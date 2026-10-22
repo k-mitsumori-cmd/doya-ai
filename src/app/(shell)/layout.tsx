@@ -32,8 +32,10 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
     : [undefined, {}]
   // 最近使ったツール（新しい見た目のときだけ。最初の描画から並べ、あとから押し下げない）
   const initialRecent = uiNext ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
+  // ドヤパワーの残りと減る量の表。⚠️ 台帳の表（doya_power_*）が本番DBに入るまでは読まない。旗が off なら、いつも null
+  const doyaPowerState = null
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

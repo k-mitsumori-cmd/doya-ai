@@ -91,9 +91,10 @@ function StatsChart({ stats }: { stats: PopupDaily }) {
         tickFormat={(n) => fmt(n)}
         format={(n) => fmt(n)}
         height={180}
+        // クリックは表示より桁が小さく、同じ目盛りでは 0 に張り付くので、右の目盛りで測る（統括の指摘 2026-10-23）
         series={[
           { name: '表示', values: stats.series.map((p) => p.impressions) },
-          { name: 'クリック', values: stats.series.map((p) => p.clicks), tone: 'pink' },
+          { name: 'クリック', values: stats.series.map((p) => p.clicks), tone: 'pink', axis: 'right' },
         ]}
       />
     )

@@ -74,6 +74,30 @@ export default function ChartsPreview() {
         <Card title="小さな折れ線（Sparkline）">
           <Sparkline data={[3, 5, 4, 8, 7, 9, 12, 11, 14]} label="直近9日の生成数" />
         </Card>
+        <Card title="右の縦軸（桁の違う2系列）" meta="クリックが 0 に張り付かない">
+          <AreaChart
+            labels={['10/01', '10/02', '10/03', '10/04', '10/05', '10/06', '10/07']}
+            yTicks
+            tickFormat={(n) => `${n}`}
+            format={(n) => `${n}回`}
+            series={[
+              { name: '表示', values: [1200, 1480, 1310, 1660, 1820, 1540, 1900] },
+              { name: 'クリック', values: [14, 22, 17, 31, 28, 19, 35], tone: 'pink', axis: 'right' },
+            ]}
+          />
+        </Card>
+        <Card title="破線の系列と、値が同じ水平な線" meta="線の種類が描き出しのあとも残る">
+          <AreaChart
+            labels={MONTHS.slice(0, 6)}
+            yTicks
+            format={man}
+            series={[
+              { name: '実績', values: [300, 340, 320, 380, 400, 420].map((v) => v * 10000) },
+              { name: '目標（一定）', values: [350, 350, 350, 350, 350, 350].map((v) => v * 10000) },
+              { name: '前年', values: [280, 300, 290, 320, 330, 350].map((v) => v * 10000) },
+            ]}
+          />
+        </Card>
       </div>
 
       <div style={grid(320)}>
@@ -240,6 +264,11 @@ export default function ChartsPreview() {
           </div>
         </Card>
       </div>
+
+      {/* ページのいちばん下の短いグラフ（画面に入ったと判定されにくい位置。救済で最後の形が出るかを見る） */}
+      <Card title="いちばん下の短いグラフ" meta="画面の下の端でも描かれる">
+        <Sparkline data={[2, 4, 3, 6, 5, 7]} height={32} label="いちばん下の折れ線" />
+      </Card>
     </div>
   )
 }

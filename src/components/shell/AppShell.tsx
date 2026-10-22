@@ -25,6 +25,7 @@ import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
+import { ShellPowerMeter } from './power'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -244,6 +245,8 @@ export default function AppShell({ children, userName, initialRecent }: {
         <Link href={SHELL_HOME.href} className={styles.brand}>
           <span className={styles.brandMark} aria-hidden />ドヤAI
         </Link>
+        {/* ドヤパワーの残り（旗が出すと決め、残りの値があるときだけ。無ければ何も描かない） */}
+        <ShellPowerMeter variant="topbar" />
         <button type="button" className={styles.iconButton} onClick={() => setPalette(true)} aria-label="ツールを探す">
           <Search size={18} />
         </button>
@@ -266,6 +269,7 @@ export default function AppShell({ children, userName, initialRecent }: {
           <span className={styles.navLabel}>ツールを探す</span>
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
+        <ShellPowerMeter variant="sidebar" />
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {recentTools.length ? (

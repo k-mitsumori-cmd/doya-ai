@@ -46,8 +46,8 @@ export function Sparkline({ data, height = 48, label }: { data: number[]; height
         </linearGradient>
       </defs>
       <path d={`${linePath(pts)} L${pts[pts.length - 1][0]},${height} L${pts[0][0]},${height} Z`} fill={`url(#${gid})`} className={styles.fadeIn} />
-      <DrawIn>
-        <path d={linePath(pts)} pathLength={1} fill="none" stroke="var(--blue)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <DrawIn extent={w}>
+        <path d={linePath(pts)} fill="none" stroke="var(--blue)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </DrawIn>
     </svg>
   )
@@ -134,9 +134,13 @@ type AreaTone = 'blue' | 'cyan' | ChartTone
  * - 系列は色と線の形（実線・破線・点線…）の両方で区別する
  * ⚠️ tone: 'cyan' は以前からの意味（濃い青）のまま。水色は 'sky'
  */
-export function AreaChart({ labels, series, height = 200, format, yTicks, domain, tickFormat, label }: {
+export function AreaChart({ labels, series, height = 200, format, yTicks, domain, tickFormat, label, rightTickFormat }: {
   labels: string[]
-  series: { name: string; values: number[]; tone?: AreaTone }[]
+  /**
+   * axis='right' の系列は、右の縦軸（別の目盛り）で測る。桁が大きく違う数（表示とクリックなど）を1つの図に並べるとき、
+   * 小さいほうが 0 に張り付かないようにする。凡例には「（右の目盛り）」と出す。format はその系列の数字の書き方
+   */
+  series: { name: string; values: number[]; tone?: AreaTone; axis?: 'left' | 'right'; format?: (n: number) => string }[]
   height?: number
   format?: (n: number) => string
   /** 縦軸の目盛りを出す。数を渡すと目盛りの数の目安（既定 5） */
@@ -147,24 +151,33 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
   tickFormat?: (n: number) => string
   /** 読み上げ用の名前（既定は「系列名と系列名の推移」） */
   label?: string
+  /** 右の縦軸の目盛りの書き方（既定は tickFormat と同じ） */
+  rightTickFormat?: (n: number) => string
 }) {
   const { ref, w } = useWidth<HTMLDivElement>(560)
   const gid = useId()
-  const all = series.flatMap((s) => s.values).filter((v) => Number.isFinite(v))
+  const isRight = (s: { axis?: 'left' | 'right' }) => s.axis === 'right'
+  const hasRight = series.some(isRight)
+  const all = series.filter((s) => !isRight(s)).flatMap((s) => s.values).filter((v) => Number.isFinite(v))
+  const allRight = series.filter(isRight).flatMap((s) => s.values).filter((v) => Number.isFinite(v))
   const hasNeg = all.some((v) => v < 0)
   const showTicks = !!yTicks
   const tickCount = typeof yTicks === 'number' ? yTicks : 5
   // 目盛りも負の値も範囲の指定も無いときは、前と同じ形（0〜最大、補助線は 1/4 ごと）
-  const legacy = !showTicks && !hasNeg && !domain
+  const legacy = !showTicks && !hasNeg && !domain && !hasRight
   const nt = legacy ? null : niceTicks(Math.min(0, ...all), Math.max(0, ...all), tickCount, domain)
   const lo = nt ? nt.min : 0
   const hi = nt ? nt.max : Math.max(...all, 1)
   const grids = nt ? nt.ticks : [0.25, 0.5, 0.75, 1].map((t) => hi * t)
-  const padL = showTicks ? 48 : 24, padR = showTicks ? 16 : 24, padT = 16, padB = 28
+  const padL = showTicks || hasRight ? 48 : 24, padR = hasRight ? 48 : showTicks ? 16 : 24, padT = 16, padB = 28
   const plotW = Math.max(1, w - padL - padR)
   const step = labels.length > 1 ? plotW / (labels.length - 1) : 0
   const y = (v: number) => padT + (1 - ratioIn(v, lo, hi)) * (height - padT - padB)
   const base = y(Math.max(lo, Math.min(hi, 0)))
+  // 右の縦軸（axis='right' の系列だけで範囲を決める。目盛りの数の目安は左と同じ。補助線は左の目盛りに合わせて引く）
+  const ntR = hasRight ? niceTicks(Math.min(0, ...allRight), Math.max(0, ...allRight, 1), tickCount) : null
+  const yR = (v: number) => (ntR ? padT + (1 - ratioIn(v, ntR.min, ntR.max)) * (height - padT - padB) : y(v))
+  const rtfmt = rightTickFormat ?? tickFormat ?? formatCompactJa
   const every = labelEvery(labels.length, plotW, 52)
   const fmt = (n: number) => (format ? format(n) : num(n))
   const tfmt = tickFormat ?? formatCompactJa
@@ -183,21 +196,23 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
             </linearGradient>
           </defs>
           {grids.map((t) => <line key={t} x1={padL} x2={w - padR} y1={y(t)} y2={y(t)} className={t === 0 && !legacy ? styles.zero : styles.grid} />)}
-          {showTicks ? grids.map((t) => <text key={'t' + t} x={padL - 8} y={y(t) + 4} textAnchor="end" className={styles.axis}>{tfmt(t)}</text>) : null}
+          {showTicks || hasRight ? grids.map((t) => <text key={'t' + t} x={padL - 8} y={y(t) + 4} textAnchor="end" className={styles.axis}>{tfmt(t)}</text>) : null}
+          {ntR ? ntR.ticks.map((t) => <text key={'r' + t} x={w - padR + 8} y={yR(t) + 4} textAnchor="start" className={styles.axis}>{rtfmt(t)}</text>) : null}
           {series.map((s, si) => {
-            const pts = s.values.map((v, i) => [padL + i * step, y(Number.isFinite(v) ? v : 0)] as const)
+            const yy = isRight(s) ? yR : y
+            const pts = s.values.map((v, i) => [padL + i * step, yy(Number.isFinite(v) ? v : 0)] as const)
             if (!pts.length) return null
             const stroke = colorOf(s, si)
             const dash = SERIES_DASH[si % SERIES_DASH.length]
             return (
               <g key={s.name}>
                 {si === 0 ? <path d={`${linePath(pts)} L${pts[pts.length - 1][0]},${base} L${pts[0][0]},${base} Z`} fill={`url(#${gid})`} className={styles.fadeIn} /> : null}
-                <DrawIn duration={1000 + si * 200}>
-                  <path d={linePath(pts)} pathLength={1} fill="none" stroke={stroke} strokeWidth={2.5} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
+                <DrawIn duration={1000 + si * 200} extent={w}>
+                  <path d={linePath(pts)} fill="none" stroke={stroke} strokeWidth={2.5} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
                 </DrawIn>
                 {pts.map(([px, py], i) => (
                   <circle key={i} cx={px} cy={py} r={3.5} className={styles.point} style={{ stroke }}>
-                    <title>{`${labels[i]} ${s.name} ${fmt(s.values[i])}`}</title>
+                    <title>{`${labels[i]} ${s.name} ${(s.format ?? fmt)(s.values[i])}`}</title>
                   </circle>
                 ))}
               </g>
@@ -215,10 +230,10 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
       </div>
       <figcaption className={styles.legend}>
         {series.map((s, si) => (
-          <span key={s.name}><LegendLine color={colorOf(s, si)} dash={SERIES_DASH[si % SERIES_DASH.length]} />{s.name}</span>
+          <span key={s.name}><LegendLine color={colorOf(s, si)} dash={SERIES_DASH[si % SERIES_DASH.length]} />{s.name}{hasRight ? (isRight(s) ? '（右の目盛り）' : '（左の目盛り）') : ''}</span>
         ))}
       </figcaption>
-      <SrTable caption={name} head={['', ...series.map((s) => s.name)]} rows={labels.map((l, i) => [l, ...series.map((s) => fmt(s.values[i]))])} />
+      <SrTable caption={name} head={['', ...series.map((s) => s.name)]} rows={labels.map((l, i) => [l, ...series.map((s) => (s.format ?? fmt)(s.values[i]))])} />
     </figure>
   )
 }
@@ -305,7 +320,7 @@ export function Ring({ value, size = 96, label, children, tone, thresholds, tone
     <div className={styles.ring} style={{ width: size, height: size }}>
       <svg viewBox="0 0 100 100" aria-hidden>
         <circle cx="50" cy="50" r={r} className={styles.ringTrack} />
-        <DrawIn>
+        <DrawIn mode="stroke">
           <circle cx="50" cy="50" r={r} pathLength={1} className={styles.ringValue} style={{ strokeDasharray: `${v} 1`, ...(stroke ? { stroke } : {}) } as CSSProperties} transform="rotate(-90 50 50)" />
         </DrawIn>
       </svg>
@@ -711,8 +726,8 @@ export function RadarChart({ axes, series, label, max, size = 320, format, rings
           return (
             <g key={s.name}>
               <path d={poly(pts)} fill={colors[si]} fillOpacity={si === 0 ? 0.16 : 0.08} className={styles.fadeIn} />
-              <DrawIn duration={1000 + si * 200}>
-                <path d={poly(pts)} pathLength={1} fill="none" stroke={colors[si]} strokeWidth={2.5} strokeDasharray={SERIES_DASH[si % SERIES_DASH.length]} strokeLinejoin="round" />
+              <DrawIn duration={1000 + si * 200} extent={W}>
+                <path d={poly(pts)} fill="none" stroke={colors[si]} strokeWidth={2.5} strokeDasharray={SERIES_DASH[si % SERIES_DASH.length]} strokeLinejoin="round" />
               </DrawIn>
               {pts.map(([x, y], i) => (
                 <circle key={i} cx={x} cy={y} r={3} className={styles.point} style={{ stroke: colors[si] }}>
