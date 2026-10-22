@@ -6,6 +6,6 @@ import DsPreview from './DsPreview'
 export const dynamic = 'force-dynamic'
 
 export default function DsPreviewPage() {
-  if (process.env.NODE_ENV === 'production') notFound()
+  if (process.env.NODE_ENV === 'production' && process.env.DS_PREVIEW !== '1') notFound()
   return <DsPreview />
 }

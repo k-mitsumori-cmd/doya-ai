@@ -1,6 +1,6 @@
 // 開発用プレビューの枠。サーバーコンポーネントから AppShell と ToolFrame に nav を渡す見本。
 // ⚠️ 各ツールの layout.tsx もこの形で書く。nav のアイコンは名前の文字列にする（部品を渡すと全画面が 500 になる）。
-// ⚠️ 本番では 404。
+// ⚠️ 本番では 404。画面確認で next start するときだけ DS_PREVIEW=1 で開ける（本番の環境変数には置かない）。
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
@@ -10,13 +10,14 @@ import { Button, Card } from '@/components/ds'
 
 const NAV: ShellNavItem[] = [
   { label: '見積書', href: '/ds-preview', icon: 'FileText', exact: true },
+  { label: 'グラフ', href: '/ds-preview/charts', icon: 'BarChart3' },
   { label: '商品', href: '/ds-preview/products', icon: 'Receipt' },
   { label: '設定', href: '/ds-preview/settings', icon: 'Settings' },
   { label: '対応表に無い名前', href: '/ds-preview/unknown', icon: 'NoSuchIcon' },
 ]
 
 export default function DsPreviewLayout({ children }: { children: ReactNode }) {
-  if (process.env.NODE_ENV === 'production') notFound()
+  if (process.env.NODE_ENV === 'production' && process.env.DS_PREVIEW !== '1') notFound()
   return (
     <AppShell userName="サンプル">
       <ToolFrame
