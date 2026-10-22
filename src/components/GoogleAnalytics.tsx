@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-import { getActiveServices } from '@/lib/services'
+import { getRunningServices } from '@/lib/services'
 import { isRecentRegistration } from '@/lib/registration-classification'
 
 // GA4測定ID（ドヤマーケと同一プロパティ・同一ストリーム）
@@ -26,7 +26,7 @@ function gaEvent(name: string, params?: Record<string, any>) {
 }
 
 // ツール利用として計測する第1パスセグメント（services.tsのhrefに対応）
-const TOOL_PATHS = new Set(getActiveServices().map(service => service.href.split('/')[1]).filter(Boolean))
+const TOOL_PATHS = new Set(getRunningServices().map(service => service.href.split('/')[1]).filter(Boolean))
 
 /** Browser guards are per account; analytics payloads contain no account identity. */
 function accountEventOnce(name: string, params: Record<string, unknown>, key: string, storage: () => Storage, memory: Set<string>) {

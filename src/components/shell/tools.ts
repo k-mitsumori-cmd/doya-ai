@@ -5,11 +5,12 @@
 //    ここに持つのは「どの区分（stage）に並べるか・サイドバーでの短い名前・アイコン・一言説明」の対応表だけ。
 //    - 提供終了（RETIRED_SERVICE_IDS）は getActiveServices() が外すので、ここに残っていても出ない
 //    - 開発中（UNLISTED_SERVICE_IDS）は「開発中」バッジ付きで出る（ログイン後の画面だけで使う）
+//    - 開発中のベータ版（services.ts の hidden: 'beta'）は getActiveServices() が外すので、メニュー・⌘K・最近使ったツールに出ない
 //    - services.ts に新しいツールが入ると、対応表に無くても「その他」に自動で出る
 // ⚠️ ここはナビの表示だけ。各ツールの認可・課金判定はツール側が持つ。
 // 仕様: docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md §2・§8（U-1〜U-4）
 import type { ShellIconName } from './icons'
-import { getActiveServices, UNLISTED_SERVICE_IDS } from '@/lib/services'
+import { BETA_HIDDEN_SERVICE_IDS, getActiveServices, getServiceById, UNLISTED_SERVICE_IDS, type Service } from '@/lib/services'
 
 export type ShellStage = 'sell' | 'collect' | 'hire' | 'operate' | 'other'
 
@@ -97,19 +98,21 @@ const orderOf = (id: string) => {
   return i === -1 ? META_ORDER.length : i
 }
 
+function toShellTool(s: Service): ShellTool {
+  const meta = TOOL_META[s.id]
+  return {
+    id: s.id,
+    name: meta?.name ?? s.shortName ?? s.name,
+    href: meta?.href ?? s.href,
+    icon: meta?.icon ?? 'LayoutGrid',
+    hint: meta?.hint ?? s.description,
+    stage: meta?.stage ?? 'other',
+    beta: UNLISTED_SERVICE_IDS.has(s.id) || undefined,
+  }
+}
+
 function buildTools(): ShellTool[] {
-  return [...getActiveServices()].sort((a, b) => orderOf(a.id) - orderOf(b.id)).map((s) => {
-    const meta = TOOL_META[s.id]
-    return {
-      id: s.id,
-      name: meta?.name ?? s.shortName ?? s.name,
-      href: meta?.href ?? s.href,
-      icon: meta?.icon ?? 'LayoutGrid',
-      hint: meta?.hint ?? s.description,
-      stage: meta?.stage ?? 'other',
-      beta: UNLISTED_SERVICE_IDS.has(s.id) || undefined,
-    }
-  })
+  return [...getActiveServices()].sort((a, b) => orderOf(a.id) - orderOf(b.id)).map(toShellTool)
 }
 
 const TOOLS = buildTools()
@@ -137,3 +140,15 @@ export function shellGroups(uiNext: boolean): ShellGroup[] {
 }
 
 export const ALL_SHELL_TOOLS: ShellTool[] = [SHELL_HOME, ...TOOLS]
+
+/**
+ * id からツールを引く（パンくず・見出しの名前用）。
+ * 開発中のベータ版（hidden: 'beta'）は一覧に無いが、許可した人は開けるので、ここでは引けるようにする。
+ * ⚠️ 一覧（メニュー・⌘K・最近使ったツール）には ALL_SHELL_TOOLS を使う。これを使わない。
+ */
+export function findShellTool(id: string): ShellTool | undefined {
+  const listed = ALL_SHELL_TOOLS.find((t) => t.id === id)
+  if (listed) return listed
+  const svc = BETA_HIDDEN_SERVICE_IDS.has(id) ? getServiceById(id) : undefined
+  return svc ? toShellTool(svc) : undefined
+}

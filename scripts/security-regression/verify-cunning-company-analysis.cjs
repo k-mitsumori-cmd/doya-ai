@@ -49,7 +49,7 @@ function database(initial) {
     let writes = 0
     let limited = true
     const api = load('src/app/api/cunning/company/analyze/route.ts', {
-      'next/server': { NextResponse: Response },
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => { writes++; return { id: 'profile' } } } } },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/company-budget': {
