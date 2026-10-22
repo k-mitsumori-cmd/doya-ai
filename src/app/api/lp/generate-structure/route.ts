@@ -112,7 +112,12 @@ export async function POST(req: NextRequest) {
           safeEnqueue(`data: ${JSON.stringify({ type: 'status', message: 'LP構成案を生成中...' })}\n\n`)
 
           const prompt = buildStructurePrompt(productInfo, purposes || [])
-          const result = await geminiGenerateJson<{ structures: LpStructure[] }>({ model: GEMINI_TEXT_MODEL_DEFAULT, prompt })
+          const result = await geminiGenerateJson<{ structures: LpStructure[] }>({
+            model: GEMINI_TEXT_MODEL_DEFAULT,
+            prompt,
+            // 3パターン×8〜12セクションのJSONは既定の4,096トークンを超えうる
+            generationConfig: { maxOutputTokens: 8192 },
+          })
           const structures = result?.structures || []
 
           if (!structures.length) {

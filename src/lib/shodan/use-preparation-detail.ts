@@ -115,6 +115,8 @@ export function usePreparationDetail(orgSlug: string, id: string) {
   }
   useEffect(() => {
     if (prep?.status !== 'researched' || prep.proposalMarkdown || state.current.autoAttempted || pending.current) return
+    // サーバーに失敗（または未完了）が記録済みなら、開くたびに有料の生成をやり直さない。作り直しはボタンから行う。
+    if (prep.errorMessage) return
     state.current.autoAttempted = true
     void mutate('generate')
     // Automatic generation is once per actor/org/document; the mutation synchronously captures the verified snapshot.
