@@ -25,6 +25,7 @@ import { beginArticleOperation, recoverArticleOperation, completeArticleOperatio
 import { createHash } from 'node:crypto'
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 import { readInterviewGeminiResponse } from '@/lib/interview/gemini-request'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 const ARTICLE_PROVIDER_TIMEOUT_MS = 240_000
 const ARTICLE_PROVIDER_STREAM_MAX_BYTES = 8 * 1024 * 1024
@@ -95,7 +96,7 @@ async function readOperation(req: NextRequest, cancel: boolean) {
 export async function GET(req: NextRequest) { return readOperation(req, false) }
 export async function DELETE(req: NextRequest) { return readOperation(req, true) }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   let admitted: { userId: string | null; guestId: string | null; projectId: string; operationId: string; recipeId: string; displayFormat: string; customInstructions?: string }
   let scope: string
   try {
@@ -458,3 +459,6 @@ export async function POST(req: NextRequest) {
     },
   })
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'interview.article', key: (b) => b?.operationId }, postHandler)

@@ -13,6 +13,7 @@ import {
 import { createSeoArticleWithinLimit, SeoArticleQuotaError, SeoArticleOperationError, seoArticleOperationId } from '@/lib/seo-article-admission'
 import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   try {
     await ensureSeoSchema()
     const session = await getServerSession(authOptions)
@@ -260,3 +261,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: (b) => (b?.createJob === false ? null : 'seo.article'), key: (b) => b?.operationId }, postHandler)

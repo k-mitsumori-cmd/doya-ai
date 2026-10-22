@@ -13,6 +13,7 @@ import { authOptions } from '@/lib/auth'
 import { shellEnabledIds } from '@/lib/ui-shell'
 import { uiNextMode } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
+import { doyaPowerCharger } from '@/lib/doya-power/charge'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
@@ -32,8 +33,9 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
     : [undefined, {}]
   // 最近使ったツール（新しい見た目のときだけ。最初の描画から並べ、あとから押し下げない）
   const initialRecent = uiNext ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
-  // ドヤパワーの残りと減る量の表。⚠️ 台帳の表（doya_power_*）が本番DBに入るまでは読まない。旗が off なら、いつも null
-  const doyaPowerState = null
+  // ドヤパワーの残り（枠のゲージ）。旗が出すと決めた人だけ、本人の会社の台帳を読む（毎月の付与・毎日の回復は読むときに足す）。
+  // ⚠️ 旗が off・会社が未登録・読めないときは null（ゲージは出ない）。off なら台帳に触れない
+  const doyaPowerState = doyaPower ? await doyaPowerCharger.shellState().catch(() => null) : null
   return (
     <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}

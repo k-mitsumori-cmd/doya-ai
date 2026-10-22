@@ -10,11 +10,12 @@ import { sfaAiLimitResponse } from '@/lib/sfa/ai-limit'
 import { canManageSfaBilling } from '@/lib/sfa/limits'
 import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { nextActionOperationInput, claimNextAction, settleNextAction, failNextAction, recoverNextAction } from '@/lib/sfa/next-action-operation'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 const failure = (e: unknown) => json({ error: e instanceof SfaMutationError ? e.message : 'AI操作の結果を確認できませんでした。保存結果をご確認ください。' }, e instanceof SfaMutationError ? e.status : 500)
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return json({ error: 'ログイン/組織が必要です。' }, 401)
   try {
@@ -55,3 +56,6 @@ async function recover(req: NextRequest, cancel: boolean) {
 export async function GET(req: NextRequest) { return recover(req, false) }
 // Fences only an operation not yet claimed. A running provider request is never reported as cancelled.
 export async function DELETE(req: NextRequest) { return recover(req, true) }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'text.generate', key: (b) => b?.operationId }, postHandler)

@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { IMAGE_SIZE, RATIOS, estimateQuotaYen, imageModelChain, type ImageGenRequest } from '@/lib/tenjikai/imagegen'
 import { perUserDailyImages, remainingImagesToday, reserveImageQuota } from '@/lib/tenjikai/image-quota'
 import { mockPanelImage } from '@/lib/tenjikai/mock-image'
+import { withDoyaPowerCharge, intIn } from '@/lib/doya-power/charge'
 
 const MAX_COUNT = 4
 const MAX_PROMPT_CHARS = 4000
@@ -44,7 +45,7 @@ export async function GET() {
 // 2. ログインしている
 // 3. GEMINI_API_KEY が設定されている
 // 4. リクエストに approved: true がある（利用者が「作る」を押した）
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const mock = mockMode()
   if (!mock && !enabled()) return fail(403, '画像の生成は準備中です。')
 
@@ -153,3 +154,6 @@ export async function POST(req: NextRequest) {
   // 画像の保存（Supabase Storage と TenjikaiCreative.imageUrl）は、プロジェクトの保存と一緒に入れる
   return NextResponse.json({ images })
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'tenjikai.image', units: (b) => intIn(b?.count, 1, 4, 1) }, postHandler)

@@ -9,6 +9,7 @@ import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { bannerHistoryCutoff } from '@/lib/banner/history-access'
 import { readBannerRefineInput, compressBannerRefineInput, normalizeBannerRefineOutput } from '@/lib/banner/refine-input'
 import { BannerOperationError, bannerRefineOperationId, bannerRefineFingerprint, beginBannerRefinement, completeBannerRefinement, failBannerRefinement, recoverBannerRefinement, cancelMissingBannerRefinement } from '@/lib/banner/refine-operation'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,7 @@ async function readOperation(request: NextRequest, cancel: boolean) {
 export async function GET(request: NextRequest) { return readOperation(request, false) }
 export async function DELETE(request: NextRequest) { return readOperation(request, true) }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   let operation: { userId: string; operationId: string; inputHash: string; cutoff: Date | null } | null = null
   try {
     const session = await getServerSession(authOptions)
@@ -174,3 +175,6 @@ ${tightTextNote}
 - Output ONE refined image (PNG).
 `
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'image.refine', key: (b) => b?.operationId }, postHandler)

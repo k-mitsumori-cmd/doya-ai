@@ -11,10 +11,11 @@ import { draftArticle } from '@/lib/shanai/article-service'
 import { articleDto } from '@/lib/shanai/dto'
 import { sanitizeBlocks } from '@/lib/shanai/generate'
 import { clip, isCuid } from '@/lib/shanai/types'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export async function POST(_req: NextRequest, ctx: Ctx) {
+async function postHandler(_req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params
   const userId = await getShanaiUserId()
   if (!userId) return unauthorized()
@@ -53,3 +54,6 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     return json({ error: '記事の保存に失敗しました。' }, 500)
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'interview.article' }, postHandler)

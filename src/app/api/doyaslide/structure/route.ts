@@ -13,6 +13,7 @@ import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
 import { z } from 'zod'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 const SlideSchema = z.object({
   role: z.string().trim().min(1).max(120),
@@ -22,7 +23,7 @@ const SlideSchema = z.object({
 })
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   let claimedProjectId: string | null = null
   let claimedAt: Date | null = null
   try {
@@ -154,3 +155,10 @@ export async function POST(req: NextRequest) {
     }
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({
+  // 構成づくりのときに1回だけ減らす（同じ資料では1回。続く画像の生成はこの中に含める）
+  action: 'slide.generate',
+  key: (b) => (typeof b?.projectId === 'string' ? `project-${b.projectId}` : undefined),
+}, postHandler)

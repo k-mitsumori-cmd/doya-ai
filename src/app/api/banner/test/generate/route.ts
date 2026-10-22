@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 import { canUseBannerTemplate } from '@/lib/banner/template-access'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { withDoyaPowerCharge, intIn } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -190,7 +191,7 @@ ${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
   return prompt
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   // ⚠️ このルートは名前に反して**一般利用者の導線**（/banner/dashboard の
   //    「選んで生成」）から呼ばれる。同じ名前空間の templates/* が保守APIなので
   //    2026-09-02 に requireBannerAdmin を付けたが、それは誤りで、
@@ -390,3 +391,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({
+  // 見本からの生成（count 枚）と、修正（「【修正指示】」で始まる指示・1枚）の両方がこの入口に来る
+  action: (b) => (typeof b?.customPrompt === 'string' && b.customPrompt.startsWith('【修正指示】') ? 'image.refine' : 'banner.generate'),
+  // バナーは「1回3枚」で 10。枚数が多いときは 3枚ごとに数える。修正は1枚
+  units: (b) => (typeof b?.customPrompt === 'string' && b.customPrompt.startsWith('【修正指示】') ? 1 : Math.ceil(intIn(b?.count, 1, 10, 3) / 3)),
+}, postHandler)

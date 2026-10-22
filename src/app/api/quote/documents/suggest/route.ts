@@ -10,8 +10,9 @@ import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { suggestItems } from '@/lib/quote/analyze'
 import { sanitizeProductProfile } from '@/lib/quote/profile-input'
 import type { ProductProfile } from '@/lib/quote/types'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -60,3 +61,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '品目の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'text.generate' }, postHandler)
