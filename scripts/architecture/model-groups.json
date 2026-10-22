@@ -1,0 +1,1420 @@
+{
+  "sourceCommit": "e0840743a568becade86706cc4f15d200311e5d5",
+  "models": {
+    "Account": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Session": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "VerificationToken": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "User": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "UserServiceSubscription": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Subscription": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Service": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Category": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Template": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "Generation": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SystemSetting": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "StripeWebhookEvent": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "StripeWebhookNotification": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdminUser": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdminLoginAttempt": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdminSession": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoArticle": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SwipeSession": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SwipeCelebrationImage": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SwipeQuestionImage": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoJob": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoSection": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoReference": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoAuditReport": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoUserMemo": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoImage": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoLinkCheckResult": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SeoKnowledgeItem": {
+      "group": "seo",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewProject": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewRecipe": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewMaterial": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewTranscription": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewReview": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewDraft": {
+      "group": "interview",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "GuestSession": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "StrategyProject": {
+      "group": "strategy",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyamanaCategory": {
+      "group": "doyamana",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyamanaImage": {
+      "group": "doyamana",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyamanaUsageLog": {
+      "group": "doyamana",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "BannerTemplate": {
+      "group": "banner",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiProject": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiOutput": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiBrandVoice": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiTemplate": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiUsage": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "TenkaiApiKey": {
+      "group": "tenkai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "OpeningProject": {
+      "group": "opening",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "OpeningAnimation": {
+      "group": "opening",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CopyBrandVoice": {
+      "group": "copy",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CopyProject": {
+      "group": "copy",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CopyItem": {
+      "group": "copy",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "LpProject": {
+      "group": "lp",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "LpSection": {
+      "group": "lp",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "VoiceProject": {
+      "group": "voice",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "VoiceRecording": {
+      "group": "voice",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MovieProject": {
+      "group": "movie",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MovieScene": {
+      "group": "movie",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MovieRenderJob": {
+      "group": "movie",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXProject": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXTemplate": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXQuestion": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXResponse": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXAnswer": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXDraft": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXFeedback": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXCheck": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "InterviewXChatMessage": {
+      "group": "interviewx",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripSegment": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripTemplate": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripSequence": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripStep": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripEnrollment": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripEmailLog": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripUnsubscribe": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DripSetting": {
+      "group": "drip",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdSimProject": {
+      "group": "adsim",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MitsuboshiNagusamePost": {
+      "group": "external",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MitsuboshiNagusameReply": {
+      "group": "external",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MitsuboshiNagusameSubscription": {
+      "group": "external",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrOrganization": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrOrganizationMember": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrDepartment": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrEmployee": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrEmployeeHistory": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrEvaluationPeriod": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrEvaluation": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrOneOnOne": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrInvitation": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "HrAuditLog": {
+      "group": "hr",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiOrganization": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiMember": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiDepartment": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiWorkRule": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiEmployee": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiClockRecord": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiAttendance": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "KintaiRequest": {
+      "group": "kintai",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneWorkspace": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneMember": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneClient": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneProject": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneTask": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneTimeEntry": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneExpense": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneComment": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PromaneInvitation": {
+      "group": "promane",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyalistProject": {
+      "group": "doyalist",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyalistCompany": {
+      "group": "doyalist",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyalistApproach": {
+      "group": "doyalist",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyalistTemplate": {
+      "group": "doyalist",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyaSlideProject": {
+      "group": "doyaslide",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyaSlideSlide": {
+      "group": "doyaslide",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyaSlideAsset": {
+      "group": "doyaslide",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyaSlideChatMessage": {
+      "group": "doyaslide",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "DoyaSlideVersion": {
+      "group": "doyaslide",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningSession": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningRecordingLease": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningUsageAllocation": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningTranscript": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningAudioWindow": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningAnswer": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningKnowledgeBase": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningKnowledgeChunk": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningCompanyProfile": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CunningApplicantProfile": {
+      "group": "cunning",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaOrganization": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaMember": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaAccount": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaContact": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaLead": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaPipeline": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaStage": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaDeal": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaLineItem": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaActivity": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "SfaTask": {
+      "group": "sfa",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "ShodanOrganization": {
+      "group": "shodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "ShodanMember": {
+      "group": "shodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "ShodanCompanyProfile": {
+      "group": "shodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "ShodanPreparation": {
+      "group": "shodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdBannerCampaign": {
+      "group": "adbanner",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdBannerCreative": {
+      "group": "adbanner",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioOrganization": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioMember": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioBrandProfile": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioPrompt": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioScan": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AioResult": {
+      "group": "aio",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuOrganization": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuMember": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuCompanyProfile": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuTemplate": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuQuestion": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuBranch": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuCriterion": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuSession": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuTurn": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuScore": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "MensetsuAnswerSample": {
+      "group": "mensetsu",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteOrganization": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteMember": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteIssuer": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteProduct": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteDocument": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "QuoteLineItem": {
+      "group": "quote",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanOrganization": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanMember": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanProduct": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanSource": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanChunk": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanScenario": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanRoom": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanSession": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanTurn": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanQuestion": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanSlotValue": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AishodanOutcome": {
+      "group": "aishodan",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdImageBrand": {
+      "group": "adimage",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdImageCampaign": {
+      "group": "adimage",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdImageConcept": {
+      "group": "adimage",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdImageCreative": {
+      "group": "adimage",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AdImageFeedback": {
+      "group": "adimage",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "ServiceFeedback": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "FeedbackPromptState": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "CaseStudyApplication": {
+      "group": "core",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PersonaImagePurgeTask": {
+      "group": "persona",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PersonaProject": {
+      "group": "persona",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PersonaImageJob": {
+      "group": "persona",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PersonaImageUsageDay": {
+      "group": "persona",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "PersonaUsageDay": {
+      "group": "persona",
+      "basis": "previous-snapshot",
+      "evidence": "docs/architecture/2026-10-06-er/data.json"
+    },
+    "AskLinkRun": {
+      "group": "asklink",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/asklink/runs/route.ts",
+      "actualRoute": "src/app/api/asklink/runs/[id]/route.ts",
+      "directModelUse": true
+    },
+    "AskLinkBanner": {
+      "group": "asklink",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/asklink/banner-write.ts",
+      "actualRoute": "src/app/api/asklink/runs/[id]/route.ts",
+      "directModelUse": true
+    },
+    "PopupSite": {
+      "group": "popup",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/popup/sites/[id]/route.ts",
+      "actualRoute": "src/app/api/popup/sites/route.ts",
+      "directModelUse": true
+    },
+    "Popup": {
+      "group": "popup",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/popup/sites/route.ts",
+      "actualRoute": "src/app/api/popup/sites/route.ts",
+      "directModelUse": true
+    },
+    "PopupStat": {
+      "group": "popup",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/popup/popup-read.ts",
+      "actualRoute": "src/app/api/popup/sites/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiVenue": {
+      "group": "tenjikai",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "TenjikaiVenue",
+        "TenjikaiProject"
+      ]
+    },
+    "TenjikaiProject": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/generation-operation.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiSiteAnalysis": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/generation-operation.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiBoothPlan": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/workspace-store.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiBoothElement": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/workspace-store.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiGraphicPanel": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/workspace-store.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiCreative": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/workspace-store.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiNovelty": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/workspace-store.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiBudgetLine": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/tenjikai-read.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiVendor": {
+      "group": "tenjikai",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "TenjikaiVendor",
+        "TenjikaiVendorRequest",
+        "TenjikaiProject"
+      ]
+    },
+    "TenjikaiVendorRequest": {
+      "group": "tenjikai",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "TenjikaiVendorRequest",
+        "TenjikaiProject"
+      ]
+    },
+    "TenjikaiDocument": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/tenjikai-read.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiTask": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/tenjikai/tenjikai-read.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "TenjikaiGenerationJob": {
+      "group": "tenjikai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/tenjikai/image/route.ts",
+      "actualRoute": "src/app/api/tenjikai/projects/[id]/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiCompany": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/public/survey/[token]/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiCompanySource": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/company/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiWebPage": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/company/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiProfileItem": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/company/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiInterview": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/public/survey/[token]/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiPhoto": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/interviews/[id]/confirm-upload/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiFact": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/interviews/[id]/article/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiArticle": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/shanai/interviews/[id]/article/route.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "ShanaiUsageLog": {
+      "group": "shanai",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/usage-summary.ts",
+      "actualRoute": "src/app/api/shanai/company/route.ts",
+      "directModelUse": true
+    },
+    "IncomeOrganization": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/organization/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeMember": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/home/finance-read.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeIssuer": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/organization/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeClient": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/clients/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeContract": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/contracts/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeContractItem": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/income/contracts.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeRevenueSchedule": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/contracts/[id]/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeInvoice": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/payments/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeInvoiceItem": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/income/invoices.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeInvoiceSequence": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/income/invoices.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomePayment": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/income/payments/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomePaymentAllocation": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/income/invoices.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "IncomeReminder": {
+      "group": "income",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/income/organization/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "IncomeReminder",
+        "IncomeOrganization"
+      ]
+    },
+    "IncomeCalendarConnection": {
+      "group": "income",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/income/organization/route.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "IncomeCalendarConnection",
+        "IncomeMember",
+        "IncomeOrganization"
+      ]
+    },
+    "IncomeAuditLog": {
+      "group": "income",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/income/access.ts",
+      "actualRoute": "src/app/api/income/organization/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseOrganization": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/organization/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseMember": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/members/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseVendor": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/vendors/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpensePaymentMethod": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/contracts/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseContract": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/vendors/[id]/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseContractPrice": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/contracts/[id]/prices/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseSchedule": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/forecast/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseBill": {
+      "group": "expense",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/expense/summary/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "ExpenseBill",
+        "ExpenseOrganization"
+      ]
+    },
+    "ExpenseBillLine": {
+      "group": "expense",
+      "basis": "schema-relation-to-actual-service-caller",
+      "evidence": "src/app/api/expense/summary/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": false,
+      "relationPath": [
+        "ExpenseBillLine",
+        "ExpenseBill",
+        "ExpenseOrganization"
+      ]
+    },
+    "ExpenseFxRate": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/app/api/expense/fx-rates/route.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseReminder": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/expense/notify.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "ExpenseAuditLog": {
+      "group": "expense",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/expense/access.ts",
+      "actualRoute": "src/app/api/expense/summary/route.ts",
+      "directModelUse": true
+    },
+    "AccountCompany": {
+      "group": "core",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/shell/company.server.ts",
+      "actualRoute": "src/lib/shell/company.ts",
+      "directModelUse": true
+    }
+  },
+  "schemaSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964",
+  "evidenceSha256": {
+    "docs/architecture/2026-10-06-er/data.json": "4d3c54a5a36d1d16c51d9cf443f0ec76e20d8cad042453a233fd908bd120a6b1",
+    "src/app/api/asklink/runs/[id]/route.ts": "122695280fd2cb625ea987e318849d95f8b6c1dd6730e75a939ec719284b3954",
+    "src/app/api/asklink/runs/route.ts": "56488f67343992958ddbd843f554d1f85c49cdd7e447ba18b73d6930ff3f884c",
+    "src/app/api/expense/contracts/[id]/prices/route.ts": "168ba1ffc64274c81062706b80e63426b38330933499d3d40974a96d7ce8dfa1",
+    "src/app/api/expense/contracts/route.ts": "054a5a2ebf03f83a0b8c5806a1674631b141db853a9680a3f82742046d1de747",
+    "src/app/api/expense/forecast/route.ts": "bbabc17fceda4cd79fb4af158a2ee4c711b480d26ab087475a43c2462068f13c",
+    "src/app/api/expense/fx-rates/route.ts": "b50345947e9d7c31d7edce6b6668526b0475f1fb698bc9345dd12b72e35184e2",
+    "src/app/api/expense/members/route.ts": "07eeefaef4d588b37a1afdaf742cfc164480727aa30ca573f1dccc4e0b2bb294",
+    "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+    "src/app/api/expense/summary/route.ts": "9a727b3422acefda809e2ae9ffc6e0ef64d6e8eb6590b88cc624e0e404d9c97d",
+    "src/app/api/expense/vendors/[id]/route.ts": "a3b6763012bcc270a85eeac19f26f28ef1375aa27ac3bf49c7af94ce23d047a0",
+    "src/app/api/expense/vendors/route.ts": "92990cb46e69e8c0b842d495d7a3a3eef4c5e81fa06ff9510581860db4cdd86b",
+    "src/app/api/income/clients/route.ts": "12195f8df20a56f6130513acbe03ed15c8fc2229b1cf65c248197de54bc61b52",
+    "src/app/api/income/contracts/[id]/route.ts": "4618784c0900d7cf15d3ed8dced4b4513763e667e503ff4d36e75895904661ae",
+    "src/app/api/income/contracts/route.ts": "e440567173e56eafb1fe17c53fa181827dea8c6b80d3d2bea082661d2dc506c8",
+    "src/app/api/income/organization/route.ts": "ab1856cb3c686c237eb629d8c5aaef4edcd855fe909508f4bf26c33162509c20",
+    "src/app/api/income/payments/route.ts": "70da7223b70db5b47d6c1ed138b1d8989aa5dbdefb573661f7871185ab72d413",
+    "src/app/api/popup/sites/[id]/route.ts": "36a6bbd3a67e9f8a9248b39a2a1b50a8a70ce6c2508ce6d02ac7693881397583",
+    "src/app/api/popup/sites/route.ts": "5c2d08adc328231c75721b14594fd1dd251986ddb692270cf5e4a08f7a74bdab",
+    "src/app/api/shanai/company/route.ts": "b26509349dccb9c235f34c22d3b6a1ff7d8fe1d0069d8c67d237c2052920d6c9",
+    "src/app/api/shanai/interviews/[id]/article/route.ts": "84766455b1e24324710b5ed875059f2d2eea97a20aa316c47ea6899107b759cf",
+    "src/app/api/shanai/interviews/[id]/confirm-upload/route.ts": "cb0b549fa6997f209d6603f2d2b21ccf55cf1c17db08e678d966c7224e4fa329",
+    "src/app/api/shanai/public/survey/[token]/route.ts": "47c18d01ce57f1fa7315a3baa5dd69758fa1448f1ee765f41204dd8ad7da20a6",
+    "src/app/api/tenjikai/image/route.ts": "55cbdf8e2ba76985054db0a69c78f36ba2d57aa0482ffd95ba48330499100e73",
+    "src/app/api/tenjikai/projects/[id]/route.ts": "24375b99cbb49aa0d7b917f38d35e6c466247f8b0fca0f553f77cbd1396e3068",
+    "src/lib/asklink/banner-write.ts": "ad74eab69629aef7a88c68c7a9497eb411be5571762203ce4673f0090f2c1f1b",
+    "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+    "src/lib/expense/notify.ts": "c1aaa91333a2fd692f586dd0345cd36d932aa85300cccbe211f249502e2cd35a",
+    "src/lib/home/finance-read.ts": "6943ac8903be96ece97203327ff7363a5842ab626ee23903c72f3cf32b611c51",
+    "src/lib/income/access.ts": "7806beb9e91cf1929453ea7392748c77b6b8c9d92fa6ffdfbf2a9cfca625ed22",
+    "src/lib/income/contracts.ts": "282fb001accf7662bcbfa891da3edeff406a2ea6e602285449fbb7c673c02490",
+    "src/lib/income/invoices.ts": "012a66419a41a00d8c2d3dd66e18931bf3f2b4f2ce360d0cc0472655151c72a1",
+    "src/lib/popup/popup-read.ts": "e35f4f59dfdafb75f8874660140195f8c38caad48f753cf2fc939940d53e7401",
+    "src/lib/shell/company.server.ts": "d64720831dd9036dc54502b38adde862401856e902260833dbcf1f38dc5e4614",
+    "src/lib/shell/company.ts": "879c15496db67e5b372ac8e8189fc8e3286b75117825f0049f4775e18c5cf3d1",
+    "src/lib/tenjikai/generation-operation.ts": "612cb3b1920ebbebb911abb3e8d9547024384620b220ac5c3f39c91109fdd953",
+    "src/lib/tenjikai/tenjikai-read.ts": "9ddb7057e222546d29eb311bad472af7481fc59a020094cca1d7d19a47c628d6",
+    "src/lib/tenjikai/workspace-store.ts": "60b04da5ed7bba05d837e80249d99e9d8c20abe62a4264cc90036809d6e295ff",
+    "src/lib/usage-summary.ts": "5f53f38c3f08b050ee1332df3e5e42a66f13bea78a602ba0d98c27333adb1926"
+  }
+}

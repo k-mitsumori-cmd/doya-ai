@@ -23,6 +23,26 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Verify source-only ER export with a synthetic client
+        run: python3 fixtures/verify-er-source-only.py --dependency-root "$GITHUB_WORKSPACE"
+
+      - name: Export exact source-only ER inputs after fresh Prisma generate
+        run: |
+          ER_SHA="$(git rev-parse HEAD)"
+          mkdir -p "$RUNNER_TEMP/er-inputs"
+          node scripts/architecture/export-er-inputs.cjs \
+            --root "$GITHUB_WORKSPACE" \
+            --out-dir "$RUNNER_TEMP/er-inputs/$ER_SHA" \
+            --date 2026-10-22
+
+      - name: Preserve exact source-only ER inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: er-inputs-source-only
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/er-inputs/*/*
+
       - name: Type check
         run: npx tsc --noEmit
 

@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+import copy
+import hashlib
+import json
+import pathlib
+import re
+import subprocess
+import sys
+import tempfile
+import argparse
+
+BASE = pathlib.Path(__file__).resolve().parents[1] / 'scripts/architecture'
+DATE = '2026-10-22'
+def sha(b): return hashlib.sha256(b).hexdigest()
+def command(*args, cwd=None, expect=0):
+    p = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
+    if p.returncode != expect: raise AssertionError((args, p.returncode, p.stdout, p.stderr))
+    return p.stdout
+def reject(message, *args):
+    p = subprocess.run(args, text=True, capture_output=True)
+    if p.returncode == 0 or message not in p.stdout + p.stderr:
+        raise AssertionError((args, p.returncode, p.stdout, p.stderr, message))
+
+def field(name, type, kind='scalar', required=True, **kw):
+    return {**dict(name=name,type=type,kind=kind,isRequired=required,isList=False,isId=False,isUnique=False,dbName=None), **kw}
+
+def main(dependency_root):
+  with tempfile.TemporaryDirectory(prefix='er-fixture-') as folder:
+    temp=pathlib.Path(folder); root=temp/'repo'; inp=temp/'bundle'; out=temp/'out'
+    (root/'prisma').mkdir(parents=True); (root/'src/lib').mkdir(parents=True)
+    schema='''generator client {\n provider = "prisma-client-js"\n}\nmodel ParentA {\n id String\n tenant String\n children Child[]\n lease Lease?\n @@id([id, tenant])\n @@map("parents_a")\n}\nmodel Child {\n id String @id\n left String\n right String\n reviewerId String? @map("reviewer_id")\n status Status\n owner ParentA @relation(\n   "Owner", fields: [left, right],\n   references: [id, tenant])\n reviewer ParentA? @relation("Reviewer", fields: [reviewerId], references: [id])\n @@unique([left, right])\n @@map("children")\n}\nmodel Lease {\n id String\n tenant String\n parent ParentA @relation(fields: [id, tenant], references: [id, tenant])\n @@id([id, tenant])\n}\nenum Status {\n OPEN\n CLOSED\n}\n'''
+    (root/'prisma/schema.prisma').write_text(schema)
+    (root/'src/lib/services.ts').write_text('export const SERVICES = []\nexport const RETIRED_SERVICE_IDS = new Set()\nexport function getPublicServices(){return SERVICES}\n')
+    (root/'src/lib/shell').mkdir(); (root/'src/lib/shell/company.ts').write_text('// fixture caller\n')
+    (root/'.gitignore').write_text('node_modules/\n')
+    (root/'package.json').write_text('{"name":"er-source-fixture","version":"1.0.0"}\n')
+    (root/'package-lock.json').write_text('{"name":"er-source-fixture","lockfileVersion":3}\n')
+    command('git','init','-q',cwd=root); command('git','config','user.email','fixture@example.invalid',cwd=root);command('git','config','user.name','Fixture',cwd=root);command('git','add','.',cwd=root);command('git','commit','-qm','fixture',cwd=root)
+    commit=command('git','rev-parse','HEAD',cwd=root).strip();tree=command('git','rev-parse','HEAD^{tree}',cwd=root).strip()
+    pa={'name':'ParentA','dbName':'parents_a','fields':[field('id','String'),field('tenant','String'),field('children','Child','object',False,relationFromFields=[],relationToFields=[]),field('lease','Lease','object',False,relationFromFields=[],relationToFields=[])], 'uniqueFields':[], 'primaryKey':{'fields':['id','tenant']}}
+    child={'name':'Child','dbName':'children','fields':[field('id','String',isId=True),field('left','String'),field('right','String'),field('reviewerId','String',required=False,dbName='reviewer_id'),field('status','Status','enum'),field('owner','ParentA','object',True,relationFromFields=['left','right'],relationToFields=['id','tenant'],relationName='Owner'),field('reviewer','ParentA','object',False,relationFromFields=['reviewerId'],relationToFields=['id'],relationName='Reviewer')], 'uniqueFields':[['right','left']], 'primaryKey':None}
+    lease={'name':'Lease','dbName':None,'fields':[field('id','String'),field('tenant','String'),field('parent','ParentA','object',True,relationFromFields=['id','tenant'],relationToFields=['id','tenant'])], 'uniqueFields':[], 'primaryKey':{'fields':['id','tenant']}}
+    dmmf={'models':[pa,child,lease],'enums':[{'name':'Status','values':[{'name':'OPEN','dbName':None},{'name':'CLOSED','dbName':None}]}]}
+    registry=[{'id':'demo','name':'Demo','status':'active','href':'/demo','public':True,'retired':False}]
+    inp.mkdir(); (inp/'schema.prisma').write_text(schema);(inp/'dmmf.json').write_text(json.dumps(dmmf));(inp/'service-registry.json').write_text(json.dumps(registry));(inp/'validation.json').write_text('{}')
+    files={p.name:sha(p.read_bytes()) for p in inp.iterdir()}
+    manifest={'date':DATE,'sourceCommit':commit,'sourceTree':tree,'sourceStatus':'','schemaSha256':sha(schema.encode()),'generatedClientSchemaSha256':sha(schema.encode()),'closureSha256':{'prisma/schema.prisma':sha(schema.encode()),'src/lib/services.ts':sha((root/'src/lib/services.ts').read_bytes())},'filesSha256':files,'counts':{'models':3,'enums':1,'services':1,'publicServices':1}}
+    (inp/'manifest.json').write_text(json.dumps(manifest))
+    evidence_path='src/lib/shell/company.ts'
+    groups=temp/'groups.json';groups.write_text(json.dumps({'sourceCommit':commit,'schemaSha256':sha(schema.encode()),'evidenceSha256':{evidence_path:sha((root/evidence_path).read_bytes())},'models':{n:{'group':'core','evidence':evidence_path} for n in ['ParentA','Child','Lease']}}))
+    mermaid=temp/'mermaid.js';mermaid.write_text('window.mermaid={initialize(){},render:async()=>({svg:"<svg></svg>"})};')
+    common=['--root',str(root),'--input-dir',str(inp),'--out-dir',str(out),'--date',DATE]
+    build=['python3',str(BASE/'build-er.py'),*common,'--mermaid-source',str(mermaid),'--group-map',str(groups)]
+    command(*build)
+    command('python3',str(BASE/'make-er-html.py'),*common)
+    good=command('python3',str(BASE/'validate-er.py'),*common)
+    output_manifest_path=out/'manifest.json';output_manifest=json.loads(output_manifest_path.read_text())
+    entity_file=out/'entities.csv';original_entities=entity_file.read_bytes()
+    entity_file.write_bytes(original_entities.replace(b'parents_a',b'wrong_tbl',1))
+    output_manifest['outputSha256']['entities.csv']=sha(entity_file.read_bytes())
+    output_manifest_path.write_text(json.dumps(output_manifest))
+    reject('Entity CSV semantic column mismatch','python3',str(BASE/'validate-er.py'),*common)
+    entity_file.write_bytes(original_entities);output_manifest['outputSha256']['entities.csv']=sha(original_entities)
+    relation_file=out/'relations.csv';original_relations=relation_file.read_bytes()
+    relation_file.write_bytes(original_relations.replace(b'True',b'False',1))
+    assert relation_file.read_bytes()!=original_relations
+    output_manifest['outputSha256']['relations.csv']=sha(relation_file.read_bytes())
+    output_manifest_path.write_text(json.dumps(output_manifest))
+    reject('Relation CSV semantic column mismatch','python3',str(BASE/'validate-er.py'),*common)
+    relation_file.write_bytes(original_relations);output_manifest['outputSha256']['relations.csv']=sha(original_relations)
+    output_manifest_path.write_text(json.dumps(output_manifest))
+    scripts=re.findall(r'<script>(.*?)</script>',(out/'index.html').read_text(),re.S)
+    assert len(scripts)==2
+    for script in scripts:
+        check=subprocess.run(['node','--check'],input=script,text=True,capture_output=True)
+        assert check.returncode==0,check.stderr
+    broken=scripts[-1].replace(r'\n\n','\n\n')
+    assert broken!=scripts[-1]
+    assert subprocess.run(['node','--check'],input=broken,text=True,capture_output=True).returncode!=0
+    html_file=out/'index.html';original_html=html_file.read_bytes()
+    html_file.write_text(original_html.decode().replace(r'\n\n','\n\n'))
+    output_manifest['outputSha256']['index.html']=sha(html_file.read_bytes())
+    output_manifest_path.write_text(json.dumps(output_manifest))
+    reject('Inline JavaScript syntax invalid','python3',str(BASE/'validate-er.py'),*common)
+    html_file.write_bytes(original_html);output_manifest['outputSha256']['index.html']=sha(original_html)
+    output_manifest_path.write_text(json.dumps(output_manifest))
+    data=json.loads((out/'data.json').read_text())
+    assert len(data['relations'])==3 and data['manifest']['models']==3
+    assert [r['relationField'] for r in data['relations']]==['owner','reviewer','parent']
+    owner,reviewer,parent=data['relations']
+    assert owner['fk']==['left','right'] and owner['references']==['id','tenant'] and owner['unique'] and not owner['optional']
+    assert reviewer['optional'] and not reviewer['unique'] and reviewer['relationName']=='Reviewer'
+    assert parent['identifying'] and parent['unique']
+    assert 'String id PK' in (out/'all.mmd').read_text() and 'String tenant PK' in (out/'all.mmd').read_text()
+    assert 'String left FK' in (out/'all.mmd').read_text() and 'String right FK' in (out/'all.mmd').read_text()
+    assert child['uniqueFields']==[['right','left']] and owner['fk']==['left','right'] and owner['references']==['id','tenant']
+    assert 'reviewer_id' in (out/'entities.csv').read_text() and data['enums']['Status']['values'][1]['name']=='CLOSED'
+    reject('Output must be a new path',*build) # Existing output may never be silently overwritten.
+    original=(out/'all.mmd').read_text();(out/'all.mmd').write_text(original.replace('reviewerId','reversedId'))
+    reject('Output hash mismatch', 'python3',str(BASE/'validate-er.py'),*common)
+    (out/'all.mmd').write_text(original)
+    evidence_file=root/evidence_path;original_evidence=evidence_file.read_bytes();evidence_file.write_text('changed caller\n')
+    reject('Group map caller changed','python3',str(BASE/'build-er.py'),*['--root',str(root),'--input-dir',str(inp),'--out-dir',str(temp/'stale-caller'),'--date',DATE],'--mermaid-source',str(mermaid),'--group-map',str(groups))
+    evidence_file.write_bytes(original_evidence)
+    # A correctly hashed bundle can still be semantically stale; model names must match schema.
+    dmmf_file=inp/'dmmf.json'; original_dmmf=dmmf_file.read_bytes(); changed=json.loads(original_dmmf)
+    changed['models']=changed['models'][:-1]
+    dmmf_file.write_text(json.dumps(changed)); old_dmmf_hash=manifest['filesSha256']['dmmf.json']; old_count=manifest['counts']['models']
+    manifest['filesSha256']['dmmf.json']=sha(dmmf_file.read_bytes()); manifest['counts']['models']=2
+    (inp/'manifest.json').write_text(json.dumps(manifest))
+    reject('Schema and DMMF model/enum sets differ','python3',str(BASE/'build-er.py'),*['--root',str(root),'--input-dir',str(inp),'--out-dir',str(temp/'stale'),'--date',DATE],'--mermaid-source',str(mermaid),'--group-map',str(groups))
+    dmmf_file.write_bytes(original_dmmf);manifest['filesSha256']['dmmf.json']=old_dmmf_hash;manifest['counts']['models']=old_count
+    (inp/'manifest.json').write_text(json.dumps(manifest))
+    services_file=root/'src/lib/services.ts'; original_services=services_file.read_text()
+    services_file.write_text("import * as leaked from 'node:fs'\nexport const SERVICES = leaked\n")
+    exporter=BASE/'export-er-inputs.cjs'
+    typescript=dependency_root/'node_modules/typescript'
+    if not typescript.exists():
+        raise AssertionError('Local read-only TypeScript dependency unavailable for closure fixture')
+    reject('Unknown/external service import','node','-e','require(process.argv[1]).readClosure(process.argv[2],require(process.argv[3]))',str(exporter),str(root),str(typescript))
+    services_file.write_text(original_services)
+    (root/'src/lib/services.ts').write_text('changed\n')
+    second=temp/'second';bad=['--root',str(root),'--input-dir',str(inp),'--out-dir',str(second),'--date',DATE]
+    reject('Source closure changed','python3',str(BASE/'build-er.py'),*bad,'--mermaid-source',str(mermaid),'--group-map',str(groups))
+    services_file.write_text(original_services)
+    node_modules=root/'node_modules';client=node_modules/'@prisma/client';generated=node_modules/'.prisma/client'
+    client.mkdir(parents=True);generated.mkdir(parents=True)
+    (node_modules/'typescript').symlink_to(typescript)
+    (client/'package.json').write_text('{"name":"@prisma/client","version":"0.0.0-fixture","main":"default.js"}')
+    (client/'default.js').write_text("module.exports = { ...require('.prisma/client/default') }\n")
+    (generated/'default.js').write_text("module.exports = { ...require('.') }\n")
+    (generated/'index.js').write_text('module.exports = { Prisma: { dmmf: { datamodel: '+json.dumps(dmmf)+' } } }\n')
+    (generated/'schema.prisma').write_text(schema)
+    export_args=['node',str(exporter),'--root',str(root),'--out-dir',str(temp/'exported'),'--date',DATE]
+    exported=json.loads(command(*export_args))
+    exported_manifest=json.loads((temp/'exported/manifest.json').read_text())
+    assert exported['passed'] and exported['models']==3
+    assert exported_manifest['sourceCommit']==commit and exported_manifest['sourceTree']==tree
+    assert 'node_modules/.prisma/client/index.js' in exported_manifest['closureSha256']
+    assert exported_manifest['generatedClientSchemaSha256']==sha(schema.encode())
+    assert json.loads((temp/'exported/dmmf.json').read_text())==dmmf
+    assert json.loads((temp/'exported/service-registry.json').read_text())==[]
+    reject('Expected --root, --out-dir, --date exactly once',*export_args,'--date',DATE)
+    inside_link=temp/'inside-link';inside_link.symlink_to(root,target_is_directory=True)
+    reject('ER output must be a new directory outside source checkout','node',str(exporter),'--root',str(root),'--out-dir',str(inside_link/'er'),'--date',DATE)
+    services_file.write_text('dirty tracked change\n')
+    reject('Tracked source is dirty before ER export','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'dirty'),'--date',DATE)
+    services_file.write_text(original_services)
+    (generated/'schema.prisma').write_text(schema+'\n// stale client\n')
+    reject('Generated client embedded schema does not match repository raw schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'stale-client'),'--date',DATE)
+    (generated/'schema.prisma').write_text(schema)
+    services_file.write_text("import { EXTRA } from './untracked'\nexport const SERVICES = EXTRA\nexport const RETIRED_SERVICE_IDS = new Set()\nexport function getPublicServices(){return SERVICES}\n")
+    command('git','add','src/lib/services.ts',cwd=root)
+    command('git','commit','-qm','tracked importer',cwd=root)
+    (root/'src/lib/untracked.ts').write_text('export const EXTRA = []\n')
+    assert command('git','status','--porcelain','--untracked-files=no',cwd=root).strip()==''
+    reject('Source closure is not present in HEAD: src/lib/untracked.ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-relative'),'--date',DATE)
+    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','untracked_relative_import'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser();parser.add_argument('--dependency-root',type=pathlib.Path,required=True)
+    main(parser.parse_args().dependency_root.resolve())
