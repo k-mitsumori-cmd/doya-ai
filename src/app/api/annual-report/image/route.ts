@@ -62,7 +62,8 @@ export async function GET(req: NextRequest) {
       const raw = await loadAnnualRawData(prisma, { userId: userId!, year, access, reveal, companyName })
       report = buildAnnualReport(raw, { year, reveal })
     }
-    const png = await renderAnnualImage(report, size)
+    // ドヤくんを切る設定（mascot=0）のときは、枠の絵を使わない無地で作る
+    const png = await renderAnnualImage(report, size, undefined, { plain: sp.get('mascot') === '0' })
     const filename = `doya-ai-annual-${year}-${size}.png`
     return new NextResponse(new Uint8Array(png), {
       status: 200,
