@@ -27,6 +27,7 @@ export const grantMonthlyForPlan = doyaPower.grantMonthlyForPlan
 export const balance = doyaPower.balance
 export const balanceForUser = doyaPower.balanceForUser
 export const operationStatus = doyaPower.operationStatus
+export const operationInfo = doyaPower.operationInfo
 export const recentConsume = doyaPower.recentConsume
 
 export * from './rules'

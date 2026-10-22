@@ -353,6 +353,17 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
+  /** 操作の状態に、減らした量と記録（note）を足したもの。AI商談・AI面接の「仮に減らした分数」を台帳から読むために使う */
+  async function operationInfo(operationId: string): Promise<{ status: 'none' | 'consumed' | 'refunded'; amount: number; note: string | null }> {
+    if (!validId(operationId)) return { status: 'none', amount: 0, note: null }
+    return db.$transaction(async (tx) => {
+      const consumed = await tx.doyaPowerTransaction.findUnique({ where: { operationId } })
+      if (!consumed || consumed.type !== 'consume') return { status: 'none' as const, amount: 0, note: null }
+      const refunded = await tx.doyaPowerTransaction.findUnique({ where: { refundOf: operationId } })
+      return { status: refunded ? ('refunded' as const) : ('consumed' as const), amount: -consumed.amount, note: typeof consumed.note === 'string' ? consumed.note : null }
+    })
+  }
+
   /**
    * 5分以内の作り直しを見つける（読むだけ）。同じ会社・同じ操作の名前で、withinMs 以内に減らして、まだ戻していない消費があるか。
    * - retryOf: クライアントが「この操作の作り直し」と示した、前の操作のキー（operationId の3つ目の欄）
@@ -392,7 +403,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
-  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, recentConsume }
+  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, operationInfo, recentConsume }
 }
 
 export type DoyaPowerLedger = ReturnType<typeof createDoyaPowerLedger>

@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { canPreviewUiNext, uiPreviewEmails } from '@/lib/ui-next'
 import { doyaPowerRollout } from './flag'
-import { consume, refund, grantMonthlyForPlan, operationStatus } from './index'
+import { consume, refund, grantMonthlyForPlan, operationStatus, operationInfo } from './index'
 import { createVoiceCharger } from './voice-core'
 
 export const voiceCharger = createVoiceCharger({
@@ -24,7 +24,7 @@ export const voiceCharger = createVoiceCharger({
     return { email: user?.email ?? null, plan: user?.plan ?? null, companyId: company?.id ?? null }
   },
   allowed: (email) => canPreviewUiNext(email, uiPreviewEmails()),
-  ledger: { consume, refund, grantMonthlyForPlan, operationStatus },
+  ledger: { consume, refund, grantMonthlyForPlan, operationStatus, operationInfo },
 })
 
 /** URL の文字列（秘密）をそのまま台帳に残さないための、短い要約 */

@@ -27,6 +27,7 @@ function setup(over: { rollout?: string; email?: string | null; plan?: string | 
       refund: (...a) => ledger.refund(...a),
       grantMonthlyForPlan: (...a) => ledger.grantMonthlyForPlan(...a),
       operationStatus: (...a) => ledger.operationStatus(...a),
+      operationInfo: (...a) => ledger.operationInfo(...a),
     },
     log: () => {},
   }
@@ -106,4 +107,18 @@ test('足りなければ 402 で、発行（開始）しない', async () => {
 test('旗を入れる前の面接・商談（台帳に記録なし）は、相手側は今までどおり', async () => {
   const s = setup()
   assert.equal(await s.voice.allowance('mensetsu', 'org', 'never-held', 10), null)
+})
+
+test('許す分数は、いまの設定の分数ではなく、始めるときに台帳で仮に減らした量から求める（始めたあとに長くしても、払った分より長く使えない）', async () => {
+  const s = setup()
+  // 10分の設定で始めた（13分ぶん減る）
+  const h = await s.voice.hold('mensetsu', 'org', 'k-long', voiceChargeMinutes(10), msg)
+  assert.equal(h.kind, 'charged')
+  // 始めたあとに、設定が60分に伸びた。許す分数は13分のまま
+  assert.deepEqual(await s.voice.allowance('mensetsu', 'org', 'k-long', 60), { minutes: 13 })
+  // 記録（note）が無い古い仮減らしは、減らした量を1分の量で割って求める
+  const old = s.mem.rows('doyaPowerTransaction').find((r: { operationId?: string | null }) => r.operationId === 'voice.minute:co_owner:k-long')
+  assert.ok(old)
+  old.note = null
+  assert.deepEqual(await s.voice.allowance('mensetsu', 'org', 'k-long', 60), { minutes: 13 })
 })

@@ -20,10 +20,12 @@ export const VOICE_CHARGE_GRACE_MINUTES = 3
 export type VoiceService = 'aishodan' | 'mensetsu'
 
 export type VoiceLedger = {
-  consume: (companyId: string, amount: number, operationId: string) => Promise<ConsumeResult>
+  consume: (companyId: string, amount: number, operationId: string, opts?: { note?: string }) => Promise<ConsumeResult>
   refund: (operationId: string, opts?: { companyId?: string }) => Promise<RefundResult>
   grantMonthlyForPlan: (companyId: string, plan: string | null | undefined) => Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }>
   operationStatus: (operationId: string) => Promise<'none' | 'consumed' | 'refunded'>
+  /** 減らした量と記録（note）。許す分数を、台帳で仮に減らした量から求めるために読む */
+  operationInfo: (operationId: string) => Promise<{ status: 'none' | 'consumed' | 'refunded'; amount: number; note: string | null }>
 }
 
 export type VoiceDeps = {
@@ -79,7 +81,7 @@ export function createVoiceCharger(deps: VoiceDeps) {
     const operationId = opId(who.companyId, key)
     try {
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
-      const r = await deps.ledger.consume(who.companyId, amount, operationId)
+      const r = await deps.ledger.consume(who.companyId, amount, operationId, { note: `held-minutes:${Math.max(1, Math.ceil(minutes))}` })
       if (r.ok) {
         // 同じ ID の2回目は、この呼び出しでは減らしていないので戻さない
         const refund = r.duplicated ? async () => {} : async () => {
@@ -111,10 +113,16 @@ export function createVoiceCharger(deps: VoiceDeps) {
   async function allowance(service: VoiceService, organizationId: string, key: string, minutes: number): Promise<null | { minutes: number } | 'closed'> {
     const who = await target(service, organizationId)
     if (!who) return null
-    const status = await deps.ledger.operationStatus(opId(who.companyId, key)).catch(() => 'none' as const)
-    if (status === 'none') return null
-    if (status === 'refunded') return 'closed'
-    return { minutes: voiceChargeMinutes(minutes) }
+    const info = await deps.ledger.operationInfo(opId(who.companyId, key)).catch(() => ({ status: 'none' as const, amount: 0, note: null }))
+    if (info.status === 'none') return null
+    if (info.status === 'refunded') return 'closed'
+    // ⚠️ 続けてよい分数は、いまの設定の分数ではなく、始めるときに台帳で仮に減らした量から求める
+    //    （始めたあとに設定を長くしても、払った分より長く使えない）。記録の分数を先に使い、無ければ減らした量を1分の量で割る
+    const noted = Number(/^held-minutes:(\d+)$/.exec(info.note ?? '')?.[1])
+    const perMin = doyaPowerCost('voice.minute', 1) ?? 0
+    const held = Number.isFinite(noted) && noted > 0 ? noted : perMin > 0 && info.amount > 0 ? Math.floor(info.amount / perMin) : 0
+    // 読み取れないときは、設定の分数を上限にする（払った分を取りこぼした扱いで、長くする側には倒さない）
+    return { minutes: held > 0 ? held : voiceChargeMinutes(minutes) }
   }
 
   /**
