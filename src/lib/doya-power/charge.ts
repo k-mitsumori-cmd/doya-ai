@@ -8,7 +8,7 @@
 // ⚠️ 旗（DOYA_POWER_ROLLOUT）が off のときは、本文も読まず、セッションも台帳も読まずに、今までの処理をそのまま呼ぶ。
 // ⚠️ 会社はセッションの本人の会社だけ（account_companies の userId）。body の companyId は信じない。
 import { createHash } from 'node:crypto'
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isUiNext } from '@/lib/ui-next'
 import { isPaidPlan } from '@/lib/unified-plan'
@@ -16,6 +16,7 @@ import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
 import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
 import { createDoyaPowerCharger } from './charge-core'
+export { parseCount } from './count'
 import type { DoyaPowerAction } from './costs'
 
 export const doyaPowerCharger = createDoyaPowerCharger({
@@ -40,6 +41,8 @@ type Body = Record<string, unknown> | null
 export type ChargeSpec = {
   /** 操作の名前。本文で変わるときは関数（null なら減らさない） */
   action: DoyaPowerAction | ((body: Body) => DoyaPowerAction | null)
+  /** 本文が読めないとき、減らす前に 400 で断る理由（無ければ null）。off のときは呼ばない（ハンドラ自身が同じ判定をする） */
+  invalid?: (body: Body) => string | null
   /** 件数（画像の枚数など）。無ければ 1 */
   units?: (body: Body) => number | undefined
   /** 同じ操作をまとめる ID（クライアントの operationId など）。無ければその呼び出しだけの操作 */
@@ -63,6 +66,8 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     // 旗が off なら、本文も読まずに今までの処理へ（台帳にもセッションにも触れない）
     if (doyaPowerRollout() === 'off') return handler(req, ...rest)
     const body = (await req.clone().json().catch(() => null)) as Body
+    const bad = spec.invalid?.(body)
+    if (bad) return NextResponse.json({ error: bad }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action
     if (!action) return handler(req, ...rest)
     const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body), target: spec.target?.(body), scope: routeScope(req) })

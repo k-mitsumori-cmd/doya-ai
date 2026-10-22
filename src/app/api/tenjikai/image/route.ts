@@ -9,11 +9,14 @@ import { prisma } from '@/lib/prisma'
 import { IMAGE_SIZE, RATIOS, estimateQuotaYen, imageModelChain, type ImageGenRequest } from '@/lib/tenjikai/imagegen'
 import { perUserDailyImages, remainingImagesToday, reserveImageQuota } from '@/lib/tenjikai/image-quota'
 import { mockPanelImage } from '@/lib/tenjikai/mock-image'
-import { withDoyaPowerCharge, intIn } from '@/lib/doya-power/charge'
+import { withDoyaPowerCharge, parseCount } from '@/lib/doya-power/charge'
 
 const MAX_COUNT = 4
 const MAX_PROMPT_CHARS = 4000
 const MAX_REFERENCE_BYTES = 4 * 1024 * 1024
+const COUNT_ERROR = '枚数は1〜4の数で指定してください。'
+// 課金（units）とハンドラで、同じ読み方を使う（ずれると、払った枚数と作る枚数が食い違う）
+const readCount = (v: unknown) => parseCount(v, 1, MAX_COUNT, 1)
 const JOB_KINDS = ['creative_image', 'booth_render', 'graphic_panel'] as const
 
 // 従量課金の API。モデルと解像度はサーバーが決める（利用者には選ばせず、原価も見せない）。
@@ -63,7 +66,8 @@ async function postHandler(req: NextRequest) {
     return fail(400, '参照画像は4MB以下のPNGにしてください。')
   }
   if (body.approved !== true) return fail(400, '作成の確認がありません。')
-  const count = Math.min(Math.max(1, Math.floor(body.count || 1)), MAX_COUNT)
+  const count = readCount(body.count)
+  if (count === null) return fail(400, COUNT_ERROR)
 
   if (mock) return NextResponse.json({ images: Array.from({ length: count }, (_, i) => mockPanelImage(body.aspectRatio, i)), mock: true })
 
@@ -156,4 +160,4 @@ async function postHandler(req: NextRequest) {
 }
 
 // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
-export const POST = withDoyaPowerCharge({ action: 'tenjikai.image', units: (b) => intIn(b?.count, 1, 4, 1) }, postHandler)
+export const POST = withDoyaPowerCharge({ action: 'tenjikai.image', invalid: (b) => (readCount(b?.count) === null ? COUNT_ERROR : null), units: (b) => readCount(b?.count) ?? 1 }, postHandler)
