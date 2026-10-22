@@ -50,6 +50,10 @@ const before=(src,a,b,msg)=>{const i=src.indexOf(a),j=src.indexOf(b);assert.ok(i
     const rec=code('src/lib/aishodan/recover-stale-sessions.ts');
     assert.match(rec,/export async function releaseUnstartedAishodanHolds\(\) \{\n  const stats = \{ checked: 0, released: 0 \}\n  if \(doyaPowerRollout\(\) === 'off'\) return stats/);
     before(rec,"data: { status: 'aborted', endedAt: new Date() }","voiceCharger.settle('aishodan', row.organizationId, `session-${row.id}`, 0)");
+    // 記録の無い商談で先頭が埋まっても、続きから見る（どこまで見たかを保存する）
+    assert.match(rec,/key: UNSTARTED_CURSOR_KEY/);
+    assert.match(rec,/\.\.\.\(cursor \? \{ id: \{ gt: cursor \} \} : \{\}\)/);
+    assert.ok(!/7 \* 24 \* 3600_000/.test(rec));
     assert.match(code('src/app/api/cron/aishodan-work-cleanup/route.ts'),/await releaseUnstartedAishodanHolds\(\)\.catch\(/);
   });
   await check('The guest-facing AI商談 start never shows the issuing company balance',async()=>{

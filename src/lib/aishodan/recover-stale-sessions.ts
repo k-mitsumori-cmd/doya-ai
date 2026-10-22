@@ -9,6 +9,7 @@ const RECONNECT_GRACE_MS = 15 * 60 * 1000
 const RECENT_ACTIVITY_MS = 5 * 60 * 1000
 /** 同意してからこの時間たっても始まらない商談は、中止にして、仮に減らしたドヤパワーを戻す */
 const UNSTARTED_HOLD_MS = 60 * 60 * 1000
+const UNSTARTED_CURSOR_KEY = 'aishodan-unstarted-hold-cursor:v1'
 
 /** Close abandoned conversations without running AI or delivering notifications here. */
 export async function recoverStaleAishodanSessions() {
@@ -68,17 +69,24 @@ export async function recoverStaleAishodanSessions() {
  * ⚠️ ルームの URL は誰でも開けるので、/start だけを繰り返されると、発行した会社の残りが仮に減ったまま残る。
  *    1時間たっても始まらない商談を中止にしてから（もう始められない）、0分で清算する。
  * - 台帳に仮に減らした記録がある商談だけを中止にする（旗を入れる前の商談・減らさない会社の商談には触れない）
+ * - ⚠️ 記録の無い商談は一覧に残り続けるので、どこまで見たか（id）を保存して続きから見る（先頭だけを見続けない）。日数で切らない
  * - 旗が off なら、何も読まない
  */
 export async function releaseUnstartedAishodanHolds() {
   const stats = { checked: 0, released: 0 }
   if (doyaPowerRollout() === 'off') return stats
+  const stopAt = Date.now() + 15000
+  const previous = await prisma.systemSetting.findUnique({ where: { key: UNSTARTED_CURSOR_KEY } })
+  const cursor = previous && /^[A-Za-z0-9_-]{1,128}$/.test(previous.value) ? previous.value : ''
   const rows = await prisma.aishodanSession.findMany({
-    where: { status: 'pending', startedAt: null, endedAt: null, createdAt: { lt: new Date(Date.now() - UNSTARTED_HOLD_MS), gt: new Date(Date.now() - 7 * 24 * 3600_000) } },
+    where: { status: 'pending', startedAt: null, endedAt: null, createdAt: { lt: new Date(Date.now() - UNSTARTED_HOLD_MS) }, ...(cursor ? { id: { gt: cursor } } : {}) },
     select: { id: true, organizationId: true, room: { select: { scenario: { select: { durationMin: true } } } } },
-    orderBy: { createdAt: 'asc' }, take: 50,
+    orderBy: { id: 'asc' }, take: 50,
   })
+  let last = cursor
   for (const row of rows) {
+    if (Date.now() >= stopAt) break
+    last = row.id
     stats.checked++
     try {
       const held = await voiceCharger.allowance('aishodan', row.organizationId, `session-${row.id}`, row.room.scenario.durationMin)
@@ -95,5 +103,8 @@ export async function releaseUnstartedAishodanHolds() {
       console.error('[aishodan-work-cleanup] unstarted hold release failed')
     }
   }
+  // 最後まで見たら先頭に戻る
+  const next = rows.length < 50 && stats.checked === rows.length ? '' : last
+  await prisma.systemSetting.upsert({ where: { key: UNSTARTED_CURSOR_KEY }, create: { key: UNSTARTED_CURSOR_KEY, value: next }, update: { value: next } })
   return stats
 }
