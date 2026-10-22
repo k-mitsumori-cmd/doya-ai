@@ -21,6 +21,11 @@ def reject(message, *args, env=None):
     p = subprocess.run(args, text=True, capture_output=True, env=env)
     if p.returncode == 0 or message not in p.stdout + p.stderr:
         raise AssertionError((args, p.returncode, p.stdout, p.stderr, message))
+def absent_blob_observation(root, ref):
+    historical_show=subprocess.run(['git','-C',str(root),'show',ref],capture_output=True)
+    exact_blob=subprocess.run(['git','-C',str(root),'cat-file','blob',ref],capture_output=True)
+    assert exact_blob.returncode!=0 and exact_blob.stdout==b'', (ref, exact_blob.returncode, exact_blob.stdout, exact_blob.stderr)
+    return {'gitShowExitCode':historical_show.returncode,'gitShowStdoutBytes':len(historical_show.stdout),'exactBlobMissing':True}
 
 def field(name, type, kind='scalar', required=True, **kw):
     return {**dict(name=name,type=type,kind=kind,isRequired=required,isList=False,isId=False,isUnique=False,dbName=None), **kw}
@@ -65,9 +70,7 @@ def main(dependency_root):
     for decision in bracket_groups['models'].values(): decision['evidence']=bracket_evidence
     bracket_map=temp/'groups-bracket.json';bracket_map.write_text(json.dumps(bracket_groups))
     absent_ref=commit+':'+bracket_evidence
-    old_show=subprocess.run(['git','-C',str(root),'show',absent_ref],capture_output=True)
-    exact_blob=subprocess.run(['git','-C',str(root),'cat-file','blob',absent_ref],capture_output=True)
-    assert old_show.returncode==0 and old_show.stdout==b'' and exact_blob.returncode!=0
+    missing_caller=absent_blob_observation(root, absent_ref)
     reject('Group map source commit lacks caller: '+bracket_evidence,
            'python3',str(BASE/'build-er.py'),'--root',str(root),'--input-dir',str(inp),
            '--out-dir',str(temp/'absent-bracket-evidence'),'--date',DATE,
@@ -277,15 +280,14 @@ def main(dependency_root):
     command('git','commit','-qm','tracked alias importer',cwd=root)
     alias_closure=json.loads(command('node','-e','process.stdout.write(JSON.stringify(require(process.argv[1]).readClosure(process.argv[2],require(process.argv[3])).closure))',str(exporter),str(root),str(typescript)))
     assert alias_closure['src/lib/[untracked].ts']==sha(b'')
-    old_show=subprocess.run(['git','-C',str(root),'show','HEAD:src/lib/[untracked].ts'],capture_output=True)
-    assert old_show.returncode==0 and old_show.stdout==b''
+    missing_alias=absent_blob_observation(root, 'HEAD:src/lib/[untracked].ts')
     reject('Source closure is not present in HEAD: src/lib/[untracked].ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-empty-alias'),'--date',DATE)
     command('git','add','src/lib/alias.ts','src/lib/[untracked].ts',cwd=root)
     command('git','commit','-qm','track empty symlink target',cwd=root)
     tracked_empty=json.loads(command('node',str(exporter),'--root',str(root),'--out-dir',str(temp/'tracked-empty-alias'),'--date',DATE))
     tracked_manifest=json.loads((temp/'tracked-empty-alias/manifest.json').read_text())
     assert tracked_empty['passed'] and tracked_manifest['closureSha256']['src/lib/[untracked].ts']==sha(b'')
-    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import','diagnostic_path_boundary','diagnostic_mismatch_capture','diagnostic_partial_formatter_capture','diagnostic_env_sentinel','absent_bracket_caller_evidence','ordinary_untracked_empty_import','direct_bracket_import_rejected','alias_to_untracked_bracket_empty'],'positiveCases':['tracked_empty_bracket_evidence','tracked_empty_alias_export'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
+    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import','diagnostic_path_boundary','diagnostic_mismatch_capture','diagnostic_partial_formatter_capture','diagnostic_env_sentinel','absent_bracket_caller_evidence','ordinary_untracked_empty_import','direct_bracket_import_rejected','alias_to_untracked_bracket_empty'],'positiveCases':['tracked_empty_bracket_evidence','tracked_empty_alias_export'],'historicalGitShowObservations':{'missingCaller':missing_caller,'missingAlias':missing_alias},'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--dependency-root',type=pathlib.Path,required=True)
