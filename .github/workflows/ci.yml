@@ -26,6 +26,9 @@ jobs:
       - name: Verify source-only ER export with a synthetic client
         run: python3 fixtures/verify-er-source-only.py --dependency-root "$GITHUB_WORKSPACE"
 
+      - name: Verify generated ER viewer async and SVG guards
+        run: DOYA_ER_GENERATOR="$GITHUB_WORKSPACE/scripts/architecture/make-er-html.py" DOYA_ER_EXPECT=after node scripts/architecture/fixtures/verify-er-viewer-functions.cjs
+
       - name: Export exact source-only ER inputs after fresh Prisma generate
         run: |
           ER_SHA="$(git rev-parse HEAD)"
