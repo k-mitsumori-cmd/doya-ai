@@ -58,6 +58,22 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def prisma_generator_guard_inputs() -> dict[str, object]:
+    names = (
+        "scripts/prisma/generate.cjs",
+        "scripts/prisma/generator-utf8-preload.cjs",
+        "node_modules/prisma/build/index.js",
+        "node_modules/@prisma/client/generator-build/index.js",
+    )
+    versions = {
+        name: json.loads((ROOT / f"node_modules/{name}/package.json").read_text())["version"]
+        for name in ("prisma", "@prisma/client")
+    }
+    if set(versions.values()) != {"5.22.0"}:
+        raise GateError("Prisma generator package version changed")
+    return {"versions": versions, "sha256": {name: sha256(ROOT / name) for name in names}}
+
+
 def is_source_path(name: str) -> bool:
     return (name.startswith(SOURCE_PREFIXES) or name in SOURCE_ROOT_FILES or
             (name.startswith("docs/audits/") and name.endswith(AUDIT_SOURCE_SUFFIXES)))
@@ -358,6 +374,8 @@ def main() -> int:
                 raise GateError("Next build output changed after generated-type check")
             if manifest.get("initialSourceSha256") != source_digest():
                 raise GateError("tracked source changed after generated-type check")
+            if manifest.get("prismaGeneratorGuard") != prisma_generator_guard_inputs():
+                raise GateError("Prisma generator guard input changed after generation")
             manifest["gateLogsSha256"] = {name: sha256(evidence / name) for name in logs}
             manifest["nonSourceWorkingChanges"] = [name for name in working_changes() if not is_source_path(name)]
             manifest["status"] = "passed"
@@ -380,6 +398,7 @@ def main() -> int:
         if not generated_client.is_file() or not generated_types.is_file():
             raise GateError("Prisma client was not generated")
         manifest["generatedPrismaSha256"] = {"index.js": sha256(generated_client), "index.d.ts": sha256(generated_types)}
+        manifest["prismaGeneratorGuard"] = prisma_generator_guard_inputs()
         environment = child_env(evidence, node)
         manifest["buildEnvNames"] = sorted(environment)
         manifest["namespaceProbe"] = network_probe(environment)

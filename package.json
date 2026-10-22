@@ -8,10 +8,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && tsc --noEmit && next build",
+    "build": "node scripts/prisma/generate.cjs && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && tsc --noEmit && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/prisma/generate.cjs",
     "db:push": "prisma db push",
     "test:security": "node scripts/security-regression/run.cjs",
     "test:asklink": "tsx --test src/lib/asklink/link.test.ts src/lib/asklink/scope.test.ts",

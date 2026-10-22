@@ -36,6 +36,9 @@ def main(dependency_root):
     (root/'.gitignore').write_text('node_modules/\n')
     (root/'package.json').write_text('{"name":"er-source-fixture","version":"1.0.0"}\n')
     (root/'package-lock.json').write_text('{"name":"er-source-fixture","lockfileVersion":3}\n')
+    (root/'scripts/prisma').mkdir(parents=True)
+    for name in ('generate.cjs','generator-utf8-preload.cjs'):
+        (root/'scripts/prisma'/name).write_bytes((BASE.parent/'prisma'/name).read_bytes())
     command('git','init','-q',cwd=root); command('git','config','user.email','fixture@example.invalid',cwd=root);command('git','config','user.name','Fixture',cwd=root);command('git','add','.',cwd=root);command('git','commit','-qm','fixture',cwd=root)
     commit=command('git','rev-parse','HEAD',cwd=root).strip();tree=command('git','rev-parse','HEAD^{tree}',cwd=root).strip()
     pa={'name':'ParentA','dbName':'parents_a','fields':[field('id','String'),field('tenant','String'),field('children','Child','object',False,relationFromFields=[],relationToFields=[]),field('lease','Lease','object',False,relationFromFields=[],relationToFields=[])], 'uniqueFields':[], 'primaryKey':{'fields':['id','tenant']}}
@@ -158,6 +161,7 @@ def main(dependency_root):
     prisma_version=json.loads(prisma_package.read_text())['version']
     (node_modules/'prisma').symlink_to(dependency_root/'node_modules/prisma')
     (client/'package.json').write_text(json.dumps({'name':'@prisma/client','version':prisma_version,'main':'default.js'}))
+    (client/'generator-build').symlink_to(dependency_root/'node_modules/@prisma/client/generator-build',target_is_directory=True)
     (client/'default.js').write_text("module.exports = { ...require('.prisma/client/default') }\n")
     (generated/'default.js').write_text("module.exports = { ...require('.') }\n")
     export_schema='''generator client {\n provider = "prisma-client-js"\n}\ndatasource db {\n provider = "postgresql"\n url = env("DATABASE_URL")\n}\nmodel Fixture {\n id String @id\n name String?\n}\n'''
@@ -179,6 +183,8 @@ def main(dependency_root):
     assert exported_manifest['sourceCommit']==export_commit and exported_manifest['sourceTree']==export_tree
     assert 'node_modules/.prisma/client/index.js' in exported_manifest['closureSha256']
     assert 'node_modules/prisma/build/index.js' in exported_manifest['closureSha256']
+    for bound in ('scripts/prisma/generate.cjs','scripts/prisma/generator-utf8-preload.cjs','node_modules/@prisma/client/generator-build/index.js'):
+        assert bound in exported_manifest['closureSha256']
     assert exported_manifest['schemaSha256']==sha(export_schema.encode())
     assert exported_manifest['generatedClientSchemaSha256']==sha((generated/'schema.prisma').read_bytes())
     assert exported_manifest['formattedSourceSchemaSha256']==exported_manifest['formattedGeneratedClientSchemaSha256']

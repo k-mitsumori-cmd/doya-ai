@@ -71,10 +71,14 @@ function clientSource(root) {
   const clientVersion = requireFromRoot('@prisma/client/package.json').version
   const formatterEntry = path.join(root, 'node_modules/prisma/build/index.js')
   const formatterPackage = path.join(root, 'node_modules/prisma/package.json')
+  const generatorEntry = path.join(root, 'node_modules/@prisma/client/generator-build/index.js')
+  const generatorPackage = path.join(root, 'node_modules/@prisma/client/package.json')
+  if (fs.realpathSync(generatorEntry) !== fs.realpathSync(requireFromRoot.resolve('@prisma/client/generator-build')) ||
+      fs.realpathSync(generatorPackage) !== fs.realpathSync(requireFromRoot.resolve('@prisma/client/package.json'))) throw Error('Pinned Prisma generator identity mismatch')
   if (fs.realpathSync(formatterEntry) !== fs.realpathSync(requireFromRoot.resolve('prisma/build/index.js')) ||
       fs.realpathSync(formatterPackage) !== fs.realpathSync(requireFromRoot.resolve('prisma/package.json')) ||
       requireFromRoot('prisma/package.json').version !== clientVersion) throw Error('Pinned Prisma formatter and client identity mismatch')
-  return { entry, generatedEntry, generatedIndex, generatedSchema, formatterEntry, formatterPackage, datamodel: client.Prisma.dmmf.datamodel, clientVersion }
+  return { entry, generatedEntry, generatedIndex, generatedSchema, formatterEntry, formatterPackage, generatorEntry, generatorPackage, datamodel: client.Prisma.dmmf.datamodel, clientVersion }
 }
 function formattedSchemaHashes(sourceBytes, generatedBytes, formatterEntry, diagnostic) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'doya-er-format-'))
@@ -156,7 +160,7 @@ function run(argv) {
   if (diagnostic) {
     diagnostic.generatedRaw = generatedBytes
     diagnostic.clientVersion = client.clientVersion
-    const inputs = [schemaPath, path.join(root, 'package.json'), path.join(root, 'package-lock.json'), client.entry, client.generatedEntry, client.generatedIndex, client.generatedSchema, client.formatterEntry, client.formatterPackage]
+    const inputs = [schemaPath, path.join(root, 'package.json'), path.join(root, 'package-lock.json'), path.join(root, 'scripts/prisma/generate.cjs'), path.join(root, 'scripts/prisma/generator-utf8-preload.cjs'), client.entry, client.generatedEntry, client.generatedIndex, client.generatedSchema, client.formatterEntry, client.formatterPackage, client.generatorEntry, client.generatorPackage]
     diagnostic.inputPaths = inputs.map(file => path.relative(root, file))
     diagnostic.inputHashes = Object.fromEntries(inputs.map(file => [path.relative(root, file), digest(file === schemaPath ? schemaBytes : file === client.generatedSchema ? generatedBytes : fs.readFileSync(file))]))
   }
@@ -171,12 +175,16 @@ function run(argv) {
     'prisma/schema.prisma': sourceSchemaHash,
     'package.json': digest(fs.readFileSync(path.join(root, 'package.json'))),
     'package-lock.json': digest(fs.readFileSync(path.join(root, 'package-lock.json'))),
+    'scripts/prisma/generate.cjs': digest(fs.readFileSync(path.join(root, 'scripts/prisma/generate.cjs'))),
+    'scripts/prisma/generator-utf8-preload.cjs': digest(fs.readFileSync(path.join(root, 'scripts/prisma/generator-utf8-preload.cjs'))),
     [path.relative(root, client.entry)]: digest(fs.readFileSync(client.entry)),
     [path.relative(root, client.generatedEntry)]: digest(fs.readFileSync(client.generatedEntry)),
     [path.relative(root, client.generatedIndex)]: digest(fs.readFileSync(client.generatedIndex)),
     [path.relative(root, client.generatedSchema)]: generatedHash,
     [path.relative(root, client.formatterEntry)]: digest(fs.readFileSync(client.formatterEntry)),
     [path.relative(root, client.formatterPackage)]: digest(fs.readFileSync(client.formatterPackage)),
+    [path.relative(root, client.generatorEntry)]: digest(fs.readFileSync(client.generatorEntry)),
+    [path.relative(root, client.generatorPackage)]: digest(fs.readFileSync(client.generatorPackage)),
     ...closure
   }
   const exporterFile = fs.realpathSync(__filename)

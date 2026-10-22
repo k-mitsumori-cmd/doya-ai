@@ -20,6 +20,30 @@ SPEC.loader.exec_module(gate)
 
 
 class GateTests(unittest.TestCase):
+    def test_prisma_generator_provenance_binds_scripts_implementation_and_versions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            files = (
+                "scripts/prisma/generate.cjs",
+                "scripts/prisma/generator-utf8-preload.cjs",
+                "node_modules/prisma/build/index.js",
+                "node_modules/@prisma/client/generator-build/index.js",
+            )
+            for name in files:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(name)
+            for name in ("prisma", "@prisma/client"):
+                (root / "node_modules" / name / "package.json").write_text('{"version":"5.22.0"}')
+            with mock.patch.object(gate, "ROOT", root):
+                before = gate.prisma_generator_guard_inputs()
+                self.assertEqual(set(before["sha256"]), set(files))
+                (root / files[1]).write_text("changed")
+                self.assertNotEqual(gate.prisma_generator_guard_inputs(), before)
+                (root / "node_modules/prisma/package.json").write_text('{"version":"5.23.0"}')
+                with self.assertRaises(gate.GateError):
+                    gate.prisma_generator_guard_inputs()
+
     def test_child_env_creates_fresh_runtime_and_has_only_fixed_names(self):
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory) / "evidence"
