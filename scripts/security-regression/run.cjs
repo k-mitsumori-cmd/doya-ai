@@ -1564,3 +1564,9 @@ for (const mode of ['rejection', 'invalid']) {
     { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_STALE_BODY: mode } });
   if (result.error || result.status !== 0) { console.error('Security regression failed: HR manual stale', mode); process.exit(1); }
 }
+
+// Popup public configuration and publish guidance; synthetic transport/DB/DOM only.
+for (const script of ['verify-popup-publish-contract.cjs', 'verify-popup-publish-edit-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}

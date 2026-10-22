@@ -35,7 +35,7 @@
     "scripts/security-regression/hr-owner/verify-settings-unknown-write-mounted.cjs": "ddc283deb11ea5a617045f2b0873c5f48d29497894e2c67c6d81434b087d9462",
     "scripts/security-regression/load-typescript.cjs": "56ac874824dac61870b3867b0b9416af6ce0a23126dcbc71ebb2a77045432a43",
     "scripts/security-regression/retirement-fixture.cjs": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
-    "scripts/security-regression/run.cjs": "a9a1aa958bedfdd194fa11a47dd789f4a101fe1460fa15c77fe64923c2896018",
+    "scripts/security-regression/run.cjs": "72dd2097ee96cd36732ad0f348b2110cdd6a3057bffd638de000c6e5b3578aa5",
     "scripts/security-regression/verify-hr-additional-get-cache.cjs": "df256544e951f9b8418d611092d0a9cffb71ec1e2fe3d34443861338baae1cc1",
     "scripts/security-regression/verify-hr-error-sanitization.cjs": "90c8dac2dda5ac9420538ec67bcc9927ca3fcbb54147017fbcf1f6ec71950b23",
     "scripts/security-regression/verify-hr-invite-identity.cjs": "00dea79215e68285de9721f05d364bfbcf8701565441b6dd67db8fddcd6d71cb",

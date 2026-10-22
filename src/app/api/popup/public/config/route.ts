@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     {
       headers: {
         ...corsHeaders(req, true),
-        'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+        'Cache-Control': 'public, max-age=0, s-maxage=60',
       },
     }
   )

@@ -38,7 +38,7 @@ const mocks = {
   '@/lib/safe-signin-callback': actualCallback,
   '@/components/popup/PopupPreview': { default: no, __esModule: true },
   '@/components/popup/ui': {
-    ConfirmDialog: ({ onConfirm, onCancel }) => React.createElement('div', null,
+    ConfirmDialog: ({ body, onConfirm, onCancel }) => React.createElement('div', null, body,
       React.createElement('button', { onClick: onConfirm }, 'confirm'),
       React.createElement('button', { onClick: onCancel }, 'cancel')),
     CopyButton: no,
@@ -336,6 +336,7 @@ const withReadClock = async work => {
       assert.equal(requests[1].url, `/api/popup/sites/${SITE_A}?days=30`)
       await respond(requests[1], dto(SITE_A, 30, [popup()]))
       assert.match(toasts.at(-1).message, /公開しました/)
+      assert.match(toasts.at(-1).message, /1分ほど待って対象サイトを再読み込み/)
       await act(() => toasts.at(-1).undo())
       assert.equal(requests[2].options.method, 'PATCH')
       await respond(requests[2], {})
@@ -363,6 +364,7 @@ const withReadClock = async work => {
         assert.deepEqual(JSON.parse(requests[0].options.body), { status: 'paused' })
         await respond(requests[0], {}); await respond(requests[1], dto(SITE_A, 30, [popup()]))
         assert.match(toasts.at(-1).message, /停止しました/)
+        assert.match(toasts.at(-1).message, /開いたままのページには以前の設定が残る/)
       } finally { await app.unmount() }
     }
     {
@@ -418,6 +420,7 @@ const withReadClock = async work => {
     const app = await setup()
     try {
       await act(() => clicks('このサイトを削除する'))
+      assert.match(document.body.textContent, /削除すると配信元の公開設定から除外されます/)
       await act(() => clicks('confirm'))
       assert.equal(requests[0].options.method, 'DELETE')
       await act(() => requests[0].header.reject(Error('network')))

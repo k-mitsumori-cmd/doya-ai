@@ -221,9 +221,9 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
       setDraft(json.popup)
       show(
         status === 'live'
-          ? { message: '公開しました。サイトに1分ほどで反映されます。', undo: before !== 'live' ? () => void save('paused') : undefined }
+          ? { message: '公開しました。1分ほど待って対象サイトを再読み込みしてご確認ください。', undo: before !== 'live' ? () => void save('paused') : undefined }
           : status === 'paused'
-            ? { message: '停止しました。', undo: () => void save('live') }
+            ? { message: '停止しました。1分ほど待って対象サイトを再読み込みしてご確認ください。開いたままのページには以前の設定が残る場合があります。', undo: () => void save('live') }
             : { message: '保存しました。' }
       )
     } catch {

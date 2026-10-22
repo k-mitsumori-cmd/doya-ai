@@ -85,7 +85,7 @@ function InstallCard({ site, readOnly = false }: { site: SiteDetail['site']; rea
               表示されるのは <b className="text-[color:var(--ink)]">{site.domain}</b> とそのサブドメインのページだけです。ほかのドメインに貼っても、表示も計測もされません。
             </li>
             <li>WordPress・Studio・Wix などは「ヘッダーにコードを追加」の設定から貼れます。Google タグマネージャーのカスタムHTMLでも動きます。</li>
-            <li>公開・停止の切り替えは、サイトに1分ほどで反映されます。</li>
+            <li>公開・停止の変更は、1分ほど待ってから対象サイトを再読み込みしてご確認ください。開いたままのページには自動では反映されません。</li>
           </ul>
         </div>
         <figure className="hidden lg:block">
@@ -337,7 +337,7 @@ export function SiteDetailView({ data, days, busy = null, actionError = null, lo
       {interactive && confirm?.kind === 'site' && (
         <ConfirmDialog
           title={`「${site.name}」を削除しますか？`}
-          body="公開中のポップアップもすべて止まります。貼ってある設置タグは、外しておくことをおすすめします。"
+          body="削除すると配信元の公開設定から除外されます。キャッシュや開いたままのページには以前の設定が残る場合があります。設置タグも外してください。"
           confirmLabel="削除する"
           danger
           onCancel={() => actions?.onCancelConfirm()}
@@ -581,8 +581,8 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
         await patchPopup(ticket, captured.id, { status: action })
         if (!actionCurrent(ticket)) return
         const undoSeq = life.current.undoSeq
-        notify(ticket, action === 'live' ? `「${captured.name}」を公開しました。サイトに1分ほどで反映されます。` :
-          `「${captured.name}」を停止しました。`, () => {
+        notify(ticket, action === 'live' ? `「${captured.name}」を公開しました。1分ほど待って対象サイトを再読み込みしてご確認ください。` :
+          `「${captured.name}」を停止しました。1分ほど待って対象サイトを再読み込みしてご確認ください。開いたままのページには以前の設定が残る場合があります。`, () => {
           if (!current(ticket) || life.current.undoSeq !== undoSeq || life.current.busyToken !== null) return
           void (async () => {
             const undoTicket = begin(captured.id)
