@@ -7,8 +7,8 @@
   "nativeExecuted": false,
   "sourceFiles": {
     ".github/workflows/ci.yml": "23b40086c020c3a2f109c75fdd041cd8d453395b7afe89cdabdeca5212b7d072",
-    "docs/audits/2026-10-06-all-services-recheck/verify-hr-invite-registration-snapshot-before.cjs": "4908eca0984615f1fdda25ed122a62c103b149c463e2424641af8bfc41d10b74",
-    "docs/audits/2026-10-06-all-services-recheck/verify-hr-owner-transfer-private-postgres.cjs": "6171aa09e30b9249f96c74657f3fa8ded224e7b84003c65de761baee69134260",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-invite-registration-snapshot-before.cjs": "7afaceef3a1082c1e0580b0de2b72bcd55ee7d226ec41892b4b728627a0fc95e",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-owner-transfer-private-postgres.cjs": "4605763fc0128853b0caef24c66eade1e6305abaaf8369b83349867c145064d2",
     "package-lock.json": "ef6310ba245fbf7dde5e1fcc0e2bc45ccf95c755e24be2d31eb5321144bf9dfa",
     "package.json": "82699a6655c5f5465e425b702fc1ec2d8641b1662dd4b1910290fa3aa2b77d44",
     "prisma/schema.prisma": "12e8a7da80d07b572d2e2c52c1efc52fe9a424e9f8befbb6a21f11bf86609f49",

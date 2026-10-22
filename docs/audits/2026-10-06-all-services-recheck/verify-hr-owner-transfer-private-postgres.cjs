@@ -23,8 +23,33 @@ if (expectedFile) {
   const lockBytes = fs.readFileSync('scripts/security-regression/fixtures/hr-owner-h5-source-lock.json')
   assert.equal(crypto.createHash('sha256').update(lockBytes).digest('hex'), expectedInputs.sourceLockSha256)
   const committedLock = JSON.parse(lockBytes.toString('utf8'))
+  const sourceRecord = value => value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  assert.ok(sourceRecord(expectedInputs.sourceFiles) && sourceRecord(committedLock.sourceFiles), 'H5 source maps must be plain records')
+  // The parent binds the entire canonical map by raw lock SHA; these are mandatory roots of its HR closure.
+  const requiredSourceFiles = [
+    '.github/workflows/ci.yml',
+    'scripts/security-regression/verify-hr-owner-cohort-postgres.py',
+    'scripts/security-regression/run.cjs',
+    'scripts/security-regression/verify-hr-owner-transfer-postgres.py',
+    'docs/audits/2026-10-06-all-services-recheck/verify-hr-invite-registration-snapshot-before.cjs',
+    'docs/audits/2026-10-06-all-services-recheck/verify-hr-owner-transfer-private-postgres.cjs',
+    'src/app/api/hr/organization/invite/route.ts',
+    'src/lib/hr/access.ts',
+    'src/lib/hr/membership-write.ts',
+    'src/lib/hr/owner-transfer/store.ts',
+    'src/lib/hr/owner-transfer/receipt.ts',
+    'src/lib/hr/owner-transfer/types.ts',
+    'src/lib/account-lifecycle/state.ts',
+    'src/lib/account-lifecycle/store.ts',
+    'prisma/schema.prisma',
+    'package.json',
+    'package-lock.json',
+  ]
+  const sourceKeys = Object.keys(expectedInputs.sourceFiles).sort()
+  assert.deepEqual(sourceKeys, Object.keys(committedLock.sourceFiles).sort(), 'H5 canonical source keyset changed')
+  for (const file of requiredSourceFiles) assert.ok(Object.hasOwn(committedLock.sourceFiles, file), 'Missing mandatory H5 source: ' + file)
   assert.deepEqual(expectedInputs.sourceFiles, committedLock.sourceFiles)
-  assert.equal(Object.keys(expectedInputs.sourceFiles).length, 78)
   assert.equal(Object.keys(expectedInputs.materializedBaseline).length, 22)
   assert.equal(Object.keys(expectedInputs.generatedFiles).length, 11)
   const lockedBytes = (file) => {
