@@ -1597,3 +1597,10 @@ for (const kind of ['invite', 'save', 'member', 'delete']) {
     if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner Settings deadline', mode); process.exit(1); }
   }
 }
+
+// HR owner E4: actual Settings parent + Panel/hook/client, committed receipt and late response lifetimes.
+for (const mode of ['current-positive', ...['headers', 'body'].flatMap(stage => ['success', 'malformed', '401', 'reject'].map(late => stage + '-' + late))]) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', 'verify-settings-owner-deadline-composed-mounted.cjs')],
+    { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_OWNER_PARENT_VARIANT: mode } });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner composed Settings deadline', mode); process.exit(1); }
+}
