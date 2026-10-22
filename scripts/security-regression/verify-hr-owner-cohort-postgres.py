@@ -19,6 +19,7 @@ ROOT = pathlib.Path.cwd()
 LOCK = ROOT / 'scripts/security-regression/fixtures/hr-owner-h5-source-lock.json'
 AFTER_SUPERVISOR = ROOT / 'scripts/security-regression/verify-hr-owner-transfer-postgres.py'
 H3_CURRENT_SUPERVISOR = ROOT / 'scripts/security-regression/verify-hr-invite-registration-current-postgres.py'
+H3_FINAL_NULL_SUPERVISOR = ROOT / 'scripts/security-regression/verify-hr-invite-final-null-counter-postgres.py'
 BEFORE_PROBE = ROOT / 'docs/audits/2026-10-06-all-services-recheck/verify-hr-invite-registration-snapshot-before.cjs'
 SNAPSHOT_DATA = pathlib.Path('scripts/security-regression/fixtures/hr-owner-v6-before')
 GENERATED = (
@@ -299,6 +300,26 @@ def main():
                                            'privateFolderRemoved': h3_result.get('privateFolderRemoved')}
                 if h3.returncode != 0 or h3_result.get('status') != 'passed' or not h3_result.get('evidenceValid'):
                     raise ValueError('H3 current-after exact snapshot schedule or positive failed')
+                verify_static(lock)
+                verify_generated(generated)
+                counter_dir = path / 'final-null-counter'
+                counter_dir.mkdir(mode=0o700)
+                counter_env = {**os.environ, 'DOYA_OWNER_HR_COUNTER_EVIDENCE_DIR': str(counter_dir),
+                               'DOYA_OWNER_HR_H5_BASELINE': str(baseline),
+                               'DOYA_OWNER_HR_H5_PHASE': 'after',
+                               'DOYA_OWNER_HR_H5_EXPECTED': str(expected_path),
+                               'DOYA_OWNER_HR_H5_EXPECTED_SHA256': expected_hash}
+                with (path / 'final-null-counter-supervisor.log').open('w') as output:
+                    counter = subprocess.run(['python3', str(H3_FINAL_NULL_SUPERVISOR)], env=counter_env,
+                                             stdout=output, stderr=subprocess.STDOUT, timeout=900)
+                counter_result = json.loads((counter_dir / 'h3-final-null-counter-supervisor.json').read_text())
+                state['finalNullCounter'] = {'exitCode': counter.returncode, 'status': counter_result.get('status'),
+                                             'evidenceValid': counter_result.get('evidenceValid'),
+                                             'observedClassification': counter_result.get('observedClassification'),
+                                             'observedHttpStatus': counter_result.get('observedHttpStatus'),
+                                             'privateFolderRemoved': counter_result.get('privateFolderRemoved')}
+                if counter.returncode != 0 or counter_result.get('status') != 'passed' or not counter_result.get('evidenceValid'):
+                    raise ValueError('H3 final-null counter schedule unsafe or unknown')
             finally:
                 actual_baseline = {str(p.relative_to(baseline)): read_hash(p) for p in baseline.rglob('*.ts')}
                 state['materializedBaselineAligned'] = actual_baseline == before_hashes
