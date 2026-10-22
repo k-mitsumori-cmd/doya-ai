@@ -38,7 +38,7 @@ function recordingPrisma(aliceRoles={}){
   const prisma=new Proxy({},{get:(_,k)=>{if(typeof k!=='string'||k==='then')return undefined;if(!models.has(k))models.set(k,model(k));return models.get(k)}});
   return {prisma,calls};
 }
-function fixture({session='alice',uiNext=true,roles={},env={}}={}){
+function fixture({session='alice',uiNext=true,doyaPower=true,roles={},env={}}={}){
   const {prisma,calls}=recordingPrisma(roles);
   const rendered=[];
   const report=load('src/lib/annual-report/report.ts',{});
@@ -48,6 +48,8 @@ function fixture({session='alice',uiNext=true,roles={},env={}}={}){
     'next/server':nextServer,
     '@/lib/prisma':{prisma},
     '@/lib/ui-next':{isUiNext:async()=>{calls.push(['ui-next']);return uiNext}},
+    // ドヤパワーの旗はこのテストでは出す側にする（旗が off のときの 404 は verify-doya-power-flag.cjs で見る）
+    '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>{calls.push(['ui-next']);return doyaPower}},
     '@/lib/shell/company.server':{currentUserId:async()=>session,getAccountCompanyName:async()=>({name:'アリス株式会社',source:'company'})},
     '@/lib/annual-report/report':report,
     '@/lib/annual-report/load.server':loader,

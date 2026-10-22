@@ -73,13 +73,15 @@ const plain=(v)=>JSON.parse(JSON.stringify(v));
     }
     assert.equal(await f.ledger.balanceForUser('mallory'),null);
   });
-  await check('Doya Power: API routes that use the ledger gate on isUiNext and take the company from the session',async()=>{
+  await check('Doya Power: API routes that use the ledger gate on isUiNext and the Doya Power flag, and take the company from the session',async()=>{
     const walk=(d)=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
     const files=walk(path.join(root,'src/app')).filter(f=>/\.(ts|tsx)$/.test(f));
     for(const file of files){
       const src=fs.readFileSync(file,'utf8');
       if(!/from ['"]@\/lib\/doya-power(\/index)?['"]/.test(src))continue;
       assert.match(src,/isUiNext/,file);
+      // ドヤパワーの旗（DOYA_POWER_ROLLOUT）も見る（verify-doya-power-flag.cjs）
+      assert.match(src,/isDoyaPowerEnabled\(\)/,file);
       assert.match(src,/getServerSession/,file);
       assert.doesNotMatch(src,/(body|searchParams|query)\W[^\n]*companyId/,file);
     }

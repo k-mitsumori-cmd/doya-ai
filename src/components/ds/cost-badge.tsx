@@ -1,3 +1,4 @@
+'use client'
 // ============================================
 // ds/cost-badge — ボタンに「減る量」を付ける小さな札
 // ============================================
@@ -7,7 +8,9 @@
 // - 足りないとき（short）は「足りません」を文字でも出す（色だけで伝えない）
 // ⚠️ 数字は props で受け取るだけ。ここで残りを取りに行かない。
 // ⚠️ 既存の ds の Button は変えない。子として入れるだけで使える形にしている。
+// ⚠️ ドヤパワーの旗（DOYA_POWER_ROLLOUT）が出さないと決めた人には、何も描かない（useDoyaPower()）。
 import { Zap } from 'lucide-react'
+import { useDoyaPower } from '@/components/doya-power/doya-power-context'
 import styles from './cost-badge.module.css'
 
 export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, className }: {
@@ -19,6 +22,8 @@ export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, 
   short?: boolean
   className?: string
 }) {
+  const enabled = useDoyaPower()
+  if (!enabled) return null
   const n = Math.max(0, Math.round(cost)).toLocaleString('ja-JP')
   return (
     <span className={`${styles.badge} ${className ?? ''}`} data-short={short ? 'true' : undefined}>

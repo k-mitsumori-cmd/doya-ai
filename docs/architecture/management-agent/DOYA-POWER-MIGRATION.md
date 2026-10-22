@@ -1,11 +1,31 @@
-# ドヤパワーの台帳 — 本番DBに流す SQL の案（2026-10-19）
+# ドヤパワーの台帳 — 本番DBに足す表の SQL の案（2026-10-19 作成・2026-10-22 統合ブランチでまとめ直し）
 
-- ブランチ: `ui-next/doyapower-ledger`（main には入れていない）
-- 仕様: `docs/architecture/management-agent/PRICING-POINTS-2026-10-19.md`（統括の作業フォルダ。この文書は、受け取った要点を正として作った）
+- 統合ブランチ: `integrate/doyapower`（`integrate/cost-fixes` の上に、ドヤパワーの5本と、8ツールの仕上げ・E2E の2本、あわせて7本を取り込んだもの）。main には入れていない
+- 仕様: `docs/architecture/management-agent/PRICING-POINTS-2026-10-19.md`（統括の作業フォルダ）
 - 処理の正本: `src/lib/doya-power/ledger.ts`（決まりと定数は `src/lib/doya-power/rules.ts`）
 - **⚠️ この SQL はまだ流していない。** 流すのは統括が、ユーザーの承認を取ったあと。
-- 既存の表は変えない。新しい表を3つ作り、索引を付けるだけ（`account_companies` への外部キーは、新しい表の側に付く）。
-- Prisma の `schema.prisma` との差分（`prisma migrate diff`）から作り、外部キーを CREATE TABLE の中にまとめ、CHECK 制約と `IF NOT EXISTS` を足した。
+- 既存の表は変えない。新しい表を3つ作り、索引を付けるだけ。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
+- 下の SQL は `npx prisma migrate diff --from-schema-datamodel <integrate/cost-fixes の schema> --to-schema-datamodel prisma/schema.prisma --script` の出力と同じ表・列・索引（2026-10-22 に統合ブランチで出し直して一致を確認）。外部キーを CREATE TABLE の中にまとめ、CHECK 制約と `IF NOT EXISTS` を足した。
+
+## 流す前の前提
+
+1. **`account_companies` の表が本番DBにあること。** `doya_power_accounts.companyId` の外部キーの先。無いと CREATE TABLE が失敗する（`SELECT to_regclass('public.account_companies');` が null でないことを先に見る）。
+2. **旗は off のまま流す。** 環境変数 `DOYA_POWER_ROLLOUT`（off / preview / all。既定は off）。off のあいだは台帳の表を読む・書くコードが一切動かないので、表を足すのと旗を変えるのは別の日にできる。
+3. 流したあと、ステージングか本番で `DOYA_POWER_ROLLOUT=preview`（`UI_PREVIEW_EMAILS` の人だけ）にして確かめ、そのあと `all` にする。旗を変えたら再デプロイが要る（Vercel の環境変数は再デプロイまで反映されない）。
+
+## 旗（DOYA_POWER_ROLLOUT）の仕組み
+
+| 値 | 出す相手 |
+|---|---|
+| `off`（既定。値が無い・知らない値も off） | 誰にも出さない。台帳の表を読まない |
+| `preview` | `UI_PREVIEW_EMAILS` で許可した人だけ（`src/lib/ui-next.ts` の `canPreviewUiNext`） |
+| `all` | 全員 |
+
+- サーバーの判定: `src/lib/doya-power/flag.ts` の `isDoyaPowerEnabled()`。off のときはセッションも DB も読まずに false。
+- 台帳の入口: `src/lib/doya-power/index.ts` は `gate.ts` の `createGatedLedger()` を通す。off のときは Prisma に一度も触れずに `DoyaPowerDisabledError` で止まる。
+- クライアント: `src/components/doya-power/doya-power-context.tsx`（`useDoyaPower()`、既定 false）。`src/app/(shell)/layout.tsx` が `uiNext ? await isDoyaPowerEnabled() : false` を `ShellGate` に渡す。ゲージ・言い換え・少ないときの知らせ・朝の回復・ボタンの減る量の札（`CostBadge`）は、この値が偽なら何も描かない。
+- 画面と API: `/home/collection`・`/home/missions`・`/home/annual`・`/api/annual-report/image` は、旗をいちばん先に見て、出さない人には 404。見本のページ（`/home/*/preview`）も旗が off なら 404。部品の見本 `/ds-preview/doya-power` だけは ds-preview の決まり（本番では `DS_PREVIEW=1` のときだけ）で開き、見本の数字だけを出す。
+- 回帰テスト: `scripts/security-regression/verify-doya-power-flag.cjs`（`run.cjs` に登録。`npm run build` の中で走る）。
 
 ## 前払式支払手段（資金決済法）について — 法務の確認が要る
 
@@ -85,13 +105,18 @@ CREATE INDEX IF NOT EXISTS "doya_power_transactions_accountId_createdAt_idx" ON 
 COMMIT;
 ```
 
+### 今は足さない表（ほかの担当の報告にある案。schema.prisma にはまだ無い）
+
+- `doyapower_org_settings`（会社で使う分野。ツール図鑑の活用度スコア用。今は端末の localStorage に仮に保存）と `doyapower_badge_awards`（実績を取った日）。どちらも `docs/design/screens/collection/REPORT.md` の案。足すなら、モデルを決めてから別の SQL にする。
+
+- 表と索引のほかに、既存の表への変更（ALTER TABLE）は無い。
 - 元に戻すとき（表が空のうちだけ）: `DROP TABLE "doya_power_transactions", "doya_power_grants", "doya_power_accounts";`
 - 流したあとの確認: `SELECT COUNT(*) FROM "doya_power_accounts";` が 0 で返ること。`npx prisma db pull --print` に3つの表が出ること。
 - ⚠️ CHECK 制約は Prisma のスキーマには書けない。`prisma db push` は CHECK 制約を消さないが、表を作り直す変更をするときは付け直すこと。
 
 ---
 
-## 報告（2026-10-19・台帳の担当のセッション）
+## 参考: 台帳の担当のセッションの報告（2026-10-19。統合の前の内容。画面・API・旗は統合ブランチで足した）
 
 ### ブランチとコミット
 

@@ -14,3 +14,4 @@ export {
   type ResolvedFx,
 } from './DoyaPower'
 export { jstDateKey, jstDateTime, jstTime, recoveryLabel } from './time'
+export { DoyaPowerContext, DoyaPowerProvider, useDoyaPower } from './doya-power-context'

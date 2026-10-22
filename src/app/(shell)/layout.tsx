@@ -12,6 +12,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { shellEnabledIds } from '@/lib/ui-shell'
 import { uiNextMode } from '@/lib/ui-next'
+import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
@@ -23,6 +24,8 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const session = await getServerSession(authOptions).catch(() => null)
   // 新しい見た目（UI 品質の直し）を出すか。サーバーで決めて、クライアントの部品には context で渡す（チェックリスト §5.1）
   const uiNext = session?.user ? await uiNextMode() : null
+  // ドヤパワー（DOYA_POWER_ROLLOUT）。新しい見た目の人のときだけ見る。off ならセッションも DB も読まずに false
+  const doyaPower = uiNext ? await isDoyaPowerEnabled() : false
   // 左下の「登録会社」（UI 品質 B-1）。新しい見た目のときだけ読む。失敗しても枠は出す
   const [company, toolHrefs] = uiNext
     ? await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
@@ -30,7 +33,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // 最近使ったツール（新しい見た目のときだけ。最初の描画から並べ、あとから押し下げない）
   const initialRecent = uiNext ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

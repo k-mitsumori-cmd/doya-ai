@@ -2,6 +2,7 @@
 // ⚠️ 本番では 404。画面確認のためだけに、COLLECTION_PREVIEW=1 のときは next start でも開ける。
 //    ?state=empty で「まだ何も使っていない」状態、?areas=none で「分野を選んでいない」状態を見る。
 import { notFound } from 'next/navigation'
+import { doyaPowerSampleAllowed } from '@/lib/doya-power/flag'
 import ShellGate from '@/components/shell/ShellGate'
 import { shellGroups } from '@/components/shell/tools'
 import { buildCatalog } from '@/lib/collection/catalog'
@@ -34,6 +35,8 @@ function sample(): CollectionFacts {
 
 export default async function CollectionPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.NODE_ENV === 'production' && process.env.COLLECTION_PREVIEW !== '1') notFound()
+  // ドヤパワーの旗（DOYA_POWER_ROLLOUT）が off のときも 404
+  if (!doyaPowerSampleAllowed()) notFound()
   const sp = await searchParams
   const facts = sp.state === 'empty' ? emptyFacts() : sample()
   // 見本の会社: 採用はしない（採用の分野で減点されないことを見る）

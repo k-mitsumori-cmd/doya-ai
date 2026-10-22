@@ -11,12 +11,13 @@
 // ⚠️ 新しい見た目（isUiNext() / useUiNext()）の中でだけ使う。
 // ⚠️ 演出の設定（組織・個人）でドヤくんと動きを切れる。どちらかがオフならオフ。prefers-reduced-motion でも動かさない。
 // ⚠️ メール・通知は送らない。知らせは画面の中だけ。
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { ArrowRight, BatteryLow, Sunrise, X } from 'lucide-react'
 import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import { CountUp, useInViewOnce, usePrefersReducedMotion } from '@/components/ds/motion'
 import { jstDateKey, jstDateTime, recoveryLabel } from './time'
 import styles from './doya-power.module.css'
+import { useDoyaPower } from './doya-power-context'
 
 export { CostBadge } from '@/components/ds/cost-badge'
 
@@ -75,7 +76,7 @@ function Mascot({ pose, size, className }: { pose: MascotPose; size: number; cla
 
 /* ---- DoyaPowerGauge ---- */
 
-export function DoyaPowerGauge({
+function DoyaPowerGaugeBody({
   remaining,
   limit,
   label = 'ドヤパワー',
@@ -166,7 +167,7 @@ export function DoyaPowerGauge({
 
 /* ---- PowerEquivalents（残りの言い換え） ---- */
 
-export function PowerEquivalents({ remaining, conversions, limit = 3, lead = 'あと', className }: {
+function PowerEquivalentsBody({ remaining, conversions, limit = 3, lead = 'あと', className }: {
   remaining: number
   conversions: PowerConversion[]
   /** 出す数（多いと読めないので既定3つ） */
@@ -195,7 +196,7 @@ export function PowerEquivalents({ remaining, conversions, limit = 3, lead = '�
 
 /* ---- LowPowerNotice（残りが少ないとき） ---- */
 
-export function LowPowerNotice({
+function LowPowerNoticeBody({
   remaining,
   limit,
   nextRecoveryAt,
@@ -259,7 +260,7 @@ export function shouldShowMorningToast(input: { now: Date | string | number; rec
   return !!today && jstDateKey(input.recoveredAt) === today && input.lastShownDay !== today
 }
 
-export function MorningRecoveryToast({
+function MorningRecoveryToastBody({
   recoveredAt,
   amount,
   limit,
@@ -329,4 +330,20 @@ export function MorningRecoveryToast({
       <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="知らせを閉じる"><X size={16} aria-hidden /></button>
     </div>
   )
+}
+
+/* ---- 旗（DOYA_POWER_ROLLOUT）の内側でだけ描く ---- */
+// ⚠️ サーバーが「出さない」と決めた人（旗が off・preview で許可されていない人）には何も描かない。
+//    値は src/app/(shell)/layout.tsx → ShellGate → DoyaPowerContext で渡る。context が無いところでも出さない（既定 false）。
+export function DoyaPowerGauge(props: ComponentProps<typeof DoyaPowerGaugeBody>) {
+  return useDoyaPower() ? <DoyaPowerGaugeBody {...props} /> : null
+}
+export function PowerEquivalents(props: ComponentProps<typeof PowerEquivalentsBody>) {
+  return useDoyaPower() ? <PowerEquivalentsBody {...props} /> : null
+}
+export function LowPowerNotice(props: ComponentProps<typeof LowPowerNoticeBody>) {
+  return useDoyaPower() ? <LowPowerNoticeBody {...props} /> : null
+}
+export function MorningRecoveryToast(props: ComponentProps<typeof MorningRecoveryToastBody>) {
+  return useDoyaPower() ? <MorningRecoveryToastBody {...props} /> : null
 }
