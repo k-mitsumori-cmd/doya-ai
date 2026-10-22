@@ -16,6 +16,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { ArrowLeftRight, Plus, Sparkles, Upload } from 'lucide-react'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Lead extends ConversionLead {
   id: string
@@ -299,6 +300,7 @@ export default function SfaLeadsPage() {
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-[#0066ff] hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50'}>
                       {uiNext ? <Sparkles className="h-4 w-4" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}{mutations.busy.includes('score:' + l.id) ? 'AI判定中…' : 'AIスコア'}
+                      <ShellCostBadge action="text.generate" />
                     </button>
                     {l.status !== 'converted' && !l.convertedAccountId ? (
                       <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion') || mutations.blocked('lead:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-green-700 hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-green-700 hover:underline flex items-center gap-0.5'}>

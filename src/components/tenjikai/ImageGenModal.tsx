@@ -9,6 +9,7 @@ import { Modal } from './ui'
 import EmptyState from './EmptyState'
 import { remainingLabel, requestImages, useImageQuota, type ImageGenFailure, type ImageGenKind } from './useImageGen'
 import { ds } from '@/lib/tenjikai/tokens'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Props {
   open: boolean
@@ -85,6 +86,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
           <button disabled={busy || noneLeft} onClick={run} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:cursor-not-allowed disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             {busy ? '作っています' : '画像を作る'}
+            <ShellCostBadge action="tenjikai.image" />
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { readInterviewCreationResponse, InterviewCreationResponseError } from '@
 import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
+import { ShellCostBadge } from '@/components/shell/power'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -1464,6 +1465,7 @@ export default function MaterialsPage() {
                                 {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                               </span>
                               {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                              <ShellCostBadge action="transcribe.hour" per="60分" />
                             </motion.button>
                           )}
                         {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
@@ -1524,6 +1526,7 @@ export default function MaterialsPage() {
                               {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                             </span>
                             {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                            <ShellCostBadge action="transcribe.hour" per="60分" />
                           </motion.button>
                         )}
                       {(isTranscribing && transcriptionInfo?.status !== 'completed') && (

@@ -18,6 +18,7 @@ import { ErrorNotice } from '@/components/ds'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { FACT_CATEGORY_LABELS, type ArticleBlock, type FactCategory, type SurveyAnswers } from '@/lib/shanai/types'
 import { findQuestion } from '@/lib/shanai/survey'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Photo { id: string; usage: string; caption: string; url: string | null }
 interface Fact { id: string; sourceType: 'transcript' | 'answer' | 'company'; sourceRef: string; category: FactCategory; statement: string; quote: string; approved: boolean }
@@ -750,6 +751,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
         <Button onClick={() => (article ? setConfirmRegen(true) : void generate())} loading={busy} disabled={approvedPerson < 5} variant={article ? 'secondary' : 'primary'}>
           <Sparkles className="h-4 w-4" />
           {article ? '記事を作り直す' : '記事を作る'}
+          <ShellCostBadge action="interview.article" />
         </Button>
         {article && (
           <>

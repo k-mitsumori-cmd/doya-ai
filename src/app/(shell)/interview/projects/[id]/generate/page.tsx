@@ -11,6 +11,7 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { ArticleStreamError, readArticleGeneration } from '@/lib/interview/article-stream-client'
 import { getArticleActorScope, readArticleOperation, ArticleProtocolError, type ArticleIntentScope, type ArticleOperationView } from '@/lib/interview/article-operation-client'
 import { readArticleIntent, claimArticleIntent, clearArticleIntent, type ArticleIntent } from '@/lib/interview/article-intent-client'
+import { ShellCostBadge } from '@/components/shell/power'
 
 function articleFailureGuidance(error: unknown): string {
   return error instanceof ArticleStreamError || error instanceof ArticleProtocolError || error instanceof ArticleInputError
@@ -782,7 +783,7 @@ export default function GeneratePage() {
                 {!recovery.view || ['pending', 'cancelling', 'missing', 'busy'].includes(recovery.view.state) ? (
                   <button disabled={cancelRef.current} onClick={cancelGeneration} className="px-4 py-2 rounded-lg bg-slate-100">前の生成を取り消す</button>
                 ) : (
-                  <button disabled={operationBusy} onClick={() => void restartGeneration()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">新しい記事を生成（1回使用）</button>
+                  <button disabled={operationBusy} onClick={() => void restartGeneration()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">新しい記事を生成（1回使用）<ShellCostBadge action="interview.article" /></button>
                 )}
                 {recovery.view?.result && <a href={`/interview/projects/${projectId}/edit?draftId=${recovery.view.result.draftId}`} className="px-4 py-2 rounded-lg bg-blue-100">保存済みの記事を開く</a>}
                 <a href={`/interview/projects/${projectId}`} className="px-4 py-2 rounded-lg bg-slate-100">記事一覧を確認</a>
@@ -795,6 +796,7 @@ export default function GeneratePage() {
               <p className="text-slate-700">{progress || '記事生成の準備ができました。'}</p>
               <button onClick={startGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
                 記事生成を開始
+                <ShellCostBadge action="interview.article" />
               </button>
             </div>
           )}

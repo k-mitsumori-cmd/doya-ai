@@ -22,6 +22,7 @@ import LoadingProgress from '@/components/LoadingProgress'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, ToolHero } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface PlacementRow {
   key: string
@@ -1185,6 +1186,7 @@ export default function AdImageTool() {
                 className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
               >
                 {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}
+                <ShellCostBadge action="image.refine" />
               </button>
               {!scores && directives.length === 0 && (
                 <p className="mt-2 text-center text-xs font-bold text-slate-500">

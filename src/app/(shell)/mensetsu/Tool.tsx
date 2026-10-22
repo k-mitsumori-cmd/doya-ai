@@ -16,6 +16,7 @@ import { notifyError } from '@/lib/ui/notify'
 import { fetchOrgJson } from '@/lib/org-fetch'
 import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mensetsu/session-pages'
 import LoadingProgress from '@/components/LoadingProgress'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Org {
   id: string
@@ -693,6 +694,7 @@ export default function MensetsuTool() {
                 className={nx('mt-4 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0', `min-h-11 max-w-full motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${NX_FOCUS}`)}
               >
                 {busy === 'generate' ? '生成中…（30秒ほどかかります）' : '質問セットを生成'}
+                <ShellCostBadge action="text.generate" />
               </button>
 
               {templates.length === 0 && uiNext && (
@@ -847,6 +849,7 @@ export default function MensetsuTool() {
                     className={nx('mt-5 w-full rounded-xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-xl', NX_FOCUS)}
                   >
                     {busy === 'issue' ? '発行中…' : '面接URLを発行する'}
+                    <ShellCostBadge action="voice.minute" per="分" />
                   </button>
                   {issueLimit && error === issueLimit.message && uiNext ? (
                     <div id="mensetsu-issue-error" className="mt-3 grid gap-3">

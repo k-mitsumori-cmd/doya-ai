@@ -135,6 +135,8 @@ async function fixture(page, options = {}) {
     // アイコンと ds の部品は、新しい見た目（useUiNext() が真）のときだけ描く。この試験は今の見た目（偽）で動かすので、空の部品でよい
     'lucide-react': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
     '@/components/ds': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
+    // ドヤパワーの減る量の札（旗の内側だけ）。この試験では旗が off と同じく何も描かない
+    '@/components/shell/power': { ShellCostBadge: () => null, ShellPowerMeter: () => null },
     '@/components/ds/motion': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : ({ children }) => children ?? null }),
     '@/components/sfa/SfaSidebar': { __esModule: true, default: ({ plan, memberships }) => React.createElement('aside', { 'data-plan': plan || '', 'data-memberships': JSON.stringify(memberships) }) },
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'), 'next-auth/react': { useSession: session },

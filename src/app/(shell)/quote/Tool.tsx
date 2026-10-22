@@ -28,6 +28,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice, FirstSteps, ToolHero } from '@/components/ds'
 import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
+import { ShellCostBadge } from '@/components/shell/power'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -1001,6 +1002,7 @@ export default function QuoteTool() {
                 </span>
               )}
               {suggesting ? '候補を作っています…' : '品目の候補を出す'}
+              <ShellCostBadge action="text.generate" />
             </button>
             <p className="mt-2 text-xs font-bold text-slate-500">
               相場つきの品目候補をまとめて出します。単価はあとから自由に調整できます。
@@ -1063,6 +1065,7 @@ export default function QuoteTool() {
                             AIで入力
                           </>
                         )}
+                        <ShellCostBadge action="text.generate" />
                       </button>
                       <button
                         onClick={() => removeItem(idx)}

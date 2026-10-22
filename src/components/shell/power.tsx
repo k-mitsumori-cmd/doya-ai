@@ -6,13 +6,14 @@
 // - 旗（DOYA_POWER_ROLLOUT）が出さないと決めた人には、何も描かない（useDoyaPower()）
 // - 旗が出すと決めても、残りの値（balance）が渡されていなければ、何も描かない
 //   ⚠️ 残りを返す API（/api/doya-power/balance）と台帳の表は、本番DBに表が入ってから作る。それまでは (shell)/layout.tsx が null を渡す
-// - ボタンの減る量は、操作の名前（例: 'banner.generate'）から引く。表（costs）が空なら、札は出ない
-//   ⚠️ 減る量の数は、ここで決めない（台帳の決まり src/lib/doya-power/rules.ts と合わせて、統括が決める）
+// - ボタンの減る量は、操作の名前（例: 'banner.generate'）で src/lib/doya-power/costs.ts の表から引く（仮・2026-10-23）
+//   ⚠️ 数はここに書かない。サーバーから costs を渡したときだけ、そちらを先に使う
 import Link from 'next/link'
 import { createContext, useContext, type ReactNode } from 'react'
 import { Zap } from 'lucide-react'
 import { CostBadge } from '@/components/ds/cost-badge'
 import { useDoyaPower } from '@/components/doya-power/doya-power-context'
+import { doyaPowerCost, type DoyaPowerAction } from '@/lib/doya-power/costs'
 import styles from './power.module.css'
 
 export interface ShellPowerBalance {
@@ -68,13 +69,17 @@ export function ShellPowerMeter({ className, href = '/home#doya-power', variant 
 }
 
 /**
- * ツールの生成のボタンに入れる、減る量の札。<Button>バナーを作る<ShellCostBadge action="banner.generate" /></Button>
- * 表に無い操作・旗が off・残りが分からないときは、何も描かない
+ * ツールの生成のボタンに入れる、減る量の札。<button>バナーを作る<ShellCostBadge action="banner.generate" /></button>
+ * - 旗が off の人には何も描かない（ボタンの幅も今と同じ）。表に無い操作・減る量が 0 の操作も描かない
+ * - units: 件数（AIO の質問の数など）。per: 単位あたりの量のときの単位（'分' など）
  */
-export function ShellCostBadge({ action, className }: { action: string; className?: string }) {
+export function ShellCostBadge({ action, units, per, className }: { action: DoyaPowerAction; units?: number; per?: string; className?: string }) {
+  const enabled = useDoyaPower()
   const { balance, costs } = useContext(ShellPowerContext)
-  const cost = costs[action]
-  if (cost === undefined || !Number.isFinite(cost)) return null
+  if (!enabled) return null
+  const n = units ?? 1
+  const cost = costs[action] !== undefined ? costs[action] * n : doyaPowerCost(action, n)
+  if (cost === null || !Number.isFinite(cost) || cost <= 0) return null
   // CostBadge 自身も旗を見る（off なら何も描かない）
-  return <CostBadge cost={cost} short={balance ? balance.remaining < cost : false} className={className} />
+  return <CostBadge cost={cost} per={per} short={balance ? balance.remaining < cost : false} className={className} />
 }

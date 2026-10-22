@@ -30,6 +30,7 @@ import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
+import { ShellCostBadge } from '@/components/shell/power'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -1238,6 +1239,8 @@ export default function SeoCreateWizardPage() {
                   <>
                     記事を生成する
                     <Sparkles className="w-5 h-5" />
+                    {/* 減る量（ドヤパワーの旗の内側だけ。最後の段の「記事を生成する」のときだけ） */}
+                    <ShellCostBadge action="seo.article" />
                   </>
                 )}
               </button>

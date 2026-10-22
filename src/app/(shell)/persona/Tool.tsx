@@ -45,6 +45,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from 'lucide-react'
+import { ShellCostBadge } from '@/components/shell/power'
 
 
 // ムード → 色
@@ -1034,6 +1035,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                 ペルソナを生成
               </>
             )}
+            <ShellCostBadge action="persona.generate" />
           </button>
 
           {accessWarning && <p role="status" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">{accessWarning}</p>}
