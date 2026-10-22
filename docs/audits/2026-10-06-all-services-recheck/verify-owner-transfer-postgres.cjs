@@ -57,6 +57,9 @@ const store = load('src/lib/owner-transfer/store.ts', {
 })
 const retirement = load('src/lib/account-retirement.ts', { '@prisma/client': { Prisma } })
 const cases = []
+// The first result can retain the host input object; persisted receipts are parsed in the TS loader's VM.
+// Clone into this realm before comparing every DTO field across those two equivalent boundaries.
+const dtoValue = value => structuredClone(value)
 const setting = () => db.systemSetting.findMany({ select: { key: true, value: true }, orderBy: { key: 'asc' } })
 const row = async (service, suffix = '') => {
   const spec = services.find(item => item[0] === service)
@@ -144,8 +147,8 @@ async function run() {
       assert.equal(result.phase, 'committed')
       assert.deepEqual(await roles(item), { [item.newId]: 'owner', [item.oldId]: 'admin' })
       assert.equal((await setting()).length, before.length + 1)
-      assert.deepEqual(await store.transferOwner(id, input(item), item.id, db), result)
-      assert.deepEqual(await store.ownerTransferStatus(id), result)
+      assert.deepEqual(dtoValue(await store.transferOwner(id, input(item), item.id, db)), dtoValue(result))
+      assert.deepEqual(dtoValue(await store.ownerTransferStatus(id)), dtoValue(result))
       assert.deepEqual(await individualState(), individualBefore, 'personal plans, Stripe references, service usage and unrelated User must not change')
       await retirement.checkAccountRetirementSafe(db, 'old')
     })
@@ -402,7 +405,7 @@ async function run() {
     assert.equal(one.ok, true, one.error?.message)
     assert.equal(two.ok, true, two.error?.message)
     assert.equal(one.value.phase, first === 'cancel' ? 'canceled' : 'committed')
-    assert.deepEqual(two.value, one.value)
+    assert.deepEqual(dtoValue(two.value), dtoValue(one.value))
     assert.equal(await db.systemSetting.count({ where: { key: types.ownerTransferKey(id) } }), 1)
     assert.deepEqual(await roles(item), first === 'cancel'
       ? { [item.newId]: 'member', [item.oldId]: 'owner' }
