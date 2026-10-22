@@ -18,6 +18,7 @@ import uuid
 ROOT = pathlib.Path.cwd()
 LOCK = ROOT / 'scripts/security-regression/fixtures/hr-owner-h5-source-lock.json'
 AFTER_SUPERVISOR = ROOT / 'scripts/security-regression/verify-hr-owner-transfer-postgres.py'
+H3_CURRENT_SUPERVISOR = ROOT / 'scripts/security-regression/verify-hr-invite-registration-current-postgres.py'
 BEFORE_PROBE = ROOT / 'docs/audits/2026-10-06-all-services-recheck/verify-hr-invite-registration-snapshot-before.cjs'
 SNAPSHOT_DATA = pathlib.Path('scripts/security-regression/fixtures/hr-owner-v6-before')
 GENERATED = (
@@ -280,6 +281,24 @@ def main():
                 state['before'] = run_before(before_dir, baseline, generated, expected_path, expected_hash)
                 if state['before'].get('status') != 'observed' or not state['before'].get('evidenceValid'):
                     raise ValueError('H5 v6 before observation did not meet one known classification')
+                verify_static(lock)
+                verify_generated(generated)
+                h3_dir = path / 'current-h3-after'
+                h3_dir.mkdir(mode=0o700)
+                h3_env = {**os.environ, 'DOYA_OWNER_HR_EVIDENCE_DIR': str(h3_dir),
+                          'DOYA_OWNER_HR_H5_BASELINE': str(baseline),
+                          'DOYA_OWNER_HR_H5_PHASE': 'after',
+                          'DOYA_OWNER_HR_H5_EXPECTED': str(expected_path),
+                          'DOYA_OWNER_HR_H5_EXPECTED_SHA256': expected_hash}
+                with (path / 'current-h3-after-supervisor.log').open('w') as output:
+                    h3 = subprocess.run(['python3', str(H3_CURRENT_SUPERVISOR)], env=h3_env,
+                                        stdout=output, stderr=subprocess.STDOUT, timeout=900)
+                h3_result = json.loads((h3_dir / 'h3-current-after-supervisor.json').read_text())
+                state['currentH3After'] = {'exitCode': h3.returncode, 'status': h3_result.get('status'),
+                                           'evidenceValid': h3_result.get('evidenceValid'),
+                                           'privateFolderRemoved': h3_result.get('privateFolderRemoved')}
+                if h3.returncode != 0 or h3_result.get('status') != 'passed' or not h3_result.get('evidenceValid'):
+                    raise ValueError('H3 current-after exact snapshot schedule or positive failed')
             finally:
                 actual_baseline = {str(p.relative_to(baseline)): read_hash(p) for p in baseline.rglob('*.ts')}
                 state['materializedBaselineAligned'] = actual_baseline == before_hashes
