@@ -44,7 +44,7 @@ def main(dependency_root):
     registry=[{'id':'demo','name':'Demo','status':'active','href':'/demo','public':True,'retired':False}]
     inp.mkdir(); (inp/'schema.prisma').write_text(schema);(inp/'dmmf.json').write_text(json.dumps(dmmf));(inp/'service-registry.json').write_text(json.dumps(registry));(inp/'validation.json').write_text('{}')
     files={p.name:sha(p.read_bytes()) for p in inp.iterdir()}
-    manifest={'date':DATE,'sourceCommit':commit,'sourceTree':tree,'sourceStatus':'','schemaSha256':sha(schema.encode()),'generatedClientSchemaSha256':sha(schema.encode()),'closureSha256':{'prisma/schema.prisma':sha(schema.encode()),'src/lib/services.ts':sha((root/'src/lib/services.ts').read_bytes())},'filesSha256':files,'counts':{'models':3,'enums':1,'services':1,'publicServices':1}}
+    manifest={'date':DATE,'sourceCommit':commit,'sourceTree':tree,'sourceStatus':'','schemaSha256':sha(schema.encode()),'generatedClientSchemaSha256':sha(schema.encode()),'formattedSourceSchemaSha256':sha(schema.encode()),'formattedGeneratedClientSchemaSha256':sha(schema.encode()),'closureSha256':{'prisma/schema.prisma':sha(schema.encode()),'src/lib/services.ts':sha((root/'src/lib/services.ts').read_bytes())},'filesSha256':files,'counts':{'models':3,'enums':1,'services':1,'publicServices':1}}
     (inp/'manifest.json').write_text(json.dumps(manifest))
     evidence_path='src/lib/shell/company.ts'
     groups=temp/'groups.json';groups.write_text(json.dumps({'sourceCommit':commit,'schemaSha256':sha(schema.encode()),'evidenceSha256':{evidence_path:sha((root/evidence_path).read_bytes())},'models':{n:{'group':'core','evidence':evidence_path} for n in ['ParentA','Child','Lease']}}))
@@ -126,19 +126,35 @@ def main(dependency_root):
     node_modules=root/'node_modules';client=node_modules/'@prisma/client';generated=node_modules/'.prisma/client'
     client.mkdir(parents=True);generated.mkdir(parents=True)
     (node_modules/'typescript').symlink_to(typescript)
-    (client/'package.json').write_text('{"name":"@prisma/client","version":"0.0.0-fixture","main":"default.js"}')
+    prisma_package=dependency_root/'node_modules/prisma/package.json'
+    if not prisma_package.exists(): raise AssertionError('Local read-only pinned Prisma formatter unavailable')
+    prisma_version=json.loads(prisma_package.read_text())['version']
+    (node_modules/'prisma').symlink_to(dependency_root/'node_modules/prisma')
+    (client/'package.json').write_text(json.dumps({'name':'@prisma/client','version':prisma_version,'main':'default.js'}))
     (client/'default.js').write_text("module.exports = { ...require('.prisma/client/default') }\n")
     (generated/'default.js').write_text("module.exports = { ...require('.') }\n")
-    (generated/'index.js').write_text('module.exports = { Prisma: { dmmf: { datamodel: '+json.dumps(dmmf)+' } } }\n')
-    (generated/'schema.prisma').write_text(schema)
+    export_schema='''generator client {\n provider = "prisma-client-js"\n}\ndatasource db {\n provider = "postgresql"\n url = env("DATABASE_URL")\n}\nmodel Fixture {\n id String @id\n name String?\n}\n'''
+    export_dmmf={'models':[{'name':'Fixture','dbName':None,'fields':[field('id','String',isId=True),field('name','String',required=False)],'uniqueFields':[],'primaryKey':None}],'enums':[]}
+    (root/'prisma/schema.prisma').write_text(export_schema)
+    command('git','add','prisma/schema.prisma',cwd=root)
+    command('git','commit','-qm','valid exporter schema',cwd=root)
+    export_commit=command('git','rev-parse','HEAD',cwd=root).strip()
+    export_tree=command('git','rev-parse','HEAD^{tree}',cwd=root).strip()
+    (generated/'index.js').write_text('module.exports = { Prisma: { dmmf: { datamodel: '+json.dumps(export_dmmf)+' } } }\n')
+    (generated/'schema.prisma').write_text(export_schema)
+    command('node',str(dependency_root/'node_modules/prisma/build/index.js'),'format','--schema',str(generated/'schema.prisma'),cwd=temp)
+    assert sha((generated/'schema.prisma').read_bytes())!=sha(export_schema.encode())
     export_args=['node',str(exporter),'--root',str(root),'--out-dir',str(temp/'exported'),'--date',DATE]
     exported=json.loads(command(*export_args))
     exported_manifest=json.loads((temp/'exported/manifest.json').read_text())
-    assert exported['passed'] and exported['models']==3
-    assert exported_manifest['sourceCommit']==commit and exported_manifest['sourceTree']==tree
+    assert exported['passed'] and exported['models']==1
+    assert exported_manifest['sourceCommit']==export_commit and exported_manifest['sourceTree']==export_tree
     assert 'node_modules/.prisma/client/index.js' in exported_manifest['closureSha256']
-    assert exported_manifest['generatedClientSchemaSha256']==sha(schema.encode())
-    assert json.loads((temp/'exported/dmmf.json').read_text())==dmmf
+    assert 'node_modules/prisma/build/index.js' in exported_manifest['closureSha256']
+    assert exported_manifest['schemaSha256']==sha(export_schema.encode())
+    assert exported_manifest['generatedClientSchemaSha256']==sha((generated/'schema.prisma').read_bytes())
+    assert exported_manifest['formattedSourceSchemaSha256']==exported_manifest['formattedGeneratedClientSchemaSha256']
+    assert json.loads((temp/'exported/dmmf.json').read_text())==export_dmmf
     assert json.loads((temp/'exported/service-registry.json').read_text())==[]
     reject('Expected --root, --out-dir, --date exactly once',*export_args,'--date',DATE)
     inside_link=temp/'inside-link';inside_link.symlink_to(root,target_is_directory=True)
@@ -146,16 +162,26 @@ def main(dependency_root):
     services_file.write_text('dirty tracked change\n')
     reject('Tracked source is dirty before ER export','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'dirty'),'--date',DATE)
     services_file.write_text(original_services)
-    (generated/'schema.prisma').write_text(schema+'\n// stale client\n')
-    reject('Generated client embedded schema does not match repository raw schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'stale-client'),'--date',DATE)
-    (generated/'schema.prisma').write_text(schema)
+    formatted_schema=(generated/'schema.prisma').read_bytes()
+    (generated/'schema.prisma').write_bytes(formatted_schema+b'\n// stale client\n')
+    reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'stale-client'),'--date',DATE)
+    (generated/'schema.prisma').write_bytes(formatted_schema)
+    (generated/'schema.prisma').write_bytes(formatted_schema.replace(b'name String?',b'name String @default("x")'))
+    reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'attribute-drift'),'--date',DATE)
+    (generated/'schema.prisma').write_bytes(formatted_schema)
+    (generated/'schema.prisma').write_bytes(formatted_schema.replace(b'model Fixture {',b'/// changed documentation\nmodel Fixture {'))
+    reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'comment-drift'),'--date',DATE)
+    (generated/'schema.prisma').write_bytes(formatted_schema)
+    (generated/'schema.prisma').write_text('model Broken {\n this is invalid\n}\n')
+    reject('Pinned Prisma schema formatter failed','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'formatter-fail'),'--date',DATE)
+    (generated/'schema.prisma').write_bytes(formatted_schema)
     services_file.write_text("import { EXTRA } from './untracked'\nexport const SERVICES = EXTRA\nexport const RETIRED_SERVICE_IDS = new Set()\nexport function getPublicServices(){return SERVICES}\n")
     command('git','add','src/lib/services.ts',cwd=root)
     command('git','commit','-qm','tracked importer',cwd=root)
     (root/'src/lib/untracked.ts').write_text('export const EXTRA = []\n')
     assert command('git','status','--porcelain','--untracked-files=no',cwd=root).strip()==''
     reject('Source closure is not present in HEAD: src/lib/untracked.ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-relative'),'--date',DATE)
-    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','untracked_relative_import'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
+    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--dependency-root',type=pathlib.Path,required=True)

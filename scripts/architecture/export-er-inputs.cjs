@@ -6,6 +6,7 @@ const path = require('node:path')
 const vm = require('node:vm')
 const crypto = require('node:crypto')
 const cp = require('node:child_process')
+const os = require('node:os')
 const { createRequire } = require('node:module')
 
 const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex')
@@ -67,7 +68,30 @@ function clientSource(root) {
   if (!fs.existsSync(generatedSchema) || !fs.statSync(generatedSchema).isFile()) throw Error('Generated Prisma schema missing')
   const client = requireFromRoot('@prisma/client')
   if (!client.Prisma?.dmmf?.datamodel?.models || !client.Prisma?.dmmf?.datamodel?.enums) throw Error('Generated Prisma DMMF unavailable')
-  return { entry, generatedEntry, generatedIndex, generatedSchema, datamodel: client.Prisma.dmmf.datamodel, clientVersion: requireFromRoot('@prisma/client/package.json').version }
+  const clientVersion = requireFromRoot('@prisma/client/package.json').version
+  const formatterEntry = path.join(root, 'node_modules/prisma/build/index.js')
+  const formatterPackage = path.join(root, 'node_modules/prisma/package.json')
+  if (fs.realpathSync(formatterEntry) !== fs.realpathSync(requireFromRoot.resolve('prisma/build/index.js')) ||
+      fs.realpathSync(formatterPackage) !== fs.realpathSync(requireFromRoot.resolve('prisma/package.json')) ||
+      requireFromRoot('prisma/package.json').version !== clientVersion) throw Error('Pinned Prisma formatter and client identity mismatch')
+  return { entry, generatedEntry, generatedIndex, generatedSchema, formatterEntry, formatterPackage, datamodel: client.Prisma.dmmf.datamodel, clientVersion }
+}
+function formattedSchemaHashes(sourceBytes, generatedBytes, formatterEntry) {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'doya-er-format-'))
+  try {
+    const source = path.join(temp, 'source.prisma'), generated = path.join(temp, 'generated.prisma')
+    fs.writeFileSync(source, sourceBytes, { mode: 0o600 })
+    fs.writeFileSync(generated, generatedBytes, { mode: 0o600 })
+    const env = { PATH: process.env.PATH || '', HOME: temp, PRISMA_HIDE_UPDATE_MESSAGE: '1', NO_COLOR: '1' }
+    for (const file of [source, generated]) {
+      try {
+        cp.execFileSync(process.execPath, [formatterEntry, 'format', '--schema', file], {
+          cwd: temp, env, timeout: 15000, maxBuffer: 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']
+        })
+      } catch { throw Error('Pinned Prisma schema formatter failed') }
+    }
+    return { source: digest(fs.readFileSync(source)), generated: digest(fs.readFileSync(generated)) }
+  } finally { fs.rmSync(temp, { recursive: true, force: true }) }
 }
 function run(argv) {
   const parsed = args(argv), root = fs.realpathSync(parsed.root), requestedOut = path.resolve(parsed['out-dir'])
@@ -80,7 +104,8 @@ function run(argv) {
   const sourceSchemaHash = digest(schemaBytes)
   if (!/^generator client\s*\{[\s\S]*?provider\s*=\s*"prisma-client-js"[\s\S]*?\}/m.test(schemaBytes.toString('utf8'))) throw Error('Unsupported Prisma generator')
   const client = clientSource(root), generatedHash = digest(fs.readFileSync(client.generatedSchema))
-  if (generatedHash !== sourceSchemaHash) throw Error('Generated client embedded schema does not match repository raw schema')
+  const formatted = formattedSchemaHashes(schemaBytes, fs.readFileSync(client.generatedSchema), client.formatterEntry)
+  if (formatted.source !== formatted.generated) throw Error('Generated client formatted schema does not match repository formatted schema')
   const requireFromRoot = createRequire(path.join(root, 'package.json'))
   const ts = requireFromRoot('typescript')
   const { registry, closure } = readClosure(root, ts)
@@ -92,6 +117,8 @@ function run(argv) {
     [path.relative(root, client.generatedEntry)]: digest(fs.readFileSync(client.generatedEntry)),
     [path.relative(root, client.generatedIndex)]: digest(fs.readFileSync(client.generatedIndex)),
     [path.relative(root, client.generatedSchema)]: generatedHash,
+    [path.relative(root, client.formatterEntry)]: digest(fs.readFileSync(client.formatterEntry)),
+    [path.relative(root, client.formatterPackage)]: digest(fs.readFileSync(client.formatterPackage)),
     ...closure
   }
   const exporterFile = fs.realpathSync(__filename)
@@ -105,12 +132,14 @@ function run(argv) {
   if (git(root, 'status', '--porcelain', '--untracked-files=no') !== statusBefore || git(root, 'rev-parse', 'HEAD') !== head || git(root, 'rev-parse', 'HEAD^{tree}') !== tree) throw Error('Checkout changed during export')
   const dmmf = JSON.stringify(client.datamodel, null, 2) + '\n'
   const services = JSON.stringify(registry, null, 2) + '\n'
-  const result = { passed: true, modelCount: client.datamodel.models.length, enumCount: client.datamodel.enums.length, serviceCount: registry.length, publicServiceCount: registry.filter(x => x.public).length, sourceSchemaHash, generatedSchemaHash: generatedHash }
+  const result = { passed: true, modelCount: client.datamodel.models.length, enumCount: client.datamodel.enums.length, serviceCount: registry.length, publicServiceCount: registry.filter(x => x.public).length, sourceSchemaHash, generatedSchemaHash: generatedHash, formattedSourceSchemaHash: formatted.source, formattedGeneratedSchemaHash: formatted.generated }
   const resultBytes = JSON.stringify(result, null, 2) + '\n'
   const manifest = {
     date: parsed.date, sourceCommit: head, sourceTree: tree, sourceStatus: statusBefore,
     schemaSha256: sourceSchemaHash, generatedClientSchemaSha256: generatedHash,
+    formattedSourceSchemaSha256: formatted.source, formattedGeneratedClientSchemaSha256: formatted.generated,
     client: { entry: path.relative(root, client.entry), generatedEntry: path.relative(root, client.generatedEntry), generatedIndex: path.relative(root, client.generatedIndex), generatedSchema: path.relative(root, client.generatedSchema), version: client.clientVersion },
+    formatter: { entry: path.relative(root, client.formatterEntry), package: path.relative(root, client.formatterPackage), version: client.clientVersion },
     closureSha256: Object.fromEntries(Object.entries(closureInputs).sort(([a], [b]) => a.localeCompare(b))),
     filesSha256: { 'schema.prisma': sourceSchemaHash, 'dmmf.json': digest(Buffer.from(dmmf)), 'service-registry.json': digest(Buffer.from(services)), 'validation.json': digest(Buffer.from(resultBytes)) },
     counts: { models: result.modelCount, enums: result.enumCount, services: result.serviceCount, publicServices: result.publicServiceCount },

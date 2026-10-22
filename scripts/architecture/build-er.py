@@ -25,8 +25,9 @@ def fail(message):
 
 def read_bundle(root, inp, date):
     manifest = json.loads((inp / 'manifest.json').read_text())
-    if manifest['date'] != date or manifest['schemaSha256'] != manifest['generatedClientSchemaSha256']:
-        fail('Date or exact generated schema binding mismatch')
+    if manifest['date'] != date or not manifest.get('formattedSourceSchemaSha256') or \
+            manifest['formattedSourceSchemaSha256'] != manifest.get('formattedGeneratedClientSchemaSha256'):
+        fail('Date or pinned-formatter generated schema binding mismatch')
     if manifest['sourceStatus']:
         fail('Input export came from a dirty tracked source')
     if git(root, 'rev-parse', manifest['sourceCommit'] + '^{tree}') != manifest['sourceTree']:
