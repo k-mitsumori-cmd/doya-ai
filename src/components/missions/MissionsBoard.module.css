@@ -1,0 +1,117 @@
+/* ドヤパワー（ミッション・クエスト・今月の実績）— クリアデザイン。トークンは src/components/ds/tokens.module.css */
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 28px 64px;
+  display: grid;
+  gap: 18px;
+}
+
+.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--blue); }
+.title { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.01em; }
+.subtitle { margin: 6px 0 0; color: var(--sub); font-size: 14px; }
+.back {
+  display: inline-flex; align-items: center; min-height: 40px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--sub);
+  border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.back:hover { border-color: var(--blue); color: var(--blue); }
+
+.card, .power {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.power { border-color: var(--blue-line); }
+.powerHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.powerNum { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.powerNum strong { color: var(--ink); font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+
+.meter { position: relative; height: 10px; margin-top: 12px; border-radius: 999px; background: var(--blue-soft); overflow: hidden; }
+.meterFill {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  transform-origin: left center;
+  animation: grow 0.9s var(--ease) both;
+}
+@keyframes grow { from { transform: scaleX(0); } }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.kicker { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.cardTitle { margin: 0; font-size: 17px; font-weight: 800; }
+.lead { margin: 8px 0 0; color: var(--sub); font-size: 13px; }
+
+.badge {
+  flex: none; display: inline-flex; align-items: center;
+  border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800;
+  background: var(--blue-soft); color: var(--blue);
+  font-variant-numeric: tabular-nums;
+}
+.badgeDone { background: var(--ok-bg); color: var(--ok-ink); }
+
+.list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+}
+.itemDone { background: var(--bg); }
+.itemDone .itemTitle { color: var(--sub); }
+.itemBody { flex: 1; min-width: 0; }
+.itemTitle { margin: 0; font-size: 14px; font-weight: 700; }
+.itemSub { margin: 3px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+.mark {
+  flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.markDone { border-color: var(--ok-ink); background: var(--ok-ink); color: var(--paper); }
+
+.go {
+  flex: none; align-self: center; display: inline-flex; align-items: center; min-height: 36px;
+  padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; text-decoration: none;
+  color: var(--blue); border: 1px solid var(--blue-line);
+}
+.go:hover { background: var(--blue-soft); }
+.reward { flex: none; align-self: center; font-size: 13px; font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; }
+.itemDone .reward { color: var(--muted); }
+
+.skipped { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--note-bg); color: var(--note-ink); font-size: 12px; }
+.skippedTitle { margin: 0 0 4px; font-weight: 700; }
+.skipped ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+
+.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.total { padding: 14px 16px; border-radius: var(--r-sm); background: var(--blue-soft); }
+.totalLabel { margin: 0; font-size: 12px; font-weight: 700; color: var(--sub); }
+.totalValue { margin: 4px 0 0; font-size: clamp(22px, 3vw, 28px); font-weight: 800; letter-spacing: -0.02em; color: var(--navy); font-variant-numeric: tabular-nums; }
+
+.table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.table thead th { font-size: 12px; color: var(--muted); font-weight: 700; }
+.table th:first-child { text-align: left; white-space: normal; padding-left: 0; }
+.table td:last-child, .table th:last-child { padding-right: 0; }
+.table tbody th { font-weight: 700; }
+.rate { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--muted); }
+.zero td, .zero th { color: var(--muted); }
+
+.note { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .page { padding: 20px 16px 48px; gap: 14px; }
+  .card, .power { padding: 16px; }
+  .totals { grid-template-columns: minmax(0, 1fr); }
+  .table th, .table td { padding: 9px 4px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meterFill { animation: none; }
+}
