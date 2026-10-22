@@ -33,9 +33,11 @@ jobs:
         run: |
           ER_SHA="$(git rev-parse HEAD)"
           mkdir -p "$RUNNER_TEMP/er-inputs"
+          mkdir -p "$RUNNER_TEMP/er-export-diagnostics"
           node scripts/architecture/export-er-inputs.cjs \
             --root "$GITHUB_WORKSPACE" \
             --out-dir "$RUNNER_TEMP/er-inputs/$ER_SHA" \
+            --diagnostics-dir "$RUNNER_TEMP/er-export-diagnostics/$ER_SHA" \
             --date 2026-10-22
 
       - name: Preserve exact source-only ER inputs
@@ -45,6 +47,19 @@ jobs:
           name: er-inputs-source-only
           if-no-files-found: ignore
           path: ${{ runner.temp }}/er-inputs/*/*
+
+      - name: Preserve ER export failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: er-export-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/er-export-diagnostics/*/source.raw.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/generated.raw.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/source.formatted.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/generated.formatted.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/manifest.json
 
       - name: Type check
         run: npx tsc --noEmit

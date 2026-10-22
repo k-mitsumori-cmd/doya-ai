@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -16,8 +17,8 @@ def command(*args, cwd=None, expect=0):
     p = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
     if p.returncode != expect: raise AssertionError((args, p.returncode, p.stdout, p.stderr))
     return p.stdout
-def reject(message, *args):
-    p = subprocess.run(args, text=True, capture_output=True)
+def reject(message, *args, env=None):
+    p = subprocess.run(args, text=True, capture_output=True, env=env)
     if p.returncode == 0 or message not in p.stdout + p.stderr:
         raise AssertionError((args, p.returncode, p.stdout, p.stderr, message))
 
@@ -144,8 +145,9 @@ def main(dependency_root):
     (generated/'schema.prisma').write_text(export_schema)
     command('node',str(dependency_root/'node_modules/prisma/build/index.js'),'format','--schema',str(generated/'schema.prisma'),cwd=temp)
     assert sha((generated/'schema.prisma').read_bytes())!=sha(export_schema.encode())
-    export_args=['node',str(exporter),'--root',str(root),'--out-dir',str(temp/'exported'),'--date',DATE]
+    export_args=['node',str(exporter),'--root',str(root),'--out-dir',str(temp/'exported'),'--date',DATE,'--diagnostics-dir',str(temp/'positive-diagnostics')]
     exported=json.loads(command(*export_args))
+    assert not (temp/'positive-diagnostics').exists()
     exported_manifest=json.loads((temp/'exported/manifest.json').read_text())
     assert exported['passed'] and exported['models']==1
     assert exported_manifest['sourceCommit']==export_commit and exported_manifest['sourceTree']==export_tree
@@ -157,14 +159,50 @@ def main(dependency_root):
     assert json.loads((temp/'exported/dmmf.json').read_text())==export_dmmf
     assert json.loads((temp/'exported/service-registry.json').read_text())==[]
     reject('Expected --root, --out-dir, --date exactly once',*export_args,'--date',DATE)
+    reject('Expected --root, --out-dir, --date exactly once',*export_args,'--diagnostics-dir',str(temp/'duplicate-diagnostics'))
+    reject('Expected --root, --out-dir, --date exactly once',*export_args,'--unknown',str(temp/'unknown-diagnostics'))
     inside_link=temp/'inside-link';inside_link.symlink_to(root,target_is_directory=True)
     reject('ER output must be a new directory outside source checkout','node',str(exporter),'--root',str(root),'--out-dir',str(inside_link/'er'),'--date',DATE)
+    def diagnostic_reject(path, out):
+        reject('ER diagnostics must be a new independent directory outside source checkout',
+               'node',str(exporter),'--root',str(root),'--out-dir',str(out),'--date',DATE,'--diagnostics-dir',str(path))
+    (temp/'existing-diagnostics').mkdir()
+    diagnostic_reject(temp/'existing-diagnostics',temp/'existing-case')
+    diagnostic_reject(root/'inside-diagnostics',temp/'inside-case')
+    diagnostic_reject(inside_link/'inside-diagnostics',temp/'symlink-parent-case')
+    (temp/'symlink-diagnostics').symlink_to(temp/'existing-diagnostics',target_is_directory=True)
+    diagnostic_reject(temp/'symlink-diagnostics',temp/'symlink-case')
+    diagnostic_reject(temp/'same-case',temp/'same-case')
+    (temp/'parent-case').mkdir()
+    diagnostic_reject(temp/'parent-case',temp/'parent-case'/'bundle')
     services_file.write_text('dirty tracked change\n')
     reject('Tracked source is dirty before ER export','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'dirty'),'--date',DATE)
     services_file.write_text(original_services)
     formatted_schema=(generated/'schema.prisma').read_bytes()
     (generated/'schema.prisma').write_bytes(formatted_schema+b'\n// stale client\n')
-    reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'stale-client'),'--date',DATE)
+    diagnostic_dir=temp/'stale-diagnostics'
+    stale_args=['node',str(exporter),'--root',str(root),'--out-dir',str(temp/'stale-client'),'--date',DATE,'--diagnostics-dir',str(diagnostic_dir)]
+    sentinel='DOYA_ER_SENTINEL_DO_NOT_CAPTURE'
+    stale_env={**os.environ,'ER_DIAGNOSTIC_SENTINEL':sentinel,'TMPDIR':str(temp)}
+    stale=subprocess.run(stale_args,text=True,capture_output=True,env=stale_env)
+    assert stale.returncode!=0 and 'Generated client formatted schema does not match repository formatted schema' in stale.stderr
+    assert not (temp/'stale-client').exists()
+    assert {p.name for p in diagnostic_dir.iterdir()}=={'source.raw.prisma','generated.raw.prisma','source.formatted.prisma','generated.formatted.prisma','manifest.json'}
+    diag=json.loads((diagnostic_dir/'manifest.json').read_text())
+    assert diag['kind']=='er-export-diagnostics-v1' and diag['passed'] is False and diag['errorStage']=='formatted_schema_mismatch'
+    assert diag['code']=='ER_FORMATTED_SCHEMAS_DIFFER'
+    assert diag['sourceCommit']==export_commit and diag['sourceTree']==export_tree
+    assert diag['versions']['prismaClient']==prisma_version and diag['versions']['prismaFormatter']==prisma_version
+    assert (diagnostic_dir/'source.raw.prisma').read_bytes()==export_schema.encode()
+    assert (diagnostic_dir/'generated.raw.prisma').read_bytes()==formatted_schema+b'\n// stale client\n'
+    for side in ['source','generated']:
+        assert diag['schemas'][side]['formatSucceeded'] is True
+        for kind in ['raw','formatted']:
+            body=(diagnostic_dir/f'{side}.{kind}.prisma').read_bytes()
+            assert diag['schemas'][side][kind]=={'sha256':sha(body),'size':len(body)}
+    assert diag['schemas']['source']['formatted']['sha256']!=diag['schemas']['generated']['formatted']['sha256']
+    assert 'node_modules/.prisma/client/index.js' in diag['inputSha256']
+    assert all(sentinel.encode() not in p.read_bytes() for p in diagnostic_dir.iterdir())
     (generated/'schema.prisma').write_bytes(formatted_schema)
     (generated/'schema.prisma').write_bytes(formatted_schema.replace(b'name String?',b'name String @default("x")'))
     reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'attribute-drift'),'--date',DATE)
@@ -173,7 +211,18 @@ def main(dependency_root):
     reject('Generated client formatted schema does not match repository formatted schema','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'comment-drift'),'--date',DATE)
     (generated/'schema.prisma').write_bytes(formatted_schema)
     (generated/'schema.prisma').write_text('model Broken {\n this is invalid\n}\n')
-    reject('Pinned Prisma schema formatter failed','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'formatter-fail'),'--date',DATE)
+    format_dir=temp/'format-diagnostics'
+    before_temp={p.name for p in temp.iterdir() if p.name.startswith('doya-er-format-')}
+    reject('Pinned Prisma schema formatter failed','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'formatter-fail'),'--date',DATE,'--diagnostics-dir',str(format_dir),env={**os.environ,'TMPDIR':str(temp)})
+    after_temp={p.name for p in temp.iterdir() if p.name.startswith('doya-er-format-')}
+    assert after_temp==before_temp
+    assert not (temp/'formatter-fail').exists()
+    assert {p.name for p in format_dir.iterdir()}=={'source.raw.prisma','generated.raw.prisma','source.formatted.prisma','manifest.json'}
+    format_diag=json.loads((format_dir/'manifest.json').read_text())
+    assert format_diag['errorStage']=='format_generated' and format_diag['passed'] is False
+    assert format_diag['code']=='ER_GENERATED_FORMAT_FAILED'
+    assert format_diag['schemas']['source']['formatSucceeded'] is True and format_diag['schemas']['generated']['formatSucceeded'] is False
+    assert format_diag['schemas']['generated']['formatted'] is None
     (generated/'schema.prisma').write_bytes(formatted_schema)
     services_file.write_text("import { EXTRA } from './untracked'\nexport const SERVICES = EXTRA\nexport const RETIRED_SERVICE_IDS = new Set()\nexport function getPublicServices(){return SERVICES}\n")
     command('git','add','src/lib/services.ts',cwd=root)
@@ -181,7 +230,7 @@ def main(dependency_root):
     (root/'src/lib/untracked.ts').write_text('export const EXTRA = []\n')
     assert command('git','status','--porcelain','--untracked-files=no',cwd=root).strip()==''
     reject('Source closure is not present in HEAD: src/lib/untracked.ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-relative'),'--date',DATE)
-    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
+    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import','diagnostic_path_boundary','diagnostic_mismatch_capture','diagnostic_partial_formatter_capture','diagnostic_env_sentinel'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--dependency-root',type=pathlib.Path,required=True)

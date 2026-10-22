@@ -13,10 +13,10 @@ const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex')
 function args(argv) {
   const result = {}
   for (let i = 0; i < argv.length; i += 2) {
-    if (!['--root', '--out-dir', '--date'].includes(argv[i]) || !argv[i + 1] || Object.hasOwn(result, argv[i].slice(2))) throw Error('Expected --root, --out-dir, --date exactly once')
+    if (!['--root', '--out-dir', '--date', '--diagnostics-dir'].includes(argv[i]) || !argv[i + 1] || Object.hasOwn(result, argv[i].slice(2))) throw Error('Expected --root, --out-dir, --date exactly once, with optional --diagnostics-dir')
     result[argv[i].slice(2)] = argv[i + 1]
   }
-  if (Object.keys(result).length !== 3 || !/^\d{4}-\d{2}-\d{2}$/.test(result.date)) throw Error('Missing/invalid arguments')
+  if (!result.root || !result['out-dir'] || !/^\d{4}-\d{2}-\d{2}$/.test(result.date)) throw Error('Missing/invalid arguments')
   return result
 }
 function git(root, ...argv) { return cp.execFileSync('git', ['-C', root, ...argv], { encoding: 'utf8' }).trim() }
@@ -76,36 +76,94 @@ function clientSource(root) {
       requireFromRoot('prisma/package.json').version !== clientVersion) throw Error('Pinned Prisma formatter and client identity mismatch')
   return { entry, generatedEntry, generatedIndex, generatedSchema, formatterEntry, formatterPackage, datamodel: client.Prisma.dmmf.datamodel, clientVersion }
 }
-function formattedSchemaHashes(sourceBytes, generatedBytes, formatterEntry) {
+function formattedSchemaHashes(sourceBytes, generatedBytes, formatterEntry, diagnostic) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'doya-er-format-'))
   try {
     const source = path.join(temp, 'source.prisma'), generated = path.join(temp, 'generated.prisma')
     fs.writeFileSync(source, sourceBytes, { mode: 0o600 })
     fs.writeFileSync(generated, generatedBytes, { mode: 0o600 })
     const env = { PATH: process.env.PATH || '', HOME: temp, PRISMA_HIDE_UPDATE_MESSAGE: '1', NO_COLOR: '1' }
-    for (const file of [source, generated]) {
+    for (const [label, file] of [['source', source], ['generated', generated]]) {
+      if (diagnostic) diagnostic.errorStage = label === 'source' ? 'format_source' : 'format_generated'
       try {
         cp.execFileSync(process.execPath, [formatterEntry, 'format', '--schema', file], {
           cwd: temp, env, timeout: 15000, maxBuffer: 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']
         })
       } catch { throw Error('Pinned Prisma schema formatter failed') }
+      if (diagnostic) diagnostic[label + 'Formatted'] = fs.readFileSync(file)
     }
     return { source: digest(fs.readFileSync(source)), generated: digest(fs.readFileSync(generated)) }
   } finally { fs.rmSync(temp, { recursive: true, force: true }) }
+}
+function unoccupied(file) {
+  try { fs.lstatSync(file); return false } catch (error) { if (error.code === 'ENOENT') return true; throw error }
+}
+function diagnosticPath(root, out, requested) {
+  const file = path.resolve(requested)
+  const parent = fs.realpathSync(path.dirname(file))
+  const resolved = path.join(parent, path.basename(file))
+  if (!unoccupied(file) || inside(root, resolved) || inside(out, resolved) || inside(resolved, out)) {
+    throw Error('ER diagnostics must be a new independent directory outside source checkout')
+  }
+  return resolved
+}
+function diagnosticFile(bytes) { return bytes ? { sha256: digest(bytes), size: bytes.length } : null }
+function writeDiagnostics(state) {
+  const codes = {
+    preflight: 'ER_EXPORT_PREFLIGHT_FAILED', client_source: 'ER_CLIENT_SOURCE_FAILED',
+    format_source: 'ER_SOURCE_FORMAT_FAILED', format_generated: 'ER_GENERATED_FORMAT_FAILED',
+    formatted_schema_mismatch: 'ER_FORMATTED_SCHEMAS_DIFFER',
+    export_after_schema_validation: 'ER_EXPORT_AFTER_SCHEMA_VALIDATION_FAILED'
+  }
+  fs.mkdirSync(state.dir, { recursive: false, mode: 0o700 })
+  const files = [
+    ['source.raw.prisma', state.sourceRaw],
+    ['generated.raw.prisma', state.generatedRaw],
+    ['source.formatted.prisma', state.sourceFormatted],
+    ['generated.formatted.prisma', state.generatedFormatted]
+  ]
+  for (const [name, bytes] of files) if (bytes) fs.writeFileSync(path.join(state.dir, name), bytes, { mode: 0o600 })
+  const manifest = {
+    kind: 'er-export-diagnostics-v1', passed: false,
+    errorStage: state.errorStage, code: codes[state.errorStage],
+    sourceCommit: state.head || null, sourceTree: state.tree || null,
+    inputPaths: state.inputPaths || null,
+    versions: { node: process.version, prismaClient: state.clientVersion || null, prismaFormatter: state.clientVersion || null },
+    inputSha256: state.inputHashes || null,
+    schemas: {
+      source: { raw: diagnosticFile(state.sourceRaw), formatted: diagnosticFile(state.sourceFormatted), formatSucceeded: !!state.sourceFormatted },
+      generated: { raw: diagnosticFile(state.generatedRaw), formatted: diagnosticFile(state.generatedFormatted), formatSucceeded: !!state.generatedFormatted }
+    }
+  }
+  fs.writeFileSync(path.join(state.dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { mode: 0o600 })
 }
 function run(argv) {
   const parsed = args(argv), root = fs.realpathSync(parsed.root), requestedOut = path.resolve(parsed['out-dir'])
   const out = path.join(fs.realpathSync(path.dirname(requestedOut)), path.basename(requestedOut))
   if (inside(root, out) || fs.existsSync(out)) throw Error('ER output must be a new directory outside source checkout')
+  const diagnostic = parsed['diagnostics-dir'] ? { dir: diagnosticPath(root, out, parsed['diagnostics-dir']), errorStage: 'preflight' } : null
+  try {
   const statusBefore = git(root, 'status', '--porcelain', '--untracked-files=no')
   if (statusBefore) throw Error('Tracked source is dirty before ER export')
   const head = git(root, 'rev-parse', 'HEAD'), tree = git(root, 'rev-parse', 'HEAD^{tree}')
   const schemaPath = path.join(root, 'prisma/schema.prisma'), schemaBytes = fs.readFileSync(schemaPath)
+  if (diagnostic) { diagnostic.head = head; diagnostic.tree = tree; diagnostic.sourceRaw = schemaBytes }
   const sourceSchemaHash = digest(schemaBytes)
   if (!/^generator client\s*\{[\s\S]*?provider\s*=\s*"prisma-client-js"[\s\S]*?\}/m.test(schemaBytes.toString('utf8'))) throw Error('Unsupported Prisma generator')
-  const client = clientSource(root), generatedHash = digest(fs.readFileSync(client.generatedSchema))
-  const formatted = formattedSchemaHashes(schemaBytes, fs.readFileSync(client.generatedSchema), client.formatterEntry)
+  if (diagnostic) diagnostic.errorStage = 'client_source'
+  const client = clientSource(root), generatedBytes = fs.readFileSync(client.generatedSchema)
+  const generatedHash = digest(generatedBytes)
+  if (diagnostic) {
+    diagnostic.generatedRaw = generatedBytes
+    diagnostic.clientVersion = client.clientVersion
+    const inputs = [schemaPath, path.join(root, 'package.json'), path.join(root, 'package-lock.json'), client.entry, client.generatedEntry, client.generatedIndex, client.generatedSchema, client.formatterEntry, client.formatterPackage]
+    diagnostic.inputPaths = inputs.map(file => path.relative(root, file))
+    diagnostic.inputHashes = Object.fromEntries(inputs.map(file => [path.relative(root, file), digest(file === schemaPath ? schemaBytes : file === client.generatedSchema ? generatedBytes : fs.readFileSync(file))]))
+  }
+  const formatted = formattedSchemaHashes(schemaBytes, generatedBytes, client.formatterEntry, diagnostic)
+  if (diagnostic) diagnostic.errorStage = 'formatted_schema_mismatch'
   if (formatted.source !== formatted.generated) throw Error('Generated client formatted schema does not match repository formatted schema')
+  if (diagnostic) diagnostic.errorStage = 'export_after_schema_validation'
   const requireFromRoot = createRequire(path.join(root, 'package.json'))
   const ts = requireFromRoot('typescript')
   const { registry, closure } = readClosure(root, ts)
@@ -152,6 +210,13 @@ function run(argv) {
   fs.writeFileSync(path.join(out, 'validation.json'), resultBytes)
   fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
   console.log(JSON.stringify({ passed: true, out, sourceCommit: head, sourceTree: tree, models: result.modelCount }))
+  } catch (error) {
+    if (diagnostic) {
+      try { writeDiagnostics(diagnostic) }
+      catch { console.error('ER diagnostics could not be written') }
+    }
+    throw error
+  }
 }
 if (require.main === module) { try { run(process.argv.slice(2)) } catch (error) { console.error(error.message); process.exitCode = 1 } }
 module.exports = { args, readClosure, clientSource, run }
