@@ -1604,3 +1604,10 @@ for (const mode of ['current-positive', ...['headers', 'body'].flatMap(stage => 
     { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_OWNER_PARENT_VARIANT: mode } });
   if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner composed Settings deadline', mode); process.exit(1); }
 }
+
+// HR owner E5: two actual Settings parents share a modeled durable slot and exclusive lock queue.
+for (const mode of ['current', 'lost', 'retire-a', 'late401']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', 'verify-two-settings-owner-shared-slot-mounted.cjs')],
+    { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_TWO_SETTINGS_VARIANT: mode } });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner two Settings parents', mode); process.exit(1); }
+}
