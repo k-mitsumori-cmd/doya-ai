@@ -15,6 +15,7 @@ import { isUiNext } from '@/lib/ui-next'
 import { SETUP_HIDE_COOKIE } from './cookies'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
+import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
 import HomeDashboard from './HomeDashboard'
 import HomeDashboardLegacy from './HomeDashboardLegacy'
 
@@ -37,5 +38,5 @@ export default async function HomePage() {
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
   // ドヤパワーの欄（旗 DOYA_POWER_ROLLOUT の内側だけ。off なら台帳もセッションも読まずに null。読めないときも null で、欄を出さない）
   const power = (await isDoyaPowerEnabled()) ? await loadDoyaPowerHome() : null
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} power={power} />
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} />
 }
