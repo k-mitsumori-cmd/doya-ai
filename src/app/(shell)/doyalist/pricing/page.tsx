@@ -50,7 +50,7 @@ export default function PricingPage() {
   const Heading = uiNext ? 'h2' : 'h1'
 
   return (
-    <div className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
       <Toaster position="top-center" />
 
       <div className="p-4 lg:p-10 max-w-6xl mx-auto pb-20">

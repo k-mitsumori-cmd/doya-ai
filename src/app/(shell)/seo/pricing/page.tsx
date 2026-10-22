@@ -67,7 +67,7 @@ export default function SeoPricingPage() {
   }, [isLoggedIn, isFreeHourActive, freeHourRemainingMs])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div data-legacy-backdrop className="min-h-screen bg-white">
       <div className="pt-6 flex items-center justify-center gap-3">
         <Link
           href="/seo"

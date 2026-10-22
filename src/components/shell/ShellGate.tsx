@@ -43,7 +43,7 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
   children: ReactNode
 }) {
   const pathname = usePathname()
-  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds }))
+  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds, uiNext: Boolean(uiNext) }))
     ? <AppShell userName={userName} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
     : <>{children}</>
   return (

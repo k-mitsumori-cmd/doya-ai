@@ -33,7 +33,7 @@ export default function InterviewPricingPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <main data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
       <div className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
         {/* ヒーロー */}
         <section className="text-center">

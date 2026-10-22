@@ -30,7 +30,7 @@ export default function DoyaSlidePricingPage() {
   const Heading = uiNext ? 'h2' : 'h1'
 
   return (
-    <div className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Link

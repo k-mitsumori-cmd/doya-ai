@@ -15,7 +15,7 @@ export default function BannerPricingPage() {
   const isPaid = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
 
   return (
-    <div className="min-h-screen bg-white">
+    <div data-legacy-backdrop className="min-h-screen bg-white">
       {/* Small top link (like screenshot) */}
       <div className="pt-6 flex items-center justify-center gap-3">
         <Link

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
 
 // ⚠️ 開発中の間は noindex。公開するときに外す
 export const metadata: Metadata = buildServiceMetadata('expense', {
@@ -9,5 +10,6 @@ export const metadata: Metadata = buildServiceMetadata('expense', {
 })
 
 export default function ExpenseLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  // 新しい見た目で枠の中にいるとき、組織を作る「はじめに」と料金にもツールの見出しの帯を付ける（ShellEntryFrame）
+  return <ShellEntryFrame serviceId="expense">{children}</ShellEntryFrame>
 }

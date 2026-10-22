@@ -109,6 +109,40 @@ export default function AioEntryPage() {
     )
   }
 
+  // 新しい見た目でログインしていて、組織がまだ無い = 「はじめに」（共通の枠の中に出すので、紹介ページの自前のヘッダーを出さない）。
+  // 入れた URL で組織を作って調べ始める流れ（useAioQuickStart）は、下の紹介ページと同じ
+  if (uiNext && authed) {
+    return (
+      <div className="grid place-items-center px-4 py-8 sm:py-12">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="mb-6 text-center">
+            <div className="flex justify-center"><DoyaKun mood="hello" size={110} float={false} /></div>
+            <h2 className="mt-2 text-xl font-bold text-slate-900">AI検索対策をはじめましょう</h2>
+            <p className="mt-1 text-sm font-bold text-slate-500">調べたいサービスの URL を入れると、組織を作って、最初の調査を始めます。</p>
+          </div>
+          <label htmlFor="aio-entry-service-url" className="mb-1 block text-sm font-bold text-slate-700">分析したいサービスのURL</label>
+          <input id="aio-entry-service-url"
+            value={serviceUrl}
+            onChange={(e) => setServiceUrl(e.target.value)}
+            placeholder="例: https://doya-ai.surisuta.jp"
+            inputMode="url"
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void start() } }}
+            className="mb-3 w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-bold outline-none transition-colors focus:border-[#0066ff]"
+          />
+          <button
+            type="button"
+            onClick={start}
+            disabled={flow.disabled}
+            className="w-full rounded-xl bg-[#0066ff] py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0052cc] disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100"
+          >
+            {creating ? '調べています…' : '調べる'}
+          </button>
+          <AioQuickStartStatus flow={flow} />
+        </div>
+      </div>
+    )
+  }
+
   // 未ログイン / 未ワークスペース = ランディング（URLクイックスタートは温存）
   return (
     <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/aio" ctaLabel="無料で診断する" accent={ACCENT}>

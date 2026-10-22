@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react'
 export default function QuotePricingPage() {
   const uiNext = useUiNext()
   return (
-    <div className={uiNext ? '' : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop className={uiNext ? '' : 'min-h-screen bg-slate-50'}>
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link

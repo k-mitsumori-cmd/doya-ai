@@ -28,7 +28,7 @@ const faqs = [
 
 export default function PromanePricingPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main data-legacy-backdrop className="min-h-screen bg-white">
       {/* ヒーロー */}
       <section className="px-6 pt-20 pb-8 text-center">
         <div className="mx-auto max-w-3xl">
