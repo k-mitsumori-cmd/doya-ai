@@ -8,6 +8,7 @@
 // ⚠️ 数字やデータは props で受け取るだけ。ここで取得しない。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import styles from './motion.module.css'
+import { countFrame, formatCount } from './chart-math'
 
 /** 動きを減らす設定か */
 export function usePrefersReducedMotion(): boolean {
@@ -60,10 +61,18 @@ export function useDoneAfter(start: boolean, ms: number): boolean {
   return done
 }
 
-const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t))
+function prefersReducedNow(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
 /**
- * 数字のカウントアップ。値が変わったときは、今の表示から新しい値へ動く。
+ * 数字のカウントアップ（UI 品質 A-2）。画面に入ったときに1回だけ、0 から最後の値まで数え上げる。
+ * 値が変わったときは、今の表示から新しい値へ動く。
+ * - 動きを減らす設定では動かさず、最後の値を出す
+ * - 最後の値の幅で場所を取る（桁が増えても幅が変わらない。CLS を増やさない）
+ * - 読み上げは最後の値だけ（途中の数字は aria-hidden）
+ * - タブが裏にあるなど requestAnimationFrame が止まる環境でも、時間が過ぎたら最後の値を出す（F-12）
+ * - スクリプトが動く前（サーバーの描画）は最後の値を出す
  * 例: <CountUp value={2650000} format={(n) => `${Math.round(n / 10000)}万円`} />
  */
 export function CountUp({ value, duration = 900, format, className }: {
@@ -74,28 +83,48 @@ export function CountUp({ value, duration = 900, format, className }: {
 }) {
   const { ref, seen } = useInViewOnce<HTMLSpanElement>()
   const reduced = usePrefersReducedMotion()
-  const [shown, setShown] = useState(0)
+  const armed = useArmed()
+  // null のときは最後の値を出す
+  const [shown, setShown] = useState<number | null>(null)
   const from = useRef(0)
+  const cur = useRef<number | null>(null)
   useEffect(() => {
-    if (!seen) return
-    if (reduced) { setShown(value); from.current = value; return }
-    const start = performance.now()
+    if (!armed) return
+    const finishNow = () => { from.current = value; cur.current = null; setShown(null) }
+    if (reduced || prefersReducedNow() || !Number.isFinite(value)) { finishNow(); return }
+    if (!seen) { setShown(from.current); return }
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { finishNow(); return }
     const a = from.current
+    if (a === value) { finishNow(); return }
+    const start = performance.now()
     let raf = 0
+    const finish = () => { cancelAnimationFrame(raf); finishNow() }
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration)
-      const v = a + (value - a) * easeOutExpo(t)
+      const t = (now - start) / duration
+      if (t >= 1) { finish(); return }
+      const v = countFrame(a, value, t)
+      cur.current = v
       setShown(v)
-      if (t < 1) raf = requestAnimationFrame(tick)
-      else from.current = value
+      raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [seen, value, duration, reduced])
-  const text = format ? format(shown) : Math.round(shown).toLocaleString('ja-JP')
+    // requestAnimationFrame が止まっても、最後の値に移す
+    const timer = setTimeout(finish, duration + 400)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+      // 途中で値が変わったら、今の表示から動き直す
+      if (cur.current !== null) from.current = cur.current
+    }
+  }, [armed, seen, value, duration, reduced])
+  const fmt = (n: number) => (format ? format(n) : formatCount(n, value))
+  const finalText = Number.isFinite(value) ? fmt(value) : String(value)
   return (
-    <span ref={ref} className={`${styles.num} ${className ?? ''}`} aria-label={format ? format(value) : value.toLocaleString('ja-JP')}>
-      <span aria-hidden>{text}</span>
+    <span ref={ref} className={`${styles.num} ${styles.count} ${className ?? ''}`}>
+      {/* 最後の値の幅で場所を取る */}
+      <span className={styles.countGhost} aria-hidden>{finalText}</span>
+      <span className={styles.countLive} aria-hidden>{shown === null ? finalText : fmt(shown)}</span>
+      <span className={styles.srOnly}>{finalText}</span>
     </span>
   )
 }

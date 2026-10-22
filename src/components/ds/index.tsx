@@ -40,7 +40,7 @@ export function Card({ title, meta, icon, children, className }: {
 }
 
 /* ---- StatTile ---- */
-export function StatTile({ label, value, unit, sub, icon, href, muted }: {
+export function StatTile({ label, value, unit, sub, icon, href, muted, countUp }: {
   label: string
   value: ReactNode
   unit?: string
@@ -48,10 +48,13 @@ export function StatTile({ label, value, unit, sub, icon, href, muted }: {
   icon?: ShellIconName
   href?: string
   muted?: boolean
+  /** 数字を数え上げるか。既定は新しい見た目のときだけ（false で止める、true で常に） */
+  countUp?: boolean
 }) {
-  // 数字のときは、画面に入ったときに数え上げる（新しい見た目のときだけ。UI 品質 A-2）
+  // 数字のときは、画面に入ったときに1回だけ数え上げる（UI 品質 A-2）。
+  // 幅は最後の値で取り、読み上げは最後の値だけ。動きを減らす設定では最後の値を出す（CountUp）
   const uiNext = useUiNext()
-  const shown = uiNext && typeof value === 'number' && Number.isFinite(value) ? <CountUp value={value} /> : value
+  const shown = (countUp ?? uiNext) && typeof value === 'number' && Number.isFinite(value) ? <CountUp value={value} /> : value
   const body = (
     <>
       {icon ? <span className={styles.statIcon}><ShellIcon name={icon} size={18} /></span> : null}

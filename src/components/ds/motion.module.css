@@ -1,5 +1,10 @@
 /* ds/motion — 動きは短く、意味があるところだけ。動きを減らす設定では止める */
 .num { font-variant-numeric: tabular-nums; }
+/* CountUp: 最後の値（countGhost）と今の値（countLive）を同じ場所に重ね、幅は広いほうに合わせる（CLS を増やさない） */
+.count { display: inline-grid; position: relative; white-space: nowrap; }
+.countGhost, .countLive { grid-area: 1 / 1; text-align: start; }
+.countGhost { visibility: hidden; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Stagger: 画面に入ったら、子が順に下から少し上がって入る。
  * ⚠️ 最初から見える状態にする（opacity は下げない）。アニメーションが止まる環境でも中身が見える（F-12） */

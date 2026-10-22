@@ -39,9 +39,82 @@
 .ringCenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.donut { margin: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.donut { margin: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: relative; }
+/* 中央の文字（合計など）は輪の中に重ねる */
+.donutChart { position: relative; flex: none; }
+.donutChart svg { display: block; }
+.donutCenter { position: absolute; inset: 22%; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: 14px; line-height: 1.25; color: var(--ink); font-variant-numeric: tabular-nums; }
+.donutEmpty { font-size: 12px; font-weight: 600; color: var(--muted); }
+/* 狭い画面で凡例が下に回るときは、輪と凡例を中央に寄せる */
+@media (max-width: 560px) {
+  .donut { flex-direction: column; justify-content: center; }
+  .donut .legend { justify-content: center; }
+}
+
+/* ---- 追加の部品（UI 品質 A-1）---- */
+.figure { position: relative; }
+.svgFixed { display: block; width: 100%; overflow: visible; }
+.areaBox { width: 100%; }
+.zero { stroke: var(--line-strong); stroke-width: 1.5; }
+.legendSvg { display: inline-block; flex: none; }
+.barLabel { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.bars li[data-highlight='true'] .barLabel, .bars li[data-highlight='true'] .barValue { color: var(--ink); font-weight: 800; }
+.hiMark { font-style: normal; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 6px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); white-space: nowrap; }
+
+.ringWrap { display: inline-grid; justify-items: center; gap: 6px; }
+.ringTone { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+
+/* 縦棒: 高さは先に取る。数字の文字は棒と別の層に置き、伸びる動きで潰さない */
+.colPlot { position: relative; width: 100%; container-type: inline-size; }
+.colInner { position: absolute; right: 0; }
+.colGrid, .colZero { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--line); }
+.colZero { border-top: 1.5px solid var(--line-strong); }
+.colTick { position: absolute; right: 100%; transform: translateY(-50%); padding-right: 8px; text-align: right; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; box-sizing: border-box; }
+.colGroups { position: absolute; inset: 0; display: grid; }
+.colGroup { position: relative; display: flex; gap: 3px; padding: 0 18%; min-width: 0; }
+.colSlot { position: relative; flex: 1; min-width: 0; }
+.colGrow { position: absolute; inset: 0; }
+.colSeg { position: absolute; left: 0; right: 0; border-radius: 4px 4px 2px 2px; }
+.colValue { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 16px; }
+@container (max-width: 480px) { .colPlot[data-dense='true'] .colValue { display: none; } }
+.colLabels { display: grid; margin-top: 6px; }
+.colLabels span { font-size: 11px; color: var(--muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 1px; }
+.colPlot[data-armed='true'] .colGrow { transform: scaleY(0); }
+.colPlot[data-seen='true'] .colGrow { animation: ds-col-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: calc(var(--i, 0) * 50ms); }
+.colPlot[data-done='true'] .colGrow { transform: none !important; animation: none !important; }
+@keyframes ds-col-grow { to { transform: scaleY(1); } }
+
+/* 100% の横の積み上げ */
+.stackTrack { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--bg); transform-origin: left center; }
+.stackSeg { display: grid; place-items: center; height: 100%; min-width: 0; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; }
+.stackSeg + .stackSeg { box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.7); }
+.stackEmpty { margin: auto; font-size: 11px; color: var(--muted); }
+.bars[data-armed='true'] .stackTrack { transform: scaleX(0); }
+.bars[data-seen='true'] .stackTrack { animation: ds-bar-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: calc(var(--i, 0) * 70ms); }
+.bars[data-done='true'] .stackTrack { transform: none !important; animation: none !important; }
+
+/* 0 を挟んで左右に伸びる棒 */
+.divHead { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.divTrack { display: grid; grid-template-columns: 1fr 1fr; height: 10px; background: var(--bg); border-radius: 999px; position: relative; }
+.divTrack::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1.5px; margin-left: -0.75px; background: var(--line-strong); }
+.divHalf { display: flex; min-width: 0; }
+.divHalf[data-side='neg'] { justify-content: flex-end; }
+.divFill { height: 100%; }
+.divFill[data-side='neg'] { border-radius: 999px 0 0 999px; transform-origin: right center; }
+.divFill[data-side='pos'] { border-radius: 0 999px 999px 0; transform-origin: left center; }
+.bars[data-armed='true'] .divFill { transform: scaleX(0); }
+.bars[data-seen='true'] .divFill { animation: ds-bar-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: calc(var(--i, 0) * 70ms); }
+.bars[data-done='true'] .divFill { transform: none !important; animation: none !important; }
+
+/* レーダー */
+.radarGrid { fill: none; stroke: var(--line); stroke-width: 1; }
+.radarLabel { font-size: 12px; font-weight: 600; fill: var(--sub); }
+.radarValue { font-weight: 800; fill: var(--ink); font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
   .fadeIn { animation: none; }
   .barFill, .bars[data-seen='true'] .barFill, .bars[data-armed='true'] .barFill { transform: none; animation: none; }
+  .colGrow, .colPlot[data-seen='true'] .colGrow, .colPlot[data-armed='true'] .colGrow { transform: none; animation: none; }
+  .stackTrack, .bars[data-seen='true'] .stackTrack, .bars[data-armed='true'] .stackTrack { transform: none; animation: none; }
+  .divFill, .bars[data-seen='true'] .divFill, .bars[data-armed='true'] .divFill { transform: none; animation: none; }
 }
