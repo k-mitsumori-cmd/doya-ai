@@ -30,7 +30,7 @@ const tx = {
 }
 const prisma = { cunningSession: { findUnique: async () => ({ id: 'session', userId: 'owner', status: 'active' }) } }
 const api = load('src/app/api/cunning/sessions/[id]/route.ts', {
-  '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
+  '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   '@prisma/client': { Prisma: { DbNull: null } },
   '@/lib/cunning/history-read': {},
   '@/lib/cunning/history-cursor': {},

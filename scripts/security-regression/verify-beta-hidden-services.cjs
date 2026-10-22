@@ -11,13 +11,15 @@ const ALLOWED='owner@example.invalid';
 const services=load('src/lib/services.ts',{'./unified-plan':load('src/lib/unified-plan.ts',{})});
 function guardModule(email,env={UI_PREVIEW_EMAILS:ALLOWED}){
   const uiNext=load('src/lib/ui-next.ts',{'next/headers':{cookies:async()=>({get:()=>undefined})},'next-auth':{getServerSession:async()=>null},'@/lib/auth':{authOptions:{}}},{process:{env},Promise});
-  return load('src/lib/beta-services.ts',{
+  const beta=load('src/lib/beta-service.ts',{'@/lib/services':services,'@/lib/ui-next':uiNext},{process:{env}});
+  const server=load('src/lib/beta-service.server.ts',{
     'next/server':nextServer,
     '@/lib/services':services,
-    '@/lib/ui-next':uiNext,
+    '@/lib/beta-service':beta,
     'next-auth':{getServerSession:async()=>email===undefined?null:{user:{email}}},
     '@/lib/auth':{authOptions:{}},
   },{process:{env},Promise});
+  return load('src/lib/beta-services.ts',{'./beta-service':beta,'./beta-service.server':server},{process:{env}});
 }
 function walk(dir){return fs.readdirSync(path.join(root,dir),{withFileTypes:true}).flatMap(d=>d.isDirectory()?walk(path.join(dir,d.name)):d.name==='route.ts'?[path.join(dir,d.name)]:[])}
 (async()=>{
@@ -47,6 +49,11 @@ function walk(dir){return fs.readdirSync(path.join(root,dir),{withFileTypes:true
     assert.equal(g.canUseBetaService('cunning',ALLOWED,[]),false);
     // ベータで非表示でないサービスは、いつでも使える
     assert.equal(g.canUseBetaService('sfa',null,[]),true);
+    // The canonical policy combines preview and beta-specific recipients; neither email grants everyone access.
+    const extra=guardModule('extra@example.invalid',{UI_PREVIEW_EMAILS:'',BETA_SERVICE_EMAILS:'extra@example.invalid'});
+    assert.equal(extra.canUseBetaService('cunning','extra@example.invalid'),true);
+    assert.equal(await extra.betaServiceGuard('cunning'),null);
+    assert.ok(await guardModule('other@example.invalid',{UI_PREVIEW_EMAILS:ALLOWED,BETA_SERVICE_EMAILS:'extra@example.invalid'}).betaServiceGuard('cunning'));
   });
   await check('API guard returns 403 for others and nothing for allowlisted users',async()=>{
     for(const email of ['other@example.invalid',undefined]){
@@ -65,14 +72,14 @@ function walk(dir){return fs.readdirSync(path.join(root,dir),{withFileTypes:true
     for(const f of files){
       const src=read(f);
       const handlers=[...src.matchAll(/export async function (GET|POST|PUT|PATCH|DELETE)\(/g)].length;
-      const guards=[...src.matchAll(/const betaBlocked = await betaServiceGuard\('cunning'\)\n\s*if \(betaBlocked\) return betaBlocked/g)].length;
+      const guards=[...src.matchAll(/const beta(?:Blocked|Denied) = await betaService(?:Guard|Denied)\('cunning'\)\n\s*if \(beta(?:Blocked|Denied)\) return beta(?:Blocked|Denied)/g)].length;
       assert.ok(handlers>0,f);
       assert.equal(guards,handlers,f);
     }
   });
   await check('The cunning screens show only the beta notice to others and are not indexed',async()=>{
     const src=read('src/app/(shell)/cunning/layout.tsx');
-    assert.match(src,/if \(!\(await betaServiceAllowed\('cunning'\)\)\) return <BetaServiceNotice/);
+    assert.match(src,/if \(!canUseBetaService\('cunning', session\?\.user\?\.email\)\) \{/);
     assert.match(src,/robots: \{ index: false, follow: false \}/);
   });
   console.log(JSON.stringify({scope:'Beta-hidden service lists, counts and entry guards with synthetic sessions. No DB, billing or AI.'}));
