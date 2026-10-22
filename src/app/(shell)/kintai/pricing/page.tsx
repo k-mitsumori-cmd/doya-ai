@@ -59,7 +59,7 @@ export default function KintaiPricingPage() {
   const verifying = status === 'loading' || loading || loadedIdentity !== identity
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
 
       <div className="p-6 lg:p-10 max-w-6xl mx-auto relative">
         {/* Floating bears */}

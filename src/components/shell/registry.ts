@@ -7,6 +7,7 @@
 // ⚠️ ツールを載せ替えるときは、ここに1行足す（docs/architecture/management-agent/SHELL-MIGRATION.md）。
 // ⚠️ 枠を出す条件はすべてそろったときだけ:
 //    ログインしている ＋ 台帳にある ＋ （always か UI_SHELL_SERVICES に id がある）＋ inShell(pathname) が true
+//    ⚠️ 新しい見た目のときは inShell を使わない（入口・料金・はじめにも枠の中。外すのは招待・第三者の画面・見本だけ）。shouldShowShell を見る
 //    紹介ページ（LP。未ログインのとき）・公開の画面・ログイン画面・管理画面には出さない。
 // ⚠️ クライアントでも読むので、サーバー専用のもの（process.env・prisma など）を import しない。
 import { isGuestPath } from '@/lib/ui/guest-path'
@@ -92,8 +93,30 @@ export function shellServiceForPath(pathname: string | null | undefined): ShellS
 /** 開発中だけの見本の画面（/<ツール>/dev/...）。見本は自分で枠を描くので、ここでは出さない（二重になるため） */
 const DEV_PREVIEW = /^\/[^/]+\/dev(\/|$)/
 
-/** 今のパスに枠を出すか（ログインの有無と、有効なツールの一覧は呼ぶ側から渡す） */
-export function shouldShowShell(pathname: string | null | undefined, opts: { signedIn: boolean; enabledIds: string[] }): boolean {
+/** 招待の受諾の入口（/<ツール>/invite と、その下）。まだ組織に入っていない人が開く */
+const INVITE = /^\/[a-z]+\/invite(\/|$)/
+
+/**
+ * 新しい見た目でログインしている人にも、枠を出さない画面（第三者・社外の人が開く画面と、見本）。
+ * ⚠️ ここに無いパスは、ツールの入口・料金・組織を作る「はじめに」も含めて、すべて枠の中に出す
+ *    （2026-10-23 ユーザーの指摘「収入管理・支出管理を押すと上のヘッダーが消えて画面が変わる」）。
+ *    未ログインの紹介ページ・料金ページは、signedIn が偽なので今までどおり枠の外。
+ */
+const OUTSIDE_SHELL_SIGNED_IN: RegExp[] = [
+  /^\/home\/preview(\/|$)/,
+  // 応募者が開く面接の画面と、社員が開く回答の画面（guest-path.ts は下の階層だけを見るので、入口もここで外す）
+  /^\/mensetsu\/live(\/|$)/,
+  /^\/shanai\/answer(\/|$)/,
+  // バナーの紹介ページと、開発用の試しの画面
+  /^\/banner\/(landing|test)(\/|$)/,
+]
+
+/**
+ * 今のパスに枠を出すか（ログインの有無と、有効なツールの一覧は呼ぶ側から渡す）。
+ * uiNext（新しい見た目）のときは、ツールの台帳の inShell を使わず、ログインした人には第三者の画面のほかすべてに出す。
+ * 今の見た目のときは、今までどおり inShell で決める。
+ */
+export function shouldShowShell(pathname: string | null | undefined, opts: { signedIn: boolean; enabledIds: string[]; uiNext?: boolean }): boolean {
   if (!opts.signedIn) return false
   if (DEV_PREVIEW.test(pathname || '')) return false
   // 第三者が開く画面（招待の受諾・面接・回答画面など。src/lib/ui/guest-path.ts）には出さない
@@ -102,5 +125,7 @@ export function shouldShowShell(pathname: string | null | undefined, opts: { sig
   if (!svc) return false
   const enabled = svc.always || opts.enabledIds.includes('all') || opts.enabledIds.includes(svc.id)
   if (!enabled) return false
-  return svc.inShell ? svc.inShell(pathname || '/') : true
+  const p = pathname || '/'
+  if (opts.uiNext) return !INVITE.test(p) && !OUTSIDE_SHELL_SIGNED_IN.some((re) => re.test(p))
+  return svc.inShell ? svc.inShell(p) : true
 }

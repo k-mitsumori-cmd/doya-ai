@@ -93,7 +93,7 @@ export default async function PromaneEntryPage({
   const uiNext = await isUiNext()
   const roleLabels = uiNext ? ROLE_LABELS_NEXT : ROLE_LABELS
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
         {/* ロゴ */}
         <div className="flex justify-center mb-6 animate-slide-up">

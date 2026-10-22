@@ -9,6 +9,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'next/navigation'
 import ToolFrame from '@/components/shell/ToolFrame'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
 import SfaOrgSwitcher from '@/components/sfa/SfaOrgSwitcher'
 import { sfaNav } from '@/lib/sfa/nav'
 import styles from './SfaShellFrame.module.css'
@@ -21,8 +22,8 @@ export default function SfaShellFrame({ children }: { children: ReactNode }) {
   const publishMemberships = useCallback((next: SfaShellMembership[]) => setMemberships(next), [])
   const value = useMemo<SfaShellContextValue>(() => ({ publishMemberships }), [publishMemberships])
 
-  // 組織の外（/sfa の入口など）は枠の対象外。台帳（registry.ts）の inShell と同じ条件で、ここでも ToolFrame を出さない
-  if (!orgSlug) return <>{children}</>
+  // 組織の外（/sfa の入口・料金）は、新しい見た目のときだけ ShellEntryFrame が見出しの帯を付ける（今の見た目では何もしない）
+  if (!orgSlug) return <ShellEntryFrame serviceId="sfa">{children}</ShellEntryFrame>
   return (
     <SfaShellContext.Provider value={value}>
       <ToolFrame

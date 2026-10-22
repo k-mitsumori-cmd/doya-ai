@@ -11,7 +11,7 @@ export default function IncomePricingPage() {
   // 枠の中では ToolFrame が h1 を持つので、新しい見た目では見出しを h2 にする（見出しを1つにする。S-57）
   const Title = useUiNext() ? 'h2' : 'h1'
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div data-legacy-backdrop className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link

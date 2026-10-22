@@ -10,7 +10,7 @@ export default function AdimagePricingPage() {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し（h1）と重ならないよう h2 にし、戻るリンク（枠のタブと同じ）を出さない
   const uiNext = useUiNext()
   return (
-    <div className={uiNext ? 'bg-slate-50' : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop className={uiNext ? 'bg-slate-50' : 'min-h-screen bg-slate-50'}>
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           {!uiNext && <Link

@@ -117,6 +117,9 @@
  */
 .shell[data-ui-next='true'] .main :global(.h-screen), .shell[data-ui-next='true'] .main :global(.h-dvh), .shell[data-ui-next='true'] .main :global(.h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.h-svh), .shell[data-ui-next='true'] .main :global(.h-lvh), .shell[data-ui-next='true'] .main :global(.h-\[100vh\]) { height: auto !important; }
 .shell[data-ui-next='true'] .main :global(.min-h-screen), .shell[data-ui-next='true'] .main :global(.min-h-dvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.min-h-svh), .shell[data-ui-next='true'] .main :global(.min-h-lvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100vh\]) { min-height: 0 !important; }
+/* ページの側の古い全画面の背景（料金・入口の外側。ページに data-legacy-backdrop を付けたもの）は、枠の中では出さない。
+   枠の地の色の上に、もう1枚の背景（白・薄い紫のグラデーション）が重なるのを止める（2026-10-23 ユーザーの指摘） */
+.shell[data-ui-next='true'] .main [data-legacy-backdrop] { background: none !important; min-height: 0 !important; }
 /* ⚠️ チャットの欄などの h-[calc(100vh-80px)] は、画面に合わせた大きさとして残す（S-63） */
 /* 枠の中の読み込み表示が小さくなりすぎないよう、中身の領域の最低の高さを持たせる */
 .shell[data-ui-next='true'] .main { min-height: calc(100vh - 1px); }

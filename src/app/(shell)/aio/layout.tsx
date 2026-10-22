@@ -3,6 +3,7 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { FAQ } from './lp-data'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
 
 export const metadata: Metadata = buildServiceMetadata('aio', {
   // 検索結果でサービス名が切れないよう、タイトルは短く保つ（説明はdescriptionに）
@@ -27,7 +28,8 @@ export default function AioLayout({ children }: { children: React.ReactNode }) {
         features={SVC.features}
         faq={FAQ}
       />
-      {children}
+      {/* 新しい見た目で枠の中にいるとき、入口（はじめに）と料金にもツールの見出しの帯を付ける（ShellEntryFrame） */}
+      <ShellEntryFrame serviceId="aio">{children}</ShellEntryFrame>
     </>
   )
 }

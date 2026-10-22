@@ -3,6 +3,7 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { FAQ } from './lp-data'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
 
 export const metadata: Metadata = buildServiceMetadata('shodan', {
   tagline: '商談先のURLだけで提案準備を一括生成',
@@ -22,7 +23,8 @@ export default function ShodanLayout({ children }: { children: React.ReactNode }
         features={SVC.features}
         faq={FAQ}
       />
-      {children}
+      {/* 新しい見た目で枠の中にいるとき、入口（はじめに）と料金にもツールの見出しの帯を付ける（ShellEntryFrame） */}
+      <ShellEntryFrame serviceId="shodan">{children}</ShellEntryFrame>
     </>
   )
 }

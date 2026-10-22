@@ -9,7 +9,7 @@ import { PageTitle } from '@/components/shanai/ui'
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function ShanaiPricingPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div data-legacy-backdrop className="min-h-screen bg-[var(--bg)]">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link

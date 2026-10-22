@@ -22,7 +22,7 @@ const FAQ_ITEMS = [
 
 export default function PersonaPricingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
       <div className="p-6 lg:p-10 max-w-6xl mx-auto">
         {/* Hero */}
         <div className="text-center mb-8">

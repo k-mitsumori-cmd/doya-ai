@@ -9,7 +9,7 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function ExpensePricingPage() {
   return (
-    <div className={`${tokens.ds} min-h-screen`}>
+    <div data-legacy-backdrop className={`${tokens.ds} min-h-screen`}>
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link

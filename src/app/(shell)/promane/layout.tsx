@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { buildServiceMetadata, generateToolSchema } from '@/lib/seo'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
 
 // 正本は services.ts。OGP/Twitterカード/siteName も含めて buildServiceMetadata に統一する
 export const metadata: Metadata = buildServiceMetadata('promane', {
@@ -12,7 +13,8 @@ export default function PromaneLayout({ children }: { children: React.ReactNode 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
-      {children}
+      {/* 新しい見た目で枠の中にいるとき、入口（はじめに）と料金にもツールの見出しの帯を付ける（ShellEntryFrame） */}
+      <ShellEntryFrame serviceId="promane">{children}</ShellEntryFrame>
     </>
   )
 }

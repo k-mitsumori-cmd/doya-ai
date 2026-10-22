@@ -61,7 +61,7 @@ export default function HrPricingPage() {
   const verifying = status === 'loading' || (status === 'authenticated' && (loading || loadedIdentity !== identity))
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div data-legacy-backdrop className="min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-6 py-12">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {/* Header */}
