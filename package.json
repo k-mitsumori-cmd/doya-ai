@@ -21,7 +21,8 @@
     "test:shanai": "tsx --test src/lib/shanai/shanai.test.ts",
     "test:income": "tsx --test src/lib/income/calc.test.ts src/lib/income/scope.test.ts src/lib/income/agent.test.ts",
     "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts src/lib/expense/members.test.ts",
-    "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts"
+    "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -82,6 +83,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^20.10.6",
