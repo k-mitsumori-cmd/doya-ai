@@ -90,7 +90,7 @@ export function ShanaiSteps() {
 /** インタビューの一覧（カードが順に入る） */
 export function ShanaiCardList({ rows }: { rows: ShanaiRow[] }) {
   return (
-    <Stagger className="grid gap-4 sm:grid-cols-2">
+    <Stagger className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
       {rows.map((r, i) => (
         <StaggerItem index={i} key={r.id}>
           <Link
