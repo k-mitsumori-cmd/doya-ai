@@ -1,0 +1,17 @@
+/* ds/cost-badge — ボタンの文字色（currentColor）から札の色を作る。主ボタンでも副ボタンでも読める */
+.badge {
+  display: inline-flex; align-items: center; gap: 2px; flex: none;
+  height: 22px; padding: 0 8px 0 6px; margin-left: 2px; border-radius: 999px;
+  font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
+}
+.icon { flex: none; }
+.num { min-width: 1ch; text-align: right; }
+.short { margin-left: 4px; font-weight: 700; }
+.badge[data-short='true'] { background: var(--note-bg, #fff7d6); color: var(--note-ink, #7a5b00); box-shadow: none; }
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
