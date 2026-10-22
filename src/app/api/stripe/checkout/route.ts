@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
-import { isTrialEligible } from '@/lib/trial'
+import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
 
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // セッションの user.id が欠ける/揺れる環境でも確実に userId を取得する
     const dbUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, stripeCustomerId: true },
+      select: { id: true, ...TRIAL_USER_SELECT },
     })
     if (!dbUser?.id) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
@@ -202,13 +202,18 @@ export async function POST(request: NextRequest) {
 
     // 初月無料（30日トライアル）の付与条件:
     //  (a) 月額プランのみ（年額や enterprise/bundle には付けない＝「初月無料」訴求の範囲に一致）
-    //  (b) 新規顧客のみ（メール横断で実サブスク履歴を照会。trial cycling防止）
+    //  (b) 新規顧客のみ（DB で有料なら対象外。そうでなければメール横断で実サブスク履歴を照会。trial cycling防止）
     const trialablePlan =
       billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
     let trialDays: number | undefined
     if (trialablePlan) {
       try {
-        if (await isTrialEligible({ email: session.user.email, stripeCustomerId: dbUser.stripeCustomerId })) trialDays = UNIFIED_TRIAL_DAYS
+        if (await isTrialEligible({
+          email: session.user.email,
+          stripeCustomerId: dbUser.stripeCustomerId,
+          plan: dbUser.plan,
+          servicePlans: dbUser.serviceSubscriptions?.map(s => s.plan),
+        })) trialDays = UNIFIED_TRIAL_DAYS
       } catch {
         return NextResponse.json({
           code: 'TRIAL_CHECK_UNAVAILABLE',
