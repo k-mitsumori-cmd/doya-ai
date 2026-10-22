@@ -75,7 +75,7 @@ const navigation=(log)=>({notFound:()=>{log.push('notFound');throw notFoundError
     const ledger=load('src/lib/doya-power/ledger.ts',{'./rules':rules,'@/lib/unified-plan':plan},{Promise,Object,Array,Number,Math});
     const gate=load('src/lib/doya-power/gate.ts',{'./ledger':ledger},{Promise,Object,Array});
     const flag=loadFlag(env,ALLOWED);
-    return load('src/lib/doya-power/index.ts',{'@/lib/prisma':{prisma},'./ledger':ledger,'./flag':flag,'./gate':gate,'./rules':rules},{Promise,Object,Array,process:{env}});
+    return load('src/lib/doya-power/index.ts',{'@/lib/prisma':{prisma},'@/lib/unified-plan':{isPaidPlan:(p)=>p==='banner-pro'},'./ledger':ledger,'./flag':flag,'./gate':gate,'./rules':rules},{Promise,Object,Array,process:{env}});
   }
   await check('Doya Power flag: when off, the ledger entry points touch no doya_power_* table (0 Prisma calls)',async()=>{
     for(const v of OFF_VALUES){
@@ -151,6 +151,7 @@ const navigation=(log)=>({notFound:()=>{log.push('notFound');throw notFoundError
       'next-auth':sessionMock(email,log),'@/lib/auth':{authOptions:{}},
       '@/lib/prisma':{prisma:p.prisma},
       '@/lib/ui-next':{isUiNext:async()=>true},
+      '@/lib/doya-power/fx.server':{loadDoyaPowerFxForUser:async()=>({fx:{},canEditOrg:false})},
       '@/lib/doya-power/flag':loadFlag(env,email),
       '@/lib/shell/company.server':{currentUserId:async()=>{log.push('currentUserId');return email?'u_1':null}},
     };

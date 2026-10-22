@@ -13,7 +13,7 @@ import { isUiNext } from '@/lib/ui-next'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
-import { consume, refund, grantMonthlyForPlan, balance, operationStatus } from './index'
+import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
 import { createDoyaPowerCharger } from './charge-core'
 import type { DoyaPowerAction } from './costs'
 
@@ -30,7 +30,7 @@ export const doyaPowerCharger = createDoyaPowerCharger({
     ])
     return company ? { companyId: company.id, plan: user?.plan ?? null } : null
   },
-  ledger: { consume, refund, grantMonthlyForPlan, balance, operationStatus },
+  ledger: { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume },
   isPaidPlan,
 })
 
@@ -43,6 +43,10 @@ export type ChargeSpec = {
   units?: (body: Body) => number | undefined
   /** 同じ操作をまとめる ID（クライアントの operationId など）。無ければその呼び出しだけの操作 */
   key?: (body: Body) => unknown
+  /** 作り直しのとき、前の操作のキー（クライアントが retryOf で示す）。5分以内なら半分 */
+  retryOf?: (body: Body) => unknown
+  /** 同じ対象を表すキー（同じ対象を5分以内に作り直したら半分） */
+  target?: (body: Body) => unknown
 }
 
 /** API の入口（POST など）を包み、生成の前に減らし、失敗なら戻す */
@@ -53,7 +57,7 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     const body = (await req.clone().json().catch(() => null)) as Body
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action
     if (!action) return handler(req, ...rest)
-    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body) })
+    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body), target: spec.target?.(body) })
     return doyaPowerCharger.run(outcome, () => handler(req, ...rest))
   }
 }

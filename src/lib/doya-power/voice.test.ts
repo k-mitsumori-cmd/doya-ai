@@ -9,14 +9,14 @@ import { DOYA_POWER_COSTS } from './costs'
 import { DAILY_RECOVERY_AMOUNT, SOLO_PRO_MONTHLY_GRANT } from './rules'
 
 const PER_MIN = DOYA_POWER_COSTS['voice.minute']
-const FULL = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+const FULL = SOLO_PRO_MONTHLY_GRANT
 
 function setup(over: { rollout?: string; email?: string | null; plan?: string | null; companyId?: string | null } = {}) {
   const t = new Date('2026-10-23T03:00:00.000Z')
   const clock = () => new Date(t.getTime())
   const mem = createMemoryDb({ now: clock })
   mem.rows('accountCompany').push({ id: 'co_owner', userId: 'owner', name: '持ち主の会社' })
-  const ledger = createDoyaPowerLedger(mem.db, { now: clock })
+  const ledger = createDoyaPowerLedger(mem.db, { now: clock, isPaidCompany: async () => (over.plan === undefined ? 'PRO' : over.plan) === 'PRO' })
   const calls: string[] = []
   const deps: VoiceDeps = {
     rollout: () => { calls.push('rollout'); return over.rollout ?? 'preview' },

@@ -5,7 +5,7 @@
 // ⚠️ 本番DBに台帳の表が無いうちは off のまま。表を足すのはユーザーの承認のあと（DOYA-POWER-MIGRATION.md）。
 // ⚠️ ここは「人を問わない」止め方（off なら誰の分も動かない）。人ごとの出し分け（preview）は、
 //    画面・API の側で isDoyaPowerEnabled() を見てから呼ぶ。
-import { createDoyaPowerLedger, type LedgerDb } from './ledger'
+import { createDoyaPowerLedger, type LedgerDb, type LedgerOptions } from './ledger'
 
 export class DoyaPowerDisabledError extends Error {
   constructor() {
@@ -20,7 +20,7 @@ type Ledger = ReturnType<typeof createDoyaPowerLedger>
  * 旗の内側でだけ動く台帳。db は使うときに初めて取りに行く（off のときは一度も取りに行かない）。
  * allowed は呼ぶたびに見る（環境変数の値をテストで渡せるように、関数で受け取る）。
  */
-export function createGatedLedger(getDb: () => LedgerDb, allowed: () => boolean, options: { now?: () => Date } = {}) {
+export function createGatedLedger(getDb: () => LedgerDb, allowed: () => boolean, options: LedgerOptions = {}) {
   let ledger: Ledger | null = null
   const open = (): Ledger => {
     if (!allowed()) throw new DoyaPowerDisabledError()
@@ -35,5 +35,6 @@ export function createGatedLedger(getDb: () => LedgerDb, allowed: () => boolean,
     balance: async (...a: Parameters<Ledger['balance']>) => open().balance(...a),
     balanceForUser: async (...a: Parameters<Ledger['balanceForUser']>) => open().balanceForUser(...a),
     operationStatus: async (...a: Parameters<Ledger['operationStatus']>) => open().operationStatus(...a),
+    recentConsume: async (...a: Parameters<Ledger['recentConsume']>) => open().recentConsume(...a),
   }
 }

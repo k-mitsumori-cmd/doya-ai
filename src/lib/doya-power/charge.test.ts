@@ -16,10 +16,11 @@ const isPaid = (p?: string | null) => p === 'PRO'
 
 function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: boolean; uiNext?: boolean; plan?: string | null; hasCompany?: boolean } = {}) {
   const t = new Date('2026-10-23T03:00:00.000Z')
-  const clock = () => new Date(t.getTime())
+  const clock = over.now ?? (() => new Date(t.getTime()))
   const mem = createMemoryDb({ now: clock })
   mem.rows('accountCompany').push({ id: 'co_alice', userId: 'alice', name: 'アリス株式会社' })
-  const ledger = createDoyaPowerLedger(mem.db, { now: clock })
+  const planOf = over.plan === undefined ? 'PRO' : over.plan
+  const ledger = createDoyaPowerLedger(mem.db, { now: clock, isPaidCompany: async () => isPaid(planOf) })
   const calls: string[] = []
   let n = 0
   const deps: ChargeDeps = {
@@ -33,6 +34,7 @@ function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: bo
       grantMonthlyForPlan: (...a) => { calls.push('grant'); return ledger.grantMonthlyForPlan(...a) },
       balance: (...a) => { calls.push('balance'); return ledger.balance(...a) },
       operationStatus: (...a) => { calls.push('status'); return ledger.operationStatus(...a) },
+      recentConsume: (...a) => { calls.push('recent'); return ledger.recentConsume(...a) },
     },
     isPaidPlan: isPaid,
     now: clock,
@@ -76,8 +78,8 @@ test('許可された人は、表の量だけ減る（有料の人には今月�
   const outcome = await s.charger.charge('banner.generate', { units: 2 })
   assert.equal(outcome.kind, 'charged')
   if (outcome.kind === 'charged') assert.equal(outcome.amount, DOYA_POWER_COSTS['banner.generate'] * 2)
-  // 今月の付与（3000）＋ 今日の回復（10）から 20 減る
-  assert.equal(await s.remaining(), SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT - 20)
+  // 今月の付与（3000）だけ（有料の人には毎日の回復は付かない）から 20 減る
+  assert.equal(await s.remaining(), SOLO_PRO_MONTHLY_GRANT - 20)
 })
 
 test('同じ操作の ID では1回だけ減る（今月の付与も1回だけ）', async () => {
@@ -87,13 +89,13 @@ test('同じ操作の ID では1回だけ減る（今月の付与も1回だけ�
   assert.equal(a.kind, 'charged')
   assert.equal(b.kind, 'charged')
   if (b.kind === 'charged') assert.equal(b.duplicated, true)
-  assert.equal(await s.remaining(), SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT - 1)
+  assert.equal(await s.remaining(), SOLO_PRO_MONTHLY_GRANT - 1)
   assert.equal(s.mem.rows('doyaPowerGrant').filter((g) => g.kind === 'monthly').length, 1)
 })
 
 test('失敗（4xx/5xx の応答・例外）なら戻る。成功なら戻らない', async () => {
   const s = setup()
-  const full = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+  const full = SOLO_PRO_MONTHLY_GRANT
   const r1 = await s.charger.run(await s.charger.charge('persona.generate'), async () => new Response('{}', { status: 500 }))
   assert.equal(r1.status, 500)
   assert.equal(await s.remaining(), full)
@@ -128,6 +130,7 @@ test('台帳が読めなければ 503 で止め、有料の API を呼ばない'
       grantMonthlyForPlan: async () => ({ ok: true, granted: 0, skipped: 'free_plan' }),
       balance: async () => null,
       operationStatus: async () => 'none',
+      recentConsume: async () => null,
     },
   })
   let called = 0
@@ -148,12 +151,12 @@ test('枠のゲージの上限は、有料の人は毎月の付与、無料の�
   assert.equal(gaugeLimit(5000, 'PRO', isPaid), 5000)
   const s = setup()
   const st = await s.charger.shellState()
-  assert.deepEqual(st, { balance: { remaining: SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT, limit: SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT }, costs: {} })
+  assert.deepEqual(st, { balance: { remaining: SOLO_PRO_MONTHLY_GRANT, limit: SOLO_PRO_MONTHLY_GRANT }, costs: {} })
 })
 
 test('同じ ID の2回目が失敗しても、前の成功の分は戻らない（同じ ID の使い回しで、タダで作り直せない）', async () => {
   const s = setup()
-  const full = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+  const full = SOLO_PRO_MONTHLY_GRANT
   const cost = DOYA_POWER_COSTS['image.refine']
   const first = await s.charger.run(await s.charger.charge('image.refine', { key: 'op-x' }), async () => ok())
   assert.equal(first.status, 200)
@@ -169,7 +172,7 @@ test('同じ ID の2回目が失敗しても、前の成功の分は戻らない
 
 test('前に戻した操作の ID がもう一度来たら、新しい操作として減らし直す', async () => {
   const s = setup()
-  const full = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+  const full = SOLO_PRO_MONTHLY_GRANT
   const cost = DOYA_POWER_COSTS['image.refine']
   // 1回目は失敗して戻る
   await s.charger.run(await s.charger.charge('image.refine', { key: 'op-y' }), async () => new Response('{}', { status: 502 }))
@@ -182,4 +185,94 @@ test('前に戻した操作の ID がもう一度来たら、新しい操作と�
     assert.match(retry.operationId, /:op-y:\d+:retry-/)
   }
   assert.equal(await s.remaining(), full - cost)
+})
+
+// ---- 5分以内の作り直しは半分 ----
+function withClock(over: Parameters<typeof setup>[0] = {}) {
+  let ms = new Date('2026-10-23T03:00:00.000Z').getTime()
+  const clock = () => new Date(ms)
+  const s = setup({ now: clock, ...over })
+  return { s, advance: (m: number) => { ms += m * 60_000 } }
+}
+
+test('作り直し（retryOf）が5分以内なら、減る量は半分（切り上げ）。5分を過ぎたら全額', async () => {
+  const w = withClock()
+  const first = await w.s.charger.charge('banner.generate', { key: 'a1' })
+  assert.equal(first.kind, 'charged')
+  if (first.kind === 'charged') assert.equal(first.halved, false)
+  const before = await w.s.remaining()
+  w.advance(4)
+  const retry = await w.s.charger.charge('banner.generate', { key: 'a2', retryOf: 'a1' })
+  assert.equal(retry.kind, 'charged')
+  if (retry.kind === 'charged') {
+    assert.equal(retry.halved, true)
+    assert.equal(retry.amount, 5)
+  }
+  assert.equal(await w.s.remaining(), before - 5)
+  // 6分後は全額
+  w.advance(6)
+  const late = await w.s.charger.charge('banner.generate', { key: 'a3', retryOf: 'a2' })
+  if (late.kind === 'charged') {
+    assert.equal(late.halved, false)
+    assert.equal(late.amount, 10)
+  }
+})
+
+test('半分は切り上げ（7 は 4）。retryOf も target も無ければ半分にしない', async () => {
+  const w = withClock()
+  await w.s.charger.charge('image.refine', { key: 'b1' })
+  const r = await w.s.charger.charge('image.refine', { key: 'b2', retryOf: 'b1' })
+  if (r.kind === 'charged') assert.equal(r.amount, 4)
+  const plain = await w.s.charger.charge('image.refine', { key: 'b3' })
+  if (plain.kind === 'charged') assert.equal(plain.amount, 7)
+})
+
+test('半分になるのは、同じ会社・同じ操作の名前だけ。別の操作・存在しない前の操作・戻した前の操作は全額', async () => {
+  const w = withClock()
+  await w.s.charger.charge('banner.generate', { key: 'c1' })
+  // 別の操作の名前
+  const other = await w.s.charger.charge('image.refine', { key: 'c2', retryOf: 'c1' })
+  if (other.kind === 'charged') assert.equal(other.amount, 7)
+  // 存在しない前の操作
+  const ghost = await w.s.charger.charge('banner.generate', { key: 'c3', retryOf: 'nothing' })
+  if (ghost.kind === 'charged') assert.equal(ghost.amount, 10)
+  // 前の操作が失敗して戻っていたら、作り直しも全額（半分にしない）
+  const failed = await w.s.charger.charge('slide.generate', { key: 'd1' })
+  await w.s.charger.run(failed, async () => new Response('{}', { status: 500 }))
+  const again = await w.s.charger.charge('slide.generate', { key: 'd2', retryOf: 'd1' })
+  if (again.kind === 'charged') assert.equal(again.amount, 30)
+})
+
+test('同じ対象のキー（target）でも、5分以内なら半分。別の対象は全額', async () => {
+  const w = withClock()
+  await w.s.charger.charge('seo.article', { key: 'e1', target: 'doc-1' })
+  w.advance(2)
+  const same = await w.s.charger.charge('seo.article', { key: 'e2', target: 'doc-1' })
+  if (same.kind === 'charged') assert.equal(same.amount, 20)
+  const diff = await w.s.charger.charge('seo.article', { key: 'e3', target: 'doc-2' })
+  if (diff.kind === 'charged') assert.equal(diff.amount, 40)
+})
+
+test('旗が off のときは、作り直しの確認でも台帳に触れない', async () => {
+  const s = setup({ rolloutValue: 'off' })
+  const o = await s.charger.charge('banner.generate', { key: 'x2', retryOf: 'x1' })
+  assert.equal(o.kind, 'skip')
+  assert.ok(!s.calls.includes('recent'))
+})
+
+// ---- 毎日の回復は無料プランだけ ----
+test('毎日の回復は無料の会社だけ。有料の会社には毎月の付与だけ付く', async () => {
+  const paid = setup({ plan: 'PRO' })
+  const pb = await paid.ledger.balance('co_alice')
+  await paid.charger.charge('text.generate', { key: 'p1' })
+  assert.equal(pb!.byKind.daily_recovery, 0)
+  assert.equal(pb!.nextRecoveryAt, null)
+  assert.equal(paid.mem.rows('doyaPowerGrant').filter((g) => g.kind === 'daily_recovery').length, 0)
+  assert.equal(await paid.remaining(), SOLO_PRO_MONTHLY_GRANT - 1)
+
+  const free = setup({ plan: 'FREE' })
+  const fb = await free.ledger.balance('co_alice')
+  assert.equal(fb!.byKind.daily_recovery, DAILY_RECOVERY_AMOUNT)
+  assert.equal(fb!.total, DAILY_RECOVERY_AMOUNT)
+  assert.equal(free.mem.rows('doyaPowerGrant').filter((g) => g.kind === 'monthly').length, 0)
 })

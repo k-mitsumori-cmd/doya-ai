@@ -5,11 +5,20 @@
 //    会社はセッションの本人の会社から決める（body や query の companyId を信じない。balanceForUser(session.user.id) を使う）
 // ⚠️ 本番DBに表が無いうちは呼ばない（DOYA-POWER-MIGRATION.md の SQL を統括が流したあとに使う）
 import { prisma } from '@/lib/prisma'
+import { isPaidPlan } from '@/lib/unified-plan'
 import type { LedgerDb } from './ledger'
 import { doyaPowerLedgerAllowed } from './flag'
 import { createGatedLedger } from './gate'
 
-export const doyaPower = createGatedLedger(() => prisma as unknown as LedgerDb, () => doyaPowerLedgerAllowed())
+// 毎日の回復は無料プランだけ。会社の持ち主（userId）のプランが有料なら付けない
+async function isPaidCompany(companyId: string): Promise<boolean> {
+  const company = await prisma.accountCompany.findUnique({ where: { id: companyId }, select: { userId: true } })
+  if (!company) return false
+  const user = await prisma.user.findUnique({ where: { id: company.userId }, select: { plan: true } })
+  return isPaidPlan(user?.plan)
+}
+
+export const doyaPower = createGatedLedger(() => prisma as unknown as LedgerDb, () => doyaPowerLedgerAllowed(), { isPaidCompany })
 
 export const consume = doyaPower.consume
 export const refund = doyaPower.refund
@@ -18,6 +27,7 @@ export const grantMonthlyForPlan = doyaPower.grantMonthlyForPlan
 export const balance = doyaPower.balance
 export const balanceForUser = doyaPower.balanceForUser
 export const operationStatus = doyaPower.operationStatus
+export const recentConsume = doyaPower.recentConsume
 
 export * from './rules'
 export { DoyaPowerDisabledError } from './gate'

@@ -6,11 +6,11 @@
 // ⚠️ ここは表示の数だけ。実際に台帳から減らす処理は、台帳の表が本番DBに入ってから、この表を使って作る。
 // 0 の操作（勤怠・プロマネ・収入・支出）は、札を出さない。
 
-/** 音声（AI商談・AI面接）の1分あたりの見込み。standard は原価の低い側、high は高い側 */
+/** 音声（AI商談・AI面接）の1分あたりの量。1分5（2026-10-23 ユーザー決定。仮の表の中で確定）。standard は原価の低い側（3）、high は高い側（5） */
 export const VOICE_COST_PER_MINUTE = { standard: 3, high: 5 } as const
 export type VoiceCostMode = keyof typeof VOICE_COST_PER_MINUTE
-/** 音声の見込みをどちらにするか（原価の高い側を見込むなら 'high' に変える） */
-export const VOICE_COST_MODE: VoiceCostMode = 'standard'
+/** 音声は1分5（2026-10-23 ユーザー決定。仮の表の中で確定）。standard（3）に戻すときはここを変える */
+export const VOICE_COST_MODE: VoiceCostMode = 'high'
 
 export const DOYA_POWER_COSTS = {
   /** 文章の生成（営業管理の AI 次アクション・AI スコア、見積の品目の候補など）1回 */

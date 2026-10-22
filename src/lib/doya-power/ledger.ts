@@ -70,6 +70,12 @@ export type BalanceResult = {
 
 export type GrantOptions = { sourceKey?: string; note?: string }
 
+export type LedgerOptions = {
+  now?: () => Date
+  /** その会社が有料か。有料の会社には毎日の回復を付けない（毎月の付与だけ）。既定は無料扱い */
+  isPaidCompany?: (companyId: string) => Promise<boolean>
+}
+
 class RetryableError extends Error {}
 const MAX_ATTEMPTS = 4
 
@@ -79,8 +85,9 @@ function prismaCode(e: unknown): string | undefined {
 const isRetryable = (e: unknown) => e instanceof RetryableError || prismaCode(e) === 'P2002' || prismaCode(e) === 'P2034'
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200
 
-export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date } = {}) {
+export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {}) {
   const clock = options.now ?? (() => new Date())
+  const paidOf = async (companyId: string): Promise<boolean> => (options.isPaidCompany ? Boolean(await options.isPaidCompany(companyId)) : false)
 
   /** 直列化できる取引で実行し、競合（unique・直列化の失敗・同時に減らされた）のときはやり直す */
   async function run<T>(fn: (tx: any, now: Date) => Promise<T>): Promise<T> {
@@ -121,7 +128,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
   }
 
   /** 期限切れを 0 にし、毎日の回復を足す。整えたあとの付与を返す */
-  async function settle(tx: any, account: AccountRow, now: Date): Promise<GrantRow[]> {
+  async function settle(tx: any, account: AccountRow, now: Date, paid = false): Promise<GrantRow[]> {
     let grants = await liveGrants(tx, account.id)
     let running = usableTotal(grants, now)
     for (const g of grants) {
@@ -138,7 +145,8 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
     const today = jstDayKey(now)
     if (account.lastRecoveryDay !== today) {
       const recovering = grants.filter((g) => g.kind === 'daily_recovery').reduce((s, g) => s + g.remaining, 0)
-      const add = dailyRecoveryToAdd(account.lastRecoveryDay, today, recovering)
+      // 毎日の回復は無料プランだけ。有料の会社は毎月の付与だけ（日付は進めて、無料に戻ったときに溜まった日数を一度に付けない）
+      const add = paid ? 0 : dailyRecoveryToAdd(account.lastRecoveryDay, today, recovering)
       if (add > 0) {
         const g: GrantRow = await tx.doyaPowerGrant.create({
           data: { accountId: account.id, kind: 'daily_recovery', amount: add, remaining: add, grantedAt: now, expiresAt: null, sourceKey: `daily:${today}` },
@@ -156,8 +164,9 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
   }
 
   /** 会社の残りから amount を減らす。同じ operationId では1回だけ。足りなければ減らさずに拒む */
-  async function consume(companyId: string, amount: number, operationId: string): Promise<ConsumeResult> {
+  async function consume(companyId: string, amount: number, operationId: string, opts: { note?: string } = {}): Promise<ConsumeResult> {
     if (!validId(companyId) || !validId(operationId) || !isValidAmount(amount)) return { ok: false, reason: 'invalid' }
+    const paid = await paidOf(companyId)
     return run(async (tx, now): Promise<ConsumeResult> => {
       const existing = await tx.doyaPowerTransaction.findUnique({ where: { operationId } })
       const account = await findAccount(tx, companyId, !existing)
@@ -168,13 +177,13 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
         return { ok: true, operationId, amount: -existing.amount, balance: usableTotal(grants, now), duplicated: true }
       }
       if (!account) return { ok: false, reason: 'company_not_found' }
-      const grants = await settle(tx, account, now)
+      const grants = await settle(tx, account, now, paid)
       const plan = allocate(grants, amount, now)
       if (!plan) return { ok: false, reason: 'insufficient', balance: await writeBalance(tx, account, grants, now) }
       const after = usableTotal(grants, now) - amount
       // 記録を先に作る（operationId の unique で、同時に来た2回目はここで止まり、取引ごと取り消される）
       await tx.doyaPowerTransaction.create({
-        data: { accountId: account.id, type: 'consume', amount: -amount, balanceAfter: after, operationId, allocations: plan },
+        data: { accountId: account.id, type: 'consume', amount: -amount, balanceAfter: after, operationId, allocations: plan, ...(opts.note ? { note: opts.note.slice(0, 200) } : {}) },
       })
       for (const a of plan) {
         const r = await tx.doyaPowerGrant.updateMany({
@@ -196,6 +205,9 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
    */
   async function refund(operationId: string, opts: { companyId?: string } = {}): Promise<RefundResult> {
     if (!validId(operationId) || (opts.companyId !== undefined && !validId(opts.companyId))) return { ok: false, reason: 'invalid' }
+    // 戻すときの会社は、呼ぶ側が渡した会社（無ければ操作の id の2つ目の欄）
+    const ownerId = opts.companyId ?? operationId.split(':')[1] ?? ''
+    const paid = ownerId ? await paidOf(ownerId) : false
     return run(async (tx, now): Promise<RefundResult> => {
       const consumed = await tx.doyaPowerTransaction.findUnique({ where: { operationId } })
       if (!consumed || consumed.type !== 'consume') return { ok: false, reason: 'not_found' }
@@ -216,7 +228,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
       for (const a of allocations) {
         await tx.doyaPowerGrant.updateMany({ where: { id: a.grantId, accountId: account.id }, data: { remaining: { increment: a.amount } } })
       }
-      const grants = await settle(tx, account, now)
+      const grants = await settle(tx, account, now, paid)
       const total = await writeBalance(tx, account, grants, now)
       await tx.doyaPowerTransaction.updateMany({ where: { refundOf: operationId }, data: { balanceAfter: total } })
       return { ok: true, operationId, amount, duplicated: false }
@@ -235,6 +247,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
     if (!validId(companyId) || !isGrantKind(kind) || !isValidAmount(amount)) return { ok: false, reason: 'invalid' }
     if (opts.sourceKey !== undefined && !validId(opts.sourceKey)) return { ok: false, reason: 'invalid' }
     if (expiresAt !== null && (!(expiresAt instanceof Date) || Number.isNaN(expiresAt.getTime()))) return { ok: false, reason: 'invalid' }
+    const paid = await paidOf(companyId)
     return run(async (tx, now): Promise<GrantResult> => {
       const account = await findAccount(tx, companyId, true)
       if (!account) return { ok: false, reason: 'company_not_found' }
@@ -246,7 +259,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
           return { ok: true, grantId: dup.id, granted: dup.amount, balance: usableTotal(grants, now), duplicated: true }
         }
       }
-      const grants = await settle(tx, account, now)
+      const grants = await settle(tx, account, now, paid)
 
       let granted = amount
       let expires: Date | null = expiresAt
@@ -295,10 +308,11 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
   /** 残り・種類ごとの内訳・次の回復の時刻。会社が無ければ null */
   async function balance(companyId: string): Promise<BalanceResult | null> {
     if (!validId(companyId)) return null
+    const paid = await paidOf(companyId)
     return run(async (tx, now): Promise<BalanceResult | null> => {
       const account = await findAccount(tx, companyId, true)
       if (!account) return null
-      const grants = (await settle(tx, account, now)).filter((g) => isUsable(g, now))
+      const grants = (await settle(tx, account, now, paid)).filter((g) => isUsable(g, now))
       const total = await writeBalance(tx, account, grants, now)
       const byKind = Object.fromEntries(GRANT_KINDS.map((k) => [k, 0])) as Record<GrantKind, number>
       for (const g of grants) if (isGrantKind(g.kind)) byKind[g.kind] += g.remaining
@@ -312,7 +326,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
         companyId,
         total,
         byKind,
-        nextRecoveryAt: byKind.daily_recovery < DAILY_RECOVERY_CAP ? jstNextDayStart(now) : null,
+        nextRecoveryAt: !paid && byKind.daily_recovery < DAILY_RECOVERY_CAP ? jstNextDayStart(now) : null,
         nextExpiry,
       }
     })
@@ -339,7 +353,46 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
     })
   }
 
-  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus }
+  /**
+   * 5分以内の作り直しを見つける（読むだけ）。同じ会社・同じ操作の名前で、withinMs 以内に減らして、まだ戻していない消費があるか。
+   * - retryOf: クライアントが「この操作の作り直し」と示した、前の操作のキー（operationId の3つ目の欄）
+   * - target: 同じ対象を表すキー（consume のときの note に target:<キー> で残してある）
+   * どちらも渡さなければ見つけない（会社の別の操作を、勝手に作り直し扱いにしない）
+   */
+  async function recentConsume(
+    companyId: string,
+    action: string,
+    opts: { withinMs: number; retryOf?: string | null; target?: string | null },
+  ): Promise<{ operationId: string; at: Date } | null> {
+    if (!validId(companyId) || !validId(action)) return null
+    if (!opts.retryOf && !opts.target) return null
+    return db.$transaction(async (tx) => {
+      const now = clock()
+      const account = await tx.doyaPowerAccount.findUnique({ where: { companyId } })
+      if (!account) return null
+      const rows: { operationId: string | null; note: string | null; createdAt: Date }[] = await tx.doyaPowerTransaction.findMany({
+        where: { accountId: account.id, type: 'consume', createdAt: { gte: new Date(now.getTime() - opts.withinMs) } },
+      })
+      const prefix = `${action}:${companyId}:`
+      const hits = rows.filter(
+        (r) =>
+          r.operationId !== null &&
+          r.operationId.startsWith(prefix) &&
+          ((opts.retryOf && r.operationId.startsWith(`${prefix}${opts.retryOf}:`)) || (opts.target && r.note === `target:${opts.target}`)),
+      )
+      if (!hits.length) return null
+      const refunds: { refundOf: string | null }[] = await tx.doyaPowerTransaction.findMany({
+        where: { accountId: account.id, type: 'refund', refundOf: { in: hits.map((h) => h.operationId as string) } },
+      })
+      const refunded = new Set(refunds.map((r) => r.refundOf))
+      const live = hits.filter((h) => !refunded.has(h.operationId))
+      if (!live.length) return null
+      live.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      return { operationId: live[0].operationId as string, at: live[0].createdAt }
+    })
+  }
+
+  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, recentConsume }
 }
 
 export type DoyaPowerLedger = ReturnType<typeof createDoyaPowerLedger>

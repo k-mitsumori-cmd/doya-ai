@@ -16,11 +16,21 @@ import { DAILY_RECOVERY_AMOUNT, jstNextDayStart, SOLO_PRO_MONTHLY_GRANT, DAILY_R
 import type { BalanceResult, ConsumeResult, GrantResult, RefundResult } from './ledger'
 
 export type ChargeLedger = {
-  consume: (companyId: string, amount: number, operationId: string) => Promise<ConsumeResult>
+  consume: (companyId: string, amount: number, operationId: string, opts?: { note?: string }) => Promise<ConsumeResult>
   refund: (operationId: string, opts?: { companyId?: string }) => Promise<RefundResult>
   grantMonthlyForPlan: (companyId: string, plan: string | null | undefined) => Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }>
   balance: (companyId: string) => Promise<BalanceResult | null>
   operationStatus: (operationId: string) => Promise<'none' | 'consumed' | 'refunded'>
+  /** 5分以内の作り直しの相手（同じ会社・同じ操作の名前で、戻していない消費）を探す */
+  recentConsume: (companyId: string, action: string, opts: { withinMs: number; retryOf?: string | null; target?: string | null }) => Promise<{ operationId: string; at: Date } | null>
+}
+
+/** 作り直しを半分にする時間（前の消費から5分以内） */
+export const RETRY_HALF_WINDOW_MS = 5 * 60_000
+
+/** 作り直しの量: 半分（切り上げ）。1 は 1 のまま */
+export function halfAmount(amount: number): number {
+  return Math.max(1, Math.ceil(amount / 2))
 }
 
 export type ChargeDeps = {
@@ -41,7 +51,7 @@ export type ChargeDeps = {
 
 export type ChargeOutcome =
   | { kind: 'skip' }
-  | { kind: 'charged'; operationId: string; amount: number; duplicated: boolean; refund: () => Promise<void> }
+  | { kind: 'charged'; operationId: string; amount: number; duplicated: boolean; halved: boolean; refund: () => Promise<void> }
   | { kind: 'blocked'; response: NextResponse }
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
@@ -80,13 +90,32 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
   /**
    * 生成の前に呼ぶ。units は件数（画像の枚数・質問の数など）、key は同じ操作をまとめるための ID（クライアントの operationId など）。
    * key が無いときは、その場で作る（その呼び出しだけの操作になる）
+   * retryOf（前の操作のキー）か target（同じ対象のキー）があり、同じ会社・同じ操作の名前で5分以内に減らした
+   * （まだ戻していない）前の操作が見つかれば、減る量は半分（切り上げ）。見つからなければ全額
    */
-  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown } = {}): Promise<ChargeOutcome> {
+  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown } = {}): Promise<ChargeOutcome> {
     const who = await target()
     if (!who) return { kind: 'skip' }
-    const amount = doyaPowerCost(action, opts.units ?? 1)
-    if (amount === null || amount <= 0) return { kind: 'skip' }
+    const fullAmount = doyaPowerCost(action, opts.units ?? 1)
+    if (fullAmount === null || fullAmount <= 0) return { kind: 'skip' }
     const key = cleanKey(opts.key)
+    const retryOf = cleanKey(opts.retryOf)
+    const targetKey = cleanKey(opts.target)
+    let amount = fullAmount
+    let halved = false
+    if ((retryOf && retryOf !== key) || targetKey) {
+      try {
+        const prev = await deps.ledger.recentConsume(who.companyId, action, { withinMs: RETRY_HALF_WINDOW_MS, retryOf: retryOf && retryOf !== key ? retryOf : null, target: targetKey })
+        if (prev) {
+          amount = halfAmount(fullAmount)
+          halved = true
+        }
+      } catch (e) {
+        if ((e as { name?: string })?.name === 'DoyaPowerDisabledError') return { kind: 'skip' }
+        // 探せないときは全額（安い側に倒さない）
+        log('[doya-power] recent lookup failed', { action, name: (e as { name?: string })?.name })
+      }
+    }
     // 操作の ID に量も含める（同じキーで量だけ変えた呼び出しを、同じ操作として扱わない）
     let operationId = `${action}:${who.companyId}:${key ?? newKey()}:${amount}`
     try {
@@ -94,13 +123,13 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
       // ⚠️ 前に失敗して戻した操作の ID がもう一度来たら、新しい操作として減らし直す（戻した操作をタダで動かさない）
       if (key && (await deps.ledger.operationStatus(operationId)) === 'refunded') operationId = `${operationId}:retry-${newKey()}`
-      const r = await deps.ledger.consume(who.companyId, amount, operationId)
+      const r = await deps.ledger.consume(who.companyId, amount, operationId, targetKey ? { note: `target:${targetKey}` } : undefined)
       if (r.ok) {
         // ⚠️ 同じ ID の2回目（duplicated）は、この呼び出しでは減らしていないので、失敗しても戻さない。
         //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）。
         // ⚠️ 2回目を減らさずに通すのは、処理の側が同じキーで結果を返し直す（または食い違いを断る）API だけに限る。
         //    クライアントのキーを渡してよい API は、verify-doya-power-charge-routes.cjs の KEYED で固定している
-        if (r.duplicated) return { kind: 'charged', operationId, amount: r.amount, duplicated: true, refund: async () => {} }
+        if (r.duplicated) return { kind: 'charged', operationId, amount: r.amount, duplicated: true, halved, refund: async () => {} }
         const refund = async () => {
           try {
             await deps.ledger.refund(operationId, { companyId: who.companyId })
@@ -108,7 +137,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
             log('[doya-power] refund failed', { action, name: (e as { name?: string })?.name, code: (e as { code?: string })?.code })
           }
         }
-        return { kind: 'charged', operationId, amount: r.amount, duplicated: r.duplicated, refund }
+        return { kind: 'charged', operationId, amount: r.amount, duplicated: r.duplicated, halved, refund }
       }
       if (r.reason === 'insufficient') {
         const next = jstNextDayStart(now())
