@@ -21,8 +21,10 @@ vm.runInNewContext(compiled, {
   console: { warn() {} },
   require(name) {
     if (name === './openai-image') return {
-      async generateImageGpt() { throw new Error('simulated primary failure') },
-      async editImageGpt() { throw new Error('simulated primary failure') },
+      // 別モデルへ替えるのは 429 / 5xx だけ（2026-10-19 原価見直し）。ここでは 503 を模す。
+      isRetryableImageProviderError: error => error?.status === 503,
+      async generateImageGpt() { throw Object.assign(new Error('simulated primary failure'), { status: 503 }) },
+      async editImageGpt() { throw Object.assign(new Error('simulated primary failure'), { status: 503 }) },
     }
     if (name === './fetch-timeout') return { withTimeout: async (_label, timeoutMs, fn) => {
       assert.equal(timeoutMs, 45_000)
