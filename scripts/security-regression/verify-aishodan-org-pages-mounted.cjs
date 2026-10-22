@@ -1,6 +1,6 @@
 process.env.NODE_ENV = 'test'
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), Module = require('node:module')
-const root = path.resolve(__dirname, '../..'), ts = require(root + '/node_modules/typescript'), React = require(root + '/node_modules/react')
+const root = process.env.DOYA_TEST_ROOT || process.cwd(), ts = require(root + '/node_modules/typescript'), React = require(root + '/node_modules/react')
 const { JSDOM } = require(root + '/node_modules/jsdom')
 const dom = new JSDOM('<div id="root"></div>', { url: 'https://example.invalid/aishodan?org=A' })
 global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true
@@ -59,14 +59,15 @@ const mocks = {
   './Lp': dummy,
 }
 const cache = new Map()
-function load(rel) {
-  if (cache.has(rel)) return cache.get(rel).exports.default
+function loadModule(rel) {
+  if (cache.has(rel)) return cache.get(rel).exports
   const filename = path.join(root, rel), m = new Module(filename)
   cache.set(rel, m); m.paths = Module._nodeModulePaths(path.dirname(filename))
-  m.require = id => { if (id in mocks) return mocks[id]; throw Error(`Unmocked ${id} from ${rel}`) }
+  m.require = id => { if (id === '@/components/aishodan/failure') return loadModule('src/components/aishodan/failure.tsx'); if (id in mocks) return mocks[id]; throw Error(`Unmocked ${id} from ${rel}`) }
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename)
-  return m.exports.default
+  return m.exports
 }
+const load = rel => loadModule(rel).default
 const pages = [
   ['dashboard', 'src/app/(shell)/aishodan/Tool.tsx', ['/api/aishodan/products?org=A', '/api/aishodan/rooms?org=A', '/api/aishodan/sessions?org=A', '/api/aishodan/stats?org=A']],
   ['sessions', 'src/app/(shell)/aishodan/sessions/page.tsx', ['/api/aishodan/sessions?org=A']],
