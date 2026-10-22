@@ -93,7 +93,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
    * retryOf（前の操作のキー）か target（同じ対象のキー）があり、同じ会社・同じ操作の名前で5分以内に減らした
    * （まだ戻していない）前の操作が見つかれば、減る量は半分（切り上げ）。見つからなければ全額
    */
-  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown } = {}): Promise<ChargeOutcome> {
+  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown; scope?: unknown } = {}): Promise<ChargeOutcome> {
     const who = await target()
     if (!who) return { kind: 'skip' }
     const fullAmount = doyaPowerCost(action, opts.units ?? 1)
@@ -117,7 +117,11 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       }
     }
     // 操作の ID に量も含める（同じキーで量だけ変えた呼び出しを、同じ操作として扱わない）
-    let operationId = `${action}:${who.companyId}:${key ?? newKey()}:${amount}`
+    // ⚠️ scope は呼ばれたルートの名前空間（charge.ts がルートの道すじから作る）。クライアントのキーは、同じ操作の名前でも
+    //    別のルートでは別の ID になる（安いルートで払ったキーを、高いルートに送ってタダにできない）。
+    //    キーの後ろ・量の前に置く（作り直しの探し方「操作の名前:会社:キー:」を変えないため）
+    const scope = cleanKey(opts.scope)
+    let operationId = `${action}:${who.companyId}:${key ?? newKey()}${scope ? `:${scope}` : ''}:${amount}`
     try {
       // 有料の人の毎月の付与は、残りを使うときに足りない分を付ける（月に1回だけ。cron に頼らない）。毎日の回復は台帳が足す
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)

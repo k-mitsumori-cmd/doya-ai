@@ -276,3 +276,31 @@ test('毎日の回復は無料の会社だけ。有料の会社には毎月の�
   assert.equal(fb!.total, DAILY_RECOVERY_AMOUNT)
   assert.equal(free.mem.rows('doyaPowerGrant').filter((g) => g.kind === 'monthly').length, 0)
 })
+
+test('ルートの名前空間（scope）がちがえば、同じ操作の名前・同じキーでも別の操作。安いルートで払ったキーを別のルートに送ってもタダにならない', async () => {
+  const s = setup()
+  const a = await s.charger.charge('text.generate', { key: 'same-key', scope: 'r-aaaaaaaaaaaa' })
+  assert.equal(a.kind, 'charged')
+  const after = await s.remaining()
+  const b = await s.charger.charge('text.generate', { key: 'same-key', scope: 'r-bbbbbbbbbbbb' })
+  assert.equal(b.kind, 'charged')
+  if (a.kind === 'charged' && b.kind === 'charged') {
+    assert.equal(b.duplicated, false)
+    assert.notEqual(a.operationId, b.operationId)
+  }
+  assert.ok((await s.remaining()) < after)
+  // 同じルートの同じキーは、今までどおり支払い済みの重複
+  const c = await s.charger.charge('text.generate', { key: 'same-key', scope: 'r-aaaaaaaaaaaa' })
+  if (c.kind === 'charged') assert.equal(c.duplicated, true)
+  // 操作の名前がちがえば、同じルートの名前空間でも別の操作
+  const d = await s.charger.charge('image.refine', { key: 'same-key', scope: 'r-aaaaaaaaaaaa' })
+  if (d.kind === 'charged') assert.equal(d.duplicated, false)
+})
+
+test('scope があっても、作り直し（retryOf）は前の操作を見つけて半分になる', async () => {
+  const s = setup()
+  const a = await s.charger.charge('image.refine', { key: 'first', scope: 'r-aaaaaaaaaaaa' })
+  assert.equal(a.kind, 'charged')
+  const b = await s.charger.charge('image.refine', { key: 'second', retryOf: 'first', scope: 'r-aaaaaaaaaaaa' })
+  if (a.kind === 'charged' && b.kind === 'charged') assert.equal(b.halved, true)
+})

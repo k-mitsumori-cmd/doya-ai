@@ -28,7 +28,9 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
       else assert.equal(keyed,false,p+' must not pass a client key');
     }
     // 操作の ID には量も入る（同じキーで量だけ変えた呼び出しを、同じ操作にしない）
-    assert.match(code('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{key \?\? newKey\(\)\}:\$\{amount\}`/);
+    assert.match(code('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{key \?\? newKey\(\)\}\$\{scope \? `:\$\{scope\}` : ''\}:\$\{amount\}`/);
+    // クライアントのキーは、ルートの名前空間つきで台帳に渡す（別のルートに送って支払い済みの重複にさせない）
+    assert.match(code('src/lib/doya-power/charge.ts'),/scope: routeScope\(req\)/);
   });
   await check('Every paid route behind a cost badge charges before generating',async()=>{
     for(const [p,action] of Object.entries(WRAPPED)){
