@@ -211,6 +211,11 @@ if (invitationActorMounted.status !== 0) {
   console.error('Security regression failed: verify-invitation-actor-mounted.cjs');
   process.exit(invitationActorMounted.status || 1);
 }
+const promaneInviteRetirementMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-invite-retirement-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneInviteRetirementMounted.error || promaneInviteRetirementMounted.status !== 0) {
+  console.error('Security regression failed: verify-promane-invite-retirement-mounted.cjs');
+  process.exit(promaneInviteRetirementMounted.status || 1);
+}
 const shellActorMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-shell-actor-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shellActorMounted.error || shellActorMounted.status !== 0) {
   console.error('Security regression failed: verify-shell-actor-mounted.cjs');
@@ -1063,6 +1068,11 @@ if (hrInviteIssuance.error || hrInviteIssuance.status !== 0) {
 const promaneInviteDelivery = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-invite-delivery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (promaneInviteDelivery.error || promaneInviteDelivery.status !== 0) {
   console.error('Security regression failed: verify-promane-invite-delivery.cjs');
+  process.exit(1);
+}
+const promaneInviteLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-invite-lifecycle.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneInviteLifecycle.error || promaneInviteLifecycle.status !== 0) {
+  console.error('Security regression failed: verify-promane-invite-lifecycle.cjs');
   process.exit(1);
 }
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });

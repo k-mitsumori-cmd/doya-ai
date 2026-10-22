@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+const crypto = require('node:crypto'), Prisma = require('@prisma/client').Prisma;
+const lifecycleState = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto });
+const lifecycleStore = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': lifecycleState });
 const deadline = Date.parse('2026-10-06T03:00:00Z');
 const ttl = 48 * 60 * 60 * 1000;
 function fixture(service, { offset = -1, delayAt = '', full = false, existing = false } = {}) {
@@ -28,8 +31,10 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
     },
   };
   const tx = {
+    $queryRaw: async query => { const sql = query.strings.join(''); if (sql.includes('FROM "User"')) return query.values.flat().filter(value => typeof value === 'string').map(id => ({ id })); if (sql.includes('promane_workspaces')) return [{ id: 'org', userId: 'owner' }]; if (sql.includes('promane_invitations')) return [{ id: 'invite' }]; throw Error('Unexpected SQL ' + sql); },
+    systemSetting: { findUnique: async () => null },
     sfaMember: membership, kintaiMember: { ...membership, findMany: async () => [] },
-    user: { findUnique: async () => ({ plan: 'FREE', id: 'user' }) },
+    user: { findUnique: async () => ({ plan: 'FREE', id: 'user', email: 'qa@example.invalid' }) },
     promaneInvitation: {
       findUnique: async () => structuredClone({ ...invitation, acceptedAt: state.acceptedAt }),
       update: async () => { attempted++; state.acceptedAt = new Clock(); delay('claim'); },
@@ -49,7 +54,7 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
   const common = { 'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: 'user', email: 'qa@example.invalid' } }) }, '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma } };
   const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { Date: Clock, crypto: require('node:crypto').webcrypto });
   const limits = load('src/lib/sfa/limits.ts', { ...common, '@/lib/plan-utils': load('src/lib/plan-utils.ts') }, { Date: Clock });
-  const promane = load('src/lib/promane/invite-admission.ts', { ...common, '@prisma/client': { Prisma: { TransactionIsolationLevel: { Serializable: 'Serializable' } } }, crypto: require('node:crypto'), '@/lib/promane/limits': { getUserPromaneLimits: async () => ({ maxMembersPerWorkspace: 3 }) } }, { Date: Clock });
+  const promane = load('src/lib/promane/invite-admission.ts', { ...common, '@prisma/client': { Prisma }, crypto, '@/lib/promane/limits': { getUserPromaneLimits: async () => ({ maxMembersPerWorkspace: 3 }) }, '@/lib/account-lifecycle/store': lifecycleStore, '@/lib/account-lifecycle/state': lifecycleState }, { Date: Clock });
   const route = load(`src/app/api/${service}/invite/[token]/route.ts`, { ...common, '@/lib/kintai/invite-token': tokenHelpers, '@/lib/sfa/limits': limits, '@/lib/promane/invite-admission': promane }, { Date: Clock });
   return { get: () => route.GET({}, { params: Promise.resolve({ token: 'token' }) }), post: () => route.POST({}, { params: Promise.resolve({ token: 'token' }) }), snapshot: () => structuredClone(state), stats: () => ({ attempted, rollbacks, committed }), tokenHelpers, Clock };
 }

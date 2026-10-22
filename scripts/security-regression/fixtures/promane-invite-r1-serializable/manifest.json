@@ -1,0 +1,5 @@
+{
+  "source": "freeze1-manifest.json",
+  "pinnedSerializableHelperSha256": "f540f1e85c930217979a966d24d814b50e9325dca5a39fa77bd55c8237492e0e",
+  "phase": "serializable_phantom_before_fix"
+}

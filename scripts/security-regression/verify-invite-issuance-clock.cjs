@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+const crypto = require('node:crypto'), Prisma = require('@prisma/client').Prisma;
+const lifecycleState = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto });
+const lifecycleStore = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': lifecycleState });
 const start = Date.parse('2026-10-06T00:00:00Z'), expiry = start + 1000;
 const day = 24 * 60 * 60 * 1000;
 function clockFixture() {
@@ -10,6 +13,8 @@ function clockFixture() {
 function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
   const c = clockFixture(); let writes = 0;
   const tx = {
+    $queryRaw: async query => { const sql = query.strings.join(''); if (sql.includes('FROM "User"')) return query.values.flat().filter(value => typeof value === 'string').map(id => ({ id })); if (sql.includes('promane_workspaces')) return [{ id: 'ws', userId: 'owner' }]; if (sql.includes('promane_members')) return [{ id: 'actor' }]; throw Error('Unexpected SQL ' + sql); },
+    systemSetting: { findUnique: async () => null }, user: { findMany: async () => [] },
     promaneMember: { findUnique: async () => ({ isActive: true, role: 'admin' }), findFirst: async () => null,
       count: async () => { if (stage === 'active') c.set(expiry + offset); return 1; } },
     promaneWorkspace: { findUnique: async () => ({ name: 'Team', userId: 'owner' }) },
@@ -24,9 +29,10 @@ function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
     },
   };
   const helper = load('src/lib/promane/invite-admission.ts', {
-    '@prisma/client': { Prisma: { TransactionIsolationLevel: { Serializable: 'Serializable' } } }, crypto: require('node:crypto'),
-    '@/lib/prisma': { prisma: { $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'Serializable'); return fn(tx); } } },
+    '@prisma/client': { Prisma }, crypto: require('node:crypto'),
+    '@/lib/prisma': { prisma: { $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'ReadCommitted'); return fn(tx); } } },
     '@/lib/promane/limits': { getUserPromaneLimits: async (owner, db) => { assert.equal(owner, 'owner'); assert.equal(db, tx); return { maxMembersPerWorkspace: 3 }; } },
+    '@/lib/account-lifecycle/store': lifecycleStore, '@/lib/account-lifecycle/state': lifecycleState,
   }, { Date: c.Clock });
   return { run: () => helper.issuePromaneInvitation({ workspaceId: 'ws', userId: 'admin', email: 'qa@example.invalid', role: 'member' }), now: c.now, writes: () => writes };
 }

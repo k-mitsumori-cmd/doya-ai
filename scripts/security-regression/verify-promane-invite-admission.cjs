@@ -1,5 +1,17 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+const actualPrisma = require('@prisma/client').Prisma;
+const lifecycleState = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': require('node:crypto') });
+const lifecycleStore = load('src/lib/account-lifecycle/store.ts', {
+  'node:crypto': require('node:crypto'), '@prisma/client': { Prisma: actualPrisma }, './state': lifecycleState,
+});
+const lockedRows = async query => {
+  const sql = query.strings.join('');
+  if (sql.includes('promane_workspaces')) return [{ id: 'ws', userId: 'owner' }];
+  if (sql.includes('promane_members')) return [{ id: 'member' }];
+  if (sql.includes('promane_invitations')) return [{ id: 'invite' }];
+  return query.values.filter(value => typeof value === 'string').map(id => ({ id }));
+};
 
 function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.com', conflicts = 0, clock = Date } = {}) {
   let attempts = 0;
@@ -11,6 +23,9 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
     workspace: { id: 'ws', slug: 'team', userId: 'owner' },
   };
   const tx = {
+    $queryRaw: lockedRows,
+    user: { findUnique: async () => ({ email: 'invited@example.com' }) },
+    systemSetting: { findUnique: async () => null },
     promaneInvitation: {
       findUnique: async () => invitation,
       update: async () => { inviteWrites++; },
@@ -38,7 +53,7 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
     },
   };
   const helper = load('src/lib/promane/invite-admission.ts', {
-    '@prisma/client': { Prisma: { TransactionIsolationLevel: { Serializable: 'Serializable' } } },
+    '@prisma/client': { Prisma: actualPrisma },
     crypto: require('node:crypto'),
     '@/lib/prisma': { prisma },
     '@/lib/promane/limits': {
@@ -48,6 +63,8 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
         return { maxMembersPerWorkspace: max };
       },
     },
+    '@/lib/account-lifecycle/store': lifecycleStore,
+    '@/lib/account-lifecycle/state': lifecycleState,
   }, { Date: clock });
   return {
     run: () => helper.acceptPromaneInvitation({ token: 'token', userId: 'invited', email, displayName: '招待先' }),
@@ -60,6 +77,9 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   let attempts = 0;
   let writes = 0;
   const tx = {
+    $queryRaw: lockedRows,
+    user: { findMany: async () => [] },
+    systemSetting: { findUnique: async () => null },
     promaneMember: {
       findUnique: async () => ({ role: inviterRole, isActive: inviterActive }),
       findFirst: async () => null,
@@ -87,13 +107,13 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   const prisma = {
     $transaction: async (callback, options) => {
       attempts++;
-      assert.equal(options.isolationLevel, 'Serializable');
+      assert.equal(options.isolationLevel, 'ReadCommitted');
       if (attempts <= conflicts) throw { code: 'P2034' };
       return callback(tx);
     },
   };
   const helper = load('src/lib/promane/invite-admission.ts', {
-    '@prisma/client': { Prisma: { TransactionIsolationLevel: { Serializable: 'Serializable' } } },
+    '@prisma/client': { Prisma: actualPrisma },
     crypto: require('node:crypto'),
     '@/lib/prisma': { prisma },
     '@/lib/promane/limits': {
@@ -103,6 +123,8 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
         return { maxMembersPerWorkspace: max };
       },
     },
+    '@/lib/account-lifecycle/store': lifecycleStore,
+    '@/lib/account-lifecycle/state': lifecycleState,
   });
   return {
     run: () => helper.issuePromaneInvitation({ workspaceId: 'ws', userId: actorId, email: 'invited@example.com', role: 'member' }),
@@ -208,7 +230,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     assert.deepEqual(f.state(), { attempts: 1, memberWrites: 0, inviteWrites: 0 });
   });
   await check('an existing active member can consume an invitation without another seat', async () => {
-    const f = fixture({ used: 3, existing: { id: 'old', isActive: true } });
+    const f = fixture({ used: 3, existing: { id: 'old', isActive: true, role: 'member' } });
     const result = await f.run();
     assert.equal(result.success, true);
     assert.equal(result.alreadyMember, true);

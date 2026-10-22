@@ -507,6 +507,25 @@ jobs:
       - name: Kintai and Promane invitation roles (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-additional-invite-integrated-postgres-supervise.py
 
+      - name: Promane invitation retirement before and after (private Unix PostgreSQL)
+        run: |
+          mkdir -p "$RUNNER_TEMP/promane-invite-lifecycle"
+          for phase in before serializable after; do
+            DOYA_PROMANE_INVITE_EXPECT="$phase" \
+            DOYA_PROMANE_INVITE_SUPERVISOR="$RUNNER_TEMP/promane-invite-lifecycle/$phase-supervisor.json" \
+            DOYA_PROMANE_INVITE_EVIDENCE="$RUNNER_TEMP/promane-invite-lifecycle/$phase-results.json" \
+            DOYA_PROMANE_INVITE_PROBE_LOG="$RUNNER_TEMP/promane-invite-lifecycle/$phase-probe.log" \
+            python3 docs/audits/2026-10-06-all-services-recheck/promane-invite-lifecycle-postgres-supervise.py
+          done
+
+      - name: Preserve Promane invitation retirement private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promane-invite-lifecycle-before-serializable-after-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/promane-invite-lifecycle/*
+
       - name: Promane read and receipt role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/promane-known-read-receipt-role-integrated-postgres-supervise.py
 

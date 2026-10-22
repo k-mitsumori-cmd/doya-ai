@@ -1,0 +1,78 @@
+{
+  "baseCommit": "66a60eee39f06fed34abdbcc24ab3468f3563eb7",
+  "observedOwnerHead": "37d91da675a78ad0462423120fd52782aa074bd9",
+  "entries": {
+    "docs/audits/2026-10-06-all-services-recheck/verify-adimage-operation-postgres.cjs": {
+      "baseSha256": "13a39d1cf1c5100cf91ee1e856c850df0d7f44b5c8b6f44e6676746c5cf5d50c",
+      "afterSha256": "13a39d1cf1c5100cf91ee1e856c850df0d7f44b5c8b6f44e6676746c5cf5d50c"
+    },
+    "scripts/security-regression/retirement-fixture.cjs": {
+      "baseSha256": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
+      "afterSha256": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4"
+    },
+    "scripts/security-regression/load-typescript.cjs": {
+      "baseSha256": "56ac874824dac61870b3867b0b9416af6ce0a23126dcbc71ebb2a77045432a43",
+      "afterSha256": "56ac874824dac61870b3867b0b9416af6ce0a23126dcbc71ebb2a77045432a43"
+    },
+    "prisma/schema.prisma": {
+      "baseSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964",
+      "afterSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964"
+    },
+    "src/lib/private-api-response.ts": {
+      "baseSha256": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+      "afterSha256": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
+    },
+    "src/lib/account-retirement.ts": {
+      "baseSha256": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e",
+      "afterSha256": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e"
+    },
+    "src/lib/account-lifecycle/state.ts": {
+      "baseSha256": "5e5d6883af072fd9468530f8bd21316b74cc17d6193d36ee5021c2546ffd9aaf",
+      "afterSha256": "5e5d6883af072fd9468530f8bd21316b74cc17d6193d36ee5021c2546ffd9aaf"
+    },
+    "src/lib/account-lifecycle/store.ts": {
+      "baseSha256": "8cdba8f3455977ad7a733526165304bc34a9fdce078069ac015fe59d47520ee5",
+      "afterSha256": "8cdba8f3455977ad7a733526165304bc34a9fdce078069ac015fe59d47520ee5"
+    },
+    "src/lib/account-lifecycle/subscription-plan.ts": {
+      "baseSha256": "36a55c0468e8bd0d2a9ea81a49b111e65c9470625973f04996048770ff83188a",
+      "afterSha256": "36a55c0468e8bd0d2a9ea81a49b111e65c9470625973f04996048770ff83188a"
+    },
+    "src/lib/account-lifecycle/subscription-provider.ts": {
+      "baseSha256": "8d2a987b51c32c259a6c6fc3eb62f307981ef332c0f48c3822ec41c53d365ea8",
+      "afterSha256": "8d2a987b51c32c259a6c6fc3eb62f307981ef332c0f48c3822ec41c53d365ea8"
+    },
+    "src/lib/account-lifecycle/self-subscription-settlement.ts": {
+      "baseSha256": "4ae8cd822bdbbe3b69e690c0f1900373d566fcd3e9c4479c24aacefe4630b622",
+      "afterSha256": "4ae8cd822bdbbe3b69e690c0f1900373d566fcd3e9c4479c24aacefe4630b622"
+    },
+    "src/lib/account-lifecycle/admin-subscription-plan.ts": {
+      "baseSha256": "57debeb5f05617ae7591cb4f1c7fda2614d52cce9dfde11f032bae4962d8e569",
+      "afterSha256": "57debeb5f05617ae7591cb4f1c7fda2614d52cce9dfde11f032bae4962d8e569"
+    },
+    "src/lib/account-lifecycle/admin-subscription-fact.ts": {
+      "baseSha256": "a84f5aa60856c8234203b96cc2ac19cb4d2256d13a740f97ff13d7f74e05de29",
+      "afterSha256": "a84f5aa60856c8234203b96cc2ac19cb4d2256d13a740f97ff13d7f74e05de29"
+    },
+    "src/app/api/promane/invite/[token]/route.ts": {
+      "baseSha256": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8",
+      "afterSha256": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8"
+    },
+    "src/lib/promane/invite-admission.ts": {
+      "baseSha256": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
+      "afterSha256": "656de7db75c5f612443f712efced1bf6e6eccb47f62f3c4f66981e809bb99dc7"
+    },
+    "src/app/api/promane/invite/route.ts": {
+      "baseSha256": "616a2371db6cf8779f9bb04f5463a91e7ef580c2b724b7ddd48793f3bdbf6341",
+      "afterSha256": "eb3e89df32c6e51b7f76feb9d31abf15bb6629de72c4b3822b4916d2fbf9431b"
+    },
+    "src/lib/promane/limits.ts": {
+      "baseSha256": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b",
+      "afterSha256": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b"
+    },
+    "src/lib/plan-utils.ts": {
+      "baseSha256": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",
+      "afterSha256": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+    }
+  }
+}

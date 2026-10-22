@@ -54,9 +54,25 @@ const session = { user: { id: 'actor', email: 'synthetic@example.invalid' } }
 function inviteFixture({ inviter = null, accepted = false, expired = false, sessionValue = session } = {}) {
   const invitation = { id: 'invitation', token: 'synthetic-token', workspaceId: 'workspace', invitedById: inviter ? 'sender' : null, invitedBy: inviter, role: 'member', email: 'synthetic@example.invalid', acceptedAt: accepted ? new Date() : null, expiresAt: new Date(Date.now() + (expired ? -60000 : 60000)), createdAt: new Date(), workspace: { id: 'workspace', slug: 'workspace', name: 'Synthetic workspace', userId: 'new-owner' } }
   let memberWrites = 0, inviteWrites = 0
-  const tx = { promaneInvitation: { findUnique: async () => invitation, findMany: async () => [invitation], update: async () => { inviteWrites++ } }, promaneMember: { findUnique: async () => null, count: async () => 1, create: async () => { memberWrites++ } } }
+  const tx = { $queryRaw: async query => {
+    const sql = query.strings?.join('') || ''
+    if (sql.includes('FROM "User"')) return [{ id: 'actor' }, { id: 'new-owner' }]
+    if (sql.includes('FROM promane_workspaces')) return [{ id: 'workspace', userId: 'new-owner' }]
+    if (sql.includes('FROM promane_invitations')) return [{ id: 'invitation' }]
+    throw Error('Unexpected invitation lock query: ' + sql)
+  }, systemSetting: { findUnique: async () => null }, user: { findUnique: async () => ({ email: 'synthetic@example.invalid' }) },
+  promaneWorkspace: { findUnique: async () => ({ id: 'workspace', slug: 'workspace', userId: 'new-owner' }) },
+  promaneInvitation: { findUnique: async () => invitation, findMany: async () => [invitation], update: async () => { inviteWrites++ } },
+  promaneMember: { findUnique: async () => null, count: async () => 1, create: async () => { memberWrites++ } } }
   const db = { ...tx, $transaction: async work => work(tx) }
-  const load = loader({ 'next-auth': { getServerSession: async () => sessionValue }, '@/lib/prisma': { prisma: db }, '@/lib/promane/limits': { getUserPromaneLimits: async id => { assert.equal(id, 'new-owner'); return { maxMembersPerWorkspace: 3 } } } })
+  const { load: loadActual } = require('./load-typescript.cjs')
+  const actualPrisma = require('@prisma/client').Prisma
+  const lifecycleState = loadActual('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto })
+  const lifecycleStore = loadActual('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma: actualPrisma }, './state': lifecycleState })
+  const load = loader({ 'next-auth': { getServerSession: async () => sessionValue }, '@/lib/prisma': { prisma: db },
+    '@prisma/client': { Prisma: actualPrisma }, '@/lib/account-lifecycle/state': lifecycleState,
+    '@/lib/account-lifecycle/store': lifecycleStore,
+    '@/lib/promane/limits': { getUserPromaneLimits: async id => { assert.equal(id, 'new-owner'); return { maxMembersPerWorkspace: 3 } } } })
   return { api: load('src/app/api/promane/invite/[token]/route.ts'), lists: load('src/app/api/promane/invitations/route.ts'), admission: load('src/lib/promane/invite-admission.ts'), state: () => ({ memberWrites, inviteWrites }) }
 }
 ;(async () => {

@@ -121,6 +121,18 @@ async function check(service, name, action, options) {
     await check(service, 'guest retains invitation details and explicit participation entry', async f => {
       await f.auth(null, 'unauthenticated'); assert.match(f.c.textContent, /Synthetic organization/); assert(f.c.querySelector('button')); assert.equal(f.counts().postCount, 0); assert.equal(f.counts().sdkCount, 0)
     })
+    if (service === 'promane') await check(service, 'retirement refusal stays on invitation and requires explicit recheck', async f => {
+      await f.accept()
+      assert.equal(f.counts().postCount, 1)
+      assert.equal(f.routes.length, 0)
+      assert.match(f.c.textContent, /退会処理中/)
+      const recheck = [...f.c.querySelectorAll('button')].find(button => button.textContent.includes('招待の状態を再確認'))
+      assert(recheck, 'The actual invitation page must offer recovery after safe 409')
+      await f.act(() => recheck.click())
+      assert.equal(f.counts().postCount, 1)
+      assert.equal(f.routes.length, 0)
+      assert.match(f.c.textContent, /ワークスペースに参加/)
+    }, { post: () => ({ status: 409, ok: false, json: async () => ({ code: 'ACCOUNT_RETIREMENT_IN_PROGRESS', error: '退会処理中です。' }) }) })
     const lateRead = deferred()
     await check(service, 'old lookup cannot restore invitation after a new actor lookup fails', async f => {
       await f.auth('beta'); await f.act(() => lateRead.resolve(ok(info(service))))
