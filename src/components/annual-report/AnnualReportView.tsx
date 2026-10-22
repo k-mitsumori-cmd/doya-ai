@@ -9,6 +9,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { UiIcon } from '@/components/icons'
 import { IMAGE_SIZES, REVEAL_KEYS, REVEAL_LABELS, SENSITIVE_REVEAL, DEFAULT_REVEAL, type ImageSize, type RevealKey } from '@/lib/annual-report/report'
+import type { DoyaPowerFx } from '@/lib/doya-power/fx'
+import { DoyaPowerFxProvider, useDoyaPowerFx } from '@/components/doya-power/fx-context'
+import DoyaPowerFxSettings from '@/components/doya-power/DoyaPowerFxSettings'
 import styles from './AnnualReportView.module.css'
 
 export interface AnnualReportViewProps {
@@ -18,22 +21,39 @@ export interface AnnualReportViewProps {
   allowed: RevealKey[]
   /** 見本のデータで出す（開発の確認用） */
   sample?: boolean
+  /** ドヤくんの表示と演出の設定（組織・個人）。省略するとすべてオン */
+  fx?: DoyaPowerFx
+  /** 会社の表示設定を変えられるか（会社の持ち主） */
+  canEditOrgFx?: boolean
 }
 
-export function annualImageUrl(o: { year: number; size: ImageSize; show: RevealKey[]; sample?: boolean; download?: boolean }): string {
+export function annualImageUrl(o: { year: number; size: ImageSize; show: RevealKey[]; sample?: boolean; download?: boolean; mascot?: boolean }): string {
   const p = new URLSearchParams({ year: String(o.year), size: o.size, show: o.show.join(',') })
   if (o.sample) p.set('sample', '1')
   if (o.download) p.set('download', '1')
+  // ドヤくんを出さない設定のとき。台紙（ドヤくんの絵）を使わず、無地の枠で作る（render.server.ts の plain）
+  if (o.mascot === false) p.set('mascot', '0')
   return `/api/annual-report/image?${p.toString()}`
 }
 
-export default function AnnualReportView({ years, initialYear, allowed, sample }: AnnualReportViewProps) {
+const sampleSave = async () => ({ ok: true as const })
+
+export default function AnnualReportView(props: AnnualReportViewProps) {
+  return (
+    <DoyaPowerFxProvider fx={props.fx}>
+      <AnnualBody {...props} />
+    </DoyaPowerFxProvider>
+  )
+}
+
+function AnnualBody({ years, initialYear, allowed, sample, canEditOrgFx = false }: AnnualReportViewProps) {
+  const { mascot, motion } = useDoyaPowerFx()
   const [year, setYear] = useState(initialYear)
   const [size, setSize] = useState<ImageSize>('wide')
   const [show, setShow] = useState<RevealKey[]>(() => DEFAULT_REVEAL.filter((k) => allowed.includes(k)))
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
-  const src = useMemo(() => annualImageUrl({ year, size, show, sample }), [year, size, show, sample])
+  const src = useMemo(() => annualImageUrl({ year, size, show, sample, mascot }), [year, size, show, sample, mascot])
   const imgRef = useRef<HTMLImageElement>(null)
   useEffect(() => {
     // ⚠️ 画像が描画（hydration）より先に読み終わると onLoad が来ない。読み終わっていれば、ここで表示に切り替える
@@ -47,7 +67,7 @@ export default function AnnualReportView({ years, initialYear, allowed, sample }
   const dim = IMAGE_SIZES[size]
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-motion={motion ? 'on' : 'off'}>
       <header className={styles.hero}>
         <p className={styles.eyebrow}>年間レポート</p>
         <h1 className={styles.title}>{year}年のドヤAI</h1>
@@ -100,7 +120,7 @@ export default function AnnualReportView({ years, initialYear, allowed, sample }
             </ul>
           </fieldset>
 
-          <a className={styles.save} href={annualImageUrl({ year, size, show, sample, download: true })} download>
+          <a className={styles.save} href={annualImageUrl({ year, size, show, sample, download: true, mascot })} download>
             <UiIcon name="download" size={18} aria-hidden />
             画像を保存
           </a>
@@ -126,6 +146,8 @@ export default function AnnualReportView({ years, initialYear, allowed, sample }
           </div>
         </section>
       </div>
+
+      <DoyaPowerFxSettings canEditOrg={canEditOrgFx} onSave={sample ? sampleSave : undefined} />
     </div>
   )
 }

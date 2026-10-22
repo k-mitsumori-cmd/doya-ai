@@ -13,6 +13,7 @@ import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { currentUserId } from '@/lib/shell/company.server'
 import { MIN_YEAR, allowedReveal, jstYear } from '@/lib/annual-report/report'
 import { resolveAnnualAccess } from '@/lib/annual-report/load.server'
+import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
 import AnnualReportView from '@/components/annual-report/AnnualReportView'
 
 export const metadata: Metadata = {
@@ -28,9 +29,9 @@ export default async function AnnualReportPage() {
   if (!userId) redirect('/auth/signin?callbackUrl=/home/annual')
   if (!(await isUiNext())) notFound()
 
-  const access = await resolveAnnualAccess(prisma, userId)
+  const [access, fxs] = await Promise.all([resolveAnnualAccess(prisma, userId), loadDoyaPowerFxForUser(userId)])
   const thisYear = jstYear(new Date())
   const years: number[] = []
   for (let y = thisYear; y >= MIN_YEAR; y--) years.push(y)
-  return <AnnualReportView years={years} initialYear={thisYear} allowed={allowedReveal(access)} />
+  return <AnnualReportView years={years} initialYear={thisYear} allowed={allowedReveal(access)} fx={fxs.fx} canEditOrgFx={fxs.canEditOrg} />
 }

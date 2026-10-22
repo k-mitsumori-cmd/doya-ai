@@ -16,7 +16,7 @@ export default function AnnualReportPreviewPage() {
   for (let y = thisYear; y >= MIN_YEAR; y--) years.push(y)
   return (
     <AppShell userName="サンプル">
-      <AnnualReportView years={years} initialYear={thisYear} allowed={[...REVEAL_KEYS]} sample />
+      <AnnualReportView years={years} initialYear={thisYear} allowed={[...REVEAL_KEYS]} sample canEditOrgFx />
     </AppShell>
   )
 }

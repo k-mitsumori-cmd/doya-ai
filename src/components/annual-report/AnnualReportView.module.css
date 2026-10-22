@@ -54,6 +54,8 @@
 .imgOn { opacity: 1; }
 .status { position: absolute; inset: 0; margin: 0; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center; font-size: 13px; color: var(--sub, #5b6b86); }
 
+.page[data-motion='off'] .img, .page[data-motion='off'] .imgOn { transition: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .img, .imgOn { transition: none; }
 }

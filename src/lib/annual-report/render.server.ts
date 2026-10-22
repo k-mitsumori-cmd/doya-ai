@@ -146,8 +146,12 @@ function headline(r: AnnualReport, big: number, compact: boolean) {
   ].filter(Boolean))
 }
 
-function header(r: AnnualReport) {
-  return el('div', { flexDirection: 'column', gap: 4 }, [
+/** 台紙の上に置く文字の下地（紙吹雪や光の上でも読めるように、白をかぶせる） */
+const PANEL = 'rgba(255,255,255,0.9)'
+
+function header(r: AnnualReport, panel = false) {
+  const base = { flexDirection: 'column', gap: 4 }
+  return el('div', panel ? { ...base, alignSelf: 'flex-start', padding: '12px 22px 12px 16px', backgroundColor: PANEL, borderRadius: 16 } : base, [
     el('div', { alignItems: 'center', gap: 12 }, [
       el('div', { width: 10, height: 26, borderRadius: 3, backgroundColor: C.brand }),
       text(`ドヤAI 年間レポート ${r.year}`, { fontSize: 24, fontWeight: 700, color: C.ink }),
@@ -177,12 +181,25 @@ function framedTree(r: AnnualReport, size: ImageSize, frame: string): Node {
   const extras = optionalRows(r, 112)
   const has = r.totalItems > 0
   let content: Node
-  if (size === 'wide') {
+  if (!has) {
+    // 記録が0件: 見出し・会社名・案内を1枚の白い下地にまとめ、台紙の飾りから離す。余白は上下で分ける（上に寄せて下が間延びしない）
+    const wide = size === 'wide'
+    const panelW = wide ? width - 64 - 350 : 820
+    const panel = el('div', { flexDirection: 'column', width: panelW, gap: wide ? 12 : 18, padding: wide ? '26px 34px' : '36px 44px', backgroundColor: PANEL, borderRadius: 26 }, [
+      header(r),
+      text('この年の記録は、まだありません', { fontSize: wide ? 40 : 46, fontWeight: 700, color: C.ink, marginTop: wide ? 6 : 14 }),
+      text('ツールで作ると、ここに1年分がまとまります', { fontSize: wide ? 22 : 26, color: C.sub }),
+    ])
+    content = el('div', { flexDirection: 'column', width, height, padding: wide ? '44px 350px 34px 64px' : 72, position: 'relative' }, [
+      el('div', { flex: 1, flexDirection: 'column', justifyContent: wide ? 'center' : 'flex-start', paddingTop: wide ? 0 : 150 }, [panel]),
+      footer(true),
+    ])
+  } else if (size === 'wide') {
     const W = width - 64 - 350
     const leftW = 300
     const rightW = W - leftW - 36
     content = el('div', { flexDirection: 'column', width, height, padding: '44px 350px 34px 64px', position: 'relative' }, [
-      header(r),
+      header(r, true),
       el('div', { flex: 1, flexDirection: 'column', marginTop: 14, gap: 12, overflow: 'hidden' }, [
         el('div', { flex: 1, gap: 36 }, [
           el('div', { width: has ? leftW : W, flexDirection: 'column' }, [headline(r, extras.length ? 46 : 64, extras.length > 0)]),
@@ -202,7 +219,7 @@ function framedTree(r: AnnualReport, size: ImageSize, frame: string): Node {
     const inner = width - pad * 2
     const lowerW = 500
     content = el('div', { flexDirection: 'column', width, height, padding: pad, position: 'relative' }, [
-      header(r),
+      header(r, true),
       el('div', { flex: 1, flexDirection: 'column', gap: 28, marginTop: 28, overflow: 'hidden' }, [
         headline(r, 84, false),
         ...(has ? [toolRows(r, 6, inner)] : []),
@@ -256,10 +273,11 @@ export function buildTree(r: AnnualReport, size: ImageSize, frame: string | null
 }
 
 /** root は確認用（省略すると process.cwd()） */
-export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root?: string): Promise<Buffer> {
+/** plain: true なら台紙（ドヤくんの絵）を使わず、無地の枠で作る（ドヤくんの表示を切った設定のとき） */
+export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root?: string, opts: { plain?: boolean } = {}): Promise<Buffer> {
   const { width, height } = IMAGE_SIZES[size]
   const paths = files(root)
-  const frame = await frameDataUri(size === 'tall' ? paths.frameTall : paths.frame, width, height)
+  const frame = opts.plain ? null : await frameDataUri(size === 'tall' ? paths.frameTall : paths.frame, width, height)
   const f = fonts(paths)
   const svg = await satori(buildTree(r, size, frame) as any, {
     width,
