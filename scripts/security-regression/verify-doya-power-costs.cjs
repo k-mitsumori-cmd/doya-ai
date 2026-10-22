@@ -40,8 +40,9 @@ const costs=load('src/lib/doya-power/costs.ts',{});
     }
     assert.ok(used.size>=10,'badges placed: '+used.size);
     for(const [action,files] of used)assert.ok(action in costs.DOYA_POWER_COSTS,`unknown action ${action} in ${files.join(', ')}`);
-    // 減る量が 0 の操作には、札を置かない
-    for(const a of ['kintai','promane','income','expense'])assert.ok(!used.has(a),a);
+    // 減る量が 0 の操作には、各ツールの札を置かない（見本のページは「0 なら何も出ない」ことを見せるので除く）
+    const isSample=f=>/DoyaPowerDemo\.tsx$|[\\/]ds-preview[\\/]/.test(f);
+    for(const a of ['kintai','promane','income','expense'])assert.ok(!(used.get(a)||[]).some(f=>!isSample(f)),a);
   });
   console.log(JSON.stringify({scope:'DoyaPower provisional cost table and button badges. Static checks and pure functions only.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
