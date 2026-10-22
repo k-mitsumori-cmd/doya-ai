@@ -63,6 +63,8 @@ try:
         'changed target role: confirmation fails without mutation',
         'missing target User: confirmation fails without mutation',
         'missing owner: confirmation fails without mutation',
+        'same operation committed after first missing receipt wins over deleted target User',
+        'same operation canceled after first missing receipt wins over deleted target User',
         'same operation with different target confirmation is rejected after commit',
         'same UUID in other actor and organization has independent compound receipt',
         'current User.plan alias remains exact in confirmation and unknown plan fails closed',

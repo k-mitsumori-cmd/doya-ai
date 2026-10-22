@@ -154,9 +154,15 @@ export async function transferOwner(identity: OwnerTransferIdentity, input: Owne
   for (let attempt = 0; attempt < 4; attempt++) {
     const discovered = await members(db, identity.service, identity.organizationId)
     const users = sortedUsers(discovered, identity.actorUserId, input.targetUserId)
+    let missingParticipantAtLock = false
     try {
       return await db.$transaction(async tx => {
-        await lockLifecycleUsers(tx, users)
+        try {
+          await lockLifecycleUsers(tx, users)
+        } catch (error) {
+          if ((error as { code?: string }).code === 'LIFECYCLE_USER_UNAVAILABLE') missingParticipantAtLock = true
+          throw error
+        }
         await lockOperation(tx, identity)
         const saved = await receipt(tx, identity)
         if (saved) {
@@ -194,6 +200,26 @@ export async function transferOwner(identity: OwnerTransferIdentity, input: Owne
         return result(next)
       }, options)
     } catch (error) {
+      if (missingParticipantAtLock && (error as { code?: string }).code === 'LIFECYCLE_USER_UNAVAILABLE') {
+        // The full transaction has rolled back. Recheck the same operation after
+        // locking its surviving actor: another request may have committed before
+        // the candidate User disappeared. Historical receipt always wins.
+        return db.$transaction(async tx => {
+          await lockLifecycleUsers(tx, [identity.actorUserId])
+          await lockOperation(tx, identity)
+          const saved = await receipt(tx, identity)
+          if (saved) {
+            if (saved.phase === 'committed' && saved.inputDigest !== digest) throw new OwnerTransferError('OWNER_TRANSFER_INPUT_CONFLICT')
+            return result(saved)
+          }
+          const existing = await tx.user.findMany({ where: { id: { in: users } }, select: { id: true } })
+          const present = new Set(existing.map(user => user.id))
+          if (input.targetUserId !== identity.actorUserId &&
+              users.filter(userId => !present.has(userId)).length === 1 &&
+              !present.has(input.targetUserId)) throw conflict()
+          throw error
+        }, readOptions)
+      }
       if (!retryable(error)) throw error
       if (attempt === 3) throw changed()
     }

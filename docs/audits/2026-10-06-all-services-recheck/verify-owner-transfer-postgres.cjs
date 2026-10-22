@@ -198,6 +198,38 @@ async function run() {
     assert.deepEqual(await roles(item), beforeRoles)
     assert.deepEqual(await setting(), beforeSetting)
   })
+  for (const phase of ['committed', 'canceled']) await test(`same operation ${phase} after first missing receipt wins over deleted target User`, async () => {
+    const item = await row('quote'), id = identity('quote', item.id)
+    const transactions = []
+    let first = true, terminal, savedSetting, savedRoles
+    const interposed = {
+      $queryRaw: db.$queryRaw.bind(db),
+      $transaction: async (callback, options) => {
+        transactions.push(options?.isolationLevel)
+        const value = await db.$transaction(callback, options)
+        if (first) {
+          first = false
+          assert.equal(value, null, 'the first receipt read must be missing')
+          terminal = phase === 'committed'
+            ? await store.transferOwner(id, input(item), item.id, db)
+            : await store.cancelOwnerTransfer(id, db)
+          assert.equal(terminal.phase, phase)
+          await db.$executeRawUnsafe('DELETE FROM "User" WHERE id=$1', 'new')
+          savedSetting = await setting()
+          savedRoles = await roles(item)
+        }
+        return value
+      },
+    }
+    const recovered = await store.transferOwner(id, input(item), item.id, interposed)
+    assert.deepEqual(transactions, ['ReadCommitted', 'Serializable', 'ReadCommitted'],
+      'failed full transaction must roll back before a fresh receipt read')
+    assert.deepEqual(dtoValue(recovered), dtoValue(terminal))
+    assert.deepEqual(await setting(), savedSetting, 'recovery must not rewrite any receipt')
+    assert.deepEqual(await roles(item), savedRoles, 'recovery must not rewrite either membership role')
+    assert.equal(await db.user.findUnique({ where: { id: 'new' }, select: { id: true } }), null)
+    assert.equal((await setting()).filter(record => record.key === types.ownerTransferKey(id)).length, 1)
+  })
   await test('same operation with different target confirmation is rejected after commit', async () => {
     const item = await row('quote'), id = identity('quote', item.id)
     assert.equal((await store.transferOwner(id, input(item), item.id, db)).phase, 'committed')
