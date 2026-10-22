@@ -59,13 +59,14 @@ check('version and generator hash drift fail before stdin mutation', () => {
   try {
     let changed = false
     const input = { setEncoding() { changed = true } }
-    const wrongVersion = fixture('0.0.0', 'module.exports = {}\n')
+    const wrongVersion = fixture('0.0.0', fs.readFileSync(generator))
     const wrongHash = fixture(wrapper.VERSION, 'module.exports = {}\n')
     for (const item of [wrongVersion, wrongHash]) {
       const env = { PRISMA_GENERATOR_INVOCATION: 'true', DOYA_PRISMA_GENERATOR_INVOCATION: 'true', DOYA_PRISMA_GENERATE_ROOT: item.folder }
       assert.throws(() => preload.apply(env, [process.execPath, item.entry], input), /Unexpected Prisma generator entry/)
     }
     assert.equal(JSON.parse(fs.readFileSync(path.join(wrongVersion.folder, 'node_modules/@prisma/client/package.json'))).version, '0.0.0')
+    assert.equal(digest(wrongVersion.entry), wrapper.GENERATOR_SHA256)
     assert.equal(JSON.parse(fs.readFileSync(path.join(wrongHash.folder, 'node_modules/@prisma/client/package.json'))).version, wrapper.VERSION)
     assert.notEqual(digest(wrongHash.entry), wrapper.GENERATOR_SHA256)
     assert.equal(changed, false)
