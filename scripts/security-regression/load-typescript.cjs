@@ -5,4 +5,4 @@ function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.tra
 // 減らす動きそのものは src/lib/doya-power/charge.test.ts が台帳（memory-db）で確かめる（2026-10-23）
 const DEFAULT_MOCKS={'@/lib/doya-power/charge':{withDoyaPowerCharge:(_spec,h)=>h,intIn:(v,min,max,f)=>{const n=typeof v==='number'?v:Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,Math.floor(n))):f},doyaPowerCharger:{charge:async()=>({kind:'skip'}),run:(o,fn)=>fn(),shellState:async()=>null,balanceView:async()=>null}}};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
-module.exports={load,check,results};
+module.exports={load,check,results,DEFAULT_MOCKS};

@@ -19,7 +19,7 @@ test('上限をプロセス内の変数で数えていない', () => {
 })
 
 test('生成の前に、ログイン・上限の消費・実行の記録をこの順で行う', () => {
-  const post = at('export async function POST')
+  const post = at('async function postHandler')
   const login = src.indexOf('await currentUserId()', post)
   const quota = at('reserveImageQuota(userId')
   const job = at('tenjikaiGenerationJob.create(')
@@ -42,7 +42,7 @@ test('失敗したとき、外部 API の応答の本文を利用者に返さな
 })
 
 test('有効化のフラグが無ければ、何もせずに断る', () => {
-  const post = at('export async function POST')
+  const post = at('async function postHandler')
   const gate = src.indexOf('if (!mock && !enabled())', post)
   assert.ok(gate > post && gate < src.indexOf('await req.json()', post))
   assert.match(src, /const enabled = \(\) => process\.env\.TENJIKAI_IMAGEGEN_ENABLED === 'true'/)

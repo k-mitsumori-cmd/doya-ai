@@ -15,6 +15,8 @@ async function exercise(kind, logoPath, downloaded) {
   for (const statement of ast.statements) {
     if (ts.isImportDeclaration(statement)) mocks[statement.moduleSpecifier.text] = {}
   }
+  // ドヤパワーの減らす包みは「減らさない」（旗が off と同じ）にする
+  if ('@/lib/doya-power/charge' in mocks) mocks['@/lib/doya-power/charge'] = require('./load-typescript.cjs').DEFAULT_MOCKS['@/lib/doya-power/charge']
   let claims = 0
   let campaigns = 0
   let generations = 0

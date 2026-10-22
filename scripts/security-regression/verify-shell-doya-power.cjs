@@ -15,15 +15,17 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
     assert.match(src,/if \(!enabled \|\| !balance\) return null/);
     assert.match(read('src/components/ds/cost-badge.tsx'),/if \(!enabled\) return null/);
   });
-  await check('Layout passes no balance until the ledger table exists, and the gate drops it when the flag is off',async()=>{
+  await check('Layout reads the balance only when the flag allows it, and the gate drops it when the flag is off',async()=>{
+    // 台帳の表が本番DBに入った（2026-10-23）。旗が出すと決めた人だけ、charge.ts の shellState で読む
     const layout=code('src/app/(shell)/layout.tsx');
-    assert.match(layout,/const doyaPowerState = null/);
-    assert.doesNotMatch(layout,/doya-power\/(ledger|index)|getBalance|\/api\/doya-power/);
+    assert.match(layout,/const doyaPowerState = doyaPower \? await doyaPowerCharger\.shellState\(\)\.catch\(\(\) => null\) : null/);
+    assert.doesNotMatch(layout,/doya-power\/(ledger|index)'|\/api\/doya-power/);
     assert.match(read('src/components/shell/ShellGate.tsx'),/<ShellPowerProvider value=\{uiNext && doyaPower \? doyaPowerState : null\}>/);
     assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerContext\.Provider value=\{Boolean\(uiNext && doyaPower\)\}>/);
   });
-  await check('No balance API route is added before the ledger table is in production',async()=>{
-    assert.equal(fs.existsSync(path.join(root,'src/app/api/doya-power/balance/route.ts')),false);
+  await check('Balance API checks the flag before reading anything',async()=>{
+    // 台帳の表が入ったので残りの API を作った。旗が off なら、何も読まずに 404（詳しくは verify-doya-power-charge-routes.cjs）
+    assert.match(code('src/app/api/doya-power/balance/route.ts'),/if \(doyaPowerRollout\(\) === 'off'\) return NextResponse\.json/);
   });
   console.log(JSON.stringify({scope:'Shell DoyaPower placement: flag-off renders nothing and never reads the ledger. Static source checks only.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
