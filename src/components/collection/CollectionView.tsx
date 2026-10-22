@@ -15,7 +15,7 @@ import { COLLECTION_AREAS } from '@/lib/collection/types'
 import { utilizationScore, usedToolIds } from '@/lib/collection/score'
 import { visibleBadges, type BadgeState } from '@/lib/collection/badges'
 import { loadSavedAreas, saveAreas, suggestAreas } from '@/lib/collection/areas'
-import { stampSrc } from '@/lib/collection/catalog'
+import { badgeSrc, growthStage, stampSrc } from '@/lib/collection/catalog'
 import styles from './collection.module.css'
 
 const dateFmt = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
@@ -104,6 +104,7 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
   const toggle = (id: CollectionArea) => setDraft((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]))
   const next = score.areas.flatMap((a) => a.unusedTools).slice(0, 3)
   const pct = score.percent ?? 0
+  const growth = growthStage(score.percent)
   const R = 52
   const C = 2 * Math.PI * R
 
@@ -136,6 +137,16 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
             </button>
           ) : null}
         </div>
+        {growth ? (
+          <figure className={styles.growth}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={growth.src} alt="" width={144} height={120} className={styles.growthImg} decoding="async" />
+            <figcaption className={styles.growthCaption}>
+              <span className={styles.growthLabel}>ドヤくん：{growth.label}</span>
+              <span className={styles.growthNext}>{growth.next === null ? 'いちばん上の段階です' : `活用度 ${growth.next}% で次の段階`}</span>
+            </figcaption>
+          </figure>
+        ) : null}
       </div>
 
       {editing ? (
@@ -199,7 +210,14 @@ function BadgeCard({ badge: b }: { badge: BadgeState }) {
   const date = fmtDate(b.earnedAt)
   return (
     <li className={styles.badge} data-earned={b.earned ? 'true' : undefined}>
-      <span className={styles.badgeIcon}><ShellIcon name={b.icon} size={22} /></span>
+      {badgeSrc(b.id) ? (
+        <span className={styles.badgeArt} aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={badgeSrc(b.id)!} alt="" width={56} height={56} className={styles.badgeImg} loading="lazy" decoding="async" />
+        </span>
+      ) : (
+        <span className={styles.badgeIcon}><ShellIcon name={b.icon} size={22} /></span>
+      )}
       <span className={styles.badgeBody}>
         <span className={styles.badgeTitle}>{b.title}</span>
         {b.earned ? (
@@ -264,10 +282,10 @@ function StampCard({ tool: t, usage, used }: { tool: CollectionTool; usage?: Too
   const first = fmtDate(usage?.firstAt ?? null)
   return (
     <li className={styles.stampCard} data-used={used ? 'true' : undefined}>
-      <span className={styles.stamp} aria-hidden>
+      <span className={styles.stamp} aria-hidden data-img={src && used ? 'true' : undefined}>
         {src && used ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="" width={72} height={72} className={styles.stampImg} />
+          <img src={src} alt="" width={72} height={72} className={styles.stampImg} loading="lazy" decoding="async" />
         ) : (
           <ShellIcon name={t.icon} size={28} />
         )}

@@ -3,7 +3,8 @@
 // ============================================
 // ⚠️ 画像生成 AI は使わない。satori で文字と図形を SVG にし、resvg-js で PNG にする（費用ゼロ）。
 // ⚠️ 入れるのは AnnualReport にあるものだけ。顧客名・金額・社員名は、report.ts が許した項目だけが入っている。
-// 台紙は public/annual-report/frame.webp（統括があとで差し替える）。無いときは、無地の枠で出す。
+// 台紙は横長が public/annual-report/frame.webp（1200×630）、縦長が frame-tall.webp（1080×1350）。無いときは、無地の枠で出す。
+// 台紙の右下にドヤくんがいるので、台紙があるときは、その場所を空けて文字を置く（framedTree）。
 // フォントは assets/fonts の Noto Sans JP（shanai のサムネと同じ）。
 // ⚠️ resvg-js はネイティブの .node を持ち、webpack で束ねるとビルドが落ちる。next.config.js の serverExternalPackages に
 //    入っていないため、実行時に createRequire で読む（webpack は追わない）。読めないとき（同梱されていない等）は sharp で PNG にする。
@@ -14,6 +15,7 @@ import { createRequire } from 'node:module'
 import { IMAGE_SIZES, formatYen, type AnnualReport, type ImageSize } from './report'
 
 export const FRAME_PATH = path.join('public', 'annual-report', 'frame.webp')
+export const FRAME_TALL_PATH = path.join('public', 'annual-report', 'frame-tall.webp')
 
 const C = {
   ink: '#0b1b3a',
@@ -32,12 +34,14 @@ function files(root?: string) {
       regular: path.join(root, 'assets', 'fonts', 'NotoSansJP-Regular.ttf'),
       bold: path.join(root, 'assets', 'fonts', 'NotoSansJP-Bold.ttf'),
       frame: path.join(root, FRAME_PATH),
+      frameTall: path.join(root, FRAME_TALL_PATH),
     }
   }
   return {
     regular: path.join(process.cwd(), 'assets/fonts/NotoSansJP-Regular.ttf'),
     bold: path.join(process.cwd(), 'assets/fonts/NotoSansJP-Bold.ttf'),
     frame: path.join(process.cwd(), 'public/annual-report/frame.webp'),
+    frameTall: path.join(process.cwd(), 'public/annual-report/frame-tall.webp'),
   }
 }
 
@@ -69,28 +73,30 @@ function el(type: string, style: Record<string, unknown>, children?: unknown, ex
 }
 const text = (s: string, style: Record<string, unknown>) => el('div', style, s)
 
-function toolRows(r: AnnualReport, max: number, width: number) {
+function toolRows(r: AnnualReport, max: number, width: number, small = false) {
   const top = r.tools.slice(0, max)
   const peak = Math.max(1, ...top.map((t) => t.count))
-  const barMax = width - 260
-  return el('div', { flexDirection: 'column', gap: 12 }, [
-    text('よく使ったツール', { fontSize: 20, fontWeight: 700, color: C.sub }),
+  const labelW = small ? 130 : 170
+  const barMax = width - labelW - 90
+  const fs = small ? 17 : 20
+  return el('div', { flexDirection: 'column', gap: small ? 8 : 12 }, [
+    text('よく使ったツール', { fontSize: small ? 17 : 20, fontWeight: 700, color: C.sub }),
     ...top.map((t) =>
-      el('div', { alignItems: 'center', gap: 14 }, [
-        text(t.label, { width: 170, fontSize: 20, color: C.ink }),
+      el('div', { alignItems: 'center', gap: 12 }, [
+        text(t.label, { width: labelW, fontSize: fs, color: C.ink }),
         el('div', { width: Math.max(6, Math.round((t.count / peak) * barMax)), height: 14, borderRadius: 7, backgroundColor: C.brand, opacity: 0.85 }),
-        text(`${t.count.toLocaleString('ja-JP')}${t.unit}`, { fontSize: 20, fontWeight: 700, color: C.ink }),
+        text(`${t.count.toLocaleString('ja-JP')}${t.unit}`, { fontSize: fs, fontWeight: 700, color: C.ink }),
       ])
     ),
   ])
 }
 
-function monthChart(r: AnnualReport, width: number, height: number, labels = true) {
+function monthChart(r: AnnualReport, width: number, height: number, labels = true, small = false) {
   const peak = Math.max(1, ...r.monthly)
-  const gap = 8
+  const gap = small ? 6 : 8
   const barW = Math.floor((width - gap * 11) / 12)
   return el('div', { flexDirection: 'column', gap: 10 }, [
-    text(r.busiestMonth ? `月ごとの件数（いちばん多かったのは ${r.busiestMonth}月）` : '月ごとの件数', { fontSize: 20, fontWeight: 700, color: C.sub }),
+    text(r.busiestMonth ? (small ? `月ごとの件数（最多は ${r.busiestMonth}月）` : `月ごとの件数（いちばん多かったのは ${r.busiestMonth}月）`) : '月ごとの件数', { fontSize: small ? 17 : 20, fontWeight: 700, color: C.sub }),
     el('div', { alignItems: 'flex-end', gap, height }, r.monthly.map((c, i) =>
       el('div', { width: barW, height: Math.max(3, Math.round((c / peak) * height)), borderRadius: 4, backgroundColor: i + 1 === r.busiestMonth ? C.brand : C.soft })
     )),
@@ -99,20 +105,21 @@ function monthChart(r: AnnualReport, width: number, height: number, labels = tru
 }
 
 /** 選んだときだけ出す行（金額・取引先・人） */
-function optionalRows(r: AnnualReport) {
+function optionalRows(r: AnnualReport, labelW = 130) {
   const rows: Node[] = []
   if (r.amounts) {
     const parts = [r.amounts.quoted > 0 ? `見積 ${formatYen(r.amounts.quoted)}` : '', r.amounts.won > 0 ? `受注 ${formatYen(r.amounts.won)}` : ''].filter(Boolean)
-    rows.push(row('金額', parts.join(' / ')))
+    rows.push(row('金額', parts.map((x, i) => (i < parts.length - 1 ? `${x} /` : x)), labelW, 8))
   }
-  if (r.customers) rows.push(row('主な取引先', r.customers.join('、')))
-  if (r.members) rows.push(row('よく使った人', r.members.join('、')))
+  if (r.customers) rows.push(row('主な取引先', r.customers.map((x, i, a) => (i < a.length - 1 ? `${x}、` : x)), labelW))
+  if (r.members) rows.push(row('よく使った人', r.members.map((x, i, a) => (i < a.length - 1 ? `${x}、` : x)), labelW))
   return rows
 }
-function row(label: string, value: string) {
+/** 値は区切りごとの塊で受け取り、塊の途中では折り返さない（名前の最後の1文字だけが次の行に行かないように） */
+function row(label: string, value: string[], labelW = 130, gap = 0) {
   return el('div', { gap: 16, alignItems: 'flex-start' }, [
-    text(label, { width: 130, fontSize: 18, color: C.sub, paddingTop: 2 }),
-    text(value, { flex: 1, fontSize: 19, fontWeight: 700, color: C.ink }),
+    text(label, { width: labelW, fontSize: 18, color: C.sub, paddingTop: 2 }),
+    el('div', { flex: 1, flexWrap: 'wrap', columnGap: gap }, value.map((v) => text(v, { fontSize: 19, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap' }))),
   ])
 }
 
@@ -149,14 +156,72 @@ function header(r: AnnualReport) {
   ].filter(Boolean))
 }
 
-function footer() {
-  return el('div', { justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.line}`, paddingTop: 14 }, [
+function footer(stacked = false) {
+  // stacked は台紙があるとき。台紙の模様の上でも読めるよう、白い下地を敷く
+  const style = stacked
+    ? { flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '8px 14px', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 10, alignSelf: 'flex-start' }
+    : { justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.line}`, paddingTop: 14 }
+  return el('div', style, [
     text('doya-ai.surisuta.jp', { fontSize: 16, fontWeight: 700, color: C.brand }),
     text('時間は、1件あたりの目安の時間で換算しています', { fontSize: 14, color: C.sub }),
   ])
 }
 
+/**
+ * 台紙があるときの並べ方。台紙の右下のドヤくんに文字が重ならないよう、場所を空ける。
+ * - 横長: 右の 350px を空け、左の 786px に2段組みで置く
+ * - 縦長: 上の方は横いっぱい。下の方（月ごとの件数から下）は左の 500px だけに置く
+ */
+function framedTree(r: AnnualReport, size: ImageSize, frame: string): Node {
+  const { width, height } = IMAGE_SIZES[size]
+  const extras = optionalRows(r, 112)
+  const has = r.totalItems > 0
+  let content: Node
+  if (size === 'wide') {
+    const W = width - 64 - 350
+    const leftW = 300
+    const rightW = W - leftW - 36
+    content = el('div', { flexDirection: 'column', width, height, padding: '44px 350px 34px 64px', position: 'relative' }, [
+      header(r),
+      el('div', { flex: 1, flexDirection: 'column', marginTop: 14, gap: 12, overflow: 'hidden' }, [
+        el('div', { flex: 1, gap: 36 }, [
+          el('div', { width: has ? leftW : W, flexDirection: 'column' }, [headline(r, extras.length ? 46 : 64, extras.length > 0)]),
+          has
+            ? el('div', { width: rightW, flexDirection: 'column', gap: extras.length ? 10 : 20 }, [
+                toolRows(r, extras.length ? 3 : 4, rightW, true),
+                monthChart(r, rightW, extras.length ? 28 : 56, extras.length === 0, true),
+              ])
+            : null,
+        ].filter(Boolean)),
+        extras.length ? el('div', { flexDirection: 'column', gap: 4, padding: '10px 16px', backgroundColor: 'rgba(245,248,255,0.92)', borderRadius: 12 }, extras.map((x) => x)) : null,
+      ].filter(Boolean)),
+      footer(true),
+    ])
+  } else {
+    const pad = 72
+    const inner = width - pad * 2
+    const lowerW = 500
+    content = el('div', { flexDirection: 'column', width, height, padding: pad, position: 'relative' }, [
+      header(r),
+      el('div', { flex: 1, flexDirection: 'column', gap: 28, marginTop: 28, overflow: 'hidden' }, [
+        headline(r, 84, false),
+        ...(has ? [toolRows(r, 6, inner)] : []),
+        el('div', { width: lowerW, flexDirection: 'column', gap: 24 }, [
+          has ? monthChart(r, lowerW, extras.length ? 70 : 110, true, true) : null,
+          extras.length ? el('div', { flexDirection: 'column', gap: 8, padding: '16px 20px', backgroundColor: 'rgba(245,248,255,0.92)', borderRadius: 16 }, extras) : null,
+        ].filter(Boolean)),
+      ]),
+      footer(true),
+    ])
+  }
+  return el('div', { width, height, position: 'relative', backgroundColor: C.paper, fontFamily: 'Noto Sans JP' }, [
+    el('img', { position: 'absolute', left: 0, top: 0, width, height }, undefined, { src: frame, width, height }),
+    content,
+  ])
+}
+
 export function buildTree(r: AnnualReport, size: ImageSize, frame: string | null): Node {
+  if (frame) return framedTree(r, size, frame)
   const { width, height } = IMAGE_SIZES[size]
   const pad = frame ? 72 : 56
   const inner = width - pad * 2
@@ -194,7 +259,7 @@ export function buildTree(r: AnnualReport, size: ImageSize, frame: string | null
 export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root?: string): Promise<Buffer> {
   const { width, height } = IMAGE_SIZES[size]
   const paths = files(root)
-  const frame = await frameDataUri(paths.frame, width, height)
+  const frame = await frameDataUri(size === 'tall' ? paths.frameTall : paths.frame, width, height)
   const f = fonts(paths)
   const svg = await satori(buildTree(r, size, frame) as any, {
     width,

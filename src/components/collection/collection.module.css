@@ -60,7 +60,12 @@
 }
 .ringValue small { font-size: 14px; margin-left: 2px; color: var(--sub); }
 .ringNone { font-size: 14px; font-weight: 700; color: var(--muted); }
-.scoreText { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.scoreText { display: grid; gap: 6px; justify-items: start; min-width: 0; flex: 1; }
+.growth { flex: none; margin: 0; display: grid; justify-items: center; gap: 4px; width: 160px; }
+.growthImg { width: 144px; height: 120px; object-fit: contain; }
+.growthCaption { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.growthLabel { font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.growthNext { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .scoreLead { margin: 0; font-size: 15px; line-height: 1.7; color: var(--ink); }
 .scoreLead b { font-variant-numeric: tabular-nums; }
 .scoreNote { margin: 0 0 6px; font-size: 13px; color: var(--muted); line-height: 1.6; }
@@ -114,6 +119,10 @@
   background: var(--bg); color: var(--muted);
 }
 .badge[data-earned='true'] .badgeIcon { background: var(--blue); color: #fff; box-shadow: 0 6px 16px -8px rgba(0, 102, 255, 0.7); }
+.badgeArt { flex: none; width: 56px; height: 56px; display: inline-flex; }
+.badgeImg { width: 56px; height: 56px; object-fit: contain; }
+/* まだ取っていない実績の絵は、色を抜いて薄く出す（色だけで伝えない。「開く」と進み具合の文字も出す） */
+.badge:not([data-earned='true']) .badgeImg { filter: grayscale(1); opacity: 0.45; }
 .badgeBody { flex: 1; min-width: 0; display: grid; gap: 3px; }
 .badgeTitle { font-size: 14px; font-weight: 700; color: var(--ink); }
 .badgeSub { font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -152,7 +161,10 @@
   transform: rotate(-8deg);
   animation: press 0.42s var(--ease, ease) both;
 }
-.stampImg { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.stampImg { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; }
+/* スタンプの絵は、丸い縁取りまで絵の中にあるので、仮の枠（二重線・塗り）を外す */
+.stampCard[data-used='true'] .stamp[data-img='true'] { border: none; background: none; width: 84px; height: 84px; margin: -6px 0; }
+.stamp[data-img='true'] .stampImg { width: 84px; height: 84px; border-radius: 0; }
 .stampName { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 14px; font-weight: 700; color: var(--ink); }
 .stampCard:not([data-used='true']) .stampName { color: var(--sub); }
 .stampSub { font-size: 12px; color: var(--muted); }
@@ -182,6 +194,9 @@
   .page { padding: 18px 16px 48px; gap: 16px; }
   .card { padding: 18px 16px; }
   .scoreMain { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .growth { grid-template-columns: 96px minmax(0, 1fr); justify-items: start; align-items: center; width: 100%; }
+  .growthImg { width: 96px; height: 80px; }
+  .growthCaption { justify-items: start; text-align: left; }
   .areaOptions { grid-template-columns: minmax(0, 1fr); }
   .areaBar { grid-template-columns: 10.5em minmax(0, 1fr) auto; font-size: 12px; }
   .badges { grid-template-columns: minmax(0, 1fr); }

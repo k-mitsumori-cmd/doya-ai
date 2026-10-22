@@ -1,7 +1,9 @@
 // 実行: npx tsx --test src/lib/collection/collection.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildCatalog, stampSrc } from './catalog'
+import fs from 'node:fs'
+import path from 'node:path'
+import { BADGE_IMAGES, STAMP_IMAGES_READY, badgeSrc, buildCatalog, growthStage, stampSrc } from './catalog'
 import { utilizationScore, usedToolIds } from './score'
 import { evaluateBadges, visibleBadges } from './badges'
 import { cleanBillingMonths, jstMonthKey } from './billing'
@@ -140,4 +142,22 @@ test('分野の仮の保存: 壊れた値は保存が無い扱い', () => {
 test('分野の仮の選択: 1つでも使った分野', () => {
   assert.deepEqual(suggestAreas(TOOLS, new Set(['quote', 'sfa'])), ['sell', 'operate'])
   assert.deepEqual(suggestAreas(TOOLS, new Set()), [])
+})
+
+test('スタンプ・バッジ・成長の絵: 一覧に載せた絵は、ファイルが置いてある', () => {
+  const pub = path.join(process.cwd(), 'public')
+  for (const id of STAMP_IMAGES_READY) assert.ok(fs.existsSync(path.join(pub, 'collection', 'stamps', `${id}.webp`)), id)
+  for (const id of Object.keys(BADGE_IMAGES)) assert.ok(fs.existsSync(path.join(pub, badgeSrc(id)!.slice(1))), id)
+  for (const p of [0, 50, 100]) assert.ok(fs.existsSync(path.join(pub, growthStage(p)!.src.slice(1))), String(p))
+  assert.equal(badgeSrc('first-interview-done'), null)
+})
+
+test('ドヤくんの成長: 活用度で3段階。分野を選んでいないときは出さない', () => {
+  assert.equal(growthStage(null), null)
+  assert.equal(growthStage(0)!.id, 'apprentice')
+  assert.equal(growthStage(34)!.id, 'apprentice')
+  assert.equal(growthStage(35)!.id, 'pro')
+  assert.equal(growthStage(69)!.id, 'pro')
+  assert.equal(growthStage(70)!.id, 'president')
+  assert.equal(growthStage(70)!.next, null)
 })
