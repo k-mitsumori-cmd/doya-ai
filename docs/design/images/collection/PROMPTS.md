@@ -143,3 +143,99 @@ Use your built-in image generation tool (not any API key, not a script) to gener
 Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/stamp-tenjikai.png. A square 1:1 collectible STAMP badge for a stamp card, on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). The stamp is a circle with a thick white die-cut sticker outline and a thin navy (#1b2a6b) ring inside, filled with a soft light blue (#e8f0ff) disc. Inside the circle: the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens), white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render, cheerful. Follow the expression rule in expressions.png: the eyes are glowing cyan arcs ^ ^ inside the goggle lens. Upper body, holding a small exhibition booth model. Keep everything inside the circle with margins. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (pink #ff1e72 OR yellow #ffd400) besides blue/white/navy.
 ```
 
+
+# 実績のバッジ・成長の絵・年間レポートの台紙（2026-10-22）
+
+- 置き場所: バッジ public/collection/badges/<id>.webp（256×256・透過）、成長 public/ui-renewal/mascots/growth-<段階>.webp（720×600・透過）、台紙 public/annual-report/frame-wide.webp（1200×630。frame.webp は同じもの）と frame-tall.webp（1080×1350）
+- 生成手段と後処理はスタンプと同じ。台紙は背景を抜かない。全部1回目で採用。
+
+## badge-articles-10
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-articles-10.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a stack of article sheets with a rising arrow. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-company-setup
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-company-setup.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a small office building with a check mark. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-first-banner
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-first-banner.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a picture frame with a paint brush and a sparkle. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-first-deal
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-first-deal.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: two hands shaking over a small trophy. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-first-hire
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-first-hire.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a profile card with a check mark and a small star. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-first-invoice
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-first-invoice.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: an invoice sheet with a gold yen coin. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-first-quote
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-first-quote.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a quotation sheet with a paper plane (sent). No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-team-invite
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-team-invite.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: three simple person silhouettes joined together. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-tools-5
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-tools-5.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: five small colored tiles arranged like a mini dashboard with a crown. No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## badge-zero-missed
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/badge-zero-missed.png. A square 1:1 achievement BADGE on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). A glossy hexagonal medal with a thick white die-cut outline, navy (#1b2a6b) rim, blue (#0066ff) to light blue gradient face, a small ribbon at the bottom in blue, and in the center a simple bold flat-3D icon: a calendar with a big check mark and a gold star (no missed invoices this month). No bear on badges. Clean, premium, friendly, readable at 48px. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere. At most one accent color (gold #ffd400 OR pink #ff1e72) besides blue/white/navy.
+```
+
+## grow-apprentice
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/grow-apprentice.png. Full-body character illustration, 6:5 landscape, perfectly flat solid pure magenta #ff00ff background (no shadow on the ground, no gradient; it will be keyed out). the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens) with glowing cyan eye lights inside the lens as in expressions.png, white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render, front-to-3/4 view, growth stage 1 apprentice: a little smaller and rounder, oversized hoodie sleeves, holding a small notebook and pencil, eager smile (eye lights ^ ^). Keep the whole character inside the frame with margins. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere.
+```
+
+## grow-president
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/grow-president.png. Full-body character illustration, 6:5 landscape, perfectly flat solid pure magenta #ff00ff background (no shadow on the ground, no gradient; it will be keyed out). the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens) with glowing cyan eye lights inside the lens as in expressions.png, white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render, front-to-3/4 view, growth stage 3 company president: wearing a navy tailored blazer over the hoodie and a small blue tie, holding a sleek navy briefcase, proud Doya face (eye lights as half-closed flat arcs with a small sparkle glint on one lens). Keep the whole character inside the frame with margins. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere.
+```
+
+## grow-pro
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/grow-pro.png. Full-body character illustration, 6:5 landscape, perfectly flat solid pure magenta #ff00ff background (no shadow on the ground, no gradient; it will be keyed out). the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens) with glowing cyan eye lights inside the lens as in expressions.png, white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render, front-to-3/4 view, growth stage 2 full professional: standard proportions, holding a tablet, confident pose, thumbs up (eye lights ^ ^). Keep the whole character inside the frame with margins. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere.
+```
+
+## frame-tall
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/frame-tall.png. 4:5 portrait (1080x1350 usage) background frame for an annual report share image. Bright white to very light blue (#f4f7fd) background with a soft blue (#0066ff to #00e0ff) light gradient glow at the edges, subtle confetti made of small blue and gold (#ffd400) shapes near the borders, and a small the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens) with glowing cyan eye lights inside the lens as in expressions.png, white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render in a lower corner, cheerful with a party popper. Leave a LARGE clean empty area in the middle (at least 70% of the canvas) for numbers and text to be overlaid later. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere.
+```
+
+## frame-wide
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/frame-wide.png. 16:9 wide landscape (1200x630 usage) background frame for an annual report share image. Bright white to very light blue (#f4f7fd) background with a soft blue (#0066ff to #00e0ff) light gradient glow at the edges, subtle confetti made of small blue and gold (#ffd400) shapes near the borders, and a small the ドヤAI polar bear mascot "Doya-kun" exactly like the attached references (bear-hero.png, icon-sample.png): white fluffy body, blue visor goggles (#0066ff frame, cyan #00e0ff rim, dark navy lens) with glowing cyan eye lights inside the lens as in expressions.png, white hoodie with a small white </> symbol on the chest, soft glossy 3D sticker render in a lower corner, cheerful with a party popper. Leave a LARGE clean empty area in the middle (at least 70% of the canvas) for numbers and text to be overlaid later. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere.
+```
+
