@@ -89,7 +89,7 @@ const scraper = load('src/lib/cunning/scraper.ts', {
     let writes = 0
     const tooLarge = async () => { throw new scraper.CunningScrapeTooLargeError() }
     const company = load('src/app/api/cunning/company/analyze/route.ts', {
-      'next/server': { NextResponse: Response },
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => { writes++ } } } },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/company': { analyzeCompanyUrl: tooLarge },
@@ -98,7 +98,7 @@ const scraper = load('src/lib/cunning/scraper.ts', {
     })
     assert.equal((await company.POST({ json: async () => ({ url: 'https://example.com' }) })).status, 413)
     const knowledge = load('src/app/api/cunning/knowledge/[id]/ingest/route.ts', {
-      'next/server': { NextResponse: Response },
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: { cunningKnowledgeBase: { findUnique: async () => ({ userId: 'owner' }) } } },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/rag': { chunkText: () => { writes++; return ['Chunk'] }, CUNNING_KNOWLEDGE_MAX_CHUNKS: 500 },

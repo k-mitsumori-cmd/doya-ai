@@ -463,7 +463,8 @@ export function buildServiceMetadata(
     description,
     keywords,
     alternates: { canonical },
-    ...(opts?.noindex
+    // 開発中のベータ版（services.ts の hidden: 'beta'）は、LP・料金などのサブページも検索結果に出さない
+    ...(opts?.noindex || svc.hidden === 'beta'
       ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
       : {}),
     openGraph: {

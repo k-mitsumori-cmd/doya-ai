@@ -11,9 +11,10 @@ import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
 import StripeSuccessSync from '@/components/StripeSuccessSync'
 import ServicePopupGuard from '@/components/ServicePopupGuard'
-import { getActiveServices } from '@/lib/services'
+import { getRunningServices } from '@/lib/services'
 
-const ACTIVE_SERVICE_PATHS = getActiveServices().map(service => service.href)
+// 開発中のベータ版（一覧から外したツール）も、ツールの画面としてポップアップを出さない
+const ACTIVE_SERVICE_PATHS = getRunningServices().map(service => service.href)
 
 // ============================================
 // ルートメタデータ（ポータル全体）

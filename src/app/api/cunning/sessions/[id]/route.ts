@@ -12,6 +12,7 @@ import { stopCunningRecordingForDeletion } from '@/lib/cunning/recording-ledger'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { MODE_IDS } from '@/lib/cunning/modes'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -23,6 +24,9 @@ async function ownedSession(userId: string, id: string) {
 
 // GET /api/cunning/sessions/[id] — 詳細（文字起こし・回答履歴）
 export async function GET(req: NextRequest, ctx: Ctx) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = await ctx.params
@@ -67,6 +71,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
 // PATCH /api/cunning/sessions/[id] — 利用時間の加算 / 終了
 export async function PATCH(req: NextRequest, ctx: Ctx) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = await ctx.params
@@ -107,6 +114,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/cunning/sessions/[id]
 export async function DELETE(req: NextRequest, ctx: Ctx) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = await ctx.params

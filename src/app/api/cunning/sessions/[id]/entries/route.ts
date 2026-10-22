@@ -6,8 +6,12 @@ import { readCunningTranscripts } from '@/lib/cunning/history-read'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { decodeCunningTranscriptCursor, encodeCunningTranscriptCursor, decodeCunningCursor, encodeCunningCursor } from '@/lib/cunning/history-cursor'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const { id } = await ctx.params

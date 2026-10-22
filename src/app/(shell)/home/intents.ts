@@ -5,6 +5,8 @@
 // 入力した文からも、言葉の一致で合うツールを選んで開く（エージェントの実行は、このあと）。
 // ⚠️ href は実在する画面にする（組織を選ぶツールは入口に。入口が最後に使った組織へ移す）。
 // ⚠️ 数字の質問（売上・残業・パイプラインなど）は、ここでは拾わない。agent.ts が答える。
+// ⚠️ 開発中のベータ版（services.ts の hidden: 'beta'）のツールへ行くものは、例にも入力の行き先にも出さない。
+import { isBetaHiddenPath } from '@/lib/services'
 
 export interface HomeIntent {
   label: string
@@ -18,7 +20,7 @@ export interface HomeIntentGroup {
   intents: HomeIntent[]
 }
 
-export const HOME_INTENT_GROUPS: HomeIntentGroup[] = [
+const ALL_INTENT_GROUPS: HomeIntentGroup[] = [
   {
     label: 'マーケティング',
     intents: [
@@ -60,6 +62,11 @@ export const HOME_INTENT_GROUPS: HomeIntentGroup[] = [
     ],
   },
 ]
+
+/** 例と入力の行き先。ベータで隠しているツールへ行くものは外す */
+export const HOME_INTENT_GROUPS: HomeIntentGroup[] = ALL_INTENT_GROUPS
+  .map((g) => ({ ...g, intents: g.intents.filter((i) => !isBetaHiddenPath(i.href)) }))
+  .filter((g) => g.intents.length > 0)
 
 /** 入力した文から、開くツールを選ぶ。言葉が長く一致したものを優先する。合うものが無ければ null */
 export function matchHomeIntent(text: string): HomeIntent | null {

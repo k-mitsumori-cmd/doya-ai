@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { ALL_SHELL_TOOLS, SHELL_HOME } from './tools'
+import { findShellTool, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
@@ -31,7 +31,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   children: ReactNode
 }) {
   const pathname = usePathname() || '/'
-  const tool = ALL_SHELL_TOOLS.find((t) => t.id === serviceId)
+  const tool = findShellTool(serviceId)
   const name = tool?.name ?? serviceId
 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
