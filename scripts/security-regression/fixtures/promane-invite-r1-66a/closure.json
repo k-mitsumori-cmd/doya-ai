@@ -60,7 +60,7 @@
     },
     "src/lib/promane/invite-admission.ts": {
       "baseSha256": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
-      "afterSha256": "656de7db75c5f612443f712efced1bf6e6eccb47f62f3c4f66981e809bb99dc7"
+      "afterSha256": "a29133a0c57dc71fbfc8306fbcc342083cf9fa07a7569948f1a9c9e551816bd5"
     },
     "src/app/api/promane/invite/route.ts": {
       "baseSha256": "616a2371db6cf8779f9bb04f5463a91e7ef580c2b724b7ddd48793f3bdbf6341",
