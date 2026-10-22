@@ -19,6 +19,7 @@ const read = (expected, selected, signal, service) => {
   if (calls.length > 60) throw Error('unexpected workspace read loop')
   const held = deferred(); calls.push({ expected, selected, signal, service, held }); return held.promise
 }
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const cache = new Map()
 const mocks = {
   react: React, 'react/jsx-runtime': req('react/jsx-runtime'),
@@ -35,7 +36,8 @@ const mocks = {
   },
   '@/components/CheckoutRecoveryProvider': { useCheckoutRecovery: () => ({ manager: { inspectStored() {} }, snapshot }) },
   '@/lib/checkout-recovery-client': { checkoutStoredIntent: () => ({ serviceId: 'mensetsu', organization: null }) },
-  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children) },
+  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
+  '@/components/ds': leaves.ds, '@/components/mensetsu/states': leaves.mensetsuStates(), '@/components/shell/icons': { ShellIcon: () => null },
   '@/lib/ui/notify': { notifyError: (setter, message) => setter(message) },
 }
 function load(relative) {

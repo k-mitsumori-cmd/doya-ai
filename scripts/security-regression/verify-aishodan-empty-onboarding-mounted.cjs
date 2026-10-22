@@ -14,6 +14,7 @@ global.fetch = async (url, init) => {
   writes.push(JSON.parse(init.body))
   return Response.json({ organization: { id: 'org-A', slug: 'A' } })
 }
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const mocks = {
   react: React, 'react/jsx-runtime': require(root + '/node_modules/react/jsx-runtime'),
   'next/link': { __esModule: true, default: ({ href, children, ...props }) => React.createElement('a', { ...props, href }, children) },
@@ -29,6 +30,7 @@ const mocks = {
   '@/components/shell/ui-next-context': { useUiNext: () => false },
   '@/components/ds': { Button: Null, EmptyState: Null, FirstSteps: Null, Skeleton: Null, StatTile: Null, ToolHero: Null },
   '@/components/ds/motion': { Stagger: ({ children }) => children, StaggerItem: ({ children }) => children },
+  '@/components/aishodan/failure': leaves.aishodanFailure(),
 }
 const filename = root + '/src/app/(shell)/aishodan/Tool.tsx', m = new Module(filename)
 m.paths = Module._nodeModulePaths(path.dirname(filename)); m.require = name => { assert.ok(name in mocks, name); return mocks[name] }

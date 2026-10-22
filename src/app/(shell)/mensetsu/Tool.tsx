@@ -605,7 +605,7 @@ export default function MensetsuTool() {
   if (loadError && uiNext) {
     return (
       <div className="px-4 py-6 lg:px-8">
-        <LoadIssueNotice issue={loadIssue} subject="面接の情報" onRetry={() => void load()} returnHref={proof.href('/mensetsu')} />
+        <LoadIssueNotice issue={loadIssue} subject="面接の情報" onRetry={() => void load()} returnHref={proof?.href('/mensetsu')} />
       </div>
     )
   }

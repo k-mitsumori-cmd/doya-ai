@@ -35,6 +35,7 @@ const request = (target, init = {}) => {
   if (reads === 2 && holdPoll) { oldPoll = deferred(); return oldPoll.promise }
   return Promise.resolve(Response.json(report('evaluated', 'New candidate')))
 }
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const filename = path.join(root, 'src/app/(shell)/mensetsu/sessions/[id]/page.tsx'), module_ = new Module(filename)
 module_.filename = filename
 const operationFile = path.join(root, 'src/components/mensetsu/useMensetsuOperation.ts'), operationModule = new Module(operationFile)
@@ -45,7 +46,8 @@ const mocks = {
   react: React, 'react/jsx-runtime': req('react/jsx-runtime'),
   'next/navigation': { useParams: () => ({ id: 'session-B' }) },
   'next/link': { __esModule: true, default: ({ href, children, ...props }) => React.createElement('a', { href, ...props }, children) },
-  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children) },
+  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
+  '@/components/ds': leaves.ds, '@/components/mensetsu/states': leaves.mensetsuStates(), '@/components/shell/icons': { ShellIcon: () => null },
   '@/lib/ui/notify': { notifyError: (setter, message) => setter(message) },
   '@/lib/mensetsu/types': { EVALUATION_STALE_MS: 1000 },
   '@/components/mensetsu/useMensetsuRequest': { useMensetsuRequest: () => ({ proof, request }) },

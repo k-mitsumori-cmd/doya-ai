@@ -30,6 +30,7 @@ const mocks = {
     readPortalOriginHint: (...args) => load('src/lib/aishodan/checkout-origin-hint.ts').readPortalOriginHint(...args),
   },
 }
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const cache = new Map()
 function load(rel) {
   if (cache.has(rel)) return cache.get(rel).exports
@@ -56,6 +57,7 @@ mocks['@/components/LoadingProgress'] = { __esModule: true, default: primitive }
 mocks['@/lib/aishodan/list-pages'] = { parseAishodanPage: (value, key) => ({ items: value[key] || [], nextCursor: null, total: 0 }), appendAishodanPage: (items, page) => [...items, ...page.items] }
 mocks['@/components/shell/ui-next-context'] = { useUiNext: () => true }
 mocks['@/components/ds'] = new Proxy({}, { get: (_, key) => key === '__esModule' ? true : primitive })
+mocks['@/components/aishodan/failure'] = leaves.aishodanFailure()
 mocks['@/components/ds/motion'] = { Stagger: primitive, StaggerItem: primitive }
 const Tool = load('src/app/(shell)/aishodan/Tool.tsx').default
 const organizations = [{ id: 'id-A', slug: 'A', name: 'Org A', role: 'owner' }, { id: 'id-B', slug: 'B', name: 'Org B', role: 'member' }]
@@ -180,6 +182,7 @@ const settle = (index, value) => React.act(async () => { calls[index].held.resol
   actor = 'actor-A'; status = 'authenticated'; pathname = '/aishodan'; search = '?org=A'; remembered = 'B'
   window.history.replaceState(null, '', pathname + search)
   global.fetch = (url, options) => {
+    if ((options?.method || 'GET') === 'GET') return Promise.resolve(Response.json(toolData(String(url))))
     const held = deferred(); toolPosts.push({ url, options, held })
     return held.promise.then(value => ({ ok: true, json: async () => value }))
   }

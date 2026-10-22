@@ -76,6 +76,7 @@ const request = (proof, path, init) => {
     : { canHandoff: false, organizations: [] }))
   throw Error('Unexpected staff read ' + path)
 }
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const cache = new Map()
 const no = () => null
 const mocks = {
@@ -94,7 +95,8 @@ const mocks = {
   '@/components/CheckoutRecoveryProvider': { useCheckoutRecovery: () => ({ manager: { inspectStored() {} }, snapshot: { phase: 'idle', handle: null } }) },
   '@/lib/checkout-recovery-client': { checkoutStoredIntent: () => null },
   '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
-  '@/components/ds': { EmptyState: no, ErrorNotice: no, Skeleton: no, ToolHero: no },
+  '@/components/ds': { ...leaves.ds, EmptyState: no, ErrorNotice: no, Skeleton: no, ToolHero: no },
+  '@/components/mensetsu/states': leaves.mensetsuStates(), '@/components/shell/icons': { ShellIcon: no },
   '@/components/LoadingProgress': { __esModule: true, default: no }, './Lp': { __esModule: true, default: no },
   '@/lib/ui/notify': { notifyError: (setter, message) => { notifications.push(message); setter(message) } },
   '@/lib/mensetsu/types': { EVALUATION_STALE_MS: 1000 },

@@ -1,13 +1,13 @@
 // Actual Boundary + Tool/Report legacy mutators; synthetic actor, workspace and transport.
 process.env.NODE_ENV = 'test'
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), Module = require('node:module')
-const root = path.resolve(__dirname, '../..'), req = Module.createRequire(path.join(root, 'package.json'))
+const root = process.env.DOYA_TEST_ROOT || process.cwd(), req = Module.createRequire(path.join(root, 'package.json'))
 const React = req('react'), ts = req('typescript'), { JSDOM } = req('jsdom'), { createRoot } = req('react-dom/client')
 const dom = new JSDOM('<main id="root"></main>', { url: 'https://example.invalid/mensetsu?org=B' })
 global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 let actor = 'actor-A', status = 'authenticated', pathname = '/mensetsu', search = '?org=B'
-let selected = 'B', calls = [], writes = [], readCount = 0, sessionStatus = 'none', reportMode = 'evaluate', memberRows = [], workspaceEmpty = false, transportMode = false
+let selected = 'B', calls = [], writes = [], readCount = 0, sessionStatus = 'none', reportMode = 'evaluate', memberRows = [], workspaceEmpty = false, transportMode = false, uiNext = false, emptyReadStatus = 200
 const emptyWrites = []
 const transportWrites = []
 const notifications = []
@@ -40,7 +40,7 @@ global.fetch = async (target, init) => {
     const held = deferred(); transportWrites.push({ target: String(target), init, held }); return held.promise
   }
   assert.equal(target, '/api/mensetsu/organizations', 'empty onboarding is the sole unbound route')
-  if ((init?.method || 'GET') === 'GET') return Response.json({ current: null })
+  if ((init?.method || 'GET') === 'GET') return emptyReadStatus === 200 ? Response.json({ current: null }) : Response.json({ error: 'synthetic unavailable' }, { status: emptyReadStatus })
   assert.equal(init?.method, 'POST')
   const held = deferred(); emptyWrites.push({ target, init, held, actor }); return held.promise
 }
@@ -85,8 +85,9 @@ const mocks = {
   },
   '@/components/CheckoutRecoveryProvider': { useCheckoutRecovery: () => ({ manager: { inspectStored() {} }, snapshot: { phase: 'idle', handle: null } }) },
   '@/lib/checkout-recovery-client': { checkoutStoredIntent: () => null },
-  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
-  '@/components/ds': { EmptyState: no, ErrorNotice: no, Skeleton: no, ToolHero: no },
+  '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => uiNext },
+  '@/components/shell/icons': { ShellIcon: no },
+  '@/components/ds': { EmptyState: no, Skeleton: no, ToolHero: no, Button: ({ children, href, icon, variant, ...props }) => React.createElement(href ? 'a' : 'button', { ...props, href }, children), ErrorNotice: ({ what, how, onRetry, retryLabel }) => React.createElement('div', null, what, how, onRetry ? React.createElement('button', { onClick: onRetry }, retryLabel) : null) },
   // Owner transfer has a dedicated actual mounted fixture; this test owns Mensetsu's existing write boundary.
   '@/components/org/OwnerTransferPanel': { __esModule: true, default: no },
   '@/components/LoadingProgress': { __esModule: true, default: no }, './Lp': { __esModule: true, default: no },
@@ -104,12 +105,14 @@ function load(relative) {
     if (id in mocks) return mocks[id]
     if (id === '@/lib/organization-workspace-selection') return load('src/lib/organization-workspace-selection.ts')
     if (id === '@/lib/mensetsu/checkout-origin-hint') return load('src/lib/mensetsu/checkout-origin-hint.ts')
+    if (id === '@/components/mensetsu/states') return load('src/components/mensetsu/states.tsx')
     if (id === '@/components/mensetsu/MensetsuWorkspaceBoundary' || id === './MensetsuWorkspaceBoundary') return load('src/components/mensetsu/MensetsuWorkspaceBoundary.tsx')
     if (id === '@/components/mensetsu/useMensetsuRequest') return load('src/components/mensetsu/useMensetsuRequest.ts')
     if (id === '@/components/mensetsu/useMensetsuOperation') return load('src/components/mensetsu/useMensetsuOperation.ts')
     throw Error('Unmocked ' + id)
   }
-  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
+  const source = relative === 'src/app/(shell)/mensetsu/Tool.tsx' && process.env.DOYA_MENSETSU_BEFORE_TOOL ? fs.readFileSync(process.env.DOYA_MENSETSU_BEFORE_TOOL, 'utf8') : fs.readFileSync(filename, 'utf8')
+  mod._compile(ts.transpileModule(source, { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename)
   return mod.exports
 }
@@ -519,6 +522,37 @@ async function close() { await act(() => view.unmount()); document.getElementByI
     await close()
   }
   window.setTimeout = originalWindowTimer
+
+  // Actual Boundary empty → Tool organization GET failure: no proof is available.
+  workspaceEmpty = true; selected = ''; uiNext = true; emptyReadStatus = 500
+  await open(Tool, '/mensetsu')
+  assert.ok(document.body.textContent.includes('面接の情報を読み込めませんでした'), 'actual null-proof failure notice is visible')
+  assert.equal([...document.querySelectorAll('a[href^="/auth/signin"]')].length, 0, 'null proof cannot invent a login callback')
+  status = 'loading'; await render(Tool)
+  assert.ok(document.querySelector('[hidden][inert]'), 'SDK loading retains the null-proof error view only as inert content')
+  status = 'authenticated'; await render(Tool); await respondWorkspace(calls.length - 1)
+  assert.equal([...document.querySelectorAll('a[href^="/auth/signin"]')].length, 0, 'fresh empty membership still has no invented callback')
+  await close()
+  workspaceEmpty = false; selected = 'B'; uiNext = false; emptyReadStatus = 200
+
+  // Positive control: the actual Notice uses a fresh Boundary proof to scope login.
+  function ScopedLogin() {
+    const workspace = load('src/components/mensetsu/MensetsuWorkspaceBoundary.tsx').useMensetsuWorkspace()
+    return workspace.scope.kind === 'ready'
+      ? React.createElement(load('src/components/mensetsu/states.tsx').LoadIssueNotice, { issue: 'login', subject: '面接の情報', returnHref: workspace.scope.proof.href('/mensetsu') }) : null
+  }
+  await open(ScopedLogin, '/mensetsu')
+  const loginHref = document.querySelector('a[href^="/auth/signin"]')?.getAttribute('href')
+  assert.equal(loginHref, '/auth/signin?callbackUrl=%2Fmensetsu%3Forg%3DB', 'ready proof yields a scoped login return')
+  await close()
+
+  // A different selected organization is pending: Boundary unmounts Tool, not a null-proof Tool render.
+  await open(Tool, '/mensetsu')
+  search = '?org=A'; window.history.replaceState(null, '', '/mensetsu?org=A')
+  await render(Tool)
+  assert.ok(document.body.textContent.includes('組織を確認しています'), 'selection pending is a Boundary-owned loading screen')
+  assert.equal(document.body.textContent.includes('面接の情報を読み込めませんでした'), false, 'no Tool error view escapes pending selection')
+  await close()
   dom.window.close()
-  console.log('mensetsu actual Boundary+Tool7+empty/Report3/Settings3: pending write, same-actor reproof, unknown/no-repeat/late-ack/current membership PASS', JSON.stringify({ reads: readCount, writes: writes.length, emptyWrites: emptyWrites.length }))
+  console.log('mensetsu actual Boundary+Tool7+empty/Report3/Settings3 plus null-proof error, SDK loading, ready scoped Notice, selection pending: PASS', JSON.stringify({ reads: readCount, writes: writes.length, emptyWrites: emptyWrites.length }))
 })().catch(error => { console.error(error); process.exitCode = 1; dom.window.close() })

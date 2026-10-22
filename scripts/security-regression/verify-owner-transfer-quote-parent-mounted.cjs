@@ -33,6 +33,7 @@ const fetch = async (url, init = {}) => {
 }
 global.fetch = fetch
 const Null = () => null
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const mocks = {
   react: React, 'react/jsx-runtime': req('react/jsx-runtime'),
   'next-auth/react': { useSession: () => ({ status: authStatus, data: { user: { id: actor } } }) },
@@ -54,6 +55,7 @@ const mocks = {
   '@/components/ToolSwitcherMenu': { ToolSwitcherMenu: Null },
   '@/components/sidebar': { SidebarUsagePanel: Null, useSidebarState: () => ({ isCollapsed: false, showLabel: true, toggle() {} }), SidebarShell: ({ children }) => children },
   '@/lib/ui/notify': { notifyError: (_setter, _message) => {} },
+  '@/components/ds': leaves.ds,
 }
 const cache = new Map()
 function load(relative) {
@@ -62,6 +64,7 @@ function load(relative) {
   cache.set(relative, module)
   module.require = id => {
     if (id in mocks) return mocks[id]
+    if (id === '@/components/quote/error-copy') return load('src/components/quote/error-copy.ts')
     if (id === '@/components/quote/QuoteWorkspaceBoundary') return load('src/components/quote/QuoteWorkspaceBoundary.tsx')
     if (id === '@/components/org/OwnerTransferPanel') return load('src/components/org/OwnerTransferPanel.tsx')
     if (id === '@/lib/use-owner-transfer') return load('src/lib/use-owner-transfer.ts')

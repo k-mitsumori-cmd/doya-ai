@@ -82,6 +82,7 @@ function workspace(){
 const requestCache=new Map()
 const scopedRequest=()=>{const proof=workspace().scope.proof;if(requestCache.has(proof.organization.slug))return requestCache.get(proof.organization.slug);const value={proof,request:(p,options)=>staffRequest.requestMensetsuStaff(proof,p,options)};requestCache.set(proof.organization.slug,value);return value}
 const ui={PageTitle:({children,...props})=>React.createElement('h1',props,children),useToolUiNext:()=>false}
+const leaves = require('./caller14-leaf-bridge.cjs')(root, React, ts)
 const ds={EmptyState:no,ErrorNotice:no,Skeleton:no,ToolHero:no}
 let routeId=null
 function component(file){
@@ -91,7 +92,7 @@ function component(file){
   'next/link':{__esModule:true,default:({href,children,...props})=>React.createElement('a',{href,...props},children)},
   'next-auth/react':{useSession:()=>({data:{user:{id:'actor-1',name:'Actor'}}})},
   'next/navigation':{useParams:()=>({id:routeId}),useRouter:()=>({push:()=>{throw Error('navigation forbidden in before fixture')}})},
-  '@/components/mensetsu/ui-next':ui,'@/components/ds':ds,
+  '@/components/mensetsu/ui-next':ui,'@/components/ds':ds,'@/components/mensetsu/states':leaves.mensetsuStates(),'@/components/shell/icons':{ShellIcon:no},
   '@/lib/ui/notify':{notifyError:(setter,message)=>setter(message)},
   '@/lib/org-fetch':{fetchOrgJson},'@/lib/mensetsu/session-pages':sessionPages,
   '@/components/org/OwnerTransferPanel':{__esModule:true,default:no},
