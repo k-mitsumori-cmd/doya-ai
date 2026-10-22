@@ -5,9 +5,9 @@
 //    これが無いと、崩れた文字・混入したダミー英字・UIに隠れる位置の文字が
 //    そのままユーザーへ出る（前身 /adbanner で実際に起きていた）。
 //
-// リトライは最大2回。maxDuration=300 を超えないため。
-// 2回とも不合格なら「要確認」フラグを立てて提示する。⚠️ 黙って捨てない。
-import { visionJson } from './vision'
+// 作り直しは最大1回（generate.ts の MAX_RETRIES）。maxDuration=300 を超えないため。
+// 作り直しても不合格なら「要確認」フラグを立てて提示する。⚠️ 黙って捨てない。
+import { ocrVisionJson } from './vision'
 import type { AdCopy, VerifyResult } from './types'
 import { COMPOSITIONS } from './compositions'
 import type { CompositionKey } from './placements'
@@ -69,7 +69,8 @@ async function verifyCreativeInner(input: VerifyInput): Promise<VerifyResult> {
 
   let ocr: VisionOcr
   try {
-    ocr = await visionJson<VisionOcr>({
+    // 文字の読み取りは安い gemini-2.5-flash で行う（gpt-4o は使わない）
+    ocr = await ocrVisionJson<VisionOcr>({
       pngBase64,
       prompt: [
         'この広告画像を見て、次の2つを答えてください。',
