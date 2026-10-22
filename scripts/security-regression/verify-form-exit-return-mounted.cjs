@@ -34,6 +34,7 @@ let writes = 0
 let reads = 0
 let isActive = true
 let query = new URLSearchParams()
+let hrUiNext = false
 let operationStatus = 'ready'
 let operationKey = 'scope:A'
 let interviewPending = false
@@ -43,11 +44,12 @@ const requestPayloads = []
 const pendingKey = 'promane-project-pending:v2:wA:create:u1'
 const mock = {
   react: React,
-  'next/navigation': { useRouter: () => router, useSearchParams: () => query },
+  'next/navigation': { useRouter: () => router, useSearchParams: () => query, usePathname: () => '/hr/employees/new' },
   'next/link': { default: Link },
   'framer-motion': { motion: { div: passthrough('div'), form: passthrough('form') }, AnimatePresence: ({ children }) => children },
   'next-auth/react': { useSession: () => ({ status: 'authenticated', data: { user: { id: 'u1' } } }) },
-  '@/components/hr/ui-next': { PageTitle: passthrough('h1') },
+  '@/components/hr/ui-next': { PageTitle: passthrough('h1'), useToolUiNext: () => hrUiNext },
+  '@/components/ds': { Button: ({ children, href, ...props }) => React.createElement(href ? 'a' : 'button', href ? { href } : { type: props.type ?? 'button', onClick: props.onClick, disabled: props.disabled }, children), ErrorNotice: ({ what, how, onRetry, retryLabel = 'やり直す' }) => React.createElement('div', { role: 'alert' }, what, how, onRetry ? React.createElement('button', { type: 'button', onClick: onRetry }, retryLabel) : null) },
   '@/components/hr/DepartmentListState': { default: () => React.createElement('div', null, 'department state') },
   '@/lib/hr/department-list-client': { loadHrDepartmentList: async () => ({ rows: [], organizationId: 'orgA' }) },
   '@/lib/hr/department-settings-client': { readDepartmentSettingsResponse: async () => ({ status: 200, data: {} }) },
@@ -79,6 +81,7 @@ const mock = {
   'next/image': { default: ({ src, alt }) => React.createElement('img', { src, alt }) },
   'lucide-react': { AlertCircle: passthrough('span') },
 }
+const dsImporters = new Set()
 const cache = new Map()
 function load(path) {
   if (cache.has(path)) return cache.get(path)
@@ -88,8 +91,10 @@ function load(path) {
       if (name === 'react/jsx-runtime') return require('react/jsx-runtime')
       if (name === '@/components/hr/HrAuthenticatedScope') return load('src/components/hr/HrAuthenticatedScope.tsx')
       if (name === '@/components/hr/HrOrganizationScope') return load('src/components/hr/HrOrganizationScope.tsx')
+      if (name === '@/components/hr/HrLoadError') return load('src/components/hr/HrLoadError.tsx')
       if (name === '@/lib/hr/use-page-lifetime') return load('src/lib/hr/use-page-lifetime.ts')
       if (name === '@/lib/hr/use-department-list') return load('src/lib/hr/use-department-list.ts')
+      if (name === '@/components/ds') dsImporters.add(path)
       if (name in mock) return mock[name]
       throw Error(`${path}: unmocked ${name}`)
     },
@@ -119,10 +124,33 @@ function expectExit(path) {
   console.log(`  synthetic history=${priorHistory ?? 'empty'}; back=${router.backs}; push=${router.pushes[0] ?? 'none'}; destination=${router.historyDestination ?? 'none'}`)
 }
 
+async function dsPresentationControl() {
+  const { Button, ErrorNotice } = mock['@/components/ds']
+  let clicks = 0
+  let retries = 0
+  const root = await mount(React.createElement('div', null,
+    React.createElement(Button, { href: '/hr/pricing', icon: 'Tag' }, '料金プランを見る'),
+    React.createElement(Button, { type: 'button', onClick: () => { clicks++ } }, '確認'),
+    React.createElement(Button, { disabled: true, onClick: () => { clicks++ } }, '無効'),
+    React.createElement(ErrorNotice, { what: '失敗', how: '再確認', onRetry: () => { retries++ } }),
+  ))
+  assert.equal(document.querySelector('a[href="/hr/pricing"]')?.textContent, '料金プランを見る')
+  await click([...document.querySelectorAll('button')].find(button => button.textContent === '確認'))
+  await click([...document.querySelectorAll('button')].find(button => button.textContent === '無効'))
+  assert.equal(clicks, 1)
+  assert.match(document.querySelector('[role="alert"]')?.textContent ?? '', /失敗.*再確認.*やり直す/)
+  await click([...document.querySelectorAll('button')].find(button => button.textContent === 'やり直す'))
+  assert.equal(retries, 1)
+  await unmount(root)
+  console.log('DS presentation: href/click/disabled/error/retry controls')
+}
+
 async function hr() {
   const HrScope = load('src/components/hr/HrOrganizationScope.tsx').default
   const Page = load('src/app/(shell)/hr/employees/new/page.tsx').default
-  for (const control of ['header', 'desktop', 'mobile']) {
+  for (const next of [false, true]) {
+    hrUiNext = next
+    for (const control of ['header', 'desktop', 'mobile']) {
     resetRouter({ header: '/income', desktop: '/aishodan', mobile: null }[control]); writes = 0
     window.sessionStorage.setItem('hr-selected-organization:v1:u1', 'orgA')
     const view = enabled => React.createElement(HrScope, { actor: 'u1', organizationId: 'orgA', enabled }, React.createElement(Page))
@@ -140,8 +168,14 @@ async function hr() {
     assert.equal(router.backs, 0)
     assert.deepEqual(router.pushes, [])
     await unmount(root)
-    console.log(`HR ${control}: current exit; retired no navigation; writes=0`)
+    console.log(`HR ${control}: current exit; retired no navigation; writes=0; uiNext=${next}`)
+    }
   }
+  hrUiNext = false
+  assert.ok(dsImporters.has('src/app/(shell)/hr/employees/new/page.tsx'))
+  assert.ok(dsImporters.has('src/components/hr/HrLoadError.tsx'))
+  assert.equal(load('src/components/hr/HrLoadError.tsx').hrErrorKind(401), 'login')
+  assert.equal(load('src/components/hr/HrLoadError.tsx').hrErrorKind(429), 'limit')
 }
 
 async function interview() {
@@ -264,6 +298,7 @@ async function promane() {
 }
 
 ;(async () => {
+  await dsPresentationControl()
   await hr()
   await interview()
   await kintai()
