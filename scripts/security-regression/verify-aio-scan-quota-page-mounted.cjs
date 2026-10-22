@@ -35,10 +35,15 @@ const mocks = {
   '@/components/aio/ui': { DoyaKun: empty, sym: () => null },
   'react-hot-toast': { __esModule: true, default: { loading() {}, success() {}, error() {} } },
   '@/components/ds': { EmptyState: empty },
+  '@/components/ds/charts': { AreaChart: empty, Bars: empty, Donut: empty, Ring: empty },
   '@/components/icons': { UiIcon: empty },
   'recharts': Object.fromEntries(['LineChart', 'Line', 'XAxis', 'YAxis', 'CartesianGrid', 'Tooltip', 'ResponsiveContainer', 'BarChart', 'Bar', 'Cell'].map(name => [name, empty])),
   '@/components/shell/ui-next-context': { useUiNext: () => false },
 }
+const chartImport = ts.createSourceFile(pageSource, fs.readFileSync(pageSource, 'utf8'), ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX).statements
+  .find(node => ts.isImportDeclaration(node) && node.moduleSpecifier.text === '@/components/ds/charts')
+assert.ok(chartImport, 'actual AIO page imports DS chart presentation')
+assert.deepEqual(chartImport.importClause.namedBindings.elements.map(item => item.name.text).sort(), Object.keys(mocks['@/components/ds/charts']).sort())
 const pageExports = {}
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(pageSource, 'utf8'), { fileName: pageSource, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText,
   { exports: pageExports, require: name => { assert.ok(name in mocks, `Unmocked ${name}`); return mocks[name] }, window, document, Event: window.Event, URLSearchParams, console, setInterval, clearInterval }, { filename: pageSource })
