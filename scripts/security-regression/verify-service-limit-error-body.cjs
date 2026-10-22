@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),{load}=require('./load-typescript.cjs');
+const assert=require('node:assert/strict'),{load}=require('./load-org-limit-fixture.cjs');
 const unified=load('src/lib/unified-plan.ts'),services=load('src/lib/services.ts',{'./unified-plan':unified}),results=[];
 const tick=()=>new Promise(r=>setImmediate(r));
 async function test(name,fn){let seq=0;const timers=new Map();const lib=load('src/lib/service-limit-ui.ts',{'./services':services},{TextDecoder,Uint8Array,setTimeout:(fn,ms)=>{assert.equal(ms,5000);timers.set(++seq,fn);return seq},clearTimeout:id=>timers.delete(id)});await fn({lib,timers,flush:async()=>{await tick();await tick()}});assert.equal(timers.size,0);results.push(name)}

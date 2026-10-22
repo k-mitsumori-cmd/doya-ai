@@ -2,7 +2,7 @@
 // Synthetic logged-in actor, memberships, and Prisma rows; no provider, AI, writes, or real network.
 process.env.NODE_ENV = 'test'
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), Module = require('node:module')
-const root = path.resolve(__dirname, '../..')
+const root = process.env.DOYA_SOURCE_ROOT || path.resolve(__dirname, '../..')
 const req = Module.createRequire(path.join(root,'package.json'))
 const React = req('react'), { createRoot } = req('react-dom/client'), { JSDOM } = req('jsdom'), ts = req('typescript')
 const { load } = req(path.join(root,'scripts/security-regression/load-typescript.cjs'))
@@ -40,11 +40,13 @@ const db = {
   },
 }
 const types=load('src/lib/mensetsu/types.ts')
+const selection=load('src/lib/organization-workspace-selection.ts')
 const access=load('src/lib/mensetsu/access.ts',{
   'next-auth':{getServerSession:async()=>({user:{id:'actor-1'}})},'@/lib/auth':{authOptions:{}},
   '@/lib/prisma':{prisma:db},'@/lib/account-lifecycle/store':{},'./types':types,
 })
 const routeMocks={
+  '@/lib/organization-workspace-selection':selection,
   crypto:require('node:crypto'),
   'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/mensetsu/access':access,
   '@/lib/account-lifecycle/state':{LifecycleError:class extends Error{}},
@@ -65,7 +67,6 @@ const no=()=>null
 const fetchOrgJson=load('src/lib/org-fetch.ts',{}, {fetch:(...args)=>global.fetch(...args)}).fetchOrgJson
 const staffRequest=load('src/lib/mensetsu/staff-request-client.ts',{}, {fetch:(...args)=>global.fetch(...args),AbortController,setTimeout,clearTimeout})
 const sessionPages=load('src/lib/mensetsu/session-pages.ts',{'@/lib/mensetsu/staff-request-client':staffRequest})
-const selection=load('src/lib/organization-workspace-selection.ts')
 const scopeCache=new Map()
 function workspace(){
  const slug=new URL(window.location.href).searchParams.get('org')||'A'

@@ -1,6 +1,6 @@
 const { aioLifecycleImports } = require('./shodan-lifecycle-fixture.cjs')
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, serializeOnce = false } = {}) {
   const state = { rows: [], lifetime, monthly, transactions: 0, creates: 0, writes: 0, active: true }
@@ -51,7 +51,7 @@ function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, se
     '@/lib/quote/response-shape': load('src/lib/quote/response-shape.ts'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/quote/access': { getQuoteContext: async () => ({ organizationId: 'org', userId: actor === 'owner' ? 'owner-user' : 'staff-user' }), orgSlugFrom: () => 'org' },
+    '@/lib/quote/access': { getQuoteContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actor === 'owner' ? 'owner-user' : 'staff-user' }), orgSlugFrom: () => 'org' },
     '@/lib/plan-limit': { FREE_LIMITS: { quoteProducts: 1 }, jstStartOfMonthUtc: () => new Date('2026-09-30T15:00:00Z') },
     '@/lib/organization-quota-ledger': ledger,
     '@/lib/unified-plan': { isPaidPlan: value => value === 'PRO' },
@@ -68,7 +68,7 @@ function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, se
     f.state.rows = []
     const blocked = await f.post({ name: '追加商材' })
     assert.equal(blocked.status, 402)
-    assert.equal((await blocked.json()).upgradeUrl, '/quote/pricing')
+    assert.equal((await blocked.json()).upgradeUrl, '/quote/pricing?org=org')
     assert.equal(f.state.creates, 1)
     assert.equal(f.state.writes, 1)
   })

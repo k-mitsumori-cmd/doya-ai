@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 const { parseQuoteListPage, appendQuoteListPage } = load('src/lib/quote/list-pages.ts')
 
 const makeRows = (size, prefix) => Array.from({ length: size }, (_, index) => ({

@@ -5,6 +5,7 @@ export const maxDuration = 300
 // GET  /api/aishodan/products — 商材一覧
 // POST /api/aishodan/products — サービスURLから商材を作成（クロール→チャンク化→プロフィール生成→シナリオ作成）
 import { NextRequest, NextResponse } from 'next/server'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
     canManageBilling,
-    ...(canManageBilling && checked.limit === FREE_LIMITS.aishodanProducts ? { upgradeUrl: '/aishodan/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.aishodanProducts ? { upgradeUrl: workspaceHref('/aishodan/pricing', ctx.organizationSlug, 'aishodan') } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

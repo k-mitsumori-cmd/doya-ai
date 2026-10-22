@@ -5,6 +5,7 @@ export const maxDuration = 300
 // GET  /api/mensetsu/templates — テンプレート一覧
 // POST /api/mensetsu/templates — 質問セット＋ルーブリックを生成して保存（F3-4）
 import { NextRequest, NextResponse } from 'next/server'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { assertFreeLimit, FREE_LIMITS } from '@/lib/plan-limit'
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
     canManageBilling,
     used: checked.used,
     limit: checked.limit,
-    ...(canManageBilling && checked.limit === FREE_LIMITS.mensetsuTemplates ? { upgradeUrl: '/mensetsu/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.mensetsuTemplates ? { upgradeUrl: workspaceHref('/mensetsu/pricing', ctx.organizationSlug, 'mensetsu') } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

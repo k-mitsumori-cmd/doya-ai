@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 const { parseAishodanPage, appendAishodanPage } = load('src/lib/aishodan/list-pages.ts')
 const roomInput = load('src/lib/aishodan/room-input.ts')
 

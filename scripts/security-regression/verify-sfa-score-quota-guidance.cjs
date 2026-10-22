@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto'),{load}=require('./load-typescript.cjs');
+const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto'),{load}=require('./load-org-limit-fixture.cjs');
 const services=load('src/lib/services.ts',{'./unified-plan':load('src/lib/unified-plan.ts')});
 const ui=load('src/lib/service-limit-ui.ts',{'./services':services});
 const body={error:'今月のAI実行上限（20回）に達しました。',code:'SFA_AI_LIMIT_REACHED',limitReached:true,used:20,limit:20};const cases=[];

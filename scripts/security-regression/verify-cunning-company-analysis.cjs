@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { createHash } = require('node:crypto')
 const { z } = require('zod')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const budget = load('src/lib/cunning/company-budget.ts', {
   'node:crypto': { createHash },

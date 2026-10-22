@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const sessions = Array.from({ length: 451 }, (_, index) => ({
   id: `session-${String(451 - index).padStart(3, '0')}`,

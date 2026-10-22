@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load } = require('./load-typescript.cjs')
+const { load } = require('./load-org-limit-fixture.cjs')
 
 async function main() {
   const ownerLookups = []
@@ -80,9 +80,9 @@ async function main() {
     let quotaOwner
     let ownerLookupFails = false
     let quotaChecks = 0
-    const access = { getQuoteContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
-      getMensetsuContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
-      getAishodanContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }), orgSlugFrom: () => undefined }
+    const access = { getQuoteContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
+      getMensetsuContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
+      getAishodanContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }), orgSlugFrom: () => undefined }
     const quota = { quoteDocuments: 3, mensetsuSessions: 3, mensetsuTemplates: 1, aishodanProducts: 1 }
     const route = load(file, {
       crypto: { randomBytes: () => Buffer.alloc(24) },
@@ -119,7 +119,7 @@ async function main() {
     const ownerResponse = await route.POST(req())
     assert.equal(ownerResponse.status, 402)
     const ownerBody = await ownerResponse.json()
-    assert.equal(ownerBody.upgradeUrl, `/${service}/pricing`)
+    assert.equal(ownerBody.upgradeUrl, `/${service}/pricing?org=org`)
     assert.equal(ownerBody.canManageBilling, true)
     ownerLookupFails = true
     const failed = await route.POST(req())

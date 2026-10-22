@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const pendingName = '__doya_aishodan_ingesting_v1__'
 const products = []
@@ -52,7 +52,7 @@ const route = load('src/app/api/aishodan/products/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
-  '@/lib/aishodan/access': { getAishodanContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+  '@/lib/aishodan/access': { getAishodanContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
   '@/lib/aishodan/knowledge': {
     crawlProductSite: async () => {
       crawlCalls++
@@ -95,7 +95,7 @@ const post = () => route.POST(new Request('http://offline.invalid/api/aishodan/p
   await check('free cap rejects before crawl or AI generation and gives pricing link', async () => {
     const response = await post()
     assert.equal(response.status, 402)
-    assert.equal((await response.json()).upgradeUrl, '/aishodan/pricing')
+    assert.equal((await response.json()).upgradeUrl, '/aishodan/pricing?org=org')
     assert.equal(crawlCalls, 1)
     assert.equal(profileCalls, 1)
   })
