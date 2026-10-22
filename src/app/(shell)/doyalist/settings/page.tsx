@@ -9,6 +9,8 @@ import { DEFAULT_DOYALIST_PREFERENCES, readDoyalistPreferences, saveDoyalistPref
 import Sym from '@/components/doyalist/Sym'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { AlertTriangle, Clock, Settings } from 'lucide-react'
+import { ErrorNotice } from '@/components/ds'
+import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
 
 interface Usage {
   plan?: { raw?: string; tier?: string; periodEnd?: string | null } | string
@@ -56,6 +58,8 @@ export default function SettingsPage() {
   const [usage, setUsage] = useState(null as Usage | null)
   const [usageLoading, setUsageLoading] = useState(true)
   const [usageError, setUsageError] = useState('')
+  // 新しい見た目で、失敗の理由を文に置き換えるための status（0 は通信・応答の形の失敗）
+  const [usageErrorStatus, setUsageErrorStatus] = useState(0)
   const [exporting, setExporting] = useState(false)
   const exportingRef = useRef(false)
   const [mounted, setMounted] = useState(false)
@@ -63,6 +67,7 @@ export default function SettingsPage() {
   const loadUsage = useCallback(async () => {
     setUsageLoading(true)
     setUsageError('')
+    setUsageErrorStatus(0)
     setUsage(null)
     try {
       const response = await fetch('/api/doyalist/usage', { cache: 'no-store' })
@@ -73,6 +78,7 @@ export default function SettingsPage() {
         !Number.isInteger(data?.limits?.maxApproachesPerMonth) ||
         !Number.isInteger(data?.usage?.companiesGenerated) ||
         !Number.isInteger(data?.usage?.approachesGenerated)) {
+        if (!response.ok) setUsageErrorStatus(response.status)
         throw new Error(data?.error || '利用状況を取得できませんでした')
       }
       setUsage(data)
@@ -100,7 +106,9 @@ export default function SettingsPage() {
     }
   }
 
-  const handleExportAll = async () => {
+  // genericError: 新しい見た目では、失敗の文をこれに固定する（サーバーの文字列は出さない。UI 品質 S-20）。
+  // 今までの見た目は onClick から直接呼ぶので、引数はクリックのイベントになる → 文字列のときだけ使う
+  const handleExportAll = async (genericError?: unknown) => {
     if (exportingRef.current) return
     exportingRef.current = true
     setExporting(true)
@@ -129,7 +137,7 @@ export default function SettingsPage() {
         toast.success('CSVをまとめたZIPを準備しました。保存先をご確認ください', { id: tid })
       } finally { clearTimeout(timeout) }
     } catch (e: any) {
-      toast.error(e?.message || 'エクスポートに失敗しました', { id: tid })
+      toast.error(typeof genericError === 'string' ? genericError : e?.message || 'エクスポートに失敗しました', { id: tid })
     } finally {
       exportingRef.current = false
       setExporting(false)
@@ -139,7 +147,7 @@ export default function SettingsPage() {
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-cyan-200 border-t-cyan-500 animate-spin" />
+        <div className={`w-12 h-12 rounded-full border-4 border-cyan-200 border-t-cyan-500 animate-spin${uiNext ? ' motion-reduce:animate-none' : ''}`} />
       </div>
     )
   }
@@ -153,6 +161,10 @@ export default function SettingsPage() {
   const userName = session?.user?.name || 'ゲスト'
   const userEmail = session?.user?.email || ''
   const userImage = session?.user?.image || ''
+  // 新しい見た目: 押せる場所の大きさ（44px）とキーボードの枠
+  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1' : ''
+  const tap = uiNext ? ' min-h-11' : ''
+  const usageCopy = doyalistErrorCopy(usageErrorStatus, '契約状況', '/doyalist/settings')
 
   return (
     <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
@@ -166,9 +178,9 @@ export default function SettingsPage() {
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">⚙️</div>
           )}
-          <div>
+          <div className={uiNext ? 'min-w-0' : undefined}>
             <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>設定</Heading>
-            <p className="text-sm font-medium text-slate-500 mt-0.5">アカウント情報・プラン・各種設定を管理します</p>
+            <p className={`text-sm font-medium text-slate-500 mt-0.5${uiNext ? ' [text-wrap:balance]' : ''}`}>アカウント情報・プラン・各種設定を管理します</p>
           </div>
         </div>
 
@@ -184,8 +196,8 @@ export default function SettingsPage() {
                   {userName[0]}
                 </div>
               )}
-              <p className="mt-3 text-base font-black text-[#0a1530]">{userName}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{userEmail}</p>
+              <p className={`mt-3 text-base font-black text-[#0a1530]${uiNext ? ' max-w-full truncate' : ''}`}>{userName}</p>
+              <p className={`text-xs text-slate-500 mt-0.5${uiNext ? ' max-w-full break-all text-center' : ''}`}>{userEmail}</p>
             </div>
 
             <div className="space-y-3 pt-4">
@@ -195,8 +207,9 @@ export default function SettingsPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => signOut({ callbackUrl: '/doyalist' })}
-              className="mt-5 w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              className={`mt-5${tap}${focusRing} w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm transition-colors flex items-center justify-center gap-2`}
             >
               <Sym name="logout" className="text-base" />
               ログアウト
@@ -207,6 +220,16 @@ export default function SettingsPage() {
           <Card icon="diamond" title="プラン" subtitle="ご契約状況">
             {usageLoading ? (
               <p className="py-10 text-center text-sm font-bold text-slate-500">契約状況を確認しています…</p>
+            ) : uiNext && (usageError || !usage) ? (
+              // 新しい見た目: 理由に合わせた文と、次の操作を1つ（サーバーの文字列は出さない。UI 品質 S-20）
+              <div className="py-4">
+                <ErrorNotice
+                  what={usageCopy.what}
+                  how={usageCopy.next ? usageCopy.how : `${usageCopy.how}プランと利用量は、まだ確認できていません。`}
+                  onRetry={usageCopy.next ? () => { window.location.href = usageCopy.next!.href } : () => void loadUsage()}
+                  retryLabel={usageCopy.next?.label ?? 'もう一度読み込む'}
+                />
+              </div>
             ) : usageError || !usage ? (
               <div className="py-8 text-center">
                 <p role="alert" className="text-sm font-bold text-rose-700">{usageError || '契約状況を確認できませんでした'}</p>
@@ -248,7 +271,7 @@ export default function SettingsPage() {
 
             <Link
               href="/doyalist/pricing"
-              className="mt-5 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all"
+              className={`mt-5${tap}${focusRing} w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all`}
             >
               <Sym name="arrow_upward" className="text-base" />
               プランをアップグレード
@@ -266,7 +289,8 @@ export default function SettingsPage() {
               <select
                 value={settings.defaultIndustry}
                 onChange={(e) => update('defaultIndustry', e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500"
+                aria-label={uiNext ? '既定の業界' : undefined}
+                className={`${uiNext ? 'min-h-11 max-w-[11rem] ' : ''}px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500`}
               >
                 <option value="">未設定</option>
                 {INDUSTRIES.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -278,7 +302,8 @@ export default function SettingsPage() {
               <select
                 value={settings.defaultRegion}
                 onChange={(e) => update('defaultRegion', e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500"
+                aria-label={uiNext ? '既定のエリア' : undefined}
+                className={`${uiNext ? 'min-h-11 max-w-[11rem] ' : ''}px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500`}
               >
                 <option value="">未設定</option>
                 {AREAS.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -295,13 +320,14 @@ export default function SettingsPage() {
                 アーカイブ済み・企業0件を含む全プロジェクトのCSVを、1つのZIPにまとめます
               </p>
               <button
-                onClick={handleExportAll}
+                type="button"
+                onClick={uiNext ? () => void handleExportAll('全件エクスポートを準備できませんでした。時間をおいて、もう一度お試しください') : handleExportAll}
                 disabled={exporting}
-                className="w-full py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-700 font-bold text-xs transition-colors flex items-center justify-center gap-2"
+                className={`${tap}${focusRing} w-full py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-700 font-bold text-xs transition-colors flex items-center justify-center gap-2`}
               >
                 {exporting ? (
                   <>
-                    <img src={CHARS.working} alt="" className="w-4 h-4 animate-spin" />
+                    <img src={CHARS.working} alt="" className={`w-4 h-4 animate-spin${uiNext ? ' motion-reduce:animate-none' : ''}`} />
                     エクスポート中...
                   </>
                 ) : (
@@ -319,7 +345,7 @@ export default function SettingsPage() {
         <div className="mt-8 p-6 bg-gradient-to-br from-cyan-50 via-white to-violet-50 rounded-3xl border-2 border-cyan-200 shadow-lg">
           <div className="flex items-center gap-4 flex-wrap">
             <img src={CHARS.point} alt="" className="w-16 h-16 flex-shrink-0" />
-            <div className="flex-1 min-w-[200px]">
+            <div className={uiNext ? 'flex-1 min-w-0 basis-48' : 'flex-1 min-w-[200px]'}>
               <p className="text-base font-black text-[#0a1530] flex items-center gap-2">
                 <Sym name="support_agent" className="text-cyan-600" />
                 サポート窓口
@@ -330,7 +356,7 @@ export default function SettingsPage() {
             </div>
             <a
               href="mailto:info@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
-              className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95"
+              className={`${uiNext ? 'min-h-11 w-full justify-center sm:w-auto ' : ''}inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95${focusRing}`}
             >
               <Sym name="mail" />
               info@surisuta.jp

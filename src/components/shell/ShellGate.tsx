@@ -15,11 +15,14 @@ import { shouldShowShell } from './registry'
 import { ShellToolHrefsContext, UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
 import ShellVitals from './ShellVitals'
+import { DoyaPowerContext } from '@/components/doya-power/doya-power-context'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, doyaPower = false, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   signedIn: boolean
+  /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。新しい見た目のときだけ真になる） */
+  doyaPower?: boolean
   /** 組織を選ぶツールのリンクの行き先（新しい見た目のときだけ。src/lib/shell/tool-hrefs.server.ts） */
   toolHrefs?: Record<string, string>
   /** 最近使ったツール（新しい見た目のとき、cookie から読んで渡す） */
@@ -43,11 +46,13 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
     <UiNextContext.Provider value={uiNext}>
       <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
       <ShellToolHrefsContext.Provider value={uiNext && toolHrefs ? toolHrefs : EMPTY}>
+      <DoyaPowerContext.Provider value={Boolean(uiNext && doyaPower)}>
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}><UiNextBadge /></Suspense>
       {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
       {uiNext ? <ShellVitals /> : null}
+      </DoyaPowerContext.Provider>
       </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>

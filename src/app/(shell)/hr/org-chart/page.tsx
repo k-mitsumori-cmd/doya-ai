@@ -1,11 +1,14 @@
 'use client'
-import { PageTitle } from '@/components/hr/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { ErrorNotice } from '@/components/ds'
+import HrLoadError from '@/components/hr/HrLoadError'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { readHrOrgChart, HrOrgChartReadError, type HrOrgChartData } from '@/lib/hr/org-chart-paged-client'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Hand } from 'lucide-react'
 import OrgChartView from '@/components/hr/OrgChartView'
 
 /** APIレスポンスの orgChart 配列を OrgChartView が期待する形式に変換 */
@@ -37,6 +40,8 @@ export default function OrgChartPage() {
   const [view, setView] = useState<{ scope: string; data: HrOrgChartData | null; error: boolean; unauthorized: boolean; changed?: boolean; loading: boolean }>({ scope: '', data: null, error: false, unauthorized: false, loading: true })
   const [progress, setProgress] = useState<{ scope: string; loaded: number; total: number } | null>(null)
   const [retryKey, setRetryKey] = useState(0)
+  const uiNext = useToolUiNext()
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (!allowed) return
@@ -64,8 +69,8 @@ export default function OrgChartPage() {
   if (!allowed) return <div role="status" className="p-6 text-center">{status === 'loading' ? '認証情報を確認しています。' : <a href="/auth/signin?callbackUrl=/hr/org-chart" className="underline">ログインして組織図を確認する</a>}</div>
 
   return (
-    <div className="p-6 lg:p-10">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'}>
+      <motion.div initial={uiNext && reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="mb-6">
           <PageTitle className="text-3xl font-black text-slate-900">組織図</PageTitle>
@@ -75,9 +80,9 @@ export default function OrgChartPage() {
         {/* Help Banner */}
         <div className="mb-6 bg-blue-50 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-blue-600">touch_app</span>
+            {uiNext ? <Hand aria-hidden className="h-5 w-5 text-blue-600" /> : <span className="material-symbols-outlined text-blue-600">touch_app</span>}
           </div>
-          <div>
+          <div className={uiNext ? 'min-w-0' : undefined}>
             <p className="text-sm font-bold text-blue-800">横にスクロールして組織図を確認できます</p>
             <p className="text-xs text-blue-600 mt-0.5">部署カードをクリックすると所属メンバーと下位部署を開閉できます。部署の追加は設定画面から行えます。</p>
           </div>
@@ -92,6 +97,10 @@ export default function OrgChartPage() {
               {progress?.scope === scopeKey && progress.total > 0 && <p role="status" className="mt-2 text-sm text-slate-500">部署・従業員 {progress.loaded.toLocaleString()} / {progress.total.toLocaleString()} 件を取得しています。</p>}
             </div>
           </div>
+        ) : loadError && uiNext ? (
+          view.changed
+            ? <ErrorNotice what="読み込みの途中で組織図が更新されました。" how="違う時点の情報が混ざらないよう、もう一度読み込んでください。" onRetry={retry} retryLabel="再読み込み" />
+            : <HrLoadError subject="組織図" status={view.unauthorized ? 401 : undefined} onRetry={retry} />
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
             <p className="font-bold text-rose-800">組織図データの取得に失敗しました。</p>
@@ -99,7 +108,7 @@ export default function OrgChartPage() {
             <div className="mt-4">{view.unauthorized ? <a href="/auth/signin?callbackUrl=/hr/org-chart" className="font-bold text-sky-700 underline">ログイン状態を確認して再ログインする</a> : <button type="button" onClick={retry} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再取得する</button>}</div>
           </div>
         ) : (
-          <div className="bg-white rounded-3xl shadow-md p-6 min-h-[400px]">
+          <div className={uiNext ? 'bg-white rounded-3xl shadow-md p-4 sm:p-6 min-h-[400px] min-w-0' : 'bg-white rounded-3xl shadow-md p-6 min-h-[400px]'}>
             {chart?.hierarchyWarning && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">部署の親子関係に循環があるため、一部の部署を最上位に表示しています。管理者に親部署の確認をご依頼ください。</p>}
             <OrgChartView departments={departments} orgName={chart?.orgName} unassignedEmployees={chart?.unassignedEmployees || []} />
           </div>

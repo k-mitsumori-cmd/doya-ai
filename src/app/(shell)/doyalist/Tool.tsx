@@ -15,10 +15,11 @@ import { readExtractionIntent, claimExtractionIntent, clearExtractionIntent, typ
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 import Sym from '@/components/doyalist/Sym'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { EmptyState as DsEmptyState, ToolHero, toolHeroArt } from '@/components/ds'
+import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
+import { Check, X } from 'lucide-react'
 
-interface Company {
+export interface Company {
   id?: string
   name: string
   website?: string | null
@@ -84,7 +85,19 @@ const PREVIEW_FIELDS: { label: string; always: boolean }[] = [
   { label: '事業概要', always: false },
 ]
 
-export default function DoyalistTool() {
+/**
+ * 画面の状態の見本（/doyalist/dev/states。開発時だけ）で、抽出済みの結果やエラーを最初から出すための値。
+ * ⚠️ 本番の画面からは渡さない。渡さなければ今までどおり
+ */
+export type DoyalistToolPreview = {
+  companies?: Company[]
+  errorMsg?: string
+  errorHint?: string
+  quotaAction?: 'pricing' | 'contact'
+  filterText?: string
+}
+
+export default function DoyalistTool({ preview }: { preview?: DoyalistToolPreview } = {}) {
   const { data: session, status } = useSession()
   const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
   const identity = useRef({ actor, version: 0, hasActor: Boolean(actor) })
@@ -92,10 +105,10 @@ export default function DoyalistTool() {
     actor, version: identity.current.version + (identity.current.hasActor ? 1 : 0),
     hasActor: identity.current.hasActor || Boolean(actor),
   }
-  return <ScopedDoyalistTool key={identity.current.version} identityEpoch={identity} epoch={identity.current.version} />
+  return <ScopedDoyalistTool key={identity.current.version} identityEpoch={identity} epoch={identity.current.version} preview={preview} />
 }
 
-function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number }) {
+function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number; preview?: DoyalistToolPreview }) {
   const { data: session, status } = useSession()
   // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。偽のときは今までの見た目のまま
   const uiNext = useUiNext()
@@ -118,12 +131,12 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
   const prefectureOptions = AREA_PREFECTURES[area] || []
 
   const [generating, setGenerating] = useState(false)
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [savedListId, setSavedListId] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [errorHint, setErrorHint] = useState<string | null>(null)
+  const [companies, setCompanies] = useState<Company[]>(preview?.companies ?? [])
+  const [savedListId, setSavedListId] = useState<string | null>(preview?.companies?.length ? 'preview' : null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(preview?.errorMsg ?? null)
+  const [errorHint, setErrorHint] = useState<string | null>(preview?.errorHint ?? null)
   const [warningMsg, setWarningMsg] = useState<string | null>(null)
-  const [quotaAction, setQuotaAction] = useState<'pricing' | 'contact' | null>(null)
+  const [quotaAction, setQuotaAction] = useState<'pricing' | 'contact' | null>(preview?.quotaAction ?? null)
 
   // AI変換タグ
   const [expanding, setExpanding] = useState(false)
@@ -237,7 +250,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
     })
   }
 
-  const [filterText, setFilterText] = useState('')
+  const [filterText, setFilterText] = useState(preview?.filterText ?? '')
   const [sortBy, setSortBy] = useState('default')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [filterHasUrl, setFilterHasUrl] = useState(false)
@@ -447,12 +460,18 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
   const visibleCompanies = filteredCompanies.slice(0, visibleCount)
   const hasMore = filteredCompanies.length > visibleCount
+  const clearFilters = () => { setFilterText(''); setFilterHasUrl(false); setFilterHasRep(false); setFilterHasEmployees(false); setVisibleCount(PAGE_SIZE) }
+
+  // 新しい見た目: 押せる場所の大きさ（44px）・キーボードの枠・動きを減らす設定（UI 品質 S-51・a11y）
+  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1' : ''
+  const tap = uiNext ? ' min-h-11' : ''
+  const calm = uiNext ? ' motion-reduce:animate-none' : ''
 
   if (status === 'loading') {
     return (
       <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
         <div className="flex flex-col items-center gap-4">
-          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-48 animate-pulse" />
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className={`w-48 animate-pulse${calm}`} />
           <p className="text-sm font-bold text-slate-500">読み込み中...</p>
         </div>
       </div>
@@ -548,6 +567,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 <div className="flex gap-2">
                   <input
                     type="text"
+                    aria-label={uiNext ? 'キーワード（任意）' : undefined}
                     value={keywords}
                     onChange={(e) => handleKeywordChange(e.target.value)}
                     placeholder="例: SaaS, AI, 営業効率化, 美容、コンサル..."
@@ -560,7 +580,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                     disabled={expanding || !keywords.trim()}
                     className={uiNext
                       // 主ボタンは「リストを抽出する」の1つ。AI変換は控えめなボタンにする（UI 品質 S-22）
-                      ? 'px-4 py-3 bg-white text-[#0066ff] border border-[#0066ff]/40 text-xs font-bold rounded-xl hover:bg-blue-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'
+                      ? `min-h-11 px-4 py-3 bg-white text-[#0066ff] border border-[#0066ff]/40 text-xs font-bold rounded-xl hover:bg-blue-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap${focusRing}`
                       : 'px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'}
                   >
                     {expanding ? '変換中...' : <><Sym name="smart_toy" className="align-middle text-sm mr-0.5" />AIで変換</>}
@@ -582,13 +602,14 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                             key={tag}
                             type="button"
                             onClick={() => toggleTag(tag)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                            aria-pressed={uiNext ? active : undefined}
+                            className={`${uiNext ? `min-h-11 inline-flex items-center gap-1${focusRing} ` : ''}px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                               active
                                 ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow'
                                 : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                             }`}
                           >
-                            {active ? '✓ ' : ''}{tag}
+                            {uiNext ? (active ? <Check size={14} strokeWidth={2} aria-hidden /> : null) : active ? '✓ ' : ''}{tag}
                           </button>
                         )
                       })}
@@ -605,11 +626,11 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 <div>
                   <label className="block text-sm font-bold text-[#0a1530] mb-2"><Sym name="location_on" className="align-middle text-base mr-1" />都道府県（任意・絞り込み）</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
-                    <button onClick={() => setPrefecture('')} className={`py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === '' ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                    <button type={uiNext ? 'button' : undefined} aria-pressed={uiNext ? prefecture === '' : undefined} onClick={() => setPrefecture('')} className={`${uiNext ? `min-h-11${focusRing} ` : ''}py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === '' ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                       全て
                     </button>
                     {prefectureOptions.map((p) => (
-                      <button key={p} onClick={() => setPrefecture(p)} className={`py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === p ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                      <button key={p} type={uiNext ? 'button' : undefined} aria-pressed={uiNext ? prefecture === p : undefined} onClick={() => setPrefecture(p)} className={`${uiNext ? `min-h-11 px-1${focusRing} ` : ''}py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === p ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                         {p}
                       </button>
                     ))}
@@ -631,12 +652,20 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               )}
 
               <div>
+                {uiNext ? (
+                  // 375px で「（1回最大10,000社）」が1文字だけ次の行に落ちないよう、項目名と補足を分ける
+                  <p className="mb-2 flex flex-wrap items-baseline gap-x-2 text-sm font-bold text-[#0a1530]" id="doyalist-count-label">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap"><Sym name="bar_chart" className="text-base" />抽出する件数</span>
+                    <span className="whitespace-nowrap text-xs font-normal text-slate-500">1回最大10,000社</span>
+                  </p>
+                ) : (
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
                   <Sym name="bar_chart" className="align-middle text-base mr-1" />抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社）</span>
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                )}
+                <div className="grid grid-cols-4 gap-2" role={uiNext ? 'group' : undefined} aria-labelledby={uiNext ? 'doyalist-count-label' : undefined}>
                   {COUNT_OPTIONS.map((c) => (
-                    <button key={c} onClick={() => setCountInput(String(c))} className={`py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${count === c ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                    <button key={c} type={uiNext ? 'button' : undefined} aria-pressed={uiNext ? count === c : undefined} onClick={() => setCountInput(String(c))} className={`${uiNext ? `min-h-11 whitespace-nowrap px-0.5${focusRing} ` : ''}py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${count === c ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                       {c.toLocaleString()}社
                     </button>
                   ))}
@@ -652,9 +681,14 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   value={countInput}
                   onChange={(event) => setCountInput(event.target.value)}
                   aria-invalid={!validCount}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
+                  aria-describedby={uiNext && !validCount ? 'doyalist-custom-count-error' : undefined}
+                  className={uiNext
+                    ? 'mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none focus:ring-2 focus:ring-blue-100 aria-[invalid=true]:border-rose-400'
+                    : 'mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none'}
                 />
-                {!validCount && <p className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>}
+                {!validCount && (uiNext
+                  ? <p id="doyalist-custom-count-error" role="alert" className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>
+                  : <p className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>)}
                 {count >= 500 && (
                   <p className="text-xs font-medium text-cyan-700 mt-2 inline-flex items-center gap-1">
                     <Sym name="schedule" className="text-sm" />{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
@@ -668,14 +702,15 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               </div>
 
               <button
+                type={uiNext ? 'button' : undefined}
                 onClick={handleGenerate}
                 disabled={generating || !validCount || !intentReady || Boolean(extractionIntent)}
                 className={uiNext
-                  ? 'w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                  ? 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                   : 'w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'}
               >
                 {generating ? (
-                  <><img src={CHARS.working} alt="" className="w-6 h-6 animate-spin" />抽出中...</>
+                  <><img src={CHARS.working} alt="" className={`w-6 h-6 animate-spin${calm}`} />抽出中...</>
                 ) : (
                   <><img src={CHARS.jump} alt="" className="w-6 h-6" />リストを抽出する</>
                 )}
@@ -686,10 +721,10 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   <p className="font-bold">前の抽出操作を確認してください（{extractionIntent.count}社）</p>
                   <p className="mt-1">{extractionState === 'ready' ? 'プロジェクトは保存済みです。続けると、この操作の企業抽出を開始します。' : extractionState === 'pending' ? '抽出処理が進行中です。新しく抽出せず、保存状況を確認してください。' : extractionState === 'cancelling' ? '終了処理中です。処理の停止が確認できるまでお待ちください。' : extractionState === 'busy' ? '別の抽出が利用枠を一時確保しています。完了後にこの操作を続けられます。' : extractionState === 'failed' || extractionState === 'cancelled' ? 'この抽出は終了しました。操作を終了すると、新しい条件で抽出できます。' : '通信が途切れても、保存状況を確認してから次の操作に進めます。'}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button disabled={generating} onClick={() => void runExtraction('recover')} className="rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50">保存状況を確認</button>
-                    {(extractionState === 'ready' || extractionState === 'busy') && <button disabled={generating} onClick={() => void runExtraction('resume')} className="rounded-lg bg-cyan-700 px-3 py-2 font-bold text-white disabled:opacity-50">この抽出を続ける</button>}
-                    <button disabled={generating && cancellationDispatch.current} onClick={handleCancelExtraction} className="rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50">この操作を終了</button>
-                    {extractionProject && <Link href="/doyalist/history" className="px-3 py-2 underline">保存済みの履歴を見る</Link>}
+                    <button disabled={generating} onClick={() => void runExtraction('recover')} className={`rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50${tap}${focusRing}`}>保存状況を確認</button>
+                    {(extractionState === 'ready' || extractionState === 'busy') && <button disabled={generating} onClick={() => void runExtraction('resume')} className={`rounded-lg bg-cyan-700 px-3 py-2 font-bold text-white disabled:opacity-50${tap}${focusRing}`}>この抽出を続ける</button>}
+                    <button disabled={generating && cancellationDispatch.current} onClick={handleCancelExtraction} className={`rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50${tap}${focusRing}`}>この操作を終了</button>
+                    {extractionProject && <Link href="/doyalist/history" className={`px-3 py-2 underline${uiNext ? ` inline-flex min-h-11 items-center${focusRing}` : ''}`}>保存済みの履歴を見る</Link>}
                   </div>
                 </div>
               )}
@@ -698,11 +733,35 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 <div role="status" className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
                   <Sym name="info" className="text-amber-600 text-xl flex-shrink-0" />
                   <p className="flex-1 min-w-0 text-sm font-bold text-amber-900">{warningMsg}</p>
-                  <button onClick={() => setWarningMsg(null)} className="text-amber-700 hover:text-amber-900 text-xl flex-shrink-0" aria-label="通知を閉じる">×</button>
+                  {uiNext
+                    ? <button type="button" onClick={() => setWarningMsg(null)} className={`-m-2 inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-amber-700 hover:text-amber-900${focusRing}`} aria-label="通知を閉じる"><X size={18} aria-hidden /></button>
+                    : <button onClick={() => setWarningMsg(null)} className="text-amber-700 hover:text-amber-900 text-xl flex-shrink-0" aria-label="通知を閉じる">×</button>}
                 </div>
               )}
               {/* エラー表示（toastだけだと見落としやすいので持続表示） */}
-              {errorMsg && (
+              {/* 新しい見た目: 何が起きたか・どうすればよいか・次の操作を1つ（UI 品質 S-20）。文はこの画面で決めた日本語だけ */}
+              {uiNext && errorMsg && (
+                <div className="mt-3 space-y-2">
+                  <ErrorNotice
+                    what={errorMsg}
+                    how={errorHint ?? (quotaAction === 'pricing' ? '来月まで待つか、料金プランを見直すと続けて抽出できます。'
+                      : quotaAction === 'contact' ? '追加の枠は、お問い合わせからご相談ください。'
+                      : errorMsg === DOYALIST_COLLECTION_UNKNOWN ? '同じ条件で何度も抽出せず、先に履歴を確かめてください。'
+                      : '条件を見直すか、時間をおいてもう一度お試しください。')}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {quotaAction ? (
+                      <Link href={quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
+                        {quotaAction === 'pricing' ? '料金プランを見る' : '追加枠を相談する'}
+                      </Link>
+                    ) : errorMsg === DOYALIST_COLLECTION_UNKNOWN ? (
+                      <Link href="/doyalist/history" className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>保存済みの履歴を見る</Link>
+                    ) : null}
+                    <button type="button" onClick={() => { setErrorMsg(null); setErrorHint(null); setQuotaAction(null) }} className={`inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-100${focusRing}`}>閉じる</button>
+                  </div>
+                </div>
+              )}
+              {!uiNext && errorMsg && (
                 <div className="mt-3 p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-start gap-3">
                   <Sym name="error" className="text-rose-500 text-xl flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -795,8 +854,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
         {/* ===== Loading ===== */}
         {generating && companies.length === 0 && (
-          <div className="mt-6 bg-white rounded-3xl shadow-lg border border-slate-200 p-10 text-center space-y-4">
-            <img src={CHARS.thinking} alt="" className="w-28 h-28 mx-auto animate-bounce" />
+          <div className="mt-6 bg-white rounded-3xl shadow-lg border border-slate-200 p-10 text-center space-y-4" role={uiNext ? 'status' : undefined}>
+            <img src={CHARS.thinking} alt="" className={`w-28 h-28 mx-auto animate-bounce${calm}`} />
             <p className="text-lg font-bold text-[#0a1530]">クマが企業を探しています...</p>
             <p className="text-xs font-medium text-slate-500">通常10〜60秒ほどかかります</p>
           </div>
@@ -809,7 +868,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               title="まだリストがありません"
               description="上で条件を選び、「リストを抽出する」を押すと、ここに企業が並びます。"
               art="/doyalist/empty-lists.webp"
-              action={<button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="rounded-xl border border-[#0066ff]/40 px-4 py-2 text-sm font-bold text-[#0066ff] hover:bg-blue-50">条件を選ぶ</button>}
+              action={<button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>条件を選ぶ</button>}
             />
           </div>
         )}
@@ -818,12 +877,12 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
         {companies.length > 0 && (
           <div className="mt-6 bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
             <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <img src={CHARS.success} alt="" className="w-12 h-12 animate-bounce" />
-                <div>
+              <div className={`flex items-center gap-3${uiNext ? ' min-w-0' : ''}`}>
+                <img src={CHARS.success} alt="" className={`w-12 h-12 animate-bounce${calm}`} />
+                <div className={uiNext ? 'min-w-0' : undefined}>
                   <h2 className="text-lg font-bold text-[#0a1530]">
                     <CountUp value={companies.length} duration={1500} />社できました
-                    <Sym name="auto_awesome" className="ml-2 inline-block animate-pulse text-xl align-middle" />
+                    <Sym name="auto_awesome" className={`ml-2 inline-block animate-pulse text-xl align-middle${calm}`} />
                   </h2>
                   <p className="text-xs font-medium text-slate-500">
                     {companies.length < count ? `指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）` : `ダウンロードで保存できます`}
@@ -831,8 +890,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={downloadCSV} className="inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all"><Sym name="download" className="text-base" />CSV</button>
-                <button onClick={downloadExcel} className="inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all"><Sym name="bar_chart" className="text-base" />Excel</button>
+                <button type={uiNext ? 'button' : undefined} onClick={downloadCSV} aria-label={uiNext ? 'CSVでダウンロード' : undefined} className={`${uiNext ? `min-h-11${focusRing} ` : ''}inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all`}><Sym name="download" className="text-base" />CSV</button>
+                <button type={uiNext ? 'button' : undefined} onClick={downloadExcel} aria-label={uiNext ? 'Excelでダウンロード' : undefined} className={`${uiNext ? `min-h-11${focusRing} ` : ''}inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all`}><Sym name="bar_chart" className="text-base" />Excel</button>
               </div>
             </div>
 
@@ -843,12 +902,13 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   value={filterText}
                   onChange={(e) => { setFilterText(e.target.value); setVisibleCount(PAGE_SIZE) }}
                   placeholder={uiNext ? '名前・業種・住所で絞り込み' : '🔍 名前・業種・住所で絞り込み'}
-                  className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                  aria-label={uiNext ? '名前・業種・住所で絞り込み' : undefined}
+                  className={`${uiNext ? 'min-h-11 basis-full sm:basis-auto ' : ''}flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100`}
                 />
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={uiNext ? '並び替え' : undefined} className={`${uiNext ? 'min-h-11 min-w-0 max-w-full ' : ''}px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]`}>
                   {SORT_OPTIONS.map((s) => <option key={s.v} value={s.v}>並び替え: {s.l}</option>)}
                 </select>
-                <span className="text-xs font-medium text-slate-500">{filteredCompanies.length}社表示中</span>
+                <span className={`text-xs font-medium text-slate-500${uiNext ? ' whitespace-nowrap' : ''}`} aria-live={uiNext ? 'polite' : undefined}>{filteredCompanies.length}社表示中</span>
               </div>
               {/* データ有無フィルタ（チップ） */}
               <div className="flex flex-wrap gap-2 items-center">
@@ -860,8 +920,10 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 ].map((f, i) => (
                   <button
                     key={i}
+                    type={uiNext ? 'button' : undefined}
+                    aria-pressed={uiNext ? f.state : undefined}
                     onClick={() => { f.set(!f.state); setVisibleCount(PAGE_SIZE) }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                    className={`${uiNext ? `min-h-11 whitespace-nowrap${focusRing} ` : ''}inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                       f.state
                         ? 'bg-cyan-500 text-white border-cyan-500 shadow shadow-cyan-500/20'
                         : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'
@@ -873,8 +935,9 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 ))}
                 {(filterHasUrl || filterHasRep || filterHasEmployees) && (
                   <button
+                    type={uiNext ? 'button' : undefined}
                     onClick={() => { setFilterHasUrl(false); setFilterHasRep(false); setFilterHasEmployees(false); setVisibleCount(PAGE_SIZE) }}
-                    className="text-[10px] text-slate-500 hover:text-rose-500 underline"
+                    className={uiNext ? `min-h-11 px-2 text-xs text-slate-500 hover:text-rose-500 underline${focusRing}` : 'text-[10px] text-slate-500 hover:text-rose-500 underline'}
                   >
                     フィルタ解除
                   </button>
@@ -882,6 +945,15 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               </div>
             </div>
 
+            {/* 新しい見た目: 絞り込みで0社になったとき。絵は出さず、条件を消す操作を1つ（UI 品質 S-17） */}
+            {uiNext && filteredCompanies.length === 0 && (
+              <DsEmptyState
+                kind="no-results"
+                title="条件に合う企業はありません"
+                description="絞り込みの言葉やチップを外すと、抽出した企業がまた並びます。"
+                action={<button type="button" onClick={clearFilters} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>絞り込みをクリア</button>}
+              />
+            )}
             <div className="divide-y divide-slate-100">
               {visibleCompanies.map((c, i) => {
                 const ed = c.enrichedData || {}
@@ -891,8 +963,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   ? `https://www.google.com/search?q=${encodeURIComponent(c.name + ' 法人番号 ' + ed.corporateNumber)}`
                   : null
                 return (
-                  <div key={c.id || i} className="p-5 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-start gap-4">
+                  <div key={c.id || i} className={`${uiNext ? 'p-4 sm:p-5' : 'p-5'} hover:bg-slate-50/50 transition-colors`}>
+                    <div className={`flex items-start ${uiNext ? 'gap-3 sm:gap-4' : 'gap-4'}`}>
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0a1530] flex items-center justify-center text-white font-bold text-sm shadow">{i + 1}</div>
                       <div className="flex-1 min-w-0 space-y-2">
                         {/* 企業名 + URL登録バッジ */}
@@ -902,10 +974,10 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                               href={gbizUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="group inline-flex items-center gap-1.5"
+                              className={`group inline-flex items-center gap-1.5${uiNext ? ` min-w-0 max-w-full rounded${focusRing}` : ''}`}
                               title="Google検索で企業情報を確認"
                             >
-                              <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors">{c.name}</h3>
+                              <h3 className={`text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors${uiNext ? ' min-w-0 break-words' : ''}`}>{c.name}</h3>
                               <Sym name="arrow_outward" className="text-base text-slate-300 group-hover:text-cyan-500 transition-colors" />
                             </a>
                           ) : (
@@ -978,7 +1050,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
             {hasMore && (
               <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
-                <button onClick={() => setVisibleCount(visibleCount + PAGE_SIZE)} className="px-6 py-2.5 bg-white text-[#0a1530] font-bold text-sm rounded-xl border-2 border-[#0a1530] hover:bg-[#0a1530] hover:text-white transition-all">
+                <button type={uiNext ? 'button' : undefined} onClick={() => setVisibleCount(visibleCount + PAGE_SIZE)} className={`${uiNext ? `min-h-11 [text-wrap:balance]${focusRing} ` : ''}px-6 py-2.5 bg-white text-[#0a1530] font-bold text-sm rounded-xl border-2 border-[#0a1530] hover:bg-[#0a1530] hover:text-white transition-all`}>
                   さらに{Math.min(PAGE_SIZE, filteredCompanies.length - visibleCount)}社を表示（残り{filteredCompanies.length - visibleCount}社）
                 </button>
               </div>

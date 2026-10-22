@@ -6,7 +6,9 @@
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
 import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
-import { EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
+import { Button, EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
+import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
+import { ShellIcon } from '@/components/shell/icons'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
@@ -81,8 +83,23 @@ export default function MensetsuTool() {
   const [error, setError] = useState<string | null>(null)
   const [templateUpgrade, setTemplateUpgrade] = useState<{ message: string; url: string } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  /** 読み込みに失敗した理由（新しい見た目で、理由ごとに次にやることを出し分ける） */
+  const [loadIssue, setLoadIssue] = useState<LoadIssue>('other')
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、ToolHero・空状態・中身の領域だけの読み込みにする
   const uiNext = useToolUiNext()
+  /** 新しい見た目のときだけ、小さなボタンを押しやすい高さにし、キーボードの輪を出す */
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  /** エラーを出す。新しい見た目では、日本語でない文（例外の英文など）は出さない */
+  const report = (message: unknown, fallback = '処理を完了できませんでした。時間をおいてもう一度お試しください。') =>
+    notifyError(setError, uiNext ? friendlyText(message, fallback) : message)
+  /** 発行の欄・職種の欄へ移る（空の表示のボタンから） */
+  const jobTitleRef = useRef<HTMLInputElement>(null)
+  const candidateRef = useRef<HTMLInputElement>(null)
+  const goTo = (el: HTMLElement | null) => {
+    if (!el) return
+    el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
+    el.focus({ preventScroll: true })
+  }
   const [moreError, setMoreError] = useState<string | null>(null)
   const [moreLoading, setMoreLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -125,6 +142,7 @@ export default function MensetsuTool() {
     const desiredCount = Math.max(200, sessionsRef.current.length)
     setLoading(true)
     setLoadError(null)
+    setLoadIssue('other')
     setMoreError(null)
     setMoreLoading(false)
     try {
@@ -141,6 +159,7 @@ export default function MensetsuTool() {
         return
       }
       if (!res.ok || !data || typeof data !== 'object' || !Object.prototype.hasOwnProperty.call(data, 'current')) {
+        if (!res.ok) setLoadIssue(loadIssueOf(res.status))
         throw new Error('組織情報を取得できませんでした')
       }
       setNeedsLogin(false)
@@ -231,7 +250,7 @@ export default function MensetsuTool() {
       setProfile(data.profile)
       setNotice(`会社情報を更新しました（${data.pageCount}ページを読み取り）`)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
+      report(e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
     } finally {
       setBusy(null)
     }
@@ -263,7 +282,7 @@ export default function MensetsuTool() {
       if (!res.ok) throw new Error(data?.error || '削除できませんでした')
       await load()
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+      report(e instanceof Error ? e.message : '削除できませんでした')
     } finally {
       setDeletingId('')
     }
@@ -283,7 +302,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        notifyError(setError, data?.error || '組織の作成に失敗しました')
+        report(data?.error || '組織の作成に失敗しました')
         return
       }
       await load()
@@ -314,7 +333,7 @@ export default function MensetsuTool() {
         if (res.status === 402 && data?.code === 'LIMIT_REACHED' && data?.upgradeUrl === '/mensetsu/pricing') {
           setTemplateUpgrade({ message: data?.error || '生成に失敗しました', url: data.upgradeUrl })
         }
-        notifyError(setError, data?.error || '生成に失敗しました')
+        report(data?.error || '生成に失敗しました')
         return
       }
       const removed = data?.removedByGuardrail || []
@@ -325,7 +344,7 @@ export default function MensetsuTool() {
       )
       await load()
     } catch {
-      notifyError(setError, '通信に失敗しました。時間をおいてもう一度お試しください。')
+      report('通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
       setBusy(null)
     }
@@ -342,7 +361,7 @@ export default function MensetsuTool() {
     } catch {
       // ⚠️ 「詳細画面をご覧ください」と案内しないこと。詳細画面はURLを表示しない。
       //    コピーできない環境（http・古いブラウザ）でも渡せるよう、URLそのものを出す。
-      notifyError(setError, `コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
+      report(`コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
     }
   }
 
@@ -369,14 +388,14 @@ export default function MensetsuTool() {
             setIssueLimit({ message: data.error, url: data.contactUrl, label: '追加枠を相談する' })
           }
         }
-        notifyError(setError, data?.error || '発行に失敗しました')
+        report(data?.error || '発行に失敗しました')
         return
       }
       setIssuedUrl(data.url)
       setCandidateName('')
       await load()
     } catch (cause) {
-      notifyError(setError, cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
+      report(cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
       setBusy(null)
     }
@@ -401,7 +420,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        notifyError(setError, data?.error || '終了処理に失敗しました')
+        report(data?.error || '終了処理に失敗しました')
         return
       }
       setNotice(data.status === 'completed' ? '面接を終了しました（評価できます）' : '面接を終了しました')
@@ -419,7 +438,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) {
-        notifyError(setError, data?.error || '戻せませんでした')
+        report(data?.error || '戻せませんでした')
         return
       }
       setNotice('受験可能に戻しました。同じURLで受けられます。')
@@ -438,7 +457,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        notifyError(setError, data?.error || '評価に失敗しました')
+        report(data?.error || '評価に失敗しました')
         return
       }
       await load()
@@ -459,7 +478,7 @@ export default function MensetsuTool() {
   if (loadError && uiNext) {
     return (
       <div className="px-4 py-6 lg:px-8">
-        <ErrorNotice what="面接の情報を読み込めませんでした。" how={loadError} onRetry={() => void load()} retryLabel="再読み込み" />
+        <LoadIssueNotice issue={loadIssue} subject="面接の情報" onRetry={() => void load()} />
       </div>
     )
   }
@@ -516,14 +535,19 @@ export default function MensetsuTool() {
         </p>
         </>)}
 
-        {error && (
+        {error && uiNext ? (
+          <div className="mt-5 grid gap-3">
+            <ErrorNotice what={error} how={templateUpgrade?.message === error ? '今月の上限に達しました。料金プランで上限をご確認ください。' : undefined} />
+            {templateUpgrade?.message === error && <div><Button href={templateUpgrade.url} variant="secondary" icon="CreditCard">料金プランを見る</Button></div>}
+          </div>
+        ) : error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4 text-sm font-bold text-[#c2185b]">
             {error}
             {templateUpgrade?.message === error && <p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">プロプランの料金と30日間無料の対象条件を確認する</Link></p>}
           </div>
         )}
         {notice && (
-          <div className="mt-5 rounded-lg border border-[#cfe3ff] bg-white p-4 text-sm font-bold text-[#0a0f3c]">
+          <div role="status" className="mt-5 rounded-lg border border-[#cfe3ff] bg-white p-4 text-sm font-bold text-[#0a0f3c]">
             {notice}
           </div>
         )}
@@ -540,12 +564,13 @@ export default function MensetsuTool() {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="株式会社スリスタ"
-                className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                aria-label="組織名"
+                className={nx('flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
               />
               <button
                 onClick={createOrg}
                 disabled={busy === 'org' || !orgName.trim()}
-                className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+                className={nx('rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0')}
               >
                 {busy === 'org' ? '作成中…' : '組織を作成'}
               </button>
@@ -574,12 +599,14 @@ export default function MensetsuTool() {
                   value={companyUrl}
                   onChange={(e) => setCompanyUrl(e.target.value)}
                   placeholder="https://example.co.jp"
-                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                  aria-label="会社のURL"
+                  inputMode="url"
+                  className={nx('flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                 />
                 <button
                   onClick={analyzeCompany}
                   disabled={busy === 'company' || !companyUrl.trim()}
-                  className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:hover:bg-slate-200"
+                  className={nx('rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:hover:bg-slate-200')}
                 >
                   {busy === 'company'
                     ? '読み取り中…'
@@ -632,12 +659,15 @@ export default function MensetsuTool() {
                   onChange={(e) => setJobTitle(e.target.value)}
                   maxLength={200}
                   placeholder="職種（例: フィールドセールス）"
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                  aria-label="職種"
+                  ref={jobTitleRef}
+                  className={nx('rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                 />
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                  aria-label="採用の区分"
+                  className={nx('rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                 >
                   <option value="newgrad">新卒</option>
                   <option value="mid">中途</option>
@@ -653,29 +683,39 @@ export default function MensetsuTool() {
                   onChange={(e) => setFocus(e.target.value)}
                   maxLength={1000}
                   placeholder="特に見たい点（任意）"
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                  aria-label="特に見たい点（任意）"
+                  className={nx('rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                 />
               </div>
               <button
                 onClick={generate}
                 disabled={busy === 'generate' || !jobTitle.trim()}
-                className="mt-4 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+                className={nx('mt-4 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0', `min-h-11 max-w-full motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${NX_FOCUS}`)}
               >
                 {busy === 'generate' ? '生成中…（30秒ほどかかります）' : '質問セットを生成'}
               </button>
 
+              {templates.length === 0 && uiNext && (
+                <EmptyState
+                  kind="not-generated"
+                  art="/mensetsu/empty-interviews.webp"
+                  title="まだ質問セットはありません"
+                  description="職種を入れて「質問セットを生成」を押すと、質問と評価軸がここに並びます。"
+                  action={<Button onClick={() => goTo(jobTitleRef.current)} icon="PenTool">職種を入力する</Button>}
+                />
+              )}
               {templates.length > 0 && (
                 <ul className="mt-5 space-y-3">
                   {templates.map((t) => (
                     <li key={t.id} className="rounded-xl bg-[#f7faff] p-4 ring-1 ring-[#e3edff]">
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
+                        <div className={uiNext ? 'min-w-0 break-words' : undefined}>
                           <p className="text-base font-black text-[#0a0f3c]">{t.name}</p>
                           <p className="text-xs font-semibold text-[#425071]">
                             {t.durationMin}分 / 質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
                           {/* ⚠️ これは状態の表示であって押せるものではない。隣の「編集」と
                                同じ角丸の枠にすると、押せるボタンに見えてしまう。 */}
                           <span
@@ -691,7 +731,7 @@ export default function MensetsuTool() {
                           </span>
                           <Link
                             href={`/mensetsu/templates/${t.id}`}
-                            className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
+                            className={nx('rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]')}
                           >
                             編集
                           </Link>
@@ -700,7 +740,7 @@ export default function MensetsuTool() {
                             <button
                               onClick={() => deleteTemplate(t)}
                               disabled={deletingId === t.id}
-                              className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className={nx('rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50')}
                             >
                               {deletingId === t.id ? (t._count?.sessions ? '保管中…' : '削除中…') : (t._count?.sessions ? '保管' : '削除')}
                             </button>
@@ -751,15 +791,20 @@ export default function MensetsuTool() {
             {/* --- 3. 面接URL発行 ---
                  ⚠️ ここまで来れば担当者の作業は完了。手順の終点だと分かるよう、
                     他のセクションより大きく・強く見せる（枠・余白・文字とも） */}
-            <section className="mt-8 rounded-2xl bg-white p-6 shadow-md ring-2 ring-[#0066ff] sm:p-9">
+            <section className={uiNext ? 'mt-8 rounded-2xl bg-white p-5 shadow-md ring-2 ring-[#0066ff] sm:p-9' : 'mt-8 rounded-2xl bg-white p-6 shadow-md ring-2 ring-[#0066ff] sm:p-9'}>
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0066ff] text-base font-black text-white">3</span>
-                <div>
-                  <h2 className="text-xl font-black text-[#0a0f3c] sm:text-2xl">応募者に面接URLを送る</h2>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0066ff] text-base font-black text-white">3</span>
+                <div className={uiNext ? 'min-w-0' : undefined}>
+                  <h2 className={uiNext ? 'text-xl font-black text-[#0a0f3c] [text-wrap:balance] sm:text-2xl' : 'text-xl font-black text-[#0a0f3c] sm:text-2xl'}>応募者に面接URLを送る</h2>
                   <p className="mt-0.5 text-sm font-bold text-[#0066ff]">URLを送れたら、ここで完了です</p>
                 </div>
               </div>
-              {templates.every((t) => t.status === 'archived') ? (
+              {templates.every((t) => t.status === 'archived') && uiNext ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-semibold text-[#425071]">面接URLを発行するには、先に質問セットを作ります。</p>
+                  <Button onClick={() => goTo(jobTitleRef.current)} variant="secondary" icon="PenTool">質問セットを作る</Button>
+                </div>
+              ) : templates.every((t) => t.status === 'archived') ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">先に質問セットを作成してください。</p>
               ) : (
                 <>
@@ -769,7 +814,7 @@ export default function MensetsuTool() {
                       <select
                         value={selectedTemplate}
                         onChange={(e) => setSelectedTemplate(e.target.value)}
-                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]"
+                        className={nx('w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                       >
                         {templates.filter((t) => t.status !== 'archived').map((t) => (
                           <option key={t.id} value={t.id}>
@@ -785,7 +830,10 @@ export default function MensetsuTool() {
                         value={candidateName}
                         onChange={(e) => setCandidateName(e.target.value)}
                         placeholder="山田 太郎"
-                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]"
+                        ref={candidateRef}
+                        required
+                        aria-describedby={uiNext && issueLimit && error === issueLimit.message ? 'mensetsu-issue-error' : undefined}
+                        className={nx('w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                       />
                     </label>
                   </div>
@@ -796,11 +844,16 @@ export default function MensetsuTool() {
                     // ⚠️ 応募者名は必須。空のまま発行すると「誰の面接か分からないURL」ができ、
                     //    あとで候補者を比較できなくなる。
                     disabled={busy === 'issue' || !candidateName.trim()}
-                    className="mt-5 w-full rounded-xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-xl"
+                    className={nx('mt-5 w-full rounded-xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-xl', NX_FOCUS)}
                   >
                     {busy === 'issue' ? '発行中…' : '面接URLを発行する'}
                   </button>
-                  {issueLimit && error === issueLimit.message && (
+                  {issueLimit && error === issueLimit.message && uiNext ? (
+                    <div id="mensetsu-issue-error" className="mt-3 grid gap-3">
+                      <ErrorNotice what="今月の面接の上限に達しました。" how={issueLimit.message} />
+                      <div><Button href={issueLimit.url} variant="secondary" icon="CreditCard">{issueLimit.url === '/mensetsu/pricing' ? '料金プランを見る' : '追加枠を相談する'}</Button></div>
+                    </div>
+                  ) : issueLimit && error === issueLimit.message && (
                     <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
                       <p>{issueLimit.message}</p>
                       <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label}</Link>
@@ -829,7 +882,7 @@ export default function MensetsuTool() {
                           setIssuedCopied(true)
                           window.setTimeout(() => setIssuedCopied(false), 2000)
                         }}
-                        className="mt-4 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] sm:text-lg"
+                        className={nx('mt-4 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] sm:text-lg', NX_FOCUS)}
                       >
                         {issuedCopied ? 'コピーしました' : 'URLをコピーする'}
                       </button>
@@ -853,9 +906,9 @@ export default function MensetsuTool() {
                 {sessions.some((s) => s.status === 'evaluated') && (
                   <Link
                     href="/mensetsu/compare"
-                    className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                    className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
                   >
-                    <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                    {uiNext ? <ShellIcon name="Users" size={16} /> : <span className="material-symbols-outlined text-[16px]">table_chart</span>}
                     候補者を比較
                   </Link>
                 )}
@@ -869,7 +922,7 @@ export default function MensetsuTool() {
                       <Link
                         key={s.id}
                         href={`/mensetsu/sessions/${s.id}`}
-                        className="block rounded-2xl bg-[#f7faff] p-5 ring-2 ring-[#d8e7ff] transition hover:ring-[#0066ff]"
+                        className={nx('block rounded-2xl bg-[#f7faff] p-5 ring-2 ring-[#d8e7ff] transition hover:ring-[#0066ff]', 'min-w-0 focus-visible:outline-none focus-visible:ring-[var(--blue)] focus-visible:ring-4')}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -898,6 +951,9 @@ export default function MensetsuTool() {
                   art="/mensetsu/empty-interviews.webp"
                   title="まだ面接はありません"
                   description="上の「面接URLを発行する」で応募者ごとのURLを作って送ると、面接の状況と結果がここに並びます。"
+                  action={templates.every((t) => t.status === 'archived')
+                    ? <Button onClick={() => goTo(jobTitleRef.current)} icon="PenTool">質問セットを作る</Button>
+                    : <Button onClick={() => goTo(candidateRef.current)} icon="Link2">面接URLを発行する</Button>}
                 />
               ) : sessions.length === 0 ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">まだ面接はありません。</p>
@@ -905,7 +961,7 @@ export default function MensetsuTool() {
                 <ul className="mt-4 divide-y divide-[#eef3ff]">
                   {sessions.filter((s) => s.status !== 'evaluated').map((s) => (
                     <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <div>
+                      <div className={uiNext ? 'min-w-0 break-words' : undefined}>
                         <p className="text-sm font-black text-[#0a0f3c]">
                           {s.candidateName || '（名前未入力）'}
                           <span className="ml-2 text-xs font-bold text-[#425071]">{s.template.jobTitle}</span>
@@ -923,7 +979,7 @@ export default function MensetsuTool() {
                           <>
                             <button
                               onClick={() => void copyUrl(s)}
-                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                              className={nx('rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]')}
                               title="面接URLをコピーして、応募者にお渡しできます"
                             >
                               {copiedId === s.id ? 'コピーしました' : 'URLをコピー'}
@@ -934,7 +990,7 @@ export default function MensetsuTool() {
                           <button
                             onClick={() => reopenSession(s.id)}
                             disabled={busy === `reopen-${s.id}`}
-                            className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50"
+                            className={nx('rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50')}
                             title="受験前に誤って終了扱いになった面接を、同じURLで受けられる状態に戻します"
                           >
                             {busy === `reopen-${s.id}` ? '処理中…' : '受験可能に戻す'}
@@ -944,7 +1000,7 @@ export default function MensetsuTool() {
                           <button
                             onClick={() => closeSession(s.id)}
                             disabled={busy === `close-${s.id}`}
-                            className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#425071] disabled:opacity-50"
+                            className={nx('rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#425071] disabled:opacity-50')}
                             title="応募者が離脱したまま実施中で止まっている場合に使います"
                           >
                             {busy === `close-${s.id}` ? '処理中…' : '終了にする'}
@@ -954,14 +1010,14 @@ export default function MensetsuTool() {
                           <button
                             onClick={() => evaluate(s.id)}
                             disabled={busy === `eval-${s.id}`}
-                            className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+                            className={nx('rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0')}
                           >
                             {busy === `eval-${s.id}` ? '評価中…' : '評価する'}
                           </button>
                         )}
                         <Link
                           href={`/mensetsu/sessions/${s.id}`}
-                          className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                          className={nx('rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]')}
                         >
                           詳細
                         </Link>
@@ -974,13 +1030,15 @@ export default function MensetsuTool() {
               {sessionCursor && (
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-[#425071]">
                   <span>{sessions.length} / {sessionTotal}件の面接を表示</span>
-                  <button onClick={loadMoreSessions} disabled={moreLoading} className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 font-black text-[#0066ff] disabled:opacity-50">
+                  <button onClick={loadMoreSessions} disabled={moreLoading} className={nx('rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 font-black text-[#0066ff] disabled:opacity-50')}>
                     {moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに表示'}
                   </button>
-                  {moreError && <button onClick={() => void load()} className="font-black text-[#0066ff] underline">一覧を更新</button>}
+                  {moreError && <button onClick={() => void load()} className={nx('font-black text-[#0066ff] underline')}>一覧を更新</button>}
                 </div>
               )}
-              {moreError && <p role="alert" className="mt-2 text-center text-xs font-bold text-[#c2185b]">{moreError}</p>}
+              {moreError && uiNext ? (
+                <div className="mt-3"><ErrorNotice what="面接一覧の続きを読み込めませんでした。" how="「再試行」を押すか、「一覧を更新」で最初から読み直してください。" /></div>
+              ) : moreError && <p role="alert" className="mt-2 text-center text-xs font-bold text-[#c2185b]">{moreError}</p>}
             </section>
 
             {/* ⚠️ メンバーと記録の設定は /mensetsu/settings に移した。

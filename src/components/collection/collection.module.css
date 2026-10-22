@@ -1,0 +1,209 @@
+/* ツール図鑑・実績・活用度 — クリアデザイン（トークンは AppShell の .ds から） */
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 28px 64px;
+  display: grid;
+  gap: 20px;
+}
+
+.hero { display: grid; gap: 4px; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--blue); }
+.title { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
+.subtitle { margin: 2px 0 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  min-width: 0;
+}
+
+.section { display: grid; gap: 12px; min-width: 0; }
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sectionTitle { margin: 0; font-size: 18px; font-weight: 800; color: var(--ink); }
+.sectionMeta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.note { margin: 0; font-size: 14px; color: var(--sub); }
+
+.srOnly {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.primary, .ghost {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.primary { border: 0; color: #fff; background: var(--blue); }
+.primary:hover { background: var(--blue-deep); }
+.ghost { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); }
+.ghost:hover { border-color: var(--blue); color: var(--blue); }
+.primary:focus-visible, .ghost:focus-visible, .nextItem:focus-visible, .badgeLink:focus-visible, .stampLink:focus-visible, .othersSummary:focus-visible {
+  outline: 3px solid rgba(0, 102, 255, 0.35); outline-offset: 2px;
+}
+
+/* ---- 活用度 ---- */
+.score { display: grid; gap: 18px; }
+.scoreMain { display: flex; align-items: center; gap: 24px; }
+.ring { position: relative; flex: none; width: 120px; height: 120px; }
+.ring svg { transform: rotate(-90deg); }
+.ringTrack { fill: none; stroke: var(--blue-soft); stroke-width: 12; }
+.ringFill {
+  fill: none; stroke: var(--blue); stroke-width: 12; stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s var(--ease, ease);
+}
+.ringValue {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.ringValue small { font-size: 14px; margin-left: 2px; color: var(--sub); }
+.ringNone { font-size: 14px; font-weight: 700; color: var(--muted); }
+.scoreText { display: grid; gap: 6px; justify-items: start; min-width: 0; flex: 1; }
+.growth { flex: none; margin: 0; display: grid; justify-items: center; gap: 4px; width: 160px; }
+.growthImg { width: 144px; height: 120px; object-fit: contain; }
+.growthCaption { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.growthLabel { font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.growthNext { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.scoreLead { margin: 0; font-size: 15px; line-height: 1.7; color: var(--ink); }
+.scoreLead b { font-variant-numeric: tabular-nums; }
+.scoreNote { margin: 0 0 6px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+.areaPicker { margin: 0; padding: 16px; border: 1px solid var(--blue-line); border-radius: var(--r-sm); background: var(--bg); min-width: 0; }
+.areaLegend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--sub); }
+.areaOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.areaOption {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper);
+}
+.areaOption[data-on='true'] { border-color: var(--blue); background: var(--blue-soft); }
+.areaOption:focus-within { outline: 3px solid rgba(0, 102, 255, 0.35); outline-offset: 2px; }
+.areaCheck {
+  flex: none; width: 20px; height: 20px; border-radius: 6px; margin-top: 1px;
+  border: 1.5px solid var(--line-strong); background: var(--paper); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.areaOption[data-on='true'] .areaCheck { background: var(--blue); border-color: var(--blue); }
+.areaName { display: block; font-size: 14px; font-weight: 700; color: var(--ink); }
+.areaHint { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.areaActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.areaBars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+.areaBar { display: grid; grid-template-columns: 11em minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.areaBarLabel { color: var(--sub); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.areaBarValue { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bar { display: block; height: 8px; border-radius: 999px; background: var(--blue-soft); overflow: hidden; }
+.barFill { display: block; height: 100%; border-radius: inherit; background: var(--blue); transition: width 0.6s var(--ease, ease); }
+
+.next { border-top: 1px dashed var(--line-strong); padding-top: 14px; }
+.nextTitle { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--sub); }
+.nextList { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.nextItem {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper);
+  color: var(--ink); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.nextItem:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ---- 実績 ---- */
+.badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.badge {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-width: 0;
+  border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: var(--paper);
+}
+.badge[data-earned='true'] { border: 1px solid var(--blue-line); background: linear-gradient(135deg, var(--blue-soft), var(--paper) 70%); }
+.badgeIcon {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg); color: var(--muted);
+}
+.badge[data-earned='true'] .badgeIcon { background: var(--blue); color: #fff; box-shadow: 0 6px 16px -8px rgba(0, 102, 255, 0.7); }
+.badgeArt { flex: none; width: 56px; height: 56px; display: inline-flex; }
+.badgeImg { width: 56px; height: 56px; object-fit: contain; }
+/* まだ取っていない実績の絵は、色を抜いて薄く出す（色だけで伝えない。「開く」と進み具合の文字も出す） */
+.badge:not([data-earned='true']) .badgeImg { filter: grayscale(1); opacity: 0.45; }
+.badgeBody { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.badgeTitle { font-size: 14px; font-weight: 700; color: var(--ink); }
+.badgeSub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.badgeProgress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 2px; }
+.badgeCount { font-size: 12px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; }
+.badgeDone {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; color: var(--ok-ink); background: var(--ok-bg);
+  border-radius: 999px; padding: 4px 10px;
+}
+.badgeLink, .stampLink {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 4px 12px;
+  border-radius: 999px; border: 1px solid var(--line); color: var(--blue); font-size: 12px; font-weight: 700; text-decoration: none;
+}
+.badgeLink:hover, .stampLink:hover { border-color: var(--blue); }
+
+/* ---- ツール図鑑 ---- */
+.stampGroup { display: grid; gap: 10px; }
+.stampGroup + .stampGroup { margin-top: 8px; }
+.groupTitle { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; color: var(--sub); }
+.groupCount { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stamps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+.stampCard {
+  position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center;
+  padding: 18px 12px 14px; min-width: 0; border-radius: var(--r-sm);
+  border: 1.5px dashed var(--line-strong); background: transparent;
+}
+.stampCard[data-used='true'] { border: 1px solid var(--line); background: var(--paper); box-shadow: var(--shadow); }
+.stamp {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--line-strong); color: var(--line-strong);
+}
+.stampCard[data-used='true'] .stamp {
+  border: 3px double var(--blue); color: var(--blue); background: var(--blue-soft);
+  transform: rotate(-8deg);
+  animation: press 0.42s var(--ease, ease) both;
+}
+.stampImg { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; }
+/* スタンプの絵は、丸い縁取りまで絵の中にあるので、仮の枠（二重線・塗り）を外す */
+.stampCard[data-used='true'] .stamp[data-img='true'] { border: none; background: none; width: 84px; height: 84px; margin: -6px 0; }
+.stamp[data-img='true'] .stampImg { width: 84px; height: 84px; border-radius: 0; }
+.stampName { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 14px; font-weight: 700; color: var(--ink); }
+.stampCard:not([data-used='true']) .stampName { color: var(--sub); }
+.stampSub { font-size: 12px; color: var(--muted); }
+.stampLink { margin-top: 2px; }
+.beta { font-size: 11px; font-weight: 700; color: var(--note-ink); background: var(--note-bg); border-radius: 999px; padding: 1px 8px; }
+
+.others { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+.othersSummary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; list-style: none;
+  font-size: 14px; font-weight: 700; color: var(--sub);
+}
+.othersSummary::-webkit-details-marker { display: none; }
+.othersChevron { transition: transform 0.2s ease; }
+.others[open] .othersChevron { transform: rotate(180deg); }
+.others[open] > .stampGroup:first-of-type { margin-top: 8px; }
+
+@keyframes press {
+  from { transform: rotate(-8deg) scale(1.18); opacity: 0; }
+  to { transform: rotate(-8deg) scale(1); opacity: 1; }
+}
+
+@media (max-width: 1080px) {
+  .areaBars { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .page { padding: 18px 16px 48px; gap: 16px; }
+  .card { padding: 18px 16px; }
+  .scoreMain { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .growth { grid-template-columns: 96px minmax(0, 1fr); justify-items: start; align-items: center; width: 100%; }
+  .growthImg { width: 96px; height: 80px; }
+  .growthCaption { justify-items: start; text-align: left; }
+  .areaOptions { grid-template-columns: minmax(0, 1fr); }
+  .areaBar { grid-template-columns: 10.5em minmax(0, 1fr) auto; font-size: 12px; }
+  .badges { grid-template-columns: minmax(0, 1fr); }
+  .stamps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stampCard[data-used='true'] .stamp { animation: none; }
+  .ringFill, .barFill, .othersChevron { transition: none; }
+}

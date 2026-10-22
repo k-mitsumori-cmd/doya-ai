@@ -7,7 +7,9 @@
 // ⚠️ トップ（Tool.tsx）に置かないこと。面接の作成・発行・一覧の下に毎回並ぶと、
 //    日常の作業のたびにスクロールで通過させられる。
 
-import { PageTitle } from '@/components/mensetsu/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
+import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -53,11 +55,18 @@ export default function MensetsuSettingsPage() {
   const [inviteUrl, setInviteUrl] = useState('')
   // ⚠️ 自分の行に名前が無いと「（名前未設定）」になる。ログイン中の名前で埋める。
   const { data: session } = useSession()
+  // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
+  const uiNext = useToolUiNext()
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  /** 読み込みに失敗した理由。⚠️ 失敗を「組織が無い」と取り違えて、作成の案内を出さないため（新しい見た目のとき） */
+  const [loadIssue, setLoadIssue] = useState<LoadIssue | null>(null)
 
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
+    setLoadIssue(null)
     try {
       const res = await fetch('/api/mensetsu/organizations')
+      if (!res.ok) setLoadIssue(loadIssueOf(res.status))
       const data = await res.json()
       setOrg(data?.current || null)
       if (data?.current) {
@@ -66,6 +75,8 @@ export default function MensetsuSettingsPage() {
         setMyRole(m?.myRole || 'member')
         setMyUserId(m?.myUserId || null)
       }
+    } catch {
+      setLoadIssue((prev) => prev ?? 'other')
     } finally {
       setLoading(false)
     }
@@ -136,6 +147,37 @@ export default function MensetsuSettingsPage() {
     }
   }
 
+  if (loading && uiNext) {
+    return (
+      <main className="mx-auto grid max-w-4xl gap-4 px-4 py-8" aria-busy="true" aria-label="読み込み中">
+        <Skeleton lines={2} height={24} delayMs={0} />
+        <Skeleton lines={5} height={16} delayMs={0} />
+      </main>
+    )
+  }
+
+  if (uiNext && loadIssue && !org) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        <LoadIssueNotice issue={loadIssue} subject="設定" onRetry={() => { setLoading(true); void load() }} />
+      </main>
+    )
+  }
+
+  if (!org && uiNext) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        <EmptyState
+          kind="not-generated"
+          art="/mensetsu/empty-interviews.webp"
+          title="まだ組織がありません"
+          description="メンバーや記録の設定は、組織ごとに決めます。先に面接の準備の画面で組織を作成してください。"
+          action={<Button href="/mensetsu" icon="UserCheck">組織を作成する</Button>}
+        />
+      </main>
+    )
+  }
+
   if (loading) {
     return <main className="mx-auto max-w-4xl px-4 py-10 text-sm font-semibold text-[#425071]">読み込み中…</main>
   }
@@ -155,8 +197,10 @@ export default function MensetsuSettingsPage() {
       <PageTitle className="text-xl font-black text-[#0a0f3c]">設定</PageTitle>
       <p className="mt-1 text-xs font-semibold text-[#8a94ad]">{org.name}</p>
 
-      {error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-800">{error}</p>}
-      {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{notice}</p>}
+      {error && uiNext ? (
+        <div className="mt-4"><ErrorNotice what={friendlyText(error, '保存できませんでした。')} how="時間をおいてもう一度お試しください。権限が足りない場合は、組織の管理者に依頼してください。" /></div>
+      ) : error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-800">{error}</p>}
+      {notice && <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{notice}</p>}
 
       {/* --- メンバー --- */}
       <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
@@ -184,7 +228,7 @@ export default function MensetsuSettingsPage() {
                 <button
                   onClick={() => removeMember(m.id)}
                   disabled={busy === `member-${m.id}`}
-                  className="rounded-lg border border-[#ffd0de] px-3 py-1.5 text-xs font-black text-[#c2185b] disabled:opacity-50"
+                  className={nx('rounded-lg border border-[#ffd0de] px-3 py-1.5 text-xs font-black text-[#c2185b] disabled:opacity-50')}
                 >
                   {m.status === 'PENDING' ? '招待を取り消す' : '外す'}
                 </button>
@@ -201,12 +245,15 @@ export default function MensetsuSettingsPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="招待する方のメールアドレス"
-                className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                aria-label="招待する方のメールアドレス"
+                autoComplete="email"
+                className={nx('flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-h-11 min-w-0 ${NX_FOCUS}`)}
               />
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                aria-label="招待する方の役割"
+                className={nx('rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-h-11 ${NX_FOCUS}`)}
               >
                 <option value="member">メンバー</option>
                 <option value="manager">マネージャー</option>
@@ -215,7 +262,7 @@ export default function MensetsuSettingsPage() {
               <button
                 onClick={invite}
                 disabled={busy === 'invite' || !inviteEmail.trim()}
-                className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                className={nx('rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400')}
               >
                 {busy === 'invite' ? '送信中…' : '招待する'}
               </button>

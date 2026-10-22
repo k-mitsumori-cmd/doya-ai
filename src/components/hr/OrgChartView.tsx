@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
+import { Button, EmptyState } from '@/components/ds'
+import { useToolUiNext } from './ui-next'
 
 interface OrgEmployee {
   id: string
@@ -30,6 +32,10 @@ interface OrgChartViewProps {
 function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: number }) {
   const [expanded, setExpanded] = useState(level < 2)
   const [visibleMembers, setVisibleMembers] = useState(100)
+  const uiNext = useToolUiNext()
+  // 新しい見た目では、動きを減らす設定のときに開閉・出現のアニメーションを止める
+  const reduceMotion = useReducedMotion()
+  const still = uiNext && Boolean(reduceMotion)
   const headInitials = dept.head
     ? `${dept.head.lastName?.[0] || ''}${dept.head.firstName?.[0] || ''}`
     : ''
@@ -38,16 +44,19 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
     <div className="flex flex-col items-center">
       {/* Department Card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={still ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl border-2 border-sky-200 shadow-sm min-w-[200px] overflow-hidden"
+        className={uiNext ? 'bg-white rounded-2xl border-2 border-sky-200 shadow-sm w-[min(260px,calc(100vw-5rem))] min-w-[200px] overflow-hidden' : 'bg-white rounded-2xl border-2 border-sky-200 shadow-sm min-w-[200px] overflow-hidden'}
       >
         {/* Department Header */}
         <button
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
-          className="w-full p-5 text-left hover:bg-sky-50/50 transition-colors"
+          aria-label={uiNext ? `${dept.name}（${expanded ? '閉じる' : '所属メンバーと下位部署を開く'}）` : undefined}
+          className={uiNext
+            ? 'w-full p-4 sm:p-5 text-left hover:bg-sky-50/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--blue,#0066ff)]'
+            : 'w-full p-5 text-left hover:bg-sky-50/50 transition-colors'}
         >
           <div className="flex items-center gap-3">
             {dept.head?.photoUrl ? (
@@ -66,7 +75,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 text-lg">{dept.name}</p>
+              <p className={uiNext ? 'font-bold text-slate-900 text-lg break-words [text-wrap:balance]' : 'font-bold text-slate-900 text-lg'}>{dept.name}</p>
               {dept.head && (
                 <p className="text-base font-bold text-slate-500 truncate">
                   {dept.head.lastName} {dept.head.firstName}
@@ -94,7 +103,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
         <AnimatePresence>
           {expanded && dept.members.length > 0 && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
+              initial={still ? false : { height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="border-t border-slate-100 overflow-hidden"
@@ -122,7 +131,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
                     </div>
                   )
                 })}
-                {dept.members.length > visibleMembers && <button type="button" onClick={() => setVisibleMembers(count => count + 100)} className="w-full rounded-lg px-3 py-2 text-sm font-bold text-sky-700 hover:bg-sky-50">さらに{Math.min(100, dept.members.length - visibleMembers)}名を表示</button>}
+                {dept.members.length > visibleMembers && <button type="button" onClick={() => setVisibleMembers(count => count + 100)} className={`w-full rounded-lg px-3 py-2 text-sm font-bold text-sky-700 hover:bg-sky-50${uiNext ? ' min-h-11' : ''}`}>さらに{Math.min(100, dept.members.length - visibleMembers)}名を表示</button>}
               </div>
             </motion.div>
           )}
@@ -161,6 +170,18 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
 }
 
 export default function OrgChartView({ departments, orgName, unassignedEmployees = [] }: OrgChartViewProps) {
+  const uiNext = useToolUiNext()
+  if (departments.length === 0 && unassignedEmployees.length === 0 && uiNext) {
+    // 新しい見た目: 空の状態は絵＋次にやること1つ
+    return (
+      <EmptyState
+        art="/hr/empty-members.webp"
+        title="組織図を表示するには、まず部署を作成してください"
+        description="部署と従業員を登録すると、組織図が自動的にできあがります。"
+        action={<Button href="/hr/settings" icon="Settings">設定画面で部署を追加</Button>}
+      />
+    )
+  }
   if (departments.length === 0 && unassignedEmployees.length === 0) {
     return (
       <div className="text-center py-16">
@@ -193,8 +214,8 @@ export default function OrgChartView({ departments, orgName, unassignedEmployees
         {/* Org Name */}
         {orgName && (
           <div className="mb-6">
-            <div className="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-sky-500/20">
-              <p className="font-black text-2xl">{orgName}</p>
+            <div className={uiNext ? 'max-w-[calc(100vw-5rem)] px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-sky-500/20' : 'px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-sky-500/20'}>
+              <p className={uiNext ? 'font-black text-xl sm:text-2xl text-center break-words [text-wrap:balance]' : 'font-black text-2xl'}>{orgName}</p>
             </div>
             <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-sky-200" />

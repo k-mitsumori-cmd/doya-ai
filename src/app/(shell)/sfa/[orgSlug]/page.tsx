@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation'
 import { sfaJson, sfaValidRows, isSfaClientTask, type SfaClientTask } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
+import SfaLoadError from '@/components/sfa/SfaLoadError'
+import SfaEmpty from '@/components/sfa/SfaEmpty'
 import { jstDateKey } from '@/lib/sfa/task-date'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Character } from '@/components/promane/character'
@@ -37,6 +39,10 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   const base = `/sfa/${orgSlug}`
   const [summary, setSummary] = useState<SfaSummary | null>(null)
   const [summaryError, setSummaryError] = useState('')
+  // 新しい見た目のとき、失敗の種類（ログイン切れ・権限なし・上限・通信）で案内を変えるために、投げられたエラーを持つ
+  const [summaryFailure, setSummaryFailure] = useState<unknown>(null)
+  const [taskFailure, setTaskFailure] = useState<unknown>(null)
+  const taskInput = useRef<HTMLInputElement>(null)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [retry, setRetry] = useState(0)
   const [taskError, setTaskError] = useState('')
@@ -57,7 +63,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
       .then(d => {
         if (!isSfaSummary(d.summary)) throw new Error('営業状況を取得できませんでした。')
         if (active && mutations.active()) setSummary(d.summary)
-      }).catch(() => { if (active && mutations.active()) setSummaryError('営業状況を取得できませんでした。再試行してください。') })
+      }).catch((e) => { if (active && mutations.active()) { setSummaryFailure(e); setSummaryError('営業状況を取得できませんでした。再試行してください。') } })
       .finally(() => { clearTimeout(timer); if (active && mutations.active()) setSummaryLoading(false) })
     return () => { active = false; controller.abort(); clearTimeout(timer) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,7 +86,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
       const valid = sfaValidRows(d.tasks, isSfaClientTask)
       if (!valid || typeof d.hasMore !== 'boolean') throw new Error('タスク取得失敗')
       if (alive.current && mutations.active() && sequence === taskSequence.current) { setTasks(valid.rows); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
-    }).catch(() => { if (alive.current && mutations.active() && sequence === taskSequence.current) setTaskError('タスクを取得できませんでした。再試行してください。') }).finally(() => clearTimeout(timer))
+    }).catch((e) => { if (alive.current && mutations.active() && sequence === taskSequence.current) { setTaskFailure(e); setTaskError('タスクを取得できませんでした。再試行してください。') } }).finally(() => clearTimeout(timer))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, orgSlug, mutations.key])
 
@@ -163,7 +169,9 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
 
         <section className="grid gap-3" aria-labelledby="sfa-summary-title">
           <h2 id="sfa-summary-title" className="text-base font-bold text-slate-900">売上サマリー</h2>
-          {summaryError && <ErrorNotice what="営業状況を取得できませんでした。" how={summary ? '以下は前回取得したときの値です。' : '通信状況を確かめて、もう一度お試しください。'} onRetry={() => setRetry(n => n + 1)} retryLabel="再試行" />}
+          {summaryError && (summary
+            ? <ErrorNotice what="営業状況を取得できませんでした。" how="以下は前回取得したときの値です。" onRetry={() => setRetry(n => n + 1)} retryLabel="再試行" />
+            : <SfaLoadError error={summaryFailure} what="営業状況" onRetry={() => setRetry(n => n + 1)} orgSlug={orgSlug} />)}
           {summary && summary.totalCount === 0 && !summaryError ? (
             <Card>
               <EmptyState
@@ -188,22 +196,31 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
           <Card title="タスク" icon="ListChecks" meta={`未完了 ${openTaskCount ?? '—'}件`}>
             <div className="mb-3 flex gap-2">
               <input
+                ref={taskInput}
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addTask()}
                 placeholder="例: A社に見積を送る"
                 aria-label="新しいタスク"
-                className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]/30"
               />
-              <button onClick={addTask} disabled={busy || mutations.creationBlocked('task') || !ready} className="shrink-0 rounded-xl bg-[#0066ff] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0052cc] disabled:opacity-50">
+              <button type="button" onClick={addTask} disabled={busy || mutations.creationBlocked('task') || !ready} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-[#0066ff] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0052cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 disabled:opacity-50">
                 追加
               </button>
             </div>
             {hasMoreTasks && <Link href={`${base}/tasks`} className="mb-2 block text-sm text-[#0066ff] underline">最初の{tasks.length}件を表示中。すべてのタスクを見る</Link>}
+            {tasksLoaded && !taskError && tasks.length === 0 && (
+              <SfaEmpty
+                bare
+                title="まだタスクがありません"
+                description="上の欄にやることを入れて「追加」を押すと、ここに並びます。"
+                action={<Button onClick={() => taskInput.current?.focus()} icon="Plus">タスクを入力する</Button>}
+                legacy={null}
+              />
+            )}
             <div className="max-h-72 space-y-1 overflow-y-auto">
-              {taskError && <ErrorNotice what="タスクを取得できませんでした。" onRetry={loadTasks} retryLabel="再試行" />}
+              {taskError && <SfaLoadError error={taskFailure} what="タスク" onRetry={loadTasks} orgSlug={orgSlug} />}
               {!tasksLoaded && !taskError && <p role="status" className="text-sm text-slate-500">タスクを取得しています…</p>}
-              {tasksLoaded && !taskError && tasks.length === 0 && <p className="py-6 text-center text-sm text-slate-500">タスクはありません。上の欄に入れて追加できます。</p>}
               {tasks.map((t) => {
                 const due = fmtDue(t.dueDate)
                 const done = t.status === 'done'
@@ -214,7 +231,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
                     disabled={mutations.blocked('task:' + t.id)}
                     aria-busy={mutations.blocked('task:' + t.id)}
                     aria-pressed={done}
-                    className="flex w-full items-center gap-2.5 rounded-xl p-2.5 text-left transition-colors hover:bg-slate-50"
+                    className="flex min-h-11 w-full items-center gap-2.5 rounded-xl p-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
                   >
                     {done ? <CheckCircle2 className="h-5 w-5 shrink-0 text-[#0066ff]" aria-hidden /> : <Circle className="h-5 w-5 shrink-0 text-slate-300" aria-hidden />}
                     <span className={`min-w-0 flex-1 truncate text-sm ${done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</span>
@@ -228,13 +245,13 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
           <Card title="クイックアクション" icon="Sparkles">
             <div className="grid gap-1">
               {quick.map(({ href, icon: Icon, title, sub }) => (
-                <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-slate-50">
+                <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0066ff]/10 text-[#0066ff]"><Icon className="h-5 w-5" aria-hidden /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold text-slate-900">{title}</span>
                     <span className="block text-xs text-slate-500">{sub}</span>
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" aria-hidden />
                 </Link>
               ))}
             </div>
