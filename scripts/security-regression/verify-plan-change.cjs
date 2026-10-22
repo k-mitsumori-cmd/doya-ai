@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 const { routeUnitDeps, routeUnitGlobals, genericStart } = require('./checkout-route-unit-fixture.cjs')
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 
 const env = {
   STRIPE_PRICE_BANNER_LIGHT_MONTHLY: 'price_light',
@@ -44,7 +45,7 @@ const stripeModule = load('src/lib/stripe.ts', {
   './checkout-legacy-guard': load('src/lib/checkout-legacy-guard.ts'),
 }, { process: { env } })
 const response = (data, init = {}) => Response.json(data, init)
-const checkoutPrisma = { user: { findUnique: async () => ({ id: 'owner', email: 'owner@example.invalid', stripeCustomerId: 'cus_owner' }) } }
+const checkoutPrisma = { user: { findUnique: async () => ({ id: 'owner', email: 'owner@example.invalid', stripeCustomerId: 'cus_owner', plan: 'FREE', serviceSubscriptions: [] }) } }
 const checkout = load('src/app/api/stripe/checkout/route.ts', {
   ...routeUnitDeps({ prisma: checkoutPrisma, onStart: async () => { checkoutCreated++; throw Error('second subscription') } }),
   '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
@@ -58,7 +59,7 @@ const checkout = load('src/app/api/stripe/checkout/route.ts', {
     createCheckoutSession: async () => { checkoutCreated++; throw Error('second subscription') },
   },
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
-  '@/lib/trial': { isTrialEligible: async () => true },
+  '@/lib/trial': { isTrialEligible: async () => true, TRIAL_USER_SELECT },
   '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {}, createReservedCheckoutSession: async () => { throw Error('unexpected reservation') } },
 }, routeUnitGlobals)
 const portal = load('src/app/api/stripe/portal/route.ts', {

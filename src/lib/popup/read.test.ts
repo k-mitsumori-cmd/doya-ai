@@ -111,7 +111,7 @@ test('getSiteDetail: 他人のサイト・削除したサイトは null', async 
 
 test('totalsByPopup: 期間外の数字を含めない', async () => {
   const { db } = fakeDb()
-  const t = await totalsByPopup(db, ['p1'], 7)
+  const t = await totalsByPopup(db, ['p1'], 7, NOW)
   assert.equal(t.get('p1')!.impressions, 150)
 })
 
@@ -128,7 +128,7 @@ test('getPopupDaily: 日別を0で埋め、他人の案は null', async () => {
 
 test('getPopupSummary（ホームの集客の数字・popup.stats の正本）', async () => {
   const { db, wheres } = fakeDb()
-  const s = await getPopupSummary(db, 'u1', 7)
+  const s = await getPopupSummary(db, 'u1', 7, NOW)
   assert.equal(s.days, 7)
   assert.equal(s.siteCount, 1)
   assert.equal(s.liveCount, 1) // 削除したサイトの案は数えない
@@ -137,7 +137,7 @@ test('getPopupSummary（ホームの集客の数字・popup.stats の正本）',
   assert.equal(s.totals.ctr, 8)
   assert.deepEqual(s.top.map((t) => t.popupId), ['p1'])
   assert.ok(wheres.every((w) => w.where.userId === 'u1'), '他人の数字を読んでいる')
-  const empty = await getPopupSummary(db, 'nobody', 7)
+  const empty = await getPopupSummary(db, 'nobody', 7, NOW)
   assert.equal(empty.siteCount, 0)
   assert.equal(empty.totals.ctr, null)
 })

@@ -1,29 +1,32 @@
 process.env.NODE_ENV='test';
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom'),{load}=require('./load-typescript.cjs');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom'),{load}=require(process.env.DOYA_AIO_LOADER||'./load-typescript.cjs');
 const dom=new JSDOM('<!doctype html><body></body>',{url:'https://example.invalid/persona'});global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.IS_REACT_ACT_ENVIRONMENT=true;
 const {createRoot}=require('react-dom/client'),tick=()=>new Promise(resolve=>setImmediate(resolve)),runtime=require('react/jsx-runtime'),planUtils=load('src/lib/plan-utils.ts');
-const source=ts.transpileModule(fs.readFileSync('src/components/StripeSuccessSync.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+const source=ts.transpileModule(fs.readFileSync(process.env.DOYA_AIO_SYNC_SOURCE||'src/components/StripeSuccessSync.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+const correlationFile=process.env.DOYA_AIO_CORRELATION_SOURCE||path.resolve(__dirname,'../../src/lib/aio/billing-return-correlation.ts');
+const correlation={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(correlationFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:correlation});
 const warnings=[],originalError=console.error;console.error=(...args)=>warnings.push(args.map(String).join(' '));
 async function fixture(options={}){
  let status=options.status||'authenticated',data=options.data||{user:{id:'owner-a'}},url=new URL(options.url||'https://example.invalid/persona?success=true&session_id=cs_synthetic&keep=1#anchor'),params=new URLSearchParams(url.search),seq=0,reply=options.reply||null,updateTask=options.update||asyncNoop,updates=0,closed=false,buttonHandler;
  const timers=new Map(),requests=[],events=[],notices=[],navigation=[];
  const clock={setTimeout:(fn,ms)=>{assert.equal(ms,35000);timers.set(++seq,fn);return seq},clearTimeout:id=>timers.delete(id)};
- const helper=load('src/lib/billing-response-client.ts',{}, {AbortController,TextDecoder,Uint8Array,...clock,fetch:(path,init)=>{const r={path,init,body:init.body?JSON.parse(init.body):null};requests.push(r);return reply?reply(path,init):new Promise(resolve=>{r.resolve=resolve})}});
+ const helper=load('src/lib/billing-response-client.ts',{}, {AbortController,TextDecoder,Uint8Array,...clock,fetch:(path,init)=>{const r={path,init,body:init.body?JSON.parse(init.body):null};requests.push(r);return reply?reply(path,init):new Promise((resolve,reject)=>{r.resolve=resolve;r.reject=reject})}});
  const router={refresh:()=>navigation.push({type:'refresh'}),replace:next=>{navigation.push({type:'replace',next});url=new URL(next,url);params=new URLSearchParams(url.search)}};
  const update=async()=>{updates++;return updateTask()};
  const location={get href(){return url.href},get pathname(){return url.pathname},get search(){return url.search},get hash(){return url.hash}};
- const fakeWindow={location,dispatchEvent:event=>{events.push({type:event.type,detail:event.detail,actor:data?.user?.id||data?.user?.email});return true}};
+ const lifecycleListeners=new Map();const fakeWindow={location,addEventListener:(name,fn)=>{if(!lifecycleListeners.has(name))lifecycleListeners.set(name,new Set());lifecycleListeners.get(name).add(fn)},removeEventListener:(name,fn)=>lifecycleListeners.get(name)?.delete(fn),dispatchEvent:event=>{events.push({type:event.type,detail:event.detail,actor:data?.user?.id||data?.user?.email});for(const fn of lifecycleListeners.get(event.type)||[])fn(event);return true}};
  const toast={loading:(message,opts)=>notices.push({type:'loading',message,opts}),success:(message,opts)=>notices.push({type:'success',message,opts}),error:(message,opts)=>notices.push({type:'error',message,opts}),dismiss(){}};
  const jsx={...runtime};for(const method of ['jsx','jsxs'])jsx[method]=(type,p,...rest)=>{if(type==='button'&&p.children==='契約を確認して反映する')buttonHandler=p.onClick;return runtime[method](type,p,...rest)};
- const mocks={'react':React,'react/jsx-runtime':jsx,'next-auth/react':{useSession:()=>({status,data,update})},'next/navigation':{useRouter:()=>router,useSearchParams:()=>params},'react-hot-toast':toast,'@/lib/plan-utils':planUtils,'@/lib/billing-response-client':helper,'@/components/UpgradeSuccessModal':p=>p.isOpen?React.createElement('div',{'data-paid-plan':p.planName},React.createElement('button',{onClick:p.onClose},'確認を閉じる')):null};
+ const mocks={'react':React,'react/jsx-runtime':jsx,'next-auth/react':{useSession:()=>({status,data,update})},'next/navigation':{useRouter:()=>router,useSearchParams:()=>params},'react-hot-toast':toast,'@/lib/plan-utils':planUtils,'@/lib/billing-response-client':helper,'@/lib/aio/billing-return-correlation':correlation,'@/components/UpgradeSuccessModal':p=>p.isOpen?React.createElement('div',{'data-paid-plan':p.planName},React.createElement('button',{onClick:p.onClose},'確認を閉じる')):null};
  const exportsObject={};vm.runInNewContext(source,{exports:exportsObject,require:n=>{assert.ok(n in mocks,n);return mocks[n]},window:fakeWindow,AbortController,URL,Date,CustomEvent:dom.window.CustomEvent});
  const container=document.createElement('div');document.body.append(container);const root=createRoot(container),flush=async()=>{await tick();await tick()};
  const render=()=>React.act(async()=>{root.render(React.createElement(React.StrictMode,null,React.createElement(exportsObject.default)));await flush()});
  const act=fn=>React.act(async()=>{fn();await flush()});
  const resolve=(i,value,httpStatus=200)=>act(()=>requests[i].resolve(Response.json(value,{status:httpStatus})));
  const expire=()=>act(()=>{for(const fn of [...timers.values()])fn()});
- const close=()=>React.act(async()=>{if(!closed){closed=true;root.unmount()}await flush();assert.equal(timers.size,0);container.remove()});
- await render();return{container,requests,events,notices,navigation,timers,render,resolve,expire,close,act,updates:()=>updates,href:()=>url.href,auth:(s,u)=>{status=s;data=u},params:next=>{url=new URL(next,url);params=new URLSearchParams(url.search)},reply:fn=>{reply=fn},update:fn=>{updateTask=fn},retryTwice:()=>act(()=>{buttonHandler();buttonHandler()})};
+ const close=()=>React.act(async()=>{if(!closed){closed=true;root.unmount()}await flush();assert.equal(timers.size,0);assert.equal(lifecycleListeners.get('pagehide')?.size||0,0);assert.equal(lifecycleListeners.get('pageshow')?.size||0,0);container.remove()});
+ const buttonCallback=label=>{const button=[...container.querySelectorAll('button')].find(b=>b.textContent===label);assert.ok(button,`missing button ${label}`);const key=Object.keys(button).find(k=>k.startsWith('__reactProps$'));assert.ok(key);return button[key].onClick};
+ await render();return{container,requests,events,notices,navigation,timers,render,resolve,reject:(i,error)=>act(()=>requests[i].reject(error)),expire,close,act,updates:()=>updates,href:()=>url.href,auth:(s,u)=>{status=s;data=u},params:next=>{url=new URL(next,url);params=new URLSearchParams(url.search)},reply:fn=>{reply=fn},update:fn=>{updateTask=fn},retryHandler:()=>buttonHandler,buttonCallback,retryTwice:()=>act(()=>{buttonHandler();buttonHandler()}),hide:()=>act(()=>fakeWindow.dispatchEvent({type:'pagehide'})),show:()=>act(()=>fakeWindow.dispatchEvent({type:'pageshow',persisted:true}))};
 }
 async function asyncNoop(){}
 const paid={ok:true,plan:'PRO',paymentStatus:'paid',amountTotal:9980,currency:'jpy',subscriptionStatus:'active'};
@@ -43,5 +46,137 @@ const paid={ok:true,plan:'PRO',paymentStatus:'paid',amountTotal:9980,currency:'j
  await run('Invalid return receipt sends no automatic request; manual discovery cannot claim that payment',{url:'https://example.invalid/persona?success=true&session_id=invalid'},async f=>{assert.equal(f.requests.length,0);assert.ok(f.container.querySelector('[role="dialog"]'));await f.retryTwice();assert.equal(f.requests.length,1);assert.equal(f.requests[0].path,'/api/stripe/sync/latest');await f.resolve(0,paid);assert.equal(f.container.querySelector('[data-paid-plan]'),null);assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0)});
  await run('Reopening the same return rechecks live contract while suppressing duplicate purchase events',{},async f=>{await f.resolve(0,paid);await f.render();f.params('/persona?success=true&session_id=cs_synthetic');await f.render();assert.equal(f.requests.length,2);assert.equal(f.container.querySelector('[data-paid-plan]'),null);await f.resolve(1,{ok:true,plan:'FREE'});assert.ok(f.container.querySelector('[role="dialog"]'));assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1)});
  await run('Unmount cancels and ignores noncooperating late response',{},async f=>{const n=f.notices.length;await f.close();assert.equal(f.requests[0].init.signal.aborted,true);await f.resolve(0,paid);assert.equal(f.events.length,0);assert.equal(f.updates(),0);assert.equal(f.navigation.length,0);assert.equal(f.notices.length,n)});
+ const invalidReturns=[
+  'success=true&success=true&session_id=cs_synthetic',
+  'success=true&session_id=cs_synthetic&session_id=cs_synthetic',
+  'success=true&session_id=cs_synthetic&session_id=cs_other',
+  'success=true&session_id=cs_synthetic&plan=pro&plan=pro',
+  'success=true&session_id=cs_synthetic&payment=cancelled',
+  'success=true&session_id=cs_synthetic&payment=cancelled&payment=cancelled',
+  'success=true&session_id=cs_synthetic&portal_return=plan_change',
+  'portal_return=plan_change&portal_return=plan_change',
+  'portal_return=plan_change&payment=cancelled',
+ ];
+ for(const query of invalidReturns)await run('Ambiguous return never guesses a first payment marker: '+query,
+  {url:`https://example.invalid/persona?${query}`},async f=>{
+   assert.equal(f.requests.length,0);assert.equal(f.events.length,0);assert.ok(f.container.querySelector('[role="dialog"]'));
+   await f.retryTwice();assert.equal(f.requests.length,1);assert.equal(f.requests[0].path,'/api/stripe/sync/latest');assert.equal(f.requests[0].body,null);
+   await f.resolve(0,paid);assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0);
+   assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+  });
+ for(const query of ['payment=cancelled&payment=cancelled','plan=pro&plan=pro'])await run('Unrecognized mode never auto syncs: '+query,
+  {url:`https://example.invalid/persona?${query}`},async f=>{assert.equal(f.requests.length,0);assert.equal(f.events.length,0)});
+ await run('Valid to duplicate same-first to valid ABA retires both old responses and callbacks',{},async f=>{
+  f.params('/persona?success=true&session_id=cs_synthetic&session_id=cs_other');await f.render();
+  assert.equal(f.requests[0].init.signal.aborted,true);assert.equal(f.requests.length,1);
+  await f.resolve(0,paid);assert.equal(f.events.length,0);assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+  f.params('/persona?success=true&session_id=cs_synthetic');await f.render();assert.equal(f.requests.length,2);
+  await f.resolve(1,paid);assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1);
+ });
+ await run('Retained valid failure retry cannot target an invalid same-first receipt',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler();
+  f.params('/persona?success=true&session_id=cs_synthetic&session_id=cs_second');await f.render();
+  assert.equal(f.requests.length,1);await f.act(()=>oldRetry());assert.equal(f.requests.length,1);
+  await f.retryTwice();assert.equal(f.requests.length,2);assert.equal(f.requests[1].path,'/api/stripe/sync/latest');assert.equal(f.requests[1].body,null);
+  await f.resolve(1,paid);assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0);
+ });
+ await run('Retained failure retry and close cannot operate after raw marker ABA',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler(),oldClose=f.buttonCallback('閉じる');
+  f.params('/persona?success=true&session_id=cs_synthetic&session_id=cs_second');await f.render();
+  assert.ok(f.container.querySelector('[role="dialog"]'));
+  const freshRetry=f.buttonCallback('契約を確認して反映する');
+  await f.act(()=>{oldRetry();oldClose()});assert.equal(f.requests.length,1);
+  assert.ok(f.container.querySelector('[role="dialog"]'));
+  await f.act(()=>freshRetry());assert.equal(f.requests.length,2);
+  assert.equal(f.requests[1].path,'/api/stripe/sync/latest');
+  assert.equal(f.requests[1].body,null);
+  await f.resolve(1,paid);
+  f.params('/persona?success=true&session_id=cs_synthetic');await f.render();
+  const count=f.requests.length,nav=f.navigation.length;
+  await f.act(()=>{oldRetry();oldClose()});assert.equal(f.requests.length,count);assert.equal(f.navigation.length,nav);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0);
+  assert.equal(f.events.filter(e=>e.type==='doya:plan-updated').length,1);
+ });
+ await run('Retained failure callbacks cannot cross actor A to B to A',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler(),oldClose=f.buttonCallback('閉じる');
+  f.auth('authenticated',{user:{id:'owner-b'}});await f.render();
+  f.auth('authenticated',{user:{id:'owner-a'}});await f.render();
+  const count=f.requests.length,nav=f.navigation.length;
+  await f.act(()=>{oldRetry();oldClose()});assert.equal(f.requests.length,count);assert.equal(f.navigation.length,nav);
+  assert.equal(f.events.length,0);
+ });
+ await run('An unrecognized current marker cannot inherit a prior valid failure target',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler(),oldClose=f.buttonCallback('閉じる');
+  f.params('/persona?success=false&session_id=cs_synthetic');await f.render();
+  const count=f.requests.length,nav=f.navigation.length;
+  assert.equal(f.container.querySelector('[role="dialog"]'),null);
+  await f.act(()=>{oldRetry();oldClose()});
+  assert.equal(f.requests.length,count);assert.equal(f.navigation.length,nav);
+  assert.equal(f.events.length,0);
+  f.params('/persona?keep=1#anchor');await f.render();
+  assert.equal(f.container.querySelector('[role="dialog"]'),null);
+ });
+ await run('Direct clean query removal preserves a valid same-actor exact-session failure recovery',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler();
+  f.params('/persona?keep=1#anchor');await f.render();
+  assert.ok(f.container.querySelector('[role="dialog"]'));
+  await f.act(()=>oldRetry());assert.equal(f.requests.length,1);
+  const currentRetry=f.buttonCallback('契約を確認して反映する');
+  await f.act(()=>currentRetry());assert.equal(f.requests.length,2);
+  assert.equal(f.requests[1].path,'/api/stripe/sync');
+  assert.equal(f.requests[1].body.sessionId,'cs_synthetic');
+  await f.resolve(1,paid);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1);
+ });
+ await run('Retained modal close cannot refresh after SDK loading and same-actor reproof',{},async f=>{
+  await f.resolve(0,paid);const oldClose=f.buttonCallback('確認を閉じる');
+  f.auth('loading',null);await f.render();f.auth('authenticated',{user:{id:'owner-a'}});await f.render();
+  const count=f.requests.length,nav=f.navigation.length;
+  await f.act(()=>oldClose());assert.equal(f.requests.length,count);assert.equal(f.navigation.length,nav);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1);
+ });
+ await run('Current modal close still refreshes after verified checkout query clear',{},async f=>{
+  await f.resolve(0,paid);const close=f.buttonCallback('確認を閉じる'),before=f.navigation.length;
+  await f.act(()=>close());assert.equal(f.navigation.length,before+1);
+  assert.equal(f.navigation.at(-1).type,'refresh');
+  assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+  assert.equal(f.requests.length,1);
+ });
+ await run('A verified modal cannot survive a recognized invalid marker or revive after its removal',{},async f=>{
+  await f.resolve(0,paid);
+  assert.ok(f.container.querySelector('[data-paid-plan]'));
+  const oldClose=f.buttonCallback('確認を閉じる'),nav=f.navigation.length;
+  f.params('/persona?success=false&success=true&session_id=cs_B');await f.render();
+  assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+  assert.equal(f.requests.length,1);
+  await f.act(()=>oldClose());assert.equal(f.navigation.length,nav);
+  f.params('/persona?keep=1#anchor');await f.render();
+  assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1);
+ });
+ await run('Pending exact response after pagehide cannot adopt old result',{},async f=>{
+  await f.hide();await f.resolve(0,paid);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0);
+  assert.equal(f.navigation.length,0);assert.equal(f.container.querySelector('[data-paid-plan]'),null);
+ });
+ await run('Pending exact rejection after pagehide cannot show old failure',{},async f=>{
+  await f.hide();await f.reject(0,Error('late private failure'));
+  assert.equal(f.container.querySelector('[role="dialog"]'),null);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,0);
+  assert.equal(f.navigation.length,0);assert.equal(f.requests.length,1);
+ });
+ await run('Persisted show keeps old failure retry retired and fresh retry usable',{},async f=>{
+  await f.expire();const oldRetry=f.retryHandler();
+  await f.hide();await f.show();await f.render();
+  const before=f.requests.length;await f.act(()=>oldRetry());assert.equal(f.requests.length,before);
+  const newRetry=f.buttonCallback('契約を確認して反映する');await f.act(()=>newRetry());
+  assert.equal(f.requests.length,before+1);await f.resolve(before,paid);
+  assert.equal(f.events.filter(e=>e.type==='doya:checkout-verified').length,1);
+ });
+ await run('Persisted show retires old verified modal close without resync',{},async f=>{
+  await f.resolve(0,paid);const oldClose=f.buttonCallback('確認を閉じる');
+  await f.hide();await f.show();await f.render();const nav=f.navigation.length;
+  await f.act(()=>oldClose());assert.equal(f.navigation.length,nav);assert.equal(f.requests.length,1);
+ });
  assert.equal(warnings.length,0,JSON.stringify(warnings));console.log(JSON.stringify({passed:results.length,results,scope:'Actual StripeSuccessSync TSX and bounded response/task helpers mounted under React18 StrictMode/jsdom. Synthetic session/router/API/toast/modal only; no live browser, checkout, Stripe, customer data or DB.'}));
 })().catch(error=>{console.error=originalError;console.error(error);process.exitCode=1}).finally(()=>{console.error=originalError;dom.window.close()});

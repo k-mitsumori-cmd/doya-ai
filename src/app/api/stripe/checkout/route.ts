@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { getActiveServices } from '@/lib/services'
-import { isTrialEligible } from '@/lib/trial'
+import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
 import { LifecycleError } from '@/lib/account-lifecycle/state'
@@ -91,7 +91,16 @@ export async function POST(request: NextRequest) {
       const trialable = billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
       let trialDays = 0
       if (trialable) {
-        try { if (await isTrialEligible({ email: actorEmail, stripeCustomerId: actor.stripeCustomerId })) trialDays = UNIFIED_TRIAL_DAYS }
+        try {
+          const trialUser = await prisma.user.findUnique({
+            where: { id: actor.id }, select: { id: true, email: true, ...TRIAL_USER_SELECT },
+          })
+          if (!trialUser || trialUser.id !== actor.id || !trialUser.email || trialUser.email.trim().toLowerCase() !== actorEmail.trim().toLowerCase()) {
+            throw new LifecycleError('TRIAL_CHECK_UNAVAILABLE', 503)
+          }
+          if (await isTrialEligible({ email: trialUser.email, stripeCustomerId: trialUser.stripeCustomerId,
+            plan: trialUser.plan, servicePlans: trialUser.serviceSubscriptions.map(row => row.plan) })) trialDays = UNIFIED_TRIAL_DAYS
+        }
         catch { throw new LifecycleError('TRIAL_CHECK_UNAVAILABLE', 503) }
       }
       return { cutoverEpoch, identity: checkoutIdentity(actor.id, action.operationId), mode, source: 'generic', organizationId,

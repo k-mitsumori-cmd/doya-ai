@@ -12,6 +12,9 @@ export type CheckoutPhase = 'idle' | 'checking' | 'missing' | 'reserved' | 'exec
 export type CheckoutSnapshot = { phase: CheckoutPhase; handle: Handle | null; busy: boolean; dispatched: boolean; message: string | null }
 export type CheckoutResponse = { ok: boolean; status: number; data: Record<string, unknown> }
 export type CheckoutOutcome = { kind: 'ready'; url: string } | { kind: 'plan_change' | 'subscribed' | 'provider_complete' | 'none' }
+/** Validated server ready fields for an optional UI navigation hint, never billing authority. */
+export type CheckoutReadyNavigation = { actorId: string; operationId: string; sessionId: string; provenance: 'fresh' | 'recovered' }
+export type CheckoutReadyObserver = (ready: CheckoutReadyNavigation) => void
 type Post = (body: Record<string, unknown>, headers: Record<string, string>, signal: AbortSignal) => Promise<CheckoutResponse>
 type StoragePort = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
@@ -145,7 +148,8 @@ export class CheckoutRecoveryClient {
       this.publish({ phase: dispatched && phase !== 'completed' ? 'unknown' : phase as CheckoutPhase, dispatched, message: null })
     }, lease)
   }
-  private async ready(handle: Handle, intent: CheckoutIntent, signal: AbortSignal, lease: () => boolean): Promise<CheckoutOutcome> {
+  private async ready(handle: Handle, intent: CheckoutIntent, signal: AbortSignal, lease: () => boolean,
+    observer?: CheckoutReadyObserver, provenance: CheckoutReadyNavigation['provenance'] = 'recovered'): Promise<CheckoutOutcome> {
     const response = await this.send(this.body('ready', handle), intent, signal)
     if (!this.current(signal, lease)) return { kind: 'none' }
     if (!response.ok) {
@@ -159,11 +163,13 @@ export class CheckoutRecoveryClient {
     }
     this.verify(response.data, handle, false, lease)
     const url = billingRedirectUrl(response.data.url)
-    if (!url || typeof response.data.sessionId !== 'string' || !response.data.sessionId.startsWith('cs_')) throw Error(contextMessage)
+    if (!url || typeof response.data.sessionId !== 'string' || !/^cs_[A-Za-z0-9_]{1,250}$/.test(response.data.sessionId)) throw Error(contextMessage)
     this.publish({ phase: 'completed', message: null })
+    observer?.({ actorId: this.actorId, operationId: handle.operationId, sessionId: response.data.sessionId, provenance })
     return { kind: 'ready', url }
   }
-  private async startWith(intent: CheckoutIntent, previousOperationId: string | null, lease: () => boolean): Promise<CheckoutOutcome | null> {
+  private async startWith(intent: CheckoutIntent, previousOperationId: string | null, lease: () => boolean,
+    observer?: CheckoutReadyObserver): Promise<CheckoutOutcome | null> {
     return this.task(async signal => {
       const operationId = this.newUuid()
       if (!uuid.test(operationId)) throw Error(contextMessage)
@@ -192,14 +198,14 @@ export class CheckoutRecoveryClient {
       }
       const currentHandle = this.snapshotValue.handle!
       if (typeof response.data.url !== 'string') { this.publish({ phase: 'unknown', message: unknownMessage }); return { kind: 'none' } }
-      return this.ready(currentHandle, intent, signal, lease)
+      return this.ready(currentHandle, intent, signal, lease, observer, canonical === operationId ? 'fresh' : 'recovered')
     }, lease)
   }
-  async start(intent: CheckoutIntent, lease: () => boolean = () => true) {
+  async start(intent: CheckoutIntent, lease: () => boolean = () => true, observer?: CheckoutReadyObserver) {
     if (!this.loaded || this.snapshotValue.handle || this.snapshotValue.phase !== 'idle') return null
-    return this.startWith(intent, null, lease)
+    return this.startWith(intent, null, lease, observer)
   }
-  async resume(intent: CheckoutIntent, lease: () => boolean = () => true): Promise<CheckoutOutcome | null> {
+  async resume(intent: CheckoutIntent, lease: () => boolean = () => true, observer?: CheckoutReadyObserver): Promise<CheckoutOutcome | null> {
     const handle = this.snapshotValue.handle
     if (!handle || handle.scopeKey !== checkoutScopeKey(intent) || this.snapshotValue.phase !== 'reserved' || this.snapshotValue.dispatched) return null
     return this.task(async signal => {
@@ -208,13 +214,13 @@ export class CheckoutRecoveryClient {
       if (!response.ok) { this.publish({ phase: 'unknown', message: unknownMessage }); return { kind: 'none' } }
       this.verify(response.data, handle, false, lease)
       if (typeof response.data.url !== 'string') { this.publish({ phase: 'unknown', message: unknownMessage }); return { kind: 'none' } }
-      return this.ready(handle, intent, signal, lease)
+      return this.ready(handle, intent, signal, lease, observer)
     }, lease)
   }
-  async readyAgain(intent: CheckoutIntent, lease: () => boolean = () => true): Promise<CheckoutOutcome | null> {
+  async readyAgain(intent: CheckoutIntent, lease: () => boolean = () => true, observer?: CheckoutReadyObserver): Promise<CheckoutOutcome | null> {
     const handle = this.snapshotValue.handle
     if (!handle || handle.scopeKey !== checkoutScopeKey(intent) || this.snapshotValue.phase !== 'completed') return null
-    return this.task(signal => this.ready(handle, intent, signal, lease), lease)
+    return this.task(signal => this.ready(handle, intent, signal, lease, observer), lease)
   }
   async abortMissing(intent: CheckoutIntent, lease: () => boolean = () => true) {
     const handle = this.snapshotValue.handle
@@ -228,13 +234,13 @@ export class CheckoutRecoveryClient {
       this.publish({ phase: 'aborted', message: null })
     }, lease)
   }
-  async newAfterTerminal(intent: CheckoutIntent, lease: () => boolean = () => true): Promise<CheckoutOutcome | null> {
+  async newAfterTerminal(intent: CheckoutIntent, lease: () => boolean = () => true, observer?: CheckoutReadyObserver): Promise<CheckoutOutcome | null> {
     const handle = this.snapshotValue.handle
     if (!handle || handle.actorId !== this.actorId || !['aborted', 'expired'].includes(this.snapshotValue.phase) ||
       this.snapshotValue.phase === 'expired' && handle.scopeKey !== checkoutScopeKey(intent)) return null
     // An aborted successor is tombstoned itself; do not reuse an older expired
     // operation as its predecessor for another start_after_terminal request.
     const previous = this.snapshotValue.phase === 'expired' ? handle.operationId : null
-    return this.startWith(intent, previous, lease)
+    return this.startWith(intent, previous, lease, observer)
   }
 }

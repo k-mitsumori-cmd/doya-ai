@@ -1,10 +1,11 @@
 'use client'
 
 // ドヤ社内インタビュー 新規作成: 方法（録音 / アンケート）と社員の基本情報
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClipboardList, Mic } from 'lucide-react'
-import { api, Button, Card, Field, inputCls, Notice, SectionTitle, PageTitle } from '@/components/shanai/ui'
+import { ActionError, api, Button, Card, describeError, Field, inputCls, Notice, SectionTitle, PageTitle } from '@/components/shanai/ui'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { PURPOSE_LABELS, TONE_LABELS, type ShanaiPurpose, type ShanaiTone } from '@/lib/shanai/types'
 
 interface Source {
@@ -24,6 +25,11 @@ export default function ShanaiNewPage() {
   const [serviceIds, setServiceIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 新しい見た目: 入力の誤りは欄の下に（aria-describedby でつなぐ）、送信の失敗は ErrorNotice で出す
+  const uiNext = useUiNext()
+  const [nameMissing, setNameMissing] = useState(false)
+  const [failure, setFailure] = useState<unknown>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api<{ company: { sources: Source[] } | null }>('/api/shanai/company')
@@ -36,15 +42,20 @@ export default function ShanaiNewPage() {
   const submit = async () => {
     if (!form.intervieweeName.trim()) {
       setError('社員のお名前を入力してください。')
+      setNameMissing(true)
+      if (uiNext) nameRef.current?.focus()
       return
     }
     setSaving(true)
     setError(null)
+    setNameMissing(false)
+    setFailure(null)
     try {
       const res = await api<{ id: string }>('/api/shanai/interviews', { method: 'POST', json: { ...form, mode, purpose, tone, serviceSourceIds: serviceIds } })
       router.push(`/shanai/interviews/${res.id}`)
     } catch (e) {
       setError((e as Error).message)
+      setFailure(e)
       setSaving(false)
     }
   }
@@ -67,9 +78,10 @@ export default function ShanaiNewPage() {
               key={m.key}
               type="button"
               onClick={() => setMode(m.key)}
-              className={`rounded-[var(--r)] border p-4 text-left transition-colors ${mode === m.key ? 'border-[var(--blue)] bg-[var(--blue-soft)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)] bg-[var(--paper)] hover:border-[var(--blue-line)]'}`}
+              aria-pressed={uiNext ? mode === m.key : undefined}
+              className={`${uiNext ? 'min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 ' : ''}rounded-[var(--r)] border p-4 text-left transition-colors ${mode === m.key ? 'border-[var(--blue)] bg-[var(--blue-soft)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)] bg-[var(--paper)] hover:border-[var(--blue-line)]'}`}
             >
-              <m.icon className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
+              <m.icon aria-hidden="true" className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
               <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
               <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
             </button>
@@ -81,7 +93,32 @@ export default function ShanaiNewPage() {
         <SectionTitle step="2" title="社員の情報" desc="記事のプロフィール欄に使います。" />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="お名前（必須）">
-            <input className={inputCls} value={form.intervieweeName} onChange={set('intervieweeName')} placeholder="山田 花子" maxLength={60} />
+            {uiNext ? (
+              <>
+                <input
+                  ref={nameRef}
+                  className={`${inputCls} ${nameMissing ? 'border-rose-400' : ''}`}
+                  value={form.intervieweeName}
+                  onChange={(e) => {
+                    set('intervieweeName')(e)
+                    if (nameMissing && e.target.value.trim()) setNameMissing(false)
+                  }}
+                  placeholder="山田 花子"
+                  maxLength={60}
+                  required
+                  aria-required="true"
+                  aria-invalid={nameMissing || undefined}
+                  aria-describedby={nameMissing ? 'shanai-new-name-error' : undefined}
+                />
+                {nameMissing && (
+                  <span id="shanai-new-name-error" role="alert" className="mt-1 block text-xs font-bold text-rose-700">
+                    社員のお名前を入力してください。
+                  </span>
+                )}
+              </>
+            ) : (
+              <input className={inputCls} value={form.intervieweeName} onChange={set('intervieweeName')} placeholder="山田 花子" maxLength={60} />
+            )}
           </Field>
           <Field label="部署">
             <input className={inputCls} value={form.department} onChange={set('department')} placeholder="カスタマーサクセス部" maxLength={60} />
@@ -105,7 +142,8 @@ export default function ShanaiNewPage() {
                     key={s.id}
                     type="button"
                     onClick={() => setServiceIds((ids) => (on ? ids.filter((x) => x !== s.id) : [...ids, s.id]))}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-black ${on ? 'border-[var(--blue)] bg-[var(--blue-soft)] text-[var(--blue-deep)]' : 'border-[var(--line)] bg-[var(--paper)] text-[var(--sub)]'}`}
+                    aria-pressed={uiNext ? on : undefined}
+                    className={`${uiNext ? 'min-h-11 max-w-full truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] ' : ''}rounded-full border px-3 py-1.5 text-xs font-black ${on ? 'border-[var(--blue)] bg-[var(--blue-soft)] text-[var(--blue-deep)]' : 'border-[var(--line)] bg-[var(--paper)] text-[var(--sub)]'}`}
                   >
                     {s.label || new URL(s.url).hostname}
                   </button>
@@ -145,10 +183,18 @@ export default function ShanaiNewPage() {
         </div>
       </Card>
 
-      {error && (
-        <div className="mt-4">
-          <Notice tone="error">{error}</Notice>
-        </div>
+      {uiNext ? (
+        failure ? (
+          <div className="mt-4">
+            <ActionError error={describeError(failure)} onRetry={() => void submit()} />
+          </div>
+        ) : null
+      ) : (
+        error && (
+          <div className="mt-4">
+            <Notice tone="error">{error}</Notice>
+          </div>
+        )
       )}
       <div className="mt-6 flex justify-end">
         <Button onClick={submit} loading={saving}>

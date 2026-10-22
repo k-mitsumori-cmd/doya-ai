@@ -7,10 +7,10 @@ import { readAskLinkCreationResponse } from '@/lib/asklink/creation-request'
 import type { AskLinkCreationState } from '@/lib/asklink/creation-operation'
 import { askLinkIntentKey, readAskLinkCreationIntent, claimAskLinkCreationIntent, releaseAskLinkCreationIntent, normalizeAskLinkClientInput, askLinkClientFingerprint, readAskLinkCreationDraft, writeAskLinkCreationDraft, parseAskLinkCreationState, type AskLinkCreationIntent, type AskLinkCreationDraft } from '@/lib/asklink/creation-intent-client'
 
-type View = { key: string; ready: boolean; intent: AskLinkCreationIntent | null; operation: AskLinkCreationState | null; draft: AskLinkCreationDraft; busy: boolean; phase: 'create' | 'verify' | 'finish' | 'new' | null; error: string; authorityRejected: boolean }
+type View = { key: string; ready: boolean; intent: AskLinkCreationIntent | null; operation: AskLinkCreationState | null; draft: AskLinkCreationDraft; busy: boolean; phase: 'create' | 'verify' | 'finish' | 'new' | null; error: string; errorStatus: number | null; authorityRejected: boolean }
 type Task = { version: number; controller: AbortController }
 const emptyDraft: AskLinkCreationDraft = { url: '', manualText: '', needManual: false }
-const empty: View = { key: '', ready: false, intent: null, operation: null, draft: emptyDraft, busy: false, phase: null, error: '', authorityRejected: false }
+const empty: View = { key: '', ready: false, intent: null, operation: null, draft: emptyDraft, busy: false, phase: null, error: '', errorStatus: null, authorityRejected: false }
 const message = '作成結果を確認できません。自動で再生成せず、保存結果を確認してください。'
 
 function resultFrom(data: unknown, operation: AskLinkCreationState): RunDto {
@@ -25,6 +25,8 @@ export function useAskLinkCreation(setRun: Dispatch<SetStateAction<RunDto | null
   const scope = JSON.stringify([status, actor]), epoch = useRef({ scope, version: 0 })
   if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
   const key = JSON.stringify([scope, epoch.current.version]), life = useRef({ version: 0, active: false }), task = useRef<Task | null>(null)
+  const intentIdentity = useRef<{ key: string; operationId: string | null }>({ key, operationId: null })
+  if (intentIdentity.current.key !== key) intentIdentity.current = { key, operationId: null }
   const [stored, setStored] = useState<View>(empty)
   const view = stored.key === key ? stored : { ...empty, key }
   const alive = (version: number) => status === 'authenticated' && Boolean(actor) && life.current.active && life.current.version === version && JSON.stringify([epoch.current.scope, epoch.current.version]) === key
@@ -46,7 +48,8 @@ export function useAskLinkCreation(setRun: Dispatch<SetStateAction<RunDto | null
         if (!alive(t.version) || t.controller.signal.aborted) throw Error(message)
         const response = await fetch(path, { method, signal: t.controller.signal, cache: 'no-store', credentials: 'same-origin', redirect: 'error', headers: { 'Content-Type': 'application/json', 'X-Asklink-Actor-Id': actor }, ...(body ? { body: JSON.stringify(body) } : {}) })
         if (!alive(t.version) || t.controller.signal.aborted) { void response.body?.cancel().catch(() => {}); throw Error(message) }
-        if (response.status === 401 || response.status === 403) { patch(t.version, { authorityRejected: true }); void response.body?.cancel().catch(() => {}); throw Error('アクセス権を確認できません。ログイン状態を確認してください。') }
+        if (response.status === 401 || response.status === 403) { patch(t.version, { authorityRejected: true, errorStatus: response.status }); void response.body?.cancel().catch(() => {}); throw Error('アクセス権を確認できません。ログイン状態を確認してください。') }
+        if (!response.ok) patch(t.version, { errorStatus: response.status })
         const data = await readAskLinkCreationResponse(response, t.controller.signal)
         if (data.actor !== actor) throw Error(message)
         if (!alive(t.version) || t.controller.signal.aborted) throw Error(message)
@@ -59,13 +62,14 @@ export function useAskLinkCreation(setRun: Dispatch<SetStateAction<RunDto | null
     const version = life.current.version
     if (!alive(version) || task.current?.version === version || view.authorityRejected) return
     const t: Task = { version, controller: new AbortController() }; task.current = t
-    patch(version, { busy: true, phase: mode, error: '' })
+    patch(version, { busy: true, phase: mode, error: '', errorStatus: null })
     try {
       let intent = readAskLinkCreationIntent(actor)
       if (mode === 'new') {
         if (!intent || intent.operationId !== view.operation?.operationId || !['completed', 'failed', 'canceled', 'deleted', 'superseded', 'expired'].includes(view.operation.state)) throw Error('前の作成結果を確認してから、新しく作成してください。')
         await releaseAskLinkCreationIntent(actor, intent, t.controller.signal)
         if (!alive(version)) return
+        intentIdentity.current = { key, operationId: null }
         setRun(null); onFresh(null)
         patch(version, { intent: null, operation: null })
         return
@@ -73,12 +77,15 @@ export function useAskLinkCreation(setRun: Dispatch<SetStateAction<RunDto | null
       let path: string, method: 'POST' | 'GET' | 'DELETE', body: unknown
       if (mode === 'create') {
         if (!view.ready) throw Error(message)
-        const input = normalizeAskLinkClientInput(view.draft.url, view.draft.needManual ? view.draft.manualText : '')
+        let input: ReturnType<typeof normalizeAskLinkClientInput>
+        try { input = normalizeAskLinkClientInput(view.draft.url, view.draft.needManual ? view.draft.manualText : '') }
+        catch (error) { patch(version, { errorStatus: 400 }); throw error }
         const fingerprint = await askLinkClientFingerprint(input)
         if (!alive(version)) return
         const claimed = await claimAskLinkCreationIntent(actor, fingerprint, t.controller.signal)
         intent = claimed.intent
         if (!alive(version)) return
+        intentIdentity.current = { key, operationId: intent.operationId }
         patch(version, { intent, operation: null })
         // A previous tab/attempt always takes GET recovery, never another generation POST.
         method = claimed.created ? 'POST' : 'GET'
@@ -121,16 +128,30 @@ export function useAskLinkCreation(setRun: Dispatch<SetStateAction<RunDto | null
   }
 
   useEffect(() => {
-    const version = life.current.version
-    const sync = () => {
-      if (!alive(version)) return
+    const sync = (external = false) => {
+      if (!alive(life.current.version)) return
       try {
         const intent = readAskLinkCreationIntent(actor), draft = readAskLinkCreationDraft(actor)
-        setStored(old => ({ ...(old.key === key ? old : empty), key, ready: true, intent, draft, operation: old.intent?.operationId === intent?.operationId ? old.operation : null }))
-      } catch (error) { patch(version, { ready: false, error: error instanceof Error ? error.message : message }) }
+        const operationId = intent?.operationId ?? null
+        const identityChanged = intentIdentity.current.operationId !== operationId
+        if (external || identityChanged) life.current.version++
+        if (identityChanged) intentIdentity.current = { key, operationId }
+        const version = life.current.version
+        setStored(old => {
+          const sameIntent = old.key === key && (old.intent?.operationId ?? null) === operationId
+          const keepAuthorityError = old.key === key && old.authorityRejected
+          return {
+            ...(old.key === key ? old : empty), key, ready: true, intent, draft,
+            operation: sameIntent ? old.operation : null,
+            ...(sameIntent || keepAuthorityError ? {} : { error: '', errorStatus: null }),
+            ...(external || !sameIntent ? { busy: false, phase: null } : {}),
+          }
+        })
+        if (!alive(version)) return
+      } catch (error) { patch(life.current.version, { ready: false, error: error instanceof Error ? error.message : message }) }
     }
     sync()
-    const changed = (event: StorageEvent) => { if (event.key === null || event.key === askLinkIntentKey(actor)) { task.current?.controller.abort(); onFresh(null); setRun(null); sync() } }
+    const changed = (event: StorageEvent) => { if (event.key === null || event.key === askLinkIntentKey(actor)) { task.current?.controller.abort(); onFresh(null); setRun(null); sync(true) } }
     window.addEventListener('storage', changed)
     return () => window.removeEventListener('storage', changed)
     // Scope changes must reset private client state; network recovery is an explicit action.

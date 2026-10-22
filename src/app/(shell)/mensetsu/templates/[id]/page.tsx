@@ -7,7 +7,9 @@
 // ⚠️ 手で追加した質問も、保存時にサーバ側で就職差別チェックを通す（C3）。
 //    違反があれば保存されず、該当箇所が返ってくるので画面に表示する。
 
-import { PageTitle } from '@/components/mensetsu/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
+import { LoadIssueNotice, NX_FOCUS, loadIssueOf } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -51,6 +53,7 @@ export default function TemplateEditPage() {
   const router = useRouter()
   const id = params?.id as string
   const loadedScope = useRef('')
+  const loadVersion = useRef(0)
   const scopeId = `${proof.actorId}:${proof.organization.id}:${id}`
 
   const [loading, setLoading] = useState(true)
@@ -70,16 +73,25 @@ export default function TemplateEditPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [openRubric, setOpenRubric] = useState<string | null>(null)
+  /** 読み込みに失敗したときの状態コード（通信の失敗は 0）。新しい見た目では、空のフォームを出さずに理由を出す */
+  const [loadFailed, setLoadFailed] = useState<number | null>(null)
+  // 新しい見た目（枠の中で useUiNext() が真）のときだけ、読み込み中・失敗の表示と押しやすさを直す
+  const uiNext = useToolUiNext()
 
   const load = useCallback(async () => {
+    if (!proof.current()) return
+    const version = ++loadVersion.current
+    const current = () => proof.current() && version === loadVersion.current
     setLoading(true)
     setLoaded(false)
     setError(null)
+    setLoadFailed(null)
     try {
       const res = await fetch(`/api/mensetsu/templates/${id}`)
       const json = await res.json()
-      if (!proof.current()) return
+      if (!current()) return
       if (!res.ok) {
+        setLoadFailed(res.status)
         notifyError(setError, json?.error || '取得できませんでした')
         return
       }
@@ -106,10 +118,11 @@ export default function TemplateEditPage() {
       loadedScope.current = scopeId
       setLoaded(true)
     } catch {
+      if (current()) setLoadFailed(0)
       // 通信失敗・不正な応答のときに空のフォームのまま黙らないようにする
-      if (proof.current()) notifyError(setError, '質問セットを取得できませんでした。通信状況を確認して、ページを再読み込みしてください。')
+      if (current()) notifyError(setError, '質問セットを取得できませんでした。通信状況を確認して、ページを再読み込みしてください。')
     } finally {
-      if (proof.current()) setLoading(false)
+      if (current()) setLoading(false)
     }
   }, [id, fetch, proof, scopeId])
 
@@ -237,6 +250,38 @@ export default function TemplateEditPage() {
     }
   }
 
+  if (loading && uiNext) {
+    return (
+      <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
+        <div className="mx-auto grid max-w-[900px] gap-4">
+          <Skeleton lines={2} height={28} delayMs={0} />
+          <Skeleton lines={6} height={16} delayMs={0} />
+        </div>
+      </main>
+    )
+  }
+  if (loadFailed !== null && uiNext) {
+    return (
+      <main className="px-4 py-6 lg:px-8">
+        <div className="mx-auto max-w-[900px]">
+          {loadFailed === 404 ? (
+            <EmptyState
+              kind="no-results"
+              title="この質問セットは見つかりませんでした"
+              description="削除された可能性があります。面接の準備の画面から開き直してください。"
+              action={<Button href={proof.href('/mensetsu')} icon="UserCheck">面接の準備へ戻る</Button>}
+            />
+          ) : (
+            <div className="grid gap-3">
+              <LoadIssueNotice issue={loadIssueOf(loadFailed)} subject="質問セット" onRetry={() => { setLoading(true); void load() }} returnHref={proof.href(`/mensetsu/templates/${id}`)} />
+              <div><Button href={proof.href('/mensetsu')} variant="secondary" icon="UserCheck">面接の準備へ戻る</Button></div>
+            </div>
+          )}
+        </div>
+      </main>
+    )
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
@@ -257,7 +302,7 @@ export default function TemplateEditPage() {
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[900px]">
         {operation.unknown && <p role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">保存結果を確認できません。再送すると重複する可能性があります。編集内容を控え、一覧で最新状態を確認してください。<Link href={proof.href('/mensetsu')} className="ml-2 underline">一覧を開く</Link></p>}
-        <button onClick={() => router.push(proof.href('/mensetsu'))} className="text-xs font-black text-[#0066ff]">
+        <button onClick={() => router.push(proof.href('/mensetsu'))} className={uiNext ? `inline-flex min-h-11 items-center rounded text-xs font-black text-[#0066ff] ${NX_FOCUS}` : 'text-xs font-black text-[#0066ff]'}>
           ← ダッシュボード
         </button>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</PageTitle>
@@ -268,7 +313,7 @@ export default function TemplateEditPage() {
 
         {error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4">
-            <p className="text-sm font-bold text-[#c2185b]">{error}</p>
+            <p role={uiNext ? 'alert' : undefined} className="text-sm font-bold text-[#c2185b]">{error}</p>
             {violations.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {violations.map((v, i) => (

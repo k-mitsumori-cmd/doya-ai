@@ -12,7 +12,7 @@ const { load } = require('./load-typescript.cjs');
         getMonthlyUsage: async () => 3,
       } : { getCunningUsage: async () => { reads++; return { tier: 'PRO', used: 3 }; } };
       const route = load(`src/app/api/${service}/usage/route.ts`, {
-        'next/server': { NextResponse: { json: (data, init) => Response.json(data, init) } },
+        '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: { json: (data, init) => Response.json(data, init) } },
         [`@/lib/${service}/access`]: { getUserId: async () => {
           if (mode === 'failure') throw Error('SYNTHETIC_PRIVATE');
           return mode === 'guest' ? null : 'synthetic-actor';

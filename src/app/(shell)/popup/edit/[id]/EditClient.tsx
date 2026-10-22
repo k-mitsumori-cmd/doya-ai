@@ -9,6 +9,8 @@ import type { PopupDto } from '@/lib/popup/dto'
 import type { EditSiteInfo, PopupDaily } from '@/lib/popup/popup-read'
 import { LAYOUT_LABEL, LIMITS, POPUP_LAYOUTS, type PopupCreative, type PopupLinkItem } from '@/lib/popup/schema'
 import PopupPreview from '@/components/popup/PopupPreview'
+import { AreaChart } from '@/components/ds/charts'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { DaysSwitch, ErrorState, KindBadge, PageHeader, StatTile, StatusBadge, fmt, useToast } from '@/components/popup/ui'
 
 const len = (s: string) => Array.from(s).length
@@ -77,7 +79,26 @@ function isUrl(v: string): boolean {
 }
 
 function StatsChart({ stats }: { stats: PopupDaily }) {
+  const next = useUiNext()
   const max = Math.max(1, ...stats.series.map((p) => p.impressions))
+  if (next) {
+    // 新しい見た目: 共通の AreaChart（2系列）。30日・90日でも日付の文字は間引かれ、線の形でも系列を区別する
+    return (
+      <AreaChart
+        label={`日別の表示とクリック（直近${stats.days}日）`}
+        labels={stats.series.map((p) => p.day.slice(5).replace('-', '/'))}
+        yTicks
+        tickFormat={(n) => fmt(n)}
+        format={(n) => fmt(n)}
+        height={180}
+        // クリックは表示より桁が小さく、同じ目盛りでは 0 に張り付くので、右の目盛りで測る（統括の指摘 2026-10-23）
+        series={[
+          { name: '表示', values: stats.series.map((p) => p.impressions) },
+          { name: 'クリック', values: stats.series.map((p) => p.clicks), tone: 'pink', axis: 'right' },
+        ]}
+      />
+    )
+  }
   return (
     <figure>
       <div className="flex h-36 items-end gap-[2px]" role="img" aria-label={`日別の表示とクリック（直近${stats.days}日）`}>

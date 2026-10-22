@@ -1,16 +1,32 @@
 // ============================================
-// ベータで非表示のサービスを、直接開いた人への案内
+// 開発中のベータ版のツールを開いた人に出す案内（サーバーで描く）
 // ============================================
-// src/lib/beta-services.ts で使えないと判定した人に、画面の代わりに出す。データには触れない。
+// services.ts で hidden: 'beta' にしたツールの layout が、許可していない人に children の代わりに出す。
+// ⚠️ ツールの画面は描かない（API も 403 で止めている。src/lib/beta-service.server.ts）。
 import Link from 'next/link'
+import { UiIcon } from '@/components/icons'
 
-export default function BetaServiceNotice({ name }: { name: string }) {
+export default function BetaServiceNotice({ serviceName, signedIn }: { serviceName: string; signedIn: boolean }) {
   return (
-    <main className="mx-auto flex min-h-[50vh] max-w-xl flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <p className="rounded-full bg-[#e8f0ff] px-3 py-1 text-xs font-bold text-[#0047d6]">開発中のベータ版</p>
-      <h1 className="text-2xl font-extrabold text-[#101633]">{name}は、開発中のベータ版です</h1>
-      <p className="text-sm leading-7 text-[#4a5375]">今は、限られた方だけがお使いいただけます。公開の準備ができしだい、ご案内します。</p>
-      <Link href="/" className="mt-2 rounded-full bg-[#0066ff] px-5 py-3 text-sm font-bold text-white hover:bg-[#0047d6]">ドヤAIのトップへ</Link>
-    </main>
+    <div className="min-h-[60vh] flex items-center justify-center px-4 py-16 bg-white">
+      <section role="status" aria-labelledby="beta-service-title" className="w-full max-w-md text-center">
+        <span className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#0066ff]/10 text-[#0066ff]">
+          <UiIcon name="lock" size={24} aria-hidden />
+        </span>
+        <p className="mb-2 text-xs font-bold tracking-wider text-[#0066ff]">開発中のベータ版</p>
+        <h1 id="beta-service-title" className="mb-3 text-xl font-bold text-gray-900">
+          {serviceName}は開発中のベータ版です
+        </h1>
+        <p className="mb-8 text-sm leading-relaxed text-gray-600">
+          いまは一部の方だけが使えます。<wbr />公開の準備ができしだい、<wbr />ドヤAIのツール一覧でお知らせします。
+        </p>
+        <Link
+          href={signedIn ? '/home' : '/'}
+          className="inline-flex items-center justify-center rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white hover:bg-[#0052cc]"
+        >
+          {signedIn ? '経営ホームへ戻る' : 'ドヤAIのトップへ'}
+        </Link>
+      </section>
+    </div>
   )
 }

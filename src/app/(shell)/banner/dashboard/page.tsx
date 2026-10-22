@@ -18,6 +18,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
+import { galleryTheme, GalleryCategoryHeading, GalleryGenreTabs, GalleryMoreTile, GalleryPlanTabs, GallerySkeleton, GalleryTemplateCard } from '@/components/banner/BannerTemplateGallery'
 
 type BannerTemplate = {
   id: string
@@ -1348,6 +1349,46 @@ function BannerTestPageInner() {
     toast.success('ダウンロードしました')
   }
 
+  // 見本の一覧の見た目（新しい見た目では白〜淡い青・紺の文字。今の見た目では黒のまま）
+  const gt = galleryTheme(uiNext)
+  // 見本のカード1枚（カテゴリ別とジャンルの絞り込みの両方で使う）。lockIndex はロック判定に使うジャンル内の順番
+  const renderTemplateCard = (template: BannerTemplate, lockIndex: number, index: number, loadingBar: boolean) => {
+    const lockType = getImageLockType(template, lockIndex)
+    const retry = imageRetryRef.current[template.id] || 0
+    return (
+      <GalleryTemplateCard
+        key={template.id}
+        light={uiNext}
+        template={template}
+        src={template.imageUrl ? `${thumbUrl(template.imageUrl)}${retry ? `&_r=${retry}` : ''}` : ''}
+        srcSet={template.imageUrl ? thumbSrcSet(template.imageUrl) : ''}
+        imgKey={`${template.id}-r${retry}`}
+        isLoaded={loadedImages.has(template.id)}
+        hasError={imageErrors.has(template.id)}
+        failed={retry >= MAX_IMAGE_RETRY}
+        selected={selectedTemplate?.id === template.id}
+        lockType={lockType}
+        eager={index < 12 || recentlyLoadedIds.has(template.id)}
+        loadingBar={loadingBar}
+        cardRef={(el) => observeImage(el, template.id)}
+        onLoad={() => handleImageLoad(template.id)}
+        onError={() => handleImageError(template.id)}
+        onClick={() => {
+          if (template.isPending) return // 未生成テンプレートはクリック不可
+          if (lockType !== null) {
+            handleLockedImageClick(template, lockType)
+          } else {
+            setSelectedTemplate(template)
+            setSelectedBanner(null)
+            setSelectedTemplateLockType(null)
+            setIsHeroCollapsed(false)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }
+        }}
+      />
+    )
+  }
+
   const view = (
     <div className="min-h-screen bg-black text-white flex">
       {/* PC用サイドバー（モバイルでは完全に非表示） */}
@@ -1633,8 +1674,8 @@ function BannerTestPageInner() {
 
           </div>
 
-          {/* ジャンルフィルタタブ + ギャラリーに戻るボタン（data-ui は、新しい見た目の色に合わせるための目印。banner-next.module.css） */}
-          <div data-ui="gallery-filters" className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
+          {/* ジャンルフィルタタブ + ギャラリーに戻るボタン（部品は src/components/banner/BannerTemplateGallery.tsx。新しい見た目では白〜淡い青） */}
+          <div data-ui="gallery-filters" className={`w-full relative z-10 ${gt.filterBar} transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'pt-[6vh] sm:pt-[6vh] md:pt-[4vh] lg:pt-[4vh]'
                 : isFormVisible
@@ -1643,13 +1684,13 @@ function BannerTestPageInner() {
           }`}>
             {/* ギャラリーに戻るバー（ヒーロー展開時のみ表示・スクロール時は画面上部に追従） */}
             {!isHeroCollapsed && (
-              <div className="sticky top-0 z-30 flex items-center justify-between px-2 sm:px-4 md:px-8 lg:px-12 py-2 border-b border-gray-800/50 bg-black/95 backdrop-blur-sm shadow-md">
-                <span className="text-xs sm:text-sm text-gray-400 font-medium truncate mr-2">
+              <div className={`sticky top-0 z-30 flex items-center justify-between px-2 sm:px-4 md:px-8 lg:px-12 py-2 ${gt.backBar}`}>
+                <span className={`text-xs sm:text-sm ${gt.backLabel} font-medium truncate mr-2`}>
                   選択中: {selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || ''}
                 </span>
                 <button
                   onClick={() => setIsHeroCollapsed(true)}
-                  className="flex-shrink-0 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center gap-2 transition-all duration-200 shadow-md border border-gray-700 text-white text-xs sm:text-sm font-bold"
+                  className={`flex-shrink-0 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md ${gt.backButton} text-xs sm:text-sm font-bold`}
                 >
                   <ChevronUp className="w-4 h-4" />
                   ギャラリーに戻る
@@ -1657,49 +1698,16 @@ function BannerTestPageInner() {
               </div>
             )}
             {/* プランフィルタタブ */}
-            <div className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-1.5 border-b border-gray-800/30 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <span className="flex-shrink-0 text-[10px] sm:text-xs text-gray-500 mr-1">プラン:</span>
-              {([
-                { key: 'すべて' as PlanFilterType, label: 'すべて', color: 'bg-white text-black', inactive: 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 hover:text-white' },
-                { key: 'FREE' as PlanFilterType, label: 'ログイン(Free)', color: 'bg-emerald-500 text-white', inactive: 'bg-gray-800/60 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300' },
-                { key: 'PRO' as PlanFilterType, label: 'プロプラン(PRO)', color: 'bg-amber-500 text-white', inactive: 'bg-gray-800/60 text-amber-400 hover:bg-amber-900/40 hover:text-amber-300' },
-                // ⚠️ エンタープライズは統一プランで廃止した枠。利用者に見せない。
-                //    内部的な PlanType としては残っている（トライアル中の全解放判定に使う）。
-              ]).map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActivePlanFilter(tab.key)}
-                  className={`flex-shrink-0 px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium transition-all whitespace-nowrap ${
-                    activePlanFilter === tab.key ? tab.color + ' shadow-lg' : tab.inactive
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div data-tour="filter-tabs" className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {galleryFilterTabs.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveFilter(tab)}
-                  className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                    activeFilter === tab
-                      ? 'bg-white text-black shadow-lg'
-                      : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <GalleryPlanTabs light={uiNext} value={activePlanFilter} onChange={setActivePlanFilter} />
+            <GalleryGenreTabs light={uiNext} tabs={galleryFilterTabs} value={activeFilter} onChange={setActiveFilter} />
           </div>
 
           {/* 未生成テンプレートの生成進捗バーは管理画面でのみ表示 */}
 
           {/* 一部表示中の案内 */}
           {!isLoadingTemplates && templates.length > 0 && (
-            <div data-ui="gallery-note" className="px-2 sm:px-4 md:px-8 lg:px-12 pt-2">
-              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-blue-400/80">
+            <div data-ui="gallery-note" className={`px-2 sm:px-4 md:px-8 lg:px-12 pt-2 ${gt.notice}`}>
+              <div className={`flex items-center gap-2 text-[11px] sm:text-xs ${gt.noticeText}`}>
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>
                   {templates.length}件のテンプレート{isFetchingAll && ' (読み込み中...)'}
@@ -1707,7 +1715,7 @@ function BannerTestPageInner() {
                 </span>
               </div>
               {templateFetchError && hasMoreFromApi && !isFetchingAll && (
-                <button type="button" onClick={() => void fetchRemainingTemplates(templateOffsetRef.current)} className="mt-2 text-xs font-bold text-amber-300 underline">
+                <button type="button" onClick={() => void fetchRemainingTemplates(templateOffsetRef.current)} className={`mt-2 text-xs font-bold ${gt.noticeRetry} underline`}>
                   一部のテンプレートを取得できませんでした。続きから再読み込み
                 </button>
               )}
@@ -1715,28 +1723,9 @@ function BannerTestPageInner() {
           )}
 
           {/* グリッドギャラリー */}
-          <div data-tour="gallery-grid" className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
+          <div data-tour="gallery-grid" className={`w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 ${gt.grid} relative z-10`}>
             {isLoadingTemplates ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((section) => (
-                  <div key={section}>
-                    <div className="flex items-center gap-1.5 px-1 sm:px-2 py-1.5">
-                      <ChevronRight className="h-3 w-3 text-blue-400" />
-                      <div className="h-3.5 w-24 bg-gray-700/40 rounded animate-pulse" style={{ animationDelay: `${section * 150}ms` }} />
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                      {[...Array(4)].map((_, i) => (
-                        <div key={i} className="aspect-[1200/628] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative flex flex-col items-center justify-center gap-1.5">
-                          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
-                          <div className="w-12 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-gray-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <GallerySkeleton light={uiNext} />
             ) : activeFilter === 'すべて' ? (
               Object.entries(allTemplatesByCategory).map(([categoryName, categoryTemplates]) => {
                 if (!categoryTemplates?.length) return null
@@ -1745,141 +1734,12 @@ function BannerTestPageInner() {
                 const hiddenCount = categoryTemplates.length - visibleTemplates.length
                 return (
                   <div key={categoryName} className="mb-3">
-                    <h3 className="text-xs sm:text-sm font-bold text-gray-400 px-1 sm:px-2 py-1.5 flex items-center gap-1.5">
-                      <ChevronRight className="h-4 w-4 text-blue-400" /> {categoryName}
-                      <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
-                      {isFetchingAll && (
-                        <Loader2 className="w-3 h-3 animate-spin text-blue-400/50 ml-1" />
-                      )}
-                    </h3>
+                    <GalleryCategoryHeading light={uiNext} name={categoryName} count={categoryTemplates.length} loading={isFetchingAll} />
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                      {visibleTemplates.map((template, index) => {
-                        const hasError = imageErrors.has(template.id)
-                        const isLoaded = loadedImages.has(template.id)
-                        const showImage = template.imageUrl && !hasError && !template.isPending
-                        const lockType = getImageLockType(template, index)
-                        const isLocked = lockType !== null
-
-                        return (
-                          <motion.div
-                            key={template.id}
-                            ref={(el) => observeImage(el, template.id)}
-                            whileHover={{ scale: 1.04, zIndex: 10 }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => {
-                              if (template.isPending) return // 未生成テンプレートはクリック不可
-                              if (isLocked) {
-                                handleLockedImageClick(template, lockType)
-                              } else {
-                                setSelectedTemplate(template)
-                                setSelectedBanner(null)
-                                setSelectedTemplateLockType(null)
-                                setIsHeroCollapsed(false)
-                                window.scrollTo({ top: 0, behavior: 'smooth' })
-                              }
-                            }}
-                            className={`group relative aspect-[1200/628] rounded overflow-hidden ${
-                              template.isPending
-                                ? 'cursor-default ring-1 ring-gray-800/30 opacity-60'
-                                : isLocked
-                                  ? 'cursor-pointer opacity-70 hover:opacity-90'
-                                  : selectedTemplate?.id === template.id
-                                    ? 'cursor-pointer ring-2 ring-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-                                    : 'cursor-pointer ring-1 ring-gray-800/50 hover:ring-gray-600'
-                            }`}
-                          >
-                            {template.isPending ? (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 flex items-center justify-center">
-                                <div className="text-center">
-                                  <Loader2 className="w-5 h-5 animate-spin text-blue-400/60 mx-auto mb-1.5" />
-                                  <p className="text-[9px] text-gray-500 font-medium">画像読み込み中</p>
-                                </div>
-                              </div>
-                            ) : showImage ? (
-                              <>
-                                {!isLoaded && (
-                                  <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center gap-1.5">
-                                    <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                                    <div className="w-10 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-                                      <div className="h-full bg-gray-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
-                                    </div>
-                                  </div>
-                                )}
-                                <img
-                                  key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
-                                  src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
-                                  srcSet={thumbSrcSet(template.imageUrl!)}
-                                  alt={template.displayTitle || template.industry}
-                                  loading={index < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
-                                  decoding="async"
-                                  fetchPriority={index < 12 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
-                                  onLoad={() => handleImageLoad(template.id)}
-                                  onError={() => handleImageError(template.id)}
-                                  className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                                />
-                              </>
-                            ) : hasError && (imageRetryRef.current[template.id] || 0) >= MAX_IMAGE_RETRY ? (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                                <div className="text-center">
-                                  <ImageIcon className="w-4 h-4 text-gray-600 mx-auto mb-1" />
-                                  <p className="text-[8px] text-gray-600">読み込み失敗</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                                <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                              </div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <p className="text-[7px] sm:text-[9px] font-bold text-white line-clamp-1 drop-shadow">
-                                {template.displayTitle || template.name || template.industry}
-                              </p>
-                            </div>
-                            {selectedTemplate?.id === template.id && !isLocked && (
-                              <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold text-white shadow z-20">
-                                選択中
-                              </div>
-                            )}
-                            {isLocked && (
-                              <>
-                                <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-                                <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
-                                  lockType === 'enterprise' ? 'bg-purple-500/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
-                                }`}>
-                                  <Lock className="w-2 h-2" />
-                                  {lockType === 'enterprise' ? 'Enterprise' : lockType === 'login' ? 'ログイン' : 'PRO'}
-                                </div>
-                              </>
-                            )}
-                          </motion.div>
-                        )
-                      })}
+                      {visibleTemplates.map((template, index) => renderTemplateCard(template, index, index, true))}
                       {/* カテゴリ末尾の「もっと見る」タイル */}
                       {(hiddenCount > 0 || isFetchingAll) && (
-                        <button
-                          onClick={() => loadMoreTemplates(categoryName)}
-                          className="group relative aspect-[1200/628] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
-                        >
-                          {isFetchingAll && hiddenCount === 0 ? (
-                            <div className="text-center w-full px-3 sm:px-4">
-                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-2" />
-                              <div className="w-full bg-gray-700/50 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
-                                <div
-                                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
-                                  style={{ width: `${fetchProgress}%` }}
-                                />
-                              </div>
-                              <p className="text-[9px] sm:text-[10px] text-gray-500 font-medium">{fetchProgress}% 読み込み中</p>
-                            </div>
-                          ) : (
-                            <div className="text-center">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
-                                <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
-                              </div>
-                              <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る{hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</p>
-                            </div>
-                          )}
-                        </button>
+                        <GalleryMoreTile light={uiNext} fetching={isFetchingAll && hiddenCount === 0} progress={fetchProgress} hiddenCount={hiddenCount} onClick={() => loadMoreTemplates(categoryName)} />
                       )}
                     </div>
                   </div>
@@ -1891,131 +1751,10 @@ function BannerTestPageInner() {
               const filterHiddenCount = filteredTemplates.length - visibleFiltered.length
               return (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                {visibleFiltered.map((template, filterIdx) => {
-                  const catIndex = getCategoryIndex(template)
-                  const hasError = imageErrors.has(template.id)
-                  const isLoaded = loadedImages.has(template.id)
-                  const showImage = template.imageUrl && !hasError && !template.isPending
-                  const lockType = getImageLockType(template, catIndex)
-                  const isLocked = lockType !== null
-
-                  return (
-                    <motion.div
-                      key={template.id}
-                      ref={(el) => observeImage(el, template.id)}
-                      whileHover={{ scale: 1.04, zIndex: 10 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        if (template.isPending) return
-                        if (isLocked) {
-                          handleLockedImageClick(template, lockType)
-                        } else {
-                          setSelectedTemplate(template)
-                          setSelectedBanner(null)
-                          setSelectedTemplateLockType(null)
-                          setIsHeroCollapsed(false)
-                          window.scrollTo({ top: 0, behavior: 'smooth' })
-                        }
-                      }}
-                      className={`group relative aspect-[1200/628] rounded overflow-hidden ${
-                        template.isPending
-                          ? 'cursor-default ring-1 ring-gray-800/30 opacity-60'
-                          : isLocked
-                            ? 'cursor-pointer opacity-70 hover:opacity-90'
-                            : selectedTemplate?.id === template.id
-                              ? 'cursor-pointer ring-2 ring-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-                              : 'cursor-pointer ring-1 ring-gray-800/50 hover:ring-gray-600'
-                      }`}
-                    >
-                      {template.isPending ? (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 flex items-center justify-center">
-                          <div className="text-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-blue-400/60 mx-auto mb-1.5" />
-                            <p className="text-[9px] text-gray-500 font-medium">画像読み込み中</p>
-                          </div>
-                        </div>
-                      ) : showImage ? (
-                        <>
-                          {!isLoaded && (
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                              <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                            </div>
-                          )}
-                          <img
-                            key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
-                            src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
-                            srcSet={thumbSrcSet(template.imageUrl!)}
-                            alt={template.displayTitle || template.industry}
-                            loading={filterIdx < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
-                            decoding="async"
-                            fetchPriority={filterIdx < 12 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
-                            onLoad={() => handleImageLoad(template.id)}
-                            onError={() => handleImageError(template.id)}
-                            className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                          />
-                        </>
-                      ) : hasError && (imageRetryRef.current[template.id] || 0) >= MAX_IMAGE_RETRY ? (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                          <div className="text-center">
-                            <ImageIcon className="w-4 h-4 text-gray-600 mx-auto mb-1" />
-                            <p className="text-[8px] text-gray-600">読み込み失敗</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                          <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-[7px] sm:text-[9px] font-bold text-white line-clamp-1 drop-shadow">
-                          {template.displayTitle || template.name || template.industry}
-                        </p>
-                      </div>
-                      {selectedTemplate?.id === template.id && !isLocked && (
-                        <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold text-white shadow z-20">
-                          選択中
-                        </div>
-                      )}
-                      {isLocked && (
-                        <>
-                          <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-                          <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
-                            lockType === 'enterprise' ? 'bg-purple-500/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
-                          }`}>
-                            <Lock className="w-2 h-2" />
-                            {lockType === 'enterprise' ? 'Enterprise' : lockType === 'login' ? 'ログイン' : 'PRO'}
-                          </div>
-                        </>
-                      )}
-                    </motion.div>
-                  )
-                })}
+                {visibleFiltered.map((template, filterIdx) => renderTemplateCard(template, getCategoryIndex(template), filterIdx, false))}
                 {/* フィルタ表示時の「もっと見る」タイル */}
                 {(filterHiddenCount > 0 || isFetchingAll) && (
-                  <button
-                    onClick={() => loadMoreTemplates(activeFilter)}
-                    className="group relative aspect-[1200/628] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
-                  >
-                    {isFetchingAll && filterHiddenCount === 0 ? (
-                      <div className="text-center w-full px-3 sm:px-4">
-                        <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-2" />
-                        <div className="w-full bg-gray-700/50 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${fetchProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-[9px] sm:text-[10px] text-gray-500 font-medium">{fetchProgress}% 読み込み中</p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
-                          <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
-                        </div>
-                        <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る{filterHiddenCount > 0 ? ` (+${filterHiddenCount})` : ''}</p>
-                      </div>
-                    )}
-                  </button>
+                  <GalleryMoreTile light={uiNext} fetching={isFetchingAll && filterHiddenCount === 0} progress={fetchProgress} hiddenCount={filterHiddenCount} onClick={() => loadMoreTemplates(activeFilter)} />
                 )}
               </div>
               )

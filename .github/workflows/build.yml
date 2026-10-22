@@ -1,0 +1,93 @@
+name: Build
+
+# main 由来の Build/build チェック名を維持する。
+# CI の既存検証に加え、同じ隔離手順で本番ビルドを確認する。
+# 依存取得・Prisma生成の後、Next build は秘密の値を渡さずネットワークを禁止する。
+# .next/cache は復元しない。隔離検証の fresh output と入力ハッシュを保持する。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event commit without persisted credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Record exact event source before dependencies
+        run: python3 scripts/ci/isolated-next-build.py prepare --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Record isolated postinstall Prisma schema
+        run: sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-postinstall.sha256"
+
+      - name: Generate private Prisma client
+        run: |
+          node scripts/prisma/generate.cjs
+          sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
+          cmp "$RUNNER_TEMP/prisma-isolated-postinstall.sha256" "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
+
+      - name: Verify isolated Prisma generator UTF-8 split repair
+        run: node fixtures/verify-prisma-generator-utf8.cjs "$GITHUB_WORKSPACE" --generated
+
+      - name: Verify isolated gate failure paths (no build)
+        run: python3 -B scripts/ci/test-isolated-next-build.py
+
+      - name: Run eight named suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense test:doyapower; do
+            echo "Running $suite"
+            npm run "$suite" 2>&1 | tee -a "$RUNNER_TEMP/build-isolated/named-suites.log"
+          done
+
+      - name: Fresh nonincremental TypeScript check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/build-isolated/type-before.log"
+
+      - name: Full Next production compile, prerender, and trace in a denied network namespace
+        run: python3 scripts/ci/isolated-next-build.py build --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Verify generated Next types against the same source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/build-isolated/type-after.log"
+
+      - name: Finalize exact isolated build evidence
+        run: python3 scripts/ci/isolated-next-build.py finalize --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Preserve isolated build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-isolated
+          path: ${{ runner.temp }}/build-isolated/
+          if-no-files-found: warn

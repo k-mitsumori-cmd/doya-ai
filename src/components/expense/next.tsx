@@ -10,6 +10,7 @@ import { CountUp, Stagger, StaggerItem } from '@/components/ds/motion'
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import type { ForecastMatrix } from './types'
 import { Btn, Field, inputCls } from './ui'
+import { CATEGORY_OTHER_COLOR, colorOf } from './CashBars'
 
 const STEPS = [
   { title: '契約を登録する', body: 'SaaS・業務委託・家賃などを、金額と支払周期で登録します。', art: '/expense/step-1.webp' },
@@ -99,10 +100,11 @@ export function YenCount({ value }: { value: number }) {
 /** 今月の出金のカテゴリ別の割合（多い順に4つ＋その他） */
 export function MonthDonut({ cash, month }: { cash: ForecastMatrix; month: string }) {
   const rows = cash.categories
-    .map((c) => ({ label: CATEGORY_LABEL[c as keyof typeof CATEGORY_LABEL] ?? c, value: cash.cells[c]?.[month]?.amount ?? 0 }))
+    .map((c) => ({ label: CATEGORY_LABEL[c as keyof typeof CATEGORY_LABEL] ?? c, value: cash.cells[c]?.[month]?.amount ?? 0, color: colorOf(c) }))
     .filter((r) => r.value > 0)
     .sort((a, b) => b.value - a.value)
   if (rows.length === 0) return null
-  const data = rows.length > 5 ? [...rows.slice(0, 4), { label: 'その他', value: rows.slice(4).reduce((a, r) => a + r.value, 0) }] : rows
-  return <Donut data={data} size={128} label="今月の出金のカテゴリ別の割合" />
+  const data = rows.length > 5 ? [...rows.slice(0, 4), { label: 'その他', value: rows.slice(4).reduce((a, r) => a + r.value, 0), color: CATEGORY_OTHER_COLOR }] : rows
+  // 色は積み上げの棒（CashBars）と同じ費目の色にする
+  return <Donut data={data.map(({ label, value }) => ({ label, value }))} colors={data.map((d) => d.color)} size={128} label="今月の出金のカテゴリ別の割合" />
 }

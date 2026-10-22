@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const { routeUnitDeps, routeUnitGlobals, genericStart, hrStart, state } = require('./checkout-route-unit-fixture.cjs');
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 
 const HrMemberRole = { OWNER: 'OWNER', ADMIN: 'ADMIN' };
 const { getOrgPlanLimits } = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: {} } });
@@ -19,7 +20,7 @@ let checkoutOptions = null;
 let customerEmail = 'test@example.invalid';
 let customerOwnerId = 'u1';
 const prisma = {
-  user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test' }) },
+  user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test', plan: 'FREE', serviceSubscriptions: [] }) },
   hrOrganizationMember: { findFirst: async () => ({ role }) },
 };
 const stripe = {
@@ -79,7 +80,7 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
     createCheckoutSession: async () => { throw Error('legacy Checkout entry must not write'); },
   },
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
-  '@/lib/trial': { isTrialEligible: async () => true },
+  '@/lib/trial': { isTrialEligible: async () => true, TRIAL_USER_SELECT },
 }, routeUnitGlobals);
 
 (async () => {

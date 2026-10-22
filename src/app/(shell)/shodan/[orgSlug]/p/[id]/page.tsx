@@ -230,10 +230,12 @@ export default function ShodanResultPage() {
       {prep.status === 'researched' && !prep.proposalMarkdown && !generating && (
         <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap shodan-no-print">
           <DoyaKun mood="thumbsup" size={52} float={false} />
-          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">企業調査は完了しました。続けて提案資料を作成しましょう。</span>
+          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">
+            {prep.errorMessage ? '前回の提案資料の作成は完了しませんでした。右のボタンからもう一度作成できます。' : '企業調査は完了しました。続けて提案資料を作成しましょう。'}
+          </span>
           <button onClick={generate} disabled={!detail.canAct}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
-            {sym('bolt', 16)}提案資料を作成する
+            {sym('bolt', 16)}{prep.errorMessage ? '提案資料をもう一度作成する' : '提案資料を作成する'}
           </button>
         </div>
       )}

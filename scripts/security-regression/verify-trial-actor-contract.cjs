@@ -1,13 +1,14 @@
 const assert=require('node:assert/strict');
 const {load}=require('./load-typescript.cjs');
+const TRIAL_USER_SELECT=load('src/lib/trial.ts',{'@/lib/stripe':{stripe:{}},'@/lib/unified-plan':load('src/lib/unified-plan.ts')}).TRIAL_USER_SELECT;
 const A={user:{id:'a',email:'a@example.invalid'}},B={user:{id:'b',email:'b@example.invalid'}};
 const mockRequest=(kind,actor)=>({nextUrl:new URL('https://example.invalid/api/stripe/trial-eligibility?expectedKind='+kind+(actor===undefined?'':'&expectedActor='+encodeURIComponent(actor)))});
-function fixture(session=A,user={id:'a',email:'a@example.invalid',stripeCustomerId:null},eligible=true){
+function fixture(session=A,user={id:'a',email:'a@example.invalid',stripeCustomerId:null,plan:'FREE',serviceSubscriptions:[]},eligible=true){
  let db=0,provider=0;
  const route=load('src/app/api/stripe/trial-eligibility/route.ts',{
   'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>{if(session instanceof Error)throw session;return session}},'@/lib/auth':{},
-  '@/lib/prisma':{prisma:{user:{findUnique:async query=>{db++;assert.equal(query.where.id,session?.user?.id);return user}}}},
-  '@/lib/trial':{isTrialEligible:async input=>{provider++;assert.equal(input.email,user.email);return eligible}},
+  '@/lib/prisma':{prisma:{user:{findUnique:async query=>{db++;assert.equal(query.where.id,session?.user?.id);assert.equal(query.select.id,true);assert.equal(query.select.email,true);assert.equal(query.select.plan,true);assert.equal(JSON.stringify(query.select.serviceSubscriptions),JSON.stringify(TRIAL_USER_SELECT.serviceSubscriptions));return user}}}},
+  '@/lib/trial':{TRIAL_USER_SELECT,isTrialEligible:async input=>{provider++;assert.equal(input.email,user.email);return eligible}},
  });
  return {GET:route.GET,counts:()=>({db,provider})};
 }
@@ -25,7 +26,7 @@ const headers=response=>{assert.equal(response.headers.get('cache-control'),'pri
   const f=fixture(session,user);const res=await f.GET(mockRequest('authenticated','a'));assert.equal(res.status,503);headers(res);assert.equal(f.counts().provider,0);passed++;
  }
  for(const [session,kind,actor,eligible] of [[A,'authenticated','a',true],[A,'authenticated','a',false],[null,'guest',undefined,true]]){
-  const f=fixture(session,session?{id:'a',email:'a@example.invalid',stripeCustomerId:null}:undefined,eligible);
+  const f=fixture(session,session?{id:'a',email:'a@example.invalid',stripeCustomerId:null,plan:'FREE',serviceSubscriptions:[]}:undefined,eligible);
   const res=await f.GET(mockRequest(kind,actor));assert.equal(res.status,200);headers(res);const body=await res.json();assert.equal(body.version,1);assert.equal(body.principal.kind,kind);assert.equal(body.eligible,eligible);if(actor)assert.equal(body.principal.actorId,actor);passed++;
  }
  // Parent A/B counterexample through the actual route and actual helper.

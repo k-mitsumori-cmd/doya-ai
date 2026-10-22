@@ -16,13 +16,19 @@ import { shouldShowShell } from './registry'
 import { ShellToolHrefsContext, UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
 import ShellVitals from './ShellVitals'
+import { DoyaPowerContext } from '@/components/doya-power/doya-power-context'
+import { ShellPowerProvider, type ShellPowerState } from './power'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ signedIn, serverActorId, userName, enabledIds, uiNext = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ signedIn, serverActorId, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   signedIn: boolean
   /** Principal of the server snapshot; never infer it from a name or email. */
   serverActorId: string | null
+  /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。新しい見た目のときだけ真になる） */
+  doyaPower?: boolean
+  /** ドヤパワーの残りと減る量の表（旗が出すと決めた人だけ。台帳の表が入るまでは null。src/components/shell/power.tsx） */
+  doyaPowerState?: ShellPowerState | null
   /** 組織を選ぶツールのリンクの行き先（新しい見た目のときだけ。src/lib/shell/tool-hrefs.server.ts） */
   toolHrefs?: Record<string, string>
   /** 最近使ったツール（新しい見た目のとき、cookie から読んで渡す） */
@@ -82,7 +88,7 @@ export default function ShellGate({ signedIn, serverActorId, userName, enabledId
   )
 
   const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds }))
-    ? <AppShell userName={privateReady ? userName : null} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
+    ? <AppShell userName={privateReady ? userName : null} initialRecent={privateReady && uiNext ? initialRecent : undefined}>{children}</AppShell>
     : <>{children}</>
   return (
     <>
@@ -101,11 +107,15 @@ export default function ShellGate({ signedIn, serverActorId, userName, enabledId
     <UiNextContext.Provider value={signedIn ? uiNext : null}>
       <AccountCompanyContext.Provider value={privateReady && uiNext ? company : undefined}>
       <ShellToolHrefsContext.Provider value={privateReady && uiNext && toolHrefs ? toolHrefs : EMPTY}>
+      <DoyaPowerContext.Provider value={Boolean(privateReady && uiNext && doyaPower)}>
+      <ShellPowerProvider value={privateReady && uiNext && doyaPower ? doyaPowerState : null}>
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}>{privateReady ? <UiNextBadge /> : null}</Suspense>
       {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
       {privateReady && uiNext ? <ShellVitals /> : null}
+      </ShellPowerProvider>
+      </DoyaPowerContext.Provider>
       </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>

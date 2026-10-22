@@ -1,13 +1,15 @@
 'use client'
 
-import { PageTitle } from '@/components/hr/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { Button, ErrorNotice } from '@/components/ds'
+import { hrErrorKind } from '@/components/hr/HrLoadError'
 import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import DepartmentListState from '@/components/hr/DepartmentListState'
 import { useHrDepartmentList } from '@/lib/hr/use-department-list'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
@@ -36,6 +38,17 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [limitNotice, setLimitNotice] = useState<{ message: string; href: string; label: string } | null>(null)
+  const uiNext = useToolUiNext()
+  // 新しい見た目: 入力の誤りは欄の下に出し、欄と aria-describedby で結ぶ。保存の失敗はフォームの上に出す（サーバーの文言はそのまま出さない）
+  const [fieldErrors, setFieldErrors] = useState<{ lastName?: string; firstName?: string }>({})
+  const [formError, setFormError] = useState('')
+  const formErrorRef = useRef<HTMLDivElement>(null)
+  const uid = useId()
+  const fid = (name: string) => `${uid}-${name}`
+  const describe = (name: 'lastName' | 'firstName') => uiNext && fieldErrors[name]
+    ? { 'aria-invalid': true as const, 'aria-describedby': `${fid(name)}-error` }
+    : {}
+  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2' : ''
 
   const [form, setForm] = useState({
     lastName: '',
@@ -54,6 +67,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+    // 直したらその欄の誤りを消す
+    if (uiNext && (e.target.name === 'lastName' || e.target.name === 'firstName') && e.target.value.trim()) {
+      setFieldErrors(old => ({ ...old, [e.target.name]: undefined }))
+    }
   }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +83,8 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。新しい見た目の処理は引数（onRejected）と handleSubmitNext に置き、ここで新しい名前を参照しない
+  const handleSubmit = async (e: React.FormEvent, onRejected?: (status: number) => void) => {
     e.preventDefault()
     if (departmentList.status !== 'ready' || saving || submitted) return
     setLimitNotice(null)
@@ -87,6 +105,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
+        if (onRejected && errData.code !== 'HR_ORG_EMPLOYEE_LIMIT') {
+          onRejected(res.status)
+          return
+        }
         if (errData.code === 'HR_ORG_EMPLOYEE_LIMIT') {
           setLimitNotice({
             message: errData.error || '従業員数の上限に達しました。',
@@ -138,16 +160,43 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
     }
   }
 
+  // 新しい見た目: 欄の下に誤りを出してから送る。断られたときは、生の文ではなく日本語の案内をフォームの上に出す
+  const handleSubmitNext = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (departmentList.status !== 'ready' || saving || submitted) return
+    const errors = {
+      lastName: form.lastName.trim() ? undefined : '姓を入力してください。',
+      firstName: form.firstName.trim() ? undefined : '名を入力してください。',
+    }
+    setFieldErrors(errors)
+    setFormError('')
+    if (errors.lastName || errors.firstName) {
+      // 最初の誤りの欄に移る
+      document.getElementById(fid(errors.lastName ? 'lastName' : 'firstName'))?.focus()
+      return
+    }
+    await handleSubmit(e, (status) => {
+      const kind = hrErrorKind(status)
+      setFormError(kind === 'login' ? 'ログインの有効期限が切れた可能性があります。入力内容はそのままです。ログインし直してから、もう一度保存してください。'
+        : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
+        : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
+        : status === 400 ? '入力内容を確認できませんでした。メールアドレスや日付の形式を確認して、もう一度保存してください。'
+        : '保存できませんでした。入力内容はそのままです。時間をおいて、もう一度お試しください。')
+      requestAnimationFrame(() => formErrorRef.current?.scrollIntoView({ block: 'center' }))
+    })
+  }
+
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="mb-8">
           <button
+            type="button"
             onClick={() => router.push('/hr/employees')}
-            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4 transition-colors"
+            className={`flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4 transition-colors${uiNext ? ' min-h-11 rounded-lg pr-2' + focusRing : ''}`}
           >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span aria-hidden className="material-symbols-outlined text-lg">arrow_back</span>
             従業員一覧に戻る
           </button>
           <div className="flex items-center gap-3">
@@ -160,7 +209,19 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           </div>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
-        {limitNotice && (
+        {limitNotice && uiNext && (
+          <div className="mb-6">
+            <ErrorNotice what="登録できる従業員数の上限に達しました。" how="料金プランを見直すと、さらに登録できます。入力内容はそのままです。" />
+            <div className="mt-3"><Button href={limitNotice.href.startsWith('/') ? limitNotice.href : '/hr/pricing'} icon="Tag">{limitNotice.label === 'お問い合わせ' ? 'お問い合わせ' : '料金プランを見る'}</Button></div>
+          </div>
+        )}
+        {formError && uiNext && (
+          <div ref={formErrorRef} className="mb-6">
+            <ErrorNotice what={formError} />
+            {formError.startsWith('登録できる従業員数') && <div className="mt-3"><Button href="/hr/pricing" icon="Tag">料金プランを見る</Button></div>}
+          </div>
+        )}
+        {limitNotice && !uiNext && (
           <div role="alert" className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p className="font-bold">{limitNotice.message}</p>
             <Link href={limitNotice.href} className="mt-2 inline-block font-bold underline underline-offset-2">{limitNotice.label} →</Link>
@@ -175,25 +236,25 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               { step: 2, label: '職務情報', icon: 'work' },
               { step: 3, label: '入社情報', icon: 'calendar_month' },
             ].map((item, i) => (
-              <div key={item.step} className="flex items-center flex-1">
-                <div className="flex items-center gap-2">
+              <div key={item.step} className={uiNext ? 'flex items-center flex-1 min-w-0 last:flex-none' : 'flex items-center flex-1'}>
+                <div className={uiNext ? 'flex items-center gap-1.5 sm:gap-2' : 'flex items-center gap-2'}>
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-xs font-black text-blue-600">{item.step}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-700">{item.label}</p>
+                    <p className={uiNext ? 'whitespace-nowrap text-xs sm:text-sm font-bold text-slate-700' : 'text-sm font-bold text-slate-700'}>{item.label}</p>
                   </div>
                 </div>
                 {i < 2 && (
-                  <div className="flex-1 mx-3 h-0.5 bg-slate-200 rounded-full" />
+                  <div aria-hidden className={uiNext ? 'flex-1 mx-1.5 sm:mx-3 min-w-2 h-0.5 bg-slate-200 rounded-full' : 'flex-1 mx-3 h-0.5 bg-slate-200 rounded-full'} />
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="bg-white rounded-3xl shadow-lg p-8 space-y-8">
+        <form onSubmit={uiNext ? handleSubmitNext : (e) => void handleSubmit(e)} noValidate={uiNext || undefined}>
+          <div className={uiNext ? 'bg-white rounded-3xl shadow-lg p-5 sm:p-8 space-y-8' : 'bg-white rounded-3xl shadow-lg p-8 space-y-8'}>
             {/* Photo Upload */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
@@ -201,7 +262,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                 顔写真
               </h2>
               <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-4" />
-              <div className="flex items-center gap-6">
+              <div className={uiNext ? 'flex flex-wrap items-center gap-4 sm:gap-6' : 'flex items-center gap-6'}>
                 {photoPreview ? (
                   <img src={photoPreview} alt="プレビュー" className="w-28 h-28 rounded-full object-cover ring-4 ring-blue-100" />
                 ) : (
@@ -210,14 +271,17 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   </div>
                 )}
                 <div>
-                  <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all">
-                    <span className="material-symbols-outlined text-lg">upload</span>
+                  <label className={uiNext
+                    ? 'inline-flex min-h-11 items-center gap-2 whitespace-nowrap px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all focus-within:ring-2 focus-within:ring-[var(--blue,#0066ff)] focus-within:ring-offset-2'
+                    : 'inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all'}>
+                    <span aria-hidden className="material-symbols-outlined text-lg">upload</span>
                     写真をアップロード
+                    {/* 新しい見た目では、見えないだけでキーボードから選べる入力にする */}
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoChange}
-                      className="hidden"
+                      className={uiNext ? 'sr-only' : 'hidden'}
                     />
                   </label>
                   <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（5MB以下）</p>
@@ -235,10 +299,13 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               <p className="text-sm text-slate-400 mb-4">姓名は必須です。社員番号は後から設定できます。</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    姓 <span className="text-red-500">*</span>
+                  <label htmlFor={fid('lastName')} className="block text-sm font-bold text-slate-700 mb-1">
+                    姓 <span aria-hidden className="text-red-500">*</span>{uiNext ? <span className="sr-only">（必須）</span> : null}
                   </label>
                   <input
+                    id={fid('lastName')}
+                    {...describe('lastName')}
+                    aria-required="true"
                     type="text"
                     name="lastName"
                     value={form.lastName}
@@ -247,12 +314,16 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     placeholder="山田"
                   />
+                  {uiNext && fieldErrors.lastName && <p id={`${fid('lastName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.lastName}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    名 <span className="text-red-500">*</span>
+                  <label htmlFor={fid('firstName')} className="block text-sm font-bold text-slate-700 mb-1">
+                    名 <span aria-hidden className="text-red-500">*</span>{uiNext ? <span className="sr-only">（必須）</span> : null}
                   </label>
                   <input
+                    id={fid('firstName')}
+                    {...describe('firstName')}
+                    aria-required="true"
                     type="text"
                     name="firstName"
                     value={form.firstName}
@@ -261,11 +332,13 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     placeholder="太郎"
                   />
+                  {uiNext && fieldErrors.firstName && <p id={`${fid('firstName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.firstName}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
+                  <label htmlFor={fid('lastNameKana')} className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
                   <input
                     type="text"
+                    id={fid('lastNameKana')}
                     name="lastNameKana"
                     value={form.lastNameKana}
                     onChange={handleChange}
@@ -274,9 +347,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">名（カナ）</label>
+                  <label htmlFor={fid('firstNameKana')} className="block text-sm font-bold text-slate-700 mb-1">名（カナ）</label>
                   <input
                     type="text"
+                    id={fid('firstNameKana')}
                     name="firstNameKana"
                     value={form.firstNameKana}
                     onChange={handleChange}
@@ -285,9 +359,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">社員番号</label>
+                  <label htmlFor={fid('employeeNumber')} className="block text-sm font-bold text-slate-700 mb-1">社員番号</label>
                   <input
                     type="text"
+                    id={fid('employeeNumber')}
                     name="employeeNumber"
                     value={form.employeeNumber}
                     onChange={handleChange}
@@ -296,9 +371,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">メールアドレス</label>
+                  <label htmlFor={fid('email')} className="block text-sm font-bold text-slate-700 mb-1">メールアドレス</label>
                   <input
                     type="email"
+                    id={fid('email')}
                     name="email"
                     value={form.email}
                     onChange={handleChange}
@@ -307,9 +383,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">電話番号</label>
+                  <label htmlFor={fid('phone')} className="block text-sm font-bold text-slate-700 mb-1">電話番号</label>
                   <input
                     type="tel"
+                    id={fid('phone')}
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}
@@ -329,9 +406,9 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-2" />
               <DepartmentListState status={departmentList.status} error={departmentList.error} retry={departmentList.retry} />
               {departmentList.status === 'ready' && (departments.length === 0 ? (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
-                  <span className="material-symbols-outlined text-amber-500">info</span>
-                  <p className="text-sm text-amber-800 flex-1">
+                <div className={uiNext ? 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center gap-3' : 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3'}>
+                  <span aria-hidden className="material-symbols-outlined text-amber-500">info</span>
+                  <p className={uiNext ? 'text-sm text-amber-800 flex-1 min-w-[12rem]' : 'text-sm text-amber-800 flex-1'}>
                     部署がまだ登録されていません。先に部署を追加すると従業員の配属先を選べます。
                   </p>
                   <a
@@ -348,9 +425,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               ))}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
+                  <label htmlFor={fid('departmentId')} className="block text-sm font-bold text-slate-700 mb-1">部署</label>
                   <select
                     disabled={departmentList.status !== 'ready' || saving}
+                    id={fid('departmentId')}
                     name="departmentId"
                     value={form.departmentId}
                     onChange={handleChange}
@@ -363,9 +441,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">役職</label>
+                  <label htmlFor={fid('position')} className="block text-sm font-bold text-slate-700 mb-1">役職</label>
                   <input
                     type="text"
+                    id={fid('position')}
                     name="position"
                     value={form.position}
                     onChange={handleChange}
@@ -374,9 +453,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">等級</label>
+                  <label htmlFor={fid('grade')} className="block text-sm font-bold text-slate-700 mb-1">等級</label>
                   <input
                     type="text"
+                    id={fid('grade')}
                     name="grade"
                     value={form.grade}
                     onChange={handleChange}
@@ -385,8 +465,9 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">雇用形態</label>
+                  <label htmlFor={fid('employmentType')} className="block text-sm font-bold text-slate-700 mb-1">雇用形態</label>
                   <select
+                    id={fid('employmentType')}
                     name="employmentType"
                     value={form.employmentType}
                     onChange={handleChange}
@@ -398,15 +479,17 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-1">入社日</label>
+                  <label htmlFor={fid('hireDate')} className="block text-sm font-bold text-slate-700 mb-1">入社日</label>
                   <input
                     type="date"
+                    id={fid('hireDate')}
+                    aria-describedby={`${fid('hireDate')}-hint`}
                     name="hireDate"
                     value={form.hireDate}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   />
-                  <p className="text-xs text-slate-400 mt-1.5">入社日を設定すると在籍年数が自動計算されます。</p>
+                  <p id={`${fid('hireDate')}-hint`} className={uiNext ? 'text-xs text-slate-500 mt-1.5' : 'text-xs text-slate-400 mt-1.5'}>入社日を設定すると在籍年数が自動計算されます。</p>
                 </div>
               </div>
             </div>

@@ -221,6 +221,26 @@ if (shellActorMounted.error || shellActorMounted.status !== 0) {
   console.error('Security regression failed: verify-shell-actor-mounted.cjs');
   process.exit(shellActorMounted.status || 1);
 }
+const collectionPreviewMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-collection-preview.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (collectionPreviewMounted.error || collectionPreviewMounted.status !== 0) {
+  console.error('Security regression failed: verify-collection-preview.cjs');
+  process.exit(collectionPreviewMounted.status || 1);
+}
+const uiIntegrationMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-ui-integration-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (uiIntegrationMounted.error || uiIntegrationMounted.status !== 0) {
+  console.error('Security regression failed: verify-ui-integration-mounted.cjs');
+  process.exit(uiIntegrationMounted.status || 1);
+}
+const aishodanProductUpgradeMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-product-upgrade-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanProductUpgradeMounted.error || aishodanProductUpgradeMounted.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-product-upgrade-mounted.cjs');
+  process.exit(aishodanProductUpgradeMounted.status || 1);
+}
+const workspaceErrorLifetimeMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-workspace-error-lifetime-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (workspaceErrorLifetimeMounted.error || workspaceErrorLifetimeMounted.status !== 0) {
+  console.error('Security regression failed: verify-workspace-error-lifetime-mounted.cjs');
+  process.exit(workspaceErrorLifetimeMounted.status || 1);
+}
 const hrInviteStates = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-invite-states.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrInviteStates.error || hrInviteStates.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-states.cjs');
@@ -1509,3 +1529,15 @@ if (savedTenjikaiRead.error || savedTenjikaiRead.status !== 0) {
 
 // CI source manifests are verified by explicit steps in .github/workflows/ci.yml.
 // Vercel excludes /docs, so those audit inputs are unavailable during npm run build.
+
+// Main-only regression registrations; their behavior is resolved in the corresponding fixture cohort.
+for (const script of ['verify-annual-report-scope.cjs', 'verify-cunning-beta-hidden.cjs', 'verify-doya-power-flag.cjs', 'verify-doya-power-ledger.cjs', 'verify-persona-image-cost.cjs', 'verify-seo-image-auto-once.cjs', 'verify-shell-doya-power.cjs', 'verify-text-llm-budget.cjs', 'verify-trial-paid-plan.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}
+
+// AIO personal billing return is a separately frozen source unit.
+for (const script of ['verify-aio-billing-button-mounted.cjs', 'verify-aio-billing-http-loss.cjs', 'verify-aio-billing-navigation-client.cjs', 'verify-aio-billing-return.cjs', 'verify-aio-billing-sync-mounted.cjs', 'verify-aio-pricing-scope-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}

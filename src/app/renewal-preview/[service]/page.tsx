@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getServiceById } from "@/lib/services";
+import { getServiceById, isBetaHiddenService } from "@/lib/services";
 
 // Render the same public LP even when the comparison viewer is signed in.
 // This route never mounts authenticated app screens or reads customer data.
@@ -28,7 +28,8 @@ const pages = {
 
 export const dynamicParams = false;
 export function generateStaticParams() {
-  return Object.keys(pages).map((service) => ({ service }));
+  // 開発中のベータ版（services.ts の hidden: 'beta'）の LP は、比較用のプレビューにも出さない
+  return Object.keys(pages).filter((service) => !isBetaHiddenService(service)).map((service) => ({ service }));
 }
 
 export async function generateMetadata({
@@ -51,7 +52,7 @@ export default async function RenewalPreview({
   params: Promise<{ service: string }>;
 }) {
   const { service: serviceId } = await params;
-  if (!Object.prototype.hasOwnProperty.call(pages, serviceId)) notFound();
+  if (!Object.prototype.hasOwnProperty.call(pages, serviceId) || isBetaHiddenService(serviceId)) notFound();
   const { default: Page } = await pages[serviceId as keyof typeof pages]();
   return <Page />;
 }

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import { paidTierFromSyncResult } from '@/lib/plan-utils'
 import { BillingResponseError, readBillingResponse, waitForBillingClientTask } from '@/lib/billing-response-client'
+import { classifyBillingReturnMarker, correlatedBillingReturnPath } from '@/lib/aio/billing-return-correlation'
 
 /**
  * Stripe決済からの戻り（?success=true&session_id=cs_...）を**どのサービスの戻り先でも**検知し、
@@ -24,17 +25,26 @@ function StripeSuccessSyncInner() {
   const { data: session, status, update: updateSession } = useSession()
   const user = session?.user as { id?: string; email?: string } | undefined
   const actor = user?.id || user?.email || ''
-  const mode = searchParams.get('portal_return') === 'plan_change' ? 'portal'
-    : searchParams.get('success') === 'true' ? 'checkout' : null
-  const sessionId = searchParams.get('session_id')
-  const validSession = typeof sessionId === 'string' && /^cs_[A-Za-z0-9_]{1,250}$/.test(sessionId)
-  const returnKey = JSON.stringify([mode, mode === 'checkout' ? sessionId : null])
-  const returnEpoch = useRef({ key: returnKey, version: 0 })
-  if (returnEpoch.current.key !== returnKey) returnEpoch.current = { key: returnKey, version: returnEpoch.current.version + 1 }
-  const contextKey = JSON.stringify([status, actor, returnKey, returnEpoch.current.version])
-  type Failure = { actor: string; returnKey: string; mode: typeof mode; sessionId: string | null }
+  const marker = classifyBillingReturnMarker(searchParams)
+  const { mode, sessionId } = marker
+  const returnKey = JSON.stringify([mode, sessionId, marker.fingerprint])
+  const markerEpoch = useRef({ key: returnKey, version: 0 })
+  if (markerEpoch.current.key !== returnKey) markerEpoch.current = { key: returnKey, version: markerEpoch.current.version + 1 }
+  const identityEpoch = useRef({ actor: '', version: 0 })
+  if (status === 'authenticated' && actor && identityEpoch.current.actor !== actor)
+    identityEpoch.current = { actor, version: identityEpoch.current.version + 1 }
+  const ownerKey = JSON.stringify([status, actor, returnKey])
+  const returnEpoch = useRef({ key: ownerKey, version: 0 })
+  if (returnEpoch.current.key !== ownerKey) returnEpoch.current = { key: ownerKey, version: returnEpoch.current.version + 1 }
+  const [pageEpoch, setPageEpoch] = useState(0)
+  const contextKey = JSON.stringify([ownerKey, markerEpoch.current.version, returnEpoch.current.version, pageEpoch])
+  const pathname = typeof window === 'undefined' ? '' : window.location.pathname
+  type Failure = { actor: string; returnKey: string; mode: typeof mode; sessionId: string | null;
+    markerVersion: number; identityVersion: number; pathname: string }
   const [failure, setFailure] = useState<Failure | null>(null)
-  const [modal, setModal] = useState<{ actor: string; contextKey: string; tier: 'LIGHT' | 'PRO' | 'ENTERPRISE' } | null>(null)
+  const [modal, setModal] = useState<{ actor: string; contextKey: string; identityVersion: number;
+    markerVersion: number; pathname: string;
+    tier: 'LIGHT' | 'PRO' | 'ENTERPRISE' } | null>(null)
   const [dismissedSignIn, setDismissedSignIn] = useState<string | null>(null)
   const [uiWarning, setUiWarning] = useState<{ actor: string; message: string } | null>(null)
   const [retrying, setRetrying] = useState(false)
@@ -45,31 +55,45 @@ function StripeSuccessSyncInner() {
   const active = useRef<AbortController | null>(null)
   const attempted = useRef<string | null>(null)
   const interrupted = useRef<Failure | null>(null)
-  const verified = useRef(new Map<string, { contextKey: string; uiPending: boolean }>())
+  const verified = useRef(new Map<string, { contextKey: string; markerVersion: number; identityVersion: number; uiPending: boolean }>())
+  const hiddenAttempt = useRef<string | null>(null)
+  const attemptScope = JSON.stringify([actor, returnKey, markerEpoch.current.version, identityEpoch.current.version])
   const run = useRef<(manual?: boolean) => Promise<void>>(async () => {})
   const resume = useRef<() => boolean>(() => false)
   const toastId = `stripe-verification-${useId()}`
-  const shownFailure = status === 'authenticated' && actor && failure?.actor === actor && (!mode || failure.returnKey === returnKey) ? failure : null
+  const cleanRecovery = !!failure && !marker.marked && failure.actor === actor &&
+    failure.identityVersion === identityEpoch.current.version && failure.pathname === pathname &&
+    failure.markerVersion + 1 === markerEpoch.current.version
+  const shownFailure = status === 'authenticated' && actor && failure?.actor === actor &&
+    failure.identityVersion === identityEpoch.current.version &&
+    (failure.returnKey === returnKey && failure.markerVersion === markerEpoch.current.version || cleanRecovery) ? failure : null
   const needsSignIn = !!mode && status === 'unauthenticated' && dismissedSignIn !== contextKey
   const failed = !!shownFailure || needsSignIn
   const portalReturnFailed = shownFailure?.mode === 'portal' || mode === 'portal'
-  const modalPlan = status === 'authenticated' && modal?.actor === actor && (!mode || modal.contextKey === contextKey) ? modal.tier : null
+  const modalPlan = status === 'authenticated' && modal?.actor === actor &&
+    modal.identityVersion === identityEpoch.current.version &&
+    (modal.contextKey === contextKey && modal.markerVersion === markerEpoch.current.version ||
+      !marker.marked && modal.markerVersion + 1 === markerEpoch.current.version && modal.pathname === pathname) ? modal.tier : null
   const currentReady = () => mounted.current && ready.current === contextKey && context.current === contextKey
   const clearReturnQuery = () => {
     if (!currentReady()) return
     const url = new URL(window.location.href)
+    const present = classifyBillingReturnMarker(url.searchParams)
+    if (!present.automatic || present.fingerprint !== marker.fingerprint || present.mode !== mode || present.sessionId !== sessionId) return
     if (mode === 'checkout') {
-      if (url.searchParams.get('session_id') !== sessionId || url.searchParams.get('success') !== 'true') return
+      url.pathname = correlatedBillingReturnPath(url.pathname, mode, sessionId)
       for (const name of ['session_id', 'success', 'plan']) url.searchParams.delete(name)
     } else if (mode === 'portal') {
-      if (url.searchParams.get('portal_return') !== 'plan_change') return
+      url.pathname = correlatedBillingReturnPath(url.pathname, mode, null)
       url.searchParams.delete('portal_return')
     } else return
     router.replace(url.pathname + url.search + url.hash, { scroll: false })
   }
   resume.current = () => {
     const receipt = verified.current.get(JSON.stringify([actor, returnKey]))
-    if (!currentReady() || status !== 'authenticated' || !mode || !receipt || receipt.contextKey !== contextKey || active.current) return false
+    if (!currentReady() || status !== 'authenticated' || !mode || !receipt || active.current ||
+      receipt.markerVersion !== markerEpoch.current.version ||
+      receipt.identityVersion !== identityEpoch.current.version) return false
     try {
       if (receipt.uiPending) { router.refresh(); receipt.uiPending = false }
       clearReturnQuery()
@@ -78,7 +102,8 @@ function StripeSuccessSyncInner() {
   }
   run.current = async (manual = false) => {
     if (!currentReady() || active.current || status !== 'authenticated' || !actor) return
-    const target: Failure = manual && shownFailure ? shownFailure : { actor, returnKey, mode, sessionId }
+    const target: Failure = manual && shownFailure ? shownFailure : { actor, returnKey, mode, sessionId,
+      markerVersion: markerEpoch.current.version, identityVersion: identityEpoch.current.version, pathname }
     if (!target.mode) return
     const controller = new AbortController()
     active.current = controller
@@ -92,8 +117,8 @@ function StripeSuccessSyncInner() {
     try {
       // Bad return IDs never authorize a sync. Manual recovery may discover the
       // current actor's existing contract instead, without creating a checkout.
-      const exact = target.mode === 'checkout' && typeof target.sessionId === 'string' && /^cs_[A-Za-z0-9_]{1,250}$/.test(target.sessionId)
-      if (!manual && target.mode === 'checkout' && !validSession) throw new BillingResponseError()
+      const exact = target.mode === 'checkout' && (marker.automatic || manual && cleanRecovery) && target.sessionId !== null
+      if (!manual && !marker.automatic) throw new BillingResponseError()
       toast.loading(target.mode === 'portal' ? '契約状況を確認しています…' : '決済を確認しています…', { id: toastId })
       const response = await readBillingResponse(exact ? '/api/stripe/sync' : '/api/stripe/sync/latest', {
         method: 'POST',
@@ -105,14 +130,16 @@ function StripeSuccessSyncInner() {
       const tier = paidTierFromSyncResult(data.plan)
       const receiptKey = JSON.stringify([actor, target.returnKey])
       const first = !verified.current.has(receiptKey)
-      const receipt = { contextKey, uiPending: true }
+      const receipt = { contextKey, markerVersion: markerEpoch.current.version,
+        identityVersion: identityEpoch.current.version, uiPending: true }
       verified.current.set(receiptKey, receipt)
       if (verified.current.size > 100) verified.current.delete(verified.current.keys().next().value!)
       interrupted.current = null
       setFailure(null)
       toast.dismiss(toastId)
       if (target.mode === 'checkout' && exact) {
-        setModal({ actor, contextKey, tier })
+        setModal({ actor, contextKey, identityVersion: identityEpoch.current.version,
+          markerVersion: markerEpoch.current.version, pathname, tier })
         if (first && exact) {
           try {
             window.dispatchEvent(new CustomEvent('doya:checkout-verified', { detail: {
@@ -157,7 +184,8 @@ function StripeSuccessSyncInner() {
     if (interrupted.current) setFailure(interrupted.current)
     // Deferral lets StrictMode's initial cleanup finish before any mutation.
     void Promise.resolve().then(() => {
-      if (cancelled || resume.current() || attempted.current === contextKey) return
+      if (cancelled || resume.current() || attempted.current === contextKey || hiddenAttempt.current === attemptScope ||
+        interrupted.current?.actor === actor && interrupted.current.returnKey === returnKey) return
       void run.current()
     })
     return () => {
@@ -168,9 +196,27 @@ function StripeSuccessSyncInner() {
       active.current = null
       toast.dismiss(toastId)
     }
-  }, [contextKey, toastId])
-  const handleRetry = () => { void run.current(true) }
-  const closeFailure = () => { interrupted.current = null; setFailure(null); if (status === 'unauthenticated') setDismissedSignIn(contextKey) }
+  }, [contextKey, toastId, attemptScope, actor, returnKey])
+  useEffect(() => {
+    const onHide = () => {
+      if (attempted.current === contextKey) hiddenAttempt.current = attemptScope
+      ready.current = null
+      active.current?.abort()
+      active.current = null
+      toast.dismiss(toastId)
+    }
+    const onShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setPageEpoch(value => value + 1)
+    }
+    window.addEventListener('pagehide', onHide)
+    window.addEventListener('pageshow', onShow)
+    return () => {
+      window.removeEventListener('pagehide', onHide)
+      window.removeEventListener('pageshow', onShow)
+    }
+  }, [contextKey, attemptScope, toastId])
+  const handleRetry = () => { if (currentReady()) void run.current(true) }
+  const closeFailure = () => { if (!currentReady()) return; interrupted.current = null; setFailure(null); if (status === 'unauthenticated') setDismissedSignIn(contextKey) }
   const signInCallback = typeof window === 'undefined' ? '/' : window.location.pathname + window.location.search + window.location.hash
 
   return (
@@ -178,6 +224,7 @@ function StripeSuccessSyncInner() {
       <UpgradeSuccessModal
         isOpen={modalPlan !== null}
         onClose={() => {
+          if (!currentReady()) return
           setModal(null)
           router.refresh()
         }}

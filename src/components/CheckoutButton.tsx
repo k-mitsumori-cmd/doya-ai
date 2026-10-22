@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Loader2, Zap, CreditCard } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BillingResponseError, billingRedirectUrl, readBillingResponse } from '@/lib/billing-response-client'
-import { checkoutScopeKey, type CheckoutIntent, type CheckoutOutcome } from '@/lib/checkout-recovery-client'
+import { checkoutScopeKey, type CheckoutIntent, type CheckoutOutcome, type CheckoutReadyNavigation } from '@/lib/checkout-recovery-client'
 import { useCheckoutRecovery } from '@/components/CheckoutRecoveryProvider'
 import { paidTierFromSyncResult } from '@/lib/plan-utils'
 
@@ -20,12 +20,22 @@ export interface CheckoutActionGuard {
   current: () => boolean
   verify: (signal: AbortSignal) => Promise<boolean>
   onCanonical?: (operationId: string, actorId: string) => void
+  onReady?: (ready: CheckoutReadyNavigation) => boolean
+}
+
+export interface PortalActionGuard {
+  identity: string
+  current: () => boolean
+  verify: (signal: AbortSignal) => Promise<boolean>
+  prepareReturn: (navigationId: string) => boolean
+  returnPath: (navigationId: string) => string
 }
 
 interface CheckoutButtonProps {
   planId: string
   billingOrganization?: { actor: string; organizationId: string }
   actionGuard?: CheckoutActionGuard
+  portalActionGuard?: PortalActionGuard
   billingPeriod?: 'monthly' | 'yearly'
   loginCallbackUrl?: string
   className?: string
@@ -33,7 +43,7 @@ interface CheckoutButtonProps {
   variant?: 'primary' | 'secondary'
 }
 
-export function CheckoutButton({ planId, billingOrganization, actionGuard, billingPeriod = 'monthly', loginCallbackUrl,
+export function CheckoutButton({ planId, billingOrganization, actionGuard, portalActionGuard, billingPeriod = 'monthly', loginCallbackUrl,
   className = '', children, variant = 'primary' }: CheckoutButtonProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
@@ -53,7 +63,7 @@ export function CheckoutButton({ planId, billingOrganization, actionGuard, billi
     organization: organizationId && organizationActor ? { actor: organizationActor, organizationId } : null }),
   [planId, billingPeriod, serviceId, currentPath, organizationId, organizationActor])
   const scopeKey = checkoutScopeKey(intent)
-  const contextKey = JSON.stringify([status, actorId, scopeKey, actionGuard?.identity])
+  const contextKey = JSON.stringify([status, actorId, scopeKey, actionGuard?.identity, portalActionGuard?.identity])
   const context = useRef(contextKey); context.current = contextKey
   const lease = useRef<{ active: boolean } | null>(null)
   const active = useRef<AbortController | null>(null)
@@ -81,12 +91,13 @@ export function CheckoutButton({ planId, billingOrganization, actionGuard, billi
       router.push(`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || (serviceId === 'banner' ? '/banner' : `/${serviceId}/pricing`))}`)
       return
     }
-    if (status !== 'authenticated' || !actorId || !manager || !organizationValid || actionGuard && !actionGuard.current() || foreignScope && !abortedForeign || active.current || snapshot.busy) return
+    if (status !== 'authenticated' || !actorId || !manager || !organizationValid || actionGuard && !actionGuard.current() || portalActionGuard && !portalActionGuard.current() || foreignScope && !abortedForeign || active.current || snapshot.busy) return
     const ownLease = lease.current
     if (!ownLease?.active) return
     const controller = new AbortController(); active.current = controller
     const current = () => ownLease.active && lease.current === ownLease && context.current === contextKey &&
-      active.current === controller && !controller.signal.aborted && (!actionGuard || actionGuard.current())
+      active.current === controller && !controller.signal.aborted && (!actionGuard || actionGuard.current()) &&
+      (!portalActionGuard || portalActionGuard.current())
     const fail = (message: string) => { if (current()) { setNotice({ scopeKey, message }); toast.error(message, { id: toastId }) } }
     let stage: 'checkout' | 'portal' | 'sync' = 'checkout'
     let navigating = false
@@ -95,26 +106,41 @@ export function CheckoutButton({ planId, billingOrganization, actionGuard, billi
       if (actionGuard && !await actionGuard.verify(controller.signal)) { fail('組織の契約を確認できませんでした。再読み込みしてください。'); return }
       if (!current()) return
       let outcome: CheckoutOutcome | null = null
+      let readyBinding: CheckoutReadyNavigation | null = null
+      const captureReady = (ready: CheckoutReadyNavigation) => { readyBinding = ready }
       const phase = snapshot.phase
-      if (!snapshot.handle && phase === 'idle') outcome = await manager.start(intent, current)
-      else if (abortedForeign) outcome = await manager.newAfterTerminal(intent, current)
+      if (!snapshot.handle && phase === 'idle') outcome = await manager.start(intent, current, captureReady)
+      else if (abortedForeign) outcome = await manager.newAfterTerminal(intent, current, captureReady)
       else if (ownHandle && phase === 'missing') await manager.abortMissing(intent, current)
-      else if (ownHandle && phase === 'reserved' && !snapshot.dispatched) outcome = await manager.resume(intent, current)
-      else if (ownHandle && phase === 'completed') outcome = await manager.readyAgain(intent, current)
+      else if (ownHandle && phase === 'reserved' && !snapshot.dispatched) outcome = await manager.resume(intent, current, captureReady)
+      else if (ownHandle && phase === 'completed') outcome = await manager.readyAgain(intent, current, captureReady)
       else if (ownHandle && phase === 'provider_complete') outcome = { kind: 'provider_complete' }
-      else if (ownHandle && (phase === 'expired' || phase === 'aborted')) outcome = await manager.newAfterTerminal(intent, current)
+      else if (ownHandle && (phase === 'expired' || phase === 'aborted')) outcome = await manager.newAfterTerminal(intent, current, captureReady)
       else if (ownHandle && ['unknown', 'executing', 'checking'].includes(phase)) await manager.status(intent, current)
       if (!current()) return
       const canonical = manager.snapshot().handle
       if (canonical && canonical.actorId === actorId && canonical.scopeKey === scopeKey && actionGuard?.onCanonical) actionGuard.onCanonical(canonical.operationId, actorId)
       if (outcome?.kind === 'ready') {
         if (manager.snapshot().handle?.scopeKey !== scopeKey) throw new BillingResponseError()
+        if (actionGuard?.onReady && (!readyBinding || !actionGuard.onReady(readyBinding))) {
+          fail('元の組織を保存できませんでした。申込状況を確認し、新しいお申し込みはしないでください。'); return
+        }
+        if (!current()) return
         window.location.href = outcome.url; navigating = true; return
       }
       if (outcome?.kind === 'plan_change') {
         stage = 'portal'
+        let portalReturn = currentPath || '/'
+        if (portalActionGuard) {
+          if (!await portalActionGuard.verify(controller.signal) || !current()) return
+          const navigationId = crypto.randomUUID()
+          if (!portalActionGuard.prepareReturn(navigationId) || !current()) {
+            fail('元の組織を保存できませんでした。契約状況をご確認ください。'); return
+          }
+          portalReturn = portalActionGuard.returnPath(navigationId)
+        }
         const response = await readBillingResponse('/api/stripe/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ returnTo: currentPath || '/', purpose: 'plan_change' }) }, controller.signal)
+          body: JSON.stringify({ returnTo: portalReturn, purpose: 'plan_change' }) }, controller.signal)
         if (!current()) return
         const url = billingRedirectUrl(response.data.url)
         if (!response.ok || !url || response.data.code !== undefined || response.data.error !== undefined) throw new BillingResponseError()
@@ -151,7 +177,7 @@ export function CheckoutButton({ planId, billingOrganization, actionGuard, billi
     ownHandle && phase === 'provider_complete' ? '契約状況を確認' :
     ownHandle && (phase === 'expired' || phase === 'aborted') ? '新しく申し込む' :
     ownHandle && ['unknown', 'executing'].includes(phase) ? '申込状況を確認' : children || 'プランを選択'
-  const disabled = isLoading || snapshot.busy || (status === 'authenticated' && (phase === 'checking' || phase === 'blocked' || foreignScope && !abortedForeign || !actorId || !organizationValid || actionGuard && !actionGuard.current())) || status === 'loading'
+  const disabled = isLoading || snapshot.busy || (status === 'authenticated' && (phase === 'checking' || phase === 'blocked' || foreignScope && !abortedForeign || !actorId || !organizationValid || actionGuard && !actionGuard.current() || portalActionGuard && !portalActionGuard.current())) || status === 'loading'
   const baseStyles = 'flex items-center justify-center gap-2 font-bold rounded-xl transition-all disabled:opacity-50'
   const variantStyles = variant === 'primary' ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white' : ''
   return <>

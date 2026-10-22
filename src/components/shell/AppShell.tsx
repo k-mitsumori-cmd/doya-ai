@@ -26,6 +26,7 @@ import { demoteExtraH1 } from './heading-guard'
 import { HIDE_HUBSPOT_CSS } from './hide-hubspot'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
+import { ShellPowerMeter } from './power'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -231,8 +232,9 @@ export default function AppShell({ children, userName, initialRecent }: {
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next={uiNext ? 'true' : undefined}>
-      {/* アプリの画面では、HubSpot のポップアップで画面と下のタブを覆わない（新しい見た目のときだけ） */}
-      {uiNext ? <style>{HIDE_HUBSPOT_CSS}</style> : null}
+      {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
+          375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
+      <style>{HIDE_HUBSPOT_CSS}</style>
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
@@ -241,6 +243,8 @@ export default function AppShell({ children, userName, initialRecent }: {
         <Link href={SHELL_HOME.href} className={styles.brand}>
           <span className={styles.brandMark} aria-hidden />ドヤAI
         </Link>
+        {/* ドヤパワーの残り（旗が出すと決め、残りの値があるときだけ。無ければ何も描かない） */}
+        <ShellPowerMeter variant="topbar" />
         <button type="button" className={styles.iconButton} onClick={() => setPalette(true)} aria-label="ツールを探す">
           <Search size={18} />
         </button>
@@ -263,6 +267,7 @@ export default function AppShell({ children, userName, initialRecent }: {
           <span className={styles.navLabel}>ツールを探す</span>
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
+        <ShellPowerMeter variant="sidebar" />
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {recentTools.length ? (

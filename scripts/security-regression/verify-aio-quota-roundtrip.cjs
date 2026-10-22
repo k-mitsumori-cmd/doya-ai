@@ -118,13 +118,22 @@ async function modal(reply, expected) {
 let pricingSeq = 0
 async function pricing(href, expected) {
   const url = new URL(href, 'https://example.invalid')
-  let selected = null, billingFor = null, props = null
+  let selected = null, billingFor = null, props = null, scopeExpected = null
   mocks = {
     __phase: `pricing-${++pricingSeq}`, 'react/jsx-runtime': requireRepo('react/jsx-runtime'),
     'next/link': { __esModule: true, default: link },
+    'next/navigation': { redirect: () => { throw Error('unexpected checkout return marker') } },
+    'next-auth': { getServerSession: async () => ({ user: { id: 'actor' } }) },
+    '@/lib/auth': { authOptions: {} },
+    '@/lib/aio/billing-return-route': { aioReturnRedirect: () => null },
     '@/components/UnifiedPricingPlans': { UnifiedPricingPlans: p => { props = p; return React.createElement('div', { 'data-pricing': true }) } },
+    '@/components/aio/AioPricingScope': { AioPricingScope: ({ expected: value }) => {
+      scopeExpected = value
+      props = { currentPlan: value.plan, planSource: 'organization', canPurchase: value.role === 'owner' }
+      return React.createElement('div', { 'data-scope': true })
+    } },
     '@/components/aio/ui': { DoyaKun: () => null },
-    '@/lib/aio/access': { getAioContext: async slug => { selected = slug; return slug === activeSlug ? { organizationId: 'org-A', organizationSlug: activeSlug, role: 'owner' } : slug === 'B' ? { organizationId: 'org-B', organizationSlug: 'B', role: 'owner' } : null } },
+    '@/lib/aio/access': { getAioContext: async slug => { selected = slug; return slug === activeSlug ? { userId: 'actor', organizationId: 'org-A', organizationSlug: activeSlug, role: 'owner' } : slug === 'B' ? { userId: 'actor', organizationId: 'org-B', organizationSlug: 'B', role: 'owner' } : null } },
     '@/lib/aio/billing': { getAioBilling: async (_, id) => { billingFor = id; return { plan: id === 'org-A' ? 'PRO' : 'FREE' } } },
     '@/lib/prisma': { prisma: {} },
   }
@@ -135,6 +144,11 @@ async function pricing(href, expected) {
   assert.equal(props?.planSource, expected.planSource)
   assert.equal(props?.currentPlan, expected.plan)
   assert.equal(props?.canPurchase, expected.canPurchase)
+  if (expected.planSource === 'organization') {
+    assert.equal(scopeExpected?.actorId, 'actor')
+    assert.equal(scopeExpected?.organizationId, expected.billingFor)
+    assert.equal(scopeExpected?.slug, expected.selected)
+  } else assert.equal(scopeExpected, null)
   if (expected.back) assert.ok(html.includes(`href="${expected.back}"`))
 }
 // The production organization POST truncates names at 120 characters. Its actual

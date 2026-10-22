@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./load-typescript.cjs');
 const {routeUnitDeps,routeUnitGlobals,genericStart}=require('./checkout-route-unit-fixture.cjs');
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 const sub=(id,status='active')=>({id,status,metadata:{userId:'u1',planId:'banner-pro'},items:{data:[{price:{id:'price'}}]}});
 function fixture({customers=1,subscriptions=1,fail='',repeat=false,emptyStored=false}={}){
  const calls=[];
@@ -81,9 +82,9 @@ for(const routePath of ['portal','portal/redirect'])await check(routePath+' logi
 });
 await check('repeating cursor rejected instead of infinite loop',async()=>{const f=fixture({repeat:true});await assert.rejects(f.module.findActiveLikeSubscriptions({userId:'u1',email:'x@example.invalid'}));assert.equal(f.calls.length,2)});
 for(const outcome of ['failure','existing','none'])await check('checkout gate '+outcome,async()=>{
- const f=fixture();let created=0;const prisma={user:{findUnique:async()=>({id:'user',email:'x@example.invalid',stripeCustomerId:null})}};const api=load('src/app/api/stripe/checkout/route.ts',{
+ const f=fixture();let created=0;const prisma={user:{findUnique:async()=>({id:'user',email:'x@example.invalid',stripeCustomerId:null,plan:'FREE',serviceSubscriptions:[]})}};const api=load('src/app/api/stripe/checkout/route.ts',{
   ...routeUnitDeps({prisma,onStart:async()=>{created++;return{id:'cs_synthetic',url:'https://offline.invalid/checkout'}}}),
-  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'x@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>true},'@/lib/stripe':{...f.module,STRIPE_PRICE_IDS:{...f.module.STRIPE_PRICE_IDS,banner:{pro:{monthly:'price_synthetic',yearly:'price_synthetic'}}},findActiveLikeSubscriptions:async()=>{if(outcome==='failure')throw Error('offline');return outcome==='none'?[]:[{id:'s',status:'active'}]}}},routeUnitGlobals);
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'x@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>true,TRIAL_USER_SELECT},'@/lib/stripe':{...f.module,STRIPE_PRICE_IDS:{...f.module.STRIPE_PRICE_IDS,banner:{pro:{monthly:'price_synthetic',yearly:'price_synthetic'}}},findActiveLikeSubscriptions:async()=>{if(outcome==='failure')throw Error('offline');return outcome==='none'?[]:[{id:'s',status:'active'}]}}},routeUnitGlobals);
  const res=await api.POST(new Request('https://offline.invalid/api/stripe/checkout',{method:'POST',body:JSON.stringify(genericStart())}));assert.equal(res.status,outcome==='failure'?503:outcome==='none'?200:409);assert.equal(created,outcome==='none'?1:0);
 });
 console.log(JSON.stringify({passed:results.length,results},null,2));

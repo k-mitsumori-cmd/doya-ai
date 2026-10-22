@@ -97,7 +97,7 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
     .filter(Boolean)
     .join('\n')
 
-  const raw = await geminiGenerateJson<any>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'AishodanEvaluation')
+  const raw = await geminiGenerateJson<any>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } }, 'AishodanEvaluation')
 
   // --- スコアはモデルに出させず、条件の重みからサーバで計算する ---
   // ⚠️ 点数そのものを生成させると、根拠（conditions）と数字が食い違う。

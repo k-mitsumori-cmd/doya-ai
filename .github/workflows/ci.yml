@@ -635,11 +635,11 @@ jobs:
       - name: Verify isolated gate failure paths (no build)
         run: python3 -B scripts/ci/test-isolated-next-build.py
 
-      - name: Run seven named suites
+      - name: Run eight named suites
         shell: bash
         run: |
           set -euo pipefail
-          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense; do
+          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense test:doyapower; do
             echo "Running $suite"
             npm run "$suite" 2>&1 | tee -a "$RUNNER_TEMP/next-build-isolated/named-suites.log"
           done

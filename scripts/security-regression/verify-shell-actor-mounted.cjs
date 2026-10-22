@@ -1,17 +1,19 @@
 process.env.NODE_ENV = 'test'
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto'), assert = require('node:assert/strict')
 const React = require('react'), ts = require('typescript'), { JSDOM } = require('jsdom')
-const rootPath = path.resolve(__dirname, '../..'), sources = new Map(), cases = [], failures = []
+const rootPath = path.resolve(process.env.DOYA_TEST_ROOT || path.resolve(__dirname, '../..')), sources = new Map(), cases = [], failures = []
 const dom = new JSDOM('<body></body>', { url: 'https://example.invalid/pricing?payment=cancelled#plans' })
 global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true
 const { createRoot } = require('react-dom/client'), tick = () => new Promise(resolve => setImmediate(resolve))
 async function fixture(options = {}) {
   const Session = React.createContext(null), cache = new Map()
   let actor = 'alpha', status = 'authenticated', retainedData = false, reloads = 0, refreshes = 0, mounts = 0, unmounts = 0, closed = false
-  let props = { signedIn: true, serverActorId: 'alpha', userName: 'Synthetic Alpha', enabledIds: [], uiNext: 'all', company: { name: 'Synthetic Company A' }, toolHrefs: { sfa: '/sfa/org-a' }, always: true, ...options }
+  let props = { signedIn: true, serverActorId: 'alpha', userName: 'Synthetic Alpha', enabledIds: [], uiNext: 'all', company: { name: 'Synthetic Company A' }, toolHrefs: { sfa: '/sfa/org-a' }, always: true, doyaPower: true, doyaPowerState: { balance: {remaining: 7, limit: 10}, costs: {generate: 2} }, initialRecent: ['sfa', 'hr'], ...options }
   const viewWindow = { location: { reload: () => { reloads++ } }, addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) }
   const mocks = {
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'),
+    'next/link': {__esModule: true, default: ({children,...p}) => React.createElement('a',p,children)},
+    'lucide-react': {Zap: () => null}, '@/components/ds/cost-badge': {CostBadge: () => null}, './power.module.css': {__esModule: true, default: {}},
     'next-auth/react': { useSession: () => React.useContext(Session) },
     'next/navigation': { usePathname: () => '/pricing', useRouter: () => ({ refresh: () => { refreshes++ } }) },
     './registry': { shouldShowShell: (_, config) => config.signedIn && options.registry !== false },
@@ -28,11 +30,11 @@ async function fixture(options = {}) {
       exports, require: name => {
         if (name in mocks) return mocks[name]
         const stem = name.startsWith('@/') ? path.join(rootPath, 'src', name.slice(2)) : path.resolve(path.dirname(file), name)
-        const target = [stem + '.ts', stem + '.tsx'].find(fs.existsSync); assert(target, 'Unmocked ' + name); return load(target)
+        const target = [stem + '.ts', stem + '.tsx'].find(p => fs.existsSync(p) || (process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,path.relative(rootPath,p))))); assert(target, 'Unmocked ' + name); return load(target)
       }, window: viewWindow, document, console,
     }, { filename: file }); return exports
   }
-  const contexts = load('src/components/shell/ui-next-context.tsx'), company = load('src/components/shell/company-context.tsx')
+  const contexts = load('src/components/shell/ui-next-context.tsx'), company = load('src/components/shell/company-context.tsx'), powerFlag = load('src/components/doya-power/doya-power-context.tsx'), power = load('src/components/shell/power.tsx')
   function Child() {
     const [draft, setDraft] = React.useState('unsaved draft')
     React.useEffect(() => { mounts++; return () => { unmounts++ } }, [])
@@ -40,9 +42,11 @@ async function fixture(options = {}) {
     return React.createElement('div', { 'data-child': true }, React.createElement('input', { value: draft, readOnly: true }),
       React.createElement('button', { onClick: () => setDraft('edited draft') }, 'Edit draft'),
       React.createElement('a', { href, 'data-org-link': true }, 'Sales'), React.createElement('span', { 'data-company': true }, account?.name || ''),
-      React.createElement('span', { 'data-mode': true }, React.useContext(contexts.UiNextContext) || 'legacy'))
+      React.createElement('span', { 'data-mode': true }, React.useContext(contexts.UiNextContext) || 'legacy'),
+      React.createElement('span', {'data-power-flag': true}, String(powerFlag.useDoyaPower())),
+      React.createElement('span', {'data-power-state': true}, JSON.stringify(React.useContext(power.ShellPowerContext))))
   }
-  mocks['./AppShell'] = { __esModule: true, default: ({ userName, children }) => React.createElement('div', { 'data-frame': true }, React.createElement('span', { 'data-name': true }, userName), children) }
+  mocks['./AppShell'] = { __esModule: true, default: ({ userName, initialRecent, children }) => React.createElement('div', { 'data-frame': true }, React.createElement('span', { 'data-name': true }, userName), React.createElement('span', {'data-recent': true}, JSON.stringify(initialRecent ?? null)), children) }
   const Gate = load('src/components/shell/ShellGate.tsx').default, c = document.createElement('div'); document.body.append(c); const root = createRoot(c)
   const act = fn => React.act(async () => { await fn(); for (let n = 0; n < 4; n++) await tick() })
   const render = () => act(() => root.render(React.createElement(Session.Provider, { value: { status, data: status === 'authenticated' || retainedData ? { user: { id: actor } } : null } },
@@ -92,10 +96,22 @@ async function check(name, action, options) {
   await check('guest to authenticated transition requests explicit new document', async f => { await f.auth('beta'); blocked(f) }, { signedIn: false, serverActorId: null, initialStatus: 'unauthenticated', initialActor: null })
   await check('registry no-shell children retain the same principal guard', async f => { assert.equal(f.c.querySelector('[data-frame]'), null); assert.equal(f.c.querySelector('[data-company]').textContent, 'Synthetic Company A'); await f.auth('beta'); blocked(f) }, { always: false, registry: false })
   for (const mode of [null, 'preview', 'all']) await check('server-authoritative mode ' + mode + ' cannot survive actor mismatch', async f => { await f.auth('beta'); blocked(f) }, { uiNext: mode })
+  const neutral = f => { assert.equal(f.c.querySelector('[data-power-flag]').textContent,'false'); assert.equal(f.c.querySelector('[data-power-state]').textContent,JSON.stringify({balance:null,costs:{}})); const recent=f.c.querySelector('[data-recent]'); if(recent) assert.equal(recent.textContent,'null') }
+  await check('actual Power contexts and recent expose exact bound actor values', async f => {
+    assert.equal(f.c.querySelector('[data-power-flag]').textContent,'true'); assert.equal(f.c.querySelector('[data-power-state]').textContent,JSON.stringify({balance:{remaining:7,limit:10},costs:{generate:2}})); assert.equal(f.c.querySelector('[data-recent]').textContent,JSON.stringify(['sfa','hr']))
+    await f.auth(null,'loading');neutral(f);assert.equal(f.c.querySelector('[data-company]').textContent,'');assert.equal(f.c.querySelector('[data-org-link]').getAttribute('href'),'/sfa');await f.auth('alpha');assert.equal(f.c.querySelector('[data-power-flag]').textContent,'true')
+  })
+  await check('initial loading masks new private values with retained subtree', async f=>neutral(f),{initialStatus:'loading',initialActor:null})
+  await check('guest masks new private values', async f=>neutral(f),{signedIn:false,serverActorId:null,initialStatus:'unauthenticated',initialActor:null})
+  await check('legacy mode masks Power and recent even when server supplies them',async f=>neutral(f),{uiNext:null})
+  await check('Power disabled masks balance and cost while recent remains actor-bound', async f=>{assert.equal(f.c.querySelector('[data-power-flag]').textContent,'false');assert.equal(f.c.querySelector('[data-power-state]').textContent,JSON.stringify({balance:null,costs:{}}));assert.equal(f.c.querySelector('[data-recent]').textContent,JSON.stringify(['sfa','hr']))},{doyaPower:false})
+  await check('pagehide masks synchronously before React lifecycle commit',async f=>{
+    const input=f.c.querySelector('input');await f.act(()=>{window.dispatchEvent(new window.Event('pagehide'));assert(input.closest('[hidden][inert]'))});blocked(f)
+  })
   for (const file of ['src/app/(shell)/layout.tsx', 'src/app/pricing/page.tsx']) {
-    const source = fs.readFileSync(path.join(rootPath, file), 'utf8'); sources.set(path.join(rootPath, file), source)
+    const overlay = process.env.DOYA_TEST_BASELINE && path.join(process.env.DOYA_TEST_BASELINE,file); const source = fs.readFileSync(overlay && fs.existsSync(overlay) ? overlay : path.join(rootPath,file), 'utf8'); sources.set(path.join(rootPath, file), source)
     assert.match(source, /serverActorId=\{session(?:\?\.)?\.?(?:user)(?:\?\.)?\.?id \?\? null\}/, file + ' must bind the actual server session ID')
   }
-  console.log(JSON.stringify({ checkedAt: new Date().toISOString(), passed: cases.length, failed: failures.length, cases, failures, sourceHashes: Object.fromEntries([...sources].map(([file, source]) => [path.relative(rootPath, file), crypto.createHash('sha256').update(source).digest('hex')])), scope: 'Actual ShellGate and actual company/tool href/UI contexts under React StrictMode with a stateful child. Synthetic session, AppShell consumer, lifecycle and reload only. No browser, RSC causal freshness, real SDK or production acceptance.' }, null, 2))
+  console.log(JSON.stringify({ checkedAt: new Date().toISOString(), passed: cases.length, failed: failures.length, cases, failures, sourceHashes: Object.fromEntries([...sources].map(([file, source]) => [path.relative(rootPath, file), crypto.createHash('sha256').update(source).digest('hex')])), scope: 'Actual ShellGate and actual company/tool href/UI/Power contexts, exact recent prop under React StrictMode with a stateful child. Synthetic session, AppShell consumer, lifecycle and reload only. No browser, RSC causal freshness, real SDK or production acceptance.' }, null, 2))
   dom.window.close(); if (failures.length) process.exitCode = 1
 })().catch(error => { console.error(error); process.exitCode = 1 })

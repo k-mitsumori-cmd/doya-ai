@@ -284,9 +284,11 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 |------|------|------|
 | 日数 | 30日（`UNIFIED_TRIAL_DAYS`） | `src/lib/unified-plan.ts` |
 | 付与条件(a) | **月額のみ**。年額・`enterprise`・`bundle` には付けない | `checkout/route.ts` |
-| 付与条件(b) | **実サブスク履歴のない新規顧客のみ** | `isTrialEligible()`（`src/lib/trial.ts`） |
-| 判定方法 | メール横断で全 Stripe 顧客の契約履歴を照会（INV-6）。`incomplete` 系は履歴に数えない | 同上 |
-| 判定失敗時 | **fail-closed（付与しない）** | trial cycling（解約→再契約で無料を繰り返す）を防ぐ |
+| 付与条件(b) | **今 DB で有料でなく、実サブスク履歴もない新規顧客のみ** | `isTrialEligible()`（`src/lib/trial.ts`） |
+| 判定方法(1) DB | `User.plan` が有料（`isPaidPlan()`、INV-1）か、`UserServiceSubscription.plan` のいずれかの行が有料なら**対象外**。このときは Stripe を照会しない。管理者の付与など、Stripe の履歴を持たずに有料になった利用者に「初月無料」を出さないため | `hasPaidPlanInDb()`（同上） |
+| 判定方法(2) Stripe | (1) で無料のときだけ、メール横断で全 Stripe 顧客の契約履歴を照会（INV-6）。`incomplete` 系は履歴に数えない | `isTrialEligible()` |
+| 判定の共有 | checkout（実付与）と `/api/stripe/trial-eligibility`（表示）は、同じ select（`TRIAL_USER_SELECT`）で読んだ DB の値を `isTrialEligible()` に渡す。`plan` / `servicePlans` は引数の必須キーにしてあり、渡し忘れを型で防ぐ | `src/lib/trial.ts` |
+| 判定失敗時 | **fail-closed（付与しない）**。Stripe 照会の失敗時、checkout は `503 TRIAL_CHECK_UNAVAILABLE` で決済を作らず、表示 API は `503` と `eligible:false` を返す。DB で有料と分かる利用者は、Stripe の障害中でも対象外のまま | trial cycling（解約→再契約で無料を繰り返す）を防ぐ |
 | 支払方法未登録で終了 | 自動解約 | `trial_settings.end_behavior.missing_payment_method: 'cancel'` |
 | 表示 | **「初月無料」を直書きしない。必ず `src/components/TrialCallout.tsx` 経由** | `TrialBadge` / `TrialNote` / `TrialCallout` / `TrialInlineSuffix` / `useTrialEligible()` |
 | 表示の既定 | 対象外なら**何も描画しない**（既定非表示・確定時のみ表示・fail-closed） | `/api/stripe/trial-eligibility` |
@@ -524,7 +526,7 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 |---------|------|
 | `src/lib/unified-plan.ts` | 価格・プランID・トライアル日数・`isPaidPlan()` の**単一ソース** |
 | `src/lib/stripe.ts` | Stripe クライアント・価格IDマップ・`ALL_SERVICE_IDS`・階層判定・契約検索・Checkout/ポータル生成 |
-| `src/lib/trial.ts` | トライアル資格判定（メール横断・fail-closed） |
+| `src/lib/trial.ts` | トライアル資格判定（DB の有料状態 → メール横断の Stripe 履歴・fail-closed）。回帰テストは `scripts/security-regression/verify-trial-paid-plan.cjs` / `verify-trial-failure.cjs` |
 | `src/lib/billing-audit.ts` | Stripe を正とした日次突き合わせ・Slack 本文生成 |
 | `src/app/api/stripe/checkout/route.ts` | Checkout 作成・二重契約ガード・トライアル付与・提供終了プランの遮断 |
 | `src/app/api/stripe/webhook/route.ts` | 本流の反映（作成/更新/解約/支払い） |
@@ -628,3 +630,15 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - 上限の理由は当該操作の応答として保持し、別操作や現在のプランについて推測しない。完了・終了・別操作では解除し、上限応答から自動再生成はしない。
 - 組織の選択はタブごとに保持する。HRの取得・変更・課金開始要求は選択した組織と利用者を送信し、サーバーは現在の所属・役割を確認する。別組織のオーナーであることや個人のPRO契約では、選択中の組織の課金権限を取得できない。
 - 選択した組織の所属が失われた場合は別の組織へ自動的に切り替えない。利用者が所属のある組織を明示的に選び直す。
+
+## ドヤAIOの個人契約から組織画面への復帰
+
+ドヤAIOの契約は従来どおり利用者単位であり、決済のprincipalやCheckout/Portalの保存記録を組織契約へ変更しない。`/aio/pricing?org=<slug>` では、離脱直前に現在の利用者・所属組織ID・slug・オーナー権限を再確認する。組織の復帰先は契約権限ではなく、このタブの画面移動用情報として扱う。
+
+新しく作成したCheckout操作が本人・操作ID・Checkout session IDを含む有効なready応答を返した場合に限り、そのsession IDへ元組織を一度だけ結び付ける。保存と読戻しができないときは外部決済画面へ移動しない。既存操作の再確認、canonical操作IDの採用、通信断後のready再取得では、現在表示している別組織を元組織として登録しない。既に同じsession IDの情報があれば上書きしない。
+
+決済成功の戻りではsession IDを専用URLのpathに残し、本人の現在の所属を再確認してから、登録済みの組織IDとslugが一致する場合だけ「元の組織」に戻るリンクを表示する。情報が無い・所属が変わった・取消でsession IDが無い場合は、現在所属する組織を利用者に明示して選んでもらう。PortalのGETとPOSTはそれぞれ離脱ごとに別のnavigation IDを発行し、queryの無い戻り先でも同じ方法で照合する。hintはプラン、決済成功、所属権限を証明しない。
+
+共通の決済同期は `success`、`session_id`、`portal_return`、`payment`、`plan` の重複と混在を厳格に判定する。不正な印では最初のsession IDを選んで自動同期しない。利用者が明示的に再確認する場合も、曖昧なIDを送らず現在の本人契約を確認する。有効なsession IDとAIO専用pathのIDが異なる場合、決済事実の同期対象は有効なsession IDのまま、組織復帰先は不明として扱う。通常の同期後にqueryを除いても専用pathは保つ。支払結果や契約状態の正本は既存のサーバー確認であり、画面のhintから推測しない。
+
+実ブラウザでの外部決済・ログイン・Portal往復と、provider/DBを伴う受入は別途確認する。

@@ -6,7 +6,7 @@ import type { RunDto } from '@/lib/asklink/dto'
 import { parseAskLinkCreationRunResponse } from '@/lib/asklink/creation-run-response'
 
 type Task = { token: symbol; version: number }
-type View = { runId: string; token: symbol; busy: string | null; error: string | null }
+type View = { runId: string; token: symbol; busy: string | null; error: string | null; errorStatus: number | null }
 const FAILURE = 'バナーの作成に失敗しました。保存済みの結果を確認してから、作り直してください。'
 
 // null is the new-input screen; omitted preserves the history screen's single queue.
@@ -33,10 +33,10 @@ export function useBannerQueue(setRun: (run: RunDto) => void, activeRunId?: stri
       tasks.current.set(runId, task)
       const alive = () => life.current.active && life.current.version === task.version && tasks.current.get(runId) === task
       const visible = () => alive() && owner.current.runId === runId
-      const update = (values: Partial<Pick<View, 'busy' | 'error'>>) => {
-        if (visible()) setView(old => ({ runId, token: task.token, busy: null, error: null, ...(old?.token === task.token ? old : {}), ...values }))
+      const update = (values: Partial<Pick<View, 'busy' | 'error' | 'errorStatus'>>) => {
+        if (visible()) setView(old => ({ runId, token: task.token, busy: null, error: null, errorStatus: null, ...(old?.token === task.token ? old : {}), ...values }))
       }
-      update({ error: null })
+      update({ error: null, errorStatus: null })
       try {
         for (const kind of kinds) {
           if (!alive()) break
@@ -49,13 +49,13 @@ export function useBannerQueue(setRun: (run: RunDto) => void, activeRunId?: stri
           if (res.ok && !run) throw Error(FAILURE)
           if (run && visible()) setRun(run)
           if (!res.ok) {
-            update({ error: typeof data?.error === 'string' ? data.error : FAILURE })
+            update({ error: typeof data?.error === 'string' ? data.error : FAILURE, errorStatus: res.status })
             if (res.status === 401) break
           }
           window.dispatchEvent(new Event('asklink:generated'))
         }
       } catch {
-        update({ error: FAILURE })
+        update({ error: FAILURE, errorStatus: 0 })
       } finally {
         if (alive()) {
           update({ busy: null })
@@ -68,5 +68,5 @@ export function useBannerQueue(setRun: (run: RunDto) => void, activeRunId?: stri
 
   const current = view?.runId === owner.current.runId ? view : null
   const currentTask = current && tasks.current.get(current.runId)?.token === current.token
-  return { busy: currentTask ? current.busy : null, error: current?.error ?? null, generate }
+  return { busy: currentTask ? current.busy : null, error: current?.error ?? null, errorStatus: current?.errorStatus ?? null, generate }
 }

@@ -2,8 +2,12 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { LayoutGrid, List, Search } from 'lucide-react'
+import { Button, EmptyState } from '@/components/ds'
 import EmployeeCard, { Employee } from './EmployeeCard'
+import { useToolUiNext } from './ui-next'
 
 interface Department {
   id: string
@@ -15,6 +19,9 @@ interface EmployeeGridProps {
   departments: Department[]
 }
 
+// 新しい見た目: キーボードで選んだときの輪郭
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2'
+
 const AVATAR_COLORS = [
   'from-blue-400 to-blue-600',
   'from-red-400 to-red-600',
@@ -24,12 +31,24 @@ const AVATAR_COLORS = [
   'from-pink-400 to-pink-600',
 ]
 
+const LIST_STATUS: Record<string, { label: string; color: string }> = {
+  ACTIVE: { label: '在籍', color: 'bg-emerald-100 text-emerald-700' },
+  ON_LEAVE: { label: '休職中', color: 'bg-amber-100 text-amber-700' },
+  RESIGNED: { label: '退職', color: 'bg-gray-100 text-gray-600' },
+}
+
 export default function EmployeeGrid({ employees, departments }: EmployeeGridProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const uiNext = useToolUiNext()
+  // 新しい見た目では、動きを減らす設定のときに並びの出現アニメーションを止める
+  const reduceMotion = useReducedMotion()
+  const still = uiNext && Boolean(reduceMotion)
+  const filtering = Boolean(search) || departmentFilter !== 'all' || statusFilter !== 'all'
+  const clearFilters = () => { setSearch(''); setDepartmentFilter('all'); setStatusFilter('all') }
 
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
@@ -48,6 +67,157 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
       return matchSearch && matchDept && matchStatus
     })
   }, [employees, search, departmentFilter, statusFilter])
+
+  // 新しい見た目: 絞り込みで0件のときは「条件をクリア」を1つだけ出す（絵は出さない）
+  const noResults = uiNext ? (
+    <EmptyState
+      kind="no-results"
+      title="条件に合う従業員が見つかりません"
+      description="検索の言葉や、部署・ステータスの絞り込みを変えてみてください。"
+      action={filtering ? <Button variant="secondary" icon="RotateCcw" onClick={clearFilters}>条件をクリア</Button> : undefined}
+    />
+  ) : null
+
+  if (uiNext) {
+    const selectClass = `min-h-11 min-w-0 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-base font-bold text-gray-700 transition-all cursor-pointer border-none ${FOCUS_RING}`
+    return (
+      <div>
+        {/* Toolbar（375px では検索の下に、絞り込みと表示切り替えを折り返して並べる） */}
+        <div className="flex flex-col lg:flex-row gap-3 mb-6">
+          <div className="relative min-w-0 flex-1">
+            <Search aria-hidden className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="名前、社員番号、メールで検索"
+              aria-label="従業員を検索"
+              className={`w-full min-h-11 pl-12 pr-4 py-3 bg-white rounded-full shadow-sm hover:shadow-md text-base transition-all ${FOCUS_RING}`}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select aria-label="部署で絞り込む" value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)} className={`${selectClass} max-w-full`}>
+              <option value="all">全部署</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <select aria-label="ステータスで絞り込む" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectClass}>
+              <option value="all">全ステータス</option>
+              <option value="ACTIVE">在籍</option>
+              <option value="ON_LEAVE">休職中</option>
+              <option value="RESIGNED">退職</option>
+            </select>
+            <div role="group" aria-label="表示の切り替え" className="flex bg-gray-100 rounded-full overflow-hidden p-1">
+              {([['grid', 'グリッド表示', LayoutGrid], ['list', 'リスト表示', List]] as const).map(([mode, label, Icon]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  aria-label={label}
+                  aria-pressed={viewMode === mode}
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition-all ${FOCUS_RING} ${
+                    viewMode === mode ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Icon aria-hidden className="h-5 w-5" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Results Count（絞り込みの結果は読み上げにも伝える） */}
+        <p role="status" className="text-base font-bold text-gray-600 mb-4">
+          {filtered.length}名の従業員
+        </p>
+
+        {filtered.length === 0 ? noResults : viewMode === 'grid' ? (
+          <motion.div
+            initial={still ? false : 'hidden'}
+            animate="visible"
+            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
+            {filtered.map((emp) => (
+              <motion.div
+                key={emp.id}
+                className="min-w-0"
+                variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                <EmployeeCard employee={emp} />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          // 横に収まらないときは表の中だけを横にスクロールする（画面全体は横に動かさない）
+          <div className="bg-white rounded-3xl shadow-md overflow-x-auto">
+            <table className="w-full min-w-[320px]">
+              <thead>
+                <tr className="border-b border-gray-100 text-left">
+                  <th scope="col" className="px-4 py-3 text-xs font-bold text-gray-500 tracking-wider">従業員</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-bold text-gray-500 tracking-wider hidden sm:table-cell">部署</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-bold text-gray-500 tracking-wider hidden md:table-cell">役職</th>
+                  <th scope="col" className="px-4 py-3 text-xs font-bold text-gray-500 tracking-wider whitespace-nowrap">ステータス</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((emp) => {
+                  const initials = `${emp.lastName?.[0] || ''}${emp.firstName?.[0] || ''}`
+                  const colorIndex = ((emp.lastName?.charCodeAt(0) || 0) + (emp.firstName?.charCodeAt(0) || 0)) % AVATAR_COLORS.length
+                  const st = LIST_STATUS[emp.status] ?? LIST_STATUS.ACTIVE
+                  return (
+                    // 行のどこを押しても開く（マウス用）。キーボードは名前のリンクで開く
+                    <tr
+                      key={emp.id}
+                      onClick={() => router.push(`/hr/employees/${emp.id}`)}
+                      className="border-b border-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          {emp.photoUrl ? (
+                            <img src={emp.photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                          ) : (
+                            <div aria-hidden className={`h-10 w-10 shrink-0 rounded-full bg-gradient-to-br ${AVATAR_COLORS[colorIndex]} flex items-center justify-center text-white text-sm font-bold`}>
+                              {initials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <Link
+                              href={`/hr/employees/${emp.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`inline-flex min-h-11 items-center rounded-lg text-base font-bold text-gray-900 hover:text-blue-700 ${FOCUS_RING}`}
+                            >
+                              <span className="truncate">{emp.lastName} {emp.firstName}</span>
+                            </Link>
+                            {emp.employeeNumber && (
+                              <p className="truncate text-xs font-semibold text-gray-500">{emp.employeeNumber}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-base font-semibold text-gray-700 hidden sm:table-cell">
+                        {emp.department?.name || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-base text-gray-600 hidden md:table-cell">
+                        {emp.position || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold ${st.color}`}>
+                          {st.label}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>

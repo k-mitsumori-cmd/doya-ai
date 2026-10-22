@@ -11,14 +11,14 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { writeCunningSession } from '@/lib/cunning/session-write'
 import { transcribeChunk } from '@/lib/cunning/transcribe'
 import { admitCunningAudio, releaseFailedCunningAudio, hasCurrentCunningAudioClaim } from '@/lib/cunning/audio-admission'
-import { betaServiceGuard } from '@/lib/beta-services'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 // POST /api/cunning/transcribe — 音声チャンク(multipart) → 文字起こしテキスト
 // body: FormData { audio: Blob, sessionId: string }
 export async function POST(req: NextRequest) {
-  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
-  const betaBlocked = await betaServiceGuard('cunning')
-  if (betaBlocked) return betaBlocked
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   let claim: { userId: string; sessionId: string; token: string; speaker: 'remote' | 'self'; claimedAt: Date } | undefined
   try {
     const userId = await getUserId()

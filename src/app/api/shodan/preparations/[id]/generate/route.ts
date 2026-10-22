@@ -14,6 +14,9 @@ import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationIn
 
 type Ctx = { params: Promise<{ id: string }> }
 
+// 提案資料の生成が完了しなかったことを表す記録（ShodanPreparation.errorMessage に保存する）
+const INCOMPLETE_MESSAGE = '提案資料の生成が完了しませんでした。再生成をお試しください。'
+
 // POST /api/shodan/preparations/[id]/generate — リサーチ済み案件から「分析→提案資料」を生成
 export async function POST(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
@@ -51,6 +54,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     prep = currentPrep
     const research = prep.research as unknown as CompanyResearch | null
     if (!research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
+
+    // 有料のAIを呼ぶ前に「未完了」を記録する。成功時に null へ戻す。
+    // 関数のタイムアウトで catch が走らなくても記録が残るため、画面を開き直したときに自動で作り直さない。
+    const startedAt = new Date(Math.max(Date.now(), prep.updatedAt.getTime() + 1))
+    const marked = await prisma.shodanPreparation.updateMany({
+      where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },
+      data: { errorMessage: INCOMPLETE_MESSAGE, updatedAt: startedAt },
+    })
+    if (marked.count !== 1) {
+      return NextResponse.json({ error: '資料が別の操作で変更されました。再読み込みしてご確認ください。' }, { status: 409 })
+    }
+    prep = { ...prep, errorMessage: INCOMPLETE_MESSAGE, updatedAt: startedAt }
     const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
     const own: OwnCompanyProfile | null = profile
       ? {

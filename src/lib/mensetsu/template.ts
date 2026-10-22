@@ -109,7 +109,7 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     .join('\n')
 
   const raw = await geminiGenerateJson<GeneratedTemplate>(
-    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } },
     'MensetsuTemplate'
   )
 

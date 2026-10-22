@@ -9,19 +9,21 @@ import type { ReactNode } from 'react'
 import { EmptyState } from '@/components/ds'
 import { useUiNext } from '@/components/shell/ui-next-context'
 
-export default function SfaEmpty({ title, description, action, filtered, legacy }: {
+export default function SfaEmpty({ title, description, action, filtered, bare, legacy }: {
   title: string
   description?: ReactNode
   /** 次にやることは1つだけ */
   action?: ReactNode
   /** 絞り込みの結果が0件のとき（作るのではなく条件を変える案内なので、絵を「見つからない」にする） */
   filtered?: boolean
+  /** カード（ds の Card など）の中に置くとき。外側の枠を付けない */
+  bare?: boolean
   legacy: ReactNode
 }) {
   const uiNext = useUiNext()
   if (!uiNext) return <>{legacy}</>
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white">
+    <div className={bare ? undefined : 'rounded-2xl border border-slate-200 bg-white'}>
       <EmptyState
         kind={filtered ? 'no-results' : 'zero'}
         title={title}

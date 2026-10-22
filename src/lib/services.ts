@@ -58,6 +58,16 @@ export interface Service {
   requiresAuth: boolean
   isNew?: boolean
   badge?: string
+
+  /**
+   * 'beta' … 開発中のベータ版として、一旦すべての一覧から外す（2026-10-22 ユーザー指示。最初は cunning）。
+   * status とは別の旗。status は「公開中か」、こちらは「誰に見せるか」を表す。
+   * - 外から見える一覧（トップ・LP・料金・sitemap・llms.txt）にも、ログイン後のメニュー・⌘K・最近使ったツールにも出さない
+   * - 画面と API は、許可した人（UI_PREVIEW_EMAILS）だけが使える。ほかの人には「開発中のベータ版です」と 403
+   *   （src/lib/beta-service.ts・src/lib/beta-service.server.ts）
+   * - 定義・ページ・API・DB は残す。この行を消せば、そのまま元に戻る
+   */
+  hidden?: 'beta'
 }
 
 // ============================================
@@ -1201,6 +1211,8 @@ export const SERVICES: Service[] = [
       },
     },
     status: 'active',
+    // 2026-10-22 ユーザー指示「開発中のベータ版として一旦非表示」。戻すときはこの行を消す
+    hidden: 'beta',
     category: 'other',
     order: 23,
     requiresAuth: true,
@@ -1952,13 +1964,24 @@ export const RETIRED_SERVICE_IDS = new Set([
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
 export const UNLISTED_SERVICE_IDS = new Set<string>(['tenjikai', 'shanai', 'income', 'expense']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開。tenjikai は開発中
 
-// 開発中のベータ版として、一旦どこにも出さないサービスID（2026-10-19 ユーザー判断「ドヤカンニングは、開発中のベータ版として一旦非表示に」）。
-// 開発中（UNLISTED）と違い、ログイン後のツールの一覧・左のメニュー・⌘K・料金ページの数にも出さない。
-// 画面（/<id>）と API（/api/<id>/*）は、許可した人（src/lib/beta-services.ts）だけが使える。データは消さない。
-// ⚠️ 戻すときは、ここから id を外すだけ（一覧・数・入口の判定は、すべてこの旗から決まる）。
-export const BETA_HIDDEN_SERVICE_IDS = new Set<string>(['cunning'])
+// 開発中のベータ版として、一旦すべての一覧から外すサービスID（Service.hidden === 'beta' から作る）。
+// UNLISTED と違い、ログイン後のメニュー・⌘K・最近使ったツールからも外す。画面と API は許可した人だけが使える。
+// ⚠️ 切り替えは SERVICES の hidden の1か所だけ。ここに id をベタ書きしない。
+export const BETA_HIDDEN_SERVICE_IDS: ReadonlySet<string> = new Set(
+  SERVICES.filter((s) => s.hidden === 'beta').map((s) => s.id),
+)
 
-// 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中 ＋ ベータで非表示。
+export function isBetaHiddenService(serviceId: string): boolean {
+  return BETA_HIDDEN_SERVICE_IDS.has(serviceId)
+}
+
+/** パス（/cunning/history など）が、ベータで隠しているツールの下か */
+export function isBetaHiddenPath(pathname: string): boolean {
+  const p = (pathname || '').split(/[?#]/)[0]
+  return SERVICES.some((s) => s.hidden === 'beta' && (p === s.href || p.startsWith(`${s.href}/`)))
+}
+
+// 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
 // ここに含まれる id は「外から見えるどの一覧にも出ない」。
 // ⚠️ ログイン後のアプリ内ナビは getActiveServices() を使う（開発中のものは出る）。
@@ -1973,6 +1996,14 @@ export const HIDDEN_SERVICE_IDS = new Set([
 //    サイドバーの他サービス一覧など「使う人向け」の導線はこちらを使う。
 //    対外的な一覧（トップ・sitemap・公開LP）は getPublicServices() を使うこと。
 export function getActiveServices(): Service[] {
+  // 開発中のベータ版（hidden: 'beta'）は、ログイン後の一覧からも外す
+  return getRunningServices().filter(s => !BETA_HIDDEN_SERVICE_IDS.has(s.id))
+}
+
+// 動いているサービス（提供終了を除く）。開発中のベータ版（hidden: 'beta'）も含む。
+// ⚠️ 一覧には使わない。ツールの画面かどうかの判定（ポップアップを出さない・計測でツールとして数える）だけに使う。
+//    ベータ版も、許可した人が開いたときはツールの画面として扱うため。
+export function getRunningServices(): Service[] {
   return SERVICES
     .filter(s => !RETIRED_SERVICE_IDS.has(s.id))
     // ベータで非表示のものは、ログイン後の一覧にも出さない（BETA_HIDDEN_SERVICE_IDS）

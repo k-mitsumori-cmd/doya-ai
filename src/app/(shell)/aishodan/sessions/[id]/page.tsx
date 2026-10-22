@@ -17,6 +17,7 @@ import { DoyaKun } from '@/components/lp'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface Detail {
   id: string
@@ -77,6 +78,31 @@ function AishodanSessionWorkspace() {
   const [saving, setSaving] = useState(false)
   const [operationUnknown, setOperationUnknown] = useState(false)
   const [error, setError] = useState('')
+  /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
+  const [loadStatus, setLoadStatus] = useState(0)
+  /** 新しい見た目だけ: 判定の保存・再評価に失敗したときの「何が起きたか・どうすればよいか」 */
+  const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
+  const tap = uiNext ? AISHODAN_TAP : ''
+  /**
+   * 新しい見た目だけ: 判定の操作の失敗を、サーバーの文の代わりに利用者向けの文で知らせる。
+   * override / reEvaluate に onRejected として渡す（今までの見た目では渡さず、サーバーの文をそのまま出す）
+   */
+  function actionRejected(subject: string) {
+    return (status: number, serverMessage: string | undefined) => {
+      const f = describeAishodanFailure(status, subject, { serverMessage })
+      setActionFailure(f)
+      notifyError(setError, f.what)
+    }
+  }
+  function overrideNext(verdict: Verdict) {
+    setActionFailure(null)
+    return override(verdict, actionRejected('判定を保存できませんでした。'))
+  }
+  function reEvaluateNext() {
+    setActionFailure(null)
+    return reEvaluate(false, actionRejected('自動判定を作成できませんでした。'))
+  }
 
   const load = useCallback(async () => {
     if (!id) return
@@ -86,15 +112,19 @@ function AishodanSessionWorkspace() {
     try {
       const r = await fetch(proof.api(`/api/aishodan/sessions/${id}`))
       const j = await r.json()
-      if (!r.ok) throw new Error(j?.error || '読み込みに失敗しました')
+      if (!r.ok) throw new AishodanHttpError(j?.error || '読み込みに失敗しました', r.status)
       if (version !== loadVersion.current || !proof.current()) return
       setD(j.session)
     } catch (e) {
-      if (version === loadVersion.current && proof.current()) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) {
+        setLoadStatus(failureStatus(e))
+        // 新しい見た目では、トーストにもサーバーの文を出さない
+        notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
       if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [id, proof])
+  }, [id, proof, uiNext])
 
   useEffect(() => {
     void load()
@@ -112,7 +142,7 @@ function AishodanSessionWorkspace() {
     setError('直前の判定結果を確認できません。商談ログを再読み込みして確認してください。')
   }, [proof, saving])
 
-  async function override(verdict: Verdict) {
+  async function override(verdict: Verdict, onRejected?: (status: number, serverMessage: string | undefined) => void) {
     if (!id || !proof.current()) return
     setSaving(true)
     setError('')
@@ -129,7 +159,8 @@ function AishodanSessionWorkspace() {
       if (!proof.current()) return
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        if (proof.current()) notifyError(setError, j?.error || '判定を保存できませんでした')
+        if (proof.current() && onRejected) onRejected(res.status, j?.error)
+        else if (proof.current()) notifyError(setError, j?.error || '判定を保存できませんでした')
         return
       }
       await load()
@@ -141,7 +172,7 @@ function AishodanSessionWorkspace() {
   }
 
   /** 自動判定をやり直す。生成に失敗した商談を救うための導線 */
-  async function reEvaluate(overwriteManual = false) {
+  async function reEvaluate(overwriteManual = false, onRejected?: (status: number, serverMessage: string | undefined) => void) {
     if (!id || !proof.current()) return
     setSaving(true)
     setError('')
@@ -157,11 +188,12 @@ function AishodanSessionWorkspace() {
         // 手入力を上書きしてよいか、一度だけ確かめる
         if (j?.needsConfirm && !overwriteManual) {
           if (window.confirm('この商談の判定は担当者が手で入力しています。AIの判定で上書きしますか。')) {
-            await reEvaluate(true)
+            await reEvaluate(true, onRejected)
           }
           return
         }
-        notifyError(setError, j?.error || '判定を作成できませんでした')
+        if (onRejected) onRejected(res.status, j?.error)
+        else notifyError(setError, j?.error || '判定を作成できませんでした')
         return
       }
       await load()
@@ -184,6 +216,20 @@ function AishodanSessionWorkspace() {
       </div>
     )
   }
+  if (!d && uiNext) {
+    // サーバーの文は出さない。見つからない・権限が無いときは一覧へ、通信の失敗はやり直す
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? '商談を読み込めませんでした。' : 'この商談は見つかりませんでした。')}
+          onRetry={() => void load()}
+          backHref={proof.href('/aishodan/sessions')}
+          backLabel="商談ログに戻る"
+          returnHref={proof.href(`/aishodan/sessions/${id}`)}
+        />
+      </div>
+    )
+  }
   if (!d) {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
@@ -203,11 +249,11 @@ function AishodanSessionWorkspace() {
     <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href={proof.href('/aishodan/sessions')} className="text-xs text-slate-500 hover:underline font-semibold">← 商談ログ</Link>
-          <AishodanHeading className="text-lg font-bold text-slate-900">
+          <Link href={proof.href('/aishodan/sessions')} className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← 商談ログ</Link>
+          <AishodanHeading className={`text-lg font-bold text-slate-900${uiNext ? ' break-words [text-wrap:balance]' : ''}`}>
             {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
           </AishodanHeading>
-          <p className="text-xs text-slate-500 font-semibold">
+          <p className={`text-xs text-slate-500 font-semibold${uiNext ? ' break-words' : ''}`}>
             {d.productName} / {d.startedAt ? new Date(d.startedAt).toLocaleString('ja-JP') : '未実施'}
             {d.guestEmail && ` / ${d.guestEmail}`}
           </p>
@@ -216,7 +262,7 @@ function AishodanSessionWorkspace() {
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
         {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          判定が後から保存される場合があります。内容を確認してから、次の操作を選んでください。
+          直前の判定の結果を確認できません。後から保存される場合があります。最新の商談ログを確認してから、次の操作を選んでください。
           <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新の商談ログを読み込む</button>
         </div>}
         {d.evaluationStatus && !['ready', 'manual'].includes(d.evaluationStatus) && (
@@ -237,7 +283,7 @@ function AishodanSessionWorkspace() {
         )}
         {/* 判定 */}
         {d.outcome ? (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
             <div className="flex flex-wrap items-center gap-4">
               <div>
                 <p className="text-xs text-slate-500 font-semibold">適合スコア</p>
@@ -263,9 +309,12 @@ function AishodanSessionWorkspace() {
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                         c.met ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-white'
                       }`}
+                      aria-hidden={uiNext ? true : undefined}
                     >
                       {c.met ? '○' : '−'}
                     </span>
+                    {/* 記号だけでは読み上げで伝わらない（新しい見た目だけ） */}
+                    {uiNext && <span className="sr-only">{c.met ? '満たしている' : '満たしていない'}</span>}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">
                         {c.label} <span className="text-xs font-normal text-slate-500 font-semibold">（{c.weight}点）</span>
@@ -302,21 +351,24 @@ function AishodanSessionWorkspace() {
 
             <div className="mt-5 border-t border-slate-100 pt-4">
               <button
-                onClick={() => void reEvaluate()}
+                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
                 disabled={saving || !canEvaluate}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                className={`rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40${tap}`}
               >
                 自動判定をやり直す
               </button>
-              {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+              {error && uiNext ? (
+                <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/sessions/${id}`)} /></div>
+              ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
               <p className="mt-4 text-xs text-slate-500 font-semibold">判定を変える</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                   <button
                     key={v}
-                    onClick={() => override(v)}
+                    onClick={() => (uiNext ? overrideNext(v) : override(v))}
                     disabled={saving || d.outcome?.verdict === v}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
+                    aria-pressed={uiNext ? d.outcome?.verdict === v : undefined}
+                    className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                   >
                     {VERDICT_LABELS[v]}
                   </button>
@@ -338,9 +390,9 @@ function AishodanSessionWorkspace() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
-                onClick={() => void reEvaluate()}
+                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
                 disabled={saving || !canEvaluate}
-                className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
+                className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
               >
                 {saving ? '処理中…' : '自動判定をやり直す'}
               </button>
@@ -348,15 +400,17 @@ function AishodanSessionWorkspace() {
               {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                 <button
                   key={v}
-                  onClick={() => override(v)}
+                  onClick={() => (uiNext ? overrideNext(v) : override(v))}
                   disabled={saving}
-                  className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold"
+                  className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                 >
                   {VERDICT_LABELS[v]}
                 </button>
               ))}
             </div>
-            {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+            {error && uiNext ? (
+              <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/sessions/${id}`)} /></div>
+            ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
           </section>
         )}
 
@@ -402,12 +456,12 @@ function AishodanSessionWorkspace() {
           <h2 className="text-sm font-bold text-slate-900">ヒアリング結果</h2>
           <dl className="mt-3 divide-y divide-slate-100">
             {d.slots.map((s) => (
-              <div key={s.key} className="flex gap-4 py-2.5">
-                <dt className="w-32 shrink-0 text-xs text-slate-500 font-semibold">
+              <div key={s.key} className={uiNext ? 'flex gap-3 py-2.5 sm:gap-4' : 'flex gap-4 py-2.5'}>
+                <dt className={uiNext ? 'w-24 shrink-0 text-xs text-slate-500 font-semibold sm:w-32' : 'w-32 shrink-0 text-xs text-slate-500 font-semibold'}>
                   {s.label}
                   {s.required && <span className="ml-1 text-rose-500">*</span>}
                 </dt>
-                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'}`}>
+                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'}${uiNext ? ' min-w-0 break-words' : ''}`}>
                   {s.value || '聞き取れず'}
                 </dd>
               </div>
@@ -442,7 +496,7 @@ function AishodanSessionWorkspace() {
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       t.speaker === 'ai' ? 'bg-slate-100 text-slate-800' : 'bg-[#0066ff] text-white'
-                    }`}
+                    }${uiNext ? ' min-w-0 break-words' : ''}`}
                   >
                     {t.text}
                   </div>

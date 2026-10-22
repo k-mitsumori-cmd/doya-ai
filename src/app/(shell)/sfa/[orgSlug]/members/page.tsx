@@ -6,6 +6,9 @@ import toast from 'react-hot-toast'
 import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
 import { sfaInit } from '@/lib/sfa/client'
 import SfaPageHeading from '@/components/sfa/PageHeading'
+import SfaLoadError from '@/components/sfa/SfaLoadError'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Trash2 } from 'lucide-react'
 
 interface Member {
   id: string
@@ -25,10 +28,13 @@ const ASSIGNABLE = [
 const RANK: Record<string, number> = { member: 0, manager: 1, admin: 2, owner: 3 }
 
 export default function SfaMembersPage() {
+  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const ready = !!orgSlug
   const [members, setMembers] = useState<Member[]>([])
   const [loadState, setLoadState] = useState<'loading' | 'error' | 'ready'>('loading')
+  // 新しい見た目のとき、失敗の種類（ログイン切れ・権限なし・通信）で案内を変えるために、HTTP の状態を持つ（画面には出さない）
+  const [loadStatus, setLoadStatus] = useState(0)
   const [myRole, setMyRole] = useState('member')
   const [myMemberId, setMyMemberId] = useState('')
   const requestSeq = useRef(0)
@@ -42,11 +48,12 @@ export default function SfaMembersPage() {
     if (!ready) return
     const seq = ++requestSeq.current
     setLoadState('loading')
+    setLoadStatus(0)
     setMyRole('member')
     setMyMemberId('')
     fetch('/api/sfa/members', sfaInit(orgSlug))
       .then(async (r) => {
-        if (!r.ok) throw new Error('Members request failed')
+        if (!r.ok) { if (requestSeq.current === seq) setLoadStatus(r.status); throw new Error('Members request failed') }
         return r.json()
       })
       .then((d) => {
@@ -125,7 +132,7 @@ export default function SfaMembersPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-3xl mx-auto">
+    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-3xl mx-auto' : 'p-6 lg:p-10 max-w-3xl mx-auto'}>
       <SfaPageHeading className="text-2xl font-black text-slate-900 mb-1">メンバー</SfaPageHeading>
       <p className="text-slate-500 font-bold text-sm mb-6">チームを招待し、権限を管理できます。</p>
 
@@ -137,14 +144,15 @@ export default function SfaMembersPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="invite@example.com"
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold"
+              aria-label="招待するメールアドレス"
+              className={uiNext ? 'min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold' : 'flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold'}
             />
-            <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">
+            <select aria-label="招待する権限" value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">
               {assignable.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
-            <button onClick={invite} disabled={busy} className="px-5 py-3 rounded-xl bg-green-600 text-white font-black disabled:opacity-50 whitespace-nowrap">
+            <button onClick={invite} disabled={busy} className="min-h-11 px-5 py-3 rounded-xl bg-green-600 text-white font-black disabled:opacity-50 whitespace-nowrap">
               {busy ? '送信中…' : '招待する'}
             </button>
           </div>
@@ -156,6 +164,8 @@ export default function SfaMembersPage() {
       <div className="space-y-2">
         {loadState === 'loading' ? (
           <p className="py-8 text-center text-slate-500">読み込み中…</p>
+        ) : loadState === 'error' && uiNext ? (
+          <SfaLoadError error={loadStatus} what="メンバー一覧" onRetry={load} orgSlug={orgSlug} />
         ) : loadState === 'error' ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
             <p className="font-bold text-rose-700">メンバー一覧を読み込めませんでした。時間をおいて再試行してください。</p>
@@ -166,11 +176,11 @@ export default function SfaMembersPage() {
           // 自分より下位のメンバーのみ編集可（サーバ側と一致）
           const editable = canManage && !isSelf && RANK[m.role] < (RANK[myRole] ?? 0)
           return (
-            <div key={m.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div key={m.id} className={uiNext ? 'bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center justify-between gap-3' : 'bg-white rounded-xl shadow-sm p-4 flex items-center justify-between gap-3'}>
+              <div className={uiNext ? 'min-w-0 flex-1' : 'min-w-0'}>
                 <p className="font-black text-slate-800 truncate">
                   {m.name || m.inviteEmail || '（招待中）'}
-                  {isSelf && <span className="ml-2 text-[10px] font-black text-green-600">あなた</span>}
+                  {isSelf && <span className="ml-2 text-[10px] font-black text-green-600 whitespace-nowrap">あなた</span>}
                 </p>
                 {m.inviteEmail && m.name && <p className="text-[11px] font-bold text-slate-400 truncate">{m.inviteEmail}</p>}
               </div>
@@ -179,7 +189,8 @@ export default function SfaMembersPage() {
                   <select
                     value={m.role}
                     onChange={(e) => changeRole(m, e.target.value)}
-                    className="text-xs font-black rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
+                    aria-label={`${m.name || m.inviteEmail || '招待中のメンバー'}の権限`}
+                    className={uiNext ? 'min-h-11 text-xs font-black rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50' : 'text-xs font-black rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50'}
                   >
                     {ASSIGNABLE.map((r) => (
                       <option key={r.value} value={r.value}>{r.label}</option>
@@ -199,9 +210,10 @@ export default function SfaMembersPage() {
                   <button
                     onClick={() => remove(m)}
                     title={m.status === 'PENDING' ? '招待を取り消す' : '削除'}
-                    className="text-slate-300 hover:text-red-500 transition-colors"
+                    aria-label={m.status === 'PENDING' ? `${m.inviteEmail || 'この招待'}の招待を取り消す` : `${m.name || m.inviteEmail || 'このメンバー'}を削除`}
+                    className={uiNext ? 'grid h-11 w-11 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-slate-300 hover:text-red-500 transition-colors'}
                   >
-                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                    {uiNext ? <Trash2 className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined text-[20px]">delete</span>}
                   </button>
                 )}
               </div>

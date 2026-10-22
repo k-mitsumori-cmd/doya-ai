@@ -15,6 +15,11 @@ import { DoyaKun } from '@/components/lp'
 import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
 import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
 import OwnerTransferPanel from '@/components/org/OwnerTransferPanel'
+import { ErrorNotice } from '@/components/ds'
+import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
+
+// 新しい見た目で、キーボードで移ったときに見える枠（UI 品質 a11y）
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2'
 
 const FIELDS = [
   { key: 'companyName', label: '会社名', placeholder: '株式会社スリスタ', required: true },
@@ -49,7 +54,7 @@ export default function QuoteSettingsPage() {
     <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
-          <Link href={listHref} className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
+          <Link href={listHref} className={`${uiNext ? `inline-flex min-h-11 items-center rounded ${FOCUS} ` : ''}text-xs text-slate-500 hover:underline font-semibold`}>← 見積もり一覧</Link>
           {!uiNext && <QuoteOrgSwitcher />}
           <QuotePageHeading className="text-lg font-bold text-slate-900">設定</QuotePageHeading>
           <p className="text-xs text-slate-500 font-semibold">発行者情報とメンバーを管理します。</p>
@@ -57,18 +62,27 @@ export default function QuoteSettingsPage() {
       </header>
 
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
-        {loading && <DoyaKun mood="working" size={88} />}
+        {/* ⚠️ 新しい見た目では、読み込み中の絵を出し入れしない（下の入力欄が押し下げられる＝CLS）。高さを取った一行だけにする */}
+        {uiNext
+          ? <p role="status" className="h-5 text-xs font-semibold text-slate-500">{loading ? '発行者情報を読み込んでいます…' : ''}</p>
+          : loading && <DoyaKun mood="working" size={88} />}
         <h2 className="text-base font-bold text-slate-900">発行者情報</h2>
         <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
-        {(!loaded || unknown) && (
-          <button type="button" onClick={() => void load()} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">
+        {error && uiNext && (() => {
+          // 新しい見た目: 読み込み失敗・権限は決まった文言に置き換える（S-20）。入力の直し方（保存の 400）はそのまま見せる
+          const kind = quoteErrorKind(0, error)
+          const copy = loaded && kind === 'failed' ? { what: error, how: '' } : quoteErrorCopy(kind, '発行者情報')
+          return <ErrorNotice what={copy.what} how={copy.how || undefined} onRetry={kind === 'forbidden' || kind === 'login' ? undefined : () => void load()} retryLabel="もう一度読み込む" />
+        })()}
+        {error && !uiNext && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {(uiNext ? unknown || (!loaded && !loading && !error) : !loaded || unknown) && (
+          <button type="button" onClick={() => void load()} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold`}>
             発行者情報を再読み込みする
           </button>
         )}
         {unknown && <p className="text-sm font-semibold text-amber-800">保存結果が未確認のため、再送信を停止しています。再読み込みで保存済みの情報を確認してください。</p>}
         {loaded && !canEdit && <p className="text-sm text-slate-600">発行者情報の変更はオーナーまたは管理者にご依頼ください。</p>}
-        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
+        {message && <div role={uiNext ? 'status' : undefined} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         <section className="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           {FIELDS.map((f) => (
@@ -82,6 +96,7 @@ export default function QuoteSettingsPage() {
                 value={form[f.key] ?? ''}
                 onChange={(e) => update(f.key, e.target.value)}
                 placeholder={f.placeholder}
+                aria-required={'required' in f && f.required ? true : undefined}
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
@@ -111,7 +126,7 @@ export default function QuoteSettingsPage() {
         <button
           onClick={save}
           disabled={!canEdit || saving || unknown || !form.companyName?.trim()}
-          className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400`}
         >
           {saving ? '保存中...' : '保存する'}
         </button>

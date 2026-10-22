@@ -72,9 +72,10 @@ function Onboarding() {
   )
 }
 
-function TrendTable({ rows }: { rows: TrendRow[] }) {
+function TrendTable({ rows, hideBars = false }: { rows: TrendRow[]; hideBars?: boolean }) {
   const max = Math.max(1, ...rows.map((r) => Math.max(r.revenue, r.received, r.expense ?? 0)))
-  const bar = (v: number | null, fill: string) => (
+  // 新しい見た目では上に面グラフがあるので、表の中の小さな横棒は出さない（数字だけにする）
+  const bar = (v: number | null, fill: string) => hideBars ? null : (
     <div className={s.bar}><div className={s.barFill} style={{ width: `${v ? Math.max(2, Math.round((v / max) * 100)) : 0}%`, background: fill }} /></div>
   )
   return (
@@ -162,7 +163,7 @@ export default function Dashboard() {
 
               <Card title="月別推移（直近12か月）">
                 {uiNext && <div style={{ marginBottom: 16 }}><TrendChart rows={data.trend} /></div>}
-                <TrendTable rows={data.trend} />
+                <TrendTable rows={data.trend} hideBars={uiNext} />
               </Card>
             </div>
           )

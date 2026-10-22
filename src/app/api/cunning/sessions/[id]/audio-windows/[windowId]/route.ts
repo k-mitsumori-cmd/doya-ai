@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { claimCunningAudioWindow, settleCunningAudioWindow, releaseCunningAudioWindow } from '@/lib/cunning/audio-windows'
 import { transcribeChunk } from '@/lib/cunning/transcribe'
-import { betaServiceGuard } from '@/lib/beta-services'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,9 +12,9 @@ const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
 type Claim = { userId: string; sessionId: string; recordingToken: string; windowId: string; inputHash: string; claimToken: string }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string; windowId: string }> }) {
-  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
-  const betaBlocked = await betaServiceGuard('cunning')
-  if (betaBlocked) return betaBlocked
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   let claim: Claim | undefined
   try {
     const userId = await getUserId()

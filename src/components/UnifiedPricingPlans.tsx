@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
-import { CheckoutButton, type CheckoutActionGuard } from '@/components/CheckoutButton'
+import { CheckoutButton, type CheckoutActionGuard, type PortalActionGuard } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
@@ -19,13 +19,7 @@ import {
 const BRAND = '#0066ff'
 const ACCENT = '#ff1e72'
 
-export interface PortalNavigationGuard {
-  identity: string
-  current: () => boolean
-  verify: (signal: AbortSignal) => Promise<boolean>
-  prepareReturn: (navigationId: string) => boolean
-  returnPath?: (navigationId: string) => string
-}
+export interface PortalNavigationGuard extends PortalActionGuard {}
 
 export function GuardedPortalLink({ guard }: { guard: PortalNavigationGuard }) {
   const [busy, setBusy] = useState(false)
@@ -238,6 +232,7 @@ export function UnifiedPricingPlans({
             <CheckoutButton
               billingOrganization={billingOrganization}
               actionGuard={checkoutActionGuard}
+              portalActionGuard={serviceId === 'aio' ? portalNavigationGuard : undefined}
               planId={UNIFIED_PRO_PLAN_ID}
               loginCallbackUrl={loginCallbackUrl || returnTo}
               variant="secondary"

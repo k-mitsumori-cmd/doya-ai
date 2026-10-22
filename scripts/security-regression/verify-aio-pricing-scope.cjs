@@ -7,7 +7,7 @@ const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 
 const source = fs.readFileSync(process.env.AIO_PRICING_SOURCE || path.resolve(__dirname, '../../src/app/(shell)/aio/pricing/page.tsx'), 'utf8')
-const selection = require('./load-typescript.cjs').load('src/lib/organization-workspace-selection.ts')
+const selection = require(process.env.DOYA_AIO_LOADER || './load-typescript.cjs').load('src/lib/organization-workspace-selection.ts')
 const compiled = ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
 } }).outputText
@@ -15,13 +15,24 @@ let context = null
 let billing = null
 let contextReads = 0
 let priceProps = null
+let scopeExpected = null
+let currentSession = { user: { id: 'actor' } }
 const pageExports = {}
 const mocks = {
   'react/jsx-runtime': require('react/jsx-runtime'),
   'next/link': ({ href, children, ...props }) => React.createElement('a', { href, ...props }, children),
+  'next/navigation': { redirect: () => { throw Error('unexpected checkout return marker') } },
+  'next-auth': { getServerSession: async () => currentSession },
+  '@/lib/auth': { authOptions: {} },
+  '@/lib/aio/billing-return-route': { aioReturnRedirect: () => null },
   '@/components/UnifiedPricingPlans': { UnifiedPricingPlans: props => { priceProps = props; return React.createElement('div', { 'data-pricing': true }) } },
+  '@/components/aio/AioPricingScope': { AioPricingScope: ({ expected }) => {
+    scopeExpected = expected
+    priceProps = { currentPlan: expected.plan, planSource: 'organization', canPurchase: expected.role === 'owner' }
+    return React.createElement('div', { 'data-scope': true })
+  } },
   '@/components/aio/ui': { DoyaKun: () => null },
-  '@/lib/aio/access': { getAioContext: async () => { contextReads++; return context } },
+  '@/lib/aio/access': { getAioContext: async slug => { contextReads++; return context ? { ...context, userId: 'actor', organizationSlug: slug } : null } },
   '@/lib/aio/billing': { getAioBilling: async () => billing },
   '@/lib/organization-workspace-selection': selection,
   '@/lib/prisma': { prisma: {} },
@@ -33,6 +44,7 @@ vm.runInNewContext(compiled, { exports: pageExports, require: name => {
 
 async function render(org) {
   priceProps = null
+  scopeExpected = null
   const element = await pageExports.default({ searchParams: Promise.resolve(org === undefined ? {} : { org }) })
   return renderToStaticMarkup(element)
 }
@@ -50,6 +62,9 @@ async function render(org) {
   assert.equal(priceProps.currentPlan, 'FREE')
   assert.equal(priceProps.planSource, 'organization')
   assert.equal(priceProps.canPurchase, false)
+  assert.equal(scopeExpected.actorId, 'actor')
+  assert.equal(scopeExpected.organizationId, 'org')
+  assert.equal(scopeExpected.slug, 'workspace')
   assert.ok(memberHtml.includes('ご自身のプランを購入しても、この組織の利用枠は増えません'))
   assert.ok(memberHtml.includes('href="/aio/workspace"'))
   const longMemberSlug = 'a'.repeat(120) + '-1234567890123'
@@ -74,6 +89,12 @@ async function render(org) {
   const foreignHtml = await render('foreign')
   assert.equal(priceProps, null)
   assert.ok(foreignHtml.includes('契約情報を確認できません'))
+
+  currentSession = null
+  const guestHtml = await render('workspace')
+  assert.equal(priceProps, null)
+  assert.ok(guestHtml.includes(`href="/auth/signin?callbackUrl=${encodeURIComponent('/aio/pricing?org=workspace')}"`))
+  currentSession = { user: { id: 'actor' } }
 
   const emptyHtml = await render('')
   assert.equal(priceProps, null)

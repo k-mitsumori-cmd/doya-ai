@@ -1,7 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
+import { useToolUiNext } from './ui-next'
 
 export interface Employee {
   id: string
@@ -54,6 +55,45 @@ export default function EmployeeCard({ employee }: EmployeeCardProps) {
   const status = STATUS_MAP[employee.status] ?? STATUS_MAP.ACTIVE
   const initials = `${employee.lastName?.[0] || ''}${employee.firstName?.[0] || ''}`
   const colorIndex = ((employee.lastName?.charCodeAt(0) || 0) + (employee.firstName?.charCodeAt(0) || 0)) % AVATAR_COLORS.length
+  const uiNext = useToolUiNext()
+  const reduceMotion = useReducedMotion()
+
+  if (uiNext) {
+    // 新しい見た目: カード全体が1つのリンク。キーボードの選択を輪郭で示し、長い名前・部署は1行で省略する
+    return (
+      <Link
+        href={`/hr/employees/${employee.id}`}
+        className="group block rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2"
+      >
+        <motion.div
+          whileHover={reduceMotion ? undefined : { y: -4, boxShadow: '0 20px 40px -8px rgba(0,0,0,0.12)' }}
+          transition={{ duration: 0.2 }}
+          className="bg-white rounded-3xl shadow-md p-6 flex flex-col items-center text-center transition-all"
+        >
+          {employee.photoUrl ? (
+            <img src={employee.photoUrl} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-sm mb-4" />
+          ) : (
+            <div aria-hidden className={`w-20 h-20 rounded-full bg-gradient-to-br ${AVATAR_COLORS[colorIndex]} flex items-center justify-center text-white text-xl font-bold mb-4 shadow-sm`}>
+              {initials}
+            </div>
+          )}
+          <h3 className="w-full truncate font-black text-gray-900 text-base">
+            {employee.lastName} {employee.firstName}
+          </h3>
+          {employee.hireDate && (
+            <p className="text-xs font-semibold text-gray-500 mt-0.5">{formatHireDate(employee.hireDate)}</p>
+          )}
+          <p className="w-full truncate text-sm font-bold text-gray-600 mt-1">{employee.department?.name || '未所属'}</p>
+          {employee.position && (
+            <p className="w-full truncate text-sm font-semibold text-gray-500 mt-0.5">{employee.position}</p>
+          )}
+          <span className={`mt-3 whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold ${status.color}`}>
+            {status.label}
+          </span>
+        </motion.div>
+      </Link>
+    )
+  }
 
   return (
     <Link href={`/hr/employees/${employee.id}`}>

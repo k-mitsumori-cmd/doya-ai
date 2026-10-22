@@ -176,7 +176,8 @@ function SignInContent() {
             <div>
               <p className="text-xs font-black text-slate-400 tracking-widest uppercase">Sign in</p>
               <h1 className="mt-2 text-2xl font-black text-slate-900">おかえりなさい</h1>
-              <p className="mt-2 text-sm text-slate-600 font-bold">Googleアカウントで簡単にログインできます</p>
+              {/* 375px で「す」だけが次の行に落ちないよう、文節で折り返す（2026-10-23） */}
+              <p className="mt-2 text-sm text-slate-600 font-bold [text-wrap:balance] [word-break:auto-phrase]">Googleアカウントで<wbr />簡単にログインできます</p>
             </div>
             <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600">
               <Sparkles className="w-6 h-6 text-white" />

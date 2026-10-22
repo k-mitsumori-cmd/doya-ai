@@ -15,6 +15,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import { ToolHero } from '@/components/ds'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
 import styles from './Tool.module.css'
+import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
 const HERO_ART = '/asklink/hero.webp'
@@ -80,6 +81,10 @@ function AskLinkCreationTool() {
 
   const create = () => creation.create()
 
+  const errStatus = creation.errorStatus
+  const urlInvalid = Boolean(error) && errStatus === 400 && !needManual
+  const manualInvalid = Boolean(error) && errStatus === 400 && needManual
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       {uiNext ? (
@@ -114,7 +119,7 @@ function AskLinkCreationTool() {
         </label>
         <div className="mt-2 flex flex-col gap-2 md:flex-row">
           <div className="relative flex-1">
-            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Link2 aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               id="asklink-url"
               type="text"
@@ -123,16 +128,22 @@ function AskLinkCreationTool() {
               onChange={(e) => creation.setDraft({ url: e.target.value })}
               disabled={locked}
               placeholder="https://example.co.jp/"
-              className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-3 text-sm font-bold text-slate-800 focus:border-[#0066ff] focus:outline-none"
+              className={`w-full rounded-xl border border-slate-300 py-3 pl-9 pr-3 text-sm font-bold text-slate-800 focus:border-[#0066ff] focus:outline-none${
+                uiNext ? ' min-h-11 min-w-0 text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 sm:text-sm' : ''
+              }`}
               required
+              aria-invalid={uiNext && urlInvalid ? true : undefined}
+              aria-describedby={uiNext && urlInvalid ? 'asklink-form-error' : undefined}
             />
           </div>
           <button
             type="submit"
             disabled={locked || !url.trim() || (needManual && manualText.trim().length < 20)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
+            className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-700 disabled:opacity-50${
+              uiNext ? ' min-h-11 whitespace-nowrap focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 focus-visible:ring-offset-white' : ''
+            }`}
           >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {loading && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
             {loading ? '作成しています' : '作成する'}
           </button>
         </div>
@@ -150,9 +161,13 @@ function AskLinkCreationTool() {
               rows={5}
               maxLength={3000}
               placeholder="会社名・サービスの内容・強み・対象のお客さまなどを、20字以上で入力してください。"
-              className="mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none"
+              className={`mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none${
+                uiNext ? ' text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] sm:text-sm' : ''
+              }`}
+              aria-invalid={uiNext && manualInvalid ? true : undefined}
+              aria-describedby={uiNext ? `asklink-manual-note${error ? ' asklink-form-error' : ''}` : undefined}
             />
-            <p className="mt-1 text-xs font-bold text-slate-500">
+            <p id="asklink-manual-note" className="mt-1 text-xs font-bold text-slate-500">
               手入力のときは、質問文に入れるURLは上で入力したURLだけになります。
             </p>
           </div>
@@ -163,7 +178,7 @@ function AskLinkCreationTool() {
             {LOADING_STEPS.map((label, i) => (
               <li
                 key={label}
-                className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff]"
+                className={`flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff]${uiNext ? ' motion-reduce:![animation:none]' : ''}`}
                 style={{ animation: `pulse 1.6s ease-in-out ${i * 0.5}s infinite` }}
               >
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#0066ff] text-[10px] font-black text-white">{i + 1}</span>
@@ -174,11 +189,24 @@ function AskLinkCreationTool() {
           </ol>
         )}
         {error && uiNext && (
-          <div className="mt-3">
-            <ErrorNotice
-              what={error}
-              how={needManual ? '下の欄にサービスの説明を入れて、もう一度「作成する」を押してください。' : creation.intent ? '新しく作成せず、「保存結果を確認」を押してください。' : 'URLを確かめて、もう一度「作成する」を押してください。'}
-            />
+          <div id="asklink-form-error" className="mt-3">
+            {creation.authorityRejected && (errStatus === 401 || errStatus === 403) ? (
+              <AskLinkErrorNotice status={errStatus} action="create" />
+            ) : creation.intent ? (
+              <ErrorNotice what={error} how="新しく作成せず、「保存結果を確認」を押してください。" />
+            ) : errStatus === 422 ? (
+              <ErrorNotice
+                what="このサイトは読み取れませんでした。"
+                how="下の欄にサービスの説明を入れて、もう一度「作成する」を押してください。"
+              />
+            ) : errStatus === 400 ? (
+              <ErrorNotice
+                what={needManual ? 'サービスの説明の長さが合っていません。' : 'URLの形が正しくないようです。'}
+                how={needManual ? 'サービスの説明を20〜3,000字で入れて、もう一度「作成する」を押してください。' : '「https://」から始まるサイトのURLを入れて、もう一度「作成する」を押してください。'}
+              />
+            ) : (
+              <AskLinkErrorNotice status={errStatus ?? 500} action="create" onRetry={creation.ready && !creation.authorityRejected ? () => void create() : undefined} />
+            )}
           </div>
         )}
         {error && !uiNext && (
@@ -197,7 +225,12 @@ function AskLinkCreationTool() {
             </div>
           </div>
         )}
-        {limit && (
+        {limit && uiNext && (
+          <div className="mt-3">
+            <AskLinkErrorNotice status={429} action="create" />
+          </div>
+        )}
+        {limit && !uiNext && (
           <div className="mt-3 rounded-xl bg-blue-50 p-4 text-sm font-bold text-slate-700">
             <p>{limit.message}</p>
             {limit.upgradeUrl && (
@@ -228,7 +261,15 @@ function AskLinkCreationTool() {
               バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。
             </p>
           )}
-          {queue.error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{queue.error}</p>}
+          {uiNext ? (
+            queue.errorStatus !== null && (
+              <div className="mb-4">
+                <AskLinkErrorNotice status={queue.errorStatus} action="banner" />
+              </div>
+            )
+          ) : (
+            queue.error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{queue.error}</p>
+          )}
           <RunResult
             run={run}
             onChange={setRun}

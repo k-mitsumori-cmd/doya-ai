@@ -153,7 +153,7 @@ export async function extractFacts(input: {
   ].join('\n')
 
   const raw = await geminiGenerateJson<{ facts?: RawFact[] }>(
-    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { temperature: 0.2 } },
+    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } },
     'ShanaiFacts'
   )
 

@@ -6,12 +6,12 @@ import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { isTrialEligible } from '@/lib/trial'
+import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 import { privateApiJson } from '@/lib/private-api-response'
 
 // GET /api/stripe/trial-eligibility
 // 「初月無料」訴求の表示出し分け用。未ログイン訪問者は将来の新規顧客なので eligible:true。
-// ログイン済みは Stripe 履歴で判定（再契約者は false）。
+// ログイン済みは DB の有料状態と Stripe 履歴で判定（有料利用者・再契約者は false）。
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
   const kinds = params.getAll('expectedKind')
@@ -34,12 +34,13 @@ export async function GET(request: NextRequest) {
     if (kinds[0] !== 'authenticated' || actors[0] !== actualId) return privateApiJson({ code: 'PRINCIPAL_CHANGED' }, { status: 409 })
     const user = await prisma.user.findUnique({
       where: { id: actualId },
-      select: { id: true, email: true, stripeCustomerId: true },
+      select: { id: true, email: true, ...TRIAL_USER_SELECT },
     })
     if (!user || user.id !== actualId || !user.email || user.email.toLowerCase() !== email.toLowerCase()) {
       return privateApiJson({ code: 'USER_UNAVAILABLE' }, { status: 503 })
     }
-    const eligible = await isTrialEligible({ email: user.email, stripeCustomerId: user.stripeCustomerId })
+    const eligible = await isTrialEligible({ email: user.email, stripeCustomerId: user.stripeCustomerId,
+      plan: user.plan, servicePlans: user.serviceSubscriptions.map(row => row.plan) })
     return privateApiJson({ version: 1, principal: { kind: 'authenticated', actorId: actualId }, eligible })
   } catch {
     return privateApiJson({ code: 'TRIAL_CHECK_UNAVAILABLE' }, { status: 503 })

@@ -11,13 +11,10 @@ import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
 import StripeSuccessSync from '@/components/StripeSuccessSync'
 import ServicePopupGuard from '@/components/ServicePopupGuard'
-import { getActiveServices, SERVICES, BETA_HIDDEN_SERVICE_IDS, RETIRED_SERVICE_IDS } from '@/lib/services'
+import { getRunningServices } from '@/lib/services'
 
-// 一覧に出さないベータでも、許可利用者の作業画面は広告から保護する。
-const ACTIVE_SERVICE_PATHS = [
-  ...getActiveServices(),
-  ...SERVICES.filter(service => BETA_HIDDEN_SERVICE_IDS.has(service.id) && !RETIRED_SERVICE_IDS.has(service.id)),
-].map(service => service.href)
+// 開発中のベータ版（一覧から外したツール）も、ツールの画面としてポップアップを出さない
+const ACTIVE_SERVICE_PATHS = getRunningServices().map(service => service.href)
 
 // ============================================
 // ルートメタデータ（ポータル全体）

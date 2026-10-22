@@ -8,6 +8,7 @@ import { INDUSTRIES } from '@/lib/doyalist/constants'
 import { useApproachUsage } from './useApproachUsage'
 import { Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { ErrorNotice } from '@/components/ds'
 
 // 新しい見た目では、絵文字の代わりに lucide のアイコンを出す（UI 品質 S-52。絵文字をアイコンにしない）
 const TYPE_ICON = { form: PenLine, email: Mail, phone: Phone } as const
@@ -71,6 +72,8 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
   const [targetIndustry, setTargetIndustry] = useState('IT・ソフトウェア')
   const [tone, setTone] = useState('formal')
   const [generating, setGenerating] = useState(false)
+  // 新しい見た目: 必須の欄が空のまま押されたとき、欄の下に理由を出す（aria-describedby でつなぐ）
+  const [serviceInputError, setServiceInputError] = useState(false)
   const quota = useApproachUsage(type)
   const quotaRef = useRef(quota)
   quotaRef.current = quota
@@ -108,7 +111,10 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
 
   const handleGenerate = async () => {
     if (pendingOperation.current || !quota.allowed || !quota.usage || quota.failed || limitMessage) return
-    if (!serviceInput.trim()) { toast.error('サービス内容またはURLを入力してください'); return }
+    if (!serviceInput.trim()) {
+      if (uiNext) { setServiceInputError(true); document.getElementById(`doyalist-service-${type}`)?.focus(); return }
+      toast.error('サービス内容またはURLを入力してください'); return
+    }
     const operation = { key: operationKey, controller: new AbortController(), tid: toast.loading('AIが文章を作成中...') }
     pendingOperation.current = operation
     setGenerating(true)
@@ -153,6 +159,23 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
 
   const isUrl = /^https?:\/\//.test(serviceInput.trim())
   const tips = TIPS_BY_TYPE[type] || []
+  // 新しい見た目: 押せる場所の大きさ（44px）とキーボードの枠
+  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1' : ''
+  // 新しい見た目: 利用枠・上限の知らせ。あとから出て下を押し下げないよう、主ボタンのすぐ下に出す（CLS を増やさない）
+  const quotaNotice = !uiNext ? null : limitMessage ? (
+    <div className="space-y-2">
+      <ErrorNotice what={limitMessage} how={limitAction === 'contact' ? '追加の枠は、お問い合わせからご相談ください。' : '来月まで待つか、料金プランを見直すと続けて作れます。'} />
+      {limitAction && (
+        <Link href={limitAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
+          {limitAction === 'pricing' ? '料金プランを見る' : '追加枠を相談する'}
+        </Link>
+      )}
+    </div>
+  ) : loginRequired ? (
+    <ErrorNotice what="ログインの有効期限が切れました" how="ログインし直すと、文章を作れます。入力した内容はこのままです。" onRetry={() => { window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(`/doyalist/tools/${type}`)}` }} retryLabel="ログインし直す" />
+  ) : quota.failed ? (
+    <ErrorNotice what="今月の利用枠を確認できませんでした" how="時間をおいて、もう一度お試しください。入力した内容はこのままです。" onRetry={quota.refresh} retryLabel="もう一度確認する" />
+  ) : null
 
   return (
     <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
@@ -168,15 +191,15 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
             {emoji}
           </div>
           )}
-          <div>
-            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>{title}</Heading>
-            <p className="text-sm font-medium text-slate-500 mt-0.5">{subtitle}</p>
+          <div className={uiNext ? 'min-w-0' : undefined}>
+            <Heading className={`${uiNext ? 'text-xl lg:text-2xl [text-wrap:balance]' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>{title}</Heading>
+            <p className={`text-sm font-medium text-slate-500 mt-0.5${uiNext ? ' [text-wrap:balance]' : ''}`}>{subtitle}</p>
           </div>
         </div>
 
-        {!quota.usage && <div role={quota.failed ? 'alert' : 'status'} className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">{loginRequired ? 'ログインして文章生成を始めてください。' : quota.failed ? '利用枠を確認できませんでした。入力内容は保持しています。' : '利用枠を確認しています。'}{loginRequired ? <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/doyalist/tools/${type}`)}`} className="ml-2 underline">ログインする</Link> : quota.failed && <button type="button" onClick={quota.refresh} className="ml-2 underline">再取得する</button>}</div>}
+        {!uiNext && !quota.usage && <div role={quota.failed ? 'alert' : 'status'} className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">{loginRequired ? 'ログインして文章生成を始めてください。' : quota.failed ? '利用枠を確認できませんでした。入力内容は保持しています。' : '利用枠を確認しています。'}{loginRequired ? <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/doyalist/tools/${type}`)}`} className="ml-2 underline">ログインする</Link> : quota.failed && <button type="button" onClick={quota.refresh} className="ml-2 underline">再取得する</button>}</div>}
 
-        {limitMessage && (
+        {!uiNext && limitMessage && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
             <span>{limitMessage}</span>
             {limitAction && <Link href={limitAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
@@ -200,25 +223,30 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
 
               {/* 自社サービス */}
               <div>
-                <label className="block text-sm font-bold text-[#0a1530] mb-2">
+                <label className="block text-sm font-bold text-[#0a1530] mb-2" htmlFor={uiNext ? `doyalist-service-${type}` : undefined}>
                   {uiNext ? ico(Sparkles) : '✨ '}自社サービスの内容 または URL <span className="text-rose-500 text-xs">*必須</span>
                 </label>
                 <textarea
+                  id={uiNext ? `doyalist-service-${type}` : undefined}
+                  aria-invalid={uiNext ? serviceInputError : undefined}
+                  aria-describedby={uiNext && serviceInputError ? `doyalist-service-${type}-error` : undefined}
                   value={serviceInput}
-                  onChange={(e) => setServiceInput(e.target.value)}
+                  onChange={(e) => { setServiceInput(e.target.value); if (e.target.value.trim()) setServiceInputError(false) }}
                   placeholder={'例: AIで営業リストを自動生成するSaaSツール\nまたは https://doya-ai.surisuta.jp'}
                   rows={3}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 resize-none"
                 />
+                {uiNext && serviceInputError && <p id={`doyalist-service-${type}-error`} role="alert" className="mt-1 text-xs font-bold text-rose-700">自社サービスの内容か、URLを入力してください。</p>}
                 {isUrl && (<p className="text-xs font-bold text-cyan-600 mt-1">{uiNext ? ico(Link2) : '🔗 '}URLとして認識：AIがサイトの内容を推定します</p>)}
               </div>
 
               {/* 相手の業種 */}
               <div>
-                <label className="block text-sm font-bold text-[#0a1530] mb-2">
+                <label className="block text-sm font-bold text-[#0a1530] mb-2" htmlFor={uiNext ? `doyalist-industry-${type}` : undefined}>
                   {uiNext ? ico(Target) : '🎯 '}相手の業種 <span className="text-rose-500 text-xs">*必須</span>
                 </label>
                 <select
+                  id={uiNext ? `doyalist-industry-${type}` : undefined}
                   value={targetIndustry}
                   onChange={(e) => setTargetIndustry(e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 cursor-pointer"
@@ -229,8 +257,8 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
 
               {/* トーン */}
               <div>
-                <label className="block text-sm font-bold text-[#0a1530] mb-2">{uiNext ? ico(MessageSquare) : '💬 '}トーン</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-sm font-bold text-[#0a1530] mb-2" id={uiNext ? `doyalist-tone-${type}` : undefined}>{uiNext ? ico(MessageSquare) : '💬 '}トーン</label>
+                <div className="grid grid-cols-3 gap-2" role={uiNext ? 'group' : undefined} aria-labelledby={uiNext ? `doyalist-tone-${type}` : undefined}>
                   {[
                     { v: 'formal', l: '丁寧・フォーマル' },
                     { v: 'friendly', l: '親しみやすい' },
@@ -238,8 +266,10 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   ].map((t) => (
                     <button
                       key={t.v}
+                      type={uiNext ? 'button' : undefined}
                       onClick={() => setTone(t.v)}
-                      className={`py-3 rounded-xl text-xs font-bold transition-all ${
+                      aria-pressed={uiNext ? tone === t.v : undefined}
+                      className={`${uiNext ? `min-h-11 px-1 [text-wrap:balance]${focusRing} ` : ''}py-3 rounded-xl text-xs font-bold transition-all ${
                         tone === t.v ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
@@ -250,18 +280,20 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
               </div>
 
               <button
+                type={uiNext ? 'button' : undefined}
                 onClick={handleGenerate}
                 disabled={generating || Boolean(limitMessage) || !quota.usage || quota.failed || !quota.allowed}
                 className={uiNext
-                  ? 'w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                  ? 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                   : 'w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'}
               >
                 {generating ? (
-                  <><img src={CHARS.working} alt="" className="w-6 h-6 animate-spin" />作成中...</>
+                  <><img src={CHARS.working} alt="" className={`w-6 h-6 animate-spin${uiNext ? ' motion-reduce:animate-none' : ''}`} />作成中...</>
                 ) : (
                   <><img src={CHARS.jump} alt="" className="w-6 h-6" />文章を作成する</>
                 )}
               </button>
+              {quotaNotice}
             </div>
           </div>
 
@@ -288,8 +320,8 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
               )}
 
               {generating && (
-                <div className="py-6 text-center space-y-3">
-                  <img src={CHARS.thinking} alt="" className="w-20 h-20 mx-auto animate-bounce" />
+                <div className="py-6 text-center space-y-3" role={uiNext ? 'status' : undefined}>
+                  <img src={CHARS.thinking} alt="" className={`w-20 h-20 mx-auto animate-bounce${uiNext ? ' motion-reduce:animate-none' : ''}`} />
                   <p className="text-sm font-bold text-[#0a1530]">クマが考え中...</p>
                 </div>
               )}
@@ -299,8 +331,9 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-500">生成結果</span>
                     <button
+                      type={uiNext ? 'button' : undefined}
                       onClick={copyToClipboard}
-                      className="px-3 py-1.5 bg-[#0a1530] text-white font-bold text-xs rounded-lg hover:bg-[#13234d] active:scale-95 transition-all"
+                      className={`${uiNext ? `min-h-11${focusRing} ` : ''}px-3 py-1.5 bg-[#0a1530] text-white font-bold text-xs rounded-lg hover:bg-[#13234d] active:scale-95 transition-all`}
                     >
                       {uiNext ? <Copy size={14} aria-hidden className="mr-1 inline-block align-[-2px]" /> : '📋 '}コピー
                     </button>

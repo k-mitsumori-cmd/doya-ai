@@ -20,6 +20,7 @@ import { DoyaKun } from '@/components/lp'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface ScenarioData {
   id: string
@@ -54,6 +55,12 @@ function AishodanScenarioWorkspace() {
   const [operationUnknown, setOperationUnknown] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
+  const [loadStatus, setLoadStatus] = useState(0)
+  /** 新しい見た目だけ: 保存に失敗したときの「何が起きたか・どうすればよいか」 */
+  const [saveFailure, setSaveFailure] = useState<AishodanFailure | null>(null)
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
+  const tap = uiNext ? AISHODAN_TAP : ''
 
   const load = useCallback(async () => {
     if (!id) return
@@ -63,15 +70,19 @@ function AishodanScenarioWorkspace() {
     try {
       const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`))
       const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
+      if (!r.ok) throw new AishodanHttpError(d?.error || '読み込みに失敗しました', r.status)
       if (version !== loadVersion.current || !proof.current()) return
       setS(d.scenario)
     } catch (e) {
-      if (version === loadVersion.current && proof.current()) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) {
+        setLoadStatus(failureStatus(e))
+        // 新しい見た目では、トーストにもサーバーの文を出さない
+        notifyError(setError, uiNext ? 'シナリオを読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
       if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [id, proof])
+  }, [id, proof, uiNext])
 
   useEffect(() => {
     void load()
@@ -94,6 +105,7 @@ function AishodanScenarioWorkspace() {
     setSaving(true)
     setMessage('')
     setError('')
+    setSaveFailure(null)
     try {
       const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`), {
         method: 'PUT',
@@ -113,12 +125,21 @@ function AishodanScenarioWorkspace() {
       })
       const d = await r.json()
       if (!proof.current()) return
-      if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
+      if (!r.ok) throw new AishodanHttpError(d?.error || '保存に失敗しました', r.status)
       if (!proof.current()) return
       setS(d.scenario)
       setMessage('保存しました')
     } catch (e) {
-      if (proof.current()) notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
+      if (proof.current()) {
+        if (uiNext) {
+          // サーバーの文は、入力の誤りを伝える短い日本語の文（400 など）のときだけ出す
+          const f = describeAishodanFailure(failureStatus(e), 'シナリオを保存できませんでした。', { serverMessage: e instanceof AishodanHttpError ? e.message : undefined })
+          setSaveFailure(f)
+          notifyError(setError, f.what)
+          return
+        }
+        notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
+      }
     } finally {
       if (proof.current()) setSaving(false)
     }
@@ -140,6 +161,20 @@ function AishodanScenarioWorkspace() {
       </div>
     )
   }
+  if (!s && uiNext) {
+    // サーバーの文は出さない。見つからない・権限が無いときはダッシュボードへ、通信の失敗はやり直す
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? 'シナリオを読み込めませんでした。' : 'このシナリオは見つかりませんでした。')}
+          onRetry={() => void load()}
+          backHref={proof.href('/aishodan')}
+          backLabel="ダッシュボードに戻る"
+          returnHref={proof.href(`/aishodan/scenarios/${id}`)}
+        />
+      </div>
+    )
+  }
   if (!s) {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
@@ -157,21 +192,21 @@ function AishodanScenarioWorkspace() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href={proof.href('/aishodan')} className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
+            <Link href={proof.href('/aishodan')} className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
             <AishodanHeading className="truncate text-base font-bold text-slate-900">{s.name}</AishodanHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
             <Link
               href={proof.href('/aishodan/preview')}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
+              className={`rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
             >
               試す
             </Link>
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+              className={`rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white disabled:opacity-40${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
             >
               {saving ? '保存中...' : '保存'}
             </button>
@@ -181,11 +216,13 @@ function AishodanScenarioWorkspace() {
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
         {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          保存が後から完了する場合があります。内容を確認してから、次の操作を選んでください。
+          直前の保存の結果を確認できません。後から完了する場合があります。最新のシナリオを確認してから、次の操作を選んでください。
           <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新のシナリオを読み込む</button>
         </div>}
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
-        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
+        {error && uiNext ? (
+          <AishodanFailureNotice failure={saveFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/scenarios/${id}`)} />
+        ) : error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {message && <div role={uiNext ? 'status' : undefined} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         {/* 基本 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -247,7 +284,7 @@ function AishodanScenarioWorkspace() {
             <p className="text-xs font-bold text-slate-500">価格の扱い</p>
             <div className="mt-2 space-y-2">
               {(['disclose', 'rough', 'withhold'] as PricePolicy[]).map((v) => (
-                <label key={v} className="flex cursor-pointer items-center gap-2.5">
+                <label key={v} className={`flex cursor-pointer items-center gap-2.5${uiNext ? ' min-h-11' : ''}`}>
                   <input
                     type="radio"
                     checked={s.guardrails.pricePolicy === v}
@@ -263,7 +300,7 @@ function AishodanScenarioWorkspace() {
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500">資料に根拠が無い質問への対応</p>
             <div className="mt-2 space-y-2">
-              <label className="flex cursor-pointer items-start gap-2.5">
+              <label className={`flex cursor-pointer items-start gap-2.5${uiNext ? ' min-h-11 py-1' : ''}`}>
                 <input
                   type="radio"
                   checked={s.guardrails.noEvidenceBehavior === 'defer'}
@@ -275,7 +312,7 @@ function AishodanScenarioWorkspace() {
                   <span className="ml-1 text-xs text-slate-500 font-semibold">（推奨。推測で答えさせない）</span>
                 </span>
               </label>
-              <label className="flex cursor-pointer items-start gap-2.5">
+              <label className={`flex cursor-pointer items-start gap-2.5${uiNext ? ' min-h-11 py-1' : ''}`}>
                 <input
                   type="radio"
                   checked={s.guardrails.noEvidenceBehavior === 'general'}
@@ -292,8 +329,8 @@ function AishodanScenarioWorkspace() {
 
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500">競合他社への言及</p>
-            <div className="mt-2 flex gap-4">
-              <label className="flex cursor-pointer items-center gap-2">
+            <div className={uiNext ? 'mt-2 flex flex-wrap gap-x-4' : 'mt-2 flex gap-4'}>
+              <label className={`flex cursor-pointer items-center gap-2${uiNext ? ' min-h-11' : ''}`}>
                 <input
                   type="radio"
                   checked={s.guardrails.competitorPolicy === 'neutral'}
@@ -302,7 +339,7 @@ function AishodanScenarioWorkspace() {
                 />
                 <span className="text-sm text-slate-800 font-semibold">中立的な事実のみ述べる</span>
               </label>
-              <label className="flex cursor-pointer items-center gap-2">
+              <label className={`flex cursor-pointer items-center gap-2${uiNext ? ' min-h-11' : ''}`}>
                 <input
                   type="radio"
                   checked={s.guardrails.competitorPolicy === 'avoid'}
@@ -358,7 +395,8 @@ function AishodanScenarioWorkspace() {
                       next[i] = { ...ph, name: e.target.value }
                       patch({ phases: next })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
+                    aria-label={uiNext ? `${i + 1}番目のフェーズの名前` : undefined}
+                    className={`flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none${uiNext ? ' min-w-0' : ''}`}
                   />
                   <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
                     上限
@@ -383,6 +421,7 @@ function AishodanScenarioWorkspace() {
                   }}
                   rows={2}
                   placeholder="このフェーズで達成したいこと"
+                  aria-label={uiNext ? 'このフェーズで達成したいこと' : undefined}
                   className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
@@ -407,9 +446,10 @@ function AishodanScenarioWorkspace() {
                       next[i] = { ...sl, label: e.target.value }
                       patch({ slots: next })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
+                    aria-label={uiNext ? `${i + 1}番目の聞くこと` : undefined}
+                    className={`flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none${uiNext ? ' min-w-0' : ''}`}
                   />
-                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600 font-semibold">
+                  <label className={`flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600 font-semibold${uiNext ? ' min-h-11' : ''}`}>
                     <input
                       type="checkbox"
                       checked={sl.required}
@@ -424,7 +464,8 @@ function AishodanScenarioWorkspace() {
                   </label>
                   <button
                     onClick={() => patch({ slots: s.slots.filter((_, j) => j !== i) })}
-                    className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold"
+                    aria-label={uiNext ? `「${sl.label || `${i + 1}番目の項目`}」を削除` : undefined}
+                    className={`shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                   >
                     削除
                   </button>
@@ -437,6 +478,7 @@ function AishodanScenarioWorkspace() {
                     patch({ slots: next })
                   }}
                   placeholder="どう聞くかの例"
+                  aria-label={uiNext ? 'どう聞くかの例' : undefined}
                   className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
@@ -451,7 +493,7 @@ function AishodanScenarioWorkspace() {
                 ],
               })
             }
-            className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold"
+            className={`mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold${tap}`}
           >
             項目を追加
           </button>
@@ -474,7 +516,8 @@ function AishodanScenarioWorkspace() {
                       next[i] = { ...c, label: e.target.value }
                       patch({ icp: { conditions: next } })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
+                    aria-label={uiNext ? `${i + 1}番目の条件` : undefined}
+                    className={`flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none${uiNext ? ' min-w-0' : ''}`}
                   />
                   <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
                     重み
@@ -498,6 +541,7 @@ function AishodanScenarioWorkspace() {
                     patch({ icp: { conditions: next } })
                   }}
                   placeholder="どんな状態なら満たしたと言えるか"
+                  aria-label={uiNext ? 'どんな状態なら満たしたと言えるか' : undefined}
                   className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
@@ -576,7 +620,7 @@ function AishodanScenarioWorkspace() {
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
-            <div className="flex gap-3">
+            <div className={uiNext ? 'flex flex-wrap gap-3' : 'flex gap-3'}>
               <label className="text-sm font-semibold">
                 <span className="mb-1 block text-xs font-bold text-slate-500">一人称</span>
                 <input

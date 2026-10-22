@@ -14,15 +14,18 @@ import { isUiNext } from '@/lib/ui-next'
 import { listMemberships } from '@/lib/aio/access'
 import AioEntry from './Entry'
 import AioLp from './Lp'
+import { aioReturnRedirect } from '@/lib/aio/billing-return-route'
 
 export default async function AioPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams
+  const returnPath = aioReturnRedirect(params)
+  if (returnPath) redirect(returnPath)
   const session = await getServerSession(authOptions)
   if (!session?.user) return <AioLp />
   // ⚠️ 組織があるなら、サーバーで直接その組織のページへ移す（全画面の読み込みを出さない。UI 品質 C-1）。
   //    選び方は、これまでクライアント（Entry）がしていたのと同じ。URL に指定（クイックスタートなど）があるときと、
   //    組織がまだ無いときは、今までどおり Entry に任せる
   //    新しい見た目（チェックリスト §5.1）のときだけ
-  const params = await searchParams
   if (Object.keys(params).length === 0 && (await isUiNext())) {
     const memberships = await listMemberships().catch(() => [])
     const target = memberships[memberships.length - 1]

@@ -7,8 +7,8 @@ import { LpJsonLd } from '@/components/lp'
 import { isShellEnabled } from '@/lib/ui-shell'
 import CunningLayoutShell from '@/components/cunning/CunningLayoutShell'
 import CunningShellFrame from '@/components/cunning/CunningShellFrame'
-import { betaServiceAllowed } from '@/lib/beta-services'
 import BetaServiceNotice from '@/components/BetaServiceNotice'
+import { canUseBetaService } from '@/lib/beta-service'
 
 export const metadata: Metadata = {
   ...buildServiceMetadata('cunning', {
@@ -22,9 +22,14 @@ export const metadata: Metadata = {
 const SVC = getServiceById('cunning')!
 
 export default async function CunningLayout({ children }: { children: React.ReactNode }) {
-  // 開発中のベータ版として非表示の間は、許可した人だけが使える。それ以外の人には案内だけを出す（API も同じ判定。2026-10-19）
-  if (!(await betaServiceAllowed('cunning'))) return <BetaServiceNotice name={SVC.name} />
-  const session = await getServerSession(authOptions)
+  const session = await (async () => {
+    try { return await getServerSession(authOptions) } catch { return null }
+  })()
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人（UI_PREVIEW_EMAILS）のほかは、画面を出さずに案内だけを出す。
+  // /cunning の下のページ（履歴・ナレッジ・料金・ライブなど）はすべてこの layout を通る。API は各ルートの先頭で 403
+  if (!canUseBetaService('cunning', session?.user?.email)) {
+    return <BetaServiceNotice serviceName={SVC.name} signedIn={Boolean(session?.user)} />
+  }
   return (
     <>
       <LpJsonLd
