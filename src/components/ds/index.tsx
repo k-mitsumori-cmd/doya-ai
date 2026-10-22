@@ -155,8 +155,16 @@ const TOOL_HERO_ART = new Set([
   'kintai', 'mensetsu', 'persona', 'popup', 'promane', 'quote', 'seo', 'sfa', 'shanai', 'shodan', 'tenjikai',
 ])
 
-/** そのツールのキービジュアルの場所。まだ無ければ undefined */
+// ツールの仕事がひと目で分かるキーアート（ドヤくん＋大きな絵。2026-10-23 Codex 内蔵の画像生成で作成）。
+// LP 用の hero.webp は細かい画面の見本が入っていて、200×167 に縮めると読めないため、こちらを先に使う。
+const TOOL_KEY_ART = new Set([
+  'adimage', 'aio', 'aishodan', 'asklink', 'banner', 'doyalist', 'doyaslide', 'expense', 'hr', 'income', 'interview',
+  'kintai', 'mensetsu', 'persona', 'popup', 'promane', 'quote', 'seo', 'sfa', 'shanai', 'shodan', 'tenjikai',
+])
+
+/** そのツールのキービジュアルの場所。キーアート → マスコットの順。まだ無ければ undefined */
 export function toolHeroArt(tool: string): string | undefined {
+  if (TOOL_KEY_ART.has(tool)) return `/ui-renewal/keyart/${tool}.webp`
   return TOOL_HERO_ART.has(tool) ? `/ui-renewal/mascots/${tool}.webp` : undefined
 }
 

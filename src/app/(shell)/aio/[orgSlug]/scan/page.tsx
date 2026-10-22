@@ -40,7 +40,7 @@ export default function AioScanPage() {
           <ToolHero
             title={<>AI検索で、自社が<wbr />どう語られているかを調べます</>}
             lead={<>調べたいサービスのURLを入れるだけ。<wbr />サービス名も監視する質問もAIが判定して、<wbr />ChatGPT・Gemini などでの今の見え方を診断します。</>}
-            art="/aio/hero.webp"
+            tool="aio"
           />
         </div>
       ) : (

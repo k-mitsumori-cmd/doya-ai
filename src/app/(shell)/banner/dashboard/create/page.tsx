@@ -1573,7 +1573,7 @@ function BannerDashboardWorkspace() {
               title="入力するだけで、プロ品質のバナーを3案。"
               lead="用途・業種・伝えたい言葉を入れると、AIがクリックされやすい構成でバナーをつくります。迷ったら「サンプル入力」から試せます。"
               action={<Button href="/banner/dashboard" variant="secondary" icon="LayoutTemplate">見本から選ぶ</Button>}
-              art="/banner/hero.webp"
+              tool="banner"
             />
           </div>
         )}

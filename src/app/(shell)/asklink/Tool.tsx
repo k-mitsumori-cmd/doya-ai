@@ -16,7 +16,7 @@ import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
-const HERO_ART = '/asklink/hero.webp'
+const HERO_ART = '/ui-renewal/keyart/asklink.webp'
 
 const LOADING_STEPS = ['サイトを読み取っています', '質問文を作っています', 'URLと文字数を確認しています']
 
