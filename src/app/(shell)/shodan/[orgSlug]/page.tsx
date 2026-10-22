@@ -78,8 +78,8 @@ export default function ShodanListPage() {
             />
           </div>
         ) : (
-          {/* 列の幅を画面の幅までに収める（minmax(0,1fr)）。長い商談先の名前で 375px の画面が横に広がっていた（2026-10-23） */}
           <section aria-label="商談準備の一覧" className="grid grid-cols-[minmax(0,1fr)] gap-3">
+            {/* 列の幅を画面の幅までに収める（minmax(0,1fr)）。長い商談先の名前で 375px の画面が横に広がっていた（2026-10-23） */}
             <Stagger className="grid grid-cols-[minmax(0,1fr)] gap-3" step={40}>
               {items.map((it, i) => {
                 const st = STATUS[it.status] || STATUS.processing
