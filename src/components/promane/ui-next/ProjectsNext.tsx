@@ -7,6 +7,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button, Card, EmptyState, StatTile } from '@/components/ds'
+import { DivergingBars } from '@/components/ds/charts'
 import { formatCurrency, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
 import { manYen, PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
 
@@ -33,6 +34,9 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
 }) {
   const base = `/promane/${workspaceSlug}`
   const newHref = `${base}/projects/new`
+  // 0 を挟む利益率の棒。予算のある案件だけを、利益率の高い順に最大12件（多いと縦に長くなるため）
+  const rated = rows.filter((p) => p.contractAmount > 0).sort((a, b) => b.profitRate - a.profitRate)
+  const rateBars = rated.slice(0, 12).map((p) => ({ label: p.name, value: Math.round(p.profitRate) }))
 
   return (
     <div className="mx-auto max-w-[1300px] space-y-6 px-4 py-6 sm:px-8">
@@ -61,6 +65,20 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
             <StatTile label="売上（契約額）" value={manYen(totalRevenue)} unit="円" icon="BadgeJapaneseYen" />
             <StatTile label="平均の利益率" value={avgProfitRate} unit="%" icon="LineChart" />
           </div>
+
+          {rateBars.length > 0 ? (
+            <Card title="案件ごとの利益率" meta={rated.length > rateBars.length ? `上位${rateBars.length}件／${rated.length}件` : `${rated.length}件`}>
+              <DivergingBars
+                label="案件ごとの利益率"
+                negativeLabel="赤字"
+                positiveLabel="黒字"
+                positiveTone="good"
+                negativeTone="negative"
+                format={(n) => `${n}%`}
+                data={rateBars}
+              />
+            </Card>
+          ) : null}
 
           <Card title="すべてのプロジェクト" meta={`${rows.length}件`}>
             <div className="-mx-2 hidden grid-cols-[minmax(0,4fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)] gap-3 border-b border-slate-100 px-2 pb-2 text-xs font-bold text-slate-500 md:grid">

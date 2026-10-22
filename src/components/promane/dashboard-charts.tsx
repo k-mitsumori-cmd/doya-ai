@@ -5,6 +5,18 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts'
+import { AreaChart, ColumnChart, Donut } from '@/components/ds/charts'
+import { formatCompactJa } from '@/components/ds/chart-math'
+import { useUiNext } from '@/components/shell/ui-next-context'
+
+const yen = (n: number) => `${n < 0 ? '−' : ''}¥${Math.abs(Math.round(n)).toLocaleString('ja-JP')}`
+/** 意味のある色（完了=良い、レビュー=普通、未着手=灰色） */
+const STATUS_TONES: Record<string, string> = {
+  done: 'good',
+  in_progress: 'blue',
+  review: 'fair',
+  todo: 'muted',
+}
 
 const STATUS_COLORS: Record<string, string> = {
   done: '#10b981',
@@ -25,6 +37,7 @@ interface TaskSummaryProps {
 }
 
 export function TaskPieChart({ data }: TaskSummaryProps) {
+  const next = useUiNext()
   const total = data.reduce((s, d) => s + (d.count || 0), 0)
   const doneCount = data.find((d) => d.status === 'done')?.count || 0
   const completionRate = total > 0 ? Math.round((doneCount / total) * 100) : 0
@@ -35,6 +48,23 @@ export function TaskPieChart({ data }: TaskSummaryProps) {
       value: d.count,
       fill: STATUS_COLORS[d.status] || '#94a3b8',
     }))
+
+  if (next) {
+    // 新しい見た目: 共通の Donut。中央に完了率、凡例に件数と割合
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <Donut
+          label={`タスクの状態（完了率 ${completionRate}%）`}
+          size={140}
+          empty="タスクがまだありません"
+          center={<span><span style={{ fontSize: 22 }}>{completionRate}%</span><br /><span style={{ fontSize: 11, color: 'var(--sub)' }}>完了率</span></span>}
+          data={data
+            .filter((d) => (d.count || 0) > 0)
+            .map((d) => ({ label: `${STATUS_LABELS[d.status] || d.status} ${d.count}件`, value: d.count, tone: STATUS_TONES[d.status] || 'muted' }))}
+        />
+      </div>
+    )
+  }
 
   // 空データ時はプレースホルダー
   if (chartData.length === 0) {
@@ -74,6 +104,22 @@ interface RevenueData {
 }
 
 export function RevenueLineChart({ data }: { data: RevenueData[] }) {
+  const next = useUiNext()
+  if (next && data && data.length > 0) {
+    // 新しい見た目: 共通の AreaChart。利益の負の値は 0 の線の下に出る
+    return (
+      <AreaChart
+        label="売上と利益の推移"
+        labels={data.map((d) => d.month)}
+        yTicks
+        format={yen}
+        series={[
+          { name: '売上', values: data.map((d) => d.revenue) },
+          { name: '利益', values: data.map((d) => d.profit), tone: 'good' },
+        ]}
+      />
+    )
+  }
   if (!data || data.length === 0) {
     return (
       <div className="h-[200px] min-w-[200px] flex items-center justify-center">
@@ -103,6 +149,18 @@ export function RevenueLineChart({ data }: { data: RevenueData[] }) {
 }
 
 export function ProfitBarChart({ data }: { data: RevenueData[] }) {
+  const next = useUiNext()
+  if (next && data && data.length > 0) {
+    // 新しい見た目: 共通の ColumnChart。赤字の月は下へ伸び、色と「−」の記号で分かる
+    return (
+      <ColumnChart
+        label="月ごとの利益"
+        // 棒の上の値は短い形（狭いカードでも重ならないように）
+        format={(n) => `${formatCompactJa(n)}円`}
+        data={data.map((d) => ({ label: d.month, value: d.profit, tone: d.profit < 0 ? 'negative' : 'blue' }))}
+      />
+    )
+  }
   if (!data || data.length === 0) {
     return (
       <div className="h-[200px] min-w-[200px] flex items-center justify-center">

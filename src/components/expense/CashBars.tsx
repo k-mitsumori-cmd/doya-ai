@@ -3,6 +3,9 @@
 // 月ごとの出金をカテゴリ別に積み上げた棒グラフ（div だけで描く。見込み分は薄い色）
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import { useInViewOnce, usePrefersReducedMotion } from '@/components/ds/motion'
+import { StackedColumnChart } from '@/components/ds/charts'
+import { formatCompactJa } from '@/components/ds/chart-math'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import type { ForecastMatrix } from './types'
 import { formatYen } from './ui'
 
@@ -21,9 +24,12 @@ const colorOf = (c: string) => CATEGORY_COLOR[c] ?? 'var(--blue-line)'
 /** grow: 画面に入ったときに棒を下から伸ばす（新しい見た目のときだけ渡す。動きを減らす設定では伸ばさない） */
 export default function CashBars({ cash, grow = false }: { cash: ForecastMatrix; grow?: boolean }) {
   const { ref, seen } = useInViewOnce<HTMLDivElement>()
-  const animate = grow && !usePrefersReducedMotion()
+  const reduced = usePrefersReducedMotion()
+  const animate = grow && !reduced
   const max = Math.max(1, ...cash.months.map((m) => cash.totals[m]?.amount ?? 0))
   const H = 160
+  const next = useUiNext()
+  if (next) return <CashColumns cash={cash} />
   return (
     <div>
       <div className="overflow-x-auto">
@@ -70,5 +76,36 @@ export default function CashBars({ cash, grow = false }: { cash: ForecastMatrix;
         </span>
       </div>
     </div>
+  )
+}
+
+/** 見込みの色（費目の色を薄くする。凡例の文字にも「見込み」と出す） */
+const faint = (color: string) => `color-mix(in srgb, ${color} 40%, transparent)`
+
+/**
+ * 新しい見た目: 共通の StackedColumnChart。費目ごとに「確定」と「見込み（薄い色）」を積む。
+ * 見込みが1か月も無い費目は、見込みの系列を出さない（凡例を短くするため）
+ */
+function CashColumns({ cash }: { cash: ForecastMatrix }) {
+  const series = cash.categories.flatMap((c) => {
+    const name = CATEGORY_LABEL[c] ?? c
+    const sure = cash.months.map((m) => {
+      const cell = cash.cells[c]?.[m]
+      return cell ? Math.max(0, cell.amount - cell.estimated) : 0
+    })
+    const est = cash.months.map((m) => Math.max(0, cash.cells[c]?.[m]?.estimated ?? 0))
+    const out: { name: string; values: number[]; tone: string }[] = []
+    if (sure.some((v) => v > 0) || !est.some((v) => v > 0)) out.push({ name, values: sure, tone: colorOf(c) })
+    if (est.some((v) => v > 0)) out.push({ name: `${name}（見込み）`, values: est, tone: faint(colorOf(c)) })
+    return out
+  })
+  return (
+    <StackedColumnChart
+      label="12か月の出金（費目別・見込みは薄い色）"
+      labels={cash.months.map((m) => `${Number(m.slice(5))}月`)}
+      // 棒の上の合計は短い形（12本並ぶため）。正確な金額は上の表にある
+      format={(n) => `${formatCompactJa(n)}円`}
+      series={series}
+    />
   )
 }

@@ -12,7 +12,7 @@ import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/ds'
-import { AreaChart, Donut, Ring } from '@/components/ds/charts'
+import { AreaChart, Bars, Donut, Ring } from '@/components/ds/charts'
 import { UiIcon } from '@/components/icons'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import { useUiNext } from '@/components/shell/ui-next-context'
@@ -728,6 +728,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
 }
 
 function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?: number | null; locked: boolean; orgSlug: string }) {
+  const uiNext = useUiNext()
   const data = summary.sov.slice(0, 10).map((s) => ({ name: s.brand, pct: s.pct, isOwn: s.isOwn }))
   return (
     <ProGate locked={locked} orgSlug={orgSlug} note="競合と比較した自社のシェア・オブ・ボイスはプロプランで閲覧できます">
@@ -747,6 +748,13 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
         </table>
       </Card>
       <Card title="占有率（上位10）">
+        {uiNext ? (
+          // 新しい見た目: 共通の Bars。自社だけ強調し（ほかは灰色）、「自社」の印と % の文字も出す
+          <Bars
+            format={(n) => `${n}%`}
+            data={data.map((d) => ({ label: d.name, value: d.pct, highlight: d.isOwn ? '自社' : undefined }))}
+          />
+        ) : (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20, top: 0, bottom: 0 }}>
             <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 'dataMax']} />
@@ -757,6 +765,7 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        )}
       </Card>
     </div>
     </ProGate>

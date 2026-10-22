@@ -250,7 +250,7 @@ export function Bars({ data, format, basis = 'max' }: {
       {data.map((d, i) => {
         const fill = d.tone ? seriesColor(i, d.tone) : anyHi && !d.highlight ? 'var(--line-strong, #c6cde0)' : undefined
         return (
-          <li key={d.label} data-highlight={d.highlight ? 'true' : undefined}>
+          <li key={`${i}-${d.label}`} data-highlight={d.highlight ? 'true' : undefined}>
             <div className={styles.barHead}>
               <span className={styles.barLabel}>
                 {d.label}
@@ -587,7 +587,7 @@ export function StackedBar100({ rows, categories, label, format, showTotal = tru
         {rows.map((r, ri) => {
           const p = stacks[ri]
           return (
-            <li key={r.label}>
+            <li key={`${ri}-${r.label}`}>
               <div className={styles.barHead}>
                 <span className={styles.barLabel}>{r.label}</span>
                 {showTotal ? <span className={styles.barValue}>{fmt(p.total)}</span> : null}
@@ -647,7 +647,7 @@ export function DivergingBars({ data, label, format, negativeLabel, positiveLabe
           const v = Number.isFinite(d.value) ? d.value : 0
           const w = `${Math.max(v === 0 ? 0 : 1.5, (Math.abs(v) / maxAbs) * 100)}%`
           return (
-            <li key={d.label} data-highlight={d.highlight ? 'true' : undefined}>
+            <li key={`${i}-${d.label}`} data-highlight={d.highlight ? 'true' : undefined}>
               <div className={styles.barHead}>
                 <span className={styles.barLabel}>{d.label}{d.highlight ? <em className={styles.hiMark}>{typeof d.highlight === 'string' ? d.highlight : '注目'}</em> : null}</span>
                 <span className={styles.barValue}>{fmt(v)}</span>
@@ -741,5 +741,36 @@ export function RadarChart({ axes, series, label, max, size = 320, format, rings
       <SrTable caption={label} head={['', ...series.map((s) => s.name)]} rows={axes.map((a, i) => [a, ...series.map((s) => fmt(s.values[i] ?? 0))])} />
       {n < 3 ? <span className={styles.srOnly}>項目が3つ未満のため、形は参考です</span> : null}
     </figure>
+  )
+}
+
+/* ------------------------------------------------------------------
+ * 表の中の小さな積み上げ（MiniStack）
+ * ------------------------------------------------------------------ */
+
+/**
+ * 表のセルに置く、小さな横の積み上げ棒（通常と残業など）。凡例は持たないので、
+ * 値は隣の列か label の文字で必ず伝える（色だけで伝えない）。読み上げは label の1回だけ。
+ * - basis で棒の全長に当たる値を決める（既定は合計。例: 8時間を全長にするなら 480）
+ * - 高さと幅は固定（CLS を増やさない）
+ */
+export function MiniStack({ parts, label, basis, width = 56, height = 8 }: {
+  parts: { value: number; tone?: ChartTone | string; name?: string }[]
+  /** 読み上げの文字（例: 勤務 8時間30分（うち残業 30分）） */
+  label: string
+  basis?: number
+  width?: number | string
+  height?: number
+}) {
+  const vals = parts.map((p) => (Number.isFinite(p.value) && p.value > 0 ? p.value : 0))
+  const total = vals.reduce((a, v) => a + v, 0)
+  const full = Math.max(basis ?? 0, total) || 1
+  return (
+    <span role="img" aria-label={label} title={label}
+      style={{ display: 'inline-flex', width, height, borderRadius: 999, overflow: 'hidden', background: 'var(--line, #e3e8f2)', flex: 'none', verticalAlign: 'middle' }}>
+      {parts.map((p, i) => vals[i] > 0 ? (
+        <span key={i} style={{ width: `${(vals[i] / full) * 100}%`, height: '100%', background: seriesColor(i, p.tone) }} />
+      ) : null)}
+    </span>
   )
 }

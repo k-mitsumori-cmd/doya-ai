@@ -2,6 +2,7 @@
 
 import { useToolUiNext } from '@/components/kintai/ui-next'
 import { Button, EmptyState } from '@/components/ds'
+import { MiniStack } from '@/components/ds/charts'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
@@ -317,6 +318,19 @@ export default function AttendancePage() {
                               <span className="font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
                                 {formatMinutesJa(att.workMinutes)}
                               </span>
+                              {uiNext ? (
+                                // 新しい見た目: 共通の MiniStack。8時間を全長にし、通常（青）と残業（注意の色）を積む。時間は左右の列の文字で出る
+                                <span className="hidden sm:inline-flex">
+                                  <MiniStack
+                                    basis={480}
+                                    label={`勤務 ${formatMinutesJa(att.workMinutes)}${att.overtimeMinutes ? `（うち残業 ${formatMinutesJa(att.overtimeMinutes)}）` : ''}`}
+                                    parts={[
+                                      { name: '通常', value: att.workMinutes - (att.overtimeMinutes || 0), tone: 'blue' },
+                                      { name: '残業', value: att.overtimeMinutes || 0, tone: 'fair' },
+                                    ]}
+                                  />
+                                </span>
+                              ) : (
                               <div className="w-14 h-2 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
                                 {/* Normal hours portion */}
                                 <div className="h-full flex">
@@ -332,6 +346,7 @@ export default function AttendancePage() {
                                   )}
                                 </div>
                               </div>
+                              )}
                             </div>
                           ) : isFuture ? '' : isWeekend && !att ? '' : (
                             <span className="text-slate-300">-</span>

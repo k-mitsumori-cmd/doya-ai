@@ -1,7 +1,7 @@
 'use client'
 
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { Bars } from '@/components/ds/charts'
+import { Bars, ColumnChart } from '@/components/ds/charts'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -509,7 +509,16 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               </div>
             </div>
             
-            {totalBanners > 0 ? (
+            {totalBanners > 0 && uiNext ? (
+              // 新しい見た目: 共通の ColumnChart（棒の上に件数）
+              <ColumnChart
+                label="直近7日の生成数"
+                height={160}
+                yTicks={false}
+                format={(n) => `${n.toLocaleString('ja-JP')}件`}
+                data={dailyStats.map((d) => ({ label: d.date, value: d.count }))}
+              />
+            ) : totalBanners > 0 ? (
               <div className="flex items-end justify-between gap-2 h-40">
                 {dailyStats.map((day, i) => {
                   const maxCount = Math.max(...dailyStats.map(d => d.count), 1)

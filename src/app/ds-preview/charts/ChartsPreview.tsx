@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button, Card, StatTile } from '@/components/ds'
 import { CountUp } from '@/components/ds/motion'
 import {
-  AreaChart, Bars, ColumnChart, DivergingBars, Donut, GroupedColumnChart, RadarChart, Ring, Sparkline, StackedBar100, StackedColumnChart,
+  AreaChart, Bars, ColumnChart, DivergingBars, Donut, GroupedColumnChart, MiniStack, RadarChart, Ring, Sparkline, StackedBar100, StackedColumnChart,
 } from '@/components/ds/charts'
 
 const MONTHS = ['5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月']
@@ -206,6 +206,23 @@ export default function ChartsPreview() {
               { label: '紹介', value: 120 }, { label: '直接', value: 100 }, { label: 'メール', value: 50 }, { label: 'その他', value: 30 },
             ]}
           />
+        </Card>
+        <Card title="表の中の小さな積み上げ（MiniStack）" meta="8時間を全長。時間は隣の列の文字で出す">
+          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+            <thead><tr><th style={{ textAlign: 'left' }}>日</th><th style={{ textAlign: 'right' }}>勤務</th><th /><th style={{ textAlign: 'right' }}>残業</th></tr></thead>
+            <tbody>
+              {[[1, 480, 0], [2, 570, 90], [3, 300, 0], [4, 660, 180]].map(([d, w, o]) => (
+                <tr key={d}>
+                  <td>{d}日</td>
+                  <td style={{ textAlign: 'right' }}>{Math.floor(w / 60)}時間{w % 60 ? `${w % 60}分` : ''}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <MiniStack basis={480} label={`勤務 ${w}分（うち残業 ${o}分）`} parts={[{ name: '通常', value: w - o, tone: 'blue' }, { name: '残業', value: o, tone: 'fair' }]} />
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{o ? `${o}分` : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
         <Card title="Donut（意味のある色・色の配列・空）">
           <div style={{ display: 'grid', gap: 20 }}>
