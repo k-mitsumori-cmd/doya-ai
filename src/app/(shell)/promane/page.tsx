@@ -95,8 +95,8 @@ export default async function PromaneEntryPage({
   return (
     <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
-        {/* ロゴ */}
-        <div className="flex justify-center mb-6 animate-slide-up">
+        {/* ロゴ（新しい見た目では、枠の見出しの帯がツール名を出すので、大きなロゴは出さない） */}
+        <div className={uiNext ? 'hidden' : 'flex justify-center mb-6 animate-slide-up'}>
           <Image
             src="/promane/logo.png"
             alt="ドヤプロマネ"
@@ -109,7 +109,7 @@ export default async function PromaneEntryPage({
         </div>
         {/* Header */}
         <div className="text-center mb-10 animate-slide-up">
-          <h1 className="text-[28px] font-black text-gray-900 tracking-tight">どのワークスペースで作業する？</h1>
+          <h1 className={uiNext ? 'text-xl font-bold text-slate-900' : 'text-[28px] font-black text-gray-900 tracking-tight'}>{uiNext ? '作業するワークスペースを選んでください' : 'どのワークスペースで作業する？'}</h1>
           <p className="text-[14px] text-gray-500 font-bold mt-2">{uiNext ? '参加中のワークスペースと、届いている招待です。' : '参加中のワークスペース・招待を確認しよう 👇'}</p>
         </div>
 
