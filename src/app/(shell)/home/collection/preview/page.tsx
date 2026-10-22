@@ -50,6 +50,7 @@ export default async function CollectionPreviewPage({ searchParams }: { searchPa
         badges={evaluateBadges(facts)}
         initialAreas={areas}
         persistAreas={false}
+        sample
       />
     </ShellGate>
   )

@@ -15,6 +15,7 @@ import { shellGroups } from '@/components/shell/tools'
 import { buildCatalog } from '@/lib/collection/catalog'
 import { evaluateBadges } from '@/lib/collection/badges'
 import { loadCollectionFacts } from '@/lib/collection/facts.server'
+import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
 import CollectionView from '@/components/collection/CollectionView'
 
 export const metadata: Metadata = {
@@ -31,7 +32,7 @@ export default async function CollectionPage() {
   if (!userId) redirect('/auth/signin?callbackUrl=/home/collection')
   if (!(await isUiNext())) notFound()
 
-  const facts = await loadCollectionFacts(userId)
+  const [facts, fxs] = await Promise.all([loadCollectionFacts(userId), loadDoyaPowerFxForUser(userId)])
   // 枠（AppShell）は src/app/(shell)/layout.tsx が出す
-  return <CollectionView tools={buildCatalog(shellGroups(true))} usage={facts.tools} badges={evaluateBadges(facts)} />
+  return <CollectionView tools={buildCatalog(shellGroups(true))} usage={facts.tools} badges={evaluateBadges(facts)} fx={fxs.fx} canEditOrgFx={fxs.canEditOrg} />
 }

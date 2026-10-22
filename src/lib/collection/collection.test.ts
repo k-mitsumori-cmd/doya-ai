@@ -9,6 +9,8 @@ import { evaluateBadges, visibleBadges } from './badges'
 import { cleanBillingMonths, jstMonthKey } from './billing'
 import { parseAreas, suggestAreas } from './areas'
 import { emptyFacts } from './types'
+import { STAMP_SET_BONUS, claimableAreas, stampSets } from './bonus'
+import { applyAwards } from '../missions/rules'
 
 const GROUPS = [
   { stage: 'collect', tools: [
@@ -156,8 +158,34 @@ test('ドヤくんの成長: 活用度で3段階。分野を選んでいない�
   assert.equal(growthStage(null), null)
   assert.equal(growthStage(0)!.id, 'apprentice')
   assert.equal(growthStage(34)!.id, 'apprentice')
-  assert.equal(growthStage(35)!.id, 'pro')
-  assert.equal(growthStage(69)!.id, 'pro')
+  assert.equal(growthStage(35)!.id, 'regular')
+  assert.equal(growthStage(69)!.id, 'regular')
   assert.equal(growthStage(70)!.id, 'president')
   assert.equal(growthStage(70)!.next, null)
+})
+
+test('ドヤくんの成長の名前は「見習い → 一人前 → 社長」（「プロ」は使わない）', () => {
+  assert.deepEqual([0, 40, 80].map((p) => growthStage(p)!.label), ['見習い', '一人前', '社長'])
+})
+
+test('分野のスタンプがそろったらボーナス: 開発中を除くツールをすべて使った分野だけ。ツールが1つの分野は対象外', () => {
+  const used = new Set(['seo', 'banner', 'sfa', 'quote'])
+  const sets = stampSets(TOOLS, used)
+  const by = Object.fromEntries(sets.map((x) => [x.area, x]))
+  assert.equal(by.collect.complete, true)
+  assert.equal(by.collect.bonus, STAMP_SET_BONUS)
+  assert.equal(by.operate.complete, false) // 収入管理がまだ（開発中の beta-tool は数えない）
+  assert.equal(by.operate.used, 1)
+  assert.equal(by.operate.total, 2)
+  assert.equal(by.sell.eligible, false) // 1つだけの分野は、そろえる意味が無い
+  assert.equal(by.sell.complete, false)
+  assert.deepEqual(claimableAreas(sets), ['collect'])
+})
+
+test('スタンプのボーナスは小さく、月の上限（200）の中で付ける', () => {
+  assert.ok(STAMP_SET_BONUS > 0 && STAMP_SET_BONUS <= 50)
+  const four = [1, 2, 3, 4].map((n) => ({ req: { type: 'bonus' as const, id: `stampset:a${n}`, amount: STAMP_SET_BONUS }, at: `2026-10-0${n}T00:00:00Z` }))
+  const big = Array.from({ length: 8 }, (_, n) => ({ req: { type: 'bonus' as const, id: `stampset:b${n}`, amount: 30 }, at: `2026-10-1${n}T00:00:00Z` }))
+  assert.equal(applyAwards(four).reduce((a, e) => a + e.amount, 0), STAMP_SET_BONUS * 4)
+  assert.equal(applyAwards(big).reduce((a, e) => a + e.amount, 0), 200)
 })

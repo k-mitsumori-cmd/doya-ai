@@ -40,7 +40,7 @@
 .primary:hover { background: var(--blue-deep); }
 .ghost { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); }
 .ghost:hover { border-color: var(--blue); color: var(--blue); }
-.primary:focus-visible, .ghost:focus-visible, .nextItem:focus-visible, .badgeLink:focus-visible, .stampLink:focus-visible, .othersSummary:focus-visible {
+.primary:focus-visible, .ghost:focus-visible, .nextItem:focus-visible, .badgeLink:focus-visible, .stampLink:focus-visible, .othersSummary:focus-visible, .disclose:focus-visible {
   outline: 3px solid rgba(0, 102, 255, 0.35); outline-offset: 2px;
 }
 
@@ -140,46 +140,77 @@
 .badgeLink:hover, .stampLink:hover { border-color: var(--blue); }
 
 /* ---- ツール図鑑 ---- */
-.stampGroup { display: grid; gap: 10px; }
-.stampGroup + .stampGroup { margin-top: 8px; }
-.groupTitle { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; color: var(--sub); }
-.groupCount { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-.stamps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
-.stampCard {
-  position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center;
-  padding: 18px 12px 14px; min-width: 0; border-radius: var(--r-sm);
-  border: 1.5px dashed var(--line-strong); background: transparent;
+.disclose {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; border: 0; background: none; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--sub); justify-self: start;
 }
-.stampCard[data-used='true'] { border: 1px solid var(--line); background: var(--paper); box-shadow: var(--shadow); }
+.disclose:focus-visible, .groupSummary:focus-visible { outline: 3px solid rgba(0, 102, 255, 0.35); outline-offset: 2px; border-radius: 8px; }
+.chevron { transition: transform 0.2s ease; }
+.chevron[data-open='true'] { transform: rotate(180deg); }
+
+.stampGroup { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper); padding: 4px 16px 14px; }
+.stampGroup + .stampGroup { margin-top: 8px; }
+.groupSummary {
+  display: flex; align-items: center; gap: 8px; min-height: 52px; cursor: pointer; list-style: none;
+  font-size: 15px; font-weight: 800; color: var(--ink);
+}
+.groupSummary::-webkit-details-marker { display: none; }
+.groupChevron { flex: none; transition: transform 0.2s ease; transform: rotate(-90deg); color: var(--sub); }
+.stampGroup[open] > .groupSummary .groupChevron { transform: rotate(0); }
+.groupName { min-width: 0; }
+.groupCount { font-size: 13px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; }
+.setDone { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--ok-ink); background: var(--ok-bg); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.setNote { margin: 0; font-size: 13px; line-height: 1.7; color: var(--sub); text-wrap: pretty; }
+.nextOne { margin: 0; }
+
+.stamps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.stampCard {
+  position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; text-align: center;
+  padding: 12px 8px 12px; min-width: 0; border-radius: var(--r-sm);
+  border: 1.5px dashed var(--line-strong); background: var(--bg);
+}
+.stampCard[data-used='true'] { border: 1.5px solid var(--blue); background: var(--paper); box-shadow: var(--shadow); }
 .stamp {
-  width: 72px; height: 72px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   border: 2px dashed var(--line-strong); color: var(--line-strong);
 }
-.stampCard[data-used='true'] .stamp {
-  border: 3px double var(--blue); color: var(--blue); background: var(--blue-soft);
-  transform: rotate(-8deg);
-  animation: press 0.42s var(--ease, ease) both;
-}
-.stampImg { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; }
-/* スタンプの絵は、丸い縁取りまで絵の中にあるので、仮の枠（二重線・塗り）を外す */
-.stampCard[data-used='true'] .stamp[data-img='true'] { border: none; background: none; width: 84px; height: 84px; margin: -6px 0; }
-.stamp[data-img='true'] .stampImg { width: 84px; height: 84px; border-radius: 0; }
+.stampImg { width: 64px; height: 64px; object-fit: contain; }
+.stamp[data-img='true'] { border: none; width: 64px; height: 64px; }
+/* 取得していないスタンプは、色を抜いて薄く出す（色だけで伝えない。「未取得」の文字も出す） */
+.stampCard:not([data-used='true']) .stampImg { filter: grayscale(1) contrast(0.85); opacity: 0.38; }
+.stampCard[data-used='true'] .stamp { transform: rotate(-8deg); animation: press 0.42s var(--ease, ease) both; }
+.stampCard[data-used='true'] .stamp:not([data-img='true']) { border: 3px double var(--blue); color: var(--blue); background: var(--blue-soft); }
 .stampName { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 14px; font-weight: 700; color: var(--ink); }
-.stampCard:not([data-used='true']) .stampName { color: var(--sub); }
-.stampSub { font-size: 12px; color: var(--muted); }
-.stampLink { margin-top: 2px; }
+.stampCard:not([data-used='true']) .stampName { color: var(--sub); font-weight: 600; }
+.stampSub { display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--sub); }
+.stampCard:not([data-used='true']) .stampSub { color: var(--muted); }
+.got { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--ok-ink); background: var(--ok-bg); border-radius: 999px; padding: 2px 8px; }
+.since { font-size: 11px; color: var(--sub); }
+.stampLink { display: inline-flex; align-items: center; min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--blue); font-size: 13px; font-weight: 700; text-decoration: none; }
+.stampLink:hover { border-color: var(--blue); }
 .beta { font-size: 11px; font-weight: 700; color: var(--note-ink); background: var(--note-bg); border-radius: 999px; padding: 1px 8px; }
 
-.others { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+/* 受け取れるボーナス */
+.claim {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 14px 16px;
+  border: 1px solid var(--blue-line); border-radius: var(--r-sm); background: var(--blue-soft);
+}
+.claimIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--paper); color: var(--blue); }
+.claimText { margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink); text-wrap: pretty; }
+.claimMsg { grid-column: 1 / -1; margin: 0; min-height: 20px; font-size: 13px; color: var(--sub); }
+.claimMsg[data-ok='true'] { color: var(--ok-ink); font-weight: 700; }
+.primary:disabled { opacity: 0.6; cursor: default; }
+.growthText { margin: 0; font-size: 13px; color: var(--sub); }
+
+.others { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; display: grid; gap: 8px; }
 .othersSummary {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; list-style: none;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; list-style: none;
   font-size: 14px; font-weight: 700; color: var(--sub);
 }
 .othersSummary::-webkit-details-marker { display: none; }
 .othersChevron { transition: transform 0.2s ease; }
 .others[open] .othersChevron { transform: rotate(180deg); }
-.others[open] > .stampGroup:first-of-type { margin-top: 8px; }
 
 @keyframes press {
   from { transform: rotate(-8deg) scale(1.18); opacity: 0; }
@@ -200,10 +231,39 @@
   .areaOptions { grid-template-columns: minmax(0, 1fr); }
   .areaBar { grid-template-columns: 10.5em minmax(0, 1fr) auto; font-size: 12px; }
   .badges { grid-template-columns: minmax(0, 1fr); }
-  .stamps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stamps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* 奇数のとき、最後の1枚が余らないよう横いっぱいに広げる */
+  .stamps > .stampCard:last-child:nth-child(odd) { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr); justify-items: start; text-align: left; align-items: center; column-gap: 12px; }
+  .stamps > .stampCard:last-child:nth-child(odd) .stampName { justify-content: flex-start; }
+  .stamps > .stampCard:last-child:nth-child(odd) .stamp { grid-row: span 2; }
+  .stamps > .stampCard:last-child:nth-child(odd) .stampSub { justify-items: start; }
+  .stampGroup { padding: 2px 12px 12px; }
+  .claim { grid-template-columns: auto minmax(0, 1fr); }
+  .claim .primary { grid-column: 1 / -1; justify-content: center; }
+  .badge { padding: 12px; }
+  .badgeLink { min-height: 36px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .stampCard[data-used='true'] .stamp { animation: none; }
-  .ringFill, .barFill, .othersChevron { transition: none; }
+  .ringFill, .barFill, .othersChevron, .groupChevron, .chevron { transition: none; }
+}
+
+/* ドヤくんと動きの設定で「動きをオフ」にしたとき */
+.page[data-motion='off'] *, .page[data-motion='off'] *::before { animation: none !important; transition: none !important; }
+
+/* 暗い設定（prefers-color-scheme: dark）。枠が明るいままでも読めるよう、この画面の中で色をそろえる（文字と背景の比は 4.5:1 以上） */
+@media (prefers-color-scheme: dark) {
+  .page {
+    --ink: #f1f4ff; --sub: #c8cfea; --muted: #a9b2d6;
+    --line: #2c3868; --line-strong: #55629a;
+    --bg: #151c3d; --paper: #1d2650;
+    --blue: #7db0ff; --blue-deep: #a3c4ff; --blue-soft: #243468; --blue-line: #365099;
+    --note-bg: #43360a; --note-ink: #ffe08a; --ok-bg: #0f3d2a; --ok-ink: #6fe7ab;
+    background: #101634; border-radius: var(--r); color: var(--ink);
+  }
+  .primary { color: #0b1230; background: var(--blue); }
+  .badge[data-earned='true'] .badgeIcon { color: #0b1230; }
+  .primary:hover { background: var(--blue-deep); }
+  .stampCard:not([data-used='true']) .stampImg, .badge:not([data-earned='true']) .badgeImg { opacity: 0.5; }
 }

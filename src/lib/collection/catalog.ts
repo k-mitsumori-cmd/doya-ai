@@ -60,12 +60,12 @@ export function badgeSrc(id: string, table: Readonly<Record<string, string>> = B
   return name ? `/collection/badges/${name}.webp` : null
 }
 
-/** ドヤくんの成長（活用度で3段階）。絵は public/ui-renewal/mascots/growth-*.webp（720×600・透過） */
-export type GrowthStage = { id: 'apprentice' | 'pro' | 'president'; label: string; src: string; next: number | null }
+/** ドヤくんの成長（活用度で3段階。見習い → 一人前 → 社長）。絵は public/ui-renewal/mascots/growth-*.webp（720×600・透過） */
+export type GrowthStage = { id: 'apprentice' | 'regular' | 'president'; label: string; src: string; next: number | null }
 
 export function growthStage(percent: number | null): GrowthStage | null {
   if (percent === null) return null
   if (percent >= 70) return { id: 'president', label: '社長', src: '/ui-renewal/mascots/growth-president.webp', next: null }
-  if (percent >= 35) return { id: 'pro', label: 'プロ', src: '/ui-renewal/mascots/growth-pro.webp', next: 70 }
+  if (percent >= 35) return { id: 'regular', label: '一人前', src: '/ui-renewal/mascots/growth-pro.webp', next: 70 }
   return { id: 'apprentice', label: '見習い', src: '/ui-renewal/mascots/growth-apprentice.webp', next: 35 }
 }

@@ -8,7 +8,7 @@
 // ⚠️ 動きは控えめ。prefers-reduced-motion では動かさない（CSS で止める）。
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronDown, Settings2 } from 'lucide-react'
+import { Check, ChevronDown, Gift, Settings2 } from 'lucide-react'
 import { ShellIcon } from '@/components/shell/icons'
 import type { CollectionArea, CollectionTool, ToolUsage } from '@/lib/collection/types'
 import { COLLECTION_AREAS } from '@/lib/collection/types'
@@ -16,6 +16,11 @@ import { utilizationScore, usedToolIds } from '@/lib/collection/score'
 import { visibleBadges, type BadgeState } from '@/lib/collection/badges'
 import { loadSavedAreas, saveAreas, suggestAreas } from '@/lib/collection/areas'
 import { badgeSrc, growthStage, stampSrc } from '@/lib/collection/catalog'
+import { STAMP_SET_BONUS, claimableAreas, stampSets, type StampSet } from '@/lib/collection/bonus'
+import type { DoyaPowerFx } from '@/lib/doya-power/fx'
+import { DoyaPowerFxProvider, useDoyaPowerFx } from '@/components/doya-power/fx-context'
+import DoyaPowerFxSettings from '@/components/doya-power/DoyaPowerFxSettings'
+import { claimStampSetBonuses, type ClaimResult } from '@/lib/collection/bonus-actions'
 import styles from './collection.module.css'
 
 const dateFmt = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
@@ -31,9 +36,27 @@ export interface CollectionViewProps {
   canEditAreas?: boolean
   /** 仮の保存（この端末の localStorage）を読み書きするか。見本の画面では false */
   persistAreas?: boolean
+  /** ドヤくんの表示と演出の設定（組織・個人）。省略するとすべてオン */
+  fx?: DoyaPowerFx
+  /** 会社の表示設定を変えられるか（会社の持ち主） */
+  canEditOrgFx?: boolean
+  /** 見本の画面。設定の保存とボーナスの受け取りで、サーバーに何も送らない */
+  sample?: boolean
 }
 
-export default function CollectionView({ tools, usage, badges, initialAreas = null, canEditAreas = true, persistAreas = true }: CollectionViewProps) {
+const sampleClaim = async (): Promise<ClaimResult> => ({ ok: true, granted: 0, message: '見本の画面では、ドヤパワーは付きません' })
+const sampleSave = async () => ({ ok: true as const })
+
+export default function CollectionView(props: CollectionViewProps) {
+  return (
+    <DoyaPowerFxProvider fx={props.fx}>
+      <CollectionBody {...props} />
+    </DoyaPowerFxProvider>
+  )
+}
+
+function CollectionBody({ tools, usage, badges, initialAreas = null, canEditAreas = true, persistAreas = true, canEditOrgFx = false, sample = false }: CollectionViewProps) {
+  const { motion } = useDoyaPowerFx()
   const used = useMemo(() => usedToolIds(usage), [usage])
   const suggested = useMemo(() => suggestAreas(tools, used), [tools, used])
   const [saved, setSaved] = useState<CollectionArea[] | null>(initialAreas)
@@ -55,7 +78,7 @@ export default function CollectionView({ tools, usage, badges, initialAreas = nu
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-motion={motion ? 'on' : 'off'}>
       <header className={styles.hero}>
         <p className={styles.eyebrow}>ドヤパワー</p>
         <h1 className={styles.title}>ツール図鑑と実績</h1>
@@ -72,9 +95,7 @@ export default function CollectionView({ tools, usage, badges, initialAreas = nu
         {shownBadges.length === 0 ? (
           <p className={styles.note}>使う分野を選ぶと、その分野の実績が出ます。</p>
         ) : (
-          <ul className={styles.badges}>
-            {shownBadges.map((b) => <BadgeCard key={b.id} badge={b} />)}
-          </ul>
+          <BadgeList badges={shownBadges} />
         )}
       </section>
 
@@ -83,8 +104,10 @@ export default function CollectionView({ tools, usage, badges, initialAreas = nu
           <h2 id="stamps-title" className={styles.sectionTitle}>ツール図鑑</h2>
           <span className={styles.sectionMeta}>{tools.filter((t) => used.has(t.id)).length} / {tools.length} 種類</span>
         </div>
-        <StampBook tools={tools} usage={usage} used={used} areas={areas} />
+        <StampBook tools={tools} usage={usage} used={used} areas={areas} onClaim={sample ? sampleClaim : claimStampSetBonuses} />
       </section>
+
+      <DoyaPowerFxSettings canEditOrg={canEditOrgFx || sample} onSave={sample ? sampleSave : undefined} />
     </div>
   )
 }
@@ -105,6 +128,7 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
   const next = score.areas.flatMap((a) => a.unusedTools).slice(0, 3)
   const pct = score.percent ?? 0
   const growth = growthStage(score.percent)
+  const { mascot } = useDoyaPowerFx()
   const R = 52
   const C = 2 * Math.PI * R
 
@@ -137,7 +161,7 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
             </button>
           ) : null}
         </div>
-        {growth ? (
+        {growth && mascot ? (
           <figure className={styles.growth}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={growth.src} alt="" width={144} height={120} className={styles.growthImg} decoding="async" />
@@ -148,6 +172,10 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
           </figure>
         ) : null}
       </div>
+
+      {growth && !mascot ? (
+        <p className={styles.growthText}>ドヤくんの成長：<b>{growth.label}</b>（{growth.next === null ? 'いちばん上の段階です' : `活用度 ${growth.next}% で次の段階`}）</p>
+      ) : null}
 
       {editing ? (
         <fieldset className={styles.areaPicker}>
@@ -239,30 +267,83 @@ function BadgeCard({ badge: b }: { badge: BadgeState }) {
   )
 }
 
+function BadgeList({ badges }: { badges: BadgeState[] }) {
+  const [openRest, setOpenRest] = useState(false)
+  const earned = badges.filter((b) => b.earned)
+  const rest = badges.filter((b) => !b.earned)
+  return (
+    <>
+      {earned.length > 0 ? <ul className={styles.badges}>{earned.map((b) => <BadgeCard key={b.id} badge={b} />)}</ul> : <p className={styles.note}>まだ達成した実績はありません。</p>}
+      {rest.length > 0 ? (
+        <>
+          <button type="button" className={styles.disclose} aria-expanded={openRest} onClick={() => setOpenRest((v) => !v)}>
+            <ChevronDown size={16} aria-hidden className={styles.chevron} data-open={openRest ? 'true' : undefined} />
+            これから取れる実績（{rest.length}件）
+          </button>
+          {openRest ? <ul className={styles.badges}>{rest.map((b) => <BadgeCard key={b.id} badge={b} />)}</ul> : null}
+        </>
+      ) : null}
+    </>
+  )
+}
+
 /* ---------------- ツール図鑑（スタンプカード） ---------------- */
 
-function StampBook({ tools, usage, used, areas }: {
+function StampBook({ tools, usage, used, areas, onClaim }: {
   tools: CollectionTool[]
   usage: Record<string, ToolUsage>
   used: ReadonlySet<string>
   areas: CollectionArea[]
+  onClaim: (() => Promise<ClaimResult>) | null
 }) {
   const mine = COLLECTION_AREAS.filter((a) => areas.includes(a.id))
   const others = COLLECTION_AREAS.filter((a) => !areas.includes(a.id))
+  const sets = useMemo(() => stampSets(tools, used), [tools, used])
+  const claimable = claimableAreas(sets)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const claim = async () => {
+    if (!onClaim || busy) return
+    setBusy(true)
+    const r = await onClaim().catch(() => ({ ok: false as const, message: '受け取れませんでした。時間をおいて、もう一度お試しください' }))
+    setMsg({ ok: r.ok, text: r.message })
+    setBusy(false)
+  }
+  const first = (mine.length ? mine : COLLECTION_AREAS)[0]?.id
   const group = (a: (typeof COLLECTION_AREAS)[number]) => {
     const list = tools.filter((t) => t.area === a.id)
     if (list.length === 0) return null
+    const set = sets.find((x) => x.area === a.id)
+    const usedCount = list.filter((t) => used.has(t.id)).length
+    const nextTool = list.find((t) => !used.has(t.id) && !t.beta)
     return (
-      <div key={a.id} className={styles.stampGroup}>
-        <h3 className={styles.groupTitle}>{a.label}<span className={styles.groupCount}>{list.filter((t) => used.has(t.id)).length} / {list.length}</span></h3>
+      <details key={a.id} className={styles.stampGroup} open={a.id === first}>
+        <summary className={styles.groupSummary}>
+          <ChevronDown size={16} aria-hidden className={styles.groupChevron} />
+          <span className={styles.groupName}>{a.label}</span>
+          <span className={styles.groupCount}>{usedCount} / {list.length}</span>
+          {set?.complete ? <span className={styles.setDone}>そろいました</span> : null}
+        </summary>
+        <SetNote set={set} nextName={nextTool?.name} />
         <ul className={styles.stamps}>
           {list.map((t) => <StampCard key={t.id} tool={t} usage={usage[t.id]} used={used.has(t.id)} />)}
         </ul>
-      </div>
+        {nextTool ? (
+          <p className={styles.nextOne}><Link href={nextTool.href} className={styles.stampLink} aria-label={`${nextTool.name}を開く`}>次に試す：{nextTool.name}</Link></p>
+        ) : null}
+      </details>
     )
   }
   return (
     <>
+      {claimable.length > 0 && onClaim ? (
+        <div className={styles.claim}>
+          <span className={styles.claimIcon}><Gift size={18} aria-hidden /></span>
+          <p className={styles.claimText}>{claimable.length}つの分野でスタンプがそろいました。1分野ごとに {STAMP_SET_BONUS} ドヤパワーを受け取れます。</p>
+          <button type="button" className={styles.primary} onClick={claim} disabled={busy}>{busy ? '受け取っています' : 'ボーナスを受け取る'}</button>
+          <p className={styles.claimMsg} role="status" aria-live="polite" data-ok={msg?.ok ? 'true' : undefined}>{msg?.text ?? ''}</p>
+        </div>
+      ) : null}
       {(mine.length ? mine : COLLECTION_AREAS).map(group)}
       {mine.length && others.length ? (
         <details className={styles.others}>
@@ -277,13 +358,20 @@ function StampBook({ tools, usage, used, areas }: {
   )
 }
 
+function SetNote({ set, nextName }: { set?: StampSet; nextName?: string }) {
+  if (!set || !set.eligible) return null
+  if (set.complete) return <p className={styles.setNote}>この分野のスタンプがそろいました（ボーナス +{set.bonus}。月のボーナスの上限の中で付きます）。</p>
+  return <p className={styles.setNote}>あと {set.total - set.used} ツールでそろいます（ボーナス +{set.bonus}）{nextName ? `。次は${nextName}です` : ''}。</p>
+}
+
 function StampCard({ tool: t, usage, used }: { tool: CollectionTool; usage?: ToolUsage; used: boolean }) {
   const src = stampSrc(t.id)
   const first = fmtDate(usage?.firstAt ?? null)
   return (
     <li className={styles.stampCard} data-used={used ? 'true' : undefined}>
-      <span className={styles.stamp} aria-hidden data-img={src && used ? 'true' : undefined}>
-        {src && used ? (
+      <span className={styles.stamp} aria-hidden data-img={src ? 'true' : undefined}>
+        {src ? (
+          // 取得していないツールも同じ絵を、色を抜いて薄く出す（取得済みとの違いは、文字「取得済み」でも示す）
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" width={72} height={72} className={styles.stampImg} loading="lazy" decoding="async" />
         ) : (
@@ -295,14 +383,10 @@ function StampCard({ tool: t, usage, used }: { tool: CollectionTool; usage?: Too
         {t.beta ? <span className={styles.beta}>開発中</span> : null}
       </span>
       {used ? (
-        <span className={styles.stampSub}>{first ? `${first}から` : '使っています'}</span>
+        <span className={styles.stampSub}><span className={styles.got}><Check size={12} aria-hidden />取得済み</span>{first ? <span className={styles.since}>{first}から</span> : null}</span>
       ) : (
-        <>
-          <span className={styles.stampSub}>まだ使っていません</span>
-          <Link href={t.href} className={styles.stampLink} aria-label={`${t.name}を開く`}>開く</Link>
-        </>
+        <span className={styles.stampSub}>未取得</span>
       )}
-      <span className={styles.srOnly}>{used ? 'スタンプあり' : 'スタンプなし'}</span>
     </li>
   )
 }
