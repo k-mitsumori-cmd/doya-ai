@@ -10,7 +10,7 @@ try:
  with (base/'hr-photo-write-scope-postgres.log').open('w') as out:result=subprocess.run(['node',str(base/'verify-hr-photo-write-scope-postgres.cjs')],env=childEnv,stdout=out,stderr=subprocess.STDOUT,timeout=180)
  evidence=base/'hr-photo-write-scope-postgres-results.json'
  proof=json.loads(evidence.read_text()) if evidence.exists() else {}
- evidenceValid=proof.get('passed')==6 and len(proof.get('cases',[]))==6 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==5
+ evidenceValid=proof.get('passed')==6 and len(proof.get('cases',[]))==6 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==14
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:
