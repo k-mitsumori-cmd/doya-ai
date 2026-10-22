@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
 const STATES: HrDevState[] = ['home', 'empty', 'error', 'forbidden', 'limit', 'login', 'org-error']
 const PAGES: HrDevPage[] = ['dashboard', 'employees', 'new', 'evaluations', 'one-on-one', 'org-chart']
 
-type Props = { searchParams: Promise<{ s?: string; p?: string }> | { s?: string; p?: string } }
+type Props = { searchParams: Promise<{ s?: string; p?: string }> }
 
 export default async function HrDevStatesPage({ searchParams }: Props) {
   if (process.env.NODE_ENV === 'production') notFound()
