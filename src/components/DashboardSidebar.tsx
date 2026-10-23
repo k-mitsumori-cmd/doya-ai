@@ -234,7 +234,7 @@ function DashboardSidebarImpl({
 
         <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
           <div className="space-y-1">
-            <SidebarSectionTitle title={isBanner ? "ドヤバナーAI" : "ドヤライティングAI"} isCollapsed={isCollapsed} theme={dashboardTheme} />
+            <SidebarSectionTitle title={isBanner ? "ドヤバナーAI" : "ドヤ記事作成"} isCollapsed={isCollapsed} theme={dashboardTheme} />
             {activeNavItems.map((item) => (
               <SidebarNavLink
                 key={item.href + item.label}

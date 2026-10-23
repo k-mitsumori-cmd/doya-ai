@@ -1,6 +1,6 @@
 'use client'
 
-// ドヤライティングAI 共通の枠の中身（ToolFrame だけ。AppShell では包まない）
+// ドヤ記事作成 共通の枠の中身（ToolFrame だけ。AppShell では包まない）
 // 今の SeoAppLayout が出していた「初回ログイン特典の残り時間」「現在のプラン」「新規記事作成」を、枠の中でも同じ値で出す。
 // ⚠️ 本文の余白と最大幅は SeoAppLayout と同じにする（/seo/template の負の margin がこの余白を打ち消す前提のため）
 import React from 'react'
@@ -60,7 +60,7 @@ export default function SeoShellFrame({
   return (
     <ToolFrame
       serviceId="seo"
-      title="ドヤライティングAI"
+      title="ドヤ記事作成"
       description="SEOツール"
       nav={nav}
       action={

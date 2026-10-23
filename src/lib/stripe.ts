@@ -31,7 +31,7 @@ const BANNER_ENTERPRISE_MONTHLY = process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MON
 const BANNER_ENTERPRISE_YEARLY = process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_banner_enterprise_yearly'
 
 export const STRIPE_PRICE_IDS = {
-  // ドヤSEO（ドヤライティングAI）
+  // ドヤSEO（ドヤ記事作成）
   // ドヤバナーAIと完全に同じStripe価格を使用（同一商品として課金）
   seo: {
     // LIGHT: 月額¥2,980（ドヤバナーAIと共通）

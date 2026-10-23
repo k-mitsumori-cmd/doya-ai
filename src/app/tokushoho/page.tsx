@@ -67,7 +67,7 @@ export default function TokushohoPage() {
               </tr>
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">サービス名</th>
-                <td className="py-4 text-sm text-gray-700">ドヤAI（ドヤライティングAI、ドヤバナーAI、ドヤインタビューAI、ドヤペルソナAI 等）</td>
+                <td className="py-4 text-sm text-gray-700">ドヤAI（ドヤ記事作成、ドヤバナーAI、ドヤインタビューAI、ドヤペルソナAI 等）</td>
               </tr>
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">サービスURL</th>

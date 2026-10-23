@@ -20,7 +20,7 @@ import ds from '@/components/ds/tokens.module.css'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
-import { getPublicServices, type Service } from '@/lib/services'
+import { getPublicServices, getListedServiceCount, type Service } from '@/lib/services'
 import { isPaidPlan, UNIFIED_PLAN_COPY, UNIFIED_PRO_PLAN_ID, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import styles from './PricingNext.module.css'
 
@@ -81,6 +81,7 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
   })
 
   const services = getPublicServices()
+  const toolCount = getListedServiceCount()
   const groups = comparisonGroups(services)
 
   return (
@@ -90,7 +91,7 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/renewal/bear-success.webp" alt="" width={160} height={160} className={styles.heroArt} />
         <p className={styles.eyebrow}>料金プラン</p>
-        <h1 className={styles.title}>1つの契約で、<wbr />全{services.length}ツールの<wbr />プロ機能を使えます</h1>
+        <h1 className={styles.title}>1つの契約で、<wbr />全{toolCount}ツールの<wbr />プロ機能を使えます</h1>
         <p className={styles.lead}>プランは無料とプロの2つだけです。ツールごとの契約や組み合わせは要りません。</p>
         <ul className={styles.promises}>
           <li><Check size={16} strokeWidth={2.5} aria-hidden />いつでも解約できます</li>
@@ -142,7 +143,7 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
             )}
           </div>
           <ul className={styles.planList}>
-            <li>全{services.length}ツールのプロ機能を使えます</li>
+            <li>全{toolCount}ツールのプロ機能を使えます</li>
             <li>各ツールの上限が上がります（下の比較表）</li>
             <li>{UNIFIED_PLAN_COPY.proNote}</li>
           </ul>

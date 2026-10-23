@@ -53,7 +53,7 @@ export async function GET() {
     ])
 
     const services = [
-      { id: 'seo', name: 'ドヤライティングAI', icon: '✍️', path: '/seo', status: 'active', stats: { articles: seoArticles, jobs: seoJobs }, color: 'emerald' },
+      { id: 'seo', name: 'ドヤ記事作成', icon: '✍️', path: '/seo', status: 'active', stats: { articles: seoArticles, jobs: seoJobs }, color: 'emerald' },
       { id: 'banner', name: 'ドヤバナーAI', icon: '🎨', path: '/banner', status: 'active', stats: { generations: bannerGenerations }, color: 'violet' },
       { id: 'interview', name: 'ドヤインタビュー', icon: '🎙️', path: '/interview', status: 'active', stats: { projects: interviewProjects, transcriptions: interviewTranscriptions }, color: 'rose' },
       { id: 'copy', name: 'ドヤコピーAI', icon: '📝', path: '/copy', status: 'active', stats: { projects: copyProjects, items: copyItems }, color: 'amber' },

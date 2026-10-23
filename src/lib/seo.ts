@@ -135,24 +135,24 @@ export const SERVICE_SEO = {
     },
   },
   
-  // ドヤライティングAI（旧: ドヤSEO）
+  // ドヤ記事作成（旧: ドヤSEO）
   seo: {
-    title: 'ドヤライティングAI | SEO + LLMOに強い長文記事を安定生成',
+    title: 'ドヤ記事作成 | SEO + LLMOに強い長文記事を安定生成',
     description: 'アウトライン→分割生成→整合性チェック→統合のパイプラインで、長文でも崩れにくい記事生成を目指します。',
     keywords: ['SEO', '記事生成', 'アウトライン', 'LLMO', 'コンテンツマーケ', '生成AI'],
     ogImage: '/ogp/seo.jpg',
     sections: {
       dashboard: {
-        title: 'ダッシュボード | ドヤライティングAI',
+        title: 'ダッシュボード | ドヤ記事作成',
         description: '記事一覧・進捗を確認し、生成中のジョブにすぐ戻れます。',
       },
       pricing: {
-        title: '料金プラン | ドヤライティングAI',
+        title: '料金プラン | ドヤ記事作成',
         description: `記事生成にはログインが必要です。無料プランは月${SEO_PRICING.freeLimit}回まで、プロプランは月${SEO_PRICING.proLimit}回まで。プロプランは月額¥${(SEO_PRICING.plans.find((plan) => plan.id === 'seo-pro')?.price ?? 9980).toLocaleString('ja-JP')}。`,
       },
       guide: {
-        title: '使い方 | ドヤライティングAI',
-        description: 'ドヤライティングAIの使い方を解説。キーワード設計、アウトライン、生成のコツなど。',
+        title: '使い方 | ドヤ記事作成',
+        description: 'ドヤ記事作成の使い方を解説。キーワード設計、アウトライン、生成のコツなど。',
       },
     },
   },
@@ -323,7 +323,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
   
   const serviceData = {
     seo: {
-      name: 'ドヤライティングAI',
+      name: 'ドヤ記事作成',
       applicationCategory: 'BusinessApplication',
       offers: {
         '@type': 'Offer',

@@ -46,7 +46,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   doyaslide: { stage: 'sell', name: 'スライド', icon: 'Presentation', hint: '提案資料・スライド作成' },
   // 集める
   aio: { stage: 'collect', name: 'AI検索対策', icon: 'Search', hint: 'AI検索での見え方を確認' },
-  seo: { stage: 'collect', name: '記事作成', icon: 'PenTool', hint: 'SEO記事の作成' },
+  seo: { stage: 'collect', name: 'ドヤ記事作成', icon: 'PenTool', hint: 'SEO記事の作成' },
   banner: { stage: 'collect', name: 'バナー', icon: 'Image', hint: 'バナーの制作' },
   adimage: { stage: 'collect', name: '広告画像', icon: 'Megaphone', hint: '媒体ごとの広告画像をまとめて作成' },
   persona: { stage: 'collect', name: 'ペルソナ', icon: 'CircleUser', hint: 'ターゲット像の作成' },
