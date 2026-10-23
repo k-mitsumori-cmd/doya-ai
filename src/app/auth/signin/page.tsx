@@ -2,11 +2,22 @@
 
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'lucide-react'
+import { Briefcase, Megaphone, Receipt, Sparkles, Mic, FileText, Wand2, Users } from 'lucide-react'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { getListedServiceCount, getServiceById } from '@/lib/services'
 import { invitationSignInOptions, safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
+
+// 左側の説明に出す、4つの分類と代表のツール。分類の名前は shell/tools.ts のメニューと同じ。
+// ツール名は services.ts の名前を引く（呼び名を二重に持たない）
+const toolNames = (ids: string[]) => ids.map((id) => getServiceById(id)?.name).filter(Boolean).join('、')
+const SIGNIN_CATEGORY_CARDS = [
+  { icon: Megaphone, title: 'マーケティング', desc: toolNames(['banner', 'seo', 'aio']), tone: 'from-emerald-500/20 to-blue-500/20' },
+  { icon: Briefcase, title: '営業（セールス）', desc: toolNames(['sfa', 'shodan', 'doyalist']), tone: 'from-violet-500/20 to-indigo-500/20' },
+  { icon: Users, title: '採用・人材管理', desc: toolNames(['mensetsu', 'hr', 'kintai']), tone: 'from-amber-500/20 to-fuchsia-500/20' },
+  { icon: Receipt, title: '経理・バックオフィス', desc: toolNames(['quote', 'promane']), tone: 'from-sky-500/20 to-cyan-500/20' },
+]
 
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
@@ -126,14 +137,15 @@ function SignInContent() {
                   ドヤAI
                 </div>
 
-                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
-                  マーケティング全体を
-                  <span className="text-blue-300"> AIで一気通貫 </span>
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight [text-wrap:balance] [word-break:auto-phrase]">
+                  1つの契約で、
+                  <wbr />
+                  <span className="text-blue-300">4つの業務のAIを</span>
+                  <wbr />
+                  使えます
                 </h2>
-                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
-                  ドヤバナーAIとドヤ記事作成で、企画→制作→改善までを最短で。
-                  <br className="hidden sm:block" />
-                  「作るだけ」で終わらない、成果につなげる制作体験へ。
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed [text-wrap:balance] [word-break:auto-phrase]">
+                  マーケティング、営業、採用、経理で使える<wbr />{getListedServiceCount()}のAIツールを、<wbr />ひとつのアカウントでお使いいただけます。
                 </p>
               </>
             )}
@@ -144,9 +156,7 @@ function SignInContent() {
                 { icon: FileText, title: '校正・ファクトチェック', desc: 'AIが品質をチェック、信頼性を担保', tone: 'from-emerald-500/20 to-teal-500/20' },
                 { icon: Wand2, title: 'SNS・翻訳', desc: '記事からSNS投稿文や多言語翻訳も一括生成', tone: 'from-amber-500/20 to-fuchsia-500/20' },
               ] : [
-                { icon: Palette, title: 'ドヤバナーAI', desc: '広告バナーを最速で量産（A/Bテストに強い）', tone: 'from-emerald-500/20 to-blue-500/20' },
-                { icon: PenLine, title: 'ドヤ記事作成', desc: 'SEO記事を安定生成（分割生成・監査で品質担保）', tone: 'from-violet-500/20 to-indigo-500/20' },
-                { icon: BarChart3, title: '改善まで支援', desc: '訴求・コピー・構成を改善して成果に寄せる', tone: 'from-amber-500/20 to-fuchsia-500/20' },
+                ...SIGNIN_CATEGORY_CARDS,
               ]).map((item, idx) => (
                 <motion.div
                   key={item.title}
