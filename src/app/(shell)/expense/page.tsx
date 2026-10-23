@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { isUiNext } from '@/lib/ui-next'
-import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib/expense/access'
+import { claimPendingMemberships, createOrganization, getExpenseContext, resolveUserId } from '@/lib/expense/access'
+import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
 
@@ -16,18 +17,29 @@ export default async function ExpensePage() {
   //    組織が無いときは、読み込みを挟まずに作成の画面を出す
   if (await isUiNext()) {
     let slug: string | null = null
+    let companyName: string | null = null
     try {
       const userId = await resolveUserId()
       if (userId) {
         await claimPendingMemberships(userId)
         slug = (await getExpenseContext())?.organizationSlug ?? null
+        // 1アカウント＝1会社（2026-10-24 ユーザーの決定）。支出管理の組織が無く、アカウントの会社（account_companies）があれば、
+        // その会社の名前で組織を裏で作って移す（組織の作成を求めない。表の持ち方は変えない。createOrganization は所属があればそれを返す）
+        if (!slug) {
+          companyName = (await getOwnCompany(userId))?.name?.trim() || null
+          if (companyName) {
+            const memberName = session.user.name?.trim() || session.user.email?.split('@')[0] || companyName
+            slug = (await createOrganization(userId, companyName, memberName)).slug
+          }
+        }
       }
     } catch {
-      // 判定に失敗したら、今までどおりクライアント（Entry）に任せる
+      // 判定・作成に失敗したら、今までどおりクライアント（Entry）に任せる
       return <ExpenseEntry />
     }
     if (slug) redirect(`/expense/${encodeURIComponent(slug)}`)
-    return <ExpenseEntry known />
+    // アカウントの会社がまだ無い: 会社の登録を案内する（登録すると、この画面を読み直して、上で組織を作って移る）
+    return <ExpenseEntry known needsCompany />
   }
   return <ExpenseEntry />
 }

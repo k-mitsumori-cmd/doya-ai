@@ -10,8 +10,11 @@ import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { EntryNext } from '@/components/expense/next'
 
-/** known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない */
-export default function ExpenseEntry({ known = false }: { known?: boolean } = {}) {
+/**
+ * known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない
+ * needsCompany: アカウントの会社が未登録（新しい見た目のとき）。組織の作成ではなく、会社の登録を案内する
+ */
+export default function ExpenseEntry({ known = false, needsCompany = false }: { known?: boolean; needsCompany?: boolean } = {}) {
   const router = useRouter()
   const uiNext = useUiNext()
   const [checking, setChecking] = useState(!known)
@@ -65,6 +68,7 @@ export default function ExpenseEntry({ known = false }: { known?: boolean } = {}
           onOrgName={setOrgName}
           onMemberName={setMemberName}
           onCreate={create}
+          needsCompany={needsCompany}
         />
       </>
     )

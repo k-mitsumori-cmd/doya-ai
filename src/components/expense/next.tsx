@@ -11,6 +11,7 @@ import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import type { ForecastMatrix } from './types'
 import { Btn, Field, inputCls } from './ui'
 import { CATEGORY_OTHER_COLOR, colorOf } from './CashBars'
+import { CompanyRegisterButton } from '@/components/shell/ShellCompanyCard'
 
 const STEPS = [
   { title: '契約を登録する', body: 'SaaS・業務委託・家賃などを、金額と支払周期で登録します。', art: '/expense/step-1.webp' },
@@ -19,13 +20,15 @@ const STEPS = [
 ]
 
 /** 入口（組織がまだ無い人）。枠の外の画面なので、見出し（h1）はここで1つ持つ */
-export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, onCreate }: {
+export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, onCreate, needsCompany = false }: {
   orgName: string
   memberName: string
   busy: boolean
   onOrgName: (v: string) => void
   onMemberName: (v: string) => void
   onCreate: () => void
+  /** アカウントの会社が未登録。組織の作成ではなく、会社の登録を案内する（1アカウント＝1会社。2026-10-24） */
+  needsCompany?: boolean
 }) {
   return (
     <div data-ui-next="true" className="bg-[var(--bg)]">
@@ -37,6 +40,18 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
           tool="expense"
         />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {needsCompany ? (
+          <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-company-title">
+            <h2 id="expense-company-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">会社を登録して始める</h2>
+            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤマーケAIは、1つのアカウントで1つの会社を扱います。会社を登録すると、支出管理はその会社の名前ですぐに使えます。</p>
+            <p className="mt-2 text-[14px] leading-[1.7] text-[var(--sub)]">ほかのツールで使っている組織の名前があれば、候補から選べます。</p>
+            <div className="mt-5">
+              <CompanyRegisterButton className="inline-flex min-h-[44px] items-center justify-center rounded-[var(--r-sm)] bg-[var(--blue)] px-5 text-[15px] font-bold text-white transition-colors hover:bg-[var(--blue-deep)]">
+                会社を登録する
+              </CompanyRegisterButton>
+            </div>
+          </section>
+          ) : (
           <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-create-title">
             <h2 id="expense-create-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">組織を作成する</h2>
             <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">会社名とあなたの氏名だけで始められます。あとからメンバーを招待できます。</p>
@@ -54,6 +69,7 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
               </Btn>
             </div>
           </section>
+          )}
           <section aria-labelledby="expense-steps-title">
             <h2 id="expense-steps-title" className="mb-3 text-[18px] font-bold leading-[1.4] text-[var(--ink)]">3ステップで始める</h2>
             <Stagger as="ol" className="m-0 grid list-none grid-cols-1 gap-3 p-0">
