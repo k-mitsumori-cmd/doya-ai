@@ -33,7 +33,7 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
     assert.match(loader,/if \(doyaPowerRollout\(\) === 'off'\) return null\n  try \{\n    const who = await doyaPowerCharger\.target\(\)/);
     assert.doesNotMatch(loader,/companyId: (body|query|params|searchParams)/);
     const home=code('src/app/(shell)/home/page.tsx');
-    assert.match(home,/const power = \(await isDoyaPowerEnabled\(\)\) \? await loadDoyaPowerHome\(\) : null/);
+    assert.match(home,/const doyaPower = await isDoyaPowerEnabled\(\)[\s\S]*?const power = doyaPower \? await loadDoyaPowerHome\(\) : null/); // 旗を先に確かめ、出さない人には台帳を読まない（会社の登録の案内の文にも同じ判定を使う）
     const page=code('src/app/(shell)/home/doya-power/page.tsx');
     const flag=page.indexOf('if (!(await isDoyaPowerEnabled())) notFound()'),session=page.indexOf('getServerSession(');
     assert.ok(flag>0&&session>flag,'flag before session');
