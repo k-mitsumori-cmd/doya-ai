@@ -2021,6 +2021,19 @@ export function getPublicServices(): Service[] {
     .sort((a, b) => a.order - b.order)
 }
 
+// 外に向けて「いくつのAIツールがあるか」を言うときの一覧と数。
+// LP・トップ・料金ページの「○○のAIツール」「全○○ツール」は、必ずこの関数から出す（数字を直書きしない）。
+// 公開中（status が active か beta）で、提供終了・開発中・ベータで隠したもの（HIDDEN_SERVICE_IDS）を除く。
+export function getListedServices(): Service[] {
+  return SERVICES
+    .filter(s => (s.status === 'active' || s.status === 'beta') && !HIDDEN_SERVICE_IDS.has(s.id))
+    .sort((a, b) => a.order - b.order)
+}
+
+export function getListedServiceCount(): number {
+  return getListedServices().length
+}
+
 // 全サービス（近日公開含む）をorder順で取得
 export function getAllServices(): Service[] {
   return [...SERVICES].sort((a, b) => a.order - b.order)
