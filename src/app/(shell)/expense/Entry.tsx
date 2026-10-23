@@ -10,8 +10,12 @@ import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { EntryNext } from '@/components/expense/next'
 
-/** known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない */
-export default function ExpenseEntry({ known = false }: { known?: boolean } = {}) {
+/**
+ * known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない
+ * needsCompany: アカウントの会社が未登録（新しい見た目のとき）。組織の作成ではなく、会社の登録を案内する
+ * companyName: アカウントの会社の名前（新しい見た目のとき）。「◯◯で始める」を1回押すと、サーバーがその名前で組織を作る
+ */
+export default function ExpenseEntry({ known = false, needsCompany = false, companyName = null }: { known?: boolean; needsCompany?: boolean; companyName?: string | null } = {}) {
   const router = useRouter()
   const uiNext = useUiNext()
   const [checking, setChecking] = useState(!known)
@@ -30,6 +34,29 @@ export default function ExpenseEntry({ known = false }: { known?: boolean } = {}
       })
       .catch(() => setChecking(false))
   }, [router, known])
+
+  // アカウントの会社の名前で始める（組織名・氏名はサーバーが決める。POST は押したときの1回だけ）
+  const startWithCompany = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/expense/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromAccountCompany: true }),
+      })
+      if (res.status === 401) {
+        await startGoogleSignIn('/expense')
+        return
+      }
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || '始められませんでした。時間をおいて、もう一度お試しください。')
+      router.replace(`/expense/${d.organization.slug}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+      setBusy(false)
+    }
+  }
 
   const create = async () => {
     if (!orgName.trim() || !memberName.trim() || busy) return
@@ -65,6 +92,9 @@ export default function ExpenseEntry({ known = false }: { known?: boolean } = {}
           onOrgName={setOrgName}
           onMemberName={setMemberName}
           onCreate={create}
+          needsCompany={needsCompany}
+          companyName={companyName}
+          onStartWithCompany={startWithCompany}
         />
       </>
     )

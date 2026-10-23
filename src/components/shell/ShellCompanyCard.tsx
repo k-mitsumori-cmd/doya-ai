@@ -14,12 +14,14 @@ export default function ShellCompanyCard() {
   const [open, setOpen] = useState(false)
   if (company === undefined) return null
   const dialog = <CompanyDialog open={open} onClose={() => setOpen(false)} />
-  if (!company) {
+  // 未登録（会社が無い、またはツールの組織の名前を仮に出しているだけ）のときは、登録済みと見分けがつく形にする。
+  // ⚠️ 「株式会社◯◯ 登録する」と並べると、登録済みに見えた（2026-10-24 メインの全画面の点検）
+  if (!company || company.source !== 'company') {
     return (
-      <div className={styles.card}>
-        <p className={styles.label}>登録会社</p>
-        <p className={styles.empty}>まだ登録されていません</p>
-        <button type="button" className={styles.register} onClick={() => setOpen(true)}>会社情報を登録する</button>
+      <div className={`${styles.card} ${styles.pending}`}>
+        <p className={styles.label}>登録会社（未登録）</p>
+        {company ? <p className={styles.empty}>候補: {company.name}</p> : <p className={styles.empty}>まだ登録されていません</p>}
+        <button type="button" className={styles.registerPrimary} onClick={() => setOpen(true)}>会社を登録する</button>
         {dialog}
       </div>
     )
@@ -31,9 +33,7 @@ export default function ShellCompanyCard() {
           <span className={styles.label}>登録会社</span>
           <span className={styles.name}>{company.name}</span>
         </span>
-        <button type="button" className={styles.edit} onClick={() => setOpen(true)}>
-          {company.source === 'company' ? '会社情報' : '登録する'}
-        </button>
+        <button type="button" className={styles.edit} onClick={() => setOpen(true)}>会社情報</button>
       </div>
       {dialog}
     </div>

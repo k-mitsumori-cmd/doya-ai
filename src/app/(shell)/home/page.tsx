@@ -36,7 +36,9 @@ export default async function HomePage() {
   // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
   if (!uiNext) return <HomeDashboardLegacy initial={summary} />
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
-  // ドヤパワーの欄（旗 DOYA_POWER_ROLLOUT の内側だけ。off なら台帳もセッションも読まずに null。読めないときも null で、欄を出さない）
-  const power = (await isDoyaPowerEnabled()) ? await loadDoyaPowerHome() : null
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} />
+  // ドヤパワーの旗が出すと決めた人か（旗 DOYA_POWER_ROLLOUT の内側だけ。off なら台帳もセッションも読まない）
+  const doyaPower = await isDoyaPowerEnabled()
+  // ドヤパワーの欄（読めないときは null で、欄を出さない）と、会社の登録の案内の文（登録するとゲージが出る）の両方に使う
+  const power = doyaPower ? await loadDoyaPowerHome() : null
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} />
 }

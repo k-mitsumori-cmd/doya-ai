@@ -205,7 +205,7 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
  * 会社をまだ登録していない人への案内（UI 品質 S-9・B-1）。1行の細い帯で、入力（主役）の下に出す。閉じたら、このブラウザでは出さない。
  * 押すと、会社名とサイトの URL を入れる小さな画面が開く。左下の「会社情報」からも、いつでも登録できる。
  */
-function CompanySetupNote({ initiallyHidden }: { initiallyHidden: boolean }) {
+function CompanySetupNote({ initiallyHidden, doyaPower }: { initiallyHidden: boolean; doyaPower: boolean }) {
   const company = useAccountCompany()
   const [hidden, setHidden] = useState(initiallyHidden)
   // undefined は今の見た目（出さない）。登録済み（source が company）なら出さない
@@ -215,11 +215,17 @@ function CompanySetupNote({ initiallyHidden }: { initiallyHidden: boolean }) {
     try { document.cookie = `${SETUP_HIDE_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax` } catch { /* 覚えられなくても閉じる */ }
   }
   return (
-    <section className={styles.setup} aria-label="会社情報の登録">
-      <p className={styles.setupText}>
-        {company ? <>会社情報が未登録です（今は「{company.name}」を仮に表示）</> : '会社情報が未登録です'}
-      </p>
-      <CompanyRegisterButton className={styles.setupAction}>登録する</CompanyRegisterButton>
+    <section className={styles.setup} aria-labelledby="home-setup-title">
+      <div className={styles.setupBody}>
+        <h2 id="home-setup-title" className={styles.setupTitle}>会社を登録してください</h2>
+        <p className={styles.setupText}>
+          {company ? <>まだ会社が登録されていません。今は、ほかのツールの組織の名前「{company.name}」を仮に出しています。</> : 'まだ会社が登録されていません。'}
+          ドヤマーケAIは、1つのアカウントで1つの会社を扱います。
+          {/* ドヤパワーの台帳は会社ごと。旗の内側だけ、登録するとゲージが出ることを伝える */}
+          {doyaPower ? '登録すると、ドヤパワー（使える量）のゲージが出ます。' : null}
+        </p>
+      </div>
+      <CompanyRegisterButton className={styles.setupAction}>会社を登録する</CompanyRegisterButton>
       <button type="button" className={styles.setupClose} onClick={hide} aria-label="この案内を閉じる"><X size={16} aria-hidden /></button>
     </section>
   )
@@ -377,11 +383,13 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false, powerCard = null }: {
+export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false }: {
   initial: HomeSummary
   setupHidden?: boolean
   /** ドヤパワーの欄（旗の内側だけ。page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
   powerCard?: ReactNode
+  /** ドヤパワーの旗が出すと決めた人か（page.tsx が isDoyaPowerEnabled() で決めて渡す。会社の登録の案内の文に使う） */
+  doyaPower?: boolean
 }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
@@ -418,7 +426,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
-      <CompanySetupNote initiallyHidden={setupHidden} />
+      <CompanySetupNote initiallyHidden={setupHidden} doyaPower={doyaPower} />
 
       <TodayCard summary={s} />
 
