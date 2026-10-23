@@ -7,6 +7,8 @@
 // ⚠️ 枠を出す・出さないが切り替わるとき（LP⇔アプリ、公開の画面）だけ、中身が作り直される。
 import { usePathname } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
+import { SessionProvider } from 'next-auth/react'
+import type { Session } from 'next-auth'
 import type { UiNextMode } from '@/lib/ui-next'
 import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
@@ -23,7 +25,9 @@ import type { DoyaPowerFx } from '@/lib/doya-power/fx'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ session, signedIn, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+  /** サーバーで読んだログイン情報（新しい見た目のときだけ渡す）。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
+  session?: Session | null
   signedIn: boolean
   /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。新しい見た目のときだけ真になる） */
   doyaPower?: boolean
@@ -50,7 +54,7 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
   const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds, uiNext: Boolean(uiNext) }))
     ? <AppShell userName={userName} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
     : <>{children}</>
-  return (
+  const tree = (
     <UiNextContext.Provider value={uiNext}>
       <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
       <ShellToolHrefsContext.Provider value={uiNext && toolHrefs ? toolHrefs : EMPTY}>
@@ -72,4 +76,7 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>
   )
+  // 新しい見た目で、サーバーがログインを確認できているときだけ、初期値つきの SessionProvider で包む。
+  // useSession() が最初から 'authenticated' を返すので、各ツールが「ログイン情報を確認しています」を出さない
+  return uiNext && session?.user ? <SessionProvider session={session}>{tree}</SessionProvider> : tree
 }
