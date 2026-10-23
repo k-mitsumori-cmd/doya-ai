@@ -56,6 +56,12 @@ const nextConfig = {
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js'],
 
+  // ⚠️ 画面が増えて、Vercel のビルドがコンパイルの途中でメモリ不足（SIGKILL）で止まった（2026-10-24）。
+  // webpack のメモリの使い方を抑える（ビルドが少し遅くなる代わりに、ピークのメモリが下がる）。
+  experimental: {
+    webpackMemoryOptimizations: true,
+  },
+
     // ------------------------------------------------------------------
     // PDF生成ルートに Chromium のバイナリを同梱する
     // ------------------------------------------------------------------
