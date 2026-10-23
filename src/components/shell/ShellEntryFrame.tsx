@@ -8,8 +8,8 @@
 // - 組織の下（/<ツール>/<組織>/...）は、組織の layout が ToolFrame を出すので、ここでは包まない
 // - 料金のページに ?org= があれば、その組織のタブの並びを出す（組織の画面の「料金プラン」のタブから来たとき）
 // ⚠️ 2026-10-23 ユーザーの指摘（ツールを押すと上のヘッダーが消えて画面が変わる）への直し。registry.ts の shouldShowShell と組で使う
-import type { ReactNode } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import ToolFrame from './ToolFrame'
 import { useInShell } from './in-shell'
 import { useUiNext } from './ui-next-context'
@@ -32,9 +32,13 @@ export default function ShellEntryFrame({ serviceId, children }: { serviceId: En
   const inShell = useInShell()
   const uiNext = useUiNext()
   const pathname = usePathname() || ''
-  const search = useSearchParams()
+  // ?org= は描いたあとに読む。⚠️ useSearchParams() を使うと、静的に書き出す画面（/expense など）で
+  //    Suspense が無いためにビルドが止まる（2026-10-23 の Vercel のプレビューで発生）
+  const [org, setOrg] = useState<string | null>(null)
+  useEffect(() => {
+    setOrg(pathname.endsWith('/pricing') ? new URLSearchParams(window.location.search).get('org') : null)
+  }, [pathname])
   if (!inShell || !uiNext || !isEntryPath(serviceId, pathname)) return <>{children}</>
-  const org = pathname.endsWith('/pricing') ? search?.get('org') : null
   const nav = org ? ORG_NAV[serviceId]?.(org) : undefined
   return <ToolFrame serviceId={serviceId} nav={nav}>{children}</ToolFrame>
 }
