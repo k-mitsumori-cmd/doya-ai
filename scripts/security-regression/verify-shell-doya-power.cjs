@@ -27,5 +27,25 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
     // 台帳の表が入ったので残りの API を作った。旗が off なら、何も読まずに 404（詳しくは verify-doya-power-charge-routes.cjs）
     assert.match(code('src/app/api/doya-power/balance/route.ts'),/if \(doyaPowerRollout\(\) === 'off'\) return NextResponse\.json/);
   });
+  await check('Home power card and history page check the flag first and read only the session company',async()=>{
+    // 経営ホームの欄・内訳と履歴の画面（2026-10-23）。旗が off なら何も読まない。会社はセッションの本人の会社だけ（charger.target）
+    const loader=code('src/lib/doya-power/home.server.ts');
+    assert.match(loader,/if \(doyaPowerRollout\(\) === 'off'\) return null\n  try \{\n    const who = await doyaPowerCharger\.target\(\)/);
+    assert.doesNotMatch(loader,/companyId: (body|query|params|searchParams)/);
+    const home=code('src/app/(shell)/home/page.tsx');
+    assert.match(home,/const power = \(await isDoyaPowerEnabled\(\)\) \? await loadDoyaPowerHome\(\) : null/);
+    const page=code('src/app/(shell)/home/doya-power/page.tsx');
+    const flag=page.indexOf('if (!(await isDoyaPowerEnabled())) notFound()'),session=page.indexOf('getServerSession(');
+    assert.ok(flag>0&&session>flag,'flag before session');
+    // 履歴に操作の ID（会社やクライアントのキーを含む）を出さない
+    assert.doesNotMatch(code('src/components/doya-power/DoyaPowerHome.tsx'),/operationId/);
+    // 枠のゲージ（ドヤパワーの入口）は、内訳と履歴の画面へ
+    assert.match(code('src/components/shell/power.tsx'),/href = '\/home\/doya-power'/);
+  });
+  await check('The shell passes the mascot and effects setting only when the flag allows it',async()=>{
+    const layout=code('src/app/(shell)/layout.tsx');
+    assert.match(layout,/const doyaPowerFx = doyaPower && userId \? /);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerFxProvider fx=\{uiNext && doyaPower \? doyaPowerFx : undefined\}>/);
+  });
   console.log(JSON.stringify({scope:'Shell DoyaPower placement: flag-off renders nothing and never reads the ledger. Static source checks only.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});

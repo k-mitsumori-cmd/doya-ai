@@ -403,7 +403,56 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
-  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, operationInfo, recentConsume }
+  /**
+   * 増えた・減った記録の新しい順（読むだけ。経営ホームの内訳・履歴の画面で使う）。会社が無ければ空。
+   * ⚠️ 操作の ID（会社やクライアントのキーを含む）は返さない。返すのは操作の名前（ID の1つ目の欄）だけ
+   */
+  async function history(companyId: string, opts: { limit?: number } = {}): Promise<HistoryEntry[]> {
+    if (!validId(companyId)) return []
+    const limit = Math.min(Math.max(1, Math.floor(opts.limit ?? 30)), 100)
+    return db.$transaction(async (tx) => {
+      const account = await tx.doyaPowerAccount.findUnique({ where: { companyId } })
+      if (!account) return []
+      const rows: { type: string; amount: number; balanceAfter: number; operationId: string | null; refundOf: string | null; note: string | null; createdAt: Date }[] =
+        await tx.doyaPowerTransaction.findMany({
+          where: { accountId: account.id },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: limit,
+          select: { type: true, amount: true, balanceAfter: true, operationId: true, refundOf: true, note: true, createdAt: true },
+        })
+      // メモリの DB（テスト）は orderBy・take を見ないので、ここでも並べて切る
+      return rows
+        .slice()
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map((r): HistoryEntry => {
+          const op = r.type === 'consume' ? r.operationId : r.type === 'refund' ? r.refundOf : null
+          return {
+            at: r.createdAt,
+            type: r.type === 'consume' || r.type === 'refund' || r.type === 'grant' || r.type === 'expire' ? r.type : 'grant',
+            amount: r.amount,
+            balanceAfter: r.balanceAfter,
+            action: op ? op.split(':')[0] || null : null,
+            kind: r.type === 'grant' && r.note && !r.note.startsWith('target:') ? r.note.slice(0, 40) : null,
+          }
+        })
+    })
+  }
+
+  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, operationInfo, recentConsume, history }
+}
+
+/** 増えた・減った記録の1行（経営ホームの履歴に出す） */
+export type HistoryEntry = {
+  at: Date
+  type: 'consume' | 'refund' | 'grant' | 'expire'
+  /** 増は正、減は負 */
+  amount: number
+  balanceAfter: number
+  /** 減らした（戻した）操作の名前（例: 'banner.generate'）。付与・期限切れは null */
+  action: string | null
+  /** 付与の種類（monthly・daily_recovery・bonus・mission など）。付与でなければ null */
+  kind: string | null
 }
 
 export type DoyaPowerLedger = ReturnType<typeof createDoyaPowerLedger>

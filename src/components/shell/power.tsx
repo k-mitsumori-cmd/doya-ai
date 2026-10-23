@@ -38,8 +38,8 @@ export function ShellPowerProvider({ value, children }: { value?: ShellPowerStat
 
 const fmt = (n: number) => Math.max(0, Math.round(n)).toLocaleString('ja-JP')
 
-/** 枠のヘッダーに置く、残りの小さなゲージ。押すと経営ホームのドヤパワーの欄へ移る */
-export function ShellPowerMeter({ className, href = '/home#doya-power', variant = 'topbar' }: {
+/** 枠のヘッダーに置く、残りの小さなゲージ。ドヤパワーの入口で、押すと内訳と履歴の画面（/home/doya-power）へ移る */
+export function ShellPowerMeter({ className, href = '/home/doya-power', variant = 'topbar' }: {
   className?: string
   href?: string
   /** topbar … スマホの上の帯 / sidebar … 左のメニューの上（アイコンだけの幅では稲妻だけ） */
@@ -57,7 +57,7 @@ export function ShellPowerMeter({ className, href = '/home#doya-power', variant 
       href={href}
       className={`${styles.meter} ${variant === 'sidebar' ? styles.sidebarMeter : ''} ${className ?? ''}`}
       data-low={low ? 'true' : undefined}
-      aria-label={`ドヤパワーの残り ${fmt(value)}（上限 ${fmt(max)}）${low ? '。残りわずかです' : ''}`}
+      aria-label={`ドヤパワーの残り ${fmt(value)}（上限 ${fmt(max)}）${low ? '。残りわずかです' : ''}。内訳と履歴を見る`}
       title={`ドヤパワーの残り ${fmt(value)} / 上限 ${fmt(max)}`}
     >
       <Zap size={14} strokeWidth={2.25} aria-hidden className={styles.icon} />
