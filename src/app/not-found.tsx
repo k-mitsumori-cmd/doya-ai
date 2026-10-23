@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { Home, ArrowLeft, Sparkles } from 'lucide-react'
+import { Home, ArrowLeft } from 'lucide-react'
+import DoyaLogo from '@/components/brand/DoyaLogo'
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
       <div className="text-center max-w-md">
         {/* ロゴ */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-6 shadow-xl">
-          <Sparkles className="w-10 h-10 text-white" />
+        <div className="mb-6 flex justify-center">
+          <DoyaLogo size={64} textClassName="text-2xl font-black text-gray-900" />
         </div>
         
         {/* 404 */}
