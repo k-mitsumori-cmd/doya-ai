@@ -26,6 +26,7 @@ import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
 import { ShellPowerMeter } from './power'
+import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -243,7 +244,7 @@ export default function AppShell({ children, userName, initialRecent }: {
           <Menu size={20} />
         </button>
         <Link href={SHELL_HOME.href} className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden />ドヤAI
+          <DoyaLogoMark size={28} className={styles.brandMark} />ドヤAI
         </Link>
         {/* ドヤパワーの残り（旗が出すと決め、残りの値があるときだけ。無ければ何も描かない） */}
         <ShellPowerMeter variant="topbar" />
@@ -257,7 +258,7 @@ export default function AppShell({ children, userName, initialRecent }: {
       <nav className={styles.sidebar} data-open={open} aria-label="ツール一覧">
         <div className={styles.sideHead}>
           <Link href={SHELL_HOME.href} className={styles.brand} onClick={close}>
-            <span className={styles.brandMark} aria-hidden />
+            <DoyaLogoMark size={28} className={styles.brandMark} />
             <span className={styles.navLabel}>ドヤAI</span>
           </Link>
           <button type="button" className={`${styles.iconButton} ${styles.closeButton}`} onClick={close} aria-label="メニューを閉じる">

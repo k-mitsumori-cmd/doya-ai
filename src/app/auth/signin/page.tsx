@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Briefcase, Megaphone, Receipt, Sparkles, Mic, FileText, Wand2, Users } from 'lucide-react'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import DoyaLogo from '@/components/brand/DoyaLogo'
 import { motion } from 'framer-motion'
 import { getListedServiceCount, getServiceById } from '@/lib/services'
 import { invitationSignInOptions, safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
@@ -189,9 +190,7 @@ function SignInContent() {
               {/* 375px で「す」だけが次の行に落ちないよう、文節で折り返す（2026-10-23） */}
               <p className="mt-2 text-sm text-slate-600 font-bold [text-wrap:balance] [word-break:auto-phrase]">Googleアカウントで<wbr />簡単にログインできます</p>
             </div>
-            <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
+            <DoyaLogo size={40} className="hidden sm:inline-flex flex-none" textClassName="text-lg font-black text-slate-900" />
           </div>
 
           {errorMessage && (

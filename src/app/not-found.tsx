@@ -7,11 +7,13 @@
 import Link from 'next/link'
 import tokens from '@/components/ds/tokens.module.css'
 import { Button, EmptyState } from '@/components/ds'
+import DoyaLogo from '@/components/brand/DoyaLogo'
 
 export default function NotFound() {
   return (
     <main className={`${tokens.ds} grid min-h-[100dvh] place-items-center bg-[var(--bg)] px-4 py-12`}>
       <div className="w-full max-w-lg rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-6 shadow-[var(--shadow)] sm:p-8">
+        <div className="mb-4 flex justify-center"><DoyaLogo size={40} textClassName="text-xl font-black text-[var(--ink)]" /></div>
         <p className="m-0 text-center text-[13px] font-bold tracking-[0.12em] text-[var(--blue)]">404</p>
         <EmptyState
           kind="no-results"

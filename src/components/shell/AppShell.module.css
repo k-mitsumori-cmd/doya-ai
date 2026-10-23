@@ -34,9 +34,8 @@
 }
 
 .brandMark {
-  width: 24px; height: 24px; border-radius: 8px; flex: none;
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.28);
+  /* 記号の画像（青い板＋ドヤくん）。透過の角丸なので、ダークでも板の青で形が保たれる */
+  width: 28px; height: 28px; flex: none;
 }
 
 .search {
