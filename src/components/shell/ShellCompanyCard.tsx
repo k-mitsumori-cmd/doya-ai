@@ -20,7 +20,8 @@ export default function ShellCompanyCard() {
     return (
       <div className={`${styles.card} ${styles.pending}`}>
         <p className={styles.label}>登録会社（未登録）</p>
-        {company ? <p className={styles.empty}>候補: {company.name}</p> : <p className={styles.empty}>まだ登録されていません</p>}
+        {/* 候補の名前（ツールの組織の名前）はここに出さない。場面で変わって分かりにくいため（2026-10-24）。候補は登録の画面の中で選ぶ */}
+        <p className={styles.empty}>まだ登録されていません</p>
         <button type="button" className={styles.registerPrimary} onClick={() => setOpen(true)}>会社を登録する</button>
         {dialog}
       </div>
@@ -54,6 +55,7 @@ export function CompanyRegisterButton({ className, children }: { className?: str
 /** 経営ホームの見出しの横・ツールの見出しの帯に出す、小さな会社名（B-2） */
 export function ShellCompanyTag({ className }: { className?: string }) {
   const company = useAccountCompany()
-  if (!company) return null
+  // 登録した会社だけを出す（ツールの組織の名前を仮に出すと、ツールごとに名前が変わって見える。2026-10-24）
+  if (!company || company.source !== 'company') return null
   return <span className={`${styles.tag} ${className ?? ''}`}>{company.name}</span>
 }

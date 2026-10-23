@@ -14,6 +14,7 @@ import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
 import { useUiNext } from './ui-next-context'
+import { useToolUsageBody } from './ShellUsage'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -37,6 +38,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
   // （新しい見た目のときだけ。統括の確認 2026-10-19）
   const uiNext = useUiNext()
+  const usage = useToolUsageBody()
   const tabsRef = useRef<HTMLDivElement | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   useEffect(() => {
@@ -80,7 +82,18 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
             <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
-          {action ? <div className={styles.action}>{action}</div> : null}
+          {action || (uiNext && usage) ? (
+            <div className={styles.action}>
+              {/* このツールの「作った数 / 残り」とプラン。新しい見た目では左下ではなく、ここに出す（押すと開く。開いても下の行は動かない） */}
+              {uiNext && usage ? (
+                <details className={styles.usage}>
+                  <summary className={styles.usageSummary}>このツールの残りとプラン</summary>
+                  <div className={styles.usageCard}>{usage}</div>
+                </details>
+              ) : null}
+              {action}
+            </div>
+          ) : null}
         </div>
         {nav?.length ? (
           <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label={`${name}のメニュー`} data-more-left={more.left ? 'true' : undefined} data-more-right={more.right ? 'true' : undefined}>

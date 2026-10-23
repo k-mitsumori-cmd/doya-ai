@@ -6,6 +6,8 @@
 // - 台帳（registry.ts）の usage があれば、SidebarUsagePanel をそのまま使う（数字の出どころ・読み直しの合図は今と同じ）
 // - ツールの中でしか分からない数字（人事の従業員数など）は、ツールが <ShellUsageSlot> で渡す。渡されたらそちらを出す
 // ⚠️ 上限に達したときのモーダルは各ツールに残っている。ここは表示だけ。
+// ⚠️ 新しい見た目では、左下には出さない（ツールを押すたびに左下が入れ替わって分かりにくい。2026-10-24 ユーザーの指摘）。
+//    ツールの見出しの帯（ToolFrame）の「このツールの残りとプラン」に出す（useToolUsageBody）。今の見た目は左下のまま（ShellUsageArea）
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -90,6 +92,16 @@ export function ShellUsageArea({ className }: { className?: string }) {
   // ⚠️ 高さを保つのは、新しい見た目（チェックリスト §5.1）のときだけ
   const minHeight = uiNext && held.key === holdKey && held.height > 0 ? held.height : undefined
   return <div ref={ref} className={className} data-hold={minHeight ? 'true' : undefined} style={minHeight ? { minHeight } : undefined}>{body}</div>
+}
+
+/**
+ * 今のツールの「作った数 / 残り」とプラン（新しい見た目で、ツールの見出しの帯に出す中身）。
+ * 台帳（registry.ts）に usage が無く、ツールが ShellUsageSlot で渡してもいなければ null（帯に何も出さない）
+ */
+export function useToolUsageBody(): ReactNode | null {
+  const pathname = usePathname() || '/'
+  const slot = useContext(SlotContext)
+  return usageBody(pathname, slot)
 }
 
 function usageBody(pathname: string, slot: ReactNode | null): ReactNode {
