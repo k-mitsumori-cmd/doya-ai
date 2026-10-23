@@ -12,6 +12,15 @@
 .edit:hover { border-color: var(--blue-line); color: var(--blue); }
 .edit:focus-visible, .register:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .register:hover { text-decoration: underline; }
+/* 未登録のとき: 登録済み（白い札）と見分けがつくよう、薄い青の地と、はっきりしたボタンにする */
+.pending { padding: 10px; border: 1px dashed var(--blue-line); border-radius: 12px; background: var(--blue-soft); }
+.pending .empty { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.registerPrimary {
+  display: block; width: 100%; min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: var(--blue); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.registerPrimary:hover { background: var(--blue-deep); }
+.registerPrimary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .card > .label { display: block; padding: 0 2px; }
 
 

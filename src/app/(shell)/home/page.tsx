@@ -13,6 +13,7 @@ import { getHomeSummary } from '@/lib/home/summary'
 import { cookies } from 'next/headers'
 import { isUiNext } from '@/lib/ui-next'
 import { SETUP_HIDE_COOKIE } from './cookies'
+import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import HomeDashboard from './HomeDashboard'
 import HomeDashboardLegacy from './HomeDashboardLegacy'
 
@@ -33,5 +34,7 @@ export default async function HomePage() {
   // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
   if (!uiNext) return <HomeDashboardLegacy initial={summary} />
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} />
+  // 会社の登録の案内で、登録するとドヤパワーのゲージが出ることを伝えるか（旗 DOYA_POWER_ROLLOUT の内側だけ）
+  const doyaPower = await isDoyaPowerEnabled()
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} doyaPower={doyaPower} />
 }
