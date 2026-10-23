@@ -270,7 +270,8 @@ export default function AppShell({ children, userName, initialRecent }: {
           <span className={styles.navLabel}>ツールを探す</span>
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
-        <ShellPowerMeter variant="sidebar" />
+        {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
+        {uiNext ? null : <ShellPowerMeter variant="sidebar" />}
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {recentTools.length ? (
@@ -290,10 +291,13 @@ export default function AppShell({ children, userName, initialRecent }: {
             </div>
           ))}
         </div>
-        <ShellUsageArea className={styles.usage} />
+        {/* 新しい見た目では、左下はどの画面でも同じもの（登録会社・ドヤパワー・アカウント・ログアウト）だけにする。
+            ツールごとの「作った数 / 残り」は、ツールの見出しの帯（ToolFrame）に出す（2026-10-24 ユーザーの指摘「ツールを押すごとに変わるのは分かりにくい」） */}
+        {uiNext ? null : <ShellUsageArea className={styles.usage} />}
         <div className={styles.account} id="shell-account">
           {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
           <ShellCompanyCard />
+          {uiNext ? <ShellPowerMeter variant="sidebar" /> : null}
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
