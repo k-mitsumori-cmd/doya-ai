@@ -877,7 +877,7 @@ function EditorInner() {
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !chatBusy && sendChat()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && !chatBusy && sendChat()}
                 placeholder="修正を入力..."
                 disabled={chatBusy || busySlide !== null || generating || !selected}
                 className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
