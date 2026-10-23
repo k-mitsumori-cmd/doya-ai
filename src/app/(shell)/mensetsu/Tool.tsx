@@ -10,6 +10,7 @@ import { Button, EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/component
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { ShellIcon } from '@/components/shell/icons'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { TRIAL_LABEL, useTrialEligible } from '@/components/TrialCallout'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
@@ -125,6 +126,8 @@ export default function MensetsuTool() {
   const sessionsRef = useRef(sessions)
   sessionsRef.current = sessions
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
+  const trialEligible = useTrialEligible()
+  const proPlanLinkLabel = trialEligible ? `プロプランの料金と${TRIAL_LABEL}の対象条件を確認する` : 'プロプランの料金を確認する'
   const [issueLimit, setIssueLimit] = useState<{ message: string; url: string; label: string } | null>(null)
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
@@ -389,7 +392,7 @@ export default function MensetsuTool() {
       if (!res.ok) {
         if (res.status === 402 && data?.code === 'LIMIT_REACHED') {
           if (data?.upgradeUrl === '/mensetsu/pricing') {
-            setIssueLimit({ message: data.error, url: data.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+            setIssueLimit({ message: data.error, url: data.upgradeUrl, label: '' })
           } else if (typeof data?.contactUrl === 'string' && data.contactUrl.startsWith('https://')) {
             setIssueLimit({ message: data.error, url: data.contactUrl, label: '追加枠を相談する' })
           }
@@ -549,7 +552,7 @@ export default function MensetsuTool() {
         ) : error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4 text-sm font-bold text-[#c2185b]">
             {error}
-            {templateUpgrade?.message === error && <p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">プロプランの料金と30日間無料の対象条件を確認する</Link></p>}
+            {templateUpgrade?.message === error && <p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">{proPlanLinkLabel}</Link></p>}
           </div>
         )}
         {notice && (
@@ -864,7 +867,7 @@ export default function MensetsuTool() {
                   ) : issueLimit && error === issueLimit.message && (
                     <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
                       <p>{issueLimit.message}</p>
-                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label}</Link>
+                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label || proPlanLinkLabel}</Link>
                     </div>
                   )}
                   {templates.find((t) => t.id === selectedTemplate)?.status === 'draft' && (
