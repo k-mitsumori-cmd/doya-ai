@@ -108,7 +108,8 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .heroTitle { margin: 0; font-size: 24px; line-height: 1.35; font-weight: 800; color: var(--ink); }
 .heroLead { margin: 0; font-size: 15px; line-height: 1.7; color: var(--sub); max-width: 36em; }
 .heroAction { margin-top: 8px; }
-.heroArt { width: clamp(120px, 18vw, 200px); height: auto; filter: drop-shadow(0 12px 24px rgba(10, 15, 60, 0.12)); }
+/* 絵に影や背景の箱を付けない（透明な絵がカードになじむように。2026-10-24 ユーザー「アイコンが浮くのはやめてほしい」） */
+.heroArt { width: clamp(120px, 18vw, 200px); height: auto; background: none; box-shadow: none; border-radius: 0; }
 @media (max-width: 640px) {
   .hero { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .heroArt { width: 120px; justify-self: end; margin-top: -8px; }
