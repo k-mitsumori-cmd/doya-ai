@@ -17,8 +17,8 @@ export async function GET() {
       return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const evaluationWhere = await getEvaluationReadWhere(ctx)
-    const oneOnOneWhere = await getOneOnOneReadWhere(ctx)
+    // 2つの閲覧条件は互いに依存しないので同時に求める
+    const [evaluationWhere, oneOnOneWhere] = await Promise.all([getEvaluationReadWhere(ctx), getOneOnOneReadWhere(ctx)])
 
     const orgId = ctx.organizationId
     const month = hrJstMonthRange()
