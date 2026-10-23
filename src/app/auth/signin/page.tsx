@@ -131,7 +131,7 @@ function SignInContent() {
                   <span className="text-blue-300"> AIで一気通貫 </span>
                 </h2>
                 <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
-                  ドヤバナーAIとドヤライティングAIで、企画→制作→改善までを最短で。
+                  ドヤバナーAIとドヤ記事作成で、企画→制作→改善までを最短で。
                   <br className="hidden sm:block" />
                   「作るだけ」で終わらない、成果につなげる制作体験へ。
                 </p>
@@ -145,7 +145,7 @@ function SignInContent() {
                 { icon: Wand2, title: 'SNS・翻訳', desc: '記事からSNS投稿文や多言語翻訳も一括生成', tone: 'from-amber-500/20 to-fuchsia-500/20' },
               ] : [
                 { icon: Palette, title: 'ドヤバナーAI', desc: '広告バナーを最速で量産（A/Bテストに強い）', tone: 'from-emerald-500/20 to-blue-500/20' },
-                { icon: PenLine, title: 'ドヤライティングAI', desc: 'SEO記事を安定生成（分割生成・監査で品質担保）', tone: 'from-violet-500/20 to-indigo-500/20' },
+                { icon: PenLine, title: 'ドヤ記事作成', desc: 'SEO記事を安定生成（分割生成・監査で品質担保）', tone: 'from-violet-500/20 to-indigo-500/20' },
                 { icon: BarChart3, title: '改善まで支援', desc: '訴求・コピー・構成を改善して成果に寄せる', tone: 'from-amber-500/20 to-fuchsia-500/20' },
               ]).map((item, idx) => (
                 <motion.div

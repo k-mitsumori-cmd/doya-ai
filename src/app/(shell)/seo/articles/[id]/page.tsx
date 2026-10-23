@@ -625,7 +625,7 @@ function SeoArticleInner() {
     const filtered = lines.filter((line) => {
       const t = line.trim()
       if (!t) return true
-      // 過去ログに混入していた「テキストを入れない」系を除去（SEO=ドヤライティングAIのみ）
+      // 過去ログに混入していた「テキストを入れない」系を除去（SEO=ドヤ記事作成のみ）
       // より広範囲にマッチするように正規表現を使用
       if (/文字.*入れない/i.test(t)) return false
       if (/文字は一切/i.test(t)) return false

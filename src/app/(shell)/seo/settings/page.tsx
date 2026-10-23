@@ -39,14 +39,14 @@ export default function SeoSettingsPage() {
             戻る
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">設定</h1>
-          <p className="text-sm text-gray-500 mt-1">ドヤライティングAIの体験をカスタマイズできます。</p>
+          <p className="text-sm text-gray-500 mt-1">ドヤ記事作成の体験をカスタマイズできます。</p>
         </div>
       </div>
 
       {/* アカウント情報（最上部） */}
       <div className="mb-6">
         <AccountSummaryCard
-          serviceName="ドヤライティングAI"
+          serviceName="ドヤ記事作成"
           planLabel={planLabel}
           isLoggedIn={isLoggedIn}
           user={session?.user || null}

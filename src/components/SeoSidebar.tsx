@@ -97,7 +97,7 @@ function SeoSidebarImpl({
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden"
               >
-                <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤライティングAI</h1>
+                <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤ記事作成</h1>
                 <p className="text-[10px] font-bold text-emerald-100/70 mt-0.5">SEOライティングAI</p>
               </motion.div>
             )}
@@ -200,7 +200,7 @@ function SeoSidebarImpl({
           )}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={seoTheme} />
-        <SidebarBrandingFooter brandName="ドヤライティングAI" isCollapsed={isCollapsed} theme={seoTheme} />
+        <SidebarBrandingFooter brandName="ドヤ記事作成" isCollapsed={isCollapsed} theme={seoTheme} />
       </SidebarShell>
 
       <SidebarLogoutDialog

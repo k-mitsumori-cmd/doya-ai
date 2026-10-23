@@ -381,7 +381,7 @@ export default function SeoTool() {
           <div className="h-14 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Link href="/seo" className="font-black tracking-tight text-gray-900 truncate">
-                ドヤライティングAI
+                ドヤ記事作成
               </Link>
               <span className="hidden sm:inline text-xs font-bold text-gray-400 truncate">生成記事一覧</span>
             </div>

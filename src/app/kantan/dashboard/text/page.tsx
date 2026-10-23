@@ -248,7 +248,7 @@ export default function KantanTextListPage() {
           </Link>
           <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
-            <span>ドヤライティングAI</span>
+            <span>ドヤ記事作成</span>
           </Link>
         </div>
 
@@ -511,7 +511,7 @@ export default function KantanTextListPage() {
                       <span className="text-xl">🧠</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-800">ドヤライティングAI</h4>
+                      <h4 className="font-bold text-gray-800">ドヤ記事作成</h4>
                       <p className="text-xs text-gray-400">5万字超の長文記事も安定生成</p>
                     </div>
                     <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />

@@ -67,7 +67,7 @@ export default function SeoPlanPage() {
             <Link href="/seo" className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-700 text-xs font-black">
               ← 生成記事一覧に戻る
             </Link>
-            <h1 className="mt-3 text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">アカウント（ドヤライティングAI）</h1>
+            <h1 className="mt-3 text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">アカウント（ドヤ記事作成）</h1>
             <p className="mt-2 text-sm text-gray-500 font-bold">
               統一プランの変更・解約・再開をここで行えます。解約・再開は、すべての対象サービスに適用されます。
             </p>
@@ -180,7 +180,7 @@ export default function SeoPlanPage() {
                     </p>
                   </div>
                   <div className="px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 text-gray-700 text-xs font-black">
-                    ドヤライティングAI
+                    ドヤ記事作成
                   </div>
                 </div>
 

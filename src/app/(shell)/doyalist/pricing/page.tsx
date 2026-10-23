@@ -83,13 +83,13 @@ export default function PricingPage() {
             <Faq q="プランはいつでも変更できますか?" a="はい。いつでもアップグレード・ダウングレードが可能です。Stripeのカスタマーポータルから簡単に変更できます。" />
             <Faq q="月の途中で契約した場合は?" a="日割り計算が適用されます。残日数分の料金のみご請求します。" />
             <Faq q="無料プランの上限を超えるとどうなりますか?" a="月初にリセットされます。途中でPROプランに変更すれば即時に拡張上限が適用されます。" />
-            <Faq q="他のドヤAIサービスも使えますか?" a="PROに加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤライティングAI・ドヤインタビュー等、すべてのドヤAIサービスのPROプランをご利用いただけます（統一プラン方式）。" />
+            <Faq q="他のドヤAIサービスも使えますか?" a="PROに加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤ記事作成・ドヤインタビュー等、すべてのドヤAIサービスのPROプランをご利用いただけます（統一プラン方式）。" />
             <Faq q="支払い方法は?" a="クレジットカード（Visa / Mastercard / JCB / American Express）に対応しています。Stripeで安全に処理されます。" />
             <Faq q="解約方法は?" a="サブスクリプション管理からいつでも解約できます。解約後も契約期間終了まではご利用いただけます。" />
           </div>
           <div className="mt-8 pt-5 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">
             <strong className="text-slate-600">用語について:</strong><br />
-            <strong>ドヤAI</strong>: スリスタが提供するAI SaaSプラットフォームの総称 / <strong>ドヤリスト</strong>: 営業リスト抽出・営業文作成ツール（本サービス） / <strong>ドヤ勤怠 / ドヤバナーAI / ドヤライティングAI 等</strong>: ドヤAIのサブサービス
+            <strong>ドヤAI</strong>: スリスタが提供するAI SaaSプラットフォームの総称 / <strong>ドヤリスト</strong>: 営業リスト抽出・営業文作成ツール（本サービス） / <strong>ドヤ勤怠 / ドヤバナーAI / ドヤ記事作成 等</strong>: ドヤAIのサブサービス
           </div>
         </div>
       </div>
