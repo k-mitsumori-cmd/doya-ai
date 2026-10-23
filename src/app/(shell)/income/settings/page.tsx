@@ -8,8 +8,17 @@ import {
   errMsg, fetchJson, inputCls, s, toast, useResource, useUnsavedGuard, type Terms,
 } from '@/components/income/ui'
 
-type Org = { id: string; name: string; slug: string; promaneWorkspaceId: string | null }
-type OrgRes = { organization: Org; role: string; promaneWorkspaces: { id: string; name: string }[] }
+type Org = { id: string; name: string; slug: string; promaneWorkspaceId: string | null; expenseSourceId?: string | null; expenseOrganizationId?: string | null }
+type ExpenseSourceInfo = { id: string; label: string; available: boolean; options: { id: string; name: string }[] }
+type OrgRes = { organization: Org; role: string; promaneWorkspaces: { id: string; name: string }[]; expenseSources?: ExpenseSourceInfo[] }
+
+// 取り込み元の選択値は「取り込み元:相手のid」の1本にする（支出管理との結び付きを保ったまま保存するため）
+const linkValue = (o: Org) => {
+  const src = o.expenseSourceId ?? (o.promaneWorkspaceId ? 'promane' : null)
+  if (src === 'expense' && o.expenseOrganizationId) return `expense:${o.expenseOrganizationId}`
+  if (src === 'promane' && o.promaneWorkspaceId) return `promane:${o.promaneWorkspaceId}`
+  return ''
+}
 type Loaded = { org: OrgRes; issuer: any }
 
 const EMPTY_ISSUER = {
@@ -33,7 +42,7 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
   const [issuer, setIssuer] = useState(init.issuer)
   const [terms, setTerms] = useState<Terms>(init.terms)
   const [orgName, setOrgName] = useState(org.organization.name)
-  const [wsId, setWsId] = useState(org.organization.promaneWorkspaceId ?? '')
+  const [wsId, setWsId] = useState(linkValue(org.organization))
   const [issuerBusy, setIssuerBusy] = useState(false)
   const [issuerError, setIssuerError] = useState<string | null>(null)
   const [orgBusy, setOrgBusy] = useState(false)
@@ -42,6 +51,9 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
   const [tried, setTried] = useState<{ issuer: boolean; org: boolean }>({ issuer: false, org: false })
   const issuerGuard = useUnsavedGuard({ issuer, terms })
   const orgGuard = useUnsavedGuard({ orgName, wsId })
+
+  // 古いAPI応答（expenseSources なし）でも、プロマネの候補だけは出せるようにする
+  const sources: ExpenseSourceInfo[] = (org.expenseSources ?? [{ id: 'promane', label: 'ドヤプロマネ', available: true, options: org.promaneWorkspaces }]).filter((g) => g.available && g.options.length > 0)
 
   const canEdit = org.role === 'owner' || org.role === 'admin'
   const set = (k: keyof typeof EMPTY_ISSUER) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setIssuer({ ...issuer, [k]: e.target.value })
@@ -80,8 +92,12 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
     setOrgBusy(true)
     setOrgError(null)
     try {
-      await fetchJson('/api/income/organization', { method: 'PATCH', body: { name: orgName } })
-      await fetchJson('/api/income/organization', { method: 'PATCH', body: { promaneWorkspaceId: wsId || null } })
+      // 1回のPATCHで名前と取り込み元をまとめて送る（片方だけ成功する状態を作らない）
+      const [sourceId, ...rest] = wsId.split(':')
+      await fetchJson('/api/income/organization', {
+        method: 'PATCH',
+        body: wsId ? { name: orgName, expenseSourceId: sourceId, expenseRefId: rest.join(':') } : { name: orgName, expenseSourceId: null },
+      })
       orgGuard.markClean()
       toast('組織の設定を保存しました')
     } catch (err) {
@@ -137,14 +153,18 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
           <Card title="組織と支出の取り込み元">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="組織名" error={oerr('orgName')}><input className={inputCls} value={orgName} onChange={(e) => setOrgName(e.target.value)} onBlur={touch('orgName')} maxLength={80} /></Field>
-              <Field label="支出の取り込み元（ドヤプロマネ）">
+              <Field label="支出の取り込み元">
                 <select className={inputCls} value={wsId} onChange={(e) => setWsId(e.target.value)}>
                   <option value="">連携しない</option>
-                  {org.promaneWorkspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {sources.map((g) => (
+                    <optgroup key={g.id} label={g.label}>
+                      {g.options.map((w) => <option key={`${g.id}:${w.id}`} value={`${g.id}:${w.id}`}>{w.name}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
               </Field>
             </div>
-            <p className={s.sub} style={{ margin: '12px 0 0' }}>ダッシュボードの粗利には、選んだドヤプロマネのワークスペースの記録（プロジェクト経費＋人件費）を暫定的に使います。財務を閲覧できるワークスペースだけを選べます。</p>
+            <p className={s.sub} style={{ margin: '12px 0 0' }}>ダッシュボードの粗利と出金予定には、選んだ取り込み元の記録を使います。ドヤプロマネはプロジェクト経費と人件費、ドヤ支出管理は支払の記録です。閲覧できる取り込み先だけを選べます。</p>
           </Card>
         </fieldset>
         <div className="mt-4 space-y-3">
