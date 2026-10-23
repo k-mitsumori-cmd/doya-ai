@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
 import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
 import { appendProjectPage, parseProjectPage, type ProjectSummaryCounts } from '@/lib/doyalist/project-pages'
@@ -265,6 +266,8 @@ export default function HistoryPage() {
   const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
   const iconBtn = uiNext ? `inline-flex h-11 w-11 items-center justify-center ${focusRing}` : 'p-1.5'
 
+  // 新しい見た目では古いステッカーを出さず、共通の骨組みにする
+  if (loadingProjects && uiNext) return <ShellLoading />
   if (loadingProjects) {
     return (
       <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
