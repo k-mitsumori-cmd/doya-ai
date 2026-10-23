@@ -13,6 +13,7 @@ import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState, FirstSteps, ToolHero } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -236,6 +237,8 @@ export type PersonaRestoredRecord = {
 export default function PersonaTool({ initialRecord }: { initialRecord?: PersonaRestoredRecord } = {}) {
   const { data: session, status } = useSession()
   const userId = session?.user?.id
+  const uiNextFrame = useUiNext()
+  if (uiNextFrame && status === 'loading') return <ShellLoading />
   if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">{status === 'loading' ? 'ログイン状態を確認しています。' : 'ペルソナを利用するにはログインしてください。'}</p>
   return <AccountPersonaTool key={`${userId}:${initialRecord?.id || ''}`} userId={userId} plan={session.user.plan} initialRecord={initialRecord} />
 }

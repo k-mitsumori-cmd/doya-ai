@@ -15,6 +15,7 @@ import { readExtractionIntent, claimExtractionIntent, clearExtractionIntent, typ
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 import Sym from '@/components/doyalist/Sym'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
 import { Check, X } from 'lucide-react'
@@ -467,6 +468,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
   const tap = uiNext ? ' min-h-11' : ''
   const calm = uiNext ? ' motion-reduce:animate-none' : ''
 
+  // 新しい見た目では古いロゴのステッカーを出さず、共通の骨組みにする
+  if (status === 'loading' && uiNext) return <ShellLoading />
   if (status === 'loading') {
     return (
       <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>

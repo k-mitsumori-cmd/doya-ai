@@ -20,6 +20,7 @@ import ExportDownload from '@/components/adimage/ExportDownload'
 import { notifyError } from '@/lib/ui/notify'
 import LoadingProgress from '@/components/LoadingProgress'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -488,7 +489,8 @@ export default function AdImageTool() {
     return <AdImageLp />
   }
 
-  if (authStatus === 'loading' || visibleScope !== actorScope) return <p className="p-6 text-sm text-slate-600">ログイン情報を確認しています。</p>
+  // 新しい見た目では文字だけを出さず、共通の骨組みにする（ログインはサーバーで確認済みなので通常は一瞬）
+  if (authStatus === 'loading' || visibleScope !== actorScope) return uiNext ? <ShellLoading /> : <p className="p-6 text-sm text-slate-600">ログイン情報を確認しています。</p>
 
   if (operation.authRequired) return (
     <div className="mx-auto max-w-xl space-y-4 p-6">

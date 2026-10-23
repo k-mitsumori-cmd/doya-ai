@@ -4,6 +4,8 @@ import { useSession, signOut } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { readBillingResponse } from '@/lib/billing-response-client'
 
@@ -24,6 +26,7 @@ const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
 
 export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const { data: session, status } = useSession()
+  const uiNext = useUiNext()
   const pathname = usePathname() || ''
   const isSessionLoading = status === 'loading'
   const isSignedOut = status === 'unauthenticated'
@@ -92,6 +95,8 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
     return () => window.removeEventListener('focus', refresh)
   }, [allowed, loadUsage])
 
+  // 新しい見た目では古いロゴのステッカーを出さず、共通の骨組みにする
+  if (isSessionLoading && !knownActor && uiNext) return <ShellLoading />
   if (isSessionLoading && !knownActor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">

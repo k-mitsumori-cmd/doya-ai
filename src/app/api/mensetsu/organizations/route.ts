@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
   const userId = await resolveUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-  const ctx = await getMensetsuContext(orgSlugFrom(req))
-  const memberships = await listMemberships()
+  // 組織の解決と所属一覧は互いに依存しないので同時に読む（どちらも userId で絞る）
+  const [ctx, memberships] = await Promise.all([getMensetsuContext(orgSlugFrom(req)), listMemberships()])
 
   if (!ctx) return NextResponse.json({ current: null, memberships })
 

@@ -147,6 +147,15 @@ export default function MensetsuTool() {
     setMoreError(null)
     setMoreLoading(false)
     try {
+      // ⚠️ 組織・テンプレート・面接一覧・会社情報の4本は互いの結果を使わない（どれも「いまの組織」をサーバーが決める）ので、同時に出す。
+      //    以前は組織を待ってから残り3本を出しており、サーバーの往復が2段つながっていた。
+      //    組織が無い・未ログインのときは残りの3本は使わずに捨てる（失敗は握りつぶし、使うときだけ await して従来と同じ例外にする）
+      const bundle = Promise.all([
+        fetchOrgJson('/api/mensetsu/templates'),
+        fetchMensetsuSessionPage<SessionRow>(),
+        fetchOrgJson('/api/mensetsu/company'),
+      ])
+      bundle.catch(() => undefined)
       const res = await fetch('/api/mensetsu/organizations')
       const data = await res.json().catch(() => null)
       if (loadVersion.current !== version) return
@@ -166,11 +175,7 @@ export default function MensetsuTool() {
       setNeedsLogin(false)
       if (data.current) {
         // ⚠️ メンバーはこの画面では使わない（/mensetsu/settings が自分で取得する）
-        const [t, first, c] = await Promise.all([
-          fetchOrgJson('/api/mensetsu/templates'),
-          fetchMensetsuSessionPage<SessionRow>(),
-          fetchOrgJson('/api/mensetsu/company'),
-        ])
+        const [t, first, c] = await bundle
         if (!Array.isArray(t?.templates) || !Object.prototype.hasOwnProperty.call(c, 'profile')) {
           throw new Error('組織のデータを確認できませんでした')
         }
