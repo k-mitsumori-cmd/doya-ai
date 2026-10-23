@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 /**
  * POST /api/doyalist/expand-keywords
@@ -14,7 +15,7 @@ import { OperationalBodyError, readOperationalJson } from '@/lib/operational-jso
  * Body: { keyword: string, industry?: string }
  * Response: { tags: string[] }
  */
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id
@@ -93,3 +94,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'タグ展開に失敗しました' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: AI を呼ぶ前に減らし、失敗なら戻す。足りないときは 402 と日本語の理由（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'text.generate' }, postHandler)
