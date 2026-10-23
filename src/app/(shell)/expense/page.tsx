@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { isUiNext } from '@/lib/ui-next'
-import { claimPendingMemberships, createOrganization, getExpenseContext, resolveUserId } from '@/lib/expense/access'
+import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib/expense/access'
 import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
@@ -23,23 +23,18 @@ export default async function ExpensePage() {
       if (userId) {
         await claimPendingMemberships(userId)
         slug = (await getExpenseContext())?.organizationSlug ?? null
-        // 1アカウント＝1会社（2026-10-24 ユーザーの決定）。支出管理の組織が無く、アカウントの会社（account_companies）があれば、
-        // その会社の名前で組織を裏で作って移す（組織の作成を求めない。表の持ち方は変えない。createOrganization は所属があればそれを返す）
-        if (!slug) {
-          companyName = (await getOwnCompany(userId))?.name?.trim() || null
-          if (companyName) {
-            const memberName = session.user.name?.trim() || session.user.email?.split('@')[0] || companyName
-            slug = (await createOrganization(userId, companyName, memberName)).slug
-          }
-        }
+        // 1アカウント＝1会社（2026-10-24 ユーザーの決定）。支出管理の組織が無ければ、アカウントの会社（account_companies）の名前を読む。
+        // ⚠️ ここ（画面を開く GET）では組織を作らない。先取りや他サイトからの読み込みでも作られてしまうため。
+        //    作るのは、画面の「◯◯で始める」を押したときの POST だけ（/api/expense/organization の fromAccountCompany）
+        if (!slug) companyName = (await getOwnCompany(userId))?.name?.trim() || null
       }
     } catch {
-      // 判定・作成に失敗したら、今までどおりクライアント（Entry）に任せる
+      // 判定に失敗したら、今までどおりクライアント（Entry）に任せる
       return <ExpenseEntry />
     }
     if (slug) redirect(`/expense/${encodeURIComponent(slug)}`)
-    // アカウントの会社がまだ無い: 会社の登録を案内する（登録すると、この画面を読み直して、上で組織を作って移る）
-    return <ExpenseEntry known needsCompany />
+    // 会社があれば「その会社の名前で始める」を、無ければ会社の登録を案内する（どちらも組織名・氏名の入力は出さない）
+    return companyName ? <ExpenseEntry known companyName={companyName} /> : <ExpenseEntry known needsCompany />
   }
   return <ExpenseEntry />
 }

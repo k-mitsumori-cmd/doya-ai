@@ -20,7 +20,7 @@ const STEPS = [
 ]
 
 /** 入口（組織がまだ無い人）。枠の外の画面なので、見出し（h1）はここで1つ持つ */
-export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, onCreate, needsCompany = false }: {
+export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, onCreate, needsCompany = false, companyName = null, onStartWithCompany }: {
   orgName: string
   memberName: string
   busy: boolean
@@ -29,6 +29,9 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
   onCreate: () => void
   /** アカウントの会社が未登録。組織の作成ではなく、会社の登録を案内する（1アカウント＝1会社。2026-10-24） */
   needsCompany?: boolean
+  /** アカウントの会社の名前。あれば「◯◯で始める」のボタンだけを出す（組織名・氏名の入力は出さない） */
+  companyName?: string | null
+  onStartWithCompany?: () => void
 }) {
   return (
     <div data-ui-next="true" className="bg-[var(--bg)]">
@@ -40,7 +43,16 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
           tool="expense"
         />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {needsCompany ? (
+          {companyName && onStartWithCompany ? (
+          <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-start-title">
+            <h2 id="expense-start-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">登録した会社で始める</h2>
+            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤマーケAIは、1つのアカウントで1つの会社を扱います。支出管理も、登録した会社の名前で使えます。</p>
+            <p className="mt-3 rounded-[var(--r-sm)] bg-[var(--bg)] px-3 py-2 text-[15px] font-bold text-[var(--ink)]">{companyName}</p>
+            <div className="mt-5">
+              <Btn onClick={onStartWithCompany} busy={busy}>この会社で始める</Btn>
+            </div>
+          </section>
+          ) : needsCompany ? (
           <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-company-title">
             <h2 id="expense-company-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">会社を登録して始める</h2>
             <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤマーケAIは、1つのアカウントで1つの会社を扱います。会社を登録すると、支出管理はその会社の名前ですぐに使えます。</p>
