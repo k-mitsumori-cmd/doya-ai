@@ -39,20 +39,57 @@ export function dailyLimitYen(): number {
   return Number.isInteger(n) && n > 0 ? n : 500
 }
 
-export type ImageQuotaResult = { ok: true } | { ok: false; status: 429 | 503; message: string }
+export type ImageQuotaResult = { ok: true; reserved: ReservedImageQuota } | { ok: false; status: 429 | 503; message: string }
+
+/** 消費した分の控え。戻すときに、消費した日のキーをそのまま使う（日付をまたいでも別の日を減らさない） */
+export type ReservedImageQuota = { userKey: string; yenKey: string; images: number; costYen: number }
+
+/** 消費した量を戻す。0 より下には減らさない。戻せなくても生成の失敗の応答は変えない（ログだけ残す） */
+async function giveBackAmount(key: string, amount: number): Promise<boolean> {
+  try {
+    await prisma.$executeRaw`
+      UPDATE "SystemSetting"
+      SET "value" = GREATEST(0, ("value")::int - ${amount})::text
+      WHERE "key" = ${key}
+    `
+    return true
+  } catch {
+    console.warn('[tenjikai/image-quota] refund failed')
+    return false
+  }
+}
+
+/**
+ * 生成に失敗したとき、reserveImageQuota で消費した枚数と金額を戻す。
+ * 利用者に画像が渡っていない（失敗の応答を返す）ときだけ呼ぶ。
+ */
+export async function refundImageQuota(reserved: ReservedImageQuota): Promise<void> {
+  await giveBackAmount(reserved.userKey, reserved.images)
+  await giveBackAmount(reserved.yenKey, reserved.costYen)
+}
 
 /**
  * 生成の前に、1人あたりの枚数とサービス全体の金額を消費する。
  * DB が使えないときは実行しない（課金を伴うため、安全側に倒す）。
  */
 export async function reserveImageQuota(userId: string, images: number, costYen: number): Promise<ImageQuotaResult> {
+  const userKey = dailyQuotaKey('tenjikai-img-user', quotaSubject(userId))
+  const yenKey = dailyQuotaKey('tenjikai-img-yen', 'all')
+  const reserved: ReservedImageQuota = { userKey, yenKey, images, costYen }
   const user = await consumeDailyAmount('tenjikai-img-user', quotaSubject(userId), images, perUserDailyImages())
   if (user === 'unavailable') return { ok: false, status: 503, message: '利用状況を確かめられないため、画像を作れません。時間をおいて、もう一度お試しください。' }
   if (user === 'limited') return { ok: false, status: 429, message: `画像は1日${perUserDailyImages()}枚まで作れます。明日もう一度お試しください。` }
   const yen = await consumeDailyAmount('tenjikai-img-yen', 'all', costYen, dailyLimitYen())
-  if (yen === 'unavailable') return { ok: false, status: 503, message: '利用状況を確かめられないため、画像を作れません。時間をおいて、もう一度お試しください。' }
-  if (yen === 'limited') return { ok: false, status: 429, message: '本日の画像生成の上限に達しました。明日もう一度お試しください。' }
-  return { ok: true }
+  // 金額の消費で失敗したら、先に消費した枚数を戻す（取られっぱなしにしない）
+  if (yen === 'unavailable') {
+    await giveBackAmount(userKey, images)
+    return { ok: false, status: 503, message: '利用状況を確かめられないため、画像を作れません。時間をおいて、もう一度お試しください。' }
+  }
+  if (yen === 'limited') {
+    await giveBackAmount(userKey, images)
+    return { ok: false, status: 429, message: '本日の画像生成の上限に達しました。明日もう一度お試しください。' }
+  }
+  return { ok: true, reserved }
 }
 
 /** きょう作れる残りの枚数（表示用）。DB が使えないときは null */

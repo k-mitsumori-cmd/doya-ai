@@ -47,3 +47,9 @@ test('有効化のフラグが無ければ、何もせずに断る', () => {
   assert.ok(gate > post && gate < src.indexOf('await req.json()', post))
   assert.match(src, /const enabled = \(\) => process\.env\.TENJIKAI_IMAGEGEN_ENABLED === 'true'/)
 })
+
+test('生成に失敗して画像を返さないとき、消費した上限を戻す（4か所）', () => {
+  const n = (src.match(/await refundImageQuota\(quota\.reserved\)/g) ?? []).length
+  assert.equal(n, 4)
+  assert.ok(at('refundImageQuota(quota.reserved)') > at('reserveImageQuota(userId'))
+})

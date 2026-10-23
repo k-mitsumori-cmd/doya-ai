@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { IMAGE_SIZE, RATIOS, estimateQuotaYen, imageModelChain, type ImageGenRequest } from '@/lib/tenjikai/imagegen'
-import { perUserDailyImages, remainingImagesToday, reserveImageQuota } from '@/lib/tenjikai/image-quota'
+import { perUserDailyImages, remainingImagesToday, refundImageQuota, reserveImageQuota } from '@/lib/tenjikai/image-quota'
 import { mockPanelImage } from '@/lib/tenjikai/mock-image'
 import { withDoyaPowerCharge, parseCount } from '@/lib/doya-power/charge'
 
@@ -20,7 +20,7 @@ const readCount = (v: unknown) => parseCount(v, 1, MAX_COUNT, 1)
 const JOB_KINDS = ['creative_image', 'booth_render', 'graphic_panel'] as const
 
 // 従量課金の API。モデルと解像度はサーバーが決める（利用者には選ばせず、原価も見せない）。
-// 生成の前にサーバー側で上限を消費する（src/lib/tenjikai/image-quota.ts）。
+// 生成の前にサーバー側で上限を消費する（src/lib/tenjikai/image-quota.ts）。失敗して画像を返さないときは、消費した枚数と金額を戻す。
 // 1人あたりの枚数とサービス全体の金額を SystemSetting で数えるので、Vercel のインスタンスをまたいでも守れる。
 // 実行の記録は TenjikaiGenerationJob に残す（見込み額・結果・失敗の理由）。
 
@@ -97,6 +97,7 @@ async function postHandler(req: NextRequest) {
     jobId = job.id
   } catch (e) {
     console.error('[tenjikai/image] failed to record job', { code: (e as { code?: string })?.code ?? 'unknown' })
+    await refundImageQuota(quota.reserved)
     return fail(503, '実行の記録を残せないため、画像を作れません。時間をおいて、もう一度お試しください。')
   }
   const finish = (data: { status: 'done' | 'failed'; imageCount: number; errorCode?: string; model?: string }) =>
@@ -135,6 +136,7 @@ async function postHandler(req: NextRequest) {
         const text = res ? await res.text().catch(() => '') : ''
         console.error('[tenjikai/image] upstream error', { jobId, model: used, status: res?.status, body: text.slice(0, 500) })
         await finish({ status: 'failed', imageCount: images.length, errorCode: `upstream_${res?.status ?? 'none'}`, model: used })
+        await refundImageQuota(quota.reserved)
         return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
       }
       const json = await res.json()
@@ -146,12 +148,14 @@ async function postHandler(req: NextRequest) {
   } catch (e) {
     console.error('[tenjikai/image] upstream request failed', { jobId, kind: e instanceof Error ? e.name : 'unknown' })
     await finish({ status: 'failed', imageCount: images.length, errorCode: 'network', model: used })
+    await refundImageQuota(quota.reserved)
     return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
   }
 
   if (images.length === 0) {
     console.error('[tenjikai/image] upstream returned no image', { jobId })
     await finish({ status: 'failed', imageCount: 0, errorCode: 'no_image', model: used })
+    await refundImageQuota(quota.reserved)
     return fail(502, '画像を作れませんでした。内容を変えて、もう一度お試しください。')
   }
   await finish({ status: 'done', imageCount: images.length, model: used })
