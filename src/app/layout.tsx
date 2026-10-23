@@ -77,7 +77,7 @@ export const metadata: Metadata = {
   
   // アイコン
   icons: {
-    // App Router の src/app/icon.png・apple-icon.png（ロゴ案A。正本は docs/design/images/brand/PROMPTS.md）
+    // App Router のアイコンの画像ファイル（src/app の icon と apple-icon。ロゴ案A。正本は docs/design/images/brand/PROMPTS.md）
     icon: [{ url: '/icon.png', type: 'image/png' }],
     shortcut: [{ url: '/icon.png', type: 'image/png' }],
     apple: [{ url: '/apple-icon.png', type: 'image/png' }],
