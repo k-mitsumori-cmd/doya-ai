@@ -132,3 +132,10 @@ export interface CompanyAnalysis {
 //    「表示は残っているのに弾かれる」状態になる。
 // ⚠️ 有料も無制限にしない。1件ごとに巡回とAIの実費が出る。
 export const SHODAN_MONTHLY_LIMIT = { FREE: 5, PRO: 50, ENTERPRISE: 300 } as const
+
+// ============================================
+// 提案資料・スライド生成の月次上限（組織単位・AI の呼び出し回数）
+// ============================================
+// 単位: 提案資料の生成 = 1、スライド画像 1 枚（再生成も 1 枚）= 1。
+// 失敗した分は戻す（lib/shodan/ai-quota.ts）。生成はプロ以上のみなので FREE は置かない。
+export const SHODAN_AI_MONTHLY_LIMIT = { PRO: 600, ENTERPRISE: 3000 } as const

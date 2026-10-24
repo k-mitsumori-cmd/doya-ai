@@ -12,6 +12,7 @@ import { raceTimeout } from '@/lib/fetch-timeout'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { getShodanBilling } from '@/lib/shodan/billing'
+import { reserveShodanAi, refundShodanAi, shodanAiLimitFor, shodanAiLimitResponse } from '@/lib/shodan/ai-quota'
 import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationInProgressError } from '@/lib/shodan/slide-generation-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -75,16 +76,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const batch = todo.slice(0, BATCH)
 
     if (batch.length > 0) {
+      // 画像 1 枚 = 1 回として月次の回数を予約し、できなかった枚数は戻す
+      const aiLimit = shodanAiLimitFor(billing.plan)
+      const reserved = await reserveShodanAi(sctx.organizationId, batch.length, aiLimit)
+      if (!reserved.ok) return NextResponse.json(shodanAiLimitResponse(aiLimit, sctx.role === 'owner' && sctx.userId === billing.ownerUserId), { status: 429 })
+      let notStarted = 0
       let next = 0
       const concurrency = 2
       async function worker() {
         while (next < batch.length) {
           const i = batch[next++]
           try { images[i] = await raceTimeout('slideGen', 220000, generateSlideImage(sctx!.userId, prep!.id, list[i], i, { brand })) }
-          catch (e) { console.error('[shodan/slides] slide failed') }
+          catch (e) { if ((e as { aiNotInvoked?: boolean } | null)?.aiNotInvoked === true) notStarted++; console.error('[shodan/slides] slide failed') }
         }
       }
-      await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, worker))
+      try { await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, worker)) }
+      finally { await refundShodanAi(reserved.key, notStarted) } // 時間切れ・AI 呼び出し後の失敗は戻さない
 
       const changes = batch.filter((index) => images[index]?.imagePath).map((index) => ({ index, image: images[index] }))
       if (changes.length > 0) {

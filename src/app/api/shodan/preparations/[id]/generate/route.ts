@@ -10,6 +10,7 @@ import type { CompanyResearch } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getShodanBilling } from '@/lib/shodan/billing'
+import { reserveShodanAi, refundShodanAi, shodanAiLimitFor, shodanAiLimitResponse } from '@/lib/shodan/ai-quota'
 import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationInProgressError } from '@/lib/shodan/slide-generation-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '資料の生成を開始できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
   }
   let prep = existingPrep
+  let aiReservedKey: string | null = null
+  let aiInvoked = false
+  const canManage = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
   try {
     const currentPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
     if (!currentPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
@@ -66,6 +70,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '資料が別の操作で変更されました。再読み込みしてご確認ください。' }, { status: 409 })
     }
     prep = { ...prep, errorMessage: INCOMPLETE_MESSAGE, updatedAt: startedAt }
+    // AI を呼ぶ前に月次の回数を予約する（失敗したら catch で戻す）
+    const aiLimit = shodanAiLimitFor(billing.plan)
+    const reserved = await reserveShodanAi(sctx.organizationId, 1, aiLimit)
+    if (!reserved.ok) {
+      await prisma.shodanPreparation.updateMany({ where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt }, data: { errorMessage: null } }).catch(() => {})
+      return NextResponse.json(shodanAiLimitResponse(aiLimit, canManage), { status: 429 })
+    }
+    aiReservedKey = reserved.key
     const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
     const own: OwnCompanyProfile | null = profile
       ? {
@@ -75,6 +87,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         }
       : null
 
+    // ここから先は有料の AI を呼ぶ。以降の失敗では回数を戻さない（上流で費用が出ている可能性がある）
+    aiInvoked = true
     const analysis = await analyzeCompany(research, own)
     const proposalMarkdown = await generateProposal(research, analysis, own)
     const slides = await generateSlides(research, analysis, own)
@@ -107,6 +121,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch {
     console.error('[shodan/generate] failed')
+    if (aiReservedKey && !aiInvoked) await refundShodanAi(aiReservedKey, 1)
     // 開始時から未変更の資料だけに失敗を記録。既存の本文・画像・状態は保持する。
     await prisma.shodanPreparation.updateMany({
       where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },

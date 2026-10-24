@@ -95,7 +95,8 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = require('
   await check('unusable Shodan research fails and releases the reserved monthly slot', async () => {
     const f = fixture(4, 'FREE', { sourceStatus: { homepage: 'failed', gbizinfo: 'skipped', prtimes: 'skipped' } })
     const response = await f.post()
-    assert.equal(response.status, 500)
+    assert.equal(response.status, 422)
+    assert.equal(response.body.code, 'RESEARCH_FAILED')
     assert.equal(f.rows.at(-1).status, 'failed')
     assert.equal(f.rows.filter((row) => row.status !== 'failed').length, 4)
   })

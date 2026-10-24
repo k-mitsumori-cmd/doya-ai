@@ -92,13 +92,20 @@ export async function POST(req: NextRequest) {
   // プラン制限（組織単位・月次）
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
   //    無制限にすると月額を上回る使われ方を止められない。
-  const reservation = await prisma.$transaction(async (tx) => {
+  const sc = ctx
+  let reservation: Awaited<ReturnType<typeof reserve>>
+  try { reservation = await reserve() }
+  catch {
+    console.error('[shodan/preparations] reservation failed')
+    return NextResponse.json({ error: '商談準備を開始できませんでした。時間をおいて再度お試しください。', code: 'UNAVAILABLE' }, { status: 503 })
+  }
+  async function reserve() { return await prisma.$transaction(async (tx) => {
     // 組織ごとに予約を直列化する。件数確認と作成を分けると同時POSTで上限を超える。
     const organizations = await tx.$queryRaw<{ id: string }[]>`
-      SELECT id FROM shodan_organizations WHERE id = ${ctx.organizationId} FOR NO KEY UPDATE
+      SELECT id FROM shodan_organizations WHERE id = ${sc.organizationId} FOR NO KEY UPDATE
     `
     if (!organizations.length) return { kind: 'missing' } as const
-    const billing = await getShodanBilling(tx, ctx.organizationId)
+    const billing = await getShodanBilling(tx, sc.organizationId)
     if (!billing) return { kind: 'billing' } as const
     const limit = isPaidPlan(billing.plan)
       ? billing.plan.toUpperCase() === 'ENTERPRISE'
@@ -115,7 +122,7 @@ export async function POST(req: NextRequest) {
     const staleBefore = new Date(Date.now() - PREP_STALE_MS)
     const usedThisMonth = await tx.shodanPreparation.count({
       where: {
-        organizationId: ctx.organizationId,
+        organizationId: sc.organizationId,
         createdAt: { gte: since },
         OR: [
           { status: 'done' },
@@ -129,10 +136,10 @@ export async function POST(req: NextRequest) {
       return { kind: 'limit', limit, billing } as const
     }
     const prep = await tx.shodanPreparation.create({
-      data: { organizationId: ctx.organizationId, createdByMemberId: ctx.memberId, targetUrl, status: 'processing' },
+      data: { organizationId: sc.organizationId, createdByMemberId: sc.memberId, targetUrl: targetUrl as string, status: 'processing' },
     })
     return { kind: 'created', prep } as const
-  })
+  }) }
 
   if (reservation.kind === 'missing') {
     return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
@@ -183,6 +190,8 @@ export async function POST(req: NextRequest) {
       where: { id: prep.id },
       data: { status: 'failed', errorMessage: '企業調査に失敗しました。URLを確認して再実行してください。' },
     }).catch(() => {})
-    return NextResponse.json({ id: prep.id, status: 'failed', error: '企業調査に失敗しました。URLを確認して再実行してください。' }, { status: 500 })
+    // 調査の失敗は「結果が確定した失敗」。failed は月次枠に数えない（上の usedThisMonth を参照）ので、
+    // 枠は消費されず、そのままやり直せる。5xx にすると画面が「結果不明」とみなして止まるため 422 で返す。
+    return NextResponse.json({ id: prep.id, status: 'failed', code: 'RESEARCH_FAILED', retryable: true, error: '企業調査に失敗しました。URLを確認して、もう一度お試しください。今月の利用枠は減っていません。' }, { status: 422 })
   }
 }

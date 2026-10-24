@@ -26,6 +26,12 @@ export interface SlideBrand {
   logoUrl?: string | null
 }
 
+/** AI を呼ぶ前に失敗したことを表す。これだけは生成回数を戻してよい（時間切れや呼んだ後の失敗は戻さない）。 */
+export class ShodanSlideNotStartedError extends Error {
+  readonly aiNotInvoked = true
+  constructor() { super('Shodan slide generation did not reach the image provider') }
+}
+
 function shodanProject(prepId: string, brand?: SlideBrand): ComposeProject {
   const theme = brand?.brandColors?.find((c) => /^#[0-9a-fA-F]{6}$/.test(c)) || '#7f19e6'
   return {
@@ -89,7 +95,8 @@ export async function generateSlideImage(
   index: number,
   opts?: { extra?: string; brand?: SlideBrand }
 ): Promise<StoredSlide> {
-  await raceTimeout('privateImageStorage', 25000, assertPrivateStorage())
+  try { await raceTimeout('privateImageStorage', 25000, assertPrivateStorage()) }
+  catch { throw new ShodanSlideNotStartedError() }
   const role = roleFromType(slide.type)
   const res = await composePrivateSlideImage(
     shodanProject(prepId, opts?.brand),
