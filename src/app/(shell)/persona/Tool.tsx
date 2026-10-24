@@ -557,7 +557,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         currentRecordId.current = record.id
         currentServerRecord.current = record.serverStored
         savePersonaRecord(accountStorage, record)
-      } catch { setError(typeof data.projectId === 'string' ? 'このブラウザには残せませんでした。保存した履歴から開き直せます。' : '履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
+      } catch { setError(typeof data.projectId === 'string' ? '生成は完了し、結果は保存しましたが、このブラウザには残せませんでした。保存した履歴から開き直せます。' : '生成は完了しましたが、履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
       if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'generate') }
     } finally {
@@ -608,7 +608,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         setPortraitImage(data.image)
         try {
           savePersonaImage(accountStorage, recordId, generatedData, { portrait: data.image })
-        } catch { setPortraitError('画像をこのブラウザに残せませんでした。保存した履歴から開き直せます。') }
+        } catch { setPortraitError('画像は保存しましたが、このブラウザには残せませんでした。保存した履歴から開き直せます。') }
       } else {
         throw new PersonaImageResponseError('画像の保存先を確かめられませんでした。もう一度お試しください。')
       }
@@ -666,7 +666,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         setSceneImages(prev => isCurrent() ? { ...prev, [sceneKey]: data.image } : prev)
         try {
           savePersonaImage(accountStorage, recordId, generatedData, { sceneImages: { [sceneKey]: data.image } })
-        } catch { setError('画像をこのブラウザに残せませんでした。保存した履歴から開き直せます。') }
+        } catch { setError('画像は保存しましたが、このブラウザには残せませんでした。保存した履歴から開き直せます。') }
       }
     } catch (e) {
       if (isCurrent()) setSceneErrors(prev => isCurrent() ? { ...prev, [sceneKey]: (e instanceof PersonaQuotaError ? e.message : personaImageError(e, res)) } : prev)
@@ -738,7 +738,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         currentRecordId.current = record.id
         currentServerRecord.current = record.serverStored
         savePersonaRecord(accountStorage, record)
-      } catch { setError(typeof data.projectId === 'string' ? 'このブラウザには残せませんでした。保存した履歴から開き直せます。' : '履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
+      } catch { setError(typeof data.projectId === 'string' ? '変更は完了し、結果は保存しましたが、このブラウザには残せませんでした。保存した履歴から開き直せます。' : '変更は完了しましたが、履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
       if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'modify') }
     } finally {

@@ -576,6 +576,8 @@ export default function SeoJobPage() {
   const cancelJob = useCallback(async () => {
     if (cancellingRef.current || job?.supersededAt) return
     if (!(await confirmDialog({ title: '生成を止めますか？', message: '途中まで作った内容は、記事の画面に残ります。', confirmLabel: '止める', cancelLabel: '続ける', tone: 'danger' }))) return
+    // 確かめの画面を開いている間に、別の押しで止める処理が始まっていたら送らない（二重送信を防ぐ）
+    if (cancellingRef.current) return
     cancellingRef.current = true
     setCancelling(true)
     setActionError(null)
