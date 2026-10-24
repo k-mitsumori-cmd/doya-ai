@@ -575,7 +575,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                     onChange={(e) => handleKeywordChange(e.target.value)}
                     placeholder="例: SaaS, AI, 営業効率化, 美容、コンサル..."
                     className={`${uiNext ? 'min-w-0 ' : ''}flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100`}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); handleExpandKeyword() } }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); handleExpandKeyword() } }}
                   />
                   <button
                     type="button"

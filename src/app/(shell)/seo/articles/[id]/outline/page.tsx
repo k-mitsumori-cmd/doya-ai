@@ -349,7 +349,7 @@ export default function SeoOutlineEditPage() {
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.nativeEvent.isComposing || e.keyCode === 229) return
+                            if (e.nativeEvent?.isComposing || e.keyCode === 229) return
                             if (e.key === 'Enter') confirmEdit()
                             if (e.key === 'Escape') cancelEdit()
                           }}
