@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-type ExportFormat = 'markdown' | 'html' | 'word' | 'wordpress'
+type ExportFormat = 'markdown' | 'html' | 'txt' | 'note'
 
 const FORMATS: Array<{
   id: ExportFormat
@@ -27,9 +27,9 @@ const FORMATS: Array<{
   ext: string
 }> = [
   { id: 'html', label: 'HTML', desc: 'ブログやCMSに貼り付け', icon: Code, ext: '.html' },
-  { id: 'word', label: 'Word', desc: 'Wordドキュメント形式', icon: FileType, ext: '.docx' },
   { id: 'markdown', label: 'Markdown', desc: '汎用テキスト形式', icon: FileText, ext: '.md' },
-  { id: 'wordpress', label: 'WordPress', desc: 'ブロックエディタ用HTML', icon: Layout, ext: '.html' },
+  { id: 'note', label: 'note', desc: 'noteに貼り付けやすいMarkdown', icon: Layout, ext: '.md' },
+  { id: 'txt', label: 'テキスト', desc: '装飾なしのテキスト', icon: FileType, ext: '.txt' },
 ]
 
 export default function SeoExportPage() {
@@ -78,13 +78,7 @@ export default function SeoExportPage() {
 
     try {
       // エクスポートAPIを呼び出し
-      const endpoint = selectedFormat === 'word'
-        ? `/api/seo/articles/${articleId}/export/word`
-        : selectedFormat === 'wordpress'
-          ? `/api/seo/articles/${articleId}/export/wp`
-          : selectedFormat === 'html'
-            ? `/api/seo/articles/${articleId}/export/html`
-            : `/api/seo/articles/${articleId}/export/md`
+      const endpoint = `/api/seo/articles/${articleId}/export/${selectedFormat}`
 
       const res = await fetch(endpoint)
       if (!res.ok) {
@@ -114,13 +108,6 @@ export default function SeoExportPage() {
 
       // 状態を更新
       setExported(true)
-
-      // 記事のステータスをEXPORTEDに更新
-      await fetch(`/api/seo/articles/${articleId}/content`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'EXPORTED' }),
-      }).catch(() => {})
     } catch (e: any) {
       setError(e?.message || 'ダウンロードに失敗しました')
     } finally {
@@ -170,7 +157,7 @@ export default function SeoExportPage() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">
-              記事が完成しました！ 🎉
+              記事が完成しました
             </h1>
             <p className="text-sm text-gray-500 font-bold mb-8">
               {article.title}

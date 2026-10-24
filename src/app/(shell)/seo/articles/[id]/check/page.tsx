@@ -307,7 +307,7 @@ export default function SeoCheckPage() {
         ) : filteredChecks.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-12 text-center">
             <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
-            <h3 className="text-lg font-black text-gray-900 mb-2">問題ありません 🎉</h3>
+            <h3 className="text-lg font-black text-gray-900 mb-2">問題ありません</h3>
             <p className="text-sm text-gray-400 font-bold">
               このカテゴリでは問題が見つかりませんでした
             </p>
