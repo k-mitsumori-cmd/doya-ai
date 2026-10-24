@@ -9,6 +9,9 @@ import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
+/** ドヤパワーの包みに「AI を呼んだあとの失敗なので戻さない」と伝える印（統合のとき DOYA_POWER_CONSUMED_HEADER の定数へそろえる） */
+const CONSUMED = { 'x-doya-power-consumed': '1' }
+
 /**
  * POST /api/doyalist/expand-keywords
  * ユーザー入力キーワードをgBizINFO検索向けの法人名キーワードに展開
@@ -77,7 +80,7 @@ async function postHandler(req: NextRequest) {
       })
     } catch {
       console.error('[doyalist/expand-keywords] Gemini request failed')
-      return NextResponse.json({ error: 'AI変換に失敗しました' }, { status: 502 })
+      return NextResponse.json({ error: 'AI変換に失敗しました' }, { status: 502, headers: CONSUMED })
     }
 
     const tags = Array.isArray(result?.tags)
@@ -85,7 +88,7 @@ async function postHandler(req: NextRequest) {
       : []
 
     if (tags.length === 0) {
-      return NextResponse.json({ error: '有効なタグを生成できませんでした' }, { status: 502 })
+      return NextResponse.json({ error: '有効なタグを生成できませんでした' }, { status: 502, headers: CONSUMED })
     }
 
     return NextResponse.json({ success: true, tags })
