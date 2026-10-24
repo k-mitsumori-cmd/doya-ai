@@ -54,7 +54,8 @@ export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerH
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>ドヤパワー</p>
-          <h2 className={styles.pageTitle}>内訳と履歴</h2>
+          {/* この画面は ToolFrame の外なので、ページの見出し（h1）をここに置く（本番の点検で h1 が0だった。2026-10-25） */}
+          <h1 className={styles.pageTitle}>内訳と履歴</h1>
           <p className={styles.subtitle}>今の残りの内訳と、増えた・減った記録です。生成に失敗したときは、減った分が戻ります。</p>
         </div>
         <Link href="/home#doya-power" className={styles.link}>経営ホームに戻る</Link>
