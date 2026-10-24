@@ -1,18 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/promane/ui/button'
-import { MessageSquare, X, Send, Bug, Lightbulb, MessageCircle } from 'lucide-react'
+import { MessageSquare, X, Send, Bug, Lightbulb, MessageCircle, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import { userErrorMessage, PROMANE_NETWORK_ERROR } from '@/lib/promane/user-error'
 
 type FeedbackType = 'bug' | 'feature' | 'other'
 
 const TYPE_OPTIONS: { value: FeedbackType; label: string; icon: any; color: string }[] = [
-  { value: 'bug', label: '🐛 バグ報告', icon: Bug, color: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
-  { value: 'feature', label: '💡 機能要望', icon: Lightbulb, color: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
-  { value: 'other', label: '💬 その他', icon: MessageCircle, color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
+  { value: 'bug', label: '不具合の報告', icon: Bug, color: 'bg-rose-100 text-rose-700 hover:bg-rose-200' },
+  { value: 'feature', label: '機能の要望', icon: Lightbulb, color: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
+  { value: 'other', label: 'その他', icon: MessageCircle, color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
 ]
 
 /**
@@ -38,6 +39,15 @@ export function FeedbackButton({
   const [type, setType] = useState<FeedbackType>('other')
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const titleId = useId()
+
+  // Esc で閉じる（送信中は閉じない）
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sending) setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, sending])
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -52,21 +62,21 @@ export function FeedbackButton({
         body: JSON.stringify({ type, message: message.trim(), page: pathname }),
       })
       if (!res.ok) {
-        const d = await res.json()
-        toast.error(d?.error || '送信に失敗しました', {
+        const d = await res.json().catch(() => ({}))
+        toast.error(userErrorMessage(d?.error, '送信できませんでした。少し待って、もう一度お試しください。'), {
           icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         })
         return
       }
       const result = await res.json().catch(() => ({}))
-      toast.success(result.notified === false ? '内容を受け付けました。担当者への通知が遅れています。' : '送信しました！対応します 🙏', {
+      toast.success(result.notified === false ? '内容を受け付けました。担当者への通知が遅れています。' : '送信しました。内容を確かめて対応します。', {
         icon: <Image src="/character/love.png" alt="" width={28} height={28} unoptimized />,
         duration: 5000,
       })
       setMessage('')
       setOpen(false)
     } catch (e: any) {
-      toast.error(e?.message || 'エラーが発生しました')
+      toast.error(PROMANE_NETWORK_ERROR)
     } finally {
       setSending(false)
     }
@@ -110,6 +120,9 @@ export function FeedbackButton({
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div
             className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -117,12 +130,12 @@ export function FeedbackButton({
               <div className="flex items-center gap-3">
                 <Image src="/character/love.png" alt="" width={44} height={44} unoptimized />
                 <div>
-                  <h2 className="text-[18px] font-black text-gray-900">フィードバック・不具合報告</h2>
+                  <h2 id={titleId} className="text-[18px] font-black text-gray-900">フィードバック・不具合報告</h2>
                   <p className="text-[11px] text-gray-500 font-bold">担当者にSlackで届きます</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
-                <X className="h-5 w-5" />
+              <button type="button" onClick={() => setOpen(false)} aria-label="閉じる" className="text-gray-400 hover:text-gray-700 transition-colors">
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
 
@@ -143,7 +156,7 @@ export function FeedbackButton({
                           : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                       }`}
                     >
-                      {t.label}
+                      <t.icon className="mr-1 inline-block h-4 w-4 -mt-0.5" aria-hidden />{t.label}
                     </button>
                   ))}
                 </div>
@@ -174,7 +187,7 @@ export function FeedbackButton({
 
               {/* 現在のページ情報 */}
               <div className="bg-gray-50 rounded-xl px-3 py-2 text-[11px] text-gray-600 font-bold">
-                📍 現在のページ: <code className="bg-white px-1.5 py-0.5 rounded text-blue-600">{pathname}</code>
+                <MapPin className="mr-1 inline-block h-3.5 w-3.5 -mt-0.5" aria-hidden />現在のページ: <code className="bg-white px-1.5 py-0.5 rounded text-blue-600">{pathname}</code>
               </div>
             </div>
 

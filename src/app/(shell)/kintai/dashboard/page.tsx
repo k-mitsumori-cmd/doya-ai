@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatMinutesJa } from '@/lib/kintai/format'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { useToolUiNext } from '@/components/kintai/ui-next'
 import KintaiDashboardNext, { KintaiDashboardError, KintaiDashboardLoading } from '@/components/kintai/KintaiDashboardNext'
@@ -24,11 +25,11 @@ export default function DashboardPage() {
         const text = await r.text()
         try {
           const json = JSON.parse(text)
-          if (!r.ok || json.error) { setError(json.error || 'APIエラー'); return }
+          if (!r.ok || json.error) { setError(userErrorMessage(json.error, '少し待って、もう一度お試しください。')); return }
           setData(json)
-        } catch { setError('レスポンス解析エラー') }
+        } catch { setError('少し待って、もう一度お試しください。') }
       })
-      .catch((e) => setError(String(e.message)))
+      .catch(() => setError(KINTAI_NETWORK_ERROR))
       .finally(() => setLoading(false))
   }, [])
 
@@ -38,7 +39,7 @@ export default function DashboardPage() {
   }, [])
 
   if (uiNext && loading) return <KintaiDashboardLoading />
-  if (uiNext && (error || !data)) return <KintaiDashboardError message={error || '不明なエラー'} />
+  if (uiNext && (error || !data)) return <KintaiDashboardError message={error || '少し待って、もう一度お試しください。'} />
 
   if (loading) {
     return (

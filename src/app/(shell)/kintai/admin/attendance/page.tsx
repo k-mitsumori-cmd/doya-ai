@@ -1,5 +1,6 @@
 'use client'
 
+import { Skeleton } from '@/components/ds'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
@@ -198,9 +199,8 @@ export default function AdminAttendancePage() {
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5" aria-busy="true" aria-label="勤怠を読み込み中">
+            <Skeleton lines={4} height={16} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">

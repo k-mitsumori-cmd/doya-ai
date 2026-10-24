@@ -1,7 +1,7 @@
 'use client'
 
 import { useToolUiNext } from '@/components/kintai/ui-next'
-import { Button, EmptyState } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { MiniStack } from '@/components/ds/charts'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
@@ -185,14 +185,8 @@ export default function AttendancePage() {
 
         {/* ===== Table ===== */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img
-              src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
-              alt="読み込み中"
-              className="w-20 h-20 object-contain bear-loading-float"
-            />
-            <div className="w-10 h-10 rounded-full border-4 border-[#0066ff]/20 border-t-[#0066ff] animate-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-3xl border border-slate-200 p-5" aria-busy="true" aria-label="勤怠を読み込み中">
+            <Skeleton lines={6} height={18} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center">

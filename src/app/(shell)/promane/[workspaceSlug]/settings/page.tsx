@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import { WorkspaceSettingsForm } from "@/components/promane/workspace-settings-form";
 import { RepairDataButton } from "@/components/promane/repair-data-button";
+import { Building2, FolderOpen, Users, Wrench } from "lucide-react";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const session = await requirePromaneAuth();
@@ -20,9 +21,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
   const clientCount = await prisma.promaneClient.count({ where: { workspaceId: workspace.id } });
 
   const stats = [
-    { emoji: "👥", label: "メンバー数", value: `${memberCount} 人`, bg: "from-blue-100 to-indigo-100" },
-    { emoji: "📁", label: "プロジェクト数", value: `${projectCount} 件`, bg: "from-brand-50 to-brand-50" },
-    { emoji: "🏢", label: "顧客数", value: `${clientCount} 社`, bg: "from-amber-100 to-orange-100" },
+    { icon: Users, label: "メンバー数", value: `${memberCount} 人`, bg: "from-blue-100 to-indigo-100" },
+    { icon: FolderOpen, label: "プロジェクト数", value: `${projectCount} 件`, bg: "from-brand-50 to-brand-50" },
+    { icon: Building2, label: "顧客数", value: `${clientCount} 社`, bg: "from-amber-100 to-orange-100" },
   ];
 
   return (
@@ -52,7 +53,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
         <div className="grid grid-cols-3 gap-4">
           {stats.map((stat, i) => (
             <div key={stat.label} className={`rounded-2xl bg-gradient-to-br ${stat.bg} p-5 text-center transition-all hover:scale-105 stagger-${i + 1}`}>
-              <span className="text-3xl">{stat.emoji}</span>
+              <stat.icon size={28} strokeWidth={1.75} aria-hidden className="mx-auto text-gray-700" />
               <p className="mt-2 text-[13px] font-bold text-gray-500">{stat.label}</p>
               <p className="text-[24px] font-black text-gray-900">{stat.value}</p>
             </div>
@@ -62,7 +63,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
 
       {/* 編集可能フォーム */}
       <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-8 mb-6 animate-slide-up stagger-2">
-        <h2 className="text-[18px] font-black text-gray-900 mb-1">🔧 ワークスペース情報</h2>
+        <h2 className="text-[18px] font-black text-gray-900 mb-1 flex items-center gap-2"><Wrench size={18} aria-hidden />ワークスペース情報</h2>
         <p className="text-[12px] font-bold text-gray-400 mb-5">
           {canEdit ? '名前とスラッグ (URL) を編集できます' : '編集は owner/admin のみ可能です'}
         </p>
@@ -84,7 +85,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
           <div className="flex items-start gap-4">
             <Image src="/character/working.png" alt="" width={56} height={56} unoptimized className="flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="text-[16px] font-black text-amber-900 mb-1">🔧 データ修復ツール</h3>
+              <h3 className="text-[16px] font-black text-amber-900 mb-1 flex items-center gap-2"><Wrench size={16} aria-hidden />データ修復ツール</h3>
               <p className="text-[12px] text-amber-800 font-bold leading-relaxed mb-3">
                 過去に登録された負額の経費・契約金額・時給、逆転日付タスクを<br />
                 一括で正常な値に修復します（負値→0、終了日逆転→null）。

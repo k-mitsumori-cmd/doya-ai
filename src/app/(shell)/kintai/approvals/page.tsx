@@ -1,9 +1,13 @@
 'use client'
 
 import { PageTitle } from '@/components/kintai/ui-next'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useId, useState, useCallback, useRef } from 'react'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
+import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 const TABS = [
   { key: 'pending', label: '未承認' },
@@ -45,6 +49,13 @@ export default function ApprovalsPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectComment, setRejectComment] = useState('')
   const [actionFeedback, setActionFeedback] = useState<Record<string, { type: 'approved' | 'rejected'; message: string }>>({})
+  // 休暇の承認の取り消し（理由を書く窓）。以前は window.prompt だった
+  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const rejectTitleId = useId()
+  const cancelTitleId = useId()
+  useEscapeToClose(rejectingId !== null, () => setRejectingId(null))
+  useEscapeToClose(cancelTargetId !== null, () => setCancelTargetId(null), cancellingId !== null)
   useEffect(() => { tabRef.current = tab }, [tab])
 
   const load = useCallback(() => {
@@ -93,10 +104,12 @@ export default function ApprovalsPage() {
 
   const approve = async (id: string) => {
     const request = requests.find(r => r.id === id)
-    const message = request?.type === 'leave'
-      ? 'この休暇申請を承認しますか？開始日から終了日までの全日が対象です。休日は自動除外されません。勤怠・打刻が登録済みの場合は承認されません。'
-      : 'この申請を承認しますか？'
-    if (!window.confirm(message)) return
+    const isLeave = request?.type === 'leave'
+    if (!(await confirmDialog({
+      title: isLeave ? 'この休暇申請を承認しますか？' : 'この申請を承認しますか？',
+      message: isLeave ? '開始日から終了日までの全日が対象です。休日は自動で除かれません。勤怠・打刻が登録済みの日があると承認されません。' : undefined,
+      confirmLabel: '承認する',
+    }))) return
     try {
       setActionError('')
       const response = await fetch(`/api/kintai/requests/${id}`, {
@@ -104,14 +117,14 @@ export default function ApprovalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'approved' }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '承認に失敗しました')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '承認できませんでした。少し待って、もう一度お試しください。'))
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'approved', message: '承認しました' } }))
       setTimeout(() => {
         setActionFeedback(prev => { const n = { ...prev }; delete n[id]; return n })
         load()
       }, 1500)
-    } catch (error) { setActionError(error instanceof Error ? error.message : '承認に失敗しました') }
+    } catch (error) { setActionError(userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR)) }
   }
 
   const reject = async () => {
@@ -124,8 +137,8 @@ export default function ApprovalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rejected', reviewerComment: rejectComment }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '却下に失敗しました')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '却下できませんでした。少し待って、もう一度お試しください。'))
       setRejectingId(null)
       setRejectComment('')
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'rejected', message: '却下しました' } }))
@@ -133,15 +146,22 @@ export default function ApprovalsPage() {
         setActionFeedback(prev => { const n = { ...prev }; delete n[id]; return n })
         load()
       }, 1500)
-    } catch (error) { setActionError(error instanceof Error ? error.message : '却下に失敗しました') }
+    } catch (error) { setRejectingId(null); setActionError(userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR)) }
   }
 
-  const cancelLeave = async (id: string) => {
+  const openCancelLeave = (id: string) => {
     if (cancellingId) return
-    const reason = window.prompt('休暇を取り消す理由を入力してください（必須・2000文字以内）。')
-    if (reason === null) return
-    if (!reason.trim() || reason.length > 2000) { setActionError('取消理由を1〜2000文字で入力してください。'); return }
-    if (!window.confirm('承認済み休暇を取り消しますか？この申請で作成した休暇実績を削除し、申請履歴と取消理由は残します。日程変更は取消後に本人が再申請してください。')) return
+    setActionError('')
+    setCancelReason('')
+    setCancelTargetId(id)
+  }
+
+  const cancelLeave = async () => {
+    const id = cancelTargetId
+    if (!id || cancellingId) return
+    const reason = cancelReason
+    if (!reason.trim() || reason.length > 2000) { setActionError('取消の理由を1〜2000文字で入力してください。'); return }
+    setCancelTargetId(null)
     setCancellingId(id)
     setActionError('')
     try {
@@ -149,10 +169,10 @@ export default function ApprovalsPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'withdrawn', reviewerComment: reason.trim() }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '取消に失敗しました')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '取り消せませんでした。少し待って、もう一度お試しください。'))
       load()
-    } catch (error) { setActionError(error instanceof Error ? error.message : '取消に失敗しました') }
+    } catch (error) { setActionError(userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR)) }
     finally { setCancellingId(null) }
   }
 
@@ -228,9 +248,10 @@ export default function ApprovalsPage() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="space-y-3" aria-busy="true" aria-label="申請を読み込み中">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4"><Skeleton lines={2} height={16} /></div>
+            ))}
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
@@ -325,7 +346,7 @@ export default function ApprovalsPage() {
                         <p className="text-sm text-slate-600">取消理由: {r.details.leaveCancellation.reason}</p>
                       )}
                       {r.status === 'approved' && r.type === 'leave' && (
-                        <button disabled={cancellingId !== null} onClick={() => cancelLeave(r.id)} className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50">{cancellingId === r.id ? '取消中...' : '休暇の承認を取り消す'}</button>
+                        <button disabled={cancellingId !== null} onClick={() => openCancelLeave(r.id)} className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50">{cancellingId === r.id ? '取消中...' : '休暇の承認を取り消す'}</button>
                       )}
                       {/* Action buttons */}
                       {tab === 'pending' && !feedback && (
@@ -368,10 +389,10 @@ export default function ApprovalsPage() {
         {/* Reject modal */}
         {rejectingId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setRejectingId(null)}>
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-labelledby={rejectTitleId} className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="" width={48} height={48} className="bear-wiggle" />
-                <h2 className="text-lg font-bold text-slate-800">申請を却下</h2>
+                <h2 id={rejectTitleId} className="text-lg font-bold text-slate-800">申請を却下</h2>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">コメント（任意）</label>
@@ -387,6 +408,26 @@ export default function ApprovalsPage() {
                     却下する
                   </span>
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 休暇の承認の取り消し（理由を書く） */}
+        {cancelTargetId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { if (!cancellingId) setCancelTargetId(null) }}>
+            <div role="dialog" aria-modal="true" aria-labelledby={cancelTitleId} className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
+              <h2 id={cancelTitleId} className="text-lg font-bold text-slate-800">休暇の承認を取り消しますか？</h2>
+              <p className="text-sm text-slate-600">この申請で作った休暇の実績を消します。申請の履歴と取り消しの理由は残ります。日程を変えるときは、取り消したあとに本人がもう一度申請します。</p>
+              <div>
+                <label htmlFor={`${cancelTitleId}-reason`} className="block text-sm font-medium text-slate-700 mb-1">取り消しの理由（必須・2000文字以内）</label>
+                <textarea id={`${cancelTitleId}-reason`} value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3} maxLength={2000} autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] resize-none"
+                  placeholder="例: 日程を変えるため" />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setCancelTargetId(null)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50">やめる</button>
+                <button type="button" onClick={() => void cancelLeave()} disabled={!cancelReason.trim()} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">取り消す</button>
               </div>
             </div>
           </div>

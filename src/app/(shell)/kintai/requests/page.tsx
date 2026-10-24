@@ -1,7 +1,9 @@
 'use client'
 
 import { useToolUiNext } from '@/components/kintai/ui-next'
-import { Button, EmptyState } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
+import { alertDialog, confirmDialog } from '@/components/ds/dialog'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -123,18 +125,18 @@ export default function RequestsPage() {
   }
 
   const withdraw = async (id: string) => {
-    if (!window.confirm('この申請を取り下げますか？')) return
+    if (!(await confirmDialog({ title: 'この申請を取り下げますか？', message: '取り下げた申請は承認されません。必要ならもう一度申請してください。', confirmLabel: '取り下げる', tone: 'danger' }))) return
     try {
       const response = await fetch(`/api/kintai/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'withdrawn' }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '取下げに失敗しました')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '少し待って、もう一度お試しください。'))
       load()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '取下げに失敗しました')
+      await alertDialog({ title: '取り下げられませんでした', message: userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR), tone: 'error' })
     }
   }
 
@@ -186,9 +188,8 @@ export default function RequestsPage() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5" aria-busy="true" aria-label="申請を読み込み中">
+            <Skeleton lines={4} height={16} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">

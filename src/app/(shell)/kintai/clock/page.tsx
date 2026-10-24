@@ -8,6 +8,9 @@ import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { Skeleton } from '@/components/ds'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 type ClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
 
@@ -45,6 +48,8 @@ export default function ClockPage() {
   const [records, setRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  // 打刻のあとの読み直しでは画面を骨組みに戻さない（成功の表示を消さない）。最初の読み込みのときだけ骨組みを出す
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [acting, setActing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -74,6 +79,7 @@ export default function ClockPage() {
       setLoadError(true)
     } finally {
       setLoading(false)
+      setHasLoaded(true)
     }
   }, [])
 
@@ -100,9 +106,9 @@ export default function ClockPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setMessage({ type: 'error', text: data.error || '打刻に失敗しました' })
+        setMessage({ type: 'error', text: userErrorMessage(data?.error, '打刻できませんでした。状態を確かめて、もう一度お試しください。') })
         return
       }
       setMessage({ type: 'success', text: `${CLOCK_TYPE_LABELS[type] || type}しました` })
@@ -110,7 +116,7 @@ export default function ClockPage() {
       setTimeout(() => setShowSuccess(false), 3000)
       await fetchRecords()
     } catch {
-      setMessage({ type: 'error', text: '通信エラーが発生しました' })
+      setMessage({ type: 'error', text: KINTAI_NETWORK_ERROR })
     } finally {
       setActing(false)
     }
@@ -127,6 +133,7 @@ export default function ClockPage() {
   const handleClockOutCancel = () => {
     setConfirmClockOut(false)
   }
+  useEscapeToClose(confirmClockOut, handleClockOutCancel, acting)
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()
@@ -210,16 +217,11 @@ export default function ClockPage() {
     </div>
   }
 
-  if (loading) {
+  if (loading && !hasLoaded) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <img
-          src={CHARS.thinking}
-          alt="読み込み中"
-          className="bear-loading"
-          style={{ width: 120, height: 120, objectFit: 'contain' }}
-        />
-        <p className="text-slate-500 font-bold text-sm">読み込み中...</p>
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-4" aria-busy="true" aria-label="打刻の状態を読み込み中">
+        <Skeleton lines={2} height={40} />
+        <Skeleton lines={3} height={64} />
       </div>
     )
   }
@@ -244,7 +246,7 @@ export default function ClockPage() {
               <div className="success-overlay-inner flex items-center justify-center" style={{ width: 200, height: 200 }}>
                 <img
                   src={CHARS.jump}
-                  alt="大喜びのクマ"
+                  alt=""
                   className="bear-jump-in"
                   style={{ width: 160, height: 160, objectFit: 'contain' }}
                 />
@@ -422,16 +424,16 @@ export default function ClockPage() {
                 className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 clock-fade-in"
                 onClick={handleClockOutCancel}
               />
-              <div className="fixed inset-x-4 bottom-8 z-50 max-w-lg mx-auto clock-slide-up">
+              <div role="dialog" aria-modal="true" aria-labelledby="kintai-clockout-title" className="fixed inset-x-4 bottom-8 z-50 max-w-lg mx-auto clock-slide-up">
                 <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-5">
                   <div className="text-center">
                     {/* Surprise bear */}
                     <img
                       src={CHARS.surprise}
-                      alt="驚きのクマ"
+                      alt=""
                       style={{ width: 100, height: 100, objectFit: 'contain', margin: '0 auto 8px' }}
                     />
-                    <p className="text-xl font-black text-slate-800">本当に退勤しますか？</p>
+                    <h2 id="kintai-clockout-title" className="text-xl font-black text-slate-800">本当に退勤しますか？</h2>
                     <p className="text-sm text-slate-500 mt-2">
                       本日の勤務時間: <span className="font-bold text-slate-700">{formatMinutesJa(workMinutes)}</span>
                     </p>

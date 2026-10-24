@@ -1,10 +1,14 @@
 'use client'
 
 import { PageTitle } from '@/components/kintai/ui-next'
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useId, useState, useMemo, useRef } from 'react'
 import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { useKintaiWorkRuleCreation } from '@/lib/kintai/use-work-rule-creation'
+import { Skeleton } from '@/components/ds'
+import { alertDialog, ConfirmDialog } from '@/components/ds/dialog'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage } from '@/lib/kintai/user-error'
 
 function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes: number): string {
   if (!workStart || !workEnd) return ''
@@ -58,6 +62,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
+  const formTitleId = useId()
 
   const creation = useKintaiWorkRuleCreation(organizationId, ready && canManage, (state) => {
     if (state === 'found' && !editing) { formVersion.current += 1; setShowForm(false) }
@@ -72,9 +77,9 @@ export default function SettingsPage() {
     setRules([])
     try {
       const response = await fetch('/api/kintai/work-rules', { cache: 'no-store' })
-      if (!response.ok) throw new Error('Failed to fetch work rules')
+      if (!response.ok) throw new Error('就業ルールを読み込めませんでした')
       const data = await response.json()
-      if (data?.organizationId !== organizationId || !Array.isArray(data?.rules)) throw new Error('Invalid work rules response')
+      if (data?.organizationId !== organizationId || !Array.isArray(data?.rules)) throw new Error('就業ルールを読み込めませんでした')
       if (version === requestVersion.current && currentAccess()) setRules(data.rules)
     } catch {
       if (version === requestVersion.current && currentAccess()) setLoadError(true)
@@ -119,13 +124,14 @@ export default function SettingsPage() {
   }
 
   const closeForm = () => { formVersion.current += 1; setShowForm(false) }
+  useEscapeToClose(showForm, closeForm, saving)
 
   const handleSave = async () => {
     if (!currentAccess() || !canManage || saveLock.current) return
-    if (editing && (typeof editing.revision !== 'string' || !/^[a-f0-9]{64}$/.test(editing.revision))) { alert('最新の就業ルールを読み込み直してください。入力内容は保存されていません。'); return }
-    if (!form.name.trim()) { alert('ルール名を入力してください'); return }
+    if (editing && (typeof editing.revision !== 'string' || !/^[a-f0-9]{64}$/.test(editing.revision))) { await alertDialog({ title: '保存できませんでした', message: '最新の就業ルールを読み込み直してから、もう一度お試しください。', tone: 'error' }); return }
+    if (!form.name.trim()) { await alertDialog({ title: 'ルール名を入力してください', message: 'ルール名は必須です。例: 標準 (9:00-18:00)', tone: 'error' }); return }
     const inputError = validateKintaiWorkRuleInput(form) || validateKintaiWorkRuleSchedule(form)
-    if (inputError) { alert(inputError); return }
+    if (inputError) { await alertDialog({ title: '入力を確かめてください', message: inputError, tone: 'error' }); return }
     const version = formVersion.current
     const current = () => mounted.current && formVersion.current === version && currentAccess()
     const attempt = {}
@@ -143,16 +149,16 @@ export default function SettingsPage() {
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
-      if (!res.ok) { alert(data?.error || '保存に失敗しました'); return }
+      if (!res.ok) { await alertDialog({ title: '保存できませんでした', message: userErrorMessage(data?.error, '入力を確かめて、もう一度お試しください。'), tone: 'error' }); return }
       if (!data?.rule || typeof data.rule.id !== 'string' || !data.rule.id
         || typeof data.rule.revision !== 'string' || !/^[a-f0-9]{64}$/.test(data.rule.revision) || data.rule.revision === editing.revision
         || data.rule.organizationId !== organizationId || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
-        alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。')
+        await alertDialog({ title: '保存できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' })
         return
       }
       setShowForm(false)
       void fetchRules()
-    } catch { if (current()) alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。') } finally {
+    } catch { if (current()) await alertDialog({ title: '保存できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }) } finally {
       if (saveLock.current === attempt) { saveLock.current = null; if (current()) setSaving(false) }
     }
   }
@@ -168,7 +174,7 @@ export default function SettingsPage() {
 
   const handleDelete = async () => {
     if (!currentAccess() || !canManage || !showDeleteConfirm || deleteLock.current) return
-    if (typeof showDeleteConfirm.revision !== 'string' || !/^[a-f0-9]{64}$/.test(showDeleteConfirm.revision)) { alert('最新の就業ルールを読み込み直してください。削除は行っていません。'); return }
+    if (typeof showDeleteConfirm.revision !== 'string' || !/^[a-f0-9]{64}$/.test(showDeleteConfirm.revision)) { await alertDialog({ title: '削除できませんでした', message: '最新の就業ルールを読み込み直してから、もう一度お試しください。', tone: 'error' }); return }
     const version = deleteVersion.current
     const current = () => mounted.current && deleteVersion.current === version && currentAccess()
     const attempt = {}
@@ -179,11 +185,11 @@ export default function SettingsPage() {
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
-      if (!res.ok) { alert(data?.error || '削除に失敗しました'); return }
-      if (data?.success !== true) { alert('削除結果を確認できませんでした。再読み込みして最新のルールをご確認ください。'); return }
+      if (!res.ok) { await alertDialog({ title: '削除できませんでした', message: userErrorMessage(data?.error, '少し待って、もう一度お試しください。'), tone: 'error' }); return }
+      if (data?.success !== true) { await alertDialog({ title: '削除できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }); return }
       setShowDeleteConfirm(null)
       void fetchRules()
-    } catch { if (current()) alert('削除結果を確認できませんでした。再読み込みして最新のルールをご確認ください。') } finally {
+    } catch { if (current()) await alertDialog({ title: '削除できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }) } finally {
       if (deleteLock.current === attempt) { deleteLock.current = null; if (current()) setDeleting(false) }
     }
   }
@@ -231,13 +237,14 @@ export default function SettingsPage() {
         {(!showForm || editing) && recoveryPanel}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-busy="true" aria-label="就業ルールを読み込み中">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border-2 border-slate-200 p-6"><Skeleton lines={4} height={16} /></div>
+            ))}
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
-            就業ルールを取得できませんでした。
+            就業ルールを読み込めませんでした。通信を確かめて、もう一度お試しください。
             <button type="button" onClick={() => void fetchRules()} className="ml-2 font-bold underline">再読み込み</button>
           </div>
         ) : rules.length === 0 ? (
@@ -281,10 +288,10 @@ export default function SettingsPage() {
                       )}
                     </div>
                     <div className="flex gap-0.5 ml-2 shrink-0">
-                      <button disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors">
+                      <button type="button" aria-label={`${rule.name}を編集する`} disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
-                      <button disabled={!canManage} onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <button type="button" aria-label={`${rule.name}を削除する`} disabled={!canManage} onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
@@ -350,13 +357,13 @@ export default function SettingsPage() {
 
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeForm}>
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-labelledby={formTitleId} className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="" width={40} height={40} className="bear-wiggle" />
-                  <h2 className="text-lg font-bold text-slate-800">{editing ? 'ルールを編集' : 'ルールを追加'}</h2>
+                  <h2 id={formTitleId} className="text-lg font-bold text-slate-800">{editing ? 'ルールを編集' : 'ルールを追加'}</h2>
                 </div>
-                <button onClick={closeForm} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <button type="button" aria-label="閉じる" onClick={closeForm} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
@@ -431,35 +438,19 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Delete confirmation dialog */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeDelete}>
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-3">
-                <img src="/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png" alt="" width={56} height={56} className="bear-wiggle" />
-                <h2 className="text-lg font-bold text-slate-800">ルールを削除</h2>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-slate-600">
-                  <span className="font-bold text-slate-800">「{showDeleteConfirm.name}」</span>を削除しますか？
-                </p>
-                {(showDeleteConfirm._count?.employees || 0) > 0 && (
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <span className="material-symbols-outlined text-amber-600 text-base mt-0.5">info</span>
-                    <p className="text-xs text-amber-700">このルールは<span className="font-bold">{showDeleteConfirm._count.employees}名</span>の従業員に適用されています。</p>
-                  </div>
-                )}
-                <p className="text-xs text-slate-400">この操作は元に戻せません。</p>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={closeDelete} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleDelete} disabled={!canManage || deleting} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
-                  {deleting ? '削除中...' : '削除する'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 削除の確認（共通のダイアログ） */}
+        <ConfirmDialog
+          open={!!showDeleteConfirm}
+          title={showDeleteConfirm ? `「${showDeleteConfirm.name}」を削除しますか？` : ''}
+          message={(showDeleteConfirm?._count?.employees || 0) > 0
+            ? `このルールは${showDeleteConfirm._count.employees}名の従業員に適用されています。元に戻せません。`
+            : '元に戻せません。'}
+          confirmLabel={deleting ? '削除中…' : '削除する'}
+          tone="danger"
+          busy={deleting}
+          onConfirm={() => void handleDelete()}
+          onCancel={closeDelete}
+        />
       </div>
     </>
   )

@@ -3,6 +3,7 @@
 import { PageTitle } from './ui-next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 export default function KintaiOnboarding() {
   const router = useRouter()
@@ -30,12 +31,12 @@ export default function KintaiOnboarding() {
         body: JSON.stringify({ name: orgName.trim(), employeeName: employeeName.trim() }),
       })
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || '組織の作成に失敗しました')
+        const data = await res.json().catch(() => ({}))
+        throw new Error(userErrorMessage(data?.error, '組織を作れませんでした。入力を確かめて、もう一度お試しください。'))
       }
       window.location.href = '/kintai/clock'
     } catch (e: any) {
-      setError(e.message)
+      setError(userErrorMessage(e?.message, KINTAI_NETWORK_ERROR))
     } finally {
       setLoading(false)
     }

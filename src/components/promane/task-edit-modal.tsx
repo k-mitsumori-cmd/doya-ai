@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateTask, deleteTask } from '@/lib/promane/actions-tasks'
 import { Button } from '@/components/promane/ui/button'
 import { Input } from '@/components/promane/ui/input'
-import { X, Save, Trash2 } from 'lucide-react'
+import { X, Save, Trash2, ClipboardList, Loader, Eye, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { useConfirm } from '@/components/promane/confirm-dialog'
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 interface TaskEditModalProps {
   workspaceSlug: string
@@ -28,17 +29,17 @@ interface TaskEditModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'todo', label: '📋 未着手', color: 'bg-gray-100 text-gray-700' },
-  { value: 'in_progress', label: '⚡ 進行中', color: 'bg-blue-100 text-blue-700' },
-  { value: 'review', label: '👀 レビュー', color: 'bg-amber-100 text-amber-700' },
-  { value: 'done', label: '✅ 完了', color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'todo', label: '未着手', icon: ClipboardList, color: 'bg-gray-100 text-gray-700' },
+  { value: 'in_progress', label: '進行中', icon: Loader, color: 'bg-blue-100 text-blue-700' },
+  { value: 'review', label: 'レビュー', icon: Eye, color: 'bg-amber-100 text-amber-700' },
+  { value: 'done', label: '完了', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-700' },
 ]
 
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: '🐢 のんびり' },
-  { value: 'medium', label: '🚶 ふつう' },
-  { value: 'high', label: '🏃 いそぎ' },
-  { value: 'urgent', label: '🔥 超キンキュウ' },
+  { value: 'low', label: 'のんびり' },
+  { value: 'medium', label: 'ふつう' },
+  { value: 'high', label: 'いそぎ' },
+  { value: 'urgent', label: '超キンキュウ' },
 ]
 
 function toDateInput(d: Date | string | null): string {
@@ -72,6 +73,19 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
     setDueDate(toDateInput(task.dueDate))
   }, [task])
 
+  const titleId = useId()
+  // Esc で閉じる（共通の確認ダイアログが開いている間は、そちらが Esc を受ける）
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || saving || deleting) return
+      if (document.querySelector('dialog[open]')) return
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, saving, deleting, onClose])
+
   if (!open) return null
 
   const handleSave = async () => {
@@ -96,13 +110,13 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
         startDate: startDate || null,
         dueDate: dueDate || null,
       })
-      toast.success('タスクを更新しました ✓', {
+      toast.success('タスクを更新しました', {
         icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
       })
       router.refresh()
       onClose()
     } catch (e: any) {
-      toast.error(e?.message || '更新に失敗しました', {
+      toast.error(userErrorMessage(e?.message, '更新できませんでした。少し待って、もう一度お試しください。'), {
         icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         duration: 5000,
       })
@@ -113,8 +127,8 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: 'タスクを削除',
-      message: `「${task.title}」を削除しますか？\nこの操作は取り消せません。`,
+      title: 'このタスクを削除しますか？',
+      message: `「${task.title}」を削除します。元に戻せません。`,
       tone: 'danger',
       confirmLabel: '削除する',
       icon: '/character/surprise.png',
@@ -127,7 +141,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
       router.refresh()
       onClose()
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました')
+      toast.error(userErrorMessage(e?.message, '削除できませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setDeleting(false)
     }
@@ -137,6 +151,9 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -144,12 +161,12 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           <div className="flex items-center gap-3">
             <Image src="/character/working.png" alt="" width={40} height={40} unoptimized />
             <div>
-              <h2 className="text-[18px] font-black text-gray-900">タスク編集</h2>
+              <h2 id={titleId} className="text-[18px] font-black text-gray-900">タスク編集</h2>
               <p className="text-[11px] text-gray-400 font-bold">変更を加えて保存</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="閉じる" className="text-gray-400 hover:text-gray-700 transition-colors">
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
 
@@ -188,7 +205,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
                       : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                   }`}
                 >
-                  {s.label}
+                  <s.icon className="mr-1 inline-block h-4 w-4 -mt-0.5" aria-hidden />{s.label}
                 </button>
               ))}
             </div>
@@ -223,9 +240,9 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
               onChange={(e) => setAssigneeId(e.target.value)}
               className="w-full h-11 px-3 rounded-xl border border-gray-200 text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <option value="">👤 未割当</option>
+              <option value="">未割当</option>
               {members.map((m) => (
-                <option key={m.id} value={m.id}>👤 {m.displayName}</option>
+                <option key={m.id} value={m.id}>{m.displayName}</option>
               ))}
             </select>
           </div>
@@ -233,11 +250,11 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           {/* 日付 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[12px] font-black text-gray-700 mb-1.5">📅 開始日</label>
+              <label className="block text-[12px] font-black text-gray-700 mb-1.5">開始日</label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
             </div>
             <div>
-              <label className="block text-[12px] font-black text-gray-700 mb-1.5">🏁 終了日</label>
+              <label className="block text-[12px] font-black text-gray-700 mb-1.5">終了日</label>
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
             </div>
           </div>
@@ -245,8 +262,8 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           {/* 注意書き */}
           {startDate && dueDate && new Date(dueDate) < new Date(startDate) && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
-              <p className="text-[11px] text-rose-700 font-bold">
-                ⚠️ 終了日が開始日より前です。保存できません
+              <p className="flex items-center gap-1 text-[12px] text-rose-700 font-bold">
+                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />終了日が開始日より前です。日付を直すと保存できます。
               </p>
             </div>
           )}

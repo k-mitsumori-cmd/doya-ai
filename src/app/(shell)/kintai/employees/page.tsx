@@ -3,7 +3,11 @@
 import { useToolUiNext } from '@/components/kintai/ui-next'
 import { AlertTriangle, CheckCircle2, Mail } from 'lucide-react'
 import { PageTitle } from '@/components/kintai/ui-next'
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useId, useState, useMemo, useRef } from 'react'
+import { Skeleton } from '@/components/ds'
+import { alertDialog, confirmDialog } from '@/components/ds/dialog'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
 import { loadAllEmployees } from '@/lib/kintai/load-employees'
 import { EmptyState } from '@/components/EmptyState'
@@ -49,6 +53,8 @@ export default function EmployeesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentUserRole, setCurrentUserRole] = useState('employee')
   const loadSeq = useRef(0)
+  const formTitleId = useId()
+  useEscapeToClose(showForm, () => setShowForm(false), saving)
 
   const fetchAll = () => {
     const seq = ++loadSeq.current
@@ -57,7 +63,7 @@ export default function EmployeesPage() {
     setCurrentUserRole('employee')
     const readJson = async (url: string) => {
       const response = await fetch(url, { cache: 'no-store' })
-      if (!response.ok) throw new Error('Employee data request failed')
+      if (!response.ok) throw new Error('従業員データを読み込めませんでした')
       return response.json()
     }
     Promise.all([
@@ -67,7 +73,7 @@ export default function EmployeesPage() {
       readJson('/api/kintai/usage'),
     ]).then(([allEmployees, deptData, ruleData, usageData]) => {
       if (!Array.isArray(deptData.departments) || !Array.isArray(ruleData.rules)) {
-        throw new Error('Invalid employee data response')
+        throw new Error('従業員データを読み込めませんでした')
       }
       if (loadSeq.current !== seq) return
       setEmployees(allEmployees)
@@ -131,7 +137,8 @@ export default function EmployeesPage() {
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         if (d.code === 'KINTAI_EMPLOYEE_LIMIT') { showEmployeeLimit(d); return }
-        alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : ''))
+        // 内部の詳細（d.detail）は画面に出さない
+        await alertDialog({ title: '保存できませんでした', message: userErrorMessage(d.error, '入力を確かめて、もう一度お試しください。'), tone: 'error' })
         return
       }
       if (!editing) {
@@ -141,13 +148,18 @@ export default function EmployeesPage() {
       setLimitNotice(null)
       setShowForm(false)
       fetchAll()
-    } catch { alert('通信エラー') } finally { setSaving(false) }
+    } catch { await alertDialog({ title: '保存できませんでした', message: KINTAI_NETWORK_ERROR, tone: 'error' }) } finally { setSaving(false) }
   }
 
   const toggleActive = async (emp: any) => {
     if (togglingRef.current.has(emp.id)) return
     const action = emp.isActive ? '無効化' : '有効化'
-    if (!window.confirm(`${emp.name}を${action}しますか？`)) return
+    if (!(await confirmDialog({
+      title: `${emp.name}さんを${action}しますか？`,
+      message: emp.isActive ? '無効にすると、この人は打刻できなくなります。あとで有効に戻せます。' : '有効にすると、この人がまた打刻できるようになります。',
+      confirmLabel: emp.isActive ? '無効にする' : '有効にする',
+      tone: emp.isActive ? 'danger' : 'primary',
+    }))) return
     togglingRef.current.add(emp.id)
     setTogglingIds(new Set(togglingRef.current))
     try {
@@ -159,17 +171,17 @@ export default function EmployeesPage() {
       const result = await res.json().catch(() => null)
       if (!res.ok) {
         if (result?.code === 'KINTAI_EMPLOYEE_LIMIT') { showEmployeeLimit(result); return }
-        alert(typeof result?.error === 'string' ? result.error : `${action}できませんでした。もう一度お試しください。`)
+        await alertDialog({ title: `${action}できませんでした`, message: userErrorMessage(result?.error, '少し待って、もう一度お試しください。'), tone: 'error' })
         return
       }
       setLimitNotice(null)
       if (result?.employee?.id !== emp.id || typeof result.employee.isActive !== 'boolean') {
-        alert('更新結果を確認できませんでした。画面を再読み込みして状態をご確認ください。')
+        await alertDialog({ title: '更新できたか確かめられませんでした', message: '画面を再読み込みして、状態を確かめてください。', tone: 'error' })
         return
       }
       setEmployees(previous => previous.map(row => row.id === emp.id ? { ...row, ...result.employee } : row))
     } catch {
-      alert('通信エラーが発生しました。画面を再読み込みして状態をご確認ください。')
+      await alertDialog({ title: '更新できたか確かめられませんでした', message: '通信を確かめて、画面を再読み込みしてください。', tone: 'error' })
     } finally {
       togglingRef.current.delete(emp.id)
       setTogglingIds(new Set(togglingRef.current))
@@ -248,7 +260,7 @@ export default function EmployeesPage() {
               <input aria-label="招待URL" value={inviteDeliveryFailure} readOnly className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" />
               <button type="button" onClick={async () => {
                 try { await navigator.clipboard.writeText(inviteDeliveryFailure) }
-                catch { alert('自動でコピーできませんでした。URL欄から手動でコピーしてください。') }
+                catch { await alertDialog({ title: 'コピーできませんでした', message: 'URL欄を選んで、手でコピーしてください。', tone: 'error' }) }
               }} className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-bold text-white">コピー</button>
             </div>
           </div>
@@ -331,9 +343,8 @@ export default function EmployeesPage() {
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5" aria-busy="true" aria-label="従業員を読み込み中">
+            <Skeleton lines={6} height={18} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
@@ -422,27 +433,35 @@ export default function EmployeesPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => openEdit(emp)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors" title="編集">
+                          <button type="button" aria-label={`${emp.name}さんを編集する`} onClick={() => openEdit(emp)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors" title="編集">
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
                           {emp.isActive && (emp.member?.status === 'PENDING' || emp.member?.status === 'INACTIVE') && <button
                             onClick={async () => {
-                              if (!confirm(`${emp.name} さんに招待メールを送信しますか？`)) return
+                              if (!(await confirmDialog({ title: `${emp.name}さんに招待メールを送りますか？`, message: '参加用のリンクをメールで送ります。', confirmLabel: '送信する' }))) return
                               try {
                                 const res = await fetch(`/api/kintai/employees/${emp.id}/invite`, { method: 'POST' })
-                                const data = await res.json()
+                                const data = await res.json().catch(() => ({}))
                                 if (data.inviteUrl) {
                                   let copied = false
                                   try { await navigator.clipboard.writeText(data.inviteUrl); copied = true } catch {}
                                   fetchAll()
-                                  alert(`${data.emailSent ? '招待メールを送信しました。' : '招待メールは送信できませんでした。'}\n${copied ? 'リンクをコピーしました。' : 'リンクをコピーできませんでした。以下のURLを手動でコピーしてください。'}\n\n${data.inviteUrl}`)
+                                  await alertDialog({
+                                    title: data.emailSent ? '招待メールを送りました' : '招待メールを送れませんでした',
+                                    tone: data.emailSent ? 'primary' : 'error',
+                                    message: <>
+                                      {copied ? '招待のリンクをコピーしました。' : 'リンクをコピーできませんでした。下のURLを手でコピーしてください。'}
+                                      {'\n'}<span className="break-all">{data.inviteUrl}</span>
+                                    </>,
+                                  })
                                 } else {
-                                  alert(data.error || '招待の作成に失敗しました')
+                                  await alertDialog({ title: '招待を作れませんでした', message: userErrorMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
                                 }
-                              } catch { alert('通信エラーが発生しました') }
+                              } catch { await alertDialog({ title: '招待を作れませんでした', message: KINTAI_NETWORK_ERROR, tone: 'error' }) }
                             }}
                             className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="招待メールを送信"
+                            aria-label={`${emp.name}さんに招待メールを送る`}
                           >
                             <span className="material-symbols-outlined text-lg">mail</span>
                           </button>}
@@ -452,6 +471,7 @@ export default function EmployeesPage() {
                             aria-busy={togglingIds.has(emp.id)}
                             className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait ${emp.isActive ? 'text-green-500 hover:text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`}
                             title={emp.isActive ? '無効化する' : '有効化する'}
+                            aria-label={`${emp.name}さんを${emp.isActive ? '無効にする' : '有効にする'}`}
                           >
                             <span className="material-symbols-outlined text-lg">{emp.isActive ? 'toggle_on' : 'toggle_off'}</span>
                           </button>
@@ -486,13 +506,13 @@ export default function EmployeesPage() {
         {/* Modal */}
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-labelledby={formTitleId} className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={48} height={48} className="bear-wiggle" />
-                  <h2 className="text-lg font-bold text-slate-800">{editing ? '従業員を編集' : '従業員を登録'}</h2>
+                  <h2 id={formTitleId} className="text-lg font-bold text-slate-800">{editing ? '従業員を編集' : '従業員を登録'}</h2>
                 </div>
-                <button onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <button type="button" aria-label="閉じる" onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>

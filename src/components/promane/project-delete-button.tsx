@@ -7,6 +7,7 @@ import { deleteProject } from '@/lib/promane/actions-projects'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/promane/confirm-dialog'
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 export function ProjectDeleteButton({
   workspaceSlug,
@@ -36,7 +37,7 @@ export function ProjectDeleteButton({
       toast.success('プロジェクトを削除しました')
       router.push(`/promane/${workspaceSlug}/projects`)
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました', { duration: 6000 })
+      toast.error(userErrorMessage(e?.message, '削除できませんでした。少し待って、もう一度お試しください。'), { duration: 6000 })
       setDeleting(false)
     }
   }

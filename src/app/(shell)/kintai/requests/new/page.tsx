@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { Skeleton } from '@/components/ds'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -25,14 +27,8 @@ export default function NewRequestPage() {
   }
   return (
     <Suspense fallback={
-      <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">
-        <img
-          src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
-          alt="読み込み中"
-          style={{ width: 80, height: 80, objectFit: 'contain' }}
-        />
-        <div className="w-10 h-10 rounded-full border-4 border-[#0066ff]/20 border-t-[#0066ff] animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto" aria-busy="true" aria-label="申請の画面を読み込み中">
+        <Skeleton lines={5} height={18} />
       </div>
     }>
       <NewRequestContent />
@@ -110,7 +106,7 @@ function NewRequestContent() {
           setOrigClockIn(cin ? new Date(cin.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
           setOrigClockOut(cout ? new Date(cout.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
         })
-        .catch(e => { if (active) setRecordsError(e.message || '打刻の取得に失敗しました') })
+        .catch(e => { if (active) setRecordsError(userErrorMessage(e instanceof Error ? e.message : null, '打刻を読み込めませんでした。日付を選び直して、もう一度お試しください。')) })
     }
     return () => { active = false }
   }, [fixDate, type])
@@ -188,8 +184,8 @@ function NewRequestContent() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || '申請に失敗しました')
+        const data = await res.json().catch(() => ({}))
+        setError(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'))
         return
       }
 
@@ -198,7 +194,7 @@ function NewRequestContent() {
         router.push('/kintai/requests')
       }, 2000)
     } catch {
-      setError('通信エラーが発生しました')
+      setError(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)
     }

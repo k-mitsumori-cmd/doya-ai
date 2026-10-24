@@ -16,6 +16,7 @@ import { PROJECT_STATUS_LABELS, BILLING_TYPE_LABELS } from "@/lib/promane/format
 import { toast } from "sonner";
 import Image from "next/image";
 import { AlertCircle } from "lucide-react";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type Client = { id: string; name: string };
 type ProjectData = {
@@ -97,14 +98,14 @@ export function ProjectForm({
       estimatedHours = hours === '' ? undefined : parsePromaneIntegerInput(hours, "見積工数");
       monthlyAmount = billingType === "monthly" ? parsePromaneIntegerInput(form.get("monthlyAmount"), "月額") : undefined;
       hourlyRate = billingType === "hourly" ? parsePromaneIntegerInput(form.get("hourlyRate"), "時給") : undefined;
-    } catch (error) { setError(error instanceof Error ? error.message : "入力値を確認してください"); return; }
+    } catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "入力値を確認してください")); return; }
     const startDate = (form.get("startDate") as string) || undefined;
     const endDate = (form.get("endDate") as string) || undefined;
     try {
       const start = startDate ? parsePromaneWorkDate(startDate) : null;
       const end = endDate ? parsePromaneWorkDate(endDate) : null;
       if (start && end && end < start) throw new Error("納期は開始日以降を指定してください");
-    } catch (error) { setError(error instanceof Error ? error.message : "日付を確認してください"); return; }
+    } catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "日付を確認してください")); return; }
 
     const data = {
       name,
@@ -122,7 +123,7 @@ export function ProjectForm({
     };
 
     try { validatePromaneProjectText(data) }
-    catch (error) { setError(error instanceof Error ? error.message : "入力を確認してください"); return; }
+    catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "入力を確認してください")); return; }
 
     submitting.current = true;
     try {
@@ -144,7 +145,7 @@ export function ProjectForm({
         });
       finish(result);
     } catch (error) {
-      setError(error instanceof Error ? error.message : '保存状態を確認してください');
+      setError(userErrorMessage(error instanceof Error ? error.message : null, '保存状態を確認してください'));
     } finally { submitting.current = false; }
   }
 

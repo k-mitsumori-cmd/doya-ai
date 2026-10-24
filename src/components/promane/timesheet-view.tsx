@@ -10,10 +10,11 @@ import { Input } from "@/components/promane/ui/input";
 import { Label } from "@/components/promane/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/promane/ui/select";
 import { formatDuration } from "@/lib/promane/format";
-import { Plus, Trash2, Clock } from "lucide-react";
+import { Plus, Trash2, Clock, FolderOpen, ClipboardList, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useConfirm } from "@/components/promane/confirm-dialog";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type EntryItem = { id: string; taskId: string | null; duration: number; date: string; note: string | null; taskTitle: string | null; projectName: string | null };
 type ProjectWithTasks = { id: string; name: string; tasks: { id: string; title: string }[] };
@@ -67,7 +68,7 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
       refreshCreated();
     } catch (e: any) {
       console.error("[promane/time] create exception");
-      toast.error(e?.message || "記録に失敗しました", { duration: 6000 });
+      toast.error(userErrorMessage(e?.message, "記録できませんでした。入力を確かめて、もう一度お試しください。"), { duration: 6000 });
     } finally {
       submission.current = false;
     }
@@ -75,8 +76,8 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
 
   async function handleDelete(entryId: string) {
     const ok = await confirm({
-      title: '時間記録を削除',
-      message: 'この時間記録を削除しますか？\n人件費の集計に影響します。',
+      title: 'この時間記録を削除しますか？',
+      message: '人件費の集計も変わります。元に戻せません。',
       tone: 'danger',
       confirmLabel: '削除する',
       icon: '/character/surprise.png',
@@ -87,7 +88,7 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
       toast.success("記録を削除したよ");
       router.refresh();
     } catch (e: any) {
-      toast.error(e?.message || "削除に失敗しました");
+      toast.error(userErrorMessage(e?.message, "削除できませんでした。少し待って、もう一度お試しください。"));
     }
   }
 
@@ -133,14 +134,14 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
             <fieldset disabled={creation.status !== "ready"} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📁 プロジェクト</Label>
+                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">プロジェクト</Label>
                 <Select value={selectedProject} onValueChange={(v) => setSelectedProject(v ?? "")}>
                   <SelectTrigger className="h-12 rounded-2xl font-bold bg-gray-50"><SelectValue placeholder="選択..." /></SelectTrigger>
                   <SelectContent>{projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📋 タスク</Label>
+                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">タスク</Label>
                 <Select key={selectedProject} name="taskId">
                   <SelectTrigger className="h-12 rounded-2xl font-bold bg-gray-50"><SelectValue placeholder="選択..." /></SelectTrigger>
                   <SelectContent>
@@ -152,24 +153,24 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor={`${inputId}-hours`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">⏰ 時間</Label>
+                <Label htmlFor={`${inputId}-hours`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">時間</Label>
                 <Input id={`${inputId}-hours`} name="hours" type="number" min="0" step="1" placeholder="1" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
               </div>
               <div>
-                <Label htmlFor={`${inputId}-minutes`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">⏰ 分</Label>
+                <Label htmlFor={`${inputId}-minutes`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">分</Label>
                 <Input id={`${inputId}-minutes`} name="minutes" type="number" min="0" step="1" max="59" placeholder="30" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor={`${inputId}-date`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📅 日付</Label>
+                <Label htmlFor={`${inputId}-date`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">日付</Label>
                 <Input id={`${inputId}-date`} name="date" type="date" defaultValue={promaneToday()} required className="h-12 rounded-2xl font-bold bg-gray-50" />
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor={`${inputId}-note`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📝 メモ</Label>
+                <Label htmlFor={`${inputId}-note`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">メモ</Label>
                 <Input id={`${inputId}-note`} name="note" maxLength={1000} placeholder="作業内容（1,000文字以内）" className="h-12 rounded-2xl font-bold bg-gray-50" />
               </div>
             </div>
             <Button type="submit" disabled={creation.status !== "ready"} className="rounded-full h-12 px-8 font-black text-[15px] shadow-md hover:scale-[1.02] active:scale-95 transition-all">
-              {loading ? "記録中..." : "記録する！ ✨"}
+              {loading ? "記録中..." : "記録する"}
             </Button>
             </fieldset>
           </form>
@@ -193,18 +194,18 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[16px] font-black text-gray-900">{formatDuration(entry.duration)}</span>
-                    {entry.projectName && <span className="text-[14px] font-bold text-gray-400">📁 {entry.projectName}</span>}
+                    {entry.projectName && <span className="inline-flex items-center gap-1 text-[14px] font-bold text-gray-400"><FolderOpen className="h-4 w-4" aria-hidden />{entry.projectName}</span>}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {entry.taskTitle && <span className="text-[13px] font-bold text-gray-400">📋 {entry.taskTitle}</span>}
+                    {entry.taskTitle && <span className="inline-flex items-center gap-1 text-[13px] font-bold text-gray-400"><ClipboardList className="h-4 w-4" aria-hidden />{entry.taskTitle}</span>}
                     {entry.note && <span className="text-[13px] text-gray-300">— {entry.note}</span>}
                   </div>
                 </div>
-                <span className="text-[14px] font-bold text-gray-400">
-                  📅 {formatPromaneWorkDate(entry.date)}
+                <span className="inline-flex items-center gap-1 text-[14px] font-bold text-gray-400">
+                  <CalendarDays className="h-4 w-4" aria-hidden />{formatPromaneWorkDate(entry.date)}
                 </span>
-                <button onClick={() => handleDelete(entry.id)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
-                  <Trash2 className="h-4 w-4" />
+                <button type="button" aria-label="この記録を削除する" onClick={() => handleDelete(entry.id)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                  <Trash2 className="h-4 w-4" aria-hidden />
                 </button>
               </div>
             ))}

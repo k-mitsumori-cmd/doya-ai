@@ -14,6 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useConfirm } from "@/components/promane/confirm-dialog";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type ExpenseItem = {
   id: string;
@@ -77,7 +78,7 @@ export function FinanceTab({
       refreshCreated();
     } catch (e: any) {
       console.error("[promane/expense] create exception");
-      toast.error(e?.message || "通信エラーが発生しました");
+      toast.error(userErrorMessage(e?.message, "通信できませんでした。通信を確かめて、もう一度お試しください。"));
     } finally {
       submission.current = false;
     }
@@ -99,13 +100,13 @@ export function FinanceTab({
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data?.error || "削除に失敗しました");
+        toast.error(userErrorMessage(data?.error, "削除できませんでした。少し待って、もう一度お試しください。"));
         return;
       }
       toast.success("経費を削除しました");
       router.refresh();
     } catch (e: any) {
-      toast.error(e?.message || "通信エラー");
+      toast.error(userErrorMessage(e?.message, "通信できませんでした。通信を確かめて、もう一度お試しください。"));
     }
   }
 

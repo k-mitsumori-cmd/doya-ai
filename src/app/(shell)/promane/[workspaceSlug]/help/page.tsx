@@ -149,7 +149,7 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
         <p className="mt-1 text-[12px] text-gray-500 font-bold">バグ報告・機能要望はワンクリックで Slack に届きます</p>
         <div className="mt-4 flex justify-center">
           <FeedbackButton variant="inline" className="rounded-full h-12 px-7 text-[14px] font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 text-white shadow-lg">
-            🐛 不具合を報告 / 💡 要望を送る
+            不具合・要望を送る
           </FeedbackButton>
         </div>
         <p className="mt-3 text-[12px] text-gray-400">通常 1営業日以内に対応します</p>
