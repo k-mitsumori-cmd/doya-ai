@@ -29,12 +29,15 @@ import {
   type GeneratedPlan,
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
+import { loadProject, saveProject } from '@/lib/tenjikai/local-store'
 
 type Phase = 'input' | 'generating' | 'ready'
 
 // ⚠️ src/app/(shell)/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
-export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
+// 出展プロジェクトは、この端末のブラウザ（localStorage）に利用者ごとに残す暫定の保存（src/lib/tenjikai/local-store.ts）。
+// サーバー保存の設計は docs/architecture/TENJIKAI-PERSISTENCE.md。
+export default function TenjikaiApp({ shell = false, userId = null }: { shell?: boolean; userId?: string | null }) {
   const router = useRouter()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
@@ -51,6 +54,39 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   const [pending, setPending] = useState(false)
   const [animDone, setAnimDone] = useState(false)
   const requestSeq = useRef(0)
+  // 保存の読み込みが済んだか。済むまでは、入力の画面を一瞬出さないため /tenjikai/booth などは空にしておく
+  const [restored, setRestored] = useState(false)
+  const [saveNote, setSaveNote] = useState<string | null>(null)
+
+  // 開いたとき、保存したプロジェクトがあればその内容で再開する（URL のセクションはそのまま）
+  useEffect(() => {
+    const saved = loadProject(userId)
+    if (saved) {
+      setInput(saved.input)
+      setGenerated(saved.generated)
+      setVariant(saved.variant)
+      setSelectedNovelty(saved.selectedNovelty)
+      setPanelImages(saved.panelImages)
+      setPhase('ready')
+    }
+    setRestored(true)
+  }, [userId])
+
+  // 結果が出ているあいだ、変わるたびに保存する（画像の連続生成で何度も書かないよう少し待つ）
+  useEffect(() => {
+    if (!restored || phase !== 'ready') return
+    const t = window.setTimeout(() => {
+      const r = saveProject(userId, { input, generated, variant, selectedNovelty, panelImages })
+      setSaveNote(
+        r === 'saved-without-images'
+          ? 'この端末には、作った画像を保存しきれませんでした。再読み込みすると画像は消えます。ブース設計の画面から画像を書き出しておいてください。'
+          : r === 'failed'
+            ? 'この端末のブラウザに保存できませんでした。再読み込みすると、入力した内容は消えます。'
+            : null,
+      )
+    }, 500)
+    return () => window.clearTimeout(t)
+  }, [restored, phase, userId, input, generated, variant, selectedNovelty, panelImages])
 
   const analysis = generated.analysis
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
@@ -105,7 +141,21 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
           onDone={onGeneratingDone}
         />
       )
-    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} />
+    if (!restored && section !== 'new') return null
+    if (phase === 'input' || section === 'new') {
+      return (
+        <>
+          {phase === 'input' && section !== 'new' && (
+            <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+              <p className="rounded-xl border border-doya-200 bg-doya-50 px-4 py-2 text-xs font-bold text-doya-700">
+                この端末に保存した出展プロジェクトがありません。条件を入れると、続きの画面が使えます。
+              </p>
+            </div>
+          )}
+          <Wizard initial={input} onSubmit={start} />
+        </>
+      )
+    }
     switch (section) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
@@ -128,6 +178,11 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
 
   const body = (
     <>
+      {phase === 'ready' && saveNote && (
+        <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{saveNote}</p>
+        </div>
+      )}
       {phase === 'ready' && section !== 'new' && generated.notice && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>

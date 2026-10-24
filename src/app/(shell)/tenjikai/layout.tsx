@@ -28,19 +28,20 @@ export default async function TenjikaiLayout({ children }: { children: React.Rea
   // 未ログインには紹介ページ（LP）だけを出す。アプリの画面はログイン後だけ（点検 SHL-015。asklink と同じ）
   // 開発中の画面確認用（next dev でだけ効く）。ログインせずにアプリの画面を開く
   const devPreview = process.env.NODE_ENV === 'development' && process.env.TENJIKAI_DEV_PREVIEW === 'true'
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null
   if (!session?.user && !devPreview) return <TenjikaiLp />
   // 共通の枠（フラグ ui.shell.tenjikai）。枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
   if (session?.user && isShellEnabled('tenjikai')) {
     return (
       <>
-        <TenjikaiShellFrame />
+        <TenjikaiShellFrame userId={userId} />
         {children}
       </>
     )
   }
   return (
     <>
-      <TenjikaiApp />
+      <TenjikaiApp userId={userId} />
       {children}
     </>
   )
