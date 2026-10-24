@@ -371,6 +371,39 @@ function MiniCalendar({ events }: { events: HomeEvent[] }) {
   )
 }
 
+function MoneyCard({ money }: { money: NonNullable<HomeSummary['money']> }) {
+  const { income, expense } = money
+  return (
+    <section className={styles.card} aria-label="入金と出金の予定">
+      <div className={styles.cardHead}><h2>今月の入金と出金</h2></div>
+      <div className={styles.gridWide}>
+        <div>
+          <p className={styles.toolGroupLabel}>入金（収入管理）</p>
+          {income.state === 'ready' ? (
+            <dl className={styles.stats}>
+              <div><dt>今月の売上予定</dt><dd>{man(income.scheduled)}</dd></div>
+              <div><dt>入金済み</dt><dd>{man(income.received)}</dd></div>
+              <div><dt>入金待ち</dt><dd>{man(income.unpaid)}{income.overdueCount > 0 ? `（遅れ ${income.overdueCount}件）` : ''}</dd></div>
+            </dl>
+          ) : income.state === 'error' ? <p className={styles.error} role="status">読み込めませんでした</p>
+            : <EmptyCard text="契約と請求書を登録すると、入金の予定がここに出ます。" href={income.href} cta="収入管理をはじめる" />}
+        </div>
+        <div>
+          <p className={styles.toolGroupLabel}>出金（支出管理）</p>
+          {expense.state === 'ready' ? (
+            <dl className={styles.stats}>
+              <div><dt>今月の出金予定</dt><dd>{man(expense.thisMonthOut)}</dd></div>
+              <div><dt>支払済み</dt><dd>{man(expense.paid)}</dd></div>
+              <div><dt>来月の出金予定</dt><dd>{man(expense.nextMonthOut)}</dd></div>
+            </dl>
+          ) : expense.state === 'error' ? <p className={styles.error} role="status">読み込めませんでした</p>
+            : <EmptyCard text="契約と支払を登録すると、出金の予定がここに出ます。" href={expense.href} cta="支出管理をはじめる" />}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function EmptyCard({ text, href, cta }: { text: string; href: string; cta: string }) {
   return (
     <div className={styles.emptyCard}>
@@ -450,6 +483,8 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
         <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? s.sales.weightedPipeline : null} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
       </section>
+
+      {s.money ? <MoneyCard money={s.money} /> : null}
 
       <div className={styles.gridWide}>
         <section className={styles.card}>
