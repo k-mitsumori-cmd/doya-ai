@@ -7,7 +7,7 @@ import { Trash2 } from 'lucide-react'
 import { todayJst } from '@/lib/income/dates'
 import {
   Button, Card, ConfirmDialog, DetailSkeleton, EmptyState, ErrorText, Field, Gate, ListSkeleton, PageHeader, PageShell, PaymentMatchBadge,
-  errMsg, fetchJson, inputCls, parseYenInput, s, toast, useResource, useUnsavedGuard, ymd, yen,
+  errMsg, fetchJson, inputCls, parseYenInput, s, toast, useIncomePermission, useResource, useUnsavedGuard, ymd, yen,
 } from '@/components/income/ui'
 
 type OpenInvoice = { id: string; invoiceNo: string | null; clientName: string; remaining: number; dueDate: string; totalInclTax: number }
@@ -18,7 +18,10 @@ type Payment = {
 }
 type Data = { payments: Payment[]; openInvoices: OpenInvoice[] }
 
-function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; onChanged: () => Promise<void> }) {
+/** 入金の登録・削除・消込は API で manager 以上。権限の無い人には操作のボタンを出さない */
+const MANAGER_ONLY_NOTE = '入金の登録と消込は、マネージャー以上の役割の人ができます。'
+
+function PaymentCard({ p, open, onChanged, canEdit, pending }: { p: Payment; open: OpenInvoice[]; onChanged: () => Promise<void>; canEdit: boolean; pending: boolean }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pickId, setPickId] = useState('')
@@ -78,9 +81,11 @@ function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; 
               {p.memo ? ` / ${p.memo}` : ''}
             </p>
           </div>
-          <Button variant="danger" size="sm" disabled={!!busy} onClick={() => { setDeleteError(null); setDeleting(true) }}>
-            <Trash2 size={14} aria-hidden="true" />削除
-          </Button>
+          {canEdit && (
+            <Button variant="danger" size="sm" disabled={!!busy || pending} onClick={() => { setDeleteError(null); setDeleting(true) }}>
+              <Trash2 size={14} aria-hidden="true" />削除する
+            </Button>
+          )}
         </div>
 
         {p.allocations.length > 0 && (
@@ -90,10 +95,12 @@ function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; 
                 <Link href={`/income/invoices/${a.invoice.id}`} className={s.link}>{a.invoice.invoiceNo ?? '請求書'} {a.invoice.client.name}</Link>
                 <span className="flex flex-wrap items-center gap-3">
                   <span className={`${s.num} ${s.strong}`}>{yen(a.amount)}</span>
-                  <Button size="sm" disabled={!!busy} loading={busy === `u-${a.invoice.id}`}
-                    onClick={() => call(`u-${a.invoice.id}`, () => fetchJson(`/api/income/payments/${p.id}/allocate?invoiceId=${encodeURIComponent(a.invoice.id)}`, { method: 'DELETE' }).then(() => undefined), '消込を外しました')}>
-                    外す
-                  </Button>
+                  {canEdit && (
+                    <Button size="sm" disabled={!!busy || pending} loading={busy === `u-${a.invoice.id}`}
+                      onClick={() => call(`u-${a.invoice.id}`, () => fetchJson(`/api/income/payments/${p.id}/allocate?invoiceId=${encodeURIComponent(a.invoice.id)}`, { method: 'DELETE' }).then(() => undefined), '消込を外しました')}>
+                      外す
+                    </Button>
+                  )}
                 </span>
               </li>
             ))}
@@ -117,16 +124,18 @@ function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; 
                           <p className={s.strong} style={{ margin: 0 }}>{inv.invoiceNo ?? '請求書'} {inv.clientName}</p>
                           <p className={s.sub} style={{ margin: 0 }}>残高 <span className={s.num}>{yen(inv.remaining)}</span> / 期日 {inv.dueDate} / {c.reason}</p>
                         </div>
-                        <Button size="sm" disabled={!!busy || amt <= 0} loading={busy === `a-${c.invoiceId}`} onClick={() => allocate(c.invoiceId, amt, 'rule')}>
-                          {yen(amt)}を消込する
-                        </Button>
+                        {canEdit && (
+                          <Button size="sm" disabled={!!busy || pending || amt <= 0} loading={busy === `a-${c.invoiceId}`} onClick={() => allocate(c.invoiceId, amt, 'rule')}>
+                            {yen(amt)}を消込する
+                          </Button>
+                        )}
                       </li>
                     )
                   })}
                 </ul>
               </div>
             )}
-            <div>
+            {canEdit && <div>
               <p className={s.label}>手動で消込する</p>
               <div className="flex flex-wrap items-start gap-3">
                 <Field label="請求書" className="min-w-[12rem] flex-1">
@@ -139,12 +148,12 @@ function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; 
                   <input className={inputCls} inputMode="numeric" value={pickAmount} onChange={(e) => setPickAmount(e.target.value)} />
                 </Field>
                 <div className="w-full self-end sm:w-auto">
-                  <Button disabled={!!busy || !pickId || !(pickAmountNum > 0)} loading={busy === `a-${pickId}`} onClick={() => allocate(pickId, pickAmountNum, 'manual')}>
+                  <Button disabled={!!busy || pending || !pickId || !(pickAmountNum > 0)} loading={busy === `a-${pickId}`} onClick={() => allocate(pickId, pickAmountNum, 'manual')}>
                     消込する
                   </Button>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
         )}
         <div className="mt-3"><ErrorText message={error} /></div>
@@ -166,7 +175,7 @@ function PaymentCard({ p, open, onChanged }: { p: Payment; open: OpenInvoice[]; 
   )
 }
 
-function PaymentForm({ onCreated }: { onCreated: () => Promise<void> }) {
+function PaymentForm({ onCreated, pending }: { onCreated: () => Promise<void>; pending: boolean }) {
   const [f, setF] = useState({ receivedOn: todayJst(), amount: '', feeDeducted: '', payerName: '', memo: '' })
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -187,6 +196,7 @@ function PaymentForm({ onCreated }: { onCreated: () => Promise<void> }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTried(true)
+    if (busy || pending) return
     if (Object.values(errors).some(Boolean)) {
       setFormError('入力に誤りがあります。赤字の項目を直してください。')
       return
@@ -219,7 +229,7 @@ function PaymentForm({ onCreated }: { onCreated: () => Promise<void> }) {
           <Field label="メモ" className="sm:col-span-4"><input className={inputCls} value={f.memo} onChange={(e) => setF({ ...f, memo: e.target.value })} maxLength={500} /></Field>
         </div>
         <ErrorText message={formError} />
-        <Button type="submit" variant="primary" loading={busy}>入金を登録する</Button>
+        <Button type="submit" variant="primary" loading={busy} disabled={pending}>入金を登録する</Button>
       </form>
     </Card>
   )
@@ -227,6 +237,8 @@ function PaymentForm({ onCreated }: { onCreated: () => Promise<void> }) {
 
 export default function PaymentsPage() {
   const res = useResource(() => fetchJson<Data>('/api/income/payments'), 'payments')
+  const perm = useIncomePermission()
+  const canEdit = perm.allows('manager')
   return (
     <PageShell>
       <PageHeader
@@ -237,16 +249,16 @@ export default function PaymentsPage() {
       <Gate res={res} skeleton={<><DetailSkeleton cards={1} /><div style={{ height: 16 }} /><ListSkeleton rows={2} /></>}>
         {(data) => (
           <div className={s.stackY}>
-            <PaymentForm onCreated={res.reload} />
+            {canEdit ? <PaymentForm onCreated={res.reload} pending={perm.pending} /> : <Card><p className={s.sub} style={{ margin: 0 }}>{MANAGER_ONLY_NOTE}</p></Card>}
             {data.payments.length === 0 ? (
               <EmptyState
                 image="/income/empty-payments.webp"
                 message="入金がまだ登録されていません。入金を登録すると、請求書との照合候補が出ます。"
-                action={{ label: '入金を登録する', onClick: () => document.getElementById('income-payment-amount')?.focus() }}
+                action={canEdit ? { label: '入金を登録する', onClick: () => document.getElementById('income-payment-amount')?.focus() } : undefined}
               />
             ) : (
               <ul className="m-0 space-y-4 p-0" style={{ listStyle: 'none' }}>
-                {data.payments.map((p) => <PaymentCard key={p.id} p={p} open={data.openInvoices} onChanged={res.reload} />)}
+                {data.payments.map((p) => <PaymentCard key={p.id} p={p} open={data.openInvoices} onChanged={res.reload} canEdit={canEdit} pending={perm.pending} />)}
               </ul>
             )}
           </div>

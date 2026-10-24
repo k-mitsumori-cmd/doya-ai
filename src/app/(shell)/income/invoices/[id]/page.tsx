@@ -8,7 +8,7 @@ import { Ban, CheckCircle2, Pencil, Printer, Send, Trash2 } from 'lucide-react'
 import InvoiceSheet, { type SheetInvoice } from '@/components/income/InvoiceSheet'
 import {
   Button, Card, ConfirmDialog, DetailSkeleton, emptyLine, ErrorText, Field, Gate, InvoiceStatusBadge, LineItemsEditor, PageHeader, PageShell,
-  PaymentStateBadge, errMsg, fetchJson, inputCls, linesToPayload, s, toast, useResource, useUnsavedGuard, ymd, yen, type LineRow,
+  PaymentStateBadge, errMsg, fetchJson, inputCls, linesToPayload, s, toast, useIncomePermission, useResource, useUnsavedGuard, ymd, yen, type LineRow,
 } from '@/components/income/ui'
 
 type Detail = Omit<SheetInvoice, 'items' | 'client'> & {
@@ -101,6 +101,17 @@ function InvoiceView({ inv, issuer, reload }: { inv: Detail; issuer: any; reload
   const canSend = inv.status === 'confirmed' || inv.status === 'sent'
   const open = (d: Dialog) => { setDialogError(null); setDialog(d) }
 
+  // API と同じ役割で出し分ける（確定・送付の記録は manager 以上、取消は admin 以上。編集と下書きの削除は全員）
+  const perm = useIncomePermission()
+  const mayConfirm = perm.allows('manager')
+  const maySend = perm.allows('manager')
+  const mayVoid = perm.allows('admin')
+  const roleNote = perm.pending || editing ? null
+    : isDraft && !mayConfirm ? '請求書の確定は、マネージャー以上の役割の人ができます。'
+    : canSend && !maySend ? '送付の記録はマネージャー以上、取消は管理者以上の役割の人ができます。'
+    : canSend && !mayVoid ? '請求書の取消は、管理者以上の役割の人ができます。'
+    : null
+
   return (
     <>
       <div className="no-print">
@@ -113,15 +124,15 @@ function InvoiceView({ inv, issuer, reload }: { inv: Detail; issuer: any; reload
               <>
                 {isDraft && (
                   <>
-                    <Button onClick={startEdit} disabled={busy}><Pencil size={16} aria-hidden="true" />編集</Button>
-                    <Button variant="primary" onClick={() => open('confirm')} disabled={busy}><CheckCircle2 size={16} aria-hidden="true" />確定</Button>
-                    <Button variant="danger" onClick={() => open('delete')} disabled={busy}><Trash2 size={16} aria-hidden="true" />削除</Button>
+                    <Button onClick={startEdit} disabled={busy}><Pencil size={16} aria-hidden="true" />編集する</Button>
+                    {mayConfirm && <Button variant="primary" onClick={() => open('confirm')} disabled={busy || perm.pending}><CheckCircle2 size={16} aria-hidden="true" />確定する</Button>}
+                    <Button variant="danger" onClick={() => open('delete')} disabled={busy}><Trash2 size={16} aria-hidden="true" />削除する</Button>
                   </>
                 )}
                 {canSend && (
                   <>
-                    <Button variant="primary" onClick={() => { setSentTo(inv.sentTo ?? inv.client.billingEmail ?? ''); open('send') }} disabled={busy}><Send size={16} aria-hidden="true" />送付済みにする</Button>
-                    <Button variant="danger" onClick={() => { setReason(''); open('void') }} disabled={busy}><Ban size={16} aria-hidden="true" />取消</Button>
+                    {maySend && <Button variant="primary" onClick={() => { setSentTo(inv.sentTo ?? inv.client.billingEmail ?? ''); open('send') }} disabled={busy || perm.pending}><Send size={16} aria-hidden="true" />送付済みにする</Button>}
+                    {mayVoid && <Button variant="danger" onClick={() => { setReason(''); open('void') }} disabled={busy || perm.pending}><Ban size={16} aria-hidden="true" />取り消す</Button>}
                   </>
                 )}
                 <Button onClick={() => window.print()}><Printer size={16} aria-hidden="true" />印刷・PDF保存</Button>
@@ -134,6 +145,7 @@ function InvoiceView({ inv, issuer, reload }: { inv: Detail; issuer: any; reload
           <PaymentStateBadge label={inv.state.label} />
           {inv.sentAt && <span className={s.sub}>送付済み: {ymd(inv.sentAt)}{inv.sentTo ? `（${inv.sentTo}）` : ''}</span>}
         </div>
+        {roleNote && <p className={s.sub} style={{ margin: '0 0 16px' }}>{roleNote}</p>}
         <ErrorText message={error} />
 
         {editing && (
