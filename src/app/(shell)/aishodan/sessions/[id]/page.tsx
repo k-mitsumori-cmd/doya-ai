@@ -12,8 +12,6 @@ import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
-import { DoyaKun } from '@/components/lp'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
@@ -61,7 +59,6 @@ const MANUAL_FIT_SCORE: Record<Verdict, number> = { hot: 85, warm: 65, cold: 40,
 
 export default function AishodanSessionDetail() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
-  const uiNext = useUiNext()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [d, setD] = useState<Detail | null>(null)
@@ -70,12 +67,12 @@ export default function AishodanSessionDetail() {
   const [error, setError] = useState('')
   /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
   const [loadStatus, setLoadStatus] = useState(0)
-  /** 新しい見た目だけ: 判定の保存・再評価に失敗したときの「何が起きたか・どうすればよいか」 */
+  /** 判定の保存・再評価に失敗したときの「何が起きたか・どうすればよいか」 */
   const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
-  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
-  const tap = uiNext ? AISHODAN_TAP : ''
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠
+  const tap = AISHODAN_TAP
   /**
-   * 新しい見た目だけ: 判定の操作の失敗を、サーバーの文の代わりに利用者向けの文で知らせる。
+   * 判定の操作の失敗を、サーバーの文の代わりに利用者向けの文で知らせる。
    * override / reEvaluate に onRejected として渡す（今までの見た目では渡さず、サーバーの文をそのまま出す）
    */
   function actionRejected(subject: string) {
@@ -106,11 +103,11 @@ export default function AishodanSessionDetail() {
     } catch (e) {
       setLoadStatus(failureStatus(e))
       // 新しい見た目では、トーストにもサーバーの文を出さない
-      notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      notifyError(setError, '商談を読み込めませんでした。')
     } finally {
       setLoading(false)
     }
-  }, [id, uiNext])
+  }, [id])
 
   useEffect(() => {
     void load()
@@ -176,19 +173,10 @@ export default function AishodanSessionDetail() {
     }
   }
 
-  if (loading && uiNext) {
+  if (loading) {
     return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
   }
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
-        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
-        <DoyaKun mood="working" size={88} />
-        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
-      </div>
-    )
-  }
-  if (!d && uiNext) {
+  if (!d) {
     // サーバーの文は出さない。見つからない・権限が無いときは一覧へ、通信の失敗はやり直す
     return (
       <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
@@ -201,14 +189,6 @@ export default function AishodanSessionDetail() {
       </div>
     )
   }
-  if (!d) {
-    return (
-      <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
-        <p className="text-slate-600">{error || '商談が見つかりません'}</p>
-        <Link href="/aishodan/sessions" className="text-sm text-[#0066ff] underline font-semibold">商談一覧に戻る</Link>
-      </div>
-    )
-  }
 
   const summary = d.outcome?.summary || {}
   const conditions: Array<{ label: string; met: boolean; weight: number; note: string }> = summary.conditions || []
@@ -217,14 +197,14 @@ export default function AishodanSessionDetail() {
   const canEvaluate = !!d.startedAt && !!d.endedAt && ['completed', 'evaluated'].includes(d.status)
 
   return (
-    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
+    <div className="pb-12">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan/sessions" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← 商談ログ</Link>
-          <AishodanHeading className={`text-lg font-bold text-slate-900${uiNext ? ' break-words [text-wrap:balance]' : ''}`}>
+          <Link href="/aishodan/sessions" className={`text-xs text-slate-500 hover:underline font-semibold inline-flex items-center rounded-lg${tap}`}>← 商談ログ</Link>
+          <AishodanHeading className="text-lg font-bold text-slate-900 break-words [text-wrap:balance]">
             {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
           </AishodanHeading>
-          <p className={`text-xs text-slate-500 font-semibold${uiNext ? ' break-words' : ''}`}>
+          <p className="text-xs text-slate-500 font-semibold break-words">
             {d.productName} / {d.startedAt ? new Date(d.startedAt).toLocaleString('ja-JP') : '未実施'}
             {d.guestEmail && ` / ${d.guestEmail}`}
           </p>
@@ -250,7 +230,7 @@ export default function AishodanSessionDetail() {
         )}
         {/* 判定 */}
         {d.outcome ? (
-          <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
+          <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 p-4 sm:p-6">
             <div className="flex flex-wrap items-center gap-4">
               <div>
                 <p className="text-xs text-slate-500 font-semibold">適合スコア</p>
@@ -276,12 +256,12 @@ export default function AishodanSessionDetail() {
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                         c.met ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-white'
                       }`}
-                      aria-hidden={uiNext ? true : undefined}
+                      aria-hidden={true}
                     >
                       {c.met ? '○' : '−'}
                     </span>
-                    {/* 記号だけでは読み上げで伝わらない（新しい見た目だけ） */}
-                    {uiNext && <span className="sr-only">{c.met ? '満たしている' : '満たしていない'}</span>}
+                    {/* 記号だけでは読み上げで伝わらない */}
+                    <span className="sr-only">{c.met ? '満たしている' : '満たしていない'}</span>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">
                         {c.label} <span className="text-xs font-normal text-slate-500 font-semibold">（{c.weight}点）</span>
@@ -318,13 +298,13 @@ export default function AishodanSessionDetail() {
 
             <div className="mt-5 border-t border-slate-100 pt-4">
               <button
-                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
+                onClick={() => void (reEvaluateNext())}
                 disabled={saving || !canEvaluate}
                 className={`rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40${tap}`}
               >
                 自動判定をやり直す
               </button>
-              {error && uiNext ? (
+              {error ? (
                 <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
               ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
               <p className="mt-4 text-xs text-slate-500 font-semibold">判定を変える</p>
@@ -332,10 +312,10 @@ export default function AishodanSessionDetail() {
                 {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                   <button
                     key={v}
-                    onClick={() => (uiNext ? overrideNext(v) : override(v))}
+                    onClick={() => (overrideNext(v))}
                     disabled={saving || d.outcome?.verdict === v}
-                    aria-pressed={uiNext ? d.outcome?.verdict === v : undefined}
-                    className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
+                    aria-pressed={d.outcome?.verdict === v}
+                    className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold whitespace-nowrap${tap}`}
                   >
                     {VERDICT_LABELS[v]}
                   </button>
@@ -357,9 +337,9 @@ export default function AishodanSessionDetail() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
-                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
+                onClick={() => void (reEvaluateNext())}
                 disabled={saving || !canEvaluate}
-                className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
+                className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40 whitespace-nowrap${tap}`}
               >
                 {saving ? '処理中…' : '自動判定をやり直す'}
               </button>
@@ -367,15 +347,15 @@ export default function AishodanSessionDetail() {
               {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                 <button
                   key={v}
-                  onClick={() => (uiNext ? overrideNext(v) : override(v))}
+                  onClick={() => (overrideNext(v))}
                   disabled={saving}
-                  className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
+                  className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold whitespace-nowrap${tap}`}
                 >
                   {VERDICT_LABELS[v]}
                 </button>
               ))}
             </div>
-            {error && uiNext ? (
+            {error ? (
               <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
             ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
           </section>
@@ -423,12 +403,12 @@ export default function AishodanSessionDetail() {
           <h2 className="text-sm font-bold text-slate-900">ヒアリング結果</h2>
           <dl className="mt-3 divide-y divide-slate-100">
             {d.slots.map((s) => (
-              <div key={s.key} className={uiNext ? 'flex gap-3 py-2.5 sm:gap-4' : 'flex gap-4 py-2.5'}>
-                <dt className={uiNext ? 'w-24 shrink-0 text-xs text-slate-500 font-semibold sm:w-32' : 'w-32 shrink-0 text-xs text-slate-500 font-semibold'}>
+              <div key={s.key} className="flex gap-3 py-2.5 sm:gap-4">
+                <dt className="w-24 shrink-0 text-xs text-slate-500 font-semibold sm:w-32">
                   {s.label}
                   {s.required && <span className="ml-1 text-rose-500">*</span>}
                 </dt>
-                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'}${uiNext ? ' min-w-0 break-words' : ''}`}>
+                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'} min-w-0 break-words`}>
                   {s.value || '聞き取れず'}
                 </dd>
               </div>
@@ -461,9 +441,7 @@ export default function AishodanSessionDetail() {
               {d.turns.map((t) => (
                 <div key={t.id} className={`flex gap-3 ${t.speaker === 'ai' ? '' : 'flex-row-reverse'}`}>
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      t.speaker === 'ai' ? 'bg-slate-100 text-slate-800' : 'bg-[#0066ff] text-white'
-                    }${uiNext ? ' min-w-0 break-words' : ''}`}
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${t.speaker === 'ai' ? 'bg-slate-100 text-slate-800' : 'bg-[#0066ff] text-white'} min-w-0 break-words`}
                   >
                     {t.text}
                   </div>

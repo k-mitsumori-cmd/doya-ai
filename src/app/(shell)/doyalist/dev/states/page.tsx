@@ -54,7 +54,6 @@ export default async function DoyalistDevStates({ searchParams }: Props) {
   const { s = 'home' } = await searchParams
   const { mode, body } = renderState(s)
   return (
-    // 新しい見た目（UiNextContext = 'all'）と偽のログインは MockFetch が包む
     <MockFetch mode={mode}>
       <AppShell userName="見本 太郎">
         <DoyalistShellFrame>{body}</DoyalistShellFrame>

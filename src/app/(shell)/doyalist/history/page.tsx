@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
-import { EmptyState } from '@/components/EmptyState'
 import { EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
 import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
@@ -32,10 +30,6 @@ interface ApproachSummary {
   createdAt: string
 }
 
-const CHARS = {
-  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
-  sleep: '/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png',
-}
 
 const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: string }[] = [
   { v: 'all', l: 'すべて', icon: 'book' as UiIconName },
@@ -53,8 +47,7 @@ const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
 
 export default function HistoryPage() {
   // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（S-57）
-  const uiNext = useUiNext()
-  const Heading = uiNext ? 'h2' : 'h1'
+  const Heading = 'h2'
   const [lists, setLists] = useState<ListSummary[]>([])
   const [approaches, setApproaches] = useState<ApproachSummary[]>([])
   const [loadingProjects, setLoadingProjects] = useState(true)
@@ -264,36 +257,24 @@ export default function HistoryPage() {
     : { href: '/doyalist', label: 'リストを作る' }
   // 新しい見た目: 押せる場所の大きさ（44px）とキーボードの枠
   const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
-  const iconBtn = uiNext ? `inline-flex h-11 w-11 items-center justify-center ${focusRing}` : 'p-1.5'
+  const iconBtn = `inline-flex h-11 w-11 items-center justify-center ${focusRing}`
 
   // 新しい見た目では古いステッカーを出さず、共通の骨組みにする
-  if (loadingProjects && uiNext) return <ShellLoading />
-  if (loadingProjects) {
-    return (
-      <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
-        <div className="flex flex-col items-center gap-4">
-          <img src={CHARS.thinking} alt="" className={`w-28 h-28 animate-bounce${uiNext ? ' motion-reduce:animate-none' : ''}`} />
-          <p className="text-sm font-medium text-slate-500">読み込み中...</p>
-        </div>
-      </div>
-    )
-  }
+  if (loadingProjects) return <ShellLoading />
 
   return (
-    <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
+    <div className="p-4 lg:p-8">
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex items-center gap-3 mb-6">
-          <div className={uiNext ? 'w-12 h-12 shrink-0 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center' : 'w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white'}><UiIcon name="book" size={uiNext ? 24 : 26} /></div>
-          <div className={uiNext ? 'min-w-0' : undefined}>
-            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>生成履歴</Heading>
-            <p className={`text-sm font-medium text-slate-500 mt-0.5${uiNext ? ' [text-wrap:balance]' : ''}`}>これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
+          <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center"><UiIcon name="book" size={24} /></div>
+          <div className="min-w-0">
+            <Heading className="text-xl lg:text-2xl font-black text-[#0a1530]">生成履歴</Heading>
+            <p className="text-sm font-medium text-slate-500 mt-0.5 [text-wrap:balance]">これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
           </div>
         </div>
 
-        {!uiNext && projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects(setProjectsErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
-        {!uiNext && approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches(setApproachesErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
 
         {!projectsError && projectSummary && approachSummary && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <StatCard icon="chart" label="合計件数" value={stats.total} color="cyan" />
@@ -303,7 +284,7 @@ export default function HistoryPage() {
 
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
-            <div className="flex gap-1 flex-wrap" role={uiNext ? 'group' : undefined} aria-label={uiNext ? '履歴の種類' : undefined}>
+            <div className="flex gap-1 flex-wrap" role="group" aria-label="履歴の種類">
               {TABS.map((t) => {
                 const count = t.v === 'all' ? (projectSummary?.allTotal || 0) + (approachSummary?.allTotal || 0)
                   : t.v === 'list' ? (projectSummary?.allTotal || 0)
@@ -312,13 +293,11 @@ export default function HistoryPage() {
                   <button
                     key={t.v}
                     onClick={() => { if (t.v !== tab) { requestVersion.current++; setLoadingApproaches(true); setTab(t.v) } }}
-                    aria-pressed={uiNext ? tab === t.v : undefined}
-                    className={`${uiNext ? `min-h-11 whitespace-nowrap ${focusRing} ` : ''}px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                      tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
+                    aria-pressed={tab === t.v}
+                    className={`min-h-11 whitespace-nowrap ${focusRing} px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
                     {/* ⚠️ 今の見た目では、アイコンの名前（book・list など）がそのまま文字で出ている。新しい見た目では絵にする */}
-                    {uiNext ? <UiIcon name={t.icon as UiIconName} size={14} /> : <span>{t.icon}</span>}
+                    <UiIcon name={t.icon as UiIconName} size={14} />
                     <span>{t.l}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tab === t.v ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{approachSummary ? count : '—'}</span>
                   </button>
@@ -326,22 +305,20 @@ export default function HistoryPage() {
               })}
             </div>
             {/* 新しい見た目: 375px で空の行ができないよう、すき間は sm 以上だけ。検索欄は幅いっぱい */}
-            <div className={uiNext ? 'hidden sm:block flex-1' : 'flex-1 min-w-[200px]'} />
+            <div className="hidden sm:block flex-1" />
             <input
-              type={uiNext ? 'search' : 'text'}
+              type="search"
               value={search}
               maxLength={200}
               onChange={(e) => { requestVersion.current++; setLoadingApproaches(true); setSearch(e.target.value) }}
               placeholder="検索"
-              aria-label={uiNext ? '履歴を検索' : undefined}
-              className={uiNext
-                ? 'min-h-11 w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0066ff] focus:ring-2 focus:ring-blue-100 sm:w-64'
-                : 'px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 min-w-[200px]'}
+              aria-label="履歴を検索"
+              className="min-h-11 w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0066ff] focus:ring-2 focus:ring-blue-100 sm:w-64"
             />
           </div>
 
           {/* 新しい見た目: 読み込みの失敗は、表の上にまとめて出す（理由に合わせた文と、次の操作を1つ） */}
-          {uiNext && (projectsError || approachesError) && (
+          {(projectsError || approachesError) && (
             <div className="space-y-2 px-5 pt-4">
               {projectsError && errorNotice(projectsErrorStatus, 'リスト履歴', () => void loadProjects(setProjectsErrorStatus))}
               {approachesError && tab !== 'list' && errorNotice(approachesErrorStatus, '営業文の履歴', () => void loadApproaches(setApproachesErrorStatus))}
@@ -350,14 +327,14 @@ export default function HistoryPage() {
 
           {loadingApproaches && tab !== 'list' ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-slate-500">営業文履歴を読み込んでいます…</p>
-          ) : uiNext && isEmpty && (projectsError || (approachesError && tab !== 'list')) ? (
+          ) : isEmpty && (projectsError || (approachesError && tab !== 'list')) ? (
             // 新しい見た目: 失敗の知らせは上に出しているので、ここは空のまま（同じ知らせを二度出さない）
             <div className="pb-4" />
           ) : approachesError && tab !== 'list' && filteredLists.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">履歴を取得できませんでした。再読み込みしてください。</p>
           ) : projectsError && filteredLists.length === 0 && filteredApproaches.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">リスト履歴を取得できませんでした。再読み込みしてください。</p>
-          ) : isEmpty && uiNext && search.trim() ? (
+          ) : isEmpty && search.trim() ? (
             // 新しい見た目: 検索で0件。絵は出さず、検索を消す操作を1つ（UI 品質 S-17）
             <DsEmptyState
               kind="no-results"
@@ -365,7 +342,7 @@ export default function HistoryPage() {
               description="言葉を短くするか、検索を消してすべての履歴を見てください。"
               action={<button type="button" onClick={() => { requestVersion.current++; setLoadingApproaches(true); setSearch('') }} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50 ${focusRing}`}>検索をクリア</button>}
             />
-          ) : isEmpty && uiNext ? (
+          ) : isEmpty ? (
             // 新しい見た目: ツールの空状態の画像と、次にやることを1つ（UI 品質 S-17）
             <DsEmptyState
               title={tab === 'all' || tab === 'list' ? 'まだ履歴がありません' : `まだ${TABS.find((t) => t.v === tab)?.l ?? ''}の履歴がありません`}
@@ -373,21 +350,9 @@ export default function HistoryPage() {
               art="/doyalist/empty-lists.webp"
               action={<Link href={emptyAction.href} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-6 text-sm font-bold text-white transition-all hover:bg-[#0052cc] ${focusRing}`}>{emptyAction.label}</Link>}
             />
-          ) : isEmpty ? (
-            <EmptyState
-              kind="no-results"
-              title="該当する履歴がありません"
-              description="条件を変えるか、新しくリストを作成してください。"
-              action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Link href="/doyalist" className="rounded-xl bg-[#0a1530] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#13234d]">リストを作成</Link>
-                  <Link href="/doyalist/tools/form" className="rounded-xl bg-[#0066ff] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#0057db]">営業文を作成</Link>
-                </div>
-              }
-            />
           ) : (
             <div className="overflow-x-auto">
-              <table className={`w-full text-sm${uiNext ? ' min-w-[640px] [&_th]:whitespace-nowrap' : ''}`}>
+              <table className="w-full text-sm min-w-[640px] [&_th]:whitespace-nowrap">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">タイプ</th>
@@ -415,14 +380,14 @@ export default function HistoryPage() {
                         <span className="font-bold text-[#0a1530]">{l.companyCount.toLocaleString()}</span>
                         <span className="text-xs text-slate-400 ml-0.5">社</span>
                       </td>
-                      <td className={`px-5 py-3 text-xs text-slate-500${uiNext ? ' whitespace-nowrap' : ''}`}>
+                      <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
                         {new Date(l.updatedAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" aria-label={uiNext ? `${l.name}をCSVでダウンロード` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="download" size={uiNext ? 16 : 14} /></a>
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" aria-label={uiNext ? `${l.name}をExcelでダウンロード` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="chart" size={uiNext ? 16 : 14} /></a>
-                          <button type={uiNext ? 'button' : undefined} onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={uiNext ? 16 : 14} /></button>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" aria-label={`${l.name}をCSVでダウンロード`} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="download" size={16} /></a>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" aria-label={`${l.name}をExcelでダウンロード`} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="chart" size={16} /></a>
+                          <button type="button" onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -435,36 +400,34 @@ export default function HistoryPage() {
                       <tr key={`appr-${a.id}`} className="hover:bg-slate-50 transition-colors align-top">
                         <td className="px-5 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md ${meta.color}`}>
-                            {uiNext ? <UiIcon name={meta.icon as UiIconName} size={12} /> : <>{meta.icon} </>}{meta.l}
+                            <UiIcon name={meta.icon as UiIconName} size={12} />{meta.l}
                           </span>
                         </td>
                         <td className="px-5 py-3 max-w-[400px]">
                           <p className="font-bold text-[#0a1530] text-sm truncate">{a.subject || '(無題)'}</p>
                           <button
-                            type={uiNext ? 'button' : undefined}
+                            type="button"
                             onClick={() => setExpandedId(isExpanded ? null : a.id)}
-                            aria-expanded={uiNext ? isExpanded : undefined}
-                            aria-controls={uiNext ? `doyalist-approach-${a.id}` : undefined}
-                            className={uiNext
-                              ? `mt-1 inline-flex min-h-11 items-center text-xs text-slate-500 hover:text-[#0066ff] transition-colors ${focusRing}`
-                              : 'text-[11px] text-slate-500 mt-1 hover:text-cyan-600 transition-colors'}
+                            aria-expanded={isExpanded}
+                            aria-controls={`doyalist-approach-${a.id}`}
+                            className={`mt-1 inline-flex min-h-11 items-center text-xs text-slate-500 hover:text-[#0066ff] transition-colors ${focusRing}`}
                           >
                             {isExpanded ? '▲ 閉じる' : '▼ 全文を表示'}
                           </button>
                           {isExpanded && (
-                            <div id={uiNext ? `doyalist-approach-${a.id}` : undefined} className="mt-2 p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
+                            <div id={`doyalist-approach-${a.id}`} className="mt-2 p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
                               <pre className="whitespace-pre-wrap text-xs text-slate-700 leading-relaxed font-sans">{a.body}</pre>
                             </div>
                           )}
                         </td>
                         <td className="px-5 py-3 text-center text-xs text-slate-400">—</td>
-                        <td className={`px-5 py-3 text-xs text-slate-500${uiNext ? ' whitespace-nowrap' : ''}`}>
+                        <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
                           {new Date(a.createdAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            <button type={uiNext ? 'button' : undefined} onClick={() => handleCopy(a.body)} title="コピー" aria-label={uiNext ? `「${a.subject || '無題'}」をコピー` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="copy" size={uiNext ? 16 : 14} /></button>
-                            <button type={uiNext ? 'button' : undefined} onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label={uiNext ? `「${a.subject || '無題'}」を削除` : '削除'} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={uiNext ? 16 : 14} /></button>
+                            <button type="button" onClick={() => handleCopy(a.body)} title="コピー" aria-label={`「${a.subject || '無題'}」をコピー`} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="copy" size={16} /></button>
+                            <button type="button" onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label={`「${a.subject || '無題'}」を削除`} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -474,8 +437,8 @@ export default function HistoryPage() {
               </table>
             </div>
           )}
-          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore(setApproachesErrorStatus)} disabled={loadingMore} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50`}>{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
-          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects(setProjectsErrorStatus)} disabled={loadingMoreProjects} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50`}>{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
+          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore(setApproachesErrorStatus)} disabled={loadingMore} className={`min-h-11 ${focusRing} rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50`}>{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
+          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects(setProjectsErrorStatus)} disabled={loadingMoreProjects} className={`min-h-11 ${focusRing} rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50`}>{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
         </div>
       </div>
     </div>

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { EmptyState } from '@/components/ds'
 import toast from 'react-hot-toast'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface KB {
   id: string
@@ -15,8 +14,7 @@ interface KB {
 
 export default function CunningKnowledgePage() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const [bases, setBases] = useState<KB[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -110,7 +108,7 @@ export default function CunningKnowledgePage() {
   }
 
   return (
-    <div className={`${uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'} max-w-4xl mx-auto`}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-1">
         <img src="/character/present.png" alt="" className="w-12 h-12 object-contain" />
         <Title className="text-2xl font-black text-slate-900">ナレッジ（商談モード）</Title>
@@ -125,7 +123,7 @@ export default function CunningKnowledgePage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="ナレッジ名（例: 自社サービス資料）"
-          className={`flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold ${uiNext ? 'min-w-0' : ''}`}
+          className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold min-w-0"
         />
         <button
           onClick={createKB}
@@ -166,17 +164,12 @@ export default function CunningKnowledgePage() {
           </div>
         ))}
         {!loading && !loadError && bases.length === 0 && (
-          uiNext ? (
+          (
             <EmptyState
               title="まだナレッジがありません"
               description={<>上の入力欄にナレッジの名前を入れて「作成」を押し、<wbr />サービスの資料や想定問答を取り込んでください。<wbr />商談中の回答に、根拠として使います。</>}
               art="/cunning/empty-cards.webp"
             />
-          ) : (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
-            <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
-            <p className="text-slate-400 font-bold text-sm">まだナレッジがありません。上の入力から作ってみよう！</p>
-          </div>
           )
         )}
       </div>

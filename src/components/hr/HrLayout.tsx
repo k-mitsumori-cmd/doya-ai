@@ -8,17 +8,13 @@ import HrOrganizationScope from './HrOrganizationScope'
 import { loadHrOrganizationChoices, type HrOrganizationChoice } from '@/lib/hr/organization-choices-client'
 import { HR_SELECTED_ORGANIZATION_HEADER, HR_SELECTED_ACTOR_HEADER } from '@/lib/hr/organization-selection'
 import { readBillingResponse } from '@/lib/billing-response-client'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Users2 } from 'lucide-react'
-import HrSidebar from './HrSidebar'
 import HrOnboarding from './HrOnboarding'
-import { useToolUiNext } from './ui-next'
 import { ErrorNotice, Skeleton } from '@/components/ds'
 
 interface HrLayoutProps {
   children: React.ReactNode
   /**
-   * 共通の枠に載せたときの外側（HrShellFrame が ToolFrame を渡す）。省略時は今までのサイドバーのレイアウト。
+   * 共通の枠に載せたときの外側（HrShellFrame が ToolFrame を渡す）。省略時（未ログインの紹介・料金・招待）は中身だけ。
    * 組織の切り替え（<select>）は switcher として渡し、中身（sessionStorage・ヘッダー）はここで持ったまま変えない
    */
   renderFrame?: (frame: { switcher: ReactNode; canManageEmployees: boolean; usage: { employeeCount: number; employeeLimit: number; plan: string } | null; children: ReactNode }) => ReactNode
@@ -27,8 +23,6 @@ interface HrLayoutProps {
 export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname(), router = useRouter()
-  // 新しい見た目（枠の中）では、読み込み・エラーを全画面にせず、中身の領域にだけ出す（C-2・F-3）
-  const toolNext = useToolUiNext()
   const [selection, setSelection] = useState<{ actor: string; organizationId?: string; revision: number }>({ actor: '', revision: 0 })
   const [selectionError, setSelectionError] = useState('')
   const [choices, setChoices] = useState<{ actor: string; rows: HrOrganizationChoice[]; error: string; loading: boolean }>({ actor: '', rows: [], error: '', loading: true })
@@ -57,8 +51,6 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const pendingUsage = useRef<AbortController | null>(null)
   const knownScope = Boolean(actor) && loadedScope === scopeKey
   const previousPathname = useRef(pathname)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isLandingPage = pathname === '/hr'
   const isPricingPage = pathname === '/hr/pricing'
@@ -200,15 +192,10 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
     if (allowed && selectionReady) void loadUsage(confirmedScope.current === scopeKey)
   }, [pathname, allowed, scopeKey, loadUsage])
 
-  // ルートを変えたらモバイルメニューを閉じる
-  useEffect(() => {
-    setMobileMenuOpen(false)
-  }, [pathname])
-
   if (isPublicPage) {
-    // 新しい見た目の枠の中では、料金のページもほかのタブと同じ枠（renderFrame）で包む。組織の切り替えは枠の switcher に出す。
+    // 枠の中では、料金のページもほかのタブと同じ枠（renderFrame）で包む。組織の切り替えは枠の switcher に出す。
     // ⚠️ ほかのタブと同じ包み方にするので、料金とほかのタブを移っても、組織の読み込みをやり直さない（2026-10-23）
-    const pricingFramed = isPricingPage && Boolean(renderFrame) && toolNext
+    const pricingFramed = isPricingPage && Boolean(renderFrame)
     const wrap = (node: ReactNode) => pricingFramed ? framed(node) : <>{node}</>
     const picker = pricingFramed ? null : organizationPicker
     if (isPricingPage && allowed) {
@@ -221,14 +208,14 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
-  if ((usageError || selectionError) && session?.user && !knownScope && renderFrame && toolNext) {
+  if ((usageError || selectionError) && session?.user && !knownScope && renderFrame) {
     return framed(<div className="p-4 sm:p-6"><ErrorNotice what="組織の情報を読み込めませんでした。組織の状態は変わっていません。" how={selectionError || '時間をおいて、もう一度お試しください。'} onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
   }
   if ((usageError || selectionError) && session?.user && !knownScope) {
     return framed(<div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{inlinePicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>)
   }
 
-  if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed) && renderFrame && toolNext) {
+  if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed) && renderFrame) {
     return framed(<div className="grid gap-4 p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={1} height={28} delayMs={0} /><Skeleton lines={4} height={18} delayMs={0} /></div>)
   }
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
@@ -277,87 +264,13 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
     </>)
   }
 
+  // 共通の枠の外（サーバーでログインを確かめられなかったときだけ）。旧来のサイドバーは出さず、中身だけを出す
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <>
       {organizationPicker}
       {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
       {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">組織情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
-    <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex min-h-0 flex-1 bg-slate-50 overflow-hidden">
-      {/* Desktop Sidebar (fixed / 画面外フロー) */}
-      <div className="hidden md:flex">
-        <HrSidebar
-          isCollapsed={sidebarCollapsed}
-          onToggle={(collapsed) => setSidebarCollapsed(collapsed)}
-          employeeCount={usage.employeeCount}
-          employeeLimit={usage.employeeLimit}
-          plan={usage.plan}
-          canManageEmployees={usage.canManageEmployees}
-        />
-      </div>
-      {/* デスクトップ用スペーサー: fixed サイドバー幅をCSSのみで確保（JSブレークポイント不要） */}
-      <div
-        className="hidden md:block flex-shrink-0 transition-[width] duration-200"
-        style={{ width: sidebarCollapsed ? 72 : 240 }}
-        aria-hidden
-      />
-
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed inset-y-0 left-0 z-50 md:hidden"
-          >
-            <HrSidebar
-              forceExpanded
-              isMobile
-              onToggle={() => setMobileMenuOpen(false)}
-              employeeCount={usage.employeeCount}
-              employeeLimit={usage.employeeLimit}
-              plan={usage.plan}
-              canManageEmployees={usage.canManageEmployees}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-3 p-3 sm:p-4 border-b border-slate-200 bg-white">
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            aria-label="メニューを開く"
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-700"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-2">
-            <Users2 className="h-5 w-5 text-blue-600" />
-            <span className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">ドヤHR</span>
-          </div>
-        </div>
-
-        {/* Page Content */}
-        <div className="flex-1 overflow-y-auto"><HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && !usageError && knownScope}>{children}</HrOrganizationScope></div>
-      </main>
-    </div>
-    </div>
+      <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined}><HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && !usageError && knownScope}>{children}</HrOrganizationScope></div>
+    </>
   )
 }

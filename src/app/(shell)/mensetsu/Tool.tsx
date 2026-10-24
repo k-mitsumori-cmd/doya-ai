@@ -5,7 +5,6 @@
 // ============================================
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
-import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
 import { Button, EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { ShellIcon } from '@/components/shell/icons'
@@ -88,12 +87,11 @@ export default function MensetsuTool() {
   /** 読み込みに失敗した理由（新しい見た目で、理由ごとに次にやることを出し分ける） */
   const [loadIssue, setLoadIssue] = useState<LoadIssue>('other')
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、ToolHero・空状態・中身の領域だけの読み込みにする
-  const uiNext = useToolUiNext()
-  /** 新しい見た目のときだけ、小さなボタンを押しやすい高さにし、キーボードの輪を出す */
-  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  /** 小さなボタンを押しやすい高さにし、キーボードの輪を出す */
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (`${legacy} ${extra}`)
   /** エラーを出す。新しい見た目では、日本語でない文（例外の英文など）は出さない */
   const report = (message: unknown, fallback = '処理を完了できませんでした。時間をおいてもう一度お試しください。') =>
-    notifyError(setError, uiNext ? friendlyText(message, fallback) : message)
+    notifyError(setError, friendlyText(message, fallback))
   /** 発行の欄・職種の欄へ移る（空の表示のボタンから） */
   const jobTitleRef = useRef<HTMLInputElement>(null)
   const candidateRef = useRef<HTMLInputElement>(null)
@@ -475,7 +473,7 @@ export default function MensetsuTool() {
     }
   }
 
-  if (loading && uiNext) {
+  if (loading) {
     return (
       <div className="grid gap-4 px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
         <Skeleton lines={2} height={28} delayMs={0} />
@@ -484,7 +482,7 @@ export default function MensetsuTool() {
     )
   }
 
-  if (loadError && uiNext) {
+  if (loadError) {
     return (
       <div className="px-4 py-6 lg:px-8">
         <LoadIssueNotice issue={loadIssue} subject="面接の情報" onRetry={() => void load()} />
@@ -516,7 +514,7 @@ export default function MensetsuTool() {
   }
 
   return (
-    <main className={uiNext ? 'px-4 py-6 lg:px-8' : 'min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8'}>
+    <main className="px-4 py-6 lg:px-8">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
         isLoading={busy === 'generate'}
@@ -526,25 +524,13 @@ export default function MensetsuTool() {
         tips={['Tip: 就職差別につながる質問は生成の時点で除外されます', 'Tip: 全応募者に同じ主質問を当てる構造化面接の方式です', 'Tip: 生成後に質問は自由に編集できます']}
       />
       <div className="mx-auto max-w-[1100px]">
-        {uiNext ? (
-          // キービジュアルは仮（人事の熊）。統括が public/ui-next/mensetsu/hero.webp を置いたら差し替える
-          <ToolHero
+        <ToolHero
             art="/hr/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
             title={<>AIが一次面接をして、<wbr />評価まで残す</>}
             lead={<>企業URLから質問セットと評価基準を自動で作り、応募者はURLを開くだけで面接を受けられます。判定は「推薦度」で、<strong className="font-bold text-[var(--ink)]">最終的な選考の判断は、必ず人が行います。</strong></>}
           />
-        ) : (<>
-        <p className="text-sm font-black text-[#0066ff]">ドヤ面接官</p>
-        <PageTitle className="mt-2 text-3xl font-black leading-tight text-[#0a0f3c]">
-          AIが一次面接を実施し、評価まで残す
-        </PageTitle>
-        <p className="mt-3 max-w-[62ch] text-sm font-semibold leading-relaxed text-[#425071]">
-          企業URLから質問セットと評価基準を自動生成し、応募者はURLを開くだけで面接を受けられます。
-          判定は「推薦度」であり、<strong className="font-black text-[#0a0f3c]">最終的な選考の判断は必ず人が行います。</strong>
-        </p>
-        </>)}
 
-        {error && uiNext ? (
+        {error ? (
           <div className="mt-5 grid gap-3">
             <ErrorNotice what={error} how={templateUpgrade?.message === error ? '今月の上限に達しました。料金プランで上限をご確認ください。' : undefined} />
             {templateUpgrade?.message === error && <div><Button href={templateUpgrade.url} variant="secondary" icon="CreditCard">料金プランを見る</Button></div>}
@@ -705,7 +691,7 @@ export default function MensetsuTool() {
                 <ShellCostBadge action="text.generate" />
               </button>
 
-              {templates.length === 0 && uiNext && (
+              {(templates.length === 0) && (
                 <EmptyState
                   kind="not-generated"
                   art="/mensetsu/empty-interviews.webp"
@@ -719,13 +705,13 @@ export default function MensetsuTool() {
                   {templates.map((t) => (
                     <li key={t.id} className="rounded-xl bg-[#f7faff] p-4 ring-1 ring-[#e3edff]">
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className={uiNext ? 'min-w-0 break-words' : undefined}>
+                        <div className="min-w-0 break-words">
                           <p className="text-base font-black text-[#0a0f3c]">{t.name}</p>
                           <p className="text-xs font-semibold text-[#425071]">
                             {t.durationMin}分 / 質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
                           </p>
                         </div>
-                        <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
+                        <div className="flex flex-wrap items-center gap-2">
                           {/* ⚠️ これは状態の表示であって押せるものではない。隣の「編集」と
                                同じ角丸の枠にすると、押せるボタンに見えてしまう。 */}
                           <span
@@ -801,15 +787,15 @@ export default function MensetsuTool() {
             {/* --- 3. 面接URL発行 ---
                  ⚠️ ここまで来れば担当者の作業は完了。手順の終点だと分かるよう、
                     他のセクションより大きく・強く見せる（枠・余白・文字とも） */}
-            <section className={uiNext ? 'mt-8 rounded-2xl bg-white p-5 shadow-md ring-2 ring-[#0066ff] sm:p-9' : 'mt-8 rounded-2xl bg-white p-6 shadow-md ring-2 ring-[#0066ff] sm:p-9'}>
+            <section className="mt-8 rounded-2xl bg-white p-5 shadow-md ring-2 ring-[#0066ff] sm:p-9">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0066ff] text-base font-black text-white">3</span>
-                <div className={uiNext ? 'min-w-0' : undefined}>
-                  <h2 className={uiNext ? 'text-xl font-black text-[#0a0f3c] [text-wrap:balance] sm:text-2xl' : 'text-xl font-black text-[#0a0f3c] sm:text-2xl'}>応募者に面接URLを送る</h2>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-black text-[#0a0f3c] [text-wrap:balance] sm:text-2xl">応募者に面接URLを送る</h2>
                   <p className="mt-0.5 text-sm font-bold text-[#0066ff]">URLを送れたら、ここで完了です</p>
                 </div>
               </div>
-              {templates.every((t) => t.status === 'archived') && uiNext ? (
+              {templates.every((t) => t.status === 'archived') ? (
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <p className="text-sm font-semibold text-[#425071]">面接URLを発行するには、先に質問セットを作ります。</p>
                   <Button onClick={() => goTo(jobTitleRef.current)} variant="secondary" icon="PenTool">質問セットを作る</Button>
@@ -842,7 +828,7 @@ export default function MensetsuTool() {
                         placeholder="山田 太郎"
                         ref={candidateRef}
                         required
-                        aria-describedby={uiNext && issueLimit && error === issueLimit.message ? 'mensetsu-issue-error' : undefined}
+                        aria-describedby={issueLimit && error === issueLimit.message ? 'mensetsu-issue-error' : undefined}
                         className={nx('w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]', `min-w-0 ${NX_FOCUS}`)}
                       />
                     </label>
@@ -859,7 +845,7 @@ export default function MensetsuTool() {
                     {busy === 'issue' ? '発行中…' : '面接URLを発行する'}
                     <ShellCostBadge action="voice.minute" per="分" />
                   </button>
-                  {issueLimit && error === issueLimit.message && uiNext ? (
+                  {issueLimit && error === issueLimit.message ? (
                     <div id="mensetsu-issue-error" className="mt-3 grid gap-3">
                       <ErrorNotice what="今月の面接の上限に達しました。" how={issueLimit.message} />
                       <div><Button href={issueLimit.url} variant="secondary" icon="CreditCard">{issueLimit.url === '/mensetsu/pricing' ? '料金プランを見る' : '追加枠を相談する'}</Button></div>
@@ -919,7 +905,7 @@ export default function MensetsuTool() {
                     href="/mensetsu/compare"
                     className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
                   >
-                    {uiNext ? <ShellIcon name="Users" size={16} /> : <span className="material-symbols-outlined text-[16px]">table_chart</span>}
+                    <ShellIcon name="Users" size={16} />
                     候補者を比較
                   </Link>
                 )}
@@ -957,7 +943,7 @@ export default function MensetsuTool() {
                 </div>
               )}
 
-              {sessions.length === 0 && uiNext ? (
+              {sessions.length === 0 ? (
                 <EmptyState
                   art="/mensetsu/empty-interviews.webp"
                   title="まだ面接はありません"
@@ -972,7 +958,7 @@ export default function MensetsuTool() {
                 <ul className="mt-4 divide-y divide-[#eef3ff]">
                   {sessions.filter((s) => s.status !== 'evaluated').map((s) => (
                     <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <div className={uiNext ? 'min-w-0 break-words' : undefined}>
+                      <div className="min-w-0 break-words">
                         <p className="text-sm font-black text-[#0a0f3c]">
                           {s.candidateName || '（名前未入力）'}
                           <span className="ml-2 text-xs font-bold text-[#425071]">{s.template.jobTitle}</span>
@@ -1047,7 +1033,7 @@ export default function MensetsuTool() {
                   {moreError && <button onClick={() => void load()} className={nx('font-black text-[#0066ff] underline')}>一覧を更新</button>}
                 </div>
               )}
-              {moreError && uiNext ? (
+              {moreError ? (
                 <div className="mt-3"><ErrorNotice what="面接一覧の続きを読み込めませんでした。" how="「再試行」を押すか、「一覧を更新」で最初から読み直してください。" /></div>
               ) : moreError && <p role="alert" className="mt-2 text-center text-xs font-bold text-[#c2185b]">{moreError}</p>}
             </section>

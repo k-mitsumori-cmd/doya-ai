@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Ring } from '@/components/ds/charts'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -250,71 +249,18 @@ function CelebrationConfetti() {
 
 // ── Animated Circular Gauge ──
 function ScoreGauge({ score, size = 160, strokeWidth = 14 }: { score: number; size?: number; strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - score / 100)
-  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444'
   const label = score >= 80 ? '素晴らしい！' : score >= 60 ? '良い仕上がり' : '改善の余地あり'
-  const uiNext = useUiNext()
 
-  if (uiNext) {
-    // 新しい見た目: 共通の Ring（大きさは旧ゲージと同じ）。評価は色だけでなく文字でも出す
-    return (
-      <div className="relative flex flex-col items-center">
-        <Ring value={Math.max(0, Math.min(100, score)) / 100} size={size} label={`採点 ${score}点（100点満点）${label}`}>
-          <div className="flex flex-col items-center leading-none">
-            <span className="text-5xl font-black text-slate-900 tabular-nums">{score}</span>
-            <span className="text-sm text-slate-500 font-medium mt-1">点</span>
-          </div>
-        </Ring>
-        <p className="text-sm font-bold mt-3 text-slate-700">{label}</p>
-      </div>
-    )
-  }
-
+  // 新しい見た目: 共通の Ring（大きさは旧ゲージと同じ）。評価は色だけでなく文字でも出す
   return (
     <div className="relative flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
-          <motion.circle
-            cx={size / 2} cy={size / 2} r={radius}
-            fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.8, ease: [0.34, 1.56, 0.64, 1] }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.span
-            className="text-5xl font-black"
-            style={{ color }}
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1, duration: 0.6, type: 'spring', stiffness: 200, damping: 12 }}
-          >
-            {score}
-          </motion.span>
-          <motion.span
-            className="text-sm text-slate-500 font-medium"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.4 }}
-          >
-            点
-          </motion.span>
+      <Ring value={Math.max(0, Math.min(100, score)) / 100} size={size} label={`採点 ${score}点（100点満点）${label}`}>
+        <div className="flex flex-col items-center leading-none">
+          <span className="text-5xl font-black text-slate-900 tabular-nums">{score}</span>
+          <span className="text-sm text-slate-500 font-medium mt-1">点</span>
         </div>
-      </div>
-      <motion.p
-        className="text-sm font-bold mt-3"
-        style={{ color }}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.6 }}
-      >
-        {label}
-      </motion.p>
+      </Ring>
+      <p className="text-sm font-bold mt-3 text-slate-700">{label}</p>
     </div>
   )
 }

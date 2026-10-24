@@ -2,11 +2,9 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 // ⚠️ トークンは CSS モジュールを直接読む。'@/components/ds'（'use client' の index.tsx）経由だと、
 //    サーバの layout では tokens.ds が undefined になり配色が崩れる（SHL-098）
 import tokens from '@/components/ds/tokens.module.css'
-import PopupAppLayout from '@/components/popup/PopupAppLayout'
 import PopupShellFrame from '@/components/popup/PopupShellFrame'
 import { POPUP_NAV } from '@/lib/popup/nav'
 import { LpJsonLd } from '@/components/lp'
@@ -35,23 +33,13 @@ export default async function PopupLayout({ children }: { children: React.ReactN
       </>
     )
   }
-  // 統合仕様 §9: ui.shell.popup が ON のときだけ共通シェルに載せる。OFF の間は従来の枠
+  // ログイン後は共通シェルに載せる（統合仕様 §9）
   // ⚠️ 公開の口（/api/popup/public/*・/popup/embed.js）はこの layout を通らない（R-7）
-  if (isShellEnabled('popup')) {
-    return (
-      <>
-        {jsonLd}
-        <div className="popup-ds">
-          <PopupShellFrame nav={POPUP_NAV}>{children}</PopupShellFrame>
-        </div>
-      </>
-    )
-  }
   return (
     <>
       {jsonLd}
-      <div className={`${tokens.ds} popup-ds`}>
-        <PopupAppLayout>{children}</PopupAppLayout>
+      <div className="popup-ds">
+        <PopupShellFrame nav={POPUP_NAV}>{children}</PopupShellFrame>
       </div>
     </>
   )

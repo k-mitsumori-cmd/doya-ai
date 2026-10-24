@@ -1,5 +1,5 @@
 'use client'
-import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { PageTitle } from '@/components/hr/ui-next'
 import { Button, EmptyState } from '@/components/ds'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import HrLoadError, { HrStatusError, hrErrorStatus } from '@/components/hr/HrLoadError'
@@ -27,7 +27,6 @@ export default function EmployeesPage() {
   const [loadError, setLoadError] = useState(false)
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
   const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined)
-  const uiNext = useToolUiNext()
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -89,19 +88,19 @@ export default function EmployeesPage() {
   }, [fetchData, reloadKey])
 
   return (
-    <div className={uiNext ? 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto' : 'p-6 lg:p-10 max-w-7xl mx-auto'}>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header（新しい見た目では、375px でボタンを下に回す） */}
-      <div className={uiNext ? 'flex flex-wrap items-end justify-between gap-4 mb-6' : 'flex items-center justify-between mb-8'}>
-        <div className={uiNext ? 'min-w-0' : undefined}>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div className="min-w-0">
           <PageTitle className="text-3xl font-black text-slate-900">
-            {uiNext ? <span className="whitespace-nowrap">従業員一覧</span> : '従業員一覧'}
+            <span className="whitespace-nowrap">従業員一覧</span>
             {!loading && !loadError && (
-              <span className={uiNext ? 'ml-3 inline-block whitespace-nowrap text-lg font-bold text-slate-500' : 'ml-3 text-lg font-bold text-slate-400'}>全 {total} 名</span>
+              <span className="ml-3 inline-block whitespace-nowrap text-lg font-bold text-slate-500">全 {total} 名</span>
             )}
           </PageTitle>
           <p className="text-sm text-slate-500 mt-1">{canManageEmployees ? '組織のメンバーを管理' : 'あなたの従業員情報を確認'}</p>
         </div>
-        {canManageEmployees && uiNext ? (
+        {canManageEmployees ? (
           // 新しい見た目: 主ボタンは「従業員を追加」1つ。CSV は脇役の見た目にする（375px では折り返す）
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" icon="FileText" onClick={() => setShowImport(true)}>CSV一括登録</Button>
@@ -125,19 +124,13 @@ export default function EmployeesPage() {
         </div>}
       </div>
 
-      {loadError && uiNext && (
+      {loadError && (
         <HrLoadError className="mb-6" subject="従業員の一覧" status={errorStatus} onRetry={() => setReloadKey(key => key + 1)} />
-      )}
-      {loadError && !uiNext && (
-        <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-          従業員情報を取得できませんでした。
-          <button type="button" onClick={() => setReloadKey(key => key + 1)} className="ml-2 underline">再読み込み</button>
-        </div>
       )}
 
       {/* Sort Controls */}
       {!loading && !loadError && total > 0 && (
-        <div className={uiNext ? 'flex flex-wrap items-center gap-2 mb-4' : 'flex items-center gap-2 mb-4'} role={uiNext ? 'group' : undefined} aria-label={uiNext ? '並び替え' : undefined}>
+        <div className="flex flex-wrap items-center gap-2 mb-4" role="group" aria-label="並び替え">
           <span className="text-sm font-bold text-slate-500 flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">sort</span>
             並び替え:
@@ -150,13 +143,11 @@ export default function EmployeesPage() {
             <button
               key={opt.key}
               type="button"
-              aria-pressed={uiNext ? sortKey === opt.key : undefined}
+              aria-pressed={sortKey === opt.key}
               onClick={() => { setSortKey(opt.key); setPage(1) }}
-              className={`${uiNext ? 'min-h-11 whitespace-nowrap px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)]' : 'px-3'} py-1.5 rounded-full text-sm font-bold transition-all ${
-                sortKey === opt.key
+              className={`min-h-11 whitespace-nowrap px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] py-1.5 rounded-full text-sm font-bold transition-all ${sortKey === opt.key
                   ? 'bg-blue-100 text-blue-700'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
             >
               {opt.label}
             </button>
@@ -178,7 +169,7 @@ export default function EmployeesPage() {
             </div>
           ))}
         </div>
-      ) : loadError ? null : employees.length === 0 && uiNext ? (
+      ) : loadError ? null : employees.length === 0 ? (
         <EmptyState
           art="/hr/empty-members.webp"
           title={canManageEmployees ? 'まだ従業員が登録されていません' : '従業員情報を表示できません'}
@@ -240,9 +231,9 @@ export default function EmployeesPage() {
 
       {!loading && !loadError && totalPages > 1 && (
         <nav aria-label="従業員一覧のページ切り替え" className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm font-bold text-slate-600">
-          <button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)} className={`rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40 ${uiNext ? 'min-h-11 whitespace-nowrap' : ''}`}>前のページ</button>
-          <span className={uiNext ? 'text-center' : undefined}>{page} / {totalPages} ページ（{(page - 1) * PAGE_SIZE + 1}〜{Math.min(page * PAGE_SIZE, total)}名を表示）</span>
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)} className={`rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40 ${uiNext ? 'min-h-11 whitespace-nowrap' : ''}`}>次のページ</button>
+          <button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)} className="rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40 min-h-11 whitespace-nowrap">前のページ</button>
+          <span className="text-center">{page} / {totalPages} ページ（{(page - 1) * PAGE_SIZE + 1}〜{Math.min(page * PAGE_SIZE, total)}名を表示）</span>
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)} className="rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40 min-h-11 whitespace-nowrap">次のページ</button>
         </nav>
       )}
 

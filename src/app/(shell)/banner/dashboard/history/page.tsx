@@ -1,9 +1,8 @@
 'use client'
 
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon, RefreshCw, Search, X } from 'lucide-react'
+import { Clock, Download, Trash2, Image as ImageIcon, RefreshCw, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
@@ -76,7 +75,6 @@ export default function BannerHistoryPage() {
 
 function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> }) {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
-  const uiNext = useUiNext()
   const { data: session, status } = auth
   const userId = status === 'authenticated' ? session?.user?.id : null
   const isGuest = status !== 'loading' && !userId
@@ -415,51 +413,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       </div>
       <div className="md:pl-[240px] transition-all duration-200">
         {/* ヘッダー */}
-        {!uiNext && (
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-              <div className="h-16 sm:h-20 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
-                    <ArrowLeft className="w-5 h-5" />
-                  </Link>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    生成履歴
-                  </h1>
-                </div>
-                
-                <div className="flex items-center gap-3 sm:gap-6">
-                  <button
-                    onClick={() => loadHistory(true)}
-                    disabled={isLoading}
-                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                    title="更新"
-                  >
-                    <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                  </button>
-                  <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                  <div className="flex items-center gap-3 pl-2">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
-                    </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                      {session?.user?.image ? (
-                        <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                          {session?.user?.name?.[0]?.toUpperCase() || 'G'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-        )}
-        {uiNext && (
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-4 flex justify-end">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-4 flex justify-end">
             <button
               type="button"
               onClick={() => loadHistory(true)}
@@ -470,7 +424,6 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
               最新の状態にする
             </button>
           </div>
-        )}
 
         {/* メイン */}
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
@@ -625,16 +578,12 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
-              {uiNext ? (
-                <DsEmptyState
+              <DsEmptyState
                   title="まだバナーをつくっていません"
                   description="つくったバナーは、ここからいつでも見返して、もう一度ダウンロードできます。まずは見本を選んで、最初の1枚をつくりましょう。"
                   action={<Button href="/banner/dashboard" icon="LayoutTemplate">見本から最初の1枚をつくる</Button>}
                   art="/banner/empty-banners.webp"
                 />
-              ) : (
-                <EmptyState kind="zero" title="履歴がありません" description="生成したバナーをここから再ダウンロードできます。閲覧できる期間はプランによって異なります。" action={<Link href="/banner/dashboard" className="inline-flex rounded-2xl bg-blue-600 px-8 py-4 font-black text-white shadow-lg">最初のバナーを生成する</Link>} />
-              )}
             </motion.div>
           ) : filteredHistory.length === 0 ? (
             <motion.div

@@ -14,7 +14,7 @@ import { DAILY_RECOVERY_AMOUNT, SOLO_PRO_MONTHLY_GRANT } from './rules'
 
 const isPaid = (p?: string | null) => p === 'PRO'
 
-function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: boolean; uiNext?: boolean; plan?: string | null; hasCompany?: boolean } = {}) {
+function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: boolean; plan?: string | null; hasCompany?: boolean } = {}) {
   const t = new Date('2026-10-23T03:00:00.000Z')
   const clock = over.now ?? (() => new Date(t.getTime()))
   const mem = createMemoryDb({ now: clock })
@@ -26,7 +26,6 @@ function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: bo
   const deps: ChargeDeps = {
     rollout: () => { calls.push('rollout'); return over.rolloutValue ?? 'preview' },
     isEnabled: async () => { calls.push('isEnabled'); return over.enabled ?? true },
-    isUiNext: async () => { calls.push('isUiNext'); return over.uiNext ?? true },
     account: async () => { calls.push('account'); return over.hasCompany === false ? null : { companyId: 'co_alice', plan: over.plan === undefined ? 'PRO' : over.plan } },
     ledger: {
       consume: (...a) => { calls.push('consume'); return ledger.consume(...a) },
@@ -63,8 +62,8 @@ test('off のときは、セッション・会社・台帳を読まずに、今�
   assert.equal(await s.charger.balanceView(), null)
 })
 
-test('preview で許可されていない人・新しい見た目でない人・会社が未登録の人は、減らさない', async () => {
-  for (const over of [{ enabled: false }, { uiNext: false }, { hasCompany: false }]) {
+test('preview で許可されていない人・会社が未登録の人は、減らさない', async () => {
+  for (const over of [{ enabled: false }, { hasCompany: false }]) {
     const s = setup(over)
     const outcome = await s.charger.charge('banner.generate')
     assert.equal(outcome.kind, 'skip', JSON.stringify(over))

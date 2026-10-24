@@ -14,8 +14,6 @@ import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/ds'
 import { AreaChart, Bars, Donut, Ring } from '@/components/ds/charts'
 import { UiIcon } from '@/components/icons'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { ShellCostBadge } from '@/components/shell/power'
 
 type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
@@ -32,7 +30,6 @@ interface Summary {
   recommendations?: { title: string; detail: string; priority: string }[]
 }
 
-const PURPLE = '#7f19e6'
 
 export default function AioDashboard() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
@@ -41,8 +38,7 @@ export default function AioDashboard() {
 
 function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const loadSequence = useRef(0)
   const searchParams = useSearchParams()
   const autoScanTriggered = useRef(false)
@@ -268,7 +264,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
 
   if (!summary && error) return <div className="max-w-2xl mx-auto p-6">{errorBanner}</div>
 
-  if (!summary && uiNext) {
+  if (!summary) {
     // 新しい見た目: 空状態の絵と説明と、次にやること（スキャン実行）を1つだけ出す
     return (
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
@@ -291,36 +287,9 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     )
   }
 
-  if (!summary) {
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        {errorBanner}
-        {scanLimitBanner}
-        {failedBanner}
-      {coverageBanner}
-        {setupBanner}
-        {promptLimitBanner}
-        <div className="text-center">
-          <div className="flex justify-center mt-6"><DoyaKun mood={doya.mood} size={120} /></div>
-          <div className="inline-block mt-3 rounded-2xl bg-purple-50 border border-purple-100 px-4 py-2 text-sm font-bold text-purple-800">{doya.message}</div>
-          <Title className="text-2xl font-black text-slate-900 mt-3">まだスキャン結果がありません</Title>
-          <p className="text-slate-500 font-bold mt-2 mb-6">
-            サービス名・URLは登録済みです。下のボタンでAIでの現状をスキャンしましょう（監視する質問は
-            <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">プロンプト</Link>で編集できます）。
-          </p>
-          <div className="flex justify-center items-center gap-2 flex-wrap">
-            {RunButton}
-            <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
-              {sym('add', 18)}別のURLを調べる
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className={`max-w-5xl mx-auto ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div className="flex items-center gap-3 min-w-0">
           <DoyaKun mood={doya.mood} size={56} float={false} className="shrink-0" />
@@ -329,7 +298,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
             <p className="text-sm font-bold text-purple-700">{doya.message}</p>
           </div>
         </div>
-        <div className={`flex items-center gap-2 ${uiNext ? 'flex-wrap' : ''}`}>
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">スキャン履歴</Link>
           <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
             {sym('add', 18)}別のURLを調べる
@@ -394,7 +363,6 @@ function DashboardSkeleton() {
 // スキャン中の派手な進捗演出。実際の監視プロンプト・エンジンを小出しに見せて飽きさせない。
 function ScanProgress({ brandName, prompts }: { brandName: string | null; prompts: string[] }) {
   // 新しい見た目（チェックリスト §5.1）のときは、絵文字の代わりに lucide のアイコンを出す
-  const uiNext = useUiNext()
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000)
@@ -472,7 +440,7 @@ function ScanProgress({ brandName, prompts }: { brandName: string | null; prompt
         ))}
       </div>
 
-      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up">{uiNext ? <span className="inline-flex items-center gap-1"><UiIcon name="idea" size={14} className="flex-shrink-0" />{tip}</span> : <>💡 {tip}</>}</p>
+      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up"><span className="inline-flex items-center gap-1"><UiIcon name="idea" size={14} className="flex-shrink-0" />{tip}</span></p>
       <p className="text-center text-[11px] font-bold text-slate-300 mt-2">完了までふつう数分かかります。このままお待ちください。</p>
     </div>
   )
@@ -488,35 +456,16 @@ function Card({ children, title, className = '' }: { children: React.ReactNode; 
 }
 
 function Gauge({ pct, label, delta }: { pct: number; label: string; delta?: number | null }) {
-  const uiNext = useUiNext()
-  if (uiNext) {
-    // 新しい見た目: 共通の Ring。大きさは旧ゲージと同じ 160px で、高さを変えない
-    return (
-      <div className="text-center">
-        <div className="inline-grid place-items-center">
-          <Ring value={Math.min(pct, 100) / 100} size={160} label={`${label} ${pct}%`}>
-            <div className="text-center">
-              <p className="text-3xl font-black text-slate-900 tabular-nums">{pct}%</p>
-              {delta != null && <div className="mt-1 flex justify-center"><DeltaBadge value={delta} /></div>}
-            </div>
-          </Ring>
-        </div>
-        <p className="text-sm font-bold text-slate-500 mt-1">{label}</p>
-      </div>
-    )
-  }
+  // 新しい見た目: 共通の Ring。大きさは旧ゲージと同じ 160px で、高さを変えない
   return (
     <div className="text-center">
-      <div className="relative inline-grid place-items-center" style={{ width: 160, height: 160 }}>
-        <svg width="160" height="160" className="-rotate-90">
-          <circle cx="80" cy="80" r="68" fill="none" stroke="#f1e9fc" strokeWidth="16" />
-          <circle cx="80" cy="80" r="68" fill="none" stroke={PURPLE} strokeWidth="16" strokeLinecap="round"
-            strokeDasharray={2 * Math.PI * 68} strokeDashoffset={2 * Math.PI * 68 * (1 - Math.min(pct, 100) / 100)} />
-        </svg>
-        <div className="absolute text-center">
-          <p className="text-3xl font-black text-slate-900">{pct}%</p>
-          {delta != null && <div className="mt-1 flex justify-center"><DeltaBadge value={delta} /></div>}
-        </div>
+      <div className="inline-grid place-items-center">
+        <Ring value={Math.min(pct, 100) / 100} size={160} label={`${label} ${pct}%`}>
+          <div className="text-center">
+            <p className="text-3xl font-black text-slate-900 tabular-nums">{pct}%</p>
+            {delta != null && <div className="mt-1 flex justify-center"><DeltaBadge value={delta} /></div>}
+          </div>
+        </Ring>
       </div>
       <p className="text-sm font-bold text-slate-500 mt-1">{label}</p>
     </div>
@@ -556,7 +505,6 @@ function DeltaBadge({ value, suffix = 'pt' }: { value: number; suffix?: string }
 }
 
 function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary; trend: any[]; delta?: number | null; brandName?: string | null }) {
-  const uiNext = useUiNext()
   const competitors = summary.sov.filter((s) => !s.isOwn)
   const zeroAware = summary.awarenessPct === 0
   const label = brandName ? `「${brandName}」` : 'このブランド'
@@ -593,7 +541,7 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
       <Card title="認知度・SoVの推移（全件測定済みのみ）">
         {trend.length <= 1 ? (
           <p className="text-sm text-slate-400 font-bold py-12 text-center">全件測定済みのスキャンが2回以上あると推移が表示されます</p>
-        ) : uiNext ? (
+        ) : (
           // 新しい見た目: 共通の AreaChart（2系列は実線と破線、凡例の文字でも区別）
           <div style={{ minHeight: 220 }}>
             <AreaChart
@@ -606,24 +554,11 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
               format={(n) => `${n}%`}
             />
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="認知度" stroke={PURPLE} strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="SoV" stroke="#e879f9" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
         )}
       </Card>
 
       <Card title="センチメント分析（言及時の論調）" className="md:col-span-2">
-        {uiNext ? (
-          // 新しい見た目: 3区分の割合を Donut で。凡例に区分名と割合の文字を出す
-          <div className="flex justify-center py-1">
+        <div className="flex justify-center py-1">
             <Donut
               label={`センチメント ポジティブ${summary.sentiment.positive}% ニュートラル${summary.sentiment.neutral}% ネガティブ${summary.sentiment.negative}%`}
               data={[
@@ -633,16 +568,6 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
               ]}
             />
           </div>
-        ) : (
-        <div className="flex gap-2">
-          {([['ポジティブ', summary.sentiment.positive, 'bg-emerald-500'], ['ニュートラル', summary.sentiment.neutral, 'bg-slate-400'], ['ネガティブ', summary.sentiment.negative, 'bg-rose-500']] as [string, number, string][]).map(([label, v, c]) => (
-            <div key={label} className="flex-1">
-              <div className="flex justify-between text-xs font-bold text-slate-500 mb-1"><span>{label}</span><span>{v}%</span></div>
-              <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full ${c}`} style={{ width: `${v}%` }} /></div>
-            </div>
-          ))}
-        </div>
-        )}
       </Card>
 
       <Card title="プロンプト別の言及状況（クリックで実際のAI回答を表示）" className="md:col-span-2">
@@ -731,7 +656,6 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
 }
 
 function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?: number | null; locked: boolean; orgSlug: string }) {
-  const uiNext = useUiNext()
   const data = summary.sov.slice(0, 10).map((s) => ({ name: s.brand, pct: s.pct, isOwn: s.isOwn }))
   return (
     <ProGate locked={locked} orgSlug={orgSlug} note="競合と比較した自社のシェア・オブ・ボイスはプロプランで閲覧できます">
@@ -751,24 +675,10 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
         </table>
       </Card>
       <Card title="占有率（上位10）">
-        {uiNext ? (
-          // 新しい見た目: 共通の Bars。自社だけ強調し（ほかは灰色）、「自社」の印と % の文字も出す
-          <Bars
+        <Bars
             format={(n) => `${n}%`}
             data={data.map((d) => ({ label: d.name, value: d.pct, highlight: d.isOwn ? '自社' : undefined }))}
           />
-        ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20, top: 0, bottom: 0 }}>
-            <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 'dataMax']} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-            <Tooltip />
-            <Bar dataKey="pct" radius={[0, 6, 6, 0]}>
-              {data.map((d, i) => <Cell key={i} fill={d.isOwn ? PURPLE : '#d8b4fe'} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        )}
       </Card>
     </div>
     </ProGate>

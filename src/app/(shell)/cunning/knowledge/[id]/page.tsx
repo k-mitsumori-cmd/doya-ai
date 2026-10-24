@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface Chunk {
   id: string
@@ -22,8 +21,7 @@ interface Base {
 
 export default function CunningKnowledgeDetail() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const params = useParams()
   const id = params.id as string
   const [base, setBase] = useState<Base | null>(null)
@@ -105,7 +103,7 @@ export default function CunningKnowledgeDetail() {
   if (!base) return <div className="p-10 text-slate-400 font-bold">ナレッジを読み込めませんでした。<button type="button" onClick={() => void load()} className="ml-2 underline">再読み込み</button></div>
 
   return (
-    <div className={`${uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'} max-w-4xl mx-auto`}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-1">
         <Link href="/cunning/knowledge" className="text-slate-400 hover:text-slate-600">
           <span className="material-symbols-outlined">arrow_back</span>

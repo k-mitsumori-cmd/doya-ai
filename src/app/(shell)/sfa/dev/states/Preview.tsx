@@ -13,7 +13,6 @@ import type { Session } from 'next-auth'
 import { Toaster } from 'react-hot-toast'
 import { PathParamsContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
 import AppShell from '@/components/shell/AppShell'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 import SfaShellFrame from '@/components/sfa/SfaShellFrame'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import CrmRecordsPage from '@/components/sfa/CrmRecordsPage'
@@ -59,12 +58,12 @@ function LimitNotice() {
   return <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6"><MutationRecovery mutations={mutations} /></div>
 }
 
-export default function SfaStatesPreview({ page, state, legacy }: { page: string; state: string; legacy: boolean }) {
+export default function SfaStatesPreview({ page, state }: { page: string; state: string }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const render = PAGES[page] ?? PAGES.home
   return (
-    <UiNextContext.Provider value={legacy ? null : 'all'}>
+    <>
       <AppShell userName="見本 太郎">
         {mounted ? (
           <SessionProvider session={SAMPLE_SESSION as unknown as Session} refetchOnWindowFocus={false}>
@@ -81,6 +80,6 @@ export default function SfaStatesPreview({ page, state, legacy }: { page: string
           <p role="status" className="p-6 text-sm text-slate-500">見本を準備しています…</p>
         )}
       </AppShell>
-    </UiNextContext.Provider>
+    </>
   )
 }

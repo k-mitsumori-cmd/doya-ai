@@ -14,7 +14,6 @@ import type { CunningMode } from '@/lib/cunning/types'
 import { recordingAllowance } from '@/lib/cunning/allowance-client'
 import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState, FirstSteps, ToolHero } from '@/components/ds'
 import { UiIcon } from '@/components/icons'
 import { CunningModeIcon } from '@/components/cunning/mode-icon'
@@ -36,7 +35,6 @@ interface SessionRow {
 export default function CunningTool() {
   const router = useRouter()
   // 新しい見た目（チェックリスト §5.1）のときだけ、ヒーロー・lucide のアイコン・空状態・折り返しの直しを出す
-  const uiNext = useUiNext()
   const { data: session, status: authStatus } = useSession()
   const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
   const allowed = authStatus === 'authenticated' && Boolean(actor)
@@ -346,10 +344,9 @@ export default function CunningTool() {
   const overLimit = typeof remaining === 'number' && remaining !== -1 && remaining <= 0
 
   return (
-    <div className={uiNext ? '' : 'min-h-full bg-gradient-to-b from-[#EAF2FF] to-slate-50'}>
-      <div className={uiNext ? 'p-4 sm:p-6 max-w-5xl mx-auto' : 'p-6 lg:p-10 max-w-5xl mx-auto'}>
-        {uiNext ? (
-          <div className="space-y-4 mb-4">
+    <div className="">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+        <div className="space-y-4 mb-4">
             {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く */}
             <ToolHero
               title={<>相手の声をAIが聞き取り、<wbr />答えの案をその場で出します</>}
@@ -365,14 +362,6 @@ export default function CunningTool() {
               ]}
             />
           </div>
-        ) : (
-        <div className="mb-1">
-          <img src="/cunning/logo.png" alt="ドヤカンニング" className="h-16 sm:h-20 w-auto object-contain" />
-          <p className="text-slate-500 font-bold text-sm mt-1">
-            相手の声をAIが即解析！最高の“カンペ”をリアルタイムでお届け。もう会話で困らない！
-          </p>
-        </div>
-        )}
 
         {usage?.limits && (
           <div className="mb-6 mt-3 inline-flex items-center gap-3 text-xs font-bold text-slate-500 bg-white rounded-full px-4 py-2 shadow-sm">
@@ -398,30 +387,19 @@ export default function CunningTool() {
                   <button
                     key={m.id}
                     onClick={() => setMode(m.id)}
-                    aria-pressed={uiNext ? mode === m.id : undefined}
-                    className={`text-left ${uiNext ? 'p-4 sm:p-6' : 'p-6'} rounded-3xl border-2 transition-all bg-white flex items-center gap-4 ${
-                      mode === m.id
+                    aria-pressed={mode === m.id}
+                    className={`text-left p-4 sm:p-6 rounded-3xl border-2 transition-all bg-white flex items-center gap-4 ${mode === m.id
                         ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-lg'
-                        : 'border-slate-200 hover:border-blue-300'
-                    }`}
+                        : 'border-slate-200 hover:border-blue-300'}`}
                   >
-                    <img src={`/character/${m.character}.png`} alt="" className={uiNext ? 'w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0' : 'w-20 h-20 object-contain flex-shrink-0'} />
+                    <img src={`/character/${m.character}.png`} alt="" className="w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0" />
                     <div className="min-w-0">
-                      {uiNext ? (
-                        <>
+                      <>
                           <p className="font-black text-slate-900 text-lg inline-flex items-center gap-2">
                             <CunningModeIcon mode={m.id} size={20} className="text-[#0066ff] flex-shrink-0" />{m.label}
                           </p>
                           <p className={`text-sm text-slate-500 font-bold mt-1 leading-relaxed ${PHRASE_CLASS}`}><Phrase text={m.desc} /></p>
                         </>
-                      ) : (
-                        <>
-                          <p className="font-black text-slate-900 text-lg">
-                            {m.icon} {m.label}
-                          </p>
-                          <p className="text-xs text-slate-500 font-bold mt-1 leading-snug">{m.desc}</p>
-                        </>
-                      )}
                     </div>
                   </button>
                 )
@@ -432,14 +410,14 @@ export default function CunningTool() {
           {/* その他（同サイズで下に並べる） */}
           <div>
             <p className="text-xs font-black text-slate-400 mb-2 ml-1">その他のモード</p>
-            <div className={uiNext ? 'grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-3' : 'grid grid-cols-2 lg:grid-cols-3 gap-3'}>
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-3">
               {MODE_IDS.filter((id) => id !== 'sales' && id !== 'interview').map((id) => {
                 const m = MODES[id]
                 return (
                   <button
                     key={m.id}
                     onClick={() => setMode(m.id)}
-                    aria-pressed={uiNext ? mode === m.id : undefined}
+                    aria-pressed={mode === m.id}
                     className={`text-left p-4 rounded-2xl border-2 transition-all bg-white ${
                       mode === m.id
                         ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-md'
@@ -447,21 +425,12 @@ export default function CunningTool() {
                     }`}
                   >
                     <img src={`/character/${m.character}.png`} alt="" className="w-12 h-12 object-contain mb-1" />
-                    {uiNext ? (
-                      <>
+                    <>
                         <p className="font-black text-slate-800 text-sm inline-flex items-center gap-1.5">
                           <CunningModeIcon mode={m.id} size={16} className="text-[#0066ff] flex-shrink-0" />{m.label}
                         </p>
                         <p className={`text-xs text-slate-500 font-bold mt-1 leading-relaxed ${PHRASE_CLASS}`}><Phrase text={m.desc} /></p>
                       </>
-                    ) : (
-                      <>
-                        <p className="font-black text-slate-800 text-sm">
-                          {m.icon} {m.label}
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-bold mt-0.5 leading-snug">{m.desc}</p>
-                      </>
-                    )}
                   </button>
                 )
               })}
@@ -519,7 +488,7 @@ export default function CunningTool() {
         )}
         {def.context === 'none' && (
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 text-sm font-bold text-blue-700">
-            {uiNext ? <span className="inline-flex items-start gap-2"><CunningModeIcon mode={def.id} size={18} className="flex-shrink-0 mt-0.5" /><span className={PHRASE_CLASS}><Phrase text={`${def.label}：設定不要。開始して相手のコメント・発話に${def.trigger === 'any' ? '即レス' : '回答'}します。`} /></span></span> : <>{def.icon} {def.label}：設定不要。開始して相手のコメント・発話に{def.trigger === 'any' ? '即レス' : '回答'}します。</>}
+            <span className="inline-flex items-start gap-2"><CunningModeIcon mode={def.id} size={18} className="flex-shrink-0 mt-0.5" /><span className={PHRASE_CLASS}><Phrase text={`${def.label}：設定不要。開始して相手のコメント・発話に${def.trigger === 'any' ? '即レス' : '回答'}します。`} /></span></span>
           </div>
         )}
 
@@ -545,9 +514,9 @@ export default function CunningTool() {
 
         {/* キャラの吹き出し（ポップな後押し） */}
         <div className="flex items-end gap-2 mb-3">
-          <img src={`/character/${def.character}.png`} alt="" className={`w-16 h-16 object-contain flex-shrink-0 ${uiNext ? 'motion-safe:animate-bounce' : 'animate-bounce'}`} />
+          <img src={`/character/${def.character}.png`} alt="" className="w-16 h-16 object-contain flex-shrink-0 motion-safe:animate-bounce" />
           <div className="relative bg-white rounded-2xl rounded-bl-none shadow-sm px-4 py-2.5 font-black text-slate-700 text-sm">
-            {uiNext ? <span className={PHRASE_CLASS}><Phrase text={`「${def.label}」で行くよ〜！準備できたらスタート！いっちょやったろ！`} /></span> : <>{def.icon} 「{def.label}」で行くよ〜！準備できたらスタート！いっちょやったろ！</>}
+            <span className={PHRASE_CLASS}><Phrase text={`「${def.label}」で行くよ〜！準備できたらスタート！いっちょやったろ！`} /></span>
           </div>
         </div>
 
@@ -564,9 +533,7 @@ export default function CunningTool() {
         <button
           onClick={start}
           disabled={starting || overLimit || missingKnowledge || !usage || !allowed || loginRequired || startUnknown || Boolean(confirmedSessionId)}
-          className={uiNext
-            ? 'w-full py-4 rounded-2xl bg-[#0066ff] hover:bg-[#0047d6] text-white font-black text-lg shadow-lg shadow-blue-500/25 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066ff]'
-            : 'w-full py-4 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50'}
+          className="w-full py-4 rounded-2xl bg-[#0066ff] hover:bg-[#0047d6] text-white font-black text-lg shadow-lg shadow-blue-500/25 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066ff]"
         >
           {!usage ? (
             usageError ? '利用状況を確認できませんでした' : '利用状況を確認中…'
@@ -576,16 +543,16 @@ export default function CunningTool() {
             '開始中…'
           ) : (
             <span className="inline-flex items-center gap-2">
-              {uiNext ? <UiIcon name="mic" size={22} /> : <span className="material-symbols-outlined">mic</span>}
+              <UiIcon name="mic" size={22} />
               ライブ開始！いくぞ〜
             </span>
           )}
         </button>
         {usageError && loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="mt-3 block underline">再度ログインする</Link>}
         {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={() => refreshUsage()} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
-        {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className={`mt-3 block w-full rounded-xl p-3 text-center font-bold ${uiNext ? 'border border-[#0066ff] bg-white text-[#0047d6]' : 'bg-violet-700 text-white'}`}>{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
-        <p className={`text-center text-xs font-bold mt-2 ${uiNext ? `text-slate-500 ${PHRASE_CLASS}` : 'text-slate-400'}`}>
-          {uiNext ? <Phrase text="開始後、会議・配信のタブの音声の共有を許可してください（Chrome・Edge推奨）" /> : '開始後、会議/配信タブの音声共有を許可してください（Chrome/Edge推奨）'}
+        {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl p-3 text-center font-bold border border-[#0066ff] bg-white text-[#0047d6]">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
+        <p className={`text-center text-xs font-bold mt-2 text-slate-500 ${PHRASE_CLASS}`}>
+          <Phrase text="開始後、会議・配信のタブの音声の共有を許可してください（Chrome・Edge推奨）" />
         </p>
 
         {/* 最近のセッション */}
@@ -601,7 +568,7 @@ export default function CunningTool() {
                   className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
         >
                   <div className="flex items-center gap-3 min-w-0">
-                    {uiNext ? <CunningModeIcon mode={s.mode} size={18} className="text-[#0066ff] flex-shrink-0" /> : <span>{getMode(s.mode).icon}</span>}
+                    <CunningModeIcon mode={s.mode} size={18} className="text-[#0066ff] flex-shrink-0" />
                     <span className="font-bold text-slate-700 truncate">{s.title}</span>
                   </div>
                   <span className="text-xs font-bold text-slate-400 flex-shrink-0">
@@ -615,7 +582,7 @@ export default function CunningTool() {
             </Link>
           </div>
         )}
-        {uiNext && sessionsLoaded && !sessionsError && sessions.length === 0 && (
+        {sessionsLoaded && !sessionsError && sessions.length === 0 && (
           <div className="mt-10">
             <EmptyState
               title="まだセッションがありません"

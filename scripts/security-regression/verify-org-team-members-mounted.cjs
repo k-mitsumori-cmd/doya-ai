@@ -1,4 +1,4 @@
-// Actual AppLayout, member page, guard, protocol and bounded HTTP transport. Synthetic HTTP only.
+// Actual member page, guard, protocol and bounded HTTP transport. Synthetic HTTP only.
 process.env.NODE_ENV='test';const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 if(!process.argv[2]){for(const service of ['aio','shodan']){const result=require('node:child_process').spawnSync(process.execPath,[__filename,service],{stdio:'inherit',timeout:60000});if(result.status!==0)process.exit(1)}process.exit(0)}
 const service=process.argv[2],root=process.cwd(),req=n=>require(path.join(root,'node_modules',n)),React=req('react'),ts=req('typescript'),{JSDOM}=req('jsdom');
@@ -17,9 +17,9 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  if(n==='next/navigation')return{useParams:()=>({orgSlug:org})};if(n==='next-auth/react')return{useSession:()=>({status:auth,data:auth==='unauthenticated'?null:{user:{id:actor}}})};if(n===`@/components/${service}/ui`)return{PageHeader:Null};
  if(n.startsWith('@/')){const stem='src/'+n.slice(2);return load(fs.existsSync(path.join(root,stem+'.tsx'))?stem+'.tsx':stem+'.ts')}
  throw Error('Unmocked '+n)},window:dom.window,document:dom.window.document,navigator:dom.window.navigator,fetch,URL,Response,Request,AbortController,TextDecoder,Uint8Array,Set,Map,Error,Date,setTimeout,clearTimeout,console},{filename:file});return exports}
-const Page=load(`src/app/${fs.existsSync(path.join(root,`src/app/(shell)/${service}`))?"(shell)/":""}${service}/[orgSlug]/members/page.tsx`).default,Layout=load(`src/components/${service}/${service==='aio'?'Aio':'Shodan'}AppLayout.tsx`).default;
+const Page=load(`src/app/${fs.existsSync(path.join(root,`src/app/(shell)/${service}`))?"(shell)/":""}${service}/[orgSlug]/members/page.tsx`).default,Layout=({children})=>children/* 旧来の AppLayout（サイドバー）は 2026-10-24 に消した。組織のページは ToolFrame だけで包む */;
 const act=fn=>React.act(async()=>{await fn();for(let i=0;i<14;i++)await new Promise(setImmediate)}),props=e=>{assert.ok(e,'Element exists');return e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))]};
-let c,r,mounted=true;const render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,{orgSlug:org,organizationPlan:'FREE',isOwner:true,canManageBilling:true},React.createElement(Page))));
+let c,r,mounted=true;const render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,null,React.createElement(Page))));
 const email=()=>c.querySelector('input[type=email]'),invite=()=>email()?.parentElement.querySelector('button'),reload=()=>[...c.querySelectorAll('button')].find(b=>b.textContent==='\u30e1\u30f3\u30d0\u30fc\u4e00\u89a7\u3092\u518d\u78ba\u8a8d\u3059\u308b'),deletes=()=>[...c.querySelectorAll('button[title]')].filter(b=>b.title==='\u524a\u9664');
 const edit=value=>props(email()).onChange({target:{value}}),click=()=>props(invite()).onClick();
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve}};
@@ -47,5 +47,5 @@ async function test(name,fn){org='alpha';actor='actor-a';auth='authenticated';my
  await test('missing own membership rejects list and blocks mutation',async()=>{readHook=()=>Response.json({members:[],myRole:'owner',myMemberId:'self'});org='beta';await act(render);assert.equal(email(),null);assert.ok(c.querySelector('[role=alert]'))});
  await test('unauthenticated view provides login without loading forever',async()=>{auth='unauthenticated';await act(render);assert.equal(email(),null);assert.ok(c.querySelector('a[href^="/api/auth/signin"]'));assert.doesNotMatch(c.textContent,/\u8aad\u307f\u8fbc\u307f\u4e2d/)});
  await test('cancelling pending invite removes displayed URL',async()=>{await act(()=>edit('new@example.invalid'));await act(click);assert.ok(c.querySelector('input[readonly]'));const target=deletes().find(b=>b.parentElement.textContent.includes('invited-'));await act(()=>props(target).onClick());assert.equal(c.querySelector('input[readonly]'),null)});
- console.log(JSON.stringify({service,cases:cases.length,checks:cases,scope:'Actual mounted AppLayout, member page, guard, parsers and bounded transport under StrictMode. Synthetic session/HTTP/confirmation only; no real email, DB or provider.'}));dom.window.close()
+ console.log(JSON.stringify({service,cases:cases.length,checks:cases,scope:'Actual mounted member page, guard, parsers and bounded transport under StrictMode. Synthetic session/HTTP/confirmation only; no real email, DB or provider.'}));dom.window.close()
 })().catch(e=>{console.error(e);process.exitCode=1;dom.window.close()});

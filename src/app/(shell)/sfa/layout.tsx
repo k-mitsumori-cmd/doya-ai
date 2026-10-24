@@ -3,7 +3,6 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 import { LpJsonLd } from '@/components/lp'
 import SfaShellFrame from '@/components/sfa/SfaShellFrame'
 import { FAQ } from './lp-data'
@@ -17,9 +16,9 @@ const SVC = getServiceById('sfa')!
 
 export default async function SfaLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
-  // ui.shell.sfa が ON のときだけ ToolFrame で包む（未ログインのLPは今のまま。OFF の間は [orgSlug]/layout.tsx のサイドバー）。
+  // ログインしていれば ToolFrame で包む（未ログインのLPは今のまま）。
   // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここでは包まない
-  const shell = Boolean(session?.user) && isShellEnabled('sfa')
+  const shell = Boolean(session?.user)
   return (
     <>
       <LpJsonLd

@@ -30,7 +30,6 @@ function world(opts: { rollout?: string } = {}) {
     const deps: ChargeDeps = {
       rollout: () => { calls.push('rollout'); return opts.rollout ?? 'preview' },
       isEnabled: async () => { calls.push('isEnabled'); return true },
-      isUiNext: async () => { calls.push('isUiNext'); return true },
       account: async () => { calls.push('account'); return { companyId, plan: 'PRO' } },
       ledger: {
         consume: (...a) => { calls.push('consume'); return ledger.consume(...a) },

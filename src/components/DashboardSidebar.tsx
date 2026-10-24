@@ -2,7 +2,6 @@
 
 import React, { memo, useMemo, useState, type ComponentProps } from 'react'
 import { useInShell } from '@/components/shell/in-shell'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -383,7 +382,6 @@ const DashboardSidebarMemo = memo(DashboardSidebarImpl)
 //    新しい見た目（チェックリスト §5.1）のときだけ
 export default function DashboardSidebar(props: ComponentProps<typeof DashboardSidebarImpl>) {
   const inShell = useInShell()
-  const uiNext = useUiNext()
-  if (inShell && uiNext) return null
+  if (inShell) return null
   return <DashboardSidebarMemo {...props} />
 }

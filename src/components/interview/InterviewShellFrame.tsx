@@ -6,13 +6,11 @@
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここでは AppShell を使わない。
 import { usePathname } from 'next/navigation'
 import ToolFrame from '@/components/shell/ToolFrame'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { INTERVIEW_NAV } from '@/lib/interview/nav'
 
 export default function InterviewShellFrame({ children }: { children: React.ReactNode }) {
-  const uiNext = useUiNext()
   // 記事エディタは画面いっぱいに使うので、余白を付けない
-  const padded = uiNext && !/\/edit\/?$/.test(usePathname() || '')
+  const padded = !/\/edit\/?$/.test(usePathname() || '')
   return (
     <ToolFrame
       serviceId="interview"

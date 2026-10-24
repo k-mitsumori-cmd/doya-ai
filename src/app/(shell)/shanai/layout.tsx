@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import ShanaiFrame from '@/components/shanai/ShanaiFrame'
 import ds from '@/components/ds/tokens.module.css'
-import { isShellEnabled } from '@/lib/ui-shell'
 import '@/components/shanai/tokens.css'
 
 // ⚠️ 開発中（UNLISTED_SERVICE_IDS）の間は noindex。公開するときに外す（reference/services/shanai.md）
@@ -18,11 +17,11 @@ export default async function ShanaiLayout({ children }: { children: React.React
   const session = await getServerSession(authOptions)
   // ⚠️ 未ログインをアプリ枠で包まない（空のサイドバーが出る）。社員が開く回答画面もアプリ枠の外（guest-path.ts）
   // トークンは ds（段0）の .ds と、その補い（tokens.css の .shanai-ds）の中だけで効く。LP・アプリ・回答画面のすべてを包む
-  // 共通シェルは ui.shell.shanai（環境変数 UI_SHELL_SERVICES）が ON のときだけ。回答画面には出さない（ShanaiFrame）
+  // ログイン後は共通シェルに載せる。回答画面には出さない（ShanaiFrame）
   return (
     <div className={`${ds.ds} shanai-ds`}>
       {session?.user ? (
-        <ShanaiFrame shell={isShellEnabled('shanai')}>
+        <ShanaiFrame>
           {children}
         </ShanaiFrame>
       ) : (

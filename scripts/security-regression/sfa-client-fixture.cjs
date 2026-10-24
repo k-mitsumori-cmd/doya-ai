@@ -132,13 +132,17 @@ async function fixture(page, options = {}) {
     setTimeout: (fn, ms) => setTimeout(fn, timeout && [30000, 310000].includes(ms) ? 5 : ms), clearTimeout };
   const externals = {
     'framer-motion': { motion: { div: ({ children }) => React.createElement('div', null, children) }, AnimatePresence: ({ children }) => children },
-    // アイコンと ds の部品は、新しい見た目（useUiNext() が真）のときだけ描く。この試験は今の見た目（偽）で動かすので、空の部品でよい
+    // アイコンは空の部品。ds の部品は、押せるもの・読めるもの（ボタン・失敗の箱・空の状態・カード）だけを素の要素で描く
     'lucide-react': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
-    '@/components/ds': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
+    '@/components/ds': new Proxy({
+      Button: ({ href, children, onClick, type, disabled }) => href !== undefined ? React.createElement('a', { href }, children) : React.createElement('button', { type: type || 'button', onClick, disabled }, children),
+      ErrorNotice: ({ what, how, onRetry, retryLabel }) => React.createElement('div', { role: 'alert' }, React.createElement('p', null, what), how ? React.createElement('p', null, how) : null, onRetry ? React.createElement('button', { type: 'button', onClick: onRetry }, retryLabel || 'もう一度試す') : null),
+      EmptyState: ({ title, description, action }) => React.createElement('div', null, React.createElement('p', null, title), description ? React.createElement('p', null, description) : null, action || null),
+      Card: ({ title, children }) => React.createElement('section', null, title ? React.createElement('h2', null, title) : null, children),
+    }, { get: (o, name) => name === '__esModule' ? false : name in o ? o[name] : () => null }),
     // ドヤパワーの減る量の札（旗の内側だけ）。この試験では旗が off と同じく何も描かない
     '@/components/shell/power': { ShellCostBadge:()=>null,useDoyaPowerRetry:()=>({halved:false,retryOf:()=>null,headers:()=>({}),remember:()=>{}}), ShellPowerMeter: () => null },
     '@/components/ds/motion': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : ({ children }) => children ?? null }),
-    '@/components/sfa/SfaSidebar': { __esModule: true, default: ({ plan, memberships }) => React.createElement('aside', { 'data-plan': plan || '', 'data-memberships': JSON.stringify(memberships) }) },
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'), 'next-auth/react': { useSession: session },
     'next/navigation': { useParams: () => ({ orgSlug }), usePathname: () => '/sfa/' + orgSlug },
     'next/link': { __esModule: true, default: ({ children, href }) => React.createElement('a', { href }, children) },
@@ -158,19 +162,23 @@ async function fixture(page, options = {}) {
     } }, { filename: file });
     return exports;
   }
+  const published = [];
   if (page === 'hook') {
     const hook = load('src/lib/sfa/use-client-mutations.ts').useSfaClientMutations;
     component = () => { currentHook = hook(orgSlug, () => { recoveries++; }); return null; };
   } else if (page === 'layout') {
     const Layout = load('src/app/(shell)/sfa/[orgSlug]/layout.tsx').default;
     const Child = () => { const [value, setValue] = React.useState('Initial'); return React.createElement('input', { id: 'scoped-child', value, onChange: e => setValue(e.target.value) }); };
-    component = () => React.createElement(Layout, null, React.createElement(Child));
+    // 組織の layout は、共通の枠（SfaShellFrame）の文脈へ所属組織の一覧を渡す（旧来のサイドバーは消した）
+    const { SfaShellContext } = load('src/lib/sfa/shell-context.ts');
+    const shell = { publishMemberships: m => published.push(m) };
+    component = () => React.createElement(SfaShellContext.Provider, { value: shell }, React.createElement(Layout, null, React.createElement(Child)));
   } else component = load('src/app/(shell)/sfa/[orgSlug]/' + (page ? page + '/' : '') + 'page.tsx').default;
   const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
   const render = () => act(() => root.render(React.createElement(React.StrictMode, null, React.createElement(component))));
   await render();
   return { container, writes, requests, notices, receipts, storage, makeTask, taskData, activityData, act, props, render,
-    hook: () => currentHook, recovered: () => recoveries,
+    hook: () => currentHook, recovered: () => recoveries, memberships: () => published.at(-1) ?? [],
     reply: fn => writeReply = fn, read: fn => readReply = fn, noStorage: () => failStorage = true, timeout: () => timeout = true,
     auth: async (a, s = 'authenticated') => { actor = a; status = s; await render(); }, org: async value => { orgSlug = value; await render(); },
     edit: (selector, value) => act(() => { const input = container.querySelector(selector); assert.ok(input, selector); props(input).onChange({ target: { value } }); }),

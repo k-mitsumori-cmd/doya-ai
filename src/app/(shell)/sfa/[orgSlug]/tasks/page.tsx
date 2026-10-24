@@ -10,7 +10,6 @@ import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 import SfaPageHeading from '@/components/sfa/PageHeading'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { Button } from '@/components/ds'
@@ -29,7 +28,6 @@ interface SfaActivityRow {
 const isOverdue = (t: Task) => t.status !== 'done' && isJstOverdue(t.dueDate)
 
 export default function SfaTasksPage() {
-  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const mutations = useSfaClientMutations(orgSlug, () => { void load(); void loadActs() })
   const ready = mutations.allowed
@@ -196,25 +194,23 @@ export default function SfaTasksPage() {
   const done = tasks.filter((t) => t.status === 'done')
 
   const row = (t: Task) => (
-    <div key={t.id} className={uiNext ? 'bg-white rounded-xl shadow-sm p-3 sm:p-3.5 flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2' : 'bg-white rounded-xl shadow-sm p-3.5 flex items-center gap-3'}>
+    <div key={t.id} className="bg-white rounded-xl shadow-sm p-3 sm:p-3.5 flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2">
       <button
         onClick={() => toggle(t)}
         disabled={mutations.blocked('task:' + t.id)}
-        aria-label={uiNext ? `「${t.title}」を${t.status === 'done' ? '未完了に戻す' : '完了にする'}` : undefined}
-        aria-pressed={uiNext ? t.status === 'done' : undefined}
-        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-          t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-500'
-        }${uiNext ? ' relative before:absolute before:-inset-2.5 before:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : ''}`}
+        aria-label={`「${t.title}」を${t.status === 'done' ? '未完了に戻す' : '完了にする'}`}
+        aria-pressed={t.status === 'done'}
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-500'} relative before:absolute before:-inset-2.5 before:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2`}
       >
-        {t.status === 'done' && (uiNext ? <Check className="h-4 w-4" aria-hidden /> : <span className="material-symbols-outlined text-[16px]">check</span>)}
+        {t.status === 'done' && (<Check className="h-4 w-4" aria-hidden />)}
       </button>
       {/* 新しい見た目: 375px では題名を1行ぶん取り、期日と削除は次の行に回す（題名が数文字で切れないように） */}
-      <div className={uiNext ? 'min-w-0 flex-1 basis-[calc(100%-3rem)] sm:basis-0' : 'min-w-0 flex-1'}>
+      <div className="min-w-0 flex-1 basis-[calc(100%-3rem)] sm:basis-0">
         <p className={`font-black truncate ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</p>
         <div className="flex items-center gap-2 flex-wrap">
           {t.dealName && (
             <span className="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 truncate max-w-[12rem]">
-              {uiNext ? '商談: ' : '📈 '}{t.dealName}
+              {'商談: '}{t.dealName}
             </span>
           )}
           {t.dueDate && isOverdue(t) && <span className="text-[11px] font-bold text-red-500">期限切れ</span>}
@@ -227,18 +223,16 @@ export default function SfaTasksPage() {
         onChange={(e) => changeDue(t, e.target.value)}
         title="締め切り日"
         aria-label={`「${t.title}」の締め切り日`}
-        className={`rounded-lg border px-2 py-1.5 text-xs font-bold flex-shrink-0 w-[8.5rem]${uiNext ? ' min-h-11 ml-9 sm:ml-0' : ''} ${
-          isOverdue(t) ? 'border-red-300 text-red-600 bg-red-50' : 'border-slate-200 text-slate-600'
-        }`}
+        className={`rounded-lg border px-2 py-1.5 text-xs font-bold flex-shrink-0 w-[8.5rem] min-h-11 ml-9 sm:ml-0 ${isOverdue(t) ? 'border-red-300 text-red-600 bg-red-50' : 'border-slate-200 text-slate-600'}`}
       />
-      <button onClick={() => remove(t)} disabled={mutations.blocked('task:' + t.id)} aria-busy={mutations.blocked('task:' + t.id)} aria-label={uiNext ? `「${t.title}」を削除` : 'タスクを削除'} className={uiNext ? 'grid h-11 w-11 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 flex-shrink-0 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-slate-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40'}>
-        {uiNext ? <Trash2 className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined text-[20px]">delete</span>}
+      <button onClick={() => remove(t)} disabled={mutations.blocked('task:' + t.id)} aria-busy={mutations.blocked('task:' + t.id)} aria-label={`「${t.title}」を削除`} className="grid h-11 w-11 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 flex-shrink-0 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
+        <Trash2 className="h-5 w-5" aria-hidden />
       </button>
     </div>
   )
 
   return (
-    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-3xl mx-auto' : 'p-6 lg:p-10 max-w-3xl mx-auto'}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-3xl mx-auto">
       <MutationRecovery mutations={mutations} />
       <div className="mb-6">
         <SfaPageHeading className="text-2xl font-black text-slate-900">タスク・活動</SfaPageHeading>
@@ -253,10 +247,10 @@ export default function SfaTasksPage() {
           onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && create()}
           placeholder="やることを入力（例: 見積を送る）"
           aria-label="やること"
-          className={uiNext ? 'min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold' : 'flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold'}
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold"
         />
-        <input type="date" aria-label="期日" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={uiNext ? 'min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm' : 'rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm'} />
-        <button onClick={create} disabled={busy || mutations.creationBlocked('task') || !ready} className={`px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 whitespace-nowrap ${uiNext ? 'min-h-11 bg-[#0066ff] hover:bg-[#0052cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'bg-gradient-to-r from-green-500 to-lime-600'}`}>追加</button>
+        <input type="date" aria-label="期日" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm" />
+        <button onClick={create} disabled={busy || mutations.creationBlocked('task') || !ready} className="px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 whitespace-nowrap min-h-11 bg-[#0066ff] hover:bg-[#0052cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">追加</button>
       </div>
 
       <div className="space-y-2">
@@ -275,23 +269,21 @@ export default function SfaTasksPage() {
       <div className="mt-4 space-y-2 text-sm">
         {listLoading && <p role="status">タスクを読み込んでいます…</p>}
         {skippedTasks > 0 && <p role="status" className="text-amber-700">{skippedTasks}件のタスクは内容を確認できなかったため表示していません。</p>}
-        {listError && (uiNext
-          ? <SfaLoadError error={listFailure} what="タスク" onRetry={() => load()} orgSlug={orgSlug} />
-          : <p role="alert" className="text-red-600">{listError}。表示内容が最新でない可能性があります。</p>)}
+        {listError && (<SfaLoadError error={listFailure} what="タスク" onRetry={() => load()} orgSlug={orgSlug} />)}
         {loadedPage > 0 && <p className="text-slate-500">{tasks.length}件を表示中{hasMore ? '（続きがあります）' : ''}</p>}
-        <button onClick={() => load()} disabled={listLoading} className={uiNext ? 'min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'rounded-lg border px-3 py-2 disabled:opacity-50'}>一覧を再読み込み</button>
-        {hasMore && <button onClick={() => load(loadedPage + 1)} disabled={listLoading || !!listError} className={uiNext ? 'ml-2 min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'ml-2 rounded-lg border px-3 py-2 disabled:opacity-50'}>次の200件を表示</button>}
+        <button onClick={() => load()} disabled={listLoading} className="min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">一覧を再読み込み</button>
+        {hasMore && <button onClick={() => load(loadedPage + 1)} disabled={listLoading || !!listError} className="ml-2 min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">次の200件を表示</button>}
       </div>
 
       {/* ===== 活動タイムライン（旧・活動ページを統合。タスクと同じ操作感） ===== */}
       <div className="mt-10">
         <h2 className="text-lg font-black text-slate-900 mb-1 flex items-center gap-1.5">
-          {uiNext ? <History className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined text-[20px]">history</span>}活動タイムライン
+          <History className="h-5 w-5" aria-hidden />活動タイムライン
         </h2>
         <p className="text-slate-500 font-bold text-xs mb-3">電話・商談・メールなどの記録（商談に紐づく活動は商談カードの詳細からも追加できます）</p>
 
         <div className="bg-white rounded-2xl shadow-sm p-4 mb-4 flex flex-col sm:flex-row gap-2">
-          <select aria-label="活動の種類" value={actType} onChange={(e) => setActType(e.target.value as ActivityType)} className={uiNext ? 'min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm' : 'rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm'}>
+          <select aria-label="活動の種類" value={actType} onChange={(e) => setActType(e.target.value as ActivityType)} className="min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm">
             {(Object.keys(ACTIVITY_TYPE_LABEL) as ActivityType[]).map((k) => (
               <option key={k} value={k}>{ACTIVITY_TYPE_LABEL[k]}</option>
             ))}
@@ -303,9 +295,9 @@ export default function SfaTasksPage() {
             onChange={(e) => setActSubject(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addActivity()}
             placeholder="活動内容を入力（例: 株式会社サンプルへ初回ヒアリング）"
-            className={uiNext ? 'min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold' : 'flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold'}
+            className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold"
           />
-          <button onClick={addActivity} disabled={actBusy || mutations.creationBlocked('activity') || !ready || !actSubject.trim()} className={uiNext ? 'min-h-11 px-5 py-2.5 rounded-xl bg-[#0066ff] hover:bg-[#0052cc] text-white font-black disabled:opacity-50 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap'}>記録</button>
+          <button onClick={addActivity} disabled={actBusy || mutations.creationBlocked('activity') || !ready || !actSubject.trim()} className="min-h-11 px-5 py-2.5 rounded-xl bg-[#0066ff] hover:bg-[#0052cc] text-white font-black disabled:opacity-50 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">記録</button>
         </div>
 
         <div className="space-y-2">
@@ -322,16 +314,14 @@ export default function SfaTasksPage() {
               <span className="text-[10px] font-black text-white bg-slate-400 rounded px-1.5 py-0.5 flex-shrink-0">
                 {ACTIVITY_TYPE_LABEL[a.type as ActivityType] || a.type}
               </span>
-              <span className={uiNext ? 'text-sm font-bold text-slate-700 min-w-0 flex-1 truncate' : 'text-sm font-bold text-slate-700 flex-1 truncate'}>{a.subject || a.body}</span>
+              <span className="text-sm font-bold text-slate-700 min-w-0 flex-1 truncate">{a.subject || a.body}</span>
               <span className="text-[11px] font-black text-slate-400 flex-shrink-0">{fmtActDate(a.occurredAt)}</span>
             </div>
           ))}
         </div>
         <div className="mt-3 space-y-2 text-sm">
           {actsLoading && <p role="status">活動を読み込んでいます…</p>}
-          {actsError && (uiNext
-            ? <SfaLoadError error={actsFailure} what="活動" onRetry={() => loadActs(actsRetryCursor || undefined)} orgSlug={orgSlug} />
-            : <p role="alert" className="text-red-600">{actsError}。<button type="button" onClick={() => loadActs(actsRetryCursor || undefined)} className="underline">再試行</button></p>)}
+          {actsError && (<SfaLoadError error={actsFailure} what="活動" onRetry={() => loadActs(actsRetryCursor || undefined)} orgSlug={orgSlug} />)}
           {!actsLoading && !actsError && <p className="text-slate-500">{acts.length} / {actsTotal}件を表示</p>}
           {actsCursor && <button type="button" onClick={() => loadActs(actsCursor)} disabled={actsLoading} className="rounded-lg border px-3 py-2 disabled:opacity-50">次の200件を表示</button>}
         </div>

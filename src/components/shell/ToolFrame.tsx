@@ -13,7 +13,6 @@ import { findShellTool, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
-import { useUiNext } from './ui-next-context'
 import { useToolUsageBody } from './ShellUsage'
 import styles from './ToolFrame.module.css'
 
@@ -36,14 +35,13 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   const name = tool?.name ?? serviceId
 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
-  // （新しい見た目のときだけ。統括の確認 2026-10-19）
-  const uiNext = useUiNext()
+  // （統括の確認 2026-10-19）
   const usage = useToolUsageBody()
   const tabsRef = useRef<HTMLElement | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   useEffect(() => {
     const el = tabsRef.current
-    if (!uiNext || !el) return
+    if (!el) return
     const update = () => {
       const max = el.scrollWidth - el.clientWidth
       setMore((prev) => {
@@ -63,7 +61,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
     ro?.observe(el)
     return () => { el.removeEventListener('scroll', update); ro?.disconnect() }
-  }, [uiNext, pathname, nav?.length])
+  }, [pathname, nav?.length])
 
   return (
     <div className={styles.frame}>
@@ -74,7 +72,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
             <ChevronRight size={14} aria-hidden />
             <span aria-current="page">{name}</span>
           </nav>
-          {/* 組織の切り替えが無いツールでは、今の会社を小さく出す（新しい見た目のときだけ。UI 品質 B-2） */}
+          {/* 組織の切り替えが無いツールでは、今の会社を小さく出す（UI 品質 B-2） */}
           {switcher ? <div className={styles.switcher}>{switcher}</div> : <ShellCompanyTag />}
         </div>
         <div className={styles.titleRow}>
@@ -82,10 +80,10 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
             <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
-          {action || (uiNext && usage) ? (
+          {action || (usage) ? (
             <div className={styles.action}>
               {/* このツールの「作った数 / 残り」とプラン。新しい見た目では左下ではなく、ここに出す（押すと開く。開いても下の行は動かない） */}
-              {uiNext && usage ? (
+              {usage ? (
                 <details className={styles.usage}>
                   <summary className={styles.usageSummary}>このツールの残りとプラン</summary>
                   <div className={styles.usageCard}>{usage}</div>

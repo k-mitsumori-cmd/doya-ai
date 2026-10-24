@@ -6,16 +6,14 @@
 // 枠（AppShell）も作り直されず、左のメニューや開いていた引き出しの状態が残る。
 // ⚠️ 枠を出す・出さないが切り替わるとき（LP⇔アプリ、公開の画面）だけ、中身が作り直される。
 import { usePathname } from 'next/navigation'
-import { Suspense, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import type { Session } from 'next-auth'
-import type { UiNextMode } from '@/lib/ui-next'
 import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
 import AppShell from './AppShell'
 import { shouldShowShell } from './registry'
-import { ShellToolHrefsContext, UiNextContext } from './ui-next-context'
-import UiNextBadge from './UiNextBadge'
+import { ShellToolHrefsContext } from './ui-next-context'
 import ShellVitals from './ShellVitals'
 import { DoyaPowerContext } from '@/components/doya-power/doya-power-context'
 import { ShellPowerProvider, type ShellPowerState } from './power'
@@ -25,58 +23,50 @@ import type { DoyaPowerFx } from '@/lib/doya-power/fx'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
-  /** サーバーで読んだログイン情報（新しい見た目のときだけ渡す）。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
+export default function ShellGate({ session, signedIn, userName, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+  /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
-  /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。新しい見た目のときだけ真になる） */
+  /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。ログインしている人のときだけ真になる） */
   doyaPower?: boolean
   /** ドヤパワーの残りと減る量の表（旗が出すと決めた人だけ。台帳の表が入るまでは null。src/components/shell/power.tsx） */
   doyaPowerState?: ShellPowerState | null
   /** ドヤくんの絵と演出の設定（会社・個人。旗が出すと決めた人だけ。src/lib/doya-power/fx.server.ts）。枠の中の部品が DoyaPowerFxProvider から読む */
   doyaPowerFx?: DoyaPowerFx
-  /** 組織を選ぶツールのリンクの行き先（新しい見た目のときだけ。src/lib/shell/tool-hrefs.server.ts） */
+  /** 組織を選ぶツールのリンクの行き先（src/lib/shell/tool-hrefs.server.ts） */
   toolHrefs?: Record<string, string>
-  /** 最近使ったツール（新しい見た目のとき、cookie から読んで渡す） */
+  /** 最近使ったツール（cookie から読んで渡す） */
   initialRecent?: string[]
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
   always?: boolean
-  /** 新しい見た目を出すか（サーバーの uiNextMode() で決めて渡す。チェックリスト §5.1） */
-  uiNext?: UiNextMode
-  /** アカウントの会社（新しい見た目のときだけ。null は見つからない。UI 品質 B-1） */
+  /** アカウントの会社（null は見つからない。UI 品質 B-1） */
   company?: AccountCompany | null
   userName?: string | null
-  /** UI_SHELL_SERVICES に書かれた id（サーバーで読んで渡す） */
-  enabledIds: string[]
   children: ReactNode
 }) {
   const pathname = usePathname()
-  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds, uiNext: Boolean(uiNext) }))
-    ? <AppShell userName={userName} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
+  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn }))
+    ? <AppShell userName={userName} initialRecent={initialRecent}>{children}</AppShell>
     : <>{children}</>
   const tree = (
-    <UiNextContext.Provider value={uiNext}>
-      <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
-      <ShellToolHrefsContext.Provider value={uiNext && toolHrefs ? toolHrefs : EMPTY}>
-      <DoyaPowerContext.Provider value={Boolean(uiNext && doyaPower)}>
-      <ShellPowerProvider value={uiNext && doyaPower ? doyaPowerState : null}>
-      <DoyaPowerFxProvider fx={uiNext && doyaPower ? doyaPowerFx : undefined}>
+      <AccountCompanyContext.Provider value={company}>
+      <ShellToolHrefsContext.Provider value={toolHrefs ?? EMPTY}>
+      <DoyaPowerContext.Provider value={doyaPower}>
+      <ShellPowerProvider value={doyaPower ? doyaPowerState : null}>
+      <DoyaPowerFxProvider fx={doyaPower ? doyaPowerFx : undefined}>
       {inner}
       {/* 「ドヤパワーが足りない」（402）の知らせ。旗が出すと決めた人だけ動く */}
       <DoyaPowerFetchWatcher />
       <ShellLowPowerNotice />
       </DoyaPowerFxProvider>
-      {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
-      <Suspense fallback={null}><UiNextBadge /></Suspense>
-      {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
-      {uiNext ? <ShellVitals /> : null}
+      {/* 表示の速さを測る（外には送らない。UI 品質 S-45） */}
+      {signedIn ? <ShellVitals /> : null}
       </ShellPowerProvider>
       </DoyaPowerContext.Provider>
       </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
-    </UiNextContext.Provider>
   )
-  // 新しい見た目で、サーバーがログインを確認できているときだけ、初期値つきの SessionProvider で包む。
+  // サーバーがログインを確認できているときだけ、初期値つきの SessionProvider で包む。
   // useSession() が最初から 'authenticated' を返すので、各ツールが「ログイン情報を確認しています」を出さない
-  return uiNext && session?.user ? <SessionProvider session={session}>{tree}</SessionProvider> : tree
+  return session?.user ? <SessionProvider session={session}>{tree}</SessionProvider> : tree
 }

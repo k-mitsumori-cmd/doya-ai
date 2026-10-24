@@ -4,49 +4,11 @@ import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { BUDGET_META, man, yen, type BudgetLine, type ProjectInput } from '@/lib/tenjikai/engine'
-import { ds } from '@/lib/tenjikai/tokens'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Bars, Donut as DsDonut } from '@/components/ds/charts'
-
-function Donut({ lines, total }: { lines: BudgetLine[]; total: number }) {
-  const r = 70
-  const circ = 2 * Math.PI * r
-  let acc = 0
-  return (
-    <svg viewBox="0 0 200 200" className="h-56 w-56" role="img" aria-label="予算内訳の円グラフ">
-      <circle cx="100" cy="100" r={r} fill="none" stroke={ds.track} strokeWidth="26" />
-      {lines.map((l, i) => {
-        const frac = l.amountYen / total
-        const offset = acc
-        acc += frac
-        return (
-          <motion.circle
-            key={l.category}
-            cx="100"
-            cy="100"
-            r={r}
-            fill="none"
-            stroke={BUDGET_META[l.category].color}
-            strokeWidth="26"
-            strokeDasharray={`${Math.max(0, frac * circ - 2)} ${circ}`}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: -offset * circ }}
-            transition={{ delay: 0.1 + i * 0.08, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            transform="rotate(-90 100 100)"
-          />
-        )
-      })}
-      <text x="100" y="94" textAnchor="middle" fontSize="11" fill={ds.sub} fontWeight={700}>見積合計</text>
-      <text x="100" y="116" textAnchor="middle" fontSize="18" fill={ds.ink} style={{ fontVariantNumeric: 'tabular-nums' }} fontWeight={600}>{man(total)}</text>
-    </svg>
-  )
-}
-
 export default function BudgetPlanner({ input, setInput, budget }: { input: ProjectInput; setInput: (i: ProjectInput) => void; budget: BudgetLine[] }) {
   const total = budget.reduce((s, b) => s + b.amountYen, 0)
   const diff = input.budgetYen - total
   const usage = Math.min(1.3, total / input.budgetYen)
-  const uiNext = useUiNext()
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
@@ -54,18 +16,13 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <motion.div {...cardIn(0)} className="flex flex-col items-center gap-4 rounded-[var(--r)] border border-gray-200 bg-white p-6">
-          {uiNext ? (
-            // 新しい見た目: 共通の Donut。中央に見積合計、費目の色は表の印と同じ色。凡例に費目名と割合
-            <DsDonut
+          <DsDonut
               label={`予算の内訳（見積合計 ${man(total)}）`}
               size={180}
               center={<span><span style={{ fontSize: 11, color: 'var(--sub)' }}>見積合計</span><br /><span style={{ fontSize: 18 }}>{man(total)}</span></span>}
               colors={budget.map((b) => BUDGET_META[b.category].color)}
               data={budget.map((b) => ({ label: BUDGET_META[b.category].label, value: b.amountYen }))}
             />
-          ) : (
-            <Donut lines={budget} total={total} />
-          )}
           <div className="w-full">
             <div className="mb-1 flex items-baseline justify-between">
               <span className="text-xs font-black text-gray-500">総予算</span>
@@ -103,11 +60,6 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
                   </td>
                   <td className="hidden px-5 py-3 text-xs text-gray-500 sm:table-cell">
                     {b.detail}
-                    {!uiNext && (
-                      <div className="mt-1 h-1 rounded-full bg-gray-100">
-                        <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ duration: 0.4 }} />
-                      </div>
-                    )}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-mono tabular text-ink">{yen(b.amountYen)}</td>
                 </motion.tr>
@@ -120,7 +72,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
             </tbody>
           </table>
         </motion.div>
-        {uiNext && budget.length > 0 && (
+        {(budget.length > 0) && (
           // 新しい見た目: 表の行ごとの細い棒をやめ、共通の Bars で費目ごとの金額と割合を並べる
           <motion.div {...cardIn(2)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5 lg:col-span-2">
             <h3 className="mb-3 text-sm font-black text-ink">費目ごとの金額</h3>

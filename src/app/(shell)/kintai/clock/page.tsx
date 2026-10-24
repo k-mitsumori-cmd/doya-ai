@@ -1,6 +1,5 @@
 'use client'
 
-import { useToolUiNext } from '@/components/kintai/ui-next'
 import { Pencil, RotateCcw } from 'lucide-react'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useCallback, useRef } from 'react'
@@ -38,7 +37,6 @@ const TIMELINE_CHAR: Record<string, string> = {
 }
 
 export default function ClockPage() {
-  const uiNext = useToolUiNext()
   const { isActive } = useKintaiAccess()
   const [now, setNow] = useState(new Date())
   const [status, setStatus] = useState<ClockStatus>('not_clocked_in')
@@ -487,10 +485,10 @@ export default function ClockPage() {
                 disabled={acting}
                 className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
               >
-                {uiNext ? <RotateCcw size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '🔄 '}再出勤する（シフト・深夜勤務など）
+                <RotateCcw size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" />再出勤する（シフト・深夜勤務など）
               </button>
               <a href="/kintai/requests/new" className="block w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 text-sm text-center">
-                {uiNext ? <Pencil size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '✏️ '}打刻を修正申請する
+                <Pencil size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" />打刻を修正申請する
               </a>
             </div>
           )}

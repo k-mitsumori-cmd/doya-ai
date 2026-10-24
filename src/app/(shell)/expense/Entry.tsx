@@ -7,7 +7,6 @@ import toast, { Toaster } from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
 import tokens from '@/components/ds/tokens.module.css'
 import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { EntryNext } from '@/components/expense/next'
 
 /**
@@ -17,7 +16,6 @@ import { EntryNext } from '@/components/expense/next'
  */
 export default function ExpenseEntry({ known = false, needsCompany = false, companyName = null }: { known?: boolean; needsCompany?: boolean; companyName?: string | null } = {}) {
   const router = useRouter()
-  const uiNext = useUiNext()
   const [checking, setChecking] = useState(!known)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
@@ -81,7 +79,7 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
   }
 
   // 新しい見た目（チェックリスト §5.1）: キービジュアルと「3ステップで始める」の案内（S-69）
-  if (uiNext && !checking) {
+  if (!checking) {
     return (
       <>
         <Toaster position="top-center" />

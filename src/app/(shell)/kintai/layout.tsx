@@ -4,7 +4,6 @@ import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 import KintaiLayout from '@/components/kintai/KintaiLayout'
 import KintaiShellFrame from '@/components/kintai/KintaiShellFrame'
 import { FAQ } from './lp-data'
@@ -16,9 +15,9 @@ export const metadata: Metadata = buildServiceMetadata('kintai', {
 const SVC = getServiceById('kintai')!
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  // 未ログイン → 今のまま（KintaiLayout が LP・ログイン案内を出す）。ログイン済みで枠が有効 → ToolFrame だけ（AppShell は共通の layout）
+  // 未ログイン → 今のまま（KintaiLayout が LP・ログイン案内を出す）。ログイン済み → ToolFrame だけ（AppShell は共通の layout）
   const session = await getServerSession(authOptions)
-  const useShell = Boolean(session?.user) && isShellEnabled('kintai')
+  const useShell = Boolean(session?.user)
   return (
     <>
       <LpJsonLd

@@ -11,7 +11,6 @@ import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
 import { createInterviewProjectRequest, readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { EmptyState, Skeleton, ToolHero } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
 
@@ -102,9 +101,7 @@ const FLOATING_ICONS = ['mic', 'description', 'auto_awesome', 'movie', 'music_no
 
 export default function InterviewTool() {
   const { data: session, status: sessionStatus } = useSession()
-  const uiNext = useUiNext()
   const router = useRouter()
-  const userName = (session?.user?.name || '').split(' ')[0] || 'ゲスト'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
   const xhrRef = useRef<Map<string, XMLHttpRequest>>(new Map())
@@ -546,12 +543,10 @@ export default function InterviewTool() {
       className="max-w-5xl mx-auto space-y-8"
       variants={pageVariants}
       // ⚠️ 新しい見た目では、最初の HTML を透明にしない（JS の読み込みが終わるまで本文が見えなかった）
-      initial={uiNext ? false : 'hidden'}
+      initial={false}
       animate="show"
     >
-      {uiNext ? (
-        // ⚠️ 使い方のカード（FirstSteps）は置かない。読み込み後に差し込まれて中身が動き（CLS 0.1）、375px ではアップロードの枠が画面の外に押し出されるため
-        <>
+      <>
           <ToolHero
             title={<>取材の音声から、<wbr />記事の下書きまで</>}
             lead="録音・録画のファイルを入れるだけで、話者を分けて文字に起こし、AIがインタビュー記事を書きます。"
@@ -559,31 +554,11 @@ export default function InterviewTool() {
             artAlt="ドヤインタビューAIの文字起こしの画面"
           />
         </>
-      ) : (
-      <div className="text-center pt-4 pb-2">
-        <motion.h1
-          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 mb-2"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          おかえりなさい、{userName}さん
-        </motion.h1>
-        <motion.p
-          className="text-slate-500 text-base"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          インタビュー素材をアップロードして、AI記事を生成しましょう
-        </motion.p>
-      </div>
-      )}
 
       {/* Upload Zone Card */}
       <motion.div
         className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-        initial={uiNext ? false : { opacity: 0, scale: 0.98 }}
+        initial={false}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
@@ -616,14 +591,14 @@ export default function InterviewTool() {
               className="hidden"
             />
             <div className="w-14 h-14 bg-[#7f19e6] rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-lg shadow-[#7f19e6]/20">
-              {uiNext ? <UploadCloud className="h-7 w-7 text-white" aria-hidden /> : <span className="material-symbols-outlined text-white text-3xl">cloud_upload</span>}
+              <UploadCloud className="h-7 w-7 text-white" aria-hidden />
             </div>
             <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1.5 text-center">インタビュー記事を作成する</h3>
             <p className="text-slate-500 text-xs sm:text-sm mb-6 text-center">
               動画・音声ファイルをドラッグ&ドロップ。MP4, MOV, MP3 最大10GBまで
             </p>
             <span className="bg-[#7f19e6] text-white px-6 sm:px-8 py-3 rounded-xl font-black text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 inline-flex items-center gap-2 min-h-[44px]">
-              {uiNext ? <PlusCircle className="h-[18px] w-[18px]" aria-hidden /> : <span className="material-symbols-outlined text-lg">add_circle</span>}
+              <PlusCircle className="h-[18px] w-[18px]" aria-hidden />
               ファイルを選択
             </span>
           </div>
@@ -631,14 +606,14 @@ export default function InterviewTool() {
           {/* Feature Badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 sm:mt-6">
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
-              {uiNext ? <Users className="h-5 w-5 text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[#7f19e6] text-xl">record_voice_over</span>}
+              <Users className="h-5 w-5 text-[#7f19e6]" aria-hidden />
               <div>
                 <p className="text-xs font-black text-slate-900">話者分離</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">自動対応</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
-              {uiNext ? <Sparkles className="h-5 w-5 text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[#7f19e6] text-xl">auto_awesome</span>}
+              <Sparkles className="h-5 w-5 text-[#7f19e6]" aria-hidden />
               <div>
                 <p className="text-xs font-black text-slate-900">AI記事下書き</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">自動生成</p>
@@ -1079,7 +1054,7 @@ export default function InterviewTool() {
       <div>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            {uiNext ? <Clock className="h-5 w-5 text-slate-700" aria-hidden /> : <span className="material-symbols-outlined text-slate-700">schedule</span>}
+            <Clock className="h-5 w-5 text-slate-700" aria-hidden />
             <h2 className="text-lg font-black text-slate-900">最近のプロジェクト</h2>
           </div>
           {session?.user && (
@@ -1107,35 +1082,21 @@ export default function InterviewTool() {
               ログインする
             </Link>
           </div>
-        ) : loading && uiNext ? (
+        ) : loading ? (
           // 読み込みの間も、一覧と同じ高さを取っておく（読み込み後に下の中身が動かないように）
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" aria-busy="true">
             {[1, 2, 3].map((i) => (
               <div key={i} className="min-h-[84px] rounded-xl border border-slate-200 bg-white p-4"><Skeleton lines={2} delayMs={0} /></div>
             ))}
           </div>
-        ) : loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-100 rounded-xl" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-slate-200 rounded w-3/4" />
-                    <div className="h-3 bg-slate-100 rounded w-1/2" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : projectListError && uiNext ? (
+        ) : projectListError ? (
           <ErrorNotice what="プロジェクトの一覧を読み込めませんでした。" how="通信の状態を確かめて、もう一度読み込んでください。" onRetry={() => window.location.reload()} retryLabel="読み込み直す" />
         ) : projectListError ? (
           <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
             プロジェクト一覧を読み込めませんでした。
             <button type="button" onClick={() => window.location.reload()} className="ml-2 font-bold underline underline-offset-2">再読み込み</button>
           </div>
-        ) : recentProjects.length === 0 && uiNext ? (
+        ) : recentProjects.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white">
             <EmptyState
               kind="not-generated"
@@ -1156,7 +1117,7 @@ export default function InterviewTool() {
           <motion.div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             variants={containerVariants}
-            initial={uiNext ? false : 'hidden'}
+            initial={false}
             animate="show"
           >
             {recentProjects.map((project) => {
@@ -1176,7 +1137,7 @@ export default function InterviewTool() {
                       </div>
                     ) : (
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0`}>
-                        {uiNext ? <Mic className="h-5 w-5 text-white/80" aria-hidden /> : <span className="material-symbols-outlined text-white/80 text-xl">mic</span>}
+                        <Mic className="h-5 w-5 text-white/80" aria-hidden />
                       </div>
                     )}
 
@@ -1193,7 +1154,7 @@ export default function InterviewTool() {
                       {/* 文字起こし要約 */}
                       {(project.transcriptionSummary || project.transcriptionExcerpt) && (
                         <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-1">
-                          {uiNext ? <Mic className="mr-0.5 inline h-2.5 w-2.5 align-middle text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[10px] text-[#7f19e6] mr-0.5 align-middle">mic</span>}
+                          <Mic className="mr-0.5 inline h-2.5 w-2.5 align-middle text-[#7f19e6]" aria-hidden />
                           {project.transcriptionSummary || project.transcriptionExcerpt}
                         </p>
                       )}

@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ExternalLink, Globe, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { ActionError, api, Button, Card, describeError, EmptyState, ErrorState, Field, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, useLeaveGuard, useTimedStep, PageTitle } from '@/components/shanai/ui'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { DEFAULT_BRAND_COLOR, PROFILE_CATEGORY_LABELS, SOURCE_KIND_LABELS, type ProfileCategory, type SourceKind } from '@/lib/shanai/types'
 
 interface Source {
@@ -51,7 +50,6 @@ export default function ShanaiCompanyPage() {
   const [newItem, setNewItem] = useState<{ category: ProfileCategory; statement: string }>({ category: 'culture', statement: '' })
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loadFailure, setLoadFailure] = useState<unknown>(null)
-  const uiNext = useUiNext()
   const crawlStep = useTimedStep(crawling, 3, 25000)
 
   // 保存前に離れようとしたら確認を出す（会社名・色・URLを変えたとき）
@@ -139,7 +137,7 @@ export default function ShanaiCompanyPage() {
 
       {message && (
         <div className="mt-4">
-          {uiNext && message.tone === 'error' ? <ActionError error={describeError(message.err)} /> : <Notice tone={message.tone}>{message.text}</Notice>}
+          {message.tone === 'error' ? <ActionError error={describeError(message.err)} /> : <Notice tone={message.tone}>{message.text}</Notice>}
         </div>
       )}
 
@@ -150,10 +148,10 @@ export default function ShanaiCompanyPage() {
             <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="株式会社サンプル" maxLength={120} />
           </Field>
           <Field label="サムネの色">
-            <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
-              <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className={uiNext ? 'h-11 w-12 cursor-pointer rounded-lg border border-[var(--line)]' : 'h-10 w-12 cursor-pointer rounded-lg border border-[var(--line)]'} aria-label="サムネの色" />
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="h-11 w-12 cursor-pointer rounded-lg border border-[var(--line)]" aria-label="サムネの色" />
               {company.colors.slice(0, 3).map((c) => (
-                <button key={c} type="button" onClick={() => setBrandColor(c)} className={uiNext ? 'h-11 w-11 rounded-full border border-[var(--line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2' : 'h-7 w-7 rounded-full border border-[var(--line)]'} style={{ backgroundColor: c }} aria-label={`サイトの色 ${c} を使う`} />
+                <button key={c} type="button" onClick={() => setBrandColor(c)} className="h-11 w-11 rounded-full border border-[var(--line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2" style={{ backgroundColor: c }} aria-label={`サイトの色 ${c} を使う`} />
               ))}
             </div>
           </Field>
@@ -166,27 +164,23 @@ export default function ShanaiCompanyPage() {
           {sources.map((s, i) => (
             <div key={s.id || i} className="rounded-[var(--r-sm)] border border-[var(--line)] p-3">
               <div className="grid gap-2 sm:grid-cols-[140px_1fr_1fr_auto]">
-                <select className={inputCls} value={s.kind} aria-label={uiNext ? 'URLの種類' : undefined} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, kind: e.target.value as SourceKind } : x)))}>
+                <select className={inputCls} value={s.kind} aria-label="URLの種類" onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, kind: e.target.value as SourceKind } : x)))}>
                   {Object.entries(SOURCE_KIND_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>
                   ))}
                 </select>
-                <input className={inputCls} value={s.label} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={s.kind === 'service' ? 'サービス名' : '名前（任意）'} maxLength={60} aria-label={uiNext ? '名前' : undefined} />
-                <input className={inputCls} value={s.url} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://example.co.jp" inputMode="url" id={uiNext ? `shanai-source-url-${i}` : undefined} aria-label={uiNext ? 'URL' : undefined} />
-                <button type="button" onClick={() => setSources((l) => l.filter((_, j) => j !== i))} className={
-                    uiNext
-                      ? 'grid h-11 w-11 place-items-center justify-self-end rounded-[var(--r-sm)] text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]'
-                      : 'rounded-[var(--r-sm)] px-3 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600'
-                  }
+                <input className={inputCls} value={s.label} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={s.kind === 'service' ? 'サービス名' : '名前（任意）'} maxLength={60} aria-label="名前" />
+                <input className={inputCls} value={s.url} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://example.co.jp" inputMode="url" id={`shanai-source-url-${i}`} aria-label="URL" />
+                <button type="button" onClick={() => setSources((l) => l.filter((_, j) => j !== i))} className="grid h-11 w-11 place-items-center justify-self-end rounded-[var(--r-sm)] text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
                   aria-label="このURLを外す"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               {(s.error || s.lastCrawledAt) && (
-                <p className={`mt-2 text-xs font-bold ${uiNext ? 'break-words ' : ''}${s.error ? 'text-rose-600' : 'text-[var(--muted)]'}`}>
+                <p className={`mt-2 text-xs font-bold break-words ${s.error ? 'text-rose-600' : 'text-[var(--muted)]'}`}>
                   {s.error || `最終読み取り: ${new Date(s.lastCrawledAt!).toLocaleString('ja-JP')}`}
                 </p>
               )}
@@ -200,7 +194,7 @@ export default function ShanaiCompanyPage() {
               URLを追加
             </Button>
           )}
-          <div className={uiNext ? 'ml-auto flex flex-wrap justify-end gap-2' : 'ml-auto flex gap-2'}>
+          <div className="ml-auto flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={save} loading={saving} disabled={crawling}>
               保存
             </Button>
@@ -225,7 +219,7 @@ export default function ShanaiCompanyPage() {
           desc="サイトから読み取った項目です。記事に使ってよいものにチェックを入れてください。原文はサイトに書かれていた文章で、変更できません。"
         />
         {grouped.length === 0 ? (
-          uiNext ? (
+          (
             // 新しい見た目: ツールの絵＋次にやること1つ（URL を登録済みなら読み取り、まだなら入力欄へ）
             <EmptyState
               image="/shanai/empty-interviews.webp"
@@ -244,12 +238,6 @@ export default function ShanaiCompanyPage() {
                 )
               }
             />
-          ) : (
-            <EmptyState
-              image="/empty/not-generated.svg"
-              title="まだ会社プロフィールがありません"
-              desc="上で会社サイトのURLを登録して「サイトを読み取る」を押すと、ここに項目が並びます。"
-            />
           )
         ) : (
           <div className="space-y-6">
@@ -265,17 +253,17 @@ export default function ShanaiCompanyPage() {
                           checked={it.approved}
                           onChange={(e) => updateItems([{ id: it.id, category: it.category, approved: e.target.checked }])}
                           className="mt-1 h-4 w-4 accent-[var(--blue)]"
-                          aria-label={uiNext ? `「${it.statement}」を記事に使う` : '記事に使う'}
+                          aria-label={`「${it.statement}」を記事に使う`}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className={`text-sm font-black text-[var(--ink)]${uiNext ? ' break-words' : ''}`}>{it.statement}</p>
+                          <p className="text-sm font-black text-[var(--ink)] break-words">{it.statement}</p>
                           {it.quote && <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">原文: {it.quote}</p>}
                           {it.pageUrl ? (
-                            <a href={it.pageUrl} target="_blank" rel="noopener noreferrer" className={`mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[var(--muted)] hover:text-[var(--blue-deep)]${uiNext ? ' max-w-full' : ''}`}>
+                            <a href={it.pageUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[var(--muted)] hover:text-[var(--blue-deep)] max-w-full">
                               <Globe className="h-3 w-3 shrink-0" aria-hidden="true" />
-                              {uiNext ? <span className="min-w-0 truncate">{it.pageTitle || it.pageUrl}</span> : it.pageTitle || it.pageUrl}
+                              <span className="min-w-0 truncate">{it.pageTitle || it.pageUrl}</span>
                               <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-                              {uiNext && <span className="sr-only">（新しいタブで開きます）</span>}
+                              <span className="sr-only">（新しいタブで開きます）</span>
                             </a>
                           ) : (
                             it.origin === 'manual' && <p className="mt-1 text-[11px] font-bold text-[var(--muted)]">手入力</p>
@@ -284,11 +272,7 @@ export default function ShanaiCompanyPage() {
                         <button
                           type="button"
                           onClick={() => updateItems([{ id: it.id, delete: true }])}
-                          className={
-                            uiNext
-                              ? '-my-2 -mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]'
-                              : 'rounded-lg p-1.5 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600'
-                          }
+                          className="-my-2 -mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
                           aria-label="この項目を削除"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -306,14 +290,14 @@ export default function ShanaiCompanyPage() {
           <p className="text-xs font-black text-[var(--sub)]">サイトに無い情報を追加する</p>
           <p className="mt-0.5 text-[11px] font-bold text-[var(--muted)]">社内の制度や数字など、事実として記事に書いてよいことだけを入れてください。</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-[160px_1fr_auto]">
-            <select className={inputCls} value={newItem.category} aria-label={uiNext ? '項目の種類' : undefined} onChange={(e) => setNewItem((n) => ({ ...n, category: e.target.value as ProfileCategory }))}>
+            <select className={inputCls} value={newItem.category} aria-label="項目の種類" onChange={(e) => setNewItem((n) => ({ ...n, category: e.target.value as ProfileCategory }))}>
               {CATEGORY_ORDER.map((c) => (
                 <option key={c} value={c}>
                   {PROFILE_CATEGORY_LABELS[c]}
                 </option>
               ))}
             </select>
-            <input className={inputCls} value={newItem.statement} onChange={(e) => setNewItem((n) => ({ ...n, statement: e.target.value }))} placeholder="例: 毎月1回、全社で成果を共有する会を開いている" maxLength={300} aria-label={uiNext ? '追加する内容' : undefined} />
+            <input className={inputCls} value={newItem.statement} onChange={(e) => setNewItem((n) => ({ ...n, statement: e.target.value }))} placeholder="例: 毎月1回、全社で成果を共有する会を開いている" maxLength={300} aria-label="追加する内容" />
             <Button
               variant="secondary"
               disabled={!newItem.statement.trim()}

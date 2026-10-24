@@ -29,7 +29,7 @@ export default async function TenjikaiLayout({ children }: { children: React.Rea
   const devPreview = process.env.NODE_ENV === 'development' && process.env.TENJIKAI_DEV_PREVIEW === 'true'
   const userId = (session?.user as { id?: string } | undefined)?.id ?? null
   if (!session?.user && !devPreview) return <TenjikaiLp />
-  // 共通の枠。UI_SHELL_SERVICES に関係なく、ログインしていればいつも枠に入る（2026-10-24 ユーザーの決定 FRM-05。registry.ts の always と組）。
+  // 共通の枠。ログインしていればいつも枠に入る（2026-10-24 ユーザーの決定 FRM-05）。
   // 枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
   if (session?.user) {
     return (

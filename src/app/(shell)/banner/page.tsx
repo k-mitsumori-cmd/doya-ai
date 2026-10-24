@@ -13,15 +13,12 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { isUiNext } from '@/lib/ui-next'
 import BannerLanding from './landing/page'
-import BannerDashboardPage from './dashboard/page'
 
 export default async function BannerPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return <BannerLanding />
-  // 新しい見た目（チェックリスト §5.1）のときは、共通の枠の中の作業画面（/banner/dashboard）へ移す。
-  // /banner は枠の外なので、ここで旧来の画面を出すと、左のメニューから押したときに別の画面に切り替わる（U-6）
-  if (await isUiNext()) redirect('/banner/dashboard')
-  return <BannerDashboardPage />
+  // ログイン後は、共通の枠の中の作業画面（/banner/dashboard）へ移す。
+  // /banner で作業画面を出すと、左のメニューから押したときに別の画面に切り替わる（U-6）
+  redirect('/banner/dashboard')
 }

@@ -1,11 +1,10 @@
 // 実行: npm run test:shell
 // 共通の枠（AppShell）を出すパスの決まり（registry.ts の shouldShowShell）。
 // 2026-10-23 ユーザーの指摘「収入管理・支出管理を押すと、上のヘッダーが消えて画面が変わる」への回帰テスト。
-// - 新しい見た目でログインしている人: 全ツールの入口・料金・組織を作る「はじめに」・ツールの中のタブで、枠が出る
+// - ログインしている人: 全ツールの入口・料金・組織を作る「はじめに」・ツールの中のタブで、枠が出る
 // - 招待の受諾・応募者や社員が開く画面・見本・ログインしていない人の紹介ページでは、枠が出ない
-// - 今の見た目では、今までどおり（台帳の inShell で決める）
 // - どのツールのタブにも「料金プラン」を入れない（2026-10-24 ユーザーの決定 FRM-04）。料金のページは直リンクで開けるまま
-// - 展示会は、UI_SHELL_SERVICES に関係なく、いつも枠に入る（2026-10-24 ユーザーの決定 FRM-05）
+// - 展示会は、いつも枠に入る（2026-10-24 ユーザーの決定 FRM-05）
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
@@ -37,7 +36,7 @@ import { SHANAI_NAV } from '@/lib/shanai/nav'
 import { shodanNav } from '@/lib/shodan/nav'
 import { TENJIKAI_NAV } from '@/lib/tenjikai/nav'
 
-const NEXT = { signedIn: true, enabledIds: ['all'], uiNext: true }
+const NEXT = { signedIn: true }
 const pathOf = (href: string) => href.split(/[?#]/)[0]
 
 /** 全ツールの入口と料金（ユーザーの指摘で枠が消えていたものを含む） */
@@ -63,7 +62,7 @@ const OUTSIDE = [
   '/home/preview', '/hr/dev/sample', '/sfa/dev', '/banner/landing', '/banner/test',
 ]
 
-test('新しい見た目でログインしている人には、全ツールの入口と料金で枠が出る', () => {
+test('ログインしている人には、全ツールの入口と料金で枠が出る', () => {
   for (const p of ENTRIES) assert.equal(shouldShowShell(p, NEXT), true, p)
   // ユーザーと統括が本番で見つけた、枠が消えていた画面
   for (const p of ['/expense', '/doyaslide', '/aio/pricing', '/sfa/pricing', '/shodan/pricing', '/hr/pricing', '/kintai/pricing',
@@ -72,7 +71,7 @@ test('新しい見た目でログインしている人には、全ツールの�
   }
 })
 
-test('新しい見た目でログインしている人には、ツールの中のタブと収入管理の下の画面で枠が出る', () => {
+test('ログインしている人には、ツールの中のタブと収入管理の下の画面で枠が出る', () => {
   assert.ok(TABS.length > 50)
   for (const p of [...TABS, ...INCOME]) assert.equal(shouldShowShell(p, NEXT), true, p)
 })
@@ -80,7 +79,6 @@ test('新しい見た目でログインしている人には、ツールの中�
 test('招待・応募者や社員が開く画面・見本には、ログインしていても枠を出さない', () => {
   for (const p of OUTSIDE) {
     assert.equal(shouldShowShell(p, NEXT), false, p)
-    assert.equal(shouldShowShell(p, { ...NEXT, uiNext: false }), false, p)
   }
 })
 
@@ -90,30 +88,13 @@ test('ログインしていない人の紹介ページ・料金ページには�
   }
 })
 
-test('今の見た目では、今までどおり台帳の inShell で決める（入口・料金は枠の外のまま）', () => {
-  const legacy = { signedIn: true, enabledIds: ['all'] }
-  for (const p of ['/expense', '/sfa', '/sfa/pricing', '/aio/pricing', '/hr', '/hr/pricing', '/kintai', '/doyaslide', '/banner/pricing']) {
-    assert.equal(shouldShowShell(p, legacy), false, p)
-  }
-  for (const p of ['/income', '/sfa/acme', '/hr/dashboard', '/banner/dashboard']) assert.equal(shouldShowShell(p, legacy), true, p)
-})
-
-test('有効でないツールには、新しい見た目でも枠を出さない', () => {
-  assert.equal(shouldShowShell('/sfa/pricing', { signedIn: true, enabledIds: [], uiNext: true }), false)
-  // いつも枠を出すツール（収入管理・支出管理）は、一覧に無くても出す
-  assert.equal(shouldShowShell('/expense', { signedIn: true, enabledIds: [], uiNext: true }), true)
-})
-
-test('展示会は、UI_SHELL_SERVICES に無くても、いつも枠に入る（FRM-05）', () => {
-  assert.equal(SHELL_SERVICES.find((s) => s.id === 'tenjikai')?.always, true)
+test('展示会は、ログインしていればいつも枠に入る（FRM-05）', () => {
   const tenjikai = ['/tenjikai', ...TENJIKAI_NAV.map((n) => pathOf(n.href))]
   assert.ok(tenjikai.length > 5)
-  for (const uiNext of [true, false]) {
-    for (const p of tenjikai) {
-      assert.equal(shouldShowShell(p, { signedIn: true, enabledIds: [], uiNext }), true, `${p} uiNext=${uiNext}`)
-      // 未ログインは紹介ページ（LP）だけ。枠は出さない
-      assert.equal(shouldShowShell(p, { signedIn: false, enabledIds: [], uiNext }), false, `${p} 未ログイン`)
-    }
+  for (const p of tenjikai) {
+    assert.equal(shouldShowShell(p, { signedIn: true }), true, p)
+    // 未ログインは紹介ページ（LP）だけ。枠は出さない
+    assert.equal(shouldShowShell(p, { signedIn: false }), false, `${p} 未ログイン`)
   }
 })
 

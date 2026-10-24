@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { readCunningListResponse, readCunningMutationResponse } from '@/lib/cunning/list-response-client'
 import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface Company {
   id: string
@@ -22,8 +21,7 @@ interface Applicant {
 
 export default function CunningCompanyPage() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const [companies, setCompanies] = useState<Company[]>([])
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [companyCursor, setCompanyCursor] = useState<string | null>(null)
@@ -236,7 +234,7 @@ export default function CunningCompanyPage() {
   )
 
   return (
-    <div className={`${uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'} max-w-4xl mx-auto`}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto">
       {loadError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{loadError}<button type="button" onClick={() => void load()} className="ml-3 underline">再読み込み</button></div>}
       <div className="flex items-center gap-3 mb-1">
         <img src="/character/focus.png" alt="" className="w-12 h-12 object-contain" />
@@ -258,12 +256,12 @@ export default function CunningCompanyPage() {
             placeholder="https://example.com/recruit"
             maxLength={2048}
             aria-label="応募先企業の採用URL"
-            className={`flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold ${uiNext ? 'min-w-0' : ''}`}
+            className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold min-w-0"
           />
           <button
             onClick={analyze}
             disabled={analyzing || uncertain.analyze || reauthRequired || !allowed}
-            className={`px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50 ${uiNext ? 'shrink-0 whitespace-nowrap' : ''}`}
+            className="px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50 shrink-0 whitespace-nowrap"
           >
             {analyzing ? '解析中…' : '解析'}
           </button>

@@ -11,7 +11,6 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import { listMemberships } from '@/lib/sfa/access'
 import SfaEntry from './Entry'
 import SfaLp from './Lp'
@@ -21,7 +20,7 @@ export default async function SfaPage({ searchParams }: { searchParams: Promise<
   if (!session?.user) return <SfaLp />
   // 選び方は Entry と同じにする。URL に指定があるときと、組織がまだ無いときは、今までどおり Entry に任せる
   const params = await searchParams
-  if (Object.keys(params).length === 0 && (await isUiNext())) {
+  if (Object.keys(params).length === 0) {
     const memberships = await listMemberships().catch(() => [])
     // Entry が使う /api/sfa/usage は、組織の指定が無いと「いちばん新しく入った組織」を選ぶ（listMemberships は古い順）
     const target = memberships[memberships.length - 1]

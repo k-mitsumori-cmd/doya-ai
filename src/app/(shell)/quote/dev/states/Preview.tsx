@@ -4,7 +4,6 @@
 import type { ReactNode } from 'react'
 import type { Session } from 'next-auth'
 import { SessionProvider } from 'next-auth/react'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 import AppShell from '@/components/shell/AppShell'
 import ToolFrame from '@/components/shell/ToolFrame'
 import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
@@ -15,12 +14,12 @@ export default function QuotePreview({ state, children }: { state: string; child
   return (
     <MockFetch state={state}>
       <SessionProvider session={PREVIEW_SESSION as unknown as Session} refetchOnWindowFocus={false}>
-        <UiNextContext.Provider value="all">
+        <>
           <AppShell userName="見本 太郎">
             {/* ⚠️ QuoteShellFrame は /quote/dev では枠を描かない（ログイン中の二重枠を防ぐため）。中身は同じ ToolFrame をここで描く */}
             <ToolFrame serviceId="quote" nav={QUOTE_NAV} switcher={<QuoteOrgSwitcher />}>{children}</ToolFrame>
           </AppShell>
-        </UiNextContext.Provider>
+        </>
       </SessionProvider>
     </MockFetch>
   )

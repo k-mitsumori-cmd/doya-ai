@@ -4,11 +4,10 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import DoyaSlideLp from './Lp'
 
 export default async function DoyaSlideHomePage() {
   const session = await getServerSession(authOptions).catch(() => null)
-  if (session?.user && (await isUiNext())) redirect('/doyaslide/projects')
+  if (session?.user) redirect('/doyaslide/projects')
   return <DoyaSlideLp />
 }

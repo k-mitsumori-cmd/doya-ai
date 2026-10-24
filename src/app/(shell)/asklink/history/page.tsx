@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, History } from 'lucide-react'
 import Image from 'next/image'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState, Skeleton } from '@/components/ds'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
@@ -27,7 +26,6 @@ export default function AskLinkHistoryPage() {
   const [errStatus, setErrStatus] = useState(0)
   // 「やり直す」で読み込み直す（ページ全体は開き直さない）
   const [reloadKey, setReloadKey] = useState(0)
-  const uiNext = useUiNext()
 
   useEffect(() => {
     let alive = true
@@ -65,18 +63,16 @@ export default function AskLinkHistoryPage() {
       <div className="mb-6 flex items-center gap-3">
         <History aria-hidden className="h-6 w-6 shrink-0 text-[#0066ff]" />
         {/* 新しい見た目では、h1 は枠（ToolFrame）の見出しだけにする */}
-        {uiNext
-          ? <h2 className="text-2xl font-black text-slate-900">これまでの結果</h2>
-          : <h1 className="text-2xl font-black text-slate-900">これまでの結果</h1>}
+        <h2 className="text-2xl font-black text-slate-900">これまでの結果</h2>
       </div>
 
-      {loading && uiNext ? (
+      {loading ? (
         <div className="space-y-3" aria-busy="true">
           {[1, 2, 3].map((i) => <div key={i} className="min-h-[76px] rounded-2xl bg-white p-4 ring-1 ring-slate-200"><Skeleton lines={2} delayMs={0} /></div>)}
         </div>
-      ) : error && uiNext ? (
+      ) : error ? (
         <AskLinkErrorNotice status={errStatus} action="load" callbackUrl="/asklink/history" onRetry={() => setReloadKey((k) => k + 1)} retryLabel="読み込み直す" />
-      ) : runs.length === 0 && !loading && uiNext ? (
+      ) : runs.length === 0 && !loading ? (
         <div className="rounded-2xl bg-white ring-1 ring-slate-200">
           <EmptyState
             kind="not-generated"
@@ -105,19 +101,15 @@ export default function AskLinkHistoryPage() {
             <li key={r.id}>
               <Link
                 href={`/asklink/history/${r.id}`}
-                className={`flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:ring-[#0066ff]${
-                  uiNext ? ' min-h-[76px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 motion-reduce:transition-none' : ''
-                }`}
+                className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:ring-[#0066ff] min-h-[76px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 motion-reduce:transition-none"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate !whitespace-nowrap text-base font-black text-slate-900">{r.name}</p>
                   <p className="truncate !whitespace-nowrap text-xs font-bold text-slate-500">{r.sourceUrl}</p>
-                  {/* 375px では右の列を隠すので、種類と日付をここに出す（新しい見た目だけ） */}
-                  {uiNext ? (
-                    <p className="mt-0.5 truncate !whitespace-nowrap text-xs font-bold text-slate-400 sm:hidden">
+                  {/* 375px では右の列を隠すので、種類と日付をここに出す */}
+                  <p className="mt-0.5 truncate !whitespace-nowrap text-xs font-bold text-slate-400 sm:hidden">
                       {r.audience === 'b2c' ? 'ToC' : 'ToB'}・バナー{r.bannersDone}/3・{new Date(r.createdAt).toLocaleDateString('ja-JP', { dateStyle: 'medium' })}
                     </p>
-                  ) : null}
                 </div>
                 <div className="hidden shrink-0 text-right text-xs font-bold text-slate-500 sm:block">
                   <p>{r.audience === 'b2c' ? 'ToC' : 'ToB'}・バナー{r.bannersDone}/3</p>

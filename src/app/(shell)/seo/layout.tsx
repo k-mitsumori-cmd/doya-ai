@@ -2,9 +2,7 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import { SeoAppLayout } from '@/components/SeoAppLayout'
 import SeoShellFrame from '@/components/SeoShellFrame'
-import { isShellEnabled } from '@/lib/ui-shell'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
@@ -42,11 +40,9 @@ export default async function SeoLayout({ children }: { children: React.ReactNod
         category="BusinessApplication"
         features={SVC.features}
       />
-      {/* 共通の枠が有効なら ToolFrame だけ（枠は (shell)/layout.tsx が出す）。無効なら今のレイアウト */}
+      {/* ログイン後は ToolFrame だけ（枠は (shell)/layout.tsx が出す） */}
       {isLoggedIn
-        ? isShellEnabled('seo')
-          ? <SeoShellFrame currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>{children}</SeoShellFrame>
-          : <SeoAppLayout currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>{children}</SeoAppLayout>
+        ? <SeoShellFrame currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>{children}</SeoShellFrame>
         : children}
     </>
   )

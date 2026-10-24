@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { NavigationSubmissionError, startGoogleSignIn, switchGoogleAccount, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import toast from 'react-hot-toast'
 import { BgDots, DoyaKun } from '@/components/aio/ui'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import brand from '@/components/aio/brand-next.module.css'
 
 type State = 'loading' | 'ready' | 'error' | 'expired' | 'account-mismatch'
@@ -18,7 +17,6 @@ export default function AioInvitePage() {
 
 function InvitationContent({ token }: { token: string }) {
   // 新しい見た目（チェックリスト §5.1）のときは、全画面の高さを外し、紫をブランドの青にそろえる
-  const uiNext = useUiNext()
   const router = useRouter()
   const [state, setState] = useState<State>('loading')
   const [info, setInfo] = useState<{ organizationName: string; organizationSlug: string; email: string; role: string } | null>(null)
@@ -88,7 +86,7 @@ function InvitationContent({ token }: { token: string }) {
   }
 
   return (
-    <div className={uiNext ? `${brand.brand} relative flex items-center justify-center px-4 py-12 sm:p-6` : 'min-h-screen relative bg-gradient-to-b from-purple-50 to-fuchsia-100/50 flex items-center justify-center p-6'}>
+    <div className={`${brand.brand} relative flex items-center justify-center px-4 py-12 sm:p-6`}>
       <BgDots />
       <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-purple-100 p-8 w-full max-w-md text-center">
         <div className="flex justify-center mb-2">

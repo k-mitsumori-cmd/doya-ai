@@ -10,11 +10,8 @@
 //    ここでの絞り込みは不要。未ログインなら 401 が返るのでログインを促す。
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
-import { EmptyState } from '@/components/EmptyState'
 import { EmptyState as DsEmptyState, Button, Skeleton } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import ExportDownload from '@/components/adimage/ExportDownload'
 
 interface Creative {
@@ -52,7 +49,6 @@ function formatDate(iso: string): string {
 
 export default function AdImageHistoryPage() {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し（h1）と重なる見出しの帯を出さず、空状態に専用の絵を出す
-  const uiNext = useUiNext()
   const [concepts, setConcepts] = useState<Concept[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -125,28 +121,11 @@ export default function AdImageHistoryPage() {
   }, [load])
 
   return (
-    <div className={uiNext ? 'bg-slate-50 pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
-      {uiNext ? (
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 pt-6">
+    <div className="bg-slate-50 pb-24">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 pt-6">
           <p className="text-sm font-semibold text-slate-600">作成した広告画像を、新しい順に表示します。</p>
           <Button href="/adimage" variant="secondary" icon="Plus">新しく作る</Button>
         </div>
-      ) : (
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">これまでに作った広告画像</h1>
-              <p className="text-xs text-slate-500 font-semibold">作成した広告画像を新しい順に表示します。</p>
-            </div>
-            <Link
-              href="/adimage"
-              className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white"
-            >
-              新しく作る
-            </Link>
-          </div>
-        </header>
-      )}
 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         {error && (
@@ -154,28 +133,15 @@ export default function AdImageHistoryPage() {
         )}
 
         {loading ? (
-          uiNext ? <Skeleton lines={4} height={18} /> : <p className="py-16 text-center text-sm text-slate-500 font-semibold">読み込んでいます…</p>
+          <Skeleton lines={4} height={18} />
         ) : error && concepts.length === 0 ? null : concepts.length === 0 ? (
-          uiNext ? (
+          (
             <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
               <DsEmptyState
                 title="まだ広告画像をつくっていません"
                 description="サービスのURLを入れるだけで、Meta・Google・X・LINE などのサイズの揃った広告画像ができます。つくった画像は、ここにたまります。"
                 action={<Button href="/adimage" icon="Megaphone">最初の広告画像をつくる</Button>}
                 art="/adimage/empty-images.webp"
-              />
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-              <EmptyState
-                kind="not-generated"
-                title="最初の広告画像をつくりましょう"
-                description="サービスのURLを入れると、媒体ごとにサイズの揃った広告画像を作れます。"
-                action={
-                  <Link href="/adimage" className="inline-block rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white">
-                    広告画像をつくる
-                  </Link>
-                }
               />
             </div>
           )

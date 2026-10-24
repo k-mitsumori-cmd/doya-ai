@@ -1,7 +1,7 @@
 'use client'
 
 // ドヤ社内インタビュー: 新しい見た目（UI 品質の直し）の部品
-// ⚠️ useUiNext() が真のときだけ使う。偽のときは今までの部品のまま（チェックリスト §5.1）
+// ⚠️ 新しい見た目で使う。）
 // ⚠️ 一覧の数を数えて見せるだけ。API・集計のロジックは変えない
 import Link from 'next/link'
 import { ArrowRight, ClipboardList, Image as ImageIcon, Mic } from 'lucide-react'

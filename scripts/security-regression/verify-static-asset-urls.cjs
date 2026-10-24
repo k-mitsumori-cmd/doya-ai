@@ -27,5 +27,6 @@ function inspect(directory) {
 }
 
 inspect(sourceRoot)
-assert.ok(encodedAssets >= 127, 'Expected existing percent-encoded character artwork references')
+// 2026-10-24: 古い見た目の分岐（勤怠のマイページの絵など）を消したので 127 → 120 件
+assert.ok(encodedAssets >= 120, 'Expected existing percent-encoded character artwork references')
 console.log(`PASS static image URLs: ${encodedAssets} encoded references, no raw non-ASCII paths`)

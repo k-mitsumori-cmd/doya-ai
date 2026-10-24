@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
 import { useSession } from 'next-auth/react'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { useAioQuickStart } from '@/lib/aio/use-quick-start'
 import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
@@ -42,7 +41,6 @@ const ROWS: ShowcaseRow[] = [
 
 export default function AioEntryPage() {
   // 新しい見た目（チェックリスト §5.1）かどうか
-  const uiNext = useUiNext()
   const router = useRouter()
   const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
   const [authed, setAuthed] = useState(false)
@@ -88,7 +86,7 @@ export default function AioEntryPage() {
     await flow.start()
   }
 
-  if (phase === 'loading' && uiNext) {
+  if (phase === 'loading') {
     // 新しい見た目: 全画面の水色の読み込みにせず、中身の場所にだけ小さく出す（UI 品質 C-1・C-2・F-2）
     return (
       <div role="status" className="grid place-items-center py-20 text-center">
@@ -98,20 +96,10 @@ export default function AioEntryPage() {
     )
   }
 
-  if (phase === 'loading') {
-    return (
-      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-cyan-50">
-        <div className="text-center">
-          <DoyaKun mood="thinking" size={88} />
-          <p className="mt-3 text-slate-400 font-bold">読み込み中…</p>
-        </div>
-      </div>
-    )
-  }
 
   // 新しい見た目でログインしていて、組織がまだ無い = 「はじめに」（共通の枠の中に出すので、紹介ページの自前のヘッダーを出さない）。
   // 入れた URL で組織を作って調べ始める流れ（useAioQuickStart）は、下の紹介ページと同じ
-  if (uiNext && authed) {
+  if (authed) {
     return (
       <div className="grid place-items-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">

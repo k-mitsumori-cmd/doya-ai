@@ -13,7 +13,6 @@ import type { EmptyStateKind } from '@/components/EmptyState'
 import styles from './ds.module.css'
 
 import { CountUp } from './motion'
-import { useUiNext } from '@/components/shell/ui-next-context'
 export { default as tokens } from './tokens.module.css'
 // 使い方・生成中・完了・エラーの表示（UI 品質 S-16・S-18・S-19・S-20）
 export { FirstSteps, GenerationProgress, DoneBanner, ErrorNotice } from './feedback'
@@ -48,13 +47,12 @@ export function StatTile({ label, value, unit, sub, icon, href, muted, countUp }
   icon?: ShellIconName
   href?: string
   muted?: boolean
-  /** 数字を数え上げるか。既定は新しい見た目のときだけ（false で止める、true で常に） */
+  /** 数字を数え上げるか。既定は（false で止める、true で常に） */
   countUp?: boolean
 }) {
   // 数字のときは、画面に入ったときに1回だけ数え上げる（UI 品質 A-2）。
   // 幅は最後の値で取り、読み上げは最後の値だけ。動きを減らす設定では最後の値を出す（CountUp）
-  const uiNext = useUiNext()
-  const shown = (countUp ?? uiNext) && typeof value === 'number' && Number.isFinite(value) ? <CountUp value={value} /> : value
+  const shown = (countUp ?? true) && typeof value === 'number' && Number.isFinite(value) ? <CountUp value={value} /> : value
   const body = (
     <>
       {icon ? <span className={styles.statIcon}><ShellIcon name={icon} size={18} /></span> : null}

@@ -4,9 +4,7 @@ import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import MensetsuAppLayout from '@/components/mensetsu/MensetsuAppLayout'
 import MensetsuShellFrame from '@/components/mensetsu/MensetsuShellFrame'
-import { isShellEnabled } from '@/lib/ui-shell'
 import { FAQ } from './lp-data'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
@@ -35,10 +33,9 @@ export default async function MensetsuLayout({ children }: { children: React.Rea
         features={SVC.features}
         faq={FAQ}
       />
-      {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
-           ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
-      {/* 共通の枠が有効なら ToolFrame だけ（AppShell は (shell)/layout.tsx が出す）。面接・招待の画面は台帳と guest-path で枠の外 */}
-      {!session?.user ? children : isShellEnabled('mensetsu') ? <MensetsuShellFrame>{children}</MensetsuShellFrame> : <MensetsuAppLayout>{children}</MensetsuAppLayout>}
+      {/* ⚠️ ログイン後は共通の枠の中に出す（ToolFrame だけ。枠は (shell)/layout.tsx が描く）。独自ヘッダーを作らないこと。 */}
+      {/* 面接・招待の画面は台帳と guest-path で枠の外 */}
+      {!session?.user ? children : <MensetsuShellFrame>{children}</MensetsuShellFrame>}
     </>
   )
 }

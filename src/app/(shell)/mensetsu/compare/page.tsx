@@ -7,7 +7,7 @@
 // ⚠️ 点数の高い順に並べているが、これは意思決定そのものではない。
 //    情報不足の軸があると平均は上振れするため、必ず個別レポートを確認してもらう。
 
-import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -78,8 +78,7 @@ export default function ComparePage() {
   const [templatesIssue, setTemplatesIssue] = useState<LoadIssue>('other')
   const requestVersion = useRef(0)
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
-  const uiNext = useToolUiNext()
-  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (`${legacy} ${extra}`)
 
   const loadTemplates = useCallback(async () => {
     setTemplatesError(null)
@@ -174,7 +173,7 @@ export default function ComparePage() {
   /** 全職種に戻す（絞り込みで0件のときの出口） */
   const showAll = () => { requestVersion.current++; setLoadingCompare(true); setTemplateId('all') }
 
-  if (loading && uiNext) {
+  if (loading) {
     return (
       <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
         <div className="mx-auto grid max-w-[1200px] gap-4">
@@ -212,9 +211,9 @@ export default function ComparePage() {
           </p>
         </div>
 
-        {templatesError && uiNext ? (
+        {templatesError ? (
           <div className="mt-6"><LoadIssueNotice issue={templatesIssue} subject="比較に使う質問セット" onRetry={() => void loadTemplates()} /></div>
-        ) : templates.length === 0 && uiNext ? (
+        ) : templates.length === 0 ? (
           <EmptyState
             art="/mensetsu/empty-interviews.webp"
             title="まだ質問セットはありません"
@@ -241,7 +240,7 @@ export default function ComparePage() {
               ))}
             </select>
 
-            {error && uiNext ? (
+            {error ? (
               <div className="mt-4">
                 <ErrorNotice what="比較結果を読み込めませんでした。" how="時間をおいて、最初から読み直してください。" onRetry={() => void load()} retryLabel="最初から読み直す" />
               </div>
@@ -253,11 +252,11 @@ export default function ComparePage() {
               </p>
             )}
 
-            {loadingCompare && uiNext ? (
+            {loadingCompare ? (
               <div className="mt-6" aria-busy="true" aria-label="比較結果を読み込み中"><Skeleton lines={4} height={16} /></div>
             ) : loadingCompare ? (
               <p className="mt-6 text-sm font-semibold text-[#425071]">比較結果を読み込んでいます…</p>
-            ) : error && sorted.length === 0 ? null : sorted.length === 0 && uiNext ? (
+            ) : error && sorted.length === 0 ? null : sorted.length === 0 ? (
               templateId === 'all' ? (
                 <EmptyState
                   art="/mensetsu/empty-interviews.webp"

@@ -6,7 +6,6 @@
 // ⚠️ 子の部品が描かれる前に差し替える（モジュールの読み込み時に1回だけ。状態は描画のたびに更新する）
 // ⚠️ 見本の名前・会社はすべて架空（見本 株式会社・見本 花子）。
 import { useEffect, useState, type ReactNode } from 'react'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 
 const ORG = { id: 'org1', name: '見本 株式会社', slug: 'mihon', role: 'owner', retentionDays: 180, recordAudio: false, discloseToCandidate: false }
 
@@ -185,7 +184,6 @@ if (typeof window !== 'undefined' && realFetch) {
 
 /**
  * 見本の状態を fetch の差し替えに伝える（描画のたびに更新）。新しい見た目も強制する。
- * ⚠️ UiNextContext.Provider はサーバーの部品からは使えない（クライアントの参照になる）ため、ここで包む
  */
 export default function MockFetch({ s, children }: { s: string; children: ReactNode }) {
   state = s
@@ -194,7 +192,7 @@ export default function MockFetch({ s, children }: { s: string; children: ReactN
     state = s
     return null
   })
-  return <UiNextContext.Provider value="all">{children}</UiNextContext.Provider>
+  return <>{children}</>
 }
 
 /**

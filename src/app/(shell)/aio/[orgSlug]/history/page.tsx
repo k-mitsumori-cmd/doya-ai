@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
 import type { ScanCoverageCounts } from '@/lib/aio/coverage'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 type ScanRow = {
   id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null
@@ -15,8 +14,7 @@ type ScanPage = { items: ScanRow[]; nextCursor: string | null }
 
 export default function AioHistoryPage() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const generation = useRef(0)
   const [items, setItems] = useState<ScanRow[]>([])

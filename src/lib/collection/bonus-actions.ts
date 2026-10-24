@@ -4,11 +4,10 @@
 // - 台帳の grant（kind: bonus）。分野ごとに sourceKey で1回だけ。月の上限（MONTHLY_BONUS_CAP）に当たったら付かない
 // - 旗が off・新しい見た目でないときは何もしない。有料の API は呼ばない
 import { prisma } from '@/lib/prisma'
-import { isUiNext } from '@/lib/ui-next'
 import { currentUserId } from '@/lib/shell/company.server'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { grant } from '@/lib/doya-power'
-import { shellGroups } from '@/components/shell/tools'
+import { SHELL_GROUPS } from '@/components/shell/tools'
 import { buildCatalog } from './catalog'
 import { loadCollectionFacts } from './facts.server'
 import { usedToolIds } from './score'
@@ -17,14 +16,14 @@ import { claimableAreas, stampSetKey, stampSets, STAMP_SET_BONUS } from './bonus
 export type ClaimResult = { ok: true; granted: number; message: string } | { ok: false; message: string }
 
 export async function claimStampSetBonuses(): Promise<ClaimResult> {
-  if (!(await isDoyaPowerEnabled()) || !(await isUiNext())) return { ok: false, message: 'このボーナスはまだ使えません' }
+  if (!(await isDoyaPowerEnabled())) return { ok: false, message: 'このボーナスはまだ使えません' }
   const userId = await currentUserId()
   if (!userId) return { ok: false, message: 'ログインしてください' }
   try {
     const company = await prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } })
     if (!company) return { ok: false, message: '会社が登録されていません' }
     const facts = await loadCollectionFacts(userId)
-    const areas = claimableAreas(stampSets(buildCatalog(shellGroups(true)), usedToolIds(facts.tools)))
+    const areas = claimableAreas(stampSets(buildCatalog(SHELL_GROUPS), usedToolIds(facts.tools)))
     if (areas.length === 0) return { ok: false, message: 'そろった分野がまだありません' }
     let granted = 0
     let capped = false

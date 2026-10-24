@@ -7,7 +7,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { buildLink } from '@/lib/asklink/link'
 import type { RunDto } from '@/lib/asklink/dto'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 
 const ALLOWED = ['https://mihon.example.jp/', 'https://mihon.example.jp/contact', 'https://mihon.example.jp/price']
 
@@ -104,7 +103,6 @@ if (typeof window !== 'undefined' && realFetch) {
 
 /**
  * 見本の状態を fetch の差し替えに伝える（描画のたびに更新）。新しい見た目も強制する。
- * ⚠️ UiNextContext.Provider はサーバーの部品からは使えない（クライアントの参照になる）ため、ここで包む
  */
 export default function MockFetch({ s, children }: { s: string; children: ReactNode }) {
   state = s
@@ -113,7 +111,7 @@ export default function MockFetch({ s, children }: { s: string; children: ReactN
     state = s
     return null
   })
-  return <UiNextContext.Provider value="all">{children}</UiNextContext.Provider>
+  return <>{children}</>
 }
 
 /**

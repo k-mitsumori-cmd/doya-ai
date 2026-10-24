@@ -13,7 +13,6 @@ import { FinanceTab } from "@/components/promane/finance-tab";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Building2, CalendarDays, Pencil, Wallet } from "lucide-react";
-import { isUiNext } from "@/lib/ui-next";
 import { Button } from "@/components/promane/ui/button";
 import { Progress } from "@/components/promane/ui/progress";
 import { CharacterOnly } from "@/components/promane/character";
@@ -93,7 +92,6 @@ export default async function ProjectDetailPage({
   const moodForProgress = progress >= 80 ? "jump" : progress >= 50 ? "thumbsup" : progress >= 20 ? "working" : "thinking";
 
   // 新しい見た目（UI 品質の直し）。偽のときは今までの見出しのまま（チェックリスト §5.1）
-  const uiNext = await isUiNext();
 
   return (
     <div className="p-8 max-w-[1200px] space-y-6">
@@ -104,9 +102,7 @@ export default async function ProjectDetailPage({
           プロジェクト一覧
         </Link>
 
-        {uiNext ? (
-          // 新しい見た目: 375px で詰まらないよう、見出しと操作を折り返す。絵文字のアイコンは lucide にする（UI 品質 S-57）
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <PromanePageHeading className="min-w-0 break-words text-2xl font-bold text-slate-900">{project.name}</PromanePageHeading>
@@ -130,33 +126,6 @@ export default async function ProjectDetailPage({
               <ProjectDeleteButton workspaceSlug={workspaceSlug} projectId={projectId} projectName={project.name} />
             </div>
           </div>
-        ) : (
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <CharacterOnly mood={moodForProgress} size={48} animate="bounce-in" />
-                <PromanePageHeading className="text-[26px] font-extrabold tracking-tight text-gray-900">{project.name}</PromanePageHeading>
-                <Badge variant="secondary" className={`${PROJECT_STATUS_COLORS[project.status]} font-bold text-[12px] rounded-full px-3 py-1`}>
-                  {PROJECT_STATUS_LABELS[project.status]}
-                </Badge>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-5 text-[14px] text-gray-400 font-medium ml-12">
-                {project.client && <span>👤 {project.client.name}</span>}
-                <span>💳 {BILLING_TYPE_LABELS[project.billingType]} {formatCurrency(project.contractAmount)}</span>
-                {project.endDate && <span>📅 納期 {new Date(project.endDate).toLocaleDateString("ja-JP")}</span>}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Link href={`/promane/${workspaceSlug}/projects/${projectId}/edit`}>
-                <Button variant="outline" className="rounded-2xl font-bold text-[14px] h-10 px-4">
-                  <Pencil className="mr-1.5 h-4 w-4" />
-                  編集
-                </Button>
-              </Link>
-              <ProjectDeleteButton workspaceSlug={workspaceSlug} projectId={projectId} projectName={project.name} />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* KPI + 進捗バー */}

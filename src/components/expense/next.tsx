@@ -1,7 +1,7 @@
 'use client'
 
 // ドヤ支出管理: 新しい見た目（UI 品質の直し）の部品
-// ⚠️ useUiNext() が真のときだけ使う。偽のときは今までの部品のまま（チェックリスト §5.1）
+// ⚠️ 新しい見た目で使う。）
 // ⚠️ 計算・集計はしない。API の値を並べ替えて表示するだけ
 import tokens from '@/components/ds/tokens.module.css'
 import { ToolHero } from '@/components/ds'

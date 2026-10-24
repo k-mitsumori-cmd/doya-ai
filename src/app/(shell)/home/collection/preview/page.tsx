@@ -4,7 +4,7 @@
 import { notFound } from 'next/navigation'
 import { doyaPowerSampleAllowed } from '@/lib/doya-power/flag'
 import ShellGate from '@/components/shell/ShellGate'
-import { shellGroups } from '@/components/shell/tools'
+import { SHELL_GROUPS } from '@/components/shell/tools'
 import { buildCatalog } from '@/lib/collection/catalog'
 import { evaluateBadges } from '@/lib/collection/badges'
 import { emptyFacts, type CollectionArea, type CollectionFacts } from '@/lib/collection/types'
@@ -43,9 +43,9 @@ export default async function CollectionPreviewPage({ searchParams }: { searchPa
   const areas: CollectionArea[] = sp.areas === 'none' ? [] : ['collect', 'sell', 'operate']
   return (
     // 新しい見た目の枠で見る（uiNext="preview"）。ログインしていなくても枠を出す（always）
-    <ShellGate signedIn always uiNext="preview" enabledIds={[]} userName="サンプル">
+    <ShellGate signedIn always userName="サンプル">
       <CollectionView
-        tools={buildCatalog(shellGroups(true))}
+        tools={buildCatalog(SHELL_GROUPS)}
         usage={facts.tools}
         badges={evaluateBadges(facts)}
         initialAreas={areas}

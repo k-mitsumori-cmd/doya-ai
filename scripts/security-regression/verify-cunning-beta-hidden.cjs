@@ -97,14 +97,12 @@ function routeFiles(dir) {
   await check('shell menu, command palette, recent tools and all-tools list omit cunning', async () => {
     const tools = load('src/components/shell/tools.ts', { '@/lib/services': services })
     assert.ok(!tools.ALL_SHELL_TOOLS.some((t) => t.id === 'cunning'))
-    for (const uiNextOn of [true, false]) {
-      assert.ok(!tools.shellGroups(uiNextOn).flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
-    }
+    assert.ok(!tools.SHELL_GROUPS.flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
     // 許可した人が開いたときのパンくずの名前だけは引ける
     assert.equal(tools.findShellTool('cunning').name, 'カンニング')
     assert.equal(tools.findShellTool('banner').id, 'banner')
     assert.equal(tools.findShellTool('no-such-tool'), undefined)
-    // ⌘K・最近使ったツール・スマホの下のタブは ALL_SHELL_TOOLS / shellGroups から引く（ほかの一覧を持たない）
+    // ⌘K・最近使ったツール・スマホの下のタブは ALL_SHELL_TOOLS / SHELL_GROUPS から引く（ほかの一覧を持たない）
     const shell = read('src/components/shell/AppShell.tsx')
     assert.match(shell, /const TOOL_ITEMS: PaletteItem\[\] = ALL_SHELL_TOOLS\.map/)
     assert.equal((shell.match(/new Map\(ALL_SHELL_TOOLS\.map/g) || []).length, 2)
@@ -240,15 +238,12 @@ function routeFiles(dir) {
     const Notice = function BetaServiceNotice() { return null }
     const Lp = function LpJsonLd() { return null }
     const Shell = function CunningShellFrame() { return null }
-    const Legacy = function CunningLayoutShell() { return null }
     const layoutFor = (session) => loadTsx('src/app/(shell)/cunning/layout.tsx', {
       'next-auth': { getServerSession: async () => session },
       '@/lib/auth': { authOptions: {} },
       '@/lib/seo': { buildServiceMetadata: () => ({}) },
       '@/lib/services': services,
       '@/components/lp': { LpJsonLd: Lp },
-      '@/lib/ui-shell': { isShellEnabled: () => true },
-      '@/components/cunning/CunningLayoutShell': { __esModule: true, default: Legacy },
       '@/components/cunning/CunningShellFrame': { __esModule: true, default: Shell },
       '@/components/BetaServiceNotice': { __esModule: true, default: Notice },
       '@/lib/beta-service': beta,
@@ -266,7 +261,7 @@ function routeFiles(dir) {
       const el = await layoutFor(session).default({ children })
       const nodes = flatten(el)
       assert.ok(nodes.some((n) => n.type === Notice))
-      assert.ok(!nodes.some((n) => n === children || n.type === Shell || n.type === Legacy || n.type === Lp))
+      assert.ok(!nodes.some((n) => n === children || n.type === Shell || n.type === Lp))
       assert.equal(nodes.find((n) => n.type === Notice).props.signedIn, Boolean(session))
     }
     const allowed = flatten(await layoutFor({ user: { email: ALLOWED } }).default({ children }))

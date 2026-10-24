@@ -1,6 +1,6 @@
 'use client'
 
-// 共通シェルの中の外枠（ログインしていれば、UI_SHELL_SERVICES に関係なくいつもこれ。FRM-05）。ナビは nav.ts のデータを ToolFrame に渡すだけ（ADDON R-1）。
+// 共通シェルの中の外枠（ログインしていれば、いつもこれ。FRM-05）。ナビは nav.ts のデータを ToolFrame に渡すだけ（ADDON R-1）。
 // ナビの icon は名前の文字列なので、サーバーから渡すこともできる。ここでは TenjikaiApp と同じクライアント部品の中で読んでいる。
 import ToolFrame from '@/components/shell/ToolFrame'
 import { TENJIKAI_NAV } from '@/lib/tenjikai/nav'

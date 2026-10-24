@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import Link from 'next/link'
-import { useToolUiNext } from './ui-next'
 import { hrErrorKind } from './HrLoadError'
 
 interface ImportResultRow {
@@ -59,10 +58,9 @@ export default function CsvImportModal({
   const [result, setResult] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
-  const uiNext = useToolUiNext()
   const titleId = useId(), textareaId = useId()
   // 新しい見た目: 押せる場所を 44px 以上にし、キーボードの選択を輪郭で示す
-  const tap = uiNext ? ' min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)]' : ''
+  const tap = ' min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)]'
   // 新しい見た目: 失敗をトーストだけでなく、ダイアログの中にも残す（サーバーの文言はそのまま出さない）
   const [importError, setImportError] = useState<{ message: string; pricing: boolean } | null>(null)
 
@@ -136,18 +134,14 @@ export default function CsvImportModal({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (uiNext) {
-          const kind = hrErrorKind(res.status, data?.code === 'HR_ORG_EMPLOYEE_LIMIT')
-          const message = kind === 'login' ? 'ログインの有効期限が切れた可能性があります。ログインし直してから、もう一度お試しください。'
-            : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
-            : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
-            : res.status === 400 ? 'CSVの内容を読み取れませんでした。1行目の列名と、姓・名が入っているかを確認してください。'
-            : '一括登録できませんでした。時間をおいて、もう一度お試しください。'
-          setImportError({ message, pricing: kind === 'limit' })
-          toast.error(message)
-          return
-        }
-        toast.error(data.error || 'インポートに失敗しました')
+        const kind = hrErrorKind(res.status, data?.code === 'HR_ORG_EMPLOYEE_LIMIT')
+        const message = kind === 'login' ? 'ログインの有効期限が切れた可能性があります。ログインし直してから、もう一度お試しください。'
+          : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
+          : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
+          : res.status === 400 ? 'CSVの内容を読み取れませんでした。1行目の列名と、姓・名が入っているかを確認してください。'
+          : '一括登録できませんでした。時間をおいて、もう一度お試しください。'
+        setImportError({ message, pricing: kind === 'limit' })
+        toast.error(message)
         return
       }
       const imported = data.imported ?? 0
@@ -160,7 +154,7 @@ export default function CsvImportModal({
         toast.error('登録できた従業員はありませんでした')
       }
     } catch {
-      if (uiNext) setImportError({ message: '一括登録できませんでした。通信状態を確認して、もう一度お試しください。', pricing: false })
+      setImportError({ message: '一括登録できませんでした。通信状態を確認して、もう一度お試しください。', pricing: false })
       toast.error('インポートに失敗しました')
     } finally {
       setImporting(false)
@@ -198,15 +192,13 @@ export default function CsvImportModal({
                 type="button"
                 onClick={handleClose}
                 aria-label="閉じる"
-                className={uiNext
-                  ? 'inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)]'
-                  : 'p-1 rounded-lg text-slate-400 hover:bg-slate-100'}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)]"
               >
                 <span aria-hidden className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className={uiNext ? 'p-4 sm:p-6 space-y-5' : 'p-6 space-y-5'}>
+            <div className="p-4 sm:p-6 space-y-5">
               {importError && (
                 <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
                   <p>{importError.message}</p>

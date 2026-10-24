@@ -1,12 +1,10 @@
 'use client'
 
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Bars, ColumnChart } from '@/components/ds/charts'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
-  ArrowLeft, 
   Clock, 
   Zap, 
   TrendingUp, 
@@ -19,7 +17,6 @@ import {
   Timer,
   Layers,
   ChevronRight,
-  RefreshCw,
   Info,
 } from 'lucide-react'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -78,7 +75,6 @@ export default function StatsPage() {
 
 function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
-  const uiNext = useUiNext()
   const { data: session, status } = auth
   const userId = status === 'authenticated' ? session?.user?.id : null
   const isGuest = status !== 'loading' && !userId
@@ -267,20 +263,6 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
           <DashboardSidebar />
         </div>
         <div className="md:pl-[240px] transition-all duration-200">
-          {!uiNext && (
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-              <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-                <div className="h-16 sm:h-20 flex items-center gap-4">
-                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                    <ArrowLeft className="w-5 h-5 text-slate-400" />
-                  </Link>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                    パフォーマンス分析
-                  </h1>
-                </div>
-              </div>
-            </header>
-          )}
           <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -330,20 +312,6 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
           <DashboardSidebar />
         </div>
         <div className="md:pl-[240px] transition-all duration-200">
-          {!uiNext && (
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-              <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-                <div className="h-16 sm:h-20 flex items-center gap-4">
-                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                    <ArrowLeft className="w-5 h-5 text-slate-400" />
-                  </Link>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                    パフォーマンス分析
-                  </h1>
-                </div>
-              </div>
-            </header>
-          )}
           <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -387,46 +355,6 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
         <DashboardSidebar />
       </div>
       <div className="md:pl-[240px] transition-all duration-200">
-        {!uiNext && (
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-            <div className="h-16 sm:h-20 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                  <ArrowLeft className="w-5 h-5 text-slate-400" />
-                </Link>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                  パフォーマンス分析
-                </h1>
-              </div>
-              
-              <div className="flex items-center gap-3 sm:gap-6">
-                <button
-                  onClick={() => loadHistory(true)}
-                  disabled={isLoading}
-                  className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                  title="更新"
-                >
-                  <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-                <div className="flex items-center gap-3 pl-2">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                    {session?.user?.image ? (
-                      <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-blue-600 font-black text-xs">{session?.user?.name?.[0]?.toUpperCase() || 'G'}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-        )}
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8">
         {/* Summary Stats Grid */}
@@ -509,7 +437,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               </div>
             </div>
             
-            {totalBanners > 0 && uiNext ? (
+            {totalBanners > 0 ? (
               // 新しい見た目: 共通の ColumnChart（棒の上に件数）
               <ColumnChart
                 label="直近7日の生成数"
@@ -518,31 +446,6 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
                 format={(n) => `${n.toLocaleString('ja-JP')}件`}
                 data={dailyStats.map((d) => ({ label: d.date, value: d.count }))}
               />
-            ) : totalBanners > 0 ? (
-              <div className="flex items-end justify-between gap-2 h-40">
-                {dailyStats.map((day, i) => {
-                  const maxCount = Math.max(...dailyStats.map(d => d.count), 1)
-                  const height = (day.count / maxCount) * 100
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '120px' }}>
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${height}%` }}
-                          transition={{ delay: 0.2 + i * 0.05, duration: 0.5 }}
-                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-500 to-amber-400 rounded-t-lg"
-                        />
-                        {day.count > 0 && (
-                          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold text-gray-600">
-                            {day.count}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-gray-500">{day.date}</span>
-                    </div>
-                  )
-                })}
-              </div>
             ) : (
               <div className="h-40 flex items-center justify-center text-gray-400 text-sm">
                 まだデータがありません
@@ -562,34 +465,12 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               業種別ランキング
             </h2>
             
-            {topCategories.length > 0 && uiNext ? (
+            {topCategories.length > 0 ? (
               // 新しい見た目: 共通の Bars（順位と業種名・件数を文字で出す）
               <Bars
                 data={topCategories.map(([cat, count], i) => ({ label: `${i + 1}位 ${categoryLabels[cat] || cat}`, value: count }))}
                 format={(n) => `${n.toLocaleString('ja-JP')}件`}
               />
-            ) : topCategories.length > 0 ? (
-              <div className="space-y-3">
-                {topCategories.map(([cat, count], i) => {
-                  const maxCount = Math.max(...topCategories.map(([_, c]) => c), 1)
-                  const width = (count / maxCount) * 100
-                  return (
-                    <div key={cat} className="flex items-center gap-3">
-                      <span className="w-6 h-6 flex items-center justify-center text-xs font-black text-gray-400 bg-gray-100 rounded-full">{i + 1}</span>
-                      <span className="w-20 text-sm font-bold text-gray-700 truncate">{categoryLabels[cat] || cat}</span>
-                      <div className="flex-1 bg-gray-100 rounded-full h-3">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${width}%` }}
-                          transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
-                          className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
-                        />
-                      </div>
-                      <span className="text-xs font-black text-gray-600 w-8 text-right">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
             ) : (
               <div className="h-40 flex items-center justify-center text-gray-400 text-sm">
                 まだデータがありません

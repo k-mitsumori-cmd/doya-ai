@@ -1,127 +1,103 @@
-// 新しい見た目のプレビュー（UI-QUALITY-CHECKLIST §5.1）のセキュリティの回帰テスト。
-// - 許可されていないメールの人が cookie（doya_ui_next=1）を手で付けても、今の見た目のまま
-// - 切り替えの API は、許可されていない人・未ログインの人には 403 で、cookie を立てない
-// - 許可した人の cookie は httpOnly・secure・sameSite=lax・30日。戻る先は同じサイトの中だけ
-// 合成のセッションと cookie だけを使う。DB・課金・AI には触れない。
-const assert=require('node:assert/strict'),path=require('node:path'),{load,check}=require('./load-typescript.cjs');
+// 新しい見た目（UI-QUALITY-CHECKLIST §5.1）を全員に出し終えたあと（2026-10-24 FRM-07）の回帰テスト。
+// - 旗 UI_NEXT_ROLLOUT・プレビューの cookie（doya_ui_next）・切り替えの API（/api/ui-preview）・プレビュー中の札は無い
+// - isUiNext() は環境変数・cookie・セッションを見ずにいつも true（読みに行かない）
+// - ログインしている人のときだけ、枠の会社・リンクの行き先・最近使ったツールを読む。会社の読み込みは組織を作らない
+// - 料金ページは PricingNext だけ。購入は同じボタンと同じプラン ID、トライアルの表示の決まりは変えない
+// 合成の値と、ソースの静的な確認だけを使う。DB・課金・AI には触れない。
+const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs'),{load,check}=require('./load-typescript.cjs');
 const root=path.resolve(__dirname,'../..');
-const nextServer=require(path.join(root,'node_modules/next/server'));
-const ALLOWED='owner@example.invalid';
-const env=(rollout='preview')=>({UI_NEXT_ROLLOUT:rollout,UI_PREVIEW_EMAILS:ALLOWED});
-function loadUiNext({cookie,email,rollout}){
-  return load('src/lib/ui-next.ts',{
-    'next/headers':{cookies:async()=>({get:n=>n==='doya_ui_next'&&cookie!=null?{value:cookie}:undefined})},
-    'next-auth':{getServerSession:async()=>email===undefined?null:{user:{email}}},
-    '@/lib/auth':{authOptions:{}},
-  },{process:{env:env(rollout)},Promise});
-}
-function loadRoute(email){
-  const uiNext=loadUiNext({rollout:'preview'});
-  return load('src/app/api/ui-preview/route.ts',{
-    'next/server':nextServer,
-    'next-auth':{getServerSession:async()=>email===undefined?null:{user:{email}}},
-    '@/lib/auth':{authOptions:{}},
-    '@/lib/ui-next':uiNext,
-  },{process:{env:env()},Promise});
-}
-const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.invalid/api/ui-preview'+q,{headers});
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const exists=f=>fs.existsSync(path.join(root,f));
 (async()=>{
-  await check('Unallowed user with a forged cookie still gets the current UI',async()=>{
-    for(const email of ['other@example.invalid','',null,undefined]){
-      const m=loadUiNext({cookie:'1',email,rollout:'preview'});
-      assert.equal(await m.uiNextMode(),null,String(email));
-      assert.equal(await m.isUiNext(),false,String(email));
+  await check('isUiNext() is always true without reading env, cookies or the session',async()=>{
+    const touched=[];
+    const trap=name=>new Proxy({},{get:()=>{touched.push(name);throw Error('must not read '+name)}});
+    for(const UI_NEXT_ROLLOUT of ['off','preview','all',undefined]){
+      const m=load('src/lib/ui-next.ts',{'next/headers':trap('next/headers'),'next-auth':trap('next-auth'),'@/lib/auth':trap('@/lib/auth')},{process:{env:{UI_NEXT_ROLLOUT,UI_PREVIEW_EMAILS:'owner@example.invalid'}},Promise});
+      assert.equal(await m.isUiNext(),true,String(UI_NEXT_ROLLOUT));
+      assert.equal(m.uiNextMode,undefined);assert.equal(m.uiNextRollout,undefined);assert.equal(m.decideUiNext,undefined);
+      // ドヤパワーの preview が使う許可の一覧は残す
+      assert.equal(m.canPreviewUiNext('OWNER@example.invalid'),true);assert.equal(m.canPreviewUiNext('other@example.invalid'),false);
     }
+    assert.deepEqual(touched,[]);
+    const lib=read('src/lib/ui-next.ts');
+    assert.doesNotMatch(lib,/process\.env\.UI_NEXT_ROLLOUT|doya_ui_next|UI_NEXT_COOKIE|next\/headers|cookies\(/);
   });
-  await check('Allowed user needs the cookie; off overrides it; all shows everyone',async()=>{
-    assert.equal(await loadUiNext({cookie:'1',email:ALLOWED,rollout:'preview'}).uiNextMode(),'preview');
-    assert.equal(await loadUiNext({cookie:'1',email:'OWNER@EXAMPLE.INVALID',rollout:'preview'}).uiNextMode(),'preview');
-    assert.equal(await loadUiNext({cookie:null,email:ALLOWED,rollout:'preview'}).uiNextMode(),null);
-    assert.equal(await loadUiNext({cookie:'1',email:ALLOWED,rollout:'off'}).uiNextMode(),null);
-    assert.equal(await loadUiNext({cookie:null,email:'other@example.invalid',rollout:'all'}).uiNextMode(),'all');
+  await check('The preview toggle API, cookie and badge are gone',async()=>{
+    assert.equal(exists('src/app/api/ui-preview/route.ts'),false);
+    assert.equal(exists('src/components/shell/UiNextBadge.tsx'),false);
+    const walk=d=>fs.readdirSync(path.join(root,d),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):/\.(tsx?|jsx?)$/.test(e.name)?[path.join(d,e.name).split(path.sep).join('/')]:[]);
+    // コメントの説明（やめた経緯）は除いて、コードに残っていないことを確かめる
+    const code=f=>read(f).split('\n').filter(l=>!/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n');
+    for(const f of walk('src'))assert.doesNotMatch(code(f),/doya_ui_next|\/api\/ui-preview|UiNextBadge|UI_NEXT_ROLLOUT/,f);
+    // クライアントの部品は cookie で見た目を決めない
+    for(const f of ['src/components/shell/ui-next-context.tsx','src/components/shell/ShellGate.tsx'])assert.doesNotMatch(read(f),/document\.cookie/,f);
+    assert.doesNotMatch(read('src/components/shell/ui-next-context.tsx'),/UiNextContext|useUiNextMode/);
   });
-  await check('Session lookup failure falls back to the current UI',async()=>{
-    const m=load('src/lib/ui-next.ts',{'next/headers':{cookies:async()=>({get:()=>({value:'1'})})},'next-auth':{getServerSession:async()=>{throw Error('boom')}},'@/lib/auth':{authOptions:{}}},{process:{env:env()},Promise});
-    assert.equal(await m.uiNextMode(),null);
-  });
-  await check('Preview API rejects unallowed and signed-out users without setting a cookie',async()=>{
-    for(const email of ['other@example.invalid',undefined]){
-      for(const q of ['?on=1','?on=0']){
-        const res=await loadRoute(email).GET(req(q));
-        assert.equal(res.status,403);
-        assert.equal(res.headers.get('set-cookie'),null);
-      }
-    }
-  });
-  await check('Preview API sets a hardened 30-day cookie for the allowed user and clears it with on=0',async()=>{
-    const on=await loadRoute(ALLOWED).GET(req('?on=1&next=/shodan/acme'));
-    assert.equal(on.status,303);
-    assert.equal(on.headers.get('location'),'https://doya-ai.example.invalid/shodan/acme');
-    const c=on.headers.get('set-cookie')||'';
-    assert.match(c,/doya_ui_next=1/);assert.match(c,/HttpOnly/i);assert.match(c,/Secure/i);assert.match(c,/SameSite=lax/i);assert.match(c,/Max-Age=2592000/);assert.match(c,/Path=\//);
-    const off=await loadRoute(ALLOWED).GET(req('?on=0'));
-    assert.match(off.headers.get('set-cookie')||'',/doya_ui_next=;.*Max-Age=0/i);
-  });
-  await check('Preview API never redirects to another site',async()=>{
-    for(const next of ['https://evil.example/','//evil.example/','/\\evil.example','/\t/evil.example','/\n/evil.example']){
-      const res=await loadRoute(ALLOWED).GET(req('?on=1&next='+encodeURIComponent(next)));
-      assert.equal(new URL(res.headers.get('location')).origin,'https://doya-ai.example.invalid',next);
-    }
-    const ref=await loadRoute(ALLOWED).GET(req('?on=1',{referer:'https://evil.example/x'}));
-    assert.equal(ref.headers.get('location'),'https://doya-ai.example.invalid/home');
-  });
-  await check('UI quality fixes stay behind the server-side preview decision',async()=>{
-    const fs=require('node:fs'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
-    assert.match(read('src/app/(shell)/layout.tsx'),/uiNext=\{uiNext\}/);
-    assert.match(read('src/app/(shell)/layout.tsx'),/session\?\.user \? await uiNextMode\(\) : null/);
-    // 組織のページへのリンクの行き先も、新しい見た目の人のときだけ読んで渡す
-    assert.match(read('src/app/(shell)/layout.tsx'),/const \[company, toolHrefs\] = uiNext\n\s*\? await Promise\.all/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/ShellToolHrefsContext\.Provider value=\{uiNext && toolHrefs \? toolHrefs : EMPTY\}/);
+  await check('Shell data is read only for signed-in users and never creates organizations',async()=>{
+    const layout=read('src/app/(shell)/layout.tsx');
+    assert.match(layout,/const signedIn = Boolean\(session\?\.user\)/);
+    // 組織のページへのリンクの行き先と会社の名前は、ログインしている人のときだけ読んで渡す
+    assert.match(layout,/const \[company, toolHrefs\] = signedIn\n\s*\? await Promise\.all/);
+    assert.match(layout,/getAccountCompanyName\(\)\.catch/);
+    // 最近使ったツールは、ログインしている人のときだけ cookie から読んで渡す
+    assert.match(layout,/const initialRecent = signedIn \? parseRecent/);
+    assert.doesNotMatch(layout,/uiNext/);
+    const gate=read('src/components/shell/ShellGate.tsx');
+    assert.match(gate,/ShellToolHrefsContext\.Provider value=\{toolHrefs \?\? EMPTY\}/);
+    assert.match(gate,/AccountCompanyContext\.Provider value=\{company\}/);
+    assert.match(gate,/shouldShowShell\(pathname, \{ signedIn \}\)/);
+    assert.match(gate,/return session\?\.user \? <SessionProvider session=\{session\}>/);
+    assert.doesNotMatch(gate,/uiNext/);
     assert.doesNotMatch(read('src/lib/shell/tool-hrefs.server.ts'),/prisma\.|create|upsert|ensure\w*\(/);
-    // 会社の名前は、新しい見た目の人のときだけ読んで渡す
-    assert.match(read('src/app/(shell)/layout.tsx'),/getAccountCompanyName\(\)\.catch/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/AccountCompanyContext\.Provider value=\{uiNext \? company : undefined\}/);
     // 候補はログイン中の人の所属だけを読む関数から作る（組織を作らない）
     const loader=read('src/lib/shell/company.server.ts');
     // 書き込むのは本人の会社の表（accountCompany）だけ。各ツールの組織は読むだけ（詳しくは verify-account-company-scope.cjs）
     assert.doesNotMatch(loader,/prisma\.(?!accountCompany\b|user\.findUnique)\w+\.\w+/);assert.doesNotMatch(loader,/ensure\w*\(/);
     // AI検索対策の組織はブランドの一覧なので、会社名に使わない
     assert.doesNotMatch(loader,/lib\/aio\//);
-    for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx','src/app/(shell)/sfa/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
-    assert.match(read('src/app/(shell)/home/page.tsx'),/if \(!uiNext\) return <HomeDashboardLegacy/);
-    // 最近使ったツールは、新しい見た目のときだけ cookie から読んで渡す
-    assert.match(read('src/app/(shell)/layout.tsx'),/const initialRecent = uiNext \? parseRecent/);
-    assert.match(read('src/app/pricing/page.tsx'),/if \(!uiNext\) return <PricingLegacy \/>/);
+    // 組織を選ぶツールの入口は、所属があれば組織のページへ移すだけ（ログインしている人だけ）
+    for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx','src/app/(shell)/sfa/page.tsx']){
+      const src=read(f);assert.match(src,/if \(!session\?\.user\) return <\w+Lp \/>/,f);assert.match(src,/if \(Object\.keys\(params\)\.length === 0\) \{/,f);assert.doesNotMatch(src,/isUiNext/,f);
+    }
+    // 経営ホームは入力が主役のホームだけ（旧来のホームは無い）
+    assert.equal(exists('src/app/(shell)/home/HomeDashboardLegacy.tsx'),false);
+    assert.match(read('src/app/(shell)/home/page.tsx'),/return <HomeDashboard initial=\{summary\}/);
+  });
+  await check('Pricing page, shell chrome and CSS use only the new look',async()=>{
+    assert.equal(exists('src/app/pricing/PricingLegacy.tsx'),false);
+    assert.doesNotMatch(read('src/app/pricing/page.tsx'),/PricingLegacy|uiNext/);
     assert.match(read('src/app/pricing/page.tsx'),/if \(!session\?\.user\) return <PricingNext/);
     // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     // 有料のプランの人には、トライアルの表示を出さない（trial-eligibility の API と TrialCallout は変えない）
     assert.match(read('src/components/pricing/PricingNext.tsx'),/const trialEligible = trialEligibleRaw && !paid/);
     assert.match(read('src/components/pricing/PricingNext.tsx'),/const paid = authStatus === 'authenticated' && isPaidPlan\(accountPlan\)/);
-    assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);
-    // ふつうの利用者の切り替えを main と同じにする: (shell) の下に、こちらで足した loading.tsx を置かない。template は包みを出さない
+    // 枠の中では、旧来のサイドバー付きの外枠を出さない（未ログインのバナーの画面だけが今の外枠）
+    assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell\) return <>\{children\}<\/>/);
+    // (shell) の下に、こちらで足した loading.tsx を置かない。template は中身の入れ替えの包みだけを出す
     // ⚠️ git ls-files は使わない（Vercel のビルドには .git が無く、失敗してデプロイが止まる。2026-10-19）
     const fsx=require('node:fs'),px=require('node:path');
     const walk=(d)=>fsx.readdirSync(px.join(root,d),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(px.join(d,e.name)):e.name==='loading.tsx'?[px.join(d,e.name).split(px.sep).join('/')]:[]);
     const loadings=walk('src/app/(shell)');
     assert.deepEqual(loadings.sort(),['src/app/(shell)/banner/dashboard/loading.tsx','src/app/(shell)/popup/edit/[id]/loading.tsx','src/app/(shell)/popup/sites/[id]/loading.tsx']);
-    assert.match(read('src/app/(shell)/template.tsx'),/if \(!uiNext\) return <>\{children\}<\/>/);
+    assert.match(read('src/app/(shell)/template.tsx'),/return <div className=\{styles\.enter\}>\{children\}<\/div>/);
     const shell=read('src/components/shell/AppShell.tsx');
-    // 2026-10-24 分かりやすさの点検（FRM-02・03）: 新しい見た目では、左のメニューの「最近使ったツール」と、
-    // スマホの下のタブの入れ替わる2枠を出さない（どの画面でも同じ並び。今の見た目は今までどおり）
-    assert.match(shell,/const recentTools = useMemo\(\(\) => \{\n    if \(uiNext\) return \[\]/);
-    assert.match(shell,/if \(uiNext\) return \[\]\n    return \[\.\.\.picked, \.\.\.fill\]\.slice\(0, 3\)/);
-    assert.match(shell,/withIntents=\{uiNext\}/);
-    assert.match(shell,/\{uiNext \? \(\s*<button type="button" className=\{styles\.tab\} onClick=\{openAccount\}>/);
-    assert.match(read('src/components/DashboardSidebar.tsx'),/if \(inShell && uiNext\) return null/);
-    assert.match(shell,/if \(!uiNext \|\| !el \|\| typeof MutationObserver === 'undefined'\) return/);
+    assert.doesNotMatch(shell,/uiNext|useUiNext/);
+    assert.match(shell,/data-ui-next="true"/);
+    assert.match(shell,/withIntents=\{true\}/);
+    assert.match(shell,/<button type="button" className=\{styles\.tab\} onClick=\{openAccount\}>/);
+    assert.match(read('src/components/DashboardSidebar.tsx'),/if \(inShell\) return null/);
+    assert.match(shell,/if \(!el \|\| typeof MutationObserver === 'undefined'\) return/);
+    // 2026-10-24 分かりやすさの点検（FRM-02・03）: 左のメニューの「最近使ったツール」と、
+    // スマホの下のタブの入れ替わる枠を出さない（どの画面でも同じ並び）
+    assert.match(shell,/const recentTools: ShellTool\[\] = \[\]/);
+    assert.match(shell,/const tabTools: ShellTool\[\] = \[\]/);
     // CSS の直しは data-ui-next の下だけ
     const css=read('src/components/shell/AppShell.module.css');
     for(const line of css.split('\n').filter(l=>/h-screen|min-h-screen|calc\(100vh/.test(l)&&!l.trim().startsWith('*')&&!l.trim().startsWith('/*')))assert.match(line,/\[data-ui-next='true'\]/,line);
     assert.match(read('src/app/(shell)/template.module.css'),/\[data-ui-next='true'\]\) \.enter \{/);
     assert.doesNotMatch(read('src/components/ds/tokens.module.css'),/^\.ds \{\s*word-break/m);
-    // クライアントは cookie を読まない（判定はサーバーだけ）
-    for(const f of ['src/components/shell/ui-next-context.tsx','src/components/shell/UiNextBadge.tsx','src/components/shell/ShellGate.tsx'])assert.doesNotMatch(read(f),/document\.cookie|doya_ui_next/,f);
   });
-  console.log(JSON.stringify({scope:'ui-next preview gate and /api/ui-preview with synthetic sessions and cookies. No DB, billing or AI.'}));
+  console.log(JSON.stringify({scope:'ui-next is always on: no rollout flag, preview cookie, toggle API or badge; signed-in-only shell data; static source checks. No DB, billing or AI.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});

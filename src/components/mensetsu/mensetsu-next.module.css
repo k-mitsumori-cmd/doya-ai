@@ -1,7 +1,7 @@
 /* ============================================
  * 面接: 新しい見た目（UI 品質の直し）だけで使う CSS
  * ============================================
- * ⚠️ MensetsuShellFrame が、useUiNext() が真で枠の中のときだけ .scope を当てる。偽のときは何も効かない。
+ * ⚠️ MensetsuShellFrame が、useUiNext() が真で枠の中のときだけ .scope を当てる。
  * 各ページの <main> が持つ、独り立ちのときの地の色と大きな余白を、枠の中では外す（C-2・S-63）。
  */
 .scope :global(main.bg-\[\#f2f6ff\]) { background: transparent !important; }

@@ -1,7 +1,7 @@
 // ドヤパワーの台帳（本番の Prisma に結びつけたもの）。サーバーの中だけで使う。
 // ⚠️ 旗（DOYA_POWER_ROLLOUT、src/lib/doya-power/flag.ts）が off のときは、どの関数も DB に触れずに
 //    DoyaPowerDisabledError で止まる（gate.ts）。本番DBに台帳の表が無いうちは off のまま。
-// ⚠️ 画面・API に出すときは、isDoyaPowerEnabled() と新しい見た目（isUiNext()）の両方を見て、
+// ⚠️ 画面・API に出すときは、isDoyaPowerEnabled() を見て、
 //    会社はセッションの本人の会社から決める（body や query の companyId を信じない。balanceForUser(session.user.id) を使う）
 // ⚠️ 本番DBに表が無いうちは呼ばない（DOYA-POWER-MIGRATION.md の SQL を統括が流したあとに使う）
 import { prisma } from '@/lib/prisma'

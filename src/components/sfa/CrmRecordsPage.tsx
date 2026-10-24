@@ -10,7 +10,6 @@ import MutationRecovery from './MutationRecovery'
 import SfaPageHeading from '@/components/sfa/PageHeading'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import { Button } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import SfaLoadError from './SfaLoadError'
 
 // 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
@@ -29,14 +28,12 @@ const fields = {
 const FORM_INVALID_MESSAGE = '必須項目と各項目の文字数をご確認ください。'
 const emptyValues = (kind: Kind): Values => Object.fromEntries([...fields[kind].map(([key]) => [key, '']), ...(kind === 'contact' ? [['accountId', ''], ['isKeyPerson', false]] : [])])
 const inputClass = 'w-full rounded-xl border border-slate-200 px-4 py-3 font-bold'
-const buttonClass = 'rounded-xl border border-slate-200 bg-white px-4 py-2 font-bold text-green-700 disabled:opacity-50'
 // 新しい見た目: 押せる大きさ（44px）・短い文言は折り返さない・キーボードで分かる枠（UI 品質 375px / a11y）
 const nextButtonClass = 'inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2 font-bold text-[#0066ff] hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] disabled:opacity-50'
 const nextInputClass = 'mt-1 w-full min-h-11 rounded-xl border border-slate-200 px-4 py-3 font-bold'
 
 export default function CrmRecordsPage({ kind }: { kind: Kind }) {
-  const uiNext = useUiNext()
-  const btn = uiNext ? nextButtonClass : buttonClass
+  const btn = nextButtonClass
   const orgSlug = (useParams().orgSlug as string) || ''
   const label = kind === 'account' ? '取引先' : '担当者'
   const path = '/api/sfa/' + kind + 's'
@@ -189,10 +186,10 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
     toast.success(label + 'を削除しました'); reload.current()
   }
 
-  return <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto' : 'p-6 lg:p-10 max-w-5xl mx-auto'}>
+  return <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div className={uiNext ? 'min-w-0' : undefined}><SfaPageHeading className="text-2xl font-black text-slate-900">{label}</SfaPageHeading><p className="text-slate-500 font-bold text-sm">{kind === 'account' ? '会社・顧客を一元管理' : '取引先のキーマン・連絡先を管理'}</p></div>
-      <div className={uiNext ? 'flex flex-wrap gap-2' : 'flex gap-2'}>
+      <div className="min-w-0"><SfaPageHeading className="text-2xl font-black text-slate-900">{label}</SfaPageHeading><p className="text-slate-500 font-bold text-sm">{kind === 'account' ? '会社・顧客を一元管理' : '取引先のキーマン・連絡先を管理'}</p></div>
+      <div className="flex flex-wrap gap-2">
         {kind === 'account' && ready && <a href={withOrg('/api/sfa/export?type=accounts', orgSlug)} className={btn}>CSV出力</a>}
         <button type="button" className={btn} disabled={!ready || loading} onClick={() => setRefresh(v => v + 1)}>一覧を更新</button>
         <button type="button" onClick={() => openForm(null)} disabled={!ready || mutations.creationBlocked(kind) || currentForm && mutations.busy.includes(formLane)} className={btn}>新規登録</button>
@@ -210,7 +207,7 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
         {key === 'note' ? <textarea aria-label={placeholder} value={String(form.values[key])} onChange={e => setForm(current => ({ ...current, values: { ...current.values, [key]: e.target.value } }))} className={inputClass} />
           : <input aria-label={placeholder} placeholder={placeholder} value={String(form.values[key])}
             // 新しい見た目: 入力の誤りの文を、会社名・氏名の欄に結び付ける（読み上げで分かるように）
-            aria-invalid={uiNext && key === 'name' && formInvalid ? true : undefined} aria-describedby={uiNext && key === 'name' && formInvalid ? formMessageId : undefined} onChange={e => setForm(current => ({ ...current, values: { ...current.values, [key]: e.target.value } }))} className={inputClass} />}
+            aria-invalid={(key === 'name') && formInvalid ? true : undefined} aria-describedby={(key === 'name') && formInvalid ? formMessageId : undefined} onChange={e => setForm(current => ({ ...current, values: { ...current.values, [key]: e.target.value } }))} className={inputClass} />}
       </label>)}
       {kind === 'contact' && <>
         <label className="block text-sm text-slate-700">取引先<select aria-label="取引先" value={String(form.values.accountId)} disabled={!currentOptions || options.loading || options.error} onChange={e => setForm(current => ({ ...current, values: { ...current.values, accountId: e.target.value } }))} className={inputClass}>
@@ -222,7 +219,7 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
         {currentOptions && options.error && <p role="alert">取引先の選択肢を読み込めませんでした。<button type="button" className="underline" onClick={() => setOptionsRefresh(v => v + 1)}>選択肢を再試行</button></p>}
         <label className="flex gap-2"><input type="checkbox" checked={Boolean(form.values.isKeyPerson)} onChange={e => setForm(current => ({ ...current, values: { ...current.values, isKeyPerson: e.target.checked } }))} />キーマン（決裁者）</label>
       </>}
-      {formMessage && (uiNext && formInvalid
+      {formMessage && (formInvalid
         ? <p id={formMessageId} role="alert" className="text-sm font-bold text-red-700">{formMessage}</p>
         : <p role="status">{formMessage}</p>)}
       {form.row && <div className="text-sm text-slate-600"><p>更新が競合した場合は「一覧を更新」し、保存済みの内容を開き直してください。入力の破棄前に確認します。</p><button type="button" className={btn} disabled={!currentList || loading || mutations.blocked(formLane) || !list.rows.some(row => row.id === form.row?.id)} onClick={() => { const row = list.rows.find(row => row.id === form.row?.id); if (row && mutations.active()) setSwitchTarget({ identity: mutations.identity, row }) }}>最新の内容で開き直す</button></div>}
@@ -235,11 +232,9 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
       <button type="button" className={btn} disabled={mutations.blocked(kind + ':' + currentDeletion.id)} onClick={remove}>削除を確定する</button>
       <button type="button" className={btn} onClick={() => setDeletion(null)}>戻る</button>
     </div>}
-    <label className="block mb-4">{kind === 'account' ? '会社名で検索' : '氏名で検索'}<input aria-label="検索" value={q} maxLength={100} onChange={e => { requestVersion.current++; setQ(e.target.value) }} className={uiNext ? nextInputClass : inputClass} /></label>
+    <label className="block mb-4">{kind === 'account' ? '会社名で検索' : '氏名で検索'}<input aria-label="検索" value={q} maxLength={100} onChange={e => { requestVersion.current++; setQ(e.target.value) }} className={nextInputClass} /></label>
     {ready && (loading || !currentList) && <p>{label}を読み込み中です...</p>}
-    {currentList && listError && (uiNext
-      ? <SfaLoadError error={listFailure} what={label} onRetry={() => setRefresh(v => v + 1)} orgSlug={orgSlug} />
-      : <p role="alert">{label}を読み込めませんでした。<button type="button" className="underline" onClick={() => setRefresh(v => v + 1)}>再試行</button></p>)}
+    {currentList && listError && (<SfaLoadError error={listFailure} what={label} onRetry={() => setRefresh(v => v + 1)} orgSlug={orgSlug} />)}
     {currentList && !loading && !listError && <>
       <p className="mb-3 text-xs text-slate-500">{list.total}件中{list.rows.length}件を表示</p>
       {!list.rows.length && <SfaEmpty
@@ -251,8 +246,8 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
       />}
       <div className="space-y-2">{list.rows.map(row => <div key={row.id} className="bg-white rounded-xl p-4 flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1"><p className="font-bold break-words">{row.name}</p><p className="text-xs text-slate-500 break-words">{'industry' in row ? [row.industry, row.prefecture].filter(Boolean).join(' · ') : [row.accountName, row.title, row.email, row.phone, row.isKeyPerson ? 'キーマン' : ''].filter(Boolean).join(' · ')}</p></div>
-        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={uiNext ? `${row.name}を編集` : undefined} onClick={() => openForm(row)}>編集</button>
-        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={uiNext ? `${row.name}を削除` : undefined} onClick={() => { if (mutations.active()) setDeletion({ identity: mutations.identity, row }) }}>削除</button>
+        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を編集`} onClick={() => openForm(row)}>編集</button>
+        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を削除`} onClick={() => { if (mutations.active()) setDeletion({ identity: mutations.identity, row }) }}>削除</button>
       </div>)}</div>
       {list.cursor && <div className="mt-4"><button type="button" onClick={loadMore} disabled={moreLoading} className={btn}>さらに表示</button>{moreError && <p role="alert">追加の{label}を読み込めませんでした。再度お試しください。</p>}</div>}
     </>}

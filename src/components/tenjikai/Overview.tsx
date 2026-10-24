@@ -5,7 +5,6 @@ import { ArrowRight, CalendarClock } from 'lucide-react'
 import IsoBooth from './IsoBooth'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { StackedBar100 } from '@/components/ds/charts'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import type { Section } from './TenjikaiSidebar'
 import { BUDGET_META, POSITION_LABEL, boothSize, daysUntil, expectedVisitors, man, type BoothPlan, type BudgetLine, type Creative, type Deadline, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 
@@ -20,7 +19,6 @@ interface Props {
 }
 
 export default function Overview({ input, analysis, plan, budget, deadlines, creatives, go }: Props) {
-  const uiNext = useUiNext()
   const total = budget.reduce((s, b) => s + b.amountYen, 0)
   const diff = input.budgetYen - total
   const { venue, w, d } = boothSize(input)
@@ -75,9 +73,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
               <h2 className="text-sm font-black text-ink">予算の内訳</h2>
               <button onClick={() => go('budget')} className="text-xs font-black text-doya-600 hover:underline">調整する</button>
             </div>
-            {uiNext ? (
-              // 新しい見た目: 共通の StackedBar100。費目の色は予算の画面と同じ。予算が余るときは「残り」を灰色で足し、凡例に金額を出す
-              <StackedBar100
+            <StackedBar100
                 label="予算の内訳"
                 showTotal={false}
                 format={man}
@@ -90,23 +86,6 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
                   values: [...budget.map((b) => b.amountYen), ...(input.budgetYen > total ? [input.budgetYen - total] : [])],
                 }]}
               />
-            ) : (
-              <>
-              <div className="flex h-4 overflow-hidden rounded-full bg-gray-100">
-                {budget.map((b, i) => (
-                  <motion.div key={b.category} title={BUDGET_META[b.category].label} initial={{ width: 0 }} animate={{ width: `${(b.amountYen / Math.max(total, input.budgetYen)) * 100}%` }} transition={{ delay: 0.3 + i * 0.07, duration: 0.6 }} style={{ background: BUDGET_META[b.category].color }} />
-                ))}
-              </div>
-              <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1">
-                {budget.map((b) => (
-                  <li key={b.category} className="flex items-center justify-between gap-2 text-[11px] font-bold text-gray-600">
-                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ background: BUDGET_META[b.category].color }} />{BUDGET_META[b.category].label}</span>
-                    <span className="font-mono tabular text-ink">{man(b.amountYen)}</span>
-                  </li>
-                ))}
-              </ul>
-              </>
-            )}
           </motion.div>
 
           <motion.div {...cardIn(6)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5">

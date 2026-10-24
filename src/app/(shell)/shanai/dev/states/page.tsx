@@ -2,7 +2,6 @@
 // ドヤ社内インタビュー: 画面の状態の見本（開発時だけ。本番では 404）
 // ============================================
 // 統合仕様 D-3 / D-6 / §11 の目視確認用。DB・ログイン・AI には一切触れない（見本データだけ）。
-// 新しい見た目（UiNextContext='all'）で、共通シェル（AppShell＋ToolFrame）に載せた形で出す。
 // 本物の画面部品をそのまま描き、/api/shanai/* は DevRoot が見本データを返す（window.fetch の差し替え）。
 // 使い方: npx next dev → /shanai/dev/states?s=<状態>   （&shell=0 で共通シェルなし）
 //   home           一覧（見本データ3件）
@@ -45,7 +44,7 @@ export default async function ShanaiDevStates({ searchParams }: Props) {
         body
       ) : (
         <AppShell userName="見本 太郎">
-          <ShanaiFrame shell>{body}</ShanaiFrame>
+          <ShanaiFrame>{body}</ShanaiFrame>
         </AppShell>
       )}
     </DevRoot>

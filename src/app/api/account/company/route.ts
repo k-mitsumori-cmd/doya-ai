@@ -10,7 +10,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { isUiNext } from '@/lib/ui-next'
 import { parseCompanyInput } from '@/lib/shell/company'
 import { currentUserId, getOwnCompany, listCompanyCandidates, saveOwnCompany } from '@/lib/shell/company.server'
 
@@ -19,7 +18,6 @@ const NO_STORE = { 'Cache-Control': 'private, no-store' }
 async function guard(): Promise<{ userId: string } | NextResponse> {
   const userId = await currentUserId()
   if (!userId) return NextResponse.json({ error: 'ログインしてください' }, { status: 401, headers: NO_STORE })
-  if (!(await isUiNext())) return NextResponse.json({ error: '見つかりません' }, { status: 404, headers: NO_STORE })
   return { userId }
 }
 

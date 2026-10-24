@@ -1,7 +1,7 @@
 'use client'
 
 // ドヤ収入管理: 新しい見た目（UI 品質の直し）の部品
-// ⚠️ useUiNext() が真のときだけ使う。偽のときは今までの部品のまま（チェックリスト §5.1）
+// ⚠️ 新しい見た目で使う。）
 // ⚠️ 計算・集計はしない。数字は API の値をそのまま受け取って表示するだけ
 import Link from 'next/link'
 import { Check } from 'lucide-react'

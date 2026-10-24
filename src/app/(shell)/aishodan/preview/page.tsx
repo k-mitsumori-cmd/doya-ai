@@ -15,9 +15,7 @@ import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Memb
 import { fetchOrgJson } from '@/lib/org-fetch'
 import { SESSION_STATUS_LABELS } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
-import { DoyaKun } from '@/components/lp'
 import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
 
@@ -39,7 +37,6 @@ interface SessionRow {
 
 export default function AishodanPreviewPage() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
-  const uiNext = useUiNext()
   const [loading, setLoading] = useState(true)
   const [needsLogin, setNeedsLogin] = useState(false)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
@@ -167,22 +164,13 @@ export default function AishodanPreviewPage() {
     }
   }, [scenarioId])
 
-  if (loading && uiNext) {
-    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
-  }
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
-        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working。テキストだけにしない */}
-        <DoyaKun mood="working" size={88} />
-        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
-      </div>
-    )
+    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
   }
 
   if (needsLogin) {
     return (
-      <div className={uiNext ? 'flex items-center justify-center px-4 py-8 sm:py-12' : 'flex min-h-screen items-center justify-center bg-slate-50 px-4'}>
+      <div className="flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
           <AishodanHeading className="text-xl font-bold text-slate-900">ドヤAI商談</AishodanHeading>
           <p className="mt-2 text-sm text-slate-600 font-semibold">ご利用にはログインが必要です。</p>
@@ -203,7 +191,7 @@ export default function AishodanPreviewPage() {
 
   if (!org) {
     return (
-      <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
+      <div className="flex flex-col items-center justify-center gap-4 px-4 py-16">
         <p className="text-slate-600">先に商材を取り込んでください。</p>
         <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードへ</Link>
       </div>
@@ -213,7 +201,7 @@ export default function AishodanPreviewPage() {
   const scenarios = products.flatMap((p) => p.scenarios.map((s) => ({ ...s, productName: p.name })))
 
   return (
-    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
+    <div className="pb-12">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">

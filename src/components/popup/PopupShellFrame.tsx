@@ -3,7 +3,7 @@
 // ============================================
 // ドヤポップアップ: 共通シェル（AppShell＋ToolFrame）に載せる枠
 // ============================================
-// フラグ ui.shell.popup が ON のときだけ layout.tsx から使う（OFF の間は PopupAppLayout）。
+// ログインしているとき、layout.tsx から使う。
 // ⚠️ ナビ（nav.ts）はサーバの layout.tsx から受け取る。アイコンは名前の文字列なので、そのまま渡せる。
 // ⚠️ ページ本体と API は変えない。ページの見出しは ToolFrame が出すので、ページ側は小見出しにする（PopupShellContext）。
 import type { ReactNode } from 'react'

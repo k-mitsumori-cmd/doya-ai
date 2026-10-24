@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 export default function DoyaSlidePricingPage() {
   const [plan, setPlan] = useState<string | null>(null)
@@ -26,11 +25,10 @@ export default function DoyaSlidePricingPage() {
   }, [loadPlan])
 
   // 新しい見た目（チェックリスト §5.1）では、枠の中で画面いっぱいの高さを取らず、見出しは枠の h1 に任せて h2 にする（UI 品質 S-57・S-63）
-  const uiNext = useUiNext()
-  const Heading = uiNext ? 'h2' : 'h1'
+  const Heading = 'h2'
 
   return (
-    <div data-legacy-backdrop className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop>
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Link
@@ -40,7 +38,7 @@ export default function DoyaSlidePricingPage() {
             <span className="material-symbols-outlined text-lg">arrow_back</span>
             プロジェクトに戻る
           </Link>
-          <Heading className={`${uiNext ? 'text-2xl' : 'text-3xl'} font-black text-slate-900`}>料金プラン</Heading>
+          <Heading className="text-2xl font-black text-slate-900">料金プラン</Heading>
           <p className="mt-2 text-slate-500 font-bold max-w-xl mx-auto">
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>

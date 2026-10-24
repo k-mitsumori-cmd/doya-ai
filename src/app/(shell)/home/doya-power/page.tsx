@@ -10,7 +10,6 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
 import { DoyaPowerDetail } from '@/components/doya-power/DoyaPowerHome'
@@ -27,7 +26,6 @@ export default async function DoyaPowerHistoryPage() {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home/doya-power')
-  if (!(await isUiNext())) redirect('/home')
   const view = await loadDoyaPowerHome({ withHistory: true, limit: 50 })
   // 会社が未登録・台帳が読めないときは、経営ホームへ戻す（会社の登録の案内はホームにある）
   if (!view) redirect('/home')

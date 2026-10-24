@@ -7,7 +7,7 @@
 // ⚠️ トップ（Tool.tsx）に置かないこと。面接の作成・発行・一覧の下に毎回並ぶと、
 //    日常の作業のたびにスクロールで通過させられる。
 
-import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useState } from 'react'
@@ -56,8 +56,7 @@ export default function MensetsuSettingsPage() {
   // ⚠️ 自分の行に名前が無いと「（名前未設定）」になる。ログイン中の名前で埋める。
   const { data: session } = useSession()
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
-  const uiNext = useToolUiNext()
-  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (`${legacy} ${extra}`)
   /** 読み込みに失敗した理由。⚠️ 失敗を「組織が無い」と取り違えて、作成の案内を出さないため（新しい見た目のとき） */
   const [loadIssue, setLoadIssue] = useState<LoadIssue | null>(null)
 
@@ -147,7 +146,7 @@ export default function MensetsuSettingsPage() {
     }
   }
 
-  if (loading && uiNext) {
+  if (loading) {
     return (
       <main className="mx-auto grid max-w-4xl gap-4 px-4 py-8" aria-busy="true" aria-label="読み込み中">
         <Skeleton lines={2} height={24} delayMs={0} />
@@ -156,7 +155,7 @@ export default function MensetsuSettingsPage() {
     )
   }
 
-  if (uiNext && loadIssue && !org) {
+  if (loadIssue && !org) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8">
         <LoadIssueNotice issue={loadIssue} subject="設定" onRetry={() => { setLoading(true); void load() }} />
@@ -164,7 +163,7 @@ export default function MensetsuSettingsPage() {
     )
   }
 
-  if (!org && uiNext) {
+  if (!org) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8">
         <EmptyState
@@ -197,7 +196,7 @@ export default function MensetsuSettingsPage() {
       <PageTitle className="text-xl font-black text-[#0a0f3c]">設定</PageTitle>
       <p className="mt-1 text-xs font-semibold text-[#8a94ad]">{org.name}</p>
 
-      {error && uiNext ? (
+      {error ? (
         <div className="mt-4"><ErrorNotice what={friendlyText(error, '保存できませんでした。')} how="時間をおいてもう一度お試しください。権限が足りない場合は、組織の管理者に依頼してください。" /></div>
       ) : error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-800">{error}</p>}
       {notice && <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{notice}</p>}

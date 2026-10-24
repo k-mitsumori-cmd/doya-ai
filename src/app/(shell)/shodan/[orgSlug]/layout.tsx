@@ -1,10 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
-import { getShodanBilling } from '@/lib/shodan/billing'
-import ShodanAppLayout from '@/components/shodan/ShodanAppLayout'
 import ShodanShellFrame from '@/components/shodan/ShodanShellFrame'
-import { isShellEnabled } from '@/lib/ui-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,19 +31,8 @@ export default async function ShodanOrgLayout(
   // 当該組織のACTIVEメンバーでなければ入口へ（他組織は解決されない＝IDOR安全）
   if (!ctx || ctx.organizationSlug !== orgSlug) redirect('/shodan')
 
-  const [org, billing] = await Promise.all([
-    prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } }),
-    getShodanBilling(prisma, ctx.organizationId),
-  ])
+  const org = await prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } })
 
-  // 共通シェルが有効なら ToolFrame だけ（枠は (shell)/layout.tsx が出す）。無効の間は今のレイアウト
-  if (isShellEnabled('shodan')) {
-    return <ShodanShellFrame orgSlug={orgSlug} orgName={org?.name}>{children}</ShodanShellFrame>
-  }
-
-  return (
-    <ShodanAppLayout orgSlug={orgSlug} orgName={org?.name} organizationPlan={billing?.plan ?? null} canManageBilling={ctx.role === 'owner' && ctx.userId === billing?.ownerUserId}>
-      {children}
-    </ShodanAppLayout>
-  )
+  // ToolFrame だけ（枠は (shell)/layout.tsx が出す）
+  return <ShodanShellFrame orgSlug={orgSlug} orgName={org?.name}>{children}</ShodanShellFrame>
 }

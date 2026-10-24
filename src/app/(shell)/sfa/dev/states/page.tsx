@@ -7,7 +7,6 @@
 //   p（ページ）: home（ダッシュボード）| deals（商談パイプライン）| leads | tasks | activities | members | accounts | contacts
 //   s（状態）  : home（見本データあり）| empty（0件）| error（読み込み失敗 500）| forbidden（権限なし 403）
 //               | login（ログイン切れ 401）| limit（上限 402。上限の案内を最初から出し、作る操作も 402 を返す）
-//   &ui=legacy を付けると、今の見た目（新しい見た目でない）で表示する
 //   例: /sfa/dev/states?s=home  /sfa/dev/states?p=deals&s=empty  /sfa/dev/states?p=leads&s=error
 //   絞り込み 0 件（no-results）は p=leads か p=accounts で、検索欄に「該当なし」などを入れると出る
 import { notFound } from 'next/navigation'
@@ -15,10 +14,10 @@ import SfaStatesPreview from './Preview'
 
 export const dynamic = 'force-dynamic'
 
-type Props = { searchParams: Promise<{ s?: string; p?: string; ui?: string }> }
+type Props = { searchParams: Promise<{ s?: string; p?: string }> }
 
 export default async function SfaDevStates({ searchParams }: Props) {
   if (process.env.NODE_ENV === 'production') notFound()
-  const { s = 'home', p = 'home', ui } = await searchParams
-  return <SfaStatesPreview page={p} state={s} legacy={ui === 'legacy'} />
+  const { s = 'home', p = 'home' } = await searchParams
+  return <SfaStatesPreview page={p} state={s} />
 }

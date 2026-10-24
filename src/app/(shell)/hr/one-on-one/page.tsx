@@ -1,5 +1,5 @@
 'use client'
-import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { Button, EmptyState } from '@/components/ds'
 import HrLoadError from '@/components/hr/HrLoadError'
@@ -60,9 +60,8 @@ export default function OneOnOnePage() {
   const [totalPages, setTotalPages] = useState(0)
   // 失敗の文と、新しい見た目で失敗の種類（ログイン・権限・上限）を分けるためのステータスを一緒に持つ
   const [listError, setListError] = useState<'' | { message: string; status?: number }>('')
-  const uiNext = useToolUiNext()
   const reduceMotion = useReducedMotion()
-  const still = uiNext && Boolean(reduceMotion)
+  const still = Boolean(reduceMotion)
   const dialogRef = useRef<HTMLDivElement>(null)
   const dialogTitleId = useId(), employeeFieldId = useId(), managerFieldId = useId(), dateFieldId = useId(), timeFieldId = useId(), durationLabelId = useId()
   const [employeePage, setEmployeePage] = useState(0)
@@ -170,21 +169,21 @@ export default function OneOnOnePage() {
 
   // 新しい見た目: 記録のダイアログは Esc で閉じ、開いたら最初の欄に移る。閉じたら元のボタンに戻す
   useEffect(() => {
-    if (!uiNext || !showNewModal) return
+    if (!showNewModal) return
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const frame = requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>('select')?.focus())
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setShowNewModal(false) } }
     document.addEventListener('keydown', onKey)
     return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onKey); opener?.focus() }
-  }, [uiNext, showNewModal])
+  }, [showNewModal])
 
-  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2' : ''
+  const focusRing = ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2'
 
   return (
-    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto' : 'p-6 lg:p-10 max-w-5xl mx-auto'}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
       <motion.div initial={still ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header（新しい見た目では、375px でボタンを下に回す） */}
-        <div className={uiNext ? 'flex flex-wrap items-end justify-between gap-4 mb-6' : 'flex items-center justify-between mb-8'}>
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
             <PageTitle className="text-3xl font-black text-slate-900">1on1</PageTitle>
             <p className="text-sm text-slate-500 mt-1">1対1ミーティングの記録を管理</p>
@@ -192,17 +191,14 @@ export default function OneOnOnePage() {
           {canCreate && <button
             type="button"
             onClick={() => setShowNewModal(true)}
-            className={`${uiNext ? 'min-h-11 whitespace-nowrap' + focusRing + ' ' : ''}flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all`}
+            className={`${'min-h-11 whitespace-nowrap' + focusRing + ' '}flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all`}
           >
             <span aria-hidden className="material-symbols-outlined text-lg">add</span>
             1on1を記録
           </button>}
         </div>
 
-        {listError && uiNext && <HrLoadError className="mb-4" subject="1on1の一覧" status={listError.status} onRetry={() => { if (!loading) fetchRecords(page) }} />}
-        {listError && !uiNext && <div role="alert" className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl">
-          {listError.message} <button onClick={() => fetchRecords(page)} disabled={loading} className="underline">再読み込み</button>
-        </div>}
+        {listError && <HrLoadError className="mb-4" subject="1on1の一覧" status={listError.status} onRetry={() => { if (!loading) fetchRecords(page) }} />}
         {/* Records List */}
         {loading ? (
           <div className="space-y-3">
@@ -243,7 +239,7 @@ export default function OneOnOnePage() {
                 >
                   <Link
                     href={`/hr/one-on-one/${record.id}`}
-                    className={`flex items-center gap-4 bg-white rounded-3xl shadow-md p-5 hover:shadow-lg transition-all${uiNext ? ' min-w-0' + focusRing : ''}`}
+                    className={`flex items-center gap-4 bg-white rounded-3xl shadow-md p-5 hover:shadow-lg transition-all${' min-w-0' + focusRing}`}
                   >
                     {record.employeePhotoUrl ? (
                       <img src={record.employeePhotoUrl} alt={record.employeeName} className="w-11 h-11 rounded-full object-cover" />
@@ -253,7 +249,7 @@ export default function OneOnOnePage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className={uiNext ? 'truncate text-base font-bold text-slate-900' : 'text-base font-bold text-slate-900'}>{record.employeeName}</p>
+                      <p className="truncate text-base font-bold text-slate-900">{record.employeeName}</p>
                       <p className="text-xs text-slate-500">
                         {record.date && !isNaN(new Date(record.date).getTime())
                           ? new Date(record.date).toLocaleDateString('ja-JP', {
@@ -267,7 +263,7 @@ export default function OneOnOnePage() {
                         {' '}/ {record.duration || 0}分
                       </p>
                     </div>
-                    <div className={uiNext ? 'flex shrink-0 items-center gap-3' : 'flex items-center gap-3'}>
+                    <div className="flex shrink-0 items-center gap-3">
                       <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-sm">list_alt</span>
@@ -278,9 +274,7 @@ export default function OneOnOnePage() {
                           {record.actionItemCount}
                         </span>
                       </div>
-                      <span className={`${uiNext ? 'whitespace-nowrap ' : ''}px-3 py-1.5 rounded-full text-sm font-bold ${
-                        record.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
+                      <span className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-bold ${record.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                         {record.status === 'COMPLETED' ? '完了' : '予定'}
                       </span>
                     </div>
@@ -289,7 +283,7 @@ export default function OneOnOnePage() {
               )
             })}
           </motion.div>
-        ) : !listError && uiNext ? (
+        ) : !listError ? (
           // 新しい見た目: 空の状態は絵＋次にやること1つ
           <EmptyState
             art="/hr/empty-members.webp"
@@ -329,20 +323,13 @@ export default function OneOnOnePage() {
             {!canCreate && <p className="text-sm text-slate-500">1on1の作成は担当上司・管理者に依頼してください。</p>}
           </div>
         ) : null}
-        {totalPages > (uiNext ? 1 : 0) && <nav aria-label="1on1一覧のページ" className="flex items-center justify-center gap-4 mt-6">
-          <button type="button" disabled={loading || page <= 1} onClick={() => fetchRecords(page - 1)} className={`px-4 py-2 bg-white rounded-xl disabled:opacity-40${uiNext ? ' min-h-11 whitespace-nowrap' + focusRing : ''}`}>前へ</button>
-          <span className={uiNext ? 'whitespace-nowrap' : undefined}>{page} / {totalPages}ページ</span>
-          <button type="button" disabled={loading || page >= totalPages} onClick={() => fetchRecords(page + 1)} className={`px-4 py-2 bg-white rounded-xl disabled:opacity-40${uiNext ? ' min-h-11 whitespace-nowrap' + focusRing : ''}`}>次へ</button>
+        {totalPages > (1) && <nav aria-label="1on1一覧のページ" className="flex items-center justify-center gap-4 mt-6">
+          <button type="button" disabled={loading || page <= 1} onClick={() => fetchRecords(page - 1)} className={`px-4 py-2 bg-white rounded-xl disabled:opacity-40${' min-h-11 whitespace-nowrap' + focusRing}`}>前へ</button>
+          <span className="whitespace-nowrap">{page} / {totalPages}ページ</span>
+          <button type="button" disabled={loading || page >= totalPages} onClick={() => fetchRecords(page + 1)} className={`px-4 py-2 bg-white rounded-xl disabled:opacity-40${' min-h-11 whitespace-nowrap' + focusRing}`}>次へ</button>
         </nav>}
 
         {/* FAB（新しい見た目では出さない。見出しの横の主ボタンと同じ役目で、375px では一覧に重なるため） */}
-        {canCreate && !uiNext && <button
-          onClick={() => setShowNewModal(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-40"
-          aria-label="1on1を記録"
-        >
-          <span className="material-symbols-outlined text-3xl">add</span>
-        </button>}
 
         {/* New 1on1 Modal */}
         {showNewModal && canCreate && (
@@ -355,7 +342,7 @@ export default function OneOnOnePage() {
               aria-labelledby={dialogTitleId}
               initial={still ? false : { opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={uiNext ? 'relative bg-white rounded-3xl shadow-2xl p-5 sm:p-6 w-full max-w-md mx-4 max-h-[90dvh] overflow-y-auto' : 'relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4'}
+              className="relative bg-white rounded-3xl shadow-2xl p-5 sm:p-6 w-full max-w-md mx-4 max-h-[90dvh] overflow-y-auto"
             >
               <h2 id={dialogTitleId} className="text-lg font-bold text-slate-900 mb-4">1on1を記録</h2>
               <div className="space-y-4">
@@ -399,7 +386,7 @@ export default function OneOnOnePage() {
                   </select>
                 </div>
                 <p className="text-sm text-slate-500">日時は任意です。未定の場合は日付・時間を両方空欄にしてください。</p>
-                <div className={uiNext ? 'grid grid-cols-1 min-[400px]:grid-cols-2 gap-4' : 'grid grid-cols-2 gap-4'}>
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
                   <div className="min-w-0">
                     <label htmlFor={dateFieldId} className="block text-sm font-bold text-slate-700 mb-1">日付</label>
                     <input
@@ -430,7 +417,7 @@ export default function OneOnOnePage() {
                         type="button"
                         onClick={() => setSelectedDuration(min)}
                         aria-pressed={selectedDuration === min}
-                        className={`${uiNext ? 'min-h-11 whitespace-nowrap' + focusRing + ' ' : ''}flex-1 py-2 rounded-full text-sm font-bold transition-all ${
+                        className={`${'min-h-11 whitespace-nowrap' + focusRing + ' '}flex-1 py-2 rounded-full text-sm font-bold transition-all ${
                           selectedDuration === min
                             ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -446,7 +433,7 @@ export default function OneOnOnePage() {
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className={`${uiNext ? 'min-h-11 whitespace-nowrap rounded-full' + focusRing + ' ' : ''}px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors`}
+                  className={`${'min-h-11 whitespace-nowrap rounded-full' + focusRing + ' '}px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors`}
                 >
                   キャンセル
                 </button>
@@ -454,7 +441,7 @@ export default function OneOnOnePage() {
                   type="button"
                   onClick={handleCreateRecord}
                   disabled={creating || !selectedEmployee || !selectedManager}
-                  className={`${uiNext ? 'min-h-11 whitespace-nowrap' + focusRing + ' ' : ''}flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-emerald-700 transition-all disabled:opacity-50`}
+                  className={`${'min-h-11 whitespace-nowrap' + focusRing + ' '}flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-emerald-700 transition-all disabled:opacity-50`}
                 >
                   {creating ? '作成中...' : '開始'}
                 </button>
