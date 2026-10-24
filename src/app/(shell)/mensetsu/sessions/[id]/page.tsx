@@ -6,7 +6,7 @@
 // スコア・根拠引用・逐語ログを表示する。
 // ⚠️ AIの判定は「推薦度」であり最終決定ではない旨を、画面上に常時明示する（C2）。
 
-import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf } from '@/components/mensetsu/states'
 import { ShellIcon } from '@/components/shell/icons'
@@ -39,8 +39,7 @@ export default function MensetsuReportPage() {
   /** 最初の読み込みで返った状態コード（新しい見た目で、見つからない・権限なし・その他を出し分ける） */
   const [loadStatus, setLoadStatus] = useState<number | null>(null)
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
-  const uiNext = useToolUiNext()
-  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (`${legacy} ${extra}`)
   const [tab, setTab] = useState<'report' | 'transcript'>('report')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioBusy, setAudioBusy] = useState(false)
@@ -183,7 +182,7 @@ export default function MensetsuReportPage() {
     return () => window.clearInterval(timer)
   }, [data?.session?.status, load])
 
-  if (loading && uiNext) {
+  if (loading) {
     return (
       <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
         <div className="mx-auto grid max-w-[900px] gap-4">
@@ -193,7 +192,7 @@ export default function MensetsuReportPage() {
       </main>
     )
   }
-  if (!data?.session && uiNext) {
+  if (!data?.session) {
     return (
       <main className="px-4 py-6 lg:px-8">
         <div className="mx-auto max-w-[900px]">
@@ -250,14 +249,14 @@ export default function MensetsuReportPage() {
           ← 面接一覧
         </Link>
 
-        <PageTitle className={uiNext ? 'mt-1 break-words text-2xl font-black text-[#0a0f3c]' : 'mt-3 text-2xl font-black text-[#0a0f3c]'}>
+        <PageTitle className="mt-1 break-words text-2xl font-black text-[#0a0f3c]">
           {s.candidateName || '（名前未入力）'}
         </PageTitle>
         <p className="mt-1 text-sm font-semibold text-[#425071]">
           {s.template.jobTitle} / {s.template.durationMin}分 /{' '}
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
         </p>
-        {error && uiNext ? (
+        {error ? (
           <div className="mt-4"><ErrorNotice what={friendlyText(error, '処理を完了できませんでした。')} how="時間をおいてもう一度お試しください。続く場合は画面を再読み込みしてください。" /></div>
         ) : error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
 
@@ -340,12 +339,12 @@ export default function MensetsuReportPage() {
 
           {/* PDFは評価済みのときだけ。未評価だとAPIが400を返すため、押せるのに進まないボタンにしない */}
           {s.evaluatedAt && (
-            <div className={uiNext ? 'ml-auto flex flex-wrap items-center gap-2' : 'ml-auto flex items-center gap-2'}>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <a
                 href={`/api/mensetsu/sessions/${id}/pdf`}
                 className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
               >
-                {uiNext ? <ShellIcon name="FileText" size={16} /> : <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>}
+                <ShellIcon name="FileText" size={16} />
                 レポートPDF
               </a>
               <a
@@ -375,7 +374,7 @@ export default function MensetsuReportPage() {
                   disabled={audioBusy}
                   className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
                 >
-                  {uiNext ? <ShellIcon name="Headphones" size={16} /> : <span className="material-symbols-outlined text-[16px]">play_circle</span>}
+                  <ShellIcon name="Headphones" size={16} />
                   {audioBusy ? '準備中…' : '録音を再生'}
                 </button>
               )}
@@ -390,7 +389,7 @@ export default function MensetsuReportPage() {
           // ⚠️ 未評価の面接で評価軸を「情報不足」で埋めて表示しない。
           //    まだ採点していないだけなのに、AIがそう判定したように見えてしまう。
           <section className="mt-4 rounded-lg bg-white p-8 text-center shadow-sm">
-            {uiNext ? <ShellIcon name="ListChecks" size={30} className="mx-auto text-[#8a94ad]" /> : <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>}
+            <ShellIcon name="ListChecks" size={30} className="mx-auto text-[#8a94ad]" />
             <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-[#425071]">
               {s.status === 'evaluating' && !evaluationStale
@@ -419,7 +418,7 @@ export default function MensetsuReportPage() {
                 return (
                   <div key={c.id} className="rounded-lg bg-white p-5 shadow-sm">
                     <div className="flex items-start justify-between gap-4">
-                      <div className={uiNext ? 'min-w-0 break-words' : undefined}>
+                      <div className="min-w-0 break-words">
                         <p className="text-sm font-black text-[#0a0f3c]">{c.name}</p>
                         {c.description && (
                           <p className="mt-1 text-xs font-semibold text-[#425071]">{c.description}</p>
@@ -514,7 +513,7 @@ export default function MensetsuReportPage() {
                             setHr((prev: any) => ({ ...prev, alreadyHandedOff: true }))
                             setHrMsg('ドヤHRへ登録しました。')
                           } catch (e) {
-                            setHrMsg(uiNext ? friendlyText(e, '登録できませんでした。時間をおいてもう一度お試しください。') : e instanceof Error ? e.message : '登録できませんでした')
+                            setHrMsg(friendlyText(e, '登録できませんでした。時間をおいてもう一度お試しください。'))
                           } finally {
                             setHrBusy(false)
                           }
@@ -537,7 +536,7 @@ export default function MensetsuReportPage() {
           </>
         ) : (
           <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
-            {s.turns.length === 0 && uiNext ? (
+            {s.turns.length === 0 ? (
               <EmptyState
                 art="/mensetsu/empty-interviews.webp"
                 title="発話の記録はまだありません"
@@ -575,16 +574,16 @@ export default function MensetsuReportPage() {
                         <div
                           className="mt-1.5 rounded-lg bg-[#f7faff] p-3"
                           // Esc で「やめる」と同じ（新しい見た目のとき）
-                          onKeyDown={uiNext ? (e) => { if (e.key === 'Escape') { setLabeling(null); setLabelError('') } } : undefined}
+                          onKeyDown={(e) => { if (e.key === 'Escape') { setLabeling(null); setLabelError('') } }}
                         >
                           <p id={`label-q-${t.id}`} className="text-[11px] font-bold text-[#425071]">どの評価軸の例にしますか</p>
                           <select
                             value={labelCriterion}
                             onChange={(e) => setLabelCriterion(e.target.value)}
                             aria-labelledby={`label-q-${t.id}`}
-                            aria-invalid={uiNext && labelError ? true : undefined}
-                            aria-describedby={uiNext && labelError ? `label-err-${t.id}` : undefined}
-                            autoFocus={uiNext}
+                            aria-invalid={labelError ? true : undefined}
+                            aria-describedby={labelError ? `label-err-${t.id}` : undefined}
+                            autoFocus={true}
                             className={nx('mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff] font-medium', `min-h-11 ${NX_FOCUS}`)}
                           >
                             <option value="">選んでください</option>
@@ -592,7 +591,7 @@ export default function MensetsuReportPage() {
                               <option key={c.key} value={c.key}>{c.name}</option>
                             ))}
                           </select>
-                          {labelError && <p id={`label-err-${t.id}`} role="alert" className="mt-1 text-[11px] font-bold text-[#c5221f]">{uiNext ? friendlyText(labelError, '登録できませんでした。時間をおいてもう一度お試しください。') : labelError}</p>}
+                          {labelError && <p id={`label-err-${t.id}`} role="alert" className="mt-1 text-[11px] font-bold text-[#c5221f]">{friendlyText(labelError, '登録できませんでした。時間をおいてもう一度お試しください。')}</p>}
                           <div className="mt-2 flex flex-wrap gap-2">
                             <button
                               onClick={() => addSample(t, 'good', questionText)}

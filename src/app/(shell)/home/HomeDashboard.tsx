@@ -43,7 +43,7 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
 function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
-  // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
+  // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const toHref = useToolHref()
   const router = useRouter()
   const [opening, setOpening] = useState<string | null>(null)

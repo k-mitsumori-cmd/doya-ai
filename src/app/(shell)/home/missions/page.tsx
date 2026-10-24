@@ -9,7 +9,6 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadMissionsView } from '@/lib/missions/load.server'
 import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
@@ -27,7 +26,6 @@ export default async function MissionsPage() {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home/missions')
-  if (!(await isUiNext())) redirect('/home')
 
   const [view, fxs] = await Promise.all([loadMissionsView(userId), loadDoyaPowerFxForUser(userId)])
   return <MissionsBoard view={view} fx={fxs.fx} canEditOrgFx={fxs.canEditOrg} />

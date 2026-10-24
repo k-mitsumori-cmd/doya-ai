@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { getServerSession } from 'next-auth'
 import { buildServiceMetadata } from '@/lib/seo'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 import TenjikaiApp from '@/components/tenjikai/TenjikaiApp'
 import TenjikaiShellFrame from '@/components/tenjikai/TenjikaiShellFrame'
 import TenjikaiLp from './Lp'
@@ -16,7 +15,7 @@ export const metadata: Metadata = buildServiceMetadata('tenjikai', {
   noindex: true,
 })
 
-// フラグ（UI_SHELL_SERVICES）をリクエストごとに読むため、ビルド時に固定しない
+// ログインをリクエストごとに読むため、ビルド時に固定しない
 export const dynamic = 'force-dynamic'
 
 // 画面の本体（TenjikaiApp）はここに置く。/tenjikai/<section> の page.tsx は URL を受けるだけで何も描かない。
@@ -30,8 +29,8 @@ export default async function TenjikaiLayout({ children }: { children: React.Rea
   const devPreview = process.env.NODE_ENV === 'development' && process.env.TENJIKAI_DEV_PREVIEW === 'true'
   const userId = (session?.user as { id?: string } | undefined)?.id ?? null
   if (!session?.user && !devPreview) return <TenjikaiLp />
-  // 共通の枠（フラグ ui.shell.tenjikai）。枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
-  if (session?.user && isShellEnabled('tenjikai')) {
+  // 共通の枠。枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
+  if (session?.user) {
     return (
       <>
         <TenjikaiShellFrame userId={userId} />

@@ -7,7 +7,7 @@
 // ⚠️ 手で追加した質問も、保存時にサーバ側で就職差別チェックを通す（C3）。
 //    違反があれば保存されず、該当箇所が返ってくるので画面に表示する。
 
-import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, loadIssueOf } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useState } from 'react'
@@ -68,7 +68,6 @@ export default function TemplateEditPage() {
   /** 読み込みに失敗したときの状態コード（通信の失敗は 0）。新しい見た目では、空のフォームを出さずに理由を出す */
   const [loadFailed, setLoadFailed] = useState<number | null>(null)
   // 新しい見た目（枠の中で useUiNext() が真）のときだけ、読み込み中・失敗の表示と押しやすさを直す
-  const uiNext = useToolUiNext()
 
   const load = useCallback(async () => {
     setLoadFailed(null)
@@ -221,7 +220,7 @@ export default function TemplateEditPage() {
     }
   }
 
-  if (loading && uiNext) {
+  if (loading) {
     return (
       <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
         <div className="mx-auto grid max-w-[900px] gap-4">
@@ -231,7 +230,7 @@ export default function TemplateEditPage() {
       </main>
     )
   }
-  if (loadFailed !== null && uiNext) {
+  if (loadFailed !== null) {
     return (
       <main className="px-4 py-6 lg:px-8">
         <div className="mx-auto max-w-[900px]">
@@ -266,7 +265,7 @@ export default function TemplateEditPage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[900px]">
-        <button onClick={() => router.push('/mensetsu')} className={uiNext ? `inline-flex min-h-11 items-center rounded text-xs font-black text-[#0066ff] ${NX_FOCUS}` : 'text-xs font-black text-[#0066ff]'}>
+        <button onClick={() => router.push('/mensetsu')} className={`inline-flex min-h-11 items-center rounded text-xs font-black text-[#0066ff] ${NX_FOCUS}`}>
           ← ダッシュボード
         </button>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</PageTitle>
@@ -277,7 +276,7 @@ export default function TemplateEditPage() {
 
         {error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4">
-            <p role={uiNext ? 'alert' : undefined} className="text-sm font-bold text-[#c2185b]">{error}</p>
+            <p role="alert" className="text-sm font-bold text-[#c2185b]">{error}</p>
             {violations.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {violations.map((v, i) => (

@@ -5,11 +5,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { AlertTriangle, Link2, Loader2 } from 'lucide-react'
+import { Link2, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { ToolHero } from '@/components/ds'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
@@ -62,7 +61,6 @@ export default function AskLinkTool() {
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
   const [run, setRun] = useState<RunDto | null>(null)
   const queue = useBannerQueue(setRun)
-  const uiNext = useUiNext()
   const [doneShown, setDoneShown] = useState(false)
 
   // 入力の誤り（400）を、どの欄の誤りかとして支援技術に伝える
@@ -114,9 +112,7 @@ export default function AskLinkTool() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-      {uiNext ? (
-        // 見出し（h1）は枠（ToolFrame）が出すので、ここは「何ができるか」を h2 で書く
-        <div className="mb-6">
+      <div className="mb-6">
           <ToolHero
             title={<>サイトのURLから、<wbr />「AIに聞く」リンクを</>}
             lead="URLを1つ入れると、ChatGPTに質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
@@ -124,15 +120,6 @@ export default function AskLinkTool() {
             artAlt="サイトのポップアップの「AIに聞く」ボタンから、ChatGPTで相談が始まる様子"
           />
         </div>
-      ) : (
-      <div className="mb-6 flex items-center gap-3">
-        <Image src="/asklink/icon.png" alt="" width={44} height={44} className="h-11 w-11 rounded-xl shadow" priority />
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">ドヤAI質問リンク</h1>
-          <p className="text-sm font-bold text-slate-500">サイトのURLから「AIに聞く」リンク2本とポップアップ用バナー3枚を作ります。</p>
-        </div>
-      </div>
-      )}
 
       <form
         onSubmit={(e) => {
@@ -154,20 +141,16 @@ export default function AskLinkTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.co.jp/"
-              className={`w-full rounded-xl border border-slate-300 py-3 pl-9 pr-3 text-sm font-bold text-slate-800 focus:border-[#0066ff] focus:outline-none${
-                uiNext ? ' min-h-11 min-w-0 text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 sm:text-sm' : ''
-              }`}
+              className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-3 text-sm font-bold text-slate-800 focus:border-[#0066ff] focus:outline-none min-h-11 min-w-0 text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 sm:text-sm"
               required
-              aria-invalid={uiNext && urlInvalid ? true : undefined}
-              aria-describedby={uiNext && urlInvalid ? 'asklink-form-error' : undefined}
+              aria-invalid={urlInvalid ? true : undefined}
+              aria-describedby={urlInvalid ? 'asklink-form-error' : undefined}
             />
           </div>
           <button
             type="submit"
             disabled={loading || !url.trim() || (needManual && manualText.trim().length < 20)}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-700 disabled:opacity-50${
-              uiNext ? ' min-h-11 whitespace-nowrap focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 focus-visible:ring-offset-white' : ''
-            }`}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-700 disabled:opacity-50 min-h-11 whitespace-nowrap focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
           >
             {loading && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
             {loading ? '作成しています' : '作成する'}
@@ -186,11 +169,9 @@ export default function AskLinkTool() {
               rows={5}
               maxLength={3000}
               placeholder="会社名・サービスの内容・強み・対象のお客さまなどを、20字以上で入力してください。"
-              className={`mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none${
-                uiNext ? ' text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] sm:text-sm' : ''
-              }`}
-              aria-invalid={uiNext && manualInvalid ? true : undefined}
-              aria-describedby={uiNext ? `asklink-manual-note${error ? ' asklink-form-error' : ''}` : undefined}
+              className="mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] sm:text-sm"
+              aria-invalid={manualInvalid ? true : undefined}
+              aria-describedby={`asklink-manual-note${error ? ' asklink-form-error' : ''}`}
             />
             <p id="asklink-manual-note" className="mt-1 text-xs font-bold text-slate-500">
               手入力のときは、質問文に入れるURLは上で入力したURLだけになります。
@@ -203,7 +184,7 @@ export default function AskLinkTool() {
             {LOADING_STEPS.map((label, i) => (
               <li
                 key={label}
-                className={`flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff]${uiNext ? ' motion-reduce:![animation:none]' : ''}`}
+                className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff] motion-reduce:![animation:none]"
                 style={{ animation: `pulse 1.6s ease-in-out ${i * 0.5}s infinite` }}
               >
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#0066ff] text-[10px] font-black text-white">{i + 1}</span>
@@ -213,7 +194,7 @@ export default function AskLinkTool() {
             <li className="text-xs font-bold text-slate-500 sm:col-span-3">十数秒ほどかかります。このままお待ちください。</li>
           </ol>
         )}
-        {error && uiNext && (
+        {error && (
           <div id="asklink-form-error" className="mt-3">
             {errStatus === 422 ? (
               <ErrorNotice
@@ -230,25 +211,9 @@ export default function AskLinkTool() {
             )}
           </div>
         )}
-        {error && !uiNext && (
-          <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            {error}
-          </p>
-        )}
-        {limit && uiNext && (
+        {limit && (
           <div className="mt-3">
             <AskLinkErrorNotice status={429} action="create" />
-          </div>
-        )}
-        {limit && !uiNext && (
-          <div className="mt-3 rounded-xl bg-blue-50 p-4 text-sm font-bold text-slate-700">
-            <p>{limit.message}</p>
-            {limit.upgradeUrl && (
-              <Link href={limit.upgradeUrl} className="mt-2 inline-block font-black text-[#0066ff] hover:underline">
-                料金プランを見る
-              </Link>
-            )}
           </div>
         )}
       </form>
@@ -257,7 +222,7 @@ export default function AskLinkTool() {
 
       {run && (
         <div className="mt-8">
-          {uiNext && doneShown && !queue.busy && (
+          {doneShown && !queue.busy && (
             <div className="mb-4">
               <DoneBanner
                 title="質問リンクとバナーができました。下のボタンでコピーして、ポップアップに貼ってください。"
@@ -272,14 +237,12 @@ export default function AskLinkTool() {
               バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。
             </p>
           )}
-          {uiNext ? (
+          {(
             queue.errorStatus !== null && (
               <div className="mb-4">
                 <AskLinkErrorNotice status={queue.errorStatus} action="banner" />
               </div>
             )
-          ) : (
-            queue.error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{queue.error}</p>
           )}
           <RunResult
             run={run}

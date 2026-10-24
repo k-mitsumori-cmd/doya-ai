@@ -3,7 +3,6 @@
 // ドヤ商談準備 共通UIパーツ（ドヤAIデザイン言語：ブランド紫 #7f19e6・ドヤくん・浮遊ドット）
 import React from 'react'
 import { Briefcase, Rocket, Settings, Users, type LucideIcon } from 'lucide-react'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 export const BRAND = '#7f19e6'
 
@@ -87,39 +86,19 @@ const NEXT_ICON: Record<string, LucideIcon> = {
  * ⚠️ 新しい見た目でないときは、今までどおりの h1 と className のまま。
  */
 export function ShodanHeading({ children, className = 'text-2xl font-black text-slate-900' }: { children: React.ReactNode; className?: string }) {
-  const uiNext = useUiNext()
-  if (uiNext) return <h2 className={className.replace(/\btext-2xl\b/, 'text-xl').replace(/\bfont-black\b/, 'font-bold')}>{children}</h2>
-  return <h1 className={className}>{children}</h1>
+  return <h2 className={className.replace(/\btext-2xl\b/, 'text-xl').replace(/\bfont-black\b/, 'font-bold')}>{children}</h2>
 }
 
 /** 画面共通ヘッダ（アイコン＋タイトル＋サブ。任意でドヤくん） */
 export function PageHeader({ icon, title, subtitle, mood }: { icon: string; title: string; subtitle?: string; mood?: Mood }) {
-  const uiNext = useUiNext()
   // 新しい見た目: ブランドの青の lucide アイコンと h2。旧来のマスコット画像・紫のグラデーションは出さない
-  if (uiNext) {
-    const Icon = NEXT_ICON[icon] ?? Briefcase
-    return (
-      <div className="mb-6 flex items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0066ff]/10 text-[#0066ff]"><Icon className="h-5 w-5" aria-hidden /></span>
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
-        </div>
-      </div>
-    )
-  }
+  const Icon = NEXT_ICON[icon] ?? Briefcase
   return (
-    <div className="flex items-center gap-3 mb-6">
-      {mood ? (
-        <DoyaKun mood={mood} size={52} float={false} />
-      ) : (
-        <span className="grid place-items-center w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white shadow-md shadow-purple-500/25">
-          <span className="material-symbols-outlined">{icon}</span>
-        </span>
-      )}
+    <div className="mb-6 flex items-start gap-3">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0066ff]/10 text-[#0066ff]"><Icon className="h-5 w-5" aria-hidden /></span>
       <div className="min-w-0">
-        <h1 className="text-2xl font-black text-slate-900">{title}</h1>
-        {subtitle && <p className="text-sm font-bold text-slate-400 mt-0.5">{subtitle}</p>}
+        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
     </div>
   )

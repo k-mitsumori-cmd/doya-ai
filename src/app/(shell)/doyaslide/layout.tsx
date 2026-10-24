@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata, generateToolSchema } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 import DoyaSlideLayout from '@/components/doyaslide/DoyaSlideLayout'
 import DoyaSlideShellFrame from '@/components/doyaslide/DoyaSlideShellFrame'
 
@@ -13,10 +12,10 @@ export const metadata: Metadata = buildServiceMetadata('doyaslide', {
 })
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  // 未ログインは今のまま（紹介ページの判定は DoyaSlideLayout がクライアントで行う）。ログイン済みで枠が有効なときだけ共通の枠
-  // ⚠️ 今まではセッションを見ずに描いていた。ログインが分からないときは未ログインとして今のレイアウトにする
+  // 未ログインは今のまま（紹介ページの判定は DoyaSlideLayout がクライアントで行う）。ログイン済みなら共通の枠
+  // ⚠️ 今まではセッションを見ずに描いていた。ログインが分からないときは未ログインとして扱う
   const session = await getServerSession(authOptions).catch(() => null)
-  const shell = Boolean(session?.user) && isShellEnabled('doyaslide')
+  const shell = Boolean(session?.user)
   const toolSchema = generateToolSchema({ path: '/doyaslide', name: 'ドヤスライド', description: 'テーマを入力するだけでAIが構成からデザインまでプレゼン資料を自動生成するツール。', category: 'BusinessApplication', serviceId: 'doyaslide' })
   return (
     <>

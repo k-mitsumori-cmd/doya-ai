@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import Sym from '@/components/doyalist/Sym'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 type PlanId = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
@@ -46,11 +45,10 @@ export default function PricingPage() {
   }, [loadPlan])
 
   // 新しい見た目では、ページの見出しは枠（ToolFrame）の h1 に任せ、ここは h2 にする（UI 品質 S-57・S-63）
-  const uiNext = useUiNext()
-  const Heading = uiNext ? 'h2' : 'h1'
+  const Heading = 'h2'
 
   return (
-    <div data-legacy-backdrop className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop>
       <Toaster position="top-center" />
 
       <div className="p-4 lg:p-10 max-w-6xl mx-auto pb-20">
@@ -60,7 +58,7 @@ export default function PricingPage() {
             <Sym name="diamond" className="text-cyan-600 text-base" />
             <span className="text-xs font-black text-cyan-700">料金プラン</span>
           </div>
-          <Heading className={`${uiNext ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl'} font-black text-[#0a1530] mb-3`}>
+          <Heading className="text-2xl lg:text-3xl font-black text-[#0a1530] mb-3">
             シンプルな2プラン
           </Heading>
           <p className="text-base text-slate-500 max-w-xl mx-auto">

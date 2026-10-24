@@ -17,10 +17,10 @@ import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
-import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
+import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tools'
-import { useToolHref, useUiNext } from './ui-next-context'
+import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, type ShellTool } from './tools'
+import { useToolHref } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
@@ -50,7 +50,7 @@ function readRecent(): string[] {
 
 function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean; mirror?: boolean }) {
   const active = isActive(pathname, tool)
-  // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
+  // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const href = useToolHref()(tool.href)
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
@@ -155,14 +155,13 @@ export default function AppShell({ children, userName, initialRecent }: {
 }) {
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
-  const uiNext = useUiNext()
   const toHref = useToolHref()
-  const groups = shellGroups(uiNext)
+  const groups = SHELL_GROUPS
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
   const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
   // サーバーから並びを受け取ったときは、最初の1回は表示を変えない（読み込みの直後に並びが動くと CLS になる）
-  const keepFirst = useRef(Boolean(uiNext && initialRecent))
+  const keepFirst = useRef(Boolean(initialRecent))
 
   // 最近使ったツール（タブバー用）。サービスを固定しない
   useEffect(() => {
@@ -171,13 +170,11 @@ export default function AppShell({ children, userName, initialRecent }: {
     const next = current ? [current.id, ...list.filter((id) => id !== current.id)].slice(0, 6) : list
     if (keepFirst.current) keepFirst.current = false
     else setRecent(next)
-    if (uiNext) {
-      try { document.cookie = `${RECENT_COOKIE}=${serializeRecent(next)}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax` } catch { /* 覚えられなくても動く */ }
-    }
+    try { document.cookie = `${RECENT_COOKIE}=${serializeRecent(next)}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax` } catch { /* 覚えられなくても動く */ }
     if (current) {
       try { window.localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* 保存できなくても動く */ }
     }
-  }, [pathname, uiNext])
+  }, [pathname])
 
   const onKey = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -197,34 +194,33 @@ export default function AppShell({ children, userName, initialRecent }: {
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   useEffect(() => setPendingHref(null), [pathname])
   const shownPath = pendingHref ?? pathname
-  const navigate = (href: string) => { if (uiNext) setPendingHref(href); close() }
-  const prefetch = uiNext ? true : undefined
+  const navigate = (href: string) => { setPendingHref(href); close() }
+  const prefetch = true
 
   const tabTools = useMemo(() => {
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     const picked = recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t))
     const fill = groups.flatMap((g) => g.tools).filter((t) => !recent.includes(t.id))
     // 新しい見た目のスマホの下のタブは「ホーム・最近使ったツール2つ・すべて・アカウント」の決まった並び（UI 品質 S-4）
-    return [...picked, ...fill].slice(0, uiNext ? 2 : 3)
-  }, [recent, groups, uiNext])
+    return [...picked, ...fill].slice(0, 2)
+  }, [recent, groups])
 
-  // 左のメニューの上に出す「最近使ったツール」（新しい見た目のときだけ。UI 品質 S-1）
+  // 左のメニューの上に出す「最近使ったツール」（UI 品質 S-1）
   const recentTools = useMemo(() => {
-    if (!uiNext) return []
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     return recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t) && t!.id !== 'home').slice(0, 3)
-  }, [recent, uiNext])
+  }, [recent])
 
-  // 枠の中の h1 を1つにする（新しい見た目のときだけ。UI 品質 S-57）
+  // 枠の中の h1 を1つにする（UI 品質 S-57）
   const mainRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const el = mainRef.current
-    if (!uiNext || !el || typeof MutationObserver === 'undefined') return
+    if (!el || typeof MutationObserver === 'undefined') return
     demoteExtraH1(el)
     const mo = new MutationObserver(() => demoteExtraH1(el))
     mo.observe(el, { childList: true, subtree: true })
     return () => mo.disconnect()
-  }, [uiNext])
+  }, [])
 
   const openAccount = () => {
     setOpen(true)
@@ -234,7 +230,7 @@ export default function AppShell({ children, userName, initialRecent }: {
   return (
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
-    <div className={`${ds.ds} ${styles.shell}`} data-ui-next={uiNext ? 'true' : undefined}>
+    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true">
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>
@@ -271,7 +267,6 @@ export default function AppShell({ children, userName, initialRecent }: {
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
-        {uiNext ? null : <ShellPowerMeter variant="sidebar" />}
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {recentTools.length ? (
@@ -293,11 +288,10 @@ export default function AppShell({ children, userName, initialRecent }: {
         </div>
         {/* 新しい見た目では、左下はどの画面でも同じもの（登録会社・ドヤパワー・アカウント・ログアウト）だけにする。
             ツールごとの「作った数 / 残り」は、ツールの見出しの帯（ToolFrame）に出す（2026-10-24 ユーザーの指摘「ツールを押すごとに変わるのは分かりにくい」） */}
-        {uiNext ? null : <ShellUsageArea className={styles.usage} />}
         <div className={styles.account} id="shell-account">
-          {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
+          {/* 登録会社と切り替え（中身が出る。UI 品質 B-1） */}
           <ShellCompanyCard />
-          {uiNext ? <ShellPowerMeter variant="sidebar" /> : null}
+          <ShellPowerMeter variant="sidebar" />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
@@ -311,9 +305,9 @@ export default function AppShell({ children, userName, initialRecent }: {
       </nav>
 
       <main id="shell-main" ref={mainRef} className={styles.main}>
-        {/* 読み込みの表示は、枠の上の細い線だけ（新しい見た目のときだけ。UI 品質 C-3）。
+        {/* 読み込みの表示は、枠の上の細い線だけ（UI 品質 C-3）。
             ⚠️ loading.tsx は置かない。置くと、ふつうの利用者にも前のページが消えて読み込みが出るようになる */}
-        {uiNext && pendingHref && pendingHref !== pathname ? <div className={styles.progress} role="progressbar" aria-label="読み込み中" /> : null}
+        {pendingHref && pendingHref !== pathname ? <div className={styles.progress} role="progressbar" aria-label="読み込み中" /> : null}
         {children}
       </main>
 
@@ -330,15 +324,13 @@ export default function AppShell({ children, userName, initialRecent }: {
           <LayoutGrid size={20} aria-hidden />
           <span>すべて</span>
         </button>
-        {uiNext ? (
-          <button type="button" className={styles.tab} onClick={openAccount}>
+        <button type="button" className={styles.tab} onClick={openAccount}>
             <CircleUser size={20} aria-hidden />
             <span>アカウント</span>
           </button>
-        ) : null}
       </nav>
 
-      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={uiNext} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} />
     </div>
     </ShellUsageProvider>
     </InShellContext.Provider>

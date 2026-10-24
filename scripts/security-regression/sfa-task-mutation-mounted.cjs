@@ -15,7 +15,7 @@ async function verify(operations) {
       const row = () => title()?.parentElement.parentElement;
       const invoke = () => {
         const target = row(); assert.ok(target);
-        if (operation === 'delete') return props(target.querySelector('[aria-label="タスクを削除"]')).onClick();
+        if (operation === 'delete') return props(target.querySelector('[aria-label$="」を削除"]')).onClick();
         if (operation === 'toggle') return props(target.querySelector('button')).onClick();
         return props(target.querySelector('input[type=date]')).onChange({ target: { value: '2026-09-22' } });
       };
@@ -34,7 +34,7 @@ async function verify(operations) {
       let pending; await f.act(() => { pending = invoke(); });
       if (mode === 'duplicate') {
         assert.ok(title()); assert.equal(title().classList.contains('line-through'), false); assert.equal(row().querySelector('input[type=date]').value, '');
-        await f.act(() => { invoke(); props(row().querySelector('[aria-label="タスクを削除"]')).onClick(); }); assert.equal(calls, 1);
+        await f.act(() => { invoke(); props(row().querySelector('[aria-label$="」を削除"]')).onClick(); }); assert.equal(calls, 1);
         await f.act(() => { hold.resolve(); });
       }
       await f.act(() => pending);
@@ -43,7 +43,7 @@ async function verify(operations) {
       assert.ok(f.container.textContent.includes('Task B'), 'other task survives every response');
       if (!good) {
         assert.ok(title()); assert.equal(title().classList.contains('line-through'),false); assert.equal(row().querySelector('input[type=date]').value,'');
-        assert.ok(f.container.querySelector('[role=status]')); assert.equal(row().querySelector('[aria-label="タスクを削除"]').disabled, unknown);
+        assert.ok(f.container.querySelector('[role=status]')); assert.equal(row().querySelector('[aria-label$="」を削除"]').disabled, unknown);
       }
       if (mode === 'retry') {
         const before = calls; await f.act(() => invoke()); assert.equal(calls,before,'unknown write cannot be blindly replayed');

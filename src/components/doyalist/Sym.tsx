@@ -8,7 +8,6 @@ import {
   AlertTriangle, ArrowUp, ArrowUpRight, BarChart3, Building2, Bot, AlertCircle, HelpCircle, Clock, DownloadCloud, Download, FileText, Gem, Globe,
   Headphones, Info, LogIn, SlidersHorizontal, UserCircle, Lightbulb, ListChecks, LogOut, Mail, Map as MapIcon, MapPin, Radio, Reply, Search, Sparkles, User, Users,
 } from 'lucide-react'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 const ICONS: Record<string, LucideIcon> = {
   apartment: Building2, arrow_outward: ArrowUpRight, arrow_upward: ArrowUp, auto_awesome: Sparkles, bar_chart: BarChart3,
@@ -21,9 +20,8 @@ const ICONS: Record<string, LucideIcon> = {
 const SIZE: [string, number][] = [['text-3xl', 28], ['text-2xl', 24], ['text-xl', 20], ['text-lg', 18], ['text-base', 16], ['text-sm', 14], ['text-xs', 12]]
 
 export default function Sym({ name, className = '' }: { name: string; className?: string }) {
-  const uiNext = useUiNext()
   const Icon = ICONS[name]
-  if (!uiNext || !Icon) return <span className={`material-symbols-outlined ${className}`} aria-hidden="true">{name}</span>
+  if (!Icon) return <span className={`material-symbols-outlined ${className}`} aria-hidden="true">{name}</span>
   const size = SIZE.find(([c]) => className.split(/\s+/).includes(c))?.[1] ?? 18
   // 文字の大きさのクラスは外し、色・余白・並びのクラスだけを残す
   const rest = className.split(/\s+/).filter((c) => c && !SIZE.some(([s]) => s === c)).join(' ')

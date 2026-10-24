@@ -8,10 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
-import { DoyaKun } from '@/components/lp'
 import { EmptyState } from '@/components/EmptyState'
 import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Button, EmptyState as DsEmptyState, Skeleton } from '@/components/ds'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus } from '@/components/aishodan/failure'
@@ -51,15 +49,14 @@ const LOAD_FORBIDDEN_MESSAGE = '選択中の組織にアクセスできません
 
 export default function AishodanSessionsPage() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
-  const uiNext = useUiNext()
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [verdict, setVerdict] = useState('')
   const [error, setError] = useState('')
   /** 続きの読み込みに失敗したときの応答の状態（新しい見た目で「何が起きたか・どうすればよいか」を決める。通信の失敗は 0） */
   const [errorStatus, setErrorStatus] = useState(0)
-  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
-  const tap = uiNext ? AISHODAN_TAP : ''
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠
+  const tap = AISHODAN_TAP
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -122,37 +119,33 @@ export default function AishodanSessionsPage() {
   }, [load])
 
   return (
-    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
+    <div className="pb-12">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
+          <Link href="/aishodan" className={`text-xs text-slate-500 hover:underline font-semibold inline-flex items-center rounded-lg${tap}`}>← ダッシュボード</Link>
           <AishodanHeading className="text-lg font-bold text-slate-900">商談ログ</AishodanHeading>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        <div className="flex flex-wrap gap-2" role={uiNext ? 'group' : undefined} aria-label={uiNext ? '判定で絞り込む' : undefined}>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="判定で絞り込む">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
-              aria-pressed={uiNext ? verdict === f.key : undefined}
+              aria-pressed={verdict === f.key}
               onClick={() => { if (f.key !== verdict) { loadVersion.current++; setVerdict(f.key) } }}
-              className={`rounded-full px-3.5 py-1.5 text-sm ${
-                verdict === f.key ? 'bg-[#0066ff] text-white' : 'border border-slate-300 bg-white text-slate-700'
-              }${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
+              className={`rounded-full px-3.5 py-1.5 text-sm ${verdict === f.key ? 'bg-[#0066ff] text-white' : 'border border-slate-300 bg-white text-slate-700'} whitespace-nowrap${tap}`}
             >
               {f.label}
             </button>
           ))}
         </div>
 
-        <div className={`mt-5 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
-          {loading && uiNext ? (
+        <div className="mt-5 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 p-4 sm:p-6">
+          {loading ? (
             <Skeleton lines={5} height={18} />
-          ) : loading ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
-          ) : error && sessions.length === 0 && uiNext ? (
+          ) : error && sessions.length === 0 ? (
             // サーバーの文は出さない。403 は組織の選び直し、401 はログインし直し、それ以外はやり直す
             <AishodanFailureNotice
               failure={describeAishodanFailure(error === LOAD_FORBIDDEN_MESSAGE ? 403 : 0, '商談ログを読み込めませんでした。')}
@@ -167,7 +160,7 @@ export default function AishodanSessionsPage() {
               <button type="button" onClick={() => void load()} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">再読み込みする</button>
               <Link href="/aishodan" className="ml-3 inline-block text-sm font-bold text-blue-700 underline">組織を確認する</Link>
             </div>
-          ) : sessions.length === 0 && uiNext ? (
+          ) : sessions.length === 0 ? (
             <DsEmptyState
               kind={verdict === '' ? 'zero' : 'no-results'}
               title={verdict === '' ? 'まだ商談がありません' : 'この判定の商談はありません'}
@@ -185,7 +178,7 @@ export default function AishodanSessionsPage() {
             />
           ) : (
             <div>
-            {error && uiNext ? (
+            {error ? (
               <div className="mb-3">
                 <AishodanFailureNotice failure={describeAishodanFailure(errorStatus, '続きを読み込めませんでした。')} onRetry={() => void loadMore()} retryLabel="もう一度読み込む" />
               </div>
@@ -193,18 +186,16 @@ export default function AishodanSessionsPage() {
             <div className="divide-y divide-slate-100">
               {sessions.map((s) => (
                 // 新しい見た目: 375px では札（練習・日程調整済み・適合・判定）を名前の下に回す。横に並べると名前が数文字しか見えない
-                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className={uiNext
-                  ? `flex flex-col gap-2 rounded-lg px-1 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:gap-3${tap}`
-                  : 'flex items-center justify-between gap-3 py-3 hover:bg-slate-50'}>
+                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className={`flex flex-col gap-2 rounded-lg px-1 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:gap-3${tap}`}>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {s.guestCompany || '会社名未取得'} {s.guestName ? `／ ${s.guestName}` : ''}
                     </p>
-                    <p className={`text-xs text-slate-500 font-semibold${uiNext ? ' break-words' : ''}`}>
+                    <p className="text-xs text-slate-500 font-semibold break-words">
                       {new Date(s.createdAt).toLocaleString('ja-JP')} / {s.room.name} / {s._count.turns}発話
                     </p>
                   </div>
-                  <div className={uiNext ? 'flex shrink-0 flex-wrap items-center gap-2' : 'flex shrink-0 items-center gap-2'}>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {s.room.isPreview && (
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                         練習

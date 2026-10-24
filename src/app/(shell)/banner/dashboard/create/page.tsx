@@ -11,14 +11,12 @@ import {
   ChevronDown, Check, Star, Eye, Copy, 
   Play, Crown, ArrowUpRight, Palette,
   MessageSquare, Send, RotateCcw, Pencil, BarChart3,
-  Users, DollarSign, Settings, Search, ArrowUpDown, ChevronRight,
-  TrendingUp, Layers, Link2
+  Users, DollarSign, Settings, Search, ArrowUpDown, ChevronRight, Link2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, getBannerDailyLimitByUserPlan, getBannerMaxImagesPerRequest, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { tierFrom } from '@/lib/plan-utils'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, ToolHero } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { FeatureGuide } from '@/components/FeatureGuide'
@@ -843,7 +841,6 @@ export default function BannerDashboard() {
 function BannerDashboardWorkspace() {
   const { data: session, status: sessionStatus } = useSession()
   // 新しい見た目（チェックリスト §5.1）のときだけ、共通の ToolHero・余白・折り返しの直しを使う
-  const uiNext = useUiNext()
   const operations = useBannerRequestFence(sessionStatus, String(session?.user?.id || ''), true)
   const refineRecovery = useBannerRefineRecovery(sessionStatus, String(session?.user?.id || ''))
   
@@ -1533,7 +1530,7 @@ function BannerDashboardWorkspace() {
   // ========================================
   return (
     <DashboardLayout>
-      <div className={`text-gray-900 relative ${uiNext ? nextStyles.page : ''}`}>
+      <div className={`text-gray-900 relative ${nextStyles.page}`}>
         {/* Page Background Accent */}
         <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none -z-10" />
 
@@ -1567,8 +1564,7 @@ function BannerDashboardWorkspace() {
             Main Content
             ======================================== */}
         {/* UI崩れ対策：左カラム固定幅だと日本語が1文字改行しやすいので、元の比率（右=固定）に戻す */}
-        {uiNext && (
-          <div className={nextStyles.createHero}>
+        <div className={nextStyles.createHero}>
             <ToolHero
               title="入力するだけで、プロ品質のバナーを3案。"
               lead="用途・業種・伝えたい言葉を入れると、AIがクリックされやすい構成でバナーをつくります。迷ったら「サンプル入力」から試せます。"
@@ -1576,8 +1572,7 @@ function BannerDashboardWorkspace() {
               tool="banner"
             />
           </div>
-        )}
-        <div className={uiNext ? 'grid lg:grid-cols-[minmax(0,1fr),380px] xl:grid-cols-[minmax(0,1fr),440px] gap-6 sm:gap-10' : 'grid lg:grid-cols-[1fr,380px] xl:grid-cols-[1fr,440px] gap-6 sm:gap-10'}>
+        <div className="grid lg:grid-cols-[minmax(0,1fr),380px] xl:grid-cols-[minmax(0,1fr),440px] gap-6 sm:gap-10">
           
           {/* ========================================
               Left Column - Input Form
@@ -1585,49 +1580,6 @@ function BannerDashboardWorkspace() {
           <div className="space-y-6">
             
             {/* Hero Card - Professional（新しい見た目では、列の外の上に共通の ToolHero を出す。H-3） */}
-            {uiNext ? null : (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative bg-white rounded-[2rem] border border-blue-50 p-4 sm:p-8 md:p-10 shadow-sm overflow-hidden"
-            >
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
-              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex-1">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-6">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    ドヤバナーAI Engine v2.0
-                  </div>
-                  
-                  <h2 className="text-3xl sm:text-4xl font-black text-slate-800 mb-4 tracking-tighter leading-tight">
-                    プロ品質のバナーを
-                    <br />
-                    <span className="text-blue-600">
-                      数クリックで自動生成
-                    </span>
-                  </h2>
-                  
-                  <p className="text-slate-400 text-sm sm:text-base max-w-md font-medium">
-                    最新のAIエンジンが、あなたのビジネスに最適な高CTRバナーを3パターン提案します。
-                  </p>
-                </div>
-                
-                <div className="flex-shrink-0 grid grid-cols-2 gap-3">
-                  {[
-                    { label: '高CTR', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: '爆速生成', icon: Zap, color: 'text-orange-500', bg: 'bg-orange-50' },
-                    { label: '修正自在', icon: Wand2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'マルチサイズ', icon: Layers, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-                  ].map((f) => (
-                    <div key={f.label} className={`${f.bg} p-3 rounded-2xl flex flex-col items-center justify-center text-center w-20 h-20 sm:w-24 sm:h-24 transition-transform hover:scale-105 cursor-default`}>
-                      <f.icon className={`w-6 h-6 ${f.color} mb-2`} />
-                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">{f.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-            )}
 
             {/* Step 1: Purpose */}
             <motion.div 
@@ -1642,7 +1594,7 @@ function BannerDashboardWorkspace() {
                     01
                   </div>
                   <div>
-                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${uiNext ? nextStyles.nowrap : ''}`}>用途を選択</h2>
+                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>用途を選択</h2>
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Channel Strategy</p>
                   </div>
                 </div>
@@ -1728,7 +1680,7 @@ function BannerDashboardWorkspace() {
                   02
                 </div>
                 <div>
-                  <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${uiNext ? nextStyles.nowrap : ''}`}>業種を選択</h2>
+                  <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>業種を選択</h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Industry Design</p>
                 </div>
               </div>
@@ -1789,7 +1741,7 @@ function BannerDashboardWorkspace() {
                     03
                   </div>
                   <div>
-                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${uiNext ? nextStyles.nowrap : ''}`}>サイズを選択</h2>
+                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>サイズを選択</h2>
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Canvas Dimensions</p>
                   </div>
                 </div>
@@ -1911,7 +1863,7 @@ function BannerDashboardWorkspace() {
                     04
                   </div>
                   <div>
-                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${uiNext ? nextStyles.nowrap : ''}`}>内容とイメージ</h2>
+                    <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>内容とイメージ</h2>
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Message & Visuals</p>
                   </div>
                 </div>
@@ -2116,7 +2068,7 @@ function BannerDashboardWorkspace() {
                       <span className="ml-1 font-bold text-slate-700">枚数を増やすほど時間がかかります。</span>
                     </p>
                   </div>
-                  <div className={uiNext ? `text-right flex-shrink-0 ${nextStyles.nowrap}` : 'text-right'}>
+                  <div className={`text-right flex-shrink-0 ${nextStyles.nowrap}`}>
                     <p className="text-xs font-black text-slate-900 tabular-nums">{generateCount}枚</p>
                     <p className="text-[10px] text-slate-400 font-bold">
                       {`最大${maxCount}枚`}

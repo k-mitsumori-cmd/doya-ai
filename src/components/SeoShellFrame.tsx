@@ -1,12 +1,11 @@
 'use client'
 
 // ドヤ記事作成 共通の枠の中身（ToolFrame だけ。AppShell では包まない）
-// 今の SeoAppLayout が出していた「初回ログイン特典の残り時間」「現在のプラン」「新規記事作成」を、枠の中でも同じ値で出す。
-// ⚠️ 本文の余白と最大幅は SeoAppLayout と同じにする（/seo/template の負の margin がこの余白を打ち消す前提のため）
+// 旧来の SeoAppLayout（2026-10-24 に削除）が出していた「初回ログイン特典の残り時間」「現在のプラン」「新規記事作成」を、枠の中でも同じ値で出す。
+// ⚠️ 本文の余白と最大幅は旧来の SeoAppLayout と同じにする（/seo/template の負の margin がこの余白を打ち消す前提のため）
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Plus, Timer } from 'lucide-react'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { SEO_NAV, seoNavHref } from '@/lib/seo/nav'
@@ -51,9 +50,8 @@ export default function SeoShellFrame({
   }, [isLoggedIn, firstLoginAt])
 
   // 新しい見た目では、記事の一覧（/seo）の主ボタンはページのヒーローに置くので、見出しの帯には出さない（主ボタンは1画面に1つ）
-  const uiNext = useUiNext()
   const pathname = usePathname()
-  const showCreate = !(uiNext && pathname === '/seo')
+  const showCreate = !(pathname === '/seo')
 
   const nav = SEO_NAV.map((item) => ({ ...item, href: seoNavHref(item.href, !!isLoggedIn) }))
 

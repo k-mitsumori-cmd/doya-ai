@@ -32,8 +32,8 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
   if(resolved){for(const ext of ['.ts','.tsx'])if(fs.existsSync(path.join(root,resolved+ext)))return load(resolved+ext)}
   throw Error('Unexpected import '+n+' in '+file)
  },window:dom.window,document:dom.window.document,navigator:dom.window.navigator,URL,Blob,AbortController,console,setTimeout,clearTimeout,setInterval:(fn,ms)=>{const token=++timerId;intervals.set(token,{fn,ms});return token},clearInterval:token=>intervals.delete(token)},{filename:file});return exports}
-const Page=load('src/app/(shell)/shodan/[orgSlug]/p/[id]/page.tsx').default,Layout=load('src/components/shodan/ShodanAppLayout.tsx').default
-const render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,{orgSlug:org,organizationPlan:'PRO',canManageBilling:true},React.createElement(Page))))
+const Page=load('src/app/(shell)/shodan/[orgSlug]/p/[id]/page.tsx').default,Layout=({children})=>children/* 旧来の AppLayout（サイドバー）は 2026-10-24 に消した。組織のページは ToolFrame だけで包む */
+const render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,null,React.createElement(Page))))
 const act=fn=>React.act(async()=>{await fn();for(let n=0;n<14;n++)await new Promise(setImmediate)})
 const props=el=>el[Object.keys(el).find(k=>k.startsWith('__reactProps$'))],button=text=>[...c.querySelectorAll('button')].find(b=>b.textContent.includes(text)),retry=()=>button('\u540c\u3058URL\u3067\u518d\u751f\u6210'),recover=()=>button('\u4fdd\u5b58\u6e08\u307f\u306e\u7d50\u679c\u3092\u78ba\u8a8d'),deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve}},cases=[]
 async function test(name,fn,configure=()=>{}){org='alpha';actor='actor-a';auth='authenticated';id='one';writes=[];reads=[];notices=[];navigation=[];clips=[];clipHook=null;writeHook=null;readHook=null;stored={'alpha:one':fixture(),'beta:two':fixture('two','beta current')};await configure();c=document.createElement('div');document.body.append(c);r=createRoot(c);mounted=true;await act(render)

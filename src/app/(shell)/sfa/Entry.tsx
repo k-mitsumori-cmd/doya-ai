@@ -7,11 +7,10 @@ import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission }
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
-  DoyaKun, BgDots, type ShowcaseRow,
+  DoyaKun, type ShowcaseRow,
 } from '@/components/lp'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { SfaPipelineMock, SfaAccountsMock, SfaDashboardMock } from './mocks'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Skeleton } from '@/components/ds'
 
 const SVC = getServiceById('sfa')!
@@ -41,7 +40,6 @@ export default function SfaEntryPage() {
   const router = useRouter()
   const { status } = useSession()
   // 新しい見た目（UI 品質 §5.1）: 枠の中で全画面の読み込み・グラデーションの背景を出さない（C-2）
-  const uiNext = useUiNext()
   const [checking, setChecking] = useState(true)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
@@ -81,7 +79,7 @@ export default function SfaEntryPage() {
     })
   }
 
-  if (checking && uiNext) {
+  if (checking) {
     return (
       <div className="mx-auto max-w-md p-6" aria-busy="true" aria-label="読み込み中">
         <Skeleton lines={4} height={18} />
@@ -89,28 +87,15 @@ export default function SfaEntryPage() {
     )
   }
 
-  if (checking) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-blue-50">
-        <div className="text-center">
-          <DoyaKun mood="thinking" size={88} />
-          <p className="mt-3 text-slate-400 font-bold">読み込み中…</p>
-        </div>
-      </div>
-    )
-  }
 
   // ログイン済み・未オンボーディング → 組織作成フォーム
   if (status === 'authenticated') {
     return (
-      <div className={uiNext ? 'grid place-items-center px-4 py-8 sm:py-12' : 'min-h-screen relative bg-gradient-to-b from-white via-blue-50/40 to-blue-100/40 grid place-items-center p-6'}>
-        {!uiNext && <BgDots />}
-        <div className={uiNext ? 'w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8' : 'relative z-10 bg-white rounded-3xl shadow-xl shadow-blue-500/10 p-8 w-full max-w-md border border-blue-100'}>
+      <div className="grid place-items-center px-4 py-8 sm:py-12">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
           <div className="text-center mb-6">
             <div className="flex justify-center"><DoyaKun mood="hello" size={110} /></div>
-            {uiNext
-              ? <h1 className="mt-2 text-xl font-bold text-slate-900">営業管理をはじめましょう</h1>
-              : <h2 className="text-2xl font-black text-slate-900 mt-2">ようこそ！</h2>}
+            <h1 className="mt-2 text-xl font-bold text-slate-900">営業管理をはじめましょう</h1>
             <p className="text-slate-500 font-bold text-sm mt-1">組織を作成すると、すぐに使い始められます（サンプル付き）</p>
           </div>
           <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>
@@ -130,10 +115,7 @@ export default function SfaEntryPage() {
           <button
             onClick={create}
             disabled={creating}
-            className={uiNext
-              ? 'w-full rounded-xl bg-[#0066ff] py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0052cc] disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100'
-              : 'w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]'}
-            style={uiNext ? undefined : { background: 'linear-gradient(135deg, #0066ff, #16a34a)' }}
+            className="w-full rounded-xl bg-[#0066ff] py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0052cc] disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100"
           >
             {creating ? '作成中…' : '組織を作成して始める'}
           </button>

@@ -1,7 +1,7 @@
 // ============================================
 // プロマネのプロジェクト一覧（新しい見た目）
 // ============================================
-// isUiNext() が真のときだけ、src/app/(shell)/promane/[workspaceSlug]/projects/page.tsx から出す。偽のときは今までの画面のまま。
+// src/app/(shell)/promane/[workspaceSlug]/projects/page.tsx から出す。偽のときは今までの画面のまま。
 // ⚠️ 集計は page.tsx のまま。ここは受け取った値を並べるだけ。
 // ⚠️ 目立たせるのは案件名と収支。顧客が未設定なら薄い「—」にする（UI 品質 S-50）。375px では2列の札にする（固定幅の列を置かない）。
 import Link from 'next/link'

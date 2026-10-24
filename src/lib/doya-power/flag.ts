@@ -1,15 +1,13 @@
 // ============================================
 // ドヤパワー（ポイント制とゲーミフィケーション）を出すかどうか
 // ============================================
-// 新しい見た目（UI_NEXT_ROLLOUT）は全員に出しているので、useUiNext() の内側に入れるだけでは全員に見える。
-// ドヤパワーは、この旗で別に出し分ける。
+// 新しい見た目は全員に出し終えたので、ドヤパワーはこの旗で別に出し分ける。
 //   DOYA_POWER_ROLLOUT=off      … 誰にも出さない（既定。値が無い・知らない値も off）
 //   DOYA_POWER_ROLLOUT=preview  … UI_PREVIEW_EMAILS で許可した人だけ（src/lib/ui-next.ts の canPreviewUiNext）
 //   DOYA_POWER_ROLLOUT=all      … 全員
 // ⚠️ 判定はサーバーだけで行う。クライアントの部品には (shell)/layout.tsx が context で渡す（doya-power-context.tsx）。
 // ⚠️ off のときは、セッションも DB も読まずに false を返す。台帳の表（doya_power_*）は本番DBにまだ無いので、
 //    off のまま台帳を読む・書くコードが動くと落ちる。台帳の入口（index.ts）もこの旗で止める。
-// ⚠️ 新しい見た目（isUiNext()）とは別の判定。両方が真のときだけ画面を出す（各ページで両方を見る）。
 import { canPreviewUiNext, uiPreviewEmails } from '@/lib/ui-next'
 
 export type DoyaPowerRollout = 'off' | 'preview' | 'all'

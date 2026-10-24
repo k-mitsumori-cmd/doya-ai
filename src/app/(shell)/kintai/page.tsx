@@ -7,11 +7,10 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import KintaiLandingPage from './Landing'
 
 export default async function KintaiEntryPage() {
   const session = await getServerSession(authOptions).catch(() => null)
-  if (session?.user && (await isUiNext())) redirect('/kintai/dashboard')
+  if (session?.user) redirect('/kintai/dashboard')
   return <KintaiLandingPage />
 }

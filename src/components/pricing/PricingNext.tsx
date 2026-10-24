@@ -15,7 +15,7 @@ import { useSession } from 'next-auth/react'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { ShellIcon } from '@/components/shell/icons'
-import { ALL_SHELL_TOOLS, shellGroups } from '@/components/shell/tools'
+import { ALL_SHELL_TOOLS, SHELL_GROUPS } from '@/components/shell/tools'
 import ds from '@/components/ds/tokens.module.css'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
@@ -30,7 +30,7 @@ const RETURN_TO = '/pricing'
 function comparisonGroups(services: Service[]) {
   const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
   const used = new Set<string>()
-  const groups = shellGroups(true).map((g) => {
+  const groups = SHELL_GROUPS.map((g) => {
     const rows = services.filter((s) => byId.get(s.id)?.stage === g.stage)
     rows.forEach((s) => used.add(s.id))
     return { label: g.label, rows }

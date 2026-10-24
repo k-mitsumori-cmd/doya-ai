@@ -9,9 +9,8 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
-import { shellGroups } from '@/components/shell/tools'
+import { SHELL_GROUPS } from '@/components/shell/tools'
 import { buildCatalog } from '@/lib/collection/catalog'
 import { evaluateBadges } from '@/lib/collection/badges'
 import { loadCollectionFacts } from '@/lib/collection/facts.server'
@@ -30,9 +29,8 @@ export default async function CollectionPage() {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home/collection')
-  if (!(await isUiNext())) notFound()
 
   const [facts, fxs] = await Promise.all([loadCollectionFacts(userId), loadDoyaPowerFxForUser(userId)])
   // 枠（AppShell）は src/app/(shell)/layout.tsx が出す
-  return <CollectionView tools={buildCatalog(shellGroups(true))} usage={facts.tools} badges={evaluateBadges(facts)} fx={fxs.fx} canEditOrgFx={fxs.canEditOrg} />
+  return <CollectionView tools={buildCatalog(SHELL_GROUPS)} usage={facts.tools} badges={evaluateBadges(facts)} fx={fxs.fx} canEditOrgFx={fxs.canEditOrg} />
 }

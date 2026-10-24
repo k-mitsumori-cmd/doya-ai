@@ -9,7 +9,6 @@
 // ⚠️ /api/aishodan 以外の URL は、本物の fetch にそのまま渡す。
 import { useEffect, useState, type ReactNode } from 'react'
 import { PathParamsContext } from 'next/dist/shared/lib/hooks-client-context.shared-runtime'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 
 const ORG = { slug: 'mihon', name: '見本 株式会社', role: 'owner' }
 
@@ -159,7 +158,6 @@ function install() {
 }
 
 /**
- * 見本の応答を差し替えてから、新しい見た目（UiNextContext = 'all'）で子を描く。
  * params を渡すと、useParams() が返す値（商談詳細・シナリオの [id]）も見本にする。
  * act は、操作したあとの状態（上限・絞り込みゼロ件）を見せるため、読み込み後に1回だけ押す操作。
  */
@@ -212,7 +210,6 @@ export default function MockFetch({ state, params, act, children }: {
     return () => window.clearInterval(timer)
   }, [act])
 
-  // 新しい見た目で描く（UiNextContext はクライアントの部品なので、サーバーの page ではなくここで渡す）
-  const body = <UiNextContext.Provider value="all">{children}</UiNextContext.Provider>
+  const body = <>{children}</>
   return params ? <PathParamsContext.Provider value={params}>{body}</PathParamsContext.Provider> : body
 }

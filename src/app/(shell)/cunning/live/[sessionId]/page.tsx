@@ -19,7 +19,6 @@ import { looksLikeQuestion } from '@/lib/cunning/classify'
 import { getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 import { UiIcon } from '@/components/icons'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { CunningModeIcon } from '@/components/cunning/mode-icon'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
@@ -76,7 +75,6 @@ function normQ(s: string): string {
 
 export default function CunningLivePage() {
   // 新しい見た目（チェックリスト §5.1）のときは、モードの絵文字を lucide のアイコンにする（選択肢の中は文字だけ）
-  const uiNext = useUiNext()
   const params = useParams()
   const sessionId = params.sessionId as string
 
@@ -1049,7 +1047,7 @@ const SILENCE_PEAK = 8
         <optgroup key={g.category} label={g.label}>
           {g.modes.map((m) => (
             <option key={m.id} value={m.id}>
-              {uiNext ? m.label : `${m.icon} ${m.label}`}
+              {m.label}
             </option>
           ))}
         </optgroup>
@@ -1225,7 +1223,7 @@ const SILENCE_PEAK = 8
 
       {/* このモードで「何にどう答えるか」を明示（薄い青＝ボタンと色で区別） */}
       <div className="mb-4 flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-4">
-        {uiNext ? <CunningModeIcon mode={modeDef.id} size={28} className="text-[#0066ff] flex-shrink-0" /> : <span className="text-3xl leading-none">{modeDef.icon}</span>}
+        <CunningModeIcon mode={modeDef.id} size={28} className="text-[#0066ff] flex-shrink-0" />
         <div className="min-w-0">
           <p className="font-black text-sm text-[#0B5CFF]">
             {modeDef.label}｜<span className="text-slate-600">何にどう答える？</span>
@@ -1425,7 +1423,7 @@ const SILENCE_PEAK = 8
                 <img src={`/character/${modeDef.character}.png`} alt="" className="w-20 h-20 object-contain drop-shadow-lg" />
                 <p className="font-bold text-xs text-center text-white/70 max-w-sm">
                   {sessionState === 'ended' ? '録音は終了しました。保存状況は画面上部で確認できます。' : <>
-                    {uiNext ? '' : `${modeDef.icon} `}{modeDef.label}・準備OK！下のボタンで
+                    {''}{modeDef.label}・準備OK！下のボタンで
                     {audioSource === 'device' ? '入力デバイスから取り込み開始' : '会議/配信タブを共有して開始'}
                   </>}
                 </p>

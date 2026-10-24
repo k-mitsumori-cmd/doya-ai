@@ -4,8 +4,6 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import { isShellEnabled } from '@/lib/ui-shell'
-import CunningLayoutShell from '@/components/cunning/CunningLayoutShell'
 import CunningShellFrame from '@/components/cunning/CunningShellFrame'
 import BetaServiceNotice from '@/components/BetaServiceNotice'
 import { canUseBetaService } from '@/lib/beta-service'
@@ -34,7 +32,7 @@ export default async function CunningLayout({ children }: { children: React.Reac
         features={SVC.features}
       />
       {/* 未ログイン → 今のまま / 枠が有効 → ToolFrame だけ（枠は (shell)/layout.tsx） / それ以外 → 今のレイアウト。/cunning/live は要ログインの画面なので枠に含める */}
-      {!session?.user ? children : isShellEnabled('cunning') ? <CunningShellFrame>{children}</CunningShellFrame> : <CunningLayoutShell>{children}</CunningLayoutShell>}
+      {!session?.user ? children : <CunningShellFrame>{children}</CunningShellFrame>}
     </>
   )
 }

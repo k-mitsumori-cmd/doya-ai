@@ -6,7 +6,7 @@
 const assert=require('node:assert/strict'),path=require('node:path'),{load,check}=require('./load-typescript.cjs');
 const root=path.resolve(__dirname,'../..');
 const nextServer=require(path.join(root,'node_modules/next/server'));
-function fixture({session={user:{id:'alice',email:'alice@example.invalid'}},uiNext=true,rows={alice:{name:'アリス株式会社',websiteUrl:null,industry:null,updatedAt:new Date(0)},bob:{name:'ボブ株式会社',websiteUrl:null,industry:null,updatedAt:new Date(0)}}}={}){
+function fixture({session={user:{id:'alice',email:'alice@example.invalid'}},rows={alice:{name:'アリス株式会社',websiteUrl:null,industry:null,updatedAt:new Date(0)},bob:{name:'ボブ株式会社',websiteUrl:null,industry:null,updatedAt:new Date(0)}}}={}){
   const calls=[];
   const orgWrites=[];
   const prisma={
@@ -33,7 +33,6 @@ function fixture({session={user:{id:'alice',email:'alice@example.invalid'}},uiNe
   },{Promise});
   const route=load('src/app/api/account/company/route.ts',{
     'next/server':nextServer,
-    '@/lib/ui-next':{isUiNext:async()=>uiNext},
     '@/lib/shell/company':company,
     '@/lib/shell/company.server':server,
   },{Promise});
@@ -62,8 +61,8 @@ const req=(method,body)=>new nextServer.NextRequest('https://doya.example.invali
     assert.equal('userId' in ups[0][1].update,false);
     assert.equal(f.rows.bob.name,'ボブ株式会社');
   });
-  await check('Signed-out and non-preview users are rejected without touching the table',async()=>{
-    for(const [opts,status] of [[{session:null},401],[{uiNext:false},404]]){
+  await check('Signed-out users are rejected without touching the table',async()=>{
+    for(const [opts,status] of [[{session:null},401]]){
       const f=fixture(opts);
       for(const call of [()=>f.route.GET(),()=>f.route.PUT(req('PUT',{name:'x'}))]){
         const res=await call();

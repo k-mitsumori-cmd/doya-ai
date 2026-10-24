@@ -4,9 +4,8 @@
 // ドヤバナーAI「見本から作る」の、見本の一覧の部品
 // ============================================
 // /banner/dashboard の絞り込みのボタンと見本のカードを、ここにまとめる。
-// light が真（新しい見た目。useUiNext() が真）のときは、白〜淡い青の背景と紺の文字で出す。
-// light が偽のときは、今までの黒い見た目のまま（クラスは今までと同じ）。
-// ⚠️ 見本の画像そのもの、画像の上に重ねる文字（題名・選択中・ロック）は、どちらの見た目でも変えない。
+// 白〜淡い青の背景と紺の文字で出す（旧来の黒い見た目は 2026-10-24 にやめた）。
+// ⚠️ 見本の画像そのもの、画像の上に重ねる文字（題名・選択中・ロック）の色は変えない。
 // ⚠️ 色を変えるのは背景・文字・枠線（ring は box-shadow）だけ。大きさ・余白は変えない（CLS を増やさない）。
 import { motion } from 'framer-motion'
 import { ChevronDown, ChevronRight, ImageIcon, Loader2, Lock } from 'lucide-react'
@@ -14,92 +13,54 @@ import { ChevronDown, ChevronRight, ImageIcon, Loader2, Lock } from 'lucide-reac
 export type GalleryLockType = 'login' | 'pro' | 'enterprise' | null
 export type GalleryPlanFilter = 'すべて' | 'FREE' | 'LIGHT' | 'PRO'
 
-/** 見た目ごとのクラス。旧来（dark）は、今までの page.tsx に書いてあったものと同じ */
-export function galleryTheme(light: boolean) {
-  return light
-    ? {
-        filterBar: 'bg-[#f4f7fd] border-b border-[#e3e8f4]',
-        backBar: 'border-b border-[#e3e8f4] bg-white/95 backdrop-blur-sm shadow-sm',
-        backLabel: 'text-[#4a5375]',
-        backButton: 'bg-white hover:bg-[#eaf1ff] border border-[#c6cde0] text-[#0a0f3c]',
-        planRow: 'border-b border-[#e3e8f4]',
-        planLabel: 'text-[#4a5375]',
-        tabActive: 'bg-[#0a0f3c] text-white shadow-sm',
-        tabInactive: 'bg-white text-[#4a5375] ring-1 ring-[#dbe3f3] hover:bg-[#eaf1ff] hover:text-[#0a0f3c]',
-        planFreeInactive: 'bg-white text-emerald-700 ring-1 ring-[#dbe3f3] hover:bg-emerald-50 hover:text-emerald-800',
-        planProInactive: 'bg-white text-amber-700 ring-1 ring-[#dbe3f3] hover:bg-amber-50 hover:text-amber-800',
-        notice: 'bg-[#f4f7fd]',
-        noticeText: 'text-[#0066ff]',
-        noticeRetry: 'text-amber-700',
-        grid: 'bg-[#f4f7fd]',
-        heading: 'text-[#0a0f3c]',
-        headingIcon: 'text-[#0066ff]',
-        headingCount: 'text-[#4a5375]',
-        headingSpinner: 'text-[#0066ff]/60',
-        placeholder: 'bg-gradient-to-br from-[#eaf1ff] to-[#dfe8fb]',
-        placeholderPending: 'bg-gradient-to-br from-[#eaf1ff] via-[#dfe8fb] to-[#eaf1ff]',
-        placeholderIcon: 'text-[#8a93b0]',
-        placeholderText: 'text-[#6b7493]',
-        placeholderTrack: 'bg-[#c6cde0]',
-        placeholderBar: 'bg-[#8a93b0]',
-        pendingSpinner: 'text-[#0066ff]/60',
-        skeletonLine: 'bg-[#dbe3f3]',
-        ringPending: 'ring-1 ring-[#e3e8f4]',
-        ringIdle: 'ring-1 ring-[#dbe3f3] hover:ring-[#0066ff]/50',
-        ringSelected: 'ring-2 ring-[#0066ff] shadow-[0_0_12px_rgba(0,102,255,0.35)]',
-        more: 'border-[#c6cde0] hover:border-[#0066ff] bg-white hover:bg-[#f0f5ff]',
-        moreCircle: 'border-[#c6cde0] group-hover:border-[#0066ff]',
-        moreText: 'text-[#4a5375] group-hover:text-[#0066ff]',
-        moreTrack: 'bg-[#e3e8f4]',
-        moreSpinner: 'text-[#0066ff]/60',
-      }
-    : {
-        filterBar: 'bg-black/90 backdrop-blur-sm border-b border-gray-800/50',
-        backBar: 'border-b border-gray-800/50 bg-black/95 backdrop-blur-sm shadow-md',
-        backLabel: 'text-gray-400',
-        backButton: 'bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white',
-        planRow: 'border-b border-gray-800/30',
-        planLabel: 'text-gray-500',
-        tabActive: 'bg-white text-black shadow-lg',
-        tabInactive: 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 hover:text-white',
-        planFreeInactive: 'bg-gray-800/60 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300',
-        planProInactive: 'bg-gray-800/60 text-amber-400 hover:bg-amber-900/40 hover:text-amber-300',
-        notice: '',
-        noticeText: 'text-blue-400/80',
-        noticeRetry: 'text-amber-300',
-        grid: 'bg-black',
-        heading: 'text-gray-400',
-        headingIcon: 'text-blue-400',
-        headingCount: 'text-gray-600',
-        headingSpinner: 'text-blue-400/50',
-        placeholder: 'bg-gradient-to-br from-gray-800 to-gray-900',
-        placeholderPending: 'bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800',
-        placeholderIcon: 'text-gray-600',
-        placeholderText: 'text-gray-600',
-        placeholderTrack: 'bg-gray-700',
-        placeholderBar: 'bg-gray-500',
-        pendingSpinner: 'text-blue-400/60',
-        skeletonLine: 'bg-gray-700/40',
-        ringPending: 'ring-1 ring-gray-800/30',
-        ringIdle: 'ring-1 ring-gray-800/50 hover:ring-gray-600',
-        ringSelected: 'ring-2 ring-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]',
-        more: 'border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800',
-        moreCircle: 'border-gray-600 group-hover:border-blue-400',
-        moreText: 'text-gray-500 group-hover:text-blue-400',
-        moreTrack: 'bg-gray-700/50',
-        moreSpinner: 'text-blue-400/60',
-      }
+/** 一覧の部品のクラス */
+export function galleryTheme() {
+  return {
+    filterBar: 'bg-[#f4f7fd] border-b border-[#e3e8f4]',
+    backBar: 'border-b border-[#e3e8f4] bg-white/95 backdrop-blur-sm shadow-sm',
+    backLabel: 'text-[#4a5375]',
+    backButton: 'bg-white hover:bg-[#eaf1ff] border border-[#c6cde0] text-[#0a0f3c]',
+    planRow: 'border-b border-[#e3e8f4]',
+    planLabel: 'text-[#4a5375]',
+    tabActive: 'bg-[#0a0f3c] text-white shadow-sm',
+    tabInactive: 'bg-white text-[#4a5375] ring-1 ring-[#dbe3f3] hover:bg-[#eaf1ff] hover:text-[#0a0f3c]',
+    planFreeInactive: 'bg-white text-emerald-700 ring-1 ring-[#dbe3f3] hover:bg-emerald-50 hover:text-emerald-800',
+    planProInactive: 'bg-white text-amber-700 ring-1 ring-[#dbe3f3] hover:bg-amber-50 hover:text-amber-800',
+    notice: 'bg-[#f4f7fd]',
+    noticeText: 'text-[#0066ff]',
+    noticeRetry: 'text-amber-700',
+    grid: 'bg-[#f4f7fd]',
+    heading: 'text-[#0a0f3c]',
+    headingIcon: 'text-[#0066ff]',
+    headingCount: 'text-[#4a5375]',
+    headingSpinner: 'text-[#0066ff]/60',
+    placeholder: 'bg-gradient-to-br from-[#eaf1ff] to-[#dfe8fb]',
+    placeholderPending: 'bg-gradient-to-br from-[#eaf1ff] via-[#dfe8fb] to-[#eaf1ff]',
+    placeholderIcon: 'text-[#8a93b0]',
+    placeholderText: 'text-[#6b7493]',
+    placeholderTrack: 'bg-[#c6cde0]',
+    placeholderBar: 'bg-[#8a93b0]',
+    pendingSpinner: 'text-[#0066ff]/60',
+    skeletonLine: 'bg-[#dbe3f3]',
+    ringPending: 'ring-1 ring-[#e3e8f4]',
+    ringIdle: 'ring-1 ring-[#dbe3f3] hover:ring-[#0066ff]/50',
+    ringSelected: 'ring-2 ring-[#0066ff] shadow-[0_0_12px_rgba(0,102,255,0.35)]',
+    more: 'border-[#c6cde0] hover:border-[#0066ff] bg-white hover:bg-[#f0f5ff]',
+    moreCircle: 'border-[#c6cde0] group-hover:border-[#0066ff]',
+    moreText: 'text-[#4a5375] group-hover:text-[#0066ff]',
+    moreTrack: 'bg-[#e3e8f4]',
+    moreSpinner: 'text-[#0066ff]/60',
+  }
 }
 
 /** プランの絞り込みのボタン（エンタープライズは統一プランで廃止した枠なので出さない） */
-export function GalleryPlanTabs({ light, value, onChange }: {
-  light: boolean
+export function GalleryPlanTabs({ value, onChange }: {
   value: GalleryPlanFilter
   onChange: (v: GalleryPlanFilter) => void
 }) {
-  const t = galleryTheme(light)
+  const t = galleryTheme()
   const tabs: { key: GalleryPlanFilter; label: string; color: string; inactive: string }[] = [
-    { key: 'すべて', label: 'すべて', color: light ? 'bg-[#0a0f3c] text-white' : 'bg-white text-black', inactive: t.tabInactive },
+    { key: 'すべて', label: 'すべて', color: 'bg-[#0a0f3c] text-white', inactive: t.tabInactive },
     { key: 'FREE', label: 'ログイン(Free)', color: 'bg-emerald-500 text-white', inactive: t.planFreeInactive },
     { key: 'PRO', label: 'プロプラン(PRO)', color: 'bg-amber-500 text-white', inactive: t.planProInactive },
   ]
@@ -113,7 +74,7 @@ export function GalleryPlanTabs({ light, value, onChange }: {
           onClick={() => onChange(tab.key)}
           aria-pressed={value === tab.key}
           className={`flex-shrink-0 px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium transition-all whitespace-nowrap ${
-            value === tab.key ? tab.color + (light ? ' shadow-sm' : ' shadow-lg') : tab.inactive
+            value === tab.key ? tab.color + (' shadow-sm') : tab.inactive
           }`}
         >
           {tab.label}
@@ -124,13 +85,12 @@ export function GalleryPlanTabs({ light, value, onChange }: {
 }
 
 /** ジャンルの絞り込みのボタン */
-export function GalleryGenreTabs({ light, tabs, value, onChange }: {
-  light: boolean
+export function GalleryGenreTabs({ tabs, value, onChange }: {
   tabs: string[]
   value: string
   onChange: (v: string) => void
 }) {
-  const t = galleryTheme(light)
+  const t = galleryTheme()
   return (
     <div data-tour="filter-tabs" className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       {tabs.map((tab) => (
@@ -151,8 +111,8 @@ export function GalleryGenreTabs({ light, tabs, value, onChange }: {
 }
 
 /** カテゴリの見出し */
-export function GalleryCategoryHeading({ light, name, count, loading }: { light: boolean; name: string; count: number; loading: boolean }) {
-  const t = galleryTheme(light)
+export function GalleryCategoryHeading({ name, count, loading }: { name: string; count: number; loading: boolean }) {
+  const t = galleryTheme()
   return (
     <h3 className={`text-xs sm:text-sm font-bold ${t.heading} px-1 sm:px-2 py-1.5 flex items-center gap-1.5`}>
       <ChevronRight className={`h-4 w-4 ${t.headingIcon}`} /> {name}
@@ -163,8 +123,8 @@ export function GalleryCategoryHeading({ light, name, count, loading }: { light:
 }
 
 /** 読み込み中の見本の一覧（3段×4枚） */
-export function GallerySkeleton({ light }: { light: boolean }) {
-  const t = galleryTheme(light)
+export function GallerySkeleton() {
+  const t = galleryTheme()
   return (
     <div className="space-y-3">
       {[1, 2, 3].map((section) => (
@@ -176,7 +136,7 @@ export function GallerySkeleton({ light }: { light: boolean }) {
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className={`aspect-[1200/628] rounded ${t.placeholder} overflow-hidden relative flex flex-col items-center justify-center gap-1.5`}>
-                <Loader2 className={`w-5 h-5 animate-spin ${light ? t.placeholderIcon : 'text-gray-500'}`} />
+                <Loader2 className={`w-5 h-5 animate-spin ${t.placeholderIcon}`} />
                 <div className={`w-12 h-0.5 ${t.placeholderTrack} rounded-full overflow-hidden`}>
                   <div className={`h-full ${t.placeholderBar} rounded-full animate-[progressGrow_4s_ease-out_forwards]`} />
                 </div>
@@ -200,9 +160,8 @@ export type GalleryCardTemplate = {
 
 /** 見本のカード1枚 */
 export function GalleryTemplateCard({
-  light, template, src, srcSet, imgKey, isLoaded, hasError, failed, selected, lockType, eager, loadingBar, cardRef, onClick, onLoad, onError,
+  template, src, srcSet, imgKey, isLoaded, hasError, failed, selected, lockType, eager, loadingBar, cardRef, onClick, onLoad, onError,
 }: {
-  light: boolean
   template: GalleryCardTemplate
   src: string
   srcSet: string
@@ -221,7 +180,7 @@ export function GalleryTemplateCard({
   onLoad: () => void
   onError: () => void
 }) {
-  const t = galleryTheme(light)
+  const t = galleryTheme()
   const showImage = Boolean(template.imageUrl) && !hasError && !template.isPending
   const isLocked = lockType !== null
   return (
@@ -244,7 +203,7 @@ export function GalleryTemplateCard({
         <div className={`w-full h-full ${t.placeholderPending} flex items-center justify-center`}>
           <div className="text-center">
             <Loader2 className={`w-5 h-5 animate-spin ${t.pendingSpinner} mx-auto mb-1.5`} />
-            <p className={`text-[9px] ${light ? t.placeholderText : 'text-gray-500'} font-medium`}>画像読み込み中</p>
+            <p className={`text-[9px] ${t.placeholderText} font-medium`}>画像読み込み中</p>
           </div>
         </div>
       ) : showImage ? (
@@ -314,15 +273,14 @@ export function GalleryTemplateCard({
 }
 
 /** 一覧の末尾の「もっと見る」タイル */
-export function GalleryMoreTile({ light, fetching, progress, hiddenCount, onClick }: {
-  light: boolean
+export function GalleryMoreTile({ fetching, progress, hiddenCount, onClick }: {
   /** 残りを取得中で、まだ出せる見本が無い */
   fetching: boolean
   progress: number
   hiddenCount: number
   onClick: () => void
 }) {
-  const t = galleryTheme(light)
+  const t = galleryTheme()
   return (
     <button
       type="button"
@@ -338,7 +296,7 @@ export function GalleryMoreTile({ light, fetching, progress, hiddenCount, onClic
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className={`text-[9px] sm:text-[10px] ${light ? 'text-[#4a5375]' : 'text-gray-500'} font-medium`}>{progress}% 読み込み中</p>
+          <p className="text-[9px] sm:text-[10px] text-[#4a5375] font-medium">{progress}% 読み込み中</p>
         </div>
       ) : (
         <div className="text-center">

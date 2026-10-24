@@ -6,11 +6,10 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { todayJst } from '@/lib/income/dates'
 import {
-  Button, Card, EmptyState, Gate, ListSkeleton, MonthSwitcher, PageHeader, PageShell, StatTile, StatsSkeleton, Skeleton,
-  fetchJson, monthLabel, num, s, useResource, yen,
+  Button, Card, Gate, ListSkeleton, MonthSwitcher, PageHeader, PageShell, StatTile, StatsSkeleton, Skeleton,
+  fetchJson, monthLabel, s, useResource, yen,
 } from '@/components/income/ui'
 import { IncomeHero, OnboardingSteps, TrendChart, YenCount } from '@/components/income/next'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 type Action = { kind: string; title: string; detail: string; amount: number | null; href: string; dueOn: string }
 type TrendRow = { month: string; revenue: number; received: number; expense: number | null; profit: number | null }
@@ -43,41 +42,8 @@ function ActionRow({ a }: { a: Action }) {
     </li>
   )
 }
-
-function Onboarding() {
-  const steps = [
-    { n: 1, title: '設定で請求元（自社名・振込先）を登録する', href: '/income/settings', cta: '設定を開く' },
-    { n: 2, title: '取引先を登録する', href: '/income/clients', cta: '取引先を開く' },
-    { n: 3, title: '契約を登録すると、月ごとの売上予定が自動で作られます', href: '/income/contracts/new', cta: '契約を登録する' },
-  ]
-  return (
-    <div className={s.stackY}>
-      <EmptyState
-        image="/ui-renewal/mascots/income.webp"
-        message="まだ売上予定がありません。請求元、取引先、契約の順に登録すると、この画面に毎月の収入が出ます。"
-        action={{ label: '設定を開く', href: '/income/settings' }}
-      />
-      <Card title="はじめの3ステップ">
-        <ol className="m-0 list-none space-y-3 p-0">
-          {steps.map((st) => (
-            <li key={st.n} className="flex flex-wrap items-center gap-3">
-              <span className={`${s.badge} ${s.bInfo} ${s.num}`} aria-hidden="true">{st.n}</span>
-              <span className="min-w-0 flex-1">{st.title}</span>
-              <Link href={st.href} className={s.link}>{st.cta}</Link>
-            </li>
-          ))}
-        </ol>
-      </Card>
-    </div>
-  )
-}
-
-function TrendTable({ rows, hideBars = false }: { rows: TrendRow[]; hideBars?: boolean }) {
-  const max = Math.max(1, ...rows.map((r) => Math.max(r.revenue, r.received, r.expense ?? 0)))
-  // 新しい見た目では上に面グラフがあるので、表の中の小さな横棒は出さない（数字だけにする）
-  const bar = (v: number | null, fill: string) => hideBars ? null : (
-    <div className={s.bar}><div className={s.barFill} style={{ width: `${v ? Math.max(2, Math.round((v / max) * 100)) : 0}%`, background: fill }} /></div>
-  )
+// 上に面グラフがあるので、表は数字だけにする（表の中の小さな横棒は出さない）
+function TrendTable({ rows }: { rows: TrendRow[] }) {
   return (
     <div className={s.tableWrap}>
       <table className={`${s.table} ${s.tableMid}`}>
@@ -88,10 +54,10 @@ function TrendTable({ rows, hideBars = false }: { rows: TrendRow[]; hideBars?: b
           {rows.map((r) => (
             <tr key={r.month}>
               <td data-label="月" className={s.strong} style={{ whiteSpace: 'nowrap' }}>{monthLabel(r.month)}</td>
-              <td data-label="売上予定（税抜）"><div className={s.cellBar}><div>{yen(r.revenue)}</div>{bar(r.revenue, 'var(--blue)')}</div></td>
-              <td data-label="入金"><div className={s.cellBar}><div>{yen(r.received)}</div>{bar(r.received, 'var(--navy)')}</div></td>
+              <td data-label="売上予定（税抜）"><div className={s.cellBar}><div>{yen(r.revenue)}</div></div></td>
+              <td data-label="入金"><div className={s.cellBar}><div>{yen(r.received)}</div></div></td>
               <td data-label="支出">
-                <div className={s.cellBar}><div>{r.expense === null ? '—' : yen(r.expense)}</div>{r.expense !== null && bar(r.expense, 'var(--muted)')}</div>
+                <div className={s.cellBar}><div>{r.expense === null ? '—' : yen(r.expense)}</div></div>
               </td>
               <td data-label="粗利" className={`${s.r} ${s.strong} ${r.profit !== null && r.profit < 0 ? s.badText : ''}`}>{r.profit === null ? '—' : yen(r.profit)}</td>
             </tr>
@@ -116,12 +82,11 @@ export default function Dashboard() {
   const [month, setMonth] = useState(() => todayJst().slice(0, 7))
   const res = useResource(() => fetchJson<Summary>(`/api/income/summary?month=${month}`), month)
   // 新しい見た目（キービジュアル・数字の動き・グラフ）は、許可した人だけに出す（チェックリスト §5.1）
-  const uiNext = useUiNext()
-  const n = (v: number | null) => (uiNext ? <YenCount value={v} /> : num(v))
+  const n = (v: number | null) => (<YenCount value={v} />)
 
   return (
     <PageShell>
-      {uiNext && <IncomeHero />}
+      <IncomeHero />
       <PageHeader title={`${monthLabel(month)}の収入`} sub="売上予定・請求・入金を月ごとに確認します" actions={<MonthSwitcher month={month} onChange={setMonth} />} />
       <Gate res={res} skeleton={<DashboardSkeleton />}>
         {(data) => {
@@ -129,7 +94,7 @@ export default function Dashboard() {
           const empty = k.scheduled === 0 && k.invoiced === 0 && k.received === 0 && k.unpaid === 0 && k.scheduleCount === 0 && data.actions.length === 0
           return (
             <div className={s.stackY} style={{ opacity: res.loading ? 0.6 : 1, transition: 'opacity .2s' }}>
-              {empty && (uiNext ? <OnboardingSteps /> : <Onboarding />)}
+              {empty && (<OnboardingSteps />)}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatTile label="売上予定（税抜）" value={n(k.scheduled)} unit="円" sub={`契約 ${k.scheduleCount} 件`} />
@@ -162,8 +127,8 @@ export default function Dashboard() {
               </Card>
 
               <Card title="月別推移（直近12か月）">
-                {uiNext && <div style={{ marginBottom: 16 }}><TrendChart rows={data.trend} /></div>}
-                <TrendTable rows={data.trend} hideBars={uiNext} />
+                <div style={{ marginBottom: 16 }}><TrendChart rows={data.trend} /></div>
+                <TrendTable rows={data.trend} />
               </Card>
             </div>
           )

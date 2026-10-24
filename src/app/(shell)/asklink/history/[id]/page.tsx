@@ -8,7 +8,6 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState, Skeleton } from '@/components/ds'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
@@ -22,7 +21,6 @@ export default function AskLinkRunPage() {
   const [errStatus, setErrStatus] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
   const queue = useBannerQueue(setRun)
-  const uiNext = useUiNext()
 
   useEffect(() => {
     let alive = true
@@ -55,14 +53,12 @@ export default function AskLinkRunPage() {
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       <Link
         href="/asklink/history"
-        className={`mb-4 inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700${
-          uiNext ? ' min-h-11 whitespace-nowrap rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : ''
-        }`}
+        className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700 min-h-11 whitespace-nowrap rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
       >
         <ArrowLeft aria-hidden className="h-4 w-4" />
         これまでの結果に戻る
       </Link>
-      {uiNext && error && errStatus === 404 ? (
+      {error && errStatus === 404 ? (
         // 他人の結果・消えた結果は、ここから一覧に戻れるようにする
         <div className="rounded-2xl bg-white ring-1 ring-slate-200">
           <EmptyState
@@ -72,9 +68,9 @@ export default function AskLinkRunPage() {
             action={<Button href="/asklink/history" icon="History" variant="secondary">これまでの結果を見る</Button>}
           />
         </div>
-      ) : uiNext && error ? (
+      ) : error ? (
         <AskLinkErrorNotice status={errStatus} action="load" callbackUrl={`/asklink/history/${id}`} onRetry={() => setReloadKey((k) => k + 1)} retryLabel="読み込み直す" />
-      ) : uiNext && !run ? (
+      ) : !run ? (
         <div className="space-y-4" aria-busy="true">
           <div className="min-h-[220px] rounded-2xl bg-white p-5 ring-1 ring-slate-200"><Skeleton lines={5} delayMs={0} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -90,14 +86,12 @@ export default function AskLinkRunPage() {
         </p>
       ) : (
         <>
-          {uiNext ? (
+          {(
             queue.errorStatus !== null && (
               <div className="mb-4">
                 <AskLinkErrorNotice status={queue.errorStatus} action="banner" callbackUrl={`/asklink/history/${id}`} />
               </div>
             )
-          ) : (
-            queue.error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{queue.error}</p>
           )}
           <RunResult run={run} onChange={setRun} bannerBusy={queue.busy} onGenerateBanner={(kind) => void queue.generate(run.id, [kind])} />
         </>

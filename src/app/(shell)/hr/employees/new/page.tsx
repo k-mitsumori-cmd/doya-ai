@@ -1,6 +1,6 @@
 'use client'
 
-import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { PageTitle } from '@/components/hr/ui-next'
 import { Button, ErrorNotice } from '@/components/ds'
 import { hrErrorKind } from '@/components/hr/HrLoadError'
 import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
@@ -10,7 +10,6 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 
 import { useId, useRef, useState } from 'react'
-import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 interface Department {
@@ -38,17 +37,16 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [limitNotice, setLimitNotice] = useState<{ message: string; href: string; label: string } | null>(null)
-  const uiNext = useToolUiNext()
   // 新しい見た目: 入力の誤りは欄の下に出し、欄と aria-describedby で結ぶ。保存の失敗はフォームの上に出す（サーバーの文言はそのまま出さない）
   const [fieldErrors, setFieldErrors] = useState<{ lastName?: string; firstName?: string }>({})
   const [formError, setFormError] = useState('')
   const formErrorRef = useRef<HTMLDivElement>(null)
   const uid = useId()
   const fid = (name: string) => `${uid}-${name}`
-  const describe = (name: 'lastName' | 'firstName') => uiNext && fieldErrors[name]
+  const describe = (name: 'lastName' | 'firstName') => fieldErrors[name]
     ? { 'aria-invalid': true as const, 'aria-describedby': `${fid(name)}-error` }
     : {}
-  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2' : ''
+  const focusRing = ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2'
 
   const [form, setForm] = useState({
     lastName: '',
@@ -68,7 +66,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
     // 直したらその欄の誤りを消す
-    if (uiNext && (e.target.name === 'lastName' || e.target.name === 'firstName') && e.target.value.trim()) {
+    if ((e.target.name === 'lastName' || e.target.name === 'firstName') && e.target.value.trim()) {
       setFieldErrors(old => ({ ...old, [e.target.name]: undefined }))
     }
   }
@@ -194,7 +192,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className={`flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4 transition-colors${uiNext ? ' min-h-11 rounded-lg pr-2' + focusRing : ''}`}
+            className={`flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4 transition-colors${' min-h-11 rounded-lg pr-2' + focusRing}`}
           >
             <span aria-hidden className="material-symbols-outlined text-lg">arrow_back</span>
             戻る
@@ -209,22 +207,16 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           </div>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
-        {limitNotice && uiNext && (
+        {limitNotice && (
           <div className="mb-6">
             <ErrorNotice what="登録できる従業員数の上限に達しました。" how="料金プランを見直すと、さらに登録できます。入力内容はそのままです。" />
             <div className="mt-3"><Button href={limitNotice.href.startsWith('/') ? limitNotice.href : '/hr/pricing'} icon="Tag">{limitNotice.label === 'お問い合わせ' ? 'お問い合わせ' : '料金プランを見る'}</Button></div>
           </div>
         )}
-        {formError && uiNext && (
+        {formError && (
           <div ref={formErrorRef} className="mb-6">
             <ErrorNotice what={formError} />
             {formError.startsWith('登録できる従業員数') && <div className="mt-3"><Button href="/hr/pricing" icon="Tag">料金プランを見る</Button></div>}
-          </div>
-        )}
-        {limitNotice && !uiNext && (
-          <div role="alert" className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-            <p className="font-bold">{limitNotice.message}</p>
-            <Link href={limitNotice.href} className="mt-2 inline-block font-bold underline underline-offset-2">{limitNotice.label} →</Link>
           </div>
         )}
 
@@ -236,25 +228,25 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               { step: 2, label: '職務情報', icon: 'work' },
               { step: 3, label: '入社情報', icon: 'calendar_month' },
             ].map((item, i) => (
-              <div key={item.step} className={uiNext ? 'flex items-center flex-1 min-w-0 last:flex-none' : 'flex items-center flex-1'}>
-                <div className={uiNext ? 'flex items-center gap-1.5 sm:gap-2' : 'flex items-center gap-2'}>
+              <div key={item.step} className="flex items-center flex-1 min-w-0 last:flex-none">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-xs font-black text-blue-600">{item.step}</span>
                   </div>
                   <div>
-                    <p className={uiNext ? 'whitespace-nowrap text-xs sm:text-sm font-bold text-slate-700' : 'text-sm font-bold text-slate-700'}>{item.label}</p>
+                    <p className="whitespace-nowrap text-xs sm:text-sm font-bold text-slate-700">{item.label}</p>
                   </div>
                 </div>
                 {i < 2 && (
-                  <div aria-hidden className={uiNext ? 'flex-1 mx-1.5 sm:mx-3 min-w-2 h-0.5 bg-slate-200 rounded-full' : 'flex-1 mx-3 h-0.5 bg-slate-200 rounded-full'} />
+                  <div aria-hidden className="flex-1 mx-1.5 sm:mx-3 min-w-2 h-0.5 bg-slate-200 rounded-full" />
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <form onSubmit={uiNext ? handleSubmitNext : (e) => void handleSubmit(e)} noValidate={uiNext || undefined}>
-          <div className={uiNext ? 'bg-white rounded-3xl shadow-lg p-5 sm:p-8 space-y-8' : 'bg-white rounded-3xl shadow-lg p-8 space-y-8'}>
+        <form onSubmit={handleSubmitNext} noValidate={true}>
+          <div className="bg-white rounded-3xl shadow-lg p-5 sm:p-8 space-y-8">
             {/* Photo Upload */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
@@ -262,7 +254,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                 顔写真
               </h2>
               <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-4" />
-              <div className={uiNext ? 'flex flex-wrap items-center gap-4 sm:gap-6' : 'flex items-center gap-6'}>
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                 {photoPreview ? (
                   <img src={photoPreview} alt="プレビュー" className="w-28 h-28 rounded-full object-cover ring-4 ring-blue-100" />
                 ) : (
@@ -271,9 +263,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                   </div>
                 )}
                 <div>
-                  <label className={uiNext
-                    ? 'inline-flex min-h-11 items-center gap-2 whitespace-nowrap px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all focus-within:ring-2 focus-within:ring-[var(--blue,#0066ff)] focus-within:ring-offset-2'
-                    : 'inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all'}>
+                  <label className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all focus-within:ring-2 focus-within:ring-[var(--blue,#0066ff)] focus-within:ring-offset-2">
                     <span aria-hidden className="material-symbols-outlined text-lg">upload</span>
                     写真をアップロード
                     {/* 新しい見た目では、見えないだけでキーボードから選べる入力にする */}
@@ -281,7 +271,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoChange}
-                      className={uiNext ? 'sr-only' : 'hidden'}
+                      className="sr-only"
                     />
                   </label>
                   <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（5MB以下）</p>
@@ -300,7 +290,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor={fid('lastName')} className="block text-sm font-bold text-slate-700 mb-1">
-                    姓 <span aria-hidden className="text-red-500">*</span>{uiNext ? <span className="sr-only">（必須）</span> : null}
+                    姓 <span aria-hidden className="text-red-500">*</span><span className="sr-only">（必須）</span>
                   </label>
                   <input
                     id={fid('lastName')}
@@ -314,11 +304,11 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     placeholder="山田"
                   />
-                  {uiNext && fieldErrors.lastName && <p id={`${fid('lastName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.lastName}</p>}
+                  {fieldErrors.lastName && <p id={`${fid('lastName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.lastName}</p>}
                 </div>
                 <div>
                   <label htmlFor={fid('firstName')} className="block text-sm font-bold text-slate-700 mb-1">
-                    名 <span aria-hidden className="text-red-500">*</span>{uiNext ? <span className="sr-only">（必須）</span> : null}
+                    名 <span aria-hidden className="text-red-500">*</span><span className="sr-only">（必須）</span>
                   </label>
                   <input
                     id={fid('firstName')}
@@ -332,7 +322,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     placeholder="太郎"
                   />
-                  {uiNext && fieldErrors.firstName && <p id={`${fid('firstName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.firstName}</p>}
+                  {fieldErrors.firstName && <p id={`${fid('firstName')}-error`} role="alert" className="mt-1 text-sm font-bold text-rose-700">{fieldErrors.firstName}</p>}
                 </div>
                 <div>
                   <label htmlFor={fid('lastNameKana')} className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
@@ -406,9 +396,9 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
               <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-2" />
               <DepartmentListState status={departmentList.status} error={departmentList.error} retry={departmentList.retry} />
               {departmentList.status === 'ready' && (departments.length === 0 ? (
-                <div className={uiNext ? 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center gap-3' : 'mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3'}>
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center gap-3">
                   <span aria-hidden className="material-symbols-outlined text-amber-500">info</span>
-                  <p className={uiNext ? 'text-sm text-amber-800 flex-1 min-w-[12rem]' : 'text-sm text-amber-800 flex-1'}>
+                  <p className="text-sm text-amber-800 flex-1 min-w-[12rem]">
                     部署がまだ登録されていません。先に部署を追加すると従業員の配属先を選べます。
                   </p>
                   <a
@@ -489,7 +479,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   />
-                  <p id={`${fid('hireDate')}-hint`} className={uiNext ? 'text-xs text-slate-500 mt-1.5' : 'text-xs text-slate-400 mt-1.5'}>入社日を設定すると在籍年数が自動計算されます。</p>
+                  <p id={`${fid('hireDate')}-hint`} className="text-xs text-slate-500 mt-1.5">入社日を設定すると在籍年数が自動計算されます。</p>
                 </div>
               </div>
             </div>

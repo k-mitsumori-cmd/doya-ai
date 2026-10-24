@@ -15,7 +15,6 @@ import {
   ActionError, api, Button, Card, ConfirmDialog, describeError, ErrorState, Field, ForbiddenState, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, StatusBadge, uploadToInterview, useLeaveGuard, useTimedStep, PageTitle,
 } from '@/components/shanai/ui'
 import { ErrorNotice } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { FACT_CATEGORY_LABELS, type ArticleBlock, type FactCategory, type SurveyAnswers } from '@/lib/shanai/types'
 import { findQuestion } from '@/lib/shanai/survey'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -52,22 +51,9 @@ const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:rin
 const ICON_BTN_NEXT = `grid h-11 w-11 shrink-0 place-items-center rounded-lg text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600 ${FOCUS}`
 
 function LimitNotice({ error }: { error: SectionError | null }) {
-  const uiNext = useUiNext()
   if (!error) return null
-  if (uiNext) {
-    // 新しい見た目: 生の文は出さない。上限なら料金プランへの道、それ以外は「何が起きたか・どうすればよいか」
-    return error.err === undefined ? <ErrorNotice what={error.message} /> : <ActionError error={describeError(error.err)} />
-  }
-  return (
-    <Notice tone="error">
-      {error.message}
-      {error.upgradeUrl && (
-        <Link href={error.upgradeUrl} className="ml-2 underline">
-          料金プランを見る
-        </Link>
-      )}
-    </Notice>
-  )
+  // 新しい見た目: 生の文は出さない。上限なら料金プランへの道、それ以外は「何が起きたか・どうすればよいか」
+  return error.err === undefined ? <ErrorNotice what={error.message} /> : <ActionError error={describeError(error.err)} />
 }
 
 export default function ShanaiInterviewPage() {
@@ -77,7 +63,6 @@ export default function ShanaiInterviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loadFailure, setLoadFailure] = useState<unknown>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const uiNext = useUiNext()
 
   const load = useCallback(async () => {
     try {
@@ -105,7 +90,7 @@ export default function ShanaiInterviewPage() {
       toast.success('削除しました', { duration: 3000 })
       router.push('/shanai')
     } catch (e) {
-      toast.error(uiNext ? describeError(e).what : (e as Error).message)
+      toast.error(describeError(e).what)
     }
   }
 
@@ -115,16 +100,16 @@ export default function ShanaiInterviewPage() {
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Link
         href="/shanai"
-        className={`inline-flex items-center gap-1 text-xs font-black text-[var(--sub)] hover:text-[var(--ink)]${uiNext ? ` -my-2 min-h-11 rounded-[var(--r-sm)] ${FOCUS}` : ''}`}
+        className={`inline-flex items-center gap-1 text-xs font-black text-[var(--sub)] hover:text-[var(--ink)] -my-2 min-h-11 rounded-[var(--r-sm)] ${FOCUS}`}
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> インタビュー一覧
       </Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <div className={uiNext ? 'min-w-0 [overflow-wrap:anywhere]' : undefined}>
+        <div className="min-w-0 [overflow-wrap:anywhere]">
           <PageTitle>{data.intervieweeName} さん</PageTitle>
           <p className="mt-1 text-sm font-bold text-[var(--sub)]">{[data.department, data.position, data.joinYear && `${data.joinYear}入社`].filter(Boolean).join(' / ') || '部署未設定'}</p>
         </div>
-        <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
+        <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={data.status} />
           <Button variant="danger" onClick={() => setConfirmDelete(true)}>
             <Trash2 className="h-4 w-4" />
@@ -160,7 +145,6 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<SectionError | null>(null)
   const [showAll, setShowAll] = useState(false)
-  const uiNext = useUiNext()
   const transcribeStep = useTimedStep(busy, 3, 20000)
   const inputRef = useRef<HTMLInputElement>(null)
   const cancelled = useRef(false)
@@ -218,7 +202,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
             文字起こしする
           </Button>
         )}
-        {progress !== null && <span className="text-xs font-black text-[var(--sub)]" role={uiNext ? 'status' : undefined}>アップロード中 {progress}%</span>}
+        {progress !== null && <span className="text-xs font-black text-[var(--sub)]" role="status">アップロード中 {progress}%</span>}
         {data.audio.uploaded && data.audio.size && progress === null && (
           <span className="text-xs font-bold text-[var(--muted)]">
             {(data.audio.size / 1024 / 1024).toFixed(1)}MB{data.audio.durationSec ? ` / ${fmtTime(data.audio.durationSec)}` : ''}
@@ -228,12 +212,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
       {busy && <ProgressSteps steps={['録音の長さを確認しています', '文字起こしサービスに送っています', '話者を分けて文字にしています']} current={transcribeStep} note="30分の録音で数分かかります。" />}
       {data.audio.status === 'failed' && data.audio.error && !error && (
         <div className="mt-3">
-          {uiNext ? (
-            // 保存された失敗の文には技術的な文（外部サービス名など）が入ることがあるので、新しい見た目では出さない
-            <ErrorNotice what="文字起こしができませんでした。" how="録音ファイルの形式（mp3・m4a・wav など）を確かめて、もう一度「文字起こしする」を押してください。続くときは、録音を差し替えてください。" />
-          ) : (
-            <Notice tone="error">{data.audio.error}</Notice>
-          )}
+          <ErrorNotice what="文字起こしができませんでした。" how="録音ファイルの形式（mp3・m4a・wav など）を確かめて、もう一度「文字起こしする」を押してください。続くときは、録音を差し替えてください。" />
         </div>
       )}
       {error && (
@@ -249,7 +228,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
               <li key={i} className="flex gap-2">
                 <span className="w-12 shrink-0 font-mono text-[11px] text-[var(--muted)]">{fmtTime(s.start)}</span>
                 <span className="w-14 shrink-0 text-[11px] font-black text-[var(--blue-deep)]">{s.speaker ? `話者${s.speaker}` : '話者'}</span>
-                <span className={`font-bold leading-relaxed text-[var(--sub)]${uiNext ? ' min-w-0 [overflow-wrap:anywhere]' : ''}`}>{s.text}</span>
+                <span className="font-bold leading-relaxed text-[var(--sub)] min-w-0 [overflow-wrap:anywhere]">{s.text}</span>
               </li>
             ))}
           </ul>
@@ -257,8 +236,8 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              aria-expanded={uiNext ? showAll : undefined}
-              className={`mt-2 text-xs font-black text-[var(--blue-deep)]${uiNext ? ` -mb-2 min-h-11 rounded-[var(--r-sm)] px-1 ${FOCUS}` : ''}`}
+              aria-expanded={showAll}
+              className={`mt-2 text-xs font-black text-[var(--blue-deep)] -mb-2 min-h-11 rounded-[var(--r-sm)] px-1 ${FOCUS}`}
             >
               {showAll ? '閉じる' : 'すべて表示'}
             </button>
@@ -279,7 +258,6 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string; err?: unknown } | null>(null)
   const [confirmRotate, setConfirmRotate] = useState(false)
-  const uiNext = useUiNext()
   const rotate = async () => {
     setConfirmRotate(false)
     try {
@@ -287,7 +265,7 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
       onChange(d.interview)
       toast.success('新しい回答URLを作りました。前のURLは使えなくなりました。', { duration: 3000 })
     } catch (e) {
-      toast.error(uiNext ? describeError(e).what : (e as Error).message)
+      toast.error(describeError(e).what)
     }
   }
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/shanai/answer/${data.survey.token}` : ''
@@ -357,13 +335,13 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
       <SectionTitle step="ステップ1" title="アンケート" desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
       <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--bg)] p-2">
         <code className="min-w-0 flex-1 truncate px-2 text-xs font-bold text-[var(--sub)]">{shareUrl}</code>
-        <button type="button" onClick={copy} className={`${uiNext ? `min-h-11 whitespace-nowrap ${FOCUS} focus-visible:ring-offset-2 ` : ''}inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-[var(--ok-bg)]' : 'bg-[var(--blue)] hover:bg-[var(--blue-deep)]'}`}>
+        <button type="button" onClick={copy} className={`min-h-11 whitespace-nowrap ${FOCUS} focus-visible:ring-offset-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-[var(--ok-bg)]' : 'bg-[var(--blue)] hover:bg-[var(--blue-deep)]'}`}>
           {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
           {copied ? 'コピーしました' : 'URLをコピー'}
         </button>
-        {uiNext && <span className="sr-only" role="status">{copied ? '回答URLをコピーしました' : ''}</span>}
+        <span className="sr-only" role="status">{copied ? '回答URLをコピーしました' : ''}</span>
         {!submitted && (
-          <button type="button" onClick={() => setConfirmRotate(true)} className={`min-h-[44px] rounded-[var(--r-sm)] px-3 text-xs font-black text-[var(--sub)] hover:bg-[var(--paper)]${uiNext ? ` whitespace-nowrap ${FOCUS}` : ''}`}>
+          <button type="button" onClick={() => setConfirmRotate(true)} className={`min-h-[44px] rounded-[var(--r-sm)] px-3 text-xs font-black text-[var(--sub)] hover:bg-[var(--paper)] whitespace-nowrap ${FOCUS}`}>
             URLを作り直す
           </button>
         )}
@@ -378,14 +356,14 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div className={uiNext ? 'min-w-0 flex-1 basis-48' : 'flex-1'}>
+        <div className="min-w-0 flex-1 basis-48">
           <div className="flex items-center justify-between text-xs font-black text-[var(--sub)]">
-            <span id={uiNext ? 'shanai-survey-score' : undefined}>回答の充実度</span>
+            <span id="shanai-survey-score">回答の充実度</span>
             <span className="tabular-nums">{check.score}%</span>
           </div>
           <div
             className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--bg)]"
-            {...(uiNext ? { role: 'progressbar', 'aria-labelledby': 'shanai-survey-score', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': check.score } : {})}
+            {...({ role: 'progressbar', 'aria-labelledby': 'shanai-survey-score', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': check.score })}
           >
             <div className="h-full rounded-full bg-[var(--blue)] transition-all motion-reduce:transition-none" style={{ width: `${check.score}%` }} />
           </div>
@@ -401,15 +379,15 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
 
       {message && (
         <div className="mt-3">
-          {uiNext && message.tone === 'error' ? <ActionError error={describeError(message.err)} /> : <Notice tone={message.tone}>{message.text}</Notice>}
+          {message.tone === 'error' ? <ActionError error={describeError(message.err)} /> : <Notice tone={message.tone}>{message.text}</Notice>}
         </div>
       )}
 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-expanded={uiNext ? open : undefined}
-        className={`mt-4 text-sm font-black text-[var(--blue-deep)]${uiNext ? ` min-h-11 rounded-[var(--r-sm)] px-1 text-left ${FOCUS}` : ''}`}
+        aria-expanded={open}
+        className={`mt-4 text-sm font-black text-[var(--blue-deep)] min-h-11 rounded-[var(--r-sm)] px-1 text-left ${FOCUS}`}
       >
         {open ? '回答を閉じる' : '回答を見る・代わりに入力する'}
       </button>
@@ -444,7 +422,6 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
   // 失敗の中身（新しい見た目では生の文ではなく、ここから伝える文を組み立てる）
   const [failure, setFailure] = useState<unknown>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const uiNext = useUiNext()
   const fail = (e: unknown) => {
     setError((e as Error).message)
     setFailure(e)
@@ -496,8 +473,8 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
               <button
                 type="button"
                 onClick={() => patch(p.id, { usage: 'thumbnail' })}
-                aria-pressed={uiNext ? p.usage === 'thumbnail' : undefined}
-                className={`${uiNext ? `grid h-11 w-11 place-items-center ${FOCUS} ` : ''}absolute left-1.5 top-1.5 rounded-full p-1.5 ${p.usage === 'thumbnail' ? 'bg-[var(--blue)] text-white' : 'bg-[var(--paper)] text-[var(--sub)] hover:text-[var(--blue-deep)]'}`}
+                aria-pressed={p.usage === 'thumbnail'}
+                className={`grid h-11 w-11 place-items-center ${FOCUS} absolute left-1.5 top-1.5 rounded-full p-1.5 ${p.usage === 'thumbnail' ? 'bg-[var(--blue)] text-white' : 'bg-[var(--paper)] text-[var(--sub)] hover:text-[var(--blue-deep)]'}`}
                 aria-label="サムネに使う"
                 title="サムネに使う"
               >
@@ -506,7 +483,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
               <button
                 type="button"
                 onClick={() => remove(p.id)}
-                className={`${uiNext ? `grid h-11 w-11 place-items-center ${FOCUS} ` : ''}absolute right-1.5 top-1.5 rounded-full bg-[var(--paper)] p-1.5 text-[var(--sub)] hover:text-rose-600`}
+                className={`grid h-11 w-11 place-items-center ${FOCUS} absolute right-1.5 top-1.5 rounded-full bg-[var(--paper)] p-1.5 text-[var(--sub)] hover:text-rose-600`}
                 aria-label="写真を削除"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -516,7 +493,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
               className="w-full border-t border-[var(--line)] px-2 py-1.5 text-[11px] font-bold text-[var(--sub)] placeholder:text-[var(--muted)] focus:outline-none"
               defaultValue={p.caption}
               placeholder="キャプション（任意）"
-              aria-label={uiNext ? 'キャプション' : undefined}
+              aria-label="キャプション"
               maxLength={100}
               onBlur={(e) => e.target.value !== p.caption && patch(p.id, { caption: e.target.value })}
             />
@@ -527,7 +504,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={!!uploading}
-            className={`${uiNext ? `${FOCUS} ` : ''}flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-[var(--r-sm)] border-2 border-dashed border-[var(--line)] text-xs font-black text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--blue-deep)]`}
+            className={`${FOCUS} flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-[var(--r-sm)] border-2 border-dashed border-[var(--line)] text-xs font-black text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--blue-deep)]`}
           >
             {uploading ? <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <ImagePlus className="h-5 w-5" aria-hidden="true" />}
             {uploading ? 'アップロード中' : '写真を追加'}
@@ -536,7 +513,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
       </div>
       {error && (
         <div className="mt-3">
-          {uiNext ? <ActionError error={describeError(failure)} /> : <Notice tone="error">{error}</Notice>}
+          <ActionError error={describeError(failure)} />
         </div>
       )}
     </Card>
@@ -554,7 +531,6 @@ function sourceLabel(f: Fact) {
 function FactSection({ data, onChange, materialReady }: { data: Detail; onChange: (d: Detail) => void; materialReady: boolean }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<SectionError | null>(null)
-  const uiNext = useUiNext()
 
   const [confirmRedo, setConfirmRedo] = useState(false)
   const factStep = useTimedStep(busy, 3, 15000)
@@ -588,7 +564,7 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
   const FactRow = ({ f }: { f: Fact }) => (
     <li className={`rounded-[var(--r-sm)] border p-3 ${f.approved ? 'border-[var(--line)] bg-[var(--paper)]' : 'border-[var(--line)] bg-[var(--bg)] opacity-70'}`}>
       <div className="flex items-start gap-3">
-        <input type="checkbox" checked={f.approved} onChange={(e) => update([{ id: f.id, approved: e.target.checked }])} className="mt-1 h-4 w-4 accent-[var(--blue)]" aria-label={uiNext ? `「${f.statement}」を記事に使う` : '記事に使う'} />
+        <input type="checkbox" checked={f.approved} onChange={(e) => update([{ id: f.id, approved: e.target.checked }])} className="mt-1 h-4 w-4 accent-[var(--blue)]" aria-label={`「${f.statement}」を記事に使う`} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="rounded-full bg-[var(--blue-soft)] px-2 py-0.5 text-[10px] font-black text-[var(--blue-deep)]">{FACT_CATEGORY_LABELS[f.category] || f.category}</span>
@@ -597,13 +573,13 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
           <input
             className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-sm font-black text-[var(--ink)] hover:border-[var(--line)] focus:border-[var(--blue)] focus:outline-none"
             defaultValue={f.statement}
-            aria-label={uiNext ? '事実の言い回し' : undefined}
+            aria-label="事実の言い回し"
             maxLength={300}
             onBlur={(e) => e.target.value.trim() && e.target.value !== f.statement && update([{ id: f.id, statement: e.target.value }])}
           />
-          <p className={`mt-0.5 px-1 text-xs font-bold leading-relaxed text-[var(--sub)]${uiNext ? ' [overflow-wrap:anywhere]' : ''}`}>原文: {f.quote}</p>
+          <p className="mt-0.5 px-1 text-xs font-bold leading-relaxed text-[var(--sub)] [overflow-wrap:anywhere]">原文: {f.quote}</p>
         </div>
-        <button type="button" onClick={() => update([{ id: f.id, delete: true }])} className={uiNext ? `-my-2 -mr-2 ${ICON_BTN_NEXT}` : 'rounded-lg p-1.5 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600'} aria-label="この事実を削除">
+        <button type="button" onClick={() => update([{ id: f.id, delete: true }])} className={`-my-2 -mr-2 ${ICON_BTN_NEXT}`} aria-label="この事実を削除">
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
@@ -670,7 +646,6 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
   const [thumbKey, setThumbKey] = useState(0)
   const [error, setError] = useState<SectionError | null>(null)
   const [saved, setSaved] = useState(false)
-  const uiNext = useUiNext()
 
   // ⚠️ 事実の更新などで data が入れ替わっても、編集中の記事は消さない（別の版になったときだけ差し替える）
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -761,10 +736,10 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
             </Button>
             {/* 新しい見た目: 編集中でも href を残し、キーボードで届くようにする（押したときに止めて案内する） */}
             <a
-              href={dirty && !uiNext ? undefined : `/api/shanai/interviews/${data.id}/export`}
+              href={`/api/shanai/interviews/${data.id}/export`}
               onClick={(e) => dirty && (e.preventDefault(), toast.error('先に「編集を保存」を押してください。'))}
-              aria-disabled={uiNext && dirty ? true : undefined}
-              className={`inline-flex items-center gap-1.5 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] px-4 py-2.5 text-sm font-black text-[var(--ink)] hover:bg-[var(--bg)]${uiNext ? ` min-h-[44px] whitespace-nowrap ${FOCUS}` : ''}`}
+              aria-disabled={dirty ? true : undefined}
+              className={`inline-flex items-center gap-1.5 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] px-4 py-2.5 text-sm font-black text-[var(--ink)] hover:bg-[var(--bg)] min-h-[44px] whitespace-nowrap ${FOCUS}`}
             >
               <FileText className="h-4 w-4" aria-hidden="true" />
               Wordでダウンロード
@@ -797,7 +772,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
               <img key={thumbKey} src={`/api/shanai/interviews/${data.id}/thumbnail?v=${thumbKey}`} alt="サムネイル画像" className="mt-1 w-full rounded-[var(--r-sm)] border border-[var(--line)]" />
               <a
                 href={`/api/shanai/interviews/${data.id}/thumbnail?download=1`}
-                className={`mt-2 inline-flex items-center gap-1 text-xs font-black text-[var(--blue-deep)]${uiNext ? ` min-h-11 rounded-[var(--r-sm)] ${FOCUS}` : ''}`}
+                className={`mt-2 inline-flex items-center gap-1 text-xs font-black text-[var(--blue-deep)] min-h-11 rounded-[var(--r-sm)] ${FOCUS}`}
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
                 サムネをダウンロード（1200×630）
@@ -822,18 +797,18 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
               b.type === 'heading' ? (
                 <div key={i} className="flex items-center gap-2 pt-2">
                   <input className={`${inputCls} text-base font-black`} value={b.heading || ''} maxLength={120} onChange={(e) => editBlock(i, { heading: e.target.value })} aria-label="見出し" />
-                  <button type="button" onClick={() => removeBlock(i)} className={uiNext ? ICON_BTN_NEXT : 'rounded-lg p-2 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600'} aria-label="見出しを削除">
+                  <button type="button" onClick={() => removeBlock(i)} className={ICON_BTN_NEXT} aria-label="見出しを削除">
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               ) : (
                 <div key={i} className={`rounded-[var(--r-sm)] border p-3 ${b.unsupported ? 'border-[var(--note-ink)] bg-[var(--note-bg)]' : b.type === 'company' ? 'border-[var(--line)] bg-[var(--bg)]' : 'border-[var(--line)] bg-[var(--paper)]'}`}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className={`text-[11px] font-black text-[var(--sub)]${uiNext ? ' min-w-0' : ''}`}>
+                    <span className="text-[11px] font-black text-[var(--sub)] min-w-0">
                       {b.type === 'qa' ? '質問と答え' : b.type === 'quote' ? '印象に残った一言' : b.type === 'company' ? '会社について' : '本文'}
                       {b.unsupported && <span className="ml-2 text-[var(--note-ink)]">根拠の事実がありません</span>}
                     </span>
-                    <button type="button" onClick={() => removeBlock(i)} className={uiNext ? `-my-3 -mr-2 ${ICON_BTN_NEXT}` : 'rounded-lg p-1 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600'} aria-label="段落を削除">
+                    <button type="button" onClick={() => removeBlock(i)} className={`-my-3 -mr-2 ${ICON_BTN_NEXT}`} aria-label="段落を削除">
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
@@ -841,7 +816,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
                   <textarea
                     className={`${inputCls} leading-relaxed ${b.type === 'quote' ? 'min-h-[60px] text-base font-black' : 'min-h-[120px]'}`}
                     value={b.body}
-                    aria-label={uiNext ? (b.type === 'qa' ? '答え' : b.type === 'quote' ? '印象に残った一言' : b.type === 'company' ? '会社について' : '本文') : undefined}
+                    aria-label={(b.type === 'qa' ? '答え' : b.type === 'quote' ? '印象に残った一言' : b.type === 'company' ? '会社について' : '本文')}
                     maxLength={5000}
                     onChange={(e) => editBlock(i, { body: e.target.value })}
                   />

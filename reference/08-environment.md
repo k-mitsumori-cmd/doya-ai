@@ -190,9 +190,9 @@ export const HIGH_USAGE_CONTACT_URL = '...'   // 大量利用相談
 
 | 変数名 | 説明 |
 |--------|------|
-| `UI_SHELL_SERVICES` | 共通の枠（AppShell）で表示するツールの id（カンマ区切り）。`all` で全ツール。未設定なら従来のレイアウト（`src/lib/ui-shell.ts`） |
-| `UI_NEXT_ROLLOUT` | UI 品質の直しを誰に出すか。`off`（誰にも出さない）／`preview`（切り替えた許可者だけ。既定）／`all`（全員）（`src/lib/ui-next.ts`） |
-| `UI_PREVIEW_EMAILS` | プレビューの切り替え（`/api/ui-preview?on=1`、戻すときは `?on=0`）を使ってよい人のメール（カンマ区切り） |
+| `UI_SHELL_SERVICES` | 2026-10-24 に廃止（コードは読まない）。全ツールがいつも共通の枠（AppShell）で出る。環境変数は残っていても害はない |
+| `UI_NEXT_ROLLOUT` | 2026-10-24 に廃止（コードは読まない）。新しい見た目はいつも全員に出る（`src/lib/ui-next.ts`） |
+| `UI_PREVIEW_EMAILS` | 許可した人のメール（カンマ区切り）。ドヤパワーの旗 `DOYA_POWER_ROLLOUT=preview` で、出す相手を決めるのに使う（見た目の切り替え `/api/ui-preview` は廃止） |
 
 - 判定はサーバーで毎回メールを確かめる。cookie `doya_ui_next=1` だけでは新しい見た目にならない。
 - 変えたあとは再デプロイが必要（コードとデータは変わらない）。仕様: `docs/architecture/management-agent/UI-QUALITY-CHECKLIST-2026-10-19.md` §5.1

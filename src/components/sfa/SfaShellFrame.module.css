@@ -2,7 +2,7 @@
  * ドヤ営業管理: 新しい見た目（UI 品質 §5.1・S-22）のときだけ、操作の色（緑・黄緑）をブランドの青（#0066ff）に置き換える。
  * 受注・完了など意味のある色（emerald）はそのまま残す。
  * ページ本体の className は今の見た目のために残し、枠（SfaShellFrame）の中だけで色を差し替える。
- * ⚠️ [data-ui-next='true']（AppShell の根）の下だけに効く。今の見た目は変わらない。
+ * ⚠️ [data-ui-next='true']（AppShell の根）の下だけに効く。
  */
 
 :global([data-ui-next='true']) .content :global(.from-green-500) { --tw-gradient-from: #0066ff var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }

@@ -216,10 +216,10 @@ const navigation=(log)=>({notFound:()=>{log.push('notFound');throw notFoundError
   });
   await check('Doya Power flag: the shell passes the flag only with the new look, decided on the server',async()=>{
     const layout=read('src/app/(shell)/layout.tsx'),gate=read('src/components/shell/ShellGate.tsx');
-    assert.match(layout,/const doyaPower = uiNext \? await isDoyaPowerEnabled\(\) : false/);
+    assert.match(layout,/const doyaPower = signedIn \? await isDoyaPowerEnabled\(\) : false/);
     assert.match(layout,/doyaPower=\{doyaPower\}/);
     assert.match(gate,/doyaPower = false/);
-    assert.match(gate,/<DoyaPowerContext\.Provider value=\{Boolean\(uiNext && doyaPower\)\}>/);
+    assert.match(gate,/<DoyaPowerContext\.Provider value=\{doyaPower\}>/);
     assert.doesNotMatch(read('src/components/doya-power/doya-power-context.tsx'),/process\.env|document\.cookie|cookies\(/);
   });
   await check('Doya Power flag: every page/API that uses Doya Power code checks the flag; nothing else touches the ledger tables',async()=>{

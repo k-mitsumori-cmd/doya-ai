@@ -1,6 +1,6 @@
 /**
  * /seo/template 専用レイアウト
- * 親レイアウト（SeoAppLayout）のpadding/max-widthを打ち消す
+ * 親レイアウト（SeoShellFrame）のpadding/max-widthを打ち消す
  */
 export default function SeoTemplateLayout({
   children,

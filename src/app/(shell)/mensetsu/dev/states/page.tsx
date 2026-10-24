@@ -28,7 +28,7 @@
 //   settings            設定（メンバー3人）
 //   settings-noorg      設定（組織が無い → 空の絵＋「組織を作成する」）
 //   settings-forbidden  設定 403
-// ⚠️ 共通シェル（AppShell＋ToolFrame）に載せた形で出す。新しい見た目を強制する（MockFetch の中で UiNextContext = 'all'）
+// ⚠️ 共通シェル（AppShell＋ToolFrame）に載せた形で出す。共通シェルの見た目で描く
 // ⚠️ ログインしたまま開くと、(shell)/layout と mensetsu/layout の枠が外側にも出る。ログアウトした状態で開く
 import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
@@ -48,7 +48,6 @@ export default async function MensetsuDevStates({ searchParams }: Props) {
   if (process.env.NODE_ENV === 'production') notFound()
   const { s = 'home' } = await searchParams
   return (
-    // MockFetch が UiNextContext.Provider value="all" で包む（サーバーの部品からは Provider を使えないため）
     <MockFetch s={s}>
       <AppShell userName="見本 太郎">
         <MensetsuShellFrame>{renderState(s)}</MensetsuShellFrame>

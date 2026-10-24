@@ -16,7 +16,7 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  if(n==='@/lib/aio/client'||n==='./client')return client;
  if(n==='@/components/TrialCallout')return{TrialNote:()=>{trialRenders++;return React.createElement('span',null,'synthetic eligible trial')}};
  if(n==='@/components/aio/ui')return{PageHeader:()=>null};
- if(n==='@/components/shell/power')return{ShellCostBadge:()=>null,ShellPowerMeter:()=>null};if(n==='@/components/shell/ui-next-context')return{useUiNext:()=>false};
+ if(n==='@/components/shell/power')return{ShellCostBadge:()=>null,ShellPowerMeter:()=>null};if(n==='@/components/shell/ui-next-context')return{useUiNext:()=>true};
  if(n==='@/components/ds')return{EmptyState:()=>null};
  if(n==='./AioSidebar')return{__esModule:true,default:()=>null};
  if(n==='lucide-react')return new Proxy({},{get:()=>()=>null});
@@ -24,8 +24,9 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  let resolved=n.startsWith('@/')?path.join('src',n.slice(2)):n.startsWith('.')?path.resolve(path.dirname(file),n):null;
  if(resolved){if(!fs.existsSync(resolved+'.ts'))resolved+='.tsx';else resolved+='.ts';return load(resolved)}throw Error('Unmocked '+n)
 },window:dom.window,document:dom.window.document,crypto:webcrypto,URL,Date,Set,Map,Error,console,AbortController,confirm:()=>{confirms++;return true}},{filename:file});return exports}
-const Page=load('src/app/(shell)/aio/[orgSlug]/prompts/page.tsx').default,Layout=load('src/components/aio/AioAppLayout.tsx').default;
-const act=fn=>React.act(async()=>{await fn();for(let i=0;i<12;i++)await new Promise(setImmediate)}),render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,{orgSlug:org,organizationPlan:'PRO',isOwner:true},React.createElement(Page)))),props=e=>e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))],button=text=>[...c.querySelectorAll('button')].find(b=>b.textContent===text),input=()=>c.querySelector('input'),edit=text=>act(()=>props(input()).onChange({target:{value:text}})),click=text=>act(()=>props(button(text)).onClick()),toggle=()=>c.querySelector('[role="switch"]'),archive=()=>c.querySelector('button[title="保管"]'),defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)}};
+const Page=load('src/app/(shell)/aio/[orgSlug]/prompts/page.tsx').default,Layout=({children})=>children;// 組織のページは AioShellFrame（ToolFrame）で包む。旧来の AioAppLayout（サイドバー）は 2026-10-24 に消した
+
+const act=fn=>React.act(async()=>{await fn();for(let i=0;i<12;i++)await new Promise(setImmediate)}),render=()=>r.render(React.createElement(React.StrictMode,null,React.createElement(Layout,null,React.createElement(Page)))),props=e=>e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))],button=text=>[...c.querySelectorAll('button')].find(b=>b.textContent===text),input=()=>c.querySelector('input'),edit=text=>act(()=>props(input()).onChange({target:{value:text}})),click=text=>act(()=>props(button(text)).onClick()),toggle=()=>c.querySelector('[role="switch"]'),archive=()=>c.querySelector('button[title="保管"]'),defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)}};
 const cases=[];async function test(name,fn,setup){org='alpha';actor='actor-a';auth='authenticated';stored={alpha:[row('alpha')],beta:[row('beta')]};writes=[];reads=[];readHook=null;writeHook=null;canEdit=true;confirms=0;trialRenders=0;serial=10;if(setup)setup();c=document.createElement('div');document.body.append(c);r=createRoot(c);await act(render);try{await fn();cases.push(name);console.log('PASS '+name)}finally{await act(()=>r.unmount());c.remove()}}
 const change=mode=>act(()=>{if(mode==='org')org='beta';if(mode==='actor')actor='actor-b';if(mode==='auth')auth='loading';render()});
 (async()=>{

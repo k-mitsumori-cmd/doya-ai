@@ -8,11 +8,8 @@
 // ⚠️ 新しい見た目（チェックリスト §5.1）でない人には、包みの div も出さない（main と同じ形にする）。
 // ⚠️ 動きを減らす設定の人には動かさない（CSS の prefers-reduced-motion）。
 import type { ReactNode } from 'react'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import styles from './template.module.css'
 
 export default function ShellTemplate({ children }: { children: ReactNode }) {
-  const uiNext = useUiNext()
-  if (!uiNext) return <>{children}</>
   return <div className={styles.enter}>{children}</div>
 }

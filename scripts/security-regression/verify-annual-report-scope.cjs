@@ -38,7 +38,7 @@ function recordingPrisma(aliceRoles={}){
   const prisma=new Proxy({},{get:(_,k)=>{if(typeof k!=='string'||k==='then')return undefined;if(!models.has(k))models.set(k,model(k));return models.get(k)}});
   return {prisma,calls};
 }
-function fixture({session='alice',uiNext=true,doyaPower=true,roles={},env={}}={}){
+function fixture({session='alice',doyaPower=true,roles={},env={}}={}){
   const {prisma,calls}=recordingPrisma(roles);
   const rendered=[];
   const report=load('src/lib/annual-report/report.ts',{});
@@ -47,9 +47,8 @@ function fixture({session='alice',uiNext=true,doyaPower=true,roles={},env={}}={}
   const route=load('src/app/api/annual-report/image/route.ts',{
     'next/server':nextServer,
     '@/lib/prisma':{prisma},
-    '@/lib/ui-next':{isUiNext:async()=>{calls.push(['ui-next']);return uiNext}},
     // ドヤパワーの旗はこのテストでは出す側にする（旗が off のときの 404 は verify-doya-power-flag.cjs で見る）
-    '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>{calls.push(['ui-next']);return doyaPower}},
+    '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>{calls.push(['flag']);return doyaPower}},
     '@/lib/shell/company.server':{currentUserId:async()=>session,getAccountCompanyName:async()=>({name:'アリス株式会社',source:'company'})},
     '@/lib/annual-report/report':report,
     '@/lib/annual-report/load.server':loader,
@@ -59,7 +58,7 @@ function fixture({session='alice',uiNext=true,doyaPower=true,roles={},env={}}={}
   return {route,calls,rendered};
 }
 const req=(qs)=>new nextServer.NextRequest(`https://doya.example.invalid/api/annual-report/image?${qs}`);
-const dbCalls=(f)=>f.calls.filter(c=>c[0]!=='ui-next');
+const dbCalls=(f)=>f.calls.filter(c=>c[0]!=='flag');
 const SENSITIVE_FIELDS=['clientCompany','targetName','accountId','assigneeMemberId','createdByMemberId','totalExclTax','amount'];
 function touchesSensitive(f){
   return dbCalls(f).some(([m,op,a])=>op==='aggregate'||['sfaAccount','shodanMember'].includes(m)&&op==='findMany'||m==='sfaMember'&&op==='findMany'||
@@ -127,8 +126,8 @@ function assertOnlyAlice(f){
     assert.equal(r.members,null);
     assertOnlyAlice(f);
   });
-  await check('Signed-out and non-preview users are rejected without touching the database',async()=>{
-    for(const [opts,status] of [[{session:null},401],[{uiNext:false},404]]){
+  await check('Signed-out users are rejected without touching the database',async()=>{
+    for(const [opts,status] of [[{session:null},401]]){
       const f=fixture(opts);
       const res=await f.route.GET(req('year=2026&show=amounts'));
       assert.equal(res.status,status);

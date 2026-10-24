@@ -12,7 +12,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import ToolFrame from './ToolFrame'
 import { useInShell } from './in-shell'
-import { useUiNext } from './ui-next-context'
 import type { ShellNavItem } from './nav'
 import { sfaNav } from '@/lib/sfa/nav'
 import { buildAioNav } from '@/lib/aio/nav'
@@ -30,7 +29,6 @@ const ORG_NAV: Partial<Record<EntryServiceId, (org: string) => ShellNavItem[]>> 
 
 export default function ShellEntryFrame({ serviceId, children }: { serviceId: EntryServiceId; children: ReactNode }) {
   const inShell = useInShell()
-  const uiNext = useUiNext()
   const pathname = usePathname() || ''
   // ?org= は描いたあとに読む。⚠️ useSearchParams() を使うと、静的に書き出す画面（/expense など）で
   //    Suspense が無いためにビルドが止まる（2026-10-23 の Vercel のプレビューで発生）
@@ -38,7 +36,7 @@ export default function ShellEntryFrame({ serviceId, children }: { serviceId: En
   useEffect(() => {
     setOrg(pathname.endsWith('/pricing') ? new URLSearchParams(window.location.search).get('org') : null)
   }, [pathname])
-  if (!inShell || !uiNext || !isEntryPath(serviceId, pathname)) return <>{children}</>
+  if (!inShell || !isEntryPath(serviceId, pathname)) return <>{children}</>
   const nav = org ? ORG_NAV[serviceId]?.(org) : undefined
   return <ToolFrame serviceId={serviceId} nav={nav}>{children}</ToolFrame>
 }

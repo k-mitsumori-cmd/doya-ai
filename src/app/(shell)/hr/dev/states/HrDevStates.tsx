@@ -7,7 +7,6 @@
 import type { ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import type { Session } from 'next-auth'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 import AppShell from '@/components/shell/AppShell'
 import HrShellFrame from '@/components/hr/HrShellFrame'
 import HrDashboardPage from '../../dashboard/page'
@@ -33,13 +32,13 @@ export default function HrDevStates({ state, page }: { state: HrDevState; page: 
   // 子の読み込み（effect）より先に、fetch の差し替えと状態を決める
   installHrDevFetch(state)
   return (
-    <UiNextContext.Provider value="all">
+    <>
       <SessionProvider session={DEV_SESSION as unknown as Session} refetchOnWindowFocus={false} refetchInterval={0}>
         <AppShell userName="見本 太郎">
           {/* 状態・ページを変えたら作り直して、読み込みからやり直す */}
           <HrShellFrame key={`${state}:${page}`}>{PAGES[page]()}</HrShellFrame>
         </AppShell>
       </SessionProvider>
-    </UiNextContext.Provider>
+    </>
   )
 }

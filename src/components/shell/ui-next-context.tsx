@@ -1,26 +1,18 @@
 'use client'
 // ============================================
-// 新しい見た目かどうかを、クライアントの部品に伝える
+// 新しい見た目と、組織を選ぶツールのリンクの行き先
 // ============================================
-// 判定はサーバー（src/lib/ui-next.ts の uiNextMode()）。src/app/(shell)/layout.tsx が値を渡す。
-// ⚠️ ここでは cookie を読まない。サーバーが決めた値を使うだけ。
+// 新しい見た目は全員に出し終えた（2026-10-24）。useUiNext() はいつも true。
 import { createContext, useCallback, useContext } from 'react'
-import type { UiNextMode } from '@/lib/ui-next'
 
-export const UiNextContext = createContext<UiNextMode>(null)
-
-/** 新しい見た目（UI 品質の直し）を出すか */
+/** 新しい見た目（UI 品質の直し）を出すか。全員に出し終えたので、いつも true */
 export function useUiNext(): boolean {
-  return useContext(UiNextContext) !== null
-}
-
-export function useUiNextMode(): UiNextMode {
-  return useContext(UiNextContext)
+  return true
 }
 
 /**
  * 組織を選ぶツール（shodan・aio・sfa）の、リンクの行き先（ツールの id → 組織のページ）。
- * サーバー（src/lib/shell/tool-hrefs.server.ts）が決めて渡す。無いツールは入口のまま。新しい見た目のときだけ中身がある。
+ * サーバー（src/lib/shell/tool-hrefs.server.ts）が決めて渡す。無いツールは入口のまま。
  */
 export const ShellToolHrefsContext = createContext<Record<string, string>>({})
 

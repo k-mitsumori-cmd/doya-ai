@@ -1,6 +1,5 @@
 'use client'
 
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -25,7 +24,6 @@ import {
   CheckCircle2,
   MessageSquare,
   Zap,
-  Settings,
   DollarSign,
   CreditCard,
   ArrowRight,
@@ -42,7 +40,6 @@ const HOURLY_DESIGNER_RATE_JPY = 3000
 
 export default function BannerPlanPage() {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
-  const uiNext = useUiNext()
   const { data: session, status } = useSession()
   const isGuest = !session
   const bannerPlanRaw = session ? higherPlan((session.user as any)?.bannerPlan, (session.user as any)?.plan) : 'GUEST'
@@ -150,47 +147,6 @@ export default function BannerPlanPage() {
         {/* ========================================
             Header - Doya Banner Style
             ======================================== */}
-        {!uiNext && (
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-              <div className="h-16 sm:h-20 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                    <ArrowRight className="w-5 h-5 text-slate-400 rotate-180" />
-                  </Link>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    <CreditCard className="w-6 h-6 text-blue-600" />
-                    サービスプラン
-                  </h1>
-                </div>
-                
-                  <div className="flex items-center gap-3 sm:gap-6">
-                  <div className="hidden md:flex items-center gap-2">
-                    <Link href="/banner/dashboard/settings" className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                      <Settings className="w-5 h-5" />
-                    </Link>
-                  </div>
-                  <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                  <div className="flex items-center gap-3 pl-2">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{session?.user ? 'Member' : 'Guest'}</p>
-                    </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                      {session?.user?.image ? (
-                        <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                          {session?.user?.name?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-        )}
 
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8">
 

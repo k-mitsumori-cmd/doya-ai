@@ -1,6 +1,5 @@
 'use client'
 
-import { useToolUiNext } from '@/components/kintai/ui-next'
 import { Button, EmptyState } from '@/components/ds'
 import { MiniStack } from '@/components/ds/charts'
 import { PageTitle } from '@/components/kintai/ui-next'
@@ -24,7 +23,6 @@ function countWorkingDays(year: number, month: number): number {
 }
 
 export default function AttendancePage() {
-  const uiNext = useToolUiNext()
   const { isActive } = useKintaiAccess()
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -199,7 +197,7 @@ export default function AttendancePage() {
             <p className="font-bold text-red-800">勤怠データを読み込めませんでした。時間をおいて再試行してください。</p>
             <button onClick={() => setRetryCount(count => count + 1)} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
-        ) : !hasData && uiNext ? (
+        ) : !hasData ? (
           <EmptyState
             art="/kintai/empty-records.webp"
             title="この月の勤怠はまだありません"
@@ -245,10 +243,6 @@ export default function AttendancePage() {
                     const isWeekend = dow === 0 || dow === 6
                     const att = attendanceMap.get(dateStr)
 
-                    const workHoursPct = att?.workMinutes ? Math.min(100, Math.round((att.workMinutes / 480) * 100)) : 0
-                    const overtimePct = att?.overtimeMinutes && att?.workMinutes
-                      ? Math.round((att.overtimeMinutes / att.workMinutes) * 100)
-                      : 0
 
                     const dayTextColor = dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-slate-700'
 
@@ -318,9 +312,7 @@ export default function AttendancePage() {
                               <span className="font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
                                 {formatMinutesJa(att.workMinutes)}
                               </span>
-                              {uiNext ? (
-                                // 新しい見た目: 共通の MiniStack。8時間を全長にし、通常（青）と残業（注意の色）を積む。時間は左右の列の文字で出る
-                                <span className="hidden sm:inline-flex">
+                              <span className="hidden sm:inline-flex">
                                   <MiniStack
                                     basis={480}
                                     label={`勤務 ${formatMinutesJa(att.workMinutes)}${att.overtimeMinutes ? `（うち残業 ${formatMinutesJa(att.overtimeMinutes)}）` : ''}`}
@@ -330,23 +322,6 @@ export default function AttendancePage() {
                                     ]}
                                   />
                                 </span>
-                              ) : (
-                              <div className="w-14 h-2 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
-                                {/* Normal hours portion */}
-                                <div className="h-full flex">
-                                  <div
-                                    className="h-full bg-emerald-400 rounded-l-full"
-                                    style={{ width: `${Math.min(100, workHoursPct - overtimePct)}%` }}
-                                  />
-                                  {overtimePct > 0 && (
-                                    <div
-                                      className="h-full bg-orange-400 rounded-r-full"
-                                      style={{ width: `${overtimePct}%` }}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                              )}
                             </div>
                           ) : isFuture ? '' : isWeekend && !att ? '' : (
                             <span className="text-slate-300">-</span>

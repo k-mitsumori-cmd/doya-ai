@@ -12,7 +12,6 @@ import LeadConversionForm, { type ConversionLead } from '@/components/sfa/LeadCo
 import type { LeadStatus } from '@/lib/sfa/types'
 import SfaPageHeading from '@/components/sfa/PageHeading'
 import { Button } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { ArrowLeftRight, Plus, Sparkles, Upload } from 'lucide-react'
@@ -57,7 +56,6 @@ const scoreColor = (s: number | null) =>
   s == null ? 'text-slate-300' : s >= 70 ? 'text-green-600' : s >= 40 ? 'text-amber-500' : 'text-slate-400'
 
 export default function SfaLeadsPage() {
-  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const reload = useRef<() => void>(() => {})
   const mutations = useSfaClientMutations(orgSlug, (pending, state, row) => {
@@ -210,12 +208,12 @@ export default function SfaLeadsPage() {
           <SfaPageHeading className="text-2xl font-black text-slate-900">リード</SfaPageHeading>
           <p className="text-slate-500 font-bold text-sm">見込み客を集めて、有望なら取引先へ転換</p>
         </div>
-        <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
-          <button onClick={() => { setImportOpen((v) => !v); setOpen(false) }} aria-expanded={uiNext ? importOpen : undefined} className={uiNext ? 'min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
-            {uiNext ? <Upload className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">upload</span>}CSV取込
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => { setImportOpen((v) => !v); setOpen(false) }} aria-expanded={importOpen} className="min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
+            <Upload className="h-5 w-5" aria-hidden />CSV取込
           </button>
-          <button onClick={() => { setOpen((v) => !v); setImportOpen(false) }} aria-expanded={uiNext ? open : undefined} className={uiNext ? 'min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
-            {uiNext ? <Plus className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">add</span>}リード追加
+          <button onClick={() => { setOpen((v) => !v); setImportOpen(false) }} aria-expanded={open} className="min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">
+            <Plus className="h-5 w-5" aria-hidden />リード追加
           </button>
         </div>
       </div>
@@ -254,22 +252,18 @@ export default function SfaLeadsPage() {
       {/* ステータスフィルタ */}
       <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
         {(['all', ...STATUS_ORDER] as const).map((s) => (
-          <button key={s} onClick={() => { if (filter !== s) { requestVersion.current++; setLoading(true); setFilter(s) } }} aria-pressed={uiNext ? filter === s : undefined} className={uiNext
-            ? `min-h-11 px-4 rounded-full text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${filter === s ? 'bg-[#0066ff] text-white' : 'bg-white text-slate-600 border border-slate-200'}`
-            : `px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-colors ${filter === s ? 'bg-[#7f19e6] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+          <button key={s} onClick={() => { if (filter !== s) { requestVersion.current++; setLoading(true); setFilter(s) } }} aria-pressed={filter === s} className={`min-h-11 px-4 rounded-full text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${filter === s ? 'bg-[#0066ff] text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
             {s === 'all' ? 'すべて' : LEAD_STATUS_LABEL[s]}
           </button>
         ))}
       </div>
 
       <div className="mb-4">
-        <input value={q} maxLength={100} onChange={(e) => { requestVersion.current++; setLoading(true); setQ(e.target.value) }} placeholder="企業名で検索" aria-label="企業名で検索" className={uiNext ? 'w-full min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm' : 'w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm'} />
+        <input value={q} maxLength={100} onChange={(e) => { requestVersion.current++; setLoading(true); setQ(e.target.value) }} placeholder="企業名で検索" aria-label="企業名で検索" className="w-full min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
       </div>
 
       {loading && <p className="mb-3 text-sm text-slate-500">リードを読み込み中です...</p>}
-      {currentList && listError && (uiNext
-        ? <div className="mb-3"><SfaLoadError error={listFailure} what="リード" onRetry={() => load(filter, q)} orgSlug={orgSlug} /></div>
-        : <div role="alert" className="mb-3 text-sm text-red-700">リードを読み込めませんでした。<button type="button" onClick={() => load(filter, q)} className="ml-2 underline">再試行</button></div>)}
+      {currentList && listError && (<div className="mb-3"><SfaLoadError error={listFailure} what="リード" onRetry={() => load(filter, q)} orgSlug={orgSlug} /></div>)}
       {currentList && !loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{leads.length}件を表示</p>}
       {currentList && !loading && !listError && <div className="space-y-2">
         {leads.length === 0 ? (
@@ -292,24 +286,24 @@ export default function SfaLeadsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={uiNext ? 'font-black text-slate-800 min-w-0 max-w-full break-words' : 'font-black text-slate-800 truncate'}>{l.name}</p>
+                    <p className="font-black text-slate-800 min-w-0 max-w-full break-words">{l.name}</p>
                     <span className={`text-[10px] font-black rounded px-1.5 py-0.5 ${STATUS_COLOR[l.status]}`}>{LEAD_STATUS_LABEL[l.status]}</span>
                     <span className="text-[10px] font-bold text-slate-400">{SOURCE_LABEL[l.source] || l.source}</span>
                   </div>
                   {l.contactName && <p className="text-xs font-bold text-slate-400 mt-0.5">{l.contactName}</p>}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-[#0066ff] hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50'}>
-                      {uiNext ? <Sparkles className="h-4 w-4" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}{mutations.busy.includes('score:' + l.id) ? 'AI判定中…' : 'AIスコア'}
+                    <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className="min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-[#0066ff] hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
+                      <Sparkles className="h-4 w-4" aria-hidden />{mutations.busy.includes('score:' + l.id) ? 'AI判定中…' : 'AIスコア'}
                       <ShellCostBadge action="text.generate" />
                     </button>
                     {l.status !== 'converted' && !l.convertedAccountId ? (
-                      <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion') || mutations.blocked('lead:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-green-700 hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-green-700 hover:underline flex items-center gap-0.5'}>
-                        {uiNext ? <ArrowLeftRight className="h-4 w-4" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">swap_horiz</span>}取引先に転換
+                      <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion') || mutations.blocked('lead:' + l.id)} className="min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-green-700 hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
+                        <ArrowLeftRight className="h-4 w-4" aria-hidden />取引先に転換
                       </button>
                     ) : (
                       <span className="text-xs font-bold text-slate-400">転換済</span>
                     )}
-                    <select value={l.status} disabled={!ready || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id) || l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} aria-label={`${l.name}の状態`} className={uiNext ? 'ml-auto min-h-11 text-xs font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60' : 'ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60'}>
+                    <select value={l.status} disabled={!ready || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id) || l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} aria-label={`${l.name}の状態`} className="ml-auto min-h-11 text-xs font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
                       {STATUS_ORDER.filter((s) => s !== 'converted' || l.status === 'converted').map((s) => <option key={s} value={s}>{LEAD_STATUS_LABEL[s]}</option>)}
                     </select>
                   </div>

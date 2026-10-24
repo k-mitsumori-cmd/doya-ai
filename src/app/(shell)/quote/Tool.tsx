@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { clearSelectedOrg, getSelectedOrg, selectOrganization, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { clearSelectedOrg, getSelectedOrg, selectOrganization, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { useSession } from 'next-auth/react'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { isQuoteProductProfile, isQuoteSuggestedItem, isQuoteProductAcknowledgement } from '@/lib/quote/response-shape'
@@ -23,8 +23,6 @@ import QuoteLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
-import { EmptyState } from '@/components/EmptyState'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice, FirstSteps, ToolHero } from '@/components/ds'
 import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
@@ -77,8 +75,7 @@ class QuoteLoadError extends Error {
 
 export default function QuoteTool() {
   const { data: session, status: authStatus } = useSession()
-  // 新しい見た目（UI 品質の直し）。偽のときは今までの見た目のまま（チェックリスト §5.1）
-  const uiNext = useUiNext()
+  // 新しい見た目（UI 品質の直し））
   const lastActor = useRef('')
   if (authStatus === 'authenticated') lastActor.current = session?.user?.id || ''
   if (authStatus === 'unauthenticated') lastActor.current = ''
@@ -130,7 +127,7 @@ export default function QuoteTool() {
   const [creatingOrg, setCreatingOrg] = useState(false)
   const [organizationUncertain, setOrganizationUncertain] = useState(false)
   const creatingOrgRequest = useRef(false)
-  const [memberships, setMemberships] = useState<Membership[]>([])
+  const [, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
    *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
@@ -268,12 +265,12 @@ export default function QuoteTool() {
         const failStatus = e instanceof QuoteLoadError || e instanceof OrgResponseError ? e.status : 0
         setLoadFailStatus(failStatus)
         // 新しい見た目では、トーストにも生の文（英語の状態の文など）を出さない
-        notifyError(setError, uiNext ? quoteErrorCopy(quoteErrorKind(failStatus), '見積書と商材').what : e instanceof Error ? e.message : '読み込みに失敗しました')
+        notifyError(setError, quoteErrorCopy(quoteErrorKind(failStatus), '見積書と商材').what)
       }
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoading(false)
     }
-  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef, uiNext])
+  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef])
 
   useEffect(() => {
     if (draftIdentity.current !== identity) {
@@ -687,7 +684,7 @@ export default function QuoteTool() {
     )
   }
 
-  if (loadFailed && uiNext) {
+  if (loadFailed) {
     // 新しい見た目: 生の文言は出さず、状態コードから「何が起きたか・どうするか」を出す（S-20）
     const kind = quoteErrorKind(loadFailStatus)
     const copy = quoteErrorCopy(kind, '見積書と商材')
@@ -701,15 +698,6 @@ export default function QuoteTool() {
     )
   }
 
-  if (loadFailed) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-slate-50 px-4 text-center">
-        <p role="alert" className="text-sm font-bold text-rose-700">{error || '組織のデータを読み込めませんでした。'}</p>
-        {savedProduct && <p role="status" className="text-sm text-blue-900">商材「{savedProduct.name}」は保存しました。一覧を読み込めませんでした。再登録せず、再試行で一覧を確認してください。</p>}
-        <button onClick={() => void load()} className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-bold text-blue-700">再試行</button>
-      </div>
-    )
-  }
 
   // ⚠️ 未ログインの方にはLPを見せる。以前は「ログインが必要です」の小さな箱だけで、
   //    何をするサービスなのか説明する面がどこにも無かった。
@@ -720,10 +708,9 @@ export default function QuoteTool() {
   // --- 初回オンボーディング ---
   if (!org) {
     return (
-      <div className={uiNext ? 'flex justify-center px-4 py-8 sm:py-12' : 'flex min-h-screen items-center justify-center bg-slate-50 px-4'}>
-        <div className={`w-full max-w-md rounded-2xl bg-white ${uiNext ? 'p-5 sm:p-8' : 'p-8'} shadow-sm ring-1 ring-slate-200`}>
-          {uiNext ? (
-            <>
+      <div className="flex justify-center px-4 py-8 sm:py-12">
+        <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-slate-200">
+          <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={QUOTE_UI_NEXT_ART.empty} alt="" width={240} height={180} className="mx-auto h-auto w-[200px]" />
               {/* ⚠️ 枠（ToolFrame）が h1 を持つので、ここは h2 */}
@@ -732,41 +719,32 @@ export default function QuoteTool() {
                 見積書に載せる会社の名前を入れてください。あとから発行者情報（住所・印影など）を足せます。
               </p>
             </>
-          ) : (
-            <>
-              <h1 className="text-xl font-bold text-slate-900">ドヤ見積もりAI</h1>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
-                はじめに、見積書を発行する組織を作成してください。
-              </p>
-            </>
-          )}
-          {uiNext && <label htmlFor="quote-org-name" className="mt-5 block text-xs font-bold text-slate-500">組織名（会社名）</label>}
+          <label htmlFor="quote-org-name" className="mt-5 block text-xs font-bold text-slate-500">組織名（会社名）</label>
           <input
-            id={uiNext ? 'quote-org-name' : undefined}
+            id="quote-org-name"
             value={orgName}
             onChange={(e) => { if (context.isCurrent(epoch)) setOrgName(e.target.value) }}
-            placeholder={uiNext ? '見本 株式会社' : '株式会社スリスタ'}
-            aria-label={uiNext ? undefined : '組織名'}
-            aria-invalid={uiNext && error ? true : undefined}
-            aria-describedby={uiNext && error ? 'quote-org-error' : undefined}
-            className={`${uiNext ? 'mt-1 min-h-11 ' : 'mt-5 '}w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
+            placeholder="見本 株式会社"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'quote-org-error' : undefined}
+            className="mt-1 min-h-11 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
           />
-          {error && <p id={uiNext ? 'quote-org-error' : undefined} role={uiNext ? 'alert' : undefined} className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
+          {error && <p id="quote-org-error" role="alert" className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
           <button
             onClick={createOrg}
             disabled={!orgName.trim() || creatingOrg || organizationUncertain}
-            className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
+            className={`min-h-11 ${FOCUS} mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
           >
             {creatingOrg ? '作成しています…' : organizationUncertain ? '作成結果の確認が必要です' : '組織を作成する'}
           </button>
-          {organizationUncertain && <button type="button" onClick={() => void load()} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}mt-3 block underline`}>組織一覧を再読み込みして確認する</button>}
+          {organizationUncertain && <button type="button" onClick={() => void load()} className={`min-h-11 ${FOCUS} mt-3 block underline`}>組織一覧を再読み込みして確認する</button>}
         </div>
       </div>
     )
   }
 
   return (
-    <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
+    <div className="pb-24">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
         isLoading={analyzing}
@@ -790,29 +768,9 @@ export default function QuoteTool() {
         tips={['Tip: 想定予算を入れると、その範囲に寄せた構成になります', 'Tip: 相手の状況を書くほど、刺さる品目が出ます', 'Tip: 出てきた品目は追加・削除・単価変更が自由にできます']}
       />
       {/* ⚠️ 新しい見た目では、見出し（h1）と組織の切り替えは枠（ToolFrame）の1か所だけにする（S-31・S-57） */}
-      {!uiNext && <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">ドヤ見積もりAI</h1>
-            <p className="text-xs text-slate-500 font-semibold">{org.name}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <OrgSwitcher
-              service="quote"
-              memberships={memberships}
-              currentSlug={org.slug}
-              onChange={changeOrganization}
-            />
-            <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
-              発行者情報
-            </Link>
-          </div>
-        </div>
-      </header>}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-        {uiNext && (
-          <>
+        <>
             <ToolHero
               title="URLを入れるだけで、相場つきの見積書"
               lead={<>サービスのページを読み取り、品目と金額の出所（自社価格・相場・AI推定）をそろえます。<span className="mt-1 block text-sm text-slate-500">発行する組織: {org.name}</span></>}
@@ -830,11 +788,10 @@ export default function QuoteTool() {
               />
             )}
           </>
-        )}
         {!hasIssuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             見積書に印字する自社情報が未設定です。このままでもPDFは出力できます（自社名の欄は空欄になります）。
-            <Link href="/quote/settings" className={`mx-1 font-bold underline${uiNext ? ` ${FOCUS}` : ''}`}>
+            <Link href="/quote/settings" className={`mx-1 font-bold underline ${FOCUS}`}>
               発行者情報
             </Link>
             を登録すると印字されます。
@@ -842,11 +799,10 @@ export default function QuoteTool() {
         )}
 
         {savedProduct && <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">商材「{savedProduct.name}」を保存しました。</p>}
-        {error && !(uiNext && (documentLimited || productLimited) && error === limitError.current) && (
+        {error && !((documentLimited || productLimited) && error === limitError.current) && (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
             <p>{error}</p>
-            {quotaAction && org?.role === 'owner' && !uiNext && <Link href={quotaAction.url} className="mt-2 inline-block font-bold text-blue-700 underline">{quotaAction.label}</Link>}
-            {productSaveUncertain && <button type="button" onClick={() => void load()} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}mt-2 block font-bold text-blue-700 underline`}>商材一覧を再読み込み</button>}
+            {productSaveUncertain && <button type="button" onClick={() => void load()} className={`min-h-11 ${FOCUS} mt-2 block font-bold text-blue-700 underline`}>商材一覧を再読み込み</button>}
           </div>
         )}
 
@@ -857,19 +813,19 @@ export default function QuoteTool() {
             自社のサービスURLを入力すると、提供形態・課金の軸・公開している価格を読み取ります。
           </p>
           {/* ⚠️ 375px でボタンの文字が1文字ずつ折り返さないよう、新しい見た目では縦に積む（S-59） */}
-          <div className={uiNext ? 'mt-4 flex flex-col gap-2 sm:flex-row' : 'mt-4 flex gap-2'}>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
               value={url}
               onChange={(e) => { if (context.isCurrent(epoch)) setUrl(e.target.value) }}
               placeholder="https://example.com/service"
               aria-label="自社のサービスのURL"
-              type={uiNext ? 'url' : undefined}
-              className={`${uiNext ? 'min-w-0 ' : ''}flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
+              type="url"
+              className="min-w-0 flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className={`${uiNext ? `min-h-11 shrink-0 whitespace-nowrap ${FOCUS} ` : ''}rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
+              className={`min-h-11 shrink-0 whitespace-nowrap ${FOCUS} rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
             >
               {analyzing ? '解析中...' : '解析する'}
             </button>
@@ -881,7 +837,7 @@ export default function QuoteTool() {
                 {draftProfile.summary && (
                   <div><dt className="text-xs font-bold text-slate-500">概要</dt><dd className="text-slate-800">{draftProfile.summary}</dd></div>
                 )}
-                <div className={uiNext ? 'flex flex-wrap gap-x-6 gap-y-2' : 'flex gap-6'}>
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
                   {draftProfile.deliveryModel && (
                     <div><dt className="text-xs font-bold text-slate-500">提供形態</dt><dd className="text-slate-800">{draftProfile.deliveryModel}</dd></div>
                   )}
@@ -902,25 +858,25 @@ export default function QuoteTool() {
                   </dd>
                 </div>
               </dl>
-              <div className={uiNext ? 'mt-4 flex flex-col gap-2 sm:flex-row' : 'mt-4 flex gap-2'}>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <input
                   value={productName}
                   onChange={(e) => { if (context.isCurrent(epoch)) setProductName(e.target.value) }}
                   placeholder="商材名（例: SEOコンサルティング）"
                   aria-label="商材名"
-                  className={`${uiNext ? 'min-w-0 ' : ''}flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
+                  className="min-w-0 flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
                 <button
                   onClick={saveProduct}
                   disabled={!productName.trim() || savingProduct || productSaveUncertain || productLimited}
-                  className={`${uiNext ? `min-h-11 shrink-0 ${FOCUS} ` : ''}rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
+                  className={`min-h-11 shrink-0 ${FOCUS} rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
                 >
                   {savingProduct ? '保存しています…' : productLimited ? '商材登録の利用上限に達しています' : productSaveUncertain ? '保存結果の確認が必要です' : '商材として保存'}
                 </button>
               </div>
             </div>
           )}
-          {productLimited && uiNext && (
+          {productLimited && (
             // 新しい見た目: 上限は「何が起きたか・どうするか」と、料金プランへの道を1つだけ出す
             <div className="mt-4 space-y-3">
               <ErrorNotice
@@ -928,14 +884,6 @@ export default function QuoteTool() {
                 how={org?.role === 'owner' ? '料金プランを確認すると、続けて登録できます。' : '利用枠を増やすには、組織のオーナーに相談してください。'}
               />
               {org?.role === 'owner' && <DsButton href={productQuotaAction?.url ?? '/quote/pricing'} variant="secondary" icon="CreditCard">料金プランを見る</DsButton>}
-            </div>
-          )}
-          {productLimited && !uiNext && (
-            <div role="alert" className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
-              <p>商材登録の利用上限に達しています。入力は保持しています。</p>
-              {org?.role === 'owner' && productQuotaAction
-                ? <Link href={productQuotaAction.url} className="mt-2 inline-block underline">{productQuotaAction.label}</Link>
-                : <p className="mt-2">利用枠の変更は組織の契約者にご相談ください。</p>}
             </div>
           )}
         </section>
@@ -950,7 +898,7 @@ export default function QuoteTool() {
                 <select
                   value={selectedProduct}
                   onChange={(e) => { if (context.isCurrent(epoch)) setSelectedProduct(e.target.value) }}
-                  className={`${uiNext ? 'min-h-11 ' : ''}w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
+                  className="min-h-11 w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 >
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -978,28 +926,22 @@ export default function QuoteTool() {
             {productCursor && (
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
                 <span>{products.length} / {productTotal}件の商材を表示</span>
-                <button onClick={loadMoreProducts} disabled={loadingMoreProducts} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50`}>
+                <button onClick={loadMoreProducts} disabled={loadingMoreProducts} className={`min-h-11 ${FOCUS} rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50`}>
                   {loadingMoreProducts ? '読み込み中…' : productPageError ? '再試行' : '商材をさらに表示'}
                 </button>
-                {productPageError && <button onClick={() => void load()} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}text-blue-700 underline`}>一覧を更新</button>}
+                {productPageError && <button onClick={() => void load()} className={`min-h-11 ${FOCUS} text-blue-700 underline`}>一覧を更新</button>}
               </div>
             )}
-            {productPageError && (uiNext
-              ? <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">商材の続きを読み込めませんでした。「再試行」を押すか、一覧を更新してください。</p>
-              : <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{productPageError}</p>)}
+            {productPageError && (<p role="alert" className="mt-2 text-xs font-semibold text-rose-700">商材の続きを読み込めませんでした。「再試行」を押すか、一覧を更新してください。</p>)}
             {/* ⚠️ ここが本サービスの主役の操作。押すと何が起きるかを添えて、
                  主要アクションだと分かる見た目にする（AIが動く＝待ち時間が出るボタン） */}
             <button
               onClick={suggest}
               disabled={suggesting || !selectedProduct}
-              className={`${uiNext ? `w-full justify-center whitespace-nowrap sm:w-auto motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${FOCUS} ` : ''}mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-7 py-3.5 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
+              className={`w-full justify-center whitespace-nowrap sm:w-auto motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${FOCUS} mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-7 py-3.5 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
             >
-              {uiNext ? (
+              {(
                 suggesting ? <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-5 w-5" aria-hidden />
-              ) : (
-                <span className="material-symbols-outlined text-[20px]">
-                  {suggesting ? 'hourglass_top' : 'auto_awesome'}
-                </span>
               )}
               {suggesting ? '候補を作っています…' : '品目の候補を出す'}
               <ShellCostBadge action="text.generate" />
@@ -1013,7 +955,7 @@ export default function QuoteTool() {
         {/* --- 3. 編集して見積書へ --- */}
         {items.length > 0 && (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className={uiNext ? 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1' : 'flex items-baseline justify-between'}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h2 className="text-base font-bold text-slate-900">3. 内容を調整する</h2>
               <p className="text-xs text-slate-500 font-semibold">金額の出所は行ごとに表示されます</p>
             </div>
@@ -1023,12 +965,12 @@ export default function QuoteTool() {
                 <div
                   // 世代番号を key に混ぜて、出し直しのたびに演出を再生させる
                   key={`${revealSeq}-${idx}`}
-                  className={`rounded-xl border border-slate-200 ${uiNext ? 'p-3 sm:p-4 motion-reduce:animate-none' : 'p-4'} ${revealSeq > 0 ? 'animate-quote-item' : ''}`}
+                  className={`rounded-xl border border-slate-200 p-3 sm:p-4 motion-reduce:animate-none ${revealSeq > 0 ? 'animate-quote-item' : ''}`}
                   // 上から順に少しずつ遅らせる。長い一覧で待たされないよう上限を設ける
                   style={revealSeq > 0 ? ({ '--stagger': `${Math.min(idx, 9) * 55}ms` } as CSSProperties) : undefined}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`${uiNext ? 'min-w-0 ' : ''}flex-1 space-y-2`}>
+                    <div className="min-w-0 flex-1 space-y-2">
                       <input
                         value={it.itemName}
                         onChange={(e) => updateItem(idx, { itemName: e.target.value })}
@@ -1051,12 +993,12 @@ export default function QuoteTool() {
                         onClick={() => void estimateRow(idx)}
                         disabled={estimating.has(it) || !it.itemName.trim()}
                         title={it.itemName.trim() ? '品目名から数量と単価をAIが入れます' : '先に品目名を入力してください'}
-                        aria-label={uiNext ? `${idx + 1}行目の数量と単価をAIで入れる` : undefined}
-                        className={`${uiNext ? `min-h-11 whitespace-nowrap ${FOCUS} ` : ''}inline-flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-300`}
+                        aria-label={`${idx + 1}行目の数量と単価をAIで入れる`}
+                        className={`min-h-11 whitespace-nowrap ${FOCUS} inline-flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-300`}
                       >
                         {estimating.has(it) ? (
                           <>
-                            <span className={`h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white${uiNext ? ' motion-reduce:animate-none' : ''}`} aria-hidden />
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden />
                             作成中
                           </>
                         ) : (
@@ -1070,7 +1012,7 @@ export default function QuoteTool() {
                       <button
                         onClick={() => removeItem(idx)}
                         aria-label={`${idx + 1}行目の品目を削除`}
-                        className={`${uiNext ? `min-h-11 whitespace-nowrap ${FOCUS} ` : ''}rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold`}
+                        className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold`}
                       >
                         削除
                       </button>
@@ -1144,7 +1086,7 @@ export default function QuoteTool() {
                             sourceRef: `相場の中央値を採用（${yen(it.rangeMin!)}〜${yen(it.rangeMax!)}）`,
                           })
                         }}
-                        className={`${uiNext ? `min-h-11 whitespace-nowrap ${FOCUS} ` : ''}rounded-lg border-2 border-[#0066ff] px-2.5 py-1 text-[11px] font-black text-[#0066ff] transition-colors hover:bg-blue-50`}
+                        className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg border-2 border-[#0066ff] px-2.5 py-1 text-[11px] font-black text-[#0066ff] transition-colors hover:bg-blue-50`}
                       >
                         相場で埋める
                       </button>
@@ -1155,7 +1097,7 @@ export default function QuoteTool() {
               ))}
             </div>
 
-            <button onClick={addItem} disabled={items.length >= MAX_QUOTE_ITEMS} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold disabled:cursor-not-allowed disabled:opacity-50`}>
+            <button onClick={addItem} disabled={items.length >= MAX_QUOTE_ITEMS} className={`min-h-11 ${FOCUS} mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold disabled:cursor-not-allowed disabled:opacity-50`}>
               品目を追加（{items.length} / {MAX_QUOTE_ITEMS}行）
             </button>
 
@@ -1189,9 +1131,9 @@ export default function QuoteTool() {
                       )
                     )
                   }}
-                  className={`${uiNext ? `mt-3 min-h-11 text-left ${FOCUS} ` : 'mb-3 '}inline-flex items-center gap-1.5 rounded-xl border-2 border-[#0066ff] px-4 py-2 text-sm font-black text-[#0066ff] transition-colors hover:bg-blue-50`}
+                  className={`mt-3 min-h-11 text-left ${FOCUS} inline-flex items-center gap-1.5 rounded-xl border-2 border-[#0066ff] px-4 py-2 text-sm font-black text-[#0066ff] transition-colors hover:bg-blue-50`}
                 >
-                  {uiNext ? <Zap className="h-[18px] w-[18px] shrink-0" aria-hidden /> : <span className="material-symbols-outlined text-[18px]">bolt</span>}
+                  <Zap className="h-[18px] w-[18px] shrink-0" aria-hidden />
                   相場が分かる品目をまとめて埋める
                 </button>
               )}
@@ -1222,14 +1164,14 @@ export default function QuoteTool() {
                  金額の計算は画面・PDF・保存値で同じ calcTotals を使うので、ここと最終物はずれない。 */}
             <div className="mt-5 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4">
               <div className="mb-3 flex items-center gap-2">
-                {uiNext ? <Eye className="h-[18px] w-[18px] text-slate-500" aria-hidden /> : <span className="material-symbols-outlined text-[18px] text-slate-500">visibility</span>}
+                <Eye className="h-[18px] w-[18px] text-slate-500" aria-hidden />
                 <span className="text-sm font-black text-slate-700">見積書プレビュー</span>
                 <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
                   作成前
                 </span>
               </div>
-              <div className={`rounded-xl bg-white ${uiNext ? 'p-4 sm:p-5' : 'p-5'} shadow-sm`}>
-                <div className={uiNext ? 'mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-1' : 'mb-4 flex items-start justify-between gap-4'}>
+              <div className="rounded-xl bg-white p-4 sm:p-5 shadow-sm">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
                   <div className="min-w-0">
                     <p className="text-lg font-black text-slate-900">御見積書</p>
                     <p className="mt-1 truncate text-sm font-bold text-slate-700">
@@ -1285,28 +1227,28 @@ export default function QuoteTool() {
             <button
               onClick={createDocument}
               disabled={creating || documentUncertain || documentLimited || !!createdDocument || items.length === 0}
-              className={`${uiNext ? `motion-reduce:transition-none motion-reduce:hover:translate-y-0 [text-wrap:balance] ${FOCUS} ` : ''}mt-4 w-full rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-5 py-4 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
+              className={`motion-reduce:transition-none motion-reduce:hover:translate-y-0 [text-wrap:balance] ${FOCUS} mt-4 w-full rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-5 py-4 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
             >
               {creating ? '作成しています…' : createdDocument ? '送信した内容の見積書を作成しました' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : '見積書を作成する'}
             </button>
             {createdDocument && (
               <div role="status" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                 送信した内容の見積書を作成しました。待機中に変更した入力は保持しています。
-                <Link href={`/quote/documents/${encodeURIComponent(createdDocument.id)}`} className={`${uiNext ? `flex min-h-11 items-center ${FOCUS} ` : 'block '}mt-2 underline`}>作成した見積書を確認する（{createdDocument.quoteNo}）</Link>
+                <Link href={`/quote/documents/${encodeURIComponent(createdDocument.id)}`} className={`flex min-h-11 items-center ${FOCUS} mt-2 underline`}>作成した見積書を確認する（{createdDocument.quoteNo}）</Link>
                 <button type="button" onClick={() => {
                   if (!context.isCurrent(epoch)) return
                   creatingDocumentRequest.current = false
                   setCreatedDocument(null)
-                }} className={`${uiNext ? `min-h-11 text-left ${FOCUS} ` : ''}mt-2 block underline`}>編集した内容で別の見積書を作成する</button>
+                }} className={`min-h-11 text-left ${FOCUS} mt-2 block underline`}>編集した内容で別の見積書を作成する</button>
               </div>
             )}
             {documentUncertain && (
               <div role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 作成結果を確認できませんでした。入力は保持しています。重ねて作成せず、同じ組織の見積書一覧をご確認ください。
-                <button type="button" onClick={() => void load()} className={`${uiNext ? `min-h-11 text-left ${FOCUS} ` : ''}mt-2 block underline`}>見積書一覧を再読み込みして確認する</button>
+                <button type="button" onClick={() => void load()} className={`min-h-11 text-left ${FOCUS} mt-2 block underline`}>見積書一覧を再読み込みして確認する</button>
               </div>
             )}
-            {documentLimited && uiNext && (
+            {documentLimited && (
               // 新しい見た目: 上限は「何が起きたか・どうするか」と、料金プランへの道を1つだけ出す
               <div className="mt-3 space-y-3">
                 <ErrorNotice
@@ -1314,12 +1256,6 @@ export default function QuoteTool() {
                   how={org?.role === 'owner' ? '料金プランを確認すると、続けて作れます。' : '利用枠を増やすには、組織のオーナーに相談してください。'}
                 />
                 {org?.role === 'owner' && <DsButton href={quotaAction?.url ?? '/quote/pricing'} variant="secondary" icon="CreditCard">料金プランを見る</DsButton>}
-              </div>
-            )}
-            {quotaAction && error && org?.role === 'owner' && !uiNext && (
-              <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
-                <p>{error}</p>
-                <Link href={quotaAction.url} className="mt-2 inline-block text-blue-700 underline">{quotaAction.label}</Link>
               </div>
             )}
           </section>
@@ -1332,21 +1268,19 @@ export default function QuoteTool() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">見積書</h2>
           {docs.length === 0 ? (
-            uiNext ? (
+            (
               <DsEmptyState
                 title="まだ見積書はありません"
                 description="上の「1. 商材を取り込む」にサービスのURLを入れると、根拠つきの見積書を作れます。"
                 art={QUOTE_UI_NEXT_ART.empty}
                 action={<DsButton href="#quote-step-1" variant="secondary" icon="Receipt">最初の見積書をつくる</DsButton>}
               />
-            ) : (
-              <EmptyState kind="not-generated" title="まだ見積書はありません" description="商材と商談条件を入力すると、根拠つきの見積書を作成できます。" />
             )
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {docs.map((d) => (
-                <Link key={d.id} href={`/quote/documents/${d.id}`} className={uiNext ? `-mx-2 flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-3 hover:bg-slate-50 ${FOCUS}` : 'flex items-center justify-between py-3 hover:bg-slate-50'}>
-                  <div className={uiNext ? 'min-w-0 flex-1' : 'min-w-0'}>
+                <Link key={d.id} href={`/quote/documents/${d.id}`} className={`-mx-2 flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-3 hover:bg-slate-50 ${FOCUS}`}>
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {d.clientCompany || '宛先未設定'} — {d.title}
                     </p>
@@ -1354,13 +1288,11 @@ export default function QuoteTool() {
                       {d.quoteNo} / 有効期限 {new Date(d.expiryDate).toLocaleDateString('ja-JP')}
                     </p>
                   </div>
-                  <div className={uiNext ? 'flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3' : 'flex shrink-0 items-center gap-3'}>
-                    <span className={uiNext ? 'whitespace-nowrap text-sm font-bold tabular-nums text-slate-900' : 'text-sm font-bold text-slate-900'}>{yen(d.totalInclTax)}</span>
-                    <span className={`${uiNext ? 'whitespace-nowrap ' : ''}rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      d.status === 'draft' ? 'bg-slate-100 text-slate-600'
+                  <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+                    <span className="whitespace-nowrap text-sm font-bold tabular-nums text-slate-900">{yen(d.totalInclTax)}</span>
+                    <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium ${d.status === 'draft' ? 'bg-slate-100 text-slate-600'
                       : d.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-blue-50 text-blue-700'
-                    }`}>
+                      : 'bg-blue-50 text-blue-700'}`}>
                       {QUOTE_STATUS_LABEL[d.status] || d.status}
                     </span>
                   </div>
@@ -1371,15 +1303,13 @@ export default function QuoteTool() {
           {documentCursor && (
             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
               <span>{docs.length} / {documentTotal}件の見積書を表示</span>
-              <button onClick={loadMoreDocuments} disabled={loadingMoreDocuments} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50`}>
+              <button onClick={loadMoreDocuments} disabled={loadingMoreDocuments} className={`min-h-11 ${FOCUS} rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50`}>
                 {loadingMoreDocuments ? '読み込み中…' : documentPageError ? '再試行' : '見積書をさらに表示'}
               </button>
-              {documentPageError && <button onClick={() => void load()} className={`${uiNext ? `min-h-11 ${FOCUS} ` : ''}text-blue-700 underline`}>一覧を更新</button>}
+              {documentPageError && <button onClick={() => void load()} className={`min-h-11 ${FOCUS} text-blue-700 underline`}>一覧を更新</button>}
             </div>
           )}
-          {documentPageError && (uiNext
-            ? <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">見積書の続きを読み込めませんでした。「再試行」を押すか、一覧を更新してください。</p>
-            : <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{documentPageError}</p>)}
+          {documentPageError && (<p role="alert" className="mt-2 text-xs font-semibold text-rose-700">見積書の続きを読み込めませんでした。「再試行」を押すか、一覧を更新してください。</p>)}
         </section>
       </main>
     </div>

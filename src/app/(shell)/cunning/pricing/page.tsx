@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 export default function CunningPricingPage() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const [plan, setPlan] = useState<string | null>(null)
   const [planError, setPlanError] = useState(false)
   const loadPlan = useCallback(async () => {
@@ -29,7 +27,7 @@ export default function CunningPricingPage() {
   }, [loadPlan])
 
   return (
-    <div data-legacy-backdrop className={uiNext ? '' : 'min-h-screen bg-slate-50'}>
+    <div data-legacy-backdrop className="">
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Link

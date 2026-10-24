@@ -7,7 +7,6 @@ import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS } from '@/lib/doyalist/constants'
 import { DEFAULT_DOYALIST_PREFERENCES, readDoyalistPreferences, saveDoyalistPreferences, type DoyalistPreferences } from '@/lib/doyalist/preferences'
 import Sym from '@/components/doyalist/Sym'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { AlertTriangle, Clock, Settings } from 'lucide-react'
 import { ErrorNotice } from '@/components/ds'
 import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
@@ -51,8 +50,7 @@ const CHARS = {
 
 export default function SettingsPage() {
   // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（S-57）
-  const uiNext = useUiNext()
-  const Heading = uiNext ? 'h2' : 'h1'
+  const Heading = 'h2'
   const { data: session } = useSession()
   const [settings, setSettings] = useState(DEFAULT_DOYALIST_PREFERENCES)
   const [usage, setUsage] = useState(null as Usage | null)
@@ -147,7 +145,7 @@ export default function SettingsPage() {
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className={`w-12 h-12 rounded-full border-4 border-cyan-200 border-t-cyan-500 animate-spin${uiNext ? ' motion-reduce:animate-none' : ''}`} />
+        <div className="w-12 h-12 rounded-full border-4 border-cyan-200 border-t-cyan-500 animate-spin motion-reduce:animate-none" />
       </div>
     )
   }
@@ -162,25 +160,21 @@ export default function SettingsPage() {
   const userEmail = session?.user?.email || ''
   const userImage = session?.user?.image || ''
   // 新しい見た目: 押せる場所の大きさ（44px）とキーボードの枠
-  const focusRing = uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1' : ''
-  const tap = uiNext ? ' min-h-11' : ''
+  const focusRing = ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
+  const tap = ' min-h-11'
   const usageCopy = doyalistErrorCopy(usageErrorStatus, '契約状況', '/doyalist/settings')
 
   return (
-    <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
+    <div className="p-4 lg:p-8">
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* ===== Page Header ===== */}
         <div className="flex items-center gap-3 mb-6">
-          {uiNext ? (
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center"><Settings size={24} strokeWidth={1.75} aria-hidden /></div>
-          ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">⚙️</div>
-          )}
-          <div className={uiNext ? 'min-w-0' : undefined}>
-            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>設定</Heading>
-            <p className={`text-sm font-medium text-slate-500 mt-0.5${uiNext ? ' [text-wrap:balance]' : ''}`}>アカウント情報・プラン・各種設定を管理します</p>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center"><Settings size={24} strokeWidth={1.75} aria-hidden /></div>
+          <div className="min-w-0">
+            <Heading className="text-xl lg:text-2xl font-black text-[#0a1530]">設定</Heading>
+            <p className="text-sm font-medium text-slate-500 mt-0.5 [text-wrap:balance]">アカウント情報・プラン・各種設定を管理します</p>
           </div>
         </div>
 
@@ -196,8 +190,8 @@ export default function SettingsPage() {
                   {userName[0]}
                 </div>
               )}
-              <p className={`mt-3 text-base font-black text-[#0a1530]${uiNext ? ' max-w-full truncate' : ''}`}>{userName}</p>
-              <p className={`text-xs text-slate-500 mt-0.5${uiNext ? ' max-w-full break-all text-center' : ''}`}>{userEmail}</p>
+              <p className="mt-3 text-base font-black text-[#0a1530] max-w-full truncate">{userName}</p>
+              <p className="text-xs text-slate-500 mt-0.5 max-w-full break-all text-center">{userEmail}</p>
             </div>
 
             <div className="space-y-3 pt-4">
@@ -220,7 +214,7 @@ export default function SettingsPage() {
           <Card icon="diamond" title="プラン" subtitle="ご契約状況">
             {usageLoading ? (
               <p className="py-10 text-center text-sm font-bold text-slate-500">契約状況を確認しています…</p>
-            ) : uiNext && (usageError || !usage) ? (
+            ) : (usageError || !usage) ? (
               // 新しい見た目: 理由に合わせた文と、次の操作を1つ（サーバーの文字列は出さない。UI 品質 S-20）
               <div className="py-4">
                 <ErrorNotice
@@ -289,8 +283,8 @@ export default function SettingsPage() {
               <select
                 value={settings.defaultIndustry}
                 onChange={(e) => update('defaultIndustry', e.target.value)}
-                aria-label={uiNext ? '既定の業界' : undefined}
-                className={`${uiNext ? 'min-h-11 max-w-[11rem] ' : ''}px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500`}
+                aria-label="既定の業界"
+                className="min-h-11 max-w-[11rem] px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500"
               >
                 <option value="">未設定</option>
                 {INDUSTRIES.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -302,8 +296,8 @@ export default function SettingsPage() {
               <select
                 value={settings.defaultRegion}
                 onChange={(e) => update('defaultRegion', e.target.value)}
-                aria-label={uiNext ? '既定のエリア' : undefined}
-                className={`${uiNext ? 'min-h-11 max-w-[11rem] ' : ''}px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500`}
+                aria-label="既定のエリア"
+                className="min-h-11 max-w-[11rem] px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-cyan-500"
               >
                 <option value="">未設定</option>
                 {AREAS.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -321,13 +315,13 @@ export default function SettingsPage() {
               </p>
               <button
                 type="button"
-                onClick={uiNext ? () => void handleExportAll('全件エクスポートを準備できませんでした。時間をおいて、もう一度お試しください') : handleExportAll}
+                onClick={() => void handleExportAll('全件エクスポートを準備できませんでした。時間をおいて、もう一度お試しください')}
                 disabled={exporting}
                 className={`${tap}${focusRing} w-full py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-700 font-bold text-xs transition-colors flex items-center justify-center gap-2`}
               >
                 {exporting ? (
                   <>
-                    <img src={CHARS.working} alt="" className={`w-4 h-4 animate-spin${uiNext ? ' motion-reduce:animate-none' : ''}`} />
+                    <img src={CHARS.working} alt="" className="w-4 h-4 animate-spin motion-reduce:animate-none" />
                     エクスポート中...
                   </>
                 ) : (
@@ -345,7 +339,7 @@ export default function SettingsPage() {
         <div className="mt-8 p-6 bg-gradient-to-br from-cyan-50 via-white to-violet-50 rounded-3xl border-2 border-cyan-200 shadow-lg">
           <div className="flex items-center gap-4 flex-wrap">
             <img src={CHARS.point} alt="" className="w-16 h-16 flex-shrink-0" />
-            <div className={uiNext ? 'flex-1 min-w-0 basis-48' : 'flex-1 min-w-[200px]'}>
+            <div className="flex-1 min-w-0 basis-48">
               <p className="text-base font-black text-[#0a1530] flex items-center gap-2">
                 <Sym name="support_agent" className="text-cyan-600" />
                 サポート窓口
@@ -356,7 +350,7 @@ export default function SettingsPage() {
             </div>
             <a
               href="mailto:info@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
-              className={`${uiNext ? 'min-h-11 w-full justify-center sm:w-auto ' : ''}inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95${focusRing}`}
+              className={`min-h-11 w-full justify-center sm:w-auto inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95${focusRing}`}
             >
               <Sym name="mail" />
               info@surisuta.jp
@@ -383,11 +377,10 @@ export default function SettingsPage() {
 }
 
 function Card({ icon, title, subtitle, children }: { icon: string; title: string; subtitle: string; children: React.ReactNode }) {
-  const uiNext = useUiNext()
   return (
     <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6">
       <div className="flex items-center gap-2 pb-4 border-b border-slate-100 mb-4">
-        {uiNext ? <Sym name={icon} className="text-[#0066ff] text-xl" /> : <span className="material-symbols-outlined text-cyan-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>}
+        <Sym name={icon} className="text-[#0066ff] text-xl" />
         <div>
           <h2 className="text-base font-black text-[#0a1530]">{title}</h2>
           <p className="text-[10px] text-slate-400 mt-0.5">{subtitle}</p>
@@ -423,7 +416,6 @@ function InfoRow({ label, value, icon }: { label: string; value: string; icon: s
 }
 
 function UsageBar({ label, used, max, color }: { label: string; used: number; max: number; color: 'cyan' | 'violet' }) {
-  const uiNext = useUiNext()
   const isUnlimited = max === -1
   const pct = isUnlimited ? 0 : max > 0 ? Math.min(100, (used / max) * 100) : 0
   // 80%以上で警告色、95%以上で危険色
@@ -465,10 +457,10 @@ function UsageBar({ label, used, max, color }: { label: string; used: number; ma
         )}
       </div>
       {warningLevel === 'danger' && (
-        <p className="text-[10px] text-rose-600 mt-1 font-bold">{uiNext ? <AlertTriangle size={12} className="mr-1 inline-block align-[-2px]" aria-hidden /> : '⚠️ '}まもなく上限です。プランをアップグレードしてください</p>
+        <p className="text-[10px] text-rose-600 mt-1 font-bold"><AlertTriangle size={12} className="mr-1 inline-block align-[-2px]" aria-hidden />まもなく上限です。プランをアップグレードしてください</p>
       )}
       {warningLevel === 'warn' && (
-        <p className="text-[10px] text-amber-600 mt-1 font-bold">{uiNext ? <Clock size={12} className="mr-1 inline-block align-[-2px]" aria-hidden /> : '⏰ '}あと {(max - used).toLocaleString()} で上限です</p>
+        <p className="text-[10px] text-amber-600 mt-1 font-bold"><Clock size={12} className="mr-1 inline-block align-[-2px]" aria-hidden />あと {(max - used).toLocaleString()} で上限です</p>
       )}
     </div>
   )

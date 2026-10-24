@@ -12,7 +12,6 @@ import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState, FirstSteps, ToolHero } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -23,7 +22,6 @@ import {
   Clipboard,
   ChevronRight,
   ChevronDown,
-  Target,
   Check,
   Clock,
   BookOpen,
@@ -237,15 +235,13 @@ export type PersonaRestoredRecord = {
 export default function PersonaTool({ initialRecord }: { initialRecord?: PersonaRestoredRecord } = {}) {
   const { data: session, status } = useSession()
   const userId = session?.user?.id
-  const uiNextFrame = useUiNext()
-  if (uiNextFrame && status === 'loading') return <ShellLoading />
-  if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">{status === 'loading' ? 'ログイン状態を確認しています。' : 'ペルソナを利用するにはログインしてください。'}</p>
+  if (status === 'loading') return <ShellLoading />
+  if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">ペルソナを利用するにはログインしてください。</p>
   return <AccountPersonaTool key={`${userId}:${initialRecord?.id || ''}`} userId={userId} plan={session.user.plan} initialRecord={initialRecord} />
 }
 
 function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; plan?: string | null; initialRecord?: PersonaRestoredRecord }) {
   // 新しい見た目（チェックリスト §5.1）のときだけ、ヒーロー・空状態を出し、見出しの二重と画面いっぱいの高さを外す
-  const uiNext = useUiNext()
   const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
   const textRequest = useRef<symbol | null>(null)
   const generationAttempt = useRef<{ input: string; key: string } | null>(null)
@@ -904,8 +900,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const persona = generatedData?.persona
 
   return (
-    <div className={uiNext ? '' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30'}>
-      <div className={uiNext ? 'max-w-6xl mx-auto p-4 sm:p-6' : 'max-w-6xl mx-auto p-4 lg:p-8'}>
+    <div className="">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
@@ -916,8 +912,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           </div>
         )}
         {/* Header */}
-        {uiNext ? (
-          <div className="mb-6 space-y-4">
+        <div className="mb-6 space-y-4">
             {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く（同じ見出しの二重をやめる。F-9） */}
             <ToolHero
               title={<>サイトのURLから、<wbr />お客さまの人物像を描きます</>}
@@ -942,26 +937,6 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               </a>
             </div>
           </div>
-        ) : (
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1 flex items-center gap-3">
-              <Target className="w-8 h-8 text-purple-600" />
-              ドヤペルソナAI
-            </h1>
-            <p className="text-gray-500 text-sm">URLからマーケティングペルソナを自動生成</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <a
-              href={`/api/stripe/portal?returnTo=${encodeURIComponent('/persona')}`}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              プラン管理・解約
-            </a>
-          </div>
-        </div>
-        )}
 
         {/* Input Section */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 shadow-sm">
@@ -1191,8 +1166,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           </motion.div>
         )}
 
-        {/* ===== 空の状態（新しい見た目のときだけ） ===== */}
-        {uiNext && !initialRecord && !loading && !generatedData && (
+        {/* ===== 空の状態 ===== */}
+        {!initialRecord && !loading && !generatedData && (
           <EmptyState
             title="まだペルソナがありません"
             description={<>上の欄にサイトのURLを入れて、<wbr />「ペルソナを生成」を押してください。<wbr />作ったペルソナは「生成履歴」にたまります。</>}

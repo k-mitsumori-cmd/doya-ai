@@ -4,9 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import DoyalistLayout from '@/components/doyalist/DoyalistLayout'
 import DoyalistShellFrame from '@/components/doyalist/DoyalistShellFrame'
-import { isShellEnabled } from '@/lib/ui-shell'
 
 export const metadata: Metadata = buildServiceMetadata('doyalist', {
   keywords: ['営業リスト', '営業リスト自動生成', '営業AI', 'フォーム営業文', '営業メール文面', '荷電スクリプト', '新規開拓', 'リスト作成'],
@@ -43,8 +41,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
         category="BusinessApplication"
         features={SVC.features}
       />
-      {/* ⚠️ 共通の枠が有効なときは、枠（AppShell）を (shell)/layout.tsx が出す。ここは ToolFrame だけ */}
-      {isShellEnabled('doyalist') ? <DoyalistShellFrame>{children}</DoyalistShellFrame> : <DoyalistLayout>{children}</DoyalistLayout>}
+      {/* ⚠️ 枠（AppShell）は (shell)/layout.tsx が出す。ここは ToolFrame だけ */}
+      <DoyalistShellFrame>{children}</DoyalistShellFrame>
     </>
   )
 }

@@ -4,23 +4,19 @@
 // ドヤ社内インタビュー 外枠の切り替え
 // ============================================
 // - 回答画面などの第三者向け画面: 枠を出さない（統合仕様 R-7。guest-path.ts）
-// - ui.shell.shanai=ON: 共通シェル（AppShell＋ToolFrame）。ナビは nav.ts をそのまま渡す
-// - OFF: 暫定の ShanaiAppLayout（nav.ts を描くだけのサイドバー）
-// ⚠️ ON / OFF の判定はサーバー（layout.tsx）で行い、結果（真偽値）だけを受け取る。nav はここで読む
+// - それ以外（ログイン後）: 共通シェル（AppShell＋ToolFrame）。ナビは nav.ts をそのまま渡す
 // ⚠️ シェルの中では見出しを ToolFrame の1つにする（各ページは ShanaiShellContext を見て h1 を出さない）
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { isGuestPath } from '@/lib/ui/guest-path'
 import { SHANAI_NAV } from '@/lib/shanai/nav'
-import ShanaiAppLayout from './ShanaiAppLayout'
 import { ShanaiShellContext } from './shell-context'
 
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
-export default function ShanaiFrame({ shell, children }: { shell: boolean; children: ReactNode }) {
+export default function ShanaiFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   if (isGuestPath(pathname)) return <>{children}</>
-  if (!shell) return <ShanaiAppLayout>{children}</ShanaiAppLayout>
   return (
     <ToolFrame serviceId="shanai" title="ドヤ社内インタビュー" description="録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。" nav={SHANAI_NAV}>
       <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>

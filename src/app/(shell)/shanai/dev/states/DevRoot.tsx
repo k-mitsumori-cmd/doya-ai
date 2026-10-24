@@ -3,12 +3,10 @@
 // ============================================
 // ドヤ社内インタビュー: 画面の状態の見本の土台（開発時だけ）
 // ============================================
-// - 新しい見た目（UiNextContext='all'）を強制する
 // - window.fetch を差し替え、/api/shanai/* に見本データ（または状態ごとの失敗）を返す
 // ⚠️ 差し替えは最初の描画の前（useState の初期化）に行う。子の画面の読み込み（useEffect）より先に効く
 // ⚠️ /api/shanai/ 以外の通信は、そのまま本物の fetch に渡す
 import { useState, type ReactNode } from 'react'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 import { ActionError, Button, Card, describeError, SectionTitle } from '@/components/shanai/ui'
 import { COMPANY, COMPANY_EMPTY, DETAIL_READY, DETAIL_SURVEY, DETAIL_VOICE, LIMIT_BODY, ROWS } from './fixtures'
 
@@ -71,7 +69,7 @@ export default function DevRoot({ state, children }: { state: string; children: 
     install()
     return null
   })
-  return <UiNextContext.Provider value="all">{children}</UiNextContext.Provider>
+  return <>{children}</>
 }
 
 /** 上限に達したときの見本（詳細の「④ 記事」に出る形。押さなくても見えるように、失敗を最初から出す） */

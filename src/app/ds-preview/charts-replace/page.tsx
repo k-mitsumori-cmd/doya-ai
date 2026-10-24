@@ -3,7 +3,6 @@
 // ログインの要る画面（AIO・バナーの統計・インタビューの採点・展示会の予算）と同じ組み立て方にしてある。
 // ⚠️ 本番では 404（ds-preview の layout）。
 import { AreaChart, Bars, ColumnChart, DivergingBars, Donut, MiniStack, Ring, StackedBar100 } from '@/components/ds/charts'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 import { TaskPieChart, RevenueLineChart, ProfitBarChart } from '@/components/promane/dashboard-charts'
 import { ReportChart } from '@/components/promane/report-chart'
 import CashBars from '@/components/expense/CashBars'
@@ -67,7 +66,7 @@ const CASH = (() => {
 
 function Stage2() {
   return (
-    <UiNextContext.Provider value="all">
+    <>
       <Box title="プロマネ タスクの割合（recharts → Donut・中央に完了率）">
         <TaskPieChart data={[{ status: 'done', count: 18 }, { status: 'in_progress', count: 9 }, { status: 'review', count: 4 }, { status: 'todo', count: 11 }]} />
       </Box>
@@ -131,7 +130,7 @@ function Stage2() {
           categories={[...BUDGET.map((b, i) => ({ name: `${b.label} ${Math.round(b.value / 10000)}万円`, tone: ['#7f19e6', '#4c0f8f', '#10b981', '#ec4899', '#3b82f6', '#f59e0b'][i] })), { name: '残り 102万円', tone: 'muted' }]}
           rows={[{ label: '見積 398万円／予算 500万円', values: [...BUDGET.map((b) => b.value), 1020000] }]} />
       </Box>
-    </UiNextContext.Provider>
+    </>
   )
 }
 

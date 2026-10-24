@@ -185,9 +185,6 @@ test('nav.ts: サイドバーの項目はデータで、選択中の判定', () 
   assert.ok(isPopupNavActive(home, '/popup/edit/abc'))
   assert.ok(!isPopupNavActive(home, '/popup/pricing'))
   assert.ok(isPopupNavActive(POPUP_NAV[1], '/popup/pricing'))
-  const sidebar = readFileSync(join(process.cwd(), 'src/components/popup/PopupSidebar.tsx'), 'utf8')
-  assert.ok(/POPUP_NAV\.map/.test(sidebar), 'サイドバーが nav.ts を描いていない')
-  assert.ok(!/label: '/.test(sidebar), 'サイドバーに nav.ts 以外の項目がある（D-1）')
 })
 
 test('D-2: src/app/(shell)/popup に色の直書きが無い', () => {
@@ -206,11 +203,10 @@ test('D-2: src/app/(shell)/popup に色の直書きが無い', () => {
   assert.deepEqual(hits, [])
 })
 
-test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ載せる', () => {
+test('D-3: ログイン後は共通シェルに載せる（旧来の枠は無い）', () => {
   const layout = readFileSync(join(process.cwd(), 'src/app/(shell)/popup/layout.tsx'), 'utf8')
-  assert.ok(/isShellEnabled\('popup'\)/.test(layout), 'layout.tsx がフラグを見ていない')
+  assert.ok(!/isShellEnabled|PopupAppLayout/.test(layout), 'layout.tsx に旗か旧来の枠が残っている')
   assert.ok(/<PopupShellFrame[^>]*nav=\{POPUP_NAV\}/.test(layout), 'layout.tsx から nav.ts を渡していない')
-  assert.ok(/<PopupAppLayout>/.test(layout), 'フラグ OFF の従来の枠が無い')
   // SHL-098: サーバの layout から 'use client' の ds/index.tsx 経由でトークンを読まない
   assert.ok(!/from '@\/components\/ds'/.test(layout), "layout.tsx が '@/components/ds' を読んでいる")
   assert.ok(/from '@\/components\/ds\/tokens\.module\.css'/.test(layout))

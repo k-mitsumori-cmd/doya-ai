@@ -1,6 +1,6 @@
 'use client'
 
-// ドヤAI質問リンク 失敗したときの表示（新しい見た目のときだけ）
+// ドヤAI質問リンク 失敗したときの表示
 // 何が起きたか・どうすればよいか・次の一手（やり直す／料金プラン／ログイン）を出す。サーバーの文言はそのまま出さない
 import { Button } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'

@@ -5,12 +5,9 @@ import { authOptions } from '@/lib/auth'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import InterviewLayout from '@/components/interview/InterviewLayout'
-import { isShellEnabled } from '@/lib/ui-shell'
 import InterviewShellFrame from '@/components/interview/InterviewShellFrame'
 import InterviewGuestClaimGate from '@/components/interview/InterviewGuestClaimGate'
 import { INTERVIEW_GUEST_COOKIE } from '@/lib/interview/access'
-import { isUiNext } from '@/lib/ui-next'
 import nextStyles from '@/components/interview/interview-next.module.css'
 
 export const metadata: Metadata = buildServiceMetadata('interview', {
@@ -33,8 +30,6 @@ export default async function Layout({ children }: { children: React.ReactNode }
       currentPlan = 'FREE'
     }
   }
-  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。枠の中のログイン後の画面だけ
-  const uiNext = isLoggedIn && isShellEnabled('interview') && (await isUiNext())
 
   return (
     <>
@@ -45,11 +40,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
         category="BusinessApplication"
         features={SVC.features}
       />
-      {/* ⚠️ 新しい見た目では、本文の中のフォントの読み込みと太さの上書きをしない。
+      {/* ⚠️ ログイン後は、本文の中のフォントの読み込みと太さの上書きをしない。
           本文の中の <link rel="stylesheet"> は、読み込みが終わるまで後ろの中身の表示を止めるため、
           開いてから本文が出るまで数秒かかっていた（Material Symbols は root layout の <head> で読み込み済み）。
           文字は共通の枠（ds）の書体と太さにそろえる */}
-      {uiNext ? null : (
+      {/* 未ログインの紹介ページ・ゲストは今までの書体のまま */}
+      {isLoggedIn ? null : (
         <>
         {/* Material Symbols Outlined font（root layout と同じ URL パラメータ） */}
         <link
@@ -99,10 +95,10 @@ export default async function Layout({ children }: { children: React.ReactNode }
         ` }} />
         </>
       )}
-      <div className={uiNext ? nextStyles.next : 'interview-root'}>
+      <div className={isLoggedIn ? nextStyles.next : 'interview-root'}>
         <InterviewGuestClaimGate enabled={guestCookiePresent}>
-          {/* ゲスト（未ログイン）→ 枠なし / 枠が有効 → ToolFrame だけ（枠は (shell)/layout.tsx） / それ以外 → 今のレイアウト */}
-          {!isLoggedIn ? children : isShellEnabled('interview') ? <InterviewShellFrame>{children}</InterviewShellFrame> : <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout>}
+          {/* ゲスト（未ログイン）→ 枠なし / ログイン後 → ToolFrame だけ（枠は (shell)/layout.tsx） */}
+          {!isLoggedIn ? children : <InterviewShellFrame>{children}</InterviewShellFrame>}
         </InterviewGuestClaimGate>
       </div>
     </>

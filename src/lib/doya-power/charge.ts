@@ -10,7 +10,6 @@
 import { createHash } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { isUiNext } from '@/lib/ui-next'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
@@ -27,7 +26,6 @@ import type { DoyaPowerAction } from './costs'
 export const doyaPowerCharger = createDoyaPowerCharger({
   rollout: () => doyaPowerRollout(),
   isEnabled: isDoyaPowerEnabled,
-  isUiNext,
   account: async () => {
     const userId = await currentUserId()
     if (!userId) return null

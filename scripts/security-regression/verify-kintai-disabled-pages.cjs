@@ -21,8 +21,8 @@ const mocks = {
   '@/lib/kintai/types': { CLOCK_TYPE_LABELS: {}, REQUEST_TYPE_LABELS: {}, REQUEST_STATUS_LABELS: {} },
   '@/lib/kintai/format': { formatMinutesJa: () => '0分' },
   '@/lib/kintai/load-requests': { appendKintaiRequestPage: () => [], fetchKintaiRequestPage: async () => ({}) },
-  // 新しい見た目（UI 品質の直し）の判定。ここでは今の見た目（偽）を確かめる
-  '@/components/kintai/ui-next': { useToolUiNext: () => false, PageTitle: ({ className, children }) => React.createElement('h1', { className }, children) },
+  // 共通の枠の中（新しい見た目）。ページの見出しは ToolFrame の h1 の下の h2
+  '@/components/kintai/ui-next': { useToolUiNext: () => true, PageTitle: ({ className, children }) => React.createElement('h2', { className }, children) },
   '@/components/ds': { Button: () => null, EmptyState: () => null },
 }
 
@@ -43,7 +43,9 @@ function page(file) {
 const requests = page('src/app/(shell)/kintai/requests/page.tsx')
 const newRequest = page('src/app/(shell)/kintai/requests/new/page.tsx')
 const clock = page('src/app/(shell)/kintai/clock/page.tsx')
-const sidebar = page('src/components/kintai/KintaiSidebar.tsx')
+// 打刻のタブは共通の枠のナビ（src/lib/kintai/nav.ts。KintaiShellFrame が ToolFrame に渡す）で出し分ける
+const { buildKintaiNav } = require('./load-typescript.cjs').load('src/lib/kintai/nav.ts', { '@/lib/kintai/access-client': { hasMinRole: () => false } })
+const navHrefs = employeeActive => buildKintaiNav('employee', employeeActive).map(item => item.href)
 
 const render = Component => renderToStaticMarkup(React.createElement(Component))
 isActive = false
@@ -55,12 +57,11 @@ const inactiveClock = render(clock)
 assert.match(inactiveClock, /打刻は利用できません/)
 assert.match(inactiveClock, /href="\/kintai\/attendance"/)
 assert.doesNotMatch(inactiveClock, /出勤する/)
-const inactiveSidebar = renderToStaticMarkup(React.createElement(sidebar, { role: 'employee', employeeActive: false }))
-assert.doesNotMatch(inactiveSidebar, /href="\/kintai\/clock"/)
-assert.match(inactiveSidebar, /href="\/kintai\/attendance"/)
+assert.ok(!navHrefs(false).includes('/kintai/clock'))
+assert.ok(navHrefs(false).includes('/kintai/attendance'))
 
 isActive = true
 assert.match(render(requests), /href="\/kintai\/requests\/new"/)
 assert.doesNotMatch(render(newRequest), /新規申請は利用できません/)
-assert.match(renderToStaticMarkup(React.createElement(sidebar, { role: 'employee', employeeActive: true })), /href="\/kintai\/clock"/)
+assert.ok(navHrefs(true).includes('/kintai/clock'))
 console.log('Kintai disabled pages: PASS')

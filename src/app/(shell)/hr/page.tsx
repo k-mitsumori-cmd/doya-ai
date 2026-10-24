@@ -7,11 +7,10 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { isUiNext } from '@/lib/ui-next'
 import HrLandingPage from './Landing'
 
 export default async function HrEntryPage() {
   const session = await getServerSession(authOptions).catch(() => null)
-  if (session?.user && (await isUiNext())) redirect('/hr/dashboard')
+  if (session?.user) redirect('/hr/dashboard')
   return <HrLandingPage />
 }

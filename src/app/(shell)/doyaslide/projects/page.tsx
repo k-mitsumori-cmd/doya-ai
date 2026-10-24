@@ -5,10 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { EmptyState } from '@/components/EmptyState'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { ImageIcon, Trash2 } from 'lucide-react'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState as DsEmptyState, ToolHero, toolHeroArt } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
 
@@ -33,8 +31,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function DoyaSlideProjectsPage() {
-  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。偽のときは今までの見た目のまま
-  const uiNext = useUiNext()
+  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [projectsError, setProjectsError] = useState(false)
@@ -141,10 +138,9 @@ export default function DoyaSlideProjectsPage() {
   }
 
   return (
-    <div className={uiNext ? 'p-4 lg:p-8 max-w-6xl mx-auto' : 'p-6 lg:p-10 max-w-6xl mx-auto'}>
+    <div className="p-4 lg:p-8 max-w-6xl mx-auto">
       {deleteError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{deleteError}</p><button onClick={load} className="mt-2 font-bold underline">一覧を再読み込み</button></div>}
-      {uiNext ? (
-        <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-4">
           {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」と主ボタン1つ（UI 品質 H-3・S-57・S-58） */}
           <ToolHero
             title={<>テーマを入れるだけで、<wbr />提案スライドが<wbr />できあがります</>}
@@ -163,28 +159,6 @@ export default function DoyaSlideProjectsPage() {
             ]}
           />
         </div>
-      ) : (
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="sr-only">ドヤスライド プロジェクト一覧</h1>
-            <img
-              src="/doyaslide/logo.png"
-              alt="ドヤスライド — SaaSサービス向けプレゼン作成ツール"
-              className="h-14 sm:h-16 w-auto object-contain"
-            />
-            <p className="text-slate-500 font-bold mt-1 hidden sm:block">作成したプロジェクト一覧</p>
-          </div>
-        </div>
-        <Link
-          href="/doyaslide/new"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
-        >
-          <span className="material-symbols-outlined">add</span>
-          新規作成
-        </Link>
-      </div>
-      )}
 
       {usage?.limits && (
         <div className="mb-6 inline-flex items-center gap-3 text-xs font-bold text-slate-500 bg-white rounded-full px-4 py-2 shadow-sm">
@@ -211,7 +185,7 @@ export default function DoyaSlideProjectsPage() {
         </div>
       ) : projectsError ? (
         <div role="alert" className="rounded-2xl bg-rose-50 p-6 text-center font-bold text-rose-700">プロジェクト一覧を取得できませんでした。<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>
-      ) : projects.length === 0 && uiNext ? (
+      ) : projects.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white">
           <DsEmptyState
             title="まだスライドがありません"
@@ -219,10 +193,6 @@ export default function DoyaSlideProjectsPage() {
             art="/doyaslide/empty-slides.webp"
             action={<Button href="/doyaslide/new" variant="secondary" icon="Plus">最初のスライドを作る</Button>}
           />
-        </div>
-      ) : projects.length === 0 ? (
-        <div className="rounded-3xl bg-white shadow-sm">
-          <EmptyState kind="not-generated" title="最初のスライドを作りましょう" description="テーマを入れるだけで、AIが全スライドを画像で作ります。" action={<Link href="/doyaslide/new" className="inline-flex rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 font-black text-white shadow-lg">最初のスライドを作る</Link>} />
         </div>
       ) : (
         <>
@@ -236,7 +206,7 @@ export default function DoyaSlideProjectsPage() {
                     {cover ? (
                       <img src={doyaslideImageSrc(cover)} alt={p.title} className="w-full h-full object-cover" />
                     ) : (
-                      uiNext ? <ImageIcon size={40} strokeWidth={1.5} aria-hidden className="text-slate-300" /> : <span className="text-4xl opacity-30">🖼️</span>
+                      <ImageIcon size={40} strokeWidth={1.5} aria-hidden className="text-slate-300" />
                     )}
                   </div>
                 </Link>
@@ -251,7 +221,7 @@ export default function DoyaSlideProjectsPage() {
                       className="text-slate-300 hover:text-red-500 transition-colors"
                       title="削除"
                     >
-                      {uiNext ? <Trash2 size={18} aria-hidden /> : <span className="material-symbols-outlined text-lg">delete</span>}
+                      <Trash2 size={18} aria-hidden />
                     </button>
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-xs font-bold text-slate-400">

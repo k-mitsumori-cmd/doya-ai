@@ -20,8 +20,8 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
     const layout=code('src/app/(shell)/layout.tsx');
     assert.match(layout,/const doyaPowerState = doyaPower \? await doyaPowerCharger\.shellState\(\)\.catch\(\(\) => null\) : null/);
     assert.doesNotMatch(layout,/doya-power\/(ledger|index)'|\/api\/doya-power/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/<ShellPowerProvider value=\{uiNext && doyaPower \? doyaPowerState : null\}>/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerContext\.Provider value=\{Boolean\(uiNext && doyaPower\)\}>/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<ShellPowerProvider value=\{doyaPower \? doyaPowerState : null\}>/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerContext\.Provider value=\{doyaPower\}>/);
   });
   await check('Balance API checks the flag before reading anything',async()=>{
     // 台帳の表が入ったので残りの API を作った。旗が off なら、何も読まずに 404（詳しくは verify-doya-power-charge-routes.cjs）
@@ -45,7 +45,7 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
   await check('The shell passes the mascot and effects setting only when the flag allows it',async()=>{
     const layout=code('src/app/(shell)/layout.tsx');
     assert.match(layout,/const doyaPowerFx = doyaPower && userId \? /);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerFxProvider fx=\{uiNext && doyaPower \? doyaPowerFx : undefined\}>/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerFxProvider fx=\{doyaPower \? doyaPowerFx : undefined\}>/);
   });
   console.log(JSON.stringify({scope:'Shell DoyaPower placement: flag-off renders nothing and never reads the ledger. Static source checks only.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});

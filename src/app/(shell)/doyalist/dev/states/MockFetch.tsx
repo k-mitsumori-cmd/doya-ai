@@ -8,7 +8,6 @@
 import { useState, type ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import type { Session } from 'next-auth'
-import { UiNextContext } from '@/components/shell/ui-next-context'
 
 /** 状態ごとの、API の返し方 */
 export type MockMode = 'ok' | 'empty' | 'error' | 'forbidden' | 'limit' | 'login'
@@ -107,10 +106,10 @@ export default function MockFetch({ mode, children }: { mode: MockMode; children
   useState(() => { install(mode); return null })
   // 新しい見た目で描く（サーバーの部品からは、クライアントの context の .Provider に触れないため、ここで包む）
   return (
-    <UiNextContext.Provider value="all">
+    <>
       <SessionProvider session={SESSION} refetchOnWindowFocus={false}>
         {children}
       </SessionProvider>
-    </UiNextContext.Provider>
+    </>
   )
 }

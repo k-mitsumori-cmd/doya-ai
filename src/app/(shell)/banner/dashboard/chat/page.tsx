@@ -1,12 +1,11 @@
 'use client'
 
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
-import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Settings, Menu, X } from 'lucide-react'
+import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, ArrowRight, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
@@ -158,7 +157,6 @@ export default function BannerChatPage() {
 
 function BannerChatWorkspace() {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
-  const uiNext = useUiNext()
   const { data: session, status } = useSession()
   const operations = useBannerRequestFence(status, String(session?.user?.id || ''))
   const refineRecovery = useBannerRefineRecovery(status, String(session?.user?.id || ''))
@@ -542,54 +540,6 @@ function BannerChatWorkspace() {
         {/* ========================================
             Header - Doya Banner Style
             ======================================== */}
-        {!uiNext && (
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-              <div className="h-16 sm:h-20 flex items-center justify-between">
-                <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                  {/* ハンバーガーメニュー（モバイルのみ） */}
-                  <button 
-                    className="md:hidden p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-                    onClick={() => setIsSidebarOpen(true)}
-                  >
-                    <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </button>
-                  <Link href="/banner/dashboard" className="hidden md:block p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors flex-shrink-0">
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 rotate-180" />
-                  </Link>
-                  <h1 className="text-base sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2 sm:gap-3 truncate">
-                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />
-                    <span className="truncate">AIチャット</span>
-                  </h1>
-                </div>
-                
-                <div className="flex items-center gap-3 sm:gap-6">
-                  <div className="hidden md:flex items-center gap-2">
-                    <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                      <Settings className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                  <div className="flex items-center gap-3 pl-2">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{session?.user ? 'Member' : 'Guest'}</p>
-                    </div>
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                      {session?.user?.image ? (
-                        <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                          {session?.user?.name?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-        )}
 
         <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-8">
           {!operations.allowed && <div role="status" className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">

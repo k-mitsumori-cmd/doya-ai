@@ -5,14 +5,12 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
 import type { ScanSummary, Recommendation } from '@/lib/aio/types'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 type StoredScan = { id: string; status: string; createdAt: string; summary: (ScanSummary & { recommendations?: Recommendation[] }) | null }
 
 export default function AioHistoryDetailPage() {
   // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
-  const uiNext = useUiNext()
-  const Title = uiNext ? 'h2' : 'h1'
+  const Title = 'h2'
   const { orgSlug, id } = useParams<{ orgSlug: string; id: string }>()
   const [scan, setScan] = useState<StoredScan | null>(null)
   const [error, setError] = useState<string | null>(null)

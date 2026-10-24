@@ -4,7 +4,7 @@ import { templateImageUrl } from '@/lib/banner-template-storage'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -14,7 +14,6 @@ import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import Image from 'next/image'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
@@ -129,54 +128,13 @@ const PLAN_LIMITS = {
 }
 
 // ページ内Suspense用のスケルトン（loading.tsxと同じ構造）
-function DashboardSkeleton() {
-  return (
-    <div className="min-h-screen bg-black text-white flex">
-      <div className="hidden md:block w-[240px] bg-gray-950 border-r border-gray-800/50 flex-shrink-0">
-        <div className="p-4 space-y-4">
-          <div className="h-8 w-32 bg-gray-800 rounded animate-pulse" />
-          <div className="space-y-2">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-9 bg-gray-800/60 rounded-lg animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
-            ))}
-          </div>
-        </div>
-      </div>
-      <main className="flex-1 min-h-screen bg-black overflow-hidden">
-        <div className="bg-black/90 border-b border-gray-800/50 px-2 sm:px-4 md:px-8 lg:px-12 py-2 flex gap-1">
-          {[80, 64, 56, 72, 64, 48].map((w, i) => (
-            <div key={i} className="h-7 rounded-full bg-gray-800/60 animate-pulse flex-shrink-0" style={{ width: `${w}px`, animationDelay: `${i * 80}ms` }} />
-          ))}
-        </div>
-        <div className="px-1 sm:px-2 md:px-4 lg:px-8 py-2">
-          {[1, 2].map((section) => (
-            <div key={section} className="mb-3">
-              <div className="flex items-center gap-1.5 px-1 sm:px-2 py-1.5">
-                <div className="w-2 h-2 bg-blue-400/40 rounded-sm animate-pulse" />
-                <div className="h-3.5 w-24 bg-gray-700/40 rounded animate-pulse" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="aspect-[1200/628] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/20 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', animationDelay: `${(section * 4 + i) * 100}ms` }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
-  )
-}
 
 export default function BannerTestPage() {
   const { data: session } = useSession()
   const user = session?.user as { id?: string; email?: string } | undefined
   const actor = user?.id || user?.email || 'guest'
-  const uiNext = useUiNext()
   return (
-    <Suspense fallback={uiNext ? <ShellLoading /> : <DashboardSkeleton />}>
+    <Suspense fallback={<ShellLoading />}>
       <BannerTestPageInner key={actor} />
     </Suspense>
   )
@@ -185,8 +143,7 @@ export default function BannerTestPage() {
 function BannerTestPageInner() {
   const { data: session, status: sessionStatus } = useSession()
   // 新しい見た目（チェックリスト §5.1）。枠の見出し（h1）と重ならないよう、この画面の見出しは h2 にする
-  const uiNext = useUiNext()
-  const Heading: 'h1' | 'h2' = uiNext ? 'h2' : 'h1'
+  const Heading: 'h1' | 'h2' = 'h2'
   const [templates, setTemplates] = useState<BannerTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null)
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
@@ -1351,7 +1308,7 @@ function BannerTestPageInner() {
   }
 
   // 見本の一覧の見た目（新しい見た目では白〜淡い青・紺の文字。今の見た目では黒のまま）
-  const gt = galleryTheme(uiNext)
+  const gt = galleryTheme()
   // 見本のカード1枚（カテゴリ別とジャンルの絞り込みの両方で使う）。lockIndex はロック判定に使うジャンル内の順番
   const renderTemplateCard = (template: BannerTemplate, lockIndex: number, index: number, loadingBar: boolean) => {
     const lockType = getImageLockType(template, lockIndex)
@@ -1359,7 +1316,7 @@ function BannerTestPageInner() {
     return (
       <GalleryTemplateCard
         key={template.id}
-        light={uiNext}
+       
         template={template}
         src={template.imageUrl ? `${thumbUrl(template.imageUrl)}${retry ? `&_r=${retry}` : ''}` : ''}
         srcSet={template.imageUrl ? thumbSrcSet(template.imageUrl) : ''}
@@ -1423,23 +1380,11 @@ function BannerTestPageInner() {
       {/* メインコンテンツ */}
       <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black overflow-x-hidden">
         {/* モバイル用ヘッダー。⚠️ 新しい見た目では出さない（枠の上に黒い帯が浮いて見えるため。見出しは ToolFrame とヒーローにある。統括の確認 2026-10-19） */}
-        {!uiNext ? <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
-          {/* 枠の中（新しい見た目）では旧来のサイドバーを出さないので、開くボタンも出さない */}
-          {uiNext ? <div className="w-9" /> : <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="メニューを開く"
-          >
-            <Menu className="w-5 h-5 text-white" />
-          </button>}
-          <Heading className="text-sm font-bold text-white">バナーテンプレート</Heading>
-          <div className="w-9" /> {/* スペーサー */}
-        </div> : null}
         
         {/* ローディング画面は廃止: テンプレートギャラリーのスケルトンで代替 */}
 
         {/* Netflix風のメインコンテンツ */}
-        <div className={`relative ${uiNext ? '' : 'pt-12 md:pt-0'}`}>
+        <div className="relative ">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
           <div
             data-tour="hero-preview"
@@ -1699,8 +1644,8 @@ function BannerTestPageInner() {
               </div>
             )}
             {/* プランフィルタタブ */}
-            <GalleryPlanTabs light={uiNext} value={activePlanFilter} onChange={setActivePlanFilter} />
-            <GalleryGenreTabs light={uiNext} tabs={galleryFilterTabs} value={activeFilter} onChange={setActiveFilter} />
+            <GalleryPlanTabs value={activePlanFilter} onChange={setActivePlanFilter} />
+            <GalleryGenreTabs tabs={galleryFilterTabs} value={activeFilter} onChange={setActiveFilter} />
           </div>
 
           {/* 未生成テンプレートの生成進捗バーは管理画面でのみ表示 */}
@@ -1726,7 +1671,7 @@ function BannerTestPageInner() {
           {/* グリッドギャラリー */}
           <div data-tour="gallery-grid" className={`w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 ${gt.grid} relative z-10`}>
             {isLoadingTemplates ? (
-              <GallerySkeleton light={uiNext} />
+              <GallerySkeleton />
             ) : activeFilter === 'すべて' ? (
               Object.entries(allTemplatesByCategory).map(([categoryName, categoryTemplates]) => {
                 if (!categoryTemplates?.length) return null
@@ -1735,12 +1680,12 @@ function BannerTestPageInner() {
                 const hiddenCount = categoryTemplates.length - visibleTemplates.length
                 return (
                   <div key={categoryName} className="mb-3">
-                    <GalleryCategoryHeading light={uiNext} name={categoryName} count={categoryTemplates.length} loading={isFetchingAll} />
+                    <GalleryCategoryHeading name={categoryName} count={categoryTemplates.length} loading={isFetchingAll} />
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                       {visibleTemplates.map((template, index) => renderTemplateCard(template, index, index, true))}
                       {/* カテゴリ末尾の「もっと見る」タイル */}
                       {(hiddenCount > 0 || isFetchingAll) && (
-                        <GalleryMoreTile light={uiNext} fetching={isFetchingAll && hiddenCount === 0} progress={fetchProgress} hiddenCount={hiddenCount} onClick={() => loadMoreTemplates(categoryName)} />
+                        <GalleryMoreTile fetching={isFetchingAll && hiddenCount === 0} progress={fetchProgress} hiddenCount={hiddenCount} onClick={() => loadMoreTemplates(categoryName)} />
                       )}
                     </div>
                   </div>
@@ -1755,7 +1700,7 @@ function BannerTestPageInner() {
                 {visibleFiltered.map((template, filterIdx) => renderTemplateCard(template, getCategoryIndex(template), filterIdx, false))}
                 {/* フィルタ表示時の「もっと見る」タイル */}
                 {(filterHiddenCount > 0 || isFetchingAll) && (
-                  <GalleryMoreTile light={uiNext} fetching={isFetchingAll && filterHiddenCount === 0} progress={fetchProgress} hiddenCount={filterHiddenCount} onClick={() => loadMoreTemplates(activeFilter)} />
+                  <GalleryMoreTile fetching={isFetchingAll && filterHiddenCount === 0} progress={fetchProgress} hiddenCount={filterHiddenCount} onClick={() => loadMoreTemplates(activeFilter)} />
                 )}
               </div>
               )
@@ -1871,8 +1816,8 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold">生成枚数</label>
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-lg sm:text-xl font-bold text-blue-400 ${uiNext ? 'whitespace-nowrap' : ''}`}>{generateCount}枚</span>
-                        <span className={`text-[10px] sm:text-xs text-gray-400 ${uiNext ? 'whitespace-nowrap' : ''}`}>最大{planLimits.maxCount}枚</span>
+                        <span className="text-lg sm:text-xl font-bold text-blue-400 whitespace-nowrap">{generateCount}枚</span>
+                        <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">最大{planLimits.maxCount}枚</span>
                       </div>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
@@ -3283,7 +3228,6 @@ function BannerTestPageInner() {
     </div>
   )
 
-  if (!uiNext) return view
   // 新しい見た目: 枠の中に、ヒーロー（何ができるか・主ボタン）と、見本の画面を入れた箱を出す（U-6・H-3・C-7）
   return (
     <>

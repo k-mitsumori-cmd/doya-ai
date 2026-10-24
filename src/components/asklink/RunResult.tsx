@@ -9,11 +9,10 @@ import {
 import { buildLink, QUESTION_MAX_CHARS, URL_MAX_LENGTH } from '@/lib/asklink/link'
 import type { AskLink, Audience } from '@/lib/asklink/types'
 import type { BannerDto, RunDto } from '@/lib/asklink/dto'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import AskLinkErrorNotice from './AskLinkErrorNotice'
 import { statusError, statusOf } from './errors'
 
-// 新しい見た目のときだけ足すクラス（押せる大きさ 44px・キーボードのフォーカスの輪）
+// 足すクラス（押せる大きさ 44px・キーボードのフォーカスの輪）
 const TAP_NEXT = ' min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 focus-visible:ring-offset-white'
 
 // ---------- コピー ----------
@@ -61,7 +60,6 @@ function useFlash(): [string | null, (key: string) => void] {
 function CopyButton({
   label, done, onClick, primary, icon: Icon = Copy,
 }: { label: string; done: boolean; onClick: () => void; primary?: boolean; icon?: typeof Copy }) {
-  const uiNext = useUiNext()
   return (
     <button
       type="button"
@@ -70,7 +68,7 @@ function CopyButton({
         (primary
           ? 'inline-flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-3 py-2 text-xs font-black text-white transition hover:bg-blue-700'
           : 'inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50') +
-        (uiNext ? TAP_NEXT : '')
+        (TAP_NEXT)
       }
     >
       {done ? <Check aria-hidden className="h-3.5 w-3.5" /> : <Icon aria-hidden className="h-3.5 w-3.5" />}
@@ -104,8 +102,7 @@ function LinkCard({
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useFlash()
   const selectId = `asklink-q-${link.key}`
-  const uiNext = useUiNext()
-  const tap = uiNext ? TAP_NEXT : ''
+  const tap = TAP_NEXT
 
   useEffect(() => {
     setQuestion(link.question)
@@ -138,13 +135,13 @@ function LinkCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className={uiNext ? 'min-w-0 max-w-full' : undefined}>
+        <div className="min-w-0 max-w-full">
           <p className="text-[11px] font-black text-[#0066ff]">リンク {index + 1}｜{link.title}</p>
           {editing ? (
             <input
               value={buttonLabel}
               onChange={(e) => setButtonLabel(e.target.value)}
-              className={`mt-1 w-64 rounded-lg border border-slate-300 px-2 py-1 text-base font-black text-slate-900${uiNext ? ' min-h-11 max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : ''}`}
+              className="mt-1 w-64 rounded-lg border border-slate-300 px-2 py-1 text-base font-black text-slate-900 min-h-11 max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
               aria-label="ボタン名"
             />
           ) : (
@@ -160,12 +157,10 @@ function LinkCard({
         readOnly={!editing}
         onChange={(e) => setQuestion(e.target.value)}
         rows={editing ? 9 : 6}
-        className={`mt-3 w-full resize-y rounded-xl border p-3 text-sm leading-relaxed text-slate-700 ${
-          editing ? 'border-[#0066ff] bg-white' : 'border-slate-200 bg-slate-50'
-        }${uiNext ? ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : ''}`}
+        className={`mt-3 w-full resize-y rounded-xl border p-3 text-sm leading-relaxed text-slate-700 ${editing ? 'border-[#0066ff] bg-white' : 'border-slate-200 bg-slate-50'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]`}
         aria-label="質問文"
-        aria-invalid={uiNext && editing && !view.check.ok ? true : undefined}
-        aria-describedby={uiNext ? `${selectId}-check${view.check.issues.length > 0 ? ` ${selectId}-issues` : ''}` : undefined}
+        aria-invalid={editing && !view.check.ok ? true : undefined}
+        aria-describedby={`${selectId}-check${view.check.issues.length > 0 ? ` ${selectId}-issues` : ''}`}
       />
 
       <div id={`${selectId}-check`} className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
@@ -220,7 +215,7 @@ function LinkCard({
             >
               <ExternalLink aria-hidden className="h-3.5 w-3.5" />
               ChatGPTで試す
-              {uiNext ? <span className="sr-only">（新しいタブで開きます）</span> : null}
+              <span className="sr-only">（新しいタブで開きます）</span>
             </a>
             <button
               type="button"
@@ -234,7 +229,7 @@ function LinkCard({
         )}
       </div>
       {/* コピーできたことを読み上げる（ボタンの文字が変わるだけでは伝わらない） */}
-      {uiNext ? <span className="sr-only" aria-live="polite">{flash ? 'コピーしました' : ''}</span> : null}
+      <span className="sr-only" aria-live="polite">{flash ? 'コピーしました' : ''}</span>
     </div>
   )
 }
@@ -252,8 +247,7 @@ function BannerCard({
   const [flash, setFlash] = useFlash()
   const [copyError, setCopyError] = useState<string | null>(null)
   const filename = `asklink-${banner.kind}.png`
-  const uiNext = useUiNext()
-  const tap = uiNext ? TAP_NEXT : ''
+  const tap = TAP_NEXT
 
   const copyImage = async () => {
     setCopyError(null)
@@ -323,7 +317,7 @@ function BannerCard({
             : '文字の検査ができませんでした。画像の文字を目で確認してからお使いください。'}
         </p>
       )}
-      {copyError && <p className="mt-2 text-[11px] font-bold text-slate-500" role={uiNext ? 'status' : undefined}>{copyError}</p>}
+      {copyError && <p className="mt-2 text-[11px] font-bold text-slate-500" role="status">{copyError}</p>}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {banner.url && !generating && (
@@ -340,7 +334,7 @@ function BannerCard({
             <CopyButton label="コードをコピー" icon={Code2} done={flash === 'html'} onClick={() => void copyHtml()} />
           </>
         )}
-        {uiNext ? <span className="sr-only" aria-live="polite">{flash ? 'コピーしました' : ''}</span> : null}
+        <span className="sr-only" aria-live="polite">{flash ? 'コピーしました' : ''}</span>
         {!generating && banner.remaining > 0 && (banner.status !== 'done' || !banner.url || (banner.verify && !banner.verify.ok)) && (
           <button
             type="button"
@@ -368,11 +362,10 @@ export interface RunResultProps {
 
 export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner }: RunResultProps) {
   const [switching, setSwitching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
   // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（どの操作で失敗したかも持つ）
   const [errInfo, setErrInfo] = useState<{ status: number; action: 'switch' | 'save' } | null>(null)
   const site = run.site
-  const uiNext = useUiNext()
 
   const switchAudience = async (audience: Audience) => {
     if (audience === run.audience || switching) return
@@ -428,7 +421,7 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-black text-slate-400">{run.source === 'manual' ? '入力した説明から作成' : '読み取ったサイト'}</p>
-            <h2 className={`mt-1 text-xl font-black text-slate-900${uiNext ? ' break-words [text-wrap:balance]' : ''}`}>{site.name}</h2>
+            <h2 className="mt-1 text-xl font-black text-slate-900 break-words [text-wrap:balance]">{site.name}</h2>
             <a href={run.sourceUrl} target="_blank" rel="noopener noreferrer" className="break-all text-xs font-bold text-[#0066ff] hover:underline">
               {run.sourceUrl}
             </a>
@@ -439,8 +432,8 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
             </p>
             <div
               className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1"
-              role={uiNext ? 'group' : undefined}
-              aria-labelledby={uiNext ? 'asklink-audience-label' : undefined}
+              role="group"
+              aria-labelledby="asklink-audience-label"
             >
               {(['b2b', 'b2c'] as const).map((a) => (
                 <button
@@ -448,17 +441,15 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
                   type="button"
                   disabled={switching}
                   onClick={() => void switchAudience(a)}
-                  aria-pressed={uiNext ? run.audience === a : undefined}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-black transition ${
-                    run.audience === a ? 'bg-white text-[#0066ff] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }${uiNext ? ' min-h-11 min-w-16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] motion-reduce:transition-none' : ''}`}
+                  aria-pressed={run.audience === a}
+                  className={`rounded-lg px-4 py-1.5 text-xs font-black transition ${run.audience === a ? 'bg-white text-[#0066ff] shadow-sm' : 'text-slate-500 hover:text-slate-700'} min-h-11 min-w-16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] motion-reduce:transition-none`}
                 >
                   {a === 'b2b' ? 'ToB' : 'ToC'}
                 </button>
               ))}
             </div>
             {switching && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-slate-500" role={uiNext ? 'status' : undefined}>
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-slate-500" role="status">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 質問を作り直しています
               </p>
@@ -503,9 +494,7 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200${
-                      uiNext ? ' inline-flex min-h-11 max-w-full items-center break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : ''
-                    }`}
+                    className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 inline-flex min-h-11 max-w-full items-center break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
                   >
                     {p.label}
                   </a>
@@ -516,9 +505,7 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
         </dl>
       </section>
 
-      {uiNext
-        ? errInfo && <AskLinkErrorNotice status={errInfo.status} action={errInfo.action} callbackUrl={`/asklink/history/${run.id}`} />
-        : error && <p className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}
+      {errInfo && <AskLinkErrorNotice status={errInfo.status} action={errInfo.action} callbackUrl={`/asklink/history/${run.id}`} />}
 
       {/* 質問リンク */}
       <section>

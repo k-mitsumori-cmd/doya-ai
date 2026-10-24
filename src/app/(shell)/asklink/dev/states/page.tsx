@@ -15,7 +15,7 @@
 //   create-error 作成画面で「作成する」→ 500（作成できなかった／やり直す）
 //   detail       結果の詳細（リンク2本・バナー3枚。「作り直す」→ 429、ToB/ToC 切り替え → 500 の案内も試せる）
 //   notfound     結果の詳細（404 → 見つからない／これまでの結果へ）
-// ⚠️ 共通シェル（AppShell＋ToolFrame）に載せた形で出す。新しい見た目を強制する（MockFetch の中で UiNextContext = 'all'）
+// ⚠️ 共通シェル（AppShell＋ToolFrame）に載せた形で出す。共通シェルの見た目で描く
 import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
 import AskLinkShellFrame from '@/components/asklink/AskLinkShellFrame'
@@ -32,7 +32,6 @@ export default async function AskLinkDevStates({ searchParams }: Props) {
   if (process.env.NODE_ENV === 'production') notFound()
   const { s = 'home' } = await searchParams
   return (
-    // MockFetch が UiNextContext.Provider value="all" で包む（サーバーの部品からは Provider を使えないため）
     <MockFetch s={s}>
       <AppShell userName="見本 太郎">
         <AskLinkShellFrame>{renderState(s)}</AskLinkShellFrame>

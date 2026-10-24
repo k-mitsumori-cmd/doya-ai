@@ -4,9 +4,7 @@ import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import AskLinkAppLayout from '@/components/asklink/AskLinkAppLayout'
 import AskLinkShellFrame from '@/components/asklink/AskLinkShellFrame'
-import { isShellEnabled } from '@/lib/ui-shell'
 import { FAQ } from './lp-data'
 
 export const metadata: Metadata = buildServiceMetadata('asklink', {
@@ -29,11 +27,9 @@ export default async function AsklinkLayout({ children }: { children: React.Reac
         faq={FAQ}
       />
       {/* ⚠️ 未ログインをアプリ枠で包まない（空のサイドバーが出る） */}
-      {/* 共通の枠が有効なら ToolFrame だけ（枠は (shell)/layout.tsx が出す）。無効なら今のレイアウト */}
+      {/* ログイン後は ToolFrame だけ（枠は (shell)/layout.tsx が出す） */}
       {session?.user
-        ? isShellEnabled('asklink')
-          ? <AskLinkShellFrame>{children}</AskLinkShellFrame>
-          : <AskLinkAppLayout>{children}</AskLinkAppLayout>
+        ? <AskLinkShellFrame>{children}</AskLinkShellFrame>
         : children}
     </>
   )

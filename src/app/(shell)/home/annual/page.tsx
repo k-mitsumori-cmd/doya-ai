@@ -8,7 +8,6 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { isUiNext } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { currentUserId } from '@/lib/shell/company.server'
 import { MIN_YEAR, allowedReveal, jstYear } from '@/lib/annual-report/report'
@@ -27,7 +26,6 @@ export default async function AnnualReportPage() {
   if (!(await isDoyaPowerEnabled())) notFound()
   const userId = await currentUserId()
   if (!userId) redirect('/auth/signin?callbackUrl=/home/annual')
-  if (!(await isUiNext())) notFound()
 
   const [access, fxs] = await Promise.all([resolveAnnualAccess(prisma, userId), loadDoyaPowerFxForUser(userId)])
   const thisYear = jstYear(new Date())

@@ -15,7 +15,6 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { isUiNext } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { currentUserId, getAccountCompanyName } from '@/lib/shell/company.server'
 import {
@@ -44,7 +43,6 @@ export async function GET(req: NextRequest) {
   if (!devSample) {
     userId = await currentUserId()
     if (!userId) return NextResponse.json({ error: 'ログインしてください' }, { status: 401, headers: noStore })
-    if (!(await isUiNext())) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: noStore })
   }
 
   const year = parseYear(sp.get('year'), new Date())

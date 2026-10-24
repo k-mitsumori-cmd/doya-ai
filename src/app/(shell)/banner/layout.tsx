@@ -5,7 +5,6 @@ import { LpJsonLd } from '@/components/lp'
 import PlanUpdatedListener from '@/components/PlanUpdatedListener'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { isShellEnabled } from '@/lib/ui-shell'
 import BannerShellFrame from '@/components/banner/BannerShellFrame'
 
 // ============================================
@@ -38,8 +37,8 @@ export default async function BannerLayout({
       />
       {/* 決済直後など、プラン更新イベントを受けてUIを即時反映 */}
       <PlanUpdatedListener />
-      {/* 共通の枠が有効で、ログイン中のときだけ ToolFrame（作業画面 /banner/dashboard/** のみ。BannerShellFrame が判定）。無効なら今のまま */}
-      {session?.user && isShellEnabled('banner') ? <BannerShellFrame>{children}</BannerShellFrame> : children}
+      {/* ログイン中は ToolFrame（作業画面 /banner/dashboard/** のみ。BannerShellFrame が判定） */}
+      {session?.user ? <BannerShellFrame>{children}</BannerShellFrame> : children}
     </>
   )
 }

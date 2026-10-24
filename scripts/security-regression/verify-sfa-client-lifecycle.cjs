@@ -147,14 +147,14 @@ async function input(f, c, value) { if (c.page === 'deals') await f.openDetail()
   await check('Layout hides same-actor loading without discarding draft and resets child on actor change', 'layout', async f => {
     await f.edit('#scoped-child', 'Private draft'); await f.auth('actor-a', 'loading');
     assert.equal(f.container.querySelector('#scoped-child').value,'Private draft'); assert.ok(f.container.querySelector('#scoped-child').closest('[hidden]'));
-    assert.equal(f.container.querySelector('aside').dataset.plan,''); assert.equal(f.container.querySelector('aside').dataset.memberships,'[]');
+    assert.equal(JSON.stringify(f.memberships()),'[]');
     await f.auth('actor-a'); assert.equal(f.container.querySelector('#scoped-child').value,'Private draft'); assert.equal(f.container.querySelector('#scoped-child').closest('[hidden]'),null);
     await f.auth('actor-b'); assert.equal(f.container.querySelector('#scoped-child').value,'Initial');
   });
   await check('Layout rejects old actor usage response even after actor round-trip', 'layout', async f => {
     const hold=deferred();f.read(async r=>{if(r.path==='/api/sfa/usage'){await hold.promise;return Response.json({plan:'PRO',memberships:[{slug:'old',name:'Old actor',role:'owner'}]})}});
     await f.auth('actor-b');f.read(undefined);await f.auth('actor-a');
-    await f.act(()=>{hold.resolve()});assert.equal(f.container.querySelector('aside').dataset.plan,'FREE');assert.ok(!f.container.querySelector('aside').dataset.memberships.includes('Old actor'));
+    await f.act(()=>{hold.resolve()});assert.equal(JSON.stringify(f.memberships().map(m=>m.name)),'["Synthetic workspace"]');assert.ok(!JSON.stringify(f.memberships()).includes('Old actor'));
   });
   await check('AI unknown bulk stops remaining sends; recovery removes only committed candidate', 'deals', async f => {
     const ai=[...f.container.querySelectorAll('button')].find(b=>b.textContent.includes('AI')&&props(b).onClick);await f.act(()=>props(ai).onClick());

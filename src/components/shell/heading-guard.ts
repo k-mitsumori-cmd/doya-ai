@@ -5,7 +5,7 @@
 // ページの本体は各ツールが持つので、ここでは読み上げと見出しの一覧の上だけで2段目にする。
 // - 残す h1: data-shell-title の付いたもの（ToolFrame）。無ければ最初の h1
 // - ほかの h1: role="heading" aria-level="2" を付ける（見た目は変えない）
-// ⚠️ 新しい見た目のときだけ AppShell から呼ぶ。各ツールが見出しを直したら、この処理は何もしなくなる。
+// ⚠️  AppShell から呼ぶ。各ツールが見出しを直したら、この処理は何もしなくなる。
 
 export function demoteExtraH1(root: ParentNode): number {
   const all = Array.from(root.querySelectorAll('h1'))

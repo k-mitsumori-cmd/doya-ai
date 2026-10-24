@@ -11,13 +11,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getHomeSummary } from '@/lib/home/summary'
 import { cookies } from 'next/headers'
-import { isUiNext } from '@/lib/ui-next'
 import { SETUP_HIDE_COOKIE } from './cookies'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
 import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
 import HomeDashboard from './HomeDashboard'
-import HomeDashboardLegacy from './HomeDashboardLegacy'
 
 export const metadata: Metadata = {
   title: '経営ホーム',
@@ -31,10 +29,8 @@ export default async function HomePage() {
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home')
 
-  const [summary, uiNext] = await Promise.all([getHomeSummary(userId), isUiNext()])
-  // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。
-  // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
-  if (!uiNext) return <HomeDashboardLegacy initial={summary} />
+  const summary = await getHomeSummary(userId)
+  // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。入力が主役のホーム（UI 品質 H-2）
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
   // ドヤパワーの旗が出すと決めた人か（旗 DOYA_POWER_ROLLOUT の内側だけ。off なら台帳もセッションも読まない）
   const doyaPower = await isDoyaPowerEnabled()

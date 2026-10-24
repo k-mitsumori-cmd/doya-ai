@@ -7,7 +7,6 @@
 // ⚠️ 新しい見た目でないときは、今までの表示（legacy）をそのまま出す。
 import type { ReactNode } from 'react'
 import { EmptyState } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 
 export default function SfaEmpty({ title, description, action, filtered, bare, legacy }: {
   title: string
@@ -20,8 +19,6 @@ export default function SfaEmpty({ title, description, action, filtered, bare, l
   bare?: boolean
   legacy: ReactNode
 }) {
-  const uiNext = useUiNext()
-  if (!uiNext) return <>{legacy}</>
   return (
     <div className={bare ? undefined : 'rounded-2xl border border-slate-200 bg-white'}>
       <EmptyState

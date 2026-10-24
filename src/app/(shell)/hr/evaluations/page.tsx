@@ -1,5 +1,5 @@
 'use client'
-import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { PageTitle } from '@/components/hr/ui-next'
 import { Button, EmptyState } from '@/components/ds'
 import HrLoadError from '@/components/hr/HrLoadError'
 import HrPeriodCreationRecovery from '@/components/hr/HrPeriodCreationRecovery'
@@ -27,9 +27,8 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
   const errorStatus = loadError instanceof HrEvaluationPeriodListReadError ? loadError.status : undefined
   const loadErrorText = loadError ? (loadError instanceof Error ? loadError.message : '評価期間を取得できませんでした。') : ''
-  const uiNext = useToolUiNext()
   const reduceMotion = useReducedMotion()
-  const still = uiNext && Boolean(reduceMotion)
+  const still = Boolean(reduceMotion)
   const dialogRef = useRef<HTMLDivElement>(null)
   const dialogTitleId = useId(), nameId = useId(), startId = useId(), endId = useId()
   const [hint, setHint] = useState<{ ready: boolean; organizationId?: string; error: string }>({ ready: false, error: '' })
@@ -80,13 +79,13 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   const closeModalRef = useRef(closeCreateModal)
   closeModalRef.current = closeCreateModal
   useEffect(() => {
-    if (!uiNext || !showCreateModal) return
+    if (!showCreateModal) return
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const frame = requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>('input[type="text"]')?.focus())
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); closeModalRef.current() } }
     document.addEventListener('keydown', onKey)
     return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onKey); opener?.focus() }
-  }, [uiNext, showCreateModal])
+  }, [showCreateModal])
   async function handleCreatePeriod() {
     if (blocked) return
     await creation.create({ ...newPeriod })
@@ -107,7 +106,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   }
 
   return (
-    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto' : 'p-6 lg:p-10 max-w-5xl mx-auto'}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
       <motion.div initial={still ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -120,7 +119,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
             type="button"
             onClick={() => { if (!blocked) setShowCreateModal(true) }}
             disabled={blocked}
-            className={`${uiNext ? 'min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2 ' : ''}flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            className="min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus aria-hidden="true" className="w-5 h-5 shrink-0" />
             評価期間を作成
@@ -151,7 +150,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
               <div key={i} className="h-40 bg-white rounded-3xl shadow-md animate-pulse" />
             ))}
           </div>
-        ) : loadError && uiNext ? (
+        ) : loadError ? (
           <HrLoadError subject="評価期間の一覧" status={errorStatus} onRetry={() => void fetchPeriods()} />
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
@@ -192,13 +191,11 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
                 >
                   <Link
                     href={`/hr/evaluations/period/${period.id}`}
-                    className={uiNext
-                      ? 'block bg-white rounded-3xl shadow-md p-5 sm:p-6 hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2'
-                      : 'block bg-white rounded-3xl shadow-md p-6 hover:shadow-lg transition-all'}
+                    className="block bg-white rounded-3xl shadow-md p-5 sm:p-6 hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2"
                   >
-                    <div className={uiNext ? 'flex items-start justify-between gap-3 mb-3' : 'flex items-start justify-between mb-3'}>
-                      <h3 className={uiNext ? 'min-w-0 break-words text-lg font-bold text-slate-900 [text-wrap:balance]' : 'text-lg font-bold text-slate-900'}>{period.name}</h3>
-                      <span className={`${uiNext ? 'shrink-0 whitespace-nowrap ' : ''}px-3 py-1.5 rounded-full text-sm font-bold ${st.color}`}>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h3 className="min-w-0 break-words text-lg font-bold text-slate-900 [text-wrap:balance]">{period.name}</h3>
+                      <span className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-bold ${st.color}`}>
                         {st.label}
                       </span>
                     </div>
@@ -234,7 +231,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
               )
             })}
           </motion.div>
-        ) : uiNext ? (
+        ) : (
           // 新しい見た目: 空の状態は絵＋次にやること1つ（作れない人には一覧のかわりにダッシュボードへ）
           <EmptyState
             art="/hr/empty-members.webp"
@@ -246,70 +243,9 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
               ? <Button icon="Plus" onClick={() => { if (!blocked) setShowCreateModal(true) }} disabled={blocked}>評価期間を作成</Button>
               : <Button variant="secondary" href="/hr/dashboard" icon="LayoutDashboard">ダッシュボードに戻る</Button>}
           />
-        ) : (
-          <div className="bg-white rounded-3xl shadow-lg p-6 sm:p-12 text-center">
-            <motion.img
-              src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
-              alt="白くまキャラクター"
-              className="w-40 mx-auto mb-4"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-            />
-            <h3 className="text-2xl font-black text-slate-900 mb-2">{canCreatePeriods ? '評価をはじめてみましょう！' : '評価期間はまだありません'}</h3>
-            <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
-              {canCreatePeriods
-                ? 'MBO（目標管理制度）に基づいた人事評価をオンラインでかんたんに管理できます。'
-                : '管理者が評価期間を作成すると、ここに表示されます。'}
-            </p>
-            {canCreatePeriods && <>
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <div className="flex items-start gap-3 text-left max-w-md w-full bg-blue-50 rounded-2xl p-4">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-black shrink-0 mt-0.5">1</span>
-                <div>
-                  <span className="text-sm font-bold text-slate-900">評価期間を作成する</span>
-                  <p className="text-xs text-slate-500 mt-0.5">上期（4-9月）や下期（10-3月）など、評価の対象期間を設定します</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left max-w-md w-full bg-red-50 rounded-2xl p-4">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-500 text-xs font-black shrink-0 mt-0.5">2</span>
-                <div>
-                  <span className="text-sm font-bold text-slate-900">従業員に評価シートを割り当て</span>
-                  <p className="text-xs text-slate-500 mt-0.5">対象の従業員を選んで、目標設定用の評価シートを配布します</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left max-w-md w-full bg-emerald-50 rounded-2xl p-4">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black shrink-0 mt-0.5">3</span>
-                <div>
-                  <span className="text-sm font-bold text-slate-900">自己評価 → 上司評価 → 最終評価</span>
-                  <p className="text-xs text-slate-500 mt-0.5">3ステップで評価を進行。進捗はダッシュボードで確認できます</p>
-                </div>
-              </div>
-            </div>
-            <motion.button
-              onClick={() => { if (!blocked) setShowCreateModal(true) }}
-              disabled={blocked}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
-            >
-              <Plus aria-hidden="true" className="w-5 h-5 shrink-0" />
-              評価期間を作成
-            </motion.button>
-            </>}
-          </div>
         )}
 
         {/* FAB（新しい見た目では出さない。見出しの横の主ボタンと同じ役目で、375px では一覧に重なるため） */}
-        {canCreatePeriods && !uiNext && (
-          <button
-          onClick={() => { if (!blocked) setShowCreateModal(true) }}
-          disabled={blocked}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 hover:shadow-2xl transition-all z-40 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="評価期間を作成"
-        >
-          <Plus aria-hidden="true" className="w-7 h-7" />
-          </button>
-        )}
 
         {/* Create Modal */}
         {canCreatePeriods && showCreateModal && (
@@ -322,7 +258,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
               aria-labelledby={dialogTitleId}
               initial={still ? false : { opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={uiNext ? 'relative bg-white rounded-3xl shadow-2xl p-5 sm:p-6 w-full max-w-md mx-4 max-h-[90dvh] overflow-y-auto' : 'relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4'}
+              className="relative bg-white rounded-3xl shadow-2xl p-5 sm:p-6 w-full max-w-md mx-4 max-h-[90dvh] overflow-y-auto"
             >
               <h2 id={dialogTitleId} className="text-lg font-bold text-slate-900 mb-4">評価期間を作成</h2>
               <fieldset disabled={blocked} className="space-y-4">
@@ -342,7 +278,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
                         key={preset.label}
                         type="button"
                         onClick={() => setNewPeriod({ name: preset.name, startDate: preset.start, endDate: preset.end })}
-                        className={`${uiNext ? 'min-h-11 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] ' : 'px-3 py-1.5 text-xs '}font-bold rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors`}
+                        className="min-h-11 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] font-bold rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                       >
                         {preset.label}
                       </button>
@@ -360,7 +296,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
                     placeholder="2026年度 上期評価"
                   />
                 </div>
-                <div className={uiNext ? 'grid grid-cols-1 min-[400px]:grid-cols-2 gap-4' : 'grid grid-cols-2 gap-4'}>
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
                   <div className="min-w-0">
                     <label htmlFor={startId} className="block text-sm font-bold text-slate-700 mb-1">開始日</label>
                     <input
@@ -389,7 +325,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
                   type="button"
                   onClick={closeCreateModal}
                   disabled={creating || Boolean(creation.intent)}
-                  className={`${uiNext ? 'min-h-11 whitespace-nowrap rounded-full ' : ''}px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors`}
+                  className="min-h-11 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
                 >
                   キャンセル
                 </button>
@@ -397,7 +333,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
                   type="button"
                   onClick={handleCreatePeriod}
                   disabled={blocked || !newPeriod.name.trim() || !newPeriod.startDate || !newPeriod.endDate}
-                  className={`${uiNext ? 'min-h-11 whitespace-nowrap ' : ''}flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50`}
+                  className="min-h-11 whitespace-nowrap flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
                 >
                   {creating ? '作成中...' : '作成'}
                 </button>

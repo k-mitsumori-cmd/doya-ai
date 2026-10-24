@@ -6,7 +6,6 @@ import { AIO_MAX_PROMPTS_PER_SCAN } from '@/lib/aio/types'
 import { TrialNote } from '@/components/TrialCallout'
 import Link from 'next/link'
 import { PageHeader } from '@/components/aio/ui'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { EmptyState } from '@/components/ds'
 
 // どの業種でも使える汎用テンプレート（〔  〕を自社カテゴリ・課題に置き換えて使う想定の編集可能な例）
@@ -22,7 +21,6 @@ export default function AioPromptsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const state = useAioPrompts(orgSlug)
   // 新しい見た目（チェックリスト §5.1）のときだけ、空状態の絵と、375px で入力欄がはみ出さない直しを出す
-  const uiNext = useUiNext()
   const { prompts, text, busy, quota, error, notice, loaded, pending } = state
   const disabled = busy || pending || !state.allowed || !state.canEdit
   if (state.requiresLogin) return <div className="p-6" role="alert">ログイン状態を確認できません。再ログインしてください。<Link href="/auth/signin" className="ml-2 underline">ログインする</Link></div>
@@ -56,9 +54,9 @@ export default function AioPromptsPage() {
         <div className="flex gap-2">
           <input aria-label="監視する質問" maxLength={500} value={text} onChange={(e) => state.edit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); state.add() } }}
             placeholder="例: 〔自社のカテゴリ〕でおすすめのサービスは？"
-            className={`flex-1 rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-2.5 font-bold transition-colors ${uiNext ? 'min-w-0' : ''}`} />
+            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-2.5 font-bold transition-colors min-w-0" />
           <button onClick={state.add} disabled={disabled || !text.trim()}
-            className={`px-5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow disabled:opacity-50 ${uiNext ? 'shrink-0 whitespace-nowrap' : ''}`}>追加</button>
+            className="px-5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow disabled:opacity-50 shrink-0 whitespace-nowrap">追加</button>
         </div>
         <p className="text-xs text-slate-400 font-bold mt-3">編集可能な例文です。〔  〕を自社のカテゴリや課題に置き換えて登録してください。</p>
         <div className="flex flex-wrap gap-2 mt-2">
@@ -72,14 +70,12 @@ export default function AioPromptsPage() {
       <button disabled={busy || !state.allowed} onClick={() => void state.load()} className="mb-4 font-bold underline disabled:opacity-50">先頭から再読み込み</button>
       {busy ? (
         <p className="text-slate-400 font-bold">読み込み中…</p>
-      ) : !loaded ? <p className="text-slate-500">一覧の確認が必要です。</p> : prompts.length === 0 && uiNext ? (
+      ) : !loaded ? <p className="text-slate-500">一覧の確認が必要です。</p> : prompts.length === 0 ? (
         <EmptyState
           title="まだ監視プロンプトがありません"
           description={state.canEdit ? <>上の欄に、お客さまがAIに聞きそうな質問を入れて「追加」を押してください。<wbr />例文を押すと、入力欄に入ります。</> : <>監視する質問は、組織の管理者が登録します。</>}
           art="/aio/empty-scans.webp"
         />
-      ) : prompts.length === 0 ? (
-        <p className="text-slate-400 font-bold text-center py-8">まだプロンプトがありません。上から追加してください。</p>
       ) : (
         <div className="space-y-2">
           {prompts.map((p) => (

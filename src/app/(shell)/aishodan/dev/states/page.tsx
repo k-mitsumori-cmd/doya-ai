@@ -62,7 +62,6 @@ export default async function AishodanDevStates({ searchParams }: Props) {
   }
 
   return (
-    // 新しい見た目（UiNextContext = 'all'）は MockFetch の中で渡す
     <MockFetch state={s} params={params} act={act}>
       <AppShell userName="見本 太郎">
         <AishodanShellFrame>{body}</AishodanShellFrame>

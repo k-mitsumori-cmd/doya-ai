@@ -44,8 +44,6 @@ export type ChargeDeps = {
   rollout: () => string
   /** 今の人にドヤパワーを出すか（preview の許可を含む） */
   isEnabled: () => Promise<boolean>
-  /** 新しい見た目か */
-  isUiNext: () => Promise<boolean>
   /** セッションの本人の会社とプラン。会社が未登録なら null */
   account: () => Promise<{ companyId: string; plan: string | null } | null>
   ledger: ChargeLedger
@@ -89,7 +87,6 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
   async function target(): Promise<{ companyId: string; plan: string | null } | null> {
     if (deps.rollout() === 'off') return null
     if (!(await deps.isEnabled())) return null
-    if (!(await deps.isUiNext())) return null
     return deps.account()
   }
 

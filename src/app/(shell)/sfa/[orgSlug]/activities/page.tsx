@@ -6,10 +6,9 @@ import toast from 'react-hot-toast'
 import { sfaJson, isSfaClientActivity } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
-import { ACTIVITY_TYPE_LABEL, ACTIVITY_TYPE_ICON } from '@/lib/sfa/constants'
+import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 import SfaPageHeading from '@/components/sfa/PageHeading'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { Button } from '@/components/ds'
@@ -38,7 +37,6 @@ const fmtDateTime = (d: string) => {
 }
 
 export default function SfaActivitiesPage() {
-  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const mutations = useSfaClientMutations(orgSlug, () => { void load() })
   const ready = mutations.allowed
@@ -109,7 +107,7 @@ export default function SfaActivitiesPage() {
   }
 
   return (
-    <div className={uiNext ? 'p-4 sm:p-6 lg:p-10 max-w-3xl mx-auto' : 'p-6 lg:p-10 max-w-3xl mx-auto'}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-3xl mx-auto">
       <MutationRecovery mutations={mutations} />
       <div className="mb-6">
         <SfaPageHeading className="text-2xl font-black text-slate-900">活動タイムライン</SfaPageHeading>
@@ -120,16 +118,14 @@ export default function SfaActivitiesPage() {
       <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
         <div className="flex gap-1.5 mb-2 flex-wrap">
           {TYPES.map((t) => (
-            <button key={t} onClick={() => setType(t)} aria-pressed={uiNext ? type === t : undefined} className={uiNext
-              ? `min-h-11 px-4 rounded-full text-sm font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${type === t ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-600'}`
-              : `px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 transition-colors ${type === t ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-500'}`}>
-              {uiNext ? (() => { const Icon = TYPE_LUCIDE[t]; return <Icon className="h-4 w-4" aria-hidden /> })() : <span className="material-symbols-outlined text-[14px]">{ACTIVITY_TYPE_ICON[t]}</span>}{ACTIVITY_TYPE_LABEL[t]}
+            <button key={t} onClick={() => setType(t)} aria-pressed={type === t} className={`min-h-11 px-4 rounded-full text-sm font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${type === t ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-600'}`}>
+              {(() => { const Icon = TYPE_LUCIDE[t]; return <Icon className="h-4 w-4" aria-hidden /> })()}{ACTIVITY_TYPE_LABEL[t]}
             </button>
           ))}
         </div>
-        <input ref={subjectInput} aria-label="件名" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="件名（例: 定例MTG / 折り返し電話）" className={uiNext ? 'w-full min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 font-bold mb-2' : 'w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold mb-2'} />
+        <input ref={subjectInput} aria-label="件名" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="件名（例: 定例MTG / 折り返し電話）" className="w-full min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 font-bold mb-2" />
         <textarea aria-label="メモ・要点" value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="メモ・要点（任意）" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
-        <button onClick={create} disabled={busy || mutations.creationBlocked('activity') || !ready} className={`mt-2 px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 ${uiNext ? 'min-h-11 whitespace-nowrap bg-[#0066ff] hover:bg-[#0052cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'bg-gradient-to-r from-green-500 to-lime-600'}`}>{busy ? '記録中…' : '記録する'}</button>
+        <button onClick={create} disabled={busy || mutations.creationBlocked('activity') || !ready} className="mt-2 px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 min-h-11 whitespace-nowrap bg-[#0066ff] hover:bg-[#0052cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">{busy ? '記録中…' : '記録する'}</button>
       </div>
 
       {/* タイムライン */}
@@ -140,14 +136,14 @@ export default function SfaActivitiesPage() {
           activities.map((a) => (
             <div key={a.id} className="bg-white rounded-xl shadow-sm p-4 flex items-start gap-3">
               <span className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${TYPE_COLOR[a.type]}`}>
-                {uiNext ? (() => { const Icon = TYPE_LUCIDE[a.type]; return <Icon className="h-5 w-5" aria-label={ACTIVITY_TYPE_LABEL[a.type]} /> })() : <span className="material-symbols-outlined text-[20px]">{ACTIVITY_TYPE_ICON[a.type]}</span>}
+                {(() => { const Icon = TYPE_LUCIDE[a.type]; return <Icon className="h-5 w-5" aria-label={ACTIVITY_TYPE_LABEL[a.type]} /> })()}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-black text-slate-800 truncate">{a.subject || ACTIVITY_TYPE_LABEL[a.type]}</p>
                   <span className="text-[10px] font-bold text-slate-300 ml-auto whitespace-nowrap">{fmtDateTime(a.occurredAt)}</span>
                 </div>
-                {a.body && <p className={uiNext ? 'text-sm font-bold text-slate-500 mt-0.5 whitespace-pre-wrap break-words' : 'text-sm font-bold text-slate-500 mt-0.5 whitespace-pre-wrap'}>{a.body}</p>}
+                {a.body && <p className="text-sm font-bold text-slate-500 mt-0.5 whitespace-pre-wrap break-words">{a.body}</p>}
               </div>
             </div>
           ))
@@ -155,11 +151,9 @@ export default function SfaActivitiesPage() {
       </div>
       <div className="mt-4 space-y-2 text-sm">
         {loading && <p role="status">活動を読み込んでいます…</p>}
-        {loadError && (uiNext
-          ? <SfaLoadError error={loadFailure} what="活動" onRetry={() => load(retryCursor || undefined)} orgSlug={orgSlug} />
-          : <p role="alert" className="text-red-600">{loadError}。<button type="button" onClick={() => load(retryCursor || undefined)} className="underline">再試行</button></p>)}
+        {loadError && (<SfaLoadError error={loadFailure} what="活動" onRetry={() => load(retryCursor || undefined)} orgSlug={orgSlug} />)}
         {!loading && !loadError && <p className="text-slate-500">{activities.length} / {totalCount}件を表示</p>}
-        {nextCursor && <button type="button" onClick={() => load(nextCursor)} disabled={loading} className={uiNext ? 'min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50' : 'rounded-lg border px-3 py-2 disabled:opacity-50'}>次の200件を表示</button>}
+        {nextCursor && <button type="button" onClick={() => load(nextCursor)} disabled={loading} className="min-h-11 rounded-lg border px-3 py-2 disabled:opacity-50">次の200件を表示</button>}
       </div>
     </div>
   )

@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
-import { useUiNext } from '@/components/shell/ui-next-context'
 import { useInShanaiShell } from './shell-context'
 
 export const ACCENT = 'var(--blue)'
@@ -57,7 +56,7 @@ type BtnProps = {
 
 export function Button({ children, onClick, disabled, loading, variant = 'primary', type = 'button', className = '' }: BtnProps) {
   // 新しい見た目では、キーボードで移ったときに枠を出す・短いラベルを途中で折り返さない
-  const next = useUiNext() ? ' whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2' : ''
+  const next = ' whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2'
   const cls =
     variant === 'primary'
       ? 'bg-[var(--blue)] text-white hover:bg-[var(--blue-deep)] disabled:bg-[var(--line-strong)]'
@@ -204,7 +203,7 @@ export function EmptyState({ image, title, desc, action }: { image: string; titl
   return <DsEmptyState kind={kind ?? 'zero'} art={kind ? undefined : image} title={title} description={desc} action={action} />
 }
 
-// ---------- 失敗の伝え方（新しい見た目だけで使う。チェックリスト §11） ----------
+// ---------- 失敗の伝え方（チェックリスト §11） ----------
 // ⚠️ 生のエラー文（err.message・ステータス番号・英語の技術的な文）は画面に出さない。
 //    サーバーの 4xx の日本語文（入力の誤りなど、利用者向けに書いたもの）だけはそのまま使う
 
@@ -284,51 +283,25 @@ export function LimitState({ what = '今月の利用上限に達しました。'
  * 今までの見た目では、これまで通り message をそのまま出す
  */
 export function ErrorState({ message, onRetry, error }: { message?: string; onRetry?: () => void; error?: unknown }) {
-  const uiNext = useUiNext()
-  if (uiNext) {
-    const d = describeError(error, 'load')
-    if (d.kind === 'forbidden') return <ForbiddenState />
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-        <ActionError error={d} onRetry={onRetry} />
-      </div>
-    )
-  }
+  const d = describeError(error, 'load')
+  if (d.kind === 'forbidden') return <ForbiddenState />
   return (
-    <EmptyState
-      image="/empty/error.svg"
-      title="読み込めませんでした"
-      desc={message || '通信が混み合っているか、一時的な不具合が起きています。少し時間をおいてお試しください。'}
-      action={onRetry ? <Button onClick={onRetry}>もう一度読み込む</Button> : undefined}
-    />
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <ActionError error={d} onRetry={onRetry} />
+    </div>
   )
 }
 
 export function ForbiddenState({ backHref = '/shanai' }: { backHref?: string }) {
-  const uiNext = useUiNext()
-  if (uiNext) {
-    // 新しい見た目: ErrorNotice と同じ形（何が起きたか・どうすればよいか）＋戻る道を1つ
-    return (
-      <div className="mx-auto max-w-3xl space-y-3 px-4 py-8 sm:px-6 sm:py-10">
-        <ErrorNotice
-          what="このインタビューを表示する権限がありません。"
-          how="削除されたか、別のアカウントで作成されたインタビューです。作成した方に共有を依頼するか、管理者にお問い合わせください。"
-        />
-        <DsButton variant="secondary" href={backHref} icon="List">インタビュー一覧に戻る</DsButton>
-      </div>
-    )
-  }
+  // 新しい見た目: ErrorNotice と同じ形（何が起きたか・どうすればよいか）＋戻る道を1つ
   return (
-    <EmptyState
-      image="/empty/forbidden.svg"
-      title="このページを表示できません"
-      desc="削除されたか、別のアカウントで作成されたインタビューです。作成した方に共有を依頼するか、作成したアカウントでログインしてください。"
-      action={
-        <a href={backHref} className="inline-flex min-h-[44px] items-center rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] px-4 text-sm font-black text-[var(--ink)] hover:bg-[var(--bg)]">
-          一覧に戻る
-        </a>
-      }
-    />
+    <div className="mx-auto max-w-3xl space-y-3 px-4 py-8 sm:px-6 sm:py-10">
+      <ErrorNotice
+        what="このインタビューを表示する権限がありません。"
+        how="削除されたか、別のアカウントで作成されたインタビューです。作成した方に共有を依頼するか、管理者にお問い合わせください。"
+      />
+      <DsButton variant="secondary" href={backHref} icon="List">インタビュー一覧に戻る</DsButton>
+    </div>
   )
 }
 
@@ -394,12 +367,11 @@ export function ConfirmDialog({
   onConfirm: () => void
   onClose: () => void
 }) {
-  const uiNext = useUiNext()
   const boxRef = useRef<HTMLDivElement>(null)
   // 新しい見た目: 開いたらダイアログに移す（キーボード・読み上げで、いま何を聞かれているかが分かるように）
   useEffect(() => {
-    if (open && uiNext) boxRef.current?.focus()
-  }, [open, uiNext])
+    if (open) boxRef.current?.focus()
+  }, [open])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
