@@ -19,7 +19,7 @@ const STEPS = [
   { title: '請求書と支払を記録する', body: '請求書待ちや金額の差異は「要対応」に出ます。', art: '/expense/step-3.webp' },
 ]
 
-/** 入口（組織がまだ無い人）。枠の外の画面なので、見出し（h1）はここで1つ持つ */
+/** 入口（組織がまだ無い人）。共通の枠の中に出すので、見出し（h1）は ToolFrame が持つ。ここは h2（1画面に h1 は1つ。2026-10-24 統括の確認） */
 export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, onCreate, needsCompany = false, companyName = null, onStartWithCompany }: {
   orgName: string
   memberName: string
@@ -36,7 +36,7 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
   return (
     <div data-ui-next="true" className="bg-[var(--bg)]">
       <div className={`${tokens.ds} mx-auto w-full max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12`}>
-        <h1 className="text-[13px] font-bold tracking-wide text-[var(--blue-deep)]">ドヤ支出管理をはじめる</h1>
+        <h2 className="text-[13px] font-bold tracking-wide text-[var(--blue-deep)]">ドヤ支出管理をはじめる</h2>
         <ToolHero
           title="支払いの予定を、12か月先まで見える化"
           lead="固定費・業務委託・家賃の支払いを契約ごとに登録すると、毎月いくら出ていくかが一目で分かります。"
@@ -46,7 +46,7 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
           {companyName && onStartWithCompany ? (
           <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-start-title">
             <h2 id="expense-start-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">登録した会社で始める</h2>
-            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤマーケAIは、1つのアカウントで1つの会社を扱います。支出管理も、登録した会社の名前で使えます。</p>
+            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤAIは、1つのアカウントで1つの会社を扱います。支出管理も、登録した会社の名前で使えます。</p>
             <p className="mt-3 rounded-[var(--r-sm)] bg-[var(--bg)] px-3 py-2 text-[15px] font-bold text-[var(--ink)]">{companyName}</p>
             <div className="mt-5">
               <Btn onClick={onStartWithCompany} busy={busy}>この会社で始める</Btn>
@@ -55,7 +55,7 @@ export function EntryNext({ orgName, memberName, busy, onOrgName, onMemberName, 
           ) : needsCompany ? (
           <section className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] md:p-6" aria-labelledby="expense-company-title">
             <h2 id="expense-company-title" className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">会社を登録して始める</h2>
-            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤマーケAIは、1つのアカウントで1つの会社を扱います。会社を登録すると、支出管理はその会社の名前ですぐに使えます。</p>
+            <p className="mt-1 text-[14px] leading-[1.7] text-[var(--sub)]">ドヤAIは、1つのアカウントで1つの会社を扱います。会社を登録すると、支出管理はその会社の名前ですぐに使えます。</p>
             <p className="mt-2 text-[14px] leading-[1.7] text-[var(--sub)]">ほかのツールで使っている組織の名前があれば、候補から選べます。</p>
             <div className="mt-5">
               <CompanyRegisterButton className="inline-flex min-h-[44px] items-center justify-center rounded-[var(--r-sm)] bg-[var(--blue)] px-5 text-[15px] font-bold text-white transition-colors hover:bg-[var(--blue-deep)]">
