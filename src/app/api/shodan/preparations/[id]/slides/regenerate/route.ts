@@ -15,6 +15,7 @@ import { parseOrgProfileVersion } from '@/lib/org-profile-version'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { getShodanBilling } from '@/lib/shodan/billing'
+import { reserveShodanAi, refundShodanAi, shodanAiLimitFor, shodanAiLimitResponse } from '@/lib/shodan/ai-quota'
 import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationInProgressError } from '@/lib/shodan/slide-generation-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -85,11 +86,17 @@ async function regenerate(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '登録済みロゴを読み込めませんでした。ロゴを確認してから再度お試しください。', code: 'LOGO_UNAVAILABLE' }, { status: 503 })
     }
 
+    const aiLimit = shodanAiLimitFor(billing.plan)
+    const reserved = await reserveShodanAi(sctx.organizationId, 1, aiLimit)
+    if (!reserved.ok) return NextResponse.json(shodanAiLimitResponse(aiLimit, sctx.role === 'owner' && sctx.userId === billing.ownerUserId), { status: 429 })
+    let generated = false
     try {
       const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, { extra: instruction, brand })
+      generated = true
       await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, images, [{ index, image: img }])
       return NextResponse.json({ success: true, data: { preparationId: prep.id, index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath), imageKey: slideImageKey(img.imagePath) } } })
     } catch (e: any) {
+      if (!generated) await refundShodanAi(sctx.organizationId, 1)
       if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
       console.error('[shodan/slides/regenerate]')
       return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
