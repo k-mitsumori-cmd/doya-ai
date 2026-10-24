@@ -1,5 +1,6 @@
 'use client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import { hrUserMessage } from '@/lib/hr/user-message'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 export type EvaluationAiInput = { evaluationId: string; expectedUpdatedAt: string }
 type Intent = { version: 1; operationId: string; actor: string; organizationId: string; input: EvaluationAiInput }
@@ -145,7 +146,7 @@ export function useHrEvaluationAiOperation(status: string, actor: string, organi
         return null
       }
       message(response.status === 401 ? 'ログインの有効期限を確認してください。生成結果は再ログイン後に確認できます。' :
-        response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? response.data.error : 'AIコメントの生成結果を確認してください。生成処理は自動で再実行されません。', response.status === 401)
+        response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? hrUserMessage(response.data.error, 'AIコメントの生成結果を確認してください。生成処理は自動で再実行されません。') : 'AIコメントの生成結果を確認してください。生成処理は自動で再実行されません。', response.status === 401)
       return null
     }
     const result = parseResult(response.data, intent)

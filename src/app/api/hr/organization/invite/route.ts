@@ -20,18 +20,18 @@ export async function POST(req: NextRequest) {
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const body = await req.json()
     const { email } = body
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'email is required' }, { status: 400 })
+      return NextResponse.json({ error: '招待する相手のメールアドレスを入力して、もう一度お試しください。' }, { status: 400 })
     }
     const emailNorm = email.trim().toLowerCase()
     if (emailNorm.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[hr/organization/invite] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to create invitation' },
+      { error: '招待を作成できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

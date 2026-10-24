@@ -35,13 +35,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
     const id = p.id
     if (!hasMinRole(hrCtx.role, HrMemberRole.MANAGER) && hrCtx.employeeId !== id) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const evaluationWhere = await getEvaluationReadWhere(hrCtx)
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
 
     if (!employee) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const viewer = await getOneOnOneViewer(hrCtx)
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[hr/employees/[id]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch employee' },
+      { error: '従業員の情報を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -88,12 +88,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       include: { department: { select: { id: true, name: true } } },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const body = await req.json().catch(() => null)
@@ -261,12 +261,12 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -279,7 +279,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       where: { id, organizationId: hrCtx.organizationId },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     await prisma.$transaction(async (tx) => {

@@ -29,7 +29,7 @@ async function expectSafe(promise, expected) {
       '@/lib/hr/billing': {}, '@/lib/service-usage': {},
     }
     const api = load('src/app/api/hr/employees/route.ts', mocks)
-    await expectSafe(api.GET({ nextUrl: new URL('http://offline.invalid/') }), 'Failed to fetch employees')
+    await expectSafe(api.GET({ nextUrl: new URL('http://offline.invalid/') }), '従業員の一覧を読み込めませんでした。時間をおいて再読み込みしてください。')
     mocks['@/lib/hr/access'].getHrContext = async () => null
     assert.equal((await api.GET({ nextUrl: new URL('http://offline.invalid/') })).status, 401)
   })
@@ -39,7 +39,7 @@ async function expectSafe(promise, expected) {
       '@/lib/prisma': { prisma: { hrOrganizationMember: { findMany: failure } } },
       '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole: () => true },
     })
-    await expectSafe(api.GET(), 'Failed to fetch members')
+    await expectSafe(api.GET(), 'メンバーの一覧を読み込めませんでした。時間をおいて再読み込みしてください。')
   })
   await check('HR dashboard does not return private database error', async () => {
     const api = load('src/app/api/hr/dashboard/route.ts', {
@@ -55,7 +55,7 @@ async function expectSafe(promise, expected) {
       '@/lib/hr/evaluation-access': { getEvaluationReadWhere: async () => ({}) },
       '@/lib/hr/one-on-one-access': { getOneOnOneReadWhere: async () => ({}) },
     })
-    await expectSafe(api.GET(), 'Failed')
+    await expectSafe(api.GET(), 'ダッシュボードを読み込めませんでした。時間をおいて再読み込みしてください。')
   })
   await check('HR denied onboarding returns fixed403 without echoing a coded private exception', async () => {
     const api = load('src/app/api/hr/organization/route.ts', {

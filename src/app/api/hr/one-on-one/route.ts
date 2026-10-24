@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const url = req.nextUrl
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     console.error('[hr/one-on-one] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch 1on1 records' },
+      { error: '1on1の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -80,12 +80,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const viewer = await getOneOnOneViewer(ctx)
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     if (typeof employeeId !== 'string' || !employeeId || typeof managerId !== 'string' || !managerId || employeeId === managerId) {
       return NextResponse.json(
-        { error: 'employeeId and managerId are required' },
+        { error: '対象の従業員と担当の上司を両方選んでから、もう一度お試しください。' },
         { status: 400 }
       )
     }
@@ -128,10 +128,10 @@ export async function POST(req: NextRequest) {
       }),
     ])
     if (!employee) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
     if (!manager) {
-      return NextResponse.json({ error: 'Manager not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この上司は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const oneOnOne = await prisma.hrOneOnOne.create({
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[hr/one-on-one] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to create 1on1 record' },
+      { error: '1on1を作成できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

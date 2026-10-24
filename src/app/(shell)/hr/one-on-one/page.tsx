@@ -152,7 +152,12 @@ export default function OneOnOnePage() {
           duration: selectedDuration,
         }),
       })
-      if (!res.ok) throw new Error('1on1の作成に失敗しました')
+      if (!res.ok) {
+        // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない
+        const failure = await res.json().catch(() => null)
+        const serverMessage = typeof failure?.error === 'string' ? failure.error : ''
+        throw new Error(/[\u3040-\u30ff\u3400-\u9fff]/.test(serverMessage) && !/[A-Za-z]{4,}/.test(serverMessage) ? serverMessage : '1on1を作成できませんでした。時間をおいて、もう一度お試しください。')
+      }
       const data = await res.json()
       const newId = data.oneOnOne?.id ?? data.id
       if (newId) {
@@ -162,7 +167,8 @@ export default function OneOnOnePage() {
         fetchRecords()
       }
     } catch (e: any) {
-      toast.error(e.message)
+      const message = typeof e?.message === 'string' ? e.message : ''
+      toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '1on1を作成できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setCreating(false)
     }

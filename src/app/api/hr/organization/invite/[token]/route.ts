@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const token = p.token
 
     if (!token) {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
+      return NextResponse.json({ error: '招待のリンクが正しくありません。届いたリンクを開き直してください。' }, { status: 400 })
     }
 
     const invitation = await prisma.hrInvitation.findUnique({
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[hr/organization/invite/[token]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch invitation' },
+      { error: '招待を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

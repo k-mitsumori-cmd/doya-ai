@@ -8,6 +8,7 @@ import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import DepartmentListState from '@/components/hr/DepartmentListState'
 import { useHrDepartmentList } from '@/lib/hr/use-department-list'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 import Link from 'next/link'
 
@@ -190,7 +191,7 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
     e.preventDefault()
     if (submitLock.current || !loadedVersion || loadedVersion.id !== id || departmentList.status !== 'ready' || (form.departmentId && !departments.some(d => d.id === form.departmentId))) return
     if (!form.lastName || !form.firstName) {
-      toast.error('姓名は必須項目です')
+      toast.error('姓と名は必須です。両方を入力してから、もう一度保存してください。')
       return
     }
     const scope = editScope.current
@@ -208,7 +209,7 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
         if (!isCurrent()) return
         if (!up.ok) {
           const ed = await up.json().catch(() => ({}))
-          throw new Error(ed.error || '写真のアップロードに失敗しました')
+          throw new Error(hrUserMessage(ed.error, '写真を保存できませんでした。画像を確かめて、もう一度お試しください。'))
         }
         finalPhotoUrl = (await up.json()).url
         if (!isCurrent()) return
@@ -224,7 +225,7 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         if (!isCurrent()) return
-        throw new Error(err.error || '更新に失敗しました')
+        throw new Error(hrUserMessage(err.error, '従業員の情報を保存できませんでした。もう一度お試しください。'))
       }
       const acknowledgement = await res.json().catch(() => null)
       if (!isCurrent()) return
@@ -238,7 +239,7 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
       toast.success('従業員情報を更新しました')
       router.push(`/hr/employees/${id}`)
     } catch (err: any) {
-      if (isCurrent()) toast.error(err.message)
+      if (isCurrent()) toast.error(hrUserMessage(err, '従業員の情報を保存できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       if (submitLock.current === attempt) {
         submitLock.current = null

@@ -2,6 +2,7 @@
 
 import { PageTitle } from './ui-next'
 import toast from 'react-hot-toast'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -39,7 +40,7 @@ export default function HrOnboarding() {
 
   const handleCreate = async () => {
     if (!orgName.trim()) {
-      toast.error('組織名を入力してください')
+      toast.error('組織名が空です。組織名を入力してから、次へ進んでください。')
       return
     }
     setLoading(true)
@@ -51,13 +52,13 @@ export default function HrOnboarding() {
         body: JSON.stringify({ name: orgName.trim(), industry, size }),
       })
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || '組織の作成に失敗しました')
+        const data = await res.json().catch(() => null)
+        throw new Error(hrUserMessage(data?.error, '組織を作成できませんでした。時間をおいて、もう一度お試しください。'))
       }
       router.refresh()
       window.location.reload()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(hrUserMessage(e, '組織を作成できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setLoading(false)
     }

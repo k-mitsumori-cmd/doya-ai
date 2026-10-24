@@ -27,12 +27,12 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
     if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // 組織の上限は OWNER の User.plan で決まる。別メンバーが購入しても反映されない。
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: e.code, error: userMessage }, { status: e.status })
     }
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: 'お支払いの画面を開けませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

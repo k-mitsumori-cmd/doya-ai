@@ -157,10 +157,13 @@ export default function EvaluationForm({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'AI生成に失敗しました')
+      if (!res.ok) throw new Error(typeof data?.error === 'string' && data.error ? data.error : 'AIのコメントを作れませんでした。時間をおいて、もう一度お試しください。')
       if (live()) setAiResult(data.aiComment || data.comment || data.result || '')
     } catch (e: any) {
-      if (live()) setAiResult(`エラー: ${e.message}`)
+      // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない。
+      //    英語や内部の文（通信の失敗など）は出さず、日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      if (live()) setAiResult(`エラー: ${/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : 'AIのコメントを作れませんでした。時間をおいて、もう一度お試しください。'}`)
     } finally {
       aiLoadingRef.current = false
       if (live()) setAiLoading(false)
@@ -193,11 +196,12 @@ export default function EvaluationForm({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
-        if (!res.ok) throw new Error('保存に失敗しました')
+        if (!res.ok) throw new Error('評価を保存できませんでした。時間をおいて、もう一度お試しください。')
       }
       return live()
     } catch (e: any) {
-      if (live()) toast.error(e.message)
+      const message = typeof e?.message === 'string' ? e.message : ''
+      if (live()) toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '評価を保存できませんでした。通信を確かめて、もう一度お試しください。')
       return false
     } finally {
       savingRef.current = false
@@ -217,7 +221,10 @@ export default function EvaluationForm({
       if (!(await handleSave()) || !live()) return
       await onWorkflowAction(workflow.action)
       if (live()) setConfirmWorkflow(false)
-    } catch (error: any) { if (live()) toast.error(error.message) }
+    } catch (error: any) {
+      const message = typeof error?.message === 'string' ? error.message : ''
+      if (live()) toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '操作を記録できませんでした。時間をおいて、もう一度お試しください。')
+    }
     finally { workflowRef.current = false; if (live()) setWorkflowLoading(false) }
   }
 

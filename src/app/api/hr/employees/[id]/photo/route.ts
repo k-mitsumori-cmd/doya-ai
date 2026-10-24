@@ -18,12 +18,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401, headers: privateHeaders })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401, headers: privateHeaders })
     }
     if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403, headers: privateHeaders })
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       where: { id, organizationId: hrCtx.organizationId },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404, headers: privateHeaders })
+      return NextResponse.json({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404, headers: privateHeaders })
     }
 
     const body = await req.json().catch(() => null)

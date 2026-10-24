@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const url = req.nextUrl
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     console.error('[hr/employees] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch employees' },
+      { error: '従業員の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -97,12 +97,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     } = body
 
     if (!lastName || !firstName) {
-      return NextResponse.json({ error: 'lastName and firstName are required' }, { status: 400 })
+      return NextResponse.json({ error: '姓と名が入っていません。両方を入力して、もう一度お試しください。' }, { status: 400 })
     }
 
     if (departmentId) {
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
         where: { id: departmentId, organizationId: ctx.organizationId },
       })
       if (!dept) {
-        return NextResponse.json({ error: 'Department not found' }, { status: 400 })
+        return NextResponse.json({ error: 'この部署は見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
       }
     }
 

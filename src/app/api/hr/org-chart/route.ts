@@ -39,7 +39,7 @@ export async function GET(req: Request) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (req) {
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
     if (e instanceof HrOrgChartPageError) return privateApiJson({ error: e.status === 409 ? '組織図が更新されました。再取得してください' : e.status === 401 ? 'ログイン状態を確認してください' : '組織図の取得条件が正しくありません', code: e.code }, { status: e.status })
     console.error('[hr/org-chart] unexpected error')
     return privateApiJson(
-      { error: 'Failed to fetch org chart' },
+      { error: '組織図を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

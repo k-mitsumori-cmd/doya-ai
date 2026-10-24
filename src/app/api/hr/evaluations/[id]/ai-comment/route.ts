@@ -19,9 +19,9 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
-    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const hrCtx = await getHrContext()
-    if (!hrCtx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!hrCtx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const organization = req.headers.get('X-HR-Organization-Id')
     if (organization && organization !== hrCtx.organizationId) return privateApiJson({ error: '組織が変更されています。再取得してください。' }, { status: 403 })
     const { id } = await ctx.params

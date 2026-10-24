@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const body = await req.json().catch(() => null)
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
     const { name, slug, industry, size } = body
     if (typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 })
+      return NextResponse.json({ error: '組織名が空です。組織名を入力して、もう一度お試しください。' }, { status: 400 })
     }
     if (slug != null && (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))) {
       return NextResponse.json({ error: 'slugの形式が正しくありません' }, { status: 400 })
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (req?.nextUrl.searchParams.get('format') === 'choices') {
@@ -99,11 +99,11 @@ export async function PATCH(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const body = await req.json().catch(() => null)

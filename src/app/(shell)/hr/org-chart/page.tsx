@@ -1,6 +1,6 @@
 'use client'
 import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
-import { ErrorNotice } from '@/components/ds'
+import { ErrorNotice, Skeleton } from '@/components/ds'
 import HrLoadError from '@/components/hr/HrLoadError'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
@@ -90,12 +90,14 @@ export default function OrgChartPage() {
 
         {/* Loading */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="w-12 h-12 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm text-slate-500">組織図を読み込み中...</p>
-              {progress?.scope === scopeKey && progress.total > 0 && <p role="status" className="mt-2 text-sm text-slate-500">部署・従業員 {progress.loaded.toLocaleString()} / {progress.total.toLocaleString()} 件を取得しています。</p>}
-            </div>
+          // 枠を残したまま、組織図のカードの中に骨組みと進み具合を出す（全面のくるくるにしない）
+          <div className={uiNext ? 'bg-white rounded-3xl shadow-md p-4 sm:p-6 min-h-[400px] min-w-0' : 'bg-white rounded-3xl shadow-md p-6 min-h-[400px]'}>
+            <Skeleton lines={6} height={18} />
+            <p role="status" className="mt-4 text-sm text-slate-600">
+              {progress?.scope === scopeKey && progress.total > 0
+                ? `部署・従業員 ${progress.loaded.toLocaleString()} / ${progress.total.toLocaleString()} 件を読み込んでいます。`
+                : '組織図を読み込んでいます。'}
+            </p>
           </div>
         ) : loadError && uiNext ? (
           view.changed

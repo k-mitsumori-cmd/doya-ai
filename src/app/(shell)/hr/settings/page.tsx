@@ -10,6 +10,9 @@ import { useSession } from 'next-auth/react'
 import { useHrDepartmentCreation, type DepartmentCreationResult } from '@/lib/hr/use-department-creation'
 import { motion } from 'framer-motion'
 import rawToast from 'react-hot-toast'
+import { ArrowRight, X } from 'lucide-react'
+import { confirmDialog } from '@/components/ds/dialog'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface AuditLog {
   id: string
@@ -189,6 +192,18 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferEmail, setTransferEmail] = useState('')
   const [transferring, setTransferring] = useState(false)
+  // 開いている窓は Esc で閉じる（処理中は閉じない）
+  useEffect(() => {
+    if (!showDeptModal && !showTransferModal && !linkingMemberId) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (showTransferModal) { if (!transferring) setShowTransferModal(false); return }
+      if (showDeptModal) { if (!creatingDept && !departmentCreation.busy) setShowDeptModal(false); return }
+      if (linkingMemberId) setLinkingMemberId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showDeptModal, showTransferModal, linkingMemberId, transferring, creatingDept, departmentCreation.busy])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -268,7 +283,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       } catch (error) {
         if (!controller.signal.aborted) {
           setEmployeeOptions([])
-          toast.error(error instanceof Error ? error.message : '従業員候補を取得できませんでした')
+          toast.error(hrUserMessage(error, '従業員の候補を読み込めませんでした。時間をおいて、もう一度お試しください。'))
         }
       } finally {
         if (!controller.signal.aborted) setSearchingEmployees(false)
@@ -287,12 +302,12 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         body: JSON.stringify({ employeeId }),
       })
       const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(data?.error || '従業員との紐付けを変更できませんでした')
+      if (!res.ok) throw new Error(hrUserMessage(data?.error, '従業員との紐付けを変更できませんでした。もう一度お試しください。'))
       await reloadMembers()
       setMemberMsg({ id: member.id, ok: true, text: employeeId ? '従業員情報を紐付けました。' : '従業員情報の紐付けを解除しました。' })
       setLinkingMemberId(null)
     } catch (error) {
-      setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : '従業員との紐付けを変更できませんでした' })
+      setMemberMsg({ id: member.id, ok: false, text: hrUserMessage(error, '従業員との紐付けを変更できませんでした。もう一度お試しください。') })
     } finally {
       setMemberBusy(null)
     }
@@ -314,7 +329,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       })
       const d = await res.json().catch(() => null)
       if (!res.ok) {
-        setMemberMsg({ id: member.id, ok: false, text: d?.error || '権限を変更できませんでした' })
+        setMemberMsg({ id: member.id, ok: false, text: hrUserMessage(d?.error, '権限を変更できませんでした。時間をおいて、もう一度お試しください。') })
         return
       }
       setMemberMsg({
@@ -324,7 +339,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       })
       await reloadMembers()
     } catch (error) {
-      if (live()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
+      if (live()) setMemberMsg({ id: member.id, ok: false, text: hrUserMessage(error, 'メンバー情報を更新できませんでした。時間をおいて、もう一度お試しください。') })
     } finally {
       setMemberBusy(null)
     }
@@ -337,7 +352,12 @@ function HrSettingsForActor({ actor }: { actor: string }) {
    */
   const removeMember = async (member: OrgMember) => {
     const label = member.name || member.email
-    if (!window.confirm(`${label} をこの組織から外します。よろしいですか。\n\n従業員データは残りますが、この方はドヤHRにアクセスできなくなります。`)) {
+    if (!(await confirmDialog({
+      title: `${label} をこの組織から外しますか？`,
+      message: '従業員データは残りますが、この方はドヤHRを使えなくなります。',
+      confirmLabel: '組織から外す',
+      tone: 'danger',
+    }))) {
       return
     }
     setMemberBusy(member.id)
@@ -346,13 +366,13 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       const res = await fetch(`/api/hr/organization/members/${member.id}`, { method: 'DELETE' })
       const d = await res.json().catch(() => null)
       if (!res.ok) {
-        setMemberMsg({ id: member.id, ok: false, text: d?.error || 'メンバーを外せませんでした' })
+        setMemberMsg({ id: member.id, ok: false, text: hrUserMessage(d?.error, 'メンバーを外せませんでした。時間をおいて、もう一度お試しください。') })
         return
       }
       setMemberMsg({ id: member.id, ok: true, text: `${label} を組織から外しました。` })
       await reloadMembers()
     } catch (error) {
-      if (live()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
+      if (live()) setMemberMsg({ id: member.id, ok: false, text: hrUserMessage(error, 'メンバー情報を更新できませんでした。時間をおいて、もう一度お試しください。') })
     } finally {
       setMemberBusy(null)
     }
@@ -377,10 +397,10 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       })
-      if (!res.ok) throw new Error('設定の保存に失敗しました')
+      if (!res.ok) throw new Error('設定を保存できませんでした。時間をおいて、もう一度お試しください。')
       toast.success('設定を保存しました')
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(hrUserMessage(e, '設定を保存できませんでした。時間をおいて、もう一度お試しください。'))
     } finally {
       setSaving(false)
     }
@@ -398,14 +418,14 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       const data = await res.json()
       if (res.status === 403 && data.code === 'HR_ORG_MEMBER_LIMIT') {
         setInviteLimitNotice({
-          message: data.error || 'メンバー数の上限に達しています。',
+          message: hrUserMessage(data.error, 'メンバー数の上限に達しています。プランの変更をご検討ください。'),
           upgradeUrl: data.upgradeUrl,
           contactUrl: data.contactUrl,
           canManageBilling: data.canManageBilling === true,
         })
         return
       }
-      if (!res.ok) throw new Error(data.error || '招待の送信に失敗しました')
+      if (!res.ok) throw new Error(hrUserMessage(data.error, '招待を送れませんでした。時間をおいて、もう一度お試しください。'))
       setInviteLimitNotice(null)
       setInviteEmail('')
       setInviteEmailSent(data.emailSent === true)
@@ -422,8 +442,8 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         if (settingsData.myRole) setMyRole(settingsData.myRole)
         if (settingsData.myMemberId) setMyMemberId(settingsData.myMemberId)
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(hrUserMessage(e, '招待を送れませんでした。時間をおいて、もう一度お試しください。'))
     } finally {
       setInviting(false)
     }
@@ -501,7 +521,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       await fetchDepartments()
     } catch (e: unknown) {
       if (departmentLife.current === life) {
-        toast.error(e instanceof Error ? e.message : '部署の削除結果を確認できませんでした。部署一覧を確認してください。')
+        toast.error(hrUserMessage(e, '部署の削除結果を確認できませんでした。部署一覧を確認してください。'))
         setDepartmentListWarning('部署の削除結果を確認できませんでした。削除を繰り返さず、部署一覧を再取得してください。')
       }
     } finally {
@@ -558,14 +578,14 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'オーナー移譲に失敗しました')
+        throw new Error(hrUserMessage(data.error, 'オーナーを譲れませんでした。時間をおいて、もう一度お試しください。'))
       }
       setShowTransferModal(false)
       setTransferEmail('')
       await reloadMembers()
       toast.success('オーナーを移譲しました')
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(hrUserMessage(e, 'オーナーを譲れませんでした。時間をおいて、もう一度お試しください。'))
     } finally {
       setTransferring(false)
     }
@@ -725,14 +745,14 @@ function HrSettingsForActor({ actor }: { actor: string }) {
 
         {/* Department Create Modal */}
         {canManageMembers && showDeptModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/30" onClick={() => { if (!creatingDept && !departmentCreation.busy) setShowDeptModal(false) }} />
+          <div role="dialog" aria-modal="true" aria-labelledby="hr-dept-modal-title" className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" aria-hidden="true" onClick={() => { if (!creatingDept && !departmentCreation.busy) setShowDeptModal(false) }} />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4"
             >
-              <h2 className="text-lg font-bold text-slate-900 mb-4">部署を追加</h2>
+              <h2 id="hr-dept-modal-title" className="text-lg font-bold text-slate-900 mb-4">部署を追加</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">
@@ -946,7 +966,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
             <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-900">従業員情報を紐付ける</h3>
-                <button type="button" onClick={() => setLinkingMemberId(null)} className="rounded-lg px-2 py-1 text-slate-600 hover:bg-slate-100" aria-label="閉じる">✕</button>
+                <button type="button" onClick={() => setLinkingMemberId(null)} className="rounded-lg px-2 py-1 text-slate-600 hover:bg-slate-100" aria-label="閉じる"><X size={16} aria-hidden="true" /></button>
               </div>
               <p className="mb-3 text-sm text-slate-600">{members.find(member => member.id === linkingMemberId)?.email} が閲覧する従業員を選んでください。</p>
               <input
@@ -1129,7 +1149,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
                       <p className="text-sm font-bold text-slate-900">{actionInfo.label}</p>
                       <p className="text-xs text-slate-500 truncate">
                         {log.actor}
-                        {log.target && <> → {log.target}</>}
+                        {log.target && <><ArrowRight size={12} aria-hidden="true" className="mx-1 inline align-[-1px]" />{log.target}</>}
                       </p>
                     </div>
                     <span className="text-xs text-slate-400 flex-shrink-0">
@@ -1182,8 +1202,8 @@ function HrSettingsForActor({ actor }: { actor: string }) {
 
         {/* Owner Transfer Modal */}
         {showTransferModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/30" onClick={() => setShowTransferModal(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="hr-transfer-modal-title" className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" aria-hidden="true" onClick={() => { if (!transferring) setShowTransferModal(false) }} />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1194,7 +1214,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
                   <span className="material-symbols-outlined text-red-500">warning</span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">オーナー権限の移譲</h2>
+                  <h2 id="hr-transfer-modal-title" className="text-lg font-bold text-slate-900">オーナー権限の移譲</h2>
                   <p className="text-xs text-red-500 font-bold">この操作は取り消せません</p>
                 </div>
               </div>

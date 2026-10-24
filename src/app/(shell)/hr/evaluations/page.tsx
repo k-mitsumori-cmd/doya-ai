@@ -13,6 +13,7 @@ import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import { loadHrEvaluationPeriodList, HrEvaluationPeriodListReadError, type HrEvaluationPeriodListRow } from '@/lib/hr/evaluation-period-list-client'
 import { useHrPeriodCreation, findHrPeriodCreationOrganization } from '@/lib/hr/use-evaluation-period-creation'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 export default function EvaluationsPage() {
   return <HrAuthenticatedScope callbackUrl="/hr/evaluations" resourceLabel="評価期間">{actor => <ScopedEvaluationsPage actor={actor} />}</HrAuthenticatedScope>
@@ -26,7 +27,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState<unknown>(null), [loginRequired, setLoginRequired] = useState(false)
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
   const errorStatus = loadError instanceof HrEvaluationPeriodListReadError ? loadError.status : undefined
-  const loadErrorText = loadError ? (loadError instanceof Error ? loadError.message : '評価期間を取得できませんでした。') : ''
+  const loadErrorText = loadError ? hrUserMessage(loadError, '評価期間を読み込めませんでした。時間をおいて再読み込みしてください。') : ''
   const uiNext = useToolUiNext()
   const reduceMotion = useReducedMotion()
   const still = uiNext && Boolean(reduceMotion)
@@ -280,7 +281,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
               <div className="flex items-start gap-3 text-left max-w-md w-full bg-emerald-50 rounded-2xl p-4">
                 <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black shrink-0 mt-0.5">3</span>
                 <div>
-                  <span className="text-sm font-bold text-slate-900">自己評価 → 上司評価 → 最終評価</span>
+                  <span className="inline-flex flex-wrap items-center gap-1 text-sm font-bold text-slate-900">自己評価<ChevronRight size={14} aria-hidden="true" />上司評価<ChevronRight size={14} aria-hidden="true" />最終評価</span>
                   <p className="text-xs text-slate-500 mt-0.5">3ステップで評価を進行。進捗はダッシュボードで確認できます</p>
                 </div>
               </div>

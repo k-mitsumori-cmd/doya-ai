@@ -5,8 +5,10 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { useToolUiNext } from './ui-next'
 import { hrErrorKind } from './HrLoadError'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface ImportResultRow {
   row: number
@@ -106,7 +108,7 @@ export default function CsvImportModal({
     setFileName(file.name)
     const reader = new FileReader()
     reader.onload = () => setCsvText(String(reader.result ?? ''))
-    reader.onerror = () => toast.error('ファイルの読み込みに失敗しました')
+    reader.onerror = () => toast.error('ファイルを読み込めませんでした。CSVファイルを選び直してください。')
     reader.readAsText(file, 'UTF-8')
   }
 
@@ -122,7 +124,7 @@ export default function CsvImportModal({
 
   const handleImport = async () => {
     if (!csvText.trim()) {
-      toast.error('CSVデータを入力するか、ファイルを選択してください')
+      toast.error('CSVの内容が空です。ファイルを選ぶか、内容を貼り付けてください。')
       return
     }
     setImporting(true)
@@ -147,7 +149,7 @@ export default function CsvImportModal({
           toast.error(message)
           return
         }
-        toast.error(data.error || 'インポートに失敗しました')
+        toast.error(hrUserMessage(data?.error, '一括登録できませんでした。時間をおいて、もう一度お試しください。'))
         return
       }
       const imported = data.imported ?? 0
@@ -157,11 +159,11 @@ export default function CsvImportModal({
         toast.success(`${imported}名を登録しました`)
         onImported()
       } else if (failed > 0) {
-        toast.error('登録できた従業員はありませんでした')
+        toast.error('登録できた従業員はいませんでした。エラーの詳細を確かめてください。')
       }
     } catch {
       if (uiNext) setImportError({ message: '一括登録できませんでした。通信状態を確認して、もう一度お試しください。', pricing: false })
-      toast.error('インポートに失敗しました')
+      toast.error('一括登録できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setImporting(false)
     }
@@ -228,8 +230,8 @@ export default function CsvImportModal({
                   {result.limitNotice && (
                     <div role="alert" className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
                       <p className="font-bold">{result.limitNotice.message}</p>
-                      <Link href={result.limitNotice.upgradeUrl || result.limitNotice.contactUrl || '/hr/pricing'} className="mt-2 inline-block font-bold underline underline-offset-2">
-                        {result.limitNotice.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ'} →
+                      <Link href={result.limitNotice.upgradeUrl || result.limitNotice.contactUrl || '/hr/pricing'} className="mt-2 inline-flex items-center gap-1 font-bold underline underline-offset-2">
+                        {result.limitNotice.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ'}<ArrowRight size={16} aria-hidden="true" />
                       </Link>
                     </div>
                   )}
@@ -242,7 +244,7 @@ export default function CsvImportModal({
                           .map((d, i) => (
                             <div key={i} className="px-4 py-2 text-sm flex items-start gap-2">
                               <span className="font-bold text-slate-700 shrink-0">{d.row}行目</span>
-                              <span className="text-red-600">{d.error}</span>
+                              <span className="text-red-600">{hrUserMessage(d.error, 'この行は登録できませんでした。内容を確かめてください。')}</span>
                             </div>
                           ))}
                       </div>

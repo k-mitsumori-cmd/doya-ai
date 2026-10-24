@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { alertDialog } from '@/components/ds/dialog'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface BillingInfo {
   plan: string
@@ -123,10 +125,10 @@ export default function BillingPage() {
       if (redirect) {
         window.location.href = redirect
       } else {
-        alert(data.error || 'ポータルセッションの作成に失敗しました')
+        await alertDialog({ title: '契約の管理画面を開けませんでした', message: hrUserMessage(data?.error, '時間をおいて、もう一度お試しください。続くときはお問い合わせください。'), tone: 'error' })
       }
     } catch {
-      if (organizationScope.isCurrent()) alert('エラーが発生しました。もう一度お試しください。')
+      if (organizationScope.isCurrent()) await alertDialog({ title: '契約の管理画面を開けませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setPortalLoading(false)
     }

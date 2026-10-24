@@ -1,5 +1,6 @@
 'use client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import { hrUserMessage } from '@/lib/hr/user-message'
 import { useEffect, useRef, useState } from 'react'
 import { loadHrDepartmentList } from '@/lib/hr/department-list-client'
 import type { DepartmentHierarchyRow } from '@/lib/hr/department-hierarchy'
@@ -30,7 +31,7 @@ export function useHrDepartmentList(status: string, actor: string, organizationI
     }).catch((error: unknown) => {
       if (current()) setView(old => ({ key, status: 'error', rows: old.key === key ? old.rows : [],
         organizationId: old.key === key ? old.organizationId : undefined,
-        error: error instanceof Error ? error.message : '部署一覧を取得できませんでした。再取得してください。' }))
+        error: hrUserMessage(error, '部署一覧を取得できませんでした。再取得してください。') }))
     })
     return () => { active = false; controller.abort() }
   }, [key, allowed, organizationId, attempt, organizationScope])

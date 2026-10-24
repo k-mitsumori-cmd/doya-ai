@@ -12,6 +12,7 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 
 interface Department {
   id: string
@@ -154,7 +155,9 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
         router.push('/hr/employees')
       }, 1200)
     } catch (e: any) {
-      toast.error(e.message)
+      // ⚠️ 通信の失敗（英語の TypeError など）はそのまま出さない。日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '従業員を登録できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setSaving(false)
     }
@@ -224,7 +227,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
         {limitNotice && !uiNext && (
           <div role="alert" className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p className="font-bold">{limitNotice.message}</p>
-            <Link href={limitNotice.href} className="mt-2 inline-block font-bold underline underline-offset-2">{limitNotice.label} →</Link>
+            <Link href={limitNotice.href} className="mt-2 inline-flex items-center gap-1 font-bold underline underline-offset-2">{limitNotice.label}<ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
         )}
 

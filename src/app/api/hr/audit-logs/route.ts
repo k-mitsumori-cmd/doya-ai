@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const url = req.nextUrl
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   } catch {
     console.error('[hr/audit-logs] failed')
     return NextResponse.json(
-      { error: 'Failed to fetch audit logs' },
+      { error: '操作の記録を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

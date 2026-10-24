@@ -10,7 +10,7 @@ import { getHrContext, hasMinRole } from '@/lib/hr/access'
 export async function GET() {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
 
     const org = await prisma.hrOrganization.findUnique({
       where: { id: ctx.organizationId },
@@ -59,7 +59,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (!hasMinRole(ctx.role, 'ADMIN')) {
       return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
     }

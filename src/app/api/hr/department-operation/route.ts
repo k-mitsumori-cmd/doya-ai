@@ -10,7 +10,7 @@ import { validDepartmentOperationId, readDepartmentCreationReceipt, cancelDepart
 async function operationRequest(request: Request, cancel: boolean) {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (!hasMinRole(ctx.role, 'ADMIN')) return privateApiJson({ error: '権限がありません' }, { status: 403 })
     const query = new URL(request.url).searchParams
     const operationId = query.get('operationId'), organizationId = query.get('organizationId')

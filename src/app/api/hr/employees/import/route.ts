@@ -64,23 +64,23 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const body = await req.json()
     const { csvText } = body
 
     if (!csvText || typeof csvText !== 'string') {
-      return NextResponse.json({ error: 'csvText is required' }, { status: 400 })
+      return NextResponse.json({ error: 'CSVの内容が空です。ファイルを選ぶか、内容を貼り付けてください。' }, { status: 400 })
     }
     if (csvText.length > MAX_CSV_CHARS) {
       return NextResponse.json({ error: 'CSVは100万文字以内にしてください' }, { status: 413 })
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: (error as Error).message }, { status: 400 })
     }
     if (rows.length < 2) {
-      return NextResponse.json({ error: 'CSV must have header and at least one data row' }, { status: 400 })
+      return NextResponse.json({ error: 'CSVには見出しの行と1行以上のデータが必要です。内容を確かめてください。' }, { status: 400 })
     }
     if (rows.length - 1 > MAX_CSV_ROWS) {
       return NextResponse.json({ error: `一度に登録できるのは${MAX_CSV_ROWS}名までです` }, { status: 413 })
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     const firstNameIdx = colMap['firstname']
     if (lastNameIdx === undefined || firstNameIdx === undefined) {
       return NextResponse.json(
-        { error: 'CSV must contain lastName and firstName columns' },
+        { error: 'CSVに lastName と firstName の列が必要です。見出しを確かめてください。' },
         { status: 400 }
       )
     }
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         const lastName = row[lastNameIdx]
         const firstName = row[firstNameIdx]
         if (!lastName || !firstName) {
-          results.push({ row: rowNumber, success: false, error: 'lastName/firstName missing' })
+          results.push({ row: rowNumber, success: false, error: 'この行は姓か名が空です。入力してから、もう一度取り込んでください。' })
           continue
         }
         if (limitNotice) {

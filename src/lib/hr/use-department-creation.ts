@@ -1,5 +1,6 @@
 'use client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import { hrUserMessage } from '@/lib/hr/user-message'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { parseCreatedSettingsDepartment, type SettingsDepartment } from '@/lib/hr/department-settings-client'
 
@@ -122,7 +123,7 @@ export function useHrDepartmentCreation(status: string, actor: string, organizat
     if (!active(operation) || !sameIntent(intent)) { sync(); return null }
     if (response.status !== 200) {
       message(response.status === 401 ? 'ログインの有効期限を確認してください。作成結果は再ログイン後に確認できます。' :
-        response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? response.data.error : '部署の作成結果を確認してください。作成処理は自動で再実行されません。', response.status === 401)
+        response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? hrUserMessage(response.data.error, '部署の作成結果を確認してください。作成処理は自動で再実行されません。') : '部署の作成結果を確認してください。作成処理は自動で再実行されません。', response.status === 401)
       return null
     }
     const result = parseResult(response.data, intent)

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface EmployeeDetail {
   id: string
@@ -91,7 +92,7 @@ export default function EmployeeDetailPage() {
     async function fetchEmployee() {
       try {
         const res = await fetch(`/api/hr/employees/${id}`)
-        if (!res.ok) throw new Error('従業員データの取得に失敗しました')
+        if (!res.ok) throw new Error(res.status === 404 ? 'この従業員は見つかりませんでした。一覧から選び直してください。' : '従業員の情報を読み込めませんでした。時間をおいて再読み込みしてください。')
         const data = await res.json()
         setCanManageEmployees(data.canManageEmployees === true)
         const emp = data.employee ?? data
@@ -100,7 +101,7 @@ export default function EmployeeDetailPage() {
         setOneOnOnes(data.oneOnOnes ?? emp.oneOnOnesAsEmployee ?? emp.oneOnOnes ?? [])
         setTransfers(data.transfers ?? emp.histories ?? [])
       } catch (e: any) {
-        setError(e.message)
+        setError(hrUserMessage(e, '従業員の情報を読み込めませんでした。時間をおいて再読み込みしてください。'))
       } finally {
         setLoading(false)
       }

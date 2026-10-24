@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (req.nextUrl.searchParams.get('format') === 'operation') return await evaluationOperationRequest(req, ctx, false)
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
         where: { id: periodId, organizationId: ctx.organizationId },
       })
       if (!period) {
-        return privateApiJson({ error: 'Period not found' }, { status: 404 })
+        return privateApiJson({ error: 'この評価期間は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
       }
     }
 
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
   } catch {
     console.error('[hr/evaluations][GET] failed')
     return privateApiJson(
-      { error: 'Failed to fetch evaluations' },
+      { error: '評価の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -102,9 +102,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const ctx = await getHrContext()
-    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const reader = await getEvaluationReader(ctx)
     if (!reader || reader.employeeId !== null) return privateApiJson({ error: '評価の作成はオーナー・管理者のみ実行できます' }, { status: 403 })
     const operation = readHrEvaluationCreationOperation(req)
@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
         if (state.state !== 'not_received') return privateApiJson({ error: '終了済みの操作で評価を作成することはできません。', state: state.state }, { status: 409 })
       }
       const period = await tx.hrEvaluationPeriod.findFirst({ where: { id: input.periodId, organizationId: ctx.organizationId }, select: { id: true } })
-      if (!period) return privateApiJson({ error: 'Period not found' }, { status: 404 })
-      if (await tx.hrEmployee.count({ where: { id: input.employeeId, organizationId: ctx.organizationId } }) !== 1) return privateApiJson({ error: 'Employee not found' }, { status: 404 })
+      if (!period) return privateApiJson({ error: 'この評価期間は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
+      if (await tx.hrEmployee.count({ where: { id: input.employeeId, organizationId: ctx.organizationId } }) !== 1) return privateApiJson({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
       if (input.evaluatorId && await tx.hrEmployee.count({ where: { id: input.evaluatorId, organizationId: ctx.organizationId } }) !== 1) return privateApiJson({ error: '評価者が同じ組織に存在しません' }, { status: 400 })
       const existing = await tx.hrEvaluation.findUnique({ where: { periodId_employeeId: { periodId: input.periodId, employeeId: input.employeeId } }, select: { id: true } })
       if (existing) return privateApiJson({ error: 'この従業員の評価はこの期間に既に作成されています' }, { status: 400 })
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof HrEvaluationCreationConflict) return privateApiJson({ error: '同じ操作に異なる作成内容を指定することはできません。' }, { status: 409 })
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') return privateApiJson({ error: '評価が作成または変更されています。作成結果を確認してください。' }, { status: 409 })
     console.error('[hr/evaluations][POST] failed')
-    return privateApiJson({ error: 'Failed to create evaluation' }, { status: 500 })
+    return privateApiJson({ error: '評価を作成できませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 })
   }
 }
 
@@ -152,7 +152,7 @@ async function evaluationOperationRequest(req: NextRequest, ctx: NonNullable<Awa
 export async function DELETE(req: NextRequest) {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (req.nextUrl.searchParams.get('format') !== 'operation') return privateApiJson({ error: 'この操作はサポートされていません。' }, { status: 405 })
     return await evaluationOperationRequest(req, ctx, true)
   } catch {
