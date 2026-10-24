@@ -28,6 +28,12 @@ export type ChargeLedger = {
 /** 作り直しを半分にする時間（前の消費から5分以内） */
 export const RETRY_HALF_WINDOW_MS = 5 * 60_000
 
+/**
+ * 有料の AI を呼んだあとに失敗した応答に、ハンドラが付ける印（値は '1'）。
+ * 付いた失敗の応答は戻さない（4xx/5xx でも、使った分は使ったものとして数える）。印は利用者に返す前に外す
+ */
+export const DOYA_POWER_CONSUMED_HEADER = 'x-doya-power-consumed'
+
 /** 作り直しの量: 半分（切り上げ）。1 は 1 のまま */
 export function halfAmount(amount: number): number {
   return Math.max(1, Math.ceil(amount / 2))
@@ -191,7 +197,11 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await outcome.refund()
       throw e
     }
-    if (res.status >= 400) await outcome.refund()
+    // 有料の AI を呼んだあとの失敗は、ハンドラが印（DOYA_POWER_CONSUMED_HEADER）を付けて知らせる。印があれば戻さない
+    // （失敗を起こして無料で AI を使えないように。印は利用者に返す前に外す）
+    const consumed = res.headers.get(DOYA_POWER_CONSUMED_HEADER) === '1'
+    if (consumed) { try { res.headers.delete(DOYA_POWER_CONSUMED_HEADER) } catch { /* 変えられない応答なら、そのまま返す */ } }
+    if (res.status >= 400 && !consumed) await outcome.refund()
     return res
   }
 

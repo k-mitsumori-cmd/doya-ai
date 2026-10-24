@@ -16,7 +16,12 @@ import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
 import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
 import { createDoyaPowerCharger } from './charge-core'
+import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 export { parseCount } from './count'
+export { DOYA_POWER_CONSUMED_HEADER } from './charge-core'
+
+/** 包みが本文を読むときの上限（課金の判定に使う短い項目だけを見る） */
+const CHARGE_BODY_MAX_BYTES = 64 * 1024
 import type { DoyaPowerAction } from './costs'
 
 export const doyaPowerCharger = createDoyaPowerCharger({
@@ -65,7 +70,17 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
   return async (req: NextRequest, ...rest: R): Promise<Response> => {
     // 旗が off なら、本文も読まずに今までの処理へ（台帳にもセッションにも触れない）
     if (doyaPowerRollout() === 'off') return handler(req, ...rest)
-    const body = (await req.clone().json().catch(() => null)) as Body
+    // 本文は、決まり（spec）が本文を見るときだけ読む。読むときも大きさに上限を付ける（大きな本文で処理を止められないように）
+    const needsBody = typeof spec.action === 'function' || !!(spec.invalid || spec.units || spec.key || spec.retryOf || spec.target)
+    let body: Body = null
+    if (needsBody) {
+      try {
+        body = await readOperationalJson(req.clone(), CHARGE_BODY_MAX_BYTES)
+      } catch (e) {
+        if (e instanceof OperationalBodyError && e.status === 413) return NextResponse.json({ error: '送った内容が大きすぎます。' }, { status: 413, headers: { 'Cache-Control': 'private, no-store' } })
+        body = null
+      }
+    }
     const bad = spec.invalid?.(body)
     if (bad) return NextResponse.json({ error: bad }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action

@@ -51,7 +51,9 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
   });
   await check('The wrapper calls the original handler untouched when the flag is off',async()=>{
     const src=code('src/lib/doya-power/charge.ts');
-    assert.match(src,/if \(doyaPowerRollout\(\) === 'off'\) return handler\(req, \.\.\.rest\)\s*const body =/);
+    // 旗の判定のあとで、本文は上限つき（readOperationalJson）でだけ読む。req.json() をそのまま読まない（大きな本文で止められないように）
+    assert.match(src,/if \(doyaPowerRollout\(\) === 'off'\) return handler\(req, \.\.\.rest\)[\s\S]*?readOperationalJson\(req\.clone\(\), CHARGE_BODY_MAX_BYTES\)/);
+    assert.doesNotMatch(src,/req\.clone\(\)\.json\(\)/);
     const core=code('src/lib/doya-power/charge-core.ts');
     assert.match(core,/if \(deps\.rollout\(\) === 'off'\) return null/);
   });

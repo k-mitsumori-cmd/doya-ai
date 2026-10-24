@@ -8,7 +8,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDoyaPowerLedger } from './ledger'
 import { createMemoryDb } from './memory-db'
-import { createDoyaPowerCharger, gaugeLimit, type ChargeDeps } from './charge-core'
+import { createDoyaPowerCharger, gaugeLimit, DOYA_POWER_CONSUMED_HEADER, type ChargeDeps } from './charge-core'
 import { DOYA_POWER_COSTS } from './costs'
 import { DAILY_RECOVERY_AMOUNT, SOLO_PRO_MONTHLY_GRANT } from './rules'
 
@@ -103,6 +103,18 @@ test('失敗（4xx/5xx の応答・例外）なら戻る。成功なら戻らな
   assert.equal(await s.remaining(), full)
   const r3 = await s.charger.run(await s.charger.charge('persona.generate'), async () => ok())
   assert.equal(r3.status, 200)
+  assert.equal(await s.remaining(), full - DOYA_POWER_COSTS['persona.generate'])
+})
+
+test('有料の AI を呼んだあとの失敗（印つきの応答）は戻らない。印は利用者に返す前に外す', async () => {
+  const s = setup()
+  const full = SOLO_PRO_MONTHLY_GRANT
+  const res = await s.charger.run(await s.charger.charge('persona.generate'), async () => new Response('{}', { status: 502, headers: { [DOYA_POWER_CONSUMED_HEADER]: '1' } }))
+  assert.equal(res.status, 502)
+  assert.equal(res.headers.get(DOYA_POWER_CONSUMED_HEADER), null)
+  assert.equal(await s.remaining(), full - DOYA_POWER_COSTS['persona.generate'])
+  // 印の値が '1' でなければ、今までどおり戻る
+  await s.charger.run(await s.charger.charge('persona.generate'), async () => new Response('{}', { status: 502, headers: { [DOYA_POWER_CONSUMED_HEADER]: 'yes' } }))
   assert.equal(await s.remaining(), full - DOYA_POWER_COSTS['persona.generate'])
 })
 
