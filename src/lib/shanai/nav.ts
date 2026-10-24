@@ -20,7 +20,6 @@ export const SHANAI_NAV: ShanaiNavItem[] = [
   { label: 'インタビュー一覧', href: SHANAI_BASE, icon: 'List', exact: true },
   { label: '新しく作る', href: SHANAI_BASE + '/new', icon: 'Plus', hot: true },
   { label: '会社情報', href: SHANAI_BASE + '/company', icon: 'Building2' },
-  { label: '料金プラン', href: SHANAI_BASE + '/pricing', icon: 'CreditCard' },
 ]
 
 /** pathname がその項目の選択中にあたるか（インタビュー詳細は「インタビュー一覧」の中） */

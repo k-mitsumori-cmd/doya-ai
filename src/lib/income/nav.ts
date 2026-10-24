@@ -14,5 +14,4 @@ export const INCOME_NAV: ShellNavItem[] = [
   { label: '契約', href: '/income/contracts', icon: 'FileText' },
   { label: '取引先', href: '/income/clients', icon: 'Building2' },
   { label: '設定', href: '/income/settings', icon: 'Settings' },
-  { label: '料金プラン', href: '/income/pricing', icon: 'CreditCard' },
 ]

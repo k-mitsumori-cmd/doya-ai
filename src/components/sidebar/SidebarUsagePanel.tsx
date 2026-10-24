@@ -86,12 +86,15 @@ export function SidebarUsagePanel({
   refreshEvent,
   organizationSlug,
   pricingHref,
+  pricingLabel = '組織のプランと利用枠を確認',
 }: {
   service: string
   show: boolean
   refreshEvent?: string
   organizationSlug?: string | null
   pricingHref?: string
+  /** pricingHref のリンクの文言 */
+  pricingLabel?: string
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
   const { data: session, status } = useSession()
@@ -190,7 +193,7 @@ export function SidebarUsagePanel({
       )}
       {pricingHref && (
         <Link href={pricingHref} className="mt-3 block rounded-lg bg-white px-3 py-2 text-center text-[11px] font-black text-slate-800 hover:bg-slate-100">
-          組織のプランと利用枠を確認
+          {pricingLabel}
         </Link>
       )}
     </div>

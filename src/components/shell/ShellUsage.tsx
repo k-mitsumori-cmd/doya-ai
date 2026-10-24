@@ -8,12 +8,13 @@
 // ⚠️ 上限に達したときのモーダルは各ツールに残っている。ここは表示だけ。
 // ⚠️ 新しい見た目では、左下には出さない（ツールを押すたびに左下が入れ替わって分かりにくい。2026-10-24 ユーザーの指摘）。
 //    ツールの見出しの帯（ToolFrame）の「このツールの残りとプラン」に出す（useToolUsageBody）。今の見た目は左下のまま（ShellUsageArea）
+// ⚠️ ツールのタブには料金プランを入れない（FRM-04）。代わりに、ここにいつもそのツールの料金のページへのリンクを出す
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { SidebarUsagePanel } from '@/components/sidebar'
 import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
-import { shellServiceForPath, type ShellUsage } from './registry'
+import { shellServiceForPath, toolPricingHref, type ShellUsage } from './registry'
 import { useUiNext } from './ui-next-context'
 
 type SlotSetter = (node: ReactNode | null) => void
@@ -106,8 +107,9 @@ export function useToolUsageBody(): ReactNode | null {
 
 function usageBody(pathname: string, slot: ReactNode | null): ReactNode {
   if (slot) return slot
-  const usage = shellServiceForPath(pathname)?.usage
-  if (!usage) return null
+  const svc = shellServiceForPath(pathname)
+  const usage = svc?.usage
+  if (!svc || !usage) return null
   if (usage.org === 'quote') return <QuoteUsage key={usage.service} usage={usage} />
   const organizationSlug = usage.org === 'path' ? orgFromPath(pathname) : undefined
   return (
@@ -115,7 +117,8 @@ function usageBody(pathname: string, slot: ReactNode | null): ReactNode {
       key={usage.service}
       service={usage.service}
       refreshEvent={usage.refreshEvent}
-      pricingHref={usage.pricingHref}
+      pricingHref={toolPricingHref(svc, organizationSlug)}
+      pricingLabel={organizationSlug ? undefined : 'プランと料金を見る'}
       organizationSlug={organizationSlug}
       show
     />

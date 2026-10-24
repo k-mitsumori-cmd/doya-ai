@@ -26,7 +26,6 @@ export const HR_MAIN_NAV: HrNavItem[] = [
 export const HR_ADMIN_NAV: HrNavItem[] = [
   { href: '/hr/settings', label: '設定', icon: 'Settings', exact: true },
   { href: '/hr/settings/billing', label: '現在のプラン', icon: 'CreditCard' },
-  { href: '/hr/pricing', label: '料金プラン', icon: 'Tag' },
 ]
 
 /** 表示の条件（従業員を追加は管理者だけ）を当てた一覧 */

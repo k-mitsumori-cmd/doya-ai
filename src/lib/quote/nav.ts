@@ -7,5 +7,4 @@ export const QUOTE_BASE = '/quote'
 export const QUOTE_NAV: ShellNavItem[] = [
   { label: '見積書をつくる', href: QUOTE_BASE, icon: 'Receipt', exact: true },
   { label: '設定', href: `${QUOTE_BASE}/settings`, icon: 'Settings' },
-  { label: '料金プラン', href: `${QUOTE_BASE}/pricing`, icon: 'CreditCard' },
 ]

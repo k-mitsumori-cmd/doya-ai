@@ -37,7 +37,7 @@ export interface ShellUsage {
   service: string
   /** この名前のイベントが来たら数字を読み直す（今のサイドバーと同じ名前） */
   refreshEvent?: string
-  /** 「プランを見る」の行き先。省略すると SidebarUsagePanel の既定 */
+  /** 「このツールの残りとプラン」の料金へのリンクの行き先。省略すると /<ツール>/pricing（toolPricingHref） */
   pricingHref?: string
   /**
    * 組織ごとに数えるツールの、組織の取り方。
@@ -53,7 +53,9 @@ export const SHELL_SERVICES: ShellService[] = [
   // 支出管理は組織を選んだあと（/expense/<組織>）だけ枠に入る。入口（/expense）と料金（/expense/pricing）は今までどおり
   { id: 'expense', basePath: '/expense', always: true, inShell: (p) => /^\/expense\/[^/]+/.test(p) && !p.startsWith('/expense/pricing') },
   { id: 'popup', basePath: '/popup', usage: { service: 'popup', refreshEvent: 'popup:generated' } },
-  { id: 'tenjikai', basePath: '/tenjikai' },
+  // 展示会は UI_SHELL_SERVICES に関係なく、いつも枠に入る（2026-10-24 ユーザーの決定 FRM-05）。
+  // ⚠️ src/app/(shell)/tenjikai/layout.tsx も、ログインしていれば環境変数を見ずに ToolFrame を出す。両方を同じにする
+  { id: 'tenjikai', basePath: '/tenjikai', always: true },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer'), usage: { service: 'shanai', refreshEvent: 'shanai:generated' } },
   { id: 'doyalist', basePath: '/doyalist' },
@@ -83,6 +85,16 @@ export const SHELL_SERVICES: ShellService[] = [
   // 勤怠の紹介ページ（/kintai）・料金（/kintai/pricing）・招待（/kintai/invite*）は枠を出さない（KintaiLayout の公開ページと同じ判定）
   { id: 'kintai', basePath: '/kintai', inShell: (p) => p !== '/kintai' && p !== '/kintai/pricing' && !p.startsWith('/kintai/invite') },
 ]
+
+/**
+ * 料金のページの行き先。台帳に pricingHref があればそれ、無ければ /<ツール>/pricing（組織ごとのツールは ?org= を付ける。
+ * 料金のページは ?org= でその組織のプランを出す）
+ */
+export function toolPricingHref(svc: Pick<ShellService, 'basePath'> & { usage?: Pick<ShellUsage, 'pricingHref'> }, organizationSlug?: string | null): string {
+  if (svc.usage?.pricingHref) return svc.usage.pricingHref
+  const base = `${svc.basePath}/pricing`
+  return organizationSlug ? `${base}?org=${encodeURIComponent(organizationSlug)}` : base
+}
 
 /** 今のパスが、台帳のどのツールに当たるか */
 export function shellServiceForPath(pathname: string | null | undefined): ShellService | null {

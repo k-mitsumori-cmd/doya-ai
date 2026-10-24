@@ -20,7 +20,5 @@ export function buildAioNav(orgSlug: string): AioNavItem[] {
     { label: 'URL AI調査', href: `${base}/scan`, icon: 'ScanSearch', hot: true },
     { label: 'ダッシュボード', href: base, icon: 'LayoutDashboard', exact: true },
     { label: 'スキャン履歴', href: `${base}/history`, icon: 'History' },
-    // 料金ページは組織の下ではなく /aio/pricing。組織は ?org= で渡す
-    { label: '料金プラン', href: `/aio/pricing?org=${encodeURIComponent(orgSlug)}`, icon: 'CreditCard' },
   ]
 }

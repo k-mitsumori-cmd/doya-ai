@@ -172,7 +172,8 @@ test('エージェントの道具は API と同じ lib 関数を呼ぶ（処理�
 })
 
 test('nav.ts: サイドバーの項目はデータで、選択中の判定', () => {
-  assert.deepEqual(POPUP_NAV.map((n) => n.href), ['/popup', '/popup/pricing'])
+  // 料金のタブはナビに入れない（FRM-04。料金は枠の左下と「このツールの残りとプラン」から開く）
+  assert.deepEqual(POPUP_NAV.map((n) => n.href), ['/popup'])
   // アイコンは名前の文字列（関数だとサーバの layout から渡せず 500 になる）。対応表にある名前だけ
   const { SHELL_ICONS } = require('../../components/shell/icons') as typeof import('../../components/shell/icons')
   for (const n of POPUP_NAV) {
@@ -183,8 +184,8 @@ test('nav.ts: サイドバーの項目はデータで、選択中の判定', () 
   assert.ok(isPopupNavActive(home, '/popup'))
   assert.ok(isPopupNavActive(home, '/popup/sites/abc'))
   assert.ok(isPopupNavActive(home, '/popup/edit/abc'))
+  // 料金のページ（直リンクで開ける）では、トップのタブを選択中にしない
   assert.ok(!isPopupNavActive(home, '/popup/pricing'))
-  assert.ok(isPopupNavActive(POPUP_NAV[1], '/popup/pricing'))
   const sidebar = readFileSync(join(process.cwd(), 'src/components/popup/PopupSidebar.tsx'), 'utf8')
   assert.ok(/POPUP_NAV\.map/.test(sidebar), 'サイドバーが nav.ts を描いていない')
   assert.ok(!/label: '/.test(sidebar), 'サイドバーに nav.ts 以外の項目がある（D-1）')

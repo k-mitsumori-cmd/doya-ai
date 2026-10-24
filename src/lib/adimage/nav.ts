@@ -10,5 +10,4 @@ export const ADIMAGE_BASE = '/adimage'
 export const ADIMAGE_NAV: ShellNavItem[] = [
   { label: '広告画像をつくる', href: ADIMAGE_BASE, icon: 'Megaphone', exact: true },
   { label: 'これまでの画像', href: `${ADIMAGE_BASE}/history`, icon: 'History' },
-  { label: '料金プラン', href: `${ADIMAGE_BASE}/pricing`, icon: 'CreditCard' },
 ]

@@ -20,7 +20,7 @@
   - 開発用の見本（`/<ツール>/dev/...`）でも、第三者が開く画面（`src/lib/ui/guest-path.ts`）でもない
 - ツールの layout は、枠で包まない。ツール内のナビ（ToolFrame）だけを出す。
 
-既に載っているもの: 経営ホーム（`home`）・収入管理・支出管理（いつも枠）、ポップアップ・展示会・社内インタビュー（設定で枠）。
+既に載っているもの: 経営ホーム（`home`）・収入管理・支出管理・展示会（いつも枠。展示会は 2026-10-24 のユーザーの決定 FRM-05 から）、ポップアップ・社内インタビュー（設定で枠）。
 
 ---
 
@@ -71,14 +71,14 @@ import type { ShellNavItem } from '@/components/shell/nav'
 export const QUOTE_NAV: ShellNavItem[] = [
   { label: '見積書をつくる', href: '/quote', icon: 'Receipt', exact: true },
   { label: '設定', href: '/quote/settings', icon: 'Settings' },
-  { label: '料金プラン', href: '/quote/pricing', icon: 'CreditCard' },
 ]
 ```
 
 - `icon` は**名前の文字列**で書く。lucide の部品（関数）を渡すと、サーバーの layout から渡したときに全画面が 500 になる
 - 名前は `src/components/shell/icons.tsx` の対応表にあるもの。無ければ対応表に足す（共通部品の担当に知らせる）。無い名前は既定のアイコンになる
 - 今のサイドバー（`QuoteSidebar` など）も、この配列を描くだけにする。描くときは `resolveShellIcon(item.icon)` で部品を引く
-- 料金プランとログアウトは枠の下にあるので、ナビに入れなくてよい（入れてもよい）
+- 料金プランのタブは**ナビに入れない**（2026-10-24 ユーザーの決定 FRM-04）。料金は枠の左下のアカウント欄と、ToolFrame の「このツールの残りとプラン」から開く。料金のページ（`/<ツール>/pricing`）は消さずに、直リンクで開けるまま残す。`src/components/shell/registry.test.ts` が確かめる
+- ログアウトも枠の下にあるので、ナビに入れない
 
 ### 2.4 layout を書き換える
 
