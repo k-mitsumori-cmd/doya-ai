@@ -22,7 +22,7 @@ export default function ShanaiFrame({ shell, children }: { shell: boolean; child
   if (isGuestPath(pathname)) return <>{children}</>
   if (!shell) return <ShanaiAppLayout>{children}</ShanaiAppLayout>
   return (
-    <ToolFrame serviceId="shanai" title="ドヤ社内インタビュー" description="録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。" nav={SHANAI_NAV}>
+    <ToolFrame serviceId="shanai" nav={SHANAI_NAV}>
       <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>
     </ToolFrame>
   )

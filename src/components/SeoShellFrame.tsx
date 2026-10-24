@@ -60,8 +60,6 @@ export default function SeoShellFrame({
   return (
     <ToolFrame
       serviceId="seo"
-      title="ドヤ記事作成"
-      description="SEOツール"
       nav={nav}
       action={
         <div className="flex items-center gap-2">

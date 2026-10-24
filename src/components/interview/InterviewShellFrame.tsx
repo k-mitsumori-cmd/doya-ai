@@ -16,8 +16,6 @@ export default function InterviewShellFrame({ children }: { children: React.Reac
   return (
     <ToolFrame
       serviceId="interview"
-      title="ドヤインタビューAI"
-      description="取材の音声から、AIがインタビュー記事を作ります。"
       nav={INTERVIEW_NAV}
     >
       {/* 新しい見た目では、本文に左右の余白を付ける（今まで画面の端に貼り付いていた。旧レイアウトの余白と同じ値） */}

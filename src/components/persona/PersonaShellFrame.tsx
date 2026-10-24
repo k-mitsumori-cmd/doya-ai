@@ -15,8 +15,6 @@ export default function PersonaShellFrame({ children }: { children: React.ReactN
   return (
     <ToolFrame
       serviceId="persona"
-      title="ドヤペルソナAI"
-      description="ターゲットの人物像を、AIが具体的なペルソナにまとめます。"
       nav={PERSONA_NAV}
     >
       {uiNext ? <div className={brand.brand}>{children}</div> : children}
