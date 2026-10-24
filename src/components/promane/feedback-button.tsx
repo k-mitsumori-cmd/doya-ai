@@ -78,7 +78,7 @@ export function FeedbackButton({
       {variant === 'floating' && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white font-black text-[13px] shadow-xl shadow-violet-500/30 transition-all hover:scale-105 active:scale-95"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 text-white font-black text-[13px] shadow-xl shadow-brand-400/30 transition-all hover:scale-105 active:scale-95"
           title="フィードバック・不具合報告"
         >
           <MessageSquare className="h-4 w-4" />
@@ -89,7 +89,7 @@ export function FeedbackButton({
       {variant === 'inline' && (
         <Button
           onClick={() => setOpen(true)}
-          className={className || 'rounded-full font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white shadow-md'}
+          className={className || 'rounded-full font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 text-white shadow-md'}
         >
           <MessageSquare className="h-4 w-4 mr-2" />
           {children || 'フィードバック・不具合報告'}
@@ -113,7 +113,7 @@ export function FeedbackButton({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-brand-50">
               <div className="flex items-center gap-3">
                 <Image src="/character/love.png" alt="" width={44} height={44} unoptimized />
                 <div>
@@ -190,7 +190,7 @@ export function FeedbackButton({
                 <Button
                   onClick={handleSend}
                   disabled={sending || !message.trim()}
-                  className="rounded-full font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-md"
+                  className="rounded-full font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-md"
                 >
                   <Send className="h-4 w-4 mr-1.5" />
                   {sending ? '送信中...' : '送信'}

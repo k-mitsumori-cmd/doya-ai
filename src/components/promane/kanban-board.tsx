@@ -101,7 +101,7 @@ export function KanbanBoard({
         icon: <Image src="/character/jump.png" alt="" width={36} height={36} unoptimized />,
         duration: 4000,
         style: {
-          background: "linear-gradient(135deg, #dbeafe, #ede9fe)",
+          background: "linear-gradient(135deg, #dbeafe, #eaf2ff)",
           border: "2px solid #818cf8",
           fontSize: "15px",
           fontWeight: 900,

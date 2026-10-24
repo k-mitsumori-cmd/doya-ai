@@ -34,7 +34,7 @@ export default function PromanePricingPage() {
         <div className="mx-auto max-w-3xl">
           <span
             className="inline-block rounded-full px-4 py-1.5 text-sm font-semibold"
-            style={{ backgroundColor: 'rgba(127, 25, 230, 0.1)', color: '#7f19e6' }}
+            style={{ backgroundColor: 'rgba(0, 102, 255, 0.1)', color: '#0066ff' }}
           >
             料金プラン
           </span>
@@ -70,7 +70,7 @@ export default function PromanePricingPage() {
                 <h3 className="flex items-start gap-2 text-lg font-semibold text-gray-900">
                   <span
                     className="material-symbols-outlined mt-0.5 text-xl"
-                    style={{ color: '#7f19e6' }}
+                    style={{ color: '#0066ff' }}
                     aria-hidden
                   >
                     help

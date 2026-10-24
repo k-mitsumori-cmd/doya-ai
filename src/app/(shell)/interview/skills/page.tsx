@@ -291,7 +291,7 @@ export default function SkillManagementPage() {
   if (sessionStatus === 'loading') {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="inline-block w-8 h-8 border-2 border-slate-300 border-t-[#7f19e6] rounded-full animate-spin" />
+        <div className="inline-block w-8 h-8 border-2 border-slate-300 border-t-[#0066ff] rounded-full animate-spin" />
       </div>
     )
   }
@@ -300,14 +300,14 @@ export default function SkillManagementPage() {
     return (
       <div className="max-w-md mx-auto mt-20 text-center">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10">
-          <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
+          <div className="w-16 h-16 bg-[#0066ff]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span className="material-symbols-outlined text-[#0066ff] text-3xl">lock</span>
           </div>
           <h2 className="text-xl font-black text-slate-900 mb-2">ログインが必要です</h2>
           <p className="text-slate-500 text-sm mb-6">スキル管理を利用するにはログインしてください</p>
           <Link
             href="/auth/signin?callbackUrl=/interview/skills"
-            className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25"
+            className="inline-flex items-center gap-2 bg-[#0066ff] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#0047d6] transition-all shadow-lg shadow-[#0066ff]/25"
           >
             <span className="material-symbols-outlined text-lg">login</span>
             ログインする
@@ -331,14 +331,14 @@ export default function SkillManagementPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setShowAiModal(true); setAiPreview(null); setAiSampleText(''); setAiName('') }}
-            className="px-4 py-2.5 bg-white text-[#7f19e6] border border-[#7f19e6] rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2.5 bg-white text-[#0066ff] border border-[#0066ff] rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-lg">auto_awesome</span>
             AIで自動生成
           </button>
           <button
             onClick={openCreateModal}
-            className="px-4 py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-bold hover:bg-[#6b12c9] transition-colors flex items-center gap-2 shadow-lg shadow-[#7f19e6]/20"
+            className="px-4 py-2.5 bg-[#0066ff] text-white rounded-lg text-sm font-bold hover:bg-[#0047d6] transition-colors flex items-center gap-2 shadow-lg shadow-[#0066ff]/20"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             新規作成
@@ -355,24 +355,24 @@ export default function SkillManagementPage() {
             <button
               onClick={() => { setFilterCategory(null); setShowOnlyCustom(false) }}
               className={`w-full flex justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                !filterCategory && !showOnlyCustom ? 'bg-[#7f19e6]/10 text-[#7f19e6] font-bold' : 'text-slate-600 hover:bg-slate-50'
+                !filterCategory && !showOnlyCustom ? 'bg-[#0066ff]/10 text-[#0066ff] font-bold' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span className="flex gap-3 items-center">
                 <span className="material-symbols-outlined text-lg">view_list</span> すべてのスキル
               </span>
-              <span className={`px-2 rounded ${!filterCategory && !showOnlyCustom ? 'bg-[#7f19e6]/20' : 'bg-slate-100'}`}>{recipes.length}</span>
+              <span className={`px-2 rounded ${!filterCategory && !showOnlyCustom ? 'bg-[#0066ff]/20' : 'bg-slate-100'}`}>{recipes.length}</span>
             </button>
             <button
               onClick={() => { setShowOnlyCustom(true); setFilterCategory(null) }}
               className={`w-full flex justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                showOnlyCustom ? 'bg-[#7f19e6]/10 text-[#7f19e6] font-bold' : 'text-slate-600 hover:bg-slate-50'
+                showOnlyCustom ? 'bg-[#0066ff]/10 text-[#0066ff] font-bold' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               <span className="flex gap-3 items-center">
-                <span className={`material-symbols-outlined text-lg ${showOnlyCustom ? 'text-[#7f19e6]' : 'text-slate-400'}`}>person</span> カスタム
+                <span className={`material-symbols-outlined text-lg ${showOnlyCustom ? 'text-[#0066ff]' : 'text-slate-400'}`}>person</span> カスタム
               </span>
-              <span className={`px-2 rounded ${showOnlyCustom ? 'bg-[#7f19e6]/20' : 'bg-slate-100'}`}>{recipes.filter(r => !r.isTemplate).length}</span>
+              <span className={`px-2 rounded ${showOnlyCustom ? 'bg-[#0066ff]/20' : 'bg-slate-100'}`}>{recipes.filter(r => !r.isTemplate).length}</span>
             </button>
             <button
               onClick={() => { setShowOnlyCustom(false); setFilterCategory(null) }}
@@ -411,10 +411,10 @@ export default function SkillManagementPage() {
                     key={recipe.id}
                     onClick={() => setSelectedRecipe(recipe)}
                     className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-center gap-3 ${
-                      selectedRecipe?.id === recipe.id ? 'bg-[#7f19e6]/5 border-l-2 border-[#7f19e6]' : ''
+                      selectedRecipe?.id === recipe.id ? 'bg-[#0066ff]/5 border-l-2 border-[#0066ff]' : ''
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[#7f19e6] text-xl shrink-0">
+                    <span className="material-symbols-outlined text-[#0066ff] text-xl shrink-0">
                       {CATEGORY_ICONS[recipe.category!] || 'description'}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -442,7 +442,7 @@ export default function SkillManagementPage() {
                   <div className="flex gap-2">
                     {!selectedRecipe.isTemplate ? (
                       <>
-                        <button onClick={() => openEditModal(selectedRecipe)} className="p-2 text-slate-400 hover:text-[#7f19e6] transition-colors">
+                        <button onClick={() => openEditModal(selectedRecipe)} className="p-2 text-slate-400 hover:text-[#0066ff] transition-colors">
                           <span className="material-symbols-outlined">edit</span>
                         </button>
                         <button onClick={() => setDeleteTarget(selectedRecipe)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
@@ -450,7 +450,7 @@ export default function SkillManagementPage() {
                         </button>
                       </>
                     ) : (
-                      <button onClick={() => handleDuplicate(selectedRecipe)} className="p-2 text-slate-400 hover:text-[#7f19e6] transition-colors">
+                      <button onClick={() => handleDuplicate(selectedRecipe)} className="p-2 text-slate-400 hover:text-[#0066ff] transition-colors">
                         <span className="material-symbols-outlined">content_copy</span>
                       </button>
                     )}
@@ -467,7 +467,7 @@ export default function SkillManagementPage() {
               <div className="space-y-6">
                 {selectedRecipe.editingGuidelines ? (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase text-[#7f19e6] tracking-wider">AI編集方針</h3>
+                    <h3 className="text-xs font-bold uppercase text-[#0066ff] tracking-wider">AI編集方針</h3>
                     <div className="bg-slate-50 rounded-xl p-4 font-mono text-sm text-slate-600 leading-relaxed border border-slate-100 whitespace-pre-wrap">
                       {selectedRecipe.editingGuidelines}
                     </div>
@@ -480,7 +480,7 @@ export default function SkillManagementPage() {
                 )}
                 <div className="flex justify-end">
                   {!selectedRecipe.isTemplate ? (
-                    <button onClick={() => openEditModal(selectedRecipe)} className="bg-[#7f19e6] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20">
+                    <button onClick={() => openEditModal(selectedRecipe)} className="bg-[#0066ff] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20">
                       編集する
                     </button>
                   ) : (
@@ -529,7 +529,7 @@ export default function SkillManagementPage() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="例: 社内報向けインタビュー"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]"
                 />
               </div>
 
@@ -538,7 +538,7 @@ export default function SkillManagementPage() {
                 <select
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]"
                 >
                   {CATEGORY_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -555,7 +555,7 @@ export default function SkillManagementPage() {
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="このスキルの概要を記入..."
                   rows={2}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6] resize-none"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff] resize-none"
                 />
               </div>
 
@@ -566,7 +566,7 @@ export default function SkillManagementPage() {
                   onChange={(e) => setFormGuidelines(e.target.value)}
                   placeholder={`例:\n# 出力形式\n- ストーリー形式\n- 3000〜5000文字\n\n# トーン\n- カジュアルだが信頼感のある文体\n\n# 構成\n1. リード文\n2. 経歴紹介\n3. インタビュー本文\n4. まとめ`}
                   rows={8}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-[#7f19e6] resize-y"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-[#0066ff] resize-y"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">Markdown形式で記入できます。AIが記事生成時にこの方針に従います。</p>
               </div>
@@ -582,7 +582,7 @@ export default function SkillManagementPage() {
               <button
                 onClick={handleSave}
                 disabled={!formName.trim() || formSaving}
-                className="flex-1 px-4 py-2.5 text-sm text-white bg-[#7f19e6] rounded-lg hover:bg-[#6b12c9] disabled:opacity-50 font-bold shadow-lg shadow-[#7f19e6]/20"
+                className="flex-1 px-4 py-2.5 text-sm text-white bg-[#0066ff] rounded-lg hover:bg-[#0047d6] disabled:opacity-50 font-bold shadow-lg shadow-[#0066ff]/20"
               >
                 {formSaving ? '保存中...' : editingId ? '更新' : '作成'}
               </button>
@@ -608,7 +608,7 @@ export default function SkillManagementPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-[#7f19e6]">auto_awesome</span>
+              <span className="material-symbols-outlined text-[#0066ff]">auto_awesome</span>
               <h2 className="text-lg font-bold text-slate-900">サンプル記事からスキルを自動生成</h2>
             </div>
             <p className="text-xs text-slate-500 mb-4">お手本にしたい記事を貼り付けると、AIが構成パターンを分析してスキルを作成します</p>
@@ -622,7 +622,7 @@ export default function SkillManagementPage() {
                     value={aiName}
                     onChange={(e) => setAiName(e.target.value)}
                     placeholder="自動命名されます"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]"
                   />
                 </div>
                 <div>
@@ -630,7 +630,7 @@ export default function SkillManagementPage() {
                   <select
                     value={aiCategory}
                     onChange={(e) => setAiCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]"
                   >
                     {CATEGORY_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -649,15 +649,15 @@ export default function SkillManagementPage() {
                   maxLength={15000}
                   placeholder="お手本にしたいインタビュー記事のテキストをここに貼り付けてください...&#10;&#10;AIが構成・文体・トーンを分析してスキルを生成します。"
                   rows={10}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-[#7f19e6] resize-y"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-[#0066ff] resize-y"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">{aiSampleText.length.toLocaleString()} / 15,000文字</p>
               </div>
 
               {aiDailyLimit !== null && (
-                <div role="status" className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-slate-700">
+                <div role="status" className="rounded-lg border border-brand-100 bg-brand-50 p-3 text-sm text-slate-700">
                   <p>本日のレシピ自動生成の上限（{aiDailyLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
-                  {aiLimitAction && <Link href={aiLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-block font-bold text-purple-700 underline">{aiLimitAction === 'contact' ? '追加枠を相談する' : 'プランを確認する'}</Link>}
+                  {aiLimitAction && <Link href={aiLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline">{aiLimitAction === 'contact' ? '追加枠を相談する' : 'プランを確認する'}</Link>}
                 </div>
               )}
 
@@ -665,7 +665,7 @@ export default function SkillManagementPage() {
                 <button
                   onClick={handleAiGenerate}
                   disabled={!aiSampleText.trim() || aiGenerating}
-                  className="w-full py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-bold hover:bg-[#6b12c9] disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#7f19e6]/20"
+                  className="w-full py-2.5 bg-[#0066ff] text-white rounded-lg text-sm font-bold hover:bg-[#0047d6] disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#0066ff]/20"
                 >
                   {aiGenerating ? (
                     <>
@@ -683,15 +683,15 @@ export default function SkillManagementPage() {
 
               {aiGenerating && !aiPreview && (
                 <div className="text-center py-4">
-                  <div className="inline-block w-8 h-8 border-2 border-blue-300 border-t-[#7f19e6] rounded-full animate-spin" />
+                  <div className="inline-block w-8 h-8 border-2 border-blue-300 border-t-[#0066ff] rounded-full animate-spin" />
                 </div>
               )}
 
               {aiPreview && (
-                <div className="border border-[#7f19e6]/20 bg-blue-50 rounded-xl p-4 space-y-3">
+                <div className="border border-[#0066ff]/20 bg-blue-50 rounded-xl p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#7f19e6] text-lg">verified</span>
-                    <p className="text-xs font-bold text-[#7f19e6]">AI分析結果プレビュー</p>
+                    <span className="material-symbols-outlined text-[#0066ff] text-lg">verified</span>
+                    <p className="text-xs font-bold text-[#0066ff]">AI分析結果プレビュー</p>
                   </div>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
@@ -748,7 +748,7 @@ export default function SkillManagementPage() {
                     <button
                       onClick={handleAiSave}
                       disabled={aiGenerating}
-                      className="flex-1 py-2 bg-[#7f19e6] text-white rounded-lg text-xs font-bold hover:bg-[#6b12c9] disabled:opacity-50 shadow-lg shadow-[#7f19e6]/20"
+                      className="flex-1 py-2 bg-[#0066ff] text-white rounded-lg text-xs font-bold hover:bg-[#0047d6] disabled:opacity-50 shadow-lg shadow-[#0066ff]/20"
                     >
                       {aiGenerating ? '保存中...' : 'このスキルを保存'}
                     </button>

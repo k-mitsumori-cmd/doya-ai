@@ -35,8 +35,8 @@ const AVATAR_COLORS = [
   'from-red-400 to-red-600',
   'from-green-400 to-green-600',
   'from-amber-400 to-amber-600',
-  'from-purple-400 to-purple-600',
-  'from-pink-400 to-pink-600',
+  'from-brand-300 to-brand-500',
+  'from-brand-500 to-brand-700',
 ]
 
 function formatHireDate(dateStr: string): string {

@@ -279,7 +279,7 @@ function InviteContent({ token }: { token: string }) {
                   key={i}
                   className="absolute w-3 h-3 rounded-full"
                   style={{
-                    background: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][i % 6],
+                    background: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#3d80ff', '#EC4899'][i % 6],
                     left: `${20 + Math.random() * 60}%`,
                     top: '40%',
                   }}

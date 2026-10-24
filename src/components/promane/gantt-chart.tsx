@@ -254,7 +254,7 @@ export function GanttChart({
       </div>
 
       {editingTask && (
-        <div className="border-t border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 px-6 py-4 animate-slide-up">
+        <div className="border-t border-gray-100 bg-gradient-to-r from-blue-50 to-brand-50 px-6 py-4 animate-slide-up">
           <div className="flex items-center gap-5 flex-wrap">
             <Image src="/character/focus.png" alt="" width={40} height={40} className="animate-bounce-in drop-shadow-md" unoptimized />
             <span className="text-[16px] font-black text-gray-800">
@@ -268,7 +268,7 @@ export function GanttChart({
               <span className="text-[14px] font-bold text-blue-600">🏁 終了</span>
               <Input type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
             </div>
-            <Button onClick={() => handleSaveDates(editingTask)} className="h-11 rounded-full font-black px-6 text-[14px] shadow-md bg-gradient-to-r from-blue-500 to-violet-600 hover:scale-105 active:scale-95 transition-all">
+            <Button onClick={() => handleSaveDates(editingTask)} className="h-11 rounded-full font-black px-6 text-[14px] shadow-md bg-gradient-to-r from-blue-500 to-brand-500 hover:scale-105 active:scale-95 transition-all">
               ✨ 保存！
             </Button>
             <button onClick={() => setEditingTask(null)} className="text-[14px] font-bold text-gray-400 hover:text-gray-600 transition-colors">

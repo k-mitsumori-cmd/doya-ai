@@ -647,7 +647,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
               className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
               {/* グラデーションヘッダー */}
-              <div className="h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+              <div className="h-2 bg-gradient-to-r from-blue-500 via-brand-400 to-brand-600">
                 <motion.div
                   className="h-full bg-white/30"
                   animate={{ x: ['-100%', '100%'] }}
@@ -661,13 +661,13 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                   {/* 外側の回転リング */}
                   <motion.div
                     className="absolute inset-0 rounded-full border-4 border-blue-200"
-                    style={{ borderTopColor: '#2563EB', borderRightColor: '#8B5CF6' }}
+                    style={{ borderTopColor: '#2563EB', borderRightColor: '#3d80ff' }}
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                   />
                   {/* 内側のパルス */}
                   <motion.div
-                    className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
+                    className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-brand-500 flex items-center justify-center"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >

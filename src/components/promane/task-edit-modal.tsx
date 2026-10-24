@@ -205,7 +205,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
                   onClick={() => setPriority(p.value)}
                   className={`py-2.5 rounded-xl text-[12px] font-black transition-all ${
                     priority === p.value
-                      ? 'bg-violet-100 text-violet-700 ring-2 ring-offset-1 ring-violet-400'
+                      ? 'bg-brand-50 text-brand-600 ring-2 ring-offset-1 ring-brand-300'
                       : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                   }`}
                 >
@@ -270,7 +270,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
             <Button
               onClick={handleSave}
               disabled={saving || deleting || !title.trim()}
-              className="rounded-full font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-md"
+              className="rounded-full font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-md"
             >
               <Save className="h-4 w-4 mr-1.5" />
               {saving ? '保存中...' : '保存'}

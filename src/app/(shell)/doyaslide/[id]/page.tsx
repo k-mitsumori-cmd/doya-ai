@@ -605,8 +605,8 @@ function EditorInner() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
         <img src="/character/error.png" alt="" className="w-24 h-24 object-contain" />
         <p role="alert" className="font-black text-slate-700">{projectReadError || 'プロジェクトが見つかりません。'}</p>
-        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#7f19e6] text-[#7f19e6] font-bold rounded-xl">再読み込み</button>
-        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl">
+        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#0066ff] text-[#0066ff] font-bold rounded-xl">再読み込み</button>
+        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl">
           一覧に戻る
         </Link>
       </div>

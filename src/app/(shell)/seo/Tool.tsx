@@ -68,7 +68,7 @@ function getStepIndex(status: string): number {
 const STATUS_CONFIG = {
   DRAFT: { label: '構成済み', color: 'text-blue-600', bg: 'bg-blue-100', tone: 'blue' as const },
   RUNNING: { label: '生成中', color: 'text-orange-600', bg: 'bg-orange-100', tone: 'amber' as const },
-  EDITING: { label: '編集中', color: 'text-purple-600', bg: 'bg-purple-100', tone: 'purple' as const },
+  EDITING: { label: '編集中', color: 'text-brand-500', bg: 'bg-brand-50', tone: 'purple' as const },
   DONE: { label: '完成', color: 'text-emerald-600', bg: 'bg-emerald-100', tone: 'green' as const },
   EXPORTED: { label: '出力済', color: 'text-teal-600', bg: 'bg-teal-100', tone: 'green' as const },
   ERROR: { label: 'エラー', color: 'text-red-600', bg: 'bg-red-100', tone: 'red' as const },

@@ -117,7 +117,7 @@ export default function ShodanEntryPage() {
             className={uiNext
               ? 'w-full rounded-xl bg-[#0066ff] py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0052cc] disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100'
               : 'w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]'}
-            style={uiNext ? undefined : { background: 'linear-gradient(135deg, #0066ff, #7c3aed)' }}>
+            style={uiNext ? undefined : { background: 'linear-gradient(135deg, #0066ff, #0066ff)' }}>
             {creating ? '作成中…' : '組織を作成して始める'}
           </button>
         </div>

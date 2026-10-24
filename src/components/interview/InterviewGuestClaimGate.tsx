@@ -38,7 +38,7 @@ export default function InterviewGuestClaimGate({ enabled, children }: { enabled
       {error ? (
         <>
           <p className="text-sm leading-7 text-slate-700">{error} ゲストの作業は削除されていません。</p>
-          <button type="button" onClick={() => setAttempt(value => value + 1)} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">
+          <button type="button" onClick={() => setAttempt(value => value + 1)} className="rounded-xl bg-[#0066ff] px-5 py-3 font-bold text-white">
             引き継ぎを再試行する
           </button>
         </>

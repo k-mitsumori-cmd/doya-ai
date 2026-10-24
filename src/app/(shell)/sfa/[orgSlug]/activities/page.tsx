@@ -27,7 +27,7 @@ const TYPES: ActivityType[] = ['call', 'meeting', 'email', 'note']
 const TYPE_COLOR: Record<ActivityType, string> = {
   call: 'bg-sky-100 text-sky-600',
   meeting: 'bg-green-100 text-green-600',
-  email: 'bg-violet-100 text-violet-600',
+  email: 'bg-brand-50 text-brand-500',
   note: 'bg-amber-100 text-amber-600',
 }
 // 新しい見た目のときのアイコン（lucide）。今の見た目は Material Symbols のまま
@@ -122,7 +122,7 @@ export default function SfaActivitiesPage() {
           {TYPES.map((t) => (
             <button key={t} onClick={() => setType(t)} aria-pressed={uiNext ? type === t : undefined} className={uiNext
               ? `min-h-11 px-4 rounded-full text-sm font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${type === t ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-600'}`
-              : `px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 transition-colors ${type === t ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-500'}`}>
+              : `px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 transition-colors ${type === t ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-500'}`}>
               {uiNext ? (() => { const Icon = TYPE_LUCIDE[t]; return <Icon className="h-4 w-4" aria-hidden /> })() : <span className="material-symbols-outlined text-[14px]">{ACTIVITY_TYPE_ICON[t]}</span>}{ACTIVITY_TYPE_LABEL[t]}
             </button>
           ))}

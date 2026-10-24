@@ -47,7 +47,7 @@ const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: s
 
 const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
   form: { l: 'フォーム', color: 'bg-emerald-100 text-emerald-700', icon: 'note' as UiIconName },
-  email: { l: 'メール', color: 'bg-violet-100 text-violet-700', icon: 'mail' as UiIconName },
+  email: { l: 'メール', color: 'bg-brand-50 text-brand-600', icon: 'mail' as UiIconName },
   phone: { l: '電話', color: 'bg-amber-100 text-amber-700', icon: 'phone' as UiIconName },
 }
 
@@ -486,7 +486,7 @@ function StatCard({ icon, label, value, color }: { icon: UiIconName; label: stri
   const colorMap: Record<string, string> = {
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    violet: 'bg-violet-50 text-violet-700 border-violet-200',
+    violet: 'bg-brand-50 text-brand-600 border-brand-100',
   }
   return (
     <div className="bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200 p-5 flex items-center gap-4">

@@ -414,14 +414,14 @@ export default function OneOnOneForm({
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
+              <span className="material-symbols-outlined text-brand-400">auto_awesome</span>
               AI要約生成
             </h3>
             <button
               type="button"
               onClick={handleAiSummary}
               disabled={editingDisabled}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-400 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-brand-400/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>

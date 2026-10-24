@@ -173,7 +173,7 @@ export default function GenerateBannersPage() {
                 <p className="text-sm font-bold mb-2 line-clamp-2">{template.title}</p>
                 <div className="flex gap-1 mb-2">
                   <span className="text-xs px-2 py-0.5 bg-blue-500/80 rounded">{template.phase}</span>
-                  <span className="text-xs px-2 py-0.5 bg-purple-500/80 rounded">{template.category}</span>
+                  <span className="text-xs px-2 py-0.5 bg-brand-400/80 rounded">{template.category}</span>
                 </div>
                 <button
                   onClick={(e) => {

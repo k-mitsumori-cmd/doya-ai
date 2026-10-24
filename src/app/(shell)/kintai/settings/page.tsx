@@ -196,7 +196,7 @@ export default function SettingsPage() {
           <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3 text-sm text-slate-700">
             <p>{creation.message || '保存結果を確認してください。自動で再保存は行いません。'}</p>
             {creation.pending && <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={creation.busy} onClick={() => void creation.recover()} className="rounded-lg bg-[#7f19e6] px-3 py-2 text-white disabled:opacity-50">保存結果を確認</button>
+              <button type="button" disabled={creation.busy} onClick={() => void creation.recover()} className="rounded-lg bg-[#0066ff] px-3 py-2 text-white disabled:opacity-50">保存結果を確認</button>
               <button type="button" disabled={creation.busy} onClick={() => void creation.recover(true)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">未完了の操作を取り消す</button>
             </div>}
           </div>
@@ -217,13 +217,13 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
             </div>
           </div>
-          <button onClick={openCreate} disabled={loading || loadError || creation.blocked} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
+          <button onClick={openCreate} disabled={loading || loadError || creation.blocked} className="flex items-center gap-1.5 px-4 py-2 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-lg">add</span>ルールを追加
           </button>
         </div>
 
         {/* Explanation with bear */}
-        <div className="flex items-center gap-3 bg-[#7f19e6]/5 border border-[#7f19e6]/10 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3 bg-[#0066ff]/5 border border-[#0066ff]/10 rounded-xl px-4 py-3">
           <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
           <p className="text-sm text-slate-600">就業ルールは従業員に割り当てて使用します。複数のルールを作成して、異なる勤務形態に対応できます。</p>
         </div>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
             <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={120} height={120} className="bear-float mb-4" />
             <h3 className="text-lg font-bold text-slate-700 mb-1">就業ルールがありません</h3>
             <p className="text-sm text-slate-400 mb-6">ルールを作成して従業員に割り当てましょう。</p>
-            <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors">
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors">
               <span className="material-symbols-outlined text-lg">add</span>最初のルールを作成
             </button>
           </div>
@@ -269,19 +269,19 @@ export default function SettingsPage() {
                 : [{ left: barLeftPct, width: barEndPct - barLeftPct }]
 
               return (
-                <div key={rule.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 hover:shadow-xl hover:border-purple-300 transition-all">
+                <div key={rule.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 hover:shadow-xl hover:border-brand-200 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-black text-slate-800">{rule.name}</h3>
                       {rule.flexEnabled && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#7f19e6]/10 text-[#7f19e6] rounded-full font-bold">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#0066ff]/10 text-[#0066ff] rounded-full font-bold">
                           <span className="material-symbols-outlined text-xs">sync</span>
                           フレックス
                         </span>
                       )}
                     </div>
                     <div className="flex gap-0.5 ml-2 shrink-0">
-                      <button disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
+                      <button disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
                       <button disabled={!canManage} onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
@@ -292,12 +292,12 @@ export default function SettingsPage() {
 
                   <div className="space-y-3">
                     {/* Work time — big and clear */}
-                    <div className="bg-purple-50 rounded-2xl p-4">
+                    <div className="bg-brand-50 rounded-2xl p-4">
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-xl text-[#7f19e6]">schedule</span>
-                        <span className="text-2xl font-black text-[#7f19e6]">{rule.workStart}</span>
+                        <span className="material-symbols-outlined text-xl text-[#0066ff]">schedule</span>
+                        <span className="text-2xl font-black text-[#0066ff]">{rule.workStart}</span>
                         <span className="text-lg font-black text-slate-400">〜</span>
-                        <span className="text-2xl font-black text-[#7f19e6]">{rule.workEnd}</span>
+                        <span className="text-2xl font-black text-[#0066ff]">{rule.workEnd}</span>
                       </div>
                       <p className="text-sm font-bold text-slate-500 mt-1">
                         {workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務
@@ -307,11 +307,11 @@ export default function SettingsPage() {
                     {/* Visual hours bar */}
                     <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
                       {segments.map((segment, index) => <div key={index}
-                        className="absolute top-0 bottom-0 bg-gradient-to-r from-[#7f19e6]/40 to-[#7f19e6]/60 rounded-full"
+                        className="absolute top-0 bottom-0 bg-gradient-to-r from-[#0066ff]/40 to-[#0066ff]/60 rounded-full"
                         style={{ left: `${segment.left}%`, width: `${Math.max(0, segment.width)}%` }}
                       />)}
-                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.max(3, barLeftPct - 2)}%` }}>{rule.workStart}</span>
-                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barEndPct + 1)}%` }}>{rule.workEnd}</span>
+                      <span className="absolute text-xs font-black text-[#0066ff] top-1/2 -translate-y-1/2" style={{ left: `${Math.max(3, barLeftPct - 2)}%` }}>{rule.workStart}</span>
+                      <span className="absolute text-xs font-black text-[#0066ff] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barEndPct + 1)}%` }}>{rule.workEnd}</span>
                     </div>
 
                     {/* Break */}
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                     {/* Flex core times */}
                     {rule.flexEnabled && (rule.coreStart || rule.coreEnd) && (
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-base text-[#7f19e6]">sync</span>
+                        <span className="material-symbols-outlined text-base text-[#0066ff]">sync</span>
                         <span className="text-slate-600">コアタイム: {rule.coreStart || '-'} 〜 {rule.coreEnd || '-'}</span>
                       </div>
                     )}
@@ -364,47 +364,47 @@ export default function SettingsPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">ルール名 <span className="text-red-500">*</span></label>
                 <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" placeholder="例: 標準 (9:00-18:00)" />
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" placeholder="例: 標準 (9:00-18:00)" />
               </div>
 
               {/* Section: Work Time */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <span className="material-symbols-outlined text-base text-[#7f19e6]">schedule</span>勤務時間設定
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">schedule</span>勤務時間設定
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">始業</label>
-                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" /></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">終業</label>
-                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" /></div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">休憩 (分)</label>
-                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" min={0} max={1440} step={1} value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: Number(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" min={0} max={1440} step={1} value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: Number(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" />
                 </div>
               </div>
 
               {/* Section: Overtime & Flex */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <span className="material-symbols-outlined text-base text-[#7f19e6]">more_time</span>残業・フレックス設定
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">more_time</span>残業・フレックス設定
                 </h3>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">残業計算方法</label>
-                  <select disabled={!canManage || saving || (!editing && Boolean(creation.pending))} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+                  <select disabled={!canManage || saving || (!editing && Boolean(creation.pending))} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
                     <option value="daily">日次</option><option value="weekly">週次</option><option value="monthly">月次</option>
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7f19e6] focus:ring-[#7f19e6]" />
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#0066ff] focus:ring-[#0066ff]" />
                   <span className="text-sm font-medium text-slate-700">フレックスタイム制</span>
                 </label>
                 {form.flexEnabled && (
-                  <div className="grid grid-cols-2 gap-3 bg-[#7f19e6]/5 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-3 bg-[#0066ff]/5 rounded-lg p-3">
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア開始</label>
-                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white" /></div>
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア終了</label>
-                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white" /></div>
                   </div>
                 )}
               </div>
@@ -423,7 +423,7 @@ export default function SettingsPage() {
 
               <div className="flex gap-3 pt-2">
                 <button onClick={closeForm} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleSave} disabled={!canManage || saving || (!editing && creation.blocked)} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
+                <button onClick={handleSave} disabled={!canManage || saving || (!editing && creation.blocked)} className="flex-1 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>

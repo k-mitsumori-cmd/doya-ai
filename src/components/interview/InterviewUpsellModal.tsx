@@ -129,7 +129,7 @@ export default function InterviewUpsellModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* 背景グラデーション */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#7f19e6]/10 via-blue-500/5 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0066ff]/10 via-blue-500/5 to-transparent pointer-events-none" />
 
           {/* 閉じるボタン */}
           <button
@@ -146,7 +146,7 @@ export default function InterviewUpsellModal({
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', delay: 0.15, damping: 15 }}
-              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-5 bg-gradient-to-br from-[#7f19e6] to-blue-600 shadow-lg shadow-[#7f19e6]/30"
+              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-5 bg-gradient-to-br from-[#0066ff] to-blue-600 shadow-lg shadow-[#0066ff]/30"
             >
               <span className="material-symbols-outlined text-white text-[40px]">
                 {info.icon}
@@ -190,7 +190,7 @@ export default function InterviewUpsellModal({
                     initial={{ width: 0 }}
                     animate={{ width: `${usagePercent}%` }}
                     transition={{ delay: 0.5, duration: 0.6, ease: 'easeOut' }}
-                    className="h-full rounded-full bg-gradient-to-r from-[#7f19e6] to-blue-500"
+                    className="h-full rounded-full bg-gradient-to-r from-[#0066ff] to-blue-500"
                   />
                 </div>
               </motion.div>
@@ -204,7 +204,7 @@ export default function InterviewUpsellModal({
               className="bg-slate-50 rounded-2xl p-4 mb-6 text-left"
             >
               <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-[16px] text-[#7f19e6]">
+                <span className="material-symbols-outlined text-[16px] text-[#0066ff]">
                   {isGuest ? 'person_add' : 'workspace_premium'}
                 </span>
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -226,7 +226,7 @@ export default function InterviewUpsellModal({
                     <div
                       className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                         feature.highlight
-                          ? 'bg-[#7f19e6] text-white'
+                          ? 'bg-[#0066ff] text-white'
                           : 'bg-slate-100 text-slate-600'
                       }`}
                     >
@@ -243,7 +243,7 @@ export default function InterviewUpsellModal({
                     >
                       {feature.text}
                     </span>
-                    <span className="material-symbols-outlined text-[16px] ml-auto text-[#7f19e6]">
+                    <span className="material-symbols-outlined text-[16px] ml-auto text-[#0066ff]">
                       check_circle
                     </span>
                   </motion.li>
@@ -252,13 +252,13 @@ export default function InterviewUpsellModal({
 
               {isGuest ? (
                 <div className="mt-3 pt-3 border-t border-slate-200 text-center">
-                  <span className="text-lg font-black text-[#7f19e6]">¥0</span>
+                  <span className="text-lg font-black text-[#0066ff]">¥0</span>
                   <span className="text-xs text-slate-500">　Googleアカウントで即登録</span>
                 </div>
               ) : proPlan ? (
                 <div className="mt-3 pt-3 border-t border-slate-200 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-lg font-black text-[#7f19e6]">
+                    <span className="text-lg font-black text-[#0066ff]">
                       {proPlan.priceLabel}
                     </span>
                     <span className="text-xs text-slate-500">{proPlan.period}</span>
@@ -279,7 +279,7 @@ export default function InterviewUpsellModal({
                   onClose()
                   router.push(isGuest ? '/auth/signin?callbackUrl=/interview' : '/interview/pricing')
                 }}
-                className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30"
+                className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#0066ff] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#0066ff]/30"
               >
                 <span className="flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-[20px]">

@@ -217,7 +217,7 @@ function renderRichContent(rawText: string): ReactNode[] {
 
 // ── Confetti ──
 function CelebrationConfetti() {
-  const colors = ['#3b82f6', '#60a5fa', '#2563eb', '#1e40af', '#93c5fd', '#f59e0b', '#10b981', '#8b5cf6']
+  const colors = ['#3b82f6', '#60a5fa', '#2563eb', '#1e40af', '#93c5fd', '#f59e0b', '#10b981', '#3d80ff']
   return (
     <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
       {Array.from({ length: 40 }).map((_, i) => {

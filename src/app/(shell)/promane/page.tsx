@@ -93,7 +93,7 @@ export default async function PromaneEntryPage({
   const uiNext = await isUiNext()
   const roleLabels = uiNext ? ROLE_LABELS_NEXT : ROLE_LABELS
   return (
-    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-brand-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
         {/* ロゴ（新しい見た目では、枠の見出しの帯がツール名を出すので、大きなロゴは出さない） */}
         <div className={uiNext ? 'hidden' : 'flex justify-center mb-6 animate-slide-up'}>
@@ -127,7 +127,7 @@ export default async function PromaneEntryPage({
                 <Link
                   key={inv.id}
                   href={`/promane/invite/${inv.token}`}
-                  className="group bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 rounded-3xl p-6 text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-xl hover:scale-[1.01] relative overflow-hidden"
+                  className="group bg-gradient-to-r from-brand-400 to-brand-600 hover:from-brand-500 hover:to-brand-700 rounded-3xl p-6 text-white shadow-lg shadow-brand-400/20 transition-all hover:shadow-xl hover:scale-[1.01] relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between gap-5">
                     <div className="flex-1 min-w-0">
@@ -141,7 +141,7 @@ export default async function PromaneEntryPage({
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button className="rounded-full h-11 px-6 text-[14px] font-black bg-white text-violet-700 hover:bg-violet-50 shadow-md">
+                      <Button className="rounded-full h-11 px-6 text-[14px] font-black bg-white text-brand-600 hover:bg-brand-50 shadow-md">
                         承諾する →
                       </Button>
                     </div>
@@ -172,7 +172,7 @@ export default async function PromaneEntryPage({
                   className={`group bg-white rounded-3xl p-6 shadow-md ring-1 ring-gray-200 hover:ring-blue-300 hover:shadow-xl hover:scale-[1.02] transition-all animate-slide-up stagger-${Math.min(i + 1, 5)}`}
                 >
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 text-[22px] font-black text-white shadow-md group-hover:rotate-6 transition-transform">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-brand-500 text-[22px] font-black text-white shadow-md group-hover:rotate-6 transition-transform">
                       {m.workspace.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -189,7 +189,7 @@ export default async function PromaneEntryPage({
                     </div>
                     <div className="text-center">
                       <p className="text-[10px] font-black text-gray-400">メンバー</p>
-                      <p className="text-[20px] font-black text-violet-600">{m.workspace._count.members}</p>
+                      <p className="text-[20px] font-black text-brand-500">{m.workspace._count.members}</p>
                     </div>
                   </div>
                 </Link>

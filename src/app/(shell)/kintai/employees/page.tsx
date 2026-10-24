@@ -10,8 +10,8 @@ import { EmptyState } from '@/components/EmptyState'
 import Link from 'next/link'
 
 const DEPT_COLORS = [
-  '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
-  '#dc2626', '#7c3aed', '#db2777', '#4f46e5', '#0d9488',
+  '#0066ff', '#2563eb', '#0891b2', '#059669', '#d97706',
+  '#dc2626', '#0066ff', '#db2777', '#4f46e5', '#0d9488',
 ]
 
 function getDeptColor(deptId: string | null): string {
@@ -230,15 +230,15 @@ export default function EmployeesPage() {
               <p className="text-xs text-slate-500">チームメンバーを管理しよう</p>
             </div>
           </div>
-          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
+          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-1.5 px-4 py-2 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-lg">person_add</span>新規登録
           </button>
         </div>
 
         {limitNotice && (
-          <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-purple-900">{limitNotice.message}</p>
-            {limitNotice.href && <Link href={limitNotice.href} className="rounded-lg bg-[#7f19e6] px-4 py-2 text-sm font-bold text-white hover:bg-[#6a14c2]">{limitNotice.action}</Link>}
+          <div role="alert" className="rounded-xl border border-brand-100 bg-brand-50 p-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-brand-800">{limitNotice.message}</p>
+            {limitNotice.href && <Link href={limitNotice.href} className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white hover:bg-[#0047d6]">{limitNotice.action}</Link>}
           </div>
         )}
         {inviteDeliveryFailure && (
@@ -288,7 +288,7 @@ export default function EmployeesPage() {
             <input
               type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="名前・メール・カナで検索..."
-              className="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]"
+              className="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600">
@@ -297,18 +297,18 @@ export default function EmployeesPage() {
             )}
           </div>
           <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
             <option value="">全部署</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
             <option value="">全状態</option>
             <option value="active">有効</option>
             <option value="inactive">無効</option>
           </select>
           <select value={filterEmploymentType} onChange={e => setFilterEmploymentType(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
             <option value="">全雇用形態</option>
             {Object.entries(EMPLOYMENT_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
@@ -319,9 +319,9 @@ export default function EmployeesPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500">絞り込み中:</span>
             {activeFilters.map(chip => (
-              <span key={chip.key} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#7f19e6]/10 text-[#7f19e6] text-xs font-medium rounded-full">
+              <span key={chip.key} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0066ff]/10 text-[#0066ff] text-xs font-medium rounded-full">
                 {chip.label}
-                <button onClick={() => clearFilter(chip.key)} className="hover:bg-[#7f19e6]/20 rounded-full p-0.5">
+                <button onClick={() => clearFilter(chip.key)} className="hover:bg-[#0066ff]/20 rounded-full p-0.5">
                   <span className="material-symbols-outlined text-xs">close</span>
                 </button>
               </span>
@@ -422,7 +422,7 @@ export default function EmployeesPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => openEdit(emp)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors" title="編集">
+                          <button onClick={() => openEdit(emp)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors" title="編集">
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
                           {emp.isActive && (emp.member?.status === 'PENDING' || emp.member?.status === 'INACTIVE') && <button
@@ -502,7 +502,7 @@ export default function EmployeesPage() {
               {/* Section: Basic Info */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <span className="material-symbols-outlined text-base text-[#7f19e6]">person</span>基本情報
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">person</span>基本情報
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="氏名" value={form.name} onChange={(v) => { setForm({ ...form, name: v }); if (errors.name) setErrors({ ...errors, name: '' }) }} required error={errors.name} />
@@ -514,7 +514,7 @@ export default function EmployeesPage() {
               {/* Section: Department & Role */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <span className="material-symbols-outlined text-base text-[#7f19e6]">badge</span>所属・権限
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">badge</span>所属・権限
                 </h3>
                 <SelectField label="部署" value={form.departmentId} onChange={(v) => setForm({ ...form, departmentId: v })} options={[{ value: '', label: '未設定' }, ...departments.map(d => ({ value: d.id, label: d.name }))]} />
                 <div>
@@ -527,7 +527,7 @@ export default function EmployeesPage() {
                           key={r}
                           className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                             form.role === r
-                              ? 'border-[#7f19e6] bg-[#7f19e6]/5 ring-1 ring-[#7f19e6]/30'
+                              ? 'border-[#0066ff] bg-[#0066ff]/5 ring-1 ring-[#0066ff]/30'
                               : isDisabled
                                 ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
                                 : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -540,7 +540,7 @@ export default function EmployeesPage() {
                             checked={form.role === r}
                             disabled={isDisabled}
                             onChange={() => setForm({ ...form, role: r })}
-                            className="mt-0.5 accent-[#7f19e6]"
+                            className="mt-0.5 accent-[#0066ff]"
                           />
                           <div>
                             <p className="text-sm font-bold text-slate-800">{ROLE_LABELS[r]}</p>
@@ -557,7 +557,7 @@ export default function EmployeesPage() {
               {/* Section: Work Settings */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <span className="material-symbols-outlined text-base text-[#7f19e6]">schedule</span>勤務設定
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">schedule</span>勤務設定
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <SelectField label="就業ルール" value={form.workRuleId} onChange={(v) => setForm({ ...form, workRuleId: v })} options={[{ value: '', label: '未設定' }, ...workRules.map(r => ({ value: r.id, label: r.name }))]} />
@@ -566,14 +566,14 @@ export default function EmployeesPage() {
               </div>
 
               {limitNotice && (
-                <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-3 space-y-2">
-                  <p className="text-sm font-medium text-purple-900">{limitNotice.message}</p>
-                  {limitNotice.href && <Link href={limitNotice.href} className="inline-block text-sm font-bold text-[#7f19e6] underline">{limitNotice.action}</Link>}
+                <div role="alert" className="rounded-xl border border-brand-100 bg-brand-50 p-3 space-y-2">
+                  <p className="text-sm font-medium text-brand-800">{limitNotice.message}</p>
+                  {limitNotice.href && <Link href={limitNotice.href} className="inline-block text-sm font-bold text-[#0066ff] underline">{limitNotice.action}</Link>}
                 </div>
               )}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
+                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>
@@ -592,7 +592,7 @@ function Field({ label, value, onChange, type = 'text', required, error }: { lab
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${error ? 'border-red-400 focus:ring-red-200 focus:border-red-400' : 'border-slate-300 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]'}`} />
+        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${error ? 'border-red-400 focus:ring-red-200 focus:border-red-400' : 'border-slate-300 focus:ring-[#0066ff]/30 focus:border-[#0066ff]'}`} />
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   )
@@ -603,7 +603,7 @@ function SelectField({ label, value, onChange, options }: { label: string; value
     <div>
       <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>

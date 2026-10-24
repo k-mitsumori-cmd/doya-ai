@@ -24,7 +24,7 @@ export default function DoyaSlideNotFound() {
       </p>
       <Link
         href="/doyaslide"
-        className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors"
+        className="px-6 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors"
       >
         ドヤスライドのトップへ
       </Link>

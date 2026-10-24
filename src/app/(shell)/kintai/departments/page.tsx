@@ -4,8 +4,8 @@ import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useRef, useState } from 'react'
 
 const DEPT_BORDER_COLORS = [
-  '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
-  '#dc2626', '#7c3aed', '#db2777', '#4f46e5', '#0d9488',
+  '#0066ff', '#2563eb', '#0891b2', '#059669', '#d97706',
+  '#dc2626', '#0066ff', '#db2777', '#4f46e5', '#0d9488',
 ]
 
 function getDeptBorderColor(index: number): string {
@@ -87,12 +87,12 @@ export default function DepartmentsPage() {
               <PageTitle className="text-2xl font-black text-slate-800">部署管理</PageTitle>
               {!loading && !loadError && (
                 <span className="text-sm text-slate-500">
-                  全<span className="font-bold text-[#7f19e6]">{departments.length}</span>部署
+                  全<span className="font-bold text-[#0066ff]">{departments.length}</span>部署
                 </span>
               )}
             </div>
           </div>
-          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-2 px-5 py-3 bg-[#7f19e6] text-white text-base font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg shadow-[#7f19e6]/20 disabled:opacity-50">
+          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-2 px-5 py-3 bg-[#0066ff] text-white text-base font-black rounded-full hover:bg-[#0047d6] transition-all shadow-lg shadow-[#0066ff]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-xl">add</span>部署を追加
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function DepartmentsPage() {
             <img src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png" alt="" width={120} height={120} className="bear-bounce mb-4" />
             <h3 className="text-lg font-bold text-slate-700 mb-1">部署がまだありません</h3>
             <p className="text-sm text-slate-400 mb-6 max-w-xs">最初の部署を作成しましょう！</p>
-            <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors">
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors">
               <span className="material-symbols-outlined text-lg">add</span>最初の部署を作成
             </button>
           </div>
@@ -125,7 +125,7 @@ export default function DepartmentsPage() {
               const hasParent = !!dept.parentId
 
               return (
-                <div key={dept.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-5 relative overflow-hidden hover:shadow-xl hover:border-purple-300 transition-all">
+                <div key={dept.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-5 relative overflow-hidden hover:shadow-xl hover:border-brand-200 transition-all">
                   {/* Colored left border */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ backgroundColor: borderColor }} />
 
@@ -150,7 +150,7 @@ export default function DepartmentsPage() {
                       </div>
                     </div>
                     <div className="flex gap-0.5 ml-2 shrink-0">
-                      <button onClick={() => openEdit(dept)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
+                      <button onClick={() => openEdit(dept)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
                       <button onClick={() => setShowDeleteConfirm(dept)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
@@ -182,12 +182,12 @@ export default function DepartmentsPage() {
                   部署名 <span className="text-red-500">*</span>
                 </label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]"
                   placeholder="例: 営業部" autoFocus />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
+                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>

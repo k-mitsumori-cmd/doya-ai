@@ -22,18 +22,18 @@ const FAQ_ITEMS = [
 
 export default function PersonaPricingPage() {
   return (
-    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-50">
       <div className="p-6 lg:p-10 max-w-6xl mx-auto">
         {/* Hero */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4 px-5 py-2 bg-gradient-to-r from-[#7f19e6]/10 to-violet-100 rounded-full">
+          <div className="inline-flex items-center gap-2 mb-4 px-5 py-2 bg-gradient-to-r from-[#0066ff]/10 to-brand-50 rounded-full">
             <span
-              className="material-symbols-outlined text-[#7f19e6] text-lg"
+              className="material-symbols-outlined text-[#0066ff] text-lg"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               psychology
             </span>
-            <span className="text-sm font-bold text-[#7f19e6]">ドヤペルソナAI</span>
+            <span className="text-sm font-bold text-[#0066ff]">ドヤペルソナAI</span>
           </div>
           <PersonaPageTitle className="text-3xl lg:text-4xl font-black text-slate-900 mb-3">
             ドヤペルソナAI 料金プラン
@@ -55,7 +55,7 @@ export default function PersonaPricingPage() {
             {FAQ_ITEMS.map((item) => (
               <div key={item.q} className="bg-white rounded-3xl shadow-lg p-6">
                 <h3 className="flex items-start gap-2 text-base font-bold text-slate-900 mb-2">
-                  <span className="material-symbols-outlined text-[#7f19e6] text-xl flex-shrink-0">
+                  <span className="material-symbols-outlined text-[#0066ff] text-xl flex-shrink-0">
                     help
                   </span>
                   {item.q}

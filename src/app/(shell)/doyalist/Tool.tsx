@@ -584,7 +584,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                     className={uiNext
                       // 主ボタンは「リストを抽出する」の1つ。AI変換は控えめなボタンにする（UI 品質 S-22）
                       ? `min-h-11 px-4 py-3 bg-white text-[#0066ff] border border-[#0066ff]/40 text-xs font-bold rounded-xl hover:bg-blue-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap${focusRing}`
-                      : 'px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'}
+                      : 'px-4 py-3 bg-gradient-to-r from-brand-400 to-brand-600 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'}
                   >
                     {expanding ? '変換中...' : <><Sym name="smart_toy" className="align-middle text-sm mr-0.5" />AIで変換</>}
                   </button>
@@ -592,9 +592,9 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
 
                 {/* AI生成タグ */}
                 {aiTags.length > 0 && (
-                  <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl">
+                  <div className="mt-3 p-3 bg-gradient-to-r from-brand-50 to-brand-100 border border-brand-100 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-black text-violet-700 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
+                      <span className="text-xs font-black text-brand-600 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
                       <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -608,7 +608,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                             aria-pressed={uiNext ? active : undefined}
                             className={`${uiNext ? `min-h-11 inline-flex items-center gap-1${focusRing} ` : ''}px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                               active
-                                ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow'
+                                ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow'
                                 : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                             }`}
                           >
@@ -617,7 +617,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         )
                       })}
                     </div>
-                    <p className="text-[10px] text-violet-600 mt-2">
+                    <p className="text-[10px] text-brand-500 mt-2">
                       {activeTags.size}個のタグを選択中
                       {activeTags.size > 0 && ' → これらの語を含む法人を検索します'}
                     </p>
@@ -998,7 +998,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                           )}
                           {/* 代表者情報バッジ */}
                           {ed.representative && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
                               ✓ 代表者
                             </span>
                           )}

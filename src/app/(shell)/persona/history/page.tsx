@@ -105,14 +105,14 @@ function AccountHistory({ userId }: { userId: string }) {
   }
 
   return (
-    <div className={uiNext ? `${light.light} p-4 sm:p-6` : 'min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-4 lg:p-8'}>
+    <div className={uiNext ? `${light.light} p-4 sm:p-6` : 'min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-brand-900/30 p-4 lg:p-8'}>
       <div className="max-w-4xl mx-auto">
         <Title className="mb-6 text-2xl font-black text-white">生成履歴</Title>
         <PersonaServerHistory userId={userId} onLocalChange={refreshHistory} />
         <div className={`flex justify-between mb-6 ${uiNext ? 'flex-wrap items-start gap-3' : 'items-center'}`}>
           <div className={uiNext ? 'min-w-0' : undefined}>
             <h2 className="text-xl font-black text-white flex items-center gap-3">
-              <Clock className="w-7 h-7 text-purple-400" />
+              <Clock className="w-7 h-7 text-brand-300" />
               このブラウザの履歴
             </h2>
             <p className="text-slate-400 text-sm mt-1">直近のコピーを最大20件保存しています。ここでコピーを削除しても、アカウントの保存済み履歴は削除されません。</p>
@@ -154,7 +154,7 @@ function AccountHistory({ userId }: { userId: string }) {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* Portrait */}
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-brand-400/20 to-brand-600/20 border-2 border-brand-400/30 overflow-hidden flex-shrink-0">
                       {item.portrait ? (
                         <img src={item.portrait} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -185,7 +185,7 @@ function AccountHistory({ userId }: { userId: string }) {
                       <Link
                         href={savedPersonaPath(item) || '/persona'}
                         onClick={(event) => { if (!loadItem(item)) event.preventDefault() }}
-                        className="p-2 text-purple-400 hover:bg-purple-900/30 rounded-lg transition-colors"
+                        className="p-2 text-brand-300 hover:bg-brand-800/30 rounded-lg transition-colors"
                         title="読み込む"
                       >
                         <ExternalLink className="w-5 h-5" />

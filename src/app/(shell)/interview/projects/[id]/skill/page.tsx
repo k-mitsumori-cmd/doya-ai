@@ -134,8 +134,8 @@ export default function SkillSelectionPage() {
     return (
       <motion.div className="flex items-center justify-center min-h-[400px]" variants={pageVariants} initial="hidden" animate="show">
         <div className="text-center max-w-md space-y-6">
-          <div className="w-20 h-20 rounded-2xl bg-[#7f19e6]/10 flex items-center justify-center mx-auto">
-            <span className="material-symbols-outlined text-4xl text-[#7f19e6]">lock</span>
+          <div className="w-20 h-20 rounded-2xl bg-[#0066ff]/10 flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-4xl text-[#0066ff]">lock</span>
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">ログインが必要です</h2>
@@ -146,7 +146,7 @@ export default function SkillSelectionPage() {
           </div>
           <Link
             href={`/auth/signin?callbackUrl=${encodeURIComponent(`/interview/projects/${projectId}/skill`)}`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-[#6b12c9] transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0066ff] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-[#0047d6] transition-all"
           >
             <span className="material-symbols-outlined">login</span>
             ログインする
@@ -172,7 +172,7 @@ export default function SkillSelectionPage() {
     return (
       <motion.div className="flex items-center justify-center min-h-[400px]" variants={pageVariants} initial="hidden" animate="show">
         <div className="text-center space-y-3">
-          <span className="material-symbols-outlined text-4xl text-[#7f19e6] animate-spin">progress_activity</span>
+          <span className="material-symbols-outlined text-4xl text-[#0066ff] animate-spin">progress_activity</span>
           <p className="text-sm text-slate-500">プロジェクトを確認中...</p>
         </div>
       </motion.div>
@@ -195,7 +195,7 @@ export default function SkillSelectionPage() {
           </div>
           <Link
             href={`/interview/projects/${projectId}/materials`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:shadow-[#7f19e6]/20 transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0066ff] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:shadow-[#0066ff]/20 transition-all"
           >
             <span className="material-symbols-outlined">upload_file</span>
             素材アップロードへ戻る
@@ -219,7 +219,7 @@ export default function SkillSelectionPage() {
           {['素材アップ', '文字起こし', 'スキル選択', 'AI生成', '編集'].map((step, i) => (
             <div key={step} className="flex items-center gap-2 shrink-0">
               <div className={`px-3 py-1 rounded-full tracking-tight whitespace-nowrap ${
-                i === 2 ? 'bg-[#7f19e6] text-white font-bold shadow-md shadow-[#7f19e6]/20' : i < 2 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
+                i === 2 ? 'bg-[#0066ff] text-white font-bold shadow-md shadow-[#0066ff]/20' : i < 2 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
               }`}>
                 {i < 2 ? '✓ ' : ''}{step}
               </div>
@@ -234,7 +234,7 @@ export default function SkillSelectionPage() {
         <button
           onClick={() => setFilterCategory(null)}
           className={`px-3 py-1.5 rounded-full text-xs transition-all ${
-            !filterCategory ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            !filterCategory ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
           すべて
@@ -244,7 +244,7 @@ export default function SkillSelectionPage() {
             key={cat}
             onClick={() => setFilterCategory(filterCategory === cat ? null : cat!)}
             className={`px-3 py-1.5 rounded-full text-xs transition-all flex items-center gap-1 ${
-              filterCategory === cat ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              filterCategory === cat ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             <span className="material-symbols-outlined text-sm">{CATEGORY_ICONS[cat!] || 'edit_note'}</span>
@@ -276,7 +276,7 @@ export default function SkillSelectionPage() {
           ) : (
             <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-4" variants={containerVariants} initial="hidden" animate="show">
               {/* Custom Skill Card */}
-              <Link href="/interview/skills" className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#7f19e6]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
+              <Link href="/interview/skills" className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#0066ff]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
                 <span className="material-symbols-outlined text-slate-400 text-3xl">add_circle</span>
                 <h3 className="font-bold text-lg text-slate-600">カスタムスキル</h3>
               </Link>
@@ -293,14 +293,14 @@ export default function SkillSelectionPage() {
                     whileTap={{ scale: 0.98 }}
                     className={`text-left p-5 rounded-xl transition-all relative ${
                       isSelected
-                        ? 'border-2 border-[#7f19e6] shadow-lg shadow-[#7f19e6]/5 bg-[#7f19e6]/5'
-                        : 'border border-slate-200 bg-white shadow-sm hover:border-[#7f19e6]/50'
+                        ? 'border-2 border-[#0066ff] shadow-lg shadow-[#0066ff]/5 bg-[#0066ff]/5'
+                        : 'border border-slate-200 bg-white shadow-sm hover:border-[#0066ff]/50'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         isSelected
-                          ? 'bg-[#7f19e6] text-white'
+                          ? 'bg-[#0066ff] text-white'
                           : 'bg-slate-100 text-slate-600'
                       }`}>
                         <span className="material-symbols-outlined text-2xl">
@@ -308,7 +308,7 @@ export default function SkillSelectionPage() {
                         </span>
                       </div>
                       {isSelected && (
-                        <span className="material-symbols-outlined text-[#7f19e6] text-2xl">
+                        <span className="material-symbols-outlined text-[#0066ff] text-2xl">
                           check_circle
                         </span>
                       )}
@@ -344,7 +344,7 @@ export default function SkillSelectionPage() {
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <h3 className="font-bold text-sm uppercase tracking-widest text-slate-500">構成プレビュー</h3>
               {selectedRecipe && (
-                <span className="px-2 py-1 rounded-full bg-[#7f19e6]/10 text-[#7f19e6] text-[10px] font-bold">
+                <span className="px-2 py-1 rounded-full bg-[#0066ff]/10 text-[#0066ff] text-[10px] font-bold">
                   {selectedRecipe.name}
                 </span>
               )}
@@ -354,7 +354,7 @@ export default function SkillSelectionPage() {
                 <>
                   {/* Show editing guidelines if available */}
                   {selectedRecipe.editingGuidelines && (
-                    <div className="pl-4 border-l-2 border-[#7f19e6]/30 space-y-3">
+                    <div className="pl-4 border-l-2 border-[#0066ff]/30 space-y-3">
                       <pre className="text-xs text-slate-500 whitespace-pre-wrap">
                         {selectedRecipe.editingGuidelines.slice(0, 300)}
                         {selectedRecipe.editingGuidelines.length > 300 && '...'}
@@ -375,7 +375,7 @@ export default function SkillSelectionPage() {
                           onClick={() => setDisplayFormat(opt.value)}
                           className={`flex-1 px-4 py-2.5 rounded-lg text-sm border transition-all ${
                             displayFormat === opt.value
-                              ? 'border-[#7f19e6] bg-[#7f19e6]/5 text-[#7f19e6] shadow-md shadow-[#7f19e6]/10 font-semibold'
+                              ? 'border-[#0066ff] bg-[#0066ff]/5 text-[#0066ff] shadow-md shadow-[#0066ff]/10 font-semibold'
                               : 'border-slate-200 text-slate-600 hover:border-slate-300'
                           }`}
                         >
@@ -395,7 +395,7 @@ export default function SkillSelectionPage() {
                       onChange={(e) => setCustomInstructions(e.target.value)}
                       placeholder="例: 「です・ます調で」「会社名は株式会社〇〇と正式名称で」「3000文字程度で」"
                       rows={3}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6] resize-none"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff] resize-none"
                     />
                   </div>
                 </>
@@ -403,7 +403,7 @@ export default function SkillSelectionPage() {
                 <div className="space-y-4">
                   <div className="h-6 w-3/4 bg-slate-100 rounded"></div>
                   <div className="h-4 w-full bg-slate-50 rounded"></div>
-                  <div className="pl-4 border-l-2 border-[#7f19e6]/30 space-y-3">
+                  <div className="pl-4 border-l-2 border-[#0066ff]/30 space-y-3">
                     <div className="h-3 w-1/2 bg-slate-100 rounded"></div>
                     <div className="h-2 w-full bg-slate-50 rounded"></div>
                   </div>
@@ -416,7 +416,7 @@ export default function SkillSelectionPage() {
               <button
                 onClick={handleGenerate}
                 disabled={!selectedId || navigationBusy}
-                className="w-full py-3.5 sm:py-4 bg-[#7f19e6] text-white rounded-xl font-bold text-base sm:text-lg shadow-2xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 sm:py-4 bg-[#0066ff] text-white rounded-xl font-bold text-base sm:text-lg shadow-2xl hover:shadow-lg hover:shadow-[#0066ff]/20 transition-all flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">rocket_launch</span>
                 {navigationBusy ? '生成内容を確認中...' : '生成内容を確認'}

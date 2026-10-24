@@ -53,7 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_RANK: Record<string, number> = { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 }
 const ROLE_STYLE: Record<string, string> = {
   OWNER: 'bg-amber-100 text-amber-800',
-  ADMIN: 'bg-purple-100 text-purple-700',
+  ADMIN: 'bg-brand-50 text-brand-600',
   MANAGER: 'bg-blue-100 text-blue-700',
   MEMBER: 'bg-slate-100 text-slate-600',
 }
@@ -71,8 +71,8 @@ const MEMBER_AVATAR_COLORS = [
   'from-red-400 to-red-500',
   'from-emerald-500 to-emerald-600',
   'from-amber-400 to-amber-500',
-  'from-purple-500 to-purple-600',
-  'from-pink-400 to-pink-500',
+  'from-brand-400 to-brand-500',
+  'from-brand-500 to-brand-600',
 ]
 
 const DEPT_COLOR_BARS = [
@@ -80,7 +80,7 @@ const DEPT_COLOR_BARS = [
   'bg-red-500',
   'bg-emerald-500',
   'bg-amber-500',
-  'bg-purple-500',
+  'bg-brand-400',
   'bg-pink-500',
   'bg-indigo-500',
   'bg-teal-500',
@@ -598,7 +598,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     DEPARTMENT_CREATED: { icon: 'apartment', color: 'text-amber-600', label: '部署作成' },
     DEPARTMENT_DELETED: { icon: 'delete', color: 'text-red-500', label: '部署削除' },
     EVALUATION_CREATED: { icon: 'assessment', color: 'text-red-500', label: '評価作成' },
-    ROLE_CHANGED: { icon: 'admin_panel_settings', color: 'text-purple-600', label: '権限変更' },
+    ROLE_CHANGED: { icon: 'admin_panel_settings', color: 'text-brand-500', label: '権限変更' },
     OWNER_TRANSFERRED: { icon: 'swap_horiz', color: 'text-amber-600', label: 'オーナー移譲' },
   }
 

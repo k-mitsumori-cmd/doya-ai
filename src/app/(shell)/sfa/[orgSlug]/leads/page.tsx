@@ -46,7 +46,7 @@ const STATUS_ORDER: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 
 const STATUS_COLOR: Record<LeadStatus, string> = {
   new: 'bg-sky-100 text-sky-700',
   working: 'bg-amber-100 text-amber-700',
-  nurturing: 'bg-violet-100 text-violet-700',
+  nurturing: 'bg-brand-50 text-brand-600',
   qualified: 'bg-green-100 text-green-700',
   converted: 'bg-slate-200 text-slate-600',
   disqualified: 'bg-slate-100 text-slate-400',
@@ -256,7 +256,7 @@ export default function SfaLeadsPage() {
         {(['all', ...STATUS_ORDER] as const).map((s) => (
           <button key={s} onClick={() => { if (filter !== s) { requestVersion.current++; setLoading(true); setFilter(s) } }} aria-pressed={uiNext ? filter === s : undefined} className={uiNext
             ? `min-h-11 px-4 rounded-full text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] ${filter === s ? 'bg-[#0066ff] text-white' : 'bg-white text-slate-600 border border-slate-200'}`
-            : `px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-colors ${filter === s ? 'bg-[#7f19e6] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+            : `px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-colors ${filter === s ? 'bg-[#0066ff] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
             {s === 'all' ? 'すべて' : LEAD_STATUS_LABEL[s]}
           </button>
         ))}
@@ -298,7 +298,7 @@ export default function SfaLeadsPage() {
                   </div>
                   {l.contactName && <p className="text-xs font-bold text-slate-400 mt-0.5">{l.contactName}</p>}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-[#0066ff] hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50'}>
+                    <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className={uiNext ? 'min-h-11 -my-2 px-2 rounded-lg text-xs font-bold text-[#0066ff] hover:bg-[#0066ff]/10 flex items-center gap-1 whitespace-nowrap disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-xs font-black text-[#0066ff] hover:underline flex items-center gap-0.5 disabled:opacity-50'}>
                       {uiNext ? <Sparkles className="h-4 w-4" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}{mutations.busy.includes('score:' + l.id) ? 'AI判定中…' : 'AIスコア'}
                       <ShellCostBadge action="text.generate" />
                     </button>

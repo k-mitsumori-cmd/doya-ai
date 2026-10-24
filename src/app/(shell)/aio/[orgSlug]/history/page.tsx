@@ -57,7 +57,7 @@ export default function AioHistoryPage() {
   return <div className="mx-auto max-w-5xl p-6">
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div><Title className="text-2xl font-black text-slate-900">スキャン履歴</Title><p className="mt-1 text-sm text-slate-600">保存済みの測定結果を新しい順に確認できます。</p></div>
-      <Link href={base} className="text-sm font-bold text-purple-700 underline">ダッシュボードに戻る</Link>
+      <Link href={base} className="text-sm font-bold text-brand-600 underline">ダッシュボードに戻る</Link>
     </div>
     {loading && items.length === 0 ? <p role="status">履歴を読み込み中…</p> : null}
     {error && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{error}<button type="button" className="ml-3 font-bold underline" onClick={() => void load(cursor || undefined)}>再試行</button></div>}
@@ -65,9 +65,9 @@ export default function AioHistoryPage() {
     <ol className="space-y-3">{items.map(row => <li key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-bold text-slate-900">{new Date(row.createdAt).toLocaleString('ja-JP')}</p><p className="mt-1 text-sm text-slate-600">{row.status === 'done' ? `言及率 ${metric(row.awarenessPct)} ・ SoV ${metric(row.shareOfVoice)} ・ 自社引用 ${metric(row.ownCitationPct)}` : row.status === 'failed' ? '測定失敗' : '処理中'}</p>{row.status === 'done' && <p className={`mt-1 text-xs font-bold ${row.coverage?.failed ? 'text-amber-700' : 'text-slate-500'}`}>{row.coverage ? row.coverage.failed > 0 ? `一部未測定：${row.coverage.succeeded}/${row.coverage.attempted} 回成功。数値は成功分のみ` : '全件測定済み' : '測定範囲の記録なし（過去の結果）'}</p>}</div>
-        <Link href={`${base}/history/${encodeURIComponent(row.id)}`} className="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white">結果を見る</Link>
+        <Link href={`${base}/history/${encodeURIComponent(row.id)}`} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white">結果を見る</Link>
       </div>
     </li>)}</ol>
-    {cursor && !error && <button type="button" disabled={moreLoading} onClick={() => void load(cursor)} className="mt-5 rounded-lg border border-purple-300 px-5 py-2 text-sm font-bold text-purple-800 disabled:opacity-50">{moreLoading ? '読み込み中…' : '古い履歴をさらに表示'}</button>}
+    {cursor && !error && <button type="button" disabled={moreLoading} onClick={() => void load(cursor)} className="mt-5 rounded-lg border border-brand-200 px-5 py-2 text-sm font-bold text-brand-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : '古い履歴をさらに表示'}</button>}
   </div>
 }

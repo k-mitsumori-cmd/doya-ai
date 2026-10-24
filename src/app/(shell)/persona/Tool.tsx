@@ -58,7 +58,7 @@ const MOOD_COLORS: Record<string, string> = {
   '解放感': 'bg-sky-100 text-sky-700',
   '普通': 'bg-gray-100 text-gray-600',
   '活力': 'bg-yellow-100 text-yellow-700',
-  '充実': 'bg-purple-100 text-purple-700',
+  '充実': 'bg-brand-50 text-brand-600',
 }
 
 // プラットフォームロゴ
@@ -856,7 +856,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           )}
           {scenePrompt && (
             <button type="button" onClick={() => void handleGenerateScene(scenePrompt, sceneKey)} disabled={isLoading}
-              className="absolute bottom-2 right-2 rounded bg-white/95 px-2 py-1 text-xs font-bold text-purple-800 shadow disabled:opacity-60 export-hide">
+              className="absolute bottom-2 right-2 rounded bg-white/95 px-2 py-1 text-xs font-bold text-brand-700 shadow disabled:opacity-60 export-hide">
               {isLoading ? '再生成中...' : '再生成（追加枠1枚）'}
             </button>
           )}
@@ -865,10 +865,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     }
     if (isLoading) {
       return (
-        <div className={`rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 flex items-center justify-center export-hide ${className}`}>
+        <div className={`rounded-lg bg-gradient-to-br from-brand-50 to-brand-100 border border-brand-50 flex items-center justify-center export-hide ${className}`}>
           <div className="text-center">
-            <div className="w-6 h-6 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-purple-400 text-xs">画像生成中...</p>
+            <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-brand-300 text-xs">画像生成中...</p>
           </div>
         </div>
       )
@@ -877,7 +877,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       return (
         <div className={`rounded-lg border border-red-200 bg-red-50 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
           <p role="alert" className="text-xs text-red-700">{sceneErrors[sceneKey]}</p>
-          {quotaNotice !== 'image' && <button type="button" className="rounded bg-white px-3 py-2 text-sm text-purple-700 border border-purple-200" onClick={() => {
+          {quotaNotice !== 'image' && <button type="button" className="rounded bg-white px-3 py-2 text-sm text-brand-600 border border-brand-100" onClick={() => {
             const prompt = scenePrompts.current[sceneKey]
             if (prompt) void handleGenerateScene(prompt, sceneKey)
           }}>この画像を再試行する</button>}
@@ -891,10 +891,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     if (!slotPrompt) return null
     const extra = personaSceneIntent(generatedData, sceneKey, false, isPaidPlan(plan)) === 'extra'
     return (
-      <div className={`rounded-lg border border-dashed border-purple-200 bg-purple-50/60 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
+      <div className={`rounded-lg border border-dashed border-brand-100 bg-brand-50/60 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
         <p className="text-xs text-gray-600">この場面の画像はまだありません。</p>
         <button type="button" onClick={() => void handleGenerateScene(slotPrompt!, sceneKey)}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-700">
+          className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-bold text-white hover:bg-brand-600">
           {extra ? '画像を作る（追加枠1枚）' : '画像を作る'}
         </button>
       </div>
@@ -904,14 +904,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const persona = generatedData?.persona
 
   return (
-    <div className={uiNext ? '' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30'}>
+    <div className={uiNext ? '' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-50/30'}>
       <div className={uiNext ? 'max-w-6xl mx-auto p-4 sm:p-6' : 'max-w-6xl mx-auto p-4 lg:p-8'}>
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
-          <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
+          <div role="alert" className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
             <p className="font-bold">{quotaNotice === 'text' ? '本日のペルソナ生成・文章変更の枠に達しました。' : '本日の追加画像・再生成の枠に達しました。'}</p>
             <p className="mt-1">枠は毎日0時（日本時間）にリセットされます。{quotaAction === 'pricing' ? '追加で使う場合はプランをご確認ください。' : quotaAction === 'contact' ? '追加の利用枠をご希望の場合はご相談ください。' : ''}</p>
-            {quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold text-purple-700 underline underline-offset-2">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
+            {quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline underline-offset-2">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
             {quotaAction === 'pricing' && <TrialNote className="mt-2" />}
           </div>
         )}
@@ -946,7 +946,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1 flex items-center gap-3">
-              <Target className="w-8 h-8 text-purple-600" />
+              <Target className="w-8 h-8 text-brand-500" />
               ドヤペルソナAI
             </h1>
             <p className="text-gray-500 text-sm">URLからマーケティングペルソナを自動生成</p>
@@ -967,14 +967,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 shadow-sm">
           <div className="mb-4">
             <label className="block text-sm font-bold text-gray-800 mb-2">
-              サイトURL <span className="text-purple-600">*</span>
+              サイトURL <span className="text-brand-500">*</span>
             </label>
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 text-base"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 text-base"
             />
           </div>
 
@@ -1003,7 +1003,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       onChange={(e) => setServiceName(e.target.value)}
                       maxLength={200}
                       placeholder="例: ドヤマーケ"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400"
                     />
                   </div>
                   <div>
@@ -1014,7 +1014,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       maxLength={8000}
                       placeholder="ターゲット層や商品の特徴など、補足情報があれば入力してください"
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400 resize-none"
                     />
                   </div>
                 </div>
@@ -1025,7 +1025,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           <button
             onClick={handleGenerate}
             disabled={loading || !url.trim()}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-base hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-bold text-base hover:from-brand-400 hover:to-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-400/25"
           >
             {loading ? (
               <>
@@ -1079,7 +1079,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
             {/* フェーズ表示 */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500">
                   <span className="material-symbols-outlined text-xl">{LOADING_PHASES[loadingPhase].icon}</span>
                 </div>
                 <div className="flex-1">
@@ -1112,7 +1112,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               {/* プログレスバー */}
               <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full"
                   initial={{ width: '0%' }}
                   animate={{ width: `${Math.min(((loadingPhase + 1) / LOADING_PHASES.length) * 100, 95)}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
@@ -1124,7 +1124,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                 {LOADING_PHASES.map((phase, i) => (
                   <div key={i} className="flex flex-col items-center" style={{ width: `${100 / LOADING_PHASES.length}%` }}>
                     <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                      i < loadingPhase ? 'bg-purple-500' : i === loadingPhase ? 'bg-purple-500 ring-2 ring-purple-200' : 'bg-gray-200'
+                      i < loadingPhase ? 'bg-brand-400' : i === loadingPhase ? 'bg-brand-400 ring-2 ring-brand-100' : 'bg-gray-200'
                     }`} />
                   </div>
                 ))}
@@ -1134,7 +1134,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
             {/* ペルソナ候補カード */}
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
               <p className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin inline-block" />
+                <span className="w-4 h-4 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin inline-block" />
                 ペルソナ候補を検証中...
               </p>
 
@@ -1152,12 +1152,12 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       transition={{ delay: offset * 0.1, duration: 0.4 }}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
                         isActive
-                          ? 'border-purple-300 bg-purple-50/50 shadow-sm'
+                          ? 'border-brand-200 bg-brand-50/50 shadow-sm'
                           : 'border-gray-100 bg-gray-50/50'
                       }`}
                     >
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                        isActive ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                        isActive ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-500'
                       }`}>
                         {candidate.name.charAt(0)}
                       </div>
@@ -1178,7 +1178,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex-shrink-0"
+                          className="px-2 py-0.5 rounded-full bg-brand-500 text-white text-[10px] font-bold flex-shrink-0"
                         >
                           検証中
                         </motion.div>
@@ -1212,15 +1212,15 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               onUsageChanged={() => setBannerUsageRevision(value => value + 1)}
             />
             {autoGenerateFor.current !== generatedData && !portraitImage && (
-              <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 export-hide">
+              <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 export-hide">
                 <p className="text-sm text-gray-700">履歴の閲覧では画像を自動で作りません。似顔絵が無い場合は、ボタンを押すと作ります。場面の画像は、各場面の「画像を作る」から作れます。</p>
-                <button type="button" onClick={requestMissingImages} disabled={loading || modifying || portraitLoading || Object.values(sceneLoading).some(Boolean)} className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">似顔絵を作る</button>
+                <button type="button" onClick={requestMissingImages} disabled={loading || modifying || portraitLoading || Object.values(sceneLoading).some(Boolean)} className="mt-3 rounded-lg bg-brand-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">似顔絵を作る</button>
               </div>
             )}
             {/* ペルソナ変更入力エリア */}
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <h3 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple-600" />
+                <FileText className="w-4 h-4 text-brand-500" />
                 ペルソナを変更する
               </h3>
               <div className="flex gap-2">
@@ -1229,14 +1229,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                   onChange={(e) => setModificationInput(e.target.value)}
                   maxLength={8000}
                   placeholder="例: 年齢を45歳にして / BtoB向けに変更して / 女性のペルソナにして / もっと具体的なエピソードを追加して"
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none bg-gray-50"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400/50 resize-none bg-gray-50"
                   rows={2}
                   disabled={modifying}
                 />
                 <button
                   onClick={handleModify}
                   disabled={modifying || !modificationInput.trim()}
-                  className="px-5 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap self-end"
+                  className="px-5 py-2 rounded-lg bg-brand-500 text-white text-sm font-bold hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap self-end"
                 >
                   {modifying ? (
                     <>
@@ -1271,7 +1271,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                   <button
                     onClick={() => handleExport('pdf')}
                     disabled={exporting}
-                    className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-bold hover:bg-brand-400 disabled:opacity-50 flex items-center gap-2 shadow-sm"
                   >
                     <Download className="w-4 h-4" />
                     {exporting ? '書き出し中...' : 'PDF書き出し'}
@@ -1332,7 +1332,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                             />
                           ) : portraitLoading ? (
                             <div className="text-center export-hide">
-                              <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-1" />
+                              <div className="w-5 h-5 border-2 border-gray-300 border-t-brand-500 rounded-full animate-spin mx-auto mb-1" />
                               <p className="text-gray-400 text-[10px]">生成中</p>
                             </div>
                           ) : (
@@ -1347,14 +1347,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                             <>
                               <button
                                 onClick={() => downloadImage(portraitImage, `persona-${persona.name}.png`)}
-                                className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 inline-flex items-center gap-1"
+                                className="px-2 py-1 rounded bg-brand-500 text-white text-[10px] font-bold hover:bg-brand-400 inline-flex items-center gap-1"
                               >
                                 <Download className="w-2.5 h-2.5" />
                                 保存
                               </button>
                               <button type="button" onClick={handleGeneratePortrait} disabled={portraitLoading}
                                 aria-label="ポートレートを再生成します。追加画像枠を1枚使用します"
-                                className="rounded border border-purple-300 px-2 py-1 text-[10px] font-bold text-purple-700 disabled:opacity-60">
+                                className="rounded border border-brand-200 px-2 py-1 text-[10px] font-bold text-brand-600 disabled:opacity-60">
                                 {portraitLoading ? '再生成中...' : '再生成（1枚）'}
                               </button>
                             </>
@@ -1362,7 +1362,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                             <button
                               onClick={handleGeneratePortrait}
                               disabled={portraitLoading}
-                              className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 disabled:opacity-50 inline-flex items-center gap-1"
+                              className="px-2 py-1 rounded bg-brand-500 text-white text-[10px] font-bold hover:bg-brand-400 disabled:opacity-50 inline-flex items-center gap-1"
                             >
                               <ImageIcon className="w-2.5 h-2.5" />
                               写真を生成
@@ -1498,7 +1498,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                           <td className="border border-gray-300 px-3 py-2">
                             <div className="flex flex-wrap gap-1.5">
                               {persona.personalityTraits?.map((t, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-xs">{t}</span>
+                                <span key={i} className="px-2 py-0.5 bg-brand-50 text-brand-600 border border-brand-100 rounded text-xs">{t}</span>
                               ))}
                             </div>
                           </td>
@@ -1748,14 +1748,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       {/* 響くメッセージ */}
                       {persona.resonatingMessages && persona.resonatingMessages.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-bold text-purple-700 mb-2 flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-brand-600 mb-2 flex items-center gap-2">
                             <Heart className="w-4 h-4" />
                             響くメッセージ・訴求ポイント
                           </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {persona.resonatingMessages.map((rm, i) => (
-                              <div key={i} className="flex items-start gap-2 px-3 py-2 bg-purple-50 rounded-lg border border-purple-100">
-                                <span className="text-purple-400 mt-0.5">✦</span>
+                              <div key={i} className="flex items-start gap-2 px-3 py-2 bg-brand-50 rounded-lg border border-brand-50">
+                                <span className="text-brand-300 mt-0.5">✦</span>
                                 <span className="text-sm text-gray-800">{rm}</span>
                               </div>
                             ))}
@@ -1789,7 +1789,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-violet-700 to-purple-600 px-8 py-4 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-4 flex items-center gap-3">
                       <Shield className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">深掘りインタビュー</h3>
                     </div>
@@ -1798,9 +1798,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                         <div key={i} className="space-y-3">
                           {/* Q: インタビュアー */}
                           <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">Q</div>
-                            <div className="flex-1 bg-violet-50 rounded-2xl rounded-tl-sm px-4 py-3 border border-violet-100">
-                              <p className="text-xs text-violet-500 font-bold mb-1">質問 {i + 1}</p>
+                            <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">Q</div>
+                            <div className="flex-1 bg-brand-50 rounded-2xl rounded-tl-sm px-4 py-3 border border-brand-50">
+                              <p className="text-xs text-brand-400 font-bold mb-1">質問 {i + 1}</p>
                               <p className="text-sm text-gray-800">「{oa.objection}」という不安について、詳しく教えてください。</p>
                             </div>
                           </div>
@@ -1895,9 +1895,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                           {generatedData.deepDive.adoptionStory.timeline.map((step, i) => {
                             const sceneKey = `adoption-${i}`
                             const hasImage = !!step.imagePrompt
-                            const storyColors = ['bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500']
-                            const bgColors = ['bg-teal-50', 'bg-cyan-50', 'bg-blue-50', 'bg-indigo-50', 'bg-violet-50', 'bg-purple-50']
-                            const borderColors = ['border-teal-200', 'border-cyan-200', 'border-blue-200', 'border-indigo-200', 'border-violet-200', 'border-purple-200']
+                            const storyColors = ['bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-brand-400', 'bg-brand-400']
+                            const bgColors = ['bg-teal-50', 'bg-cyan-50', 'bg-blue-50', 'bg-indigo-50', 'bg-brand-50', 'bg-brand-50']
+                            const borderColors = ['border-teal-200', 'border-cyan-200', 'border-blue-200', 'border-indigo-200', 'border-brand-100', 'border-brand-100']
 
                             return (
                               <div key={i} className="relative flex items-start gap-4 pb-6 last:pb-0">
@@ -1955,7 +1955,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900 rounded-b-lg"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-purple-700 to-pink-600 px-8 py-4 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-8 py-4 flex items-center gap-3">
                       <Award className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">ペルソナシート ─ 最終まとめ</h3>
                     </div>
@@ -1964,8 +1964,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       <div className="relative rounded-xl overflow-hidden">
                         <SceneImageSlot sceneKey="summary-hero" className="w-full h-48 sm:h-56" />
                         {generatedData.summary.oneLiner && (
-                          <div className="mt-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4 text-center">
-                            <p className="text-xs text-purple-500 font-bold mb-1">ペルソナ概要</p>
+                          <div className="mt-3 bg-gradient-to-r from-brand-50 to-brand-100 rounded-lg border border-brand-100 p-4 text-center">
+                            <p className="text-xs text-brand-400 font-bold mb-1">ペルソナ概要</p>
                             <p className="text-base font-bold text-gray-900">{generatedData.summary.oneLiner}</p>
                           </div>
                         )}
@@ -1974,7 +1974,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                       {/* 基本情報（表形式） */}
                       <div>
                         <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-purple-500" />
+                          <FileText className="w-4 h-4 text-brand-400" />
                           基本情報
                         </h4>
                         <table className="w-full text-sm border-collapse border border-gray-300">
@@ -2060,10 +2060,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                                   i === 0 ? 'rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none' :
                                   i === generatedData.summary!.customerJourney!.length - 1 ? 'rounded-b-lg sm:rounded-r-lg sm:rounded-bl-none' : ''
                                 } ${
-                                  i === 0 ? 'bg-blue-50' : i === 1 ? 'bg-green-50' : i === 2 ? 'bg-yellow-50' : 'bg-purple-50'
+                                  i === 0 ? 'bg-blue-50' : i === 1 ? 'bg-green-50' : i === 2 ? 'bg-yellow-50' : 'bg-brand-50'
                                 }`}>
                                   <p className={`text-xs font-bold mb-1 ${
-                                    i === 0 ? 'text-blue-700' : i === 1 ? 'text-green-700' : i === 2 ? 'text-yellow-700' : 'text-purple-700'
+                                    i === 0 ? 'text-blue-700' : i === 1 ? 'text-green-700' : i === 2 ? 'text-yellow-700' : 'text-brand-600'
                                   }`}>{cj.phase}</p>
                                   <p className="text-xs text-gray-700">{cj.description}</p>
                                 </div>
@@ -2105,12 +2105,12 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                           </h4>
                           <div className="space-y-1.5">
                             {generatedData.summary.catchphrases.map((cp, i) => (
-                              <div key={i} className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
-                                <span className="text-purple-500 font-bold text-xs">{i + 1}.</span>
+                              <div key={i} className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-brand-50 to-brand-100 rounded-lg border border-brand-50">
+                                <span className="text-brand-400 font-bold text-xs">{i + 1}.</span>
                                 <span className="text-sm font-medium text-gray-800 flex-1">{cp}</span>
                                 <button
                                   onClick={() => copyToClipboard(cp, `summary-cp-${i}`)}
-                                  className="p-1 hover:bg-purple-100 rounded text-gray-400 hover:text-purple-600 transition-colors export-hide"
+                                  className="p-1 hover:bg-brand-50 rounded text-gray-400 hover:text-brand-500 transition-colors export-hide"
                                   title="コピー"
                                 >
                                   {copied === `summary-cp-${i}` ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Clipboard className="w-3.5 h-3.5" />}

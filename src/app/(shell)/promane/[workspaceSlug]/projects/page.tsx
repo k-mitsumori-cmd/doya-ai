@@ -74,10 +74,10 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
   }
 
   const kpis = [
-    { icon: FolderKanban, label: "総プロジェクト", value: `${projects.length}件`, color: "from-blue-500 to-violet-500", bg: "from-blue-50 to-violet-50" },
+    { icon: FolderKanban, label: "総プロジェクト", value: `${projects.length}件`, color: "from-blue-500 to-brand-400", bg: "from-blue-50 to-brand-50" },
     { icon: TrendingUp, label: "進行中", value: `${activeCount}件`, color: "from-orange-500 to-amber-500", bg: "from-orange-50 to-amber-50" },
     { icon: Wallet, label: "総売上", value: formatCurrency(totalRevenue), color: "from-emerald-500 to-teal-500", bg: "from-emerald-50 to-teal-50" },
-    { icon: CheckCircle2, label: "平均利益率", value: `${avgProfitRate}%`, color: "from-rose-500 to-pink-500", bg: "from-rose-50 to-pink-50" },
+    { icon: CheckCircle2, label: "平均利益率", value: `${avgProfitRate}%`, color: "from-rose-500 to-brand-600", bg: "from-rose-50 to-brand-100" },
   ];
 
   return (
@@ -92,7 +92,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
           </div>
         </div>
         <Link href={`/promane/${workspaceSlug}/projects/new`}>
-          <Button className="rounded-full h-12 px-6 text-[14px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 hover:scale-105 active:scale-95 transition-all">
+          <Button className="rounded-full h-12 px-6 text-[14px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 hover:scale-105 active:scale-95 transition-all">
             <Plus className="mr-2 h-5 w-5" />
             新規プロジェクト
           </Button>
@@ -148,7 +148,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
               >
                 {/* プロジェクト名 */}
                 <div className="md:col-span-4 flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-violet-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-brand-50 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                     <Image src="/character/working.png" alt="" width={26} height={26} unoptimized />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -185,7 +185,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
                   {p.assignees.slice(0, 4).map((name, j) => (
                     <div
                       key={j}
-                      className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-[10px] font-black ring-2 ring-white shadow-sm"
+                      className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-brand-400 flex items-center justify-center text-white text-[10px] font-black ring-2 ring-white shadow-sm"
                       title={name}
                     >
                       {name.charAt(0)}

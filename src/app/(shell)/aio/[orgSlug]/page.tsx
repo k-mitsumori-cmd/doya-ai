@@ -32,7 +32,7 @@ interface Summary {
   recommendations?: { title: string; detail: string; priority: string }[]
 }
 
-const PURPLE = '#7f19e6'
+const PURPLE = '#0066ff'
 
 export default function AioDashboard() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
@@ -205,17 +205,17 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   ) : null
 
   const scanLimitBanner = scanLimit ? (
-    <div role="alert" className="mb-5 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4">
-      <p className="text-sm font-black text-purple-900">スキャンの利用枠に達しました</p>
-      <p className="mt-1 text-xs font-bold text-purple-800">{scanLimit}</p>
-      {scanLimitAction === 'owner' && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
+    <div role="alert" className="mb-5 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4">
+      <p className="text-sm font-black text-brand-800">スキャンの利用枠に達しました</p>
+      <p className="mt-1 text-xs font-bold text-brand-700">{scanLimit}</p>
+      {scanLimitAction === 'owner' && <p className="mt-2 text-xs font-bold text-brand-600">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
       {scanLimitAction === 'upgrade' && <TrialNote className="mt-2" />}
       {scanLimitAction === 'contact' ? (
-        <a href={HIGH_USAGE_CONTACT_URL} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+        <a href={HIGH_USAGE_CONTACT_URL} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
           追加枠について相談する
         </a>
       ) : scanLimitAction === 'upgrade' ? (
-        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
           料金プランを確認する
         </Link>
       ) : null}
@@ -258,7 +258,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
 
   const RunButton = (
     <button onClick={runScan} disabled={running || tooManyPrompts}
-      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
       <span className="material-symbols-outlined text-[20px]">{running ? 'hourglass_top' : 'play_arrow'}</span>
       {running ? 'スキャン中…' : 'スキャン実行'}
       {/* 減る量は、今のスキャンで聞く質問の数ぶん（ドヤパワーの旗の内側だけ） */}
@@ -302,15 +302,15 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
         {promptLimitBanner}
         <div className="text-center">
           <div className="flex justify-center mt-6"><DoyaKun mood={doya.mood} size={120} /></div>
-          <div className="inline-block mt-3 rounded-2xl bg-purple-50 border border-purple-100 px-4 py-2 text-sm font-bold text-purple-800">{doya.message}</div>
+          <div className="inline-block mt-3 rounded-2xl bg-brand-50 border border-brand-50 px-4 py-2 text-sm font-bold text-brand-700">{doya.message}</div>
           <Title className="text-2xl font-black text-slate-900 mt-3">まだスキャン結果がありません</Title>
           <p className="text-slate-500 font-bold mt-2 mb-6">
             サービス名・URLは登録済みです。下のボタンでAIでの現状をスキャンしましょう（監視する質問は
-            <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">プロンプト</Link>で編集できます）。
+            <Link href={`/aio/${orgSlug}/prompts`} className="text-brand-600 underline">プロンプト</Link>で編集できます）。
           </p>
           <div className="flex justify-center items-center gap-2 flex-wrap">
             {RunButton}
-            <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
+            <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-brand-100 text-brand-600 font-black text-sm hover:bg-brand-50 transition-colors">
               {sym('add', 18)}別のURLを調べる
             </Link>
           </div>
@@ -326,12 +326,12 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
           <DoyaKun mood={doya.mood} size={56} float={false} className="shrink-0" />
           <div className="min-w-0">
             <Title className="text-2xl font-black text-slate-900">AEO ダッシュボード</Title>
-            <p className="text-sm font-bold text-purple-700">{doya.message}</p>
+            <p className="text-sm font-bold text-brand-600">{doya.message}</p>
           </div>
         </div>
         <div className={`flex items-center gap-2 ${uiNext ? 'flex-wrap' : ''}`}>
-          <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">スキャン履歴</Link>
-          <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
+          <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-brand-100 text-brand-600 font-black text-sm hover:bg-brand-50 transition-colors">スキャン履歴</Link>
+          <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-brand-100 text-brand-600 font-black text-sm hover:bg-brand-50 transition-colors">
             {sym('add', 18)}別のURLを調べる
           </Link>
           {RunButton}
@@ -349,7 +349,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       <div className="flex gap-1 border-b border-slate-200 mb-5 overflow-x-auto">
         {([['visibility', '表示状況'], ['sov', 'シェア・オブ・ボイス'], ['citations', '引用'], ['recommend', '推奨']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2.5 text-sm font-black whitespace-nowrap border-b-2 transition-colors ${tab === k ? 'border-purple-600 text-purple-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+            className={`px-4 py-2.5 text-sm font-black whitespace-nowrap border-b-2 transition-colors ${tab === k ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
             {label}
           </button>
         ))}
@@ -423,7 +423,7 @@ function ScanProgress({ brandName, prompts }: { brandName: string | null; prompt
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-purple-700 text-white shadow-xl shadow-purple-500/30 p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-700 to-brand-600 text-white shadow-xl shadow-brand-400/30 p-6 sm:p-8">
         <div className="pointer-events-none absolute inset-0 opacity-30">
           {[...Array(6)].map((_, i) => (
             <span key={i} className="absolute rounded-full bg-white/40 animate-pulse"
@@ -432,7 +432,7 @@ function ScanProgress({ brandName, prompts }: { brandName: string | null; prompt
         </div>
         <div className="relative text-center">
           <div className="flex justify-center animate-bounce"><DoyaKun mood="thinking" size={92} /></div>
-          <p className="mt-3 text-sm font-black text-purple-100">{brandName ? `「${brandName}」をAIで調査中` : 'AIでの現状を調査中'}</p>
+          <p className="mt-3 text-sm font-black text-brand-50">{brandName ? `「${brandName}」をAIで調査中` : 'AIでの現状を調査中'}</p>
           <div className="text-5xl sm:text-6xl font-black tabular-nums mt-1">{pct}<span className="text-2xl">%</span></div>
           <div className="mt-3 h-3 rounded-full bg-white/20 overflow-hidden">
             <div className="h-full rounded-full bg-white transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
@@ -448,24 +448,24 @@ function ScanProgress({ brandName, prompts }: { brandName: string | null; prompt
         {engines.map((e, i) => {
           const on = i === activeEngine
           return (
-            <div key={e} className={`rounded-xl border p-3 text-center transition-all duration-300 ${on ? 'border-purple-400 bg-purple-50 scale-105 shadow' : 'border-slate-200 bg-white'}`}>
-              <p className={`text-xs font-black ${on ? 'text-purple-700' : 'text-slate-400'}`}>{e}</p>
-              <p className={`text-[10px] font-bold mt-0.5 ${on ? 'text-purple-500' : 'text-slate-300'}`}>{on ? '質問中…' : '待機'}</p>
+            <div key={e} className={`rounded-xl border p-3 text-center transition-all duration-300 ${on ? 'border-brand-300 bg-brand-50 scale-105 shadow' : 'border-slate-200 bg-white'}`}>
+              <p className={`text-xs font-black ${on ? 'text-brand-600' : 'text-slate-400'}`}>{e}</p>
+              <p className={`text-[10px] font-bold mt-0.5 ${on ? 'text-brand-400' : 'text-slate-300'}`}>{on ? '質問中…' : '待機'}</p>
             </div>
           )
         })}
       </div>
 
       {currentPrompt && (
-        <div className="mt-4 bg-white rounded-2xl border border-purple-100 p-4">
-          <p className="text-[11px] font-black text-purple-500 mb-1">いま調べている質問</p>
+        <div className="mt-4 bg-white rounded-2xl border border-brand-50 p-4">
+          <p className="text-[11px] font-black text-brand-400 mb-1">いま調べている質問</p>
           <p key={currentPrompt} className="text-sm font-bold text-slate-800 animate-fade-in-up">「{currentPrompt}」</p>
         </div>
       )}
 
       <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
         {STEPS.map((s, i) => (
-          <div key={s.label} className={`flex items-center gap-3 text-sm font-bold transition-colors ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-purple-700' : 'text-slate-300'}`}>
+          <div key={s.label} className={`flex items-center gap-3 text-sm font-bold transition-colors ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-brand-600' : 'text-slate-300'}`}>
             <span className="material-symbols-outlined text-[20px]">{i < stepIdx ? 'check_circle' : i === stepIdx ? 'progress_activity' : 'radio_button_unchecked'}</span>
             {s.label}
           </div>
@@ -532,11 +532,11 @@ function ProGate({ locked, orgSlug, children, note }: { locked: boolean; orgSlug
       <div className="blur-[6px] pointer-events-none select-none" aria-hidden>{children}</div>
       <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/30">
         <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`}
-          className="flex flex-col items-center gap-2 text-center px-6 py-5 rounded-2xl bg-white/95 border border-purple-200 shadow-lg shadow-purple-500/10 hover:-translate-y-0.5 transition-all">
-          <span className="material-symbols-outlined text-purple-600 text-[28px]">lock</span>
+          className="flex flex-col items-center gap-2 text-center px-6 py-5 rounded-2xl bg-white/95 border border-brand-100 shadow-lg shadow-brand-400/10 hover:-translate-y-0.5 transition-all">
+          <span className="material-symbols-outlined text-brand-500 text-[28px]">lock</span>
           <span className="font-black text-slate-900 text-sm">ここから先はプロプランで閲覧できます</span>
           <span className="text-xs font-bold text-slate-500">{note || 'SoV・引用元・改善アクションなど、AEO改善に効く詳細データが解放されます'}</span>
-          <span className="mt-1 inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm">プロプランを見る{sym('arrow_forward', 16)}</span>
+          <span className="mt-1 inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm">プロプランを見る{sym('arrow_forward', 16)}</span>
         </Link>
       </div>
     </div>
@@ -667,8 +667,8 @@ function HighlightAnswer({ text, brandName, competitors }: { text: string; brand
     <>
       {parts.map((part, i) => {
         const low = part.toLowerCase()
-        if (own && low === own.toLowerCase()) return <mark key={i} className="bg-purple-100 text-purple-800 font-black rounded px-0.5">{part}</mark>
-        if (comps.some((c) => c.toLowerCase() === low)) return <mark key={i} className="bg-fuchsia-50 text-fuchsia-700 font-bold rounded px-0.5">{part}</mark>
+        if (own && low === own.toLowerCase()) return <mark key={i} className="bg-brand-50 text-brand-700 font-black rounded px-0.5">{part}</mark>
+        if (comps.some((c) => c.toLowerCase() === low)) return <mark key={i} className="bg-pink-50 text-pink-700 font-bold rounded px-0.5">{part}</mark>
         return <span key={i}>{part}</span>
       })}
     </>
@@ -694,7 +694,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
               <span className="flex items-center gap-1.5 shrink-0">
                 {p.perEngine.map((e) => (
                   <span key={e.engine} title={ENGINE_LABEL[e.engine] || e.engine}
-                    className={`text-[11px] font-black px-1.5 py-0.5 rounded ${e.mentioned > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                    className={`text-[11px] font-black px-1.5 py-0.5 rounded ${e.mentioned > 0 ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-400'}`}>
                     {(ENGINE_LABEL[e.engine] || e.engine).slice(0, 2)} {e.total === 0 ? '未測定' : `${e.mentioned}/${e.total}`}
                   </span>
                 ))}
@@ -712,7 +712,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
                       <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${s.brandMentioned ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
                         {s.brandMentioned ? '自社あり' : '自社なし'}
                       </span>
-                      {s.competitors.length > 0 && <span className="text-[10px] font-bold text-fuchsia-600">競合: {s.competitors.slice(0, 5).join('・')}</span>}
+                      {s.competitors.length > 0 && <span className="text-[10px] font-bold text-pink-600">競合: {s.competitors.slice(0, 5).join('・')}</span>}
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
                       <HighlightAnswer text={s.answer} brandName={brandName} competitors={compNames} />
@@ -743,7 +743,7 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
             {summary.sov.slice(0, 10).map((s, i) => (
               <tr key={s.brand} className="border-b border-slate-50">
                 <td className="py-2 w-6 text-slate-400 font-bold">{i + 1}</td>
-                <td className={`py-2 font-bold ${s.isOwn ? 'text-purple-700' : 'text-slate-700'}`}>{s.brand}{s.isOwn && ' ★'}</td>
+                <td className={`py-2 font-bold ${s.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{s.brand}{s.isOwn && ' ★'}</td>
                 <td className="py-2 text-right font-black text-slate-800">{s.pct}%</td>
               </tr>
             ))}
@@ -764,7 +764,7 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
             <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
             <Tooltip />
             <Bar dataKey="pct" radius={[0, 6, 6, 0]}>
-              {data.map((d, i) => <Cell key={i} fill={d.isOwn ? PURPLE : '#d8b4fe'} />)}
+              {data.map((d, i) => <Cell key={i} fill={d.isOwn ? PURPLE : '#adc9ff'} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -791,7 +791,7 @@ function CitationsTab({ summary, delta, locked, orgSlug }: { summary: Summary; d
             <tbody>
               {summary.citations.map((c) => (
                 <tr key={c.domain} className="border-b border-slate-50">
-                  <td className={`py-2 font-bold ${c.isOwn ? 'text-purple-700' : 'text-slate-700'}`}>{c.domain}{c.isOwn && ' ★'}</td>
+                  <td className={`py-2 font-bold ${c.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{c.domain}{c.isOwn && ' ★'}</td>
                   <td className="py-2 text-slate-400 text-xs font-bold">{channelLabel[c.channel] || c.channel}</td>
                   <td className="py-2 text-right font-black text-slate-800">{c.count}</td>
                 </tr>
@@ -820,13 +820,13 @@ function RecommendTab({ summary, locked, orgSlug, brandName }: { summary: Summar
   ) : (
     <div className="space-y-4">
       {/* 現状＋使い方のイントロ */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-4 sm:p-5">
+      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 border border-brand-50 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined text-purple-600 mt-0.5">tips_and_updates</span>
+          <span className="material-symbols-outlined text-brand-500 mt-0.5">tips_and_updates</span>
           <div className="min-w-0">
             <p className="font-black text-slate-900 text-sm sm:text-base">AIに選ばれるための改善アクション</p>
             <p className="text-xs sm:text-sm font-bold text-slate-500 mt-1 leading-relaxed">
-              現在のAI認知度は <span className="text-purple-700 font-black">{summary.awarenessPct}%</span>。{who}がAIの回答にもっと登場するための打ち手を<strong className="text-slate-700">優先度の高い順</strong>に並べました。上から順に取り組むのがおすすめです。
+              現在のAI認知度は <span className="text-brand-600 font-black">{summary.awarenessPct}%</span>。{who}がAIの回答にもっと登場するための打ち手を<strong className="text-slate-700">優先度の高い順</strong>に並べました。上から順に取り組むのがおすすめです。
             </p>
           </div>
         </div>
@@ -848,7 +848,7 @@ function RecommendTab({ summary, locked, orgSlug, brandName }: { summary: Summar
             <div className={`w-1.5 shrink-0 ${m.bar}`} />
             <div className="p-4 sm:p-5 flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white font-black text-sm shrink-0">{i + 1}</span>
+                <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-black text-sm shrink-0">{i + 1}</span>
                 <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${m.pill}`}>
                   <span className="material-symbols-outlined text-[14px]">{m.icon}</span>{m.label}
                 </span>

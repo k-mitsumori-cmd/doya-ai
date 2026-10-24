@@ -139,8 +139,8 @@ export default function AdminAttendancePage() {
               onClick={goToday}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
                 isToday
-                  ? 'bg-[#7f19e6] text-white border-[#7f19e6]'
-                  : 'bg-white text-[#7f19e6] border-[#7f19e6]/30 hover:bg-[#7f19e6]/5'
+                  ? 'bg-[#0066ff] text-white border-[#0066ff]'
+                  : 'bg-white text-[#0066ff] border-[#0066ff]/30 hover:bg-[#0066ff]/5'
               }`}
             >
               今日
@@ -151,7 +151,7 @@ export default function AdminAttendancePage() {
           <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
             disabled={departmentsLoading || (departmentsError && departments.length === 0)}
             aria-label="部署で絞り込む"
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
             <option value="">{departmentsLoading && departments.length === 0 ? '部署を読み込み中...' : departmentsError && departments.length === 0 ? '部署を読み込めませんでした' : 'すべての部署'}</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>

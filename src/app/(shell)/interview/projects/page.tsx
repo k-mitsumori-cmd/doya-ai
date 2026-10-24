@@ -28,9 +28,9 @@ interface Project {
 const GENRE_GRADIENTS: Record<string, string> = {
   CASE_STUDY: 'from-blue-400 to-indigo-500',
   PRODUCT_INTERVIEW: 'from-emerald-400 to-teal-500',
-  PERSONA_INTERVIEW: 'from-violet-400 to-blue-500',
+  PERSONA_INTERVIEW: 'from-brand-300 to-blue-500',
   PANEL_DISCUSSION: 'from-amber-400 to-orange-500',
-  EVENT_REPORT: 'from-rose-400 to-pink-500',
+  EVENT_REPORT: 'from-rose-400 to-brand-600',
   OTHER: 'from-slate-400 to-slate-500',
 }
 
@@ -190,7 +190,7 @@ export default function ProjectsPage() {
         </div>
         <Link
           href="/interview"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm font-bold hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20"
         >
           <span className="material-symbols-outlined text-lg">add</span>
           新規作成
@@ -213,7 +213,7 @@ export default function ProjectsPage() {
               onClick={() => { requestVersionRef.current++; setFilter(s) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 filter === s
-                  ? 'bg-[#7f19e6] text-white shadow-sm'
+                  ? 'bg-[#0066ff] text-white shadow-sm'
                   : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
               }`}
             >
@@ -234,7 +234,7 @@ export default function ProjectsPage() {
             value={query}
             onChange={(e) => { requestVersionRef.current++; setQuery(e.target.value) }}
             placeholder="検索..."
-            className="w-full sm:w-56 pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] bg-white transition-all"
+            className="w-full sm:w-56 pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] bg-white transition-all"
           />
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function ProjectsPage() {
                 <motion.div key={p.id} variants={cardVariants}>
                   <Link
                     href={getProjectLink(p)}
-                    className="group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all hover:border-[#7f19e6]/30"
+                    className="group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all hover:border-[#0066ff]/30"
                   >
                     {/* サムネイル */}
                     <div className="aspect-video relative overflow-hidden bg-slate-50">
@@ -345,7 +345,7 @@ export default function ProjectsPage() {
                     {/* カード情報 */}
                     <div className="p-4">
                       {/* 記事タイトル（優先表示） */}
-                      <h4 className="font-bold text-sm text-slate-900 line-clamp-2 group-hover:text-[#7f19e6] transition-colors mb-1">
+                      <h4 className="font-bold text-sm text-slate-900 line-clamp-2 group-hover:text-[#0066ff] transition-colors mb-1">
                         {p.articleTitle || p.title}
                       </h4>
 
@@ -367,8 +367,8 @@ export default function ProjectsPage() {
                       {(p.transcriptionSummary || p.transcriptionExcerpt) && (
                         <div className="mb-2">
                           <div className="flex items-center gap-1 mb-0.5">
-                            <span className="material-symbols-outlined text-[11px] text-[#7f19e6]">mic</span>
-                            <span className="text-[10px] font-bold text-[#7f19e6]">文字起こし</span>
+                            <span className="material-symbols-outlined text-[11px] text-[#0066ff]">mic</span>
+                            <span className="text-[10px] font-bold text-[#0066ff]">文字起こし</span>
                           </div>
                           <p className={`text-[11px] leading-relaxed line-clamp-2 ${p.transcriptionSummary ? 'text-slate-600' : 'text-slate-500'}`}>
                             {p.transcriptionSummary || p.transcriptionExcerpt}
@@ -407,7 +407,7 @@ export default function ProjectsPage() {
       {!loading && !listError && nextCursor && (
         <div className="text-center space-y-2">
           <p className="text-xs text-slate-500">{filteredCount}件中{projects.length}件を表示</p>
-          <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-[#7f19e6] hover:bg-slate-50 disabled:opacity-60">
+          <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-[#0066ff] hover:bg-slate-50 disabled:opacity-60">
             {moreLoading ? '読み込み中...' : 'さらに記事を表示'}
           </button>
           {moreError && <p role="alert" className="text-sm text-red-700">追加の記事を読み込めませんでした。再度お試しください。</p>}

@@ -44,7 +44,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={96} height={96} style={{ objectFit: 'contain' }} className="bear-float" />
-        <div className="w-10 h-10 rounded-full border-4 border-purple-200 border-t-purple-600 animate-spin" />
+        <div className="w-10 h-10 rounded-full border-4 border-brand-100 border-t-brand-500 animate-spin" />
         <p className="text-base font-bold text-slate-400">読み込み中...</p>
       </div>
     )
@@ -57,7 +57,7 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-black text-slate-800">エラーが発生しました</h2>
         <p className="text-base font-bold text-red-600 bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-3 max-w-lg text-center">{error || '不明なエラー'}</p>
         <div className="flex gap-3">
-          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-purple-600 text-white font-black rounded-full shadow-lg">再試行する</button>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-brand-500 text-white font-black rounded-full shadow-lg">再試行する</button>
           <Link href="/kintai" className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200">トップへ戻る</Link>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => router.push('/kintai/clock')}
-            className="px-6 py-3 bg-purple-600 text-white font-black rounded-full shadow-lg hover:bg-purple-700 transition-all text-base"
+            className="px-6 py-3 bg-brand-500 text-white font-black rounded-full shadow-lg hover:bg-brand-600 transition-all text-base"
           >
             {status === 'not_clocked_in' ? '⏰ 出勤する' : '⏰ 打刻画面へ'}
           </button>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
           { href: '/kintai/attendance', bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png', label: '勤怠履歴', bg: 'from-emerald-500 to-green-600' },
           { href: '/kintai/requests', bear: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png', label: '申請履歴', bg: 'from-blue-500 to-indigo-600' },
         ] : [
-          { href: '/kintai/clock', bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png', label: '打刻', bg: 'from-purple-600 to-purple-800' },
+          { href: '/kintai/clock', bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png', label: '打刻', bg: 'from-brand-500 to-brand-700' },
           { href: '/kintai/requests/new', bear: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png', label: '申請', bg: 'from-blue-500 to-indigo-600' },
           { href: '/kintai/attendance', bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png', label: '勤怠一覧', bg: 'from-emerald-500 to-green-600' },
         ]).map((a) => (

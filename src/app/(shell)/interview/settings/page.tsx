@@ -97,7 +97,7 @@ export default function InterviewSettingsPage() {
       missingFeatures: ['ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', '優先サポート'],
     },
     PRO: {
-      label: 'PRO プラン', badge: 'PRO', badgeColor: 'bg-[#7f19e6] text-white',
+      label: 'PRO プラン', badge: 'PRO', badgeColor: 'bg-[#0066ff] text-white',
       transcription: `${INTERVIEW_PRICING.transcriptionMinutes.pro}分/月`, upload: '2GB',
       generation: `${INTERVIEW_PRICING.proLimit}回/日`,
       features: ['AI記事生成', 'スキル選択', '校正・タイトル提案', 'ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', 'データ保存（30日間）', '優先サポート'],
@@ -147,7 +147,7 @@ export default function InterviewSettingsPage() {
           <p className="text-sm text-slate-500 mb-6">設定の確認・変更にはログインが必要です。</p>
           <a
             href="/auth/signin?callbackUrl=/interview/settings"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/25"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0066ff] text-white rounded-xl text-sm font-bold hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/25"
           >
             <span className="material-symbols-outlined text-lg">login</span>
             ログインする
@@ -193,7 +193,7 @@ export default function InterviewSettingsPage() {
             whileTap={{ scale: 0.96 }}
             className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl border transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab.key
-                ? 'bg-[#7f19e6] text-white border-[#7f19e6] shadow-lg shadow-[#7f19e6]/25'
+                ? 'bg-[#0066ff] text-white border-[#0066ff] shadow-lg shadow-[#0066ff]/25'
                 : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:shadow-md'
             }`}
           >
@@ -220,7 +220,7 @@ export default function InterviewSettingsPage() {
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" delay={0}>
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                 <h3 className="font-bold tracking-tight flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7f19e6]">account_circle</span>
+                  <span className="material-symbols-outlined text-[#0066ff]">account_circle</span>
                   アカウント情報
                 </h3>
               </div>
@@ -231,7 +231,7 @@ export default function InterviewSettingsPage() {
                       {user.image ? (
                         <img src={user.image} alt="" className="w-20 h-20 rounded-2xl border-2 border-slate-200 shadow-lg" />
                       ) : (
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#0066ff] to-blue-600 flex items-center justify-center shadow-lg">
                           <span className="material-symbols-outlined text-white text-[36px]">person</span>
                         </div>
                       )}
@@ -263,7 +263,7 @@ export default function InterviewSettingsPage() {
                       <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                         <Link
                           href={`/auth/signin?callbackUrl=${encodeURIComponent('/interview/settings')}`}
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/25"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm font-bold hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/25"
                         >
                           <span className="material-symbols-outlined text-lg">login</span>
                           ログインして始める
@@ -279,7 +279,7 @@ export default function InterviewSettingsPage() {
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" delay={0.1}>
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
                 <h3 className="font-bold tracking-tight flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7f19e6]">workspace_premium</span>
+                  <span className="material-symbols-outlined text-[#0066ff]">workspace_premium</span>
                   現在のプラン
                 </h3>
                 <motion.span
@@ -297,7 +297,7 @@ export default function InterviewSettingsPage() {
                   {[
                     { icon: 'mic', value: currentPlan.transcription, label: '文字起こし', gradient: 'from-blue-500 to-indigo-600' },
                     { icon: 'cloud_upload', value: currentPlan.upload, label: 'アップロード上限', gradient: 'from-emerald-500 to-teal-600' },
-                    { icon: 'auto_awesome', value: currentPlan.generation, label: 'AI記事生成', gradient: 'from-violet-500 to-purple-600' },
+                    { icon: 'auto_awesome', value: currentPlan.generation, label: 'AI記事生成', gradient: 'from-brand-400 to-brand-500' },
                   ].map((item, i) => (
                     <motion.div
                       key={item.label}
@@ -351,7 +351,7 @@ export default function InterviewSettingsPage() {
                       <span className="material-symbols-outlined text-slate-300 text-[20px]">lock</span>
                       <span className="text-slate-400">{f}</span>
                       {(plan === 'FREE' || plan === 'GUEST') && (
-                        <span className="ml-auto text-[10px] font-black text-[#7f19e6] bg-blue-50 px-2 py-0.5 rounded-full">PRO</span>
+                        <span className="ml-auto text-[10px] font-black text-[#0066ff] bg-blue-50 px-2 py-0.5 rounded-full">PRO</span>
                       )}
                     </motion.div>
                   ))}
@@ -409,7 +409,7 @@ export default function InterviewSettingsPage() {
             {/* 利用統計 — アニメーションカウンター */}
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm" delay={0}>
               <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">analytics</span>
+                <span className="material-symbols-outlined text-[#0066ff]">analytics</span>
                 利用統計
               </h2>
               {loading ? (
@@ -430,7 +430,7 @@ export default function InterviewSettingsPage() {
                   {[
                     { icon: 'folder', value: stats.totalProjects, label: 'プロジェクト', gradient: 'from-blue-500 to-indigo-600', bg: 'from-blue-50 to-indigo-50' },
                     { icon: 'description', value: stats.totalDrafts, label: '生成記事', gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-50 to-teal-50' },
-                    { icon: 'upload_file', value: stats.totalMaterials, label: 'アップロード素材', gradient: 'from-violet-500 to-purple-600', bg: 'from-violet-50 to-purple-50' },
+                    { icon: 'upload_file', value: stats.totalMaterials, label: 'アップロード素材', gradient: 'from-brand-400 to-brand-500', bg: 'from-brand-50 to-brand-50' },
                   ].map((item, i) => (
                     <motion.div
                       key={item.label}
@@ -459,7 +459,7 @@ export default function InterviewSettingsPage() {
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" delay={0.15}>
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                 <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7f19e6]">compare</span>
+                  <span className="material-symbols-outlined text-[#0066ff]">compare</span>
                   プラン比較
                 </h2>
               </div>
@@ -484,7 +484,7 @@ export default function InterviewSettingsPage() {
           >
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm" delay={0}>
               <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">tune</span>
+                <span className="material-symbols-outlined text-[#0066ff]">tune</span>
                 デフォルト設定
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
@@ -496,7 +496,7 @@ export default function InterviewSettingsPage() {
                     <span className="material-symbols-outlined text-[18px] text-slate-500">mood</span>
                     デフォルトトーン
                   </label>
-                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#7f19e6] focus:border-[#7f19e6] transition-all">
+                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0066ff] focus:border-[#0066ff] transition-all">
                     <option value="professional">プロフェッショナル</option>
                     <option value="casual">カジュアル</option>
                     <option value="academic">アカデミック</option>
@@ -508,7 +508,7 @@ export default function InterviewSettingsPage() {
                     <span className="material-symbols-outlined text-[18px] text-slate-500">language</span>
                     デフォルトメディア
                   </label>
-                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#7f19e6] focus:border-[#7f19e6] transition-all">
+                  <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0066ff] focus:border-[#0066ff] transition-all">
                     <option value="web">Webメディア</option>
                     <option value="corporate">企業サイト</option>
                     <option value="sns">SNS</option>
@@ -524,7 +524,7 @@ export default function InterviewSettingsPage() {
 
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm" delay={0.1}>
               <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">folder_managed</span>
+                <span className="material-symbols-outlined text-[#0066ff]">folder_managed</span>
                 データ管理
               </h2>
               <div className="space-y-2">
@@ -562,7 +562,7 @@ export default function InterviewSettingsPage() {
 
             <FloatingCard className="bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-50 rounded-2xl border border-blue-200 p-6 space-y-3 shadow-sm" delay={0.2}>
               <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">support_agent</span>
+                <span className="material-symbols-outlined text-[#0066ff]">support_agent</span>
                 ヘルプ・サポート
               </h2>
               <div className="text-sm text-slate-700 space-y-2.5">
@@ -585,7 +585,7 @@ export default function InterviewSettingsPage() {
                   <span className="material-symbols-outlined text-[18px] text-blue-700 mt-0.5">mail</span>
                   <p>
                     ご不明な点は
-                    <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="text-[#7f19e6] font-bold underline ml-1 hover:text-blue-900 transition-colors">
+                    <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="text-[#0066ff] font-bold underline ml-1 hover:text-blue-900 transition-colors">
                       お問い合わせ
                     </a>
                     ください。

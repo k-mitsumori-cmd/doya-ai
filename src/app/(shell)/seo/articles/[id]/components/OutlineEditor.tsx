@@ -369,7 +369,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
                       <button
                         onClick={() => handleAction(heading.id, 'regenerate')}
                         disabled={loading}
-                        className="h-10 rounded-xl bg-purple-50 text-purple-700 text-xs font-black hover:bg-purple-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        className="h-10 rounded-xl bg-brand-50 text-brand-600 text-xs font-black hover:bg-brand-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
                         {loading && activeAction?.id === heading.id && activeAction?.type === 'regenerate' ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

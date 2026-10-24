@@ -21,7 +21,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
 
   const stats = [
     { emoji: "👥", label: "メンバー数", value: `${memberCount} 人`, bg: "from-blue-100 to-indigo-100" },
-    { emoji: "📁", label: "プロジェクト数", value: `${projectCount} 件`, bg: "from-violet-100 to-purple-100" },
+    { emoji: "📁", label: "プロジェクト数", value: `${projectCount} 件`, bg: "from-brand-50 to-brand-50" },
     { emoji: "🏢", label: "顧客数", value: `${clientCount} 社`, bg: "from-amber-100 to-orange-100" },
   ];
 
@@ -40,7 +40,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
 
       <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-8 mb-6 animate-slide-up stagger-1">
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 text-xl font-black text-white shadow-md">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-brand-500 text-xl font-black text-white shadow-md">
             {workspace.name.charAt(0)}
           </div>
           <div>

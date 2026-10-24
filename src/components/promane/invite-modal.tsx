@@ -284,7 +284,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
               <Button
                 onClick={handleSend}
                 disabled={sending || !email.trim()}
-                className="w-full h-12 rounded-full text-[15px] font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-lg"
+                className="w-full h-12 rounded-full text-[15px] font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-lg"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {sending ? '送信中...' : '招待メールを送信'}

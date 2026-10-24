@@ -18,7 +18,7 @@ function InviteContent({ token }: { token: string }) {
   const { state, invitation, error, accountAction, busy: accepting, sessionStatus: status, accept: handleAccept, signInOrSwitch, verifyAgain } = useInvitationRecovery('promane', token)
   if (state === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-violet-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-brand-50">
         <div className="flex flex-col items-center gap-4">
           <Image src="/character/thinking.png" alt="" width={120} height={120} className="animate-bounce" unoptimized />
           <p className="text-sm font-bold text-slate-500">読み込み中...</p>
@@ -47,7 +47,7 @@ function InviteContent({ token }: { token: string }) {
   const daysLeft = Math.max(0, Math.ceil((expires.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-brand-50 p-6">
 
       <div className="bg-white rounded-3xl border border-blue-200 shadow-2xl p-10 max-w-md w-full space-y-6">
         <div className="text-center space-y-3">
@@ -64,7 +64,7 @@ function InviteContent({ token }: { token: string }) {
           <p className="text-sm text-slate-500">ドヤプロマネで一緒に仕事しましょう</p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-violet-50 rounded-2xl p-5 border border-blue-100">
+        <div className="bg-gradient-to-br from-blue-50 to-brand-50 rounded-2xl p-5 border border-blue-100">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500">ワークスペース</span>
@@ -76,7 +76,7 @@ function InviteContent({ token }: { token: string }) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500">役割</span>
-              <span className="text-sm font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">
+              <span className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">
                 {ROLE_LABELS[invitation.role] || invitation.role}
               </span>
             </div>
@@ -106,7 +106,7 @@ function InviteContent({ token }: { token: string }) {
         <Button
           onClick={handleAccept}
           disabled={accepting || status === 'loading'}
-          className="w-full rounded-full h-14 text-base font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-lg"
+          className="w-full rounded-full h-14 text-base font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-lg"
         >
           {accepting ? '処理中…' : status === 'loading' ? 'ログイン状態を確認中…' : status === 'authenticated' ? 'ワークスペースに参加' : 'Googleでログインして参加'}
         </Button>

@@ -1059,8 +1059,8 @@ export default function AdImageTool() {
                 }`}
                 style={{
                   backgroundImage: scoring
-                    ? 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72, #ffd400, #00e0ff, #0066ff)'
-                    : 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72)',
+                    ? 'linear-gradient(90deg, #0066ff, #0066ff, #ff1e72, #ffd400, #00e0ff, #0066ff)'
+                    : 'linear-gradient(90deg, #0066ff, #0066ff, #ff1e72)',
                   opacity: scoring ? 1 : undefined,
                 }}
               >

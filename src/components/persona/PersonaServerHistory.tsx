@@ -6,7 +6,7 @@ import { deletePersonaRecord } from '@/lib/persona/history-records'
 
 type Item = { id: string; name: string; occupation: string; createdAt: string }
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/
-const buttonClass = 'rounded-lg border border-slate-600 px-3 py-2 text-sm text-purple-300 disabled:opacity-50'
+const buttonClass = 'rounded-lg border border-slate-600 px-3 py-2 text-sm text-brand-200 disabled:opacity-50'
 
 export default function PersonaServerHistory({ userId, onLocalChange }: { userId: string; onLocalChange: () => void }) {
   const storage = useMemo(() => personaBrowserStorage(userId), [userId])

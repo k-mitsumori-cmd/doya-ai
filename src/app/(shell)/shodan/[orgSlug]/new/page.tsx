@@ -153,10 +153,10 @@ export default function ShodanNewPage() {
       <AnimatePresence mode="wait">
         {phase === 'input' && (
           <motion.div key="input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="relative rounded-3xl bg-white border border-purple-100 p-6 pt-8 shadow-sm overflow-hidden">
+            className="relative rounded-3xl bg-white border border-brand-50 p-6 pt-8 shadow-sm overflow-hidden">
             <DoyaKun mood="point" size={96} className="!absolute -top-2 right-3" />
             <label htmlFor="shodan-new-url" className="block text-sm font-black text-slate-700 mb-2">商談先企業のURL</label>
-            <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 focus-within:border-purple-400 px-4 py-3 transition-colors bg-white">
+            <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 focus-within:border-brand-300 px-4 py-3 transition-colors bg-white">
               {sym('language', 22)}
               <input id="shodan-new-url" value={url} maxLength={8192} onChange={(e) => { if (!guard.active()) return; draft.current = e.target.value; setUrl(e.target.value) }} onKeyDown={(e) => e.key === 'Enter' && run()}
                 placeholder="例: https://www.example.co.jp" className="flex-1 font-bold outline-none" autoFocus />
@@ -170,13 +170,13 @@ export default function ShodanNewPage() {
             {limitMessage && (
               <div role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <p className="text-sm font-bold text-amber-900">{limitMessage}</p>
-                {limitAction && <Link href={limitAction.href} className="mt-2 inline-flex items-center gap-1 text-sm font-black text-purple-700 underline">
+                {limitAction && <Link href={limitAction.href} className="mt-2 inline-flex items-center gap-1 text-sm font-black text-brand-600 underline">
                   {limitAction.label} {sym('arrow_forward', 16)}
                 </Link>}
               </div>
             )}
             <motion.button data-testid="shodan-create" type="button" disabled={unknown || Boolean(limitMessage)} onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
               {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
             </motion.button>
             <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">{unknown ? '作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。' : limitMessage ? '利用枠について、上の案内をご確認ください。' : '企業調査の完了まで30秒〜2分ほど。結果を待つ間はタブを開いたままお待ちください。'}</p>
@@ -185,16 +185,16 @@ export default function ShodanNewPage() {
 
         {phase === 'researching' && (
           <motion.div key="researching" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
+            className="rounded-3xl bg-white border border-brand-50 p-8 shadow-sm text-center">
             <div className="flex justify-center"><DoyaKun mood={RESEARCH_MOODS[Math.min(tick, RESEARCH_MOODS.length - 1)]} size={120} /></div>
-            <p className="font-black text-purple-700 text-lg mt-3 flex items-center justify-center gap-2">
+            <p className="font-black text-brand-600 text-lg mt-3 flex items-center justify-center gap-2">
               <span className="material-symbols-outlined animate-spin">progress_activity</span>企業を調査中…
             </p>
             <div className="mt-5 max-w-md mx-auto text-left space-y-2">
               {RESEARCH_TICKER.map((m, i) => (
                 <motion.div key={i} initial={false}
                   animate={{ opacity: i <= tick ? 1 : 0.3, x: 0 }}
-                  className={`flex items-center gap-2 text-sm font-bold ${i < tick ? 'text-emerald-600' : i === tick ? 'text-purple-700' : 'text-slate-300'}`}>
+                  className={`flex items-center gap-2 text-sm font-bold ${i < tick ? 'text-emerald-600' : i === tick ? 'text-brand-600' : 'text-slate-300'}`}>
                   {sym(i < tick ? 'check_circle' : i === tick ? 'radio_button_checked' : 'radio_button_unchecked', 18)}
                   {m}
                 </motion.div>

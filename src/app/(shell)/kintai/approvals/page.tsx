@@ -213,12 +213,12 @@ export default function ApprovalsPage() {
         <div className="flex gap-1 bg-slate-100 rounded-lg p-1 max-w-md">
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 ${tab === t.key ? 'bg-white text-[#7f19e6] shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+              className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 ${tab === t.key ? 'bg-white text-[#0066ff] shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
               {t.label}
               {!loading && !loadError && allCounts[t.key] > 0 && (
                 <span className={`text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full font-bold ${
                   t.key === 'pending' && tab !== t.key ? 'bg-red-500 text-white' :
-                  tab === t.key ? 'bg-[#7f19e6]/10 text-[#7f19e6]' : 'bg-slate-200 text-slate-600'
+                  tab === t.key ? 'bg-[#0066ff]/10 text-[#0066ff]' : 'bg-slate-200 text-slate-600'
                 }`}>
                   {allCounts[t.key]}
                 </span>
@@ -359,7 +359,7 @@ export default function ApprovalsPage() {
             <p className="text-xs text-slate-500">{requests.length} / {total}件を表示</p>
             {moreError && <p role="alert" className="text-sm text-red-700">続きの読み込みに失敗しました。再試行するか一覧を更新してください。</p>}
             <div className="flex justify-center gap-2">
-              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-purple-300 bg-white px-5 py-2 text-sm font-bold text-purple-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
+              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-brand-200 bg-white px-5 py-2 text-sm font-bold text-brand-600 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
               {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-bold text-slate-700">一覧を更新</button>}
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function ApprovalsPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">コメント（任意）</label>
                 <textarea value={rejectComment} onChange={e => setRejectComment(e.target.value)} rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] resize-none"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] resize-none"
                   placeholder="却下理由を入力..." />
               </div>
               <div className="flex gap-3">

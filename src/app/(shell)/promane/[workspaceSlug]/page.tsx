@@ -288,7 +288,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       text: profitColors.text,
       ring: profitColors.ring,
     },
-    { icon: "/character/focus.png", label: "進行中", value: `${data.activeProjects} 件`, bg: "from-violet-100 to-purple-100", text: "text-violet-800", ring: "ring-violet-200" },
+    { icon: "/character/focus.png", label: "進行中", value: `${data.activeProjects} 件`, bg: "from-brand-50 to-brand-50", text: "text-brand-700", ring: "ring-brand-100" },
   ];
 
   return (
@@ -303,7 +303,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           </div>
         </div>
         <Link href={`/promane/${workspaceSlug}/projects/new`}>
-          <Button className="rounded-full h-12 px-7 text-[16px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 transition-all hover:scale-105 active:scale-95">
+          <Button className="rounded-full h-12 px-7 text-[16px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 transition-all hover:scale-105 active:scale-95">
             <Plus className="mr-2 h-5 w-5" />
             新規プロジェクト
           </Button>
@@ -312,7 +312,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
 
       {/* 自分の役割・タスクカード */}
       {myMember && (
-        <div className="mb-8 rounded-[28px] bg-gradient-to-br from-blue-500 via-violet-500 to-purple-600 p-6 text-white shadow-xl shadow-violet-500/20 animate-slide-up stagger-1">
+        <div className="mb-8 rounded-[28px] bg-gradient-to-br from-blue-500 via-brand-400 to-brand-500 p-6 text-white shadow-xl shadow-brand-400/20 animate-slide-up stagger-1">
           <div className="flex items-center gap-4 mb-4">
             <Image src="/character/focus.png" alt="" width={60} height={60} className="drop-shadow-md" unoptimized />
             <div className="flex-1">
@@ -471,7 +471,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
                 href={`/promane/${workspaceSlug}/projects/${project.id}`}
                 className={`flex items-center gap-5 px-7 py-5 hover:bg-blue-50/60 transition-all group animate-slide-up stagger-${Math.min(i + 1, 5)}`}
               >
-                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-violet-100 transition-all group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg">
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-50 transition-all group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg">
                   <Image src="/character/working.png" alt="" width={40} height={40} className="drop-shadow-sm" unoptimized />
                 </div>
 

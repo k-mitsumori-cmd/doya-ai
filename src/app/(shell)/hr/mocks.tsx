@@ -2,7 +2,7 @@
 import React from 'react'
 import { Sym } from '@/components/lp'
 
-const AV = ['#0066ff', '#0284c7', '#7c3aed', '#0891b2', '#2563eb', '#0ea5e9']
+const AV = ['#0066ff', '#0284c7', '#0066ff', '#0891b2', '#2563eb', '#0ea5e9']
 function Avatar({ i, initial, size = 36 }: { i: number; initial: string; size?: number }) {
   return (
     <span className="grid place-items-center rounded-full text-white font-black shrink-0"

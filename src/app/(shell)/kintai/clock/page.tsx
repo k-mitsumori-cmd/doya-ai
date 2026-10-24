@@ -188,7 +188,7 @@ export default function ClockPage() {
       statusSub: 'ゆっくり休んでリフレッシュ！',
     },
     clocked_out: {
-      bg: 'background: linear-gradient(180deg, #ede9fe 0%, #e0e7ff 40%, #ffffff 100%)',
+      bg: 'background: linear-gradient(180deg, #eaf2ff 0%, #e0e7ff 40%, #ffffff 100%)',
       character: CHARS.success,
       characterAlt: 'トロフィーを持つクマ',
       characterAnim: 'bear-celebrate',
@@ -204,7 +204,7 @@ export default function ClockPage() {
       <PageTitle className="text-xl font-bold text-slate-800">打刻は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の勤怠や申請は引き続き確認できます。</p>
       <div className="flex justify-center gap-3">
-        <Link href="/kintai/attendance" className="rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
+        <Link href="/kintai/attendance" className="rounded-xl bg-[#0066ff] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
         <Link href="/kintai/requests" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">申請履歴を見る</Link>
       </div>
     </div>
@@ -228,7 +228,7 @@ export default function ClockPage() {
     return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻状態を確認できませんでした</p>
       <p className="text-sm text-slate-600">打刻を再送せず、現在の状態を読み直してください。</p>
-      <button type="button" onClick={fetchRecords} className="rounded-xl bg-purple-600 px-5 py-3 font-bold text-white hover:bg-purple-700">状態を再確認</button>
+      <button type="button" onClick={fetchRecords} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600">状態を再確認</button>
     </div>
   }
 
@@ -283,7 +283,7 @@ export default function ClockPage() {
           {/* Floating confetti for clocked_out */}
           {status === 'clocked_out' && (
             <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-              <div className="float-confetti-0 absolute top-[10%] left-[15%] w-2 h-2 rounded-sm bg-[#7f19e6]/30" />
+              <div className="float-confetti-0 absolute top-[10%] left-[15%] w-2 h-2 rounded-sm bg-[#0066ff]/30" />
               <div className="float-confetti-1 absolute top-[20%] right-[20%] w-2 h-3 rounded-sm bg-amber-400/30" />
               <div className="float-confetti-2 absolute top-[15%] left-[60%] w-3 h-2 rounded-sm bg-emerald-400/30" />
               <div className="float-confetti-0 absolute top-[8%] right-[35%] w-2 h-2 rounded-full bg-rose-400/25" />
@@ -324,7 +324,7 @@ export default function ClockPage() {
           status === 'not_clocked_in' ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/60' :
           status === 'working' ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200/60' :
           status === 'on_break' ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200/60' :
-          'bg-gradient-to-br from-violet-50 to-indigo-50 border-violet-200/60'
+          'bg-gradient-to-br from-brand-50 to-indigo-50 border-brand-100/60'
         }`}>
           <img
             src={statusConfig.character}
@@ -336,7 +336,7 @@ export default function ClockPage() {
               status === 'not_clocked_in' ? 'text-amber-600' :
               status === 'working' ? 'text-emerald-600' :
               status === 'on_break' ? 'text-amber-600' :
-              'text-violet-600'
+              'text-brand-500'
             }`}>
               {statusConfig.statusText}
             </p>
@@ -475,11 +475,11 @@ export default function ClockPage() {
 
           {status === 'clocked_out' && (
             <div className="w-full space-y-3">
-              <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200/60 p-5 flex items-center gap-4">
+              <div className="rounded-3xl bg-gradient-to-br from-brand-50 to-indigo-50 border-2 border-brand-100/60 p-5 flex items-center gap-4">
                 <img src={CHARS.success} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
                 <div className="flex-1 text-left">
-                  <p className="text-lg font-black text-violet-700 leading-tight">お疲れさまでした！</p>
-                  <p className="text-sm font-medium text-violet-500/80 mt-0.5">ゆっくり休んでくださいね</p>
+                  <p className="text-lg font-black text-brand-600 leading-tight">お疲れさまでした！</p>
+                  <p className="text-sm font-medium text-brand-400/80 mt-0.5">ゆっくり休んでくださいね</p>
                 </div>
               </div>
               <button
@@ -528,7 +528,7 @@ export default function ClockPage() {
         {records.length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white shadow-lg shadow-slate-200/30 p-5">
             <h2 className="text-sm font-bold text-slate-600 mb-5 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#7f19e6] text-lg">timeline</span>
+              <span className="material-symbols-outlined text-[#0066ff] text-lg">timeline</span>
               今日のタイムライン
             </h2>
             <div className="relative pl-4">

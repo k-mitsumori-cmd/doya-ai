@@ -97,7 +97,7 @@ export function MemberList({
         <div className="mb-6 flex justify-end">
           <Button
             onClick={() => setInviteOpen(true)}
-            className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 transition-all hover:scale-105 active:scale-95"
+            className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 transition-all hover:scale-105 active:scale-95"
           >
             <UserPlus className="mr-2 h-5 w-5" />
             メンバーを招待
@@ -112,11 +112,11 @@ export function MemberList({
             <div
               key={member.id}
               className={`rounded-3xl bg-white ring-1 shadow-sm p-6 transition-all hover:shadow-xl hover:scale-[1.02] animate-slide-up stagger-${Math.min(i + 1, 5)} ${
-                isMe ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50/50 to-violet-50/50' : 'ring-gray-200 hover:ring-green-300'
+                isMe ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50/50 to-brand-50/50' : 'ring-gray-200 hover:ring-green-300'
               }`}
             >
               <div className="flex items-center gap-4 mb-5">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-violet-500 text-[20px] font-black text-white shadow-md">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-brand-400 text-[20px] font-black text-white shadow-md">
                   {member.displayName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">

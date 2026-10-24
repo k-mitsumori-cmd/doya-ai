@@ -54,7 +54,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-bold transition-all",
                 isActive
-                  ? "bg-gradient-to-r from-blue-50 to-violet-50 text-blue-700 ring-1 ring-blue-100"
+                  ? "bg-gradient-to-r from-blue-50 to-brand-50 text-blue-700 ring-1 ring-blue-100"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -74,7 +74,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
       {/* ワークスペース切替 */}
       <Link
         href="/promane?select=1"
-        className="mx-2 my-1 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-violet-50 hover:from-blue-100 hover:to-violet-100 text-[12px] font-black text-gray-700 hover:text-blue-700 transition-all flex items-center gap-2"
+        className="mx-2 my-1 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-brand-50 hover:from-blue-100 hover:to-brand-50 text-[12px] font-black text-gray-700 hover:text-blue-700 transition-all flex items-center gap-2"
       >
         <Building2 size={16} aria-hidden />
         <span className="flex-1">ワークスペース切替</span>
@@ -99,7 +99,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           ) : userImage ? (
             <Image src={userImage} alt={userName} width={28} height={28} className="rounded-full ring-1 ring-white shadow-sm" />
           ) : (
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-xs font-black">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-brand-400 flex items-center justify-center text-white text-xs font-black">
               {userName[0]}
             </div>
           )}

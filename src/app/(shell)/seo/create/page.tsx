@@ -624,7 +624,7 @@ export default function SeoCreateWizardPage() {
                         <button
                           type="button"
                           onClick={cycleSample}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-50 text-brand-500 text-[10px] font-black hover:from-brand-50 hover:to-indigo-100 transition-all"
                           title="押すたびにサンプルが切り替わります"
                         >
                           <Wand2 className="w-3 h-3" />

@@ -263,7 +263,7 @@ function ImageCard({
                 </div>
                 <div className="mt-2 h-1.5 w-[240px] max-w-[70vw] rounded-full bg-gray-200 overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500"
+                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-brand-400"
                     initial={{ x: '-60%' }}
                     animate={{ x: ['-60%', '110%'] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
@@ -415,7 +415,7 @@ const TABS = [
   { id: 'competitors', label: '競合記事', icon: Search, color: 'text-cyan-500' },
   { id: 'score', label: 'SEOスコア', icon: BarChart3, color: 'text-emerald-500' },
   { id: 'outline', label: '見出し編集', icon: Layers, color: 'text-indigo-500' },
-  { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-purple-500' },
+  { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-brand-400' },
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
 
@@ -1610,7 +1610,7 @@ function SeoArticleInner() {
             {[
               { label: 'スコア', val: score.score, icon: BarChart3, color: score.score >= 70 ? 'text-emerald-500' : 'text-amber-500' },
               { label: '文字数', val: score.charCount.toLocaleString(), sub: `/ ${charProgress}%`, icon: FileText, color: 'text-blue-500' },
-              { label: '見出し', val: score.headingCount, icon: Layers, color: 'text-purple-500' },
+              { label: '見出し', val: score.headingCount, icon: Layers, color: 'text-brand-400' },
               { label: '画像', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
             ].map((s, i) => (
               <div key={i} className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm">
@@ -2413,9 +2413,9 @@ function SeoArticleInner() {
                   <a
                     href={`/api/seo/articles/${id}/export/json`}
                     download
-                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-violet-500 bg-gray-50/30 hover:bg-white transition-all group"
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-brand-400 bg-gray-50/30 hover:bg-white transition-all group"
                   >
-                    <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-violet-600 mb-4" />
+                    <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-brand-500 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">JSON (.json)</h4>
                     <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">連携/自動処理用（markdown + text入り）</p>
                   </a>
@@ -2445,7 +2445,7 @@ function SeoArticleInner() {
               
               {/* クイックアクション */}
               <div className="mt-4 pt-4 border-t border-gray-100 grid gap-2">
-                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-purple-50 text-purple-700 font-black text-[10px] flex items-center justify-between hover:bg-purple-100 transition-all">
+                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-brand-50 text-brand-600 font-black text-[10px] flex items-center justify-between hover:bg-brand-50 transition-all">
                   編集 <Edit3 className="w-3 h-3" />
                 </button>
                 <button onClick={() => setTab('export')} className="w-full px-3 py-2 rounded-lg bg-gray-50 text-gray-700 font-black text-[10px] flex items-center justify-between hover:bg-gray-100 transition-all">

@@ -30,12 +30,12 @@ export default function AioShell({ orgSlug, orgName, children }: { orgSlug: stri
   const isActive = (href: string) => (href === base ? pathname === base : pathname === href || pathname.startsWith(href + '/'))
 
   const Sidebar = (
-    <aside className="w-60 shrink-0 h-full bg-gradient-to-b from-purple-700 to-fuchsia-700 text-white flex flex-col">
+    <aside className="w-60 shrink-0 h-full bg-gradient-to-b from-brand-600 to-brand-800 text-white flex flex-col">
       <div className="px-4 py-5 flex items-center gap-2 border-b border-white/15">
         <span className="grid place-items-center w-9 h-9 rounded-xl bg-white/15 text-lg">🔍</span>
         <div className="min-w-0">
           <p className="font-black leading-tight">ドヤAIO</p>
-          <p className="text-[11px] text-purple-100 font-bold truncate">{orgName || orgSlug}</p>
+          <p className="text-[11px] text-brand-50 font-bold truncate">{orgName || orgSlug}</p>
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -44,7 +44,7 @@ export default function AioShell({ orgSlug, orgName, children }: { orgSlug: stri
           return (
             <Link key={it.href} href={it.href} onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                isActive(it.href) ? 'bg-white text-fuchsia-700 shadow' : 'text-purple-50 hover:bg-white/10'
+                isActive(it.href) ? 'bg-white text-pink-700 shadow' : 'text-brand-50 hover:bg-white/10'
               }`}>
               <Icon className="w-[18px] h-[18px]" />
               {it.label}
@@ -53,7 +53,7 @@ export default function AioShell({ orgSlug, orgName, children }: { orgSlug: stri
         })}
       </nav>
       <button onClick={() => signOut({ callbackUrl: '/aio' })}
-        className="m-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-purple-50 hover:bg-white/10 transition-colors">
+        className="m-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-brand-50 hover:bg-white/10 transition-colors">
         <LogOut className="w-[18px] h-[18px]" />ログアウト
       </button>
     </aside>

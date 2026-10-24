@@ -20,7 +20,7 @@ export default async function AioPricingPage({ searchParams }: { searchParams: P
     </div>
   )
   return (
-    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-b from-white to-purple-50/40">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-b from-white to-brand-50/40">
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Link href={orgSlug ? `/aio/${encodeURIComponent(orgSlug)}` : '/aio'} className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700 mb-4">
@@ -33,7 +33,7 @@ export default async function AioPricingPage({ searchParams }: { searchParams: P
             無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。
           </p>
         </div>
-        {context && <div className="mb-8 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-950">
+        {context && <div className="mb-8 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
           <p className="font-bold">この組織の利用枠は、組織オーナーの契約で決まります。</p>
           {context.role !== 'owner' && <p className="mt-1">ご自身のプランを購入しても、この組織の利用枠は増えません。契約変更は組織オーナーにご相談ください。</p>}
         </div>}

@@ -1232,17 +1232,17 @@ ${htmlBody}
                         <button
                           onClick={() => generateBanner(true)}
                           disabled={bannerGenerating}
-                          className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#7f19e6]/5 hover:via-[#7f19e6]/10 hover:to-[#7f19e6]/5 transition-all group"
+                          className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#0066ff]/5 hover:via-[#0066ff]/10 hover:to-[#0066ff]/5 transition-all group"
                         >
                           {bannerGenerating ? (
                             <>
-                              <span className="material-symbols-outlined text-2xl text-[#7f19e6] animate-spin">progress_activity</span>
+                              <span className="material-symbols-outlined text-2xl text-[#0066ff] animate-spin">progress_activity</span>
                               <span className="text-xs font-bold text-slate-500">Nano Banana Pro でバナー生成中...</span>
                             </>
                           ) : (
                             <>
-                              <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#7f19e6] transition-colors">add_photo_alternate</span>
-                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#7f19e6] transition-colors">バナー画像を生成</span>
+                              <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#0066ff] transition-colors">add_photo_alternate</span>
+                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#0066ff] transition-colors">バナー画像を生成</span>
                             </>
                           )}
                         </button>
@@ -1349,7 +1349,7 @@ ${htmlBody}
                       }
                     }}
                     placeholder="AI修正指示を入力..."
-                    className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
+                    className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
                     disabled={reviseLoading}
                   />
                   <button

@@ -77,7 +77,7 @@ export default function ShodanSettingsPage() {
   const [extractLimitMessage, setExtractLimitMessage] = useState<string | null>(null)
   const [gaps, setGaps] = useState<Set<string>>(new Set())
   // ブランド（資料に反映）
-  const [brandColors, setBrandColors] = useState<string[]>(['#7f19e6', '#f59e0b'])
+  const [brandColors, setBrandColors] = useState<string[]>(['#0066ff', '#f59e0b'])
   const [logoPath, setLogoPath] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -114,7 +114,7 @@ export default function ShodanSettingsPage() {
         const { profile: p, version: stamp } = readOrgProfile('shodan', d)
         const fields = { ...EMPTY, ...Object.fromEntries(FIELDS.map(f => [f.key, p?.[f.key] ?? ''])) } as Profile
         setProfile(fields); setExtractUrl(fields.url)
-        setBrandColors(Array.isArray(p?.brandColors) && p.brandColors.length ? p.brandColors as string[] : ['#7f19e6', '#f59e0b'])
+        setBrandColors(Array.isArray(p?.brandColors) && p.brandColors.length ? p.brandColors as string[] : ['#0066ff', '#f59e0b'])
         setLogoPath((p?.logoPath as string) || null); setLogoUrl((p?.logoUrl as string) || null)
         version.current = stamp; ready.current = guard.identity
       })
@@ -249,7 +249,7 @@ export default function ShodanSettingsPage() {
       {/* ▼ 自社情報 抽出中 ド派手オーバーレイ ▼ */}
       {extracting && (
         <div className="fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-4
-          bg-gradient-to-br from-purple-700 via-fuchsia-600 to-indigo-700">
+          bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-700">
           {/* 背景のキラキラ */}
           {['top-10 left-8','top-24 right-12','bottom-16 left-16','bottom-28 right-24','top-1/2 left-6','top-1/3 right-1/4'].map((pos, i) => (
             <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/30 animate-ping`}
@@ -307,7 +307,7 @@ export default function ShodanSettingsPage() {
       <PageHeader icon="business_center" title="自社情報" subtitle="ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。" />
 
       {/* 自動入力カード */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white p-6 pr-28 shadow-lg shadow-purple-500/20 mb-5 overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 text-white p-6 pr-28 shadow-lg shadow-brand-400/20 mb-5 overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-1.5 font-black"><span className="material-symbols-outlined">auto_awesome</span>自社URLから自動入力</div>
           <p className="text-xs font-bold text-white/80 mt-1 mb-3">URLを入れるだけで、AIが自社情報を抽出して下書きします。</p>
@@ -316,11 +316,11 @@ export default function ShodanSettingsPage() {
               aria-label="自社情報を抽出するURL" placeholder="https://自社サイト.co.jp" disabled={extracting || saving || uploadingLogo || uncertain || checking}
               className="flex-1 rounded-xl px-4 py-2.5 font-bold text-slate-800 outline-none disabled:opacity-60" />
             <button onClick={extract} disabled={extracting || saving || uploadingLogo || uncertain || checking}
-              className="px-5 py-2.5 rounded-xl bg-white text-purple-700 font-black text-sm shadow hover:-translate-y-0.5 transition-all disabled:opacity-60 whitespace-nowrap">
+              className="px-5 py-2.5 rounded-xl bg-white text-brand-600 font-black text-sm shadow hover:-translate-y-0.5 transition-all disabled:opacity-60 whitespace-nowrap">
               {extracting ? '抽出中…' : 'AIで自動入力'}
             </button>
           </div>
-          {extractLimitMessage && <p role="alert" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-purple-950">{extractLimitMessage}</p>}
+          {extractLimitMessage && <p role="alert" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-brand-900">{extractLimitMessage}</p>}
         </div>
         <DoyaKun mood={extracting ? 'focus' : 'present'} size={110} className="!absolute -bottom-2 right-2" />
       </div>
@@ -331,10 +331,10 @@ export default function ShodanSettingsPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-black text-slate-700">情報の充実度</span>
-            <span className="text-sm font-black text-purple-700">{score}%（{doneCount}/{CORE_FIELDS.length}）</span>
+            <span className="text-sm font-black text-brand-600">{score}%（{doneCount}/{CORE_FIELDS.length}）</span>
           </div>
           <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all" style={{ width: `${score}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all" style={{ width: `${score}%` }} />
           </div>
           <p className="text-xs font-bold text-slate-500 mt-1.5">{advice}</p>
         </div>
@@ -348,7 +348,7 @@ export default function ShodanSettingsPage() {
           <div>
             <label className="block text-xs font-black text-slate-600 mb-1.5">ロゴ</label>
             <div className="flex items-center gap-3">
-              <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-purple-400 transition-colors">
+              <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-brand-300 transition-colors">
                 {sym(uploadingLogo ? 'progress_activity' : 'upload', 18)}{uploadingLogo ? '送信中…' : logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo || extracting || saving || uncertain || checking} />
               </label>
@@ -367,7 +367,7 @@ export default function ShodanSettingsPage() {
             <div className="flex items-center gap-3">
               {Array.from({ length: Math.max(2, brandColors.length) }, (_, i) => i).map((i) => (
                 <div key={i} className="flex flex-col items-center gap-1">
-                  <input type="color" aria-label={`ブランドカラー${i + 1}`} value={brandColors[i] || '#7f19e6'} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = [...draft.current.brandColors]; next[i] = e.target.value; draft.current = { ...draft.current, brandColors: next }; setBrandColors(next); setNotice('') }} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
+                  <input type="color" aria-label={`ブランドカラー${i + 1}`} value={brandColors[i] || '#0066ff'} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = [...draft.current.brandColors]; next[i] = e.target.value; draft.current = { ...draft.current, brandColors: next }; setBrandColors(next); setNotice('') }} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
                   <span className="text-[10px] font-bold text-slate-400">{i === 0 ? 'メイン' : i === 1 ? 'アクセント' : `追加色${i + 1}`}</span>
                 </div>
               ))}
@@ -390,17 +390,17 @@ export default function ShodanSettingsPage() {
               </div>
               {f.textarea ? (
                 <textarea id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} rows={3}
-                  className={`w-full rounded-xl border-2 px-4 py-2.5 font-bold text-sm resize-y outline-none transition-colors ${st === 'weak' ? 'border-amber-300 focus:border-amber-400 bg-amber-50/30' : 'border-slate-200 focus:border-purple-400'}`} />
+                  className={`w-full rounded-xl border-2 px-4 py-2.5 font-bold text-sm resize-y outline-none transition-colors ${st === 'weak' ? 'border-amber-300 focus:border-amber-400 bg-amber-50/30' : 'border-slate-200 focus:border-brand-300'}`} />
               ) : (
                 <input id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder}
-                  className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-2.5 font-bold text-sm transition-colors" />
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-brand-300 outline-none px-4 py-2.5 font-bold text-sm transition-colors" />
               )}
               {f.hint && st !== 'ok' && <p className="text-[11px] font-bold text-amber-600 mt-1 flex items-center gap-1">{sym('tips_and_updates', 14)}{f.hint}</p>}
             </div>
           )
         })}
         <button onClick={save} disabled={saving || extracting || uploadingLogo || uncertain || checking}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
           {sym('save', 20)}{saving ? '保存中…' : '保存する'}
         </button>
       </div>

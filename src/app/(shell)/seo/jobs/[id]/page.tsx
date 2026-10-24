@@ -953,7 +953,7 @@ export default function SeoJobPage() {
                       ? 'bg-gradient-to-r from-emerald-500 to-green-500'
                       : isError
                       ? 'bg-gradient-to-r from-rose-500 to-red-500'
-                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-brand-500'
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${job.progress}%` }}
@@ -1516,7 +1516,7 @@ export default function SeoJobPage() {
                                       <p className="mt-1 text-xl font-black text-white tabular-nums">{urlsCount}</p>
                                       <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
                                         <motion.div
-                                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-fuchsia-300 to-amber-300"
+                                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-brand-400 to-amber-300"
                                           animate={{ width: ['12%', '85%', '28%'] }}
                                           transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
                                         />
@@ -1726,7 +1726,7 @@ export default function SeoJobPage() {
           className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-xl shadow-blue-500/5"
         >
           {/* ステータスバー */}
-          <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}>
+          <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400'}`}>
             {isRunning && (
               <motion.div
                 className="h-full bg-white/35"

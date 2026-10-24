@@ -69,12 +69,12 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
     }
   }
 
-  return <section aria-label="ペルソナ向けバナー画像" className="rounded-xl border border-purple-200 bg-white p-5 export-hide">
+  return <section aria-label="ペルソナ向けバナー画像" className="rounded-xl border border-brand-100 bg-white p-5 export-hide">
     <h2 className="text-lg font-bold text-gray-900">ペルソナ向けバナー画像</h2>
     <p className="mt-1 text-sm text-gray-600">生成・再生成ごとに、追加画像枠を1枚使います。画像はこのペルソナの履歴に保存されます。</p>
-    {!isPaid ? <div className="mt-4 rounded-lg bg-purple-50 p-4 text-sm text-purple-950">
+    {!isPaid ? <div className="mt-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
       <p>バナー画像生成はプロプランで利用できます。</p>
-      <a href="/persona/pricing" className="mt-2 inline-block font-bold text-purple-700 underline">プランを確認する</a>
+      <a href="/persona/pricing" className="mt-2 inline-block font-bold text-brand-600 underline">プランを確認する</a>
       <TrialNote className="mt-2" />
     </div> : !projectId ? <p className="mt-4 text-sm text-gray-600">サーバーに保存したペルソナを開くと、バナー画像を生成できます。</p> : <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -90,7 +90,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
           </select>
         </label>
       </div>
-      <button type="button" onClick={() => void generate()} disabled={loading || !catchphrase.trim()} className="mt-4 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+      <button type="button" onClick={() => void generate()} disabled={loading || !catchphrase.trim()} className="mt-4 rounded-lg bg-brand-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
         {loading ? '生成中です…' : image ? 'バナーを再生成（追加枠1枚）' : 'バナーを生成（追加枠1枚）'}
       </button>
       {error && <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -101,7 +101,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
     {image && <div className="mt-5">
       <p className="mb-2 text-sm font-medium text-gray-700">保存済みのバナー画像</p>
       <img src={image} alt="生成したペルソナ向けバナー画像" className="max-h-[500px] max-w-full rounded-lg border border-gray-200 object-contain" />
-      <a href={image} download="persona-banner.png" className="mt-2 inline-block text-sm font-bold text-purple-700 underline">画像を保存する</a>
+      <a href={image} download="persona-banner.png" className="mt-2 inline-block text-sm font-bold text-brand-600 underline">画像を保存する</a>
     </div>}
   </section>
 }

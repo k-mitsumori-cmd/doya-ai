@@ -34,7 +34,7 @@ import { ShellCostBadge } from '@/components/shell/power'
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
 
-const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
+const COLOR_SWATCHES = ['#2563eb', '#0066ff', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
 const FUN_MESSAGES = [
   '入力内容を処理しています…',

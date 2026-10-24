@@ -105,7 +105,7 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
     </> : <p className="mt-3 font-bold text-slate-600" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 font-black text-[#0066ff] underline">再取得する</button>}</p>}
   </section>
 
-  return <section aria-label="本日の利用枠" className="mb-6 rounded-xl border border-purple-200 bg-white p-4 text-sm text-gray-700">
+  return <section aria-label="本日の利用枠" className="mb-6 rounded-xl border border-brand-100 bg-white p-4 text-sm text-gray-700">
     <p className="font-bold">本日の利用枠{usage ? `（${usage.planLabel}）` : ''}</p>
     {usage ? <>
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
@@ -113,7 +113,7 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
         <p>追加画像・再生成：残り{usage.extraImages.remaining}枚 / {usage.extraImages.limit}枚{usage.extraImages.reserved > 0 ? `・処理中${usage.extraImages.reserved}枚は予約済み` : ''}</p>
       </div>
       <p className="mt-2 text-xs text-gray-500">付属画像は最大16枚までペルソナ1件に含まれ、追加枠を消費しません。利用枠は毎日0時（日本時間）にリセットされます。</p>
-      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3">本日の利用枠が上限に達しました。<a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-bold text-purple-700 underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></p>}
-    </> : <p className="mt-2" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 text-purple-700 underline">再取得する</button>}</p>}
+      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3">本日の利用枠が上限に達しました。<a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-bold text-brand-600 underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></p>}
+    </> : <p className="mt-2" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 text-brand-600 underline">再取得する</button>}</p>}
   </section>
 }

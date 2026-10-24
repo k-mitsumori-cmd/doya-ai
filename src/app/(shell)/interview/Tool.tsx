@@ -48,7 +48,7 @@ interface UploadingFile {
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '下書き', color: 'bg-slate-100 text-slate-600 border border-slate-200' },
-  PLANNING: { label: '企画中', color: 'bg-purple-50 text-purple-600 border border-purple-200' },
+  PLANNING: { label: '企画中', color: 'bg-brand-50 text-brand-500 border border-brand-100' },
   TRANSCRIBING: { label: '処理中', color: 'bg-amber-50 text-amber-600 border border-amber-200' },
   EDITING: { label: '編集中', color: 'bg-blue-50 text-blue-600 border border-blue-200' },
   REVIEWING: { label: 'レビュー中', color: 'bg-indigo-50 text-indigo-600 border border-indigo-200' },
@@ -58,9 +58,9 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 const GENRE_COLORS: Record<string, string> = {
   CASE_STUDY: 'from-blue-400 to-indigo-500',
   PRODUCT_INTERVIEW: 'from-emerald-400 to-teal-500',
-  PERSONA_INTERVIEW: 'from-violet-400 to-purple-500',
+  PERSONA_INTERVIEW: 'from-brand-300 to-brand-400',
   PANEL_DISCUSSION: 'from-amber-400 to-orange-500',
-  EVENT_REPORT: 'from-rose-400 to-pink-500',
+  EVENT_REPORT: 'from-rose-400 to-brand-600',
   OTHER: 'from-slate-400 to-slate-500',
 }
 
@@ -599,8 +599,8 @@ export default function InterviewTool() {
             aria-disabled={sessionStatus === 'loading'}
             className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center py-8 sm:py-14 px-4 sm:px-6 transition-all cursor-pointer group ${
               dragOver
-                ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
-                : 'border-[#7f19e6]/25 bg-[#7f19e6]/[0.03] hover:bg-[#7f19e6]/[0.06] hover:border-[#7f19e6]/40'
+                ? 'border-[#0066ff] bg-[#0066ff]/10 scale-[1.01]'
+                : 'border-[#0066ff]/25 bg-[#0066ff]/[0.03] hover:bg-[#0066ff]/[0.06] hover:border-[#0066ff]/40'
             }`}
           >
             <input
@@ -615,14 +615,14 @@ export default function InterviewTool() {
               }}
               className="hidden"
             />
-            <div className="w-14 h-14 bg-[#7f19e6] rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-lg shadow-[#7f19e6]/20">
+            <div className="w-14 h-14 bg-[#0066ff] rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-lg shadow-[#0066ff]/20">
               {uiNext ? <UploadCloud className="h-7 w-7 text-white" aria-hidden /> : <span className="material-symbols-outlined text-white text-3xl">cloud_upload</span>}
             </div>
             <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1.5 text-center">インタビュー記事を作成する</h3>
             <p className="text-slate-500 text-xs sm:text-sm mb-6 text-center">
               動画・音声ファイルをドラッグ&ドロップ。MP4, MOV, MP3 最大10GBまで
             </p>
-            <span className="bg-[#7f19e6] text-white px-6 sm:px-8 py-3 rounded-xl font-black text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 inline-flex items-center gap-2 min-h-[44px]">
+            <span className="bg-[#0066ff] text-white px-6 sm:px-8 py-3 rounded-xl font-black text-sm hover:bg-[#0047d6] transition-all shadow-lg shadow-[#0066ff]/25 inline-flex items-center gap-2 min-h-[44px]">
               {uiNext ? <PlusCircle className="h-[18px] w-[18px]" aria-hidden /> : <span className="material-symbols-outlined text-lg">add_circle</span>}
               ファイルを選択
             </span>
@@ -631,14 +631,14 @@ export default function InterviewTool() {
           {/* Feature Badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 sm:mt-6">
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
-              {uiNext ? <Users className="h-5 w-5 text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[#7f19e6] text-xl">record_voice_over</span>}
+              {uiNext ? <Users className="h-5 w-5 text-[#0066ff]" aria-hidden /> : <span className="material-symbols-outlined text-[#0066ff] text-xl">record_voice_over</span>}
               <div>
                 <p className="text-xs font-black text-slate-900">話者分離</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">自動対応</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
-              {uiNext ? <Sparkles className="h-5 w-5 text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[#7f19e6] text-xl">auto_awesome</span>}
+              {uiNext ? <Sparkles className="h-5 w-5 text-[#0066ff]" aria-hidden /> : <span className="material-symbols-outlined text-[#0066ff] text-xl">auto_awesome</span>}
               <div>
                 <p className="text-xs font-black text-slate-900">AI記事下書き</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">自動生成</p>
@@ -684,7 +684,7 @@ export default function InterviewTool() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900/80 via-purple-900/40 to-slate-900/80 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900/80 via-brand-800/40 to-slate-900/80 backdrop-blur-md flex items-center justify-center p-4"
           >
             {/* 浮遊エモジ背景 */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -723,7 +723,7 @@ export default function InterviewTool() {
               className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
             >
               {/* グラデーション背景トップ */}
-              <div className="relative bg-gradient-to-br from-[#7f19e6] via-[#9b3ae6] to-[#b366f0] px-4 sm:px-6 pt-6 sm:pt-8 pb-5 sm:pb-6 overflow-hidden">
+              <div className="relative bg-gradient-to-br from-[#0066ff] via-[#9b3ae6] to-[#b366f0] px-4 sm:px-6 pt-6 sm:pt-8 pb-5 sm:pb-6 overflow-hidden">
                 {/* パーティクル装飾 */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {[...Array(6)].map((_, i) => (
@@ -836,7 +836,7 @@ export default function InterviewTool() {
                                 isDone
                                   ? 'bg-green-500 shadow-md shadow-green-500/30'
                                   : isCurrent
-                                  ? 'bg-[#7f19e6] shadow-md shadow-[#7f19e6]/30'
+                                  ? 'bg-[#0066ff] shadow-md shadow-[#0066ff]/30'
                                   : 'bg-slate-100'
                               }`}
                               animate={isCurrent ? { scale: [1, 1.1, 1] } : {}}
@@ -849,7 +849,7 @@ export default function InterviewTool() {
                               </span>
                             </motion.div>
                             <span className={`text-[9px] font-bold mt-1.5 text-center leading-tight ${
-                              isDone ? 'text-green-600' : isCurrent ? 'text-[#7f19e6]' : 'text-slate-400'
+                              isDone ? 'text-green-600' : isCurrent ? 'text-[#0066ff]' : 'text-slate-400'
                             }`}>
                               {step.label}
                             </span>
@@ -892,7 +892,7 @@ export default function InterviewTool() {
                       <div className="flex items-center gap-3 mb-2.5">
                         <motion.div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            isDone ? 'bg-green-500' : isError ? 'bg-red-500' : 'bg-[#7f19e6]'
+                            isDone ? 'bg-green-500' : isError ? 'bg-red-500' : 'bg-[#0066ff]'
                           }`}
                           animate={!isDone && !isError ? { rotate: [0, 5, -5, 0] } : {}}
                           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -908,7 +908,7 @@ export default function InterviewTool() {
                             {isUploading && speed > 0 && (
                               <>
                                 <span className="text-slate-300">·</span>
-                                <span className="text-[#7f19e6] font-bold">{formatSpeed(speed)}</span>
+                                <span className="text-[#0066ff] font-bold">{formatSpeed(speed)}</span>
                                 {remaining > 0 && remaining < 3600 && (
                                   <>
                                     <span className="text-slate-300">·</span>
@@ -918,15 +918,15 @@ export default function InterviewTool() {
                               </>
                             )}
                             {upload.status === 'creating' && <span className="text-amber-500 font-bold">プロジェクト作成中...</span>}
-                            {upload.status === 'confirming' && <span className="text-[#7f19e6] font-bold">確認処理中...</span>}
-                            {upload.status === 'transcribing' && <span className="text-[#7f19e6] font-bold">文字起こし開始...</span>}
+                            {upload.status === 'confirming' && <span className="text-[#0066ff] font-bold">確認処理中...</span>}
+                            {upload.status === 'transcribing' && <span className="text-[#0066ff] font-bold">文字起こし開始...</span>}
                             {isDone && <span className="text-green-600 font-bold">完了</span>}
                             {isError && <span className="text-red-500 font-bold">{upload.error}</span>}
                           </div>
                         </div>
                         {isUploading && (
                           <div className="flex items-center gap-2">
-                            <span className="text-lg font-black text-[#7f19e6] tabular-nums">{upload.progress}%</span>
+                            <span className="text-lg font-black text-[#0066ff] tabular-nums">{upload.progress}%</span>
                             <motion.button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -949,7 +949,7 @@ export default function InterviewTool() {
                           className={`h-full rounded-full ${
                             isDone ? 'bg-green-500' :
                             isError ? 'bg-red-400' :
-                            'bg-gradient-to-r from-[#7f19e6] to-[#b366f0]'
+                            'bg-gradient-to-r from-[#0066ff] to-[#b366f0]'
                           }`}
                           initial={{ width: 0 }}
                           animate={{ width: `${effectiveProgress}%` }}
@@ -974,7 +974,7 @@ export default function InterviewTool() {
                           {upload.errorActionUrl && (
                             <motion.a
                               href={upload.errorActionUrl}
-                              className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white rounded-lg text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm min-h-[44px]"
+                              className="flex items-center gap-1.5 px-4 py-2.5 bg-[#0066ff] text-white rounded-lg text-xs font-bold hover:bg-[#0047d6] transition-colors shadow-sm min-h-[44px]"
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
                             >
@@ -993,7 +993,7 @@ export default function InterviewTool() {
 
               {/* 豆知識セクション */}
               {!isAllDone && (
-                <div className="mx-4 sm:mx-6 mb-5 p-3 sm:p-4 bg-gradient-to-r from-[#7f19e6]/5 via-[#9b3ae6]/5 to-[#b366f0]/5 rounded-xl border border-[#7f19e6]/10">
+                <div className="mx-4 sm:mx-6 mb-5 p-3 sm:p-4 bg-gradient-to-r from-[#0066ff]/5 via-[#9b3ae6]/5 to-[#b366f0]/5 rounded-xl border border-[#0066ff]/10">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={tipIndex}
@@ -1004,10 +1004,10 @@ export default function InterviewTool() {
                       className="flex items-start gap-3"
                     >
                       <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <span className="material-symbols-outlined text-[#7f19e6] text-xl">{UPLOAD_TIPS[tipIndex].icon}</span>
+                        <span className="material-symbols-outlined text-[#0066ff] text-xl">{UPLOAD_TIPS[tipIndex].icon}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-[#7f19e6]/50 uppercase tracking-wider mb-0.5">豆知識</p>
+                        <p className="text-[10px] font-black text-[#0066ff]/50 uppercase tracking-wider mb-0.5">豆知識</p>
                         <p className="text-sm text-slate-600 leading-relaxed font-medium">{UPLOAD_TIPS[tipIndex].text}</p>
                       </div>
                     </motion.div>
@@ -1017,7 +1017,7 @@ export default function InterviewTool() {
                     {UPLOAD_TIPS.map((_, i) => (
                       <motion.div
                         key={i}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${i === tipIndex ? 'bg-[#7f19e6] w-5' : 'bg-slate-300 w-1.5'}`}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${i === tipIndex ? 'bg-[#0066ff] w-5' : 'bg-slate-300 w-1.5'}`}
                         layout
                       />
                     ))}
@@ -1057,7 +1057,7 @@ export default function InterviewTool() {
                     {doneUploads[0]?.[1]?.projectId && (
                       <motion.button
                         onClick={() => router.push(`/interview/projects/${doneUploads[0][1].projectId}/materials`)}
-                        className="flex-1 px-4 py-3 rounded-xl bg-[#7f19e6] text-white font-bold hover:bg-[#6b12c9] transition-colors text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-[#7f19e6]/25 min-h-[44px]"
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#0066ff] text-white font-bold hover:bg-[#0047d6] transition-colors text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-[#0066ff]/25 min-h-[44px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -1085,7 +1085,7 @@ export default function InterviewTool() {
           {session?.user && (
             <Link
               href="/interview/projects"
-              className="text-sm font-bold text-[#7f19e6] hover:underline py-2 min-h-[44px] inline-flex items-center"
+              className="text-sm font-bold text-[#0066ff] hover:underline py-2 min-h-[44px] inline-flex items-center"
             >
               すべて表示
             </Link>
@@ -1094,14 +1094,14 @@ export default function InterviewTool() {
 
         {!session?.user ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 border border-slate-200 text-center">
-            <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
+            <div className="w-16 h-16 bg-[#0066ff]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[#0066ff] text-3xl">lock</span>
             </div>
             <p className="text-slate-900 font-bold mb-1">ログインしてプロジェクトを管理</p>
             <p className="text-slate-500 text-sm mb-4">ログイン後に作成したプロジェクトの一覧を閲覧・管理できます</p>
             <Link
               href="/auth/signin?callbackUrl=/interview"
-              className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 min-h-[44px]"
+              className="inline-flex items-center gap-2 bg-[#0066ff] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#0047d6] transition-all shadow-lg shadow-[#0066ff]/25 min-h-[44px]"
             >
               <span className="material-symbols-outlined text-lg">login</span>
               ログインする
@@ -1146,8 +1146,8 @@ export default function InterviewTool() {
           </div>
         ) : recentProjects.length === 0 ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 border border-slate-200 text-center">
-            <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-[#7f19e6] text-3xl">mic</span>
+            <div className="w-16 h-16 bg-[#0066ff]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[#0066ff] text-3xl">mic</span>
             </div>
             <p className="text-slate-900 font-bold mb-1">まだプロジェクトがありません</p>
             <p className="text-slate-500 text-sm">上のエリアからファイルをアップロードして始めましょう</p>
@@ -1167,7 +1167,7 @@ export default function InterviewTool() {
                 <motion.div key={project.id} variants={cardVariants}>
                   <Link
                     href={getProjectLink(project)}
-                    className="group bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-3 sm:gap-3.5 hover:border-[#7f19e6]/30 hover:shadow-md transition-all min-h-[44px]"
+                    className="group bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-3 sm:gap-3.5 hover:border-[#0066ff]/30 hover:shadow-md transition-all min-h-[44px]"
                   >
                     {/* Thumbnail */}
                     {project.thumbnailUrl ? (
@@ -1183,7 +1183,7 @@ export default function InterviewTool() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="text-sm font-bold text-slate-900 truncate !whitespace-nowrap group-hover:text-[#7f19e6] transition-colors flex-1">
+                        <h4 className="text-sm font-bold text-slate-900 truncate !whitespace-nowrap group-hover:text-[#0066ff] transition-colors flex-1">
                           {project.articleTitle || project.title}
                         </h4>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap ${status.color}`}>
@@ -1193,7 +1193,7 @@ export default function InterviewTool() {
                       {/* 文字起こし要約 */}
                       {(project.transcriptionSummary || project.transcriptionExcerpt) && (
                         <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-1">
-                          {uiNext ? <Mic className="mr-0.5 inline h-2.5 w-2.5 align-middle text-[#7f19e6]" aria-hidden /> : <span className="material-symbols-outlined text-[10px] text-[#7f19e6] mr-0.5 align-middle">mic</span>}
+                          {uiNext ? <Mic className="mr-0.5 inline h-2.5 w-2.5 align-middle text-[#0066ff]" aria-hidden /> : <span className="material-symbols-outlined text-[10px] text-[#0066ff] mr-0.5 align-middle">mic</span>}
                           {project.transcriptionSummary || project.transcriptionExcerpt}
                         </p>
                       )}

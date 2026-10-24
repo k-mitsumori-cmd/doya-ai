@@ -45,7 +45,7 @@ export default function DashboardErrorBoundary({
       <div className="flex items-center gap-3">
         <button
           onClick={reset}
-          className="px-6 py-3 bg-[#7f19e6] text-white font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg text-base"
+          className="px-6 py-3 bg-[#0066ff] text-white font-black rounded-full hover:bg-[#0047d6] transition-all shadow-lg text-base"
         >
           再試行する
         </button>
@@ -58,7 +58,7 @@ export default function DashboardErrorBoundary({
       </div>
 
       {!showReport && !sent && (
-        <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#7f19e6] hover:underline">
+        <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#0066ff] hover:underline">
           {uiNext ? <Bug size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '🐛 '}エラーを報告する
         </button>
       )}
@@ -71,12 +71,12 @@ export default function DashboardErrorBoundary({
             onChange={(e) => setReportText(e.target.value)}
             placeholder="どんな操作でエラーが出ましたか？"
             rows={3}
-            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#7f19e6] outline-none resize-none"
+            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#0066ff] outline-none resize-none"
           />
           <button
             onClick={handleReport}
             disabled={!reportText.trim()}
-            className="mt-2 w-full px-6 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-black rounded-full disabled:opacity-50 text-sm"
+            className="mt-2 w-full px-6 py-3 bg-gradient-to-r from-[#0066ff] to-[#003985] text-white font-black rounded-full disabled:opacity-50 text-sm"
           >
             報告を送信
           </button>

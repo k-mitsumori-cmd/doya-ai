@@ -911,7 +911,7 @@ function BannerDashboardWorkspace() {
   // 使用カラー（任意・手動指定）
   const [useCustomColors, setUseCustomColors] = useState(false)
   const [customColors, setCustomColors] = useState<string[]>([])
-  const [colorDraft, setColorDraft] = useState('#8B5CF6')
+  const [colorDraft, setColorDraft] = useState('#3d80ff')
 
   // ロゴ/人物（任意・アップロード画像をAIに渡して反映）
   const [logoImage, setLogoImage] = useState<string | null>(null)
@@ -2445,11 +2445,11 @@ function BannerDashboardWorkspace() {
                               <h3 className="text-white font-black text-sm tracking-tight">GENERATION COMPLETE</h3>
                               {usedModelDisplay ? (
                                 usedModelDisplay.toLowerCase().includes('nano banana') ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-brand-600 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
                                     {usedModelDisplay}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[10px] font-bold text-white shadow-lg">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-brand-500 rounded-full text-[10px] font-bold text-white shadow-lg">
                                     {usedModelDisplay}
                                   </span>
                                 )
@@ -2557,11 +2557,11 @@ function BannerDashboardWorkspace() {
                               </h3>
                               {usedModelDisplay ? (
                                 usedModelDisplay.toLowerCase().includes('nano banana') ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-brand-600 rounded-full text-[9px] font-bold text-white shadow">
                                     {usedModelDisplay}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[9px] font-bold text-white shadow">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-brand-500 rounded-full text-[9px] font-bold text-white shadow">
                                     {usedModelDisplay}
                                   </span>
                                 )

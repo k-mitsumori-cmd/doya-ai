@@ -28,8 +28,8 @@ const AVATAR_COLORS = [
   'from-red-400 to-red-500',
   'from-emerald-500 to-emerald-600',
   'from-amber-400 to-amber-500',
-  'from-purple-500 to-purple-600',
-  'from-pink-400 to-pink-500',
+  'from-brand-400 to-brand-500',
+  'from-brand-500 to-brand-600',
 ]
 
 function getAvatarColor(name: string) {

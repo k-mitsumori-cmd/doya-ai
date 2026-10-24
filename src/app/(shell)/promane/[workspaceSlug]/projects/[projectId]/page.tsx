@@ -170,14 +170,14 @@ export default async function ProjectDetailPage({
             <p className={`text-[22px] font-extrabold ${kpi.text} leading-none`}>{kpi.value}</p>
           </div>
         ))}
-        <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-purple-50 ring-1 ring-purple-200/50 p-4 transition-all hover:scale-105 hover:shadow-lg cursor-default">
+        <div className="rounded-3xl bg-gradient-to-br from-brand-50 to-brand-50 ring-1 ring-brand-100/50 p-4 transition-all hover:scale-105 hover:shadow-lg cursor-default">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[12px] font-bold text-purple-700">進捗</span>
+            <span className="text-[12px] font-bold text-brand-600">進捗</span>
             <CharacterOnly mood={moodForProgress} size={30} animate="float" />
           </div>
-          <p className="text-[22px] font-extrabold text-purple-700 leading-none mb-2">{progress}%</p>
+          <p className="text-[22px] font-extrabold text-brand-600 leading-none mb-2">{progress}%</p>
           <Progress value={progress} className="h-2.5" />
-          <p className="text-[11px] font-semibold text-purple-400 mt-1.5">{doneTasks} / {project.tasks.length} タスク完了</p>
+          <p className="text-[11px] font-semibold text-brand-300 mt-1.5">{doneTasks} / {project.tasks.length} タスク完了</p>
         </div>
       </div>
 

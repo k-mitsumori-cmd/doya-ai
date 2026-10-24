@@ -3,7 +3,7 @@ import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ商談準備 LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
-export const ACCENT = '#7c3aed' // 青×バイオレット
+export const ACCENT = '#0066ff' // 青×バイオレット
 export const CTA = '/auth/signin?callbackUrl=/shodan'
 
 export const STEPS: Step[] = [

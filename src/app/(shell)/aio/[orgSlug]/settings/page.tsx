@@ -158,7 +158,7 @@ export default function AioSettingsPage() {
       <label htmlFor={`aio-setting-${key}`} className="block text-sm font-black text-slate-700 mb-1">{label}</label>
       {hint && <p className="text-xs text-slate-400 font-bold mb-1">{hint}</p>}
       <input id={`aio-setting-${key}`} value={form[key]} maxLength={key === 'aliases' || key === 'competitors' ? undefined : AIO_BRAND_TEXT_LIMITS[key]} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = { ...draft.current, [key]: e.target.value }; draft.current = next; setForm(next); setSaved(false); setError(null); setNotice('') }} placeholder={placeholder}
-        className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-2.5 font-bold transition-colors" />
+        className="w-full rounded-xl border-2 border-slate-200 focus:border-brand-300 outline-none px-4 py-2.5 font-bold transition-colors" />
     </div>
   )
 
@@ -193,7 +193,7 @@ export default function AioSettingsPage() {
         )}
 
         <button onClick={save} disabled={saving || uncertain || checking}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
           {saving ? '保存中…' : '保存する'}
         </button>
       </div>

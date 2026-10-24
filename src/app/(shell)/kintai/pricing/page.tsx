@@ -60,7 +60,7 @@ export default function KintaiPricingPage() {
   const verifying = status === 'loading' || loading || loadedIdentity !== identity
 
   return (
-    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-50">
 
       <div className="p-6 lg:p-10 max-w-6xl mx-auto relative">
         {/* Floating bears */}
@@ -91,11 +91,11 @@ export default function KintaiPricingPage() {
           <p className="text-slate-500 max-w-lg mx-auto text-base">
             チームの成長に合わせて最適なプランを選択できます。
           </p>
-          <div className="inline-flex items-center gap-2 mt-4 px-5 py-2 bg-gradient-to-r from-[#7f19e6]/10 to-violet-100 rounded-full">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <div className="inline-flex items-center gap-2 mt-4 px-5 py-2 bg-gradient-to-r from-[#0066ff]/10 to-brand-50 rounded-full">
+            <span className="material-symbols-outlined text-[#0066ff] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
               celebration
             </span>
-            <span className="text-sm font-bold text-[#7f19e6]">
+            <span className="text-sm font-bold text-[#0066ff]">
               従業員5名まで永久無料
             </span>
           </div>
@@ -105,7 +105,7 @@ export default function KintaiPricingPage() {
         {!verifying && planError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadPlan()} className="ml-2 underline">再読み込み</button></div>}
         {verifying && <p className="text-center text-sm font-bold text-slate-500">組織のプランを確認しています…</p>}
         {!verifying && !planError && hasOrganization && !canManageBilling && (
-          <div role="status" className="mx-auto my-12 max-w-xl rounded-2xl border border-violet-200 bg-violet-50 p-6 text-sm leading-7 text-violet-900">
+          <div role="status" className="mx-auto my-12 max-w-xl rounded-2xl border border-brand-100 bg-brand-50 p-6 text-sm leading-7 text-brand-800">
             この組織の現在のプランは{userPlan}です。ご自身の契約を変更しても組織の従業員上限は増えません。利用枠の変更は組織の契約者にご相談ください。
           </div>
         )}
@@ -129,7 +129,7 @@ export default function KintaiPricingPage() {
           </p>
           <Link
             href="/kintai/dashboard"
-            className="inline-flex items-center gap-2 px-10 py-4 bg-[#7f19e6] text-white rounded-full text-base font-bold shadow-lg shadow-[#7f19e6]/25 hover:shadow-xl hover:bg-[#6b14c4] transition-all"
+            className="inline-flex items-center gap-2 px-10 py-4 bg-[#0066ff] text-white rounded-full text-base font-bold shadow-lg shadow-[#0066ff]/25 hover:shadow-xl hover:bg-[#6b14c4] transition-all"
           >
             <span className="material-symbols-outlined text-lg">rocket_launch</span>
             無料で始める

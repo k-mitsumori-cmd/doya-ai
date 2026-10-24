@@ -60,10 +60,10 @@ export function useConfirm() {
         confirmBtn: 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700',
       },
       info: {
-        bg: 'from-blue-500 to-violet-600',
+        bg: 'from-blue-500 to-brand-500',
         text: 'text-blue-700',
         iconBg: 'bg-blue-100',
-        confirmBtn: 'bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700',
+        confirmBtn: 'bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600',
       },
     }[tone]
 

@@ -669,7 +669,7 @@ export default function SwipeArticlePage() {
                           className="relative w-[min(360px,88%)] sm:w-[min(440px,90%)] rounded-2xl sm:rounded-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-4 sm:p-6 overflow-hidden"
                         >
                           {/* 上部アクセント */}
-                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400" />
                           
                           <div className="flex items-center gap-3 sm:gap-4">
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
@@ -685,7 +685,7 @@ export default function SwipeArticlePage() {
                           <div className="mt-4 sm:mt-5">
                             <div className="h-2 sm:h-2.5 rounded-full bg-slate-100 overflow-hidden">
                               <motion.div
-                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
+                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400"
                                 initial={{ x: '-40%' }}
                                 animate={{ x: ['-40%', '110%'] }}
                                 transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -731,7 +731,7 @@ export default function SwipeArticlePage() {
               <div className="max-w-5xl mx-auto">
                 <div className="w-full h-4 sm:h-6 bg-slate-800/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-lg"
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-500 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -794,7 +794,7 @@ export default function SwipeArticlePage() {
                 className="mb-8"
               >
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
-                  <div className="px-5 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
+                  <div className="px-5 py-4 bg-gradient-to-r from-indigo-50 to-brand-50 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-indigo-600" />

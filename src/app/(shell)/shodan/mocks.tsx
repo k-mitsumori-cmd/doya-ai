@@ -16,7 +16,7 @@ export function ShodanResearchMock() {
     <div className="p-4 bg-slate-50/60">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sym name="travel_explore" size={18} className="text-[color:#7c3aed]" />
+          <Sym name="travel_explore" size={18} className="text-[color:#0066ff]" />
           <span className="font-black text-slate-800 text-sm">企業調査レポート</span>
         </div>
         <span className="inline-flex items-center gap-1 text-[10px] font-black text-white rounded-md px-2 py-1" style={{ background: '#0066ff' }}>
@@ -52,11 +52,11 @@ export function ShodanHypothesisMock() {
     { p: '中', t: '問い合わせ後のフォロー導線が弱い', d: 'CTAはあるが資料DL・ナーチャリング未整備' },
     { p: '中', t: '技術の強みが顧客言語で伝わっていない', d: '製品説明が専門用語中心で訴求が届きにくい' },
   ]
-  const pcolor: Record<string, string> = { 高: '#ff1e72', 中: '#7c3aed' }
+  const pcolor: Record<string, string> = { 高: '#ff1e72', 中: '#0066ff' }
   return (
     <div className="p-4 bg-slate-50/60">
       <div className="flex items-center gap-2 mb-3">
-        <Sym name="psychology" size={18} className="text-[color:#7c3aed]" />
+        <Sym name="psychology" size={18} className="text-[color:#0066ff]" />
         <span className="font-black text-slate-800 text-sm">課題仮説</span>
         <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded px-1.5 py-0.5">3件</span>
       </div>
@@ -81,7 +81,7 @@ export function ShodanProposalMock() {
     <div className="p-4 bg-slate-50/60">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sym name="description" size={18} className="text-[color:#7c3aed]" />
+          <Sym name="description" size={18} className="text-[color:#0066ff]" />
           <span className="font-black text-slate-800 text-sm">提案資料（Markdown）</span>
         </div>
         <span className="inline-flex items-center gap-1 text-[10px] font-black rounded-md px-2 py-1" style={{ background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)', color: 'var(--lp-accent)' }}>

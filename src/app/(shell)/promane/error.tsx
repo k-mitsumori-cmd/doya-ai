@@ -41,7 +41,7 @@ export default function PromaneError({
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button
             onClick={reset}
-            className="flex-1 h-12 rounded-full font-black text-[14px] bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-lg"
+            className="flex-1 h-12 rounded-full font-black text-[14px] bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-lg"
           >
             🔄 もう一度試す
           </Button>

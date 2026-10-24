@@ -31,9 +31,9 @@ function getCategoryVisual(category: string): { icon: React.ReactNode; gradient:
   }
   if (cat.includes('キーワード') || cat.includes('検索') || cat.includes('関連')) {
     return {
-      icon: <Search className={`${iconClass} text-violet-600`} strokeWidth={1.5} />,
-      gradient: 'from-violet-50 via-purple-50 to-fuchsia-100',
-      iconBg: 'from-violet-100 to-purple-100',
+      icon: <Search className={`${iconClass} text-brand-500`} strokeWidth={1.5} />,
+      gradient: 'from-brand-50 via-brand-50 to-brand-200',
+      iconBg: 'from-brand-50 to-brand-50',
       label: 'キーワード',
     }
   }
@@ -72,7 +72,7 @@ function getCategoryVisual(category: string): { icon: React.ReactNode; gradient:
   if (cat.includes('構成') || cat.includes('アウトライン')) {
     return {
       icon: <Layout className={`${iconClass} text-indigo-600`} strokeWidth={1.5} />,
-      gradient: 'from-indigo-50 via-blue-50 to-violet-100',
+      gradient: 'from-indigo-50 via-blue-50 to-brand-50',
       iconBg: 'from-indigo-100 to-blue-100',
       label: '記事構成',
     }
@@ -80,16 +80,16 @@ function getCategoryVisual(category: string): { icon: React.ReactNode; gradient:
   if (cat.includes('トーン') || cat.includes('雰囲気') || cat.includes('文体')) {
     return {
       icon: <MessageSquare className={`${iconClass} text-pink-600`} strokeWidth={1.5} />,
-      gradient: 'from-pink-50 via-rose-50 to-red-100',
-      iconBg: 'from-pink-100 to-rose-100',
+      gradient: 'from-brand-100 via-rose-50 to-red-100',
+      iconBg: 'from-brand-200 to-rose-100',
       label: 'トーン・文体',
     }
   }
   // デフォルト
   return {
     icon: <Target className={`${iconClass} text-rose-600`} strokeWidth={1.5} />,
-    gradient: 'from-rose-50 via-pink-50 to-red-100',
-    iconBg: 'from-rose-100 to-pink-100',
+    gradient: 'from-rose-50 via-brand-100 to-red-100',
+    iconBg: 'from-rose-100 to-brand-200',
     label: category || '質問',
   }
 }
@@ -284,7 +284,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       {/* カード本体（リッチなデザイン） */}
       <div className="relative rounded-2xl sm:rounded-3xl bg-white overflow-hidden shadow-[0_20px_60px_-12px_rgba(0,0,0,0.25)]">
         {/* 上部のアクセントライン */}
-        <div className="absolute top-0 left-0 right-0 h-1 sm:h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 sm:h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400" />
         
         {/* 光沢エフェクト */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-transparent pointer-events-none" />

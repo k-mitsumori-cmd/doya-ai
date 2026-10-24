@@ -2017,7 +2017,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
-                            value={subColor || '#8B5CF6'}
+                            value={subColor || '#3d80ff'}
                             onChange={(e) => setSubColor(e.target.value)}
                             className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
                           />
@@ -2025,7 +2025,7 @@ function BannerTestPageInner() {
                             type="text"
                             value={subColor}
                             onChange={(e) => setSubColor(e.target.value)}
-                            placeholder="#8B5CF6"
+                            placeholder="#3d80ff"
                             className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
@@ -2047,13 +2047,13 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold flex items-center gap-2">
                         <span>詳細な生成指示</span>
-                        <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full">ENTERPRISE</span>
+                        <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full">ENTERPRISE</span>
                       </label>
                       {currentPlan === 'ENTERPRISE' && (
                         <button
                           type="button"
                           onClick={() => setShowCustomPrompt(!showCustomPrompt)}
-                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          className="text-xs text-brand-300 hover:text-brand-200 transition-colors"
                         >
                           {showCustomPrompt ? '閉じる' : '開く'}
                         </button>
@@ -2063,7 +2063,7 @@ function BannerTestPageInner() {
                     {currentPlan !== 'ENTERPRISE' ? (
                       <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                         <div className="flex items-center gap-3">
-                          <Lock className="w-5 h-5 text-purple-400" />
+                          <Lock className="w-5 h-5 text-brand-300" />
                           <div>
                             <p className="text-sm text-gray-300">個別契約でご案内する機能</p>
                             <p className="text-xs text-gray-500 mt-1">
@@ -2073,7 +2073,7 @@ function BannerTestPageInner() {
                         </div>
                         <a
                           href={HIGH_USAGE_CONTACT_URL}
-                          className="mt-3 inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          className="mt-3 inline-flex items-center gap-1 text-xs text-brand-300 hover:text-brand-200 transition-colors"
                         >
                           <Crown className="w-3 h-3" />
                           利用について相談する
@@ -2088,7 +2088,7 @@ function BannerTestPageInner() {
                           value={customPrompt}
                           onChange={(e) => setCustomPrompt(e.target.value)}
                           placeholder="例：背景を青いグラデーションに変更、右下にキラキラエフェクトを追加、文字を黄色で縁取り..."
-                          className="w-full h-32 px-4 py-3 bg-gray-800 border border-purple-600/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
+                          className="w-full h-32 px-4 py-3 bg-gray-800 border border-brand-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-none text-sm"
                         />
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-500">{customPrompt.length} / 500文字</span>
@@ -2102,8 +2102,8 @@ function BannerTestPageInner() {
                             </button>
                           )}
                         </div>
-                        <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-700/50">
-                          <p className="text-[10px] text-purple-300">
+                        <div className="bg-brand-800/30 rounded-lg p-3 border border-brand-600/50">
+                          <p className="text-[10px] text-brand-200">
                             ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
                           </p>
                         </div>
@@ -2112,7 +2112,7 @@ function BannerTestPageInner() {
                       <button
                         type="button"
                         onClick={() => setShowCustomPrompt(true)}
-                        className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-purple-600/30 rounded-lg text-sm text-purple-300 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-brand-500/30 rounded-lg text-sm text-brand-200 transition-colors flex items-center justify-center gap-2"
                       >
                         <Sparkles className="w-4 h-4" />
                         詳細な生成指示を追加
@@ -2122,7 +2122,7 @@ function BannerTestPageInner() {
 
                   {/* 生成ボタン / ローディングUI */}
                   {isGenerating ? (
-                    <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-700/50">
+                    <div className="bg-gradient-to-br from-blue-900/50 to-brand-800/50 rounded-xl p-6 border border-blue-700/50">
                       <div className="flex flex-col items-center gap-4">
                         {/* アニメーションアイコン */}
                         <div className="relative">
@@ -2142,7 +2142,7 @@ function BannerTestPageInner() {
                         <div className="w-full max-w-xs">
                           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                             <motion.div 
-                              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                              className="h-full bg-gradient-to-r from-blue-500 to-brand-400"
                               initial={{ width: 0 }}
                               animate={{ width: `${generationProgress}%` }}
                               transition={{ duration: 0.5 }}
@@ -2274,11 +2274,11 @@ function BannerTestPageInner() {
                         <div className="opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center gap-2">
                           {(currentPlan === 'ENTERPRISE') ? (
                             <>
-                              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center">
                                 <Sparkles className="w-6 h-6 text-white" />
                               </div>
                               <span className="text-white font-bold text-sm">クリックして修正</span>
-                              <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full text-white">ENTERPRISE</span>
+                              <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full text-white">ENTERPRISE</span>
                             </>
                           ) : (
                             <>
@@ -2321,7 +2321,7 @@ function BannerTestPageInner() {
                               setEditPrompt('')
                               setShowEditModal(true)
                             }}
-                            className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
                           >
                             <Sparkles className="w-4 h-4" />
                             修正
@@ -2474,7 +2474,7 @@ function BannerTestPageInner() {
           >
             {/* 背景オーバーレイ（グラデーション） */}
             <motion.div 
-              className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-purple-900/95 to-black/95 backdrop-blur-xl"
+              className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-brand-800/95 to-black/95 backdrop-blur-xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             />
@@ -2521,7 +2521,7 @@ function BannerTestPageInner() {
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       className="inline-block mb-2 sm:mb-3"
                     >
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-0.5">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-500 via-brand-400 to-brand-600 p-0.5">
                         <div className="w-full h-full rounded-full bg-black/50 flex items-center justify-center">
                           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                         </div>
@@ -2548,7 +2548,7 @@ function BannerTestPageInner() {
                     </div>
                     <div className="h-1.5 sm:h-2 bg-white/10 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-blue-500 via-brand-400 to-brand-600 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${generationProgress}%` }}
                         transition={{ duration: 0.5 }}
@@ -2632,7 +2632,7 @@ function BannerTestPageInner() {
                         {customPrompt && (
                           <div className="pt-1.5 border-t border-white/10">
                             <p className="text-white/50 text-[9px] sm:text-[10px] flex items-center gap-1">
-                              <span className="px-1 py-0.5 bg-purple-600 text-[6px] sm:text-[7px] font-bold rounded">ENT</span>
+                              <span className="px-1 py-0.5 bg-brand-500 text-[6px] sm:text-[7px] font-bold rounded">ENT</span>
                               詳細指示
                             </p>
                             <p className="text-white/80 text-[9px] sm:text-[10px] line-clamp-2">{customPrompt}</p>
@@ -2817,7 +2817,7 @@ function BannerTestPageInner() {
                   ? 'bg-gradient-to-r from-red-600 to-red-500' 
                   : lockModalType === 'pro'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-500'
-                    : 'bg-gradient-to-r from-purple-600 to-purple-500'
+                    : 'bg-gradient-to-r from-brand-500 to-brand-400'
               }`}>
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -2918,8 +2918,8 @@ function BannerTestPageInner() {
                       <span className="text-amber-300 font-medium">全画像解放 + 月150枚</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-purple-400 font-medium">Enterprise</span>
-                      <span className="text-purple-300 font-medium">全画像解放 + 月1000枚</span>
+                      <span className="text-brand-300 font-medium">Enterprise</span>
+                      <span className="text-brand-200 font-medium">全画像解放 + 月1000枚</span>
                     </div>
                   </div>
                 </div>
@@ -2948,10 +2948,10 @@ function BannerTestPageInner() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative z-10 w-full max-w-[calc(100%-24px)] sm:max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 max-h-[90vh] overflow-y-auto"
+              className="relative z-10 w-full max-w-[calc(100%-24px)] sm:max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-brand-400/30 max-h-[90vh] overflow-y-auto"
             >
               {/* ヘッダー */}
-              <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-between">
+              <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-brand-500 to-brand-600 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                     <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -3003,7 +3003,7 @@ function BannerTestPageInner() {
                     onChange={(e) => setEditPrompt(e.target.value)}
                     placeholder="例：&#10;・背景をもっと明るくして&#10;・文字を大きくして&#10;・右下にロゴを追加して&#10;・全体的にポップな雰囲気に"
                     disabled={isEditing}
-                    className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-600 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-sm disabled:opacity-50"
+                    className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-600 focus:border-brand-400 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400/50 resize-none text-sm disabled:opacity-50"
                   />
                   <p className="text-xs text-gray-500 mt-2">{editPrompt.length} / 500文字</p>
                   
@@ -3090,7 +3090,7 @@ function BannerTestPageInner() {
                       }
                     }}
                     disabled={isEditing || quota.checking || !editPrompt.trim()}
-                    className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                    className="mt-4 w-full py-3 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                   >
                     {isEditing ? (
                       <>
@@ -3110,8 +3110,8 @@ function BannerTestPageInner() {
               
               {/* フッター */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                <div className="p-3 bg-purple-900/30 rounded-lg border border-purple-700/50">
-                  <p className="text-xs text-purple-300">
+                <div className="p-3 bg-brand-800/30 rounded-lg border border-brand-600/50">
+                  <p className="text-xs text-brand-200">
                     ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
                   </p>
                 </div>

@@ -135,7 +135,7 @@ export function TaskCreateForm({
           <Button
             type="submit"
             disabled={loading || !title.trim()}
-            className="h-11 rounded-full font-black px-6 text-[15px] shadow-md bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 transition-all hover:scale-105 active:scale-95"
+            className="h-11 rounded-full font-black px-6 text-[15px] shadow-md bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 transition-all hover:scale-105 active:scale-95"
           >
             <Plus className="mr-1.5 h-5 w-5" />
             追加！
