@@ -18,6 +18,7 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  if(n==='@/components/aio/ui')return{PageHeader:()=>null};
  if(n==='@/components/shell/power')return{ShellCostBadge:()=>null,ShellPowerMeter:()=>null};if(n==='@/components/shell/ui-next-context')return{useUiNext:()=>false};
  if(n==='@/components/ds')return{EmptyState:()=>null};
+ if(n==='@/components/ds/dialog')return{confirmDialog:async()=>{confirms++;return true},alertDialog:async()=>{}};
  if(n==='./AioSidebar')return{__esModule:true,default:()=>null};
  if(n==='lucide-react')return new Proxy({},{get:()=>()=>null});
  if(n==='framer-motion')return{AnimatePresence:({children})=>children,motion:new Proxy({},{get:(_,tag)=>({children})=>React.createElement(tag,null,children)})};
