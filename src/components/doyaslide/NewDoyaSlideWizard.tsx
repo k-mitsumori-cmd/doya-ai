@@ -30,12 +30,12 @@ import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { ShellCostBadge } from '@/components/shell/power'
-import { Briefcase, Building2, FileText, Handshake, Mic, Rocket, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
+import { Briefcase, Building2, FileText, Mic, Rocket, Smartphone, Sparkles, Users, type LucideIcon } from 'lucide-react'
 
 // 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
 const DOC_TYPE_ICON: Record<string, LucideIcon> = {
   sales: Briefcase, proposal: FileText, sns: Smartphone, seminar: Mic,
-  recruit: Handshake, pitch: Rocket, internal: Building2, custom: Sparkles,
+  recruit: Users, pitch: Rocket, internal: Building2, custom: Sparkles,
 }
 
 type Aspect = 'wide' | 'square' | 'vertical'
