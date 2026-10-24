@@ -25,7 +25,7 @@ const BANNERS_KEY = 'doya_admin_banners'
 const defaultBanners: Banner[] = [
   {
     id: 'doyamarke-main',
-    title: '🎁 無料テンプレートをダウンロード！',
+    title: '無料テンプレートをダウンロード！',
     description: 'ドヤマーケで使える無料のビジネステンプレートをプレゼント中。仕事をさらにスピードアップ！',
     imageUrl: '/images/banners/doyamarke-banner.jpg',
     linkUrl: 'https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1',
@@ -42,7 +42,7 @@ const defaultBanners: Banner[] = [
   },
   {
     id: 'doyamarke-side',
-    title: '💡 もっと仕事を楽にしたい？',
+    title: 'もっと仕事を楽にしたい？',
     description: 'ドヤマーケには、仕事が爆速になるツールやテンプレートが盛りだくさん！',
     imageUrl: '',
     linkUrl: 'https://doyamarke.surisuta.jp',
@@ -59,7 +59,7 @@ const defaultBanners: Banner[] = [
   },
   {
     id: 'doyamarke-template',
-    title: '✨ 生成したコンテンツを活用しませんか？',
+    title: '生成したコンテンツを活用しませんか？',
     description: 'DOYA-AIで作成した文章を、さらにブラッシュアップして使えるテンプレートがあります！',
     imageUrl: '',
     linkUrl: 'https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1',
@@ -76,7 +76,7 @@ const defaultBanners: Banner[] = [
   },
   {
     id: 'campaign-1',
-    title: '🎉 ドヤマーケ会員登録で特典ゲット！',
+    title: 'ドヤマーケ会員登録で特典ゲット！',
     description: '無料会員登録で、すぐに使えるビジネステンプレートをプレゼント！',
     imageUrl: '',
     linkUrl: 'https://doyamarke.surisuta.jp',
