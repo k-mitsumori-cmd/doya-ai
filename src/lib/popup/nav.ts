@@ -16,7 +16,6 @@ export interface PopupNavItem extends ShellNavItem {
 export const POPUP_NAV: PopupNavItem[] = [
   // ⚠️ exact: '/popup/pricing' でトップまで選択中にならないように
   { label: 'サイトとポップアップ', href: '/popup', icon: 'PanelTopOpen', exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
-  { label: '料金プラン', href: '/popup/pricing', icon: 'CreditCard' },
 ]
 
 /** 暫定サイドバーでの選択中の判定（共通シェルでは ToolFrame の isNavActive を使う） */

@@ -1,5 +1,5 @@
 // ドヤ展示会のナビ項目（ADDON-SERVICES R-1）。
-// 共通シェル（ui.shell.tenjikai が ON）のときは ToolFrame の nav に、OFF のときは暫定の TenjikaiSidebar に、同じ配列を渡す。
+// ログインしていれば、いつも共通シェルの ToolFrame の nav に渡す（FRM-05）。暫定の TenjikaiSidebar は、ログインしない開発中の画面確認だけで使う。
 // manifest.ui.nav[] にもそのまま移す。型は共通シェルの ShellNavItem に合わせる。
 // ⚠️ セクションは /tenjikai/<section> の URL で表す（シェルのタブは pathname で選択中を決めるため）。
 //    画面の状態は src/app/(shell)/tenjikai/layout.tsx に置いた TenjikaiApp が持つので、セクションを移っても消えない。

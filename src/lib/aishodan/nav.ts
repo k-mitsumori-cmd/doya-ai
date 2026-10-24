@@ -19,7 +19,6 @@ export const AISHODAN_NAV: AishodanNavItem[] = [
   { label: '商談ログ', href: AISHODAN_BASE + '/sessions', icon: 'ClipboardList' },
   { label: '練習モード', href: AISHODAN_BASE + '/preview', icon: 'DoorOpen' },
   { label: '設定', href: AISHODAN_BASE + '/settings', icon: 'Settings' },
-  { label: '料金プラン', href: AISHODAN_BASE + '/pricing', icon: 'CreditCard' },
 ]
 
 export function isNavActive(item: AishodanNavItem, pathname: string): boolean {

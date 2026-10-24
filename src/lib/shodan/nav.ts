@@ -19,6 +19,5 @@ export function shodanNav(orgSlug: string): ShodanNavItem[] {
     { label: '新規作成', href: `${base}/new`, icon: 'Sparkles', hot: true },
     { label: '自社情報', href: `${base}/settings`, icon: 'Building2' },
     { label: 'メンバー', href: `${base}/members`, icon: 'Users' },
-    { label: '料金プラン', href: `/shodan/pricing?org=${encodeURIComponent(orgSlug)}`, icon: 'CreditCard' },
   ]
 }

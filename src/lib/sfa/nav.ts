@@ -27,11 +27,10 @@ export function sfaMainNav(orgSlug: string): ShellNavItem[] {
   ]
 }
 
-/** サイドバーの下段（その他） */
+/** サイドバーの下段（その他）。料金のタブは入れない（FRM-04。今のサイドバーは下のプランの案内から料金へ行ける） */
 export function sfaSubNav(orgSlug: string): ShellNavItem[] {
   return [
     { label: 'メンバー', href: `/sfa/${orgSlug}/members`, icon: 'UserPlus' },
-    { label: '料金プラン', href: sfaPricingHref(orgSlug), icon: 'Tag' },
   ]
 }
 

@@ -4,9 +4,13 @@
 // - 新しい見た目でログインしている人: 全ツールの入口・料金・組織を作る「はじめに」・ツールの中のタブで、枠が出る
 // - 招待の受諾・応募者や社員が開く画面・見本・ログインしていない人の紹介ページでは、枠が出ない
 // - 今の見た目では、今までどおり（台帳の inShell で決める）
+// - どのツールのタブにも「料金プラン」を入れない（2026-10-24 ユーザーの決定 FRM-04）。料金のページは直リンクで開けるまま
+// - 展示会は、UI_SHELL_SERVICES に関係なく、いつも枠に入る（2026-10-24 ユーザーの決定 FRM-05）
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SHELL_SERVICES, shouldShowShell } from './registry'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { SHELL_SERVICES, shouldShowShell, toolPricingHref } from './registry'
 import { isEntryPath } from './entry-path'
 import { isNavActive } from './nav'
 import { ADIMAGE_NAV } from '@/lib/adimage/nav'
@@ -28,7 +32,7 @@ import { POPUP_NAV } from '@/lib/popup/nav'
 import { promaneNav } from '@/lib/promane/nav'
 import { QUOTE_NAV } from '@/lib/quote/nav'
 import { SEO_NAV } from '@/lib/seo/nav'
-import { sfaNav } from '@/lib/sfa/nav'
+import { sfaNav, sfaPricingHref } from '@/lib/sfa/nav'
 import { SHANAI_NAV } from '@/lib/shanai/nav'
 import { shodanNav } from '@/lib/shodan/nav'
 import { TENJIKAI_NAV } from '@/lib/tenjikai/nav'
@@ -39,12 +43,13 @@ const pathOf = (href: string) => href.split(/[?#]/)[0]
 /** 全ツールの入口と料金（ユーザーの指摘で枠が消えていたものを含む） */
 const ENTRIES = SHELL_SERVICES.flatMap((s) => [s.basePath, `${s.basePath}/pricing`])
 
-/** 組織を作る「はじめに」・料金・各ツールのタブ（ToolFrame の nav） */
-const TABS = [
+/** 各ツールのタブ（ToolFrame の nav）。いちばん多く出る形（管理者・組織あり）で並べる */
+const NAV_ITEMS = [
   ADIMAGE_NAV, buildAioNav('acme'), AISHODAN_NAV, ASKLINK_NAV, BANNER_NAV_NEXT, CUNNING_NAV, DOYALIST_NAV, DOYASLIDE_NAV,
   expenseNav('acme', 'owner'), hrShellNav(true), INCOME_NAV, INTERVIEW_NAV, buildKintaiNav('admin', true), MENSETSU_NAV,
   PERSONA_NAV, POPUP_NAV, promaneNav('acme'), QUOTE_NAV, SEO_NAV, sfaNav('acme'), SHANAI_NAV, shodanNav('acme'), TENJIKAI_NAV,
-].flat().map((item) => pathOf(item.href))
+].flat()
+const TABS = NAV_ITEMS.map((item) => pathOf(item.href))
 
 /** 収入管理の下の画面（ユーザーは収入管理でも枠が消えたと言っている） */
 const INCOME = ['/income', '/income/pricing', '/income/settings', '/income/clients', '/income/clients/c1', '/income/contracts', '/income/contracts/new',
@@ -68,7 +73,7 @@ test('新しい見た目でログインしている人には、全ツールの�
 })
 
 test('新しい見た目でログインしている人には、ツールの中のタブと収入管理の下の画面で枠が出る', () => {
-  assert.ok(TABS.length > 60)
+  assert.ok(TABS.length > 50)
   for (const p of [...TABS, ...INCOME]) assert.equal(shouldShowShell(p, NEXT), true, p)
 })
 
@@ -99,6 +104,49 @@ test('有効でないツールには、新しい見た目でも枠を出さな�
   assert.equal(shouldShowShell('/expense', { signedIn: true, enabledIds: [], uiNext: true }), true)
 })
 
+test('展示会は、UI_SHELL_SERVICES に無くても、いつも枠に入る（FRM-05）', () => {
+  assert.equal(SHELL_SERVICES.find((s) => s.id === 'tenjikai')?.always, true)
+  const tenjikai = ['/tenjikai', ...TENJIKAI_NAV.map((n) => pathOf(n.href))]
+  assert.ok(tenjikai.length > 5)
+  for (const uiNext of [true, false]) {
+    for (const p of tenjikai) {
+      assert.equal(shouldShowShell(p, { signedIn: true, enabledIds: [], uiNext }), true, `${p} uiNext=${uiNext}`)
+      // 未ログインは紹介ページ（LP）だけ。枠は出さない
+      assert.equal(shouldShowShell(p, { signedIn: false, enabledIds: [], uiNext }), false, `${p} 未ログイン`)
+    }
+  }
+})
+
+test('どのツールのタブにも「料金プラン」を入れない（FRM-04）', () => {
+  assert.ok(NAV_ITEMS.length > 50)
+  for (const item of NAV_ITEMS) {
+    const p = pathOf(item.href)
+    assert.ok(!/(^|\/)pricing(\/|$)/.test(p), `料金のページへのタブがある: ${item.label} ${item.href}`)
+    assert.ok(!/料金/.test(item.label), `料金のタブがある: ${item.label} ${item.href}`)
+  }
+  // 料金のページそのものは消さない。ログインしていれば直リンクでも枠の中で開く
+  for (const s of SHELL_SERVICES.filter((x) => x.id !== 'home')) {
+    assert.equal(shouldShowShell(`${s.basePath}/pricing`, NEXT), true, s.id)
+  }
+})
+
+test('「このツールの残りとプラン」の料金へのリンクは、そのツールの料金のページを開く（FRM-04）', () => {
+  const byId = (id: string) => SHELL_SERVICES.find((s) => s.id === id)!
+  // 利用量を出すツールは、どれも料金のページへのリンクを持つ
+  for (const s of SHELL_SERVICES.filter((x) => x.usage)) {
+    const org = s.usage?.org === 'path' ? 'acme' : undefined
+    assert.equal(pathOf(toolPricingHref(s, org)), `${s.basePath}/pricing`, s.id)
+    // 行き先の料金のページが本当にある（タブから外しても、ページは残す）
+    assert.ok(existsSync(join(process.cwd(), 'src/app/(shell)', s.basePath, 'pricing/page.tsx')), `${s.basePath}/pricing のページが無い`)
+  }
+  assert.equal(toolPricingHref(byId('popup')), '/popup/pricing')
+  // 組織ごとのツールは、その組織の料金を開く
+  assert.equal(toolPricingHref(byId('aio'), '日本語'), `/aio/pricing?org=${encodeURIComponent('日本語')}`)
+  assert.equal(toolPricingHref(byId('shodan'), 'acme'), '/shodan/pricing?org=acme')
+  // 台帳に書いた行き先が優先
+  assert.equal(toolPricingHref(byId('quote'), 'acme'), '/quote/pricing')
+})
+
 test('組織を選ぶ前の画面（入口と料金）だけに、見出しの帯を足す', () => {
   for (const [svc, p] of [['sfa', '/sfa'], ['sfa', '/sfa/pricing'], ['aio', '/aio'], ['expense', '/expense/pricing'], ['promane', '/promane']]) {
     assert.equal(isEntryPath(svc, p), true, p)
@@ -108,10 +156,11 @@ test('組織を選ぶ前の画面（入口と料金）だけに、見出しの�
   }
 })
 
-test('料金のタブは、href に ?org= があっても、料金のページで選ばれた形になる', () => {
-  const pricing = sfaNav('acme').find((n) => n.href.startsWith('/sfa/pricing'))!
+test('href に ?org= がある項目も、パスだけで選ばれた形になる（料金の案内・今のサイドバー）', () => {
+  // 料金のタブはナビから外した（FRM-04）が、今のサイドバーのプランの案内は ?org= 付きで料金のページを開く
+  const pricing = { label: 'プラン', href: sfaPricingHref('acme') }
   assert.equal(isNavActive('/sfa/pricing', pricing), true)
   assert.equal(isNavActive('/sfa/acme', pricing), false)
-  const aio = buildAioNav('acme').find((n) => n.href.startsWith('/aio/pricing'))!
+  const aio = { label: 'プラン', href: `/aio/pricing?org=${encodeURIComponent('acme')}` }
   assert.equal(isNavActive('/aio/pricing', aio), true)
 })

@@ -4,6 +4,10 @@
 // ⚠️ ナビはデータで持つ（ADDON-SERVICES R-1）。独自サイドバーはこれを描くだけにし、
 //    AppShell に載せ替えるときは ToolFrame の nav にそのまま渡す。
 //    将来の manifest.ui.nav[]（README §18.6 手順 2）と同じ形。
+// ⚠️ 「料金プラン」のタブは、どのツールのナビにも入れない（2026-10-24 ユーザーの決定 FRM-04）。
+//    料金は、枠の左下のアカウント欄（/pricing）と、ToolFrame の「このツールの残りとプラン」から開く。
+//    各ツールの料金のページ（/<ツール>/pricing）は消さない。直リンクで開けるまま残す。
+//    registry.test.ts が、どのツールのタブにも料金のページが無いことを確かめている。
 import type { ShellIconName } from './icons'
 
 export interface ShellNavItem {

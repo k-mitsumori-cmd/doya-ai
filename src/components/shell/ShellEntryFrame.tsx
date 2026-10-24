@@ -6,7 +6,7 @@
 // 入口（組織を作る「はじめに」）と料金のページは、組織の layout の外にあるので、ToolFrame が付かなかった。
 // 新しい見た目で共通の枠の中にいるときだけ、ここで ToolFrame を付ける（今の見た目・未ログインでは何もしない）。
 // - 組織の下（/<ツール>/<組織>/...）は、組織の layout が ToolFrame を出すので、ここでは包まない
-// - 料金のページに ?org= があれば、その組織のタブの並びを出す（組織の画面の「料金プラン」のタブから来たとき）
+// - 料金のページに ?org= があれば、その組織のタブの並びを出す（組織の画面の「このツールの残りとプラン」から来たとき。料金のタブはナビから外した: FRM-04）
 // ⚠️ 2026-10-23 ユーザーの指摘（ツールを押すと上のヘッダーが消えて画面が変わる）への直し。registry.ts の shouldShowShell と組で使う
 import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'

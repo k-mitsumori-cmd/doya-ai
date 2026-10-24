@@ -19,7 +19,6 @@ export const CUNNING_SUB_NAV: CunningNavItem[] = [
   { label: 'ナレッジ（商談）', href: '/cunning/knowledge', icon: 'BookOpen' },
   { label: '企業・プロフィール（面接）', href: '/cunning/company', icon: 'Building2' },
   { label: '履歴', href: '/cunning/history', icon: 'History' },
-  { label: '料金プラン', href: '/cunning/pricing', icon: 'Tag' },
 ]
 
 export const CUNNING_NAV: CunningNavItem[] = [...CUNNING_MAIN_NAV, ...CUNNING_SUB_NAV]
