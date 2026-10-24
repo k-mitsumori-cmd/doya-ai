@@ -23,8 +23,8 @@ export type ChargeLedger = {
   grantMonthlyForPlan: (companyId: string, plan: string | null | undefined) => Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }>
   balance: (companyId: string) => Promise<BalanceResult | null>
   operationStatus: (operationId: string) => Promise<'none' | 'consumed' | 'refunded'>
-  /** 5分以内の作り直しの相手（同じ会社・同じ操作の名前で、戻していない消費）を探す */
-  recentConsume: (companyId: string, action: string, opts: { withinMs: number; retryOf?: string | null; target?: string | null }) => Promise<{ operationId: string; at: Date } | null>
+  /** 5分以内の作り直しの相手（同じ会社・同じ操作の名前・同じルート・同じ対象で、全額で減らして戻していない消費）を探す */
+  recentConsume: (companyId: string, action: string, opts: { withinMs: number; retryOf?: string | null; target?: string | null; scope?: string | null }) => Promise<{ operationId: string; at: Date } | null>
 }
 
 /**
@@ -95,8 +95,10 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
   /**
    * 生成の前に呼ぶ。units は件数（画像の枚数・質問の数など）、key は同じ操作をまとめるための ID（クライアントの operationId など）。
    * key が無いときは、その場で作る（その呼び出しだけの操作になる）
-   * retryOf（前の操作のキー）か target（同じ対象のキー）があり、同じ会社・同じ操作の名前で5分以内に減らした
-   * （まだ戻していない）前の操作が見つかれば、減る量は半分（切り上げ）。見つからなければ全額
+   * 半分になるのは「同じ対象の作り直し」だけ。次を全部満たす前の操作が見つかったときに限る（見つからなければ全額）。
+   * - retryOf（前の操作のキー。クライアントが送る合図）と target（同じ対象のキー。サーバーがルートのパラメータや本文の ID から決める）の両方がある
+   * - 同じ会社・同じ操作の名前・同じルート（scope）で、5分以内に減らした
+   * - 前の操作は全額で減らしたもの（半分で減らした操作は土台にしない。連鎖させない）で、まだ戻していない
    */
   async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown; scope?: unknown } = {}): Promise<ChargeOutcome> {
     const who = await target()
@@ -108,9 +110,11 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     const targetKey = cleanKey(opts.target)
     let amount = fullAmount
     let halved = false
-    if ((retryOf && retryOf !== key) || targetKey) {
+    const scope = cleanKey(opts.scope)
+    // ⚠️ target が決められないルート・retryOf が無い呼び出しは、半分にしない（クライアントの値だけで半分にさせない）
+    if (retryOf && retryOf !== key && targetKey) {
       try {
-        const prev = await deps.ledger.recentConsume(who.companyId, action, { withinMs: RETRY_HALF_WINDOW_MS, retryOf: retryOf && retryOf !== key ? retryOf : null, target: targetKey })
+        const prev = await deps.ledger.recentConsume(who.companyId, action, { withinMs: RETRY_HALF_WINDOW_MS, retryOf, target: targetKey, scope })
         if (prev) {
           amount = halfAmount(fullAmount)
           halved = true
@@ -125,7 +129,6 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     // ⚠️ scope は呼ばれたルートの名前空間（charge.ts がルートの道すじから作る）。クライアントのキーは、同じ操作の名前でも
     //    別のルートでは別の ID になる（安いルートで払ったキーを、高いルートに送ってタダにできない）。
     //    キーの後ろ・量の前に置く（作り直しの探し方「操作の名前:会社:キー:」を変えないため）
-    const scope = cleanKey(opts.scope)
     const opKey = key ?? newKey()
     let operationId = `${action}:${who.companyId}:${opKey}${scope ? `:${scope}` : ''}:${amount}`
     try {
@@ -133,7 +136,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
       // ⚠️ 前に失敗して戻した操作の ID がもう一度来たら、新しい操作として減らし直す（戻した操作をタダで動かさない）
       if (key && (await deps.ledger.operationStatus(operationId)) === 'refunded') operationId = `${operationId}:retry-${newKey()}`
-      const r = await deps.ledger.consume(who.companyId, amount, operationId, targetKey ? { note: `target:${targetKey}` } : undefined)
+      const r = await deps.ledger.consume(who.companyId, amount, operationId, targetKey ? { note: `target:${targetKey}${halved ? ' halved:1' : ''}` } : undefined)
       if (r.ok) {
         // ⚠️ 同じ ID の2回目（duplicated）は、この呼び出しでは減らしていないので、失敗しても戻さない。
         //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）。

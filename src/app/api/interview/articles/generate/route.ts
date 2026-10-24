@@ -25,7 +25,7 @@ import { beginArticleOperation, recoverArticleOperation, completeArticleOperatio
 import { createHash } from 'node:crypto'
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 import { readInterviewGeminiResponse } from '@/lib/interview/gemini-request'
-import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { withDoyaPowerCharge, targetKeyOf } from '@/lib/doya-power/charge'
 
 const ARTICLE_PROVIDER_TIMEOUT_MS = 240_000
 const ARTICLE_PROVIDER_STREAM_MAX_BYTES = 8 * 1024 * 1024
@@ -461,4 +461,4 @@ async function postHandler(req: NextRequest) {
 }
 
 // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
-export const POST = withDoyaPowerCharge({ action: 'interview.article', key: (b) => b?.operationId, retry: true }, postHandler)
+export const POST = withDoyaPowerCharge({ action: 'interview.article', key: (b) => b?.operationId, retry: true, targetBody: true, target: (b) => targetKeyOf('interview-project', b?.projectId) }, postHandler)

@@ -365,18 +365,22 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
   }
 
   /**
-   * 5分以内の作り直しを見つける（読むだけ）。同じ会社・同じ操作の名前で、withinMs 以内に減らして、まだ戻していない消費があるか。
-   * - retryOf: クライアントが「この操作の作り直し」と示した、前の操作のキー（operationId の3つ目の欄）
-   * - target: 同じ対象を表すキー（consume のときの note に target:<キー> で残してある）
-   * どちらも渡さなければ見つけない（会社の別の操作を、勝手に作り直し扱いにしない）
+   * 5分以内の「同じ対象の作り直し」の相手を見つける（読むだけ）。次の条件を全部満たす消費だけが相手になる。
+   * - 同じ会社・同じ操作の名前（operationId の1つ目・2つ目の欄）
+   * - retryOf: クライアントが「この操作の作り直し」と示した、前の操作のキー（operationId の3つ目の欄）と同じ
+   * - target: サーバーがルートのパラメータ・本文の ID から決めた対象のキー。消費のときの note に target:<キー> で残してあるものと同じ
+   * - scope: 同じルートの前の消費だけ（operationId にルートの名前空間が入っている）。渡さなければ見ない（テスト用）
+   * - 半分で減らした消費（note に halved:1）は相手にしない。半分の作り直しを土台に、もう一度半分にさせない
+   * - 戻した消費は相手にしない
+   * retryOf か target のどちらかが無ければ見つけない（会社の別の操作を、勝手に作り直し扱いにしない）
    */
   async function recentConsume(
     companyId: string,
     action: string,
-    opts: { withinMs: number; retryOf?: string | null; target?: string | null },
+    opts: { withinMs: number; retryOf?: string | null; target?: string | null; scope?: string | null },
   ): Promise<{ operationId: string; at: Date } | null> {
     if (!validId(companyId) || !validId(action)) return null
-    if (!opts.retryOf && !opts.target) return null
+    if (!opts.retryOf || !opts.target) return null
     return db.$transaction(async (tx) => {
       const now = clock()
       const account = await tx.doyaPowerAccount.findUnique({ where: { companyId } })
@@ -384,13 +388,12 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
       const rows: { operationId: string | null; note: string | null; createdAt: Date }[] = await tx.doyaPowerTransaction.findMany({
         where: { accountId: account.id, type: 'consume', createdAt: { gte: new Date(now.getTime() - opts.withinMs) } },
       })
-      const prefix = `${action}:${companyId}:`
-      const hits = rows.filter(
-        (r) =>
-          r.operationId !== null &&
-          r.operationId.startsWith(prefix) &&
-          ((opts.retryOf && r.operationId.startsWith(`${prefix}${opts.retryOf}:`)) || (opts.target && r.note === `target:${opts.target}`)),
-      )
+      const opPrefix = `${action}:${companyId}:${opts.retryOf}:${opts.scope ? `${opts.scope}:` : ''}`
+      const hits = rows.filter((r) => {
+        if (r.operationId === null || !r.operationId.startsWith(opPrefix)) return false
+        const parts = (r.note ?? '').split(' ')
+        return parts[0] === `target:${opts.target}` && !parts.includes('halved:1')
+      })
       if (!hits.length) return null
       const refunds: { refundOf: string | null }[] = await tx.doyaPowerTransaction.findMany({
         where: { accountId: account.id, type: 'refund', refundOf: { in: hits.map((h) => h.operationId as string) } },

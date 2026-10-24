@@ -72,8 +72,6 @@ export default function AdImageTool() {
   const uiNext = useUiNext()
   const actor = (session?.user as { id?: string } | undefined)?.id || ''
   const operation = useAdImageRecovery(authStatus, actor)
-  // ドヤパワー: 「この内容で作り直す」を5分以内に続けて押したら、前の作り直しのキーを送る（減る量が半分。決めるのはサーバー）
-  const refineRetry = useDoyaPowerRetry('adimage-refine')
   const [step, setStep] = useState<Step>('input')
   const [error, setError] = useState('')
   const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
@@ -117,6 +115,9 @@ export default function AdImageTool() {
   // 生成結果
   const [generating, setGenerating] = useState(false)
   const [conceptId, setConceptId] = useState('')
+  // ドヤパワー: 「この内容で作り直す」を5分以内に続けて押したら、前の作り直しのキーを送る（減る量が半分。決めるのはサーバー）。
+  // 控えはコンセプトごと（サーバーも同じコンセプトの前の作り直しだけを半分の相手にする）
+  const refineRetry = useDoyaPowerRetry(conceptId ? `adimage-refine:${conceptId}` : null)
   const imageOperation = useRef({ revision: 0, busy: false, feedback: 0 })
   useEffect(() => () => { imageOperation.current.revision += 1 }, [])
   const [creatives, setCreatives] = useState<Creative[]>([])
