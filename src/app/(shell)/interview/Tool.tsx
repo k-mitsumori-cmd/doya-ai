@@ -12,7 +12,7 @@ import { createInterviewProjectRequest, readInterviewCreationResponse, Interview
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { EmptyState, Skeleton, ToolHero } from '@/components/ds'
+import { EmptyState, Skeleton, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/interview.webp）が置かれるまでは、LP の画面の絵を仮に出す
@@ -208,6 +208,23 @@ export default function InterviewTool() {
   }, [uploadsExist])
 
   const recentProjects = projects.slice(0, 6)
+
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作業中の素材 → 失敗した素材 → 一覧 の順に決める
+  const pickFile = () => { if (sessionStatus !== 'loading') fileInputRef.current?.click() }
+  const nextStep: NextStepView = (() => {
+    const list = Array.from(uploads.values())
+    const active = list.filter((u) => u.status !== 'done' && u.status !== 'error')
+    if (active.length > 0 || comparingCount > 0) {
+      const pid = active.find((u) => u.projectId)?.projectId
+      return { key: 'working', state: 'working', n: Math.max(1, active.length), href: pid ? `/interview/projects/${pid}/materials` : undefined }
+    }
+    if (list.some((u) => u.status === 'error')) return { key: 'error', state: 'error', onClick: pickFile, disabled: sessionStatus === 'loading', icon: 'Mic' }
+    if (loading) return null
+    if (projectListError) return { key: 'loadError', state: 'error', onClick: () => window.location.reload() }
+    const pid = list.find((u) => u.status === 'done' && u.projectId)?.projectId ?? projects[0]?.id
+    if (pid) return { key: 'done', state: 'done', href: `/interview/projects/${pid}` }
+    return { key: 'empty', state: 'empty', onClick: pickFile, disabled: sessionStatus === 'loading', icon: 'Mic' }
+  })()
 
   // ファイルからプロジェクト名を生成
   const getProjectTitle = (file: File) => {
@@ -558,6 +575,7 @@ export default function InterviewTool() {
             art={HERO_ART}
             artAlt="ドヤインタビューAIの文字起こしの画面"
           />
+          <ToolNextStep tool="interview" view={nextStep} />
         </>
       ) : (
       <div className="text-center pt-4 pb-2">

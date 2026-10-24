@@ -14,7 +14,7 @@ import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { EmptyState, FirstSteps, ToolHero } from '@/components/ds'
+import { EmptyState, FirstSteps, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -903,6 +903,16 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
   const persona = generatedData?.persona
 
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 上限 → エラー → できた → まだ の順に決める
+  const scrollTo = (el: HTMLElement | null) => el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+  const nextStep: NextStepView = (() => {
+    if (loading) return { key: 'working', state: 'working' }
+    if (quotaNotice && quotaAction) return { key: 'limit', state: 'error', href: quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing', actionLabel: quotaAction === 'contact' ? '問い合わせる' : undefined }
+    if (error && errorAction && quotaNotice !== 'text') return { key: 'error', state: 'error', onClick: () => void (errorAction === 'modify' ? handleModify() : handleGenerate()), disabled: modifying }
+    if (generatedData && persona) return { key: 'done', state: 'done', onClick: () => scrollTo(resumeRef.current) }
+    return { key: 'empty', state: 'empty', onClick: () => document.getElementById('persona-url')?.focus() }
+  })()
+
   return (
     <div className={uiNext ? '' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30'}>
       <div className={uiNext ? 'max-w-6xl mx-auto p-4 sm:p-6' : 'max-w-6xl mx-auto p-4 lg:p-8'}>
@@ -932,6 +942,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                 { title: '「ペルソナを生成」を押す', body: '1分ほどで、人物像と似顔絵ができます。' },
               ]}
             />
+            <ToolNextStep tool="persona" view={nextStep} />
             <div className="flex justify-end">
               <a
                 href={`/api/stripe/portal?returnTo=${encodeURIComponent('/persona')}`}
@@ -970,6 +981,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               サイトURL <span className="text-purple-600">*</span>
             </label>
             <input
+              id="persona-url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}

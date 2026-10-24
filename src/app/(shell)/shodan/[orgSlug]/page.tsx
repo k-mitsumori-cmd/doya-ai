@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { usePreparationList } from '@/lib/shodan/use-preparation-list'
 import { DoyaKun, sym } from '@/components/shodan/ui'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { Button, EmptyState, ErrorNotice, FirstSteps, Skeleton, ToolHero } from '@/components/ds'
+import { Button, EmptyState, ErrorNotice, FirstSteps, Skeleton, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
 import { ChevronRight, Lightbulb, Trash2 } from 'lucide-react'
 
@@ -29,6 +29,21 @@ export default function ShodanListPage() {
   // 新しい見た目（UI 品質 §5.1）: ToolHero・使い方・空状態の絵・ブランドの青。ページの見出しは h2（h1 は枠の ToolFrame）
   if (uiNext) {
     const base = `/shodan/${encodeURIComponent(orgSlug)}`
+    // 次にやること帯（ds/next-step）。調査中 → 読み込みの失敗 → 最新の準備の状態 の順に決める
+    const nextStep: NextStepView = (() => {
+      const running = items?.find((it) => it.status === 'processing')
+      if (running) return { key: 'working', state: 'working', href: `${base}/p/${running.id}` }
+      if (loadError) return { key: 'loadError', state: 'error', onClick: load }
+      if (items === null) return null
+      const latest = items[0]
+      if (!latest) return hasProfile === false
+        ? { key: 'setup', state: 'empty', href: `${base}/settings` }
+        : { key: 'empty', state: 'empty', href: `${base}/new`, icon: 'Plus' }
+      if (latest.status === 'failed') return { key: 'error', state: 'error', href: `${base}/p/${latest.id}` }
+      const done = items.find((it) => it.status === 'researched' || it.status === 'done')
+      if (done) return { key: 'done', state: 'done', href: `${base}/p/${done.id}` }
+      return { key: 'empty', state: 'empty', href: `${base}/new`, icon: 'Plus' }
+    })()
     return (
       <div className="mx-auto grid max-w-5xl gap-5 p-4 sm:p-6">
         <ToolHero
@@ -45,6 +60,7 @@ export default function ShodanListPage() {
             { title: '提案資料とスライドを受け取る', body: 'そのまま商談で使える形に仕上がります。' },
           ]}
         />
+        <ToolNextStep tool="shodan" view={nextStep} />
 
         {list.error && items && <ErrorNotice what={list.error} onRetry={load} retryLabel="一覧を更新" />}
         {list.notice && <p role="status" className="rounded-xl border border-[#0066ff]/20 bg-[#0066ff]/5 p-4 text-sm text-slate-800">{list.notice}</p>}

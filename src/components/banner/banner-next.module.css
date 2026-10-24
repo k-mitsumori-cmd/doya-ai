@@ -23,6 +23,8 @@
 }
 .scroller { height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 .heroWrap { padding: 24px 24px 16px; }
+/* 次にやること帯（ds/next-step）。ヒーローの下に、すき間をあけて置く */
+.nextStep { margin-top: 12px; }
 
 @media (max-width: 767px) {
   /* 枠の上の帯（64px）と下のタブ（68px）のぶん低くする */

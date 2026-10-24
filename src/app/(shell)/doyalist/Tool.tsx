@@ -16,7 +16,7 @@ import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 import Sym from '@/components/doyalist/Sym'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt } from '@/components/ds'
+import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt, ToolNextStep, type NextStepView } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
 import { Check, X } from 'lucide-react'
 
@@ -411,6 +411,25 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
   const downloadCSV = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=csv`)
   const downloadExcel = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=excel`)
 
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。抽出中 → 途中の操作 → エラー → 結果 の順に決める
+  const cannotRun = generating || !validCount || !intentReady || Boolean(extractionIntent)
+  const nextStep: NextStepView = (() => {
+    if (generating) return { key: 'working', state: 'working' }
+    if (extractionIntent) {
+      const canResume = extractionState === 'ready' || extractionState === 'busy'
+      return canResume
+        ? { key: 'resume', state: 'error', onClick: () => void runExtraction('resume') }
+        : { key: 'resume', state: 'error', onClick: () => void runExtraction('recover'), actionLabel: '保存状況を確かめる' }
+    }
+    if (errorMsg) {
+      if (quotaAction) return { key: 'limit', state: 'error', href: quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact', actionLabel: quotaAction === 'pricing' ? undefined : '問い合わせる' }
+      if (errorMsg === DOYALIST_COLLECTION_UNKNOWN) return { key: 'error', state: 'error', href: '/doyalist/history', actionLabel: '履歴を見る' }
+      return { key: 'error', state: 'error', onClick: handleGenerate, disabled: cannotRun }
+    }
+    if (companies.length > 0) return { key: 'done', state: 'done', n: companies.length, onClick: () => { downloadCSV() }, disabled: !savedListId }
+    return { key: 'empty', state: 'empty', onClick: handleGenerate, disabled: cannotRun, icon: 'Search' }
+  })()
+
   const filteredCompanies = useMemo(() => {
     let list = companies
     if (filterText.trim()) {
@@ -522,6 +541,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                 { title: 'CSV・Excel で書き出す', body: '絞り込んでから書き出すと、すぐ営業に使えます' },
               ]}
             />
+            <ToolNextStep tool="doyalist" view={nextStep} />
           </div>
         ) : (
         <div className="flex items-center gap-3 mb-6">

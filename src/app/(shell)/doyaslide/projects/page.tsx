@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { ImageIcon, Trash2 } from 'lucide-react'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { Button, EmptyState as DsEmptyState, ToolHero, toolHeroArt } from '@/components/ds'
+import { Button, EmptyState as DsEmptyState, ToolHero, ToolNextStep, toolHeroArt, type NextStepView } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
 
 interface Project {
@@ -140,6 +140,20 @@ export default function DoyaSlideProjectsPage() {
     }
   }
 
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 読み込みの失敗 → 最新の資料の状態 の順に決める
+  const nextStep: NextStepView = (() => {
+    const running = projects.find((p) => p.status === 'structuring' || p.status === 'generating')
+    if (running) return { key: 'working', state: 'working', href: `/doyaslide/${running.id}` }
+    if (loading && projects.length === 0) return null
+    if (projectsError) return { key: 'loadError', state: 'error', onClick: load }
+    const latest = projects[0]
+    if (!latest) return { key: 'empty', state: 'empty', href: '/doyaslide/new', icon: 'Plus' }
+    if (latest.status === 'error') return { key: 'error', state: 'error', href: `/doyaslide/${latest.id}` }
+    const done = projects.find((p) => p.status === 'completed')
+    if (done) return { key: 'done', state: 'done', href: `/doyaslide/${done.id}` }
+    return { key: 'empty', state: 'empty', href: '/doyaslide/new', icon: 'Plus' }
+  })()
+
   return (
     <div className={uiNext ? 'p-4 lg:p-8 max-w-6xl mx-auto' : 'p-6 lg:p-10 max-w-6xl mx-auto'}>
       {deleteError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{deleteError}</p><button onClick={load} className="mt-2 font-bold underline">一覧を再読み込み</button></div>}
@@ -162,6 +176,7 @@ export default function DoyaSlideProjectsPage() {
               { title: 'スライドを作る', body: '全スライドを画像で作り、PDF などで書き出せます' },
             ]}
           />
+          <ToolNextStep tool="doyaslide" view={nextStep} />
         </div>
       ) : (
       <div className="flex items-center justify-between mb-8">

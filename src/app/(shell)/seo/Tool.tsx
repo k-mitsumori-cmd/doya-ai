@@ -25,7 +25,7 @@ import { ProgressBar } from '@seo/components/ui/ProgressBar'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { Button as DsButton, EmptyState, Skeleton, ToolHero } from '@/components/ds'
+import { Button as DsButton, EmptyState, Skeleton, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
@@ -215,6 +215,22 @@ export default function SeoTool() {
     // 一覧からは常に「本文＋画像が見られる記事詳細」へ統一（迷いをなくす）
     return `/seo/articles/${a.id}`
   }
+
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 読み込みの失敗 → 最新の記事の状態 の順に決める
+  const nextStep: NextStepView = (() => {
+    if (loading && articles.length === 0 && !error) return null
+    if (counts.running > 0) {
+      const r = articles.find((a) => a.status === 'RUNNING')
+      return { key: 'working', state: 'working', n: counts.running, href: r ? getResumeLink(r) : undefined }
+    }
+    if (error) return { key: 'loadError', state: 'error', onClick: () => void load({ showLoading: true }) }
+    if (counts.total === 0) return { key: 'empty', state: 'empty', href: '/seo/create', icon: 'Plus' }
+    const latest = articles[0]
+    if (latest?.status === 'ERROR') return { key: 'error', state: 'error', href: getResumeLink(latest) }
+    const done = articles.find((a) => a.status === 'DONE' || a.status === 'EDITING' || a.status === 'EXPORTED')
+    if (done) return { key: 'done', state: 'done', href: getResumeLink(done) }
+    return { key: 'empty', state: 'empty', href: '/seo/create', icon: 'Plus' }
+  })()
 
   async function regenerate(articleId: string) {
     if (!articleId) return
@@ -408,6 +424,7 @@ export default function SeoTool() {
       )}
 
       <div className={uiNext ? 'mx-auto max-w-6xl pt-6' : 'max-w-6xl mx-auto py-6 sm:py-8 px-4'}>
+        {uiNext ? <ToolNextStep tool="seo" view={nextStep} className="mb-6" /> : null}
         {/* NewsPicks風: トップストーリー（最新の1本を大きく）。新しい見た目では、一覧の上に移す（読み込み後に上へ差し込まない） */}
         {!uiNext && !loading && !error && filtered.length > 0 && (
           <div className="mb-8 border-b border-gray-200 pb-6">
