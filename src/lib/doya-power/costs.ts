@@ -51,3 +51,21 @@ export function doyaPowerCost(action: string, units = 1): number | null {
   const n = Number.isFinite(units) && units > 0 ? units : 1
   return base * n
 }
+
+/** 「できること」に出す代表の操作（残りを割った数で言い換える）。単位は画面の言い方。バナーは1回で3枚つくるので「回」 */
+export const WHAT_YOU_CAN_DO: { action: DoyaPowerAction; label: string; unit: string }[] = [
+  { action: 'banner.generate', label: 'バナー', unit: '回' },
+  { action: 'seo.article', label: '記事', unit: '本' },
+  { action: 'persona.generate', label: 'ペルソナ', unit: '件' },
+  { action: 'slide.generate', label: 'スライド', unit: '本' },
+  { action: 'text.generate', label: '文章の生成', unit: '回' },
+]
+
+/** 残りで何回できるか（切り捨て）。表から計算する。例: 残り3,000 → バナー300回・記事75本・ペルソナ60件… */
+export function whatYouCanDo(remaining: number): { label: string; unit: string; count: number }[] {
+  const r = Number.isFinite(remaining) ? Math.max(0, Math.floor(remaining)) : 0
+  return WHAT_YOU_CAN_DO.flatMap((w) => {
+    const c = DOYA_POWER_COSTS[w.action]
+    return c > 0 ? [{ label: w.label, unit: w.unit, count: Math.floor(r / c) }] : []
+  })
+}

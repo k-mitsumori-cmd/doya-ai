@@ -13,6 +13,8 @@ import { saveDoyaPowerFx } from '@/lib/doya-power/fx-actions'
 import { jstDateTime } from './time'
 import { KIND_LABELS } from '@/lib/doya-power/history-label'
 import { GRANT_KINDS } from '@/lib/doya-power/rules'
+import { whatYouCanDo } from '@/lib/doya-power/costs'
+import { usageBreakdown } from '@/lib/doya-power/breakdown'
 import type { DoyaPowerHomeView } from '@/lib/doya-power/home.server'
 import styles from './DoyaPowerHome.module.css'
 
@@ -46,12 +48,14 @@ export function DoyaPowerHomeCard({ view }: { view: DoyaPowerHomeView | null }) 
 /** 内訳・履歴の画面の中身 */
 export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerHomeView; canEditOrg?: boolean }) {
   const router = useRouter()
+  const usage = usageBreakdown(view.history)
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>ドヤパワー</p>
-          <h2 className={styles.pageTitle}>内訳と履歴</h2>
+          {/* この画面は ToolFrame の外なので、ページの見出し（h1）をここに置く（本番の点検で h1 が0だった。2026-10-25） */}
+          <h1 className={styles.pageTitle}>内訳と履歴</h1>
           <p className={styles.subtitle}>今の残りの内訳と、増えた・減った記録です。生成に失敗したときは、減った分が戻ります。</p>
         </div>
         <Link href="/home#doya-power" className={styles.link}>経営ホームに戻る</Link>
@@ -61,6 +65,13 @@ export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerH
           <h3 id="dp-balance" className={styles.title}>今の残り</h3>
           <DoyaPowerGauge remaining={view.remaining} limit={view.limit} nextRecoveryAt={view.nextRecoveryAt ?? undefined} />
           <ExpiryNote view={view} />
+          <p className={styles.canDo}>
+            あと{' '}
+            {whatYouCanDo(view.remaining).slice(0, 4).map((w, i) => (
+              <span key={w.label} className={styles.canDoItem}>{i > 0 ? '・' : ''}{w.label}{fmt(w.count)}{w.unit}</span>
+            ))}
+            {' '}できます。
+          </p>
           <ul className={styles.kinds} aria-label="残りの内訳">
             {GRANT_KINDS.map((k) => (
               <li key={k} className={styles.kind}><span>{KIND_LABELS[k]}</span><span className={styles.num}>{fmt(view.byKind[k] ?? 0)}</span></li>
@@ -70,7 +81,10 @@ export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerH
         <section className={styles.card} aria-labelledby="dp-history">
           <h3 id="dp-history" className={styles.title}>履歴（新しい順・{view.history.length}件）</h3>
           {view.history.length === 0 ? (
-            <p className={styles.empty}>まだ記録がありません。ツールで作ると、ここに使った量が並びます。</p>
+            <div className={styles.emptyBox}>
+              <img src="/empty/zero.svg" alt="" width={160} height={128} className={styles.emptyImg} />
+              <p className={styles.empty}>まだ記録がありません。ツールで作ると、ここに使った量が並びます。</p>
+            </div>
           ) : (
             <ul className={styles.rows}>
               {view.history.map((h, i) => (
@@ -85,6 +99,20 @@ export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerH
               ))}
             </ul>
           )}
+          {view.history.length > 0 && view.history.length < 6 ? (
+            <div className={styles.usage}>
+              <h4 className={styles.usageTitle}>今月の使い道の内訳</h4>
+              {usage.length === 0 ? (
+                <p className={styles.empty}>今月はまだ使っていません。</p>
+              ) : (
+                <ul className={styles.kinds} aria-label="今月の使い道の内訳">
+                  {usage.map((u) => (
+                    <li key={u.label} className={styles.kind}><span>{u.label}（{u.count}回）</span><span className={styles.num}>−{fmt(u.total)}</span></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </section>
       </div>
       <section id="display-settings" className={styles.card} aria-labelledby="dp-display">

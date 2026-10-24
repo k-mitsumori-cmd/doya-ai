@@ -112,7 +112,7 @@ function DoyaPowerGaugeBody({
           {label}
           {low ? <span className={styles.lowTag}>残りわずか</span> : null}
         </p>
-        <p className={styles.gaugeNums}>
+        <p className={styles.gaugeNums} aria-hidden="true">
           <span className={styles.gaugeSmall}>残り</span>
           <span className={styles.gaugeValue}>
             {motion ? <CountUp value={value} duration={1100} /> : fmt(value)}
@@ -142,7 +142,7 @@ function DoyaPowerGaugeBody({
       </div>
 
       <div className={styles.gaugeFoot}>
-        <span className={styles.pct}>{pct}%</span>
+        <span className={styles.pct} aria-hidden="true">{pct}%</span>
         {recovery ? <span className={styles.recovery}><Sunrise size={14} aria-hidden />{recovery} に {fmt(max)} まで回復</span> : null}
       </div>
 
