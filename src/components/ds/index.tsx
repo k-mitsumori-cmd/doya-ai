@@ -17,6 +17,8 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 export { default as tokens } from './tokens.module.css'
 // 使い方・生成中・完了・エラーの表示（UI 品質 S-16・S-18・S-19・S-20）
 export { FirstSteps, GenerationProgress, DoneBanner, ErrorNotice } from './feedback'
+// 確認・削除・お知らせのダイアログ（window.confirm / alert の代わり。FIX-PLAN 18）
+export { ConfirmDialog, confirmDialog, alertDialog } from './dialog'
 
 /* ---- Card ---- */
 export function Card({ title, meta, icon, children, className }: {

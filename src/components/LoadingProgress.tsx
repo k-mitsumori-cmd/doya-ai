@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Zap, Brain, Lightbulb, Rocket, Coffee } from 'lucide-react';
+import { GenerationProgress } from '@/components/ds/feedback';
+import { useUiNext } from '@/components/shell/ui-next-context';
 
 interface LoadingProgressProps {
   isLoading: boolean;
@@ -75,7 +77,38 @@ function formatSeconds(sec: number) {
   return `${m}分${r.toString().padStart(2, '0')}秒`;
 }
 
+/** 新しい見た目で出す段階（API は段階を返さないので、時間の経過から目安で進め、最後の段で止まる） */
+const NEXT_STAGES = ['内容を読み取っています', 'AIが作っています', '仕上げています'];
+
+/**
+ * 新しい見た目の生成中の表示（UX 点検 FIX-PLAN 13）。
+ * 全面の暗幕を出さず、置いた場所（枠の中身の先頭）に、今の段階と残り時間の目安だけを出す。
+ * ほかの操作（タブの移動・入力の確認）は止めない。
+ */
+function LoadingProgressNext({ title, subtitle, estimateSec }: { title?: string; subtitle?: string; estimateSec: number }) {
+  const [startedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const ratio = (now - startedAt) / 1000 / Math.max(estimateSec, 1);
+  const current = Math.min(NEXT_STAGES.length - 1, Math.floor(ratio * NEXT_STAGES.length));
+  return (
+    <div className="sticky top-[76px] z-30 my-3 md:top-4" aria-label={title || '作成中'}>
+      {title ? (
+        <div className="mb-2 px-1">
+          <p className="text-sm font-bold text-slate-900">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
+        </div>
+      ) : null}
+      <GenerationProgress stages={NEXT_STAGES} current={current} startedAt={startedAt} estimateSec={estimateSec} />
+    </div>
+  );
+}
+
 export default function LoadingProgress({ isLoading, estimatedSeconds = 15, operationKey, title, subtitle, tips }: LoadingProgressProps) {
+  const uiNext = useUiNext();
   const [progress, setProgress] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -185,6 +218,9 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
   }, [isLoading, estimatedSeconds, currentStep, operationKey]);
 
   if (!isLoading) return null;
+
+  // 新しい見た目では、全面の読み込みを出さない（決まり: 全面の読み込み・暗幕を出さない）
+  if (uiNext) return <LoadingProgressNext title={title} subtitle={subtitle} estimateSec={avgSec ?? baseEstimateSec} />;
 
   // サービス固有の Tips が渡されていればそちらを使う
   const activeTips = tips && tips.length > 0
