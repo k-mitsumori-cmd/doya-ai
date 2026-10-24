@@ -83,7 +83,13 @@ async function pricing(response) {
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: true })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: true, loadedIdentity: 'user' })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
   const pricingSource = fs.readFileSync('src/app/(shell)/kintai/pricing/page.tsx', 'utf8')
-  assert.ok(pricingSource.includes('対象者は30日間無料'))
+  // 無料の期間の案内は直書きせず TrialCallout の TrialNote で出す（対象外の人には出さない。CLAUDE.md の決まり）。
+  // 守る性質: 古い「全プラン14日間」を出さない・期間の文を直書きしない・案内そのものは残す
+  assert.match(pricingSource, /import \{ TrialNote \} from '@\/components\/TrialCallout'/)
+  assert.match(pricingSource, /<TrialNote \/>/)
+  assert.ok(!pricingSource.includes('日間無料'))
   assert.ok(!pricingSource.includes('全プラン14日間'))
+  const trialSource = fs.readFileSync('src/components/TrialCallout.tsx', 'utf8')
+  assert.match(trialSource, /\{UNIFIED_TRIAL_DAYS\}日間無料/)
   console.log('PASS kintai usage: server failure never becomes onboarding or FREE')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -23,7 +23,11 @@ const mocks = {
   '@/lib/kintai/load-requests': { appendKintaiRequestPage: () => [], fetchKintaiRequestPage: async () => ({}) },
   // 新しい見た目（UI 品質の直し）の判定。ここでは今の見た目（偽）を確かめる
   '@/components/kintai/ui-next': { useToolUiNext: () => false, PageTitle: ({ className, children }) => React.createElement('h1', { className }, children) },
-  '@/components/ds': { Button: () => null, EmptyState: () => null },
+  '@/components/ds': { Button: () => null, EmptyState: () => null, Skeleton: () => null },
+  // UX 点検の直し（FIX-PLAN 17・18）で足した依存。ここでは描画だけを確かめるので、ダイアログは呼ばれない
+  '@/components/ds/dialog': { confirmDialog: async () => false, alertDialog: async () => {} },
+  '@/lib/kintai/user-error': { userErrorMessage: (_raw, fallback) => fallback, KINTAI_NETWORK_ERROR: '通信できませんでした。' },
+  '@/lib/kintai/use-escape': { useEscapeToClose: () => {} },
 }
 
 function page(file) {

@@ -25,7 +25,7 @@ export function appendKintaiRequestPage<T extends { id: string }>(
   if (page.total !== expectedTotal) throw new Error('読み込みの間に申請一覧が変わりました。もう一度読み込んでください。')
   const ids = new Set(existing.map((request) => request.id))
   for (const request of page.requests) {
-    if (ids.has(request.id)) throw new Error('申請一覧を正しく読み込めませんでした。もう一度お試しください。')
+    if (ids.has(request.id)) throw new Error('申請一覧に同じ申請が重複して届きました。もう一度読み込んでください。')
     ids.add(request.id)
   }
   const merged = existing.concat(page.requests)

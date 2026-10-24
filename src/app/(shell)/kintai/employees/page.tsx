@@ -154,13 +154,20 @@ export default function EmployeesPage() {
   const toggleActive = async (emp: any) => {
     if (togglingRef.current.has(emp.id)) return
     const action = emp.isActive ? '無効化' : '有効化'
-    if (!(await confirmDialog({
-      title: `${emp.name}さんを${action}しますか？`,
-      message: emp.isActive ? '無効にすると、この人は打刻できなくなります。あとで有効に戻せます。' : '有効にすると、この人がまた打刻できるようになります。',
-      confirmLabel: emp.isActive ? '無効にする' : '有効にする',
-      tone: emp.isActive ? 'danger' : 'primary',
-    }))) return
+    // 確認ダイアログは待つ間に次の操作が入り得るので、確認の前に鍵をかけて二重送信を防ぐ
     togglingRef.current.add(emp.id)
+    let confirmed = false
+    try {
+      confirmed = await confirmDialog({
+        title: `${emp.name}さんを${action}しますか？`,
+        message: emp.isActive ? '無効にすると、この人は打刻できなくなります。あとで有効に戻せます。' : '有効にすると、この人がまた打刻できるようになります。',
+        confirmLabel: emp.isActive ? '無効にする' : '有効にする',
+        tone: emp.isActive ? 'danger' : 'primary',
+      })
+    } finally {
+      if (!confirmed) togglingRef.current.delete(emp.id)
+    }
+    if (!confirmed) return
     setTogglingIds(new Set(togglingRef.current))
     try {
       const res = await fetch(`/api/kintai/employees/${emp.id}`, {
