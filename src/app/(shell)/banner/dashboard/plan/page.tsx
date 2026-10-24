@@ -1,7 +1,8 @@
 'use client'
 
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Skeleton } from '@/components/ds'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -115,18 +116,34 @@ export default function BannerPlanPage() {
 
   const planBadge =
     isEnterprise
-      ? { text: 'ENTERPRISE', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+      ? { text: '法人プラン', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
       : isPro
-        ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+        ? { text: 'プロ', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
         : isLight
-          ? { text: 'LIGHT', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+          ? { text: 'ライト', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
           : isGuest
-            ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-            : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
+            ? { text: 'ゲスト', cls: 'bg-gray-200 text-gray-700' }
+            : { text: '無料', cls: 'bg-blue-100 text-blue-700' }
 
   // 契約管理 / 課金開始は「リンク遷移」＋CheckoutButtonに統一（確実にStripeへ遷移）
 
+  // Esc で解約確認を閉じる
+  useEffect(() => {
+    if (!showCancelConfirm) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCancelConfirmKey(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showCancelConfirm])
+
   if (status === 'loading') {
+    // 新しい見た目では枠を残し、カードの場所に骨組みを出す
+    if (uiNext) {
+      return (
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8" aria-busy="true">
+          <Skeleton lines={6} height={20} />
+        </div>
+      )
+    }
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="hidden md:block">
@@ -174,7 +191,7 @@ export default function BannerPlanPage() {
                   <div className="flex items-center gap-3 pl-2">
                     <div className="text-right hidden sm:block">
                       <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{session?.user ? 'Member' : 'Guest'}</p>
+                      <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{session?.user ? 'メンバー' : 'ゲスト'}</p>
                     </div>
                     <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
                       {session?.user?.image ? (
@@ -207,7 +224,7 @@ export default function BannerPlanPage() {
                         </span>
                         {isPaid && (
                           <span className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-600 text-white shadow-lg shadow-blue-200 uppercase tracking-widest">
-                            Official Plan
+                            有料プラン
                           </span>
                         )}
                       </div>
@@ -459,7 +476,7 @@ export default function BannerPlanPage() {
                 </div>
 
                 <div className="mt-6 p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200">
-                  <p className="text-xs font-black uppercase tracking-widest mb-3 opacity-80">CTR Checklist</p>
+                  <p className="text-xs font-black uppercase tracking-widest mb-3 opacity-80">クリックされやすくする確認</p>
                   <div className="space-y-2.5">
                     {[
                       '数字（価格・％）を際立たせる',
@@ -487,6 +504,9 @@ export default function BannerPlanPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="banner-plan-cancel-title"
             onClick={() => setShowCancelConfirm(false)}
           >
             <motion.div
@@ -498,13 +518,14 @@ export default function BannerPlanPage() {
             >
               <button
                 onClick={() => setShowCancelConfirm(false)}
+                aria-label="閉じる"
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden />
               </button>
               <div className="text-center">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">統一プランの解約を確認</h3><p className="text-sm text-slate-600 mb-3">解約は、すべての対象サービスに適用されます。</p>
+                <h3 id="banner-plan-cancel-title" className="text-2xl font-black text-slate-900 mb-2">統一プランの解約を確認</h3><p className="text-sm text-slate-600 mb-3">解約は、すべての対象サービスに適用されます。</p>
                 <div className="text-left rounded-2xl bg-amber-50 border border-amber-200 p-4 mb-6 space-y-2 text-sm font-bold text-slate-700">
                   <p>この操作はバナーだけの解約ではありません。このアカウントで確認された有効な有料契約をすべて、各契約の次回更新日で解約予約します。</p>
                   <p>停止後はドヤバナーを含む統一プラン対象サービスの有料枠・有料機能が使えなくなります。無料枠での利用は続けられます。</p>

@@ -83,7 +83,7 @@ export default function SettingsPage() {
       }
       setUsage(data)
     } catch (error) {
-      setUsageError(error instanceof Error ? error.message : '利用状況を取得できませんでした')
+      setUsageError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '利用状況を取得できませんでした')
     } finally {
       setUsageLoading(false)
     }
@@ -137,7 +137,7 @@ export default function SettingsPage() {
         toast.success('CSVをまとめたZIPを準備しました。保存先をご確認ください', { id: tid })
       } finally { clearTimeout(timeout) }
     } catch (e: any) {
-      toast.error(typeof genericError === 'string' ? genericError : e?.message || 'エクスポートに失敗しました', { id: tid })
+      toast.error(typeof genericError === 'string' ? genericError : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '書き出せませんでした。少し待って、もう一度お試しください。', { id: tid })
     } finally {
       exportingRef.current = false
       setExporting(false)

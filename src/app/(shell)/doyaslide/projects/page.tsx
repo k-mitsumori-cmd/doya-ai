@@ -11,6 +11,11 @@ import { ImageIcon, Trash2 } from 'lucide-react'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState as DsEmptyState, ToolHero, toolHeroArt } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
+import { confirmDialog } from '@/components/ds/dialog'
+
+// プラン名は英語の内部の値で届くので、画面では日本語にする
+const PLAN_LABEL: Record<string, string> = { GUEST: 'ゲスト', FREE: '無料', LIGHT: 'ライト', PRO: 'プロ', ENTERPRISE: '法人', BUSINESS: '法人' }
+const planLabel = (plan: unknown) => (typeof plan === 'string' ? PLAN_LABEL[plan.toUpperCase()] || plan : '')
 
 interface Project {
   id: string
@@ -112,14 +117,16 @@ export default function DoyaSlideProjectsPage() {
       setProjects([...projects, ...data.projects])
       setNextCursor(data.nextCursor)
     } catch {
-      if (request === loadRequest.current) toast.error('続きを取得できませんでした。再読み込みしてください')
+      if (request === loadRequest.current) toast.error('続きを読み込めませんでした。少し待って、もう一度お試しください。')
     } finally {
       if (request === loadRequest.current) setLoadingMore(false)
     }
   }
 
   const remove = async (id: string) => {
-    if (deleteBusyRef.current || !confirm('このプロジェクトを削除しますか？')) return
+    if (deleteBusyRef.current) return
+    if (!(await confirmDialog({ title: 'このプロジェクトを削除しますか？', message: '作ったスライドも消え、元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
+    if (deleteBusyRef.current) return
     deleteBusyRef.current = true
     setDeleteBusyId(id)
     setDeleteError(null)
@@ -188,7 +195,7 @@ export default function DoyaSlideProjectsPage() {
 
       {usage?.limits && (
         <div className="mb-6 inline-flex items-center gap-3 text-xs font-bold text-slate-500 bg-white rounded-full px-4 py-2 shadow-sm">
-          <span>プラン: {usage.plan}</span>
+          <span>プラン: {planLabel(usage.plan)}</span>
           <span className="text-slate-300">|</span>
           <span>
             今月のプロジェクト {usage.usage?.projects ?? 0}

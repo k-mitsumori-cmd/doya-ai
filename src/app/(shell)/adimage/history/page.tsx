@@ -74,7 +74,7 @@ export default function AdImageHistoryPage() {
         return
       }
       if (!res.ok) {
-        notifyError(setError, '履歴を読み込めませんでした')
+        notifyError(setError, '履歴を読み込めませんでした。少し待って、もう一度お試しください。')
         return
       }
       const data = await res.json()
@@ -114,7 +114,7 @@ export default function AdImageHistoryPage() {
       setConcepts((current) => current.concat(data.concepts))
       setNextCursor(data.nextCursor)
     } catch (cause) {
-      notifyError(setError, cause instanceof Error ? cause.message : '続きを読み込めませんでした')
+      notifyError(setError, cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : '続きを読み込めませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setLoadingMore(false)
     }

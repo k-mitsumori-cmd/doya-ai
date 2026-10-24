@@ -30,6 +30,13 @@ import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { ShellCostBadge } from '@/components/shell/power'
+import { Briefcase, Building2, FileText, Handshake, Mic, Rocket, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
+
+// 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
+const DOC_TYPE_ICON: Record<string, LucideIcon> = {
+  sales: Briefcase, proposal: FileText, sns: Smartphone, seminar: Mic,
+  recruit: Handshake, pitch: Rocket, internal: Building2, custom: Sparkles,
+}
 
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
@@ -550,7 +557,7 @@ export default function NewDoyaSlideWizard() {
                       on ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-slate-100'
                     }`}
                   >
-                    <span>{d.emoji}</span>
+                    {(() => { const DocIcon = DOC_TYPE_ICON[d.value] || FileText; return <DocIcon size={20} strokeWidth={1.75} aria-hidden className={on ? 'text-white' : 'text-slate-600'} /> })()}
                   </div>
                   <div className="min-w-0">
                     <div className={`text-sm font-black ${on ? 'text-blue-700' : 'text-slate-700'}`}>{d.label}</div>
@@ -641,7 +648,7 @@ export default function NewDoyaSlideWizard() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認できます。</p>
+          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大きな見本の左右の矢印で複数ページの仕上がりを確認できます。</p>
           {/* スタイル一覧（既存2グループ + 追加テンプレート20種） */}
           {([
             { group: 'business', title: 'ビジネス系（きちんとした資料）' },
@@ -875,6 +882,21 @@ export default function NewDoyaSlideWizard() {
             </div>
           </div>
         )}
+        {uiNext && busy ? (
+          /* 新しい見た目では画面全体を覆わず、主ボタンの場所に進み具合を出す（FIX-PLAN 13）。段は経過時間からの目安 */
+          <div role="status" aria-live="polite" className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-600 mb-1.5">
+              <span className="inline-flex items-center gap-1.5">
+                <img src="/character/working.png" alt="" className="w-6 h-6 object-contain" />
+                {GEN_STEPS[genStep].label}中…（{slideCount}枚）
+              </span>
+              <span className="text-[#0066ff] whitespace-nowrap">残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}（目安）</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-[#0066ff] rounded-full transition-[width] duration-1000 ease-linear" style={{ width: `${meterPct}%` }} />
+            </div>
+          </div>
+        ) : (
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           <p className="text-xs font-bold text-slate-500 hidden sm:block">
             {aspect === 'wide' ? '横' : aspect === 'square' ? '正方形' : '縦'}・{slideCount}枚 / {currentStyle?.label}スタイル
@@ -889,10 +911,11 @@ export default function NewDoyaSlideWizard() {
             <ShellCostBadge action="slide.generate" />
           </button>
         </div>
+        )}
       </div>
 
-      {/* 生成中オーバーレイ（楽しい・進捗メーター付き） */}
-      {busy && (
+      {/* 生成中オーバーレイ（楽しい・進捗メーター付き）。旧の見た目だけ */}
+      {busy && !uiNext && (
         <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6">
           {/* キャラ + 浮遊スパークル */}
           <div className="relative">

@@ -1,10 +1,12 @@
 'use client'
 
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { confirmDialog } from '@/components/ds/dialog'
+import { Skeleton } from '@/components/ds'
 import { useSession, signOut } from 'next-auth/react'
 import { DashboardLayout } from '@/components/DashboardLayout'
-import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2, Sparkles, X, CalendarClock } from 'lucide-react'
+import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2, Sparkles, X, CalendarClock, Lightbulb } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -54,16 +56,30 @@ export default function SettingsPage() {
     if (confirmed) setShowCancelConfirm(false)
   }
   const handleResumeSubscription = async () => {
-    if (!confirm('統一プランの解約予約を取り消して、すべての対象サービスでプランを継続しますか？')) return
+    if (!(await confirmDialog({ title: '解約の予約を取り消しますか？', message: '統一プランの対象のサービスすべてで、今のプランを続けます。', confirmLabel: '取り消す' }))) return
     await management.run('resume')
   }
+
+  // Esc で解約確認を閉じる
+  useEffect(() => {
+    if (!showCancelConfirm) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCancelConfirmKey(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showCancelConfirm])
 
   if (status === 'loading') {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
+        {uiNext ? (
+          <div className="max-w-2xl mx-auto px-4 py-6 sm:px-8 sm:py-8" aria-busy="true">
+            <Skeleton lines={6} height={18} />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        )}
       </DashboardLayout>
     )
   }
@@ -205,6 +221,9 @@ export default function SettingsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="banner-cancel-confirm-title"
           >
             {/* 背景 */}
             <div
@@ -225,9 +244,10 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowCancelConfirm(false)}
+                  aria-label="閉じる"
                   className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden />
                 </button>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
@@ -235,7 +255,7 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-white/80">ちょっと待ってください！</p>
-                    <h3 className="text-xl font-black">本当に解約しますか？</h3>
+                    <h3 id="banner-cancel-confirm-title" className="text-xl font-black">本当に解約しますか？</h3>
                   </div>
                 </div>
               </div>
@@ -274,7 +294,7 @@ export default function SettingsPage() {
 
                 <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-4 mb-6">
                   <p className="text-sm font-black text-amber-900">
-                    💡 解約後、再度アップグレードすることも可能です！
+                    <Lightbulb size={16} aria-hidden className="mr-1 inline-block align-[-3px]" />解約後、再度アップグレードすることも可能です
                   </p>
                   <p className="text-xs text-amber-700 font-bold mt-1">
                     いつでもPROプランに戻れますので、ご安心ください。

@@ -6,6 +6,10 @@ import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
 import { EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
 import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
+import { confirmDialog } from '@/components/ds/dialog'
+
+/** 日本語の文だけを画面に出す（「Failed to fetch」などの英語は決まった文にする） */
+const jaError = (e: unknown, fallback: string) => (e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : fallback)
 import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { UiIcon, type UiIconName } from '@/components/icons'
@@ -103,7 +107,7 @@ export default function HistoryPage() {
       setProjectNextCursor(page.nextCursor)
       setProjectSummary(page.summary)
     } catch (error) {
-      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴を取得できませんでした')
+      if (version === projectRequestVersion.current) setProjectsError(jaError(error, 'リスト履歴を取得できませんでした'))
     } finally {
       if (version === projectRequestVersion.current) setLoadingProjects(false)
     }
@@ -132,7 +136,7 @@ export default function HistoryPage() {
       setNextCursor(page.nextCursor)
       setApproachSummary(page.summary)
     } catch (error) {
-      if (version === requestVersion.current) setApproachesError(error instanceof Error ? error.message : '営業文履歴を取得できませんでした')
+      if (version === requestVersion.current) setApproachesError(jaError(error, '営業文履歴を取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoadingApproaches(false)
     }
@@ -169,7 +173,7 @@ export default function HistoryPage() {
       setNextCursor(page.nextCursor)
       setApproachSummary(page.summary)
     } catch (error) {
-      if (version === requestVersion.current) setApproachesError(error instanceof Error ? error.message : '営業文履歴の続きを取得できませんでした')
+      if (version === requestVersion.current) setApproachesError(jaError(error, '営業文履歴の続きを取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoadingMore(false)
     }
@@ -194,14 +198,14 @@ export default function HistoryPage() {
       setProjectNextCursor(page.nextCursor)
       setProjectSummary(page.summary)
     } catch (error) {
-      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴の続きを取得できませんでした')
+      if (version === projectRequestVersion.current) setProjectsError(jaError(error, 'リスト履歴の続きを取得できませんでした'))
     } finally {
       if (version === projectRequestVersion.current) setLoadingMoreProjects(false)
     }
   }
 
   const handleDeleteList = async (id: string, name: string) => {
-    if (!confirm(`「${name}」を削除しますか？`)) return
+    if (!(await confirmDialog({ title: `「${name}」を削除しますか？`, message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     try {
       const res = await fetch(`/api/doyalist/projects/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('削除に失敗しました')
@@ -212,12 +216,12 @@ export default function HistoryPage() {
       void loadProjects(setProjectsErrorStatus)
       void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました')
+      toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
     }
   }
 
   const handleDeleteApproach = async (id: string) => {
-    if (!confirm('この生成履歴を削除しますか？')) return
+    if (!(await confirmDialog({ title: 'この営業文を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     try {
       const res = await fetch(`/api/doyalist/approaches?id=${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('削除に失敗しました')
@@ -227,7 +231,7 @@ export default function HistoryPage() {
       setExpandedId(null)
       void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました')
+      toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
     }
   }
 

@@ -305,7 +305,7 @@ export function GalleryTemplateCard({
             lockType === 'enterprise' ? 'bg-brand-400/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
           }`}>
             <Lock className="w-2 h-2" />
-            {lockType === 'enterprise' ? 'Enterprise' : lockType === 'login' ? 'ログイン' : 'PRO'}
+            {lockType === 'enterprise' ? '法人プラン' : lockType === 'login' ? 'ログイン' : 'PRO'}
           </div>
         </>
       )}

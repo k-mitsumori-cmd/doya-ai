@@ -6,14 +6,26 @@ import { ArrowLeft, Palette, Save, Check } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import { Skeleton } from '@/components/ds'
 
 const BRAND_STORAGE_KEY = 'doya_banner_brand:v2'
 
 export default function BannerBrandPage() {
   const { data: session, status } = useSession()
   const accountId = status === 'authenticated' ? session?.user?.id : status === 'unauthenticated' ? 'guest' : null
-  if (!accountId) return <div className="min-h-screen bg-gray-50" aria-busy="true" />
+  // 新しい見た目では枠を残し、フォームの場所に骨組みを出す（旧の見た目は今まで通り）
+  if (!accountId) return <BannerBrandLoading />
   return <BannerBrandContent key={accountId} storageKey={`${BRAND_STORAGE_KEY}:${accountId}`} />
+}
+
+function BannerBrandLoading() {
+  const uiNext = useUiNext()
+  if (!uiNext) return <div className="min-h-screen bg-gray-50" aria-busy="true" />
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8" aria-busy="true">
+      <Skeleton lines={5} height={20} />
+    </div>
+  )
 }
 
 function BannerBrandContent({ storageKey }: { storageKey: string }) {

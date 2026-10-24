@@ -100,7 +100,7 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
     allUnlocked: true,
   },
   ENTERPRISE: {
-    label: 'Enterpriseプラン',
+    label: '法人プラン',
     maxCountPerGeneration: 10,
     monthlyLimit: 1000,
     allUnlocked: true,
@@ -125,7 +125,13 @@ const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: 'ログインプラン' },
   LIGHT: { maxCount: 3, label: 'ライトプラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
-  ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
+  ENTERPRISE: { maxCount: 10, label: '法人プラン' },
+}
+
+/** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 
 // ページ内Suspense用のスケルトン（loading.tsxと同じ構造）
@@ -1191,6 +1197,20 @@ function BannerTestPageInner() {
   }, [updateScrollPosition])
 
   // バナー生成
+  // Esc で開いているダイアログを閉じる（拡大・ロック・修正・プロンプト）
+  useEffect(() => {
+    if (!zoomImage && !showLockModal && !showEditModal && !showPromptModal) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (zoomImage) setZoomImage(null)
+      else if (showPromptModal) setShowPromptModal(false)
+      else if (showEditModal) { if (!isEditing) setShowEditModal(false) }
+      else if (showLockModal) setShowLockModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomImage, showLockModal, showEditModal, showPromptModal, isEditing])
+
   const handleGenerate = async () => {
     if (sessionStatus === 'loading') return
     if (!session) {
@@ -1307,6 +1327,8 @@ function BannerTestPageInner() {
         setGeneratedBanners(banners)
         setGenerationComplete(true)
         clearInterval(messageInterval)
+        // 新しい見た目では完了の全面演出を出さないので、トーストで知らせる
+        if (uiNext) toast.success(`${banners.length}枚のバナーができました`)
         
         // 完了演出を3秒表示してからモーダルを閉じる
         completionTimer.current = setTimeout(() => {
@@ -1322,7 +1344,7 @@ function BannerTestPageInner() {
     } catch (err: any) {
       if (!operation.current()) return
       console.error('Generate error:')
-      toast.error(err.message || '生成に失敗しました')
+      toast.error(jaMessage(err?.message, '生成できませんでした。少し待って、もう一度お試しください。'))
       setShowGenerationModal(false)
       clearInterval(messageInterval)
       setIsGenerating(false)
@@ -1814,7 +1836,7 @@ function BannerTestPageInner() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold">サイズを選択</label>
-                      <span className="text-[10px] sm:text-xs text-gray-400">CANVAS DIMENSIONS</span>
+                      <span className="text-[10px] sm:text-xs text-gray-400">サイズ</span>
                     </div>
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       {SIZE_PRESETS.map((size) => {
@@ -1854,7 +1876,7 @@ function BannerTestPageInner() {
                                 }}
                               />
                               <p className="text-xs sm:text-sm font-bold text-white mt-2">{displayWidth}×{displayHeight}</p>
-                              <p className="text-[10px] sm:text-xs text-gray-400">ASPECT RATIO PREVIEW</p>
+                              <p className="text-[10px] sm:text-xs text-gray-400">縦横の比率</p>
                             </>
                           )
                         })()}
@@ -1931,7 +1953,7 @@ function BannerTestPageInner() {
                             {logoPreview ? (
                               <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
                             ) : (
-                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">LOGO</span>
+                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">ロゴ</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -2047,7 +2069,7 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold flex items-center gap-2">
                         <span>詳細な生成指示</span>
-                        <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full">ENTERPRISE</span>
+                        <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full">法人プラン</span>
                       </label>
                       {currentPlan === 'ENTERPRISE' && (
                         <button
@@ -2122,7 +2144,7 @@ function BannerTestPageInner() {
 
                   {/* 生成ボタン / ローディングUI */}
                   {isGenerating ? (
-                    <div className="bg-gradient-to-br from-blue-900/50 to-brand-800/50 rounded-xl p-6 border border-blue-700/50">
+                    <div role="status" aria-live="polite" className="bg-gradient-to-br from-blue-900/50 to-brand-800/50 rounded-xl p-6 border border-blue-700/50">
                       <div className="flex flex-col items-center gap-4">
                         {/* アニメーションアイコン */}
                         <div className="relative">
@@ -2278,7 +2300,7 @@ function BannerTestPageInner() {
                                 <Sparkles className="w-6 h-6 text-white" />
                               </div>
                               <span className="text-white font-bold text-sm">クリックして修正</span>
-                              <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full text-white">ENTERPRISE</span>
+                              <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full text-white">法人プラン</span>
                             </>
                           ) : (
                             <>
@@ -2352,7 +2374,7 @@ function BannerTestPageInner() {
                         >
                           <FileText className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">ENTERPRISE</span>
+                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">法人プラン</span>
                         </button>
                       ) : (
                         <button
@@ -2365,7 +2387,7 @@ function BannerTestPageInner() {
                         >
                           <Lock className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">ENTERPRISE</span>
+                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">法人プラン</span>
                         </button>
                       )}
                     </div>
@@ -2421,6 +2443,9 @@ function BannerTestPageInner() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="画像の拡大"
             onClick={() => setZoomImage(null)}
           >
             {/* 閉じるボタン */}
@@ -2463,9 +2488,9 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 生成中モーダル */}
+      {/* 生成中モーダル。新しい見た目では画面全体を覆わず、生成ボタンの場所の進み具合だけを出す（FIX-PLAN 13） */}
       <AnimatePresence>
-        {showGenerationModal && selectedTemplate && (
+        {!uiNext && showGenerationModal && selectedTemplate && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2798,6 +2823,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="この見本を使うには"
             onClick={() => setShowLockModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -2918,7 +2946,7 @@ function BannerTestPageInner() {
                       <span className="text-amber-300 font-medium">全画像解放 + 月150枚</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-brand-300 font-medium">Enterprise</span>
+                      <span className="text-brand-300 font-medium">法人プラン</span>
                       <span className="text-brand-200 font-medium">全画像解放 + 月1000枚</span>
                     </div>
                   </div>
@@ -2937,6 +2965,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="画像の修正"
             onClick={() => !isEditing && setShowEditModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -2959,7 +2990,7 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       画像を修正
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">ENTERPRISE</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
                     <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">AIに指示を出して画像を修正できます</p>
                   </div>
@@ -3083,7 +3114,7 @@ function BannerTestPageInner() {
                       } catch (err: any) {
                         if (!operation.current()) return
                         console.error('Edit error:')
-                        toast.error(err.message || '修正に失敗しました')
+                        toast.error(jaMessage(err?.message, '修正できませんでした。少し待って、もう一度お試しください。'))
                       } finally {
                         if (operation.current()) setIsEditing(false)
                         operation.finish()
@@ -3129,6 +3160,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="プロンプトの表示"
             onClick={() => setShowPromptModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -3151,7 +3185,7 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       プロンプト詳細
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">ENTERPRISE</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
                     <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">この画像を生成したプロンプトを確認できます</p>
                   </div>

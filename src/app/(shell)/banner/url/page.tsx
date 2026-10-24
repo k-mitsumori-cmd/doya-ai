@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal, Menu, X, Check } from 'lucide-react'
+import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal, Menu, X, Check, AlertTriangle, Rocket } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -61,6 +61,12 @@ function normalizeNonJsonApiError(status: number, text: string): string {
   }
   if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
   return '生成結果を確認できませんでした。履歴を確認してから再試行してください。'
+}
+
+/** サーバーの文が日本語のときだけ使う（英語・内部の言葉はそのまま出さない） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 
 // ページ内のクライアント処理を読み込み中も安全に表示する。
@@ -164,7 +170,7 @@ function BannerUrlAutoPageInner() {
         const isLimitError = parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED'
         const msg = isLimitError && (data.usage?.monthlyRemaining ?? 0) > 0
           ? '選択した枚数が今月の残り枠を超えています。'
-          : data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'URLからの自動生成に失敗しました'
+          : jaMessage(data?.error, normalizeNonJsonApiError(parsed.status, parsed.text))
         
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
@@ -174,7 +180,7 @@ function BannerUrlAutoPageInner() {
         if (isLimitError) {
           toast.error('今月の生成枠をご確認ください', { duration: 6000 })
         } else {
-          toast.error(msg.length > 50 ? '生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
+          toast.error(msg.length > 50 ? '生成できませんでした。少し待って、もう一度お試しください。' : msg, { duration: 5000 })
         }
         return
       }
@@ -185,17 +191,17 @@ function BannerUrlAutoPageInner() {
       setUsedModelDisplay(String(data.usedModelDisplay || ''))
 
       if (data.warning) {
-        setError(String(data.warning))
+        setError(jaMessage(data.warning, '一部のバナーを作れませんでした。足りない分は作り直してください。'))
         setErrorType('system')
-        toast.error('一部のバナー生成に失敗しました', { icon: '⚠️', duration: 5000 })
+        toast.error('一部のバナーを作れませんでした', { icon: <AlertTriangle size={16} aria-hidden className="text-amber-500" />, duration: 5000 })
       } else {
-        toast.success('URLからバナーを生成しました！', { icon: '🎉' })
+        toast.success('URLからバナーを作りました')
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') {
         setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
-        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+        toast.error('時間内に終わりませんでした。履歴を確かめてから、もう一度お試しください。', { duration: 6000 })
       } else {
         setError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
@@ -248,7 +254,7 @@ function BannerUrlAutoPageInner() {
         const isLimitError = parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED'
         const msg = isLimitError && (data.usage?.monthlyRemaining ?? 0) > 0
           ? '選択した枚数が今月の残り枠を超えています。'
-          : data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'バリエーション再生成に失敗しました'
+          : jaMessage(data?.error, normalizeNonJsonApiError(parsed.status, parsed.text))
 
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
@@ -258,7 +264,7 @@ function BannerUrlAutoPageInner() {
         if (isLimitError) {
           toast.error('今月の生成枠をご確認ください', { duration: 6000 })
         } else {
-          toast.error(msg.length > 50 ? '再生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
+          toast.error(msg.length > 50 ? '作り直せませんでした。少し待って、もう一度お試しください。' : msg, { duration: 5000 })
         }
         return
       }
@@ -268,17 +274,17 @@ function BannerUrlAutoPageInner() {
       setAnalysisJson((data.analysisJson as any) || null)
       setUsedModelDisplay(String(data.usedModelDisplay || ''))
       if (data.warning) {
-        setError(String(data.warning))
+        setError(jaMessage(data.warning, '一部のバナーを作れませんでした。足りない分は作り直してください。'))
         setErrorType('system')
         toast.error('生成結果の注意事項をご確認ください', { duration: 5000 })
       } else {
-        toast.success('選択したデザインでバリエーションを再生成しました！', { icon: '✨' })
+        toast.success('選んだデザインで別の案を作りました')
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') {
         setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
-        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+        toast.error('時間内に終わりませんでした。履歴を確かめてから、もう一度お試しください。', { duration: 6000 })
       } else {
         setError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
@@ -431,7 +437,7 @@ function BannerUrlAutoPageInner() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-black rounded-full px-3 py-1 ${isFreeHourActive ? 'bg-amber-100 text-amber-700' : 'text-slate-500 bg-slate-100'}`}>
-                      {isFreeHourActive ? '🚀 1時間生成し放題' : isPaidUser ? '有料' : isGuest ? 'ゲスト' : '無料'}
+                      {isFreeHourActive ? <><Rocket size={12} aria-hidden className="mr-1 inline-block align-[-2px]" />1時間生成し放題</> : isPaidUser ? '有料' : isGuest ? 'ゲスト' : '無料'}
                     </span>
                     <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                   </div>
@@ -441,7 +447,7 @@ function BannerUrlAutoPageInner() {
                   <div className="px-4 pb-4">
                     <p className="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">
                       {isFreeHourActive ? (
-                        <span className="text-amber-600 font-black">🎉 1時間生成し放題中！ 最大10枚 / サイズ指定OK / 履歴機能も解放</span>
+                        <span className="text-amber-600 font-black">1時間生成し放題中！ 最大10枚 / サイズ指定OK / 履歴機能も解放</span>
                       ) : (
                         <>現在のプラン：<span className="text-slate-800">1〜{maxCount}枚 / {isPaidUser ? 'サイズ指定OK' : '1080×1080のみ'}</span></>
                       )}
@@ -476,7 +482,7 @@ function BannerUrlAutoPageInner() {
                             )
                           })}
                         </div>
-                        <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 1回あたり無料・LIGHTは3枚、PROは5枚、Enterpriseは10枚まで。</p>
+                        <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 1回あたり無料・ライトは3枚、プロは5枚、法人プランは10枚まで。</p>
                       </div>
 
                       {/* サイズ */}
@@ -516,11 +522,6 @@ function BannerUrlAutoPageInner() {
                 <ShellCostBadge action="banner.generate" />
               </button>
 
-              {usedModelDisplay && (
-                <div className="mt-3 text-[11px] text-slate-500 font-bold">
-                  使用モデル: <span className="text-slate-700">{usedModelDisplay}</span>
-                </div>
-              )}
 
               {(analysisJson?.key_message || bannerAnalysis) && (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 space-y-2" data-tour="analysis-result">
@@ -651,16 +652,10 @@ function BannerUrlAutoPageInner() {
                         <Sparkles className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-slate-900">GENERATION COMPLETE</p>
+                        <p className="text-sm font-black text-slate-900">作成が終わりました</p>
                         <p className="text-[11px] text-slate-500 font-bold">{banners.length}枚のバナーを生成しました</p>
                       </div>
                     </div>
-                    {usedModelDisplay && (
-                      <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">
-                        <Sparkles className="w-3 h-3" />
-                        {usedModelDisplay}
-                      </span>
-                    )}
                   </div>
 
                   {/* プレビュー（大） */}
@@ -692,7 +687,7 @@ function BannerUrlAutoPageInner() {
                             onClick={() => {
                               const idx = Math.min(selectedBannerIdx, imageBanners.length - 1)
                               setBaseBannerIdx(idx)
-                              toast.success(`No.${idx + 1} を基準に設定しました`, { icon: '✅', duration: 2500 })
+                              toast.success(`No.${idx + 1} を基準に設定しました`, { duration: 2500 })
                             }}
                             className="absolute bottom-3 right-3 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-colors shadow-lg"
                           >
@@ -806,7 +801,7 @@ function BannerUrlAutoPageInner() {
 
               {/* 現在プラン表示 */}
               <p className="text-xs font-black text-slate-700 mt-2">
-                現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
+                現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'PRO' ? 'プロ' : '法人プラン'}
                 {isPaidUser && (
                   <Link href="/banner/dashboard/plan" className="ml-2 text-blue-600 hover:underline">アカウント画面で変更/解約 →</Link>
                 )}
@@ -872,7 +867,7 @@ function BannerUrlAutoPageInner() {
                     ⚠️ 現在エンタープライズの価格設定は無い。金額を書くと売っていない
                        価格を提示することになり、特商法の記載とも矛盾する。 */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-black text-slate-500">Enterprise</p>
+                  <p className="text-xs font-black text-slate-500">法人・チーム向け</p>
                   <p className="mt-1 text-lg font-black text-slate-900">さらに拡張したい方へ</p>
                   <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
                     生成上限の引き上げ、チームでのご利用、独自機能の追加など、

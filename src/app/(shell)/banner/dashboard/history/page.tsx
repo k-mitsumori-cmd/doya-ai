@@ -11,7 +11,8 @@ import { motion } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { EmptyState } from '@/components/EmptyState'
-import { EmptyState as DsEmptyState, Button } from '@/components/ds'
+import { EmptyState as DsEmptyState, Button, Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface HistoryItem {
   id: string
@@ -237,7 +238,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
             if (userId) writeHistoryCache(userId, list, data.nextCursor)
           }
         } else {
-          toast.error('履歴の取得に失敗しました')
+          toast.error('履歴を読み込めませんでした。通信を確かめて、もう一度お試しください。')
           setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
           setHistory([])
           setNextCursor(null)
@@ -296,7 +297,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       })
       setNextCursor(data.nextCursor)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '古い履歴を読み込めませんでした')
+      toast.error('古い履歴を読み込めませんでした。少し待って、もう一度お試しください。')
     } finally { setIsLoadingMore(false) }
   }, [nextCursor, isLoadingMore, userId])
 
@@ -359,12 +360,12 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       document.body.removeChild(link)
       toast.success('ダウンロード開始', { id: 'dl' })
     } catch (e: any) {
-      toast.error(e?.message || 'ダウンロードに失敗しました', { id: 'dl' })
+      toast.error('ダウンロードできませんでした。通信を確かめて、もう一度お試しください。', { id: 'dl' })
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('この画像を削除しますか？この操作は取り消せません。')) return
+    if (!(await confirmDialog({ title: 'この画像を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     if (isGuest) {
       // ゲストはlocalStorageから削除
       const updated = history.filter(item => item.id !== id)
@@ -384,15 +385,24 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
           if (userId) writeHistoryCache(userId, updated, nextCursor)
           toast.success('削除しました')
         } else {
-          toast.error('削除に失敗しました')
+          toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
         }
       } catch {
-        toast.error('削除に失敗しました')
+        toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
       }
     }
   }
 
   if (!isLoaded) {
+    // 新しい見た目では枠を残し、一覧の場所に骨組みを出す（全面のくるくるにしない）
+    if (uiNext) {
+      return (
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6" aria-busy="true">
+          <Skeleton lines={6} height={20} />
+          <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
+        </div>
+      )
+    }
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="hidden md:block">
@@ -679,7 +689,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                     
                     <div className="flex items-center gap-3">
                       <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Canvas Size</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">サイズ</span>
                         <span className="text-sm font-black text-slate-700">{item.size}</span>
                       </div>
                       <button 
@@ -776,7 +786,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                                     )
                                     toast.success('画像を読み込みました')
                                   } catch (err: any) {
-                                    toast.error(err?.message || '画像の取得に失敗しました')
+                                    toast.error('画像を読み込めませんでした。通信を確かめて、もう一度お試しください。')
                                   }
                                 }}
                                 className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-xl hover:scale-105 transition-transform"

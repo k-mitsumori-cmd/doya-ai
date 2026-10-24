@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
 import { useApproachUsage } from './useApproachUsage'
-import { Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
+import { Check, Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { ErrorNotice } from '@/components/ds'
 
@@ -311,7 +311,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   <div className="space-y-2">
                     {tips.map((tip, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs text-slate-600 text-left">
-                        <span className="text-emerald-500 flex-shrink-0 mt-0.5">✓</span>
+                        <span className="text-emerald-500 flex-shrink-0 mt-0.5"><Check size={14} strokeWidth={2.5} aria-hidden /></span>
                         <span>{tip}</span>
                       </div>
                     ))}
