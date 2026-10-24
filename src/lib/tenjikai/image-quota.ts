@@ -60,12 +60,15 @@ async function giveBackAmount(key: string, amount: number): Promise<boolean> {
 }
 
 /**
- * 生成に失敗したとき、reserveImageQuota で消費した枚数と金額を戻す。
- * 利用者に画像が渡っていない（失敗の応答を返す）ときだけ呼ぶ。
+ * 生成に失敗したとき、使わなかった分の枚数と金額だけを戻す。
+ * unused は「上流に送っていない枚数」。上流に送った要求は、作られて課金されたかもしれないので戻さない
+ * （時間切れで結果が分からない要求も、送った分として戻さない）。
  */
-export async function refundImageQuota(reserved: ReservedImageQuota): Promise<void> {
-  await giveBackAmount(reserved.userKey, reserved.images)
-  await giveBackAmount(reserved.yenKey, reserved.costYen)
+export async function refundImageQuota(reserved: ReservedImageQuota, unused: number): Promise<void> {
+  const n = Math.min(reserved.images, Math.max(0, Math.floor(unused)))
+  if (n < 1) return
+  await giveBackAmount(reserved.userKey, n)
+  await giveBackAmount(reserved.yenKey, Math.round((reserved.costYen * n) / reserved.images))
 }
 
 /**

@@ -97,7 +97,7 @@ async function postHandler(req: NextRequest) {
     jobId = job.id
   } catch (e) {
     console.error('[tenjikai/image] failed to record job', { code: (e as { code?: string })?.code ?? 'unknown' })
-    await refundImageQuota(quota.reserved)
+    await refundImageQuota(quota.reserved, count)
     return fail(503, '実行の記録を残せないため、画像を作れません。時間をおいて、もう一度お試しください。')
   }
   const finish = (data: { status: 'done' | 'failed'; imageCount: number; errorCode?: string; model?: string }) =>
@@ -110,9 +110,23 @@ async function postHandler(req: NextRequest) {
 
   const images: string[] = []
   let used = chain[0]
+  // 上流が応答を返した要求の数（作られて課金された）と、応答を待っている最中の要求（時間切れだと結果が分からない）
+  let billed = 0
+  let inFlight = false
+  // 失敗の終わり方。上流に送っていない分だけ枠を戻す。1枚でも作られていれば、その画像を返す（作った分は使ったことにする）。
+  // 何も返せず、課金されたかもしれないときは、ドヤパワーも戻さない（X-Doya-Power-Keep）
+  const giveUp = async (errorCode: string, status: number, message: string) => {
+    await finish({ status: 'failed', imageCount: images.length, errorCode, model: used })
+    await refundImageQuota(quota.reserved, count - billed - (inFlight ? 1 : 0))
+    if (images.length > 0) return NextResponse.json({ images, partial: true })
+    const res = fail(status, message)
+    if (billed > 0 || inFlight) res.headers.set('X-Doya-Power-Keep', '1')
+    return res
+  }
   try {
     for (let i = 0; i < count; i++) {
       let res: Response | null = null
+      inFlight = true
       // 404（廃止・未提供の ID）のときだけ、次のモデルを試す
       for (let m = chain.indexOf(used); m < chain.length; m++) {
         used = chain[m]
@@ -131,13 +145,13 @@ async function postHandler(req: NextRequest) {
         if (res.status !== 404) break
         console.warn('[tenjikai/image] model unavailable, trying next', { jobId, model: used })
       }
+      inFlight = false
+      if (res?.ok) billed++
       if (!res || !res.ok) {
         // 応答の本文はサーバーのログにだけ残す。利用者には日本語の文言だけを返す
         const text = res ? await res.text().catch(() => '') : ''
         console.error('[tenjikai/image] upstream error', { jobId, model: used, status: res?.status, body: text.slice(0, 500) })
-        await finish({ status: 'failed', imageCount: images.length, errorCode: `upstream_${res?.status ?? 'none'}`, model: used })
-        await refundImageQuota(quota.reserved)
-        return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
+        return giveUp(`upstream_${res?.status ?? 'none'}`, 502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
       }
       const json = await res.json()
       const found = json?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data || p?.inline_data?.data)
@@ -147,16 +161,12 @@ async function postHandler(req: NextRequest) {
     }
   } catch (e) {
     console.error('[tenjikai/image] upstream request failed', { jobId, kind: e instanceof Error ? e.name : 'unknown' })
-    await finish({ status: 'failed', imageCount: images.length, errorCode: 'network', model: used })
-    await refundImageQuota(quota.reserved)
-    return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
+    return giveUp('network', 502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
   }
 
   if (images.length === 0) {
     console.error('[tenjikai/image] upstream returned no image', { jobId })
-    await finish({ status: 'failed', imageCount: 0, errorCode: 'no_image', model: used })
-    await refundImageQuota(quota.reserved)
-    return fail(502, '画像を作れませんでした。内容を変えて、もう一度お試しください。')
+    return giveUp('no_image', 502, '画像を作れませんでした。内容を変えて、もう一度お試しください。')
   }
   await finish({ status: 'done', imageCount: images.length, model: used })
   // 画像の保存（Supabase Storage と TenjikaiCreative.imageUrl）は、プロジェクトの保存と一緒に入れる

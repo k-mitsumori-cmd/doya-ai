@@ -191,7 +191,10 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await outcome.refund()
       throw e
     }
-    if (res.status >= 400) await outcome.refund()
+    // 生成の途中まで進んで課金されたかもしれない失敗は、ハンドラが X-Doya-Power-Keep で戻さないと示す（作られた分は戻さない）
+    const keep = res.headers.get('X-Doya-Power-Keep') === '1'
+    if (keep) res.headers.delete('X-Doya-Power-Keep')
+    if (res.status >= 400 && !keep) await outcome.refund()
     return res
   }
 

@@ -304,3 +304,17 @@ test('scope があっても、作り直し（retryOf）は前の操作を見つ�
   const b = await s.charger.charge('image.refine', { key: 'second', retryOf: 'first', scope: 'r-aaaaaaaaaaaa' })
   if (a.kind === 'charged' && b.kind === 'charged') assert.equal(b.halved, true)
 })
+
+test('ハンドラが X-Doya-Power-Keep を付けた失敗（課金されたかもしれない）は戻さず、ヘッダーは外へ出さない', async () => {
+  const s = setup()
+  const full = SOLO_PRO_MONTHLY_GRANT
+  const keep = new Response('{}', { status: 502, headers: { 'X-Doya-Power-Keep': '1' } })
+  const r = await s.charger.run(await s.charger.charge('persona.generate'), async () => keep)
+  assert.equal(r.status, 502)
+  assert.equal(r.headers.get('X-Doya-Power-Keep'), null)
+  assert.equal(await s.remaining(), full - DOYA_POWER_COSTS['persona.generate'])
+  // 付けない失敗は今までどおり戻る
+  const s2 = setup()
+  await s2.charger.run(await s2.charger.charge('persona.generate'), async () => new Response('{}', { status: 502 }))
+  assert.equal(await s2.remaining(), full)
+})

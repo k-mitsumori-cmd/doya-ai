@@ -48,8 +48,24 @@ test('有効化のフラグが無ければ、何もせずに断る', () => {
   assert.match(src, /const enabled = \(\) => process\.env\.TENJIKAI_IMAGEGEN_ENABLED === 'true'/)
 })
 
-test('生成に失敗して画像を返さないとき、消費した上限を戻す（4か所）', () => {
-  const n = (src.match(/await refundImageQuota\(quota\.reserved\)/g) ?? []).length
-  assert.equal(n, 4)
-  assert.ok(at('refundImageQuota(quota.reserved)') > at('reserveImageQuota(userId'))
+test('失敗したとき、戻すのは上流に送っていない分だけ（送った要求・時間切れの要求は戻さない）', () => {
+  // 上流が応答を返した数と、応答待ちの要求を数える
+  assert.match(src, /let billed = 0/)
+  assert.match(src, /let inFlight = false/)
+  assert.match(src, /if \(res\?\.ok\) billed\+\+/)
+  // 戻す量 = count - 課金された数 - 応答待ち(時間切れで結果が分からない1件)
+  assert.match(src, /refundImageQuota\(quota\.reserved, count - billed - \(inFlight \? 1 : 0\)\)/)
+  // 予約の全部を無条件に戻す呼び方をしない
+  assert.doesNotMatch(src, /refundImageQuota\(quota\.reserved\)/)
+  // 時間切れ（catch）も、同じ giveUp を通る
+  assert.match(src, /giveUp\('network'/)
+})
+
+test('一部だけ成功したときは、作った画像を返す。何も返せず課金されたかもしれないときはドヤパワーを戻さない', () => {
+  assert.match(src, /if \(images\.length > 0\) return NextResponse\.json\(\{ images, partial: true \}\)/)
+  assert.match(src, /if \(billed > 0 \|\| inFlight\) res\.headers\.set\('X-Doya-Power-Keep', '1'\)/)
+})
+
+test('実行の記録が残せないとき（何も送っていない）は、全部を戻す', () => {
+  assert.match(src, /refundImageQuota\(quota\.reserved, count\)/)
 })
