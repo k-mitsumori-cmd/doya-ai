@@ -136,7 +136,7 @@ async function fixture(page, options = {}) {
     'lucide-react': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
     '@/components/ds': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
     // ドヤパワーの減る量の札（旗の内側だけ）。この試験では旗が off と同じく何も描かない
-    '@/components/shell/power': { ShellCostBadge: () => null, ShellPowerMeter: () => null },
+    '@/components/shell/power': { ShellCostBadge:()=>null,useDoyaPowerRetry:()=>({halved:false,retryOf:()=>null,headers:()=>({}),remember:()=>{}}), ShellPowerMeter: () => null },
     '@/components/ds/motion': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : ({ children }) => children ?? null }),
     '@/components/sfa/SfaSidebar': { __esModule: true, default: ({ plan, memberships }) => React.createElement('aside', { 'data-plan': plan || '', 'data-memberships': JSON.stringify(memberships) }) },
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'), 'next-auth/react': { useSession: session },

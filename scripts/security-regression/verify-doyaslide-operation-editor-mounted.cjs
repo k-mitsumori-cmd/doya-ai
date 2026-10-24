@@ -14,7 +14,7 @@ const runtime=require('react/jsx-runtime');
 const Panel=load('src/components/doyaslide/DoyaSlideOperationRecovery.tsx',{'react/jsx-runtime':runtime}).default;
 const notices=[];const toast=m=>notices.push(['notice',m]);toast.error=m=>notices.push(['error',m]);toast.success=m=>notices.push(['success',m]);
 const Page=load('src/app/(shell)/doyaslide/[id]/page.tsx',{
- '@/components/shell/power':{ShellCostBadge:()=>null,ShellPowerMeter:()=>null},'@/components/shell/ui-next-context':{useUiNext:()=>false},
+ '@/components/shell/power':{ShellCostBadge:()=>null,useDoyaPowerRetry:()=>({halved:false,retryOf:()=>null,headers:()=>({}),remember:()=>{}}),ShellPowerMeter:()=>null},'@/components/shell/ui-next-context':{useUiNext:()=>false},
  react:React,'react/jsx-runtime':runtime,'next/navigation':{useParams:()=>({id:'project-a'}),useRouter:()=>({replace(){}}),useSearchParams:()=>({get:()=>null})},
  'next/link':p=>React.createElement('a',{href:p.href},p.children),'react-hot-toast':toast,
  '@/lib/doyaslide/constants':{LOGO_POSITIONS:[],estimateGenSeconds:()=>5,formatDuration:()=> '5秒'},'@/lib/pricing':{SUPPORT_CONTACT_URL:'/contact'},

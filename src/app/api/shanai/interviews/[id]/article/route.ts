@@ -56,4 +56,4 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 }
 
 // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
-export const POST = withDoyaPowerCharge({ action: 'interview.article' }, postHandler)
+export const POST = withDoyaPowerCharge({ action: 'interview.article', retry: true }, postHandler)

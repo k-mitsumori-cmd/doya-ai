@@ -16,7 +16,7 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  if(n==='@/lib/aio/client'||n==='./client')return client;
  if(n==='@/components/TrialCallout')return{TrialNote:()=>{trialRenders++;return React.createElement('span',null,'synthetic eligible trial')}};
  if(n==='@/components/aio/ui')return{PageHeader:()=>null};
- if(n==='@/components/shell/power')return{ShellCostBadge:()=>null,ShellPowerMeter:()=>null};if(n==='@/components/shell/ui-next-context')return{useUiNext:()=>false};
+ if(n==='@/components/shell/power')return{ShellCostBadge:()=>null,useDoyaPowerRetry:()=>({halved:false,retryOf:()=>null,headers:()=>({}),remember:()=>{}}),ShellPowerMeter:()=>null};if(n==='@/components/shell/ui-next-context')return{useUiNext:()=>false};
  if(n==='@/components/ds')return{EmptyState:()=>null};
  if(n==='./AioSidebar')return{__esModule:true,default:()=>null};
  if(n==='lucide-react')return new Proxy({},{get:()=>()=>null});

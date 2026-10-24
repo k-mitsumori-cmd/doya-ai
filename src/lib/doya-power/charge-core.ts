@@ -14,6 +14,8 @@ import { NextResponse } from 'next/server'
 import { doyaPowerCost, type DoyaPowerAction } from './costs'
 import { DAILY_RECOVERY_AMOUNT, jstNextDayStart, SOLO_PRO_MONTHLY_GRANT, DAILY_RECOVERY_CAP } from './rules'
 import type { BalanceResult, ConsumeResult, GrantResult, RefundResult } from './ledger'
+import { RETRY_HALF_WINDOW_MS, DOYA_POWER_OP_HEADER, halfAmount, cleanRetryKey } from './retry'
+export { RETRY_HALF_WINDOW_MS, DOYA_POWER_OP_HEADER, halfAmount } from './retry'
 
 export type ChargeLedger = {
   consume: (companyId: string, amount: number, operationId: string, opts?: { note?: string }) => Promise<ConsumeResult>
@@ -25,19 +27,11 @@ export type ChargeLedger = {
   recentConsume: (companyId: string, action: string, opts: { withinMs: number; retryOf?: string | null; target?: string | null }) => Promise<{ operationId: string; at: Date } | null>
 }
 
-/** 作り直しを半分にする時間（前の消費から5分以内） */
-export const RETRY_HALF_WINDOW_MS = 5 * 60_000
-
 /**
  * 有料の AI を呼んだあとに失敗した応答に、ハンドラが付ける印（値は '1'）。
  * 付いた失敗の応答は戻さない（4xx/5xx でも、使った分は使ったものとして数える）。印は利用者に返す前に外す
  */
 export const DOYA_POWER_CONSUMED_HEADER = 'x-doya-power-consumed'
-
-/** 作り直しの量: 半分（切り上げ）。1 は 1 のまま */
-export function halfAmount(amount: number): number {
-  return Math.max(1, Math.ceil(amount / 2))
-}
 
 export type ChargeDeps = {
   /** 旗の値（off / preview / all）。off ならほかの部品を一度も呼ばない */
@@ -57,17 +51,22 @@ export type ChargeDeps = {
 
 export type ChargeOutcome =
   | { kind: 'skip' }
-  | { kind: 'charged'; operationId: string; amount: number; duplicated: boolean; halved: boolean; refund: () => Promise<void> }
+  | {
+      kind: 'charged'
+      operationId: string
+      /** 操作のキー（operationId の3つ目の欄）。成功の応答のヘッダー（DOYA_POWER_OP_HEADER）で返し、作り直しの retryOf に使ってもらう */
+      opKey: string
+      amount: number
+      duplicated: boolean
+      halved: boolean
+      refund: () => Promise<void>
+    }
   | { kind: 'blocked'; response: NextResponse }
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 
 /** キーに使える文字だけにする（台帳の id は 200 文字まで） */
-function cleanKey(k: unknown): string | null {
-  if (typeof k !== 'string') return null
-  const v = k.trim()
-  return /^[A-Za-z0-9_.:-]{1,120}$/.test(v) ? v : null
-}
+const cleanKey = cleanRetryKey
 
 /** 日本時間の時刻を「10月24日 0:00」の形で */
 function jstLabel(d: Date): string {
@@ -127,7 +126,8 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     //    別のルートでは別の ID になる（安いルートで払ったキーを、高いルートに送ってタダにできない）。
     //    キーの後ろ・量の前に置く（作り直しの探し方「操作の名前:会社:キー:」を変えないため）
     const scope = cleanKey(opts.scope)
-    let operationId = `${action}:${who.companyId}:${key ?? newKey()}${scope ? `:${scope}` : ''}:${amount}`
+    const opKey = key ?? newKey()
+    let operationId = `${action}:${who.companyId}:${opKey}${scope ? `:${scope}` : ''}:${amount}`
     try {
       // 有料の人の毎月の付与は、残りを使うときに足りない分を付ける（月に1回だけ。cron に頼らない）。毎日の回復は台帳が足す
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
@@ -139,7 +139,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
         //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）。
         // ⚠️ 2回目を減らさずに通すのは、処理の側が同じキーで結果を返し直す（または食い違いを断る）API だけに限る。
         //    クライアントのキーを渡してよい API は、verify-doya-power-charge-routes.cjs の KEYED で固定している
-        if (r.duplicated) return { kind: 'charged', operationId, amount: r.amount, duplicated: true, halved, refund: async () => {} }
+        if (r.duplicated) return { kind: 'charged', operationId, opKey, amount: r.amount, duplicated: true, halved, refund: async () => {} }
         const refund = async () => {
           try {
             await deps.ledger.refund(operationId, { companyId: who.companyId })
@@ -147,7 +147,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
             log('[doya-power] refund failed', { action, name: (e as { name?: string })?.name, code: (e as { code?: string })?.code })
           }
         }
-        return { kind: 'charged', operationId, amount: r.amount, duplicated: r.duplicated, halved, refund }
+        return { kind: 'charged', operationId, opKey, amount: r.amount, duplicated: r.duplicated, halved, refund }
       }
       if (r.reason === 'insufficient') {
         const next = jstNextDayStart(now())
@@ -201,7 +201,12 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     // （失敗を起こして無料で AI を使えないように。印は利用者に返す前に外す）
     const consumed = res.headers.get(DOYA_POWER_CONSUMED_HEADER) === '1'
     if (consumed) { try { res.headers.delete(DOYA_POWER_CONSUMED_HEADER) } catch { /* 変えられない応答なら、そのまま返す */ } }
-    if (res.status >= 400 && !consumed) await outcome.refund()
+    if (res.status >= 400 && !consumed) {
+      await outcome.refund()
+      return res
+    }
+    // 戻さなかった（減ったままの）操作だけ、キーを返す。画面はこれを「作り直す」の retryOf に使う
+    try { res.headers.set(DOYA_POWER_OP_HEADER, outcome.opKey) } catch { /* 変えられない応答なら、そのまま返す */ }
     return res
   }
 

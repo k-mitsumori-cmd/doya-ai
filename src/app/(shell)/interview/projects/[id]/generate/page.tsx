@@ -11,7 +11,7 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { ArticleStreamError, readArticleGeneration } from '@/lib/interview/article-stream-client'
 import { getArticleActorScope, readArticleOperation, ArticleProtocolError, type ArticleIntentScope, type ArticleOperationView } from '@/lib/interview/article-operation-client'
 import { readArticleIntent, claimArticleIntent, clearArticleIntent, type ArticleIntent } from '@/lib/interview/article-intent-client'
-import { ShellCostBadge } from '@/components/shell/power'
+import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
 
 function articleFailureGuidance(error: unknown): string {
   return error instanceof ArticleStreamError || error instanceof ArticleProtocolError || error instanceof ArticleInputError
@@ -326,6 +326,9 @@ export default function GeneratePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = params.id as string
+  // ドヤパワー: 同じプロジェクトの記事を作り直すとき（新しい記事を生成・スキルを変えて再生成）は、前の生成のキーを送る。
+  // 5分以内なら減る量が半分（決めるのはサーバー）。控えるのは、この画面で生成が終わったときだけ
+  const doyaRetry = useDoyaPowerRetry(projectId ? `interview-article:${projectId}` : null)
   const recipeId = searchParams.get('recipeId') || ''
   const displayFormat = searchParams.get('displayFormat') || 'MONOLOGUE'
   const selectionId = searchParams.get('selectionId') || ''
@@ -453,7 +456,7 @@ export default function GeneratePage() {
       setStatus('generating'); setGeneratedText(''); setError(''); setLimitAction(null)
       setProviderConfigurationError(false); setProgress('接続中...'); setThumbnailUrl(null)
       setShowCelebration(false); setProofScore(null); setProofScoreLoading(false)
-      await readArticleGeneration({ projectId, recipeId, displayFormat, customInstructions: customInstructions || undefined, operationId: intent.operationId, actorScope: scope.actorScope }, controller.signal, event => {
+      await readArticleGeneration({ projectId, recipeId, displayFormat, customInstructions: customInstructions || undefined, operationId: intent.operationId, actorScope: scope.actorScope, retryOf: doyaRetry.retryOf() }, controller.signal, event => {
         if (!canApply()) return
         switch (event.type) {
           case 'operation': applyOperation(event.operation); break
@@ -466,6 +469,7 @@ export default function GeneratePage() {
           case 'done': {
             const eid = event.draftId
             applyOperation({ operationId: intent.operationId, actorScope: scope.actorScope, state: 'completed', result: { draftId: eid, wordCount: event.wordCount, version: event.version }, code: null, limit: null })
+            doyaRetry.remember(intent.operationId)
             setShowCelebration(true)
             // Only a fresh, acknowledged generation runs these follow-ups.
             // Restoring an existing receipt never invokes either AI endpoint.
@@ -783,7 +787,7 @@ export default function GeneratePage() {
                 {!recovery.view || ['pending', 'cancelling', 'missing', 'busy'].includes(recovery.view.state) ? (
                   <button disabled={cancelRef.current} onClick={cancelGeneration} className="px-4 py-2 rounded-lg bg-slate-100">前の生成を取り消す</button>
                 ) : (
-                  <button disabled={operationBusy} onClick={() => void restartGeneration()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">新しい記事を生成（1回使用）<ShellCostBadge action="interview.article" /></button>
+                  <button disabled={operationBusy} onClick={() => void restartGeneration()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">新しい記事を生成（1回使用）<ShellCostBadge action="interview.article" retry={doyaRetry.halved} /></button>
                 )}
                 {recovery.view?.result && <a href={`/interview/projects/${projectId}/edit?draftId=${recovery.view.result.draftId}`} className="px-4 py-2 rounded-lg bg-blue-100">保存済みの記事を開く</a>}
                 <a href={`/interview/projects/${projectId}`} className="px-4 py-2 rounded-lg bg-slate-100">記事一覧を確認</a>
@@ -796,7 +800,7 @@ export default function GeneratePage() {
               <p className="text-slate-700">{progress || '記事生成の準備ができました。'}</p>
               <button onClick={startGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
                 記事生成を開始
-                <ShellCostBadge action="interview.article" />
+                <ShellCostBadge action="interview.article" retry={doyaRetry.halved} />
               </button>
             </div>
           )}

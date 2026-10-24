@@ -23,7 +23,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
-import { ShellCostBadge } from '@/components/shell/power'
+import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
 
 interface PlacementRow {
   key: string
@@ -72,6 +72,8 @@ export default function AdImageTool() {
   const uiNext = useUiNext()
   const actor = (session?.user as { id?: string } | undefined)?.id || ''
   const operation = useAdImageRecovery(authStatus, actor)
+  // ドヤパワー: 「この内容で作り直す」を5分以内に続けて押したら、前の作り直しのキーを送る（減る量が半分。決めるのはサーバー）
+  const refineRetry = useDoyaPowerRetry('adimage-refine')
   const [step, setStep] = useState<Step>('input')
   const [error, setError] = useState('')
   const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
@@ -463,7 +465,8 @@ export default function AdImageTool() {
     setError('')
     setLimitAction(null)
     try {
-      const d = await operation.submit('refine', conceptId, { chips: selectedChips, note: note.trim() || undefined }, new AbortController().signal)
+      const d = await operation.submit('refine', conceptId, { chips: selectedChips, note: note.trim() || undefined }, new AbortController().signal, refineRetry.headers())
+      if (d?.state === 'completed') refineRetry.remember(d.operationId)
       if (!isCurrent() || !d) return
       if (d.state === 'limit') {
         setLimitAction(d.contactUrl ? 'contact' : d.upgradeUrl ? 'pricing' : null)
@@ -476,7 +479,7 @@ export default function AdImageTool() {
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setRefining(false) }
     }
-  }, [conceptId, note, selectedChips, operation, applyImageResult])
+  }, [conceptId, note, selectedChips, operation, applyImageResult, refineRetry.headers, refineRetry.remember])
 
   const byMedia = placements.reduce<Record<string, PlacementRow[]>>((acc, p) => {
     ;(acc[p.media] = acc[p.media] || []).push(p)
@@ -1188,7 +1191,7 @@ export default function AdImageTool() {
                 className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
               >
                 {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}
-                <ShellCostBadge action="image.refine" />
+                <ShellCostBadge action="image.refine" retry={refineRetry.halved} />
               </button>
               {!scores && directives.length === 0 && (
                 <p className="mt-2 text-center text-xs font-bold text-slate-500">

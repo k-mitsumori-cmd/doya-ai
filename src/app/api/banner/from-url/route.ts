@@ -1781,4 +1781,4 @@ async function postHandler(request: NextRequest) {
 
 // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
 // バナーは表のとおり「1回ごと」に減らす（バナー（1回3枚）10）。枚数はプランと予約で処理の側が決めるので、ここでは数えない
-export const POST = withDoyaPowerCharge({ action: 'banner.generate' }, postHandler)
+export const POST = withDoyaPowerCharge({ action: 'banner.generate', retry: true }, postHandler)

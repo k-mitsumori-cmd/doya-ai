@@ -13,7 +13,7 @@ import { Zap } from 'lucide-react'
 import { useDoyaPower } from '@/components/doya-power/doya-power-context'
 import styles from './cost-badge.module.css'
 
-export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, per, className }: {
+export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, per, halved = false, className }: {
   /** 1回で減る量 */
   cost: number
   /** 読み上げで使う、ポイントの名前 */
@@ -22,6 +22,8 @@ export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, 
   short?: boolean
   /** 単位あたりの量のとき、その単位（例: '分' → 「⚡3/分」、読み上げは「1分ごとにドヤパワーを3使います」。'60分' → 「60分ごとに」） */
   per?: string
+  /** 5分以内の作り直しで、半分の量を出しているとき true。札に「半分」を出す（cost には半分にした量を渡す） */
+  halved?: boolean
   className?: string
 }) {
   const enabled = useDoyaPower()
@@ -31,8 +33,9 @@ export function CostBadge({ cost, unitLabel = 'ドヤパワー', short = false, 
     <span className={`${styles.badge} ${className ?? ''}`} data-short={short ? 'true' : undefined}>
       <Zap size={12} strokeWidth={2.25} aria-hidden="true" className={styles.icon} />
       <span aria-hidden="true" className={styles.num}>{n}{per ? `/${per}` : ''}</span>
+      {halved ? <span aria-hidden="true" className={styles.half}>半分</span> : null}
       {short ? <span aria-hidden="true" className={styles.short}>足りません</span> : null}
-      <span className={styles.sr}>（{per ? `${/^\d/.test(per) ? '' : '1'}${per}ごとに` : ''}{unitLabel}を{n}使います{short ? '。今は足りません' : ''}）</span>
+      <span className={styles.sr}>（{halved ? '5分以内の作り直しなので半分の' : ''}{per ? `${/^\d/.test(per) ? '' : '1'}${per}ごとに` : ''}{unitLabel}を{n}使います{short ? '。今は足りません' : ''}）</span>
     </span>
   )
 }

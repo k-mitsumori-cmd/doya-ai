@@ -16,6 +16,9 @@ const WRAPPED={
 };
 // クライアントのキー（同じ操作をまとめる ID）を渡してよい API。どれも、処理の側が同じキーで結果を返し直すか、
 // 食い違い（本文の違い）を断る作り（receipt・operation・reserve）。ここに無い API でキーを渡したら落とす
+// 「作り直す」のボタンがある API。リクエストのヘッダーの前の操作のキー（retryOf）を見る（retry: true）。本文は読まない。
+// 半分にするかは台帳が決める（同じ会社・同じ操作の名前・5分以内・戻していない前の操作）。ここに無い API で retry を付けたら落とす
+const RETRY=new Set(['shanai/interviews/[id]/article','interview/articles/generate','banner/from-url','adimage/concepts/[id]/refine']);
 const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/refine':'operationId','sfa/ai/score':'operationId','sfa/ai/next-action':'operationId','persona/generate':'requestKey','seo/articles':'operationId','banner/refine':'operationId'};
 (async()=>{
   await check('Only routes whose handlers dedupe on the same key pass a client key',async()=>{
@@ -26,9 +29,18 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
       const keyed=/key:/.test(m[1]);
       if(KEYED[p])assert.ok(m[1].includes('b?.'+KEYED[p]),p+' key '+KEYED[p]);
       else assert.equal(keyed,false,p+' must not pass a client key');
+      assert.equal(/retry: true/.test(m[1]),RETRY.has(p),p+' retry');
+      // retryOf を本文から読まない（大きな本文のルートで包みが本文を読まないように）
+      assert.doesNotMatch(m[1],/retryOf:/,p);
     }
     // 操作の ID には量も入る（同じキーで量だけ変えた呼び出しを、同じ操作にしない）
-    assert.match(code('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{key \?\? newKey\(\)\}\$\{scope \? `:\$\{scope\}` : ''\}:\$\{amount\}`/);
+    assert.match(code('src/lib/doya-power/charge-core.ts'),/const opKey = key \?\? newKey\(\)\s*let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{opKey\}\$\{scope \? `:\$\{scope\}` : ''\}:\$\{amount\}`/);
+    // 作り直しの retryOf はヘッダーから読む。本文を読む条件（needsBody）に retry を入れない
+    const wrap=code('src/lib/doya-power/charge.ts');
+    assert.match(wrap,/spec\.retry \? req\.headers\.get\(DOYA_POWER_RETRY_HEADER\) : undefined/);
+    assert.doesNotMatch(wrap.match(/const needsBody = [^\n]*/)[0],/spec\.retry\b/);
+    // 操作のキーは、戻さなかった応答にだけ付ける
+    assert.match(code('src/lib/doya-power/charge-core.ts'),/if \(res\.status >= 400 && !consumed\) \{\s*await outcome\.refund\(\)\s*return res\s*\}[\s\S]*?res\.headers\.set\(DOYA_POWER_OP_HEADER, outcome\.opKey\)/);
     // クライアントのキーは、ルートの名前空間つきで台帳に渡す（別のルートに送って支払い済みの重複にさせない）
     assert.match(code('src/lib/doya-power/charge.ts'),/scope: routeScope\(req\)/);
   });

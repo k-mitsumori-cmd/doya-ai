@@ -18,7 +18,7 @@ import { ErrorNotice } from '@/components/ds'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { FACT_CATEGORY_LABELS, type ArticleBlock, type FactCategory, type SurveyAnswers } from '@/lib/shanai/types'
 import { findQuestion } from '@/lib/shanai/survey'
-import { ShellCostBadge } from '@/components/shell/power'
+import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
 
 interface Photo { id: string; usage: string; caption: string; url: string | null }
 interface Fact { id: string; sourceType: 'transcript' | 'answer' | 'company'; sourceRef: string; category: FactCategory; statement: string; quote: string; approved: boolean }
@@ -671,6 +671,8 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
   const [error, setError] = useState<SectionError | null>(null)
   const [saved, setSaved] = useState(false)
   const uiNext = useUiNext()
+  // ドヤパワー: 記事を作り直すときは、前に作ったときのキーを送る（5分以内なら減る量が半分。決めるのはサーバー）
+  const retry = useDoyaPowerRetry(`shanai-article:${data.id}`)
 
   // ⚠️ 事実の更新などで data が入れ替わっても、編集中の記事は消さない（別の版になったときだけ差し替える）
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -687,7 +689,11 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
     setBusy(true)
     setError(null)
     try {
-      const d = await api<{ article: Article }>(`/api/shanai/interviews/${data.id}/article`, { method: 'POST' })
+      const d = await api<{ article: Article }>(`/api/shanai/interviews/${data.id}/article`, {
+        method: 'POST',
+        headers: article ? retry.headers() : {},
+        onOk: retry.remember,
+      })
       setArticle(d.article)
       setDirty(false)
       setThumbKey((k) => k + 1)
@@ -751,7 +757,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
         <Button onClick={() => (article ? setConfirmRegen(true) : void generate())} loading={busy} disabled={approvedPerson < 5} variant={article ? 'secondary' : 'primary'}>
           <Sparkles className="h-4 w-4" />
           {article ? '記事を作り直す' : '記事を作る'}
-          <ShellCostBadge action="interview.article" />
+          <ShellCostBadge action="interview.article" retry={!!article && retry.halved} />
         </Button>
         {article && (
           <>

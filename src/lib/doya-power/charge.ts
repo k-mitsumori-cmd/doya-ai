@@ -16,6 +16,7 @@ import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
 import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
 import { createDoyaPowerCharger } from './charge-core'
+import { DOYA_POWER_RETRY_HEADER } from './retry'
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 export { parseCount } from './count'
 export { DOYA_POWER_CONSUMED_HEADER } from './charge-core'
@@ -54,6 +55,11 @@ export type ChargeSpec = {
   key?: (body: Body) => unknown
   /** 作り直しのとき、前の操作のキー（クライアントが retryOf で示す）。5分以内なら半分 */
   retryOf?: (body: Body) => unknown
+  /**
+   * 作り直しのボタンがあるルートは true。リクエストのヘッダー（DOYA_POWER_RETRY_HEADER）の前の操作のキーを retryOf として見る。
+   * 本文は読まない（大きな本文のルートでも上限の 413 にならない）。半分にするかは台帳が決める（同じ会社・同じ操作の名前・5分以内）
+   */
+  retry?: boolean
   /** 同じ対象を表すキー（同じ対象を5分以内に作り直したら半分） */
   target?: (body: Body) => unknown
 }
@@ -85,7 +91,7 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     if (bad) return NextResponse.json({ error: bad }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action
     if (!action) return handler(req, ...rest)
-    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body), target: spec.target?.(body), scope: routeScope(req) })
+    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body) ?? (spec.retry ? req.headers.get(DOYA_POWER_RETRY_HEADER) : undefined), target: spec.target?.(body), scope: routeScope(req) })
     return doyaPowerCharger.run(outcome, () => handler(req, ...rest))
   }
 }
