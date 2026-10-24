@@ -160,7 +160,7 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
 
       <section className={styles.section} aria-labelledby="compare-title">
         <h2 id="compare-title" className={styles.sectionTitle}>ツールごとの上限</h2>
-        <p className={styles.sectionLead}>プロにすると、すべてのツールで右の列の上限になります。</p>
+        <p className={styles.sectionLead}>プロにすると、すべてのツールで「プロ」の上限になります。</p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -177,8 +177,9 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
                         <span>{service.name}</span>
                       </Link>
                     </th>
-                    <td>{service.pricing?.free?.limit || '—'}</td>
-                    <td className={styles.proCell}>{service.pricing?.pro?.limit || '—'}</td>
+                    {/* data-label は 640px 未満のカードの見出し（「無料:」「プロ:」）に使う */}
+                    <td data-label="無料">{service.pricing?.free?.limit || '—'}</td>
+                    <td data-label="プロ" className={styles.proCell}>{service.pricing?.pro?.limit || '—'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -117,3 +117,19 @@
   .table th, .table td { padding: 10px 12px; }
   .table thead th:nth-child(2), .table thead th:nth-child(3) { width: auto; }
 }
+
+/* 640px 未満: 表をツールごとのカードに組み替える（ツール名、その下に「無料: …」「プロ: …」の2行）。
+   ⚠️ 横に動かす表にしない（.tableWrap は overflow: hidden のまま。2026-10-25 統括の確認: 375px で列が切れていた） */
+@media (max-width: 639px) {
+  .tableWrap { border: 0; border-radius: 0; }
+  .table, .table tbody, .table tr, .table th, .table td { display: block; width: 100%; }
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .table tbody + tbody { margin-top: 8px; }
+  .groupRow th { padding: 16px 2px 6px; border-top: 0; background: transparent; }
+  .table tbody tr:not(.groupRow) {
+    margin-top: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper);
+  }
+  .table tbody tr:not(.groupRow) th, .table tbody tr:not(.groupRow) td { padding: 0; border-top: 0; }
+  .table tbody tr:not(.groupRow) td { display: flex; gap: 8px; margin-top: 6px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .table tbody tr:not(.groupRow) td::before { content: attr(data-label) ':'; flex: none; min-width: 3em; color: var(--muted); font-weight: 700; }
+}
