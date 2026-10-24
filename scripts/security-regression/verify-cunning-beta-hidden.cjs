@@ -102,10 +102,13 @@ function routeFiles(dir) {
     assert.equal(tools.findShellTool('cunning').name, 'ドヤカンニング')
     assert.equal(tools.findShellTool('banner').id, 'banner')
     assert.equal(tools.findShellTool('no-such-tool'), undefined)
-    // ⌘K・最近使ったツール・スマホの下のタブは ALL_SHELL_TOOLS / SHELL_GROUPS から引く（ほかの一覧を持たない）
+    // ⌘K は ALL_SHELL_TOOLS から引く（ほかの一覧を持たない）。
+    // 左のメニューの「最近使ったツール」とスマホの下のタブの入れ替わる枠は出さない（FRM-02・03）ので、ツールの一覧から作らない
     const shell = read('src/components/shell/AppShell.tsx')
     assert.match(shell, /const TOOL_ITEMS: PaletteItem\[\] = ALL_SHELL_TOOLS\.map/)
-    assert.equal((shell.match(/new Map\(ALL_SHELL_TOOLS\.map/g) || []).length, 2)
+    assert.equal((shell.match(/new Map\(ALL_SHELL_TOOLS\.map/g) || []).length, 0)
+    assert.match(shell, /const recentTools: ShellTool\[\] = \[\]/)
+    assert.match(shell, /const tabTools: ShellTool\[\] = \[\]/)
   })
 
   await check('home intents never point to a beta-hidden tool', async () => {
