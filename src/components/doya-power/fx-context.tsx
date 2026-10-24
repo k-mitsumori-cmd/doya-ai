@@ -3,7 +3,7 @@
 // 画面（ページ）が読んだ設定を <DoyaPowerFxProvider fx={...}> で渡すと、中のゲージ・図鑑・ミッション・年間レポートが見る。
 // 設定の部品（DoyaPowerFxSettings）で変えると、同じ画面の中がすぐ切り替わる。
 // 渡さなければ、すべてオン（ただし prefers-reduced-motion では動かさない）。
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { resolveDoyaPowerFx, type DoyaPowerFx, type DoyaPowerFxSetting, type FxScope, type ResolvedFx } from '@/lib/doya-power/fx'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
 
@@ -12,6 +12,14 @@ const FxContext = createContext<FxValue>({ fx: undefined, update: null })
 
 export function DoyaPowerFxProvider({ fx, children }: { fx?: DoyaPowerFx; children: ReactNode }) {
   const [state, setState] = useState<DoyaPowerFx | undefined>(fx)
+  // サーバーから新しい設定が渡されたとき（router.refresh のあと）は、それに合わせる
+  const sig = JSON.stringify(fx ?? null)
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    setState(fx)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig])
   const update = useCallback((scope: FxScope, setting: DoyaPowerFxSetting) => {
     setState((cur) => ({ ...(cur ?? {}), [scope]: { ...(cur?.[scope] ?? {}), ...setting } }))
   }, [])

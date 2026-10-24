@@ -6,7 +6,10 @@
 // ⚠️ 旗（DOYA_POWER_ROLLOUT）が出さないと決めた人には、ページの側で渡さない（null なら何も描かない）。
 // ⚠️ ドヤくんの絵と演出は、枠の DoyaPowerFxProvider の設定に従う（DoyaPowerGauge が見る）。
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { DoyaPowerGauge } from './DoyaPower'
+import DoyaPowerFxSettings from './DoyaPowerFxSettings'
+import { saveDoyaPowerFx } from '@/lib/doya-power/fx-actions'
 import { jstDateTime } from './time'
 import { KIND_LABELS } from '@/lib/doya-power/history-label'
 import { GRANT_KINDS } from '@/lib/doya-power/rules'
@@ -41,7 +44,8 @@ export function DoyaPowerHomeCard({ view }: { view: DoyaPowerHomeView | null }) 
 }
 
 /** 内訳・履歴の画面の中身 */
-export function DoyaPowerDetail({ view }: { view: DoyaPowerHomeView }) {
+export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerHomeView; canEditOrg?: boolean }) {
+  const router = useRouter()
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
@@ -83,6 +87,17 @@ export function DoyaPowerDetail({ view }: { view: DoyaPowerHomeView }) {
           )}
         </section>
       </div>
+      <section id="display-settings" className={styles.card} aria-labelledby="dp-display">
+        <h3 id="dp-display" className={styles.title}>表示の設定</h3>
+        <DoyaPowerFxSettings
+          canEditOrg={canEditOrg}
+          onSave={async (scope, setting) => {
+            const r = await saveDoyaPowerFx(scope, setting)
+            if (r.ok) router.refresh()
+            return r
+          }}
+        />
+      </section>
     </div>
   )
 }
