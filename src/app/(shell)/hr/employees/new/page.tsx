@@ -11,6 +11,7 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 import { useId, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 
 interface Department {
   id: string
@@ -152,7 +153,9 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
         router.push('/hr/employees')
       }, 1200)
     } catch (e: any) {
-      toast.error(e.message)
+      // ⚠️ 通信の失敗（英語の TypeError など）はそのまま出さない。日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '従業員を登録できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setSaving(false)
     }

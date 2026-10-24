@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
 import { useApproachUsage } from './useApproachUsage'
-import { Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
+import { Check, Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
 import { ErrorNotice } from '@/components/ds'
 
 // 新しい見た目では、絵文字の代わりに lucide のアイコンを出す（UI 品質 S-52。絵文字をアイコンにしない）
@@ -289,7 +289,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   <div className="space-y-2">
                     {tips.map((tip, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs text-slate-600 text-left">
-                        <span className="text-emerald-500 flex-shrink-0 mt-0.5">✓</span>
+                        <span className="text-emerald-500 flex-shrink-0 mt-0.5"><Check size={14} strokeWidth={2.5} aria-hidden /></span>
                         <span>{tip}</span>
                       </div>
                     ))}

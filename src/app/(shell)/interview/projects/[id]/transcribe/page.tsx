@@ -26,8 +26,8 @@ type TranscribeStep = 'init' | 'fetching' | 'submitting' | 'analyzing' | 'conver
 const STEP_INFO: Record<TranscribeStep, { icon: string; label: string; color: string }> = {
   init: { icon: 'hourglass_empty', label: '準備中', color: 'text-slate-400' },
   fetching: { icon: 'cloud_download', label: 'ファイル取得', color: 'text-blue-500' },
-  submitting: { icon: 'send', label: 'AI送信', color: 'text-purple-500' },
-  analyzing: { icon: 'graphic_eq', label: '音声解析', color: 'text-[#7f19e6]' },
+  submitting: { icon: 'send', label: 'AI送信', color: 'text-brand-400' },
+  analyzing: { icon: 'graphic_eq', label: '音声解析', color: 'text-[#0066ff]' },
   converting: { icon: 'text_fields', label: 'テキスト変換', color: 'text-cyan-500' },
   streaming: { icon: 'stream', label: '文字起こし中', color: 'text-emerald-500' },
   complete: { icon: 'check_circle', label: '完了', color: 'text-emerald-500' },
@@ -338,19 +338,19 @@ export default function TranscribePage() {
         </button>
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0066ff] to-blue-600 flex items-center justify-center shadow-lg shadow-[#0066ff]/20">
               <span className="material-symbols-outlined text-white text-xl sm:text-2xl">mic</span>
             </div>
             {/* 処理中パルス */}
             {isProcessing && (
               <>
                 <motion.div
-                  className="absolute inset-0 rounded-2xl border-2 border-[#7f19e6]"
+                  className="absolute inset-0 rounded-2xl border-2 border-[#0066ff]"
                   animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
                 />
                 <motion.div
-                  className="absolute inset-0 rounded-2xl border-2 border-[#7f19e6]"
+                  className="absolute inset-0 rounded-2xl border-2 border-[#0066ff]"
                   animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut', delay: 0.5 }}
                 />
@@ -389,7 +389,7 @@ export default function TranscribePage() {
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                       isMediaPlaying
-                        ? 'bg-gradient-to-br from-[#7f19e6] to-blue-600 shadow-lg shadow-[#7f19e6]/30'
+                        ? 'bg-gradient-to-br from-[#0066ff] to-blue-600 shadow-lg shadow-[#0066ff]/30'
                         : 'bg-slate-100'
                     }`}>
                       <span className={`material-symbols-outlined text-2xl ${isMediaPlaying ? 'text-white' : 'text-slate-400'}`}>
@@ -410,7 +410,7 @@ export default function TranscribePage() {
                       {Array.from({ length: 30 }).map((_, i) => (
                         <motion.div
                           key={i}
-                          className="w-1 bg-gradient-to-t from-[#7f19e6] to-blue-400 rounded-full"
+                          className="w-1 bg-gradient-to-t from-[#0066ff] to-blue-400 rounded-full"
                           animate={{ height: [4, Math.random() * 32 + 8, 4] }}
                           transition={{
                             duration: 0.6 + Math.random() * 0.4,
@@ -442,7 +442,7 @@ export default function TranscribePage() {
                 {activeSegmentIndex !== null && segments[activeSegmentIndex] && (
                   <span className="text-xs text-slate-400 truncate max-w-[60%]">
                     {segments[activeSegmentIndex].speaker && (
-                      <span className="font-bold text-[#7f19e6] mr-1">話者{segments[activeSegmentIndex].speaker}</span>
+                      <span className="font-bold text-[#0066ff] mr-1">話者{segments[activeSegmentIndex].speaker}</span>
                     )}
                     {segments[activeSegmentIndex].text.slice(0, 40)}...
                   </span>
@@ -480,21 +480,21 @@ export default function TranscribePage() {
               return (
                 <div key={step} className="flex-1 flex flex-col items-center min-w-[48px]">
                   <div className={`w-full h-1.5 rounded-full mb-2 transition-all duration-500 ${
-                    isDone ? 'bg-[#7f19e6]' : isActive ? 'bg-[#7f19e6]/50' : 'bg-slate-100'
+                    isDone ? 'bg-[#0066ff]' : isActive ? 'bg-[#0066ff]/50' : 'bg-slate-100'
                   }`}>
                     {isActive && (
                       <motion.div
-                        className="h-full rounded-full bg-[#7f19e6]"
+                        className="h-full rounded-full bg-[#0066ff]"
                         initial={{ width: '0%' }}
                         animate={{ width: '60%' }}
                         transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
                       />
                     )}
                   </div>
-                  <span className={`material-symbols-outlined text-[14px] ${isDone ? 'text-[#7f19e6]' : isActive ? info.color : 'text-slate-300'}`}>
+                  <span className={`material-symbols-outlined text-[14px] ${isDone ? 'text-[#0066ff]' : isActive ? info.color : 'text-slate-300'}`}>
                     {isDone ? 'check_circle' : info.icon}
                   </span>
-                  <span className={`text-[10px] font-bold mt-0.5 whitespace-nowrap ${isDone ? 'text-[#7f19e6]' : isActive ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <span className={`text-[10px] font-bold mt-0.5 whitespace-nowrap ${isDone ? 'text-[#0066ff]' : isActive ? 'text-slate-700' : 'text-slate-300'}`}>
                     {info.label}
                   </span>
                 </div>
@@ -517,9 +517,9 @@ export default function TranscribePage() {
               </motion.span>
             ) : (
               <div className="relative w-5 h-5">
-                <div className="absolute inset-0 rounded-full border-2 border-[#7f19e6]/20" />
+                <div className="absolute inset-0 rounded-full border-2 border-[#0066ff]/20" />
                 <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-[#7f19e6] border-t-transparent"
+                  className="absolute inset-0 rounded-full border-2 border-[#0066ff] border-t-transparent"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
@@ -551,7 +551,7 @@ export default function TranscribePage() {
                     key={i}
                     className="w-[3px] rounded-full"
                     style={{
-                      background: `linear-gradient(to top, #7f19e6, ${i % 3 === 0 ? '#3b82f6' : i % 3 === 1 ? '#a855f7' : '#6366f1'})`,
+                      background: `linear-gradient(to top, #0066ff, ${i % 3 === 0 ? '#3b82f6' : i % 3 === 1 ? '#3d80ff' : '#6366f1'})`,
                     }}
                     animate={{
                       height: [4, Math.random() * 40 + 14, 6, Math.random() * 30 + 8, 4],
@@ -569,7 +569,7 @@ export default function TranscribePage() {
               <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <motion.div
-                    className="w-1.5 h-1.5 rounded-full bg-[#7f19e6]"
+                    className="w-1.5 h-1.5 rounded-full bg-[#0066ff]"
                     animate={{ opacity: [1, 0.3, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />
@@ -585,7 +585,7 @@ export default function TranscribePage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <motion.div
-                    className="w-1.5 h-1.5 rounded-full bg-purple-500"
+                    className="w-1.5 h-1.5 rounded-full bg-brand-400"
                     animate={{ opacity: [0.6, 1, 0.6] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
@@ -606,7 +606,7 @@ export default function TranscribePage() {
         >
           <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="material-symbols-outlined text-[#7f19e6] text-lg">subtitles</span>
+              <span className="material-symbols-outlined text-[#0066ff] text-lg">subtitles</span>
               <span className="text-sm font-bold text-slate-700">文字起こし結果</span>
               {isProcessing && (
                 <motion.div
@@ -617,7 +617,7 @@ export default function TranscribePage() {
                   {[0, 1, 2].map((j) => (
                     <motion.div
                       key={j}
-                      className="w-1 bg-[#7f19e6] rounded-full"
+                      className="w-1 bg-[#0066ff] rounded-full"
                       animate={{ height: [3, 10, 3] }}
                       transition={{ duration: 0.6, repeat: Infinity, delay: j * 0.12, ease: 'easeInOut' }}
                     />
@@ -647,13 +647,13 @@ export default function TranscribePage() {
                     onClick={() => handleSegmentClick(seg)}
                     className={`flex gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${
                       isActive
-                        ? 'bg-[#7f19e6]/5 border border-[#7f19e6]/20 shadow-sm'
+                        ? 'bg-[#0066ff]/5 border border-[#0066ff]/20 shadow-sm'
                         : 'hover:bg-slate-50 border border-transparent'
                     }`}
                   >
                     <div className="flex-shrink-0 pt-1">
                       <span className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${
-                        isActive ? 'bg-[#7f19e6] text-white' : 'bg-slate-50 text-slate-400'
+                        isActive ? 'bg-[#0066ff] text-white' : 'bg-slate-50 text-slate-400'
                       }`}>
                         {formatTimestamp(seg.start)}
                       </span>
@@ -664,7 +664,7 @@ export default function TranscribePage() {
                         <span className={`inline-block text-[10px] font-black px-1.5 py-0.5 rounded-full mb-1 ${
                           seg.speaker === 'A' ? 'bg-blue-100 text-blue-600' :
                           seg.speaker === 'B' ? 'bg-emerald-100 text-emerald-600' :
-                          'bg-purple-100 text-purple-600'
+                          'bg-brand-50 text-brand-500'
                         }`}>
                           話者{seg.speaker}
                         </span>
@@ -679,7 +679,7 @@ export default function TranscribePage() {
                         {[0, 1, 2].map((j) => (
                           <motion.div
                             key={j}
-                            className="w-0.5 bg-[#7f19e6] rounded-full"
+                            className="w-0.5 bg-[#0066ff] rounded-full"
                             animate={{ height: [4, 14, 4] }}
                             transition={{ duration: 0.5, repeat: Infinity, delay: j * 0.15, ease: 'easeInOut' }}
                           />
@@ -731,7 +731,7 @@ export default function TranscribePage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleGoToGenerate}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-[#0066ff] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#0066ff]/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
                   AI記事を生成する
@@ -772,21 +772,21 @@ export default function TranscribePage() {
                   href={SUPPORT_CONTACT_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#0066ff] hover:bg-[#0047d6] transition-colors"
                 >
                   サポートに問い合わせる
                 </a>
               ) : limitReached && limitAction ? (
                 <a
                   href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
-                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#0066ff] hover:bg-[#0047d6] transition-colors"
                 >
                   {limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
                 </a>
               ) : (
                 <button
                   onClick={() => window.location.reload()}
-                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#0066ff] hover:bg-[#0047d6] transition-colors"
                 >
                   <span className="material-symbols-outlined text-[18px]">refresh</span>
                   もう一度試す

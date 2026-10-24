@@ -42,7 +42,8 @@ function InviteContent({ token }: { token: string }) {
           if (res.status === 410 || data.expired) {
             setStatus('expired')
           } else {
-            setError(typeof data.error === 'string' ? data.error : '招待の検証に失敗しました')
+            // ⚠️ 英語や内部の文はそのまま出さない（このファイルは検査で単体読み込みされるので、新しい import を足さない）
+            setError(typeof data.error === 'string' && /[\u3040-\u30ff\u3400-\u9fff]/.test(data.error) && !/[A-Za-z]{4,}/.test(data.error) ? data.error : '招待の検証に失敗しました。時間をおいて、もう一度お試しください。')
             setStatus('error')
           }
           return
@@ -128,7 +129,7 @@ function InviteContent({ token }: { token: string }) {
         if (!isCurrent()) return
         if (!res.ok) {
           if (res.status === 403 && data.code === 'INVITE_EMAIL_MISMATCH') setAccountAction('switch')
-          throw new NavigationSubmissionError(typeof data.error === 'string' ? data.error : '招待を受諾できませんでした。')
+          throw new NavigationSubmissionError(typeof data.error === 'string' && /[\u3040-\u30ff\u3400-\u9fff]/.test(data.error) && !/[A-Za-z]{4,}/.test(data.error) ? data.error : '招待を受諾できませんでした。時間をおいて、もう一度お試しください。')
         }
         if (data.success !== true || typeof data.organization?.id !== 'string' || !data.organization.id) throw new Error('Invalid participation response')
         setStatus('success')
@@ -279,7 +280,7 @@ function InviteContent({ token }: { token: string }) {
                   key={i}
                   className="absolute w-3 h-3 rounded-full"
                   style={{
-                    background: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][i % 6],
+                    background: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#3d80ff', '#EC4899'][i % 6],
                     left: `${20 + Math.random() * 60}%`,
                     top: '40%',
                   }}

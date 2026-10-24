@@ -81,7 +81,7 @@ export default function SettingsPage() {
       }
       setUsage(data)
     } catch (error) {
-      setUsageError(error instanceof Error ? error.message : '利用状況を取得できませんでした')
+      setUsageError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '利用状況を取得できませんでした')
     } finally {
       setUsageLoading(false)
     }
@@ -135,7 +135,7 @@ export default function SettingsPage() {
         toast.success('CSVをまとめたZIPを準備しました。保存先をご確認ください', { id: tid })
       } finally { clearTimeout(timeout) }
     } catch (e: any) {
-      toast.error(typeof genericError === 'string' ? genericError : e?.message || 'エクスポートに失敗しました', { id: tid })
+      toast.error(typeof genericError === 'string' ? genericError : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '書き出せませんでした。少し待って、もう一度お試しください。', { id: tid })
     } finally {
       exportingRef.current = false
       setExporting(false)
@@ -235,7 +235,7 @@ export default function SettingsPage() {
             <div className="text-center pb-5 border-b border-slate-100">
               <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-2 ${
                 tier === 'PRO' || tier === 'LIGHT' ? 'bg-cyan-100 text-cyan-700'
-                : tier === 'ENTERPRISE' ? 'bg-violet-100 text-violet-700'
+                : tier === 'ENTERPRISE' ? 'bg-brand-50 text-brand-600'
                 : 'bg-slate-100 text-slate-600'
               }`}>
                 現在のプラン
@@ -336,7 +336,7 @@ export default function SettingsPage() {
         </div>
 
         {/* ===== Support Section（強調版） ===== */}
-        <div className="mt-8 p-6 bg-gradient-to-br from-cyan-50 via-white to-violet-50 rounded-3xl border-2 border-cyan-200 shadow-lg">
+        <div className="mt-8 p-6 bg-gradient-to-br from-cyan-50 via-white to-brand-50 rounded-3xl border-2 border-cyan-200 shadow-lg">
           <div className="flex items-center gap-4 flex-wrap">
             <img src={CHARS.point} alt="" className="w-16 h-16 flex-shrink-0" />
             <div className="flex-1 min-w-0 basis-48">
@@ -422,7 +422,7 @@ function UsageBar({ label, used, max, color }: { label: string; used: number; ma
   const warningLevel = pct >= 95 ? 'danger' : pct >= 80 ? 'warn' : 'normal'
   const colorMap = {
     cyan: { bar: 'bg-gradient-to-r from-cyan-400 to-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-700' },
-    violet: { bar: 'bg-gradient-to-r from-violet-400 to-violet-500', bg: 'bg-violet-50', text: 'text-violet-700' },
+    violet: { bar: 'bg-gradient-to-r from-brand-300 to-brand-400', bg: 'bg-brand-50', text: 'text-brand-600' },
   }
   const c = colorMap[color]
   const barColor = warningLevel === 'danger' ? 'bg-gradient-to-r from-rose-400 to-rose-500'

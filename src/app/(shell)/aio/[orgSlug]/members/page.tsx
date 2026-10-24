@@ -34,14 +34,14 @@ export default function AioMembersPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="メールアドレス"
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm focus:border-purple-400 outline-none"
+              className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm focus:border-brand-300 outline-none"
             />
             <select aria-label="招待する方の権限" disabled={disabled} value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm">
               <option value="member">メンバー</option>
               <option value="manager">マネージャー</option>
               {myRole === 'owner' && <option value="admin">管理者</option>}
             </select>
-            <button onClick={invite} disabled={disabled || !email.trim()} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-md disabled:opacity-50">
+            <button onClick={invite} disabled={disabled || !email.trim()} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm shadow-md disabled:opacity-50">
               {busy === 'invite' ? '送信中…' : '招待を送る'}
             </button>
           </div>
@@ -59,7 +59,7 @@ export default function AioMembersPage() {
         ) : (
           (members || []).map((m) => (
             <div key={m.id} className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 last:border-0">
-              <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-black">
+              <div className="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-black">
                 {(m.name || m.inviteEmail || '?').slice(0, 1).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -68,7 +68,7 @@ export default function AioMembersPage() {
               </div>
               {m.status === 'PENDING' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">招待中</span>}
               {m.status === 'INACTIVE' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">無効</span>}
-              {m.role === 'owner' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">オーナー</span>}
+              {m.role === 'owner' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-brand-50 text-brand-600">オーナー</span>}
               {canRemove(m.id) && (
                 <button disabled={disabled} onClick={() => remove(m.id)} className="text-slate-300 hover:text-rose-500 transition-colors" title="削除">{sym('delete', 18)}</button>
               )}

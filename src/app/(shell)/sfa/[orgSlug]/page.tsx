@@ -12,7 +12,7 @@ import { jstDateKey } from '@/lib/sfa/task-date'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Button, Card, EmptyState, ErrorNotice, FirstSteps, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
-import { CheckCircle2, Circle, Kanban, Building2, Users, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Circle, Kanban, Building2, Users, ChevronRight, TrendingUp } from 'lucide-react'
 
 type Task = SfaClientTask
 
@@ -141,7 +141,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   // 新しい見た目（UI 品質 §5.1）: ToolHero・StatTile・空状態・lucide のアイコン。ページの見出しは h2（h1 は枠の ToolFrame）
   const quick = [
     { href: `${base}/deals`, icon: Kanban, title: '商談パイプライン', sub: 'カンバンで案件を管理' },
-    { href: `${base}/accounts`, icon: Building2, title: '取引先を登録', sub: '会社を一元管理・CSV出力' },
+    { href: `${base}/accounts`, icon: Building2, title: '取引先を登録', sub: '会社を一元管理・CSVで書き出し' },
     { href: `${base}/members`, icon: Users, title: 'メンバー招待・権限', sub: 'チームで営業管理' },
   ]
   return (

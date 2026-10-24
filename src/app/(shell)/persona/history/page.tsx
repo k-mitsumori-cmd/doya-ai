@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/EmptyState'
 import light from '@/components/persona/history-next.module.css'
 import PersonaServerHistory from '@/components/persona/PersonaServerHistory'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface HistoryItem {
   id?: string
@@ -66,7 +67,7 @@ function AccountHistory({ userId }: { userId: string }) {
       deletePersonaRecord(accountStorage, history[index])
       setError('')
       refreshHistory()
-    } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
+    } catch { setError('履歴を削除できませんでした。ブラウザの保存の設定を確かめてください。') }
   }
 
   const loadItem = (item: HistoryItem) => {
@@ -92,13 +93,13 @@ function AccountHistory({ userId }: { userId: string }) {
     })
   }
 
-  const clearAll = () => {
-    if (confirm('このブラウザの履歴をすべて削除しますか？ アカウントの保存済み履歴は削除されません。')) {
+  const clearAll = async () => {
+    if (await confirmDialog({ title: 'このブラウザの履歴をすべて削除しますか？', message: 'アカウントに保存した履歴は消えません。', confirmLabel: 'すべて削除する', tone: 'danger' })) {
       try {
         clearPersonaRecords(accountStorage)
         setHistory([])
         setError('')
-      } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
+      } catch { setError('履歴を削除できませんでした。ブラウザの保存の設定を確かめてください。') }
     }
   }
 
@@ -110,7 +111,7 @@ function AccountHistory({ userId }: { userId: string }) {
         <div className="flex justify-between mb-6 flex-wrap items-start gap-3">
           <div className="min-w-0">
             <h2 className="text-xl font-black text-white flex items-center gap-3">
-              <Clock className="w-7 h-7 text-purple-400" />
+              <Clock className="w-7 h-7 text-brand-300" />
               このブラウザの履歴
             </h2>
             <p className="text-slate-400 text-sm mt-1">直近のコピーを最大20件保存しています。ここでコピーを削除しても、アカウントの保存済み履歴は削除されません。</p>
@@ -152,7 +153,7 @@ function AccountHistory({ userId }: { userId: string }) {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* Portrait */}
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-brand-400/20 to-brand-600/20 border-2 border-brand-400/30 overflow-hidden flex-shrink-0">
                       {item.portrait ? (
                         <img src={item.portrait} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -183,7 +184,7 @@ function AccountHistory({ userId }: { userId: string }) {
                       <Link
                         href={savedPersonaPath(item) || '/persona'}
                         onClick={(event) => { if (!loadItem(item)) event.preventDefault() }}
-                        className="p-2 text-purple-400 hover:bg-purple-900/30 rounded-lg transition-colors"
+                        className="p-2 text-brand-300 hover:bg-brand-800/30 rounded-lg transition-colors"
                         title="読み込む"
                       >
                         <ExternalLink className="w-5 h-5" />

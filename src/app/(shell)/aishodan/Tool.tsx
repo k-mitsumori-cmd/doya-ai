@@ -19,6 +19,7 @@ import { Button, EmptyState, FirstSteps, Skeleton, StatTile, ToolHero } from '@/
 import { Stagger, StaggerItem } from '@/components/ds/motion'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, fetchAishodanJson, type AishodanFailure } from '@/components/aishodan/failure'
 import { ShellCostBadge } from '@/components/shell/power'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface Product {
   id: string
@@ -255,7 +256,7 @@ export default function AishodanTool() {
       setUrl('')
       await load()
     } catch (e) {
-      const message = e instanceof Error ? e.message : '取り込みに失敗しました'
+      const message = e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '取り込みに失敗しました'
       // 新しい見た目では、サーバーの文ではなく「何が起きたか・どうすればよいか」を出す（上限なら料金プランへ）
       const failure = describeAishodanFailure(failureStatus(e), '商材を取り込めませんでした。', { serverMessage: e instanceof AishodanHttpError ? message : undefined, limit: !!upgradeUrl })
       setImportIssue({ message, upgradeUrl, failure })
@@ -287,15 +288,11 @@ export default function AishodanTool() {
   /** 商談記録がある商材は保管し、記録を残して利用枠を空ける。 */
   async function deleteProduct(prod: Product) {
     const warn = [
-      `「${prod.name}」の利用を終了します。`,
-      '',
-      '商談記録がある場合は商材と記録を保管し、無料枠を空けます。配布済みの商談URLは利用できなくなります。',
-      '商談記録がない場合は商材・ナレッジ・シナリオを削除します。元に戻せません。',
+      '商談の記録がある場合: 商材と記録を保管して、無料枠を空けます。配った商談URLは開けなくなります。',
+      '商談の記録がない場合: 商材・ナレッジ・シナリオを削除します。元に戻せません。',
       `ナレッジ ${prod._count.chunks}件 / 取り込んだ ${prod._count.sources}ページ`,
-    ]
-      .filter(Boolean)
-      .join('\n')
-    if (!window.confirm(warn)) return
+    ].join('\n')
+    if (!(await confirmDialog({ title: `「${prod.name}」の利用を終えますか？`, message: warn, confirmLabel: '利用を終える', tone: 'danger' }))) return
 
     setDeletingId(prod.id)
     setError('')
@@ -325,18 +322,12 @@ export default function AishodanTool() {
       return
     }
     const warn = [
-      `商談URL「${room.name}」を削除します。`,
       // ⚠️ 名前は同じものが並ぶ。URLと発行日まで出さないと取り違える
       roomUrl(room.token),
       `（${new Date(room.createdAt).toLocaleString('ja-JP')} 発行）`,
-      '',
-      '・配布済みのURLは開けなくなります',
-      '',
-      '元に戻せません。',
-    ]
-      .filter(Boolean)
-      .join('\n')
-    if (!window.confirm(warn)) return
+      '配ったURLは開けなくなります。元に戻せません。',
+    ].join('\n')
+    if (!(await confirmDialog({ title: `商談URL「${room.name}」を削除しますか？`, message: warn, confirmLabel: '削除する', tone: 'danger' }))) return
 
     setDeletingId(room.id)
     setError('')
@@ -458,7 +449,7 @@ export default function AishodanTool() {
         operationKey="aishodan-import"
         title="商材を読み取っています"
         subtitle="サービスページから商材ナレッジと商談シナリオを組み立てています。"
-        tips={['Tip: 資料を足すほど、答えられる質問の範囲が広がります', 'Tip: 根拠が無い質問には推測で答えず記録に残します', 'Tip: シナリオは生成後に編集できます']}
+        tips={['資料を足すほど、答えられる質問の範囲が広がります', '根拠が無い質問には推測で答えず記録に残します', 'シナリオは生成後に編集できます']}
       />
       {/* 新しい見た目では、ページの見出しの帯の代わりに ToolHero（組織の切り替えは枠の ToolFrame にある） */}
       <div className="mx-auto grid max-w-5xl gap-4 px-4 pt-4 sm:pt-6">
@@ -569,7 +560,7 @@ export default function AishodanTool() {
                       disabled={deletingId === p.id}
                       className={`rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap${tap}`}
                     >
-                      {deletingId === p.id ? '処理中…' : '削除・保管'}
+                      {deletingId === p.id ? '処理中…' : '利用を終える'}
                     </button>
                     )}
                   </div>

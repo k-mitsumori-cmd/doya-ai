@@ -149,6 +149,12 @@ async function readAndOptimizeImage(file: File, kind: 'logo' | 'person'): Promis
 
 class BannerApiError extends Error {}
 
+/** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
+}
+
 export default function BannerChatPage() {
   const { data: session } = useSession()
   const actor = String(session?.user?.id || '')
@@ -354,7 +360,7 @@ function BannerChatWorkspace() {
           quota.reportLimit(data)
           return
         }
-        throw new BannerApiError(typeof data?.error === 'string' ? data.error : normalizeNonJsonApiError(parsed.status, parsed.text))
+        throw new BannerApiError(jaMessage(data?.error, normalizeNonJsonApiError(parsed.status, parsed.text)))
       }
       const nextBanners = Array.isArray(data.banners) ? data.banners.filter((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')) : []
       if (!nextBanners.length) throw new BannerApiError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
@@ -473,7 +479,7 @@ function BannerChatWorkspace() {
       a.click()
       a.remove()
     } catch {
-      toast.error('ダウンロードに失敗しました')
+      toast.error('ダウンロードできませんでした。もう一度お試しください。')
     }
   }
 
@@ -555,7 +561,7 @@ function BannerChatWorkspace() {
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   <p className="text-xs sm:text-sm font-bold text-slate-800">AIアドバイザー</p>
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">ライブ</span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar bg-white">
@@ -734,7 +740,7 @@ function BannerChatWorkspace() {
                                 {logoImage ? (
                                   <img src={logoImage} alt="logo" className="h-full w-full object-contain" />
                                 ) : (
-                                  <span className="text-[10px] font-black text-slate-400">LOGO</span>
+                                  <span className="text-[10px] font-black text-slate-400">ロゴ</span>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -757,7 +763,7 @@ function BannerChatWorkspace() {
                                         toast.success('ロゴを設定しました')
                                       } catch (err: any) {
                                         if (!operations.active() || logoRevision.current !== revision) return
-                                        toast.error(err?.message || 'ロゴの設定に失敗しました')
+                                        toast.error(jaMessage(err?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'))
                                       }
                                     }}
                                   />
@@ -790,7 +796,7 @@ function BannerChatWorkspace() {
                                 {personImages[0] ? (
                                   <img src={personImages[0]} alt="person" className="h-full w-full object-cover" />
                                 ) : (
-                                  <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                                  <span className="text-[10px] font-black text-slate-400">人物</span>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -815,7 +821,7 @@ function BannerChatWorkspace() {
                                         toast.success('人物写真を設定しました')
                                       } catch (err: any) {
                                         if (!operations.active() || personRevision.current !== revision) return
-                                        toast.error(err?.message || '人物写真の追加に失敗しました')
+                                        toast.error(jaMessage(err?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'))
                                       }
                                     }}
                                   />

@@ -3,7 +3,7 @@ import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤペルソナAI LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
-export const ACCENT = '#7c3aed' // バイオレット（発想・分析）
+export const ACCENT = '#0066ff' // バイオレット（発想・分析）
 export const CTA = '/auth/signin?callbackUrl=/persona'
 
 export const STEPS: Step[] = [

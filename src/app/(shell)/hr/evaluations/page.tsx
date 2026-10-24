@@ -13,6 +13,7 @@ import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import { loadHrEvaluationPeriodList, HrEvaluationPeriodListReadError, type HrEvaluationPeriodListRow } from '@/lib/hr/evaluation-period-list-client'
 import { useHrPeriodCreation, findHrPeriodCreationOrganization } from '@/lib/hr/use-evaluation-period-creation'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 export default function EvaluationsPage() {
   return <HrAuthenticatedScope callbackUrl="/hr/evaluations" resourceLabel="評価期間">{actor => <ScopedEvaluationsPage actor={actor} />}</HrAuthenticatedScope>
@@ -26,7 +27,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState<unknown>(null), [loginRequired, setLoginRequired] = useState(false)
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
   const errorStatus = loadError instanceof HrEvaluationPeriodListReadError ? loadError.status : undefined
-  const loadErrorText = loadError ? (loadError instanceof Error ? loadError.message : '評価期間を取得できませんでした。') : ''
+  const loadErrorText = loadError ? hrUserMessage(loadError, '評価期間を読み込めませんでした。時間をおいて再読み込みしてください。') : ''
   const reduceMotion = useReducedMotion()
   const still = Boolean(reduceMotion)
   const dialogRef = useRef<HTMLDivElement>(null)

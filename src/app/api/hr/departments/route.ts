@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const expectedOrganization = req?.headers?.get('x-hr-organization-id')
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     }, { status: e.status })
     console.error('[hr/departments] unexpected error')
     return privateApiJson(
-      { error: 'Failed to fetch departments' },
+      { error: '部署の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -74,12 +74,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(ctx.role, 'ADMIN')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     const { name, code, parentId, managerId, sortOrder } = body
 
     if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 })
+      return NextResponse.json({ error: '部署名が空です。部署名を入力して、もう一度お試しください。' }, { status: 400 })
     }
 
     const result = await runHrDepartmentMutation(ctx, async tx => {
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
           where: { id: parentId, organizationId: ctx.organizationId },
         })
         if (!parent) {
-          return NextResponse.json({ error: 'Parent department not found' }, { status: 400 })
+          return NextResponse.json({ error: '親の部署が見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
         }
       }
 
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
           where: { organizationId: ctx.organizationId, code },
         })
         if (existing) {
-          return NextResponse.json({ error: 'Department code already exists' }, { status: 400 })
+          return NextResponse.json({ error: 'この部署コードはすでに使われています。別のコードを入力してください。' }, { status: 400 })
         }
       }
 
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     if (e?.code === 'P2002') return NextResponse.json({ error: '部署コードはすでに使用されています。別のコードを指定してください。' }, { status: 400 })
     console.error('[hr/departments] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to create department' },
+      { error: '部署を作成できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

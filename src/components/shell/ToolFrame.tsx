@@ -18,8 +18,12 @@ import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
   serviceId: string
-  /** 見出し。省略時はツール名 */
+  /**
+   * 見出し。省略時はツール名（services.ts の name）。
+   * ⚠️ ツール名を上書きしない。メニュー・パンくず・見出しの名前を1つにするため（UX 点検 TRM-01）
+   */
   title?: ReactNode
+  /** 何ができるかの一文。省略時は tools.ts の lead */
   description?: ReactNode
   /** 主ボタン（1 画面 1 つ） */
   action?: ReactNode
@@ -33,6 +37,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   const pathname = usePathname() || '/'
   const tool = findShellTool(serviceId)
   const name = tool?.name ?? serviceId
+  const lead = description ?? tool?.lead
 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
   // （統括の確認 2026-10-19）
@@ -78,7 +83,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>
             <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
-            {description ? <p className={styles.description}>{description}</p> : null}
+            {lead ? <p className={styles.description}>{lead}</p> : null}
           </div>
           {action || (usage) ? (
             <div className={styles.action}>

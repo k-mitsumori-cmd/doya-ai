@@ -99,7 +99,7 @@ function routeFiles(dir) {
     assert.ok(!tools.ALL_SHELL_TOOLS.some((t) => t.id === 'cunning'))
     assert.ok(!tools.SHELL_GROUPS.flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
     // 許可した人が開いたときのパンくずの名前だけは引ける
-    assert.equal(tools.findShellTool('cunning').name, 'カンニング')
+    assert.equal(tools.findShellTool('cunning').name, 'ドヤカンニング')
     assert.equal(tools.findShellTool('banner').id, 'banner')
     assert.equal(tools.findShellTool('no-such-tool'), undefined)
     // ⌘K・最近使ったツール・スマホの下のタブは ALL_SHELL_TOOLS / SHELL_GROUPS から引く（ほかの一覧を持たない）

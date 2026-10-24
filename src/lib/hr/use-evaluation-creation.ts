@@ -1,5 +1,6 @@
 'use client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import { hrUserMessage } from '@/lib/hr/user-message'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 type EvaluationSnapshot = { id: string; periodId: string; employeeId: string; evaluatorId: string | null; status: string; updatedAt: string }
 function parseCreatedEvaluation(value: Record<string, unknown>, input: EvaluationCreationInput): EvaluationSnapshot {
@@ -166,7 +167,7 @@ export function useHrEvaluationCreation(status: string, actor: string, organizat
     if (!active(operation) || !sameIntent(intent)) { sync(); return null }
     if (response.status !== 200) {
       message(response.status === 401 ? 'ログインの有効期限を確認してください。作成結果は再ログイン後に確認できます。' :
-        response.status === 403 ? '操作時の組織または権限を確認できません。操作記録は保持しています。組織と権限を確認してから作成結果を再確認してください。' : response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? response.data.error : '評価の作成結果を確認してください。作成処理は自動で再実行されません。', response.status === 401, response.status === 403)
+        response.status === 403 ? '操作時の組織または権限を確認できません。操作記録は保持しています。組織と権限を確認してから作成結果を再確認してください。' : response.status === 400 && object(response.data) && typeof response.data.error === 'string' ? hrUserMessage(response.data.error, '評価の作成結果を確認してください。作成処理は自動で再実行されません。') : '評価の作成結果を確認してください。作成処理は自動で再実行されません。', response.status === 401, response.status === 403)
       return null
     }
     const result = parseResult(response.data, intent)

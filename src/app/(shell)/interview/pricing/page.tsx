@@ -33,13 +33,13 @@ export default function InterviewPricingPage() {
   ];
 
   return (
-    <main data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
+    <main data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-50">
       <div className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
         {/* ヒーロー */}
         <section className="text-center">
           <span
             className="inline-block rounded-full px-4 py-1 text-sm font-semibold"
-            style={{ backgroundColor: 'rgba(127, 25, 230, 0.1)', color: '#7f19e6' }}
+            style={{ backgroundColor: 'rgba(0, 102, 255, 0.1)', color: '#0066ff' }}
           >
             ドヤインタビュー
           </span>
@@ -69,7 +69,7 @@ export default function InterviewPricingPage() {
                 <h3 className="flex items-start gap-2 text-base font-bold text-slate-900">
                   <span
                     className="material-symbols-outlined text-xl"
-                    style={{ color: '#7f19e6' }}
+                    style={{ color: '#0066ff' }}
                     aria-hidden
                   >
                     help

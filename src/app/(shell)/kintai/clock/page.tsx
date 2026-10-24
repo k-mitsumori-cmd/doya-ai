@@ -7,6 +7,9 @@ import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { Skeleton } from '@/components/ds'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 type ClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
 
@@ -43,6 +46,8 @@ export default function ClockPage() {
   const [records, setRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  // 打刻のあとの読み直しでは画面を骨組みに戻さない（成功の表示を消さない）。最初の読み込みのときだけ骨組みを出す
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [acting, setActing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -72,6 +77,7 @@ export default function ClockPage() {
       setLoadError(true)
     } finally {
       setLoading(false)
+      setHasLoaded(true)
     }
   }, [])
 
@@ -98,9 +104,9 @@ export default function ClockPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setMessage({ type: 'error', text: data.error || '打刻に失敗しました' })
+        setMessage({ type: 'error', text: userErrorMessage(data?.error, '打刻できませんでした。状態を確かめて、もう一度お試しください。') })
         return
       }
       setMessage({ type: 'success', text: `${CLOCK_TYPE_LABELS[type] || type}しました` })
@@ -108,7 +114,7 @@ export default function ClockPage() {
       setTimeout(() => setShowSuccess(false), 3000)
       await fetchRecords()
     } catch {
-      setMessage({ type: 'error', text: '通信エラーが発生しました' })
+      setMessage({ type: 'error', text: KINTAI_NETWORK_ERROR })
     } finally {
       setActing(false)
     }
@@ -125,6 +131,7 @@ export default function ClockPage() {
   const handleClockOutCancel = () => {
     setConfirmClockOut(false)
   }
+  useEscapeToClose(confirmClockOut, handleClockOutCancel, acting)
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()
@@ -186,7 +193,7 @@ export default function ClockPage() {
       statusSub: 'ゆっくり休んでリフレッシュ！',
     },
     clocked_out: {
-      bg: 'background: linear-gradient(180deg, #ede9fe 0%, #e0e7ff 40%, #ffffff 100%)',
+      bg: 'background: linear-gradient(180deg, #eaf2ff 0%, #e0e7ff 40%, #ffffff 100%)',
       character: CHARS.success,
       characterAlt: 'トロフィーを持つクマ',
       characterAnim: 'bear-celebrate',
@@ -202,22 +209,17 @@ export default function ClockPage() {
       <PageTitle className="text-xl font-bold text-slate-800">打刻は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の勤怠や申請は引き続き確認できます。</p>
       <div className="flex justify-center gap-3">
-        <Link href="/kintai/attendance" className="rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
+        <Link href="/kintai/attendance" className="rounded-xl bg-[#0066ff] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
         <Link href="/kintai/requests" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">申請履歴を見る</Link>
       </div>
     </div>
   }
 
-  if (loading) {
+  if (loading && !hasLoaded) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <img
-          src={CHARS.thinking}
-          alt="読み込み中"
-          className="bear-loading"
-          style={{ width: 120, height: 120, objectFit: 'contain' }}
-        />
-        <p className="text-slate-500 font-bold text-sm">読み込み中...</p>
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-4" aria-busy="true" aria-label="打刻の状態を読み込み中">
+        <Skeleton lines={2} height={40} />
+        <Skeleton lines={3} height={64} />
       </div>
     )
   }
@@ -226,7 +228,7 @@ export default function ClockPage() {
     return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻状態を確認できませんでした</p>
       <p className="text-sm text-slate-600">打刻を再送せず、現在の状態を読み直してください。</p>
-      <button type="button" onClick={fetchRecords} className="rounded-xl bg-purple-600 px-5 py-3 font-bold text-white hover:bg-purple-700">状態を再確認</button>
+      <button type="button" onClick={fetchRecords} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600">状態を再確認</button>
     </div>
   }
 
@@ -242,7 +244,7 @@ export default function ClockPage() {
               <div className="success-overlay-inner flex items-center justify-center" style={{ width: 200, height: 200 }}>
                 <img
                   src={CHARS.jump}
-                  alt="大喜びのクマ"
+                  alt=""
                   className="bear-jump-in"
                   style={{ width: 160, height: 160, objectFit: 'contain' }}
                 />
@@ -281,7 +283,7 @@ export default function ClockPage() {
           {/* Floating confetti for clocked_out */}
           {status === 'clocked_out' && (
             <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-              <div className="float-confetti-0 absolute top-[10%] left-[15%] w-2 h-2 rounded-sm bg-[#7f19e6]/30" />
+              <div className="float-confetti-0 absolute top-[10%] left-[15%] w-2 h-2 rounded-sm bg-[#0066ff]/30" />
               <div className="float-confetti-1 absolute top-[20%] right-[20%] w-2 h-3 rounded-sm bg-amber-400/30" />
               <div className="float-confetti-2 absolute top-[15%] left-[60%] w-3 h-2 rounded-sm bg-emerald-400/30" />
               <div className="float-confetti-0 absolute top-[8%] right-[35%] w-2 h-2 rounded-full bg-rose-400/25" />
@@ -322,7 +324,7 @@ export default function ClockPage() {
           status === 'not_clocked_in' ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/60' :
           status === 'working' ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200/60' :
           status === 'on_break' ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200/60' :
-          'bg-gradient-to-br from-violet-50 to-indigo-50 border-violet-200/60'
+          'bg-gradient-to-br from-brand-50 to-indigo-50 border-brand-100/60'
         }`}>
           <img
             src={statusConfig.character}
@@ -334,7 +336,7 @@ export default function ClockPage() {
               status === 'not_clocked_in' ? 'text-amber-600' :
               status === 'working' ? 'text-emerald-600' :
               status === 'on_break' ? 'text-amber-600' :
-              'text-violet-600'
+              'text-brand-500'
             }`}>
               {statusConfig.statusText}
             </p>
@@ -420,16 +422,16 @@ export default function ClockPage() {
                 className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 clock-fade-in"
                 onClick={handleClockOutCancel}
               />
-              <div className="fixed inset-x-4 bottom-8 z-50 max-w-lg mx-auto clock-slide-up">
+              <div role="dialog" aria-modal="true" aria-labelledby="kintai-clockout-title" className="fixed inset-x-4 bottom-8 z-50 max-w-lg mx-auto clock-slide-up">
                 <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-5">
                   <div className="text-center">
                     {/* Surprise bear */}
                     <img
                       src={CHARS.surprise}
-                      alt="驚きのクマ"
+                      alt=""
                       style={{ width: 100, height: 100, objectFit: 'contain', margin: '0 auto 8px' }}
                     />
-                    <p className="text-xl font-black text-slate-800">本当に退勤しますか？</p>
+                    <h2 id="kintai-clockout-title" className="text-xl font-black text-slate-800">本当に退勤しますか？</h2>
                     <p className="text-sm text-slate-500 mt-2">
                       本日の勤務時間: <span className="font-bold text-slate-700">{formatMinutesJa(workMinutes)}</span>
                     </p>
@@ -473,11 +475,11 @@ export default function ClockPage() {
 
           {status === 'clocked_out' && (
             <div className="w-full space-y-3">
-              <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200/60 p-5 flex items-center gap-4">
+              <div className="rounded-3xl bg-gradient-to-br from-brand-50 to-indigo-50 border-2 border-brand-100/60 p-5 flex items-center gap-4">
                 <img src={CHARS.success} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
                 <div className="flex-1 text-left">
-                  <p className="text-lg font-black text-violet-700 leading-tight">お疲れさまでした！</p>
-                  <p className="text-sm font-medium text-violet-500/80 mt-0.5">ゆっくり休んでくださいね</p>
+                  <p className="text-lg font-black text-brand-600 leading-tight">お疲れさまでした！</p>
+                  <p className="text-sm font-medium text-brand-400/80 mt-0.5">ゆっくり休んでくださいね</p>
                 </div>
               </div>
               <button
@@ -526,7 +528,7 @@ export default function ClockPage() {
         {records.length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white shadow-lg shadow-slate-200/30 p-5">
             <h2 className="text-sm font-bold text-slate-600 mb-5 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#7f19e6] text-lg">timeline</span>
+              <span className="material-symbols-outlined text-[#0066ff] text-lg">timeline</span>
               今日のタイムライン
             </h2>
             <div className="relative pl-4">

@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const members = await prisma.hrOrganizationMember.findMany({
@@ -35,7 +35,7 @@ export async function GET() {
   } catch (e: any) {
     console.error('[hr/organization/members] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch members' },
+      { error: 'メンバーの一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

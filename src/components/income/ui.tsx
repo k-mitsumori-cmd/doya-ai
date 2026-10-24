@@ -1,13 +1,14 @@
 'use client'
 
 // ドヤ収入管理 画面の共通部品（見た目の土台は ds.tsx / ds.module.css）
-// 注意: lib/income のうちクライアントで使ってよいのは dates / schedule / tax だけ（他はサーバー専用の import を含む）
+// 注意: lib/income のうちクライアントで使ってよいのは dates / schedule / tax / roles だけ（他はサーバー専用の import を含む）
 import {
   Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode,
 } from 'react'
 import { AlertCircle, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { MONTH_END, describePaymentTerms, weekdayJa } from '@/lib/income/dates'
 import { TAX_RATES, computeInvoiceTotals } from '@/lib/income/tax'
+import { hasMinRole, type IncomeRole } from '@/lib/income/roles'
 import { Button, EmptyState, FORBIDDEN_MESSAGE, s } from './ds'
 
 export {
@@ -115,6 +116,27 @@ export async function fetchJson<T = any>(url: string, init: { method?: string; b
 
 export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : '通信に失敗しました'
+}
+
+// ---------- 権限（ボタンの出し分け） ----------
+
+/**
+ * 画面でボタンを出し分けるための役割。役割は既存の GET /api/income/organization の role を使い、
+ * 判定は API と同じ hasMinRole（lib/income/roles）を使う。表示だけの判定で、操作の可否は API が決める。
+ * - pending: 読み込み中（ボタンは出すが押せない）
+ * - allows(min): 役割が min 以上なら true。役割を読めなかったときは true（押せば API が判定する）
+ */
+export function useIncomePermission() {
+  const [state, setState] = useState<{ pending: boolean; role: IncomeRole | null }>({ pending: true, role: null })
+  useEffect(() => {
+    let alive = true
+    fetchJson<{ role?: string }>('/api/income/organization')
+      .then((d) => { if (alive) setState({ pending: false, role: typeof d?.role === 'string' && hasMinRole(d.role, 'member') ? (d.role as IncomeRole) : null }) })
+      .catch(() => { if (alive) setState({ pending: false, role: null }) })
+    return () => { alive = false }
+  }, [])
+  const allows = useCallback((min: IncomeRole) => state.role === null || hasMinRole(state.role, min), [state.role])
+  return { pending: state.pending, role: state.role, allows }
 }
 
 // ---------- 読み込みの 4 状態（読込・エラー・権限なし・未ログイン） ----------

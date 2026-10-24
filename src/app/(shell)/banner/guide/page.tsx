@@ -34,7 +34,7 @@ export default function BannerGuidePage() {
           ← ドヤバナーAIに戻る
         </Link>
         <div className="mt-10">
-          <p className="text-sm font-bold tracking-widest text-blue-700">DOYA BANNER</p>
+          <p className="text-sm font-bold tracking-widest text-blue-700">ドヤバナーAI</p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">使い方ガイド</h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
             テンプレートを選んで画像を作り、完成した案を保存するまでの流れを案内します。

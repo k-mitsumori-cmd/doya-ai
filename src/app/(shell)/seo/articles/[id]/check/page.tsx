@@ -12,12 +12,15 @@ import {
   Copy,
   Shield,
   Loader2,
+  MapPin,
   ArrowRight,
   RefreshCcw,
   Check,
   X,
 } from 'lucide-react'
 import Link from 'next/link'
+import { Skeleton } from '@/components/ds'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 type CheckItem = {
   id: string
@@ -62,7 +65,7 @@ export default function SeoCheckPage() {
       const res = await fetch(`/api/seo/articles/${articleId}`, { cache: 'no-store' })
       const json = await res.json()
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `エラー: ${res.status}`)
+        throw new Error(seoUserMessage(json?.error, '記事を読み込めませんでした。もう一度お試しください。'))
       }
       setArticle(json.article)
       // 既存のチェック結果があれば復元
@@ -79,7 +82,7 @@ export default function SeoCheckPage() {
         }
       }
     } catch (e: any) {
-      setError(e?.message || '読み込みに失敗しました')
+      setError(seoUserMessage(e, '記事を読み込めませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setLoading(false)
     }
@@ -101,16 +104,16 @@ export default function SeoCheckPage() {
       })
       const json = await res.json().catch(async () => {
         const t = await res.text().catch(() => '')
-        throw new Error(t ? `APIの応答が不正です: ${t.slice(0, 200)}` : 'APIの応答が不正です')
+        throw new Error('チェックの結果を受け取れませんでした。もう一度お試しください。')
       })
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'チェックに失敗しました')
+        throw new Error(seoUserMessage(json?.error, 'チェックできませんでした。少し待って、もう一度お試しください。'))
       }
       if (Array.isArray(json.items)) {
         setChecks(json.items)
       }
     } catch (e: any) {
-      setError(e?.message || 'チェックに失敗しました')
+      setError(seoUserMessage(e, 'チェックできませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setChecking(false)
     }
@@ -135,20 +138,19 @@ export default function SeoCheckPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <p className="text-gray-400 font-bold text-sm">読み込み中...</p>
-        </div>
-      </main>
+      // 画面全体を覆わず、本文の場所だけを骨組みにする（UX 点検 FIX-PLAN 13）
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-6" aria-busy="true" aria-label="記事を読み込んでいます">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={2} height={18} delayMs={0} /></div>
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={6} delayMs={0} /></div>
+      </div>
     )
   }
 
   if (!article) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <main className="flex justify-center px-4 py-16">
         <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-xl p-8 text-center">
-          <p className="text-red-600 font-bold mb-4">{error || '記事が見つかりません'}</p>
+          <p role="alert" className="text-red-600 font-bold mb-4">{error || '記事が見つかりません。一覧から開き直してください。'}</p>
           <Link href="/seo">
             <button className="px-6 py-3 rounded-xl bg-gray-900 text-white font-bold">
               一覧へ戻る
@@ -356,8 +358,9 @@ export default function SeoCheckPage() {
                       <h4 className="text-sm font-black text-gray-900">{item.title}</h4>
                       <p className="text-xs text-gray-500 font-bold mt-1">{item.description}</p>
                       {item.location && (
-                        <p className="text-[10px] text-gray-400 font-bold mt-2 truncate">
-                          📍 {item.location}
+                        <p className="mt-2 flex items-center gap-1 truncate text-[10px] font-bold text-gray-400">
+                          <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden />
+                          <span className="truncate">{item.location}</span>
                         </p>
                       )}
                     </div>

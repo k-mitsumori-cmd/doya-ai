@@ -40,15 +40,15 @@ export default function AioScanPage() {
           />
         </div>
 
-      <div className="bg-white rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-100 p-5">
-        <label htmlFor="aio-scan-service-url" className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-purple-600">*</span></label>
+      <div className="bg-white rounded-2xl shadow-xl shadow-brand-400/10 border border-brand-50 p-5">
+        <label htmlFor="aio-scan-service-url" className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-brand-500">*</span></label>
         <div className="flex flex-col sm:flex-row gap-2">
           <input id="aio-scan-service-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="例: https://doya-ai.surisuta.jp"
             inputMode="url" autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void start() } }}
-            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-3 font-bold transition-colors" />
+            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-brand-500 outline-none px-4 py-3 font-bold transition-colors" />
           <button onClick={start} disabled={flow.disabled}
-            className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.97]">
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.97]">
             {sym(busy ? 'hourglass_top' : 'rocket_launch')}{busy ? '準備中…' : '調査を開始'}
           </button>
         </div>
@@ -56,21 +56,21 @@ export default function AioScanPage() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <span className="text-xs font-bold text-slate-400">例:</span>
           {EXAMPLES.map((ex) => (
-            <button key={ex} onClick={() => setUrl(ex)} className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-full px-3 py-1.5 transition-colors">{ex}</button>
+            <button key={ex} onClick={() => setUrl(ex)} className="text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-50 rounded-full px-3 py-1.5 transition-colors">{ex}</button>
           ))}
         </div>
       </div>
 
       <div className="text-center mt-4">
-        <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="inline-flex items-center gap-1 text-sm font-bold text-purple-700 hover:underline">
+        <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="inline-flex items-center gap-1 text-sm font-bold text-brand-600 hover:underline">
           {sym('insights', 18)}これまでの分析・結果ダッシュボードを見る
         </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
         {[['visibility', '言及率'], ['leaderboard', 'SoV'], ['link', '引用元'], ['tips_and_updates', '改善案']].map(([icon, label]) => (
-          <div key={label} className="bg-white rounded-xl border border-purple-100 p-3 text-center">
-            <span className="material-symbols-outlined text-purple-600 text-2xl">{icon}</span>
+          <div key={label} className="bg-white rounded-xl border border-brand-50 p-3 text-center">
+            <span className="material-symbols-outlined text-brand-500 text-2xl">{icon}</span>
             <p className="text-xs font-black text-slate-600 mt-1">{label}</p>
           </div>
         ))}

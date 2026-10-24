@@ -46,7 +46,7 @@ const TEMPLATES = [
   { icon: 'wifi', name: '通信・回線', tone: '#0066ff' },
   { icon: 'shopping_bag', name: 'EC・通販', tone: '#ec4899' },
   { icon: 'badge', name: '採用・求人', tone: '#0891b2' },
-  { icon: 'spa', name: '美容・サロン', tone: '#7c3aed' },
+  { icon: 'spa', name: '美容・サロン', tone: '#0066ff' },
   { icon: 'restaurant', name: '飲食・グルメ', tone: '#f97316' },
   { icon: 'school', name: 'スクール・教育', tone: '#0284c7' },
 ]

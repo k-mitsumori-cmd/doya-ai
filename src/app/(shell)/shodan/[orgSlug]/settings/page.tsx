@@ -8,6 +8,7 @@ import { readOrgProfile } from '@/lib/org-profile-view'
 import { requestOrgJson, OrgResponseError, orgErrorMessage } from '@/lib/org-client-response'
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
+import { Skeleton } from '@/components/ds'
 
 type Profile = {
   companyName: string; url: string; description: string; valueProp: string
@@ -77,7 +78,7 @@ export default function ShodanSettingsPage() {
   const [extractLimitMessage, setExtractLimitMessage] = useState<string | null>(null)
   const [gaps, setGaps] = useState<Set<string>>(new Set())
   // ブランド（資料に反映）
-  const [brandColors, setBrandColors] = useState<string[]>(['#7f19e6', '#f59e0b'])
+  const [brandColors, setBrandColors] = useState<string[]>(['#0066ff', '#f59e0b'])
   const [logoPath, setLogoPath] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -114,11 +115,11 @@ export default function ShodanSettingsPage() {
         const { profile: p, version: stamp } = readOrgProfile('shodan', d)
         const fields = { ...EMPTY, ...Object.fromEntries(FIELDS.map(f => [f.key, p?.[f.key] ?? ''])) } as Profile
         setProfile(fields); setExtractUrl(fields.url)
-        setBrandColors(Array.isArray(p?.brandColors) && p.brandColors.length ? p.brandColors as string[] : ['#7f19e6', '#f59e0b'])
+        setBrandColors(Array.isArray(p?.brandColors) && p.brandColors.length ? p.brandColors as string[] : ['#0066ff', '#f59e0b'])
         setLogoPath((p?.logoPath as string) || null); setLogoUrl((p?.logoUrl as string) || null)
         version.current = stamp; ready.current = guard.identity
       })
-      .catch(e => { if (ticket.current()) { setLoadError(e instanceof Error ? e.message : '自社情報を読み込めませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
+      .catch(e => { if (ticket.current()) { setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '自社情報を読み込めませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
       .finally(() => { if (ticket.current()) setLoading(false); ticket.end() })
     return () => ticket.end()
   }, [guard.key, retry]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,7 +134,7 @@ export default function ShodanSettingsPage() {
       if (!ticket.current()) return
       version.current = result.version; setConfirmed({ profile: result.profile }); pendingWrite.current = false; setUncertain(false); setOperationError('')
       setNotice('保存済みの設定を再確認しました。入力中の内容は保持しています。確認してから保存してください。')
-    } catch (e) { if (ticket.current()) { setOperationError(e instanceof Error ? e.message : '設定を確認できませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } }
+    } catch (e) { if (ticket.current()) { setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '設定を確認できませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } }
     finally { if (ticket.current()) setChecking(false); ticket.end() }
   }
   const canEdit = () => guard.active() && ready.current === guard.identity && !flags.current.loading && !flags.current.loadError && !flags.current.uncertain && !pendingWrite.current && !flags.current.checking
@@ -154,7 +155,7 @@ export default function ShodanSettingsPage() {
       if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, res.status)
       revision.current++; draft.current = { ...draft.current, logoPath: d.path }; setLogoPath(d.path); setLogoUrl(d.url)
       setNotice('ロゴを読み込みました。設定を保存すると反映されます。')
-    } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
+    } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(err.message) ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
     finally { if (ticket.current()) setUploadingLogo(false); ticket.end() }
   }
 
@@ -185,7 +186,7 @@ export default function ShodanSettingsPage() {
     } catch (e) {
       if (!ticket.current()) return
       if (e instanceof ShodanApiError && e.code === 'SHODAN_PROFILE_DAILY_LIMIT') setExtractLimitMessage(e.message)
-      else setOperationError(e instanceof Error ? e.message : '自社情報の抽出に失敗しました')
+      else setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '自社情報の抽出に失敗しました')
       if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
     } finally { if (ticket.current()) setExtracting(false); ticket.end() }
   }
@@ -209,7 +210,7 @@ export default function ShodanSettingsPage() {
       if (!ticket.current()) return
       const rejected = e instanceof ShodanApiError && [400, 401, 403, 404, 409, 413, 422, 429].includes(e.status)
       pendingWrite.current = !rejected; setUncertain(!rejected || e instanceof ShodanApiError && e.status === 409)
-      setOperationError(e instanceof Error ? e.message : '保存結果を確認できませんでした')
+      setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '保存結果を確認できませんでした')
       if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
     } finally { if (ticket.current()) setSaving(false); ticket.end() }
   }
@@ -227,7 +228,7 @@ export default function ShodanSettingsPage() {
   }, [profile, gaps])
 
   if (guard.requiresLogin) return <div role="alert" className="p-6"><p>ログイン情報を確認できません。再度ログインしてください。</p><a className="mt-3 inline-block font-bold underline" href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${orgSlug}/settings`)}`}>ログイン情報を再確認する</a></div>
-  if (!guard.allowed || loading || !loadError && ready.current !== guard.identity) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
+  if (!guard.allowed || loading || !loadError && ready.current !== guard.identity) return <div className="p-6 md:p-8 max-w-2xl mx-auto" aria-busy="true" aria-label="自社情報を読み込んでいます"><PageHeader icon="business_center" title="自社情報" /><Skeleton lines={2} height={56} /><div className="mt-5"><Skeleton lines={6} height={18} /></div></div>
 
   if (loadError) return <div className="max-w-2xl mx-auto p-6"><PageHeader icon="settings" title="自社情報" />
     <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
@@ -246,68 +247,11 @@ export default function ShodanSettingsPage() {
       {notice && <p role="status" className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-800">{notice}</p>}
       {uncertain && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><p>保存結果または最新の設定を確認するまで、続けて操作できません。入力内容は保持しています。</p><button type="button" disabled={checking} onClick={confirmSaved} className="mt-2 font-bold underline">{checking ? '確認中…' : '保存済みの設定を確認する'}</button></div>}
       {extractionPreview && <div className="mb-4 rounded-xl border p-4"><details><summary>抽出結果を確認する</summary>{FIELDS.map(f => <p key={f.key} className="mt-2 whitespace-pre-wrap break-words text-sm"><strong>{f.label}</strong><br />{extractionPreview.suggested[f.key]}</p>)}</details><button type="button" onClick={() => applyExtraction(extractionPreview)} className="mt-3 font-bold underline">抽出結果を反映する</button></div>}
-      {/* ▼ 自社情報 抽出中 ド派手オーバーレイ ▼ */}
-      {extracting && (
-        <div className="fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-4
-          bg-gradient-to-br from-purple-700 via-fuchsia-600 to-indigo-700">
-          {/* 背景のキラキラ */}
-          {['top-10 left-8','top-24 right-12','bottom-16 left-16','bottom-28 right-24','top-1/2 left-6','top-1/3 right-1/4'].map((pos, i) => (
-            <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/30 animate-ping`}
-              style={{ fontSize: 18 + (i % 3) * 12, animationDuration: `${1.4 + i * 0.3}s` }}>
-              {i % 2 ? 'star' : 'auto_awesome'}
-            </span>
-          ))}
-          {/* 回転する光のリング */}
-          <div className="absolute w-[520px] h-[520px] rounded-full border-2 border-white/10 border-t-white/40 animate-spin" style={{ animationDuration: '6s' }} />
-          <div className="absolute w-[360px] h-[360px] rounded-full border-2 border-white/10 border-b-white/30 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
-
-          <div className="relative z-10 w-full max-w-md text-center text-white">
-            {/* ドヤくん（ステップごとに表情チェンジ＋ぴょこぴょこ） */}
-            <div className="relative inline-block animate-bounce" style={{ animationDuration: '1.4s' }}>
-              <div className="absolute inset-0 -z-10 blur-2xl bg-white/40 rounded-full scale-90" />
-              <DoyaKun mood={step.mood} size={150} float={false} />
-            </div>
-
-            {/* いま何をしているか（特大） */}
-            <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur text-sm font-black">
-              <span className="material-symbols-outlined animate-pulse" style={{ fontSize: 20 }}>{step.icon}</span>
-              自社情報をAIが抽出中
-            </div>
-            <h2 className="mt-4 text-3xl font-black drop-shadow-sm leading-tight">{step.title}</h2>
-            <p className="mt-2 text-white/90 font-bold">{step.sub}</p>
-            <p className="mt-1 text-xs font-bold text-white/60 truncate px-6">{extractUrl}</p>
-
-            {/* 進捗バー（シマー） */}
-            <div className="mt-6 mx-auto max-w-xs">
-              <div className="h-3 rounded-full bg-white/20 overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-amber-300 via-white to-amber-300 bg-[length:200%_100%] animate-pulse transition-all duration-700 ease-out"
-                  style={{ width: `${extractPct}%` }} />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs font-black text-white/80">
-                <span>解析中…</span><span>{extractPct}%</span>
-              </div>
-            </div>
-
-            {/* ステップ・ドット */}
-            <div className="mt-5 flex items-center justify-center gap-1.5 flex-wrap px-4">
-              {EXTRACT_STEPS.map((s, i) => (
-                <span key={i} className={`material-symbols-outlined rounded-full p-1 transition-all ${
-                  i < stepIdx ? 'text-emerald-300' : i === stepIdx ? 'text-white scale-125 bg-white/15' : 'text-white/30'}`}
-                  style={{ fontSize: 18 }}>
-                  {i < stepIdx ? 'check_circle' : s.icon}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 text-xs font-bold text-white/60">画面はそのままでOK。完了したら自動で反映されます ✨</p>
-          </div>
-        </div>
-      )}
-      {/* ▲ 抽出中オーバーレイ ▲ */}
 
       <PageHeader icon="business_center" title="自社情報" subtitle="ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。" />
 
       {/* 自動入力カード */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white p-6 pr-28 shadow-lg shadow-purple-500/20 mb-5 overflow-hidden">
+      <div className="relative rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 text-white p-6 pr-28 shadow-lg shadow-brand-400/20 mb-5 overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-1.5 font-black"><span className="material-symbols-outlined">auto_awesome</span>自社URLから自動入力</div>
           <p className="text-xs font-bold text-white/80 mt-1 mb-3">URLを入れるだけで、AIが自社情報を抽出して下書きします。</p>
@@ -316,14 +260,39 @@ export default function ShodanSettingsPage() {
               aria-label="自社情報を抽出するURL" placeholder="https://自社サイト.co.jp" disabled={extracting || saving || uploadingLogo || uncertain || checking}
               className="flex-1 rounded-xl px-4 py-2.5 font-bold text-slate-800 outline-none disabled:opacity-60" />
             <button onClick={extract} disabled={extracting || saving || uploadingLogo || uncertain || checking}
-              className="px-5 py-2.5 rounded-xl bg-white text-purple-700 font-black text-sm shadow hover:-translate-y-0.5 transition-all disabled:opacity-60 whitespace-nowrap">
+              className="px-5 py-2.5 rounded-xl bg-white text-brand-600 font-black text-sm shadow hover:-translate-y-0.5 transition-all disabled:opacity-60 whitespace-nowrap">
               {extracting ? '抽出中…' : 'AIで自動入力'}
             </button>
           </div>
-          {extractLimitMessage && <p role="alert" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-purple-950">{extractLimitMessage}</p>}
+          {extractLimitMessage && <p role="alert" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-brand-900">{extractLimitMessage}</p>}
         </div>
         <DoyaKun mood={extracting ? 'focus' : 'present'} size={110} className="!absolute -bottom-2 right-2" />
       </div>
+
+      {/* 自社情報の読み取り中。画面全体を覆わず、カードの中で進み具合を出す（見出しや他の欄はそのまま見える） */}
+      {extracting && (
+        <div role="status" aria-live="polite" className="mb-5 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined animate-pulse text-brand-600" style={{ fontSize: 22 }} aria-hidden>{step.icon}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-slate-800">{step.title}</p>
+              <p className="text-xs font-bold text-slate-500">{step.sub}</p>
+            </div>
+            <span className="text-sm font-black text-brand-600">{extractPct}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" aria-hidden>
+            <div className="h-full rounded-full bg-brand-500 transition-all duration-700 ease-out" style={{ width: `${extractPct}%` }} />
+          </div>
+          <ol className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="読み取りの手順">
+            {EXTRACT_STEPS.map((s, i) => (
+              <li key={i} className={`material-symbols-outlined rounded-full p-0.5 ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-brand-600' : 'text-slate-300'}`} style={{ fontSize: 18 }} aria-label={`${s.title}${i < stepIdx ? '（済み）' : i === stepIdx ? '（いま）' : ''}`}>
+                {i < stepIdx ? 'check_circle' : s.icon}
+              </li>
+            ))}
+          </ol>
+          <p className="mt-2 text-xs font-bold text-slate-500">この画面のままお待ちください。読み取りが終わると、下の欄に入ります。</p>
+        </div>
+      )}
 
       {/* 充足度メーター */}
       <div className="flex items-center gap-4 rounded-2xl bg-white border border-slate-200 p-4 mb-5">
@@ -331,10 +300,10 @@ export default function ShodanSettingsPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-black text-slate-700">情報の充実度</span>
-            <span className="text-sm font-black text-purple-700">{score}%（{doneCount}/{CORE_FIELDS.length}）</span>
+            <span className="text-sm font-black text-brand-600">{score}%（{doneCount}/{CORE_FIELDS.length}）</span>
           </div>
           <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all" style={{ width: `${score}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all" style={{ width: `${score}%` }} />
           </div>
           <p className="text-xs font-bold text-slate-500 mt-1.5">{advice}</p>
         </div>
@@ -348,7 +317,7 @@ export default function ShodanSettingsPage() {
           <div>
             <label className="block text-xs font-black text-slate-600 mb-1.5">ロゴ</label>
             <div className="flex items-center gap-3">
-              <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-purple-400 transition-colors">
+              <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-brand-300 transition-colors">
                 {sym(uploadingLogo ? 'progress_activity' : 'upload', 18)}{uploadingLogo ? '送信中…' : logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo || extracting || saving || uncertain || checking} />
               </label>
@@ -367,7 +336,7 @@ export default function ShodanSettingsPage() {
             <div className="flex items-center gap-3">
               {Array.from({ length: Math.max(2, brandColors.length) }, (_, i) => i).map((i) => (
                 <div key={i} className="flex flex-col items-center gap-1">
-                  <input type="color" aria-label={`ブランドカラー${i + 1}`} value={brandColors[i] || '#7f19e6'} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = [...draft.current.brandColors]; next[i] = e.target.value; draft.current = { ...draft.current, brandColors: next }; setBrandColors(next); setNotice('') }} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
+                  <input type="color" aria-label={`ブランドカラー${i + 1}`} value={brandColors[i] || '#0066ff'} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = [...draft.current.brandColors]; next[i] = e.target.value; draft.current = { ...draft.current, brandColors: next }; setBrandColors(next); setNotice('') }} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
                   <span className="text-[10px] font-bold text-slate-400">{i === 0 ? 'メイン' : i === 1 ? 'アクセント' : `追加色${i + 1}`}</span>
                 </div>
               ))}
@@ -390,17 +359,17 @@ export default function ShodanSettingsPage() {
               </div>
               {f.textarea ? (
                 <textarea id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} rows={3}
-                  className={`w-full rounded-xl border-2 px-4 py-2.5 font-bold text-sm resize-y outline-none transition-colors ${st === 'weak' ? 'border-amber-300 focus:border-amber-400 bg-amber-50/30' : 'border-slate-200 focus:border-purple-400'}`} />
+                  className={`w-full rounded-xl border-2 px-4 py-2.5 font-bold text-sm resize-y outline-none transition-colors ${st === 'weak' ? 'border-amber-300 focus:border-amber-400 bg-amber-50/30' : 'border-slate-200 focus:border-brand-300'}`} />
               ) : (
                 <input id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder}
-                  className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-2.5 font-bold text-sm transition-colors" />
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-brand-300 outline-none px-4 py-2.5 font-bold text-sm transition-colors" />
               )}
               {f.hint && st !== 'ok' && <p className="text-[11px] font-bold text-amber-600 mt-1 flex items-center gap-1">{sym('tips_and_updates', 14)}{f.hint}</p>}
             </div>
           )
         })}
         <button onClick={save} disabled={saving || extracting || uploadingLogo || uncertain || checking}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
           {sym('save', 20)}{saving ? '保存中…' : '保存する'}
         </button>
       </div>

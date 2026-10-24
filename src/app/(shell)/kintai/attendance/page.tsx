@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, EmptyState } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { MiniStack } from '@/components/ds/charts'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
@@ -117,7 +117,7 @@ export default function AttendancePage() {
           <select
             value={`${year}-${month}`}
             onChange={(e) => { const [y, m] = e.target.value.split('-').map(Number); setYear(y); setMonth(m); }}
-            className="text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-purple-400 cursor-pointer appearance-auto"
+            className="text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-300 cursor-pointer appearance-auto"
           >
             {Array.from({ length: 24 }, (_, i) => {
               const d = new Date(); d.setMonth(d.getMonth() - 12 + i);
@@ -131,7 +131,7 @@ export default function AttendancePage() {
           {!isCurrentMonth && (
             <button
               onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth() + 1) }}
-              className="px-4 py-2 text-sm font-bold text-white bg-[#7f19e6] hover:bg-[#6a14c2] rounded-full transition-colors shadow-sm"
+              className="px-4 py-2 text-sm font-bold text-white bg-[#0066ff] hover:bg-[#0047d6] rounded-full transition-colors shadow-sm"
             >
               今月に戻る
             </button>
@@ -148,9 +148,9 @@ export default function AttendancePage() {
             value={`${totalDays}`}
             unit={`/ ${workingDaysInMonth}日`}
             progress={dayProgress}
-            barColor="bg-[#7f19e6]"
-            bgColor="bg-gradient-to-br from-purple-50 to-indigo-50"
-            borderColor="border-purple-200/50"
+            barColor="bg-[#0066ff]"
+            bgColor="bg-gradient-to-br from-brand-50 to-indigo-50"
+            borderColor="border-brand-100/50"
           />
           {/* Total work pill */}
           <SummaryPillBear
@@ -183,14 +183,8 @@ export default function AttendancePage() {
 
         {/* ===== Table ===== */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img
-              src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
-              alt="読み込み中"
-              className="w-20 h-20 object-contain bear-loading-float"
-            />
-            <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-3xl border border-slate-200 p-5" aria-busy="true" aria-label="勤怠を読み込み中">
+            <Skeleton lines={6} height={18} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
@@ -259,14 +253,14 @@ export default function AttendancePage() {
                         {/* Day number */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1.5">
-                            {isToday && <div className="w-1 h-6 rounded-full bg-[#7f19e6]" />}
-                            <span className={`font-black text-sm ${isToday ? 'text-[#7f19e6]' : dayTextColor}`}>
+                            {isToday && <div className="w-1 h-6 rounded-full bg-[#0066ff]" />}
+                            <span className={`font-black text-sm ${isToday ? 'text-[#0066ff]' : dayTextColor}`}>
                               {day}
                             </span>
                           </div>
                         </td>
                         {/* Day of week */}
-                        <td className={`px-3 py-3 font-bold text-xs ${isToday ? 'text-[#7f19e6]' : dayTextColor}`}>
+                        <td className={`px-3 py-3 font-bold text-xs ${isToday ? 'text-[#0066ff]' : dayTextColor}`}>
                           {WEEKDAYS[dow]}
                         </td>
                         {/* Clock in */}
@@ -344,7 +338,7 @@ export default function AttendancePage() {
                           {isActive !== false && !isFuture && att && (
                             <Link
                               href={`/kintai/requests/new?type=clock_fix&date=${dateStr}`}
-                              className="inline-flex items-center justify-center gap-1 min-w-[64px] px-3 py-2 text-xs font-bold text-[#7f19e6] bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10 active:bg-[#7f19e6]/15 rounded-xl transition-colors"
+                              className="inline-flex items-center justify-center gap-1 min-w-[64px] px-3 py-2 text-xs font-bold text-[#0066ff] bg-[#0066ff]/5 hover:bg-[#0066ff]/10 active:bg-[#0066ff]/15 rounded-xl transition-colors"
                             >
                               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
                               修正
@@ -418,7 +412,7 @@ function StatusPill({ status }: { status: string }) {
     absent: { bg: 'bg-red-100', textColor: 'text-red-700', icon: 'cancel' },
     holiday: { bg: 'bg-slate-100', textColor: 'text-slate-500', icon: 'event_busy' },
     paid_leave: { bg: 'bg-blue-100', textColor: 'text-blue-700', icon: 'beach_access' },
-    special_leave: { bg: 'bg-purple-100', textColor: 'text-purple-700', icon: 'auto_awesome' },
+    special_leave: { bg: 'bg-brand-50', textColor: 'text-brand-600', icon: 'auto_awesome' },
   }
   const c = config[status] || { bg: 'bg-slate-100', textColor: 'text-slate-600', icon: 'help' }
 

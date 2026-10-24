@@ -17,6 +17,7 @@ import { fetchOrgJson } from '@/lib/org-fetch'
 import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mensetsu/session-pages'
 import LoadingProgress from '@/components/LoadingProgress'
 import { ShellCostBadge } from '@/components/shell/power'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface Org {
   id: string
@@ -207,7 +208,7 @@ export default function MensetsuTool() {
         setProfile(null)
       }
     } catch (e) {
-      if (loadVersion.current === version) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (loadVersion.current === version) setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
     } finally {
       if (loadVersion.current === version) setLoading(false)
     }
@@ -230,7 +231,7 @@ export default function MensetsuTool() {
       setSessions(loaded)
       setSessionCursor(page.nextCursor)
     } catch (e) {
-      if (loadVersion.current === version) setMoreError(e instanceof Error ? e.message : '続きを読み込めませんでした')
+      if (loadVersion.current === version) setMoreError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '続きを読み込めませんでした')
     } finally {
       if (loadVersion.current === version) setMoreLoading(false)
     }
@@ -257,7 +258,7 @@ export default function MensetsuTool() {
       setProfile(data.profile)
       setNotice(`会社情報を更新しました（${data.pageCount}ページを読み取り）`)
     } catch (e) {
-      report(e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
+      report(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '会社サイトを読み取れませんでした')
     } finally {
       setBusy(null)
     }
@@ -266,20 +267,19 @@ export default function MensetsuTool() {
   /** 面接記録がある質問セットは保管し、履歴を残して利用枠を空ける。 */
   const deleteTemplate = async (t: Template) => {
     const n = t._count?.sessions ?? 0
-    const warn = (n > 0 ? [
-      `質問セット「${t.name}」を保管します。`,
-      '',
-      `面接記録${n}件を残し、新しい面接URLの発行を停止します。`,
-      '保管後は編集できません。発行済みの面接URLは引き続き利用できます。',
-    ] : [
-      `質問セット「${t.name}」を削除します。`,
-      '',
-      '次のものも一緒に消えます。元に戻せません。',
-      `・質問 ${t._count?.questions ?? 0}問 / 評価軸 ${t._count?.criteria ?? 0}個`,
-    ])
-      .filter(Boolean)
-      .join('\n')
-    if (!window.confirm(warn)) return
+    const ok = n > 0
+      ? await confirmDialog({
+          title: `質問セット「${t.name}」を保管しますか？`,
+          message: `面接の記録${n}件は残り、新しい面接URLは発行できなくなります。\n保管したあとは直せません。発行ずみの面接URLはそのまま使えます。`,
+          confirmLabel: '保管する',
+        })
+      : await confirmDialog({
+          title: `質問セット「${t.name}」を削除しますか？`,
+          message: `質問 ${t._count?.questions ?? 0}問・評価の軸 ${t._count?.criteria ?? 0}個も一緒に消えます。元に戻せません。`,
+          confirmLabel: '削除する',
+          tone: 'danger',
+        })
+    if (!ok) return
 
     setDeletingId(t.id)
     setError(null)
@@ -289,7 +289,7 @@ export default function MensetsuTool() {
       if (!res.ok) throw new Error(data?.error || '削除できませんでした')
       await load()
     } catch (e) {
-      report(e instanceof Error ? e.message : '削除できませんでした')
+      report(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '削除できませんでした')
     } finally {
       setDeletingId('')
     }
@@ -402,7 +402,7 @@ export default function MensetsuTool() {
       setCandidateName('')
       await load()
     } catch (cause) {
-      report(cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
+      report(cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
       setBusy(null)
     }
@@ -521,7 +521,7 @@ export default function MensetsuTool() {
         operationKey="mensetsu-generate"
         title="質問セットを作っています"
         subtitle="職種とレベルに合わせて、質問と評価軸・ルーブリックを組み立てています。"
-        tips={['Tip: 就職差別につながる質問は生成の時点で除外されます', 'Tip: 全応募者に同じ主質問を当てる構造化面接の方式です', 'Tip: 生成後に質問は自由に編集できます']}
+        tips={['就職差別につながる質問は、作る時点で外します', '全員に同じ主な質問をする「構造化面接」の方式です', '作ったあとで質問は自由に直せます']}
       />
       <div className="mx-auto max-w-[1100px]">
         <ToolHero

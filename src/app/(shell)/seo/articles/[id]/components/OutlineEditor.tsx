@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 type HeadingItem = {
   id: string
@@ -202,7 +203,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
 
       onUpdate?.()
     } catch (e: any) {
-      setError(e?.message || '処理に失敗しました')
+      setError(seoUserMessage(e, 'うまくいきませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setLoading(false)
       setActiveAction(null)
@@ -243,7 +244,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
       onUpdate?.()
       setActiveAction(null)
     } catch (e: any) {
-      setError(e?.message || '保存に失敗しました')
+      setError(seoUserMessage(e, '保存できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setLoading(false)
     }
@@ -369,7 +370,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
                       <button
                         onClick={() => handleAction(heading.id, 'regenerate')}
                         disabled={loading}
-                        className="h-10 rounded-xl bg-purple-50 text-purple-700 text-xs font-black hover:bg-purple-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        className="h-10 rounded-xl bg-brand-50 text-brand-600 text-xs font-black hover:bg-brand-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
                         {loading && activeAction?.id === heading.id && activeAction?.type === 'regenerate' ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

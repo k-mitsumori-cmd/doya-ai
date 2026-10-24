@@ -48,10 +48,10 @@ class Boundary extends React.Component<ClientErrorBoundaryProps, ClientErrorBoun
   render() {
     if (!this.state.hasError) return this.props.children
 
-    const title = this.props.title || '表示中にエラーが発生しました'
+    const title = this.props.title || '表示できませんでした'
     const desc =
       this.props.description ||
-      '一時的な問題の可能性があります。再読み込み（リセット）をお試しください。'
+      '一時的な問題かもしれません。「再読み込み」を押してください。'
 
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50 p-5">

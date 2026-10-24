@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
 
     if (!oneOnOne) {
-      return NextResponse.json({ error: '1on1 record not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
     if (!(await canAccessOneOnOne(hrCtx, oneOnOne))) {
       return NextResponse.json({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[hr/one-on-one/[id]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to fetch 1on1 record' },
+      { error: '1on1の記録を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -75,12 +75,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       where: { id, organizationId: hrCtx.organizationId },
     })
     if (!existing) {
-      return NextResponse.json({ error: '1on1 record not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
     if (!(await canAccessOneOnOne(hrCtx, existing))) {
       return NextResponse.json({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
@@ -174,7 +174,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') return NextResponse.json({ error: '1on1が完了または削除されました。内容をご確認ください。' }, { status: 409 })
     console.error('[hr/one-on-one/[id]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to update 1on1 record' },
+      { error: '1on1の記録を保存できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

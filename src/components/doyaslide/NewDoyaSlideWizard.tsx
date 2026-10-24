@@ -29,11 +29,18 @@ import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { ShellCostBadge } from '@/components/shell/power'
+import { Briefcase, Building2, FileText, Mic, Rocket, Smartphone, Sparkles, Users, type LucideIcon } from 'lucide-react'
+
+// 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
+const DOC_TYPE_ICON: Record<string, LucideIcon> = {
+  sales: Briefcase, proposal: FileText, sns: Smartphone, seminar: Mic,
+  recruit: Users, pitch: Rocket, internal: Building2, custom: Sparkles,
+}
 
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
 
-const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
+const COLOR_SWATCHES = ['#2563eb', '#0066ff', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
 const FUN_MESSAGES = [
   '入力内容を処理しています…',
@@ -548,7 +555,7 @@ export default function NewDoyaSlideWizard() {
                       on ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-slate-100'
                     }`}
                   >
-                    <span>{d.emoji}</span>
+                    {(() => { const DocIcon = DOC_TYPE_ICON[d.value] || FileText; return <DocIcon size={20} strokeWidth={1.75} aria-hidden className={on ? 'text-white' : 'text-slate-600'} /> })()}
                   </div>
                   <div className="min-w-0">
                     <div className={`text-sm font-black ${on ? 'text-blue-700' : 'text-slate-700'}`}>{d.label}</div>
@@ -639,7 +646,7 @@ export default function NewDoyaSlideWizard() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認できます。</p>
+          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大きな見本の左右の矢印で複数ページの仕上がりを確認できます。</p>
           {/* スタイル一覧（既存2グループ + 追加テンプレート20種） */}
           {([
             { group: 'business', title: 'ビジネス系（きちんとした資料）' },
@@ -873,6 +880,21 @@ export default function NewDoyaSlideWizard() {
             </div>
           </div>
         )}
+        {busy ? (
+          /* 新しい見た目では画面全体を覆わず、主ボタンの場所に進み具合を出す（FIX-PLAN 13）。段は経過時間からの目安 */
+          <div role="status" aria-live="polite" className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-600 mb-1.5">
+              <span className="inline-flex items-center gap-1.5">
+                <img src="/character/working.png" alt="" className="w-6 h-6 object-contain" />
+                {GEN_STEPS[genStep].label}中…（{slideCount}枚）
+              </span>
+              <span className="text-[#0066ff] whitespace-nowrap">残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}（目安）</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-[#0066ff] rounded-full transition-[width] duration-1000 ease-linear" style={{ width: `${meterPct}%` }} />
+            </div>
+          </div>
+        ) : (
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           <p className="text-xs font-bold text-slate-500 hidden sm:block">
             {aspect === 'wide' ? '横' : aspect === 'square' ? '正方形' : '縦'}・{slideCount}枚 / {currentStyle?.label}スタイル
@@ -887,103 +909,10 @@ export default function NewDoyaSlideWizard() {
             <ShellCostBadge action="slide.generate" />
           </button>
         </div>
+        )}
       </div>
 
-      {/* 生成中オーバーレイ（楽しい・進捗メーター付き） */}
-      {busy && (
-        <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6">
-          {/* キャラ + 浮遊スパークル */}
-          <div className="relative">
-            <img src="/character/working.png" alt="作業中" className="w-32 h-32 object-contain anim-bob" />
-            <span className="material-symbols-outlined absolute -top-1 -right-1 text-amber-400 anim-twinkle">auto_awesome</span>
-            <span
-              className="material-symbols-outlined absolute top-8 -left-3 text-blue-400 text-base anim-twinkle"
-              style={{ animationDelay: '0.6s' }}
-            >
-              auto_awesome
-            </span>
-          </div>
-
-          <p className="text-lg font-black text-slate-800 text-center anim-msg" key={funIdx}>
-            {FUN_MESSAGES[funIdx]}
-          </p>
-
-          {/* 作業ステップ: 検索 → 分析 → 構成 → 生成 */}
-          <div className="w-full max-w-sm space-y-1.5">
-            {GEN_STEPS.map((s, i) => {
-              const done = i < genStep
-              const active = i === genStep
-              return (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all duration-300 ${
-                    active
-                      ? 'bg-white shadow-sm ring-1 ring-blue-200 scale-[1.02]'
-                      : done
-                        ? 'opacity-70'
-                        : 'opacity-40'
-                  }`}
-                >
-                  <span
-                    className={`material-symbols-outlined text-xl ${
-                      done ? 'text-emerald-500' : active ? 'text-blue-600 anim-spin' : 'text-slate-400'
-                    }`}
-                  >
-                    {done ? 'check_circle' : active ? 'progress_activity' : s.icon}
-                  </span>
-                  <span className={`text-sm font-black ${active ? 'text-slate-800' : 'text-slate-500'}`}>
-                    {s.label}
-                    {active ? '中…' : ''}
-                  </span>
-                  {active && (
-                    <span className="ml-auto flex gap-1">
-                      {[0, 1, 2].map((d) => (
-                        <span
-                          key={d}
-                          className="w-1.5 h-1.5 rounded-full bg-blue-500 anim-dot"
-                          style={{ animationDelay: `${d * 0.18}s` }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* どんどんスライドが生まれる演出 */}
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: Math.min(slideCount, 8) }).map((_, i) => (
-              <span
-                key={i}
-                className="w-6 h-4 rounded-sm bg-gradient-to-br from-blue-400 to-indigo-500 shadow-sm anim-pop"
-                style={{ animationDelay: `${i * 0.18}s` }}
-              />
-            ))}
-          </div>
-
-          {/* 進捗メーター + 枚数連動の予想時間 */}
-          <div className="w-full max-w-sm">
-            <div className="flex items-center justify-between text-xs font-black text-slate-600 mb-1.5">
-              <span className="inline-flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm text-blue-600">image</span>
-                {slideCount}枚を生成
-              </span>
-              <span className="text-blue-600">完成まで 約{formatDuration(estTotalSec)}</span>
-            </div>
-            <div className="w-full h-3 bg-white/80 rounded-full overflow-hidden ring-1 ring-blue-100 shadow-inner">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-[width] duration-1000 ease-linear anim-stripe"
-                style={{ width: `${meterPct}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mt-1.5">
-              <span>経過 {formatDuration(elapsed)}</span>
-              <span>残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 生成中オーバーレイ（楽しい・進捗メーター付き）。旧の見た目だけ */}
 
       <style jsx>{`
         .anim-up {

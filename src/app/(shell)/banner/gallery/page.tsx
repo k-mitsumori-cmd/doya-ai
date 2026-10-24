@@ -21,6 +21,12 @@ type GalleryItem = {
   lqip: string
 }
 
+/** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
+}
+
 const GALLERY_CACHE_KEY = 'doya-gallery-cache'
 const GALLERY_CACHE_TTL_MS = 60 * 1000 // 1分間有効
 
@@ -251,7 +257,7 @@ export default function BannerGalleryPage() {
         if (e?.name === 'AbortError') {
           setError('読み込みがタイムアウトしました。通信状況をご確認のうえ、再試行してください。')
         } else {
-          setError(e?.message || 'ギャラリーの取得に失敗しました')
+          setError(jaMessage(e?.message, 'ギャラリーを読み込めませんでした。通信を確かめて、もう一度お試しください。'))
         }
       } finally {
         if (mounted) setLoading(false)
@@ -273,7 +279,7 @@ export default function BannerGalleryPage() {
       if (e?.name === 'AbortError') {
         setError('追加読み込みがタイムアウトしました。時間をおいて再試行してください。')
       } else {
-        setError(e?.message || '追加読み込みに失敗しました')
+        setError(jaMessage(e?.message, '続きを読み込めませんでした。通信を確かめて、もう一度お試しください。'))
       }
     } finally {
       setLoadingMore(false)
@@ -292,7 +298,7 @@ export default function BannerGalleryPage() {
       document.body.removeChild(link)
       toast.success('ダウンロード開始', { id: 'dl' })
     } catch (e: any) {
-      toast.error(e?.message || 'ダウンロードに失敗しました', { id: 'dl' })
+      toast.error(jaMessage(e?.message, 'ダウンロードできませんでした。もう一度お試しください。'), { id: 'dl' })
     }
   }
 
@@ -307,7 +313,7 @@ export default function BannerGalleryPage() {
       if (e?.name === 'AbortError') {
         setError('読み込みがタイムアウトしました。通信状況をご確認のうえ、再試行してください。')
       } else {
-        setError(e?.message || 'ギャラリーの取得に失敗しました')
+        setError(jaMessage(e?.message, 'ギャラリーを読み込めませんでした。通信を確かめて、もう一度お試しください。'))
       }
     } finally {
       setLoading(false)

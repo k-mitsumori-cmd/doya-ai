@@ -2,7 +2,8 @@
 // 共通シェル（AppShell）のツール一覧
 // ============================================
 // ⚠️ 正本は src/lib/services.ts。表示するツール・リンク先・公開状態はそこから作る。
-//    ここに持つのは「どの区分（stage）に並べるか・サイドバーでの短い名前・アイコン・一言説明」の対応表だけ。
+//    ここに持つのは「どの区分（stage）に並べるか・アイコン・一言説明・見出しの帯の説明」の対応表だけ。
+//    ⚠️ ツール名はここに持たない。メニュー・見出し・パンくず・料金の画面は、services.ts の name を1つだけ使う（UX 点検 TRM-01・FRM-08）
 //    - 提供終了（RETIRED_SERVICE_IDS）は getActiveServices() が外すので、ここに残っていても出ない
 //    - 開発中（UNLISTED_SERVICE_IDS）は「開発中」バッジ付きで出る（ログイン後の画面だけで使う）
 //    - 開発中のベータ版（services.ts の hidden: 'beta'）は getActiveServices() が外すので、メニュー・⌘K・最近使ったツールに出ない
@@ -22,6 +23,8 @@ export interface ShellTool {
   icon: ShellIconName
   /** ホームとサイドバーのツールチップに出す一言説明 */
   hint: string
+  /** 見出しの帯（ToolFrame）に出す、何ができるかの一文。ToolFrame に description が無いときに使う */
+  lead?: string
   stage: ShellStage
   /** 開発中（ログイン後だけで使う） */
   beta?: boolean
@@ -33,37 +36,37 @@ export interface ShellGroup {
   tools: ShellTool[]
 }
 
-interface ToolMeta { stage: ShellStage; name: string; icon: ShellIconName; hint: string; href?: string }
+interface ToolMeta { stage: ShellStage; icon: ShellIconName; hint: string; lead: string; href?: string }
 
-/** 区分・短い名前・アイコン・一言説明の対応表（services.ts に無い id は出ない） */
+/** 区分・アイコン・一言説明・帯の説明の対応表（services.ts に無い id は出ない） */
 const TOOL_META: Record<string, ToolMeta> = {
   // 売る
-  sfa: { stage: 'sell', name: '営業管理', icon: 'Briefcase', hint: '商談・パイプライン・タスク' },
-  shodan: { stage: 'sell', name: '商談準備', icon: 'Building2', hint: '企業リサーチと提案資料' },
-  aishodan: { stage: 'sell', name: 'AI商談', icon: 'MessageSquare', hint: '商談の記録と要約' },
-  cunning: { stage: 'sell', name: 'カンニング', icon: 'Headphones', hint: 'Web会議の回答をその場で提示' },
-  doyalist: { stage: 'sell', name: 'リスト作成', icon: 'ListChecks', hint: '営業リストの作成' },
-  doyaslide: { stage: 'sell', name: 'スライド', icon: 'Presentation', hint: '提案資料・スライド作成' },
+  sfa: { stage: 'sell', icon: 'Briefcase', hint: '商談・パイプライン・タスク', lead: '取引先・商談・タスクを、チームで1か所にまとめて管理します。' },
+  shodan: { stage: 'sell', icon: 'Building2', hint: '企業リサーチと提案資料', lead: '商談先のURLから企業を調べ、提案資料とスライドを作ります。' },
+  aishodan: { stage: 'sell', icon: 'MessageSquare', hint: '商談の記録と要約', lead: '発行したURLを開いてもらうと、AIが一次商談を代わりに進めます。' },
+  cunning: { stage: 'sell', icon: 'Headphones', hint: 'Web会議の回答をその場で提示', lead: 'Web会議の相手の質問に、AIが回答の案をその場で出します。' },
+  doyalist: { stage: 'sell', icon: 'ListChecks', hint: '営業リストの作成', lead: '業種と地域から営業リストを作り、営業文もまとめて用意します。' },
+  doyaslide: { stage: 'sell', icon: 'Presentation', hint: '提案資料・スライド作成', lead: 'テーマを入れると、AIが提案資料のスライドを1枚ずつ作ります。' },
   // 集める
-  aio: { stage: 'collect', name: 'AI検索対策', icon: 'Search', hint: 'AI検索での見え方を確認' },
-  seo: { stage: 'collect', name: 'ドヤ記事作成', icon: 'PenTool', hint: 'SEO記事の作成' },
-  banner: { stage: 'collect', name: 'バナー', icon: 'Image', hint: 'バナーの制作' },
-  adimage: { stage: 'collect', name: '広告画像', icon: 'Megaphone', hint: '媒体ごとの広告画像をまとめて作成' },
-  persona: { stage: 'collect', name: 'ペルソナ', icon: 'CircleUser', hint: 'ターゲット像の作成' },
-  interview: { stage: 'collect', name: 'インタビュー', icon: 'Mic', hint: '取材音声から記事を作成' },
-  asklink: { stage: 'collect', name: '質問リンク', icon: 'Link2', hint: 'サイトに置く「AIに聞く」リンクとバナー' },
-  popup: { stage: 'collect', name: 'ポップアップ', icon: 'MousePointerClick', hint: 'サイトに出すポップアップの作成と計測' },
-  tenjikai: { stage: 'collect', name: '展示会', icon: 'Store', hint: '出展計画・制作物・予算・準備タスク' },
+  aio: { stage: 'collect', icon: 'Search', hint: 'AI検索での見え方を確認', lead: 'ChatGPTなどのAIの回答に、自社がどう出るかを調べて比べます。' },
+  seo: { stage: 'collect', icon: 'PenTool', hint: 'SEO記事の作成', lead: 'キーワードから、検索とAIに強い長文の記事を作ります。' },
+  banner: { stage: 'collect', icon: 'Image', hint: 'バナーの制作', lead: '用途とサイズを選ぶと、AIが広告やSNSのバナーを作ります。' },
+  adimage: { stage: 'collect', icon: 'Megaphone', hint: '媒体ごとの広告画像をまとめて作成', lead: 'URLを貼ると、媒体ごとにサイズのそろった広告画像を作ります。' },
+  persona: { stage: 'collect', icon: 'CircleUser', hint: 'ターゲット像の作成', lead: 'ターゲットの人物像を、AIが具体的なペルソナにまとめます。' },
+  interview: { stage: 'collect', icon: 'Mic', hint: '取材音声から記事を作成', lead: '取材の音声から、AIが文字起こしとインタビュー記事を作ります。' },
+  asklink: { stage: 'collect', icon: 'Link2', hint: 'サイトに置く「AIに聞く」リンクとバナー', lead: 'サイトのURLから「AIに聞く」リンクと、案内用のバナーを作ります。' },
+  popup: { stage: 'collect', icon: 'MousePointerClick', hint: 'サイトに出すポップアップの作成と計測', lead: 'URLを入れると、AIがサイトに合ったポップアップを提案します。' },
+  tenjikai: { stage: 'collect', icon: 'Store', hint: '出展計画・制作物・予算・準備タスク', lead: 'URLと出展条件から、ブース・制作物・予算・締切をまとめて用意します。' },
   // 人
-  hr: { stage: 'hire', name: '人事', icon: 'Users', hint: '社員・評価・1on1', href: '/hr/dashboard' },
-  mensetsu: { stage: 'hire', name: '面接', icon: 'UserCheck', hint: '採用面接の準備と記録' },
-  shanai: { stage: 'hire', name: '社内インタビュー', icon: 'BookOpen', hint: '社員インタビューから採用広報の記事を作成' },
-  kintai: { stage: 'hire', name: '勤怠', icon: 'Clock', hint: '打刻・残業・申請', href: '/kintai/dashboard' },
+  hr: { stage: 'hire', icon: 'Users', hint: '社員・評価・1on1', href: '/hr/dashboard', lead: '社員の情報・評価・1on1を1か所で管理し、人を活かします。' },
+  mensetsu: { stage: 'hire', icon: 'UserCheck', hint: '採用面接の準備と記録', lead: 'AIが一次面接を行い、評価のレポートまで残します。' },
+  shanai: { stage: 'hire', icon: 'BookOpen', hint: '社員インタビューから採用広報の記事を作成', lead: '録音かアンケートと写真から、社員インタビューの記事を作ります。' },
+  kintai: { stage: 'hire', icon: 'Clock', hint: '打刻・残業・申請', href: '/kintai/dashboard', lead: '打刻・残業・休暇の申請と承認を、ブラウザでまとめて管理します。' },
   // 回す
-  quote: { stage: 'operate', name: '見積', icon: 'FileText', hint: '見積書の作成と確定' },
-  promane: { stage: 'operate', name: 'プロマネ', icon: 'FolderKanban', hint: '案件・工数・収支' },
-  income: { stage: 'operate', name: '収入管理', icon: 'Receipt', hint: '契約・売上予定・請求書・入金' },
-  expense: { stage: 'operate', name: '支出管理', icon: 'Wallet', hint: '固定費・業務委託・支払予定' },
+  quote: { stage: 'operate', icon: 'FileText', hint: '見積書の作成と確定', lead: 'サービスのURLから相場つきの品目を並べ、見積書のPDFを作ります。' },
+  promane: { stage: 'operate', icon: 'FolderKanban', hint: '案件・工数・収支', lead: '案件の進み具合・工数・収支を、1か所でまとめて管理します。' },
+  income: { stage: 'operate', icon: 'Receipt', hint: '契約・売上予定・請求書・入金', lead: '契約から毎月の売上予定を作り、請求書の発行と入金を確かめます。' },
+  expense: { stage: 'operate', icon: 'Wallet', hint: '固定費・業務委託・支払予定', lead: '契約ごとの支払いを登録し、毎月の出金と先の予定を見ます。' },
 }
 
 const STAGE_LABELS: { stage: ShellStage; label: string }[] = [
@@ -90,10 +93,11 @@ function toShellTool(s: Service): ShellTool {
   const meta = TOOL_META[s.id]
   return {
     id: s.id,
-    name: meta?.name ?? s.shortName ?? s.name,
+    name: s.name,
     href: meta?.href ?? s.href,
     icon: meta?.icon ?? 'LayoutGrid',
     hint: meta?.hint ?? s.description,
+    lead: meta?.lead,
     stage: meta?.stage ?? 'other',
     beta: UNLISTED_SERVICE_IDS.has(s.id) || undefined,
   }

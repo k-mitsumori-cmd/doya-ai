@@ -14,7 +14,7 @@ export function Badge({
     green: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
     amber: 'bg-amber-50 text-amber-700 border border-amber-200',
     red: 'bg-red-50 text-red-700 border border-red-200',
-    purple: 'bg-purple-50 text-purple-700 border border-purple-200',
+    purple: 'bg-brand-50 text-brand-600 border border-brand-100',
     cyan: 'bg-cyan-50 text-cyan-700 border border-cyan-200',
     pink: 'bg-pink-50 text-pink-700 border border-pink-200',
     orange: 'bg-orange-50 text-orange-700 border border-orange-200',

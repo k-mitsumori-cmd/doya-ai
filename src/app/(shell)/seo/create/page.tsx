@@ -31,6 +31,7 @@ import { UiIcon, type UiIconName } from '@/components/icons'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
 import { ShellCostBadge } from '@/components/shell/power'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -410,7 +411,7 @@ export default function SeoCreateWizardPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `タイトル生成に失敗しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, 'タイトル候補を作れませんでした。少し待って、もう一度お試しください。'))
       }
       const list = Array.isArray(json?.titles) ? (json.titles as string[]) : []
       const uniq = Array.from(new Set(list.map((s) => String(s || '').trim()).filter(Boolean))).slice(0, 6)
@@ -422,7 +423,7 @@ export default function SeoCreateWizardPage() {
         setTitleSelected(0)
       }
     } catch (e: any) {
-      setTitleError(e?.message || 'タイトル候補の生成に失敗しました')
+      setTitleError(seoUserMessage(e, 'タイトル候補を作れませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setTitleLoading(false)
     }
@@ -503,7 +504,7 @@ export default function SeoCreateWizardPage() {
         if (res.status === 401) {
           setErrorCta({ label: 'ログインする', href: '/auth/signin' })
         }
-        throw new Error(json?.error || `エラーが発生しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, '記事の生成を始められませんでした。もう一度お試しください。'))
       }
 
       const jobId = json.jobId || json.job?.id
@@ -516,7 +517,7 @@ export default function SeoCreateWizardPage() {
         router.push('/seo')
       }
     } catch (e: any) {
-      setError(e?.message || '生成に失敗しました')
+      setError(seoUserMessage(e, '記事の生成を始められませんでした。通信を確かめて、もう一度お試しください。'))
       setLoading(false)
     }
   }
@@ -537,6 +538,14 @@ export default function SeoCreateWizardPage() {
     setConstraints(sample.constraints || '')
     setShowSampleMenu(false)
   }
+
+  // 使い方の窓を Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!showHelp) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowHelp(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showHelp])
 
   function cycleSample() {
     const next = (sampleCursor + 1) % SAMPLES.length
@@ -624,7 +633,7 @@ export default function SeoCreateWizardPage() {
                         <button
                           type="button"
                           onClick={cycleSample}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-50 text-brand-500 text-[10px] font-black hover:from-brand-50 hover:to-indigo-100 transition-all"
                           title="押すたびにサンプルが切り替わります"
                         >
                           <Wand2 className="w-3 h-3" />
@@ -1271,16 +1280,20 @@ export default function SeoCreateWizardPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="seo-create-help-title"
             >
               <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
                     <Lightbulb className="w-5 h-5 text-blue-600" />
                   </div>
-                  <h2 className="text-lg font-black text-gray-900">使い方ガイド</h2>
+                  <h2 id="seo-create-help-title" className="text-lg font-black text-gray-900">使い方ガイド</h2>
                 </div>
                 <button
                   onClick={() => setShowHelp(false)}
+                  aria-label="閉じる"
                   className="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
                 >
                   <X className="w-5 h-5" />

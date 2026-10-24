@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { EmptyState } from '@/components/ds'
 import toast from 'react-hot-toast'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface KB {
   id: string
@@ -63,7 +64,7 @@ export default function CunningKnowledgePage() {
       toast.success('作成しました')
       void load()
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '作成できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setBusy(false)
     }
@@ -85,14 +86,14 @@ export default function CunningKnowledgePage() {
       toast.success(`${d.added}件を取り込みました`)
       void load()
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '取り込めませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setBusy(false)
     }
   }
 
   const remove = async (id: string) => {
-    if (!confirm('このナレッジを削除しますか？')) return
+    if (!(await confirmDialog({ title: 'このナレッジを削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     setBusy(true)
     try {
       const res = await fetch(`/api/cunning/knowledge/${id}`, { method: 'DELETE' })
@@ -101,7 +102,7 @@ export default function CunningKnowledgePage() {
       if (selected === id) setSelected('')
       void load()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '削除できませんでした')
+      toast.error(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '削除できませんでした')
     } finally {
       setBusy(false)
     }

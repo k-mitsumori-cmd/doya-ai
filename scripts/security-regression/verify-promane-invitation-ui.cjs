@@ -2,6 +2,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
+const { load } = require('./load-typescript.cjs')
+// UX 点検（FIX-PLAN 17）で足した、画面に出す文を決める本物の関数を使う
+const { userErrorMessage } = load('src/lib/promane/user-error.ts')
 
 const source = fs.readFileSync('src/components/promane/invite-modal.tsx', 'utf8')
 const ast = ts.createSourceFile('invite-modal.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -21,7 +24,7 @@ const parse = vm.runInNewContext(compile(functions.parse), { Error, Number })
 async function initial(response) {
   const state = { invitations: ['old'], error: '', loading: false, cursor: 'old', total: -1 }
   const loadSent = vm.runInNewContext(compile(functions.loadSent), {
-    requestVersion: { current: 0 }, workspaceId: 'own-workspace', URLSearchParams, Error,
+    requestVersion: { current: 0 }, workspaceId: 'own-workspace', URLSearchParams, Error, userErrorMessage,
     fetch: async () => response, parseSentInvitationPage: parse,
     setHistoryError: (value) => { state.error = value },
     setLoading: (value) => { state.loading = value },
@@ -52,7 +55,7 @@ async function initial(response) {
   const state = { invitations: [{ id: 'first' }], error: '', loading: false }
   const loadMore = vm.runInNewContext(compile(functions.loadMore), {
     nextCursor: 'first', loadingMore: false, requestVersion: { current: 0 },
-    workspaceId: 'own-workspace', URLSearchParams, Error,
+    workspaceId: 'own-workspace', URLSearchParams, Error, userErrorMessage,
     historyTotal: 51, sentInvitations: state.invitations,
     fetch: async () => Response.json({ error: '取得失敗' }, { status: 503 }),
     parseSentInvitationPage: parse,

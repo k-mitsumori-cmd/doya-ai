@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ArrowLeft } from 'lucide-react'
 import { BILLING_MODEL_LABEL, CATEGORY_LABEL, CONTRACT_STATUS_LABEL, FORECAST_MODE_LABEL, FREQUENCY_LABEL, type BillingModel, type ForecastMode } from '@/lib/expense/constants'
-import { expenseApi, jsonInit, useExpenseQuery } from '@/components/expense/api'
+import { expenseApi, jsonInit, useBusyAction, useExpenseQuery } from '@/components/expense/api'
 import type { Contract, Schedule } from '@/components/expense/types'
 import ContractForm, { PriceFields, emptyPrice, priceToPayload, type PriceDraft } from '@/components/expense/ContractForm'
 import {
@@ -21,16 +21,16 @@ export default function ContractDetailPage() {
   const { data, error, forbidden, loading, reload } = useExpenseQuery<{ contract: Contract; schedules: Schedule[] }>(`/api/expense/contracts/${id}`, orgSlug)
   const [editing, setEditing] = useState(false)
   const [price, setPrice] = useState<PriceDraft | null>(null)
-  const [busy, setBusy] = useState(false)
+  // 金額の変更・削除は1つずつ。実行中はボタンを止め、二度押しで同じ処理が2回走らないようにする
+  const { busy, run } = useBusyAction()
   const { ask, dialog } = useConfirm()
 
   if (loading && !data) return <PageBody><Loading /></PageBody>
   if (error || !data) return <PageBody><ErrorBox forbidden={forbidden} onRetry={reload} /></PageBody>
   const { contract: c, schedules } = data
 
-  const addPrice = async () => {
+  const addPrice = () => run('price', async () => {
     if (!price) return
-    setBusy(true)
     try {
       await expenseApi(`/api/expense/contracts/${id}/prices`, orgSlug, jsonInit('POST', priceToPayload(price, c.currency)))
       toast.success('金額の変更を登録しました')
@@ -38,19 +38,20 @@ export default function ContractDetailPage() {
       reload()
     } catch (e) {
       toast.error((e as Error).message)
-    } finally {
-      setBusy(false)
     }
-  }
+  })
   const remove = async () => {
-    if (!(await ask(`契約「${c.title}」を削除します。未確定の支払予定も削除されます。請求書を受領した後の実績は残ります。削除してよろしいですか？`, '削除する'))) return
-    try {
-      await expenseApi(`/api/expense/contracts/${id}`, orgSlug, jsonInit('DELETE'))
-      toast.success('削除しました')
-      router.replace(`${base}/contracts`)
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
+    if (busy) return
+    if (!(await ask('未確定の支払予定も削除されます。請求書を受領した後の実績は残ります。', '削除する', { title: `契約「${c.title}」を削除しますか？` }))) return
+    await run('delete', async () => {
+      try {
+        await expenseApi(`/api/expense/contracts/${id}`, orgSlug, jsonInit('DELETE'))
+        toast.success('削除しました')
+        router.replace(`${base}/contracts`)
+      } catch (e) {
+        toast.error((e as Error).message)
+      }
+    })
   }
 
   const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
@@ -65,8 +66,8 @@ export default function ContractDetailPage() {
         sub={<>{c.vendor.name} <Badge tone={c.status === 'active' ? 'green' : 'slate'}>{CONTRACT_STATUS_LABEL[c.status] ?? c.status}</Badge></>}
         actions={
           <>
-            {canManage && !editing && <Btn variant="secondary" onClick={() => setEditing(true)}>契約を編集</Btn>}
-            {canAdmin && <Btn variant="danger" onClick={remove}>契約を削除</Btn>}
+            {canManage && !editing && <Btn variant="secondary" onClick={() => setEditing(true)} disabled={!!busy}>契約を編集する</Btn>}
+            {canAdmin && <Btn variant="danger" onClick={remove} busy={busy === 'delete'} disabled={!!busy}>契約を削除する</Btn>}
           </>
         }
       />
@@ -93,15 +94,15 @@ export default function ContractDetailPage() {
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[18px] font-bold text-[var(--ink)]">単価の履歴</h2>
-          {canManage && !price && <Btn variant="secondary" onClick={() => setPrice(emptyPrice(todayYmd()))}>金額を変更（適用開始日つき）</Btn>}
+          {canManage && !price && <Btn variant="secondary" onClick={() => setPrice(emptyPrice(todayYmd()))} disabled={!!busy}>金額を変更する（適用開始日つき）</Btn>}
         </div>
         {price && (
           <div className="mb-4 rounded-[var(--r-sm)] bg-[var(--bg)] p-4">
             <PriceFields value={price} onChange={setPrice} billingModel={c.billingModel} currency={c.currency} withDate />
             <p className="mt-2 text-[13px] text-[var(--sub)]">適用開始日以降の予定だけが、新しい金額になります。同じ日付で登録すると上書きされます。</p>
             <div className="mt-3 flex gap-2">
-              <Btn variant={editing ? 'secondary' : 'primary'} onClick={addPrice} busy={busy} disabled={price.unitPrice === ''}>変更を登録する</Btn>
-              <Btn variant="secondary" onClick={() => setPrice(null)}>キャンセル</Btn>
+              <Btn variant={editing ? 'secondary' : 'primary'} onClick={addPrice} busy={busy === 'price'} disabled={price.unitPrice === '' || !!busy}>変更を登録する</Btn>
+              <Btn variant="secondary" onClick={() => setPrice(null)} disabled={busy === 'price'}>キャンセル</Btn>
             </div>
           </div>
         )}

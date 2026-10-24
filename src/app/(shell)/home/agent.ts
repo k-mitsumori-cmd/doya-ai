@@ -76,14 +76,14 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
 
   if (has(q, ['パイプライン', '見込', '予測', 'フォーキャスト', '商談', '案件'])) {
     const sa = s.sales
-    if (sa.state !== 'ready') return emptyTool('営業管理', '/sfa', '商談を登録すると、受注予測とパイプラインをここで答えます。')
+    if (sa.state !== 'ready') return emptyTool('ドヤ営業管理', '/sfa', '商談を登録すると、受注予測とパイプラインをここで答えます。')
     const top = [...sa.stages].sort((a, b) => b.amount - a.amount)[0]
     return {
       intent: 'pipeline',
       title: '見込み案件と受注予測',
       steps: [
-        { tool: '営業管理', label: '進行中の商談を読み取り' },
-        { tool: '営業管理', label: 'ステージごとの確度で加重' },
+        { tool: 'ドヤ営業管理', label: '進行中の商談を読み取り' },
+        { tool: 'ドヤ営業管理', label: 'ステージごとの確度で加重' },
       ],
       lead: `進行中の商談は${sa.openDeals}件、合計${man(sa.openPipeline)}です。確度で重みづけした受注見込みは${man(sa.weightedPipeline)}です。${top && top.amount > 0 ? `いちばん金額が大きいのは「${top.name}」の段階です。` : ''}`,
       rows: [
@@ -122,9 +122,9 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
       intent: 'today',
       title: '今日やるべきこと',
       steps: [
-        { tool: '営業管理', label: 'タスクと期限を確認' },
-        { tool: 'プロマネ', label: '未完了タスクを確認' },
-        { tool: '勤怠', label: '承認待ちの申請を確認' },
+        { tool: 'ドヤ営業管理', label: 'タスクと期限を確認' },
+        { tool: 'ドヤプロマネ', label: '未完了タスクを確認' },
+        { tool: 'ドヤ勤怠', label: '承認待ちの申請を確認' },
       ],
       lead: rows.length
         ? s.sales.overdueTasks > 0
@@ -138,11 +138,11 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
 
   if (has(q, ['勤怠', '残業', '労働', '出勤', '打刻', '働き方'])) {
     const a = s.attendance
-    if (a.state !== 'ready') return emptyTool('勤怠', '/kintai', '勤怠を使い始めると、労働時間と残業をここでまとめます。')
+    if (a.state !== 'ready') return emptyTool('ドヤ勤怠', '/kintai', '勤怠を使い始めると、労働時間と残業をここでまとめます。')
     return {
       intent: 'attendance',
       title: '今月の勤怠',
-      steps: [{ tool: '勤怠', label: a.scope === 'org' ? '全社の勤怠を集計' : 'あなたの勤怠を集計' }],
+      steps: [{ tool: 'ドヤ勤怠', label: a.scope === 'org' ? '全社の勤怠を集計' : 'あなたの勤怠を集計' }],
       lead: `${a.scope === 'org' ? `全社（${a.employees}名）` : 'あなた'}の今月の労働時間は${a.workHoursThisMonth}時間、うち残業は${a.overtimeHoursThisMonth}時間です。`,
       rows: [
         { label: '労働時間', value: `${a.workHoursThisMonth}時間` },
@@ -158,8 +158,8 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
     return {
       intent: 'people',
       title: '人と組織',
-      steps: [{ tool: '人事', label: '在籍者と部署を確認' }, { tool: '面接', label: '採用の入口を確認' }],
-      lead: p.state === 'ready' ? `在籍は${p.activeEmployees}名、部署は${p.departments}つです。` : notReady('人事'),
+      steps: [{ tool: 'ドヤHR', label: '在籍者と部署を確認' }, { tool: 'ドヤ面接官', label: '採用の入口を確認' }],
+      lead: p.state === 'ready' ? `在籍は${p.activeEmployees}名、部署は${p.departments}つです。` : notReady('ドヤHR'),
       rows: p.state === 'ready'
         ? [{ label: '在籍者', value: `${p.activeEmployees}名` }, { label: '部署', value: `${p.departments}` }]
         : [],
@@ -174,7 +174,7 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
     return {
       intent: 'marketing',
       title: '集客を強化する',
-      steps: [{ tool: '営業管理', label: '今月の新規リードを確認' }],
+      steps: [{ tool: 'ドヤ営業管理', label: '今月の新規リードを確認' }],
       lead: s.sales.state === 'ready'
         ? `今月の新規リードは${s.sales.newLeads}件です。入口を増やすなら、下の順で進めるのがおすすめです。`
         : '入口を増やすなら、下の順で進めるのがおすすめです。',
@@ -197,9 +197,9 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
       intent: 'calendar',
       title: '近い予定と期日',
       steps: [
-        { tool: '営業管理', label: '受注予定日とタスク期限を確認' },
-        { tool: '見積', label: '見積の有効期限を確認' },
-        { tool: 'プロマネ', label: '納期を確認' },
+        { tool: 'ドヤ営業管理', label: '受注予定日とタスク期限を確認' },
+        { tool: 'ドヤ見積もりAI', label: '見積の有効期限を確認' },
+        { tool: 'ドヤプロマネ', label: '納期を確認' },
       ],
       lead: upcoming.length ? `この先の期日が${upcoming.length}件あります。` : 'この先45日に登録された期日はありません。',
       rows: upcoming.map((e) => ({ label: new Date(e.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' }), value: e.title })),
@@ -209,11 +209,11 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
 
   if (has(q, ['見積'])) {
     const qu = s.quotes
-    if (qu.state !== 'ready') return emptyTool('見積', '/quote', '見積を使い始めると、確定額と下書きの件数をここでまとめます。')
+    if (qu.state !== 'ready') return emptyTool('ドヤ見積もりAI', '/quote', '見積を使い始めると、確定額と下書きの件数をここでまとめます。')
     return {
       intent: 'quote',
       title: '見積の状況',
-      steps: [{ tool: '見積', label: '見積書の状態を集計' }],
+      steps: [{ tool: 'ドヤ見積もりAI', label: '見積書の状態を集計' }],
       lead: `今月確定した見積は${man(qu.confirmedThisMonth)}（税抜）です。確定前の下書きが${qu.draftCount}件あります。`,
       rows: [
         { label: '今月の確定額（税抜）', value: man(qu.confirmedThisMonth), tone: 'good' },
@@ -229,18 +229,18 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   const pr = s.projects
   const income = sa.wonThisMonth
   const rows: AgentRow[] = [
-    { label: '今月の受注（営業管理）', value: sa.state === 'ready' ? man(sa.wonThisMonth) : notReady('営業管理'), tone: sa.state === 'ready' ? 'good' : 'muted' },
-    { label: '今月確定した見積（税抜）', value: s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : notReady('見積'), tone: s.quotes.state === 'ready' ? undefined : 'muted' },
+    { label: '今月の受注（ドヤ営業管理）', value: sa.state === 'ready' ? man(sa.wonThisMonth) : notReady('ドヤ営業管理'), tone: sa.state === 'ready' ? 'good' : 'muted' },
+    { label: '今月確定した見積（税抜）', value: s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : notReady('ドヤ見積もりAI'), tone: s.quotes.state === 'ready' ? undefined : 'muted' },
     { label: '受注見込み（加重）', value: sa.state === 'ready' ? man(sa.weightedPipeline) : '—', tone: 'muted' },
-    { label: 'プロジェクト収支（売上 − 原価）', value: pr.state === 'ready' ? `${man(pr.revenue)} − ${man(pr.cost)} = ${man(pr.profit)}` : notReady('プロマネ'), tone: pr.state === 'ready' ? (pr.profit >= 0 ? 'good' : 'warn') : 'muted' },
+    { label: 'プロジェクト収支（売上 − 原価）', value: pr.state === 'ready' ? `${man(pr.revenue)} − ${man(pr.cost)} = ${man(pr.profit)}` : notReady('ドヤプロマネ'), tone: pr.state === 'ready' ? (pr.profit >= 0 ? 'good' : 'warn') : 'muted' },
   ]
   return {
     intent: 'revenue',
     title: '売上と収入の全体像',
     steps: [
-      { tool: '営業管理', label: '今月の受注を集計' },
-      { tool: '見積', label: '確定した見積を集計' },
-      { tool: 'プロマネ', label: '案件ごとの収支を計算' },
+      { tool: 'ドヤ営業管理', label: '今月の受注を集計' },
+      { tool: 'ドヤ見積もりAI', label: '確定した見積を集計' },
+      { tool: 'ドヤプロマネ', label: '案件ごとの収支を計算' },
     ],
     lead: sa.state === 'ready' || pr.state === 'ready'
       ? `今月の受注は${man(income)}です。${pr.state === 'ready' ? `プロジェクト全体の利益は${man(pr.profit)}です。` : ''}`

@@ -14,7 +14,7 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401, headers: privateHeaders })
     }
 
     // 組織オーナーの契約プランを基準に使用量を返す。

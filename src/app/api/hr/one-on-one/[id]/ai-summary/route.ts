@@ -18,12 +18,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
 
     if (!oneOnOne) {
-      return NextResponse.json({ error: '1on1 record not found' }, { status: 404 })
+      return NextResponse.json({ error: 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
     if (!(await canAccessOneOnOne(hrCtx, oneOnOne))) {
       return NextResponse.json({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     if (!oneOnOne.managerNotes && !oneOnOne.employeeNotes) {
       return NextResponse.json(
-        { error: 'No notes to summarize. Add manager or employee notes first.' },
+        { error: '要約するメモがありません。上司か本人のメモを書いてから、お試しください。' },
         { status: 400 }
       )
     }
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') return NextResponse.json({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
     console.error('[hr/one-on-one/[id]/ai-summary] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to generate AI summary' },
+      { error: 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

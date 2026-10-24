@@ -6,6 +6,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Button, EmptyState as DsEmptyState } from '@/components/ds'
 import { CunningModeIcon } from '@/components/cunning/mode-icon'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface SessionRow {
   id: string
@@ -48,7 +49,7 @@ export default function CunningHistoryPage() {
       setSessions((previous) => (cursor ? mergeCunningEntries<SessionRow>(previous, d.sessions) : d.sessions).filter((row: SessionRow) => !removedRef.current.has(row.id)))
       setNextCursor(d.nextCursor)
     } catch (error) {
-      if (aliveRef.current) setError(error instanceof Error ? error.message : '履歴を取得できませんでした。再試行してください。')
+      if (aliveRef.current) setError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '履歴を取得できませんでした。再試行してください。')
     } finally {
       clearTimeout(timeout)
       busyRef.current = false
@@ -62,7 +63,9 @@ export default function CunningHistoryPage() {
   }, [load])
 
   const remove = async (id: string) => {
-    if (deletingRef.current.has(id) || !confirm('このセッションを削除しますか？文字起こし・回答・議事録が削除されます。使用済みの利用時間は戻りません。')) return
+    if (deletingRef.current.has(id)) return
+    if (!(await confirmDialog({ title: 'このセッションを削除しますか？', message: '文字起こし・回答・議事録も消えます。使った利用時間は戻りません。元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
+    if (deletingRef.current.has(id)) return
     deletingRef.current.add(id)
     setDeleting(new Set(deletingRef.current))
     const controller = new AbortController()
@@ -75,7 +78,7 @@ export default function CunningHistoryPage() {
       toast.success('削除しました', { id: `cunning-delete-${id}` })
       setSessions((rows) => rows.filter((row) => row.id !== id))
     } catch (error) {
-      if (aliveRef.current) toast.error(error instanceof Error ? error.message : '削除できませんでした。再試行してください。', { id: `cunning-delete-${id}` })
+      if (aliveRef.current) toast.error(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '削除できませんでした。再試行してください。', { id: `cunning-delete-${id}` })
     } finally {
       clearTimeout(timeout)
       deletingRef.current.delete(id)

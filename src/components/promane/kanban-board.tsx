@@ -19,6 +19,7 @@ import { TASK_STATUS_LABELS } from "@/lib/promane/format";
 import { toast } from "sonner";
 import Image from "next/image";
 import { TaskEditModal } from "./task-edit-modal";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type TaskItem = {
   id: string;
@@ -92,16 +93,16 @@ export function KanbanBoard({
       setTasks((prev) => prev.map((item) =>
         item.id === taskId ? { ...item, status: task.status } : item
       ));
-      toast.error(error instanceof Error ? error.message : "タスクの移動に失敗しました");
+      toast.error(userErrorMessage(error instanceof Error ? error.message : null, "タスクを移動できませんでした。もう一度お試しください。"));
       return;
     }
 
     if (newStatus === "done") {
-      toast.success(`🎉 「${task.title}」完了おめでとう！！`, {
+      toast.success(`「${task.title}」を完了にしました`, {
         icon: <Image src="/character/jump.png" alt="" width={36} height={36} unoptimized />,
         duration: 4000,
         style: {
-          background: "linear-gradient(135deg, #dbeafe, #ede9fe)",
+          background: "linear-gradient(135deg, #dbeafe, #eaf2ff)",
           border: "2px solid #818cf8",
           fontSize: "15px",
           fontWeight: 900,

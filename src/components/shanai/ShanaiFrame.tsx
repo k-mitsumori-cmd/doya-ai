@@ -18,7 +18,7 @@ export default function ShanaiFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   if (isGuestPath(pathname)) return <>{children}</>
   return (
-    <ToolFrame serviceId="shanai" title="ドヤ社内インタビュー" description="録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。" nav={SHANAI_NAV}>
+    <ToolFrame serviceId="shanai" nav={SHANAI_NAV}>
       <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>
     </ToolFrame>
   )

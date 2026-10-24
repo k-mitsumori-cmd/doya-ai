@@ -30,6 +30,9 @@ import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSe
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { EmptyState } from '@/components/EmptyState'
+import { confirmDialog } from '@/components/ds/dialog'
+import { Skeleton } from '@/components/ds'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 class SeoJobReadError extends Error {}
 
@@ -103,6 +106,9 @@ const STEPS = [
   { key: 'media', label: '図解生成', icon: ImageIcon, color: 'orange' },
   { key: 'done', label: '完了', icon: Rocket, color: 'green' },
 ]
+
+// 止まった理由は内部の文（job.error）を出さず、決まった文にする（UX 点検 FIX-PLAN 17）
+const JOB_STOPPED_MESSAGE = '生成が途中で止まりました。「生成を再開する」を押すと、続きから作ります。'
 
 // ジョブステータスを日本語に変換
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -440,7 +446,7 @@ export default function SeoJobPage() {
         if (res.status === 404 || raw === 'not found') {
           throw new SeoJobReadError(
             [
-              'ジョブが見つかりませんでした。',
+              'この生成の画面が見つかりませんでした。',
               '',
               '考えられる原因:',
               '- 作成したブラウザ/端末と違う（ゲストIDが一致せず参照できません）',
@@ -452,11 +458,11 @@ export default function SeoJobPage() {
             ].join('\n')
           )
         }
-        throw new SeoJobReadError(raw || `API Error: ${res.status}`)
+        throw new SeoJobReadError(seoUserMessage(raw, '生成の状況を読み込めませんでした。もう一度読み込んでください。'))
       }
 
       const newJob = json?.job
-      if (json?.success !== true || !newJob || newJob.id !== jobId || !Array.isArray(newJob.sections) || !newJob.article || newJob.article.id !== newJob.articleId) throw new SeoJobReadError('ジョブの応答を確認できませんでした。再読み込みしてください。')
+      if (json?.success !== true || !newJob || newJob.id !== jobId || !Array.isArray(newJob.sections) || !newJob.article || newJob.article.id !== newJob.articleId) throw new SeoJobReadError('生成の状況を確かめられませんでした。もう一度読み込んでください。')
       if (newJob) {
         setLastHeartbeatAt(Date.now())
         setJob(newJob)
@@ -547,8 +553,8 @@ export default function SeoJobPage() {
     } catch (e: any) {
       const msg =
         e?.name === 'AbortError'
-          ? '読み込みがタイムアウトしました。再読み込みしてください。'
-          : e instanceof SeoJobReadError ? e.message : 'ジョブを取得できませんでした。再読み込みしてください。'
+          ? '読み込みに時間がかかっています。もう一度読み込んでください。'
+          : e instanceof SeoJobReadError ? e.message : '生成の状況を読み込めませんでした。もう一度読み込んでください。'
       setLoadError(msg)
       pushLog({
         at: Date.now(),
@@ -567,18 +573,20 @@ export default function SeoJobPage() {
   const cancellingRef = useRef(false)
   const cancelJob = useCallback(async () => {
     if (cancellingRef.current || job?.supersededAt) return
-    if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
+    if (!(await confirmDialog({ title: '生成を止めますか？', message: '途中まで作った内容は、記事の画面に残ります。', confirmLabel: '止める', cancelLabel: '続ける', tone: 'danger' }))) return
+    // 確かめの画面を開いている間に、別の押しで止める処理が始まっていたら送らない（二重送信を防ぐ）
+    if (cancellingRef.current) return
     cancellingRef.current = true
     setCancelling(true)
     setActionError(null)
     try {
       const response = await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
       const result = await response.json()
-      if (!response.ok || result?.success !== true) throw new Error(result?.error || 'キャンセルできませんでした')
-      if (result?.job?.id !== jobId || !['cancelled', 'done'].includes(result?.job?.status)) throw new Error('キャンセル結果を確認できませんでした。再読み込みしてください。')
+      if (!response.ok || result?.success !== true) throw new Error(seoUserMessage(result?.error, '生成を止められませんでした。もう一度お試しください。'))
+      if (result?.job?.id !== jobId || !['cancelled', 'done'].includes(result?.job?.status)) throw new Error('止まったかを確かめられませんでした。画面を読み込み直してください。')
       await load({ showLoading: false })
     } catch (e: any) {
-      setActionError(e?.message || 'キャンセルできませんでした')
+      setActionError(seoUserMessage(e, '生成を止められませんでした。もう一度お試しください。'))
     } finally {
       cancellingRef.current = false
       setCancelling(false)
@@ -593,7 +601,7 @@ export default function SeoJobPage() {
       if (job?.status === 'paused' || job?.status === 'error') {
         const resumed = await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST', keepalive: true })
         const resumeResult = await resumed.json()
-        if (!resumed.ok || resumeResult?.success !== true) throw new Error(resumeResult?.error || '再開できませんでした')
+        if (!resumed.ok || resumeResult?.success !== true) throw new Error(seoUserMessage(resumeResult?.error, '生成を再開できませんでした。もう一度お試しください。'))
       }
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST', keepalive: true })
       let json: any = null
@@ -603,14 +611,14 @@ export default function SeoJobPage() {
         // ignore
       }
       if (!res.ok || json?.success === false) {
-        const msg = json?.error || `advance failed (${res.status})`
+        const msg = seoUserMessage(json?.error, '生成を進められませんでした。少し待って、もう一度お試しください。')
         setActionError(msg)
         await load({ showLoading: false })
         return
       }
       await load({ showLoading: false })
     } catch (e: any) {
-      setActionError(e?.message || '生成を進められませんでした')
+      setActionError(seoUserMessage(e, '生成を進められませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setBusy(false)
     }
@@ -828,31 +836,25 @@ export default function SeoJobPage() {
   }, [job?.status, job?.step, job?.progress, advanceOnce, job])
 
   if (loading) {
+    // 新しい見た目では枠を残し、本文の場所だけを骨組みにする（UX 点検 FIX-PLAN 13）
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
-          </div>
-          <p className="text-gray-500 font-bold">読み込み中...</p>
-        </motion.div>
-      </main>
+      <div className="mx-auto max-w-5xl space-y-4 py-6" aria-busy="true" aria-label="生成の状況を読み込んでいます">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={2} height={18} delayMs={0} /></div>
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={5} delayMs={0} /></div>
+      </div>
     )
   }
 
+
   if (!job) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white flex items-center justify-center p-4">
+      <main className="flex justify-center py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-gray-100"
         >
-          <EmptyState kind="error" title="読み込みに失敗しました" description={loadError || '不明なエラー'} action={<button className="rounded-xl bg-gray-900 px-8 py-3 font-bold text-white transition-colors hover:bg-gray-800" onClick={() => { setLoading(true); load({ showLoading: true }) }}>再読み込み</button>} />
+          <EmptyState kind="error" title="読み込めませんでした" description={loadError || '通信を確かめて、もう一度読み込んでください。'} action={<button className="rounded-xl bg-gray-900 px-8 py-3 font-bold text-white transition-colors hover:bg-gray-800" onClick={() => { setLoading(true); load({ showLoading: true }) }}>再読み込み</button>} />
         </motion.div>
       </main>
     )
@@ -863,19 +865,19 @@ export default function SeoJobPage() {
     const cancelled = job.status === 'cancelled'
     const failed = job.status === 'error'
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <main className="flex justify-center py-10">
         <section className="w-full max-w-xl rounded-2xl bg-white p-8 shadow-sm" aria-labelledby="job-stopped-title">
           <h1 id="job-stopped-title" className="text-xl font-bold text-slate-900">
             {replaced ? '新しい生成に置き換えられました' : cancelled ? '生成をキャンセルしました' : failed ? '生成を停止しました' : '生成を一時停止しています'}
           </h1>
           <p className="mt-3 text-slate-600">
-            {replaced ? 'このジョブの処理は終了しています。記事画面から最新の生成状況を確認してください。' : cancelled ? '途中の成果物は記事画面で確認できます。' : '再開すると、途中の状態から生成を続けます。'}
+            {replaced ? 'この生成は終わっています。記事の画面で、新しい生成の様子を確かめてください。' : cancelled ? '途中の成果物は記事画面で確認できます。' : '再開すると、途中の状態から生成を続けます。'}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             {!replaced && !cancelled && <button disabled={busy} onClick={() => void advanceOnce()} className="rounded-lg bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy ? '再開しています…' : '生成を再開する'}</button>}
             <Link href={`/seo/articles/${encodeURIComponent(job.articleId)}`} prefetch={false} className="rounded-lg border px-5 py-3 font-bold text-blue-700">記事画面で状況を確認する</Link>
           </div>
-          {(actionError || (failed && job.error)) && <p role="alert" className="mt-4 text-red-700">{actionError || job.error}</p>}
+          {(actionError || (failed && job.error)) && <p role="alert" className="mt-4 text-red-700">{actionError || JOB_STOPPED_MESSAGE}</p>}
         </section>
       </main>
     )
@@ -907,7 +909,7 @@ export default function SeoJobPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-8 px-4">
+    <main className="py-6">
       <CompletionModal
         open={completionOpen}
         title={job.article.title}
@@ -953,7 +955,7 @@ export default function SeoJobPage() {
                       ? 'bg-gradient-to-r from-emerald-500 to-green-500'
                       : isError
                       ? 'bg-gradient-to-r from-rose-500 to-red-500'
-                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-brand-500'
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${job.progress}%` }}
@@ -1516,7 +1518,7 @@ export default function SeoJobPage() {
                                       <p className="mt-1 text-xl font-black text-white tabular-nums">{urlsCount}</p>
                                       <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
                                         <motion.div
-                                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-fuchsia-300 to-amber-300"
+                                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-brand-400 to-amber-300"
                                           animate={{ width: ['12%', '85%', '28%'] }}
                                           transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
                                         />
@@ -1726,7 +1728,7 @@ export default function SeoJobPage() {
           className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-xl shadow-blue-500/5"
         >
           {/* ステータスバー */}
-          <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}>
+          <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400'}`}>
             {isRunning && (
               <motion.div
                 className="h-full bg-white/35"
@@ -1883,12 +1885,12 @@ export default function SeoJobPage() {
                 <div className="flex items-start gap-3">
                   <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-black text-red-700">エラーが発生しました</p>
-                    <pre className="text-xs text-red-700/80 whitespace-pre-wrap mt-2">
-                      {job.error || actionError}
-                    </pre>
+                    <p className="font-black text-red-700">生成が止まりました</p>
+                    <p className="text-sm text-red-700/80 whitespace-pre-wrap mt-2">
+                      {actionError || JOB_STOPPED_MESSAGE}
+                    </p>
                     <p className="mt-4 text-xs font-bold text-red-700/80">
-                      エラーが発生しました。ページを再読み込みするか、必要に応じてキャンセルしてください。
+                      画面を読み込み直すと、続きから作ります。止めたいときは「キャンセル」を押してください。
                     </p>
                   </div>
                 </div>

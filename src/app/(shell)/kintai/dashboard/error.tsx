@@ -34,16 +34,16 @@ export default function DashboardErrorBoundary({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
-      <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="エラー" style={{ width: 120, height: 120, objectFit: 'contain' }} />
-      <h2 className="text-2xl font-black text-slate-800">エラーが発生しました</h2>
+      <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+      <h2 className="text-2xl font-black text-slate-800">画面を表示できませんでした</h2>
       <div className="bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-3 max-w-lg text-center">
-        <p className="text-base font-bold text-red-700">{error.message}</p>
-        {error.digest && <p className="text-xs text-red-400 mt-1">digest: {error.digest}</p>}
+        {/* 例外の文・digest は画面に出さない（報告の送信にだけ付ける） */}
+        <p className="text-base font-bold text-red-700">一時的な不具合です。少し待って、もう一度お試しください。</p>
       </div>
       <div className="flex items-center gap-3">
         <button
           onClick={reset}
-          className="px-6 py-3 bg-[#7f19e6] text-white font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg text-base"
+          className="px-6 py-3 bg-[#0066ff] text-white font-black rounded-full hover:bg-[#0047d6] transition-all shadow-lg text-base"
         >
           再試行する
         </button>
@@ -56,7 +56,7 @@ export default function DashboardErrorBoundary({
       </div>
 
       {!showReport && !sent && (
-        <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#7f19e6] hover:underline">
+        <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#0066ff] hover:underline">
           <Bug size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" />エラーを報告する
         </button>
       )}
@@ -69,12 +69,12 @@ export default function DashboardErrorBoundary({
             onChange={(e) => setReportText(e.target.value)}
             placeholder="どんな操作でエラーが出ましたか？"
             rows={3}
-            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#7f19e6] outline-none resize-none"
+            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#0066ff] outline-none resize-none"
           />
           <button
             onClick={handleReport}
             disabled={!reportText.trim()}
-            className="mt-2 w-full px-6 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-black rounded-full disabled:opacity-50 text-sm"
+            className="mt-2 w-full px-6 py-3 bg-gradient-to-r from-[#0066ff] to-[#003985] text-white font-black rounded-full disabled:opacity-50 text-sm"
           >
             報告を送信
           </button>

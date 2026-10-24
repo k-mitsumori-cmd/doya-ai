@@ -73,7 +73,7 @@ export default function SfaTasksPage() {
       setLoadedPage(page)
       setHasMore(data.hasMore)
     } catch (error) {
-      if (sequence === loadSequenceRef.current && mutations.active()) { setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした', error) }
+      if (sequence === loadSequenceRef.current && mutations.active()) { setListError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'タスク一覧を取得できませんでした', error) }
     } finally {
       if (sequence === loadSequenceRef.current && mutations.active()) setListLoading(false)
     }
@@ -119,7 +119,7 @@ export default function SfaTasksPage() {
       setActsRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setActsError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
+        setActsError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '活動を取得できませんでした', error)
         setActsRetryCursor(cursor || null)
       }
     } finally {

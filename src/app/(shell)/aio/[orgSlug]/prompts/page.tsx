@@ -29,13 +29,13 @@ export default function AioPromptsPage() {
     <div className="max-w-2xl mx-auto p-6">
       <PageHeader icon="quiz" title="監視プロンプト" subtitle="AIに投げて言及をチェックする質問を登録します" />
 
-      {loaded && !error && <div className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
+      {loaded && !error && <div className="mb-5 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">
         <p>表示中の有効な質問：{prompts.filter(p => p.isActive).length}件 ／ 1回の測定は最大{AIO_MAX_PROMPTS_PER_SCAN}件</p>
         <p>有効な質問をすべて測定します。上限を超える場合は、今回測定しない質問のスイッチを無効にしてください。登録した質問は残ります。</p>
         <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="font-bold underline">ダッシュボードに戻る</Link>
       </div>}
 
-      {quota && <div role="alert" className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
+      {quota && <div role="alert" className="mb-5 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">
         <p className="font-black">監視プロンプトの利用枠に達しました</p>
         <p className="mt-1">{quota.message}</p>
         {quota.canManageBilling === true && quota.upgradeUrl ? <>
@@ -44,7 +44,7 @@ export default function AioPromptsPage() {
         </> : <p className="mt-2">利用枠について組織オーナーにご相談ください。</p>}
       </div>}
 
-      {notice && <p role="status" className="mb-4 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">{notice}</p>}
+      {notice && <p role="status" className="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-800">{notice}</p>}
       {pending && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p>処理結果を確認中です。確認が終わるまで、新しい追加・切替・保管はできません。</p>
         <button disabled={busy} onClick={() => void state.recover()} className="mt-2 mr-4 underline disabled:opacity-50">操作結果を確認</button>
@@ -54,14 +54,14 @@ export default function AioPromptsPage() {
         <div className="flex gap-2">
           <input aria-label="監視する質問" maxLength={500} value={text} onChange={(e) => state.edit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); state.add() } }}
             placeholder="例: 〔自社のカテゴリ〕でおすすめのサービスは？"
-            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-2.5 font-bold transition-colors min-w-0" />
+            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-brand-500 outline-none px-4 py-2.5 font-bold transition-colors min-w-0" />
           <button onClick={state.add} disabled={disabled || !text.trim()}
-            className="px-5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow disabled:opacity-50 shrink-0 whitespace-nowrap">追加</button>
+            className="px-5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow disabled:opacity-50 shrink-0 whitespace-nowrap">追加</button>
         </div>
         <p className="text-xs text-slate-400 font-bold mt-3">編集可能な例文です。〔  〕を自社のカテゴリや課題に置き換えて登録してください。</p>
         <div className="flex flex-wrap gap-2 mt-2">
           {SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => state.edit(s)} className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-full px-3 py-1.5 transition-colors">＋ {s}</button>
+            <button key={s} onClick={() => state.edit(s)} className="text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-50 rounded-full px-3 py-1.5 transition-colors">＋ {s}</button>
           ))}
         </div>
       </div>}
@@ -81,11 +81,11 @@ export default function AioPromptsPage() {
           {prompts.map((p) => (
             <div key={p.id} className={`flex items-center gap-3 bg-white rounded-xl border p-3 ${p.isActive ? 'border-slate-200' : 'border-slate-100 opacity-60'}`}>
               <button onClick={() => state.toggle(p)} disabled={disabled} role="switch" aria-checked={p.isActive} aria-label={`「${p.text}」の監視`} title={p.isActive ? '有効' : '無効'}
-                className={`w-9 h-5 rounded-full relative shrink-0 transition-colors ${p.isActive ? 'bg-purple-500' : 'bg-slate-300'}`}>
+                className={`w-9 h-5 rounded-full relative shrink-0 transition-colors ${p.isActive ? 'bg-brand-400' : 'bg-slate-300'}`}>
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${p.isActive ? 'left-4' : 'left-0.5'}`} />
               </button>
               <p className="flex-1 text-sm font-bold text-slate-800">{p.text}</p>
-              <button onClick={() => state.archive(p)} disabled={disabled} title="保管" aria-label="質問を保管" className="text-slate-400 hover:text-purple-700 transition-colors">
+              <button onClick={() => state.archive(p)} disabled={disabled} title="保管" aria-label="質問を保管" className="text-slate-400 hover:text-brand-600 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">archive</span>
               </button>
             </div>

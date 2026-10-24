@@ -15,28 +15,28 @@ interface ArticleCardProps {
 function getTemplateGradient(template: ArticleTemplate): string {
   // フェーズとカテゴリを組み合わせてユニークなグラデーションを生成
   if (template.phase === '認知' && template.category === '解説型') {
-    return 'from-blue-600 via-purple-700 to-indigo-900'
+    return 'from-blue-600 via-brand-600 to-indigo-900'
   }
   if (template.phase === '認知' && template.category === '比較型') {
-    return 'from-blue-500 via-pink-600 to-purple-800'
+    return 'from-blue-500 via-brand-700 to-brand-700'
   }
   if (template.phase === '認知' && template.category === '一覧型') {
     return 'from-cyan-500 via-blue-600 to-indigo-800'
   }
   if (template.phase === '比較' && template.category === '解説型') {
-    return 'from-amber-500 via-purple-600 to-violet-800'
+    return 'from-amber-500 via-brand-500 to-brand-700'
   }
   if (template.phase === '比較' && template.category === '比較型') {
-    return 'from-orange-500 via-rose-600 to-pink-800'
+    return 'from-orange-500 via-rose-600 to-brand-900'
   }
   if (template.phase === '比較' && template.category === '一覧型') {
     return 'from-amber-500 via-cyan-600 to-blue-800'
   }
   if (template.phase === 'CV' && template.category === '解説型') {
-    return 'from-emerald-500 via-purple-600 to-indigo-800'
+    return 'from-emerald-500 via-brand-500 to-indigo-800'
   }
   if (template.phase === 'CV' && template.category === '比較型') {
-    return 'from-teal-500 via-pink-600 to-rose-800'
+    return 'from-teal-500 via-brand-700 to-rose-800'
   }
   if (template.phase === 'CV' && template.category === '一覧型') {
     return 'from-cyan-500 via-emerald-600 to-teal-800'
@@ -127,7 +127,7 @@ export function ArticleCard({ template, isSelected, onClick }: ArticleCardProps)
           <span
             className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full text-[7px] sm:text-[9px] md:text-[10px] font-bold whitespace-nowrap backdrop-blur-sm ${
               template.category === '解説型'
-                ? 'bg-purple-500/90 text-white'
+                ? 'bg-brand-400/90 text-white'
                 : template.category === '比較型'
                   ? 'bg-pink-500/90 text-white'
                   : 'bg-cyan-500/90 text-white'

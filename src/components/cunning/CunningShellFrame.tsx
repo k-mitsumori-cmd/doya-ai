@@ -21,8 +21,6 @@ export default function CunningShellFrame({ children }: { children: React.ReactN
       <Toaster position="top-center" />
       <ToolFrame
         serviceId="cunning"
-        title="ドヤカンニング"
-        description="Web会議中の質問に、AIが回答の案をその場で表示します。"
         nav={CUNNING_NAV}
       >
         {account.failed && <div role="alert" className="p-3 text-sm text-amber-900 bg-amber-50">プランを確認できませんでした。<button type="button" className="ml-2 underline" onClick={account.refresh}>再確認する</button></div>}

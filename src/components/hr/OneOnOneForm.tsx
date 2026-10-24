@@ -132,10 +132,13 @@ export default function OneOnOneForm({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'AI要約の生成に失敗しました')
+      if (!res.ok) throw new Error(typeof data?.error === 'string' && data.error ? data.error : 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。')
       setAiResult(data.aiSummary || data.summary || data.result || '')
     } catch (e: any) {
-      setAiResult(`エラー: ${e.message}`)
+      // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない。
+      //    英語や内部の文（通信の失敗など）は出さず、日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      setAiResult(`エラー: ${/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。'}`)
     } finally {
       aiLoadingRef.current = false
       setAiLoading(false)
@@ -167,11 +170,12 @@ export default function OneOnOneForm({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
-        if (!res.ok) throw new Error('保存に失敗しました')
+        if (!res.ok) throw new Error('1on1の記録を保存できませんでした。時間をおいて、もう一度お試しください。')
       }
       return live()
     } catch (e: any) {
-      toast.error(e.message)
+      const message = typeof e?.message === 'string' ? e.message : ''
+      toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '1on1の記録を保存できませんでした。通信を確かめて、もう一度お試しください。')
       return false
     } finally {
       savingRef.current = false
@@ -414,14 +418,14 @@ export default function OneOnOneForm({
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
+              <span className="material-symbols-outlined text-brand-400">auto_awesome</span>
               AI要約生成
             </h3>
             <button
               type="button"
               onClick={handleAiSummary}
               disabled={editingDisabled}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-400 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-brand-400/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>

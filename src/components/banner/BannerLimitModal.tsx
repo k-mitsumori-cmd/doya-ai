@@ -137,7 +137,7 @@ export default function BannerLimitModal({
           className="relative max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-3xl border border-gray-700 bg-gray-900 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-600/20 via-brand-500/10 to-transparent" />
 
           <button
             onClick={onClose}
@@ -148,7 +148,7 @@ export default function BannerLimitModal({
           </button>
 
           <div className="relative p-6 sm:p-7">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-brand-500 shadow-lg shadow-blue-500/30">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
 
@@ -172,7 +172,7 @@ export default function BannerLimitModal({
                     initial={{ width: 0 }}
                     animate={{ width: `${usagePercent}%` }}
                     transition={{ delay: 0.25, duration: 0.5, ease: 'easeOut' }}
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-brand-400"
                   />
                 </div>
                 <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-gray-400">
@@ -185,7 +185,7 @@ export default function BannerLimitModal({
             {!contactAction && (
               <div className="mt-4 space-y-2">
                 {nextPlan && (
-                  <div className="rounded-xl border border-blue-500/60 bg-gradient-to-r from-blue-600/20 to-purple-600/20 px-4 py-3">
+                  <div className="rounded-xl border border-blue-500/60 bg-gradient-to-r from-blue-600/20 to-brand-500/20 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ export default function BannerLimitModal({
                   if (destination.startsWith('https://')) window.location.assign(destination)
                   else router.push(destination)
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-brand-500 px-6 py-3.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Rocket className="h-5 w-5" />
                 {contactAction

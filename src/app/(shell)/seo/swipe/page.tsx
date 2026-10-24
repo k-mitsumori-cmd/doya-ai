@@ -9,7 +9,8 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TinderSwipeCard, SwipeDecision } from '@/components/seo/TinderSwipeCard'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
-import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X, Lock, Check, RefreshCw, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
+import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X, Lock, Check, RefreshCw, ThumbsUp, ThumbsDown, Sparkles, Lightbulb } from 'lucide-react'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 type Step = 'keyword' | 'swipe' | 'confirm' | 'generating'
 
@@ -279,7 +280,7 @@ export default function SwipeArticlePage() {
       
       // 質問が来たら、ローディングはuseEffectで自動的に消える
     } catch (e: any) {
-      setError(e.message || 'エラーが発生しました')
+      setError(seoUserMessage(e, 'スワイプを始められませんでした。少し待って、もう一度お試しください。'))
       setStep('keyword')
       setIsTransitioningQuestion(false)
     } finally {
@@ -457,7 +458,7 @@ export default function SwipeArticlePage() {
       }
     } catch (e: any) {
       console.error('[loadNextQuestions] error:')
-      setError(e.message || 'エラーが発生しました')
+      setError(seoUserMessage(e, '質問を作れませんでした。少し待って、もう一度お試しください。'))
       // エラー時も質問キューが空でない場合は続行
       if (questionQueue.length === 0) {
         // 質問キューが空の場合はリトライ
@@ -517,7 +518,7 @@ export default function SwipeArticlePage() {
       }
     } catch (e: any) {
       console.error('[handleSwipe] error:')
-      setError(e.message || 'スワイプ処理中にエラーが発生しました')
+      setError(seoUserMessage(e, '回答を送れませんでした。通信を確かめて、もう一度お試しください。'))
     }
   }
 
@@ -558,7 +559,7 @@ export default function SwipeArticlePage() {
       // 記事生成ジョブページへリダイレクト
       router.push(`/seo/jobs/${json.jobId}`)
     } catch (e: any) {
-      setError(e.message || 'エラーが発生しました')
+      setError(seoUserMessage(e, '記事の生成を始められませんでした。もう一度お試しください。'))
       setLoading(false)
     }
   }
@@ -669,7 +670,7 @@ export default function SwipeArticlePage() {
                           className="relative w-[min(360px,88%)] sm:w-[min(440px,90%)] rounded-2xl sm:rounded-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-4 sm:p-6 overflow-hidden"
                         >
                           {/* 上部アクセント */}
-                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400" />
                           
                           <div className="flex items-center gap-3 sm:gap-4">
                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
@@ -685,7 +686,7 @@ export default function SwipeArticlePage() {
                           <div className="mt-4 sm:mt-5">
                             <div className="h-2 sm:h-2.5 rounded-full bg-slate-100 overflow-hidden">
                               <motion.div
-                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
+                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-400"
                                 initial={{ x: '-40%' }}
                                 animate={{ x: ['-40%', '110%'] }}
                                 transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -731,7 +732,7 @@ export default function SwipeArticlePage() {
               <div className="max-w-5xl mx-auto">
                 <div className="w-full h-4 sm:h-6 bg-slate-800/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-lg"
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-brand-500 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -794,7 +795,7 @@ export default function SwipeArticlePage() {
                 className="mb-8"
               >
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
-                  <div className="px-5 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
+                  <div className="px-5 py-4 bg-gradient-to-r from-indigo-50 to-brand-50 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -904,7 +905,7 @@ export default function SwipeArticlePage() {
                           })
                           setSelectedTitleIndex(0)
                         } catch (e: any) {
-                          setError(e?.message || 'タイトル候補を生成できませんでした')
+                          setError(seoUserMessage(e, 'タイトル候補を作れませんでした。少し待って、もう一度お試しください。'))
                         } finally {
                           setIsGeneratingTitles(false)
                         }
@@ -929,7 +930,7 @@ export default function SwipeArticlePage() {
                 {/* タイトル候補6種類 */}
                 {finalData.titleCandidates && finalData.titleCandidates.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-2">💡 ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）</p>
+                    <p className="text-xs text-gray-500 mb-2 flex items-center gap-1"><Lightbulb className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {finalData.titleCandidates.map((title, idx) => (
                         <button
@@ -1092,8 +1093,9 @@ export default function SwipeArticlePage() {
                   rows={5}
                   className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-indigo-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200/40 transition-all resize-none"
                 />
-                <p className="mt-2 text-xs font-bold text-indigo-700">
-                  ✨ 入力した一次情報は本文生成に反映されます
+                <p className="mt-2 flex items-center gap-1 text-xs font-bold text-indigo-700">
+                  <Sparkles className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />
+                  入力した一次情報は本文生成に反映されます
                 </p>
               </div>
             </div>

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import { Button } from '@/components/promane/ui/button'
 import { Input } from '@/components/promane/ui/input'
 import { Badge } from '@/components/promane/ui/badge'
 import { Mail, X, Copy, Send, Trash2, Clock, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import { userErrorMessage } from '@/lib/promane/user-error'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface SentInvitation {
   id: string
@@ -81,7 +83,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       const params = new URLSearchParams({ type: 'sent', workspaceId })
       const response = await fetch(`/api/promane/invitations?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(data?.error || '招待履歴を取得できませんでした')
+      if (!response.ok) throw new Error(userErrorMessage(data?.error, '招待履歴を取得できませんでした'))
       const page = parseSentInvitationPage(data)
       if (page.nextCursor === null && page.invitations.length !== page.total) throw new Error('招待履歴の応答が正しくありません')
       if (version !== requestVersion.current) return
@@ -89,7 +91,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       setNextCursor(page.nextCursor)
       setHistoryTotal(page.total)
     } catch (cause) {
-      if (version === requestVersion.current) setHistoryError(cause instanceof Error ? cause.message : '招待履歴を取得できませんでした')
+      if (version === requestVersion.current) setHistoryError(userErrorMessage(cause instanceof Error ? cause.message : null, '招待履歴を取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoading(false)
     }
@@ -110,7 +112,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       const params = new URLSearchParams({ type: 'sent', workspaceId, cursor: nextCursor })
       const response = await fetch(`/api/promane/invitations?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(data?.error || '招待履歴の続きを取得できませんでした')
+      if (!response.ok) throw new Error(userErrorMessage(data?.error, '招待履歴の続きを取得できませんでした'))
       const page = parseSentInvitationPage(data)
       if (page.total !== historyTotal || sentInvitations.length + page.invitations.length > historyTotal ||
           page.invitations.some((invitation) => sentInvitations.some((current) => current.id === invitation.id)) ||
@@ -121,11 +123,23 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       setSentInvitations(sentInvitations.concat(page.invitations))
       setNextCursor(page.nextCursor)
     } catch (cause) {
-      if (version === requestVersion.current) setHistoryError(cause instanceof Error ? cause.message : '招待履歴の続きを取得できませんでした')
+      if (version === requestVersion.current) setHistoryError(userErrorMessage(cause instanceof Error ? cause.message : null, '招待履歴の続きを取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoadingMore(false)
     }
   }
+
+  const titleId = useId()
+  // Esc で閉じる（共通の確認ダイアログが開いている間は、そちらが Esc を受ける）
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -147,7 +161,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data?.error || '招待に失敗しました', {
+        toast.error(userErrorMessage(data?.error, '招待できませんでした。メールアドレスを確かめて、もう一度お試しください。'), {
           icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         })
         return
@@ -168,7 +182,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
       setEmail('')
       await loadSent()
     } catch (e: any) {
-      toast.error(e?.message || 'エラーが発生しました')
+      toast.error(userErrorMessage(e?.message, '通信できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setSending(false)
     }
@@ -185,19 +199,18 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
   }
 
   const handleRevoke = async (id: string) => {
-    // モーダル内のモーダルは複雑なため、シンプルなネイティブ確認を維持
-    if (!window.confirm('この招待を取り消しますか？')) return
+    if (!(await confirmDialog({ title: 'この招待を取り消しますか？', message: '送った招待リンクは使えなくなります。', confirmLabel: '取り消す', tone: 'danger' }))) return
     try {
       const res = await fetch(`/api/promane/invitations?id=${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const d = await res.json()
-        toast.error(d?.error || '取消に失敗しました')
+        toast.error(userErrorMessage(d?.error, '招待を取り消せませんでした。もう一度お試しください。'))
         return
       }
       toast.success('招待を取り消しました')
       await loadSent()
     } catch (e: any) {
-      toast.error(e?.message || 'エラーが発生しました')
+      toast.error(userErrorMessage(e?.message, '通信できませんでした。通信を確かめて、もう一度お試しください。'))
     }
   }
 
@@ -205,6 +218,9 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -212,12 +228,12 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
           <div className="flex items-center gap-3">
             <Image src="/character/love.png" alt="" width={48} height={48} className="drop-shadow" unoptimized />
             <div>
-              <h2 className="text-[20px] font-black text-gray-900">メンバーを招待</h2>
+              <h2 id={titleId} className="text-[20px] font-black text-gray-900">メンバーを招待</h2>
               <p className="text-[12px] text-gray-400 font-bold">メールで招待リンクを送信します</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="閉じる" className="text-gray-400 hover:text-gray-700 transition-colors">
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
 
@@ -284,7 +300,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
               <Button
                 onClick={handleSend}
                 disabled={sending || !email.trim()}
-                className="w-full h-12 rounded-full text-[15px] font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-lg"
+                className="w-full h-12 rounded-full text-[15px] font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-lg"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {sending ? '送信中...' : '招待メールを送信'}

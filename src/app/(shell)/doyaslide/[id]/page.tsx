@@ -11,6 +11,8 @@ import { useSession } from 'next-auth/react'
 import { useDoyaSlideRecovery } from '@/lib/doyaslide/use-operation-recovery'
 import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperationRecovery'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
+import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface Slide {
   id: string
@@ -545,7 +547,7 @@ function EditorInner() {
         toast.success('ロゴ設定を全スライドに反映しました')
       } else {
         setLogoRetryPatch(patch)
-        toast.error(typeof data?.error === 'string' ? data.error : 'ロゴ設定の更新に失敗しました')
+        toast.error(typeof data?.error === 'string' && /[ぁ-んァ-ヶ一-龠]/.test(data.error) ? data.error : 'ロゴの設定を保存できませんでした。もう一度お試しください。')
       }
       await reload()
     } catch {
@@ -560,7 +562,8 @@ function EditorInner() {
 
   const exportAs = async (fmt: 'pdf' | 'zip') => {
     if (!project || !mountedRef.current || exportBusyRef.current) return
-    if (!allDone && !confirm('未生成のスライドがあります。完成分のみ書き出しますか？')) return
+    if (!allDone && !(await confirmDialog({ title: '完成したスライドだけを書き出しますか？', message: 'まだ作っていないスライドは含まれません。', confirmLabel: '書き出す' }))) return
+    if (!mountedRef.current || exportBusyRef.current) return
     exportBusyRef.current = true
     setExporting(fmt)
     try {
@@ -591,10 +594,10 @@ function EditorInner() {
   }
 
   if (loading) {
+    // 新しい見た目では、文字だけでなく骨組みを出す
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <img src="/character/thinking.png" alt="" className="w-20 h-20 object-contain animate-pulse" />
-        <p className="text-slate-400 font-bold">読み込み中...</p>
+      <div className="p-4 lg:p-8 max-w-6xl mx-auto" aria-busy="true">
+        <Skeleton lines={6} height={20} />
       </div>
     )
   }
@@ -603,8 +606,8 @@ function EditorInner() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
         <img src="/character/error.png" alt="" className="w-24 h-24 object-contain" />
         <p role="alert" className="font-black text-slate-700">{projectReadError || 'プロジェクトが見つかりません。'}</p>
-        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#7f19e6] text-[#7f19e6] font-bold rounded-xl">再読み込み</button>
-        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl">
+        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#0066ff] text-[#0066ff] font-bold rounded-xl">再読み込み</button>
+        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl">
           一覧に戻る
         </Link>
       </div>
@@ -984,28 +987,8 @@ function EditorInner() {
         </div>
       </div>
 
-      {/* 生成エンジン表示（どのAIで生成されたか） */}
-      {(() => {
-        const usedModels = Array.from(new Set(slides.map((s) => s.model).filter(Boolean))) as string[]
-        if (usedModels.length === 0) return null
-        const label = (m: string) =>
-          m.includes('gpt-image')
-            ? `${m}（OpenAI ChatGPT Image 2.0）`
-            : m.includes('nano-banana')
-              ? `${m}（Geminiフォールバック）`
-              : m
-        return (
-          <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-            <p className="text-xs font-bold text-slate-400 inline-flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">auto_awesome</span>
-              生成エンジン: {usedModels.map(label).join(' / ')}
-            </p>
-          </div>
-        )
-      })()}
-
       {celebrate && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+        <div role="status" className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
           <div className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-10 py-7 flex flex-col items-center gap-2 animate-[fadeIn_.3s_ease]">
             <img src="/character/jump.png" alt="" className="w-28 h-28 object-contain animate-bounce" />
             <p className="text-xl font-black text-blue-700">{'完成しました！'}</p>
@@ -1027,9 +1010,13 @@ function EditorInner() {
   )
 }
 
+function EditorFallback() {
+  return <div className="p-4 lg:p-8 max-w-6xl mx-auto" aria-busy="true"><Skeleton lines={6} height={20} /></div>
+}
+
 export default function DoyaSlideEditorPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-slate-400 font-bold">読み込み中...</div>}>
+    <Suspense fallback={<EditorFallback />}>
       <EditorInner />
     </Suspense>
   )

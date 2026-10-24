@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/promane/utils";
 import { Badge } from "@/components/promane/ui/badge";
 import { PRIORITY_LABELS, PRIORITY_COLORS, formatDuration } from "@/lib/promane/format";
-import { Clock, User, Pencil } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock, User, Pencil } from "lucide-react";
 
 type TaskItem = {
   id: string;
@@ -101,9 +101,10 @@ export function KanbanCard({
           <span />
         )}
         {task.dueDate && (
-          <span className={cn("text-[13px] font-bold", isOverdue ? "text-red-500" : "text-gray-400")}>
-            📅 {new Date(task.dueDate).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })}
-            {isOverdue && " ⚠️"}
+          <span className={cn("inline-flex items-center gap-1 text-[13px] font-bold", isOverdue ? "text-red-500" : "text-gray-400")}>
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+            {new Date(task.dueDate).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })}
+            {isOverdue && <><AlertTriangle className="h-3.5 w-3.5" aria-hidden /><span className="sr-only">期限切れ</span></>}
           </span>
         )}
       </div>

@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { alertDialog } from '@/components/ds/dialog'
+import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface BillingInfo {
   plan: string
@@ -25,8 +27,8 @@ const PLAN_DISPLAY: Record<string, { name: string; color: string }> = {
   free: { name: 'Free', color: 'from-slate-400 to-slate-500' },
   starter: { name: 'Starter', color: 'from-blue-500 to-blue-600' },
   light: { name: 'Light', color: 'from-blue-500 to-blue-600' },
-  pro: { name: 'Pro', color: 'from-purple-500 to-purple-600' },
-  bundle: { name: 'Pro', color: 'from-purple-500 to-purple-600' },
+  pro: { name: 'Pro', color: 'from-brand-400 to-brand-500' },
+  bundle: { name: 'Pro', color: 'from-brand-400 to-brand-500' },
   enterprise: { name: 'Enterprise', color: 'from-amber-500 to-orange-500' },
 }
 
@@ -123,10 +125,10 @@ export default function BillingPage() {
       if (redirect) {
         window.location.href = redirect
       } else {
-        alert(data.error || 'ポータルセッションの作成に失敗しました')
+        await alertDialog({ title: '契約の管理画面を開けませんでした', message: hrUserMessage(data?.error, '時間をおいて、もう一度お試しください。続くときはお問い合わせください。'), tone: 'error' })
       }
     } catch {
-      if (organizationScope.isCurrent()) alert('エラーが発生しました。もう一度お試しください。')
+      if (organizationScope.isCurrent()) await alertDialog({ title: '契約の管理画面を開けませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setPortalLoading(false)
     }
@@ -154,7 +156,7 @@ export default function BillingPage() {
         <div role="alert" className="rounded-2xl bg-white p-8 shadow-md">
           <PageTitle className="text-xl font-bold text-slate-900">組織のプランを確認できませんでした</PageTitle>
           <p className="mt-2 text-sm text-slate-600">しばらくしてから再読み込みしてください。</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-bold text-white">再読み込みする</button>
+          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white">再読み込みする</button>
         </div>
       </div>
     )
@@ -252,7 +254,7 @@ export default function BillingPage() {
               used={billing?.memberCount ?? 0}
               limit={billing?.memberLimit ?? 2}
               icon="group"
-              color="text-purple-600"
+              color="text-brand-500"
             />
             <UsageBar
               label="AI利用 (今月)"
@@ -271,8 +273,8 @@ export default function BillingPage() {
           transition={{ delay: 0.3 }}
         >
           <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-purple-600">rocket_launch</span>
+            <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-brand-500">rocket_launch</span>
             </div>
             プラン一覧
           </h2>

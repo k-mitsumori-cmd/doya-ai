@@ -105,7 +105,7 @@ export default function ShodanResultPage() {
   if (detail.missing) return (
     <div className="p-10 text-center">
       <DoyaKun mood="error" size={96} />
-      <p className="text-slate-500 font-bold mt-3">商談準備が見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="text-purple-600 underline ml-1">一覧へ戻る</Link></p>
+      <p className="text-slate-500 font-bold mt-3">商談準備が見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="text-brand-500 underline ml-1">一覧へ戻る</Link></p>
     </div>
   )
   if (!prep && detail.error) return <div role="alert" className="p-10 text-center"><p>{detail.error}</p><button onClick={detail.load} disabled={detail.loading}>再読み込み</button><Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="ml-4 underline">一覧へ戻る</Link></div>
@@ -118,8 +118,8 @@ export default function ShodanResultPage() {
     <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-5">
       <style>{`@media print { aside, .shodan-no-print { display: none !important; } .shodan-print-only { display: block !important; } main { width: 100% !important; } body { background: #fff !important; } }`}</style>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 shodan-no-print">
-        <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}一覧</Link>
-        <button onClick={detail.load} disabled={detail.loading || !!detail.busy} className="ml-auto hover:text-purple-600 disabled:opacity-50">保存内容を再読み込み</button>
+        <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="hover:text-brand-500 flex items-center gap-1">{sym('arrow_back', 16)}一覧</Link>
+        <button onClick={detail.load} disabled={detail.loading || !!detail.busy} className="ml-auto hover:text-brand-500 disabled:opacity-50">保存内容を再読み込み</button>
       </div>
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -130,7 +130,7 @@ export default function ShodanResultPage() {
               <ShodanHeading className="text-2xl font-black text-slate-900">{prep.targetName || prep.targetUrl}</ShodanHeading>
               {prep.status === 'done' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">準備完了</span>}
             </div>
-            <a href={prep.targetUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-purple-600 hover:underline flex items-center gap-1 mt-1">{sym('open_in_new', 14)}{prep.targetUrl}</a>
+            <a href={prep.targetUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-brand-500 hover:underline flex items-center gap-1 mt-1">{sym('open_in_new', 14)}{prep.targetUrl}</a>
           </div>
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function ShodanResultPage() {
       </div>}
       {planNotice && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-950 shodan-no-print">
         <p>{planNotice.message}</p>
-        {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-purple-700 underline">{planNotice.label}</Link>}
+        {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-brand-600 underline">{planNotice.label}</Link>}
       </div>}
 
       {/* 完了サマリー＋成果物への素早いジャンプ */}
@@ -155,7 +155,7 @@ export default function ShodanResultPage() {
           <div className="flex-1" />
           {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
             <button onClick={() => document.getElementById('shodan-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
               {sym('slideshow', 16)}提案を見る
             </button>
           )}
@@ -163,11 +163,11 @@ export default function ShodanResultPage() {
       )}
 
       {prep.status === 'processing' && (
-        <div className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
+        <div className="rounded-3xl bg-white border border-brand-50 p-8 shadow-sm text-center">
           <div className="flex justify-center"><DoyaKun mood="working" size={120} /></div>
           <p className="font-black text-slate-900 text-lg mt-3">ドヤくんが商談準備を作成中です…</p>
           <p className="text-sm font-bold text-slate-400 mt-1">調査〜提案生成まで30秒〜2分ほど。このまま自動で更新されます。</p>
-          <div className="mt-4 inline-block w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+          <div className="mt-4 inline-block w-8 h-8 border-4 border-brand-100 border-t-brand-500 rounded-full animate-spin" />
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default function ShodanResultPage() {
 
       {/* 調査済み・提案生成中 → 派手な「作成中」進捗パネル（会社情報は下にすぐ表示） */}
       {prep.status === 'researched' && !prep.proposalMarkdown && generating && (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 text-white p-6 shadow-lg shadow-purple-500/25 shodan-no-print">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-700 to-indigo-600 text-white p-6 shadow-lg shadow-brand-400/25 shodan-no-print">
           {/* 背景キラキラ */}
           {['top-4 left-6', 'top-8 right-10', 'bottom-6 left-1/3', 'bottom-10 right-1/4'].map((pos, i) => (
             <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/25 animate-ping`}
@@ -228,13 +228,13 @@ export default function ShodanResultPage() {
 
       {/* 調査済みだが自動生成が止まった等 → 手動の作成導線（フォールバック） */}
       {prep.status === 'researched' && !prep.proposalMarkdown && !generating && (
-        <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap shodan-no-print">
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4 flex-wrap shodan-no-print">
           <DoyaKun mood="thumbsup" size={52} float={false} />
-          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">
+          <span className="flex-1 min-w-[180px] text-brand-700 font-bold text-sm">
             {prep.errorMessage ? '前回の提案資料の作成は完了しませんでした。右のボタンからもう一度作成できます。' : '企業調査は完了しました。続けて提案資料を作成しましょう。'}
           </span>
           <button onClick={generate} disabled={!detail.canAct}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
             {sym('bolt', 16)}{prep.errorMessage ? '提案資料をもう一度作成する' : '提案資料を作成する'}
           </button>
         </div>
@@ -254,7 +254,7 @@ export default function ShodanResultPage() {
 
       {/* 深掘り調査 */}
       {r && (
-        <Card title="深掘りリサーチ" icon="travel_explore" accent="text-purple-700">
+        <Card title="深掘りリサーチ" icon="travel_explore" accent="text-brand-600">
           {/* サイトのトップ画像＋調査したページのサムネイル */}
           {(r.crawledUrls?.length || r.ogImage) && (
             <div className="mb-4">
@@ -296,11 +296,11 @@ export default function ShodanResultPage() {
 
       {/* プレスリリース・最新動向（PR TIMES） */}
       {r?.pressReleases && r.pressReleases.length > 0 && (
-        <Card title="プレスリリース・最新動向（PR TIMES）" icon="campaign" accent="text-purple-700">
+        <Card title="プレスリリース・最新動向（PR TIMES）" icon="campaign" accent="text-brand-600">
           <div className="grid sm:grid-cols-2 gap-3">
             {r.pressReleases.map((p, i) => (
               <a key={i} href={p.url} target="_blank" rel="noreferrer"
-                className="group flex gap-3 rounded-2xl border border-slate-200 p-3 hover:border-purple-300 hover:shadow-md transition-all">
+                className="group flex gap-3 rounded-2xl border border-slate-200 p-3 hover:border-brand-200 hover:shadow-md transition-all">
                 <div className="w-24 h-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                   {p.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -310,8 +310,8 @@ export default function ShodanResultPage() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  {p.date && <div className="text-[11px] font-black text-purple-500">{p.date}</div>}
-                  <div className="text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-purple-700">{p.title}</div>
+                  {p.date && <div className="text-[11px] font-black text-brand-400">{p.date}</div>}
+                  <div className="text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-brand-600">{p.title}</div>
                 </div>
               </a>
             ))}
@@ -321,7 +321,7 @@ export default function ShodanResultPage() {
 
       {/* 提案資料（画像スライド）の作成 — プレスリリースの直下 */}
       {prep.status === 'done' && prep.slidesJson && prep.slidesJson.length > 0 && (
-        <Card title="提案資料（スライド）" icon="slideshow" accent="text-purple-700">
+        <Card title="提案資料（スライド）" icon="slideshow" accent="text-brand-600">
           {prep.slideImages && prep.slideImages.some((s) => s.imageUrl) ? (
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -334,13 +334,13 @@ export default function ShodanResultPage() {
                   <img key={i} src={s.imageUrl as string} alt={s.title} className="w-full aspect-video object-cover rounded-lg border border-slate-200" loading="lazy" />
                 ))}
               </div>
-              <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>
+              <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>
               {!completeSlideImages(prep) && <div className="mt-3"><p className="text-sm text-amber-800">未完成の画像があります。残りの画像を生成できます。</p><button onClick={genSlideImages} disabled={!detail.canAct} className="mt-2 underline disabled:opacity-50">未完成の画像を生成する</button></div>}
             </div>
           ) : slidesBusy ? (
-            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-6 text-center">
+            <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 border border-brand-50 p-6 text-center">
               <div className="flex justify-center"><DoyaKun mood={SLIDE_FUN_MSGS[funMsg].mood} size={96} /></div>
-              <p className="font-black text-purple-700 text-base mt-2 transition-all">{SLIDE_FUN_MSGS[funMsg].text}</p>
+              <p className="font-black text-brand-600 text-base mt-2 transition-all">{SLIDE_FUN_MSGS[funMsg].text}</p>
               {/* 進捗バー */}
               <div className="max-w-sm mx-auto mt-4">
                 <div className="flex items-center justify-between text-xs font-black text-slate-500 mb-1">
@@ -348,14 +348,14 @@ export default function ShodanResultPage() {
                   <span>{slidesProgress ? `${slidesProgress.done}/${slidesProgress.total}枚` : '準備中'}</span>
                 </div>
                 <div className="h-2.5 rounded-full bg-white/70 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all duration-700" style={{ width: slidesProgress ? `${Math.round((slidesProgress.done / Math.max(1, slidesProgress.total)) * 100)}%` : '8%' }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all duration-700" style={{ width: slidesProgress ? `${Math.round((slidesProgress.done / Math.max(1, slidesProgress.total)) * 100)}%` : '8%' }} />
                 </div>
               </div>
               {/* 組み上がるスライドのモック */}
               <div className="flex justify-center gap-2 mt-5">
                 {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="w-16 aspect-video rounded-lg bg-white border border-purple-200 grid place-items-center animate-pulse" style={{ animationDelay: `${i * 0.25}s` }}>
-                    <span className="material-symbols-outlined text-purple-300" style={{ fontSize: 16 }}>{['title', 'insert_chart', 'lightbulb', 'description'][i]}</span>
+                  <div key={i} className="w-16 aspect-video rounded-lg bg-white border border-brand-100 grid place-items-center animate-pulse" style={{ animationDelay: `${i * 0.25}s` }}>
+                    <span className="material-symbols-outlined text-brand-200" style={{ fontSize: 16 }}>{['title', 'insert_chart', 'lightbulb', 'description'][i]}</span>
                   </div>
                 ))}
               </div>
@@ -369,7 +369,7 @@ export default function ShodanResultPage() {
                 <p className="text-xs font-bold text-slate-400 mt-0.5">作成後、各スライドを修正できる編集画面に移動します。</p>
               </div>
               <button onClick={genSlideImages} disabled={!detail.canAct}
-                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all">
+                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm shadow-lg shadow-brand-400/25 hover:-translate-y-0.5 transition-all">
                 {sym('auto_awesome', 18)}提案資料を作成する
               </button>
             </div>
@@ -379,7 +379,7 @@ export default function ShodanResultPage() {
 
       {/* 現状分析 */}
       {a?.currentStateAssessment && (
-        <Card title="現状分析（はっきりめ）" icon="analytics" accent="text-purple-700">
+        <Card title="現状分析（はっきりめ）" icon="analytics" accent="text-brand-600">
           <p className="text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">{a.currentStateAssessment}</p>
           {(a.strengths?.length > 0 || a.weaknesses?.length > 0) && (
             <div className="grid md:grid-cols-2 gap-4 mt-4">
@@ -398,11 +398,11 @@ export default function ShodanResultPage() {
 
       {/* 課題仮説 */}
       {a && a.hypotheses.length > 0 && (
-        <Card title="課題仮説" icon="psychology" accent="text-purple-700">
+        <Card title="課題仮説" icon="psychology" accent="text-brand-600">
           <div className="space-y-3">
             {a.hypotheses.map((h, i) => (
               <div key={i} className="rounded-2xl border border-slate-200 p-4">
-                <div className="font-black text-slate-900 flex items-start gap-2"><span className="text-purple-600">{i + 1}.</span>{h.issue}</div>
+                <div className="font-black text-slate-900 flex items-start gap-2"><span className="text-brand-500">{i + 1}.</span>{h.issue}</div>
                 {h.basis && <div className="text-sm font-bold text-slate-500 mt-1.5"><span className="text-slate-400">根拠：</span>{h.basis}</div>}
                 {h.impact && <div className="text-sm font-bold text-rose-600 mt-1"><span className="text-rose-400">放置リスク：</span>{h.impact}</div>}
               </div>
@@ -413,11 +413,11 @@ export default function ShodanResultPage() {
 
       {/* 解決策 */}
       {a && a.solutions.length > 0 && (
-        <Card title="解決策（ご提案の柱）" icon="lightbulb" accent="text-purple-700">
+        <Card title="解決策（ご提案の柱）" icon="lightbulb" accent="text-brand-600">
           <div className="grid md:grid-cols-2 gap-3">
             {a.solutions.map((s, i) => (
-              <div key={i} className="rounded-2xl bg-purple-50/60 border border-purple-100 p-4">
-                <div className="font-black text-purple-900">{s.title}</div>
+              <div key={i} className="rounded-2xl bg-brand-50/60 border border-brand-50 p-4">
+                <div className="font-black text-brand-800">{s.title}</div>
                 {s.detail && <div className="text-sm font-bold text-slate-700 mt-1.5">{s.detail}</div>}
                 {s.expectedEffect && <div className="text-sm font-bold text-emerald-700 mt-1.5 flex items-start gap-1">{sym('check', 14)}{s.expectedEffect}</div>}
               </div>
@@ -428,11 +428,11 @@ export default function ShodanResultPage() {
 
       {/* 商談メモ */}
       {a && (a.talkingPoints.length > 0 || a.firstMessage) && (
-        <Card title="商談で使うメモ" icon="record_voice_over" accent="text-purple-700">
+        <Card title="商談で使うメモ" icon="record_voice_over" accent="text-brand-600">
           {a.firstMessage && (
             <div className="rounded-2xl bg-slate-900 text-white p-4 mb-3">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-black text-purple-300 flex items-center gap-1">{sym('waving_hand', 16)}最初の一言</span>
+                <span className="text-xs font-black text-brand-200 flex items-center gap-1">{sym('waving_hand', 16)}最初の一言</span>
                 <button onClick={() => copyText(a.firstMessage)} className="text-slate-300 hover:text-white flex items-center gap-1 text-xs font-bold">{sym('content_copy', 14)}コピー</button>
               </div>
               <p className="font-bold leading-relaxed">{a.firstMessage}</p>
@@ -451,14 +451,14 @@ export default function ShodanResultPage() {
       <div id="shodan-proposal" className="scroll-mt-4" />
       {/* 提案（スライド / 文書） */}
       {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
-        <Card title="提案資料" icon="slideshow" accent="text-purple-700">
+        <Card title="提案資料" icon="slideshow" accent="text-brand-600">
           {/* タブ */}
           <div className="flex items-center gap-2 mb-4 shodan-no-print">
             {prep.slidesJson && prep.slidesJson.length > 0 && (
-              <button onClick={() => setView('slides')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'slides' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('slideshow', 16)}スライド</button>
+              <button onClick={() => setView('slides')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'slides' ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('slideshow', 16)}スライド</button>
             )}
             {prep.proposalMarkdown && (
-              <button onClick={() => setView('doc')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'doc' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('description', 16)}文書</button>
+              <button onClick={() => setView('doc')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'doc' ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('description', 16)}文書</button>
             )}
           </div>
 
@@ -467,7 +467,7 @@ export default function ShodanResultPage() {
           ) : prep.proposalMarkdown ? (
             <>
               <div className="flex items-center gap-2 mb-4 flex-wrap shodan-no-print">
-                <button onClick={copyProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-sm hover:bg-purple-700 transition-colors">{sym('content_copy', 16)}コピー</button>
+                <button onClick={copyProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-500 text-white font-black text-sm hover:bg-brand-600 transition-colors">{sym('content_copy', 16)}コピー</button>
                 <button onClick={downloadProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('download', 16)}.md保存</button>
                 <button onClick={printProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('print', 16)}印刷 / PDF</button>
               </div>

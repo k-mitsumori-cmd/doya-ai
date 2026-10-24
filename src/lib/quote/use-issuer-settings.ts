@@ -83,7 +83,7 @@ export function useQuoteIssuerSettings() {
       if (!dirty.current) draft.current = form
       setReady({ epoch, role: org.role, slug: org.slug })
     } catch (e) {
-      if (ticket.current()) setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (ticket.current()) setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
     } finally {
       if (ticket.current()) setLoading(false)
       ticket.end()
@@ -97,7 +97,7 @@ export function useQuoteIssuerSettings() {
     if (!ticket) return
     let sent: QuoteIssuerInput
     try { sent = normalizeQuoteIssuer(draft.current) }
-    catch (e) { ticket.end(); setError(e instanceof Error ? e.message : '入力内容を確認してください'); return }
+    catch (e) { ticket.end(); setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '入力内容を確認してください'); return }
     pending.current = sent // Synchronous lock survives auth refresh and unknown responses.
     setSaving(true); setError(''); setMessage('')
     try {
@@ -115,7 +115,7 @@ export function useQuoteIssuerSettings() {
       if (QUOTE_ISSUER_FIELDS.every(f => (draft.current[f] || '') === (sent[f] || ''))) dirty.current = false
       setMessage('保存しました')
     } catch (e) {
-      if (ticket.current()) setError(e instanceof Error ? e.message : '保存結果を確認できませんでした')
+      if (ticket.current()) setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '保存結果を確認できませんでした')
     } finally {
       if (ticket.current()) setSaving(false)
       ticket.end()

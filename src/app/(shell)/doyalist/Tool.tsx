@@ -17,7 +17,7 @@ import Sym from '@/components/doyalist/Sym'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
-import { Check, X } from 'lucide-react'
+import { Check, Circle, X } from 'lucide-react'
 
 export interface Company {
   id?: string
@@ -369,7 +369,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
       toast.dismiss(operation.tid)
     } catch (error) {
       if (!current()) return
-      const msg = error instanceof Error ? error.message : DOYALIST_COLLECTION_UNKNOWN
+      // 日本語の文だけを出す（「Failed to fetch」などの英語は決まった文にする）
+      const msg = error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : DOYALIST_COLLECTION_UNKNOWN
       setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
     } finally {
       if (current()) { pendingCollection.current = null; setGenerating(false) }
@@ -496,7 +497,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
             {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」を書く（UI 品質 H-3・S-57・S-58） */}
             <ToolHero
               title={<>条件を選ぶだけで、<wbr />実在する企業の<wbr />営業リストに</>}
-              lead={<>業界・エリア・規模を選ぶと、<wbr />国の法人データ（gBizINFO）から<wbr />企業を抽出します。<wbr />CSV・Excel で<wbr />そのまま使えます。</>}
+              lead={<>業界・エリア・規模を選ぶと、<wbr />国の法人データから<wbr />企業を抽出します。<wbr />CSV・Excel で<wbr />そのまま使えます。</>}
               // 熊のキービジュアル（public/ui-renewal/mascots/doyalist.webp）が置かれるまでは、操作画面の絵を出す
               art={toolHeroArt('doyalist') ?? '/doyalist/hero.webp'}
               artAlt=""
@@ -558,9 +559,9 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
 
                 {/* AI生成タグ */}
                 {aiTags.length > 0 && (
-                  <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl">
+                  <div className="mt-3 p-3 bg-gradient-to-r from-brand-50 to-brand-100 border border-brand-100 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-black text-violet-700 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
+                      <span className="text-xs font-black text-brand-600 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
                       <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -573,7 +574,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                             onClick={() => toggleTag(tag)}
                             aria-pressed={active}
                             className={`min-h-11 inline-flex items-center gap-1${focusRing} px-3 py-1.5 rounded-full text-xs font-bold transition-all ${active
-                                ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow'
+                                ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow'
                                 : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
                           >
                             {(active ? <Check size={14} strokeWidth={2} aria-hidden /> : null)}{tag}
@@ -581,7 +582,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         )
                       })}
                     </div>
-                    <p className="text-[10px] text-violet-600 mt-2">
+                    <p className="text-[10px] text-brand-500 mt-2">
                       {activeTags.size}個のタグを選択中
                       {activeTags.size > 0 && ' → これらの語を含む法人を検索します'}
                     </p>
@@ -609,7 +610,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
               {SPARSE_INDUSTRIES.includes(industry) && (
                 <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-xs font-bold text-amber-700 leading-relaxed inline-flex items-start gap-1">
-                    <Sym name="warning" className="text-base" /><strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
+                    <Sym name="warning" className="text-base" /><strong>「{industry}」業界は国の法人データへの登録が少ない傾向です</strong>
                   </p>
                   <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
                     代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
@@ -730,7 +731,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
 
                 {/* 実数推定 */}
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-500">gBizINFOのキーワード検索ヒット数（参考）</p>
+                  <p className="text-[10px] font-bold text-slate-500">国の法人データでのキーワードの該当数（参考）</p>
                   {estimateLoading ? (
                     <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
                   ) : estimatedCount !== null ? (
@@ -761,19 +762,19 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                 <p className="text-xs font-bold text-slate-700 mb-2 inline-flex items-center gap-1"><Sym name="checklist" className="text-sm" />取得できる情報</p>
                 {PREVIEW_FIELDS.map((f) => (
                   <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
-                    <span className={f.always ? 'text-emerald-500' : 'text-cyan-500'}>{f.always ? '✓' : '◯'}</span>
+                    <span className={`mt-0.5 flex-shrink-0 ${f.always ? 'text-emerald-500' : 'text-cyan-500'}`}>{f.always ? <Check size={12} strokeWidth={2.5} aria-hidden /> : <Circle size={12} strokeWidth={2} aria-hidden />}</span>
                     <span className="flex-1">{f.label}</span>
                     {!f.always && <span className="text-[9px] text-slate-400 whitespace-nowrap">登録時のみ</span>}
                   </div>
                 ))}
                 <p className="text-[10px] text-slate-400 pt-2 mt-2 border-t border-slate-100 leading-relaxed">
-                  ※ <span className="font-bold">◯</span>の項目はgBizINFO登録状況によって取得できないことがあります（株式会社未上場の小規模法人など）
+                  ※ <Circle size={10} strokeWidth={2.5} aria-hidden className="inline-block align-[-1px] text-cyan-500" /> の項目は、国の法人データへの登録状況によって取得できないことがあります（株式会社未上場の小規模法人など）
                 </p>
               </div>
 
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Sym name="cell_tower" className="text-base" /><span>gBizINFO（経済産業省）</span>
+                  <Sym name="cell_tower" className="text-base" /><span>国の法人データ（経済産業省）</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Sym name="download" className="text-base" /><span>CSV/Excelダウンロード可</span>
@@ -915,17 +916,17 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                           {/* URL登録バッジ */}
                           {c.website ? (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-md leading-tight" title="公式URL登録あり">
-                              ✓ URL登録
+                              <Check size={10} strokeWidth={2.5} aria-hidden />URL登録
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-md leading-tight" title="gBizINFOにURL登録なし">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-md leading-tight" title="国の法人データにURLの登録なし">
                               URL未登録
                             </span>
                           )}
                           {/* 代表者情報バッジ */}
                           {ed.representative && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
-                              ✓ 代表者
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
+                              <Check size={10} strokeWidth={2.5} aria-hidden />代表者
                             </span>
                           )}
                         </div>
@@ -950,7 +951,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                               <Sym name="arrow_outward" className="text-sm group-hover:translate-x-0.5 transition-transform" />
                             </a>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="gBizINFOに公式URLが登録されていません">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="国の法人データに公式URLが登録されていません">
                               <Sym name="language" className="text-sm" />登録URLなし
                             </span>
                           )}
@@ -968,7 +969,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         </div>
                         <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
                           <span className="inline-flex items-center gap-0.5"><Sym name="cell_tower" className="text-xs" />情報ソース:</span>
-                          <span>{c.source === 'gbizinfo' ? 'gBizINFO（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? 'gBizINFO + 法人番号公表サイト' : c.source || '不明'}</span>
+                          <span>{c.source === 'gbizinfo' ? '国の法人データ（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? '国の法人データ + 法人番号公表サイト' : c.source || '不明'}</span>
                         </div>
                       </div>
                     </div>

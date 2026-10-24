@@ -85,7 +85,7 @@ export default function MensetsuReportPage() {
         setLabelDone((prev) => ({ ...prev, [turn.id]: label }))
         setLabeling(null)
       } catch (e) {
-        setLabelError(e instanceof Error ? e.message : '登録できませんでした')
+        setLabelError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '登録できませんでした')
       } finally {
         setLabelBusy(false)
       }

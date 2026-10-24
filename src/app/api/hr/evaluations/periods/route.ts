@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (req.nextUrl.searchParams.get('format') === 'creation-operation') return await creationOperationRequest(req, ctx, false)
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     if (e instanceof HrEvaluationPeriodListError) return privateApiJson({ error: e.status === 409 ? '評価期間または評価が更新されました。再取得してください。' : '評価期間一覧を確認できませんでした。', code: e.code }, { status: e.status })
     console.error('[hr/evaluations/periods] unexpected error')
     return privateApiJson(
-      { error: 'Failed to fetch evaluation periods' },
+      { error: '評価期間の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -66,16 +66,16 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return privateApiJson({ error: 'Forbidden' }, { status: 403 })
+      return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const expectedOrganization = req.headers.get('X-HR-Organization-Id')
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof HrEvaluationPeriodInputError) return privateApiJson({ error: '評価期間の作成内容を確認してください。名称・期間・状態を正しく指定してください。' }, { status: 400 })
     if (error instanceof HrEvaluationPeriodCreationConflict) return privateApiJson({ error: '評価期間の作成操作と保存記録が一致しません。作成結果を確認してください。' }, { status: 409 })
     console.error('[hr/evaluations/periods][POST] failed')
-    return privateApiJson({ error: 'Failed to create evaluation period' }, { status: 500 })
+    return privateApiJson({ error: '評価期間を作成できませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 })
   }
 }
 
@@ -123,7 +123,7 @@ async function creationOperationRequest(req: NextRequest, ctx: NonNullable<Await
 export async function DELETE(req: NextRequest) {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (req.nextUrl.searchParams.get('format') !== 'creation-operation') return privateApiJson({ error: 'この操作はサポートされていません。' }, { status: 405 })
     return await creationOperationRequest(req, ctx, true)
   } catch (error: unknown) {

@@ -1,11 +1,11 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
-import { expenseApi, jsonInit, useExpenseQuery } from '@/components/expense/api'
+import { expenseApi, jsonInit, useBusyAction, useExpenseQuery } from '@/components/expense/api'
 import { StatTile } from '@/components/ds'
 import type { Schedule } from '@/components/expense/types'
 import OneOffModal from '@/components/expense/OneOffModal'
@@ -22,24 +22,22 @@ function RowForm({ s, mode, orgSlug, onDone, onCancel }: { s: Schedule; mode: Ex
   const [paidOn, setPaidOn] = useState(todayYmd())
   const [paidAmount, setPaidAmount] = useState(String(s.netPayAmount))
   const [reason, setReason] = useState('')
-  const [busy, setBusy] = useState(false)
+  // 二度押しで同じ更新が2回走らないよう、実行中は次の押下を無視する
+  const { busy, run } = useBusyAction()
 
-  const submit = async () => {
+  const submit = () => run('submit', async () => {
     const body: Record<string, unknown> =
       mode === 'bill' ? { status: 'billed', amountExclTax: Number(excl), taxAmount: Number(tax) }
       : mode === 'pay' ? { status: 'paid', paidOn, paidAmount: Number(paidAmount) }
       : { status: 'skipped', skipReason: reason }
-    setBusy(true)
     try {
       await expenseApi(`/api/expense/schedules/${s.id}`, orgSlug, jsonInit('PATCH', body))
       toast.success('更新しました')
       onDone()
     } catch (e) {
       toast.error((e as Error).message)
-    } finally {
-      setBusy(false)
     }
-  }
+  })
 
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-[var(--r-sm)] bg-[var(--bg)] p-3">
@@ -58,8 +56,8 @@ function RowForm({ s, mode, orgSlug, onDone, onCancel }: { s: Schedule; mode: Ex
       )}
       {mode === 'skip' && <Field label="発生しない理由" className="w-72"><input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例: 今月は稼働なし" /></Field>}
       <div className="flex gap-2">
-        <Btn size="sm" variant="secondary" onClick={submit} busy={busy} disabled={mode === 'skip' && !reason.trim()}>{mode === 'bill' ? '請求書を受領にする' : mode === 'pay' ? '支払済みにする' : '発生なしにする'}</Btn>
-        <Btn size="sm" variant="secondary" onClick={onCancel}>やめる</Btn>
+        <Btn size="sm" variant="secondary" onClick={submit} busy={!!busy} disabled={mode === 'skip' && !reason.trim()}>{mode === 'bill' ? '請求書を受領にする' : mode === 'pay' ? '支払済みにする' : '発生なしにする'}</Btn>
+        <Btn size="sm" variant="secondary" onClick={onCancel} disabled={!!busy}>やめる</Btn>
       </div>
     </div>
   )
@@ -76,8 +74,13 @@ function PayablesInner() {
   const [open, setOpen] = useState<{ id: string; mode: Mode } | null>(null)
   const [adding, setAdding] = useState(false)
   const { ask, dialog } = useConfirm()
+  // 行の操作は1つずつ。実行中は全行の操作ボタンを止め、二度押しで同じ更新が2回走らないようにする
+  const { busy, run } = useBusyAction()
 
-  const quick = async (s: Schedule, body: Record<string, unknown>, done: string) => {
+  // 月を変えたら、開いていた行の入力を閉じる（前の月の行に対する入力を残さない）
+  useEffect(() => { setOpen(null) }, [month])
+
+  const quick = (s: Schedule, body: Record<string, unknown>, done: string) => run(s.id, async () => {
     try {
       await expenseApi(`/api/expense/schedules/${s.id}`, orgSlug, jsonInit('PATCH', body))
       toast.success(done)
@@ -85,22 +88,25 @@ function PayablesInner() {
     } catch (e) {
       toast.error((e as Error).message)
     }
-  }
+  })
   const remove = async (s: Schedule) => {
-    if (!(await ask(`「${s.title}」を削除します。よろしいですか？`, '削除する'))) return
-    try {
-      await expenseApi(`/api/expense/schedules/${s.id}`, orgSlug, jsonInit('DELETE'))
-      toast.success('削除しました')
-      reload()
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
+    if (busy) return
+    if (!(await ask('元に戻せません。', '削除する', { title: `「${s.title}」を削除しますか？` }))) return
+    await run(s.id, async () => {
+      try {
+        await expenseApi(`/api/expense/schedules/${s.id}`, orgSlug, jsonInit('DELETE'))
+        toast.success('削除しました')
+        reload()
+      } catch (e) {
+        toast.error((e as Error).message)
+      }
+    })
   }
 
   const actions = (s: Schedule) => {
     const out: React.ReactNode[] = []
     const b = (key: string, label: string, onClick: () => void, variant: 'primary' | 'secondary' | 'danger' = 'secondary') => (
-      <Btn key={key} size="sm" variant={variant} onClick={onClick}>{label}</Btn>
+      <Btn key={key} size="sm" variant={variant} onClick={onClick} busy={busy === s.id} disabled={!!busy}>{label}</Btn>
     )
     const openMode = (mode: Mode) => setOpen({ id: s.id, mode })
     const isTax = s.kind === 'withholding_tax'
@@ -110,18 +116,18 @@ function PayablesInner() {
       return out
     }
     if (s.status === 'planned') {
-      out.push(b('bill', '請求書を受領', () => openMode('bill')))
+      out.push(b('bill', '請求書を受領する', () => openMode('bill')))
       out.push(b('pay', '支払済みにする', () => openMode('pay')))
-      if (s.kind === 'contract') out.push(b('skip', '発生なし', () => openMode('skip')))
+      if (s.kind === 'contract') out.push(b('skip', '発生なしにする', () => openMode('skip')))
     }
     if (s.status === 'billed') {
-      out.push(b('appr', '承認', () => quick(s, { status: 'approved' }, '承認しました')))
+      out.push(b('appr', '承認する', () => quick(s, { status: 'approved' }, '承認しました')))
       out.push(b('pay', '支払済みにする', () => openMode('pay')))
       out.push(b('bill', '金額を直す', () => openMode('bill')))
     }
     if (s.status === 'approved') out.push(b('pay', '支払済みにする', () => openMode('pay')))
     if (s.status !== 'planned') out.push(b('back', '予定に戻す', () => quick(s, { status: 'planned' }, '予定に戻しました')))
-    if (s.kind === 'one_time' && s.status !== 'paid') out.push(b('del', '削除', () => remove(s), 'danger'))
+    if (s.kind === 'one_time' && s.status !== 'paid') out.push(b('del', '削除する', () => remove(s), 'danger'))
     return out
   }
 
@@ -137,7 +143,7 @@ function PayablesInner() {
           </>
         }
       />
-      {data && (
+      {data && !error && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatTile label="出金合計" value={data.totals.all.toLocaleString('ja-JP')} unit="円" />
           <StatTile label="支払済" value={data.totals.paid.toLocaleString('ja-JP')} unit="円" />

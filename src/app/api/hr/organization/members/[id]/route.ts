@@ -77,8 +77,8 @@ async function mutateMember(ctx: HrContext, id: string, action: Action) {
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
-    if (!hrCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!hrCtx) return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     const { id } = await ctx.params
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const result = await mutateMember(hrCtx, id, { kind: 'patch', data })
     if (result.kind === 'forbidden') return NextResponse.json({ error: '管理権限が変わりました。再読み込みしてください' }, { status: 403 })
-    if (result.kind === 'missing') return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    if (result.kind === 'missing') return NextResponse.json({ error: 'このメンバーは見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     if (result.kind === 'owner') return NextResponse.json({ error: 'オーナーの変更には譲渡機能を使用してください' }, { status: 403 })
     if (result.kind === 'self') return NextResponse.json({ error: 'ご自身の権限・状態は変更できません' }, { status: 400 })
     if (result.kind === 'peer') return NextResponse.json({ error: '同格以上のメンバーは変更できません' }, { status: 403 })
@@ -123,19 +123,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
-    if (!hrCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!hrCtx) return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return NextResponse.json({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     const { id } = await ctx.params
     const result = await mutateMember(hrCtx, id, { kind: 'delete' })
     if (result.kind === 'forbidden') return NextResponse.json({ error: '管理権限が変わりました。再読み込みしてください' }, { status: 403 })
-    if (result.kind === 'missing') return NextResponse.json({ error: 'Member not found' }, { status: 404 })
-    if (result.kind === 'owner') return NextResponse.json({ error: 'Cannot remove owner' }, { status: 403 })
-    if (result.kind === 'self') return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 })
+    if (result.kind === 'missing') return NextResponse.json({ error: 'このメンバーは見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
+    if (result.kind === 'owner') return NextResponse.json({ error: 'オーナーは組織から外せません。先にオーナーを別の人に譲ってください。' }, { status: 403 })
+    if (result.kind === 'self') return NextResponse.json({ error: 'ご自身を組織から外すことはできません。別の管理者に依頼してください。' }, { status: 400 })
     if (result.kind === 'peer') return NextResponse.json({ error: '同格以上のメンバーは削除できません' }, { status: 403 })
     if (result.kind === 'changed') return NextResponse.json({ error: 'メンバーの状態が変わりました。再読み込みしてください' }, { status: 409 })
     return NextResponse.json({ success: true })
   } catch {
     console.error('[hr/organization/members/[id]] unexpected error')
-    return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 })
+    return NextResponse.json({ error: 'メンバーを外せませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 })
   }
 }

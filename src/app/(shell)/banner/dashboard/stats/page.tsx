@@ -1,6 +1,7 @@
 'use client'
 
 import { Bars, ColumnChart } from '@/components/ds/charts'
+import { Skeleton } from '@/components/ds'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -241,19 +242,13 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
     : thisWeekCount > 0 ? 100 : 0
 
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
-        <div className="hidden md:block">
-          <DashboardSidebar />
+    // 新しい見た目では枠を残し、グラフの場所に骨組みを出す
+      return (
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8" aria-busy="true">
+          <Skeleton lines={6} height={20} />
+          <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
         </div>
-        <div className="md:pl-[240px] flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="mx-auto animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-            <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
-          </div>
-        </div>
-      </div>
-    )
+      )
   }
 
   if (errorMessage) {
@@ -365,7 +360,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               <Layers className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Banners</p>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">作成した枚数</p>
               <p className="text-4xl font-black text-slate-800 tracking-tighter">{totalBanners}</p>
             </div>
           </div>
@@ -377,7 +372,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
             </div>
             <div>
               <div className="mb-1 flex items-center gap-1.5">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Time Saved</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">減らせた時間</p>
                 <span className="relative group/tt">
                   <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
                   <span
@@ -399,7 +394,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
             </div>
             <div>
               <div className="mb-1 flex items-center gap-1.5">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Cost Reduction</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">減らせた費用</p>
                 <span className="relative group/tt">
                   <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
                   <span

@@ -90,7 +90,7 @@ export function PaymentMethodsSection() {
     }
   }
   const remove = async (m: PaymentMethod) => {
-    if (!(await ask(`支払方法「${m.label}」を削除します。この支払方法を使っている契約は、取引先の支払条件（振込）に戻ります。削除してよろしいですか？`, '削除する'))) return
+    if (!(await ask('この支払方法を使っている契約は、取引先の支払条件（振込）に戻ります。', '削除する', { title: `支払方法「${m.label}」を削除しますか？` }))) return
     try {
       await expenseApi(`/api/expense/payment-methods/${m.id}`, orgSlug, jsonInit('DELETE'))
       toast.success('削除しました')
@@ -237,7 +237,7 @@ export function MembersSection() {
   }
   const remove = async (m: Member) => {
     const pending = m.status === 'PENDING'
-    if (!(await ask(pending ? `${m.name}さんへの招待を取り消します。よろしいですか？` : `${m.name}さんを組織から外します。よろしいですか？`, pending ? '取り消す' : '外す'))) return
+    if (!(await ask(pending ? '送った招待のリンクは使えなくなります。' : 'この組織の支出管理に入れなくなります。', pending ? '取り消す' : '外す', { title: pending ? `${m.name}さんへの招待を取り消しますか？` : `${m.name}さんを組織から外しますか？` }))) return
     try {
       await expenseApi(`/api/expense/members/${m.id}`, orgSlug, jsonInit('DELETE'))
       toast.success(pending ? '招待を取り消しました' : '外しました')

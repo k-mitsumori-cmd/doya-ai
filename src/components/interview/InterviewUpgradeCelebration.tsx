@@ -53,13 +53,13 @@ export default function InterviewUpgradeCelebration({
           ...defaults,
           particleCount,
           origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          colors: ['#7f19e6', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'],
+          colors: ['#0066ff', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'],
         })
         confetti({
           ...defaults,
           particleCount,
           origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          colors: ['#7f19e6', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'],
+          colors: ['#0066ff', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'],
         })
       }, 250)
 
@@ -71,6 +71,14 @@ export default function InterviewUpgradeCelebration({
       setShowContent(false)
     }
   }, [isOpen])
+
+  // Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -89,10 +97,13 @@ export default function InterviewUpgradeCelebration({
           exit={{ scale: 0.8, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="プランの変更が終わりました"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 背景グラデーション */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#7f19e6]/10 via-blue-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0066ff]/10 via-blue-500/5 to-transparent" />
 
           {/* 閉じるボタン */}
           <button
@@ -108,7 +119,7 @@ export default function InterviewUpgradeCelebration({
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', delay: 0.2, damping: 15 }}
-              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-[#7f19e6] to-blue-600 shadow-lg shadow-[#7f19e6]/30"
+              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-[#0066ff] to-blue-600 shadow-lg shadow-[#0066ff]/30"
             >
               <span className="material-symbols-outlined text-white text-[40px]">workspace_premium</span>
             </motion.div>
@@ -119,9 +130,9 @@ export default function InterviewUpgradeCelebration({
               transition={{ delay: 0.3 }}
             >
               <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-[20px] text-[#7f19e6]">celebration</span>
+                <span className="material-symbols-outlined text-[20px] text-[#0066ff]">celebration</span>
                 <span className="text-sm font-bold text-slate-500">UPGRADE COMPLETE</span>
-                <span className="material-symbols-outlined text-[20px] text-[#7f19e6] transform scale-x-[-1]">celebration</span>
+                <span className="material-symbols-outlined text-[20px] text-[#0066ff] transform scale-x-[-1]">celebration</span>
               </div>
 
               <h2 className="text-2xl font-black text-slate-900 mb-2">
@@ -142,7 +153,7 @@ export default function InterviewUpgradeCelebration({
               className="bg-slate-50 rounded-2xl p-4 mb-6 text-left"
             >
               <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-[16px] text-[#7f19e6]">auto_awesome</span>
+                <span className="material-symbols-outlined text-[16px] text-[#0066ff]">auto_awesome</span>
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
                   できることが増えました！
                 </span>
@@ -161,7 +172,7 @@ export default function InterviewUpgradeCelebration({
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                       feature.highlight
-                        ? 'bg-[#7f19e6] text-white'
+                        ? 'bg-[#0066ff] text-white'
                         : 'bg-slate-100 text-slate-600'
                     }`}>
                       <span className="material-symbols-outlined text-[16px]">{feature.icon}</span>
@@ -171,7 +182,7 @@ export default function InterviewUpgradeCelebration({
                     }`}>
                       {feature.text}
                     </span>
-                    <span className="material-symbols-outlined text-[16px] ml-auto text-[#7f19e6]">
+                    <span className="material-symbols-outlined text-[16px] ml-auto text-[#0066ff]">
                       check_circle
                     </span>
                   </motion.li>
@@ -185,7 +196,7 @@ export default function InterviewUpgradeCelebration({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 }}
               onClick={onClose}
-              className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30"
+              className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#0066ff] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#0066ff]/30"
             >
               <span className="flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined text-[20px]">rocket_launch</span>

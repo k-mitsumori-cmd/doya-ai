@@ -5,6 +5,10 @@ import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
 import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
+import { confirmDialog } from '@/components/ds/dialog'
+
+/** 日本語の文だけを画面に出す（「Failed to fetch」などの英語は決まった文にする） */
+const jaError = (e: unknown, fallback: string) => (e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : fallback)
 import ShellLoading from '@/components/shell/ShellLoading'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
@@ -41,7 +45,7 @@ const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: s
 
 const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
   form: { l: 'フォーム', color: 'bg-emerald-100 text-emerald-700', icon: 'note' as UiIconName },
-  email: { l: 'メール', color: 'bg-violet-100 text-violet-700', icon: 'mail' as UiIconName },
+  email: { l: 'メール', color: 'bg-brand-50 text-brand-600', icon: 'mail' as UiIconName },
   phone: { l: '電話', color: 'bg-amber-100 text-amber-700', icon: 'phone' as UiIconName },
 }
 
@@ -96,7 +100,7 @@ export default function HistoryPage() {
       setProjectNextCursor(page.nextCursor)
       setProjectSummary(page.summary)
     } catch (error) {
-      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴を取得できませんでした')
+      if (version === projectRequestVersion.current) setProjectsError(jaError(error, 'リスト履歴を取得できませんでした'))
     } finally {
       if (version === projectRequestVersion.current) setLoadingProjects(false)
     }
@@ -125,7 +129,7 @@ export default function HistoryPage() {
       setNextCursor(page.nextCursor)
       setApproachSummary(page.summary)
     } catch (error) {
-      if (version === requestVersion.current) setApproachesError(error instanceof Error ? error.message : '営業文履歴を取得できませんでした')
+      if (version === requestVersion.current) setApproachesError(jaError(error, '営業文履歴を取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoadingApproaches(false)
     }
@@ -162,7 +166,7 @@ export default function HistoryPage() {
       setNextCursor(page.nextCursor)
       setApproachSummary(page.summary)
     } catch (error) {
-      if (version === requestVersion.current) setApproachesError(error instanceof Error ? error.message : '営業文履歴の続きを取得できませんでした')
+      if (version === requestVersion.current) setApproachesError(jaError(error, '営業文履歴の続きを取得できませんでした'))
     } finally {
       if (version === requestVersion.current) setLoadingMore(false)
     }
@@ -187,14 +191,14 @@ export default function HistoryPage() {
       setProjectNextCursor(page.nextCursor)
       setProjectSummary(page.summary)
     } catch (error) {
-      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴の続きを取得できませんでした')
+      if (version === projectRequestVersion.current) setProjectsError(jaError(error, 'リスト履歴の続きを取得できませんでした'))
     } finally {
       if (version === projectRequestVersion.current) setLoadingMoreProjects(false)
     }
   }
 
   const handleDeleteList = async (id: string, name: string) => {
-    if (!confirm(`「${name}」を削除しますか？`)) return
+    if (!(await confirmDialog({ title: `「${name}」を削除しますか？`, message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     try {
       const res = await fetch(`/api/doyalist/projects/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('削除に失敗しました')
@@ -205,12 +209,12 @@ export default function HistoryPage() {
       void loadProjects(setProjectsErrorStatus)
       void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました')
+      toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
     }
   }
 
   const handleDeleteApproach = async (id: string) => {
-    if (!confirm('この生成履歴を削除しますか？')) return
+    if (!(await confirmDialog({ title: 'この営業文を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     try {
       const res = await fetch(`/api/doyalist/approaches?id=${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('削除に失敗しました')
@@ -220,7 +224,7 @@ export default function HistoryPage() {
       setExpandedId(null)
       void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
-      toast.error(e?.message || '削除に失敗しました')
+      toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
     }
   }
 
@@ -449,7 +453,7 @@ function StatCard({ icon, label, value, color }: { icon: UiIconName; label: stri
   const colorMap: Record<string, string> = {
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    violet: 'bg-violet-50 text-violet-700 border-violet-200',
+    violet: 'bg-brand-50 text-brand-600 border-brand-100',
   }
   return (
     <div className="bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200 p-5 flex items-center gap-4">

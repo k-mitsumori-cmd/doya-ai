@@ -113,6 +113,13 @@ export default function CunningLivePage() {
   const [report, setReport] = useState<CunningReport | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportLoading, setReportLoading] = useState(false)
+  // 議事録の窓は Esc でも閉じられるようにする（作成中は閉じない）
+  useEffect(() => {
+    if (!reportOpen || reportLoading) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReportOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [reportOpen, reportLoading])
   const [focusMode, setFocusMode] = useState(false) // カンペ集中モード（画面を広げて次々表示）
   // 言語: ja=日本語(既定) / en=英語 / auto=自動判定。文字起こし＆カンペ生成の言語を制御。
   const [lang, setLang] = useState<'ja' | 'en' | 'auto'>('ja')
@@ -543,7 +550,7 @@ const SILENCE_PEAK = 8
     if (!client || !runningRef.current) return
     const failed = (error: unknown) => {
       workRef.current.fail('window-audio')
-      setTranscriptionIssue({ message: error instanceof Error ? error.message : '音声を保存できませんでした。この画面で再試行してください。', limit: false })
+      setTranscriptionIssue({ message: error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '音声を保存できませんでした。この画面で再試行してください。', limit: false })
       stopAll()
       void finishRef.current()
     }
@@ -1078,7 +1085,7 @@ const SILENCE_PEAK = 8
       if (!res.ok) { transcriptionFailed(res.status, d); throw new Error(d.error || '生成に失敗しました') }
       setPrep(d.items || [])
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '準備の案を作れませんでした。時間をおいて、もう一度お試しください。')
     } finally {
       setPrepLoading(false)
     }
@@ -1763,7 +1770,7 @@ const SILENCE_PEAK = 8
               </span>
             ))}
           </div>
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto animate-[fadeIn_.3s_ease]">
+          <div role="dialog" aria-modal="true" aria-labelledby="cunning-report-title" className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto animate-[fadeIn_.3s_ease]">
             <div className="p-6">
               <div className="flex flex-col items-center text-center">
                 <img
@@ -1771,7 +1778,7 @@ const SILENCE_PEAK = 8
                   alt=""
                   className="w-20 h-20 object-contain animate-bounce"
                 />
-                <h2 className="text-xl font-black text-slate-900 mt-2">
+                <h2 id="cunning-report-title" className="text-xl font-black text-slate-900 mt-2">
                   {reportLoading ? '議事録を作成しています' : report ? '議事録を作成しました' : '議事録を作成できませんでした'}
                 </h2>
               </div>
@@ -1844,7 +1851,7 @@ const SILENCE_PEAK = 8
                   </div>
                 </div>
               ) : (
-                <p className="text-center text-slate-400 font-bold text-sm mt-4">議事録の生成に失敗しました</p>
+                <p className="text-center text-slate-400 font-bold text-sm mt-4">議事録を作れませんでした。履歴の画面から、もう一度お試しください。</p>
               )}
 
               <div className="mt-6 flex gap-2">

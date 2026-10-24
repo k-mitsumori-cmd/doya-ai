@@ -37,7 +37,7 @@ export function usePreparationDetail(orgSlug: string, id: string) {
       state.current.ready = ''
       state.current.missing = error instanceof ShodanApiError && error.status === 404
       if (error instanceof ShodanApiError && error.status === 401) latest.current.rejectAuthentication()
-      state.current.error = error instanceof Error ? error.message : '読み込みに失敗しました。再度読み込んでください。'
+      state.current.error = error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '読み込みに失敗しました。再度読み込んでください。'
     } finally {
       if (ticket.current()) { state.current.loading = ''; redraw() }
       ticket.end()
@@ -106,7 +106,7 @@ export function usePreparationDetail(orgSlug: string, id: string) {
       if (!ticket.current()) return
       if (!acknowledged && error instanceof ShodanApiError && error.status >= 400 && error.status < 500 && error.code !== 'GENERATION_PENDING') pending.current = null
       if (error instanceof ShodanApiError && error.status === 401) { state.current.ready = ''; latest.current.rejectAuthentication() }
-      state.current.error = error instanceof Error ? error.message : '処理結果を確認できませんでした。'
+      state.current.error = error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '処理結果を確認できませんでした。'
       if (error instanceof ShodanApiError && (error.code === 'PLAN' || error.code === 'LIMIT')) state.current.notice = { message: error.message, href: error.actionUrl, label: error.actionLabel }
     } finally {
       if (ticket.current()) { state.current.busy = ''; state.current.busyKey = ''; redraw() }

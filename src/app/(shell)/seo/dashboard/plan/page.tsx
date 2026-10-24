@@ -39,6 +39,18 @@ export default function SeoPlanPage() {
   const setResumeConfirm = (show: boolean) => setResumeConfirmKey(show ? management.scopeKey : null)
 
 
+  // 確認の窓を Esc で閉じる（処理中は閉じない。UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!cancelConfirm && !resumeConfirm) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || busy) return
+      setCancelConfirmKey(null)
+      setResumeConfirmKey(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cancelConfirm, resumeConfirm, busy])
+
   useEffect(() => {
     if (!isFreeHourActive) return
     const interval = setInterval(() => {
@@ -259,36 +271,39 @@ export default function SeoPlanPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               className="relative bg-white rounded-3xl p-7 max-w-lg w-full shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="seo-plan-cancel-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <button onClick={() => setCancelConfirm(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500">
+              <button onClick={() => setCancelConfirm(false)} aria-label="閉じる" className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500">
                 <X className="w-5 h-5" />
               </button>
               <div className="text-center">
                 <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">解約すると、使える機能が制限されます</h3>
+                <h3 id="seo-plan-cancel-title" className="text-2xl font-black text-slate-900 mb-2">解約すると、使える機能が制限されます</h3>
                 <p className="text-slate-600 font-bold mb-4">
                   統一プランの解約はすべての対象サービスに適用されます。次回更新日以降、このサービスでは以下の制限が適用されます。
                 </p>
                 <ul className="text-left text-sm font-bold text-slate-700 space-y-2 mb-6 bg-slate-50 rounded-xl p-4">
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" aria-hidden />
                     <span>図解・バナー画像の生成（サムネイル含む）</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" aria-hidden />
                     <span>SEO改善提案のAI自動修正</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" aria-hidden />
                     <span>画像のダウンロード・プロンプト調整・再生成</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" aria-hidden />
                     <span>記事作成は月{SEO_PRICING.freeLimit}回までに制限</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" aria-hidden />
                     <span>1記事あたり{SEO_PRICING.charLimit?.free?.toLocaleString()}字までに制限</span>
                   </li>
                 </ul>
@@ -336,14 +351,17 @@ export default function SeoPlanPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               className="relative bg-white rounded-3xl p-7 max-w-lg w-full shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="seo-plan-resume-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <button onClick={() => setResumeConfirm(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500">
+              <button onClick={() => setResumeConfirm(false)} aria-label="閉じる" className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500">
                 <X className="w-5 h-5" />
               </button>
               <div className="text-center">
                 <Sparkles className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">解約予約を取り消しますか？</h3>
+                <h3 id="seo-plan-resume-title" className="text-2xl font-black text-slate-900 mb-2">解約予約を取り消しますか？</h3>
                 <p className="text-slate-600 font-bold mb-6">
                   統一プランの解約予約を取り消すと、すべての対象サービスで次回更新以降もプランが継続します。
                 </p>

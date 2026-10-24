@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 export default function GenerateImagesPage() {
   const [generating, setGenerating] = useState(false)
@@ -32,7 +33,7 @@ export default function GenerateImagesPage() {
     } catch (e: any) {
       setResult({
         success: false,
-        error: e.message || 'エラーが発生しました',
+        error: seoUserMessage(e, '画像を作れませんでした。少し待って、もう一度お試しください。'),
       })
     } finally {
       setGenerating(false)

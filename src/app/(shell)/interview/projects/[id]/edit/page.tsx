@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 
 type RightPanel = 'preview' | 'proofread' | 'titles' | 'factcheck' | 'sns' | 'translate' | 'revise'
 
@@ -403,7 +404,7 @@ export default function EditPage() {
         }
       } catch (error) {
         if (signal.aborted) return
-        setLoadError(error instanceof Error ? error.message : 'プロジェクトを読み込めませんでした')
+        setLoadError(interviewUserMessage(error, 'プロジェクトを読み込めませんでした。もう一度お試しください。'))
         setLoading(false)
       }
     }
@@ -439,7 +440,7 @@ export default function EditPage() {
           }
         }
       })
-      .catch((error) => { if (active) setLoadError(error instanceof Error ? error.message : '記事を読み込めませんでした') })
+      .catch((error) => { if (active) setLoadError(interviewUserMessage(error, '記事を読み込めませんでした。通信を確かめて、もう一度お試しください。')) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false; controller.abort() }
   }, [draftId, fetchDraft, retryCount])
@@ -476,7 +477,7 @@ export default function EditPage() {
       })
       const result = await res.json()
       if (!res.ok || result?.success !== true || result?.draft?.id !== draftId || typeof result?.draft?.updatedAt !== 'string') {
-        throw new Error(result?.error || '保存に失敗しました。入力を残したまま再試行してください。')
+        throw new Error(result?.error || '保存できませんでした。入力は残っているので、もう一度お試しください。')
       }
       draftVersionsRef.current[draftId] = result.draft.updatedAt
       if (sequence === saveSequenceRef.current) {
@@ -487,7 +488,7 @@ export default function EditPage() {
       return true
     }).catch((error: unknown) => {
       if (sequence === saveSequenceRef.current) {
-        setSaveError(error instanceof Error ? error.message : '保存に失敗しました。再試行してください。')
+        setSaveError(interviewUserMessage(error, '保存できませんでした。通信を確かめて、もう一度お試しください。'))
       }
       return false
     }).finally(() => {
@@ -521,7 +522,7 @@ export default function EditPage() {
   const handleSave = async () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     if (!await autoSave(content)) {
-      throw new Error('記事を保存できませんでした。内容を確認してから再試行してください。')
+      throw new Error('記事を保存できませんでした。内容を確かめて、もう一度お試しください。')
     }
   }
 
@@ -547,11 +548,11 @@ export default function EditPage() {
           setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
           setAuxLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
         }
-        showToast(data.error || 'バナー画像を生成できませんでした。時間をおいて再試行してください。', 'error')
+        showToast(interviewUserMessage(data.error, 'バナー画像を作れませんでした。少し待って、もう一度お試しください。'), 'error')
       }
     } catch (e) {
       console.error('[banner] generation failed:')
-      if (!auto) showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
+      if (!auto) showToast('バナー画像を作れませんでした。通信を確かめて、もう一度お試しください。', 'error')
     } finally {
       setBannerGenerating(false)
     }
@@ -712,7 +713,7 @@ ${htmlBody}
       noteAuxLimit(res, data)
       if (data.success) {
         setProofResult({ score: data.score, summary: data.summary, suggestions: data.suggestions || [], checks: data.checks || {} })
-      } else { showToast(data.error || '校正に失敗しました', 'error') }
+      } else { showToast(interviewUserMessage(data.error, '校正できませんでした。少し待って、もう一度お試しください。'), 'error') }
     } catch { showToast('校正の実行中にエラーが発生しました', 'error') }
     finally { setProofLoading(false) }
   }
@@ -784,7 +785,7 @@ ${htmlBody}
       const data = await res.json()
       noteAuxLimit(res, data)
       if (data.success) setSuggestedTitles(data.titles || [])
-      else showToast(data.error || 'タイトル提案に失敗しました', 'error')
+      else showToast(interviewUserMessage(data.error, 'タイトル案を作れませんでした。少し待って、もう一度お試しください。'), 'error')
     } catch { showToast('タイトル提案中にエラーが発生しました', 'error') }
     finally { setTitlesLoading(false) }
   }
@@ -806,7 +807,7 @@ ${htmlBody}
       noteAuxLimit(res, data)
       if (data.success) {
         setFactResult({ reliability: data.reliability, summary: data.summary, claims: data.claims || [], warnings: data.warnings || [] })
-      } else { showToast(data.error || 'ファクトチェックに失敗しました', 'error') }
+      } else { showToast(interviewUserMessage(data.error, '事実の確認ができませんでした。少し待って、もう一度お試しください。'), 'error') }
     } catch { showToast('ファクトチェック中にエラーが発生しました', 'error') }
     finally { setFactLoading(false) }
   }
@@ -827,7 +828,7 @@ ${htmlBody}
       const data = await res.json()
       noteAuxLimit(res, data)
       if (data.success) setSnsPosts(data.posts || [])
-      else showToast(data.error || 'SNS投稿生成に失敗しました', 'error')
+      else showToast(interviewUserMessage(data.error, 'SNSの投稿文を作れませんでした。もう一度お試しください。'), 'error')
     } catch { showToast('SNS投稿生成中にエラーが発生しました', 'error') }
     finally { setSnsLoading(false) }
   }
@@ -865,7 +866,7 @@ ${htmlBody}
           seoTitle: data.seoTitle, seoDescription: data.seoDescription,
           wordCount: data.wordCount,
         })
-      } else { showToast(data.error || '翻訳に失敗しました', 'error') }
+      } else { showToast(interviewUserMessage(data.error, '翻訳できませんでした。少し待って、もう一度お試しください。'), 'error') }
     } catch { showToast('翻訳中にエラーが発生しました', 'error') }
     finally { setTranslateLoading(false) }
   }
@@ -913,10 +914,10 @@ ${htmlBody}
         setContentBeforeRevision(content)
         setRevisedContent(data.revisedContent)
       } else {
-        setReviseError(data.error || 'AI修正に失敗しました')
+        setReviseError(interviewUserMessage(data.error, 'AIで直せませんでした。少し待って、もう一度お試しください。'))
       }
     } catch (error) {
-      setReviseError(error instanceof Error ? error.message : 'AI修正の実行中にエラーが発生しました')
+      setReviseError(interviewUserMessage(error, 'AIで直せませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setReviseLoading(false)
     }
@@ -944,7 +945,7 @@ ${htmlBody}
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="bg-slate-50" aria-busy="true" aria-label="記事を読み込んでいます">
         <div className="max-w-[1800px] mx-auto px-3 sm:px-6 py-6">
           <div className="space-y-4">
             <div className="h-8 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
@@ -957,11 +958,11 @@ ${htmlBody}
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="bg-slate-50 flex justify-center px-4 py-16">
         <div role="alert" className="max-w-lg rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
           <p className="font-bold text-red-800">記事を読み込めませんでした</p>
           <p className="mt-2 text-sm text-slate-600">{loadError}</p>
-          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">再試行</button>
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">もう一度読み込む</button>
         </div>
       </div>
     )
@@ -969,7 +970,7 @@ ${htmlBody}
 
   if (!draftId) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="bg-slate-50 flex justify-center">
         <div className="text-center py-20">
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="material-symbols-outlined text-blue-600 text-[48px]">description</span>
@@ -991,18 +992,6 @@ ${htmlBody}
     (proofResult?.score ?? 0) >= 80 ? 'text-green-600' :
     (proofResult?.score ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
 
-  const TABS: { key: RightPanel; label: string }[] = [
-    { key: 'preview', label: '💻' },
-    { key: 'proofread', label: '✅' },
-    { key: 'titles', label: '💡' },
-    { key: 'factcheck', label: '🔍' },
-    { key: 'sns', label: '📱' },
-    { key: 'translate', label: '🌐' },
-  ]
-  const TAB_NAMES: Record<string, string> = {
-    preview: 'Markdown', proofread: '校正', titles: 'タイトル',
-    factcheck: '確認候補', sns: 'SNS投稿', translate: '翻訳',
-  }
 
   return (
     <>
@@ -1194,12 +1183,12 @@ ${htmlBody}
                     }`}
                   >
                     <span className="material-symbols-outlined text-[18px]">code</span>
-                    <span>Markdown</span>
+                    <span>テキスト</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span className="material-symbols-outlined text-[14px]">info</span>
-                  <span className="hidden sm:inline">{leftMode === 'edit' ? '記事プレビュー' : 'Markdownソースを編集'}</span>
+                  <span className="hidden sm:inline">{leftMode === 'edit' ? '記事プレビュー' : '見出しの記号つきのテキストで編集'}</span>
                 </div>
               </div>
 
@@ -1232,17 +1221,17 @@ ${htmlBody}
                         <button
                           onClick={() => generateBanner(true)}
                           disabled={bannerGenerating}
-                          className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#7f19e6]/5 hover:via-[#7f19e6]/10 hover:to-[#7f19e6]/5 transition-all group"
+                          className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#0066ff]/5 hover:via-[#0066ff]/10 hover:to-[#0066ff]/5 transition-all group"
                         >
                           {bannerGenerating ? (
                             <>
-                              <span className="material-symbols-outlined text-2xl text-[#7f19e6] animate-spin">progress_activity</span>
+                              <span className="material-symbols-outlined text-2xl text-[#0066ff] animate-spin">progress_activity</span>
                               <span className="text-xs font-bold text-slate-500">Nano Banana Pro でバナー生成中...</span>
                             </>
                           ) : (
                             <>
-                              <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#7f19e6] transition-colors">add_photo_alternate</span>
-                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#7f19e6] transition-colors">バナー画像を生成</span>
+                              <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#0066ff] transition-colors">add_photo_alternate</span>
+                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#0066ff] transition-colors">バナー画像を生成</span>
                             </>
                           )}
                         </button>
@@ -1286,7 +1275,7 @@ ${htmlBody}
                       value={content}
                       onChange={(e) => handleContentChange(e.target.value)}
                       className="w-full min-h-[calc(100vh-400px)] px-6 py-6 text-[15px] leading-[1.75] text-slate-700 outline-none resize-none font-mono bg-slate-50/50"
-                      placeholder="Markdown記法で本文を入力..."
+                      placeholder="本文を入力（行の頭に ## を付けると見出しになります）"
                     />
                   </div>
                 </>
@@ -1349,7 +1338,7 @@ ${htmlBody}
                       }
                     }}
                     placeholder="AI修正指示を入力..."
-                    className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
+                    className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
                     disabled={reviseLoading}
                   />
                   <button
@@ -1379,7 +1368,7 @@ ${htmlBody}
               <div className="bg-white border border-slate-200 rounded-t-xl flex shadow-sm overflow-x-auto scrollbar-hide">
                 {[
                   { key: 'proofread' as RightPanel, label: '校正', icon: 'spellcheck' },
-                  { key: 'preview' as RightPanel, label: 'MD', icon: 'code' },
+                  { key: 'preview' as RightPanel, label: 'テキスト', icon: 'code' },
                   { key: 'revise' as RightPanel, label: 'AI修正', icon: 'edit_note' },
                   { key: 'titles' as RightPanel, label: 'タイトル', icon: 'title' },
                   { key: 'factcheck' as RightPanel, label: 'ファクト', icon: 'fact_check' },
@@ -1420,10 +1409,10 @@ ${htmlBody}
                     <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-blue-600">code</span>
-                        <h3 className="text-sm font-bold tracking-tight text-slate-900">Markdownソース</h3>
+                        <h3 className="text-sm font-bold tracking-tight text-slate-900">記号つきのテキスト</h3>
                       </div>
                       <button
-                        onClick={async () => { await navigator.clipboard.writeText(content); showToast('Markdownをコピーしました') }}
+                        onClick={async () => { await navigator.clipboard.writeText(content); showToast('本文をコピーしました') }}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors font-medium"
                       >
                         <span className="material-symbols-outlined text-[14px]">content_copy</span>
@@ -1433,7 +1422,7 @@ ${htmlBody}
                     {!content.trim() ? (
                       <div className="text-center py-12">
                         <span className="material-symbols-outlined text-slate-300 text-[48px] mb-3 block">code</span>
-                        <p className="text-sm text-slate-400">記事を入力するとMarkdownが表示されます</p>
+                        <p className="text-sm text-slate-400">記事を入力すると、記号つきのテキストが出ます</p>
                       </div>
                     ) : (
                       <div className="bg-slate-50 rounded-lg p-4 overflow-x-auto">

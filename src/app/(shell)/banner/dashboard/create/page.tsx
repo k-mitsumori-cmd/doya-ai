@@ -833,6 +833,12 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
 // ========================================
 class BannerApiError extends Error {}
 
+/** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
+}
+
 export default function BannerDashboard() {
   const { data: session } = useSession()
   return <BannerDashboardWorkspace key={String(session?.user?.id || 'guest')} />
@@ -908,7 +914,7 @@ function BannerDashboardWorkspace() {
   // 使用カラー（任意・手動指定）
   const [useCustomColors, setUseCustomColors] = useState(false)
   const [customColors, setCustomColors] = useState<string[]>([])
-  const [colorDraft, setColorDraft] = useState('#8B5CF6')
+  const [colorDraft, setColorDraft] = useState('#3d80ff')
 
   // ロゴ/人物（任意・アップロード画像をAIに渡して反映）
   const [logoImage, setLogoImage] = useState<string | null>(null)
@@ -1012,7 +1018,7 @@ function BannerDashboardWorkspace() {
       setPersonFileNames([file.name])
       toast.success('人物写真を設定しました')
     } catch (e: any) {
-      toast.error(e?.message || '人物写真の追加に失敗しました')
+      toast.error(jaMessage(e?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'))
     }
   }
 
@@ -1371,8 +1377,8 @@ function BannerDashboardWorkspace() {
           setProgress(0)
           return
         }
-        const msg = data?.error || data?.message || normalizeNonJsonApiError(parsed.status, parsed.text)
-        throw new BannerApiError(typeof msg === 'string' ? msg : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
+        const fallbackMsg = normalizeNonJsonApiError(parsed.status, parsed.text)
+        throw new BannerApiError(jaMessage(data?.error, jaMessage(data?.message, fallbackMsg)))
       }
       
       const nextBanners = Array.isArray(data.banners) ? data.banners.filter((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')) : []
@@ -1423,22 +1429,22 @@ function BannerDashboardWorkspace() {
       // 部分的にエラーがあった場合は警告表示
       const warning = typeof data.warning === 'string' ? data.warning : typeof data.error === 'string' ? data.error : ''
       if (warning) {
-        setError(warning)
-        toast.error('一部のバナー生成に失敗しました', { 
+        setError(jaMessage(warning, '一部のバナーを作れませんでした。足りない分は作り直してください。'))
+        toast.error('一部のバナーを作れませんでした', { 
           icon: <UiIcon name="warning" size={18} />,
           duration: 5000,
         })
       } else {
-        toast.success('バナーが完成しました！')
+        toast.success('バナーができました')
       }
     } catch (err: any) {
       if (!operation.current()) return
       if (err?.name === 'AbortError') {
         setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
-        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+        toast.error('時間内に終わりませんでした。履歴を確かめてから、もう一度お試しください。', { duration: 6000 })
       } else {
         setError(err instanceof BannerApiError ? err.message : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
-        toast.error('生成に失敗しました', { duration: 5000 })
+        toast.error('生成できませんでした。少し待って、もう一度お試しください。', { duration: 5000 })
       }
     } finally {
       if (operation.current()) setIsGenerating(false)
@@ -1500,7 +1506,7 @@ function BannerDashboardWorkspace() {
       void quota.refresh()
       
       if (refineDraftRevision.current === draftRevision) setRefineInstruction('')
-      toast.success('バナーを修正しました！')
+      toast.success('バナーを修正しました')
 
       // 修正時間を保存（次回以降の予測に使用）
       const actualMs = Date.now() - startedAt
@@ -1528,6 +1534,96 @@ function BannerDashboardWorkspace() {
   // ========================================
   // Render
   // ========================================
+  // 作成中の進み具合のカード。旧の見た目は画面全体の暗幕の中、新しい見た目は生成ボタンの下に置く（FIX-PLAN 13）
+  const generationCard = (
+    <motion.div
+      initial={{ y: 12, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="relative w-full max-w-[640px] mx-auto bg-white border border-gray-200/70 rounded-3xl shadow-2xl shadow-gray-900/10 p-6 sm:p-8"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-600 rounded-2xl blur-lg opacity-30" />
+            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white shadow-lg">
+              <Sparkles className="w-6 h-6" />
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500 font-semibold">生成中</div>
+            <div className="text-lg sm:text-xl font-black text-gray-900">
+              <span className="inline-flex items-center gap-2"><UiIcon name={GENERATION_PHASES[phaseIndex].icon as UiIconName} size={21} />{GENERATION_PHASES[phaseIndex].label}</span>
+            </div>
+          </div>
+        </div>
+        <div className="text-sm font-black text-gray-900 tabular-nums">
+          {Math.round(progress)}%
+        </div>
+      </div>
+  
+      <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+        <motion.div
+          className="h-full bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600"
+          initial={{ width: '0%' }}
+          animate={{ width: `${clamp(progress, 2, 85)}%` }}
+          transition={{ ease: 'easeOut', duration: 0.4 }}
+        />
+      </div>
+  
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {['A', 'B', 'C'].map((k, idx) => (
+          <div
+            key={k}
+            className={`rounded-2xl border px-3 py-2 text-center ${
+              phaseIndex >= 2 + idx ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+            }`}
+          >
+            <div className="text-xs text-gray-500 font-semibold">パターン</div>
+            <div className="text-base font-black text-gray-900">{k}</div>
+          </div>
+        ))}
+      </div>
+  
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tipIndex}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="mt-5 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/70 p-4"
+        >
+          <div className="text-sm font-bold text-blue-800 flex items-start gap-2">
+            <UiIcon name={GENERATION_TIPS[tipIndex].icon as UiIconName} size={20} />
+            <span>{GENERATION_TIPS[tipIndex].text}</span>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+  
+      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="font-semibold">高品質で作成しています</span>
+        </div>
+        <div className="font-semibold tabular-nums">
+          予測残り: 約{formatSec(predictedRemainingMs)}（平均から算出）
+        </div>
+      </div>
+  
+      <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700">
+        <div className="font-bold text-gray-900 mb-1">このタブを開いたままにしてください</div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          <span className="font-semibold">- バックグラウンドでも進行します（別タブで作業OK）</span>
+          <span className="font-semibold">- ただし「閉じる/更新」すると中断される可能性があります</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-gray-500 font-semibold">
+            予測合計: 約{formatSec(predictedTotalMs)} / 経過: {elapsedSec}秒{isHidden ? '（バックグラウンド）' : ''}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+
   return (
     <DashboardLayout>
       <div className={`text-gray-900 relative ${nextStyles.page}`}>
@@ -1595,7 +1691,7 @@ function BannerDashboardWorkspace() {
                   </div>
                   <div>
                     <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>用途を選択</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Channel Strategy</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">使う場所</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-start sm:items-end gap-2">
@@ -1681,7 +1777,7 @@ function BannerDashboardWorkspace() {
                 </div>
                 <div>
                   <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>業種を選択</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Industry Design</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">業種</p>
                 </div>
               </div>
 
@@ -1742,7 +1838,7 @@ function BannerDashboardWorkspace() {
                   </div>
                   <div>
                     <h2 className={`font-bold text-2xl text-slate-800 tracking-tight ${nextStyles.nowrap}`}>サイズを選択</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Canvas Dimensions</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">サイズ</p>
                   </div>
                 </div>
                 <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
@@ -1750,13 +1846,13 @@ function BannerDashboardWorkspace() {
                     onClick={() => setUseCustomSize(false)}
                     className={`px-5 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${!useCustomSize ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    PRESET
+                    定型
                   </button>
                   <button 
                     onClick={() => setUseCustomSize(true)}
                     className={`px-5 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${useCustomSize ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    CUSTOM
+                    自由に指定
                   </button>
                 </div>
               </div>
@@ -1774,7 +1870,7 @@ function BannerDashboardWorkspace() {
                       >
                         <div className="flex items-center gap-4">
                           <div className="flex-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Width (px)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">横幅（px）</label>
                             <input
                               type="number"
                               value={customWidth}
@@ -1784,7 +1880,7 @@ function BannerDashboardWorkspace() {
                           </div>
                           <div className="pt-6 text-slate-300 font-black">×</div>
                           <div className="flex-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Height (px)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">高さ（px）</label>
                             <input
                               type="number"
                               value={customHeight}
@@ -1845,7 +1941,7 @@ function BannerDashboardWorkspace() {
                   <p className="text-slate-800 font-black text-sm">
                     {useCustomSize ? `${customWidth} × ${customHeight}` : size}
                   </p>
-                  <p className="text-slate-400 text-[10px] font-bold mt-1 uppercase">Aspect Ratio Preview</p>
+                  <p className="text-slate-400 text-[10px] font-bold mt-1 uppercase">縦横の比率</p>
                 </div>
               </div>
             </motion.div>
@@ -2134,7 +2230,7 @@ function BannerDashboardWorkspace() {
                         {logoImage ? (
                           <img src={logoImage} alt="logo" className="h-full w-full object-contain" />
                         ) : (
-                          <span className="text-[10px] font-black text-slate-400">LOGO</span>
+                          <span className="text-[10px] font-black text-slate-400">ロゴ</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2154,7 +2250,7 @@ function BannerDashboardWorkspace() {
                                 setLogoFileName(f.name)
                                 toast.success('ロゴを設定しました')
                               } catch (err: any) {
-                                toast.error(err?.message || 'ロゴの設定に失敗しました')
+                                toast.error(jaMessage(err?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'))
                               }
                             }}
                           />
@@ -2187,7 +2283,7 @@ function BannerDashboardWorkspace() {
                         {personImages[0] ? (
                           <img src={personImages[0]} alt="person" className="h-full w-full object-cover" />
                         ) : (
-                          <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                          <span className="text-[10px] font-black text-slate-400">人物</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2310,6 +2406,12 @@ function BannerDashboardWorkspace() {
                 <ShellCostBadge action="banner.generate" />
               </button>
 
+              {isGenerating && (
+                <div role="status" aria-live="polite" className="mt-4">
+                  {generationCard}
+                </div>
+              )}
+
               {sessionStatus === 'unauthenticated' && !isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
                   <div className="font-black">バナーの生成にはログインが必要です。</div>
@@ -2347,10 +2449,10 @@ function BannerDashboardWorkspace() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-blue-600" />
-                    RECENT ACTIVITY
+                    最近の作成
                   </h3>
                   <Link href="/banner/dashboard/history" className="text-[10px] font-black text-blue-600 hover:text-blue-700 tracking-widest uppercase">
-                    VIEW ALL →
+                    すべて見る
                   </Link>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -2394,22 +2496,7 @@ function BannerDashboardWorkspace() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="text-white font-black text-sm tracking-tight">GENERATION COMPLETE</h3>
-                              {usedModelDisplay ? (
-                                usedModelDisplay.toLowerCase().includes('nano banana') ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
-                                    {usedModelDisplay}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[10px] font-bold text-white shadow-lg">
-                                    {usedModelDisplay}
-                                  </span>
-                                )
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full text-[10px] font-bold text-white shadow-lg">
-                                  AI生成
-                                </span>
-                              )}
+                              <h3 className="text-white font-black text-sm tracking-tight">作成が終わりました</h3>
                             </div>
                             <p className="text-slate-400 text-[11px] leading-relaxed">
                               A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
@@ -2507,17 +2594,6 @@ function BannerDashboardWorkspace() {
                                 <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
                                 {selectedBanner < 3 ? `${['A', 'B', 'C'][selectedBanner]}案` : `No${selectedBanner + 1}`} プレビュー
                               </h3>
-                              {usedModelDisplay ? (
-                                usedModelDisplay.toLowerCase().includes('nano banana') ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
-                                    {usedModelDisplay}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[9px] font-bold text-white shadow">
-                                    {usedModelDisplay}
-                                  </span>
-                                )
-                              ) : null}
                             </div>
                             <div className="flex gap-2">
                               {refineHistory.some(entry => entry.index === selectedBanner) && (
@@ -2767,131 +2843,6 @@ function BannerDashboardWorkspace() {
       {/* ========================================
           Generation Fullscreen Overlay (飽きさせない演出)
           ======================================== */}
-      <AnimatePresence>
-        {isGenerating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center"
-          >
-            <div className="absolute inset-0 bg-white/85 backdrop-blur-xl" />
-            <div className="absolute inset-0 overflow-hidden">
-              <motion.div
-                className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-gradient-to-br from-blue-300/35 to-blue-300/35 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.08, 1], rotate: [0, 18, 0] }}
-                transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <motion.div
-                className="absolute -bottom-40 -left-40 w-[520px] h-[520px] bg-gradient-to-br from-blue-300/30 to-blue-300/30 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.06, 1], rotate: [0, -14, 0] }}
-                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              {FLOATING_ICONS.map((ic, idx) => (
-                <motion.div
-                  key={`${ic}-${idx}`}
-                  className="absolute text-2xl sm:text-3xl opacity-35"
-                  style={{
-                    left: `${(idx * 13 + 7) % 90}%`,
-                    top: `${(idx * 11 + 10) % 90}%`,
-                  }}
-                  animate={{ y: [0, -14, 0], rotate: [0, 8, 0], opacity: [0.18, 0.38, 0.18] }}
-                  transition={{ duration: 4 + (idx % 3), repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <UiIcon name={ic} size={28} />
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={{ y: 12, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="relative w-[min(640px,92vw)] bg-white border border-gray-200/70 rounded-3xl shadow-2xl shadow-gray-900/10 p-6 sm:p-8"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-600 rounded-2xl blur-lg opacity-30" />
-                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white shadow-lg">
-                      <Sparkles className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 font-semibold">生成中</div>
-                    <div className="text-lg sm:text-xl font-black text-gray-900">
-                      <span className="inline-flex items-center gap-2"><UiIcon name={GENERATION_PHASES[phaseIndex].icon as UiIconName} size={21} />{GENERATION_PHASES[phaseIndex].label}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-sm font-black text-gray-900 tabular-nums">
-                  {Math.round(progress)}%
-                </div>
-              </div>
-
-              <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600"
-                  initial={{ width: '0%' }}
-                  animate={{ width: `${clamp(progress, 2, 85)}%` }}
-                  transition={{ ease: 'easeOut', duration: 0.4 }}
-                />
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {['A', 'B', 'C'].map((k, idx) => (
-                  <div
-                    key={k}
-                    className={`rounded-2xl border px-3 py-2 text-center ${
-                      phaseIndex >= 2 + idx ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div className="text-xs text-gray-500 font-semibold">パターン</div>
-                    <div className="text-base font-black text-gray-900">{k}</div>
-                  </div>
-                ))}
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tipIndex}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="mt-5 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/70 p-4"
-                >
-                  <div className="text-sm font-bold text-blue-800 flex items-start gap-2">
-                    <UiIcon name={GENERATION_TIPS[tipIndex].icon as UiIconName} size={20} />
-                    <span>{GENERATION_TIPS[tipIndex].text}</span>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-
-              <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="font-semibold">高品質生成中（Nano Banana Pro）</span>
-                </div>
-                <div className="font-semibold tabular-nums">
-                  予測残り: 約{formatSec(predictedRemainingMs)}（平均から算出）
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700">
-                <div className="font-bold text-gray-900 mb-1">このタブを開いたままにしてください</div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  <span className="font-semibold">- バックグラウンドでも進行します（別タブで作業OK）</span>
-                  <span className="font-semibold">- ただし「閉じる/更新」すると中断される可能性があります</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="text-gray-500 font-semibold">
-                    予測合計: 約{formatSec(predictedTotalMs)} / 経過: {elapsedSec}秒{isHidden ? '（バックグラウンド）' : ''}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       </div>
     </DashboardLayout>
   )

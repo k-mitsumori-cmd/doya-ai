@@ -48,13 +48,15 @@ export default function OneOnOneDetailPage() {
     async function fetchRecord() {
       try {
         const res = await fetch(`/api/hr/one-on-one/${id}`)
-        if (!res.ok) throw new Error('1on1データの取得に失敗しました')
+        if (!res.ok) throw new Error(res.status === 404 ? 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' : '1on1の記録を読み込めませんでした。時間をおいて再読み込みしてください。')
         const data = await res.json()
         const nextRecord = data.oneOnOne ?? data.record ?? data
-        if (nextRecord?.id !== id) throw new Error('取得した1on1データを確認できませんでした')
+        if (nextRecord?.id !== id) throw new Error('1on1の記録を確かめられませんでした。時間をおいて再読み込みしてください。')
         if (active) setRecord(nextRecord)
       } catch (e: any) {
-        if (active) setError(e.message)
+        // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない
+        const message = typeof e?.message === 'string' ? e.message : ''
+        if (active) setError(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '1on1の記録を読み込めませんでした。時間をおいて再読み込みしてください。')
       } finally {
         if (active) setLoading(false)
       }
@@ -70,7 +72,7 @@ export default function OneOnOneDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) throw new Error('保存に失敗しました')
+    if (!res.ok) throw new Error('1on1の記録を保存できませんでした。時間をおいて、もう一度お試しください。')
     const data = await res.json()
     const savedRecord = data.oneOnOne ?? data.record ?? data
     if (savedRecord?.id !== id) throw new Error('保存結果を確認できませんでした。再読み込みして内容を確認してください。')

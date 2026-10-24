@@ -606,7 +606,7 @@ export default function SfaDealsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className="min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
-            <Download className="h-5 w-5" aria-hidden />CSV出力
+            <Download className="h-5 w-5" aria-hidden />CSVを書き出す
           </a>
           <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">
             <Plus className="h-5 w-5" aria-hidden />商談を追加
@@ -839,7 +839,7 @@ export default function SfaDealsPage() {
             <MutationRecovery mutations={mutations} />
             <div className="flex items-start justify-between gap-2 mb-4">
               <div>
-                <p className="text-[11px] font-black text-[#7f19e6] flex items-center gap-1">
+                <p className="text-[11px] font-black text-[#0066ff] flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">auto_awesome</span>保存済みのAI次アクション
                 </p>
                 <p className="text-xs text-slate-500">実行時点の情報による提案です。その後の変更は含まれません。</p>
@@ -850,7 +850,7 @@ export default function SfaDealsPage() {
               </button>
             </div>
 
-            <div className="rounded-2xl bg-purple-50 p-4 mb-3">
+            <div className="rounded-2xl bg-brand-50 p-4 mb-3">
               <p className="font-black text-slate-800 text-sm">{aiModal.nextAction}</p>
               {aiModal.reason && <p className="text-xs font-bold text-slate-500 mt-1">{aiModal.reason}</p>}
             </div>

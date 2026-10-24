@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { ShellCostBadge } from '@/components/shell/power'
+import { confirmDialog } from '@/components/ds/dialog'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -202,7 +203,7 @@ export default function MaterialsPage() {
       setProjectTitle('')
       setUploads(prev => new Map(Array.from(prev, ([key, item]) => [key,
         item.status === 'done' || item.status === 'error' ? item : { ...item, status: 'error' as const,
-          error: '利用情報を再確認しています。確認後に再試行してください。',
+          error: '利用情報を確かめています。確かめ終わったら、もう一度お試しください。',
           errorActionUrl: '/interview/projects/' + encodeURIComponent(projectId) + '/materials', errorActionLabel: '保存済み素材を確認する' },
       ])))
     } else if (uploadLifecycle.current.signal.aborted) uploadLifecycle.current = new AbortController()
@@ -264,7 +265,7 @@ export default function MaterialsPage() {
         setTranscribing((prev) => {
           const info = prev.get(mat.id)
           if (!info || info.status === 'error') return prev
-          return new Map(prev).set(mat.id, { ...info, status: 'error', error: '文字起こしに失敗しました。素材を確認して再試行してください。' })
+          return new Map(prev).set(mat.id, { ...info, status: 'error', error: '文字起こしできませんでした。素材を確かめて、もう一度お試しください。' })
         })
       } else if (mat.transcriptionStatus === 'COMPLETED' && !operation.timer) {
         operation.accepted = true
@@ -358,7 +359,7 @@ export default function MaterialsPage() {
     } catch {
       if (uploadsAlive.current && uploadContextRef.current === uploadContext && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) {
         setUploads(prev => new Map(prev).set(crypto.randomUUID(), { file, progress: 0, status: 'error',
-          error: 'ファイルの内容を確認できませんでした。再試行してください。' }))
+          error: 'ファイルの中身を確かめられませんでした。もう一度お試しください。' }))
       }
       return
     }
@@ -445,11 +446,14 @@ export default function MaterialsPage() {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve()
               } else {
-                reject(new Error(`Upload failed: ${xhr.status}`))
+                // 画面に出す文は日本語にし、状態コードは再試行の判定のためだけに持つ（UX 点検 FIX-PLAN 17）
+                const err: any = new Error('ファイルを送れませんでした。もう一度お試しください。')
+                err.httpStatus = xhr.status
+                reject(err)
               }
             })
 
-            xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
+            xhr.addEventListener('error', () => reject(new Error('通信が切れました。通信を確かめて、もう一度お試しください。')))
             xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
 
             const formData = new FormData()
@@ -470,7 +474,7 @@ export default function MaterialsPage() {
           break // 成功したらループを抜ける
         } catch (uploadErr: any) {
           if (!isCurrent()) return
-          const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
+          const is5xx = typeof uploadErr?.httpStatus === 'number' && uploadErr.httpStatus >= 500 && uploadErr.httpStatus < 600
           if (is5xx && attempt < maxRetries) {
             console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
             // プログレスをリセットして再試行
@@ -665,7 +669,7 @@ export default function MaterialsPage() {
 
   const deleteMaterial = async (materialId: string) => {
     if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size) return
-    if (confirm('この素材を削除しますか？')) await runMaterialAction('delete', materialId)
+    if (await confirmDialog({ title: 'この素材を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' })) await runMaterialAction('delete', materialId)
   }
 
   const confirmPendingUpload = async (materialId: string) => { await runMaterialAction('confirm', materialId) }
@@ -718,7 +722,7 @@ export default function MaterialsPage() {
                     i < currentWorkflowStep
                       ? 'bg-green-500 shadow-lg shadow-green-500/30'
                       : i === currentWorkflowStep
-                      ? 'bg-[#7f19e6] shadow-lg shadow-[#7f19e6]/30 scale-110'
+                      ? 'bg-[#0066ff] shadow-lg shadow-[#0066ff]/30 scale-110'
                       : 'bg-slate-100'
                   }`}>
                     <span className={`material-symbols-outlined text-xl sm:text-2xl ${
@@ -728,7 +732,7 @@ export default function MaterialsPage() {
                     </span>
                   </div>
                   <p className={`text-[10px] sm:text-xs font-bold mt-1.5 sm:mt-2 whitespace-nowrap ${
-                    i === currentWorkflowStep ? 'text-[#7f19e6]' : i < currentWorkflowStep ? 'text-green-600' : 'text-slate-400'
+                    i === currentWorkflowStep ? 'text-[#0066ff]' : i < currentWorkflowStep ? 'text-green-600' : 'text-slate-400'
                   }`}>{step.label}</p>
                   <p className="text-[10px] text-slate-400 hidden md:block">{step.desc}</p>
                 </div>
@@ -750,7 +754,7 @@ export default function MaterialsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#7f19e6]/10 rounded-full text-[#7f19e6] text-xs font-bold mb-4">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#0066ff]/10 rounded-full text-[#0066ff] text-xs font-bold mb-4">
           <span className="material-symbols-outlined text-sm">cloud_upload</span>
           STEP 1
         </div>
@@ -761,7 +765,7 @@ export default function MaterialsPage() {
         {materials.some((m) => m.status === 'COMPLETED') && (
           <motion.button
             onClick={() => router.push(`/interview/projects/${projectId}/skill`)}
-            className="mt-6 px-8 py-3.5 bg-gradient-to-r from-[#7f19e6] to-[#a855f7] text-white rounded-xl text-sm font-bold hover:shadow-xl hover:shadow-[#7f19e6]/30 transition-all inline-flex items-center gap-2 group"
+            className="mt-6 px-8 py-3.5 bg-gradient-to-r from-[#0066ff] to-[#3d80ff] text-white rounded-xl text-sm font-bold hover:shadow-xl hover:shadow-[#0066ff]/30 transition-all inline-flex items-center gap-2 group"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
@@ -772,7 +776,7 @@ export default function MaterialsPage() {
       </motion.div>
 
       <motion.div
-        className="bg-white shadow-2xl shadow-[#7f19e6]/5 rounded-2xl overflow-hidden border border-slate-100"
+        className="bg-white shadow-2xl shadow-[#0066ff]/5 rounded-2xl overflow-hidden border border-slate-100"
         variants={scaleInVariants}
         initial="hidden"
         animate="show"
@@ -789,8 +793,8 @@ export default function MaterialsPage() {
             aria-disabled={sessionStatus === 'loading'}
             className={`relative border-2 border-dashed flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 px-4 sm:px-6 transition-all group cursor-pointer rounded-2xl overflow-hidden ${
               dragOver
-                ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
-                : 'border-[#7f19e6]/20 bg-gradient-to-b from-[#7f19e6]/5 to-[#7f19e6]/[0.02] hover:bg-[#7f19e6]/10 hover:border-[#7f19e6]/40'
+                ? 'border-[#0066ff] bg-[#0066ff]/10 scale-[1.01]'
+                : 'border-[#0066ff]/20 bg-gradient-to-b from-[#0066ff]/5 to-[#0066ff]/[0.02] hover:bg-[#0066ff]/10 hover:border-[#0066ff]/40'
             }`}
           >
             {/* 浮遊アイコン背景 */}
@@ -798,7 +802,7 @@ export default function MaterialsPage() {
               {FLOATING_ICONS.map((icon, i) => (
                 <motion.span
                   key={i}
-                  className="material-symbols-outlined text-[#7f19e6]/[0.07] text-3xl absolute"
+                  className="material-symbols-outlined text-[#0066ff]/[0.07] text-3xl absolute"
                   style={{
                     left: `${10 + (i * 15) % 80}%`,
                     top: `${15 + (i * 23) % 60}%`,
@@ -835,16 +839,16 @@ export default function MaterialsPage() {
 
             {/* メインアイコン */}
             <motion.div
-              className="relative z-10 size-20 bg-white rounded-3xl shadow-xl shadow-[#7f19e6]/10 flex items-center justify-center mb-6"
+              className="relative z-10 size-20 bg-white rounded-3xl shadow-xl shadow-[#0066ff]/10 flex items-center justify-center mb-6"
               animate={dragOver ? { scale: 1.15, rotate: [0, -3, 3, 0] } : { scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <span className="material-symbols-outlined text-[#7f19e6] text-5xl">
+              <span className="material-symbols-outlined text-[#0066ff] text-5xl">
                 {dragOver ? 'downloading' : 'cloud_upload'}
               </span>
               {/* パルスリング */}
               <motion.div
-                className="absolute inset-0 rounded-3xl border-2 border-[#7f19e6]/30"
+                className="absolute inset-0 rounded-3xl border-2 border-[#0066ff]/30"
                 animate={{ scale: [1, 1.3, 1.3], opacity: [0.6, 0, 0] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
               />
@@ -865,8 +869,8 @@ export default function MaterialsPage() {
             </div>
 
             <motion.span
-              className="relative z-10 bg-gradient-to-r from-[#7f19e6] to-[#a855f7] text-white px-10 py-3.5 rounded-xl font-bold shadow-lg shadow-[#7f19e6]/25 flex items-center gap-2"
-              whileHover={{ scale: 1.04, boxShadow: '0 20px 40px -10px rgba(127, 25, 230, 0.4)' }}
+              className="relative z-10 bg-gradient-to-r from-[#0066ff] to-[#3d80ff] text-white px-10 py-3.5 rounded-xl font-bold shadow-lg shadow-[#0066ff]/25 flex items-center gap-2"
+              whileHover={{ scale: 1.04, boxShadow: '0 20px 40px -10px rgba(0, 102, 255, 0.4)' }}
               whileTap={{ scale: 0.97 }}
             >
               <span className="material-symbols-outlined text-xl">add</span>
@@ -878,9 +882,9 @@ export default function MaterialsPage() {
           <div className="mt-8 pt-6 border-t border-slate-100">
             <h5 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">文字起こし設定</h5>
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-[#7f19e6] bg-[#7f19e6]/5 cursor-pointer">
+              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-[#0066ff] bg-[#0066ff]/5 cursor-pointer">
                 <div className="flex gap-3 sm:gap-4 items-center min-w-0">
-                  <div className="size-10 bg-[#7f19e6] text-white rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="size-10 bg-[#0066ff] text-white rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined">record_voice_over</span>
                   </div>
                   <div className="min-w-0">
@@ -888,9 +892,9 @@ export default function MaterialsPage() {
                     <p className="text-xs text-slate-500">複数の話者を自動識別</p>
                   </div>
                 </div>
-                <input type="checkbox" defaultChecked className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6] flex-shrink-0 ml-2" />
+                <input type="checkbox" defaultChecked className="form-checkbox h-5 w-5 text-[#0066ff] rounded border-slate-300 focus:ring-[#0066ff] flex-shrink-0 ml-2" />
               </label>
-              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-slate-100 hover:border-[#7f19e6]/30 transition-all cursor-pointer">
+              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-slate-100 hover:border-[#0066ff]/30 transition-all cursor-pointer">
                 <div className="flex gap-3 sm:gap-4 items-center min-w-0">
                   <div className="size-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined">auto_awesome</span>
@@ -900,7 +904,7 @@ export default function MaterialsPage() {
                     <p className="text-xs text-slate-500">文字起こし後に即座に記事生成</p>
                   </div>
                 </div>
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6] flex-shrink-0 ml-2" />
+                <input type="checkbox" className="form-checkbox h-5 w-5 text-[#0066ff] rounded border-slate-300 focus:ring-[#0066ff] flex-shrink-0 ml-2" />
               </label>
             </div>
           </div>
@@ -916,13 +920,13 @@ export default function MaterialsPage() {
       >
         {[
           { icon: 'speed', title: '高速アップロード', desc: 'Supabase Storage直接転送で大容量ファイルも高速にアップロード。', gradient: 'from-blue-500 to-cyan-500' },
-          { icon: 'closed_caption', title: 'AI文字起こし', desc: '音声をAIが文字起こしします。1回の利用時間は残り枠内です。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
+          { icon: 'closed_caption', title: 'AI文字起こし', desc: '音声をAIが文字起こしします。1回の利用時間は残り枠内です。', gradient: 'from-[#0066ff] to-[#3d80ff]' },
           { icon: 'security', title: '安全・セキュア', desc: 'SSL/TLS暗号化転送。音声データはセキュアに保管されます。', gradient: 'from-emerald-500 to-green-500' },
         ].map((feature, i) => (
           <motion.div
             key={i}
             variants={itemVariants}
-            className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:border-[#7f19e6]/20 transition-all group"
+            className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:border-[#0066ff]/20 transition-all group"
           >
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
               <span className="material-symbols-outlined text-white text-2xl">{feature.icon}</span>
@@ -936,8 +940,8 @@ export default function MaterialsPage() {
       {/* セキュリティ・プライバシーポリシー */}
       <div className="mt-8 sm:mt-12 bg-slate-50 rounded-2xl border border-slate-200 p-5 sm:p-8">
         <div className="flex items-center gap-3 mb-4 sm:mb-6">
-          <div className="w-10 h-10 bg-[#7f19e6]/10 rounded-xl flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#7f19e6] text-xl">shield</span>
+          <div className="w-10 h-10 bg-[#0066ff]/10 rounded-xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-[#0066ff] text-xl">shield</span>
           </div>
           <h3 className="text-lg font-bold text-slate-900">セキュリティ・プライバシーについて</h3>
         </div>
@@ -1013,7 +1017,7 @@ export default function MaterialsPage() {
             <motion.div
               key={key}
               className={`bg-white rounded-2xl p-5 border shadow-sm transition-all ${
-                upload.status === 'done' ? 'border-green-200' : upload.status === 'error' ? 'border-red-200' : 'border-[#7f19e6]/20'
+                upload.status === 'done' ? 'border-green-200' : upload.status === 'error' ? 'border-red-200' : 'border-[#0066ff]/20'
               }`}
               layout
             >
@@ -1032,7 +1036,7 @@ export default function MaterialsPage() {
                   <span className="text-xs text-slate-500 font-mono">{formatFileSize(upload.file.size)}</span>
                 </div>
                 <span className={`text-lg font-black tabular-nums ${
-                  upload.status === 'done' ? 'text-green-600' : upload.status === 'error' ? 'text-red-600' : 'text-[#7f19e6]'
+                  upload.status === 'done' ? 'text-green-600' : upload.status === 'error' ? 'text-red-600' : 'text-[#0066ff]'
                 }`}>
                   {upload.status === 'done' ? '完了' : upload.status === 'error' ? '' : `${upload.progress}%`}
                 </span>
@@ -1044,7 +1048,7 @@ export default function MaterialsPage() {
                       ? 'bg-red-500'
                       : upload.status === 'done'
                       ? 'bg-green-500'
-                      : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7]'
+                      : 'bg-gradient-to-r from-[#0066ff] to-[#3d80ff]'
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${upload.progress}%` }}
@@ -1054,13 +1058,13 @@ export default function MaterialsPage() {
               <div className="flex items-center gap-2 mt-2.5">
                 {upload.status === 'uploading' && (
                   <>
-                    <span className="material-symbols-outlined text-[#7f19e6] text-sm animate-spin">sync</span>
+                    <span className="material-symbols-outlined text-[#0066ff] text-sm animate-spin">sync</span>
                     <p className="text-xs text-slate-600">アップロード中...</p>
                   </>
                 )}
                 {upload.status === 'confirming' && (
                   <>
-                    <span className="material-symbols-outlined text-[#7f19e6] text-sm animate-pulse">pending</span>
+                    <span className="material-symbols-outlined text-[#0066ff] text-sm animate-pulse">pending</span>
                     <p className="text-xs text-slate-600">確認処理中...</p>
                   </>
                 )}
@@ -1093,12 +1097,12 @@ export default function MaterialsPage() {
                         whileTap={{ scale: 0.97 }}
                       >
                         <span className="material-symbols-outlined text-sm">refresh</span>
-                        再試行
+                        もう一度
                       </motion.button>
                       {upload.errorActionUrl && (
                         <motion.a
                           href={upload.errorActionUrl}
-                          className="flex items-center gap-1 px-4 py-2 bg-[#7f19e6] text-white rounded-xl text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm"
+                          className="flex items-center gap-1 px-4 py-2 bg-[#0066ff] text-white rounded-xl text-xs font-bold hover:bg-[#0047d6] transition-colors shadow-sm"
                           whileHover={{ scale: 1.03 }}
                           whileTap={{ scale: 0.97 }}
                         >
@@ -1150,7 +1154,7 @@ export default function MaterialsPage() {
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       info.status === 'completed' ? 'bg-green-500' :
-                      info.status === 'error' ? 'bg-red-500' : 'bg-[#7f19e6]'
+                      info.status === 'error' ? 'bg-red-500' : 'bg-[#0066ff]'
                     }`}>
                       <span className="material-symbols-outlined text-white text-xl sm:text-2xl">
                         {info.status === 'completed' ? 'check_circle' : info.status === 'error' ? 'error' : 'mic'}
@@ -1176,7 +1180,7 @@ export default function MaterialsPage() {
                   </div>
                   {isActive && (
                     <div className="text-right flex-shrink-0">
-                      <p className="text-base sm:text-lg font-mono font-bold text-[#7f19e6]">{elapsed}</p>
+                      <p className="text-base sm:text-lg font-mono font-bold text-[#0066ff]">{elapsed}</p>
                       <p className="text-[10px] sm:text-xs text-slate-500">経過時間</p>
                     </div>
                   )}
@@ -1185,7 +1189,7 @@ export default function MaterialsPage() {
                 {info.status === 'processing' && (
                   <button
                     onClick={() => router.push(`/interview/projects/${projectId}/transcribe?materialId=${encodeURIComponent(id)}`)}
-                    className="mb-3 rounded-lg bg-[#7f19e6] px-3 py-2 text-xs font-bold text-white hover:bg-[#6b12c9]"
+                    className="mb-3 rounded-lg bg-[#0066ff] px-3 py-2 text-xs font-bold text-white hover:bg-[#0047d6]"
                   >
                     進捗を見る・処理を再開する
                   </button>
@@ -1211,12 +1215,12 @@ export default function MaterialsPage() {
                       className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
-                      再試行
+                      もう一度
                     </button>}
                     {info.limitReached && info.limitAction && (
                       <a
                         href={info.limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-[#7f19e6] text-white rounded-lg text-xs font-medium hover:bg-[#6b12c9] transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#0066ff] text-white rounded-lg text-xs font-medium hover:bg-[#0047d6] transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                       >
                         {info.limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
                       </a>
@@ -1238,13 +1242,13 @@ export default function MaterialsPage() {
                                 isDone
                                   ? 'bg-green-500'
                                   : isCurrent
-                                  ? 'bg-[#7f19e6] animate-pulse'
+                                  ? 'bg-[#0066ff] animate-pulse'
                                   : 'bg-slate-200'
                               }`}
                             />
                             <div className="flex flex-col items-center gap-1 mt-2">
                               <span className={`material-symbols-outlined text-base ${
-                                isDone ? 'text-green-600' : isCurrent ? 'text-[#7f19e6]' : 'text-slate-400'
+                                isDone ? 'text-green-600' : isCurrent ? 'text-[#0066ff]' : 'text-slate-400'
                               }`}>
                                 {step.icon}
                               </span>
@@ -1253,7 +1257,7 @@ export default function MaterialsPage() {
                                   isDone
                                     ? 'text-green-600 font-medium'
                                     : isCurrent
-                                    ? 'text-[#7f19e6] font-bold'
+                                    ? 'text-[#0066ff] font-bold'
                                     : 'text-slate-400'
                                 }`}
                               >
@@ -1289,7 +1293,7 @@ export default function MaterialsPage() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#7f19e6] to-[#a855f7] rounded-xl flex items-center justify-center shadow-lg shadow-[#7f19e6]/20 flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#0066ff] to-[#3d80ff] rounded-xl flex items-center justify-center shadow-lg shadow-[#0066ff]/20 flex-shrink-0">
               <span className="material-symbols-outlined text-white text-xl">folder</span>
             </div>
             <div>
@@ -1303,7 +1307,7 @@ export default function MaterialsPage() {
                 <span className="w-2 h-2 rounded-full bg-green-500" />完了
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#7f19e6] animate-pulse" />処理中
+                <span className="w-2 h-2 rounded-full bg-[#0066ff] animate-pulse" />処理中
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-red-500" />エラー
@@ -1322,7 +1326,7 @@ export default function MaterialsPage() {
         {projectError && (
           <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
             素材一覧を読み込めませんでした。表示中の素材がある場合は更新前の情報です。
-            <button type="button" onClick={fetchProject} className="ml-3 underline">再試行</button>
+            <button type="button" onClick={fetchProject} className="ml-3 underline">もう一度読み込む</button>
           </div>
         )}
 
@@ -1373,12 +1377,12 @@ export default function MaterialsPage() {
                   variants={itemVariants}
                   className={`bg-white rounded-2xl overflow-hidden border transition-all shadow-sm group ${
                     isTranscribing && transcriptionInfo?.status !== 'completed'
-                      ? 'border-[#7f19e6]/30 shadow-[#7f19e6]/10'
+                      ? 'border-[#0066ff]/30 shadow-[#0066ff]/10'
                       : m.transcriptionStatus === 'COMPLETED'
                       ? 'border-green-200 hover:shadow-lg hover:shadow-green-100'
                       : m.status === 'ERROR'
                       ? 'border-red-200 hover:shadow-lg hover:shadow-red-100'
-                      : 'border-slate-100 hover:border-[#7f19e6]/20 hover:shadow-lg'
+                      : 'border-slate-100 hover:border-[#0066ff]/20 hover:shadow-lg'
                   }`}
                   whileHover={{ y: -1 }}
                 >
@@ -1456,7 +1460,7 @@ export default function MaterialsPage() {
                               className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 ${
                                 m.transcriptionStatus === 'ERROR'
                                   ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20'
-                                  : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] hover:shadow-xl shadow-lg shadow-[#7f19e6]/20'
+                                  : 'bg-gradient-to-r from-[#0066ff] to-[#3d80ff] hover:shadow-xl shadow-lg shadow-[#0066ff]/20'
                               }`}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
@@ -1464,18 +1468,18 @@ export default function MaterialsPage() {
                               <span className="material-symbols-outlined text-base">
                                 {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                               </span>
-                              {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                              {m.transcriptionStatus === 'ERROR' ? 'もう一度' : '文字起こし'}
                               <ShellCostBadge action="transcribe.hour" per="60分" />
                             </motion.button>
                           )}
                         {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
-                          <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                          <span className="px-4 py-2.5 text-[11px] bg-[#0066ff]/10 text-[#0066ff] font-bold rounded-xl flex items-center gap-1.5 border border-[#0066ff]/20">
                             <span className="material-symbols-outlined text-base animate-spin">sync</span>
                             処理中
                           </span>
                         )}
                         {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
-                          <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                          <span className="px-4 py-2.5 text-[11px] bg-[#0066ff]/10 text-[#0066ff] font-bold rounded-xl flex items-center gap-1.5 border border-[#0066ff]/20">
                             <span className="material-symbols-outlined text-base animate-spin">sync</span>
                             処理中
                           </span>
@@ -1518,25 +1522,25 @@ export default function MaterialsPage() {
                             className={`px-3 py-2 text-xs font-bold text-white rounded-lg transition-all flex items-center gap-1 ${
                               m.transcriptionStatus === 'ERROR'
                                 ? 'bg-red-500 hover:bg-red-600 shadow-sm'
-                                : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] shadow-sm'
+                                : 'bg-gradient-to-r from-[#0066ff] to-[#3d80ff] shadow-sm'
                             }`}
                             whileTap={{ scale: 0.97 }}
                           >
                             <span className="material-symbols-outlined text-sm">
                               {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                             </span>
-                            {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                            {m.transcriptionStatus === 'ERROR' ? 'もう一度' : '文字起こし'}
                             <ShellCostBadge action="transcribe.hour" per="60分" />
                           </motion.button>
                         )}
                       {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
-                        <span className="px-3 py-2 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-lg flex items-center gap-1 border border-[#7f19e6]/20">
+                        <span className="px-3 py-2 text-[11px] bg-[#0066ff]/10 text-[#0066ff] font-bold rounded-lg flex items-center gap-1 border border-[#0066ff]/20">
                           <span className="material-symbols-outlined text-sm animate-spin">sync</span>
                           処理中
                         </span>
                       )}
                       {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
-                        <span className="px-3 py-2 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-lg flex items-center gap-1 border border-[#7f19e6]/20">
+                        <span className="px-3 py-2 text-[11px] bg-[#0066ff]/10 text-[#0066ff] font-bold rounded-lg flex items-center gap-1 border border-[#0066ff]/20">
                           <span className="material-symbols-outlined text-sm animate-spin">sync</span>
                           処理中
                         </span>
@@ -1557,151 +1561,6 @@ export default function MaterialsPage() {
         )}
       </div>
 
-      {/* アップロード中モーダル */}
-      <AnimatePresence>
-        {Array.from(uploads.values()).some((u) => u.status === 'uploading' || u.status === 'confirming') && (() => {
-          const activeUploads = Array.from(uploads.entries()).filter(([, u]) => u.status === 'uploading' || u.status === 'confirming')
-          const totalProgress = activeUploads.length > 0
-            ? Math.round(activeUploads.reduce((sum, [, u]) => sum + u.progress, 0) / activeUploads.length)
-            : 0
-          const circumference = 2 * Math.PI * 54
-          const strokeDashoffset = circumference - (totalProgress / 100) * circumference
-
-          return (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
-            >
-              {/* 円形プログレスヘッダー */}
-              <div className="relative px-6 pt-8 pb-4">
-                {/* 背景グラデーション */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#7f19e6]/5 to-transparent rounded-t-3xl" />
-
-                <div className="relative flex flex-col items-center">
-                  {/* 円形プログレスリング */}
-                  <div className="relative w-32 h-32 mb-4">
-                    <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-                      {/* 背景リング */}
-                      <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" strokeWidth="6" />
-                      {/* プログレスリング */}
-                      <motion.circle
-                        cx="60" cy="60" r="54" fill="none"
-                        stroke="url(#progressGradient)" strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        initial={{ strokeDashoffset: circumference }}
-                        animate={{ strokeDashoffset }}
-                        transition={{ duration: 0.5, ease: 'easeOut' }}
-                      />
-                      <defs>
-                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#7f19e6" />
-                          <stop offset="100%" stopColor="#a855f7" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    {/* 中央のパーセンテージ */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl font-black text-[#7f19e6] tabular-nums">{totalProgress}</span>
-                      <span className="text-[10px] font-bold text-slate-400 -mt-1">%</span>
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-black text-slate-900 mb-1">
-                    {totalProgress === 100 ? '確認処理中...' : 'アップロード中...'}
-                  </h3>
-                  <p className="text-xs text-slate-500">このページを離れないでください</p>
-                </div>
-              </div>
-
-              {/* ファイル別プログレス */}
-              <div className="px-6 py-4 space-y-3">
-                {activeUploads.map(([key, upload]) => {
-                  const ft = getFileTypeIcon(upload.file.name)
-                  const speedInfo = uploadSpeedRef.current.get(key)
-                  const speed = speedInfo?.speed || 0
-                  const remaining = speed > 0 ? (upload.file.size * (1 - upload.progress / 100)) / speed : 0
-
-                  return (
-                    <div key={key} className="bg-slate-50 rounded-xl p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 ${ft.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                          <span className={`material-symbols-outlined ${ft.color} text-xl`}>{ft.icon}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-900 truncate">{upload.file.name}</p>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                            <span className="font-mono">{formatFileSize(upload.file.size)}</span>
-                            {speed > 0 && upload.status === 'uploading' && (
-                              <>
-                                <span>·</span>
-                                <span className="text-[#7f19e6] font-medium">{formatSpeed(speed)}</span>
-                                {remaining > 0 && remaining < 3600 && (
-                                  <>
-                                    <span>·</span>
-                                    <span>残り{remaining < 60 ? `${Math.ceil(remaining)}秒` : `${Math.ceil(remaining / 60)}分`}</span>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-sm font-bold text-[#7f19e6] tabular-nums">{upload.progress}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-[#7f19e6] to-[#a855f7]"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${upload.progress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Tips section */}
-              <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-[#7f19e6]/5 to-[#a855f7]/5 rounded-xl border border-[#7f19e6]/10">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={tipIndex}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-start gap-3"
-                  >
-                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <span className="material-symbols-outlined text-[#7f19e6] text-lg">{UPLOAD_TIPS[tipIndex].icon}</span>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-[#7f19e6]/60 uppercase tracking-wider mb-0.5">豆知識</p>
-                      <p className="text-sm text-slate-600 leading-relaxed">{UPLOAD_TIPS[tipIndex].text}</p>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-                {/* ドットインジケーター */}
-                <div className="flex justify-center gap-1.5 mt-3">
-                  {UPLOAD_TIPS.map((_, i) => (
-                    <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === tipIndex ? 'bg-[#7f19e6] w-4' : 'bg-slate-300'}`} />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-          )
-        })()}
-      </AnimatePresence>
     </div>
   )
 }

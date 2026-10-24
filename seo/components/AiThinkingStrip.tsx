@@ -39,7 +39,7 @@ export function AiThinkingStrip({
               className="absolute -inset-16 opacity-[0.18]"
               style={{
                 background:
-                  'conic-gradient(from 90deg at 50% 50%, #2563eb, #7c3aed, #10b981, #f59e0b, #2563eb)',
+                  'conic-gradient(from 90deg at 50% 50%, #2563eb, #0066ff, #10b981, #f59e0b, #2563eb)',
               }}
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 6.5, ease: 'linear' }}

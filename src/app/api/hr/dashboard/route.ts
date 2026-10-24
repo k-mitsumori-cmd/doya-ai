@@ -14,7 +14,7 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // 2つの閲覧条件は互いに依存しないので同時に求める
@@ -91,6 +91,6 @@ export async function GET() {
     })
   } catch (e: any) {
     console.error('[hr/dashboard] unexpected error')
-    return privateApiJson({ error: 'Failed' }, { status: 500 })
+    return privateApiJson({ error: 'ダッシュボードを読み込めませんでした。時間をおいて再読み込みしてください。' }, { status: 500 })
   }
 }

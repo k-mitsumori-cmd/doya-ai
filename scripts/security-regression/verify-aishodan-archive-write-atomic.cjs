@@ -2,9 +2,12 @@ const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 const roomInput = load('src/lib/aishodan/room-input.ts')
 
+const { hasMinRole } = load('src/lib/aishodan/types.ts')
+
 const access = {
   getAishodanContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }),
   orgSlugFrom: () => 'org',
+  hasMinRole,
 }
 
 ;(async () => {
@@ -117,8 +120,10 @@ const access = {
         aishodanScenario: { findFirst: async () => scenario },
         $transaction: async (fn) => fn(tx),
       }
+      const roleChecks = []
       const route = load('src/app/api/aishodan/scenarios/[id]/route.ts', {
-        'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/aishodan/access': access,
+        'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
+        '@/lib/aishodan/access': { ...access, hasMinRole: (role, min) => { roleChecks.push(min); return hasMinRole(role, min) } },
         '@/lib/aishodan/public': { toScenarioConfig: () => ({}) },
         '@/lib/aishodan/scheduling': { normalizeSchedulingLabel: () => '', validateSchedulingUrl: () => ({ ok: true, url: null }) },
       })
@@ -126,6 +131,38 @@ const access = {
       assert.equal(response.status, archivedAfterInitialRead ? 409 : 200)
       assert.equal(profileWrites, archivedAfterInitialRead ? 0 : 1)
       assert.equal(scenarioWrites, archivedAfterInitialRead ? 0 : 1)
+      assert.deepEqual(roleChecks, ['manager'])
+    })
+  }
+
+  for (const role of ['member', 'manager']) {
+    await check(`scenario edit ${role === 'member' ? 'rejects member before any read or write' : 'allows manager'}`, async () => {
+      let reads = 0
+      let writes = 0
+      const tx = {
+        $queryRaw: async () => [{ id: 'product' }],
+        aishodanProduct: { findFirst: async () => ({ id: 'product' }), update: async () => { writes++ } },
+        aishodanScenario: { update: async () => { writes++ } },
+      }
+      const prisma = {
+        aishodanScenario: { findFirst: async () => { reads++; return { id: 'scenario', productId: 'product', product: { id: 'product', name: 'Product', archivedAt: null } } } },
+        $transaction: async (fn) => fn(tx),
+      }
+      const route = load('src/app/api/aishodan/scenarios/[id]/route.ts', {
+        'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
+        '@/lib/aishodan/access': { ...access, getAishodanContext: async () => ({ organizationId: 'org', userId: 'user', role }) },
+        '@/lib/aishodan/public': { toScenarioConfig: () => ({}) },
+        '@/lib/aishodan/scheduling': { normalizeSchedulingLabel: () => '', validateSchedulingUrl: () => ({ ok: true, url: null }) },
+      })
+      const response = await route.PUT({ json: async () => ({ name: 'Updated', profile: { note: 'Updated' } }) }, { params: Promise.resolve({ id: 'scenario' }) })
+      if (role === 'member') {
+        assert.equal(response.status, 403)
+        assert.equal(reads, 0)
+        assert.equal(writes, 0)
+      } else {
+        assert.equal(response.status, 200)
+        assert.equal(writes, 2)
+      }
     })
   }
 })().catch((error) => { console.error(error); process.exitCode = 1 })

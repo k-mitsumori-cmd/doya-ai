@@ -88,7 +88,7 @@ function InvitationContent({ token }: { token: string }) {
   return (
     <div className={`${brand.brand} relative flex items-center justify-center px-4 py-12 sm:p-6`}>
       <BgDots />
-      <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-purple-100 p-8 w-full max-w-md text-center">
+      <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-brand-400/10 border border-brand-50 p-8 w-full max-w-md text-center">
         <div className="flex justify-center mb-2">
           <DoyaKun mood={state === 'error' || state === 'expired' || state === 'account-mismatch' ? 'error' : accepting ? 'jump' : 'hello'} size={110} />
         </div>
@@ -98,7 +98,7 @@ function InvitationContent({ token }: { token: string }) {
           <>
             <h1 className="text-xl font-black text-slate-900">招待を確認できませんでした</h1>
             <p className="text-sm font-bold text-slate-400 mt-2">{errMsg}</p>
-            <button onClick={verifyAgain} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-purple-600 text-white font-bold disabled:opacity-50">
+            <button onClick={verifyAgain} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-brand-500 text-white font-bold disabled:opacity-50">
               招待の状態を再確認
             </button>
           </>
@@ -108,7 +108,7 @@ function InvitationContent({ token }: { token: string }) {
             <h1 className="text-xl font-black text-slate-900">別のアカウントでログインしています</h1>
             <p className="text-sm font-bold text-slate-500 mt-3">{info.email} 宛ての招待です。</p>
             <p className="text-sm text-slate-500 mt-2">現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。</p>
-            <button onClick={switchAccount} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-purple-600 text-white font-bold disabled:opacity-50">
+            <button onClick={switchAccount} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-brand-500 text-white font-bold disabled:opacity-50">
               {accepting ? '切り替え中…' : '別のアカウントでログイン'}
             </button>
           </>
@@ -117,13 +117,13 @@ function InvitationContent({ token }: { token: string }) {
           <>
             <h1 className="text-xl font-black text-slate-900">ドヤAIOへの招待</h1>
             <p className="text-sm font-bold text-slate-500 mt-3">
-              <span className="text-purple-700 font-black">{info.organizationName}</span> に招待されています
+              <span className="text-brand-600 font-black">{info.organizationName}</span> に招待されています
             </p>
             <p className="text-xs font-bold text-slate-400 mt-1 mb-6">{info.email} 宛て</p>
             <button
               onClick={accept}
               disabled={accepting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 hover:shadow-xl transition-all disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 hover:shadow-xl transition-all disabled:opacity-50"
             >
               {accepting ? '参加中…' : '招待を受けて参加する'}
             </button>

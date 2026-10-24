@@ -82,7 +82,7 @@ export default function AishodanSessionsPage() {
       setNextCursor(page.nextCursor)
       setTotal(page.total)
     } catch (e) {
-      if (version === loadVersion.current) setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
+      if (version === loadVersion.current) setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '商談ログを取得できませんでした')
     } finally {
       if (version === loadVersion.current) setLoading(false)
     }
@@ -106,7 +106,7 @@ export default function AishodanSessionsPage() {
       setNextCursor(page.nextCursor)
     } catch (e) {
       if (version === loadVersion.current) {
-        setError(e instanceof Error ? e.message : '商談ログの続きを取得できませんでした')
+        setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '商談ログの続きを取得できませんでした')
         setErrorStatus(failureStatus(e))
       }
     } finally {

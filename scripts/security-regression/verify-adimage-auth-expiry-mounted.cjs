@@ -28,8 +28,8 @@ const posts=()=>f.calls().filter(c=>c.init.method==='POST').length
  })
  await test('DELETE401 retains missing intent until verified cancellation and acknowledgment',async()=>{
   const saved=f.client.createAdImageIntent('actor-a','analyze','analysis');await f.act(()=>f.dom.window.dispatchEvent(new f.dom.window.Event('focus')));await f.click('保存結果を確認')
-  f.setNetwork(c=>c.init.method==='DELETE'?Response.json({error:'Login'},{status:401}):f.originalNetwork(c));await f.click('未受付の操作を終了');checkLogin();assert.equal(f.client.readAdImageIntent('actor-a').operationId,saved.operationId)
-  f.setNetwork(f.originalNetwork);await f.click('保存結果を確認');await f.click('未受付の操作を終了');await f.click('この操作を閉じる');assert.equal(f.client.readAdImageIntent('actor-a'),null);assert.equal(posts(),0)
+  f.setNetwork(c=>c.init.method==='DELETE'?Response.json({error:'Login'},{status:401}):f.originalNetwork(c));await f.click('この作業を取りやめる');checkLogin();assert.equal(f.client.readAdImageIntent('actor-a').operationId,saved.operationId)
+  f.setNetwork(f.originalNetwork);await f.click('保存結果を確認');await f.click('この作業を取りやめる');await f.click('この操作を閉じる');assert.equal(f.client.readAdImageIntent('actor-a'),null);assert.equal(posts(),0)
  })
  await test('Late old actor401 cannot require login for a different actor or returned actor epoch',async()=>{
   let finish;f.setNetwork(c=>c.url==='/api/adimage/analyze'?new Promise(r=>finish=r):f.originalNetwork(c));await f.act(()=>f.input('https://example.com','https://synthetic.test'));await f.click('広告コピーを作る');f.setActor('actor-b');await f.render();f.setActor('actor-a');await f.render();await f.act(()=>finish(Response.json({error:'Login'},{status:401})));assert(!f.host().textContent.includes('ログインの有効期限'));assert(f.client.readAdImageIntent('actor-a'));assert.equal(f.client.readAdImageIntent('actor-b'),null)

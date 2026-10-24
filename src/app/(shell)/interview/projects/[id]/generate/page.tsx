@@ -216,7 +216,7 @@ function renderRichContent(rawText: string): ReactNode[] {
 
 // ── Confetti ──
 function CelebrationConfetti() {
-  const colors = ['#3b82f6', '#60a5fa', '#2563eb', '#1e40af', '#93c5fd', '#f59e0b', '#10b981', '#8b5cf6']
+  const colors = ['#3b82f6', '#60a5fa', '#2563eb', '#1e40af', '#93c5fd', '#f59e0b', '#10b981', '#3d80ff']
   return (
     <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
       {Array.from({ length: 40 }).map((_, i) => {
@@ -504,6 +504,14 @@ export default function GeneratePage() {
 
   const progressPercent = status === 'done' ? 100 : status === 'generating' ? 75 : 0
 
+  // 完成の窓を Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!showCelebration) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCelebration(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showCelebration])
+
   return (
     <>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -620,7 +628,7 @@ export default function GeneratePage() {
                     className="w-full px-4 py-2.5 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-lg">refresh</span>
-                    再試行
+                    もう一度
                   </button>
                 )}
               </div>
@@ -717,7 +725,7 @@ export default function GeneratePage() {
                 className="w-full px-4 py-2.5 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-lg">refresh</span>
-                再試行
+                もう一度
               </button>
             )}
           </div>
@@ -928,7 +936,7 @@ export default function GeneratePage() {
                   className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-xs font-semibold flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-sm">refresh</span>
-                  再試行
+                  もう一度
                 </button>
               )}
               <button
@@ -965,6 +973,9 @@ export default function GeneratePage() {
             {/* Modal */}
             <motion.div
               className="relative bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full mx-4 text-center z-[61]"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="interview-celebration-title"
               initial={{ scale: 0.7, y: 40, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -973,6 +984,7 @@ export default function GeneratePage() {
               {/* Close button */}
               <button
                 onClick={() => setShowCelebration(false)}
+                aria-label="閉じる"
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
@@ -989,6 +1001,7 @@ export default function GeneratePage() {
               </motion.div>
 
               <motion.h2
+                id="interview-celebration-title"
                 className="text-2xl font-extrabold mb-2 bg-gradient-to-r from-blue-800 to-blue-500 bg-clip-text text-transparent"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

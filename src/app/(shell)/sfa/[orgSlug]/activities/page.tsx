@@ -26,7 +26,7 @@ const TYPES: ActivityType[] = ['call', 'meeting', 'email', 'note']
 const TYPE_COLOR: Record<ActivityType, string> = {
   call: 'bg-sky-100 text-sky-600',
   meeting: 'bg-green-100 text-green-600',
-  email: 'bg-violet-100 text-violet-600',
+  email: 'bg-brand-50 text-brand-500',
   note: 'bg-amber-100 text-amber-600',
 }
 // 新しい見た目のときのアイコン（lucide）。今の見た目は Material Symbols のまま
@@ -83,7 +83,7 @@ export default function SfaActivitiesPage() {
       setRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
+        setLoadError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '活動を取得できませんでした', error)
         setRetryCursor(cursor || null)
       }
     } finally {

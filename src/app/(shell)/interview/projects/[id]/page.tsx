@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import Head from 'next/head'
+import { alertDialog, ConfirmDialog } from '@/components/ds/dialog'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 
 interface ProjectDetail {
   id: string
@@ -56,7 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string
   PLANNING: { label: '企画中', color: 'bg-blue-100 text-blue-600 border border-blue-600/20', icon: 'assignment' },
   RECORDING: { label: '収録中', color: 'bg-yellow-100 text-yellow-700 border border-yellow-700/20', icon: 'mic' },
   TRANSCRIBING: { label: '文字起こし中', color: 'bg-blue-100 text-blue-700 border border-blue-700/20', icon: 'sync' },
-  EDITING: { label: '編集中', color: 'bg-[#7f19e6]/10 text-[#7f19e6] border border-[#7f19e6]/20', icon: 'edit' },
+  EDITING: { label: '編集中', color: 'bg-[#0066ff]/10 text-[#0066ff] border border-[#0066ff]/20', icon: 'edit' },
   REVIEWING: { label: 'レビュー中', color: 'bg-cyan-100 text-cyan-600 border border-cyan-600/20', icon: 'visibility' },
   COMPLETED: { label: '完了', color: 'bg-green-100 text-green-600 border border-green-600/20', icon: 'check_circle' },
 }
@@ -123,7 +125,7 @@ export default function ProjectOverviewPage() {
         return data.project as ProjectDetail
       })
       .then((data) => { if (!controller.signal.aborted) setProject(data) })
-      .catch((error) => { if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'プロジェクトを読み込めませんでした') })
+      .catch((error) => { if (!controller.signal.aborted) setLoadError(interviewUserMessage(error, 'プロジェクトを読み込めませんでした。もう一度お試しください。')) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [projectId, retryCount])
@@ -136,10 +138,10 @@ export default function ProjectOverviewPage() {
       if (data.success) {
         router.push('/interview/projects')
       } else {
-        alert(data.error || '削除に失敗しました')
+        await alertDialog({ title: 'プロジェクトを削除できませんでした', message: interviewUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
       }
     } catch {
-      alert('削除に失敗しました')
+      await alertDialog({ title: 'プロジェクトを削除できませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setDeleting(false)
     }
@@ -197,7 +199,7 @@ export default function ProjectOverviewPage() {
     return (
       <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
         <p className="font-bold text-red-800">{loadError}</p>
-        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">もう一度読み込む</button>
       </div>
     )
   }
@@ -212,7 +214,7 @@ export default function ProjectOverviewPage() {
         <div className="text-center py-20">
           <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">sentiment_dissatisfied</span>
           <p className="text-slate-900 font-medium">プロジェクトが見つかりません</p>
-          <Link href="/interview/projects" className="text-sm text-[#7f19e6] hover:underline mt-2 inline-block">
+          <Link href="/interview/projects" className="text-sm text-[#0066ff] hover:underline mt-2 inline-block">
             プロジェクト一覧に戻る
           </Link>
         </div>
@@ -271,7 +273,7 @@ export default function ProjectOverviewPage() {
         transition={{ duration: 0.5, delay: 0.1 }}
       >
         <p className="text-sm font-bold text-slate-900 tracking-tight mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-[#7f19e6]">trending_up</span>
+          <span className="material-symbols-outlined text-[#0066ff]">trending_up</span>
           プロジェクトの進捗
         </p>
         <div className="overflow-x-auto pb-2 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -287,9 +289,9 @@ export default function ProjectOverviewPage() {
                     href={`/interview/projects/${projectId}/${step.route}`}
                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all flex-1 whitespace-nowrap ${
                       completedStep
-                        ? 'bg-[#7f19e6] text-white hover:bg-[#6b12c9]'
+                        ? 'bg-[#0066ff] text-white hover:bg-[#0047d6]'
                         : currentStep
-                          ? 'bg-[#7f19e6]/10 text-[#7f19e6] border-2 border-[#7f19e6] hover:bg-[#7f19e6]/20'
+                          ? 'bg-[#0066ff]/10 text-[#0066ff] border-2 border-[#0066ff] hover:bg-[#0066ff]/20'
                           : 'bg-slate-50 text-slate-400 border border-slate-200'
                     }`}
                   >
@@ -302,7 +304,7 @@ export default function ProjectOverviewPage() {
                   </Link>
                   {i < STEPS.length - 1 && (
                     <span className={`material-symbols-outlined text-xl sm:text-2xl shrink-0 ${
-                      completedStep ? 'text-[#7f19e6]' : 'text-slate-300'
+                      completedStep ? 'text-[#0066ff]' : 'text-slate-300'
                     }`}>
                       arrow_forward
                     </span>
@@ -317,13 +319,13 @@ export default function ProjectOverviewPage() {
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-slate-500">進捗状況</span>
-            <span className="text-xs font-semibold text-[#7f19e6]">
+            <span className="text-xs font-semibold text-[#0066ff]">
               {Math.round((STEPS.filter(s => getStepStatus(s.key) === 'done').length / STEPS.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-[#7f19e6]/20 rounded-full h-2">
+          <div className="w-full bg-[#0066ff]/20 rounded-full h-2">
             <div
-              className="bg-[#7f19e6] h-2 rounded-full transition-all duration-500"
+              className="bg-[#0066ff] h-2 rounded-full transition-all duration-500"
               style={{
                 width: `${(STEPS.filter(s => getStepStatus(s.key) === 'done').length / STEPS.length) * 100}%`
               }}
@@ -341,7 +343,7 @@ export default function ProjectOverviewPage() {
         {/* プロジェクト情報 */}
         <motion.div variants={itemVariants} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
           <p className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7f19e6]">info</span>
+            <span className="material-symbols-outlined text-[#0066ff]">info</span>
             プロジェクト情報
           </p>
           <div className="space-y-3 text-sm">
@@ -417,30 +419,30 @@ export default function ProjectOverviewPage() {
         {/* 統計サマリ */}
         <motion.div variants={itemVariants} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
           <p className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7f19e6]">analytics</span>
+            <span className="material-symbols-outlined text-[#0066ff]">analytics</span>
             統計
           </p>
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">folder_open</span>
+            <div className="bg-gradient-to-br from-[#0066ff]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#0066ff]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#0066ff] mb-1">folder_open</span>
               <p className="text-xl sm:text-2xl font-black text-slate-900">{project.materials.length}</p>
               <p className="text-xs text-slate-500">素材</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">transcribe</span>
+            <div className="bg-gradient-to-br from-[#0066ff]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#0066ff]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#0066ff] mb-1">transcribe</span>
               <p className="text-xl sm:text-2xl font-black text-slate-900">
                 {project.transcriptions.filter((t) => t.status === 'COMPLETED').length}
               </p>
               <p className="text-xs text-slate-500">文字起こし済</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">draft</span>
+            <div className="bg-gradient-to-br from-[#0066ff]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#0066ff]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#0066ff] mb-1">draft</span>
               <p className="text-xl sm:text-2xl font-black text-slate-900">{project.drafts.length}</p>
               <p className="text-xs text-slate-500">ドラフト</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">article</span>
-              <p className="text-xl sm:text-2xl font-black text-[#7f19e6]">
+            <div className="bg-gradient-to-br from-[#0066ff]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#0066ff]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#0066ff] mb-1">article</span>
+              <p className="text-xl sm:text-2xl font-black text-[#0066ff]">
                 {latestDraft?.wordCount?.toLocaleString() || '-'}
               </p>
               <p className="text-xs text-slate-500">文字数</p>
@@ -453,12 +455,12 @@ export default function ProjectOverviewPage() {
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7f19e6]">folder_open</span>
+            <span className="material-symbols-outlined text-[#0066ff]">folder_open</span>
             素材 ({project.materials.length})
           </p>
           <Link
             href={`/interview/projects/${projectId}/materials`}
-            className="text-sm text-[#7f19e6] hover:underline flex items-center gap-1"
+            className="text-sm text-[#0066ff] hover:underline flex items-center gap-1"
           >
             管理
             <span className="material-symbols-outlined text-base">arrow_forward</span>
@@ -470,7 +472,7 @@ export default function ProjectOverviewPage() {
             <p className="text-sm text-slate-500 leading-relaxed mb-4">素材がまだアップロードされていません</p>
             <Link
               href={`/interview/projects/${projectId}/materials`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20"
             >
               <span className="material-symbols-outlined text-base">upload_file</span>
               素材をアップロード
@@ -481,9 +483,9 @@ export default function ProjectOverviewPage() {
             {project.materials.map((m) => {
               const trans = project.transcriptions.find((t) => t.materialId === m.id)
               return (
-                <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all">
+                <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#0066ff]/30 transition-all">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="material-symbols-outlined text-2xl text-[#7f19e6] shrink-0">
+                    <span className="material-symbols-outlined text-2xl text-[#0066ff] shrink-0">
                       {m.type === 'AUDIO' ? 'audio_file' : m.type === 'VIDEO' ? 'videocam' : 'description'}
                     </span>
                     <div className="min-w-0">
@@ -518,13 +520,13 @@ export default function ProjectOverviewPage() {
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7f19e6]">draft</span>
+            <span className="material-symbols-outlined text-[#0066ff]">draft</span>
             記事ドラフト ({project.drafts.length})
           </p>
           {project.drafts.length > 0 && (
             <Link
               href={`/interview/projects/${projectId}/edit?draftId=${project.drafts[0]?.id}`}
-              className="text-sm text-[#7f19e6] hover:underline flex items-center gap-1"
+              className="text-sm text-[#0066ff] hover:underline flex items-center gap-1"
             >
               エディタで開く
               <span className="material-symbols-outlined text-base">arrow_forward</span>
@@ -538,7 +540,7 @@ export default function ProjectOverviewPage() {
             {project.transcriptions.some((t) => t.status === 'COMPLETED') && (
               <Link
                 href={`/interview/projects/${projectId}/skill`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20"
               >
                 <span className="material-symbols-outlined text-base">menu_book</span>
                 スキルを選んで生成
@@ -551,10 +553,10 @@ export default function ProjectOverviewPage() {
               <Link
                 key={d.id}
                 href={`/interview/projects/${projectId}/edit?draftId=${d.id}`}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#0066ff]/30 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="material-symbols-outlined text-2xl text-[#7f19e6] shrink-0">article</span>
+                  <span className="material-symbols-outlined text-2xl text-[#0066ff] shrink-0">article</span>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono shrink-0">v{d.version}</span>
@@ -592,9 +594,9 @@ export default function ProjectOverviewPage() {
       </div>
 
       {/* Pro Tip */}
-      <div className="bg-gradient-to-r from-[#7f19e6]/10 to-blue-50 rounded-xl p-5 border border-[#7f19e6]/20">
+      <div className="bg-gradient-to-r from-[#0066ff]/10 to-blue-50 rounded-xl p-5 border border-[#0066ff]/20">
         <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined text-3xl text-[#7f19e6]">lightbulb</span>
+          <span className="material-symbols-outlined text-3xl text-[#0066ff]">lightbulb</span>
           <div>
             <h3 className="text-sm font-bold text-slate-900 tracking-tight mb-2">Pro Tip</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
@@ -608,24 +610,24 @@ export default function ProjectOverviewPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         <Link
           href={`/interview/projects/${projectId}/materials`}
-          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#0066ff] hover:shadow-lg transition-all group"
         >
-          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">folder_open</span>
+          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#0066ff] mb-2 group-hover:scale-110 transition-transform inline-block">folder_open</span>
           <p className="text-xs sm:text-sm text-slate-700 font-medium">素材管理</p>
         </Link>
         <Link
           href={`/interview/projects/${projectId}/skill`}
-          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#0066ff] hover:shadow-lg transition-all group"
         >
-          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">menu_book</span>
+          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#0066ff] mb-2 group-hover:scale-110 transition-transform inline-block">menu_book</span>
           <p className="text-xs sm:text-sm text-slate-700 font-medium">スキル選択</p>
         </Link>
         {latestDraft ? (
           <Link
             href={`/interview/projects/${projectId}/edit?draftId=${latestDraft.id}`}
-            className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+            className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#0066ff] hover:shadow-lg transition-all group"
           >
-            <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">edit</span>
+            <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#0066ff] mb-2 group-hover:scale-110 transition-transform inline-block">edit</span>
             <p className="text-xs sm:text-sm text-slate-700 font-medium">記事編集</p>
           </Link>
         ) : (
@@ -636,67 +638,24 @@ export default function ProjectOverviewPage() {
         )}
         <Link
           href={`/interview/projects/${projectId}/skill`}
-          className="bg-gradient-to-br from-[#7f19e6] to-blue-700 border border-[#7f19e6] rounded-xl p-4 sm:p-5 text-center hover:shadow-xl transition-all group"
+          className="bg-gradient-to-br from-[#0066ff] to-blue-700 border border-[#0066ff] rounded-xl p-4 sm:p-5 text-center hover:shadow-xl transition-all group"
         >
           <span className="material-symbols-outlined text-3xl sm:text-4xl text-white mb-2 group-hover:scale-110 transition-transform inline-block">auto_awesome</span>
           <p className="text-xs sm:text-sm text-white font-medium">再生成</p>
         </Link>
       </div>
 
-      {/* 削除確認モーダル */}
-      <AnimatePresence>
-      {showDeleteConfirm && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setShowDeleteConfirm(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-slate-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-symbols-outlined text-4xl text-red-500">warning</span>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">プロジェクトを削除</h3>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed mb-2">「{project.title}」を削除します。</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
-              <p className="text-xs text-red-600 flex items-start gap-2">
-                <span className="material-symbols-outlined text-sm mt-0.5">error</span>
-                <span>記事などのデータは削除され、保管ファイルも順次削除されます。この操作は取り消せません。</span>
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 text-sm text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 font-medium transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 disabled:opacity-50 font-medium transition-colors flex items-center justify-center gap-1"
-              >
-                {deleting ? (
-                  <>
-                    <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                    削除中...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-sm">delete</span>
-                    削除する
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
+      {/* 削除確認（共通のダイアログ。UX 点検 FIX-PLAN 18） */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`「${project.title}」を削除しますか？`}
+        message="記事などのデータは削除され、保管ファイルも順次削除されます。元に戻せません。"
+        confirmLabel={deleting ? '削除しています…' : '削除する'}
+        tone="danger"
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
       </div>
     </>
   )

@@ -26,7 +26,7 @@ const SOURCE_STYLE: Record<string, string> = {
   market: 'bg-blue-50 text-blue-700 border-blue-200',
   competitor: 'bg-amber-50 text-amber-700 border-amber-200',
   manual: 'bg-slate-100 text-slate-600 border-slate-200',
-  ai_estimate: 'bg-violet-50 text-violet-700 border-violet-200',
+  ai_estimate: 'bg-brand-50 text-brand-600 border-brand-100',
   unknown: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 

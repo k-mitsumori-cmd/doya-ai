@@ -7,13 +7,14 @@ import { Input } from "@/components/promane/ui/input";
 import { Label } from "@/components/promane/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/promane/ui/dialog";
 import { formatCurrency } from "@/lib/promane/format";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Building2, User, Mail, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useConfirm } from "@/components/promane/confirm-dialog";
 
 import { useClientCreation } from '@/lib/promane/use-client-creation';
 import { parsePromaneClientCreate } from '@/lib/promane/client-input';
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 const emptyClientDraft = () => ({ name: '', contactName: '', email: '', phone: '' });
 
@@ -65,13 +66,13 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
       setOpen(false);
       refreshCreated();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '入力内容を確認してください', { duration: 6000 });
+      toast.error(userErrorMessage(error instanceof Error ? error.message : null, '入力内容を確かめて、もう一度お試しください。'), { duration: 6000 });
     } finally { submission.current = false; }
   }
 
   async function handleDelete(clientId: string, name: string) {
     const ok = await confirm({
-      title: '顧客を削除',
+      title: 'この顧客を削除しますか？',
       message: `「${name}」を削除しますか？\n関連する案件は保持されますが、顧客リンクは解除されます。`,
       tone: 'danger',
       confirmLabel: '削除する',
@@ -84,14 +85,14 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data?.success !== true) {
-        toast.error(data?.error || "削除に失敗しました");
+        toast.error(userErrorMessage(data?.error, "削除できませんでした。少し待って、もう一度お試しください。"));
         return;
       }
       toast.success("顧客を削除しました");
       router.refresh();
     } catch (e: any) {
       console.error("[promane/client] delete exception");
-      toast.error(e?.message || "通信エラーが発生しました");
+      toast.error(userErrorMessage(e?.message, "通信できませんでした。通信を確かめて、もう一度お試しください。"));
     }
   }
 
@@ -137,25 +138,25 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
             <form onChange={e => { rememberDraft(e.currentTarget); }} onSubmit={handleCreate} className="space-y-4 mt-2">
               <fieldset disabled={creation.status !== 'ready'} className="space-y-4">
               <div>
-                <Label htmlFor={`${inputId}-name`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">🏢 会社名</Label>
+                <Label htmlFor={`${inputId}-name`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">会社名</Label>
                 <Input id={`${inputId}-name`} name="name" defaultValue={draft.name} maxLength={200} required className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="株式会社〇〇" />
               </div>
               <div>
-                <Label htmlFor={`${inputId}-contactName`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">👤 担当者名</Label>
+                <Label htmlFor={`${inputId}-contactName`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">担当者名</Label>
                 <Input id={`${inputId}-contactName`} name="contactName" defaultValue={draft.contactName} className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="田中太郎" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor={`${inputId}-email`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📧 メール</Label>
+                  <Label htmlFor={`${inputId}-email`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">メール</Label>
                   <Input id={`${inputId}-email`} name="email" defaultValue={draft.email} type="email" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
                 <div>
-                  <Label htmlFor={`${inputId}-phone`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📱 電話</Label>
+                  <Label htmlFor={`${inputId}-phone`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">電話</Label>
                   <Input id={`${inputId}-phone`} name="phone" defaultValue={draft.phone} className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full h-12 rounded-full font-black text-[15px] shadow-md hover:scale-[1.02] active:scale-95 transition-all">
-                {loading ? "追加中..." : "追加する！ ✨"}
+                {loading ? "追加中..." : "追加する"}
               </Button>
               </fieldset>
             </form>
@@ -175,22 +176,22 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
             <div key={client.id} className={`rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-6 transition-all hover:shadow-xl hover:scale-[1.02] hover:ring-amber-300 animate-slide-up stagger-${Math.min(i + 1, 5)}`}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-xl">
-                    🏢
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                    <Building2 className="h-6 w-6" aria-hidden />
                   </div>
                   <div>
                     <p className="text-[16px] font-black text-gray-900">{client.name}</p>
-                    {client.contactName && <p className="text-[13px] font-bold text-gray-400">👤 {client.contactName}</p>}
+                    {client.contactName && <p className="flex items-center gap-1 text-[13px] font-bold text-gray-400"><User className="h-3.5 w-3.5" aria-hidden />{client.contactName}</p>}
                   </div>
                 </div>
-                <button onClick={() => handleDelete(client.id, client.name)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                <button type="button" aria-label={`${client.name}を削除する`} onClick={() => handleDelete(client.id, client.name)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              {client.email && <p className="text-[13px] font-bold text-gray-400 mb-1">📧 {client.email}</p>}
+              {client.email && <p className="flex items-center gap-1 text-[13px] font-bold text-gray-400 mb-1 break-all"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />{client.email}</p>}
               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                <span className="text-[13px] font-bold text-gray-400">
-                  📁 {client.projectCount}件 (進行中 {client.activeCount})
+                <span className="inline-flex items-center gap-1 text-[13px] font-bold text-gray-400">
+                  <FolderOpen className="h-4 w-4" aria-hidden />{client.projectCount}件 (進行中 {client.activeCount})
                 </span>
                 <span className="text-[16px] font-black text-gray-900">{formatCurrency(client.totalRevenue)}</span>
               </div>

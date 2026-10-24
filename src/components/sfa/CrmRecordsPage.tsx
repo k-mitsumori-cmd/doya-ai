@@ -190,7 +190,7 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div className="min-w-0"><SfaPageHeading className="text-2xl font-black text-slate-900">{label}</SfaPageHeading><p className="text-slate-500 font-bold text-sm">{kind === 'account' ? '会社・顧客を一元管理' : '取引先のキーマン・連絡先を管理'}</p></div>
       <div className="flex flex-wrap gap-2">
-        {kind === 'account' && ready && <a href={withOrg('/api/sfa/export?type=accounts', orgSlug)} className={btn}>CSV出力</a>}
+        {kind === 'account' && ready && <a href={withOrg('/api/sfa/export?type=accounts', orgSlug)} className={btn}>CSVを書き出す</a>}
         <button type="button" className={btn} disabled={!ready || loading} onClick={() => setRefresh(v => v + 1)}>一覧を更新</button>
         <button type="button" onClick={() => openForm(null)} disabled={!ready || mutations.creationBlocked(kind) || currentForm && mutations.busy.includes(formLane)} className={btn}>新規登録</button>
       </div>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { seoUserMessage } from '@/components/seo/user-message'
 import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2, Activity, ScanSearch, ListChecks, Sparkles, Brain, PenTool, RefreshCw } from 'lucide-react'
 
 type ScorePanelProps = {
@@ -548,7 +549,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                         body: JSON.stringify({ fix: selected.id }),
                       })
                       const json = await res.json().catch(() => ({}))
-                      if (!res.ok || json?.success === false) throw new Error(json?.error || `API Error: ${res.status}`)
+                      if (!res.ok || json?.success === false) throw new Error(seoUserMessage(json?.error, 'AIで直せませんでした。少し待って、もう一度お試しください。'))
                       onUpdated?.()
                       return
                     }
@@ -581,11 +582,11 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                       setPaidAction(json?.loginRequired || res.status === 401 ? 'login' : 'pricing')
                     }
                     if (!res.ok || json?.success === false) {
-                      throw new Error(json?.error || `API Error: ${res.status}`)
+                      throw new Error(seoUserMessage(json?.error, 'AIで直せませんでした。少し待って、もう一度お試しください。'))
                     }
 
                     const proposed = String(json?.proposedMarkdown || '')
-                    if (!proposed.trim()) throw new Error('自動修正の結果が空でした')
+                    if (!proposed.trim()) throw new Error('AIの直しが空でした。もう一度お試しください。')
 
                     // 3) 提案Markdownを保存
                     const saveRes = await fetch(`/api/seo/articles/${articleId}/content`, {
@@ -595,12 +596,12 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                     })
                     const saveJson = await saveRes.json().catch(() => ({}))
                     if (!saveRes.ok || saveJson?.success === false) {
-                      throw new Error(saveJson?.error || `保存に失敗しました (${saveRes.status})`)
+                      throw new Error(seoUserMessage(saveJson?.error, '直した記事を保存できませんでした。もう一度お試しください。'))
                     }
 
                     onUpdated?.()
                   } catch (e: any) {
-                    setApplyError(e?.message || '自動修正に失敗しました')
+                    setApplyError(seoUserMessage(e, 'AIで直せませんでした。通信を確かめて、もう一度お試しください。'))
                   } finally {
                     setApplying(false)
                   }
@@ -630,24 +631,25 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
         )}
       </AnimatePresence>
 
-      {/* AI自動修正中のポップアップモーダル */}
+      {/* AI自動修正中の進み具合。画面を覆わず、パネルの中に出す（UX 点検 FIX-PLAN 13） */}
       <AnimatePresence>
         {applying && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="mt-4"
+            role="status"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full bg-white rounded-3xl border border-blue-100 shadow-sm overflow-hidden"
             >
               {/* グラデーションヘッダー */}
-              <div className="h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+              <div className="h-2 bg-gradient-to-r from-blue-500 via-brand-400 to-brand-600">
                 <motion.div
                   className="h-full bg-white/30"
                   animate={{ x: ['-100%', '100%'] }}
@@ -661,13 +663,13 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                   {/* 外側の回転リング */}
                   <motion.div
                     className="absolute inset-0 rounded-full border-4 border-blue-200"
-                    style={{ borderTopColor: '#2563EB', borderRightColor: '#8B5CF6' }}
+                    style={{ borderTopColor: '#2563EB', borderRightColor: '#3d80ff' }}
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                   />
                   {/* 内側のパルス */}
                   <motion.div
-                    className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
+                    className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-brand-500 flex items-center justify-center"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >

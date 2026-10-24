@@ -14,6 +14,7 @@ import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aisho
 import { notifyError } from '@/lib/ui/notify'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface Detail {
@@ -156,7 +157,7 @@ export default function AishodanSessionDetail() {
       if (!res.ok) {
         // 手入力を上書きしてよいか、一度だけ確かめる
         if (j?.needsConfirm && !overwriteManual) {
-          if (window.confirm('この商談の判定は担当者が手で入力しています。AIの判定で上書きしますか。')) {
+          if (await confirmDialog({ title: 'AIの判定で上書きしますか？', message: 'この商談の判定は、担当者が手で入力したものです。', confirmLabel: '上書きする', tone: 'danger' })) {
             await reEvaluate(true, onRejected)
           }
           return

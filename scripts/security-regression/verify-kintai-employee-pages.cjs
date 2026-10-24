@@ -22,8 +22,8 @@ const { loadAllEmployees } = load('src/lib/kintai/load-employees.ts');
   })
   await check('duplicate, changed total, or malformed page is rejected', async () => {
     const first = { employees: [{ id: 'a' }, { id: 'b' }], total: 3, page: 1, pageSize: 2 }
-    await assert.rejects(loadAllEmployees(async (page) => page === 1 ? first : { employees: [{ id: 'b' }], total: 3, page: 2, pageSize: 2 }, 2), /Incomplete/)
-    await assert.rejects(loadAllEmployees(async (page) => page === 1 ? first : { employees: [{ id: 'c' }], total: 4, page: 2, pageSize: 2 }, 2), /changed/)
-    await assert.rejects(loadAllEmployees(async () => ({ employees: [], total: 0, page: 2, pageSize: 2 }), 2), /Invalid/)
+    await assert.rejects(loadAllEmployees(async (page) => page === 1 ? first : { employees: [{ id: 'b' }], total: 3, page: 2, pageSize: 2 }, 2), /一部を読み込めませんでした/)
+    await assert.rejects(loadAllEmployees(async (page) => page === 1 ? first : { employees: [{ id: 'c' }], total: 4, page: 2, pageSize: 2 }, 2), /変わりました/)
+    await assert.rejects(loadAllEmployees(async () => ({ employees: [], total: 0, page: 2, pageSize: 2 }), 2), /正しく読み込めませんでした/)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

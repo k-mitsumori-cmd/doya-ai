@@ -20,6 +20,9 @@ import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
 import { CompetitorAnalysisTab } from '@/components/seo/CompetitorAnalysisTab'
+import { confirmDialog } from '@/components/ds/dialog'
+import { Skeleton } from '@/components/ds'
+import { seoUserMessage } from '@/components/seo/user-message'
 import {
   Download,
   Image as ImageIcon,
@@ -263,7 +266,7 @@ function ImageCard({
                 </div>
                 <div className="mt-2 h-1.5 w-[240px] max-w-[70vw] rounded-full bg-gray-200 overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500"
+                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-brand-400"
                     initial={{ x: '-60%' }}
                     animate={{ x: ['-60%', '110%'] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
@@ -415,7 +418,7 @@ const TABS = [
   { id: 'competitors', label: '競合記事', icon: Search, color: 'text-cyan-500' },
   { id: 'score', label: 'SEOスコア', icon: BarChart3, color: 'text-emerald-500' },
   { id: 'outline', label: '見出し編集', icon: Layers, color: 'text-indigo-500' },
-  { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-purple-500' },
+  { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-brand-400' },
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
 
@@ -715,11 +718,11 @@ function SeoArticleInner() {
             if (showLoading) setArticle(null)
             return
           }
-          throw new Error(json?.error || '記事が見つかりません')
+          throw new Error('記事が見つかりません。少し待って、もう一度読み込んでください。')
         }
         // 404以外のエラーはカウントをリセット
         notFoundErrorCountRef.current = 0
-        throw new Error(json?.error || `API Error: ${res.status}`)
+        throw new Error(seoUserMessage(json?.error, '記事を読み込めませんでした。もう一度読み込んでください。'))
       }
       // 成功した場合、エラーカウントをリセット
       notFoundErrorCountRef.current = 0
@@ -727,7 +730,7 @@ function SeoArticleInner() {
       setMemo(json.article?.memo?.content || '')
       setMarkdownDraft(json.article?.finalMarkdown || '')
     } catch (e: any) {
-      const errorMessage = e?.message || '読み込みに失敗しました'
+      const errorMessage = seoUserMessage(e, '記事を読み込めませんでした。通信を確かめて、もう一度お試しください。')
       setLoadError(errorMessage)
       if (showLoading) setArticle(null)
     } finally {
@@ -741,10 +744,10 @@ function SeoArticleInner() {
     try {
       await fn()
       await load()
-      setMessage('完了しました ✓')
+      setMessage('完了しました')
       setTimeout(() => setMessage(null), 3000)
     } catch (e: any) {
-      setMessage(e?.message || '失敗しました')
+      setMessage(seoUserMessage(e, 'うまくいきませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setBusy(null)
     }
@@ -797,7 +800,7 @@ function SeoArticleInner() {
         setTimeout(() => setMessage(null), 3000)
       }
     } catch (e: any) {
-      setAddServiceError(e?.message || '追加に失敗しました')
+      setAddServiceError(seoUserMessage(e, 'サービスを追加できませんでした。もう一度お試しください。'))
     } finally {
       setAddingService(false)
     }
@@ -940,11 +943,11 @@ function SeoArticleInner() {
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
+      if (!res.ok || json?.success === false) throw new Error(seoUserMessage(json?.error, '画像を作れませんでした。少し待って、もう一度お試しください。'))
       if (json?.skipped) return
       await load({ showLoading: false })
     } catch (e: any) {
-      setMediaError(e?.message || '画像生成に失敗しました')
+      setMediaError(seoUserMessage(e, '画像を作れませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setMediaBusy(false)
     }
@@ -994,13 +997,13 @@ function SeoArticleInner() {
         body: JSON.stringify({ prompt: regenPrompt }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || `再生成に失敗しました (${res.status})`)
+      if (!res.ok || json?.success === false) throw new Error(seoUserMessage(json?.error, '作り直せませんでした。少し待って、もう一度お試しください。'))
       setRegenOpen(false)
       setRegenImage(null)
       setRegenPrompt('')
       await load({ showLoading: false })
     } catch (e: any) {
-      setMediaError(e?.message || '再生成に失敗しました')
+      setMediaError(seoUserMessage(e, '画像を作り直せませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setMediaBusy(false)
       const rid = String(regenImage?.id || '')
@@ -1010,18 +1013,18 @@ function SeoArticleInner() {
 
   async function deleteArticle() {
     if (!article) return
-    if (!confirm('この記事を削除しますか？この操作は取り消せません。')) return
+    if (!(await confirmDialog({ title: 'この記事を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     setDeleteBusy(true)
     setActionError(null)
     try {
       const res = await fetch(`/api/seo/articles/${article.id}`, { method: 'DELETE' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `削除に失敗しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, '記事を削除できませんでした。もう一度お試しください。'))
       }
       router.push('/seo')
     } catch (e: any) {
-      setActionError(e?.message || '記事の削除に失敗しました')
+      setActionError(seoUserMessage(e, '記事を削除できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setDeleteBusy(false)
     }
@@ -1097,7 +1100,7 @@ function SeoArticleInner() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `再生成に失敗しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, '作り直せませんでした。少し待って、もう一度お試しください。'))
       }
 
       const jobId = json.jobId || json.job?.id
@@ -1105,9 +1108,9 @@ function SeoArticleInner() {
       setRegenArticleOpen(false)
       if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
       else if (articleId) router.push(`/seo/articles/${articleId}`)
-      else throw new Error('再生成結果のID取得に失敗しました')
+      else throw new Error('作り直しの結果を確かめられませんでした。一覧を開き直してください。')
     } catch (e: any) {
-      setRegenArticleError(e?.message || '再生成に失敗しました')
+      setRegenArticleError(seoUserMessage(e, '作り直せませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setRegenArticleBusy(false)
     }
@@ -1128,11 +1131,11 @@ function SeoArticleInner() {
       const res = await fetch(`/api/seo/jobs/${latestJobId}/advance`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'advance failed')
+        throw new Error(seoUserMessage(json?.error, '生成を進められませんでした。少し待って、もう一度お試しください。'))
       }
       await load({ showLoading: false })
     } catch (e: any) {
-      setActionError(e.message)
+      setActionError(seoUserMessage(e, '生成を進められませんでした。少し待って、もう一度お試しください。'))
       setAutoRun(false)
     }
   }, [latestJobId, load])
@@ -1157,14 +1160,14 @@ function SeoArticleInner() {
           setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
           setArticleLimitAction(seoLimitActionFromResponse(json))
         }
-        throw new Error(json?.error || `再開に失敗しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, '生成を再開できませんでした。もう一度お試しください。'))
       }
       const jobId = retryFailedJob ? latestJobId : json.jobId
-      setResumeNotice(retryFailedJob ? '失敗したジョブを再開しました。月間枠は追加消費しません。' : '新しい生成ジョブを開始しました。既に生成ジョブがあった場合は今月の記事生成枠を1回使用します。')
+      setResumeNotice(retryFailedJob ? '止まった生成を再開しました。今月の枠は使いません。' : '新しく生成を始めました。前の生成があった場合は、今月の枠を1回使います。')
       if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
       else await load({ showLoading: false })
     } catch (e: any) {
-      setResumeNotice(e?.message || '再開に失敗しました')
+      setResumeNotice(seoUserMessage(e, '生成を再開できませんでした。もう一度お試しください。'))
     } finally {
       setResumeBusy(false)
       setTimeout(() => setResumeNotice(null), 4500)
@@ -1189,7 +1192,7 @@ function SeoArticleInner() {
   async function downloadImage(img: SeoImage) {
     try {
       const res = await fetch(`/api/seo/images/${img.id}`)
-      if (!res.ok) throw new Error(`download failed (${res.status})`)
+      if (!res.ok) throw new Error('画像をダウンロードできませんでした。もう一度お試しください。')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const safeTitle = String(img.title || img.kind || 'image')
@@ -1204,17 +1207,30 @@ function SeoArticleInner() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (e: any) {
-      setMediaError(e?.message || 'ダウンロードに失敗しました')
+      setMediaError(seoUserMessage(e, '画像をダウンロードできませんでした。もう一度お試しください。'))
     }
   }
 
+  // 開いている窓を Esc で閉じる（処理中は閉じない。UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!imageDetail && !regenOpen && !regenArticleOpen && !addServiceOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (imageDetail) setImageDetail(null)
+      else if (regenOpen) { if (!mediaBusy) setRegenOpen(false) }
+      else if (regenArticleOpen) { if (!regenArticleBusy) setRegenArticleOpen(false) }
+      else if (addServiceOpen) { if (!addingService) setAddServiceOpen(false) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [imageDetail, regenOpen, regenArticleOpen, addServiceOpen, mediaBusy, regenArticleBusy, addingService])
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">読み込み中...</p>
-        </div>
+      // 枠の中の本文の場所だけを骨組みにする（UX 点検 FIX-PLAN 13）
+      <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0 space-y-4" aria-busy="true" aria-label="記事を読み込んでいます">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={2} height={20} delayMs={0} /></div>
+        <div className="rounded-2xl border border-gray-100 bg-white p-6"><Skeleton lines={8} delayMs={0} /></div>
       </div>
     )
   }
@@ -1236,7 +1252,7 @@ function SeoArticleInner() {
                 load({ showLoading: false })
               }, 3000)
             }
-          }}>再試行</Button>
+          }}>もう一度読み込む</Button>
           {isNotFound && (
             <Link href="/seo/articles">
               <Button variant="secondary">記事一覧に戻る</Button>
@@ -1286,6 +1302,9 @@ function SeoArticleInner() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="seo-add-service-title"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-6 border-b border-gray-100">
@@ -1294,7 +1313,7 @@ function SeoArticleInner() {
                       <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-gray-900">比較サービスを追加</h3>
+                      <h3 id="seo-add-service-title" className="text-lg font-black text-gray-900">比較サービスを追加</h3>
                       <p className="text-sm text-gray-500">記事に追加する新しいサービスを入力してください</p>
                     </div>
                   </div>
@@ -1400,6 +1419,9 @@ function SeoArticleInner() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.98, opacity: 0 }}
                 className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="seo-regen-article-title"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-6 border-b border-gray-100">
@@ -1408,7 +1430,7 @@ function SeoArticleInner() {
                       <Wand2 className="w-6 h-6 text-white" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-lg font-black text-gray-900">同じテーマで再生成</h3>
+                      <h3 id="seo-regen-article-title" className="text-lg font-black text-gray-900">同じテーマで再生成</h3>
                       <p className="text-sm text-gray-500">
                         タイトル/キーワードは引き継ぎつつ、修正指示を追加して再生成できます
                       </p>
@@ -1558,7 +1580,7 @@ function SeoArticleInner() {
                 onClick={resumeFromCurrent}
                 disabled={resumeBusy}
                 className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black text-xs sm:text-sm"
-                title={latestJob?.status === 'error' ? '失敗したジョブを再開します。月間枠は追加消費しません。' : '新しい生成ジョブを作成します。既に生成ジョブがある場合は今月の記事生成枠を1回使用します。'}
+                title={latestJob?.status === 'error' ? '止まった生成を再開します。今月の枠は使いません。' : '新しく生成を始めます。前の生成がある場合は、今月の枠を1回使います。'}
               >
                 {resumeBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
                 {resumeBusy ? '開始中...' : latestJob?.status === 'error' ? '失敗箇所から再開' : '続きから再生成'}
@@ -1610,7 +1632,7 @@ function SeoArticleInner() {
             {[
               { label: 'スコア', val: score.score, icon: BarChart3, color: score.score >= 70 ? 'text-emerald-500' : 'text-amber-500' },
               { label: '文字数', val: score.charCount.toLocaleString(), sub: `/ ${charProgress}%`, icon: FileText, color: 'text-blue-500' },
-              { label: '見出し', val: score.headingCount, icon: Layers, color: 'text-purple-500' },
+              { label: '見出し', val: score.headingCount, icon: Layers, color: 'text-brand-400' },
               { label: '画像', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
             ].map((s, i) => (
               <div key={i} className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm">
@@ -1968,6 +1990,17 @@ function SeoArticleInner() {
                     </div>
                   )}
 
+                  {/* 画像を作っている間は、画面を覆わずにここへ出す（UX 点検 FIX-PLAN 13） */}
+                  {mediaBusy && (
+                    <div role="status" className="mb-6 flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                      <Loader2 className="mt-0.5 h-5 w-5 flex-shrink-0 animate-spin text-blue-600" aria-hidden />
+                      <div>
+                        <p className="text-sm font-black text-gray-900">バナーと図解を作っています</p>
+                        <p className="mt-1 text-xs font-bold leading-relaxed text-gray-600">最大14枚（サムネイル4枚＋図解10枚まで）を作ります。数分かかることがあるので、このままお待ちください。</p>
+                      </div>
+                    </div>
+                  )}
+
                   {mediaError && (
                     <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm font-bold">
                       {mediaError}
@@ -2010,7 +2043,9 @@ function SeoArticleInner() {
                                       body: JSON.stringify({ imageId: img.id }),
                                     })
                                     await load({ showLoading: false })
-                                  } catch {}
+                                  } catch {
+                                    setMediaError('サムネイルを選べませんでした。もう一度お試しください。')
+                                  }
                                 }}
                                 className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${
                                   isSelected
@@ -2162,11 +2197,14 @@ function SeoArticleInner() {
                         exit={{ opacity: 0, y: 14, scale: 0.98 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
                         className="relative w-full max-w-4xl rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="seo-image-detail-title"
                       >
                         <div className="p-5 sm:p-6 border-b border-gray-100 flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像プレビュー</p>
-                            <p className="text-lg font-black text-gray-900 mt-1 truncate">{imageDetail.title || '画像'}</p>
+                            <p id="seo-image-detail-title" className="text-lg font-black text-gray-900 mt-1 truncate">{imageDetail.title || '画像'}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <Badge tone={imageDetail.kind === 'BANNER' ? 'orange' : 'blue'}>{imageDetail.kind}</Badge>
                               <span className="text-[10px] font-bold text-gray-400">{new Date(imageDetail.createdAt).toLocaleString()}</span>
@@ -2271,10 +2309,10 @@ function SeoArticleInner() {
                 {regenOpen && (
                   <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
                     <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => !mediaBusy && setRegenOpen(false)} />
-                    <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+                    <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="seo-regen-image-title">
                       <div className="p-6 sm:p-8 border-b border-gray-100">
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像を再生成</p>
-                        <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-2">{regenImage?.title || '画像'}</h3>
+                        <h3 id="seo-regen-image-title" className="text-lg sm:text-xl font-black text-gray-900 mt-2">{regenImage?.title || '画像'}</h3>
                         <p className="text-xs font-bold text-gray-500 mt-2">プロンプトを修正して再生成します（テキストの有無/量はプロンプト次第です）</p>
                       </div>
                       <div className="p-6 sm:p-8 space-y-3">
@@ -2308,39 +2346,6 @@ function SeoArticleInner() {
                       </div>
                     </div>
 
-                {/* 画像生成中ポップアップ */}
-                <AnimatePresence>
-                  {mediaBusy && (
-                    <motion.div
-                      key="mediaBusyModal"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-[140] flex items-center justify-center p-4"
-                    >
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-                      <motion.div
-                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 14, scale: 0.98 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative w-full max-w-md rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden"
-                      >
-                        <div className="p-6 border-b border-gray-100">
-                          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像生成中</p>
-                          <h3 className="text-lg font-black text-gray-900 mt-2">バナー＋図解を生成しています</h3>
-                          <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
-                            記事内容を解析して最大14枚（サムネイル4枚＋図解最大10枚）を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
-                          </p>
-                        </div>
-                        <div className="p-6 flex items-center gap-3">
-                          <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                          <p className="text-sm font-black text-gray-700">生成しています…</p>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
                   </div>
                 )}
               </div>
@@ -2413,9 +2418,9 @@ function SeoArticleInner() {
                   <a
                     href={`/api/seo/articles/${id}/export/json`}
                     download
-                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-violet-500 bg-gray-50/30 hover:bg-white transition-all group"
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-brand-400 bg-gray-50/30 hover:bg-white transition-all group"
                   >
-                    <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-violet-600 mb-4" />
+                    <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-brand-500 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">JSON (.json)</h4>
                     <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">連携/自動処理用（markdown + text入り）</p>
                   </a>
@@ -2445,7 +2450,7 @@ function SeoArticleInner() {
               
               {/* クイックアクション */}
               <div className="mt-4 pt-4 border-t border-gray-100 grid gap-2">
-                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-purple-50 text-purple-700 font-black text-[10px] flex items-center justify-between hover:bg-purple-100 transition-all">
+                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-brand-50 text-brand-600 font-black text-[10px] flex items-center justify-between hover:bg-brand-50 transition-all">
                   編集 <Edit3 className="w-3 h-3" />
                 </button>
                 <button onClick={() => setTab('export')} className="w-full px-3 py-2 rounded-lg bg-gray-50 text-gray-700 font-black text-[10px] flex items-center justify-between hover:bg-gray-100 transition-all">
@@ -2461,7 +2466,7 @@ function SeoArticleInner() {
 
 export default function SeoArticlePage() {
   return (
-    <ClientErrorBoundary title="エラーが発生しました">
+    <ClientErrorBoundary title="記事を表示できませんでした">
       <SeoArticleInner />
     </ClientErrorBoundary>
   )

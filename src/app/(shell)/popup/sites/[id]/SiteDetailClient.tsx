@@ -243,7 +243,7 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
       }
       await load(days)
     } catch (e) {
-      setActionError({ message: (e as Error).message || '操作に失敗しました。', issues: (e as { issues?: string[] }).issues || [] })
+      setActionError({ message: (/[ぁ-んァ-ヶ一-龠]/.test(String((e as Error)?.message ?? '')) ? (e as Error).message : '操作に失敗しました。'), issues: (e as { issues?: string[] }).issues || [] })
     } finally {
       setBusy(null)
     }

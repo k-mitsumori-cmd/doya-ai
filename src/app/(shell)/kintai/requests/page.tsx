@@ -1,6 +1,8 @@
 'use client'
 
-import { Button, EmptyState } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
+import { alertDialog, confirmDialog } from '@/components/ds/dialog'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -121,18 +123,18 @@ export default function RequestsPage() {
   }
 
   const withdraw = async (id: string) => {
-    if (!window.confirm('この申請を取り下げますか？')) return
+    if (!(await confirmDialog({ title: 'この申請を取り下げますか？', message: '取り下げた申請は承認されません。必要ならもう一度申請してください。', confirmLabel: '取り下げる', tone: 'danger' }))) return
     try {
       const response = await fetch(`/api/kintai/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'withdrawn' }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '取下げに失敗しました')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '少し待って、もう一度お試しください。'))
       load()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '取下げに失敗しました')
+      await alertDialog({ title: '取り下げられませんでした', message: userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR), tone: 'error' })
     }
   }
 
@@ -151,7 +153,7 @@ export default function RequestsPage() {
           </div>
           {canWrite && <Link
             href="/kintai/requests/new"
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-xl hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20"
           >
             <span className="material-symbols-outlined text-lg">add_circle</span>
             新規申請
@@ -167,13 +169,13 @@ export default function RequestsPage() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  tab === t.key ? 'bg-white text-[#7f19e6] shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                  tab === t.key ? 'bg-white text-[#0066ff] shadow-sm' : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 {t.label}
                 {count > 0 && (
                   <span className={`text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
-                    tab === t.key ? 'bg-[#7f19e6]/10 text-[#7f19e6]' : 'bg-slate-200 text-slate-500'
+                    tab === t.key ? 'bg-[#0066ff]/10 text-[#0066ff]' : 'bg-slate-200 text-slate-500'
                   }`}>
                     {count}
                   </span>
@@ -184,9 +186,8 @@ export default function RequestsPage() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
-            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5" aria-busy="true" aria-label="申請を読み込み中">
+            <Skeleton lines={4} height={16} />
           </div>
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
@@ -221,7 +222,7 @@ export default function RequestsPage() {
                 </div>
                 {canWrite && <Link
                   href="/kintai/requests/new"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-xl hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20"
                 >
                   <span className="material-symbols-outlined text-lg">add_circle</span>
                   新規申請を作成
@@ -268,7 +269,7 @@ export default function RequestsPage() {
                         <div className="mt-2 text-xs text-slate-600"><p>承認取消: {r.details.leaveCancellation.reason}</p>{canWrite && <Link href="/kintai/requests/new?type=leave" className="underline">自分の休暇を新規申請する</Link>}</div>
                       )}
                       {summary && (
-                        <p className="text-xs text-[#7f19e6] mt-1 font-medium">{summary}</p>
+                        <p className="text-xs text-[#0066ff] mt-1 font-medium">{summary}</p>
                       )}
 
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
@@ -307,7 +308,7 @@ export default function RequestsPage() {
             <p className="text-xs text-slate-500">{requests.length} / {total}件を表示</p>
             {moreError && <p role="alert" className="text-sm text-red-700">続きの読み込みに失敗しました。再試行するか一覧を更新してください。</p>}
             <div className="flex justify-center gap-2">
-              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-purple-300 bg-white px-5 py-2 text-sm font-bold text-purple-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
+              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-brand-200 bg-white px-5 py-2 text-sm font-bold text-brand-600 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
               {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-bold text-slate-700">一覧を更新</button>}
             </div>
           </div>

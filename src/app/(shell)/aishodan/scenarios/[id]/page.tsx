@@ -17,6 +17,7 @@ import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phas
 import { notifyError } from '@/lib/ui/notify'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { ROLE_HIERARCHY, hasMinRole } from '@/lib/aishodan/types'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface ScenarioData {
@@ -46,8 +47,12 @@ export default function AishodanScenarioPage() {
   const [loadStatus, setLoadStatus] = useState(0)
   /** 保存に失敗したときの「何が起きたか・どうすればよいか」 */
   const [saveFailure, setSaveFailure] = useState<AishodanFailure | null>(null)
+  /** 組織での自分の役割。読めないときは null（ボタンは出し、判定はサーバーに任せる） */
+  const [role, setRole] = useState<string | null>(null)
   // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠
   const tap = AISHODAN_TAP
+  // シナリオの更新はマネージャー以上（PUT /api/aishodan/scenarios/[id]）。役割が読めないときは出しておく
+  const canEdit = !role || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, role) || hasMinRole(role, 'manager')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -58,6 +63,11 @@ export default function AishodanScenarioPage() {
       const d = await r.json()
       if (!r.ok) throw new AishodanHttpError(d?.error || '読み込みに失敗しました', r.status)
       setS(d.scenario)
+      // 役割は既存の組織の API から読む。失敗しても画面は止めない
+      void fetch(withOrg('aishodan', '/api/aishodan/organizations'))
+        .then((res) => (res.ok ? res.json() : null))
+        .then((org) => setRole(typeof org?.current?.role === 'string' ? org.current.role : null))
+        .catch(() => setRole(null))
     } catch (e) {
       setLoadStatus(failureStatus(e))
       // 新しい見た目では、トーストにもサーバーの文を出さない
@@ -149,6 +159,7 @@ export default function AishodanScenarioPage() {
             >
               試す
             </Link>
+            {canEdit && (
             <button
               onClick={save}
               disabled={saving}
@@ -156,11 +167,13 @@ export default function AishodanScenarioPage() {
             >
               {saving ? '保存中...' : '保存'}
             </button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        {!canEdit && <p role="note" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">シナリオの編集は、マネージャー以上の役割の人ができます。</p>}
         {error ? (
           <AishodanFailureNotice failure={saveFailure ?? describeAishodanFailure(0, error)} />
         ) : error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}

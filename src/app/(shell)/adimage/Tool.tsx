@@ -18,6 +18,12 @@ import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type Re
 import AdImageLp from './Lp'
 import ExportDownload from '@/components/adimage/ExportDownload'
 import { notifyError } from '@/lib/ui/notify'
+
+/** 日本語の文だけを画面に出す（「Failed to fetch」などの英語は決まった文にする） */
+function jaError(e: unknown, fallback: string): string {
+  const s = e instanceof Error ? e.message.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
+}
 import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
@@ -285,7 +291,7 @@ export default function AdImageTool() {
       }
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
+      if (isCurrent()) notifyError(setError, jaError(e, 'ページを読み取れませんでした。URLを確かめて、もう一度お試しください。'))
     } finally {
       controller.abort()
       if (isCurrent()) { imageOperation.current.busy = false; setAnalyzing(false) }
@@ -305,7 +311,7 @@ export default function AdImageTool() {
       if (!isCurrent() || !d) return
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを登録できませんでした')
+      if (isCurrent()) notifyError(setError, jaError(e, 'ロゴを登録できませんでした。画像を確かめて、もう一度お試しください。'))
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setLogoBusy(false) }
     }
@@ -322,7 +328,7 @@ export default function AdImageTool() {
       if (!isCurrent() || !d) return
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを外せませんでした')
+      if (isCurrent()) notifyError(setError, jaError(e, 'ロゴを外せませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setLogoBusy(false) }
     }
@@ -425,7 +431,7 @@ export default function AdImageTool() {
       }
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
+      if (isCurrent()) notifyError(setError, jaError(e, '画像を作れませんでした。少し待って、もう一度お試しください。'))
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setGenerating(false) }
     }
@@ -446,7 +452,7 @@ export default function AdImageTool() {
       if (!isCurrent() || !d) return
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '採点の保存結果を確認してください。')
+      if (isCurrent()) notifyError(setError, jaError(e, '採点の結果を確かめられませんでした。もう一度お試しください。'))
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setScoring(false) }
     }
@@ -472,7 +478,7 @@ export default function AdImageTool() {
       }
       applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
+      if (isCurrent()) notifyError(setError, jaError(e, '改善版を作れませんでした。少し待って、もう一度お試しください。'))
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setRefining(false) }
     }
@@ -495,7 +501,7 @@ export default function AdImageTool() {
   if (operation.authRequired) return (
     <div className="mx-auto max-w-xl space-y-4 p-6">
       <p role="status" className="text-sm text-slate-700">{operation.message}</p>
-      <p className="text-sm text-slate-600">操作情報はこのブラウザに保持しています。再ログイン後に保存結果を確認してください。処理は自動で再実行されません。</p>
+      <p className="text-sm text-slate-600">途中の作業はこのブラウザに残っています。もう一度ログインしてから、結果を確かめてください。処理は自動ではやり直しません。</p>
       <Link href="/auth/signin?callbackUrl=/adimage" className="inline-block rounded-lg bg-lime-700 px-4 py-2 text-white">ログインして結果を確認</Link>
       <button type="button" disabled={operation.busy} onClick={() => { void operation.recover() }} className="block rounded-lg border border-slate-300 px-4 py-2 disabled:opacity-50">保存結果を確認</button>
     </div>
@@ -520,7 +526,7 @@ export default function AdImageTool() {
           <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={operation.busy} onClick={() => void operation.recover()} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white disabled:opacity-50">{operation.busy ? '確認中...' : '保存結果を確認'}</button>
-            {operation.result?.state === 'missing' && <button type="button" disabled={operation.busy} onClick={() => void operation.recover(true)} className="rounded-lg border border-slate-400 px-4 py-2">未受付の操作を終了</button>}
+            {operation.result?.state === 'missing' && <button type="button" disabled={operation.busy} onClick={() => void operation.recover(true)} className="rounded-lg border border-slate-400 px-4 py-2">この作業を取りやめる</button>}
             {operation.result && ['completed', 'failed', 'cancelled', 'unavailable', 'limit'].includes(operation.result.state) && <button type="button" disabled={operation.busy} onClick={() => { if (operation.acknowledge(operation.result?.operationId)) { setError(''); setLimitAction(null) } }} className="rounded-lg border border-slate-400 px-4 py-2">{operation.result.state === 'completed' ? '結果を確認しました' : 'この操作を閉じる'}</button>}
           </div>
         </section>}
@@ -848,7 +854,7 @@ export default function AdImageTool() {
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 rows={8}
-                placeholder="例: Japanese web ad banner, 1:1. …（英語でも日本語でも可）"
+                placeholder="例: 日本向けのWeb広告バナー。正方形。…（日本語でも英語でも可）"
                 className="mt-3 w-full resize-y rounded-xl border-2 border-slate-200 px-4 py-3 font-mono text-xs focus:border-[#0066ff] focus:outline-none"
               />
               {customPrompt.trim() && (
@@ -1014,8 +1020,8 @@ export default function AdImageTool() {
                 }`}
                 style={{
                   backgroundImage: scoring
-                    ? 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72, #ffd400, #00e0ff, #0066ff)'
-                    : 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72)',
+                    ? 'linear-gradient(90deg, #0066ff, #0066ff, #ff1e72, #ffd400, #00e0ff, #0066ff)'
+                    : 'linear-gradient(90deg, #0066ff, #0066ff, #ff1e72)',
                   opacity: scoring ? 1 : undefined,
                 }}
               >

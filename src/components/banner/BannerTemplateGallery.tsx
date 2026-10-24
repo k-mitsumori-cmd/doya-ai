@@ -261,10 +261,10 @@ export function GalleryTemplateCard({
         <>
           <div className="absolute inset-0 bg-black/40 pointer-events-none" />
           <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
-            lockType === 'enterprise' ? 'bg-purple-500/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
+            lockType === 'enterprise' ? 'bg-brand-400/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
           }`}>
             <Lock className="w-2 h-2" />
-            {lockType === 'enterprise' ? 'Enterprise' : lockType === 'login' ? 'ログイン' : 'PRO'}
+            {lockType === 'enterprise' ? '法人プラン' : lockType === 'login' ? 'ログイン' : 'PRO'}
           </div>
         </>
       )}

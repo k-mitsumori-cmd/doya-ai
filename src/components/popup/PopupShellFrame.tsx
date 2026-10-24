@@ -14,7 +14,7 @@ import { PopupShellContext } from './shell-context'
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
 export default function PopupShellFrame({ nav, children }: { nav: ShellNavItem[]; children: ReactNode }) {
   return (
-    <ToolFrame serviceId="popup" title="ドヤポップアップ" description="URLを入れると、AIがサイトに合ったポップアップを提案します。" nav={nav}>
+    <ToolFrame serviceId="popup" nav={nav}>
       <PopupShellContext.Provider value={true}>{children}</PopupShellContext.Provider>
     </ToolFrame>
   )

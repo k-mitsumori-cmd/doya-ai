@@ -19,9 +19,9 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'DELE
   let failed: (() => Promise<void>) | null = null
   try {
     const session = await getServerSession(authOptions)
-    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const hrCtx = await getHrContext()
-    if (!hrCtx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!hrCtx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (req.headers.get('X-HR-Organization-Id') !== hrCtx.organizationId) return privateApiJson({ error: '組織が変更されています。再取得してください。' }, { status: 403 })
     const { id, operationId } = await ctx.params
     if (!id || !validHrEvaluationAiOperationId(operationId)) return privateApiJson({ error: '操作情報を確認できません。生成結果を確認してください。' }, { status: 400 })

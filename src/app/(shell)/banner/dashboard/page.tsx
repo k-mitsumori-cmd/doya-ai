@@ -99,7 +99,7 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
     allUnlocked: true,
   },
   ENTERPRISE: {
-    label: 'Enterpriseプラン',
+    label: '法人プラン',
     maxCountPerGeneration: 10,
     monthlyLimit: 1000,
     allUnlocked: true,
@@ -124,7 +124,13 @@ const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: 'ログインプラン' },
   LIGHT: { maxCount: 3, label: 'ライトプラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
-  ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
+  ENTERPRISE: { maxCount: 10, label: '法人プラン' },
+}
+
+/** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
+function jaMessage(msg: unknown, fallback: string): string {
+  const s = typeof msg === 'string' ? msg.trim() : ''
+  return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 
 // ページ内Suspense用のスケルトン（loading.tsxと同じ構造）
@@ -1148,6 +1154,20 @@ function BannerTestPageInner() {
   }, [updateScrollPosition])
 
   // バナー生成
+  // Esc で開いているダイアログを閉じる（拡大・ロック・修正・プロンプト）
+  useEffect(() => {
+    if (!zoomImage && !showLockModal && !showEditModal && !showPromptModal) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (zoomImage) setZoomImage(null)
+      else if (showPromptModal) setShowPromptModal(false)
+      else if (showEditModal) { if (!isEditing) setShowEditModal(false) }
+      else if (showLockModal) setShowLockModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomImage, showLockModal, showEditModal, showPromptModal, isEditing])
+
   const handleGenerate = async () => {
     if (sessionStatus === 'loading') return
     if (!session) {
@@ -1264,6 +1284,8 @@ function BannerTestPageInner() {
         setGeneratedBanners(banners)
         setGenerationComplete(true)
         clearInterval(messageInterval)
+        // 新しい見た目では完了の全面演出を出さないので、トーストで知らせる
+        toast.success(`${banners.length}枚のバナーができました`)
         
         // 完了演出を3秒表示してからモーダルを閉じる
         completionTimer.current = setTimeout(() => {
@@ -1279,7 +1301,7 @@ function BannerTestPageInner() {
     } catch (err: any) {
       if (!operation.current()) return
       console.error('Generate error:')
-      toast.error(err.message || '生成に失敗しました')
+      toast.error(jaMessage(err?.message, '生成できませんでした。少し待って、もう一度お試しください。'))
       setShowGenerationModal(false)
       clearInterval(messageInterval)
       setIsGenerating(false)
@@ -1759,7 +1781,7 @@ function BannerTestPageInner() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold">サイズを選択</label>
-                      <span className="text-[10px] sm:text-xs text-gray-400">CANVAS DIMENSIONS</span>
+                      <span className="text-[10px] sm:text-xs text-gray-400">サイズ</span>
                     </div>
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       {SIZE_PRESETS.map((size) => {
@@ -1799,7 +1821,7 @@ function BannerTestPageInner() {
                                 }}
                               />
                               <p className="text-xs sm:text-sm font-bold text-white mt-2">{displayWidth}×{displayHeight}</p>
-                              <p className="text-[10px] sm:text-xs text-gray-400">ASPECT RATIO PREVIEW</p>
+                              <p className="text-[10px] sm:text-xs text-gray-400">縦横の比率</p>
                             </>
                           )
                         })()}
@@ -1876,7 +1898,7 @@ function BannerTestPageInner() {
                             {logoPreview ? (
                               <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
                             ) : (
-                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">LOGO</span>
+                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">ロゴ</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1962,7 +1984,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
-                            value={subColor || '#8B5CF6'}
+                            value={subColor || '#3d80ff'}
                             onChange={(e) => setSubColor(e.target.value)}
                             className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
                           />
@@ -1970,7 +1992,7 @@ function BannerTestPageInner() {
                             type="text"
                             value={subColor}
                             onChange={(e) => setSubColor(e.target.value)}
-                            placeholder="#8B5CF6"
+                            placeholder="#3d80ff"
                             className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
@@ -1992,13 +2014,13 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold flex items-center gap-2">
                         <span>詳細な生成指示</span>
-                        <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full">ENTERPRISE</span>
+                        <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full">法人プラン</span>
                       </label>
                       {currentPlan === 'ENTERPRISE' && (
                         <button
                           type="button"
                           onClick={() => setShowCustomPrompt(!showCustomPrompt)}
-                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          className="text-xs text-brand-300 hover:text-brand-200 transition-colors"
                         >
                           {showCustomPrompt ? '閉じる' : '開く'}
                         </button>
@@ -2008,7 +2030,7 @@ function BannerTestPageInner() {
                     {currentPlan !== 'ENTERPRISE' ? (
                       <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                         <div className="flex items-center gap-3">
-                          <Lock className="w-5 h-5 text-purple-400" />
+                          <Lock className="w-5 h-5 text-brand-300" />
                           <div>
                             <p className="text-sm text-gray-300">個別契約でご案内する機能</p>
                             <p className="text-xs text-gray-500 mt-1">
@@ -2018,7 +2040,7 @@ function BannerTestPageInner() {
                         </div>
                         <a
                           href={HIGH_USAGE_CONTACT_URL}
-                          className="mt-3 inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          className="mt-3 inline-flex items-center gap-1 text-xs text-brand-300 hover:text-brand-200 transition-colors"
                         >
                           <Crown className="w-3 h-3" />
                           利用について相談する
@@ -2033,7 +2055,7 @@ function BannerTestPageInner() {
                           value={customPrompt}
                           onChange={(e) => setCustomPrompt(e.target.value)}
                           placeholder="例：背景を青いグラデーションに変更、右下にキラキラエフェクトを追加、文字を黄色で縁取り..."
-                          className="w-full h-32 px-4 py-3 bg-gray-800 border border-purple-600/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
+                          className="w-full h-32 px-4 py-3 bg-gray-800 border border-brand-500/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-none text-sm"
                         />
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-500">{customPrompt.length} / 500文字</span>
@@ -2047,8 +2069,8 @@ function BannerTestPageInner() {
                             </button>
                           )}
                         </div>
-                        <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-700/50">
-                          <p className="text-[10px] text-purple-300">
+                        <div className="bg-brand-800/30 rounded-lg p-3 border border-brand-600/50">
+                          <p className="text-[10px] text-brand-200">
                             ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
                           </p>
                         </div>
@@ -2057,7 +2079,7 @@ function BannerTestPageInner() {
                       <button
                         type="button"
                         onClick={() => setShowCustomPrompt(true)}
-                        className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-purple-600/30 rounded-lg text-sm text-purple-300 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-brand-500/30 rounded-lg text-sm text-brand-200 transition-colors flex items-center justify-center gap-2"
                       >
                         <Sparkles className="w-4 h-4" />
                         詳細な生成指示を追加
@@ -2067,7 +2089,7 @@ function BannerTestPageInner() {
 
                   {/* 生成ボタン / ローディングUI */}
                   {isGenerating ? (
-                    <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-700/50">
+                    <div role="status" aria-live="polite" className="bg-gradient-to-br from-blue-900/50 to-brand-800/50 rounded-xl p-6 border border-blue-700/50">
                       <div className="flex flex-col items-center gap-4">
                         {/* アニメーションアイコン */}
                         <div className="relative">
@@ -2087,7 +2109,7 @@ function BannerTestPageInner() {
                         <div className="w-full max-w-xs">
                           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                             <motion.div 
-                              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                              className="h-full bg-gradient-to-r from-blue-500 to-brand-400"
                               initial={{ width: 0 }}
                               animate={{ width: `${generationProgress}%` }}
                               transition={{ duration: 0.5 }}
@@ -2219,11 +2241,11 @@ function BannerTestPageInner() {
                         <div className="opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center gap-2">
                           {(currentPlan === 'ENTERPRISE') ? (
                             <>
-                              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full bg-brand-500 flex items-center justify-center">
                                 <Sparkles className="w-6 h-6 text-white" />
                               </div>
                               <span className="text-white font-bold text-sm">クリックして修正</span>
-                              <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full text-white">ENTERPRISE</span>
+                              <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full text-white">法人プラン</span>
                             </>
                           ) : (
                             <>
@@ -2266,7 +2288,7 @@ function BannerTestPageInner() {
                               setEditPrompt('')
                               setShowEditModal(true)
                             }}
-                            className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
                           >
                             <Sparkles className="w-4 h-4" />
                             修正
@@ -2297,7 +2319,7 @@ function BannerTestPageInner() {
                         >
                           <FileText className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">ENTERPRISE</span>
+                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">法人プラン</span>
                         </button>
                       ) : (
                         <button
@@ -2310,7 +2332,7 @@ function BannerTestPageInner() {
                         >
                           <Lock className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">ENTERPRISE</span>
+                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">法人プラン</span>
                         </button>
                       )}
                     </div>
@@ -2366,6 +2388,9 @@ function BannerTestPageInner() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="画像の拡大"
             onClick={() => setZoomImage(null)}
           >
             {/* 閉じるボタン */}
@@ -2408,332 +2433,6 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 生成中モーダル */}
-      <AnimatePresence>
-        {showGenerationModal && selectedTemplate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden"
-          >
-            {/* 背景オーバーレイ（グラデーション） */}
-            <motion.div 
-              className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-purple-900/95 to-black/95 backdrop-blur-xl"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            />
-            
-            {/* パーティクルアニメーション背景 - モバイルでは数を減らす */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 20)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/20 rounded-full"
-                  initial={{ 
-                    x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : 0, 
-                    y: typeof window !== 'undefined' ? window.innerHeight + 100 : 800,
-                    scale: Math.random() * 0.5 + 0.5
-                  }}
-                  animate={{ 
-                    y: -100,
-                    transition: {
-                      duration: Math.random() * 10 + 10,
-                      repeat: Infinity,
-                      ease: "linear",
-                      delay: Math.random() * 5
-                    }
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* メインコンテンツ */}
-            <motion.div
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="relative z-10 w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-2 sm:mx-auto p-3 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
-            >
-              {!generationComplete ? (
-                /* 生成中の表示 */
-                <>
-                  {/* ヘッダー */}
-                  <div className="text-center mb-3 sm:mb-4 md:mb-6">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="inline-block mb-2 sm:mb-3"
-                    >
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-0.5">
-                        <div className="w-full h-full rounded-full bg-black/50 flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
-                        </div>
-                      </div>
-                    </motion.div>
-                    <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1">
-                      バナーを生成中...
-                    </h2>
-                    <motion.p 
-                      key={loadingMessage}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-blue-200 text-xs sm:text-sm md:text-base"
-                    >
-                      {loadingMessage}
-                    </motion.p>
-                  </div>
-
-                  {/* プログレスバー */}
-                  <div className="mb-3 sm:mb-4 md:mb-6">
-                    <div className="flex justify-between text-[10px] sm:text-xs text-white/70 mb-1">
-                      <span>進捗</span>
-                      <span>{Math.round(generationProgress)}%</span>
-                    </div>
-                    <div className="h-1.5 sm:h-2 bg-white/10 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${generationProgress}%` }}
-                        transition={{ duration: 0.5 }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 入力内容と参考画像 - スマホでは縦並び、コンパクトに */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    {/* 参考画像（スマホでは小さく） */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-1 text-xs sm:text-sm">
-                        <ImageLucide className="w-3 h-3 sm:w-4 sm:h-4" />
-                        参考スタイル
-                      </h3>
-                      <div className="relative aspect-video rounded-lg overflow-hidden border border-white/30 shadow-lg">
-                        <img
-                          src={selectedTemplate.imageUrl || selectedTemplate.previewUrl || ''}
-                          alt={selectedTemplate.displayTitle || selectedTemplate.name || '参考画像'}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 right-1.5 sm:right-2">
-                          <p className="text-white font-bold text-xs sm:text-sm drop-shadow-lg truncate">
-                            {selectedTemplate.displayTitle || selectedTemplate.name}
-                          </p>
-                        </div>
-                        {/* パルスアニメーション */}
-                        <motion.div
-                          className="absolute inset-0 border-2 border-blue-400 rounded-lg"
-                          animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* 入力内容（コンパクト） */}
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-1 text-xs sm:text-sm">
-                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                        生成設定
-                      </h3>
-                      <div className="space-y-1.5 sm:space-y-2 bg-white/5 rounded-lg p-2 sm:p-3 border border-white/10">
-                        <div>
-                          <p className="text-white/50 text-[9px] sm:text-[10px]">テキスト</p>
-                          <p className="text-white font-medium text-xs sm:text-sm truncate">{serviceName}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                          <div>
-                            <p className="text-white/50 text-[9px] sm:text-[10px]">サイズ</p>
-                            <p className="text-white font-medium text-[10px] sm:text-xs">
-                              {`${selectedSize.width}×${selectedSize.height}`}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-white/50 text-[9px] sm:text-[10px]">枚数</p>
-                            <p className="text-white font-medium text-[10px] sm:text-xs">{generateCount}枚</p>
-                          </div>
-                        </div>
-                        {(logoPreview || personPreview) && (
-                          <div className="flex gap-1.5 sm:gap-2 pt-1.5 border-t border-white/10">
-                            {logoPreview && (
-                              <div className="flex items-center gap-1">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded overflow-hidden bg-white/10">
-                                  <img src={logoPreview} alt="ロゴ" className="w-full h-full object-contain" />
-                                </div>
-                                <span className="text-white/70 text-[9px] sm:text-xs">ロゴ</span>
-                              </div>
-                            )}
-                            {personPreview && (
-                              <div className="flex items-center gap-1">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded overflow-hidden bg-white/10">
-                                  <img src={personPreview} alt="人物" className="w-full h-full object-cover" />
-                                </div>
-                                <span className="text-white/70 text-[9px] sm:text-xs">人物</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {/* カスタムプロンプト表示（エンタープライズ） */}
-                        {customPrompt && (
-                          <div className="pt-1.5 border-t border-white/10">
-                            <p className="text-white/50 text-[9px] sm:text-[10px] flex items-center gap-1">
-                              <span className="px-1 py-0.5 bg-purple-600 text-[6px] sm:text-[7px] font-bold rounded">ENT</span>
-                              詳細指示
-                            </p>
-                            <p className="text-white/80 text-[9px] sm:text-[10px] line-clamp-2">{customPrompt}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 生成中のヒント */}
-                  <div className="mt-2 sm:mt-3 md:mt-4 text-center">
-                    <p className="text-white/50 text-[9px] sm:text-[10px] md:text-xs px-1">
-                      AIがバナーを生成中...
-                      {customPrompt && '（カスタム指示適用中）'}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                /* 完了時の表示 */
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", damping: 15, stiffness: 300 }}
-                  className="text-center py-4 sm:py-6 md:py-8"
-                >
-                  {/* 成功アイコン */}
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [0, 1.2, 1] }}
-                    transition={{ duration: 0.5, times: [0, 0.6, 1] }}
-                    className="mb-4 sm:mb-5 md:mb-6"
-                  >
-                    <div className="inline-block relative">
-                      <motion.div
-                        className="absolute inset-0 bg-green-500/30 rounded-full"
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
-                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/50">
-                        <motion.svg
-                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                          initial={{ pathLength: 0 }}
-                          animate={{ pathLength: 1 }}
-                          transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                          <motion.path
-                            d="M5 13l4 4L19 7"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </motion.svg>
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* 完了メッセージ */}
-                  <motion.h2
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3"
-                  >
-                    生成完了！
-                  </motion.h2>
-                  <motion.p
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-base sm:text-lg md:text-xl text-green-300 mb-4 sm:mb-5 md:mb-6"
-                  >
-                    {generatedBanners.length}枚のバナーが完成しました
-                  </motion.p>
-
-                  {/* 生成された画像のプレビュー - 選択したサイズに合わせる */}
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="flex justify-center gap-2 sm:gap-3 flex-wrap px-2"
-                  >
-                    {generatedBanners.slice(0, 3).map((banner, idx) => {
-                      // アスペクト比に基づいてサイズを計算
-                      const ratio = selectedSize.width / selectedSize.height
-                      const baseWidth = ratio >= 1 ? 80 : 60 // 横長なら幅を基準、縦長なら小さめ
-                      const width = baseWidth
-                      const height = baseWidth / ratio
-                      return (
-                        <motion.div
-                          key={banner.id}
-                          initial={{ scale: 0, rotate: -10 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          transition={{ delay: 0.6 + idx * 0.1, type: "spring" }}
-                          className="rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
-                          style={{
-                            width: `${width}px`,
-                            height: `${height}px`,
-                          }}
-                        >
-                          <img
-                            src={banner.imageUrl}
-                            alt={`生成バナー ${idx + 1}`}
-                            className="w-full h-full object-contain bg-gray-900"
-                          />
-                        </motion.div>
-                      )
-                    })}
-                    {generatedBanners.length > 3 && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.9, type: "spring" }}
-                        className="rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
-                        style={{
-                          width: `${selectedSize.width / selectedSize.height >= 1 ? 80 : 60}px`,
-                          height: `${(selectedSize.width / selectedSize.height >= 1 ? 80 : 60) / (selectedSize.width / selectedSize.height)}px`,
-                        }}
-                      >
-                        <span className="text-white font-bold text-xs sm:text-sm md:text-base">+{generatedBanners.length - 3}</span>
-                      </motion.div>
-                    )}
-                  </motion.div>
-
-                  {/* 紙吹雪エフェクト - モバイルでは数を減らす */}
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 15 : 30)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        className="absolute w-2 h-2 sm:w-3 sm:h-3 rounded-sm"
-                        style={{
-                          background: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][i % 6],
-                          left: `${Math.random() * 100}%`,
-                        }}
-                        initial={{ y: -20, rotate: 0, opacity: 1 }}
-                        animate={{ 
-                          y: typeof window !== 'undefined' ? window.innerHeight + 100 : 800,
-                          rotate: Math.random() * 720 - 360,
-                          opacity: [1, 1, 0]
-                        }}
-                        transition={{
-                          duration: Math.random() * 2 + 2,
-                          delay: Math.random() * 0.5,
-                          ease: "easeOut"
-                        }}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ロックモーダル */}
       <AnimatePresence>
@@ -2743,6 +2442,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="この見本を使うには"
             onClick={() => setShowLockModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -2762,7 +2464,7 @@ function BannerTestPageInner() {
                   ? 'bg-gradient-to-r from-red-600 to-red-500' 
                   : lockModalType === 'pro'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-500'
-                    : 'bg-gradient-to-r from-purple-600 to-purple-500'
+                    : 'bg-gradient-to-r from-brand-500 to-brand-400'
               }`}>
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -2863,8 +2565,8 @@ function BannerTestPageInner() {
                       <span className="text-amber-300 font-medium">全画像解放 + 月150枚</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-purple-400 font-medium">Enterprise</span>
-                      <span className="text-purple-300 font-medium">全画像解放 + 月1000枚</span>
+                      <span className="text-brand-300 font-medium">法人プラン</span>
+                      <span className="text-brand-200 font-medium">全画像解放 + 月1000枚</span>
                     </div>
                   </div>
                 </div>
@@ -2882,6 +2584,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="画像の修正"
             onClick={() => !isEditing && setShowEditModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -2893,10 +2598,10 @@ function BannerTestPageInner() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative z-10 w-full max-w-[calc(100%-24px)] sm:max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 max-h-[90vh] overflow-y-auto"
+              className="relative z-10 w-full max-w-[calc(100%-24px)] sm:max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-brand-400/30 max-h-[90vh] overflow-y-auto"
             >
               {/* ヘッダー */}
-              <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-between">
+              <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-brand-500 to-brand-600 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                     <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -2904,7 +2609,7 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       画像を修正
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">ENTERPRISE</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
                     <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">AIに指示を出して画像を修正できます</p>
                   </div>
@@ -2948,7 +2653,7 @@ function BannerTestPageInner() {
                     onChange={(e) => setEditPrompt(e.target.value)}
                     placeholder="例：&#10;・背景をもっと明るくして&#10;・文字を大きくして&#10;・右下にロゴを追加して&#10;・全体的にポップな雰囲気に"
                     disabled={isEditing}
-                    className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-600 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-sm disabled:opacity-50"
+                    className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-600 focus:border-brand-400 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400/50 resize-none text-sm disabled:opacity-50"
                   />
                   <p className="text-xs text-gray-500 mt-2">{editPrompt.length} / 500文字</p>
                   
@@ -3028,14 +2733,14 @@ function BannerTestPageInner() {
                       } catch (err: any) {
                         if (!operation.current()) return
                         console.error('Edit error:')
-                        toast.error(err.message || '修正に失敗しました')
+                        toast.error(jaMessage(err?.message, '修正できませんでした。少し待って、もう一度お試しください。'))
                       } finally {
                         if (operation.current()) setIsEditing(false)
                         operation.finish()
                       }
                     }}
                     disabled={isEditing || quota.checking || !editPrompt.trim()}
-                    className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                    className="mt-4 w-full py-3 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                   >
                     {isEditing ? (
                       <>
@@ -3055,8 +2760,8 @@ function BannerTestPageInner() {
               
               {/* フッター */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                <div className="p-3 bg-purple-900/30 rounded-lg border border-purple-700/50">
-                  <p className="text-xs text-purple-300">
+                <div className="p-3 bg-brand-800/30 rounded-lg border border-brand-600/50">
+                  <p className="text-xs text-brand-200">
                     ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
                   </p>
                 </div>
@@ -3074,6 +2779,9 @@ function BannerTestPageInner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="プロンプトの表示"
             onClick={() => setShowPromptModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -3096,7 +2804,7 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       プロンプト詳細
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">ENTERPRISE</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
                     <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">この画像を生成したプロンプトを確認できます</p>
                   </div>

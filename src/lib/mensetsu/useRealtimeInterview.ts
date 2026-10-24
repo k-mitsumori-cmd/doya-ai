@@ -466,7 +466,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     } catch (e: any) {
       cleanup()
       setState('error')
-      setError(e?.message || '面接を開始できませんでした')
+      setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '面接を始められませんでした。通信を確かめて、もう一度お試しください。'))
       return
     }
 
@@ -676,7 +676,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
           'Content-Type': 'application/sdp',
         },
       })
-      if (!sdpRes.ok) throw new Error('音声接続を確立できませんでした')
+      if (!sdpRes.ok) throw new Error('音声につながりませんでした。通信とマイクを確かめて、もう一度お試しください。')
       const answer = await sdpRes.text()
       await pc.setRemoteDescription({ type: 'answer', sdp: answer })
 
@@ -709,7 +709,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     } catch (e: any) {
       cleanup()
       setState('error')
-      setError(e?.message || '接続に失敗しました')
+      setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '音声につながりませんでした。通信とマイクを確かめて、もう一度お試しください。'))
     }
   }, [cleanup, flushTurns, handleFunctionCall, pushLine, recordAudio, token])
 

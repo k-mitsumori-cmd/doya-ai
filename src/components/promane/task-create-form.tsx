@@ -7,10 +7,11 @@ import { useConfirm } from '@/components/promane/confirm-dialog';
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/promane/ui/select";
-import { Plus } from "lucide-react";
+import { CalendarDays, Flag, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 export function TaskCreateForm({
   workspaceSlug,
@@ -62,7 +63,7 @@ export function TaskCreateForm({
       setTimeout(() => setJustAdded(false), 600);
       refreshCreated();
     } catch (e: any) {
-      toast.error(e?.message || "タスク追加に失敗しました", {
+      toast.error(userErrorMessage(e?.message, "タスクを追加できませんでした。もう一度お試しください。"), {
         icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         duration: 5000,
       });
@@ -91,7 +92,7 @@ export function TaskCreateForm({
         <fieldset disabled={creation.status !== 'ready'} className="space-y-3">
         <Input
           aria-label="タスク名"
-          placeholder="✏️ タスク名を入力..."
+          placeholder="タスク名（例: 見積書を作る）"
           maxLength={200}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -100,12 +101,12 @@ export function TaskCreateForm({
         <div className="flex flex-wrap items-end gap-3">
           <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? "")}>
             <SelectTrigger className="w-40 h-11 rounded-2xl text-[14px] font-bold bg-gray-50">
-              <SelectValue placeholder="👤 担当者" />
+              <SelectValue placeholder="担当者" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">👤 未割当</SelectItem>
+              <SelectItem value="">未割当</SelectItem>
               {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>👤 {m.displayName}</SelectItem>
+                <SelectItem key={m.id} value={m.id}>{m.displayName}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -115,27 +116,27 @@ export function TaskCreateForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">🐢 のんびり</SelectItem>
-              <SelectItem value="medium">🚶 ふつう</SelectItem>
-              <SelectItem value="high">🏃 いそぎ</SelectItem>
-              <SelectItem value="urgent">🔥 超キンキュウ！</SelectItem>
+              <SelectItem value="low">のんびり</SelectItem>
+              <SelectItem value="medium">ふつう</SelectItem>
+              <SelectItem value="high">いそぎ</SelectItem>
+              <SelectItem value="urgent">超キンキュウ！</SelectItem>
             </SelectContent>
           </Select>
 
           <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 h-11 ring-1 ring-gray-200">
-            <span className="shrink-0 whitespace-nowrap text-[13px] font-bold text-gray-500">📅 開始</span>
+            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-bold text-gray-500"><CalendarDays className="h-4 w-4" aria-hidden />開始</span>
             <Input aria-label="開始日" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
           </div>
 
           <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 h-11 ring-1 ring-gray-200">
-            <span className="shrink-0 whitespace-nowrap text-[13px] font-bold text-gray-500">🏁 終了</span>
+            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-bold text-gray-500"><Flag className="h-4 w-4" aria-hidden />終了</span>
             <Input aria-label="終了日" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
           </div>
 
           <Button
             type="submit"
             disabled={loading || !title.trim()}
-            className="h-11 rounded-full font-black px-6 text-[15px] shadow-md bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 transition-all hover:scale-105 active:scale-95"
+            className="h-11 rounded-full font-black px-6 text-[15px] shadow-md bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 transition-all hover:scale-105 active:scale-95"
           >
             <Plus className="mr-1.5 h-5 w-5" />
             追加！

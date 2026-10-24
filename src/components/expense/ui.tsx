@@ -1,9 +1,10 @@
 'use client'
 
 // ドヤ支出管理: 共通の見た目の部品と整形関数
-import React, { createContext, useCallback, useContext, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useId, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Badge as DsBadge, Button as DsButton, Card as DsCard, EmptyState as DsEmpty, Skeleton as DsSkeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
 import { ROLE_RANK, SCHEDULE_STATUS_LABEL, type ExpenseRole } from '@/lib/expense/constants'
 
 // ---------- 組織・権限 ----------
@@ -177,36 +178,54 @@ export function ErrorBox({ onRetry, forbidden }: { message?: string; onRetry?: (
 }
 
 /** 画面内の確認ダイアログ（alert / confirm は使わない） */
+/** 確認の窓（共通のダイアログ）。ask(本文, ボタンの文字, { title, danger }) で開き、決めたら true。
+ *  dialog は互換のために残す（共通のダイアログは自分で描くので、ここは null） */
 export function useConfirm() {
-  const [state, setState] = useState<{ message: string; confirmLabel: string; resolve: (v: boolean) => void } | null>(null)
   const ask = useCallback(
-    (message: string, confirmLabel = '実行する') => new Promise<boolean>((resolve) => setState({ message, confirmLabel, resolve })),
+    (message: string, confirmLabel = '実行する', opts: { title?: string; danger?: boolean } = {}) =>
+      confirmDialog({
+        title: opts.title ?? 'この操作を実行しますか？',
+        message,
+        confirmLabel,
+        tone: (opts.danger ?? /削除|外す|取り消/.test(confirmLabel)) ? 'danger' : 'primary',
+      }),
     []
   )
-  const close = (v: boolean) => {
-    state?.resolve(v)
-    setState(null)
-  }
-  const dialog = state ? (
-    <Modal title="確認" onClose={() => close(false)}>
-      <p className="text-[15px] leading-[1.7] text-[var(--ink)]">{state.message}</p>
-      <div className="mt-5 flex justify-end gap-2">
-        <Btn variant="secondary" onClick={() => close(false)}>キャンセル</Btn>
-        <Btn variant="primary" onClick={() => close(true)}>{state.confirmLabel}</Btn>
-      </div>
-    </Modal>
-  ) : null
+  const dialog: React.ReactNode = null
   return { ask, dialog }
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const panel = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    // 開いたら窓に移り、Esc で閉じ、閉じたら元のボタンに戻す
+    const prev = document.activeElement as HTMLElement | null
+    panel.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      prev?.focus?.()
+    }
+  }, [])
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--r)] bg-[var(--paper)] p-5 shadow-[var(--shadow-lg)]" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panel}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--r)] bg-[var(--paper)] p-5 shadow-[var(--shadow-lg)] outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[var(--ink)]">{title}</h2>
+          <h2 id={titleId} className="text-lg font-bold text-[var(--ink)]">{title}</h2>
           <button type="button" aria-label="閉じる" onClick={onClose} className="rounded-[var(--r-sm)] p-1.5 text-[var(--sub)] hover:bg-[var(--bg)]">
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         {children}

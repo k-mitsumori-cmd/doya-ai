@@ -16,12 +16,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, 'ADMIN')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -39,11 +39,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         where: { id, organizationId: hrCtx.organizationId },
       })
       if (!existing) {
-        return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+        return NextResponse.json({ error: 'この部署は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
       }
 
       if (parentId === id) {
-        return NextResponse.json({ error: 'Cannot set self as parent' }, { status: 400 })
+        return NextResponse.json({ error: '部署を自分自身の親にはできません。別の部署を選んでください。' }, { status: 400 })
       }
 
       if (parentId && !(await validDepartmentParent(id, parentId, (parent) =>
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2002') return NextResponse.json({ error: '部署コードはすでに使用されています。別のコードを指定してください。' }, { status: 400 })
     console.error('[hr/departments/[id]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to update department' },
+      { error: '部署を保存できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }
@@ -89,12 +89,12 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, 'ADMIN')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -112,19 +112,19 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
         },
       })
       if (!existing) {
-        return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+        return NextResponse.json({ error: 'この部署は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
       }
 
       if (existing._count.employees > 0) {
         return NextResponse.json(
-          { error: 'Cannot delete department with employees. Move or remove employees first.' },
+          { error: 'この部署には従業員がいるため削除できません。先に従業員を移してください。' },
           { status: 400 }
         )
       }
 
       if (existing._count.children > 0) {
         return NextResponse.json(
-          { error: 'Cannot delete department with sub-departments. Remove sub-departments first.' },
+          { error: 'この部署には下の部署があるため削除できません。先に下の部署を移してください。' },
           { status: 400 }
         )
       }
@@ -138,7 +138,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[hr/departments/[id]] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to delete department' },
+      { error: '部署を削除できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

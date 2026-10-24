@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // OWNERのみ実行可能
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { targetMemberId } = body
 
     if (!targetMemberId || typeof targetMemberId !== 'string') {
-      return NextResponse.json({ error: 'targetMemberId is required' }, { status: 400 })
+      return NextResponse.json({ error: 'オーナーを譲る相手のメンバーを選んでから、もう一度お試しください。' }, { status: 400 })
     }
 
     if (targetMemberId === ctx.memberId) {
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     }
     console.error('[hr/organization/transfer-owner] unexpected error')
     return NextResponse.json(
-      { error: 'Failed to transfer ownership' },
+      { error: 'オーナーを譲れませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

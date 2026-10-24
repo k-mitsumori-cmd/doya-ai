@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/promane/utils";
+import { userErrorMessage } from "@/lib/promane/user-error";
 import { TASK_STATUS_LABELS } from "@/lib/promane/format";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, CalendarDays, Flag, Pencil, Save } from "lucide-react";
 import { Button } from "@/components/promane/ui/button";
 import { updateTask } from "@/lib/promane/actions-tasks";
 import { useRouter } from "next/navigation";
@@ -25,11 +26,11 @@ type GanttTask = {
   dueDate: string | null;
 };
 
-const STATUS_COLORS: Record<string, { bar: string; bg: string; dot: string; emoji: string }> = {
-  todo: { bar: "bg-indigo-400", bg: "bg-indigo-50/50", dot: "bg-indigo-400", emoji: "📋" },
-  in_progress: { bar: "bg-blue-500", bg: "bg-blue-50", dot: "bg-blue-500", emoji: "🔵" },
-  review: { bar: "bg-amber-500", bg: "bg-amber-50", dot: "bg-amber-500", emoji: "🟡" },
-  done: { bar: "bg-green-500", bg: "bg-green-50", dot: "bg-green-500", emoji: "🟢" },
+const STATUS_COLORS: Record<string, { bar: string; bg: string; dot: string }> = {
+  todo: { bar: "bg-indigo-400", bg: "bg-indigo-50/50", dot: "bg-indigo-400" },
+  in_progress: { bar: "bg-blue-500", bg: "bg-blue-50", dot: "bg-blue-500" },
+  review: { bar: "bg-amber-500", bg: "bg-amber-50", dot: "bg-amber-500" },
+  done: { bar: "bg-green-500", bg: "bg-green-50", dot: "bg-green-500" },
 };
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -101,10 +102,15 @@ export function GanttChart({
 
   async function handleSaveDates(taskId: string) {
     const taskName = tasks.find((t) => t.id === taskId)?.title || "タスク";
-    await updateTask(workspaceSlug, taskId, {
-      startDate: editStart || null,
-      dueDate: editEnd || null,
-    });
+    try {
+      await updateTask(workspaceSlug, taskId, {
+        startDate: editStart || null,
+        dueDate: editEnd || null,
+      });
+    } catch (error) {
+      toast.error(userErrorMessage(error instanceof Error ? error.message : null, "日程を保存できませんでした。日付を確かめて、もう一度お試しください。"));
+      return;
+    }
     toast.success(`「${taskName}」の日程を保存したよ！`, {
       icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
     });
@@ -119,7 +125,7 @@ export function GanttChart({
         <div className="flex items-center gap-3">
           {Object.entries(STATUS_COLORS).map(([key, c]) => (
             <span key={key} className="flex items-center gap-1 text-[12px] font-semibold text-gray-500">
-              {c.emoji} {TASK_STATUS_LABELS[key]}
+              <span className={cn("h-2.5 w-2.5 rounded-full", c.dot)} aria-hidden />{TASK_STATUS_LABELS[key]}
             </span>
           ))}
         </div>
@@ -156,14 +162,14 @@ export function GanttChart({
                 )}
                 title="クリックで編集"
               >
-                <span className="text-base flex-shrink-0">{sc.emoji}</span>
+                <span className={cn("h-2.5 w-2.5 rounded-full flex-shrink-0", sc.dot)} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{task.title}</p>
                   {task.assigneeName && (
                     <p className="text-[11px] text-gray-400 font-medium truncate">{task.assigneeName}</p>
                   )}
                 </div>
-                <span className="text-[11px] text-gray-300 group-hover:text-blue-500 flex-shrink-0 transition-colors">✎</span>
+                <Pencil className="h-3.5 w-3.5 text-gray-300 group-hover:text-blue-500 flex-shrink-0 transition-colors" aria-hidden />
               </button>
             );
           })}
@@ -254,22 +260,22 @@ export function GanttChart({
       </div>
 
       {editingTask && (
-        <div className="border-t border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 px-6 py-4 animate-slide-up">
+        <div className="border-t border-gray-100 bg-gradient-to-r from-blue-50 to-brand-50 px-6 py-4 animate-slide-up">
           <div className="flex items-center gap-5 flex-wrap">
             <Image src="/character/focus.png" alt="" width={40} height={40} className="animate-bounce-in drop-shadow-md" unoptimized />
             <span className="text-[16px] font-black text-gray-800">
               {tasks.find((t) => t.id === editingTask)?.title}
             </span>
             <div className="flex items-center gap-2 rounded-2xl bg-white px-4 h-11 ring-1 ring-blue-200 shadow-sm">
-              <span className="text-[14px] font-bold text-blue-600">📅 開始</span>
+              <span className="inline-flex items-center gap-1 text-[14px] font-bold text-blue-600"><CalendarDays className="h-4 w-4" aria-hidden />開始</span>
               <Input type="date" value={editStart} onChange={(e) => setEditStart(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
             </div>
             <div className="flex items-center gap-2 rounded-2xl bg-white px-4 h-11 ring-1 ring-blue-200 shadow-sm">
-              <span className="text-[14px] font-bold text-blue-600">🏁 終了</span>
+              <span className="inline-flex items-center gap-1 text-[14px] font-bold text-blue-600"><Flag className="h-4 w-4" aria-hidden />終了</span>
               <Input type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
             </div>
-            <Button onClick={() => handleSaveDates(editingTask)} className="h-11 rounded-full font-black px-6 text-[14px] shadow-md bg-gradient-to-r from-blue-500 to-violet-600 hover:scale-105 active:scale-95 transition-all">
-              ✨ 保存！
+            <Button onClick={() => handleSaveDates(editingTask)} className="h-11 rounded-full font-black px-6 text-[14px] shadow-md bg-gradient-to-r from-blue-500 to-brand-500 hover:scale-105 active:scale-95 transition-all">
+              <Save className="mr-1.5 h-4 w-4" aria-hidden />保存する
             </Button>
             <button onClick={() => setEditingTask(null)} className="text-[14px] font-bold text-gray-400 hover:text-gray-600 transition-colors">
               やめる

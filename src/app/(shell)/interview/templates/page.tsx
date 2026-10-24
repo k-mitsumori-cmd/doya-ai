@@ -74,7 +74,7 @@ const ARTICLE_TEMPLATES: ArticleTemplate[] = [
     sampleExcerpt: '大学在学中に起業し、わずか2年で従業員50名を超える規模に成長させた山田CEO。「きっかけは大学の研究室で...',
     tags: ['起業', 'ビジョン', 'スタートアップ'],
     icon: 'rocket_launch',
-    gradient: 'from-purple-500 to-violet-600',
+    gradient: 'from-brand-400 to-brand-500',
     estimatedLength: '約4,000文字',
   },
   {
@@ -130,7 +130,7 @@ const ARTICLE_TEMPLATES: ArticleTemplate[] = [
     sampleExcerpt: '発売からわずか半年で累計10万個を突破した「〇〇シリーズ」。SNSでの口コミが爆発的に広がり、一時は在庫が...',
     tags: ['EC', '商品開発', 'D2C'],
     icon: 'shopping_bag',
-    gradient: 'from-pink-500 to-rose-600',
+    gradient: 'from-brand-600 to-rose-600',
     estimatedLength: '約2,500文字',
   },
   {
@@ -171,6 +171,13 @@ export default function TemplatesPage() {
   const activeTemplateCreate = useRef<AbortController | null>(null)
   const templateCreateAttempt = useRef<{ input: string; key: string; scope: string | null } | null>(null)
   useEffect(() => () => { activeTemplateCreate.current?.abort(); activeTemplateCreate.current = null }, [])
+  // テンプレートの詳細の窓を Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!selectedTemplate) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedTemplate(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedTemplate])
 
   const filteredTemplates = selectedIndustry === 'all'
     ? ARTICLE_TEMPLATES
@@ -196,7 +203,7 @@ export default function TemplatesPage() {
           setCreateLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
           if (cause.code === 'CREATION_SCOPE_CHANGED') templateCreateAttempt.current = null
         }
-        setCreateError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから再試行してください。')
+        setCreateError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確かめてから、もう一度お試しください。')
         activeTemplateCreate.current = null
         setCreating(false)
       }
@@ -219,8 +226,8 @@ export default function TemplatesPage() {
             onClick={() => setSelectedIndustry(f.value)}
             className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
               selectedIndustry === f.value
-                ? 'bg-[#7f19e6] text-white shadow-lg shadow-[#7f19e6]/20'
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-[#7f19e6]/30 hover:text-[#7f19e6]'
+                ? 'bg-[#0066ff] text-white shadow-lg shadow-[#0066ff]/20'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-[#0066ff]/30 hover:text-[#0066ff]'
             }`}
           >
             {f.label}
@@ -236,7 +243,7 @@ export default function TemplatesPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-[#7f19e6]/20 transition-all group cursor-pointer"
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-[#0066ff]/20 transition-all group cursor-pointer"
               onClick={() => setSelectedTemplate(template)}
             >
               {/* カードヘッダー（画像 or グラデーション） */}
@@ -261,7 +268,7 @@ export default function TemplatesPage() {
 
               {/* カードボディ */}
               <div className="p-4">
-                <h3 className="text-base font-black text-slate-900 mb-1 group-hover:text-[#7f19e6] transition-colors">{template.title}</h3>
+                <h3 className="text-base font-black text-slate-900 mb-1 group-hover:text-[#0066ff] transition-colors">{template.title}</h3>
                 <p className="text-xs text-slate-500 mb-3 line-clamp-2">{template.description}</p>
 
                 {/* サンプルタイトル */}
@@ -299,6 +306,9 @@ export default function TemplatesPage() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedTemplate.title}
               onClick={(e) => e.stopPropagation()}
             >
               {/* モーダルヘッダー */}
@@ -332,7 +342,7 @@ export default function TemplatesPage() {
                 {/* サンプル記事プレビュー */}
                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-[16px] text-[#7f19e6]">article</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#0066ff]">article</span>
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">サンプル記事</span>
                   </div>
                   <h3 className="text-base font-black text-slate-900 mb-2">{selectedTemplate.sampleTitle}</h3>
@@ -374,7 +384,7 @@ export default function TemplatesPage() {
                   <button
                     onClick={() => handleCreateFromTemplate(selectedTemplate)}
                     disabled={creating}
-                    className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:transform-none"
+                    className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-[#0066ff] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#0066ff]/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:transform-none"
                   >
                     <span className="flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-[20px]">{creating ? 'sync' : 'add_circle'}</span>

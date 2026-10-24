@@ -3,7 +3,7 @@ import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { formatCurrency, formatCurrencyWithSign, formatPercent, profitEmoji, profitLabel, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
+import { formatCurrency, formatCurrencyWithSign, formatPercent, profitLabel, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
 import { Badge } from "@/components/promane/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/promane/ui/tabs";
 import { KanbanBoard } from "@/components/promane/kanban-board";
@@ -12,7 +12,7 @@ import { TaskCreateForm } from "@/components/promane/task-create-form";
 import { FinanceTab } from "@/components/promane/finance-tab";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Building2, CalendarDays, Pencil, Wallet } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, GanttChartSquare, KanbanSquare, Pencil, Wallet } from "lucide-react";
 import { Button } from "@/components/promane/ui/button";
 import { Progress } from "@/components/promane/ui/progress";
 import { CharacterOnly } from "@/components/promane/character";
@@ -68,7 +68,7 @@ export default async function ProjectDetailPage({
     {
       icon: profit > 0 ? "/character/success.png" : profit < 0 ? "/character/error.png" : "/character/working.png",
       label: `利益 (${profitLabel(profit)})`,
-      value: `${profitEmoji(profit)} ${formatCurrencyWithSign(profit)}`,
+      value: formatCurrencyWithSign(profit),
       bg: profit > 0
         ? "bg-gradient-to-br from-emerald-100 to-green-100 ring-emerald-300/60"
         : profit < 0
@@ -79,7 +79,7 @@ export default async function ProjectDetailPage({
     {
       icon: profit > 0 ? "/character/jump.png" : profit < 0 ? "/character/error.png" : "/character/working.png",
       label: `利益率 (${profitLabel(profit)})`,
-      value: project.contractAmount > 0 ? `${profitEmoji(profit)} ${formatPercent(profitRate)}` : "—",
+      value: project.contractAmount > 0 ? formatPercent(profitRate) : "—",
       bg: profit > 0
         ? "bg-gradient-to-br from-emerald-100 to-green-100 ring-emerald-300/60"
         : profit < 0
@@ -139,14 +139,14 @@ export default async function ProjectDetailPage({
             <p className={`text-[22px] font-extrabold ${kpi.text} leading-none`}>{kpi.value}</p>
           </div>
         ))}
-        <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-purple-50 ring-1 ring-purple-200/50 p-4 transition-all hover:scale-105 hover:shadow-lg cursor-default">
+        <div className="rounded-3xl bg-gradient-to-br from-brand-50 to-brand-50 ring-1 ring-brand-100/50 p-4 transition-all hover:scale-105 hover:shadow-lg cursor-default">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[12px] font-bold text-purple-700">進捗</span>
+            <span className="text-[12px] font-bold text-brand-600">進捗</span>
             <CharacterOnly mood={moodForProgress} size={30} animate="float" />
           </div>
-          <p className="text-[22px] font-extrabold text-purple-700 leading-none mb-2">{progress}%</p>
+          <p className="text-[22px] font-extrabold text-brand-600 leading-none mb-2">{progress}%</p>
           <Progress value={progress} className="h-2.5" />
-          <p className="text-[11px] font-semibold text-purple-400 mt-1.5">{doneTasks} / {project.tasks.length} タスク完了</p>
+          <p className="text-[11px] font-semibold text-brand-300 mt-1.5">{doneTasks} / {project.tasks.length} タスク完了</p>
         </div>
       </div>
 
@@ -154,13 +154,13 @@ export default async function ProjectDetailPage({
       <Tabs defaultValue="gantt">
         <TabsList className="rounded-2xl bg-gray-100 p-1.5 h-auto">
           <TabsTrigger value="gantt" className="rounded-xl font-bold text-[14px] px-5 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            📊 ガントチャート
+            <GanttChartSquare className="mr-1.5 h-4 w-4" aria-hidden />ガントチャート
           </TabsTrigger>
           <TabsTrigger value="kanban" className="rounded-xl font-bold text-[14px] px-5 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            📋 カンバン
+            <KanbanSquare className="mr-1.5 h-4 w-4" aria-hidden />カンバン
           </TabsTrigger>
           <TabsTrigger value="finance" className="rounded-xl font-bold text-[14px] px-5 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            💰 収支詳細
+            <Wallet className="mr-1.5 h-4 w-4" aria-hidden />収支詳細
           </TabsTrigger>
         </TabsList>
 

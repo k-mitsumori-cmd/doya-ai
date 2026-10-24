@@ -134,7 +134,7 @@ export function ProfitBarChart({ data }: { data: RevenueData[] }) {
           <Bar dataKey="profit" fill="url(#profitGradient)" radius={[8, 8, 0, 0]} name="利益" />
           <defs>
             <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="#3d80ff" />
               <stop offset="100%" stopColor="#3b82f6" />
             </linearGradient>
           </defs>
@@ -165,7 +165,7 @@ export function ActivityTimeline({ items }: { items: ActivityItem[] }) {
     <div className="space-y-3">
       {items.map((item) => (
         <div key={item.id} className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-violet-100 flex items-center justify-center text-base">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-brand-50 flex items-center justify-center text-base">
             {item.icon || '✨'}
           </div>
           <div className="flex-1 min-w-0">

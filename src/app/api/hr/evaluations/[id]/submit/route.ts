@@ -16,9 +16,9 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
-    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const hrCtx = await getHrContext()
-    if (!hrCtx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!hrCtx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const expectedOrganization = req.headers.get('X-HR-Organization-Id')
     if (expectedOrganization && expectedOrganization !== hrCtx.organizationId) return privateApiJson({ error: '組織が変更されています。再取得してください。' }, { status: 403 })
     const { id } = await ctx.params
@@ -35,8 +35,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     FOR UPDATE OF e
   `
       const existing = await tx.hrEvaluation.findFirst({ where: { id }, include: { period: { select: { organizationId: true } } } })
-      if (!existing) return privateApiJson({ error: 'Evaluation not found' }, { status: 404 })
-      if (existing.period.organizationId !== hrCtx.organizationId) return privateApiJson({ error: 'Forbidden' }, { status: 403 })
+      if (!existing) return privateApiJson({ error: 'この評価は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
+      if (existing.period.organizationId !== hrCtx.organizationId) return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
       const employeeIds = [...new Set([existing.employeeId, ...(existing.evaluatorId ? [existing.evaluatorId] : []), ...(hrCtx.employeeId ? [hrCtx.employeeId] : [])])].sort()
       await tx.$queryRaw`SELECT id FROM hr_employees WHERE id IN (${Prisma.join(employeeIds)}) AND "organizationId" = ${hrCtx.organizationId} ORDER BY id FOR UPDATE`
       const ratingField = await getEvaluationRatingField(hrCtx, existing, tx)
@@ -57,6 +57,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (error instanceof HrEvaluationWorkflowError) return privateApiJson({ error: error.message }, { status: error.status })
     if (error instanceof HrEvaluationInputError) return privateApiJson({ error: error.message }, { status: 400 })
     console.error('[hr/evaluations/[id]/submit] failed')
-    return privateApiJson({ error: 'Failed to submit evaluation' }, { status: 500 })
+    return privateApiJson({ error: '評価を提出できませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 })
   }
 }

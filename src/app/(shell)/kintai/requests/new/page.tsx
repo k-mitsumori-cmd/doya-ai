@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { Skeleton } from '@/components/ds'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -20,19 +22,13 @@ export default function NewRequestPage() {
     return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
       <PageTitle className="text-xl font-bold text-slate-800">新規申請は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の申請は引き続き確認できます。</p>
-      <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
+      <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#0066ff] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
     </div>
   }
   return (
     <Suspense fallback={
-      <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">
-        <img
-          src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
-          alt="読み込み中"
-          style={{ width: 80, height: 80, objectFit: 'contain' }}
-        />
-        <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto" aria-busy="true" aria-label="申請の画面を読み込み中">
+        <Skeleton lines={5} height={18} />
       </div>
     }>
       <NewRequestContent />
@@ -110,7 +106,7 @@ function NewRequestContent() {
           setOrigClockIn(cin ? new Date(cin.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
           setOrigClockOut(cout ? new Date(cout.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
         })
-        .catch(e => { if (active) setRecordsError(e.message || '打刻の取得に失敗しました') })
+        .catch(e => { if (active) setRecordsError(userErrorMessage(e instanceof Error ? e.message : null, '打刻を読み込めませんでした。日付を選び直して、もう一度お試しください。')) })
     }
     return () => { active = false }
   }, [fixDate, type])
@@ -188,8 +184,8 @@ function NewRequestContent() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || '申請に失敗しました')
+        const data = await res.json().catch(() => ({}))
+        setError(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'))
         return
       }
 
@@ -198,7 +194,7 @@ function NewRequestContent() {
         router.push('/kintai/requests')
       }, 2000)
     } catch {
-      setError('通信エラーが発生しました')
+      setError(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -212,7 +208,7 @@ function NewRequestContent() {
           <img src="/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png" alt="成功！" width={140} height={140} className="bear-jump" />
           <h2 className="text-2xl font-bold text-slate-800 fade-in-scale">申請が完了しました！</h2>
           <p className="text-sm text-slate-500 fade-in-scale" style={{ animationDelay: '0.2s' }}>承認されるまでしばらくお待ちください</p>
-          <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-[#7f19e6] animate-spin mt-4" />
+          <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-[#0066ff] animate-spin mt-4" />
           <p className="text-xs text-slate-400">申請一覧に戻ります...</p>
         </div>
       </>
@@ -252,14 +248,14 @@ function NewRequestContent() {
             />
           </div>
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-            step === 1 ? 'bg-[#7f19e6] text-white' : 'bg-[#7f19e6]/10 text-[#7f19e6]'
+            step === 1 ? 'bg-[#0066ff] text-white' : 'bg-[#0066ff]/10 text-[#0066ff]'
           }`}>
             <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
             種類を選択
           </div>
           <div className="w-6 h-px bg-slate-300" />
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-            step === 2 ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-400'
+            step === 2 ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-400'
           }`}>
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
               step === 2 ? 'bg-white/20' : 'bg-slate-200'
@@ -281,7 +277,7 @@ function NewRequestContent() {
                 className={`relative text-left transition-all rounded-xl border select-none ${
                   t.disabled
                     ? 'border-slate-200 bg-slate-50 cursor-not-allowed p-4'
-                    : 'border-slate-200 bg-white hover:border-[#7f19e6] hover:shadow-md hover:shadow-[#7f19e6]/10 active:scale-[0.98] cursor-pointer p-5'
+                    : 'border-slate-200 bg-white hover:border-[#0066ff] hover:shadow-md hover:shadow-[#0066ff]/10 active:scale-[0.98] cursor-pointer p-5'
                 }`}
               >
                 {t.disabled && (
@@ -313,7 +309,7 @@ function NewRequestContent() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 fade-in-up">
             <div>
               <h2 className="font-bold text-slate-700 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">
+                <span className="material-symbols-outlined text-[#0066ff]">
                   {type === 'clock_fix' ? 'edit_clock' : type === 'leave' ? 'event_busy' : type === 'overtime' ? 'more_time' : 'work_history'}
                 </span>
                 {type === 'clock_fix' ? '打刻修正申請' : type === 'leave' ? '休暇申請' : type === 'overtime' ? '残業申請' : '休日出勤申請'}
@@ -362,7 +358,7 @@ function NewRequestContent() {
                 required
                 value={fixDate}
                 onChange={(e) => setFixDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
               />
             </div>
 
@@ -374,7 +370,7 @@ function NewRequestContent() {
               <select
                 value={fixClockType}
                 onChange={(e) => { setFixClockType(e.target.value); setFixRecordId('') }}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
               >
                 {Object.entries(CLOCK_TYPE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -404,7 +400,7 @@ function NewRequestContent() {
                 required
                 value={fixTime}
                 onChange={(e) => setFixTime(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
               />
             </div>
             </div>)}
@@ -476,10 +472,10 @@ function NewRequestContent() {
 
             {/* Preview of change */}
             {preview && (
-              <div className="p-3 rounded-xl bg-[#7f19e6]/5 border border-[#7f19e6]/10 flex items-start gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6] text-base mt-0.5">info</span>
+              <div className="p-3 rounded-xl bg-[#0066ff]/5 border border-[#0066ff]/10 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[#0066ff] text-base mt-0.5">info</span>
                 <div>
-                  <p className="text-xs font-medium text-[#7f19e6]">変更内容のプレビュー</p>
+                  <p className="text-xs font-medium text-[#0066ff]">変更内容のプレビュー</p>
                   <p className="text-sm text-slate-700 mt-0.5">{preview}</p>
                 </div>
               </div>
@@ -496,14 +492,14 @@ function NewRequestContent() {
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder={type === 'clock_fix' ? '例: 打刻を忘れたため' : type === 'leave' ? '例: 私用のため' : type === 'overtime' ? '例: プロジェクト納期対応のため' : '例: イベント対応のため'}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] resize-none bg-white"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] resize-none bg-white"
               />
             </div>
 
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full py-3.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-[#7f19e6]/20"
+              className="w-full py-3.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-[#0066ff]/20"
             >
               {submitting ? (
                 <>

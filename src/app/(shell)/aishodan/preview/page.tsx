@@ -106,7 +106,7 @@ export default function AishodanPreviewPage() {
         setMemberships(memberships)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current) notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
     } finally {
       if (version === loadVersion.current) setLoading(false)
     }
@@ -135,7 +135,7 @@ export default function AishodanPreviewPage() {
         setSessionCursor(page.nextCursor)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '続きを取得できませんでした')
+      if (version === loadVersion.current) notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '続きを取得できませんでした')
     } finally {
       if (version === loadVersion.current) setLoadingMore(null)
     }
@@ -158,7 +158,7 @@ export default function AishodanPreviewPage() {
       // ⚠️ 別タブで開く。この画面は残しておき、話した後にすぐログを見返せるようにする。
       window.open(`/m/${d.token}`, '_blank', 'noopener')
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '練習を開始できませんでした')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '練習を開始できませんでした')
     } finally {
       setStarting(false)
     }

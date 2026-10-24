@@ -13,10 +13,10 @@ type Ctx = { params: Promise<{ id: string; operationId: string }> }
 async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'DELETE') {
   try {
     const session = await getServerSession(authOptions)
-    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    if (!(session?.user as { id?: string } | undefined)?.id) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     const hrCtx = await getHrContext()
-    if (!hrCtx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
-    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return privateApiJson({ error: 'Forbidden' }, { status: 403 })
+    if (!hrCtx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     if (req.headers.get('X-HR-Organization-Id') !== hrCtx.organizationId) return privateApiJson({ error: '保存対象の組織を確認してください。' }, { status: 403 })
     const { id, operationId } = await ctx.params
     if (!id || !validHrEvaluationPeriodOperationId(operationId)) return privateApiJson({ error: '保存操作の情報を確認してください。' }, { status: 400 })

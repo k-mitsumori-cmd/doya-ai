@@ -4,9 +4,10 @@ import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { formatCurrency, formatCurrencyWithSign, formatPercent, formatDuration, profitEmoji, profitColorClass, PROJECT_STATUS_LABELS } from "@/lib/promane/format";
+import { formatCurrency, formatCurrencyWithSign, formatPercent, formatDuration, profitColorClass, PROJECT_STATUS_LABELS } from "@/lib/promane/format";
 import { ReportChart } from "@/components/promane/report-chart";
 import Image from "next/image";
+import { Building2 } from "lucide-react";
 
 export default async function ReportsPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const session = await requirePromaneAuth();
@@ -118,7 +119,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                         : pr.profit < 0 ? "text-rose-600"
                         : "text-gray-500"
                       }`}>
-                        {profitEmoji(pr.profit)} {formatCurrencyWithSign(pr.profit)}
+                        {formatCurrencyWithSign(pr.profit)}
                       </td>
                       <td className={`px-4 py-4 text-right text-[15px] font-black ${
                         pr.profit > 0 ? "text-emerald-600"
@@ -143,7 +144,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
 
           <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm overflow-hidden animate-slide-up stagger-3">
             <div className="flex items-center gap-2.5 px-7 py-5 border-b border-gray-100">
-              <span className="text-xl">🏢</span>
+              <Building2 size={20} aria-hidden className="text-gray-700" />
               <h2 className="text-[18px] font-black text-gray-900">顧客別集計</h2>
             </div>
             <div className="overflow-x-auto">
@@ -173,7 +174,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                           : profit < 0 ? "text-rose-600"
                           : "text-gray-500"
                         }`}>
-                          {profitEmoji(profit)} {formatCurrencyWithSign(profit)}
+                          {formatCurrencyWithSign(profit)}
                         </td>
                         <td className={`px-6 py-4 text-right text-[15px] font-black ${
                           profit > 0 ? "text-emerald-600"

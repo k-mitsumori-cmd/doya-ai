@@ -45,7 +45,7 @@ const STATUS_ORDER: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 
 const STATUS_COLOR: Record<LeadStatus, string> = {
   new: 'bg-sky-100 text-sky-700',
   working: 'bg-amber-100 text-amber-700',
-  nurturing: 'bg-violet-100 text-violet-700',
+  nurturing: 'bg-brand-50 text-brand-600',
   qualified: 'bg-green-100 text-green-700',
   converted: 'bg-slate-200 text-slate-600',
   disqualified: 'bg-slate-100 text-slate-400',
@@ -170,7 +170,7 @@ export default function SfaLeadsPage() {
   const doImport = async () => {
     if (!mutations.active() || mutations.creationBlocked('import')) return
     let rows: ReturnType<typeof parseLeadCsv>
-    try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error ? error.message : 'CSVを確認してください。'); return }
+    try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'CSVを確認してください。'); return }
     const revision = importDraft.current.revision
     setFormError(''); setImportResult('')
     const result = await mutations.create('import', 'lead-import:create', { source: 'csv', rows })

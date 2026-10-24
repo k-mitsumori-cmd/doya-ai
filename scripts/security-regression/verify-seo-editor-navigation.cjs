@@ -1,5 +1,6 @@
 const fs = require('node:fs'), vm = require('node:vm'), ts = require('typescript'), assert = require('node:assert/strict');
 const { check, results } = require('./load-typescript.cjs');
+const {seoUserMessage}=require('./load-typescript.cjs').load('src/components/seo/user-message.ts');
 const source = fs.readFileSync('src/app/(shell)/seo/articles/[id]/edit/page.tsx', 'utf8');
 const ast = ts.createSourceFile('editor.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let effect;
@@ -11,7 +12,7 @@ visit(ast);
 function fixture() {
   let resolve, reject;
   const state = {}, updates = [];
-  const env = { articleId: 'a', Error, fetch: () => new Promise((r,j) => { resolve=r; reject=j; }) };
+  const env = { articleId: 'a', Error, seoUserMessage, fetch: () => new Promise((r,j) => { resolve=r; reject=j; }) };
   for (const key of ['Loading','Error','Article','Content','OriginalContent']) env['set'+key] = value => {state[key]=value; updates.push(key)};
   const cleanup = vm.runInNewContext(ts.transpileModule('('+effect+')', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, env)();
   return {state,updates,cleanup,respond:body=>resolve(Response.json(body)),reject:e=>reject(e)};

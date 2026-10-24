@@ -130,7 +130,7 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
       </div>
 
       {/* FAQ */}
-      <div className="rounded-[28px] bg-gradient-to-br from-blue-50 to-violet-50 ring-1 ring-blue-200 p-7 mb-6">
+      <div className="rounded-[28px] bg-gradient-to-br from-blue-50 to-brand-50 ring-1 ring-blue-200 p-7 mb-6">
         <div className="flex items-center gap-3 mb-5">
           <Image src="/character/thinking.png" alt="" width={48} height={48} unoptimized />
           <h2 className="text-[22px] font-black text-gray-900">よくある質問</h2>
@@ -148,8 +148,8 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
         <p className="mt-3 text-[17px] font-black text-gray-900">困ったら気軽に連絡してね！</p>
         <p className="mt-1 text-[12px] text-gray-500 font-bold">バグ報告・機能要望はワンクリックで Slack に届きます</p>
         <div className="mt-4 flex justify-center">
-          <FeedbackButton variant="inline" className="rounded-full h-12 px-7 text-[14px] font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white shadow-lg">
-            🐛 不具合を報告 / 💡 要望を送る
+          <FeedbackButton variant="inline" className="rounded-full h-12 px-7 text-[14px] font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 text-white shadow-lg">
+            不具合・要望を送る
           </FeedbackButton>
         </div>
         <p className="mt-3 text-[12px] text-gray-400">通常 1営業日以内に対応します</p>

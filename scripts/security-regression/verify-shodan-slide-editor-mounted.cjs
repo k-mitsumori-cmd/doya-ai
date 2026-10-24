@@ -29,6 +29,8 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
   if(n==='./ShodanSidebar')return{__esModule:true,default:Null}
   if(n==='lucide-react')return new Proxy({},{get:()=>Null})
   if(n==='framer-motion')return{AnimatePresence:({children})=>children,motion:new Proxy({},{get:(_,tag)=>({children})=>React.createElement(tag,null,children)})}
+  // window.confirm の代わりの確認ダイアログ。答え（confirmed）と回数（confirms）は今までと同じに数える
+  if(n==='@/components/ds/dialog')return{confirmDialog:async()=>{confirms++;return confirmed},alertDialog:async()=>{}}
   if(n==='react-hot-toast')return{__esModule:true,default:{success:m=>notices.push(m),error:m=>notices.push(m)}}
   const resolved=n.startsWith('@/')?path.join('src',n.slice(2)):n.startsWith('.')?path.join(path.dirname(file),n):null
   if(resolved){for(const ext of ['.ts','.tsx'])if(fs.existsSync(path.join(root,resolved+ext)))return load(resolved+ext)}

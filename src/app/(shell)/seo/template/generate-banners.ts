@@ -113,7 +113,7 @@ function getBrandColors(template: typeof articleTemplates[0]): string[] {
   } else if (template.category === 'howto') {
     return ['#10B981', '#059669'] // グリーン系
   } else if (template.category === 'case') {
-    return ['#8B5CF6', '#A855F7'] // パープル系
+    return ['#3d80ff', '#3d80ff'] // パープル系
   }
   return ['#2563EB', '#6366F1']
 }

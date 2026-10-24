@@ -82,7 +82,7 @@ export default function NewProject() {
           setLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
           if (cause.code === 'CREATION_SCOPE_CHANGED') creationAttempt.current = null
         }
-        setError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから同じ操作を再試行してください。')
+        setError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確かめてから、もう一度お試しください。')
         activeCreate.current = null
         setLoading(false)
       }
@@ -110,7 +110,7 @@ export default function NewProject() {
         {/* プロジェクト名 */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">edit</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">edit</span>
             プロジェクト名 <span className="text-red-500">*</span>
           </label>
           <input
@@ -119,14 +119,14 @@ export default function NewProject() {
             maxLength={200}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="例: 山田太郎氏インタビュー記事"
-            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] outline-none transition-all"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] outline-none transition-all"
           />
         </div>
 
         {/* ジャンル選択 */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">category</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">category</span>
             ジャンル
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -137,11 +137,11 @@ export default function NewProject() {
                 onClick={() => setGenre(genre === g.value ? '' : g.value)}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm border transition-all ${
                   genre === g.value
-                    ? 'border-[#7f19e6] bg-[#7f19e6]/5 text-[#7f19e6] font-medium'
+                    ? 'border-[#0066ff] bg-[#0066ff]/5 text-[#0066ff] font-medium'
                     : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
-                <span className={`material-symbols-outlined text-lg ${genre === g.value ? 'text-[#7f19e6]' : 'text-slate-400'}`}>
+                <span className={`material-symbols-outlined text-lg ${genre === g.value ? 'text-[#0066ff]' : 'text-slate-400'}`}>
                   {g.icon}
                 </span>
                 <span>{g.label}</span>
@@ -153,7 +153,7 @@ export default function NewProject() {
         {/* インタビュー対象者 */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">person</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">person</span>
             インタビュー対象者（任意）
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -165,7 +165,7 @@ export default function NewProject() {
             maxLength={100}
                 onChange={(e) => setIntervieweeName(e.target.value)}
                 placeholder="名前"
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] transition-all"
               />
             </div>
             <div className="relative">
@@ -176,7 +176,7 @@ export default function NewProject() {
             maxLength={100}
                 onChange={(e) => setIntervieweeCompany(e.target.value)}
                 placeholder="会社名"
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] transition-all"
               />
             </div>
             <div className="relative">
@@ -187,7 +187,7 @@ export default function NewProject() {
             maxLength={100}
                 onChange={(e) => setIntervieweeRole(e.target.value)}
                 placeholder="役職"
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] transition-all"
               />
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function NewProject() {
         {/* テーマ */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">topic</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">topic</span>
             取材テーマ（任意）
           </label>
           <textarea
@@ -205,14 +205,14 @@ export default function NewProject() {
             onChange={(e) => setTheme(e.target.value)}
             placeholder="例: DX推進の取り組みと成果について"
             rows={2}
-            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] resize-none transition-all"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] resize-none transition-all"
           />
         </div>
 
         {/* 想定読者 */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">groups</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">groups</span>
             想定読者（任意）
           </label>
           <input
@@ -221,14 +221,14 @@ export default function NewProject() {
             maxLength={200}
             onChange={(e) => setTargetAudience(e.target.value)}
             placeholder="例: IT企業の経営者・決裁者"
-            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] transition-all"
           />
         </div>
 
         {/* トーン */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">record_voice_over</span>
+            <span className="material-symbols-outlined text-[#0066ff] text-lg">record_voice_over</span>
             トーン
           </label>
           <div className="flex gap-2 flex-wrap">
@@ -239,7 +239,7 @@ export default function NewProject() {
                 onClick={() => setTone(t.value)}
                 className={`px-4 py-2 rounded-lg text-sm border transition-all ${
                   tone === t.value
-                    ? 'border-[#7f19e6] bg-[#7f19e6]/5 text-[#7f19e6] font-medium'
+                    ? 'border-[#0066ff] bg-[#0066ff]/5 text-[#0066ff] font-medium'
                     : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
@@ -272,7 +272,7 @@ export default function NewProject() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-[#7f19e6] text-white rounded-lg hover:bg-[#6b12c9] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0066ff] text-white rounded-lg hover:bg-[#0047d6] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors shadow-sm"
           >
             {loading ? (
               <>
