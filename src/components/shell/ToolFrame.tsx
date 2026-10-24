@@ -39,7 +39,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   // （新しい見た目のときだけ。統括の確認 2026-10-19）
   const uiNext = useUiNext()
   const usage = useToolUsageBody()
-  const tabsRef = useRef<HTMLDivElement | null>(null)
+  const tabsRef = useRef<HTMLElement | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   useEffect(() => {
     const el = tabsRef.current
@@ -96,17 +96,18 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
           ) : null}
         </div>
         {nav?.length ? (
-          <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label={`${name}のメニュー`} data-more-left={more.left ? 'true' : undefined} data-more-right={more.right ? 'true' : undefined}>
+          <nav ref={tabsRef} className={styles.tabs} aria-label={`${name}のメニュー`} data-more-left={more.left ? 'true' : undefined} data-more-right={more.right ? 'true' : undefined}>
             {nav.map((item) => {
               const active = isNavActive(pathname, item)
               return (
-                <Link key={item.href} href={item.href} className={styles.tab} role="tab" aria-selected={active} aria-current={active ? 'page' : undefined}>
+                // ページを移るリンクなので role="tab" は付けない（点検 FRM-04・A11Y-05）。今のページは aria-current で伝える
+                <Link key={item.href} href={item.href} className={styles.tab} aria-current={active ? 'page' : undefined}>
                   {item.icon ? <ShellIcon name={item.icon} size={16} /> : null}
                   {item.label}
                 </Link>
               )
             })}
-          </div>
+          </nav>
         ) : null}
       </div>
       <div className={styles.body} data-aside={aside ? 'true' : undefined}>

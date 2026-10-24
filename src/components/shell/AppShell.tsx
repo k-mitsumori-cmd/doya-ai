@@ -107,7 +107,8 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
 
   return (
     <div className={styles.paletteScrim} onClick={onClose}>
-      <div className={styles.palette} role="dialog" aria-modal="true" aria-label="ツールを探す" onClick={(e) => e.stopPropagation()}>
+      {/* Esc は窓のどこにいても効く（入力欄の外にいるときも。点検 A11Y-03） */}
+      <div className={styles.palette} role="dialog" aria-modal="true" aria-label="ツールを探す" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }}>
         <div className={styles.paletteInputRow}>
           <Search size={18} aria-hidden />
           <input
@@ -118,7 +119,6 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
               if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((i) => Math.min(results.length - 1, i + 1)) }
               if (e.key === 'ArrowUp') { e.preventDefault(); setIndex((i) => Math.max(0, i - 1)) }
               if (e.key === 'Enter') { e.preventDefault(); go(results[index]) }
-              if (e.key === 'Escape') onClose()
             }}
             placeholder="ツール名ややりたいことで探す"
             aria-label="ツールを探す"
@@ -204,13 +204,16 @@ export default function AppShell({ children, userName, initialRecent }: {
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     const picked = recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t))
     const fill = groups.flatMap((g) => g.tools).filter((t) => !recent.includes(t.id))
-    // 新しい見た目のスマホの下のタブは「ホーム・最近使ったツール2つ・すべて・アカウント」の決まった並び（UI 品質 S-4）
-    return [...picked, ...fill].slice(0, uiNext ? 2 : 3)
+    // 新しい見た目のスマホの下のタブは「ホーム・すべて・アカウント」の決まった並び。使ったツールで入れ替えない
+    // （2026-10-24 分かりやすさの点検 FRM-03。左下と同じく、場面で中身が変わると分かりにくい）
+    if (uiNext) return []
+    return [...picked, ...fill].slice(0, 3)
   }, [recent, groups, uiNext])
 
-  // 左のメニューの上に出す「最近使ったツール」（新しい見た目のときだけ。UI 品質 S-1）
+  // 左のメニューの「最近使ったツール」は出さない（2026-10-24 分かりやすさの点検 FRM-02。画面を移るたびに並びが入れ替わるため）。
+  // 最近の記録（cookie・localStorage）は残す。並びの固定された欄（経営ホームなど）で使う
   const recentTools = useMemo(() => {
-    if (!uiNext) return []
+    if (uiNext) return []
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     return recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t) && t!.id !== 'home').slice(0, 3)
   }, [recent, uiNext])

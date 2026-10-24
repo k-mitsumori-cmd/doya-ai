@@ -107,7 +107,10 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.deepEqual(loadings.sort(),['src/app/(shell)/banner/dashboard/loading.tsx','src/app/(shell)/popup/edit/[id]/loading.tsx','src/app/(shell)/popup/sites/[id]/loading.tsx']);
     assert.match(read('src/app/(shell)/template.tsx'),/if \(!uiNext\) return <>\{children\}<\/>/);
     const shell=read('src/components/shell/AppShell.tsx');
-    assert.match(shell,/if \(!uiNext\) return \[\]/);
+    // 2026-10-24 分かりやすさの点検（FRM-02・03）: 新しい見た目では、左のメニューの「最近使ったツール」と、
+    // スマホの下のタブの入れ替わる2枠を出さない（どの画面でも同じ並び。今の見た目は今までどおり）
+    assert.match(shell,/const recentTools = useMemo\(\(\) => \{\n    if \(uiNext\) return \[\]/);
+    assert.match(shell,/if \(uiNext\) return \[\]\n    return \[\.\.\.picked, \.\.\.fill\]\.slice\(0, 3\)/);
     assert.match(shell,/withIntents=\{uiNext\}/);
     assert.match(shell,/\{uiNext \? \(\s*<button type="button" className=\{styles\.tab\} onClick=\{openAccount\}>/);
     assert.match(read('src/components/DashboardSidebar.tsx'),/if \(inShell && uiNext\) return null/);
