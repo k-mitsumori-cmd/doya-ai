@@ -9,6 +9,7 @@ import SfaPageHeading from '@/components/sfa/PageHeading'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Trash2 } from 'lucide-react'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface Member {
   id: string
@@ -92,7 +93,7 @@ export default function SfaMembersPage() {
       else toast.error('招待メールの送信を確認できませんでした。招待リンクをご確認ください。')
       load()
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '招待できませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setBusy(false)
     }
@@ -112,14 +113,17 @@ export default function SfaMembersPage() {
       if (!res.ok) throw new Error(d.error)
       toast.success('権限を変更しました')
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '権限を変えられませんでした。通信を確かめて、もう一度お試しください。')
       load()
     }
   }
 
   const remove = async (m: Member) => {
-    const label = m.status === 'PENDING' ? '招待を取り消しますか？' : `${m.name || m.inviteEmail} を削除しますか？`
-    if (!window.confirm(label)) return
+    const pendingInvite = m.status === 'PENDING'
+    const ok = await confirmDialog(pendingInvite
+      ? { title: `${m.inviteEmail || m.name} への招待を取り消しますか？`, message: '送った招待のリンクは使えなくなります。', confirmLabel: '取り消す', tone: 'danger' }
+      : { title: `${m.name || m.inviteEmail} をメンバーから外しますか？`, message: 'この組織のデータを見られなくなります。', confirmLabel: '削除する', tone: 'danger' })
+    if (!ok) return
     try {
       const res = await fetch(`/api/sfa/members/${m.id}`, sfaInit(orgSlug, { method: 'DELETE' }))
       const d = await res.json()
@@ -127,7 +131,7 @@ export default function SfaMembersPage() {
       toast.success(m.status === 'PENDING' ? '招待を取り消しました' : '削除しました')
       setMembers((prev) => prev.filter((x) => x.id !== m.id))
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '削除できませんでした。通信を確かめて、もう一度お試しください。')
     }
   }
 

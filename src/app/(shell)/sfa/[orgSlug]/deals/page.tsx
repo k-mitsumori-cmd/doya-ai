@@ -609,7 +609,7 @@ export default function SfaDealsPage() {
         </div>
         <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
           <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className={uiNext ? 'min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
-            {uiNext ? <Download className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">download</span>}CSV出力
+            {uiNext ? <Download className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">download</span>}CSVを書き出す
           </a>
           <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className={uiNext ? 'min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
             {uiNext ? <Plus className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">add</span>}商談を追加
@@ -754,7 +754,7 @@ export default function SfaDealsPage() {
                               </p>
                             ) : (
                             <p className="text-[11px] font-bold text-slate-400 mt-0.5 truncate">
-                              {d.accountName ? `🏢 ${d.accountName}` : ''}{d.accountName && d.contactName ? '・' : ''}{d.contactName ? `👤 ${d.contactName}` : ''}
+                              {d.accountName ? `取引先: ${d.accountName}` : ''}{d.accountName && d.contactName ? '・' : ''}{d.contactName ? `担当: ${d.contactName}` : ''}
                             </p>
                             )
                           )}

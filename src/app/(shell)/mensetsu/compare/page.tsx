@@ -128,7 +128,7 @@ export default function ComparePage() {
       setNextCursor(json.nextCursor)
       setRevision(json.revision)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
+      if (version === requestVersion.current) notifyError(setError, cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : '比較結果を取得できませんでした')
     } finally {
       if (version === requestVersion.current) setLoadingCompare(false)
     }
@@ -163,7 +163,7 @@ export default function ComparePage() {
       setNextCursor(json.nextCursor)
       setMedians(json.medians)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
+      if (version === requestVersion.current) notifyError(setError, cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : '続きを取得できませんでした')
     } finally {
       if (version === requestVersion.current) setLoadingMore(false)
     }

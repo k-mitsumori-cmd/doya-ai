@@ -69,7 +69,7 @@ export default function AioSettingsPage() {
         version.current = stamp
         ready.current = guard.identity
       })
-      .catch((e) => { if (ticket.current()) { setLoadError(e instanceof Error ? e.message : 'ブランド設定を読み込めませんでした'); if (e instanceof AioApiError && e.status === 401) guard.rejectAuthentication() } })
+      .catch((e) => { if (ticket.current()) { setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : 'ブランド設定を読み込めませんでした'); if (e instanceof AioApiError && e.status === 401) guard.rejectAuthentication() } })
       .finally(() => { if (ticket.current()) setLoading(false); ticket.end() })
     return () => ticket.end()
   }, [guard.key, retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -89,7 +89,7 @@ export default function AioSettingsPage() {
       setError(null)
       setSaved(false)
       setNotice('保存済みの設定を再確認しました。入力中の内容は保持しています。確認してから保存してください。')
-    } catch (e) { if (ticket.current()) { setError(e instanceof Error ? e.message : '設定を確認できませんでした'); if (e instanceof AioApiError && e.status === 401) guard.rejectAuthentication() } }
+    } catch (e) { if (ticket.current()) { setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '設定を確認できませんでした'); if (e instanceof AioApiError && e.status === 401) guard.rejectAuthentication() } }
     finally { if (ticket.current()) setChecking(false); ticket.end() }
   }
 
@@ -130,7 +130,7 @@ export default function AioSettingsPage() {
         pendingWrite.current = !rejected
         setUncertain(!rejected || e.status === 409)
       }
-      const msg = e?.message || '保存に失敗しました'
+      const msg = (/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '保存に失敗しました')
       toast.error(msg)
       setError(msg)
       if (e instanceof AioApiError && e.status === 401) guard.rejectAuthentication()

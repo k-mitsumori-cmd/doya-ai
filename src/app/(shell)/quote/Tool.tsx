@@ -268,7 +268,7 @@ export default function QuoteTool() {
         const failStatus = e instanceof QuoteLoadError || e instanceof OrgResponseError ? e.status : 0
         setLoadFailStatus(failStatus)
         // 新しい見た目では、トーストにも生の文（英語の状態の文など）を出さない
-        notifyError(setError, uiNext ? quoteErrorCopy(quoteErrorKind(failStatus), '見積書と商材').what : e instanceof Error ? e.message : '読み込みに失敗しました')
+        notifyError(setError, uiNext ? quoteErrorCopy(quoteErrorKind(failStatus), '見積書と商材').what : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
       }
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoading(false)
@@ -312,7 +312,7 @@ export default function QuoteTool() {
       setProducts(merged)
       setProductCursor(page.nextCursor)
     } catch (error) {
-      if (listVersion.current === version && context.isCurrent(epoch)) setProductPageError(error instanceof Error ? error.message : '商材を読み込めませんでした')
+      if (listVersion.current === version && context.isCurrent(epoch)) setProductPageError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '商材を読み込めませんでした')
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoadingMoreProducts(false)
     }
@@ -333,7 +333,7 @@ export default function QuoteTool() {
       setDocs(merged)
       setDocumentCursor(page.nextCursor)
     } catch (error) {
-      if (listVersion.current === version && context.isCurrent(epoch)) setDocumentPageError(error instanceof Error ? error.message : '見積書を読み込めませんでした')
+      if (listVersion.current === version && context.isCurrent(epoch)) setDocumentPageError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '見積書を読み込めませんでした')
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoadingMoreDocuments(false)
     }
@@ -369,7 +369,7 @@ export default function QuoteTool() {
       if (!context.isCurrent(epoch)) return
       uncertain = e instanceof OrgResponseError
       setOrganizationUncertain(uncertain)
-      notifyError(setError, e instanceof Error ? e.message : '組織を作成できませんでした。通信状態をご確認ください')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '組織を作成できませんでした。通信状態をご確認ください')
     } finally {
       if (context.isCurrent(epoch)) {
         if (!uncertain) creatingOrgRequest.current = false
@@ -407,7 +407,7 @@ export default function QuoteTool() {
       setProductName(d.profile?.companyName || '')
     } catch (e) {
       if (!context.isCurrent(epoch)) return
-      notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '解析に失敗しました')
     } finally {
       if (context.isCurrent(epoch)) {
         setAnalyzing(false)
@@ -475,7 +475,7 @@ export default function QuoteTool() {
       setProductSaveUncertain(uncertain)
       const message = !responseReceived
         ? '通信が切れました。保存された可能性があります。商材一覧を再読み込みしてから再試行してください'
-        : e instanceof Error ? e.message : '商材を登録できませんでした'
+        : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '商材を登録できませんでした'
       notifyError(setError, message)
     } finally {
       if (context.isCurrent(epoch)) {
@@ -525,7 +525,7 @@ export default function QuoteTool() {
       setRevealSeq((n) => n + 1)
     } catch (e) {
       if (!context.isCurrent(epoch)) return
-      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '生成に失敗しました')
     } finally {
       if (context.isCurrent(epoch)) {
         setSuggesting(false)
@@ -592,7 +592,7 @@ export default function QuoteTool() {
       })
     } catch (e) {
       if (!context.isCurrent(epoch)) return
-      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '生成に失敗しました')
     } finally {
       if (context.isCurrent(epoch)) setEstimating((prev) => {
         const n = new Set(prev)
@@ -670,7 +670,7 @@ export default function QuoteTool() {
       const uncertain = e instanceof OrgResponseError
       setDocumentUncertain(uncertain)
       if (!uncertain && !limited) creatingDocumentRequest.current = false
-      notifyError(setError, e instanceof Error ? e.message : '作成に失敗しました')
+      notifyError(setError, e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '作成に失敗しました')
       setCreating(false)
     }
   }
@@ -773,21 +773,21 @@ export default function QuoteTool() {
         operationKey="quote-analyzing"
         title="サービスを解析しています"
         subtitle="ページを読み取って、見積もりの品目候補と相場を組み立てています。"
-        tips={['Tip: 品目は後から自由に追加・編集できます', 'Tip: 金額の出所（自社価格 / 相場 / AI推定 / 手入力）が1件ずつ表示されます', 'Tip: 確定するとPDFの「社内確認用」透かしが消えます']}
+        tips={['品目は後から自由に追加・編集できます', '金額の出所（自社価格 / 相場 / AI推定 / 手入力）が1件ずつ表示されます', '確定するとPDFの「社内確認用」透かしが消えます']}
       />
       <LoadingProgress
         isLoading={creating}
         operationKey="quote-creating"
         title="見積書を作成しています"
         subtitle="品目と税区分を計算して、見積書の形に整えています。"
-        tips={['Tip: 発行者情報を設定しておくと、以後の見積書すべてに反映されます', 'Tip: 確定はマネージャー以上が行えます']}
+        tips={['発行者情報を設定しておくと、以後の見積書すべてに反映されます', '確定はマネージャー以上が行えます']}
       />
       <LoadingProgress
         isLoading={suggesting}
         operationKey="quote-suggest"
         title="品目の候補を作っています"
         subtitle="商材と相場から、見積書に載せる品目を組み立てています。"
-        tips={['Tip: 想定予算を入れると、その範囲に寄せた構成になります', 'Tip: 相手の状況を書くほど、刺さる品目が出ます', 'Tip: 出てきた品目は追加・削除・単価変更が自由にできます']}
+        tips={['想定予算を入れると、その範囲に寄せた構成になります', '相手の状況を書くほど、刺さる品目が出ます', '出てきた品目は追加・削除・単価変更が自由にできます']}
       />
       {/* ⚠️ 新しい見た目では、見出し（h1）と組織の切り替えは枠（ToolFrame）の1か所だけにする（S-31・S-57） */}
       {!uiNext && <header className="border-b border-slate-200 bg-white">

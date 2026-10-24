@@ -23,7 +23,7 @@ export default function AioHistoryDetailPage() {
     void aioGet<{ scan: StoredScan }>(`/api/aio/scans/${encodeURIComponent(id)}`, orgSlug).then(data => {
       if (!data.scan || data.scan.id !== id) throw new Error('スキャン結果を確認できませんでした。')
       if (active) setScan(data.scan)
-    }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'スキャン結果を読み込めませんでした。') })
+    }).catch(cause => { if (active) setError(cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : 'スキャン結果を読み込めませんでした。') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [id, orgSlug])

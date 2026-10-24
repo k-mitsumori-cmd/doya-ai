@@ -75,7 +75,7 @@ export default function SfaTasksPage() {
       setLoadedPage(page)
       setHasMore(data.hasMore)
     } catch (error) {
-      if (sequence === loadSequenceRef.current && mutations.active()) { setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした', error) }
+      if (sequence === loadSequenceRef.current && mutations.active()) { setListError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'タスク一覧を取得できませんでした', error) }
     } finally {
       if (sequence === loadSequenceRef.current && mutations.active()) setListLoading(false)
     }
@@ -121,7 +121,7 @@ export default function SfaTasksPage() {
       setActsRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setActsError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
+        setActsError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '活動を取得できませんでした', error)
         setActsRetryCursor(cursor || null)
       }
     } finally {
@@ -214,7 +214,7 @@ export default function SfaTasksPage() {
         <div className="flex items-center gap-2 flex-wrap">
           {t.dealName && (
             <span className="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 truncate max-w-[12rem]">
-              {uiNext ? '商談: ' : '📈 '}{t.dealName}
+              商談: {t.dealName}
             </span>
           )}
           {t.dueDate && isOverdue(t) && <span className="text-[11px] font-bold text-red-500">期限切れ</span>}

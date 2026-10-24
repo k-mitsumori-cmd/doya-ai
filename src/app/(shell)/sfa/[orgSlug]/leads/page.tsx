@@ -172,7 +172,7 @@ export default function SfaLeadsPage() {
   const doImport = async () => {
     if (!mutations.active() || mutations.creationBlocked('import')) return
     let rows: ReturnType<typeof parseLeadCsv>
-    try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error ? error.message : 'CSVを確認してください。'); return }
+    try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'CSVを確認してください。'); return }
     const revision = importDraft.current.revision
     setFormError(''); setImportResult('')
     const result = await mutations.create('import', 'lead-import:create', { source: 'csv', rows })

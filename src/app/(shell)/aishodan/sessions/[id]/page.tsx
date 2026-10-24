@@ -16,6 +16,7 @@ import { DoyaKun } from '@/components/lp'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface Detail {
@@ -106,7 +107,7 @@ export default function AishodanSessionDetail() {
     } catch (e) {
       setLoadStatus(failureStatus(e))
       // 新しい見た目では、トーストにもサーバーの文を出さない
-      notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -159,7 +160,7 @@ export default function AishodanSessionDetail() {
       if (!res.ok) {
         // 手入力を上書きしてよいか、一度だけ確かめる
         if (j?.needsConfirm && !overwriteManual) {
-          if (window.confirm('この商談の判定は担当者が手で入力しています。AIの判定で上書きしますか。')) {
+          if (await confirmDialog({ title: 'AIの判定で上書きしますか？', message: 'この商談の判定は、担当者が手で入力したものです。', confirmLabel: '上書きする', tone: 'danger' })) {
             await reEvaluate(true, onRejected)
           }
           return

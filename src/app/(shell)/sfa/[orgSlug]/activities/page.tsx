@@ -85,7 +85,7 @@ export default function SfaActivitiesPage() {
       setRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
+        setLoadError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '活動を取得できませんでした', error)
         setRetryCursor(cursor || null)
       }
     } finally {

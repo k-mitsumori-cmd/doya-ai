@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation'
 import Avatar from '@/components/mensetsu/Avatar'
 import Waveform from '@/components/mensetsu/Waveform'
 import { useRealtimeInterview } from '@/lib/mensetsu/useRealtimeInterview'
+import { Skeleton } from '@/components/ds'
 
 interface PublicSession {
   token: string
@@ -78,6 +79,13 @@ export default function MensetsuLivePage() {
   const [showText, setShowText] = useState(true)
   const [draft, setDraft] = useState('')
   const [sheet, setSheet] = useState<null | 'agenda' | 'log'>(null)
+  // シートは Esc でも閉じられるようにする
+  useEffect(() => {
+    if (!sheet) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sheet])
   const selfVideoRef = useRef<HTMLVideoElement | null>(null)
   const camStreamRef = useRef<MediaStream | null>(null)
 
@@ -241,9 +249,13 @@ export default function MensetsuLivePage() {
 
   if (step === 'loading') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
+      <main className="min-h-screen bg-[#f2f6ff] px-5 py-12">
       <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
-        <p className="text-sm font-bold text-[#425071]">読み込んでいます…</p>
+        {/* 同意の画面と同じ置き場所に骨組みを出し、読み込み後に形が飛ばないようにする */}
+        <div className="mx-auto max-w-xl rounded-lg bg-white p-6 shadow-sm" aria-busy="true" aria-label="面接の情報を読み込んでいます">
+          <Skeleton lines={2} height={24} delayMs={0} />
+          <div className="mt-6"><Skeleton lines={5} height={16} delayMs={0} /></div>
+        </div>
       </main>
     )
   }
@@ -614,11 +626,14 @@ export default function MensetsuLivePage() {
       {sheet && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={() => setSheet(null)}>
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mensetsu-live-sheet-title"
             className="max-h-[70dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl lg:mb-8 lg:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-black text-[#0a0f3c]">
+              <h2 id="mensetsu-live-sheet-title" className="text-sm font-black text-[#0a0f3c]">
                 {sheet === 'agenda' ? '面接の進み方' : '会話ログ'}
               </h2>
               <button onClick={() => setSheet(null)} aria-label="閉じる" className="text-[#8a94ad]">

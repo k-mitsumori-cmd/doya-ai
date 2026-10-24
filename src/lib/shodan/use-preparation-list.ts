@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { confirmDialog } from '@/components/ds/dialog'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { ShodanApiError, shodanGet, shodanSend } from './client'
 import { appendPreparationPage, mergePreparationUpdates } from './preparation-pages'
@@ -16,7 +17,7 @@ export function usePreparationList(orgSlug: string) {
   const fail = (error: unknown) => {
     if (error instanceof ShodanApiError && [401,403].includes(error.status)) { state.current.ready = ''; state.current.error = error.message }
     if (error instanceof ShodanApiError && error.status === 401) latest.current.rejectAuthentication()
-    return error instanceof Error ? error.message : '保存内容を確認できませんでした。'
+    return error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '保存内容を確認できませんでした。'
   }
   const load = useCallback(async () => {
     if (latest.current.key !== key || state.current.busy?.key === key && state.current.busy.current()) return
@@ -60,7 +61,7 @@ export function usePreparationList(orgSlug: string) {
     if (!sameSnapshot() || pending.current && !(pending.current.id === id && pending.current.reviewed && !pending.current.acknowledged)) return
     const row = pending.current?.id === id && pending.current.reviewed ? pending.current.reviewedRow : items!.find(row=>row.id === id); if (!row) return
     const ticket = latest.current.begin('preparation-list'); if (!ticket) return
-    if (!window.confirm(`「${row.targetName || row.targetUrl}」を削除しますか？`) || !ticket.current()) { ticket.end(); return }
+    if (!(await confirmDialog({ title: `「${row.targetName || row.targetUrl}」を削除しますか？`, message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' })) || !ticket.current()) { ticket.end(); return }
     const operation: PendingDelete = {id,acknowledged:false,reviewed:false}; pending.current = operation
     state.current.busy = {key,current:ticket.current}; state.current.error = ''; state.current.notice = ''; redraw()
     try {

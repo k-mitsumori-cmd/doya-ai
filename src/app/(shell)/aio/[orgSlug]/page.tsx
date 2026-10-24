@@ -11,6 +11,7 @@ import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary
 import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
+import { AlertTriangle, Star } from 'lucide-react'
 import { EmptyState } from '@/components/ds'
 import { AreaChart, Bars, Donut, Ring } from '@/components/ds/charts'
 import { UiIcon } from '@/components/icons'
@@ -93,7 +94,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     } catch (e: any) {
       if (sequence === loadSequence.current) {
         setErrorSource('load')
-        setError(e?.message || 'データの読み込みに失敗しました')
+        setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : 'データの読み込みに失敗しました'))
       }
     } finally {
       if (sequence === loadSequence.current) setLoading(false)
@@ -116,11 +117,13 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     try {
       const result = await aioSend<{ summary?: { coverage?: ScanCoverageCounts } }>('/api/aio/scans', orgSlug, 'POST')
       const coverage = result.summary?.coverage
-      if (coverage?.failed) toast(`一部未測定（${coverage.succeeded}/${coverage.attempted} 回成功）。結果を確認してください。`, { id: 'scan', icon: '⚠️' })
+      if (coverage?.failed) toast(`一部を測れませんでした（${coverage.succeeded}/${coverage.attempted} 回成功）。結果を確かめてください。`, { id: 'scan', icon: <AlertTriangle size={18} className="text-amber-500" aria-hidden /> })
       else toast.success('スキャン完了', { id: 'scan' })
       await load()
     } catch (e: any) {
-      const msg = e?.message || 'スキャンに失敗しました'
+      const raw: string = (/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : 'スキャンできませんでした。時間をおいて、もう一度お試しください。')
+      // ⚠️ サーバーの「APIキー未設定」は内部の言葉。利用者には、ふだんの言葉で出す
+      const msg = /APIキー/.test(raw) ? 'いまはAIに問い合わせできません。時間をおいて、もう一度お試しください。' : raw
       toast.error(msg, { id: 'scan' })
       if (e instanceof AioApiError && e.code === 'LIMIT') {
         setScanLimit(msg)
@@ -228,7 +231,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       <span className="text-rose-500 mt-0.5 shrink-0">{sym('warning')}</span>
       <div className="min-w-0 flex-1">
         <div className="text-rose-800 font-black text-sm">前回のスキャンは失敗しました</div>
-        <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">APIキーの未設定やタイムアウトの可能性があります。もう一度スキャンを実行してください。</p>
+        <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">AIの応答が返らなかった可能性があります。少し時間をおいて、もう一度スキャンしてください。</p>
       </div>
       <button onClick={runScan} disabled={running || tooManyPrompts}
         className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
@@ -743,7 +746,7 @@ function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?:
             {summary.sov.slice(0, 10).map((s, i) => (
               <tr key={s.brand} className="border-b border-slate-50">
                 <td className="py-2 w-6 text-slate-400 font-bold">{i + 1}</td>
-                <td className={`py-2 font-bold ${s.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{s.brand}{s.isOwn && ' ★'}</td>
+                <td className={`py-2 font-bold ${s.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{s.brand}{s.isOwn && <span className="ml-1 inline-flex items-center gap-0.5 align-middle text-[10px] font-black"><Star size={12} className="fill-current" aria-hidden />自社</span>}</td>
                 <td className="py-2 text-right font-black text-slate-800">{s.pct}%</td>
               </tr>
             ))}
@@ -791,7 +794,7 @@ function CitationsTab({ summary, delta, locked, orgSlug }: { summary: Summary; d
             <tbody>
               {summary.citations.map((c) => (
                 <tr key={c.domain} className="border-b border-slate-50">
-                  <td className={`py-2 font-bold ${c.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{c.domain}{c.isOwn && ' ★'}</td>
+                  <td className={`py-2 font-bold ${c.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{c.domain}{c.isOwn && <span className="ml-1 inline-flex items-center gap-0.5 align-middle text-[10px] font-black"><Star size={12} className="fill-current" aria-hidden />自社</span>}</td>
                   <td className="py-2 text-slate-400 text-xs font-bold">{channelLabel[c.channel] || c.channel}</td>
                   <td className="py-2 text-right font-black text-slate-800">{c.count}</td>
                 </tr>

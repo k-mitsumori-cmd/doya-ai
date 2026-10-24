@@ -8,6 +8,7 @@ import { readOrgProfile } from '@/lib/org-profile-view'
 import { requestOrgJson, OrgResponseError, orgErrorMessage } from '@/lib/org-client-response'
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
+import { Skeleton } from '@/components/ds'
 
 type Profile = {
   companyName: string; url: string; description: string; valueProp: string
@@ -118,7 +119,7 @@ export default function ShodanSettingsPage() {
         setLogoPath((p?.logoPath as string) || null); setLogoUrl((p?.logoUrl as string) || null)
         version.current = stamp; ready.current = guard.identity
       })
-      .catch(e => { if (ticket.current()) { setLoadError(e instanceof Error ? e.message : '自社情報を読み込めませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
+      .catch(e => { if (ticket.current()) { setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '自社情報を読み込めませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
       .finally(() => { if (ticket.current()) setLoading(false); ticket.end() })
     return () => ticket.end()
   }, [guard.key, retry]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,7 +134,7 @@ export default function ShodanSettingsPage() {
       if (!ticket.current()) return
       version.current = result.version; setConfirmed({ profile: result.profile }); pendingWrite.current = false; setUncertain(false); setOperationError('')
       setNotice('保存済みの設定を再確認しました。入力中の内容は保持しています。確認してから保存してください。')
-    } catch (e) { if (ticket.current()) { setOperationError(e instanceof Error ? e.message : '設定を確認できませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } }
+    } catch (e) { if (ticket.current()) { setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '設定を確認できませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } }
     finally { if (ticket.current()) setChecking(false); ticket.end() }
   }
   const canEdit = () => guard.active() && ready.current === guard.identity && !flags.current.loading && !flags.current.loadError && !flags.current.uncertain && !pendingWrite.current && !flags.current.checking
@@ -154,7 +155,7 @@ export default function ShodanSettingsPage() {
       if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, res.status)
       revision.current++; draft.current = { ...draft.current, logoPath: d.path }; setLogoPath(d.path); setLogoUrl(d.url)
       setNotice('ロゴを読み込みました。設定を保存すると反映されます。')
-    } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
+    } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(err.message) ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
     finally { if (ticket.current()) setUploadingLogo(false); ticket.end() }
   }
 
@@ -185,7 +186,7 @@ export default function ShodanSettingsPage() {
     } catch (e) {
       if (!ticket.current()) return
       if (e instanceof ShodanApiError && e.code === 'SHODAN_PROFILE_DAILY_LIMIT') setExtractLimitMessage(e.message)
-      else setOperationError(e instanceof Error ? e.message : '自社情報の抽出に失敗しました')
+      else setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '自社情報の抽出に失敗しました')
       if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
     } finally { if (ticket.current()) setExtracting(false); ticket.end() }
   }
@@ -209,7 +210,7 @@ export default function ShodanSettingsPage() {
       if (!ticket.current()) return
       const rejected = e instanceof ShodanApiError && [400, 401, 403, 404, 409, 413, 422, 429].includes(e.status)
       pendingWrite.current = !rejected; setUncertain(!rejected || e instanceof ShodanApiError && e.status === 409)
-      setOperationError(e instanceof Error ? e.message : '保存結果を確認できませんでした')
+      setOperationError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '保存結果を確認できませんでした')
       if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
     } finally { if (ticket.current()) setSaving(false); ticket.end() }
   }
@@ -227,7 +228,7 @@ export default function ShodanSettingsPage() {
   }, [profile, gaps])
 
   if (guard.requiresLogin) return <div role="alert" className="p-6"><p>ログイン情報を確認できません。再度ログインしてください。</p><a className="mt-3 inline-block font-bold underline" href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${orgSlug}/settings`)}`}>ログイン情報を再確認する</a></div>
-  if (!guard.allowed || loading || !loadError && ready.current !== guard.identity) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
+  if (!guard.allowed || loading || !loadError && ready.current !== guard.identity) return <div className="p-6 md:p-8 max-w-2xl mx-auto" aria-busy="true" aria-label="自社情報を読み込んでいます"><PageHeader icon="business_center" title="自社情報" /><Skeleton lines={2} height={56} /><div className="mt-5"><Skeleton lines={6} height={18} /></div></div>
 
   if (loadError) return <div className="max-w-2xl mx-auto p-6"><PageHeader icon="settings" title="自社情報" />
     <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
@@ -246,63 +247,6 @@ export default function ShodanSettingsPage() {
       {notice && <p role="status" className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-800">{notice}</p>}
       {uncertain && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><p>保存結果または最新の設定を確認するまで、続けて操作できません。入力内容は保持しています。</p><button type="button" disabled={checking} onClick={confirmSaved} className="mt-2 font-bold underline">{checking ? '確認中…' : '保存済みの設定を確認する'}</button></div>}
       {extractionPreview && <div className="mb-4 rounded-xl border p-4"><details><summary>抽出結果を確認する</summary>{FIELDS.map(f => <p key={f.key} className="mt-2 whitespace-pre-wrap break-words text-sm"><strong>{f.label}</strong><br />{extractionPreview.suggested[f.key]}</p>)}</details><button type="button" onClick={() => applyExtraction(extractionPreview)} className="mt-3 font-bold underline">抽出結果を反映する</button></div>}
-      {/* ▼ 自社情報 抽出中 ド派手オーバーレイ ▼ */}
-      {extracting && (
-        <div className="fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-4
-          bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-700">
-          {/* 背景のキラキラ */}
-          {['top-10 left-8','top-24 right-12','bottom-16 left-16','bottom-28 right-24','top-1/2 left-6','top-1/3 right-1/4'].map((pos, i) => (
-            <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/30 animate-ping`}
-              style={{ fontSize: 18 + (i % 3) * 12, animationDuration: `${1.4 + i * 0.3}s` }}>
-              {i % 2 ? 'star' : 'auto_awesome'}
-            </span>
-          ))}
-          {/* 回転する光のリング */}
-          <div className="absolute w-[520px] h-[520px] rounded-full border-2 border-white/10 border-t-white/40 animate-spin" style={{ animationDuration: '6s' }} />
-          <div className="absolute w-[360px] h-[360px] rounded-full border-2 border-white/10 border-b-white/30 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
-
-          <div className="relative z-10 w-full max-w-md text-center text-white">
-            {/* ドヤくん（ステップごとに表情チェンジ＋ぴょこぴょこ） */}
-            <div className="relative inline-block animate-bounce" style={{ animationDuration: '1.4s' }}>
-              <div className="absolute inset-0 -z-10 blur-2xl bg-white/40 rounded-full scale-90" />
-              <DoyaKun mood={step.mood} size={150} float={false} />
-            </div>
-
-            {/* いま何をしているか（特大） */}
-            <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur text-sm font-black">
-              <span className="material-symbols-outlined animate-pulse" style={{ fontSize: 20 }}>{step.icon}</span>
-              自社情報をAIが抽出中
-            </div>
-            <h2 className="mt-4 text-3xl font-black drop-shadow-sm leading-tight">{step.title}</h2>
-            <p className="mt-2 text-white/90 font-bold">{step.sub}</p>
-            <p className="mt-1 text-xs font-bold text-white/60 truncate px-6">{extractUrl}</p>
-
-            {/* 進捗バー（シマー） */}
-            <div className="mt-6 mx-auto max-w-xs">
-              <div className="h-3 rounded-full bg-white/20 overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-amber-300 via-white to-amber-300 bg-[length:200%_100%] animate-pulse transition-all duration-700 ease-out"
-                  style={{ width: `${extractPct}%` }} />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs font-black text-white/80">
-                <span>解析中…</span><span>{extractPct}%</span>
-              </div>
-            </div>
-
-            {/* ステップ・ドット */}
-            <div className="mt-5 flex items-center justify-center gap-1.5 flex-wrap px-4">
-              {EXTRACT_STEPS.map((s, i) => (
-                <span key={i} className={`material-symbols-outlined rounded-full p-1 transition-all ${
-                  i < stepIdx ? 'text-emerald-300' : i === stepIdx ? 'text-white scale-125 bg-white/15' : 'text-white/30'}`}
-                  style={{ fontSize: 18 }}>
-                  {i < stepIdx ? 'check_circle' : s.icon}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 text-xs font-bold text-white/60">画面はそのままでOK。完了したら自動で反映されます ✨</p>
-          </div>
-        </div>
-      )}
-      {/* ▲ 抽出中オーバーレイ ▲ */}
 
       <PageHeader icon="business_center" title="自社情報" subtitle="ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。" />
 
@@ -324,6 +268,31 @@ export default function ShodanSettingsPage() {
         </div>
         <DoyaKun mood={extracting ? 'focus' : 'present'} size={110} className="!absolute -bottom-2 right-2" />
       </div>
+
+      {/* 自社情報の読み取り中。画面全体を覆わず、カードの中で進み具合を出す（見出しや他の欄はそのまま見える） */}
+      {extracting && (
+        <div role="status" aria-live="polite" className="mb-5 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined animate-pulse text-brand-600" style={{ fontSize: 22 }} aria-hidden>{step.icon}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-slate-800">{step.title}</p>
+              <p className="text-xs font-bold text-slate-500">{step.sub}</p>
+            </div>
+            <span className="text-sm font-black text-brand-600">{extractPct}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" aria-hidden>
+            <div className="h-full rounded-full bg-brand-500 transition-all duration-700 ease-out" style={{ width: `${extractPct}%` }} />
+          </div>
+          <ol className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="読み取りの手順">
+            {EXTRACT_STEPS.map((s, i) => (
+              <li key={i} className={`material-symbols-outlined rounded-full p-0.5 ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-brand-600' : 'text-slate-300'}`} style={{ fontSize: 18 }} aria-label={`${s.title}${i < stepIdx ? '（済み）' : i === stepIdx ? '（いま）' : ''}`}>
+                {i < stepIdx ? 'check_circle' : s.icon}
+              </li>
+            ))}
+          </ol>
+          <p className="mt-2 text-xs font-bold text-slate-500">この画面のままお待ちください。読み取りが終わると、下の欄に入ります。</p>
+        </div>
+      )}
 
       {/* 充足度メーター */}
       <div className="flex items-center gap-4 rounded-2xl bg-white border border-slate-200 p-4 mb-5">

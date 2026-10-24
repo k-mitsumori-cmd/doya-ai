@@ -97,7 +97,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
       }
       upgradeHref.current = error instanceof SfaClientRejection && error.upgradeUrl === '/sfa/pricing' ? '/sfa/pricing?org=' + encodeURIComponent(orgSlug) : null
       message.current = !persisted ? '操作記録を保存できないため、送信しませんでした。ブラウザの保存領域をご確認ください。'
-        : error instanceof Error ? error.message : '保存結果を確認できませんでした。保存結果を確認してください。'
+        : error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '保存結果を確認できませんでした。保存結果を確認してください。'
       return null
     } finally {
       if (operation.current()) { running.current.delete(entry.lane); publish() }
@@ -220,7 +220,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
           : '保存記録はありますが、データは現在開けません。新しく作成する前に管理者へご確認ください。'
       } else throw new OrgResponseError(cancel, 200)
     } catch (error) {
-      if (operation.current()) { message.current = error instanceof Error ? error.message : '結果を確認できませんでした。'; if (error instanceof SfaClientRejection && error.status === 401) guard.rejectAuthentication() }
+      if (operation.current()) { message.current = error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '結果を確認できませんでした。'; if (error instanceof SfaClientRejection && error.status === 401) guard.rejectAuthentication() }
     } finally {
       if (operation.current()) { running.current.delete(entry.lane); publish() }
       operation.end()

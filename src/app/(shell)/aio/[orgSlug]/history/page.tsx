@@ -39,7 +39,7 @@ export default function AioHistoryPage() {
       setItems(previous => next ? [...new Map([...previous, ...page.items].map(row => [row.id, row])).values()] : page.items)
       setCursor(page.nextCursor)
     } catch (cause) {
-      if (request === generation.current) setError(cause instanceof Error ? cause.message : '履歴を読み込めませんでした。')
+      if (request === generation.current) setError(cause instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(cause.message) ? cause.message : '履歴を読み込めませんでした。')
     } finally {
       if (request === generation.current) { setLoading(false); setMoreLoading(false) }
     }

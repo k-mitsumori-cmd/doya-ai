@@ -86,7 +86,7 @@ export default function MensetsuReportPage() {
         setLabelDone((prev) => ({ ...prev, [turn.id]: label }))
         setLabeling(null)
       } catch (e) {
-        setLabelError(e instanceof Error ? e.message : '登録できませんでした')
+        setLabelError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '登録できませんでした')
       } finally {
         setLabelBusy(false)
       }
@@ -514,7 +514,7 @@ export default function MensetsuReportPage() {
                             setHr((prev: any) => ({ ...prev, alreadyHandedOff: true }))
                             setHrMsg('ドヤHRへ登録しました。')
                           } catch (e) {
-                            setHrMsg(uiNext ? friendlyText(e, '登録できませんでした。時間をおいてもう一度お試しください。') : e instanceof Error ? e.message : '登録できませんでした')
+                            setHrMsg(uiNext ? friendlyText(e, '登録できませんでした。時間をおいてもう一度お試しください。') : e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '登録できませんでした')
                           } finally {
                             setHrBusy(false)
                           }

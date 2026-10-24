@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { confirmDialog } from '@/components/ds/dialog'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { ShodanApiError, shodanGet, shodanSend } from './client'
 import { readSlideEditor, readRegeneratedSlide, slideStructure, slideSlotKey } from './slide-editor-response'
@@ -75,11 +76,11 @@ export function useSlideEditor(orgSlug: string, id: string) {
       if (error instanceof ShodanApiError && (error.code==='PLAN'||error.code==='LIMIT')) state.current.notice={message:error.message,href:error.actionUrl,label:error.actionLabel}
     } finally { if(ticket.current()){state.current.busy=null;redraw()}ticket.end() }
   }
-  const retryAfterReview=()=>{
+  const retryAfterReview=async()=>{
     const operation=pending.current
     if (!sameSnapshot() || busyCurrent() || !operation || !prep || operation.reviewVersion!==prep.updatedAt || operation.structure!==slideStructure(prep)) return
     const ticket=latest.current.begin('slide-editor-action');if(!ticket)return
-    const confirmed=window.confirm('前回の生成結果を確定できませんでした。確認した保存版と現在の指示をもとに再生成しますか？')
+    const confirmed=await confirmDialog({title:'このスライドを作り直しますか？',message:'前回の結果を確かめられませんでした。保存版と今の指示から作り直します。',confirmLabel:'作り直す'})
     if(!confirmed||!ticket.current()){ticket.end();return}
     const index=operation.index;pending.current=null;ticket.end();void regenerate(index)
   }

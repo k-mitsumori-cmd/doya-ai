@@ -80,7 +80,7 @@ export default function CunningKnowledgeDetail() {
       toast.success(`${d.added}件を取り込みました`)
       void load()
     } catch (e: any) {
-      toast.error(e.message)
+      toast.error(/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '取り込めませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setBusy(false)
     }
@@ -93,7 +93,7 @@ export default function CunningKnowledgeDetail() {
       if (!res.ok) throw new Error('情報を削除できませんでした')
       setBase((b) => (b ? { ...b, chunks: b.chunks.filter((c) => c.id !== chunkId) } : b))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '情報を削除できませんでした')
+      toast.error(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '情報を削除できませんでした')
     } finally {
       setBusy(false)
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { confirmDialog } from '@/components/ds/dialog'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { aioGet, aioSend, AioApiError } from './client'
 import { readPrompt, readPromptPage, type AioPromptView } from './prompt-response'
@@ -125,9 +126,14 @@ export function useAioPrompts(orgSlug: string) {
     try { operationId = crypto.randomUUID() } catch { setView(v => ({ ...v, error: '操作情報を作成できません。ブラウザを更新してください' })); return }
     void perform({ kind: 'add', text, operationId, draftRevision: local.current.revision })
   }
-  const change = (p: AioPromptView, kind: 'toggle' | 'archive') => {
-    if (local.current.pending || busyRef.current?.current() || !guard.active() || !live.current.loaded || !live.current.canEdit || !live.current.prompts.some(row => row.id === p.id && row.updatedAt === p.updatedAt)) return
-    if (kind === 'archive' && !confirm('この質問を保管しますか？過去の測定履歴は残り、監視対象から外れます。')) return
+  const change = async (p: AioPromptView, kind: 'toggle' | 'archive') => {
+    const ready = () => !(local.current.pending || busyRef.current?.current() || !guard.active() || !live.current.loaded || !live.current.canEdit || !live.current.prompts.some(row => row.id === p.id && row.updatedAt === p.updatedAt))
+    if (!ready()) return
+    if (kind === 'archive') {
+      if (!(await confirmDialog({ title: 'この質問を保管しますか？', message: '過去の測定の記録は残り、見張る対象から外れます。', confirmLabel: '保管する' }))) return
+      // ⚠️ ダイアログを開いている間に状態が変わることがある。もう一度確かめる
+      if (!ready()) return
+    }
     void perform({ kind, prompt: p })
   }
   const recover = async () => {

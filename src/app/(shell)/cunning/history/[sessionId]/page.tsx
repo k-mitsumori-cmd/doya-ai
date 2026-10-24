@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { UiIcon } from '@/components/icons'
+import { Check } from 'lucide-react'
 import { CunningModeIcon } from '@/components/cunning/mode-icon'
 
 interface Transcript {
@@ -91,7 +92,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
         if (d.session?.id !== sessionId || !Array.isArray(d.session.transcripts) || !Array.isArray(d.session.answers)) throw new Error('履歴の形式を確認できませんでした')
         if (active) setSession(d.session)
       })
-      .catch((error) => { if (active) setLoadError(error instanceof Error ? error.message : '履歴を取得できませんでした') })
+      .catch((error) => { if (active) setLoadError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '履歴を取得できませんでした') })
       .finally(() => { clearTimeout(timeout); if (active) setLoading(false) })
     return () => { active = false; clearTimeout(timeout); controller.abort() }
   }, [sessionId, retryStep])
@@ -119,7 +120,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
           : { ...current, answers: mergeCunningEntries<Answer>(current.answers, d.items), pagination }
       })
     } catch (error) {
-      if (aliveRef.current) setMoreError((s) => ({ ...s, [kind]: error instanceof Error ? error.message : '続きを取得できませんでした' }))
+      if (aliveRef.current) setMoreError((s) => ({ ...s, [kind]: error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '続きを取得できませんでした' }))
     } finally {
       clearTimeout(timeout)
       busyRef.current.delete(kind)
@@ -144,7 +145,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
       }
       if (aliveRef.current) setSession((s) => (s?.id === sessionId ? { ...s, report: d.report, reportStatus: d.reportStatus } : s))
     } catch (error) {
-      if (aliveRef.current) setGenError(error instanceof Error ? error.message : '議事録を生成できませんでした。再試行してください。')
+      if (aliveRef.current) setGenError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : '議事録を生成できませんでした。再試行してください。')
     } finally {
       if (aliveRef.current) setGenLoading(false)
     }
@@ -226,7 +227,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
               <p className="text-xs font-black text-slate-400 mb-1">ネクストアクション</p>
               <ul className="text-sm text-slate-700 font-medium space-y-0.5">
                 {session.report.todos.map((d, i) => (
-                  <li key={i} className="flex items-start gap-1.5"><span className="text-[#0B5CFF]">✓</span>{d}</li>
+                  <li key={i} className="flex items-start gap-1.5"><Check size={16} className="mt-0.5 shrink-0 text-[#0B5CFF]" aria-hidden />{d}</li>
                 ))}
               </ul>
             </div>

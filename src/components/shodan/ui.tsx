@@ -2,7 +2,7 @@
 
 // ドヤ商談準備 共通UIパーツ（ドヤAIデザイン言語：ブランド紫 #0066ff・ドヤくん・浮遊ドット）
 import React from 'react'
-import { Briefcase, Rocket, Settings, Users, type LucideIcon } from 'lucide-react'
+import { Briefcase, Rocket, Settings, Target, Users, type LucideIcon } from 'lucide-react'
 import { useUiNext } from '@/components/shell/ui-next-context'
 
 export const BRAND = '#0066ff'
@@ -63,12 +63,12 @@ export function BgDots() {
   )
 }
 
-/** ブランドマーク（🎯＋ドヤ商談準備） */
+/** ブランドマーク（Target＋ドヤ商談準備） */
 export function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const px = size === 'lg' ? 'text-3xl' : size === 'sm' ? 'text-lg' : 'text-xl'
   return (
     <span className={`inline-flex items-center gap-2 font-black ${px}`}>
-      <span className="grid place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-400/25" style={{ width: '1.6em', height: '1.6em' }}>🎯</span>
+      <span className="grid place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-400/25" style={{ width: '1.6em', height: '1.6em' }}><Target size={18} aria-hidden /></span>
       <span className="text-slate-900">ドヤ商談準備</span>
     </span>
   )

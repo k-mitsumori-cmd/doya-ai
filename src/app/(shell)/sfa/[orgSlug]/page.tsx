@@ -14,7 +14,7 @@ import { Character } from '@/components/promane/character'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, Card, EmptyState, ErrorNotice, FirstSteps, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
-import { CheckCircle2, Circle, Kanban, Building2, Users, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Circle, Kanban, Building2, Users, ChevronRight, TrendingUp } from 'lucide-react'
 
 type Task = SfaClientTask
 
@@ -145,7 +145,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   if (uiNext) {
     const quick = [
       { href: `${base}/deals`, icon: Kanban, title: '商談パイプライン', sub: 'カンバンで案件を管理' },
-      { href: `${base}/accounts`, icon: Building2, title: '取引先を登録', sub: '会社を一元管理・CSV出力' },
+      { href: `${base}/accounts`, icon: Building2, title: '取引先を登録', sub: '会社を一元管理・CSVで書き出し' },
       { href: `${base}/members`, icon: Users, title: 'メンバー招待・権限', sub: 'チームで営業管理' },
     ]
     return (
@@ -266,8 +266,8 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
         <MutationRecovery mutations={mutations} />
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-lime-600 flex items-center justify-center text-2xl shadow-lg shadow-green-500/30">
-            📈
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-lime-600 flex items-center justify-center text-white shadow-lg shadow-green-500/30">
+            <TrendingUp size={24} aria-hidden />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900">ダッシュボード</h1>
@@ -372,7 +372,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
                 <span className="material-symbols-outlined text-2xl text-emerald-600">business</span>
                 <div>
                   <p className="font-black text-slate-800 text-sm">取引先を登録</p>
-                  <p className="text-[11px] font-bold text-slate-500">会社を一元管理・CSV出力</p>
+                  <p className="text-[11px] font-bold text-slate-500">会社を一元管理・CSVで書き出し</p>
                 </div>
               </Link>
               <Link href={`${base}/members`} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 transition-colors p-3">
