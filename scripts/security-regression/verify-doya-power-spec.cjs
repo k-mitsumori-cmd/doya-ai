@@ -4,7 +4,9 @@ const fs = require('node:fs'); const path = require('node:path'); const assert =
 const root = path.join(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const core = read('src/lib/doya-power/charge-core.ts');
-assert.match(core, /RETRY_HALF_WINDOW_MS = 5 \* 60_000/); assert.match(core, /Math\.ceil\(amount \/ 2\)/); assert.match(core, /recentConsume/);
+// 5分と半分の決まりは retry.ts に移った（作り直しの配線、2026-10-24）。中心は retry.ts の定数と halfAmount を使う
+const retry = read('src/lib/doya-power/retry.ts');
+assert.match(retry, /RETRY_HALF_WINDOW_MS = 5 \* 60_000/); assert.match(retry, /Math\.ceil\(amount \/ 2\)/); assert.match(core, /from '\.\/retry'/); assert.match(core, /withinMs: RETRY_HALF_WINDOW_MS/); assert.match(core, /recentConsume/);
 const ledger = read('src/lib/doya-power/ledger.ts');
 assert.match(ledger, /paid \? 0 : dailyRecoveryToAdd/); assert.match(ledger, /isPaidCompany/);
 assert.match(read('src/lib/doya-power/index.ts'), /isPaidPlan\(user\?\.plan\)/);
