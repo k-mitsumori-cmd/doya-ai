@@ -27,5 +27,6 @@ function inspect(directory) {
 }
 
 inspect(sourceRoot)
-assert.ok(encodedAssets >= 127, 'Expected existing percent-encoded character artwork references')
+// 2026-10 UX 改修（FIX-PLAN STA）で全面の読み込み中のキャラクター画像を Skeleton に置き換えたため、127 から 125 に下げた
+assert.ok(encodedAssets >= 125, 'Expected existing percent-encoded character artwork references')
 console.log(`PASS static image URLs: ${encodedAssets} encoded references, no raw non-ASCII paths`)

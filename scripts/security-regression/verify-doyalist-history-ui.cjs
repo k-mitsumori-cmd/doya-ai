@@ -7,7 +7,7 @@ const helpers = load('src/lib/doyalist/approach-pages.ts')
 const projectHelpers = load('src/lib/doyalist/project-pages.ts')
 const source = fs.readFileSync('src/app/(shell)/doyalist/history/page.tsx', 'utf8')
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-let loadArrow, loadProjectsArrow, loadMoreFunction, loadMoreProjectsFunction
+let loadArrow, loadProjectsArrow, loadMoreFunction, loadMoreProjectsFunction, jaErrorArrow
 function visit(node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'loadApproaches' && ts.isCallExpression(node.initializer)) {
     loadArrow = node.initializer.arguments[0]
@@ -15,18 +15,21 @@ function visit(node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'loadProjects' && ts.isCallExpression(node.initializer)) {
     loadProjectsArrow = node.initializer.arguments[0]
   }
+  if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'jaError') jaErrorArrow = node.initializer
   if (ts.isFunctionDeclaration(node) && node.name?.text === 'loadMore') loadMoreFunction = node
   if (ts.isFunctionDeclaration(node) && node.name?.text === 'loadMoreProjects') loadMoreProjectsFunction = node
   ts.forEachChild(node, visit)
 }
 visit(ast)
-assert.ok(loadArrow && loadProjectsArrow && loadMoreFunction && loadMoreProjectsFunction)
+assert.ok(loadArrow && loadProjectsArrow && loadMoreFunction && loadMoreProjectsFunction && jaErrorArrow)
 const compile = (node) => ts.transpileModule(`(${node.getText(ast)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+// 画面の実際の jaError（日本語の文だけを出し、それ以外は決まった文にする）を使う
+const jaError = vm.runInNewContext(compile(jaErrorArrow), { Error })
 
 async function initial(response, tab = 'all', search = '') {
   const state = { approaches: ['previous'], error: '', loading: false, total: -1, cursor: 'old', summary: null, url: '' }
   const loadApproaches = vm.runInNewContext(compile(loadArrow), {
-    requestVersion: { current: 0 }, tab, search, URLSearchParams, Error,
+    requestVersion: { current: 0 }, tab, search, URLSearchParams, Error, jaError,
     fetch: async (url) => { state.url = url; return response },
     parseApproachPage: helpers.parseApproachPage,
     setApproachesError: (value) => { state.error = value },
@@ -44,7 +47,7 @@ async function initial(response, tab = 'all', search = '') {
 async function projectList(response, search = '') {
   const state = { lists: [], error: '', loading: false, total: 0, cursor: null, summary: null, url: '' }
   const loadProjects = vm.runInNewContext(compile(loadProjectsArrow), {
-    projectRequestVersion: { current: 0 }, search, URLSearchParams, Error,
+    projectRequestVersion: { current: 0 }, search, URLSearchParams, Error, jaError,
     fetch: async (url) => { state.url = url; return response },
     parseProjectPage: projectHelpers.parseProjectPage,
     setProjectsError: (value) => { state.error = value },
@@ -104,7 +107,7 @@ async function projectList(response, search = '') {
   const state = { approaches: [{ id: 'already-loaded' }], error: '', loading: false }
   const loadMore = vm.runInNewContext(compile(loadMoreFunction), {
     nextCursor: 'already-loaded', loadingMore: false, requestVersion: { current: 0 },
-    tab: 'all', search: '', URLSearchParams, Error, approachTotal: 2,
+    tab: 'all', search: '', URLSearchParams, Error, jaError, approachTotal: 2,
     approaches: state.approaches,
     fetch: async () => Response.json({ error: '取得失敗' }, { status: 503 }),
     parseApproachPage: helpers.parseApproachPage,
@@ -121,7 +124,7 @@ async function projectList(response, search = '') {
   const projectsState = { lists: [{ id: 'already-loaded' }], error: '', loading: false }
   const loadMoreProjects = vm.runInNewContext(compile(loadMoreProjectsFunction), {
     projectNextCursor: 'already-loaded', loadingMoreProjects: false, projectRequestVersion: { current: 0 },
-    search: '', URLSearchParams, Error, projectTotal: 2, lists: projectsState.lists,
+    search: '', URLSearchParams, Error, jaError, projectTotal: 2, lists: projectsState.lists,
     fetch: async () => Response.json({ error: '取得失敗' }, { status: 503 }),
     parseProjectPage: projectHelpers.parseProjectPage,
     appendProjectPage: projectHelpers.appendProjectPage,
