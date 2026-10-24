@@ -58,8 +58,37 @@ export type ChargeSpec = {
    * 本文は読まない（大きな本文のルートでも上限の 413 にならない）。半分にするかは台帳が決める（同じ会社・同じ操作の名前・5分以内）
    */
   retry?: boolean
-  /** 同じ対象を表すキー（同じ対象を5分以内に作り直したら半分） */
-  target?: (body: Body) => unknown
+  /**
+   * 同じ対象を表すキー。⚠️ サーバーが決める（ルートのパラメータや、本文の中の ID から。クライアントの自由な値をそのまま使わない）。
+   * 作り直し（retry: true）で半分にするには、これが必要。null を返す・指定が無いルートは半分にしない。
+   * 前の消費の note（target:<キー>）と同じで、同じルートの全額の消費だったときだけ半分になる。
+   * 第2引数以降は、ルートの入口に渡るもの（req と、[id] などの ctx）
+   */
+  target?: (body: Body, req: NextRequest, ...rest: any[]) => unknown | Promise<unknown>
+  /** target が本文の項目を使うときだけ true（本文を読む）。ルートのパラメータだけなら付けない */
+  targetBody?: boolean
+  /** 包みが本文を読むときの上限（バイト）。無ければ 64KB。target に使う項目が、大きな本文（画像など）の中にあるルートだけ上げる */
+  bodyMaxBytes?: number
+}
+
+/** 対象のキーを作る。種類（kind）と値から、台帳の note に入れても安全な短い文字列にする（値が空・文字列でなければ null） */
+export function targetKeyOf(kind: string, value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const v = value.trim()
+  if (!v) return null
+  return /^[A-Za-z0-9_-]{1,100}$/.test(v) ? `${kind}:${v}` : `${kind}:h-${createHash('sha256').update(v).digest('hex').slice(0, 24)}`
+}
+
+/** [id] などのルートのパラメータを読む（ctx は Next.js の 2つ目の引数。Promise でもそのままでも） */
+export async function routeParam(rest: unknown[], name: string): Promise<string | null> {
+  const ctx = rest[0] as { params?: unknown } | undefined
+  try {
+    const params = (await (ctx?.params as unknown)) as Record<string, unknown> | undefined
+    const v = params?.[name]
+    return typeof v === 'string' ? v : null
+  } catch {
+    return null
+  }
 }
 
 /** ルートの名前空間。道すじ（/api/sfa/ai/score など）の短い要約。同じ操作の名前を使う別のルートで、キーを共有させないために使う */
@@ -75,11 +104,11 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     // 旗が off なら、本文も読まずに今までの処理へ（台帳にもセッションにも触れない）
     if (doyaPowerRollout() === 'off') return handler(req, ...rest)
     // 本文は、決まり（spec）が本文を見るときだけ読む。読むときも大きさに上限を付ける（大きな本文で処理を止められないように）
-    const needsBody = typeof spec.action === 'function' || !!(spec.invalid || spec.units || spec.key || spec.retryOf || spec.target)
+    const needsBody = typeof spec.action === 'function' || !!(spec.invalid || spec.units || spec.key || spec.retryOf || (spec.target && spec.targetBody))
     let body: Body = null
     if (needsBody) {
       try {
-        body = await readOperationalJson(req.clone(), CHARGE_BODY_MAX_BYTES)
+        body = await readOperationalJson(req.clone(), spec.bodyMaxBytes ?? CHARGE_BODY_MAX_BYTES)
       } catch (e) {
         if (e instanceof OperationalBodyError && e.status === 413) return NextResponse.json({ error: '送った内容が大きすぎます。' }, { status: 413, headers: { 'Cache-Control': 'private, no-store' } })
         body = null
@@ -89,7 +118,7 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     if (bad) return NextResponse.json({ error: bad }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action
     if (!action) return handler(req, ...rest)
-    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body) ?? (spec.retry ? req.headers.get(DOYA_POWER_RETRY_HEADER) : undefined), target: spec.target?.(body), scope: routeScope(req) })
+    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body) ?? (spec.retry ? req.headers.get(DOYA_POWER_RETRY_HEADER) : undefined), target: spec.target ? await Promise.resolve().then(() => spec.target!(body, req, ...rest)).catch(() => null) : undefined, scope: routeScope(req) })
     return doyaPowerCharger.run(outcome, () => handler(req, ...rest))
   }
 }

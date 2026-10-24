@@ -30,6 +30,8 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
       if(KEYED[p])assert.ok(m[1].includes('b?.'+KEYED[p]),p+' key '+KEYED[p]);
       else assert.equal(keyed,false,p+' must not pass a client key');
       assert.equal(/retry: true/.test(m[1]),RETRY.has(p),p+' retry');
+      // 作り直しのあるルートは、サーバーが決める対象（target）を必ず渡す。無いルートは半分にならない
+      if(RETRY.has(p)){assert.match(m[1],/target:/,p+' target');assert.doesNotMatch(m[1],/target: \(b\) => b\?\.(retryOf|target)\b/,p+' target must not be a raw client value');}
       // retryOf を本文から読まない（大きな本文のルートで包みが本文を読まないように）
       assert.doesNotMatch(m[1],/retryOf:/,p);
     }
@@ -64,7 +66,7 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
   await check('The wrapper calls the original handler untouched when the flag is off',async()=>{
     const src=code('src/lib/doya-power/charge.ts');
     // 旗の判定のあとで、本文は上限つき（readOperationalJson）でだけ読む。req.json() をそのまま読まない（大きな本文で止められないように）
-    assert.match(src,/if \(doyaPowerRollout\(\) === 'off'\) return handler\(req, \.\.\.rest\)[\s\S]*?readOperationalJson\(req\.clone\(\), CHARGE_BODY_MAX_BYTES\)/);
+    assert.match(src,/if \(doyaPowerRollout\(\) === 'off'\) return handler\(req, \.\.\.rest\)[\s\S]*?readOperationalJson\(req\.clone\(\), spec\.bodyMaxBytes \?\? CHARGE_BODY_MAX_BYTES\)/);
     assert.doesNotMatch(src,/req\.clone\(\)\.json\(\)/);
     const core=code('src/lib/doya-power/charge-core.ts');
     assert.match(core,/if \(deps\.rollout\(\) === 'off'\) return null/);

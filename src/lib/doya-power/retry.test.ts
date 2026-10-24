@@ -2,7 +2,8 @@
 // 「作り直す」の半分（retry.ts と charge-core.ts）。メモリの上の DB の台帳だけを使う。本物の DB・課金・AI には触れない。
 // - 前の操作から5分以内の作り直し（retryOf）は半分。5分を過ぎたら全額
 // - 他社の操作のキーを retryOf に送っても全額（台帳は同じ会社の操作だけを探す。会社は1人の持ち主に1つ）
-// - 同じ作り直しを2回送っても、減るのは1回だけ。作り直しの作り直しも「全額の半分」（4分の1にはならない）
+// - 同じ作り直しを2回送っても、減るのは1回だけ。半分のあとの作り直しは全額（連鎖しない）
+// - 半分になるのは、サーバーが決めた同じ対象・同じルートの、全額の前の操作があるときだけ
 // - 減らした操作のキーは、成功の応答のヘッダーでだけ返す（失敗して戻したとき・減らさなかったときは返さない）
 // - 旗が off のときは、retryOf があっても台帳に触れない
 import { test } from 'node:test'
@@ -54,11 +55,11 @@ const ok = () => new Response('{}', { status: 200 })
 
 test('5分以内（4分59秒）の作り直しは半分。5分を過ぎた（5分1秒）作り直しは全額', async () => {
   const w = world()
-  const first = await w.alice.charge('banner.generate', { key: 'g1' })
+  const first = await w.alice.charge('banner.generate', { target: 'T1', key: 'g1' })
   assert.equal(first.kind, 'charged')
   w.advanceSec(4 * 60 + 59)
   const before = await w.remaining('co_alice')
-  const retry = await w.alice.charge('banner.generate', { retryOf: 'g1' })
+  const retry = await w.alice.charge('banner.generate', { target: 'T1', retryOf: 'g1' })
   assert.equal(retry.kind, 'charged')
   if (retry.kind === 'charged') {
     assert.equal(retry.halved, true)
@@ -67,9 +68,9 @@ test('5分以内（4分59秒）の作り直しは半分。5分を過ぎた（5�
   assert.equal(await w.remaining('co_alice'), before - HALF)
 
   const w2 = world()
-  await w2.alice.charge('banner.generate', { key: 'g1' })
+  await w2.alice.charge('banner.generate', { target: 'T1', key: 'g1' })
   w2.advanceSec(5 * 60 + 1)
-  const late = await w2.alice.charge('banner.generate', { retryOf: 'g1' })
+  const late = await w2.alice.charge('banner.generate', { target: 'T1', retryOf: 'g1' })
   if (late.kind === 'charged') {
     assert.equal(late.halved, false)
     assert.equal(late.amount, FULL)
@@ -78,13 +79,13 @@ test('5分以内（4分59秒）の作り直しは半分。5分を過ぎた（5�
 
 test('他社の操作のキーを retryOf に送っても全額（同じ会社の操作だけが相手）', async () => {
   const w = world()
-  const a = await w.alice.charge('banner.generate', { key: 'alice-op' })
+  const a = await w.alice.charge('banner.generate', { target: 'T1', key: 'alice-op' })
   assert.equal(a.kind, 'charged')
   w.advanceSec(30)
   // ボブの口座を先に作っておく（今月の付与が付いた状態から測る）
   await w.bob.charge('text.generate', { key: 'bob-warmup' })
   const bobBefore = await w.remaining('co_bob')
-  const b = await w.bob.charge('banner.generate', { retryOf: 'alice-op' })
+  const b = await w.bob.charge('banner.generate', { target: 'T1', retryOf: 'alice-op' })
   if (b.kind === 'charged') {
     assert.equal(b.halved, false)
     assert.equal(b.amount, FULL)
@@ -97,49 +98,50 @@ test('他社の操作のキーを retryOf に送っても全額（同じ会社�
 
 test('サーバーが作ったキー（応答のヘッダーで返す）でも、5分以内の作り直しは半分。ヘッダーは成功のときだけ', async () => {
   const w = world()
-  const first = await w.alice.charge('banner.generate', { scope: 'r-aaaaaaaaaaaa' })
+  const first = await w.alice.charge('banner.generate', { target: 'T1', scope: 'r-aaaaaaaaaaaa' })
   const res = await w.alice.run(first, async () => ok())
   const opKey = res.headers.get(DOYA_POWER_OP_HEADER)
   assert.ok(opKey)
   assert.doesNotMatch(opKey!, /co_alice/) // 会社の ID は返さない
   w.advanceSec(60)
-  const retry = await w.alice.charge('banner.generate', { retryOf: opKey, scope: 'r-aaaaaaaaaaaa' })
+  const retry = await w.alice.charge('banner.generate', { target: 'T1', retryOf: opKey, scope: 'r-aaaaaaaaaaaa' })
   if (retry.kind === 'charged') assert.equal(retry.amount, HALF)
   else assert.fail('retry must be charged')
 
   // 失敗して戻した操作は、キーを返さない（その作り直しは全額）
-  const failed = await w.alice.charge('banner.generate', { scope: 'r-aaaaaaaaaaaa' })
+  const failed = await w.alice.charge('banner.generate', { target: 'T1', scope: 'r-aaaaaaaaaaaa' })
   const bad = await w.alice.run(failed, async () => new Response('{}', { status: 500 }))
   assert.equal(bad.headers.get(DOYA_POWER_OP_HEADER), null)
   if (failed.kind === 'charged') {
-    const again = await w.alice.charge('banner.generate', { retryOf: failed.opKey, scope: 'r-aaaaaaaaaaaa' })
+    const again = await w.alice.charge('banner.generate', { target: 'T1', retryOf: failed.opKey, scope: 'r-aaaaaaaaaaaa' })
     if (again.kind === 'charged') assert.equal(again.amount, FULL)
   }
 })
 
-test('同じ作り直しを2回送っても、減るのは1回だけ。作り直しの作り直しも全額の半分', async () => {
+test('同じ作り直しを2回送っても、減るのは1回だけ。半分のあとの作り直しは全額（連鎖しない）', async () => {
   const w = world()
-  await w.alice.charge('banner.generate', { key: 'base' })
+  await w.alice.charge('banner.generate', { target: 'T1', key: 'base' })
   const before = await w.remaining('co_alice')
-  const r1 = await w.alice.charge('banner.generate', { key: 'retry-1', retryOf: 'base' })
-  const r1again = await w.alice.charge('banner.generate', { key: 'retry-1', retryOf: 'base' })
+  const r1 = await w.alice.charge('banner.generate', { target: 'T1', key: 'retry-1', retryOf: 'base' })
+  const r1again = await w.alice.charge('banner.generate', { target: 'T1', key: 'retry-1', retryOf: 'base' })
   assert.equal(r1.kind, 'charged')
   if (r1again.kind === 'charged') assert.equal(r1again.duplicated, true)
   // 2回目の重複は、失敗しても戻さない（1回目の分まで戻らない）
   await w.alice.run(r1again, async () => new Response('{}', { status: 500 }))
   assert.equal(await w.remaining('co_alice'), before - HALF)
   w.advanceSec(60)
-  const r2 = await w.alice.charge('banner.generate', { key: 'retry-2', retryOf: 'retry-1' })
-  if (r2.kind === 'charged') assert.equal(r2.amount, HALF)
-  assert.equal(await w.remaining('co_alice'), before - HALF * 2)
+  // 半分で減らした操作は土台にしない（連鎖させない）。retry-1 の作り直しは全額
+  const r2 = await w.alice.charge('banner.generate', { target: 'T1', key: 'retry-2', retryOf: 'retry-1' })
+  if (r2.kind === 'charged') { assert.equal(r2.halved, false); assert.equal(r2.amount, FULL) } else assert.fail('r2')
+  assert.equal(await w.remaining('co_alice'), before - HALF - FULL)
   // 自分自身のキーを retryOf にしても半分にしない
-  const self = await w.alice.charge('banner.generate', { key: 'solo', retryOf: 'solo' })
+  const self = await w.alice.charge('banner.generate', { target: 'T1', key: 'solo', retryOf: 'solo' })
   if (self.kind === 'charged') assert.equal(self.amount, FULL)
 })
 
 test('旗が off のときは、retryOf があっても台帳に触れず、キーも返さない', async () => {
   const w = world({ rollout: 'off' })
-  const o = await w.alice.charge('banner.generate', { key: 'x2', retryOf: 'x1' })
+  const o = await w.alice.charge('banner.generate', { target: 'T1', key: 'x2', retryOf: 'x1' })
   assert.equal(o.kind, 'skip')
   const res = await w.alice.run(o, async () => ok())
   assert.equal(res.headers.get(DOYA_POWER_OP_HEADER), null)
@@ -182,4 +184,40 @@ test('クライアントの控え: 5分以内だけ retryOf を返す。おか�
   assert.equal(noStore.retryOf('s'), 'k1')
   assert.equal(cleanRetryKey(' k-1 '), 'k-1')
   assert.equal(cleanRetryKey(123), null)
+})
+
+test('対象（target）が違えば全額。target が無ければ半分にしない（retryOf だけでは半分にならない）', async () => {
+  const w = world()
+  await w.alice.charge('banner.generate', { target: 'T1', key: 'p1', scope: 'r-aaaaaaaaaaaa' })
+  w.advanceSec(30)
+  const other = await w.alice.charge('banner.generate', { target: 'T2', key: 'p2', retryOf: 'p1', scope: 'r-aaaaaaaaaaaa' })
+  if (other.kind === 'charged') { assert.equal(other.halved, false); assert.equal(other.amount, FULL) } else assert.fail('other')
+  const noTarget = await w.alice.charge('banner.generate', { key: 'p3', retryOf: 'p1', scope: 'r-aaaaaaaaaaaa' })
+  if (noTarget.kind === 'charged') { assert.equal(noTarget.halved, false); assert.equal(noTarget.amount, FULL) } else assert.fail('noTarget')
+  const same = await w.alice.charge('banner.generate', { target: 'T1', key: 'p4', retryOf: 'p1', scope: 'r-aaaaaaaaaaaa' })
+  if (same.kind === 'charged') { assert.equal(same.halved, true); assert.equal(same.amount, HALF) } else assert.fail('same')
+})
+
+test('別のルート（scope）の前の操作は土台にならない。同じルートなら半分', async () => {
+  const w = world()
+  await w.alice.charge('banner.generate', { target: 'T1', key: 'q1', scope: 'r-aaaaaaaaaaaa' })
+  w.advanceSec(30)
+  const other = await w.alice.charge('banner.generate', { target: 'T1', key: 'q2', retryOf: 'q1', scope: 'r-bbbbbbbbbbbb' })
+  if (other.kind === 'charged') { assert.equal(other.halved, false); assert.equal(other.amount, FULL) } else assert.fail('other')
+  const same = await w.alice.charge('banner.generate', { target: 'T1', key: 'q3', retryOf: 'q1', scope: 'r-aaaaaaaaaaaa' })
+  if (same.kind === 'charged') { assert.equal(same.halved, true); assert.equal(same.amount, HALF) } else assert.fail('same')
+})
+
+test('半分で減らした操作を土台にした作り直しは全額（連鎖で次々に半分にできない）。全額の操作は新しい土台になる', async () => {
+  const w = world()
+  await w.alice.charge('banner.generate', { target: 'T1', key: 'c1', scope: 'r-aaaaaaaaaaaa' })
+  w.advanceSec(30)
+  const half = await w.alice.charge('banner.generate', { target: 'T1', key: 'c2', retryOf: 'c1', scope: 'r-aaaaaaaaaaaa' })
+  if (half.kind === 'charged') assert.equal(half.halved, true); else assert.fail('half')
+  // c2（半分）を土台にしても全額
+  const chain = await w.alice.charge('banner.generate', { target: 'T1', key: 'c3', retryOf: 'c2', scope: 'r-aaaaaaaaaaaa' })
+  if (chain.kind === 'charged') { assert.equal(chain.halved, false); assert.equal(chain.amount, FULL) } else assert.fail('chain')
+  // c3（全額）は新しい土台
+  const next = await w.alice.charge('banner.generate', { target: 'T1', key: 'c4', retryOf: 'c3', scope: 'r-aaaaaaaaaaaa' })
+  if (next.kind === 'charged') { assert.equal(next.halved, true); assert.equal(next.amount, HALF) } else assert.fail('next')
 })

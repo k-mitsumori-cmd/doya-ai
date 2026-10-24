@@ -92,9 +92,10 @@ function BannerUrlAutoPageInner() {
   const maxCount = isFreeHourActive ? 10 : getBannerMaxImagesPerRequest(bannerPlan)
 
   const [targetUrl, setTargetUrl] = useState('')
+  // 作り直しの控えはサイトのURLごと（サーバーも同じURLの前の生成だけを半分の相手にする）
+  const bannerRetry = useDoyaPowerRetry(targetUrl.trim() ? `banner-url:${targetUrl.trim()}` : null)
   const [isGenerating, setIsGenerating] = useState(false)
   // ドヤパワー: URLからの生成・再生成のキーを控え、「このデザインで再生成」で送る
-  const bannerRetry = useDoyaPowerRetry('banner-url')
   const [error, setError] = useState<string>('')
   const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
   const [limitUsage, setLimitUsage] = useState<MonthlyUsage | null>(null)

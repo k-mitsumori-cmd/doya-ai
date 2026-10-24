@@ -12,6 +12,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
+import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
 import { DoyaPowerDetail } from '@/components/doya-power/DoyaPowerHome'
 
 export const metadata: Metadata = {
@@ -29,5 +30,7 @@ export default async function DoyaPowerHistoryPage() {
   const view = await loadDoyaPowerHome({ withHistory: true, limit: 50 })
   // 会社が未登録・台帳が読めないときは、経営ホームへ戻す（会社の登録の案内はホームにある）
   if (!view) redirect('/home')
-  return <DoyaPowerDetail view={view} />
+  // 会社の設定を変えられるのは会社の持ち主だけ（旗が off のときは上で 404。ここでは DB を読む前に旗を見ている）
+  const { canEditOrg } = await loadDoyaPowerFxForUser(userId)
+  return <DoyaPowerDetail view={view} canEditOrg={canEditOrg} />
 }

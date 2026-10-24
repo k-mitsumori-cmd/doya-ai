@@ -208,12 +208,12 @@ function withClock(over: Parameters<typeof setup>[0] = {}) {
 
 test('作り直し（retryOf）が5分以内なら、減る量は半分（切り上げ）。5分を過ぎたら全額', async () => {
   const w = withClock()
-  const first = await w.s.charger.charge('banner.generate', { key: 'a1' })
+  const first = await w.s.charger.charge('banner.generate', { key: 'a1', target: 'T' })
   assert.equal(first.kind, 'charged')
   if (first.kind === 'charged') assert.equal(first.halved, false)
   const before = await w.s.remaining()
   w.advance(4)
-  const retry = await w.s.charger.charge('banner.generate', { key: 'a2', retryOf: 'a1' })
+  const retry = await w.s.charger.charge('banner.generate', { key: 'a2', retryOf: 'a1', target: 'T' })
   assert.equal(retry.kind, 'charged')
   if (retry.kind === 'charged') {
     assert.equal(retry.halved, true)
@@ -222,7 +222,7 @@ test('作り直し（retryOf）が5分以内なら、減る量は半分（切り
   assert.equal(await w.s.remaining(), before - 5)
   // 6分後は全額
   w.advance(6)
-  const late = await w.s.charger.charge('banner.generate', { key: 'a3', retryOf: 'a2' })
+  const late = await w.s.charger.charge('banner.generate', { key: 'a3', retryOf: 'a2', target: 'T' })
   if (late.kind === 'charged') {
     assert.equal(late.halved, false)
     assert.equal(late.amount, 10)
@@ -231,8 +231,8 @@ test('作り直し（retryOf）が5分以内なら、減る量は半分（切り
 
 test('半分は切り上げ（7 は 4）。retryOf も target も無ければ半分にしない', async () => {
   const w = withClock()
-  await w.s.charger.charge('image.refine', { key: 'b1' })
-  const r = await w.s.charger.charge('image.refine', { key: 'b2', retryOf: 'b1' })
+  await w.s.charger.charge('image.refine', { key: 'b1', target: 'T' })
+  const r = await w.s.charger.charge('image.refine', { key: 'b2', retryOf: 'b1', target: 'T' })
   if (r.kind === 'charged') assert.equal(r.amount, 4)
   const plain = await w.s.charger.charge('image.refine', { key: 'b3' })
   if (plain.kind === 'charged') assert.equal(plain.amount, 7)
@@ -240,28 +240,49 @@ test('半分は切り上げ（7 は 4）。retryOf も target も無ければ半
 
 test('半分になるのは、同じ会社・同じ操作の名前だけ。別の操作・存在しない前の操作・戻した前の操作は全額', async () => {
   const w = withClock()
-  await w.s.charger.charge('banner.generate', { key: 'c1' })
+  await w.s.charger.charge('banner.generate', { key: 'c1', target: 'T' })
   // 別の操作の名前
-  const other = await w.s.charger.charge('image.refine', { key: 'c2', retryOf: 'c1' })
+  const other = await w.s.charger.charge('image.refine', { key: 'c2', retryOf: 'c1', target: 'T' })
   if (other.kind === 'charged') assert.equal(other.amount, 7)
   // 存在しない前の操作
-  const ghost = await w.s.charger.charge('banner.generate', { key: 'c3', retryOf: 'nothing' })
+  const ghost = await w.s.charger.charge('banner.generate', { key: 'c3', retryOf: 'nothing', target: 'T' })
   if (ghost.kind === 'charged') assert.equal(ghost.amount, 10)
   // 前の操作が失敗して戻っていたら、作り直しも全額（半分にしない）
-  const failed = await w.s.charger.charge('slide.generate', { key: 'd1' })
+  const failed = await w.s.charger.charge('slide.generate', { key: 'd1', target: 'T' })
   await w.s.charger.run(failed, async () => new Response('{}', { status: 500 }))
-  const again = await w.s.charger.charge('slide.generate', { key: 'd2', retryOf: 'd1' })
+  const again = await w.s.charger.charge('slide.generate', { key: 'd2', retryOf: 'd1', target: 'T' })
   if (again.kind === 'charged') assert.equal(again.amount, 30)
 })
 
-test('同じ対象のキー（target）でも、5分以内なら半分。別の対象は全額', async () => {
+test('target だけ（retryOf が無い）では半分にならない。retryOf だけ（target が無い）でも半分にならない', async () => {
   const w = withClock()
   await w.s.charger.charge('seo.article', { key: 'e1', target: 'doc-1' })
   w.advance(2)
-  const same = await w.s.charger.charge('seo.article', { key: 'e2', target: 'doc-1' })
-  if (same.kind === 'charged') assert.equal(same.amount, 20)
-  const diff = await w.s.charger.charge('seo.article', { key: 'e3', target: 'doc-2' })
+  const onlyTarget = await w.s.charger.charge('seo.article', { key: 'e2', target: 'doc-1' })
+  if (onlyTarget.kind === 'charged') assert.equal(onlyTarget.amount, 40)
+  const onlyRetry = await w.s.charger.charge('seo.article', { key: 'e3', retryOf: 'e1' })
+  if (onlyRetry.kind === 'charged') assert.equal(onlyRetry.amount, 40)
+})
+
+test('同じ対象（target）の作り直しだけ半分。別の対象は全額', async () => {
+  const w = withClock()
+  await w.s.charger.charge('seo.article', { key: 'f1', target: 'doc-1' })
+  w.advance(2)
+  const diff = await w.s.charger.charge('seo.article', { key: 'f2', retryOf: 'f1', target: 'doc-2' })
   if (diff.kind === 'charged') assert.equal(diff.amount, 40)
+  const same = await w.s.charger.charge('seo.article', { key: 'f3', retryOf: 'f1', target: 'doc-1' })
+  if (same.kind === 'charged') { assert.equal(same.halved, true); assert.equal(same.amount, 20) }
+})
+
+test('別のルート（scope）なら全額。半分のあとの作り直しは全額（連鎖しない）', async () => {
+  const w = withClock()
+  await w.s.charger.charge('seo.article', { key: 'g1', target: 'doc-1', scope: 'r-aaaaaaaaaaaa' })
+  const other = await w.s.charger.charge('seo.article', { key: 'g2', retryOf: 'g1', target: 'doc-1', scope: 'r-bbbbbbbbbbbb' })
+  if (other.kind === 'charged') { assert.equal(other.halved, false); assert.equal(other.amount, 40) }
+  const half = await w.s.charger.charge('seo.article', { key: 'g3', retryOf: 'g1', target: 'doc-1', scope: 'r-aaaaaaaaaaaa' })
+  if (half.kind === 'charged') assert.equal(half.halved, true)
+  const chain = await w.s.charger.charge('seo.article', { key: 'g4', retryOf: 'g3', target: 'doc-1', scope: 'r-aaaaaaaaaaaa' })
+  if (chain.kind === 'charged') { assert.equal(chain.halved, false); assert.equal(chain.amount, 40) }
 })
 
 test('旗が off のときは、作り直しの確認でも台帳に触れない', async () => {
@@ -310,9 +331,9 @@ test('ルートの名前空間（scope）がちがえば、同じ操作の名前
 
 test('scope があっても、作り直し（retryOf）は前の操作を見つけて半分になる', async () => {
   const s = setup()
-  const a = await s.charger.charge('image.refine', { key: 'first', scope: 'r-aaaaaaaaaaaa' })
+  const a = await s.charger.charge('image.refine', { key: 'first', target: 'T', scope: 'r-aaaaaaaaaaaa' })
   assert.equal(a.kind, 'charged')
-  const b = await s.charger.charge('image.refine', { key: 'second', retryOf: 'first', scope: 'r-aaaaaaaaaaaa' })
+  const b = await s.charger.charge('image.refine', { key: 'second', retryOf: 'first', target: 'T', scope: 'r-aaaaaaaaaaaa' })
   if (a.kind === 'charged' && b.kind === 'charged') assert.equal(b.halved, true)
 })
 
