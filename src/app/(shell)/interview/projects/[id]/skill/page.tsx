@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useArticleInputNavigation } from '@/lib/interview/use-article-input-navigation'
+import { Check } from 'lucide-react'
 
 interface Recipe {
   id: string
@@ -218,10 +219,10 @@ export default function SkillSelectionPage() {
         <div className="flex items-center gap-2 text-xs min-w-max">
           {['素材アップ', '文字起こし', 'スキル選択', 'AI生成', '編集'].map((step, i) => (
             <div key={step} className="flex items-center gap-2 shrink-0">
-              <div className={`px-3 py-1 rounded-full tracking-tight whitespace-nowrap ${
+              <div className={`px-3 py-1 inline-flex items-center gap-1 rounded-full tracking-tight whitespace-nowrap ${
                 i === 2 ? 'bg-[#0066ff] text-white font-bold shadow-md shadow-[#0066ff]/20' : i < 2 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
               }`}>
-                {i < 2 ? '✓ ' : ''}{step}
+                {i < 2 ? <Check className="h-3 w-3" aria-hidden /> : null}{step}
               </div>
               {i < 4 && <span className="text-slate-300">→</span>}
             </div>

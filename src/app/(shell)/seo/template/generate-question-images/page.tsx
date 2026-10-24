@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { confirmDialog } from '@/components/ds/dialog'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 export default function GenerateQuestionImagesPage() {
   const [generating, setGenerating] = useState(false)
@@ -34,7 +36,7 @@ export default function GenerateQuestionImagesPage() {
     } catch (e: any) {
       setResult({
         success: false,
-        error: e.message || 'エラーが発生しました',
+        error: seoUserMessage(e, '画像を作れませんでした。少し待って、もう一度お試しください。'),
       })
     } finally {
       setGenerating(false)
@@ -42,7 +44,7 @@ export default function GenerateQuestionImagesPage() {
   }
 
   const handleClearAll = async () => {
-    const ok = window.confirm('DB内の質問画像をすべて削除します。よろしいですか？')
+    const ok = await confirmDialog({ title: '質問の画像をすべて削除しますか？', message: '保存してある質問の画像がすべて消えます。元に戻せません。', confirmLabel: '削除する', tone: 'danger' })
     if (!ok) return
 
     setClearing(true)
@@ -59,7 +61,7 @@ export default function GenerateQuestionImagesPage() {
       }
       setClearResult({ success: true, deleted: Number(json.deleted ?? 0) })
     } catch (e: any) {
-      setClearResult({ success: false, error: e.message || 'エラーが発生しました' })
+      setClearResult({ success: false, error: seoUserMessage(e, '画像を削除できませんでした。もう一度お試しください。') })
     } finally {
       setClearing(false)
     }

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Mic, PlusCircle, Sparkles, UploadCloud, Users } from 'lucide-react'
+import { CheckCircle2, Clock, Loader2, Mic, PlusCircle, RotateCcw, Sparkles, UploadCloud, Users, X, XCircle } from 'lucide-react'
 import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
 import { createInterviewProjectRequest, readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
@@ -88,14 +88,14 @@ const UPLOAD_STEPS = [
 ]
 
 const UPLOAD_TIPS = [
-  { icon: 'auto_awesome', text: 'AIが音声を文字起こしします。結果は編集して整えられます', emoji: '✨' },
-  { icon: 'speed', text: '処理時間は音声の長さや混雑状況によって変わります', emoji: '⚡' },
-  { icon: 'mic', text: '複数の話者がいても、AIが自動で話者を分離します', emoji: '🎙️' },
-  { icon: 'article', text: '文字起こし結果からプロ品質の記事を自動生成します', emoji: '📝' },
-  { icon: 'edit_note', text: '生成された記事はエディタで自由に編集できます', emoji: '✏️' },
-  { icon: 'fact_check', text: 'ファクトチェック機能で信頼性を自動検証します', emoji: '🔍' },
-  { icon: 'share', text: 'SNS投稿文の自動生成で、記事の拡散も簡単です', emoji: '🚀' },
-  { icon: 'translate', text: '10言語への翻訳機能で、グローバル展開も対応', emoji: '🌐' },
+  { icon: 'auto_awesome', text: 'AIが音声を文字起こしします。結果は編集して整えられます' },
+  { icon: 'speed', text: '処理時間は音声の長さや混雑状況によって変わります' },
+  { icon: 'mic', text: '複数の話者がいても、AIが自動で話者を分離します' },
+  { icon: 'article', text: '文字起こし結果からプロ品質の記事を自動生成します' },
+  { icon: 'edit_note', text: '生成された記事はエディタで自由に編集できます' },
+  { icon: 'fact_check', text: 'ファクトチェック機能で信頼性を自動検証します' },
+  { icon: 'share', text: 'SNS投稿文の自動生成で、記事の拡散も簡単です' },
+  { icon: 'translate', text: '10言語への翻訳機能で、グローバル展開も対応' },
 ]
 
 const FLOATING_ICONS = ['mic', 'description', 'auto_awesome', 'movie', 'music_note', 'lightbulb', 'bolt', 'local_fire_department', 'rocket_launch', 'favorite']
@@ -151,7 +151,7 @@ export default function InterviewTool() {
       setComparingCount(0)
       setUploads(prev => new Map(Array.from(prev, ([key, item]) => [key,
         item.status === 'done' || item.status === 'error' ? item : { ...item, status: 'error' as const,
-          error: '利用情報を再確認しています。確認後に再試行してください。',
+          error: '利用情報を確かめています。確かめ終わったら、もう一度お試しください。',
           errorActionUrl: '/interview/projects', errorActionLabel: '保存されたプロジェクトを確認する' },
       ])))
     } else if (uploadLifecycle.current.signal.aborted) uploadLifecycle.current = new AbortController()
@@ -233,7 +233,7 @@ export default function InterviewTool() {
     } catch {
       if (uploadsAlive.current && uploadActorRef.current === uploadActor && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) {
         setUploads(prev => new Map(prev).set(crypto.randomUUID(), { file, progress: 0, status: 'error',
-          error: 'ファイルの内容を確認できませんでした。再試行してください。' }))
+          error: 'ファイルの中身を確かめられませんでした。もう一度お試しください。' }))
       }
       return
     }
@@ -344,10 +344,13 @@ export default function InterviewTool() {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve()
               } else {
-                reject(new Error(`Upload failed: ${xhr.status}`))
+                // 画面に出す文は日本語にし、状態コードは再試行の判定のためだけに持つ（UX 点検 FIX-PLAN 17）
+                const err: any = new Error('ファイルを送れませんでした。もう一度お試しください。')
+                err.httpStatus = xhr.status
+                reject(err)
               }
             })
-            xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
+            xhr.addEventListener('error', () => reject(new Error('通信が切れました。通信を確かめて、もう一度お試しください。')))
             xhr.addEventListener('abort', () => {
               const err: any = new Error('アップロードをキャンセルしました')
               err.cancelled = true
@@ -371,7 +374,7 @@ export default function InterviewTool() {
           break // 成功したらループを抜ける
         } catch (uploadErr: any) {
           if (!isCurrent()) return
-          const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
+          const is5xx = typeof uploadErr?.httpStatus === 'number' && uploadErr.httpStatus >= 500 && uploadErr.httpStatus < 600
           if (is5xx && attempt < maxRetries) {
             console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
             // プログレスをリセットして再試行
@@ -648,8 +651,108 @@ export default function InterviewTool() {
         </div>
       </motion.div>
 
-      {/* Upload Progress Modal — createPortal でビューポート直下にレンダリング */}
-      {typeof document !== 'undefined' && createPortal(
+      {/* 新しい見た目: アップロードの進み具合は画面を覆わず、アップロードの枠の下に出す（UX 点検 FIX-PLAN 13） */}
+      {uiNext && uploads.size > 0 && (() => {
+        const allUploads = Array.from(uploads.entries())
+        const active = allUploads.filter(([, u]) => u.status !== 'done' && u.status !== 'error')
+        const done = allUploads.filter(([, u]) => u.status === 'done')
+        const allDone = active.length === 0 && done.length > 0
+        const statusText = (u: UploadingFile) =>
+          u.status === 'creating' ? 'プロジェクトを作っています'
+            : u.status === 'uploading' ? `送っています（${u.progress}%）`
+            : u.status === 'confirming' ? '保存を確かめています'
+            : u.status === 'transcribing' ? '文字起こしを始めています'
+            : u.status === 'done' ? '完了しました'
+            : u.error || 'ファイルを送れませんでした。もう一度お試しください。'
+        return (
+          <section aria-label="アップロードの進み具合" className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <p role="status" aria-live="polite" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+              {allDone
+                ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" aria-hidden />
+                : active.length > 0 ? <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-[#0066ff]" aria-hidden /> : <XCircle className="h-4 w-4 flex-shrink-0 text-red-600" aria-hidden />}
+              {allDone ? 'アップロードが終わりました。文字起こしは裏で進みます。' : active.length > 0 ? 'アップロードしています。このページを開いたままにしてください。' : 'アップロードできなかったファイルがあります。'}
+            </p>
+            <ul className="mt-3 space-y-3">
+              {allUploads.map(([key, upload]) => {
+                const isError = upload.status === 'error'
+                const isDone = upload.status === 'done'
+                const pct = isDone || upload.status === 'confirming' || upload.status === 'transcribing' ? 100 : upload.status === 'creating' ? 0 : upload.progress
+                return (
+                  <li key={key} className={`rounded-xl border p-3 ${isError ? 'border-red-200 bg-red-50' : isDone ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-slate-900">{upload.file.name}</p>
+                        <p className={`text-xs font-bold ${isError ? 'text-red-700' : isDone ? 'text-green-700' : 'text-slate-600'}`}>
+                          {formatFileSize(upload.file.size)} · {statusText(upload)}
+                        </p>
+                      </div>
+                      {upload.status === 'uploading' && (
+                        <button
+                          type="button"
+                          onClick={() => { const xhr = xhrRef.current.get(key); if (xhr) xhr.abort() }}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+                          aria-label={`${upload.file.name} のアップロードをやめる`}
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      )}
+                    </div>
+                    {!isError && (
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`${upload.file.name} の進み具合`}>
+                        <div className={`h-full rounded-full transition-all ${isDone ? 'bg-green-500' : 'bg-[#0066ff]'}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                    {isError && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const file = upload.file
+                            setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
+                            uploadFromDashboard(file)
+                          }}
+                          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                        >
+                          <RotateCcw className="h-4 w-4" aria-hidden />
+                          もう一度送る
+                        </button>
+                        {upload.errorActionUrl && (
+                          <a href={upload.errorActionUrl} className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-slate-800 hover:bg-slate-50">
+                            {upload.errorActionLabel || '詳しく見る'}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+            {allDone && (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => { setUploads(new Map()); uploadSpeedRef.current.clear(); xhrRef.current.clear() }}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-800 hover:bg-slate-50"
+                >
+                  閉じる
+                </button>
+                {done[0]?.[1]?.projectId && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/interview/projects/${done[0][1].projectId}/materials`)}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0066ff] px-4 text-sm font-bold text-white hover:bg-[#0047d6]"
+                  >
+                    プロジェクトを開く
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+        )
+      })()}
+
+      {/* Upload Progress Modal — createPortal でビューポート直下にレンダリング（今の見た目だけ） */}
+      {!uiNext && typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
         {uploads.size > 0 && (() => {
           const allUploads = Array.from(uploads.entries())
@@ -969,7 +1072,7 @@ export default function InterviewTool() {
                             whileTap={{ scale: 0.97 }}
                           >
                             <span className="material-symbols-outlined text-sm">refresh</span>
-                            再試行
+                            もう一度
                           </motion.button>
                           {upload.errorActionUrl && (
                             <motion.a

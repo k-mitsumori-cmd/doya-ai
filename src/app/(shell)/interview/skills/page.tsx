@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { alertDialog } from '@/components/ds/dialog'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Recipe {
@@ -183,14 +185,14 @@ export default function SkillManagementPage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        alert(data.error || '保存に失敗しました')
+        await alertDialog({ title: '保存できませんでした', message: interviewUserMessage(data.error, '入力を確かめて、もう一度お試しください。'), tone: 'error' })
         return
       }
 
       setShowModal(false)
       await fetchRecipes()
     } catch {
-      alert('保存に失敗しました')
+      await alertDialog({ title: '保存できませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setFormSaving(false)
     }
@@ -224,10 +226,10 @@ export default function SkillManagementPage() {
         setAiLimitAction(null)
         setAiPreview(data.recipe)
       } else {
-        alert(data.error || 'スキル生成に失敗しました')
+        await alertDialog({ title: 'スキルを作れませんでした', message: interviewUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
       }
     } catch {
-      alert('スキル生成中にエラーが発生しました')
+      await alertDialog({ title: 'スキルを作れませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setAiGenerating(false)
     }
@@ -257,10 +259,10 @@ export default function SkillManagementPage() {
         setAiPreview(null)
         await fetchRecipes()
       } else {
-        alert(data.error || '保存に失敗しました')
+        await alertDialog({ title: '保存できませんでした', message: interviewUserMessage(data.error, '入力を確かめて、もう一度お試しください。'), tone: 'error' })
       }
     } catch {
-      alert('保存に失敗しました')
+      await alertDialog({ title: '保存できませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setAiGenerating(false)
     }
@@ -274,18 +276,31 @@ export default function SkillManagementPage() {
       const res = await fetch(`/api/interview/recipes/${deleteTarget.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!data.success) {
-        alert(data.error || '削除に失敗しました')
+        await alertDialog({ title: '削除できませんでした', message: interviewUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
         return
       }
       setDeleteTarget(null)
       if (selectedRecipe?.id === deleteTarget.id) setSelectedRecipe(null)
       await fetchRecipes()
     } catch {
-      alert('削除に失敗しました')
+      await alertDialog({ title: '削除できませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setDeleting(false)
     }
   }
+
+  // 開いている窓を Esc で閉じる（処理中は閉じない。UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!showModal && !showAiModal && !deleteTarget) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (deleteTarget) { if (!deleting) setDeleteTarget(null) }
+      else if (showAiModal) { if (!aiGenerating) setShowAiModal(false) }
+      else if (showModal) { if (!formSaving) setShowModal(false) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showModal, showAiModal, deleteTarget, deleting, aiGenerating, formSaving])
 
   // ゲストユーザーはログインを促す
   if (sessionStatus === 'loading') {
@@ -396,7 +411,7 @@ export default function SkillManagementPage() {
             ) : listError ? (
               <div role="alert" className="p-6 text-center text-sm text-amber-900 bg-amber-50">
                 スキル一覧を読み込めませんでした。
-                <button type="button" onClick={fetchRecipes} className="ml-2 font-bold underline underline-offset-2">再試行</button>
+                <button type="button" onClick={fetchRecipes} className="ml-2 font-bold underline underline-offset-2">もう一度読み込む</button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="p-6 text-center">
@@ -515,6 +530,9 @@ export default function SkillManagementPage() {
         >
           <div
             className="bg-white rounded-2xl p-6 shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label="スキルの作成・編集"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-slate-900 mb-4">
@@ -605,6 +623,9 @@ export default function SkillManagementPage() {
         >
           <div
             className="bg-white rounded-2xl p-6 shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label="サンプル記事からスキルを作る"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 mb-1">
@@ -785,6 +806,9 @@ export default function SkillManagementPage() {
         >
           <div
             className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="スキルの削除の確認"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 mb-2">

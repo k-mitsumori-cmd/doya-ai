@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 
 interface Project {
   id: string
@@ -148,11 +149,11 @@ export default function ProjectsPage() {
           setThumbnailLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
           setThumbnailLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
         }
-        toast.error(data.error || 'サムネイル生成に失敗しました')
+        toast.error(interviewUserMessage(data.error, 'サムネイルを作れませんでした。少し待って、もう一度お試しください。'))
       }
     } catch (err) {
       console.error('Thumbnail generation failed:')
-      toast.error('サムネイル生成中にエラーが発生しました')
+      toast.error('サムネイルを作れませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       setGeneratingThumbnail(null)
     }

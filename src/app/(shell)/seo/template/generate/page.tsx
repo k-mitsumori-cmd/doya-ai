@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { CheckCircle2, XCircle } from 'lucide-react'
 import { articleTemplates } from '../data'
+import { alertDialog } from '@/components/ds/dialog'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 export default function GenerateBannersPage() {
   const [generating, setGenerating] = useState(false)
@@ -34,10 +37,10 @@ export default function GenerateBannersPage() {
         console.log('\n📋 data.ts update code:')
         console.log(dataTsUpdate)
       } else {
-        alert(`エラー: ${data.error}`)
+        await alertDialog({ title: 'バナーを作れませんでした', message: seoUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
       }
-    } catch (error: any) {
-      alert(`エラーが発生しました: ${error.message}`)
+    } catch {
+      await alertDialog({ title: 'バナーを作れませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setGenerating(false)
     }
@@ -58,12 +61,12 @@ export default function GenerateBannersPage() {
           const filtered = prev.filter(r => r.templateId !== templateId)
           return [...filtered, { templateId, imageUrl: data.imageUrl }]
         })
-        alert('バナー生成に成功しました')
+        await alertDialog({ title: 'バナーを作りました' })
       } else {
-        alert(`エラー: ${data.error}`)
+        await alertDialog({ title: 'バナーを作れませんでした', message: seoUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
       }
-    } catch (error: any) {
-      alert(`エラーが発生しました: ${error.message}`)
+    } catch {
+      await alertDialog({ title: 'バナーを作れませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     }
   }
 
@@ -138,9 +141,9 @@ export default function GenerateBannersPage() {
                         <div className="flex-1">
                           <p className="font-bold">{template?.title || result.templateId}</p>
                           {result.imageUrl ? (
-                            <p className="text-sm text-green-400">✅ 成功</p>
+                            <p className="flex items-center gap-1 text-sm text-green-400"><CheckCircle2 className="h-4 w-4" aria-hidden />成功</p>
                           ) : (
-                            <p className="text-sm text-red-400">❌ 失敗: {result.error}</p>
+                            <p className="flex items-center gap-1 text-sm text-red-400"><XCircle className="h-4 w-4" aria-hidden />失敗: {seoUserMessage(result.error, '作れませんでした。もう一度お試しください。')}</p>
                           )}
                         </div>
                         {result.imageUrl && (

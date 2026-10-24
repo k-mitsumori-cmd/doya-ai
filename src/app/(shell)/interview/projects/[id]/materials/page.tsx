@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { ShellCostBadge } from '@/components/shell/power'
+import { confirmDialog } from '@/components/ds/dialog'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -125,6 +127,7 @@ const scaleInVariants = {
 }
 
 export default function MaterialsPage() {
+  const uiNext = useUiNext()
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
@@ -202,7 +205,7 @@ export default function MaterialsPage() {
       setProjectTitle('')
       setUploads(prev => new Map(Array.from(prev, ([key, item]) => [key,
         item.status === 'done' || item.status === 'error' ? item : { ...item, status: 'error' as const,
-          error: '利用情報を再確認しています。確認後に再試行してください。',
+          error: '利用情報を確かめています。確かめ終わったら、もう一度お試しください。',
           errorActionUrl: '/interview/projects/' + encodeURIComponent(projectId) + '/materials', errorActionLabel: '保存済み素材を確認する' },
       ])))
     } else if (uploadLifecycle.current.signal.aborted) uploadLifecycle.current = new AbortController()
@@ -264,7 +267,7 @@ export default function MaterialsPage() {
         setTranscribing((prev) => {
           const info = prev.get(mat.id)
           if (!info || info.status === 'error') return prev
-          return new Map(prev).set(mat.id, { ...info, status: 'error', error: '文字起こしに失敗しました。素材を確認して再試行してください。' })
+          return new Map(prev).set(mat.id, { ...info, status: 'error', error: '文字起こしできませんでした。素材を確かめて、もう一度お試しください。' })
         })
       } else if (mat.transcriptionStatus === 'COMPLETED' && !operation.timer) {
         operation.accepted = true
@@ -358,7 +361,7 @@ export default function MaterialsPage() {
     } catch {
       if (uploadsAlive.current && uploadContextRef.current === uploadContext && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) {
         setUploads(prev => new Map(prev).set(crypto.randomUUID(), { file, progress: 0, status: 'error',
-          error: 'ファイルの内容を確認できませんでした。再試行してください。' }))
+          error: 'ファイルの中身を確かめられませんでした。もう一度お試しください。' }))
       }
       return
     }
@@ -445,11 +448,14 @@ export default function MaterialsPage() {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve()
               } else {
-                reject(new Error(`Upload failed: ${xhr.status}`))
+                // 画面に出す文は日本語にし、状態コードは再試行の判定のためだけに持つ（UX 点検 FIX-PLAN 17）
+                const err: any = new Error('ファイルを送れませんでした。もう一度お試しください。')
+                err.httpStatus = xhr.status
+                reject(err)
               }
             })
 
-            xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
+            xhr.addEventListener('error', () => reject(new Error('通信が切れました。通信を確かめて、もう一度お試しください。')))
             xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
 
             const formData = new FormData()
@@ -470,7 +476,7 @@ export default function MaterialsPage() {
           break // 成功したらループを抜ける
         } catch (uploadErr: any) {
           if (!isCurrent()) return
-          const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
+          const is5xx = typeof uploadErr?.httpStatus === 'number' && uploadErr.httpStatus >= 500 && uploadErr.httpStatus < 600
           if (is5xx && attempt < maxRetries) {
             console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
             // プログレスをリセットして再試行
@@ -665,7 +671,7 @@ export default function MaterialsPage() {
 
   const deleteMaterial = async (materialId: string) => {
     if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size) return
-    if (confirm('この素材を削除しますか？')) await runMaterialAction('delete', materialId)
+    if (await confirmDialog({ title: 'この素材を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' })) await runMaterialAction('delete', materialId)
   }
 
   const confirmPendingUpload = async (materialId: string) => { await runMaterialAction('confirm', materialId) }
@@ -1093,7 +1099,7 @@ export default function MaterialsPage() {
                         whileTap={{ scale: 0.97 }}
                       >
                         <span className="material-symbols-outlined text-sm">refresh</span>
-                        再試行
+                        もう一度
                       </motion.button>
                       {upload.errorActionUrl && (
                         <motion.a
@@ -1211,7 +1217,7 @@ export default function MaterialsPage() {
                       className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
-                      再試行
+                      もう一度
                     </button>}
                     {info.limitReached && info.limitAction && (
                       <a
@@ -1322,7 +1328,7 @@ export default function MaterialsPage() {
         {projectError && (
           <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
             素材一覧を読み込めませんでした。表示中の素材がある場合は更新前の情報です。
-            <button type="button" onClick={fetchProject} className="ml-3 underline">再試行</button>
+            <button type="button" onClick={fetchProject} className="ml-3 underline">もう一度読み込む</button>
           </div>
         )}
 
@@ -1464,7 +1470,7 @@ export default function MaterialsPage() {
                               <span className="material-symbols-outlined text-base">
                                 {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                               </span>
-                              {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                              {m.transcriptionStatus === 'ERROR' ? 'もう一度' : '文字起こし'}
                               <ShellCostBadge action="transcribe.hour" per="60分" />
                             </motion.button>
                           )}
@@ -1525,7 +1531,7 @@ export default function MaterialsPage() {
                             <span className="material-symbols-outlined text-sm">
                               {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                             </span>
-                            {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                            {m.transcriptionStatus === 'ERROR' ? 'もう一度' : '文字起こし'}
                             <ShellCostBadge action="transcribe.hour" per="60分" />
                           </motion.button>
                         )}
@@ -1557,9 +1563,9 @@ export default function MaterialsPage() {
         )}
       </div>
 
-      {/* アップロード中モーダル */}
+      {/* アップロード中モーダル（今の見た目だけ。新しい見た目では上の一覧の中に進み具合が出る。UX 点検 FIX-PLAN 13） */}
       <AnimatePresence>
-        {Array.from(uploads.values()).some((u) => u.status === 'uploading' || u.status === 'confirming') && (() => {
+        {!uiNext && Array.from(uploads.values()).some((u) => u.status === 'uploading' || u.status === 'confirming') && (() => {
           const activeUploads = Array.from(uploads.entries()).filter(([, u]) => u.status === 'uploading' || u.status === 'confirming')
           const totalProgress = activeUploads.length > 0
             ? Math.round(activeUploads.reduce((sum, [, u]) => sum + u.progress, 0) / activeUploads.length)

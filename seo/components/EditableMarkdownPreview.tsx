@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react'
 import { markdownToHtmlBasic } from '@seo/lib/markdown'
+import { seoUserMessage } from '@/components/seo/user-message'
 import { Edit3, Wand2, X, Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 
 type Section = {
@@ -127,7 +128,7 @@ export function EditableMarkdownPreview({ markdown, articleId, onUpdate }: Props
       const json = await res.json()
       
       if (!res.ok || !json.success) {
-        throw new Error(json.error || '修正に失敗しました')
+        throw new Error(seoUserMessage(json.error, 'AIで書き直せませんでした。少し待って、もう一度お試しください。'))
       }
 
       setSuccess(json.message || '修正しました')
@@ -139,7 +140,7 @@ export function EditableMarkdownPreview({ markdown, articleId, onUpdate }: Props
         setTimeout(() => onUpdate(), 500)
       }
     } catch (e: any) {
-      setError(e?.message || '修正に失敗しました')
+      setError(seoUserMessage(e, 'AIで書き直せませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setBusy(false)
     }
@@ -258,7 +259,7 @@ export function EditableMarkdownPreview({ markdown, articleId, onUpdate }: Props
         }
         .editable-md-preview .md-preview h2:hover::after,
         .editable-md-preview .md-preview h3:hover::after {
-          content: '✏️ クリックで編集';
+          content: 'クリックで編集';
           position: absolute;
           right: 0.5rem;
           top: 50%;

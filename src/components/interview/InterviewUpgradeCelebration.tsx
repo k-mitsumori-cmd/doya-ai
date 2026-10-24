@@ -72,6 +72,14 @@ export default function InterviewUpgradeCelebration({
     }
   }, [isOpen])
 
+  // Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
@@ -89,6 +97,9 @@ export default function InterviewUpgradeCelebration({
           exit={{ scale: 0.8, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="プランの変更が終わりました"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 背景グラデーション */}

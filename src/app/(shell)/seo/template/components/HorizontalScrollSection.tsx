@@ -256,7 +256,7 @@ export function HorizontalScrollSection({
     <div className="space-y-1.5 sm:space-y-3">
       {/* セクションタイトル */}
       <h2 className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-bold px-3 sm:px-2 md:px-4 text-white flex items-center gap-1.5 sm:gap-2">
-        <span className="text-blue-400 text-xs sm:text-base">▶</span> {section.title}
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-blue-400 sm:h-5 sm:w-5" aria-hidden /> {section.title}
       </h2>
       {section.description && (
         <p className="text-xs sm:text-sm text-gray-400 px-3 sm:px-2 md:px-4 mb-2">

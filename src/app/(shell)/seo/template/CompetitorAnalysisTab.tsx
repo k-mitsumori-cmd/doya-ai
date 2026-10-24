@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Loader2, Link2, Sparkles, RefreshCcw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 interface CompetitorAnalysisTabProps {
   articleId: string
@@ -35,7 +36,7 @@ export function CompetitorAnalysisTab({ articleId, article, onUpdated }: Competi
       const json = await res.json().catch(() => ({}))
 
       if (!res.ok || json?.error) {
-        throw new Error(json?.error || `分析に失敗しました (${res.status})`)
+        throw new Error(seoUserMessage(json?.error, '競合を分析できませんでした。少し待って、もう一度お試しください。'))
       }
 
       setSuccess(true)
@@ -44,7 +45,7 @@ export function CompetitorAnalysisTab({ articleId, article, onUpdated }: Competi
       // 3秒後に成功メッセージを消す
       setTimeout(() => setSuccess(false), 3000)
     } catch (e: any) {
-      setError(e.message || '分析中にエラーが発生しました')
+      setError(seoUserMessage(e, '競合を分析できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setAnalyzing(false)
     }

@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import Head from 'next/head'
+import { alertDialog, ConfirmDialog } from '@/components/ds/dialog'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 
 interface ProjectDetail {
   id: string
@@ -123,7 +125,7 @@ export default function ProjectOverviewPage() {
         return data.project as ProjectDetail
       })
       .then((data) => { if (!controller.signal.aborted) setProject(data) })
-      .catch((error) => { if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'プロジェクトを読み込めませんでした') })
+      .catch((error) => { if (!controller.signal.aborted) setLoadError(interviewUserMessage(error, 'プロジェクトを読み込めませんでした。もう一度お試しください。')) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [projectId, retryCount])
@@ -136,10 +138,10 @@ export default function ProjectOverviewPage() {
       if (data.success) {
         router.push('/interview/projects')
       } else {
-        alert(data.error || '削除に失敗しました')
+        await alertDialog({ title: 'プロジェクトを削除できませんでした', message: interviewUserMessage(data.error, '少し待って、もう一度お試しください。'), tone: 'error' })
       }
     } catch {
-      alert('削除に失敗しました')
+      await alertDialog({ title: 'プロジェクトを削除できませんでした', message: '通信を確かめて、もう一度お試しください。', tone: 'error' })
     } finally {
       setDeleting(false)
     }
@@ -197,7 +199,7 @@ export default function ProjectOverviewPage() {
     return (
       <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
         <p className="font-bold text-red-800">{loadError}</p>
-        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">もう一度読み込む</button>
       </div>
     )
   }
@@ -643,60 +645,17 @@ export default function ProjectOverviewPage() {
         </Link>
       </div>
 
-      {/* 削除確認モーダル */}
-      <AnimatePresence>
-      {showDeleteConfirm && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setShowDeleteConfirm(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-slate-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-symbols-outlined text-4xl text-red-500">warning</span>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">プロジェクトを削除</h3>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed mb-2">「{project.title}」を削除します。</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
-              <p className="text-xs text-red-600 flex items-start gap-2">
-                <span className="material-symbols-outlined text-sm mt-0.5">error</span>
-                <span>記事などのデータは削除され、保管ファイルも順次削除されます。この操作は取り消せません。</span>
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 text-sm text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 font-medium transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 disabled:opacity-50 font-medium transition-colors flex items-center justify-center gap-1"
-              >
-                {deleting ? (
-                  <>
-                    <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                    削除中...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-sm">delete</span>
-                    削除する
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
+      {/* 削除確認（共通のダイアログ。UX 点検 FIX-PLAN 18） */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`「${project.title}」を削除しますか？`}
+        message="記事などのデータは削除され、保管ファイルも順次削除されます。元に戻せません。"
+        confirmLabel={deleting ? '削除しています…' : '削除する'}
+        tone="danger"
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
       </div>
     </>
   )

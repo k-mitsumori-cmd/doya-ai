@@ -126,6 +126,9 @@ export default function InterviewUpsellModal({
           exit={{ scale: 0.85, opacity: 0, y: 24 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={displayTitle}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 背景グラデーション */}

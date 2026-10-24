@@ -11,6 +11,7 @@ import light from '@/components/persona/history-next.module.css'
 import PersonaServerHistory from '@/components/persona/PersonaServerHistory'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { confirmDialog } from '@/components/ds/dialog'
 
 interface HistoryItem {
   id?: string
@@ -68,7 +69,7 @@ function AccountHistory({ userId }: { userId: string }) {
       deletePersonaRecord(accountStorage, history[index])
       setError('')
       refreshHistory()
-    } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
+    } catch { setError('履歴を削除できませんでした。ブラウザの保存の設定を確かめてください。') }
   }
 
   const loadItem = (item: HistoryItem) => {
@@ -94,13 +95,13 @@ function AccountHistory({ userId }: { userId: string }) {
     })
   }
 
-  const clearAll = () => {
-    if (confirm('このブラウザの履歴をすべて削除しますか？ アカウントの保存済み履歴は削除されません。')) {
+  const clearAll = async () => {
+    if (await confirmDialog({ title: 'このブラウザの履歴をすべて削除しますか？', message: 'アカウントに保存した履歴は消えません。', confirmLabel: 'すべて削除する', tone: 'danger' })) {
       try {
         clearPersonaRecords(accountStorage)
         setHistory([])
         setError('')
-      } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
+      } catch { setError('履歴を削除できませんでした。ブラウザの保存の設定を確かめてください。') }
     }
   }
 

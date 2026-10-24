@@ -27,6 +27,8 @@ import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button as DsButton, EmptyState, Skeleton, ToolHero } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
+import { confirmDialog } from '@/components/ds/dialog'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
 const HERO_ART = '/ui-renewal/keyart/seo.webp'
@@ -45,7 +47,7 @@ type SeoArticleRow = {
 
 // ステップ定義（進行バー用）
 const WORKFLOW_STEPS = [
-  { id: 'keyword', label: 'KW', icon: Sparkles },
+  { id: 'keyword', label: 'キーワード', icon: Sparkles },
   { id: 'outline', label: '構成', icon: FileText },
   { id: 'generate', label: '本文', icon: Play },
   { id: 'edit', label: '編集', icon: Edit3 },
@@ -161,7 +163,7 @@ export default function SeoTool() {
       setError(null)
     } catch (e: any) {
       if (epoch !== listEpoch.current) return
-      const message = e?.name === 'AbortError' ? '取得に時間がかかっています。再試行してください。' : e?.message || '読み込みに失敗しました'
+      const message = e?.name === 'AbortError' ? '読み込みに時間がかかっています。もう一度お試しください。' : seoUserMessage(e, '記事の一覧を読み込めませんでした。通信を確かめてください。')
       if (opts?.showLoading) setError(message)
       else { retryMoreRef.current = !!opts?.more; setMoreError(message) }
     } finally {
@@ -230,13 +232,13 @@ export default function SeoTool() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
         if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitAction(seoLimitActionFromResponse(json))
-        throw new Error(json?.error || `API Error: ${res.status}`)
+        throw new Error(seoUserMessage(json?.error, '作り直せませんでした。少し待って、もう一度お試しください。'))
       }
       const jobId = String(json?.jobId || '').trim()
-      if (!jobId) throw new Error('jobIdが取得できませんでした')
+      if (!jobId) throw new Error('作り直しを始められませんでした。もう一度お試しください。')
       router.push(`/seo/jobs/${jobId}?auto=1`)
     } catch (e: any) {
-      setActionError(e?.message || '再生成に失敗しました')
+      setActionError(seoUserMessage(e, '作り直せませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setRegenBusyId(null)
     }
@@ -244,7 +246,7 @@ export default function SeoTool() {
 
   async function deleteArticle(articleId: string) {
     if (!articleId) return
-    if (!confirm('この記事を削除しますか？この操作は取り消せません。')) return
+    if (!(await confirmDialog({ title: 'この記事を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
     setActionError(null)
     setDeleteBusyId(articleId)
     let timeout: number | undefined
@@ -257,13 +259,13 @@ export default function SeoTool() {
       })
       const json = await res.json()
       if (!res.ok || json?.success !== true) {
-        throw new SeoArticleDeleteError(typeof json?.error === 'string' ? json.error : '削除結果を確認できませんでした。再読み込みしてご確認ください。')
+        throw new SeoArticleDeleteError(seoUserMessage(json?.error, '削除できたかを確かめられませんでした。一覧を読み込み直してください。'))
       }
       // 成功: stateから該当記事を除去
       setArticles((prev) => prev.filter((a) => a.id !== articleId))
       setRefreshStep(step => step + 1)
     } catch (e: any) {
-      setActionError(e instanceof SeoArticleDeleteError ? e.message : '削除結果を確認できませんでした。再読み込みしてご確認ください。')
+      setActionError(e instanceof SeoArticleDeleteError ? e.message : '削除できたかを確かめられませんでした。一覧を読み込み直してください。')
     } finally {
       if (timeout !== undefined) window.clearTimeout(timeout)
       setDeleteBusyId(null)
@@ -687,7 +689,7 @@ export default function SeoTool() {
                               }}
                               disabled={regenBusyId === a.id}
                               className="h-10 px-4 rounded-xl bg-white border border-red-200 text-red-700 hover:bg-red-50 text-xs font-black shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                              title="同じ記事を再生成します（新しいジョブを作成）"
+                              title="同じ記事を作り直します"
                             >
                               <RefreshCcw className={`w-4 h-4 ${regenBusyId === a.id ? 'animate-spin' : ''}`} />
                               再生成
@@ -727,7 +729,7 @@ export default function SeoTool() {
         )}
       </div>
 
-      {moreError && <p role="alert" className="mt-4 text-sm text-red-700">{moreError} <button className="underline" onClick={() => load(retryMoreRef.current ? { more: true } : { showLoading: true })}>再試行する</button></p>}
+      {moreError && <p role="alert" className="mt-4 text-sm text-red-700">{moreError} <button className="underline" onClick={() => load(retryMoreRef.current ? { more: true } : { showLoading: true })}>もう一度読み込む</button></p>}
       {!loading && !error && nextCursor && <div className="mt-6 text-center"><button className="px-6 py-3 rounded-xl border bg-white font-bold disabled:opacity-50" disabled={moreLoading} onClick={() => load({ more: true })}>{moreLoading ? '読み込み中…' : '記事の続きを読み込む'}</button></div>}
 
       </div>

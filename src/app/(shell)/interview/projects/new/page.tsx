@@ -82,7 +82,7 @@ export default function NewProject() {
           setLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
           if (cause.code === 'CREATION_SCOPE_CHANGED') creationAttempt.current = null
         }
-        setError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから同じ操作を再試行してください。')
+        setError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確かめてから、もう一度お試しください。')
         activeCreate.current = null
         setLoading(false)
       }

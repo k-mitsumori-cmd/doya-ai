@@ -171,6 +171,13 @@ export default function TemplatesPage() {
   const activeTemplateCreate = useRef<AbortController | null>(null)
   const templateCreateAttempt = useRef<{ input: string; key: string; scope: string | null } | null>(null)
   useEffect(() => () => { activeTemplateCreate.current?.abort(); activeTemplateCreate.current = null }, [])
+  // テンプレートの詳細の窓を Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!selectedTemplate) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedTemplate(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedTemplate])
 
   const filteredTemplates = selectedIndustry === 'all'
     ? ARTICLE_TEMPLATES
@@ -196,7 +203,7 @@ export default function TemplatesPage() {
           setCreateLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
           if (cause.code === 'CREATION_SCOPE_CHANGED') templateCreateAttempt.current = null
         }
-        setCreateError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから再試行してください。')
+        setCreateError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確かめてから、もう一度お試しください。')
         activeTemplateCreate.current = null
         setCreating(false)
       }
@@ -299,6 +306,9 @@ export default function TemplatesPage() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedTemplate.title}
               onClick={(e) => e.stopPropagation()}
             >
               {/* モーダルヘッダー */}

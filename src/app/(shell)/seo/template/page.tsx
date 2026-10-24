@@ -9,13 +9,15 @@ import { ArticleTemplate } from './types'
 import {
   Sparkles, Loader2, CheckCircle2, Lightbulb, FileText, Zap, Target,
   TrendingUp, Search, BarChart3, ArrowRight, ArrowLeft, ChevronDown,
-  ChevronUp, X,
+  ChevronUp, X, BookOpen, Scale, Medal, Wrench, Trophy, Smile, GraduationCap, MessageCircle,
+  type LucideIcon,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Toaster, toast } from 'react-hot-toast'
 import { useSeoTemplateRequests } from '@/lib/seo-template-requests'
 import { useSeoCreationRecovery } from '@/lib/use-seo-creation-recovery'
 import { BillingResponseError, readBillingResponse } from '@/lib/billing-response-client'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 const ARTICLE_TYPES = [
   { id: 'comparison', label: '比較記事', desc: '複数の製品やサービスを比較', icon: BarChart3 },
@@ -35,11 +37,26 @@ const AUDIENCE_PRESETS = [
 ] as const
 
 const TONE_OPTIONS = [
-  { id: 'logical', label: '論理的', desc: 'データや根拠を重視', emoji: '📊' },
-  { id: 'friendly', label: 'やさしい', desc: '初心者にも分かりやすく', emoji: '😊' },
-  { id: 'professional', label: '専門的', desc: '業界知識を前提に', emoji: '🎓' },
-  { id: 'casual', label: 'カジュアル', desc: '親しみやすい文体', emoji: '💬' },
+  { id: 'logical', label: '論理的', desc: 'データや根拠を重視', icon: BarChart3 },
+  { id: 'friendly', label: 'やさしい', desc: '初心者にも分かりやすく', icon: Smile },
+  { id: 'professional', label: '専門的', desc: '業界知識を前提に', icon: GraduationCap },
+  { id: 'casual', label: 'カジュアル', desc: '親しみやすい文体', icon: MessageCircle },
 ] as const
+
+// 画面のカテゴリのアイコン（data.ts の絵文字は画面に出さない。UX 点検 FIX-PLAN 15）
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  guide: BookOpen,
+  compare: Scale,
+  ranking: Medal,
+  howto: Target,
+  tutorial: Wrench,
+  trend: TrendingUp,
+  case: Trophy,
+}
+function CategoryIcon({ id, className }: { id: string; className?: string }) {
+  const Icon = CATEGORY_ICONS[id] || FileText
+  return <Icon className={className} aria-hidden />
+}
 
 const CHAR_PRESETS = [
   { value: 3000, label: '3,000字', desc: 'コンパクト', minPlan: 'GUEST' },
@@ -274,7 +291,7 @@ function SeoTemplateWorkspace() {
       if (!currentTitle.current.trim()) { setArticleTitle(uniq[0]); setTitleSelected(0) }
     } catch (e: any) {
       if (!operation.current()) return
-      setTitleError(e instanceof BillingResponseError ? 'タイトル候補の応答を確認できませんでした。もう一度お試しください。' : e?.message || 'タイトル候補の生成に失敗しました')
+      setTitleError(e instanceof BillingResponseError ? 'タイトル候補の応答を確認できませんでした。もう一度お試しください。' : seoUserMessage(e, 'タイトル候補を作れませんでした。少し待って、もう一度お試しください。'))
     } finally { if (operation.current()) setTitleLoading(false); operation.finish() }
   }
 
@@ -372,7 +389,7 @@ function SeoTemplateWorkspace() {
     } catch (e: any) {
       if (!operation.current()) return
       setCreationUncertain(createUnresolved.current)
-      setError(confirmedDestination.current ? '記事は保存済みです。下のリンクから作成済みの記事を開いてください。' : createUnresolved.current ? '作成結果を確認できませんでした。二重作成を避けるため、記事一覧で保存状況をご確認ください。' : e?.message || '生成に失敗しました')
+      setError(confirmedDestination.current ? '記事は保存済みです。下のリンクから作成済みの記事を開いてください。' : createUnresolved.current ? '作成結果を確認できませんでした。二重作成を避けるため、記事一覧で保存状況をご確認ください。' : seoUserMessage(e, '記事の生成を始められませんでした。もう一度お試しください。'))
       setLoading(false)
     } finally { operation.finish() }
   }
@@ -582,7 +599,7 @@ function SeoTemplateWorkspace() {
                         : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    {cat.emoji} {cat.label}
+                    <span className="inline-flex items-center gap-1.5"><CategoryIcon id={cat.id} className="h-4 w-4" />{cat.label}</span>
                   </button>
                 ))}
               </div>
@@ -597,7 +614,7 @@ function SeoTemplateWorkspace() {
                       {/* カテゴリヘッダー */}
                       <div className="flex items-center gap-2.5 mb-4">
                         <span className={`w-8 h-8 rounded-lg ${colors.badge} flex items-center justify-center text-white text-sm`}>
-                          {cat.emoji}
+                          <CategoryIcon id={cat.id} className="h-4 w-4" />
                         </span>
                         <div>
                           <h2 className="text-base sm:text-lg font-black text-slate-900">{cat.label}</h2>
@@ -692,7 +709,7 @@ function SeoTemplateWorkspace() {
                 {/* テンプレート情報 */}
                 <div className="p-4 sm:p-5 flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} flex items-center justify-center text-2xl flex-shrink-0`}>
-                    {selectedTemplate.icon}
+                    <CategoryIcon id={selectedTemplate.category} className="h-6 w-6 text-slate-700" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">選択中のテンプレート</p>
@@ -872,7 +889,7 @@ function SeoTemplateWorkspace() {
                                     selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
                                   }`}
                                 >
-                                  <span className="text-2xl mb-1 block">{opt.emoji}</span>
+                                  <opt.icon className={`mx-auto mb-1 h-6 w-6 ${selected ? 'text-blue-600' : 'text-slate-500'}`} aria-hidden />
                                   <p className={`text-base font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{opt.label}</p>
                                   <p className="text-xs font-medium text-slate-400 mt-1">{opt.desc}</p>
                                 </button>

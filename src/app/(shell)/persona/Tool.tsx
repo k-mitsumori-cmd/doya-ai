@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/persona/history-records'
@@ -45,8 +45,14 @@ import {
   X,
   AlertCircle,
   RefreshCw,
+  Play,
+  Camera,
+  Music,
+  Mic,
+  Headphones,
 } from 'lucide-react'
 import { ShellCostBadge } from '@/components/shell/power'
+import { personaUserMessage } from '@/components/persona/user-message'
 
 
 // ムード → 色
@@ -62,15 +68,16 @@ const MOOD_COLORS: Record<string, string> = {
 }
 
 // プラットフォームロゴ
-const PLATFORM_LOGOS: Record<string, { color: string; bg: string; icon: string }> = {
+// 文字で表せない媒体は lucide のアイコンにする（絵文字を使わない。UX 点検 FIX-PLAN 15）
+const PLATFORM_LOGOS: Record<string, { color: string; bg: string; icon: ReactNode }> = {
   'linkedin': { color: '#0A66C2', bg: 'bg-[#0A66C2]', icon: 'in' },
   'twitter': { color: '#000000', bg: 'bg-black', icon: '𝕏' },
   'x': { color: '#000000', bg: 'bg-black', icon: '𝕏' },
   'note': { color: '#41C9B4', bg: 'bg-[#41C9B4]', icon: 'n' },
-  'youtube': { color: '#FF0000', bg: 'bg-[#FF0000]', icon: '▶' },
-  'instagram': { color: '#E4405F', bg: 'bg-gradient-to-br from-[#833AB4] via-[#E4405F] to-[#FCAF45]', icon: '📷' },
+  'youtube': { color: '#FF0000', bg: 'bg-[#FF0000]', icon: <Play className="h-4 w-4" aria-hidden /> },
+  'instagram': { color: '#E4405F', bg: 'bg-gradient-to-br from-[#833AB4] via-[#E4405F] to-[#FCAF45]', icon: <Camera className="h-4 w-4" aria-hidden /> },
   'facebook': { color: '#1877F2', bg: 'bg-[#1877F2]', icon: 'f' },
-  'tiktok': { color: '#000000', bg: 'bg-black', icon: '♪' },
+  'tiktok': { color: '#000000', bg: 'bg-black', icon: <Music className="h-4 w-4" aria-hidden /> },
   'google': { color: '#4285F4', bg: 'bg-[#4285F4]', icon: 'G' },
   'slack': { color: '#4A154B', bg: 'bg-[#4A154B]', icon: '#' },
   'qiita': { color: '#55C500', bg: 'bg-[#55C500]', icon: 'Q' },
@@ -80,8 +87,8 @@ const PLATFORM_LOGOS: Record<string, { color: string; bg: string; icon: string }
   'pinterest': { color: '#BD081C', bg: 'bg-[#BD081C]', icon: 'P' },
   'wantedly': { color: '#21BDDB', bg: 'bg-[#21BDDB]', icon: 'W' },
   'newspicks': { color: '#FFC800', bg: 'bg-[#FFC800]', icon: 'NP' },
-  'voicy': { color: '#FF6B00', bg: 'bg-[#FF6B00]', icon: '🎙' },
-  'podcast': { color: '#9933CC', bg: 'bg-[#9933CC]', icon: '🎧' },
+  'voicy': { color: '#FF6B00', bg: 'bg-[#FF6B00]', icon: <Mic className="h-4 w-4" aria-hidden /> },
+  'podcast': { color: '#9933CC', bg: 'bg-[#9933CC]', icon: <Headphones className="h-4 w-4" aria-hidden /> },
 }
 
 function getPlatformLogo(source: string) {
@@ -208,20 +215,19 @@ function personaQuotaAction(data: { upgradeUrl?: unknown; contactUrl?: unknown }
 function toFriendlyError(e: unknown, res?: Response | null): string {
   // ネットワークエラー（fetch 自体が失敗）
   if (e instanceof TypeError && /fetch|network/i.test(e.message)) {
-    return '通信エラーが発生しました。インターネット接続を確認してください。'
+    return '通信が切れました。通信を確かめて、もう一度お試しください。'
   }
   // HTTP ステータスに基づくメッセージ
   if (res) {
     if (res.status === 429) {
-      return e instanceof PersonaQuotaError ? e.message : 'リクエスト回数の上限に達しました。しばらく時間を置いてから再度お試しください。'
+      return e instanceof PersonaQuotaError ? personaUserMessage(e, '今日の上限に達しました。明日もう一度お試しください。') : '回数の上限に達しました。少し待って、もう一度お試しください。'
     }
     if (res.status >= 500) {
-      return 'サーバーエラーが発生しました。しばらくしてから再度お試しください。'
+      return 'うまく作れませんでした。少し待って、もう一度お試しください。'
     }
   }
-  // その他 — 元のメッセージをそのまま返す
-  if (e instanceof Error) return e.message
-  return 'エラーが発生しました'
+  // その他 — 日本語の利用者向けの文だけを出す（英語・内部の言葉は決まった文にする。UX 点検 FIX-PLAN 17）
+  return personaUserMessage(e, 'ペルソナを作れませんでした。少し待って、もう一度お試しください。')
 }
 
 export type PersonaRestoredRecord = {
@@ -532,15 +538,13 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
         if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('text'); setQuotaAction(personaQuotaAction(data)) }
-        const msg =
-          (data && (data.error || data.message)) ||
-          (raw && raw.slice(0, 200)) ||
-          'ペルソナ生成に失敗しました'
+        // サーバーの応答の本文はそのまま出さない（UX 点検 FIX-PLAN 17）
+        const msg = personaUserMessage(data && (data.error || data.message), 'ペルソナを作れませんでした。少し待って、もう一度お試しください。')
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(msg) : new Error(msg)
       }
 
       if (!isPersonaDisplayData(data?.data)) {
-        throw new Error('ペルソナデータの取得に失敗しました。もう一度お試しください。')
+        throw new Error('ペルソナを受け取れませんでした。もう一度お試しください。')
       }
 
       if (!isCurrent()) return
@@ -553,7 +557,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         currentRecordId.current = record.id
         currentServerRecord.current = record.serverStored
         savePersonaRecord(accountStorage, record)
-      } catch { setError(typeof data.projectId === 'string' ? 'ペルソナはサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '生成は完了しましたが、このブラウザに履歴を保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
+      } catch { setError(typeof data.projectId === 'string' ? 'このブラウザには残せませんでした。保存した履歴から開き直せます。' : '履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
       if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'generate') }
     } finally {
@@ -604,9 +608,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         setPortraitImage(data.image)
         try {
           savePersonaImage(accountStorage, recordId, generatedData, { portrait: data.image })
-        } catch { setPortraitError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
+        } catch { setPortraitError('画像をこのブラウザに残せませんでした。保存した履歴から開き直せます。') }
       } else {
-        throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
+        throw new PersonaImageResponseError('画像の保存先を確かめられませんでした。もう一度お試しください。')
       }
     } catch (e) {
       if (isCurrent()) setPortraitError(e instanceof PersonaQuotaError ? e.message : personaImageError(e, res))
@@ -655,14 +659,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           : '本日の画像の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' || data?.code === 'NOT_INCLUDED' ? new PersonaQuotaError(message) : new Error(message)
       }
-      if (!validPersonaImageResponse(data)) throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
+      if (!validPersonaImageResponse(data)) throw new PersonaImageResponseError('画像の保存先を確かめられませんでした。もう一度お試しください。')
       if (data.image) {
         if (intent !== 'included') setQuotaNotice(current => current === 'image' ? null : current)
         delete imageAttempts.current[sceneKey]
         setSceneImages(prev => isCurrent() ? { ...prev, [sceneKey]: data.image } : prev)
         try {
           savePersonaImage(accountStorage, recordId, generatedData, { sceneImages: { [sceneKey]: data.image } })
-        } catch { setError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
+        } catch { setError('画像をこのブラウザに残せませんでした。保存した履歴から開き直せます。') }
       }
     } catch (e) {
       if (isCurrent()) setSceneErrors(prev => isCurrent() ? { ...prev, [sceneKey]: (e instanceof PersonaQuotaError ? e.message : personaImageError(e, res)) } : prev)
@@ -709,12 +713,12 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
         if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('text'); setQuotaAction(personaQuotaAction(data)) }
-        const msg = (data && (data.error || data.message)) || 'ペルソナ変更に失敗しました'
+        const msg = personaUserMessage(data && (data.error || data.message), 'ペルソナを変えられませんでした。少し待って、もう一度お試しください。')
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(msg) : new Error(msg)
       }
 
       if (!isPersonaDisplayData(data?.data)) {
-        throw new Error('変更後のペルソナデータの取得に失敗しました')
+        throw new Error('変えたペルソナを受け取れませんでした。もう一度お試しください。')
       }
 
       if (!isCurrent() || currentPersona.current !== generatedData) return
@@ -734,7 +738,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         currentRecordId.current = record.id
         currentServerRecord.current = record.serverStored
         savePersonaRecord(accountStorage, record)
-      } catch { setError(typeof data.projectId === 'string' ? '変更結果はサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '変更は完了しましたが、このブラウザに保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
+      } catch { setError(typeof data.projectId === 'string' ? 'このブラウザには残せませんでした。保存した履歴から開き直せます。' : '履歴に残せませんでした。閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
       if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'modify') }
     } finally {
@@ -880,7 +884,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           {quotaNotice !== 'image' && <button type="button" className="rounded bg-white px-3 py-2 text-sm text-brand-600 border border-brand-100" onClick={() => {
             const prompt = scenePrompts.current[sceneKey]
             if (prompt) void handleGenerateScene(prompt, sceneKey)
-          }}>この画像を再試行する</button>}
+          }}>この画像をもう一度作る</button>}
         </div>
       )
     }
@@ -1053,7 +1057,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    {errorAction === 'modify' ? '変更を再試行' : '再試行'}
+                    {errorAction === 'modify' ? 'もう一度変える' : 'もう一度作る'}
                   </button>
                 )}
               </div>
@@ -1755,7 +1759,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {persona.resonatingMessages.map((rm, i) => (
                               <div key={i} className="flex items-start gap-2 px-3 py-2 bg-brand-50 rounded-lg border border-brand-50">
-                                <span className="text-brand-300 mt-0.5">✦</span>
+                                <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-300" aria-hidden />
                                 <span className="text-sm text-gray-800">{rm}</span>
                               </div>
                             ))}

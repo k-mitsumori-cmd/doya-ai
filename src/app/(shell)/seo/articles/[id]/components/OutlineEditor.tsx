@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+import { seoUserMessage } from '@/components/seo/user-message'
 
 type HeadingItem = {
   id: string
@@ -202,7 +203,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
 
       onUpdate?.()
     } catch (e: any) {
-      setError(e?.message || '処理に失敗しました')
+      setError(seoUserMessage(e, 'うまくいきませんでした。少し待って、もう一度お試しください。'))
     } finally {
       setLoading(false)
       setActiveAction(null)
@@ -243,7 +244,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
       onUpdate?.()
       setActiveAction(null)
     } catch (e: any) {
-      setError(e?.message || '保存に失敗しました')
+      setError(seoUserMessage(e, '保存できませんでした。通信を確かめて、もう一度お試しください。'))
     } finally {
       setLoading(false)
     }
