@@ -50,6 +50,7 @@ export default function ShodanNewPage() {
   const [owner, setOwner] = useState(guard.identity)
   const [unknown, setUnknown] = useState(false)
   const [operationError, setOperationError] = useState('')
+  const [retryable, setRetryable] = useState(false)
   const [confirmedId, setConfirmedId] = useState<string | null>(null)
   const attempt = useRef<'idle' | 'pending' | 'unknown' | 'confirmed' | 'limited'>('idle')
   const draft = useRef('')
@@ -65,7 +66,7 @@ export default function ShodanNewPage() {
     setOwner(guard.identity); setUrl(''); draft.current = ''; setPhase('input')
     setResearch(null); setConfirmedId(null)
     setLimitMessage(null); setLimitAction(null); setHasProfile(null)
-    setUnknown(false); setOperationError(''); attempt.current = 'idle'
+    setUnknown(false); setOperationError(''); setRetryable(false); attempt.current = 'idle'
   }, [guard.identity])
   useEffect(() => {
     if (attempt.current === 'pending') {
@@ -118,7 +119,7 @@ export default function ShodanNewPage() {
     const ticket = guard.begin('create')
     if (!ticket) return
     attempt.current = 'pending'
-    setLimitMessage(null); setLimitAction(null); setOperationError(''); setPhase('researching')
+    setLimitMessage(null); setLimitAction(null); setOperationError(''); setRetryable(false); setPhase('researching')
     try {
       const d = await shodanSend<{ id: string; status: string; research: CompanyResearch }>('/api/shodan/preparations', orgSlug, 'POST', { url: target.href }, { signal: ticket.signal })
       if (!ticket.current()) return
@@ -132,6 +133,9 @@ export default function ShodanNewPage() {
       if (e instanceof ShodanApiError && e.code === 'LIMIT') {
         setLimitMessage(e.message)
         setLimitAction(e.actionUrl && e.actionLabel ? { href: e.actionUrl, label: e.actionLabel } : null)
+      } else if (e instanceof ShodanApiError && e.code === 'RESEARCH_FAILED') {
+        // 調査の失敗は確定した失敗。入力は残し、枠も減っていないので、そのままやり直せる
+        setRetryable(true); setOperationError(e.message)
       } else setOperationError(definite && e instanceof Error ? e.message : '作成結果を確認できませんでした。重ねて作成せず、商談準備一覧をご確認ください。')
       if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
     } finally { ticket.end() }
@@ -173,7 +177,7 @@ export default function ShodanNewPage() {
             )}
             <motion.button data-testid="shodan-create" type="button" disabled={unknown || Boolean(limitMessage)} onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
               className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
-              {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : 'この企業の商談準備をつくる'}
+              {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
             </motion.button>
             <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">{unknown ? '作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。' : limitMessage ? '利用枠について、上の案内をご確認ください。' : '企業調査の完了まで30秒〜2分ほど。結果を待つ間はタブを開いたままお待ちください。'}</p>
           </motion.div>
