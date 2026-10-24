@@ -7,10 +7,10 @@ import { TENJIKAI_NAV } from '@/lib/tenjikai/nav'
 import TenjikaiApp from './TenjikaiApp'
 
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
-export default function TenjikaiShellFrame() {
+export default function TenjikaiShellFrame({ userId = null }: { userId?: string | null }) {
   return (
     <ToolFrame serviceId="tenjikai" description="URLと出展条件から、ブース・制作物・ノベルティ・予算・業者・締切をまとめて用意します。" nav={TENJIKAI_NAV}>
-      <TenjikaiApp shell />
+      <TenjikaiApp shell userId={userId} />
     </ToolFrame>
   )
 }

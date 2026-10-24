@@ -7,10 +7,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
-import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { withDoyaPowerCharge, DOYA_POWER_CONSUMED_HEADER } from '@/lib/doya-power/charge'
 
 /** ドヤパワーの包みに「AI を呼んだあとの失敗なので戻さない」と伝える印（統合のとき DOYA_POWER_CONSUMED_HEADER の定数へそろえる） */
-const CONSUMED = { 'x-doya-power-consumed': '1' }
+const CONSUMED = { [DOYA_POWER_CONSUMED_HEADER]: '1' }
 
 /**
  * POST /api/doyalist/expand-keywords

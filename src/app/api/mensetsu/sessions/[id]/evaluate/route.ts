@@ -7,10 +7,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
-import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { withDoyaPowerCharge, DOYA_POWER_CONSUMED_HEADER } from '@/lib/doya-power/charge'
 
 /** ドヤパワーの包みに「AI を呼んだあとの失敗なので戻さない」と伝える印（統合のとき DOYA_POWER_CONSUMED_HEADER の定数へそろえる） */
-const CONSUMED = { 'x-doya-power-consumed': '1' }
+const CONSUMED = { [DOYA_POWER_CONSUMED_HEADER]: '1' }
 /** 手動の評価のやり直しを同じ面接に続けて行える間隔。AI の乱用防止（スキーマを変えず evaluatedAt で判定） */
 const REEVALUATE_COOLDOWN_MS = 5 * 60 * 1000
 
