@@ -9,7 +9,7 @@ const {client}=createOrgClient('shodan',{fetch:(_u,init)=>api.POST({json:async()
 for (const value of bad) {
  providerResult=value;writes.length=0;
  const response=await api.POST({json:async()=>({url:'https://example.invalid'})});
- assert.equal(response.status,500);
+ assert.equal(response.status,422);
  const body=await response.json();assert.equal(body.status,'failed');
  assert.equal(writes.length,1);assert.equal(writes[0].data.status,'failed');
  assert.equal(Object.hasOwn(writes[0].data,'research'),false);
@@ -17,7 +17,7 @@ for (const value of bad) {
  checks.push('Actual POST rejects malformed provider result without success persistence #'+checks.length);
 }
 providerResult={...valid,companyName:null,description:null,sourceStatus:{homepage:'failed',gbizinfo:'skipped',prtimes:'skipped'}};writes.length=0;
-const noFacts=await api.POST({json:async()=>({url:'https://example.invalid'})});assert.equal(noFacts.status,500);assert.equal(writes[0].data.status,'failed');checks.push('Structurally valid but unavailable homepage with no facts remains a failed preparation');
+const noFacts=await api.POST({json:async()=>({url:'https://example.invalid'})});assert.equal(noFacts.status,422);assert.equal(writes[0].data.status,'failed');checks.push('Structurally valid but unavailable homepage with no facts remains a failed preparation');
 let homepage='';
 const engine=load('src/lib/shodan/research.ts',{
  '@/lib/net/safe-fetch':{safeFetchText:async url=>url==='https://example.invalid/'?homepage:null,htmlToText:x=>x},
