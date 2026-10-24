@@ -14,7 +14,7 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWi
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { TrialNote, useTrialEligible, TRIAL_DAYS } from '@/components/TrialCallout'
 import { CheckoutButton } from '@/components/CheckoutButton'
-import { ShellCostBadge } from '@/components/shell/power'
+import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
 const SIZE_OPTIONS: { label: string; value: string }[] = [
@@ -87,6 +87,8 @@ function BannerUrlAutoPageInner() {
 
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  // ドヤパワー: URLからの生成・再生成のキーを控え、「このデザインで再生成」で送る
+  const bannerRetry = useDoyaPowerRetry('banner-url')
   const [error, setError] = useState<string>('')
   const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
   const [limitUsage, setLimitUsage] = useState<MonthlyUsage | null>(null)
@@ -179,6 +181,7 @@ function BannerUrlAutoPageInner() {
         return
       }
 
+      bannerRetry.remember(res)
       setBanners(Array.isArray(data.banners) ? data.banners : [])
       setBannerAnalysis(String(data.bannerAnalysis || ''))
       setAnalysisJson((data.analysisJson as any) || null)
@@ -232,7 +235,8 @@ function BannerUrlAutoPageInner() {
 
       const res = await fetch('/api/banner/from-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // ドヤパワー: 前の生成から5分以内の再生成は、前のキーを送ると減る量が半分（決めるのはサーバー）
+        headers: { 'Content-Type': 'application/json', ...bannerRetry.headers() },
         signal: controller.signal,
         body: JSON.stringify({
           targetUrl: url,
@@ -263,6 +267,7 @@ function BannerUrlAutoPageInner() {
         return
       }
 
+      bannerRetry.remember(res)
       setBanners(Array.isArray(data.banners) ? data.banners : [])
       setBannerAnalysis(String(data.bannerAnalysis || ''))
       setAnalysisJson((data.analysisJson as any) || null)
@@ -778,6 +783,7 @@ function BannerUrlAutoPageInner() {
                           >
                             <Sparkles className="w-4 h-4" />
                             このデザインで{count}枚再生成
+                            <ShellCostBadge action="banner.generate" retry={bannerRetry.halved} />
                           </button>
                         </div>
                       </div>

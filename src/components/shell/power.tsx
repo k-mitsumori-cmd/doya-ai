@@ -14,7 +14,10 @@ import { Zap } from 'lucide-react'
 import { CostBadge } from '@/components/ds/cost-badge'
 import { useDoyaPower } from '@/components/doya-power/doya-power-context'
 import { doyaPowerCost, type DoyaPowerAction } from '@/lib/doya-power/costs'
+import { halfAmount } from '@/lib/doya-power/retry'
 import styles from './power.module.css'
+// 「作り直す」の retryOf（5分以内なら半分）。画面は ShellCostBadge と同じくここから使う（中で旗を見る）
+export { useDoyaPowerRetry } from '@/components/doya-power/use-retry'
 
 export interface ShellPowerBalance {
   /** 残り */
@@ -72,14 +75,17 @@ export function ShellPowerMeter({ className, href = '/home/doya-power', variant 
  * ツールの生成のボタンに入れる、減る量の札。<button>バナーを作る<ShellCostBadge action="banner.generate" /></button>
  * - 旗が off の人には何も描かない（ボタンの幅も今と同じ）。表に無い操作・減る量が 0 の操作も描かない
  * - units: 件数（AIO の質問の数など）。per: 単位あたりの量のときの単位（'分' など）
+ * - retry: 5分以内の作り直しのとき true（useDoyaPowerRetry() の halved）。半分（切り上げ）の量と「半分」を出す。
+ *   ⚠️ 目安の表示。実際に半分にするかはサーバーが台帳で決める（同じ会社・同じ操作の名前・5分以内・戻していない前の操作）
  */
-export function ShellCostBadge({ action, units, per, className }: { action: DoyaPowerAction; units?: number; per?: string; className?: string }) {
+export function ShellCostBadge({ action, units, per, retry = false, className }: { action: DoyaPowerAction; units?: number; per?: string; retry?: boolean; className?: string }) {
   const enabled = useDoyaPower()
   const { balance, costs } = useContext(ShellPowerContext)
   if (!enabled) return null
   const n = units ?? 1
   const cost = costs[action] !== undefined ? costs[action] * n : doyaPowerCost(action, n)
   if (cost === null || !Number.isFinite(cost) || cost <= 0) return null
+  const shown = retry ? halfAmount(cost) : cost
   // CostBadge 自身も旗を見る（off なら何も描かない）
-  return <CostBadge cost={cost} per={per} short={balance ? balance.remaining < cost : false} className={className} />
+  return <CostBadge cost={shown} per={per} halved={retry} short={balance ? balance.remaining < shown : false} className={className} />
 }

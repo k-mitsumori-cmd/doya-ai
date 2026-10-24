@@ -99,11 +99,12 @@ export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | '
 }
 
 /** JSON API を呼ぶ。失敗時はサーバーの日本語メッセージを Error にして投げる */
-export async function api<T = any>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+export async function api<T = any>(url: string, init?: RequestInit & { json?: unknown; onOk?: (res: Response) => void }): Promise<T> {
+  const { json, onOk, ...rest } = init ?? {}
   const res = await fetch(url, {
-    ...init,
-    headers: { ...(init?.json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(init?.headers || {}) },
-    body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
+    ...rest,
+    headers: { ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...((rest.headers as Record<string, string>) || {}) },
+    body: json !== undefined ? JSON.stringify(json) : rest.body,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok || data?.success === false) {
@@ -112,6 +113,8 @@ export async function api<T = any>(url: string, init?: RequestInit & { json?: un
     err.status = res.status
     throw err
   }
+  // 成功した応答だけを渡す（ドヤパワーの作り直しのキーを控えるときなどに使う）
+  onOk?.(res)
   return data as T
 }
 

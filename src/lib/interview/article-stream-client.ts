@@ -1,4 +1,5 @@
 import { readArticleOperationResponse, type ArticleOperationView } from './article-operation-client'
+import { DOYA_POWER_RETRY_HEADER, cleanRetryKey } from '@/lib/doya-power/retry'
 
 /** Client acknowledgement reader. A broken connection never proves a failed save. */
 export type ArticleStreamEvent =
@@ -47,7 +48,8 @@ function parseEvent(raw: string): ArticleStreamEvent {
 
 /** One POST, one total deadline, first validated terminal event only. No retry. */
 export async function readArticleGeneration(
-  input: { projectId: string; recipeId: string; displayFormat: string; customInstructions?: string; operationId: string; actorScope: string },
+  // retryOf: ドヤパワーの作り直し（前の記事の生成の operationId）。本文には入れず、ヘッダーで送る。半分にするかはサーバーが決める
+  input: { projectId: string; recipeId: string; displayFormat: string; customInstructions?: string; operationId: string; actorScope: string; retryOf?: string | null },
   signal: AbortSignal,
   onEvent: (event: ArticleStreamEvent) => void,
 ): Promise<Extract<ArticleStreamEvent, { type: 'done' | 'error' | 'operation' }>> {
@@ -62,7 +64,9 @@ export async function readArticleGeneration(
   const timer = setTimeout(() => { controller.abort(); rejectStop(new ArticleStreamError('unknown')) }, 310_000)
   const work = (async () => {
     const response = await fetch('/api/interview/articles/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, actorScope: undefined }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(cleanRetryKey(input.retryOf) ? { [DOYA_POWER_RETRY_HEADER]: cleanRetryKey(input.retryOf) as string } : {}) },
+      body: JSON.stringify({ ...input, actorScope: undefined, retryOf: undefined }),
       signal: controller.signal, cache: 'no-store',
     })
     if (controller.signal.aborted) throw new ArticleStreamError('cancelled')

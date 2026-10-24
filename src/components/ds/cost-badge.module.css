@@ -10,6 +10,7 @@
 .icon { flex: none; }
 .num { min-width: 1ch; text-align: right; }
 .short { margin-left: 4px; font-weight: 700; }
+.half { margin-left: 4px; font-weight: 700; font-size: 11px; }
 .badge[data-short='true'] { background: var(--note-bg, #fff7d6); color: var(--note-ink, #7a5b00); box-shadow: none; }
 .sr {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
