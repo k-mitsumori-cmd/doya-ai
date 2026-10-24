@@ -7,8 +7,9 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { analyzeProduct } from '@/lib/quote/analyze'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -40,3 +41,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'サイトの解析に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: AI を呼ぶ前に減らし、失敗なら戻す。足りないときは 402 と日本語の理由（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'text.generate' }, postHandler)

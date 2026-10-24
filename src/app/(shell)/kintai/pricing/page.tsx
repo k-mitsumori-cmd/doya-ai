@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { TrialNote } from '@/components/TrialCallout'
 
 export default function KintaiPricingPage() {
   const { data: session, status } = useSession()
@@ -110,13 +111,8 @@ export default function KintaiPricingPage() {
         )}
         {!verifying && !planError && (!hasOrganization || canManageBilling) && <UnifiedPricingPlans serviceId="kintai" currentPlan={userPlan} className="my-12" />}
 
-        {/* Trial notice */}
-        {(!hasOrganization || canManageBilling) && !verifying && !planError && <div className="text-center mb-8">
-          <p className="text-sm text-slate-500">
-            <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
-            新規の月額プロプラン対象者は30日間無料。対象可否は申込時に確認できます。
-          </p>
-        </div>}
+        {/* Trial notice（対象外のときは何も出さない） */}
+        {(!hasOrganization || canManageBilling) && !verifying && !planError && <div className="text-center mb-8"><TrialNote /></div>}
 
         {/* CTA section */}
         {!verifying && !planError && !hasOrganization && <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">

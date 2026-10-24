@@ -1343,7 +1343,7 @@ ${htmlBody}
                     maxLength={4000}
                     onChange={(e) => setReviseInstruction(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey && reviseInstruction.trim() && !reviseLoading) {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && !e.shiftKey && reviseInstruction.trim() && !reviseLoading) {
                         e.preventDefault()
                         handleRevise()
                       }
