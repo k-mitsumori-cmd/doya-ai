@@ -19,6 +19,10 @@ import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
 import { ROLE_HIERARCHY as SFA_ROLES } from '@/lib/sfa/types'
 import { ROLE_HIERARCHY as HR_ROLES } from '@/lib/hr/constants'
+import { ROLE_HIERARCHY as INCOME_ROLES } from '@/lib/income/roles'
+import { EXPENSE_ROLES } from '@/lib/expense/constants'
+import { homeIncomeSummary } from '@/lib/income/summary-read'
+import { getExpenseSummary } from '@/lib/expense/expense-read'
 
 const QUOTE_ROLES = ['owner', 'admin', 'manager', 'member']
 const PROMANE_ROLES = ['owner', 'admin', 'member', 'guest']
@@ -112,6 +116,28 @@ export interface HomeSummary {
     href: string
     activeEmployees: number
     departments: number
+  }
+  /** 収入管理・支出管理の今月の数字。読めない欄は state が 'error'（ほかの欄とホーム全体は落とさない） */
+  money?: {
+    income: {
+      state: HomeToolState
+      href: string
+      /** 今月の売上予定（税抜） */
+      scheduled: number
+      /** 今月の入金済み */
+      received: number
+      /** 入金待ちの残り（請求済みで未入金の合計） */
+      unpaid: number
+      overdueCount: number
+    }
+    expense: {
+      state: HomeToolState
+      href: string
+      /** 今月の出金予定（支払済みを含む） */
+      thisMonthOut: number
+      paid: number
+      nextMonthOut: number
+    }
   }
   trend: HomeMonthPoint[]
   events: HomeEvent[]
@@ -378,6 +404,32 @@ async function loadPeople(userId: string) {
   return { activeEmployees, departments }
 }
 
+// 収入管理: 最後に参加した組織（読むだけ。組織は作らない）。組織が無い・契約が 0 件なら null
+async function loadIncome(userId: string) {
+  const m = await prisma.incomeMember.findFirst({
+    where: { userId, status: 'ACTIVE', role: { in: Object.keys(INCOME_ROLES) } },
+    orderBy: { createdAt: 'desc' },
+    select: { organizationId: true },
+  })
+  if (!m) return null
+  const s = await homeIncomeSummary({ userId, organizationId: m.organizationId }, jstMonthKey(new Date()))
+  if (!s) return null
+  return { scheduled: s.revenue.scheduled, received: s.revenue.received, unpaid: s.billing.unpaid, overdueCount: s.billing.overdue }
+}
+
+// 支出管理: 最後に参加した組織（読むだけ）。使っていない組織は null
+async function loadExpense(userId: string) {
+  const m = await prisma.expenseMember.findFirst({
+    where: { userId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] } },
+    orderBy: { createdAt: 'desc' },
+    select: { organizationId: true },
+  })
+  if (!m) return null
+  const s = await getExpenseSummary(m.organizationId)
+  if (!s.inUse) return null
+  return { thisMonthOut: s.kpi.thisMonthOut, paid: s.kpi.paid, nextMonthOut: s.kpi.nextMonthOut }
+}
+
 /**
  * ログに出してよいのは、例外の種類（name）と Prisma のエラーコード（code）だけ。
  * ⚠️ 例外そのものや message を console に出さない（個人情報やSQLが混ざるため。verify-api-error-log-privacy）。
@@ -401,13 +453,15 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const months = lastMonths(6)
   const trendStart = months[0].start
 
-  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR] = await Promise.allSettled([
+  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, incomeR, expenseR] = await Promise.allSettled([
     loadContract(userId),
     loadSales(userId, monthStart, trendStart),
     loadQuotes(userId, monthStart, trendStart),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
     loadPeople(userId),
+    loadIncome(userId),
+    loadExpense(userId),
   ])
 
   const contract = contractR.status === 'fulfilled' ? contractR.value : null
@@ -417,6 +471,8 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const projects = settle(projectsR)
   const attendance = settle(attendanceR)
   const people = settle(peopleR)
+  const income = settle(incomeR)
+  const expense = settle(expenseR)
 
   const trend: HomeMonthPoint[] = months.map(({ key }) => ({ month: key, won: 0, quoted: 0 }))
   const byKey = new Map(trend.map((p) => [p.month, p]))
@@ -444,6 +500,8 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const p = projects.value
   const a = attendance.value
   const h = people.value
+  const inc = income.value
+  const exp = expense.value
 
   return {
     generatedAt: new Date().toISOString(),
@@ -498,6 +556,23 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
       href: '/hr/dashboard',
       activeEmployees: h?.activeEmployees ?? 0,
       departments: h?.departments ?? 0,
+    },
+    money: {
+      income: {
+        state: income.state,
+        href: '/income',
+        scheduled: inc?.scheduled ?? 0,
+        received: inc?.received ?? 0,
+        unpaid: inc?.unpaid ?? 0,
+        overdueCount: inc?.overdueCount ?? 0,
+      },
+      expense: {
+        state: expense.state,
+        href: '/expense',
+        thisMonthOut: exp?.thisMonthOut ?? 0,
+        paid: exp?.paid ?? 0,
+        nextMonthOut: exp?.nextMonthOut ?? 0,
+      },
     },
     trend,
     events,
