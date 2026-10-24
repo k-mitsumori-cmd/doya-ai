@@ -96,7 +96,7 @@ async function regenerate(req: NextRequest, ctx: Ctx) {
       await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, images, [{ index, image: img }])
       return NextResponse.json({ success: true, data: { preparationId: prep.id, index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath), imageKey: slideImageKey(img.imagePath) } } })
     } catch (e: any) {
-      if (!generated) await refundShodanAi(sctx.organizationId, 1)
+      if (!generated && e?.aiNotInvoked === true) await refundShodanAi(reserved.key, 1)
       if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
       console.error('[shodan/slides/regenerate]')
       return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })

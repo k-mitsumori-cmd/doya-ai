@@ -49,7 +49,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '資料の生成を開始できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
   }
   let prep = existingPrep
-  let aiReserved = false
+  let aiReservedKey: string | null = null
+  let aiInvoked = false
   const canManage = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
   try {
     const currentPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       await prisma.shodanPreparation.updateMany({ where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt }, data: { errorMessage: null } }).catch(() => {})
       return NextResponse.json(shodanAiLimitResponse(aiLimit, canManage), { status: 429 })
     }
-    aiReserved = true
+    aiReservedKey = reserved.key
     const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
     const own: OwnCompanyProfile | null = profile
       ? {
@@ -86,6 +87,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         }
       : null
 
+    // ここから先は有料の AI を呼ぶ。以降の失敗では回数を戻さない（上流で費用が出ている可能性がある）
+    aiInvoked = true
     const analysis = await analyzeCompany(research, own)
     const proposalMarkdown = await generateProposal(research, analysis, own)
     const slides = await generateSlides(research, analysis, own)
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch {
     console.error('[shodan/generate] failed')
-    if (aiReserved) await refundShodanAi(sctx.organizationId, 1)
+    if (aiReservedKey && !aiInvoked) await refundShodanAi(aiReservedKey, 1)
     // 開始時から未変更の資料だけに失敗を記録。既存の本文・画像・状態は保持する。
     await prisma.shodanPreparation.updateMany({
       where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },

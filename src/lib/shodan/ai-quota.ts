@@ -16,7 +16,7 @@ export function shodanAiQuotaKey(organizationId: string, now = Date.now()): stri
   return `shodan-ai-quota:v1:${organizationId}:${jstMonth}`
 }
 
-export type ShodanAiReserve = { ok: true; used: number } | { ok: false; used: number; limit: number }
+export type ShodanAiReserve = { ok: true; used: number; key: string } | { ok: false; used: number; limit: number }
 
 export async function reserveShodanAi(organizationId: string, units: number, limit: number, db: PrismaClient = prisma, now = Date.now()): Promise<ShodanAiReserve> {
   if (!Number.isInteger(units) || units < 1) throw new Error('Invalid units')
@@ -28,21 +28,24 @@ export async function reserveShodanAi(organizationId: string, units: number, lim
     if (!Number.isSafeInteger(used) || used < 0) throw new Error('Shodan AI quota invalid')
     if (used + units > limit) return { ok: false, used, limit } as const
     await tx.systemSetting.upsert({ where: { key }, create: { key, value: String(used + units) }, update: { value: String(used + units) } })
-    return { ok: true, used: used + units } as const
+    return { ok: true, used: used + units, key } as const
   }, { timeout: 15_000 })
 }
 
-/** 失敗した分を戻す。戻せなくても呼び出し元の応答は変えない。 */
-export async function refundShodanAi(organizationId: string, units: number, db: PrismaClient = prisma, now = Date.now()): Promise<void> {
-  if (!Number.isInteger(units) || units < 1) return
+/**
+ * AI を呼ぶ前に失敗した分だけ戻す。予約したときのキー（月）をそのまま使うので、
+ * 月をまたいでも別の月の数を減らさない。戻せなくても呼び出し元の応答は変えない。
+ */
+export async function refundShodanAi(key: string, units: number, db: PrismaClient = prisma): Promise<void> {
+  if (!Number.isInteger(units) || units < 1 || !/^shodan-ai-quota:v1:[A-Za-z0-9_-]{1,128}:\d{4}-\d{2}$/.test(key)) return
   try {
-    const key = shodanAiQuotaKey(organizationId, now)
     await db.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`
       const row = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
-      const used = row ? Number(row.value) : 0
+      if (!row) return
+      const used = Number(row.value)
       if (!Number.isSafeInteger(used)) return
-      await tx.systemSetting.upsert({ where: { key }, create: { key, value: '0' }, update: { value: String(Math.max(0, used - units)) } })
+      await tx.systemSetting.update({ where: { key }, data: { value: String(Math.max(0, used - units)) } })
     }, { timeout: 15_000 })
   } catch { console.error('[shodan/ai-quota] refund failed') }
 }
