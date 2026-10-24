@@ -211,8 +211,11 @@
   .tab {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     min-height: 52px; border: 0; background: transparent; cursor: pointer; font: inherit;
-    font-size: 10px; font-weight: 700; color: var(--muted); text-decoration: none; border-radius: 12px;
+    font-size: 11px; font-weight: 700; color: var(--muted); text-decoration: none; border-radius: 12px;
   }
+  /* 新しい見た目の下のタブは「ホーム・すべて・アカウント」の3つで固定（点検 FRM-03）。文字は 11px 以上（CLR-04） */
+  .shell[data-ui-next='true'] .tabbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shell[data-ui-next='true'] .tab { font-size: 12px; }
   .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
   .tab[aria-current='page'] { color: var(--blue); }
 }
