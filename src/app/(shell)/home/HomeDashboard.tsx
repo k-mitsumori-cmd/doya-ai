@@ -220,7 +220,7 @@ function CompanySetupNote({ initiallyHidden, doyaPower }: { initiallyHidden: boo
         <h2 id="home-setup-title" className={styles.setupTitle}>会社を登録してください</h2>
         <p className={styles.setupText}>
           {company ? <>まだ会社が登録されていません。今は、ほかのツールの組織の名前「{company.name}」を仮に出しています。</> : 'まだ会社が登録されていません。'}
-          ドヤマーケAIは、1つのアカウントで1つの会社を扱います。
+          ドヤAIは、1つのアカウントで1つの会社を扱います。
           {/* ドヤパワーの台帳は会社ごと。旗の内側だけ、登録するとゲージが出ることを伝える */}
           {doyaPower ? '登録すると、ドヤパワー（使える量）のゲージが出ます。' : null}
         </p>

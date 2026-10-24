@@ -1,7 +1,7 @@
 // ============================================
 // 404（ページが見つからない）
 // ============================================
-// 新しい見た目（ドヤマーケAI の青）にそろえる。古いブランドの紫のグラデーションと、
+// 新しい見た目（ドヤAI の青）にそろえる。古いブランドの紫のグラデーションと、
 // 今は無い入口（カンタンドヤAI・ドヤバナーAI）へのリンクは出さない（2026-10-24 メインの全画面の点検）。
 // ⚠️ ログインの有無で中身を変えない（どの画面の下でも同じ文字にする）。行き先は、経営ホーム・トップ・料金の3つだけ
 import Link from 'next/link'
@@ -15,9 +15,11 @@ export default function NotFound() {
       <div className="w-full max-w-lg rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-6 shadow-[var(--shadow)] sm:p-8">
         <div className="mb-4 flex justify-center"><DoyaLogo size={40} textClassName="text-xl font-black text-[var(--ink)]" /></div>
         <p className="m-0 text-center text-[13px] font-bold tracking-[0.12em] text-[var(--blue)]">404</p>
+        {/* ページの見出し（h1）。EmptyState の見出しは p なので、ここで h1 を1つ持つ（2026-10-24 統括の確認） */}
+        <h1 className="m-0 mt-2 text-center text-[22px] font-bold leading-[1.4] text-[var(--ink)]">ページが見つかりません</h1>
         <EmptyState
           kind="no-results"
-          title="ページが見つかりません"
+          title="お探しのページは、ここにはありません"
           description="URL が変わったか、ページが削除された可能性があります。経営ホームから、使いたいツールを選んでください。"
           action={<Button href="/home" icon="LayoutDashboard">経営ホームへ</Button>}
         />

@@ -6,6 +6,7 @@
 //   - 料金ページ（/pricing と /…/pricing）。プロのカードに重なるため
 //   - ログインした人のツールの画面（共通の枠の中を含む）
 //   - 共有の議事録（/m/）
+//   - ログインの画面（/auth/ の下）。ログインの操作に重なり、中の文言も古い（2026-10-24 統括の確認）
 // 出す画面: 紹介ページ（LP）など、未ログインの人が見る画面
 import { shellServiceForPath } from '@/components/shell/registry'
 
@@ -24,6 +25,7 @@ export function shouldHideMarketingPopup(opts: {
 }): boolean {
   const path = opts.pathname?.replace(/\/+$/, '') || '/'
   if (path.startsWith('/m/')) return true
+  if (path === '/auth' || path.startsWith('/auth/')) return true
   if (isPricingPath(path)) return true
 
   const service = opts.servicePaths.find((root) => path === root || path.startsWith(root + '/'))
