@@ -15,7 +15,7 @@ import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import Image from 'next/image'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { Button, ToolHero } from '@/components/ds'
+import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { galleryTheme, GalleryCategoryHeading, GalleryGenreTabs, GalleryMoreTile, GalleryPlanTabs, GallerySkeleton, GalleryTemplateCard } from '@/components/banner/BannerTemplateGallery'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -155,6 +155,8 @@ function BannerTestPageInner() {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<GeneratedBanner[]>([])
+  // 次にやること帯のための、直前の生成が失敗したかどうか（失敗はトーストだけで、画面に残らなかったため）
+  const [generateFailed, setGenerateFailed] = useState(false)
   const [selectedBanner, setSelectedBanner] = useState<GeneratedBanner | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
@@ -1187,6 +1189,7 @@ function BannerTestPageInner() {
 
     const operation = operations.begin()
     if (!operation) return
+    setGenerateFailed(false)
     if (completionTimer.current !== null) clearTimeout(completionTimer.current)
     completionTimer.current = null
     setShowGenerationModal(false)
@@ -1302,6 +1305,7 @@ function BannerTestPageInner() {
       if (!operation.current()) return
       console.error('Generate error:')
       toast.error(jaMessage(err?.message, '生成できませんでした。少し待って、もう一度お試しください。'))
+      setGenerateFailed(true)
       setShowGenerationModal(false)
       clearInterval(messageInterval)
       setIsGenerating(false)
@@ -1691,7 +1695,7 @@ function BannerTestPageInner() {
           )}
 
           {/* グリッドギャラリー */}
-          <div data-tour="gallery-grid" className={`w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 ${gt.grid} relative z-10`}>
+          <div id="banner-gallery" data-tour="gallery-grid" className={`w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 ${gt.grid} relative z-10`}>
             {isLoadingTemplates ? (
               <GallerySkeleton />
             ) : activeFilter === 'すべて' ? (
@@ -2169,7 +2173,7 @@ function BannerTestPageInner() {
 
           {/* 生成されたバナー一覧（改善版） */}
           {generatedBanners.length > 0 && (
-            <div className="px-3 sm:px-4 md:px-8 lg:px-12 py-8 sm:py-10 md:py-14 space-y-6 md:space-y-8 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900">
+            <div id="banner-results" className="px-3 sm:px-4 md:px-8 lg:px-12 py-8 sm:py-10 md:py-14 space-y-6 md:space-y-8 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900">
               {/* ヘッダー */}
               <div className="flex items-center justify-between px-2 md:px-4">
                 <div className="flex items-center gap-3">
@@ -2936,6 +2940,15 @@ function BannerTestPageInner() {
     </div>
   )
 
+  // 次にやること帯（ds/next-step）。作成中 → 失敗 → できた → まだ の順に決める
+  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+  const nextStep: NextStepView = isGenerating && !generationComplete
+    ? { key: 'working', state: 'working', n: Math.round(generationProgress) }
+    : generateFailed
+      ? { key: 'error', state: 'error', onClick: () => void handleGenerate(), disabled: isGenerating || sessionStatus === 'loading' }
+      : generatedBanners.length > 0
+        ? { key: 'done', state: 'done', n: generatedBanners.length, onClick: () => jump('banner-results') }
+        : { key: 'empty', state: 'empty', onClick: () => { setIsHeroCollapsed(true); window.setTimeout(() => jump(selectedTemplate ? 'banner-form' : 'banner-gallery'), 400) } }
   // 新しい見た目: 枠の中に、ヒーロー（何ができるか・主ボタン）と、見本の画面を入れた箱を出す（U-6・H-3・C-7）
   return (
     <>
@@ -2947,6 +2960,7 @@ function BannerTestPageInner() {
           tool="banner"
           artAlt=""
         />
+        <div className={nextStyles.nextStep}><ToolNextStep tool="banner" view={nextStep} /></div>
       </div>
       <div className={nextStyles.stage}>
         <div className={nextStyles.scroller}>{view}</div>

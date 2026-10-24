@@ -25,7 +25,7 @@ function jaError(e: unknown, fallback: string): string {
   return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 import ShellLoading from '@/components/shell/ShellLoading'
-import { Button, ToolHero } from '@/components/ds'
+import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
 import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
 
@@ -507,6 +507,25 @@ export default function AdImageTool() {
     </div>
   )
 
+
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 上限 → エラー → できた → 選ぶ → まだ の順に決める
+  const busyAny = operation.blocked || analyzing || logoBusy || generating || refining || scoring
+  const jump = (id: string, focus = false) => {
+    const el = document.getElementById(id)
+    el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
+    if (focus) el?.focus()
+  }
+  const nextStep: NextStepView = (() => {
+    if (analyzing || generating || refining) return { key: 'working', state: 'working' }
+    if (error && limitAction) return { key: 'limit', state: 'error', href: limitAction === 'pricing' ? '/adimage/pricing' : 'https://doyamarke.surisuta.jp/contact', actionLabel: limitAction === 'pricing' ? undefined : '問い合わせる' }
+    if (error) return step === 'input'
+      ? { key: 'error', state: 'error', onClick: () => void analyze(), disabled: busyAny || !url.trim() }
+      : { key: 'error', state: 'error', onClick: () => void generate(), disabled: busyAny || chosen.length === 0 || !copy.headline || !copy.cta }
+    if (step === 'result' && creatives.length > 0) return { key: 'done', state: 'done', n: creatives.length, onClick: () => jump('adimage-result') }
+    if (step !== 'input' && drafts.length > 0) return { key: 'choose', state: 'empty', onClick: () => jump('adimage-copy') }
+    return { key: 'empty', state: 'empty', onClick: () => jump('adimage-url', true) }
+  })()
+
   return (
     <div className="bg-slate-50 pb-24">
       {/* 新しい見た目では、全画面の読み込みを出さず、中身の領域に段階と残り時間を出す（下の main の先頭。UI 品質 C-2・S-18） */}
@@ -521,6 +540,7 @@ export default function AdImageTool() {
         </div>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        <ToolNextStep tool="adimage" view={nextStep} />
         <AdImageProgressNext kind={analyzing ? 'analyzing' : generating ? 'generating' : refining ? 'refining' : null} />
         {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind.startsWith('logo-') ? 'ロゴ保存の結果確認' : operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
           <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
@@ -560,6 +580,8 @@ export default function AdImageTool() {
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
+              id="adimage-url"
+              aria-label="サービスのURL"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
@@ -610,7 +632,7 @@ export default function AdImageTool() {
 
         {/* --- 2. コピーを選ぶ --- */}
         {step !== 'input' && drafts.length > 0 && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section id="adimage-copy" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-base font-bold text-slate-900">2. コピーを選ぶ</h2>
             <p className="mt-1 text-sm text-slate-600 font-semibold">
               選んだコピーは全サイズ共通で画像に描き込まれます。文字数が多いと崩れやすいため上限を設けています。
@@ -878,7 +900,7 @@ export default function AdImageTool() {
 
         {/* --- 4. 結果 --- */}
         {step === 'result' && creatives.length > 0 && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section id="adimage-result" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-base font-bold text-slate-900">
                 広告画像{generation > 1 && <span className="ml-2 text-xs font-normal text-slate-500 font-semibold">改善 {generation - 1} 回目</span>}

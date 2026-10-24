@@ -24,7 +24,7 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
   EmptyState:({title,description,action})=>React.createElement('div',null,title,description,action),
   Button:({href,children,...p})=>href?React.createElement('a',{href},children):React.createElement('button',{type:'button',...p},children),
   ToolHero:({title,action})=>React.createElement('div',null,title,action),
-  FirstSteps:()=>null,Skeleton:()=>null}
+  FirstSteps:()=>null,Skeleton:()=>null,ToolNextStep:()=>null}
  // window.confirm の代わりの確認ダイアログ。答え（confirmed）と回数（confirms）は今までと同じに数える
  if(n==='@/components/ds/dialog')return{confirmDialog:async()=>{confirms++;return confirmed},alertDialog:async()=>{}}
  if(n==='@/components/ds/motion')return new Proxy({},{get:()=>({children})=>children??null})

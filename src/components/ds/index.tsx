@@ -18,6 +18,8 @@ export { default as tokens } from './tokens.module.css'
 export { FirstSteps, GenerationProgress, DoneBanner, ErrorNotice } from './feedback'
 // 確認・削除・お知らせのダイアログ（window.confirm / alert の代わり。FIX-PLAN 18）
 export { ConfirmDialog, confirmDialog, alertDialog } from './dialog'
+// 次にやること帯（T1）と手順の札（T2）。展示会の型（docs/audits/2026-10-24-ux-clarity/TENJIKAI-PATTERNS.md）
+export { NextStepBar, NextStepAction, FlowSteps, ToolNextStep, type NextStepState, type NextStepView } from './next-step'
 
 /* ---- Card ---- */
 export function Card({ title, meta, icon, children, className }: {

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { clsx } from 'clsx'
-import { Check, Download, Footprints, ImagePlus, Loader2 } from 'lucide-react'
+import { Download, Footprints, ImagePlus } from 'lucide-react'
 import IsoBooth from './IsoBooth'
 import Booth3D from './Booth3D'
 import GraphicPlanner from './GraphicPlanner'
@@ -17,6 +17,7 @@ import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
 import { ShellCostBadge } from '@/components/shell/power'
+import { FlowSteps, NextStepAction, NextStepBar } from '@/components/ds/next-step'
 
 function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?: string; onSelect: (id: string) => void }) {
   const s = 60
@@ -63,25 +64,6 @@ const VIEW_LABEL = { '3d': '3D', iso: '等角模型', plan: '平面図' } as con
 
 // 利用者の流れ（2026-10-19 ユーザー指示）: 条件を入れる → 3D で確かめる → 面の画像を作る（3D に貼られる） → 書き出す
 const FLOW = ['条件を入れる', '3Dで確かめる', '面の画像を作る', '書き出す'] as const
-
-function FlowSteps({ current }: { current: number }) {
-  return (
-    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="ブース設計の進め方">
-      {FLOW.map((label, i) => {
-        const done = i < current
-        const now = i === current
-        return (
-          <li key={label} aria-current={now ? 'step' : undefined} className={clsx('flex items-center gap-2 rounded-[var(--r-sm)] border px-3 py-2 text-[13px] font-bold', now ? 'border-doya-500 bg-white text-ink shadow-sm' : done ? 'border-transparent bg-white/70 text-[var(--sub)]' : 'border-transparent bg-white/40 text-[var(--muted)]')}>
-            <span className={clsx('flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[12px]', done ? 'bg-doya-500 text-white' : now ? 'bg-doya-50 text-doya-600 ring-2 ring-doya-500' : 'bg-gray-100 text-gray-500')}>
-              {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
-            </span>
-            {label}
-          </li>
-        )
-      })}
-    </ol>
-  )
-}
 
 // 書き出し：割付表（CSV）と、作った面の画像を保存する
 function download(name: string, href: string) {
@@ -174,29 +156,25 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader title="ブース設計" desc="出展の目的と小間の位置から、3つの設営案を作りました。3Dはドラッグで回せます。面の画像を作ると、3Dの壁面に貼られます。" />
 
-      <FlowSteps current={step} />
+      <FlowSteps steps={FLOW} current={step} label="ブース設計の進め方" />
 
-      {/* 次にやること */}
-      <div className="flex flex-col gap-3 rounded-[var(--r)] border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-[15px] font-bold text-ink">
-            {allMade ? 'すべての面に画像を貼りました。書き出して、印刷会社に渡せます。' : batch.running ? `面の画像を作っています（${batch.done}/${batch.total}面）。できた面から3Dに貼られます。` : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`}
-          </p>
-          {left && !allMade && <p className="mt-0.5 text-[13px] text-[var(--sub)]">{left}</p>}
-        </div>
-        {allMade ? (
-          <button onClick={() => void exportPack(plan, panels, panelImages)} className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-[var(--r-sm)] bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30">
-            <Download className="h-4 w-4" /> 書き出す
-          </button>
+      {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品） */}
+      <NextStepBar
+        state={allMade ? 'done' : batch.running ? 'working' : batch.error ? 'error' : 'empty'}
+        text={allMade ? 'すべての面に画像を貼りました。書き出して、印刷会社に渡せます。' : batch.running ? `面の画像を作っています（${batch.done}/${batch.total}面）。できた面から3Dに貼られます。` : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`}
+        sub={left && !allMade ? left : undefined}
+        action={allMade ? (
+          <NextStepAction onClick={() => void exportPack(plan, panels, panelImages)} iconNode={<Download className="h-4 w-4" aria-hidden />}>
+            書き出す
+          </NextStepAction>
         ) : (
-          <button disabled={batch.running} onClick={() => setBatchOpen(true)} className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-[var(--r-sm)] bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-50">
-            {batch.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          <NextStepAction busy={batch.running} onClick={() => setBatchOpen(true)} iconNode={<ImagePlus className="h-4 w-4" aria-hidden />}>
             {batch.running ? '作っています' : `面の画像をまとめて作る（${missing.length}面）`}
             {/* 減る量は、作る面の数ぶん（ドヤパワーの旗の内側だけ） */}
             <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
-          </button>
+          </NextStepAction>
         )}
-      </div>
+      />
 
       {batch.error && !batch.running && (
         <div className="rounded-[var(--r)] border border-gray-200 bg-white">
