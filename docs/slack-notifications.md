@@ -149,6 +149,31 @@ GitHub Actions から Slack に送る所は無い（`.github/workflows/ci.yml` �
 | harness/x-harness-oss | 投稿・言及の検知、運用まとめ、日報監視、エラー | `SLACK_WEBHOOK_URL`、`X_SERVICE_SLACK_WEBHOOKS` | *【X】…* | 5分ごとの cron |
 | harness/doya-secretary | AI秘書の返信・承認待ち（Bot、chat.postMessage） | `SLACK_BOT_TOKEN` ほか | *【AI秘書・確認が必要】…* | 会話に応じて |
 
+### 自動実行（cron・launchd・Codex・Claude の定期タスク）
+
+| 送り元 | 場面 | 送り先 | 頻度 | 今の形 |
+|---|---|---|---|---|
+| Codex の自動実行「AI棒と億り人」（`~/.codex/automations/ai`、送信は `send_slack_report.py`） | 毎朝の成績・売買判断・ニュース | `~/.config/aibou-okuribito/slack-webhook.url` に保存した Webhook | 毎日8:15（有効） | `AI棒と億り人｜10/22（木）朝【日本は営業日】`。丁寧体の長文、絵文字なし |
+| Codex の自動実行「3アプリのASO調査」（`~/.codex/automations/3-aso-slack`） | ASO 公開後の効果調査を1回だけ | `SLACK_APPSTORE_WEBHOOK_URL` | 停止中 | 文面の指定なし |
+| launchd `jp.surisuta.heisha-genkai.daily-report` | 弊社、限界につき。の開発・審査状況の日報 | `SLACK_REPORT_WEBHOOK_URL` | 毎日9:00 | 上の表の「弊社、限界につき。」 |
+| Codex の自動実行「a8-2」 | 推しにマイルの A8 成果をドヤAI の `/api/operations/configure` に取り込む（Slack には直接送らない） | ― | 毎日6:30 | ドヤAI の運用通知に載る |
+
+Slack に送らないもの: Claude の定期タスク3つ（obsidian-dev-record-refresh・session-triage・weekly-disk-cleanup）、ほかの Codex の自動実行（ai-2・ai-3・automation・tarot-dev-docs-weekly-handoff）、launchd のほかの4つ（Obsidian 日記の Mac 通知、ローカルのサーバーの常駐）、GitHub Actions（~/Code 配下のすべての workflow）、`~/Code/tools/*`・watashi-bunko・kokoro-ashi・ojisan-war・showa-defense・taipa-yusha・zensen-toppa-src・doyagame-*・agent-town・doyamarke-content・shigochoki・ig-harness のコード。
+
+### Slack の管理画面で確かめる項目
+
+コードと設定の中には、Slack の連携アプリ（GitHub・Vercel・HubSpot・Notion・Google など）を使っている手がかりが見つからなかった。
+今の通知は、すべて Incoming Webhook で送っている。次の項目は Slack の管理画面（アプリの管理）でしか確かめられない。
+
+| 確かめる項目 | 理由 |
+|---|---|
+| Incoming Webhook の一覧と、それぞれの投稿先チャンネル・作成者 | Webhook はチャンネルに固定で、コードからは投稿先が分からない。同じ Webhook を別の用途に使い回している疑いがある（呪い日記のアラートとお問い合わせが同じチャンネル、イベント通知が `SLACK_APPSTORE_WEBHOOK_URL` と同じ値）。 |
+| 使われていない Webhook | 旧レポート6種（vercel.json に未登録）用の Webhook が残っている可能性がある。 |
+| Vercel for Slack の有無と通知先 | デプロイの成功・失敗の通知が、別の形で届いている可能性がある。 |
+| GitHub アプリの有無と購読しているリポジトリ | PR・push の通知が、別の形で届いている可能性がある。 |
+| HubSpot・Notion・Google カレンダーなどの連携の有無 | 連携アプリの通知の形は、こちらの部品では変えられない。止める・まとめる場合は各アプリの設定で行う。 |
+| ドヤ秘書（doya-secretary）の Bot の権限と投稿先 `SLACK_OPS_CHANNEL` | 会話への返信なので今回は変えていないが、承認待ちの見出しは決まりと形が違う（`*【AI秘書・確認が必要】…*`）。 |
+
 ## 4. 変更前と後の例
 
 | 通知 | 変更前 | 変更後 |
