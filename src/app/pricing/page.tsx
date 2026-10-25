@@ -10,16 +10,17 @@ import { cookies } from 'next/headers'
 import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
 import ShellGate from '@/components/shell/ShellGate'
 import PricingNext from '@/components/pricing/PricingNext'
+import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 
 export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams
   const canceled = Boolean(params.canceled) || params.payment === 'cancelled'
   const session = await getServerSession(authOptions).catch(() => null)
   if (!session?.user) return <PricingNext canceled={canceled} serverSignedIn={false} />
-  const [company, toolHrefs] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
+  const [company, toolHrefs, supportChat] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({})), isSupportChatEnabled()])
   const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <ShellGate signedIn userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+    <ShellGate signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
       <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
     </ShellGate>
   )

@@ -1394,3 +1394,5 @@ for (const file of ['verify-expense-account-company.cjs']) { const r = require('
 for (const file of ['verify-agent-orchestration.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 const guidePopups = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-guide-popups-flag.cjs')], { stdio: 'inherit', timeout: 90000 });
 if (guidePopups.error || guidePopups.status !== 0) { console.error('Guide popups flag regression failed'); process.exit(1); }
+const supportChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-support-chat.cjs')], { stdio: 'inherit', timeout: 90000 });
+if (supportChat.error || supportChat.status !== 0) { console.error('Support chat regression failed'); process.exit(1); }
