@@ -28,7 +28,15 @@ export function todoViewOf(task: Pick<AgentPlanTask, 'id' | 'stages'>, st: Agent
     ...base,
     status: 'failed',
     retryable: true,
-    error: { text: st.error ?? 'うまく作れませんでした。もう一度お試しください。', kind: st.failure?.kind ?? 'tool', href: st.failure?.href, hrefLabel: st.failure?.hrefLabel },
+    error: {
+      text: st.error ?? 'うまく作れませんでした。もう一度お試しください。',
+      kind: st.failure?.kind ?? 'tool',
+      href: st.failure?.href,
+      hrefLabel: st.failure?.hrefLabel,
+      cause: st.failure?.cause,
+      // 次の一手が無い失敗（止めた・前の ToDo が済まなかった など）は、やり直すだけを出す
+      actions: st.failure?.actions?.length ? st.failure.actions : [{ kind: 'retry', label: 'やり直す' }],
+    },
   }
 }
 

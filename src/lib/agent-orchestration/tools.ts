@@ -7,7 +7,7 @@
 // - どのルートを呼ぶかは、この表（ToolRouteId）に書いたものだけ。画面から届いた値でルートを選ばない。
 // - 呼び方（call）と組織の名前（shodanSlug）は引数でもらう。本番は routes.server.ts、テストは差し替え。
 // ⚠️ 失敗の文は、ルートが返した利用者向けの error の文を使う（短い文字列だけ）。ステータスコードは見せない。
-import { AgentTaskError, type AgentFailureKind, type AgentPowerUse, type AgentTaskResult } from './runner'
+import { AgentTaskError, type AgentFailureAction, type AgentFailureKind, type AgentPowerUse, type AgentTaskResult } from './runner'
 import { doyaPowerCost } from '@/lib/doya-power/costs'
 import { quoteInputOf, slideInputOf, type SalesPrepAnswers } from './recipes'
 
@@ -68,6 +68,13 @@ const SETUP: Record<'shodan' | 'quote', { message: string; href: string; label: 
 }
 
 /** ルートの失敗を、利用者に見せる失敗に直す */
+const RETRY: AgentFailureAction = { kind: 'retry', label: 'やり直す' }
+const BY_COMPANY_NAME: AgentFailureAction = { kind: 'input', field: 'companyName', label: '会社名で調べ直す', placeholder: '例: 株式会社サンプル' }
+/** 会社の調査の失敗の原因（ルートの reason）。サイトを直しても読めないものは、やり直しを出さない */
+const RESEARCH_REASONS = new Set(['url_rejected', 'dns', 'network', 'timeout', 'http', 'content_type', 'redirect', 'body', 'js_rendered', 'no_facts', 'save', 'unknown'])
+const NO_RETRY_REASONS = new Set(['url_rejected', 'content_type', 'js_rendered', 'no_facts', 'dns'])
+
+/** ルートの失敗を、利用者に見せる失敗（原因・次の一手）に直す。FAILURE-CHECKLIST.md */
 export function toTaskError(tool: 'shodan' | 'quote' | 'doyaslide', res: ToolCallResult, fallback: string, resume?: Record<string, string>): AgentTaskError {
   const d = obj(res.data)
   const code = typeof d.code === 'string' ? d.code : ''
@@ -76,26 +83,42 @@ export function toTaskError(tool: 'shodan' | 'quote' | 'doyaslide', res: ToolCal
   let kind: AgentFailureKind = 'tool'
   let href: { href: string; label: string } | undefined
   if (res.status === 401) {
-    if (tool === 'doyaslide') return new AgentTaskError('ログインが切れました。ログインし直してください。', 'auth', resume, { href: '/auth/signin?callbackUrl=/home', label: 'ログインする' })
+    if (tool === 'doyaslide') {
+      const login = { href: '/auth/signin?callbackUrl=/home', label: 'ログインする' }
+      return new AgentTaskError('ログインが切れました。ログインし直してください。', 'auth', resume, login).withHelp('auth', [{ kind: 'href', ...login }])
+    }
     const s = SETUP[tool]
-    return new AgentTaskError(s.message, 'setup', resume, { href: s.href, label: s.label })
+    return new AgentTaskError(s.message, 'setup', resume, { href: s.href, label: s.label }).withHelp('no_org', [{ kind: 'href', href: s.href, label: s.label }, RETRY])
+  }
+  // 会社の調査: 原因ごとの文はルートが返す（researchFailureMessage）。会社名で調べ直す道を出す
+  if (tool === 'shodan' && code === 'RESEARCH_FAILED') {
+    const reason = typeof d.reason === 'string' && RESEARCH_REASONS.has(d.reason) ? d.reason : 'unknown'
+    const actions = reason === 'save' ? [RETRY] : NO_RETRY_REASONS.has(reason) ? [BY_COMPANY_NAME] : [BY_COMPANY_NAME, RETRY]
+    return new AgentTaskError(message, 'input', resume).withHelp(reason, actions)
   }
   if (code.startsWith('DOYA_POWER')) kind = 'power'
-  else if (res.status === 402 || res.status === 429 || /LIMIT/.test(code)) kind = 'limit'
+  else if (res.status === 402 || res.status === 403 || res.status === 429 || /LIMIT/.test(code)) kind = 'limit'
   else if (res.status === 400 || res.status === 404 || res.status === 409 || res.status === 422) kind = 'input'
-  if (kind === 'limit' && upgrade) href = { href: upgrade, label: '料金プランを見る' }
-  return new AgentTaskError(message, kind, resume, href)
+  if ((kind === 'limit' || kind === 'power') && upgrade) href = { href: upgrade, label: '料金プランを見る' }
+  const actions: AgentFailureAction[] = []
+  if (href) actions.push({ kind: 'href', ...href })
+  // 今日の上限（明日まで待つ）と、入力の誤りは、そのままのやり直しを出さない
+  if (kind === 'tool' || (kind === 'input' && res.status === 409) || res.status >= 500) actions.push(RETRY)
+  const cause = kind === 'power' ? 'power' : kind === 'limit' ? (code ? code.toLowerCase() : 'limit') : res.status >= 500 ? (res.status === 502 ? 'ai_failed' : 'server_error') : kind === 'input' ? 'input' : 'unknown'
+  return new AgentTaskError(message, kind, resume, href).withHelp(cause, actions)
 }
 
 const ok = (res: ToolCallResult) => res.status >= 200 && res.status < 300
 
 /** ドヤ商談準備: 相手の会社を調べる（POST /api/shodan/preparations） */
-export async function runResearch(a: SalesPrepAnswers, raw: ToolDeps): Promise<AgentTaskResult> {
+export async function runResearch(a: SalesPrepAnswers, raw: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   const m = meter(raw)
-  try { return { ...(await research(a, m.deps)), power: { ...m.power } } } catch (e) { return m.fail(e) }
+  try { return { ...(await research(a, m.deps, resume)), power: { ...m.power } } } catch (e) { return m.fail(e) }
 }
-async function research(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
-  const res = await deps.call('shodan.prepare', { url: a.url })
+async function research(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+  // 会社名（失敗のあとに利用者が入れたもの）があれば、サイトが読めなくても会社名で調べる
+  const companyName = str(resume?.companyName, 100)
+  const res = await deps.call('shodan.prepare', { url: a.url, ...(companyName ? { companyName } : {}) })
   if (!ok(res)) throw toTaskError('shodan', res, '会社を調べられませんでした。URLを確かめて、もう一度お試しください。')
   const d = obj(res.data)
   const id = str(d.id, 128)
@@ -109,6 +132,12 @@ async function research(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskR
     typeof r.employeeCount === 'number' ? `従業員: ${r.employeeCount.toLocaleString('ja-JP')}名` : null,
     services.length ? `主な事業: ${services.join('、')}` : null,
   ].filter((p): p is string => !!p)
+  // どう調べたかを添える（サイトの文が少なかった・会社名で調べた・AI で読み取れなかった）。FAILURE-CHECKLIST.md S12・S20
+  const diag = obj(r.diagnostics)
+  const homepage = obj(diag.homepage)
+  if (diag.companyNameFrom === 'input' && homepage.ok === false) points.push('サイトは読めなかったため、入力した会社名で調べました。')
+  else if (diag.usedPageSummary === true) points.push('サイトの文が少なかったため、ページの題と説明から読み取りました。')
+  if (diag.aiExtracted === false && homepage.ok === true) points.push('サイトから会社の情報を読み取れなかったため、分かった範囲でまとめています。')
   const slug = await deps.shodanSlug().catch(() => null)
   return {
     summary: `${name}の概要をまとめました。`,
@@ -199,7 +228,7 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
 }
 
 export async function runSalesPrepTask(taskId: SalesPrepTaskId, a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
-  if (taskId === 'research') return runResearch(a, deps)
+  if (taskId === 'research') return runResearch(a, deps, resume)
   if (taskId === 'quote') return runQuote(a, deps, resume)
   return runSlides(a, deps, resume)
 }

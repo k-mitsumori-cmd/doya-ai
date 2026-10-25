@@ -6,9 +6,9 @@
 // ⚠️ 画面（src/components/home-agent/）は、この型だけを見て作る。中の実装（tools.ts など）を直接呼ばない。
 //    画面で使ってよい関数は view.ts の todoViewOf・todoCounts と、runner.ts の runAgentTasks・progressOf だけ。
 // ⚠️ 形を変えるときは AGENT_CONTRACT_VERSION を上げ、両方の側に知らせる。
-import type { AgentFailureKind, AgentPowerUse, AgentStates, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
+import type { AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentStates, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
 
-export type { AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus }
+export type { AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus }
 
 export const AGENT_CONTRACT_VERSION = 2 as const
 
@@ -185,7 +185,7 @@ export interface AgentTaskRequest {
 /** POST /api/agent/tasks の答え。成功は 200、失敗は 422（利用者向けの文）、旗の外は 404、入力の誤りは 400 */
 export type AgentTaskResponse =
   | { result: AgentTaskResult }
-  | { error: string; kind: AgentFailureKind; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentPowerUse }
+  | { error: string; kind: AgentFailureKind; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentPowerUse; cause?: string; actions?: AgentFailureAction[] }
 
 /* ---------------- 5. ToDo の実行の状態（画面の札） ---------------- */
 
@@ -217,7 +217,11 @@ export interface AgentTodoView {
   powerKnown: boolean
   draft?: AgentDraftView
   /** 失敗の一文と、開くとよい画面 */
-  error?: { text: string; kind: AgentFailureKind; href?: string; hrefLabel?: string }
+  /**
+   * 失敗の文（何が原因で、どうすればよいか）と、次の一手（actions）。
+   * actions の input（会社名を入れてやり直す）は、入れた値を resume に { companyName } で足してやり直す
+   */
+  error?: { text: string; kind: AgentFailureKind; href?: string; hrefLabel?: string; cause?: string; actions: AgentFailureAction[] }
   /** やり直せるか（failed のとき） */
   retryable: boolean
   attempts: number

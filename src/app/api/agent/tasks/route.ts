@@ -34,6 +34,11 @@ function parseResume(v: unknown): Record<string, string> | undefined {
   if (typeof r.projectId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(r.projectId)) out.projectId = r.projectId
   // 品目の案は、tools.ts の normalizeQuoteItems でもう一度整えてから使う。大きさだけここで止める
   if (typeof r.quoteDraft === 'string' && r.quoteDraft.length <= 24 * 1024) out.quoteDraft = r.quoteDraft
+  // 会社名（会社の調査の失敗のあとに、利用者が入れたもの）。制御文字を除き、100文字まで
+  if (typeof r.companyName === 'string') {
+    const name = r.companyName.replace(/[\u0000-\u001F\u007F]/g, '').trim()
+    if (name && name.length <= 100) out.companyName = name
+  }
   return Object.keys(out).length ? out : undefined
 }
 
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
     const err = e instanceof AgentTaskError ? e : null
     if (!err) console.error('[agent/tasks] task failed', { taskId })
     return NextResponse.json(
-      { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href, power: err?.power },
+      { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href, power: err?.power, cause: err?.cause, actions: err?.actions },
       { status: 422, headers: NO_STORE },
     )
   } finally {

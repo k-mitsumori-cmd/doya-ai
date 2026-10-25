@@ -341,12 +341,17 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
       const src=read(f);
       const gate=src.indexOf('agentGate({ store: true })');
       assert.ok(gate>0,f);
-      for(const later of ['readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+      // 本文を読む呼び出し（readOperationalJson を直接、または会社名だけを読む companyNameFrom）も、入口のあと
+      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
         const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
       }
     }
-    // ToDo を動かす API は、本文を読まない（保存した作戦と答えだけから、ツールへの入力を作る）
-    assert.equal(/readOperationalJson|req\.json\(/.test(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts')),false);
+    // ToDo を動かす API が本文から読むのは、会社名だけ（会社の調査のやり直し）。ほかはすべて、保存した作戦と答えから作る
+    const runTask=read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts');
+    assert.equal((runTask.match(/readOperationalJson\(/g)||[]).length,1);
+    assert.match(runTask,/const raw = body\.companyName/);
+    assert.equal(/body\.(?!companyName)\w+/.test(runTask),false);
+    assert.equal(/req\.json\(/.test(runTask),false);
     // 表を読む・書くのは runs.prisma.ts だけで、どの読み書きも userId で絞る
     const repo=read('src/lib/agent-orchestration/runs.prisma.ts');
     const calls=repo.match(/prisma\.homeAgent(Run|Task)\.\w+\(\{[^]*?\}\)/g)||[];
