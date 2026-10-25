@@ -317,7 +317,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
                   ))}
                 </fieldset>
               ) : null}
-              <div className={styles.foot}>
+              {current.content ? <div className={styles.content}>{current.content(close) as ReactNode}</div> : null}
+              <div className={styles.foot} hidden={Boolean(current.content) && !current.pages}>
                 {current.pages ? <span className={styles.dots} aria-label={`${page + 1} / ${current.pages.length}`}>{current.pages.map((_, i) => <i key={i} data-on={i === page ? 'true' : undefined} />)}</span> : null}
                 <span className={styles.actions}>
                   {current.pages ? (

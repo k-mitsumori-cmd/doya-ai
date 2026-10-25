@@ -64,6 +64,11 @@ export interface Notice extends NoticePage {
   secondary?: NoticeAction
   /** 3つめのボタン（控えめな見た目。例: ドヤパワーが尽きたときの「回復を待つ」） */
   tertiary?: NoticeAction
+  /**
+   * 本文の下に差し込む中身（例: 新料金の UpsellActions）。中身を出す部品が自分でボタンを持つときに使う。
+   * 中身から閉じるときは、受け取った close(done) を呼ぶ。渡したときは primary・secondary・tertiary を出さない
+   */
+  content?: (close: (done: boolean) => void) => unknown
 }
 
 export interface NoticeQueueState {

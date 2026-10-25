@@ -50,6 +50,8 @@
 .levelRow input { margin-top: 4px; accent-color: var(--n-blue); }
 .levelRow small { display: block; font-size: 12px; color: var(--n-sub); }
 .levelLink { margin-left: 8px; padding: 0; border: 0; background: none; color: var(--n-blue-deep); font: inherit; font-size: 12px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.content { min-width: 0; }
+.foot[hidden] { display: none; }
 .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .dots { display: flex; gap: 6px; }
 .dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--n-line); transition: width .25s var(--n-ease), background .25s; }
