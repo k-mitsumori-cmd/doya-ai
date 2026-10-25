@@ -154,10 +154,11 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
     if ((e as { name?: string })?.name === 'AbortError') throw e
     throw new AgentTaskError('通信が切れました。もう一度お試しください。')
   }
-  const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string } } | null
+  const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentTaskError['power'] } | null
   if (res.ok && data?.result) return data.result
   if (res.status === 404) throw new AgentTaskError('この機能は、まだお使いいただけません。', 'auth')
-  throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href)
+  // 422 などの答えに付いた power を渡す（渡さないと、量が分からないまま「減っていません」と出てしまう）
+  throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href, data?.power)
 }
 
 /* ---------- 本体 ---------- */
@@ -463,6 +464,7 @@ export default function HomeAgent({ executor = 'api' }: {
                         </span>
                         {v.status === 'done' && v.draft ? <Link href={v.draft.href} className={styles.link}>{v.draft.hrefLabel}</Link> : null}
                         {v.status === 'failed' && v.error?.href ? <Link href={v.error.href} className={styles.link}>{v.error.hrefLabel ?? '開く'}</Link> : null}
+                        {v.status === 'failed' && failPowerText(v) ? <span className={styles.muted}>{failPowerText(v)}</span> : null}
                       </span>
                       <span className={styles.rstate}>
                         {v.status === 'done' ? <><Check />できた</> : v.status === 'running' ? '進めています' : v.status === 'failed' ? '作れませんでした' : '待っています'}
@@ -473,11 +475,7 @@ export default function HomeAgent({ executor = 'api' }: {
               </ul>
               {scene === 'done' && counts.failed ? (
                 <div className={styles.row}>
-                  <span className={styles.muted}>
-                    {counts.powerRefunded > 0
-                      ? `失敗した ToDo で減ったドヤパワー（${counts.powerRefunded}）は戻しました。`
-                      : '失敗した ToDo では、ドヤパワーは減っていません。'}
-                  </span>
+                  <span className={styles.muted}>やり直すと、失敗した ToDo だけをもう一度進めます。</span>
                   <button type="button" className={styles.btn} onClick={() => void run(states)}>残りをやり直す</button>
                 </div>
               ) : null}
@@ -586,6 +584,17 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
       </div>
     </div>
   )
+}
+
+/**
+ * 失敗した ToDo のドヤパワーの一文（DESIGN.md §3.5 の順）。
+ * 量が分からない（通信が切れた）ときは言わない。used と refunded は減る量の表から数えた目安
+ */
+function failPowerText(v: AgentTodoView): string | null {
+  if (!v.powerKnown) return null
+  if (v.power.used > 0) return `ドヤパワーが ${v.power.used} 減りました（途中まで作れた分）。`
+  if (v.power.refunded > 0) return `減ったドヤパワー（${v.power.refunded}）は戻しました。`
+  return 'ドヤパワーは減っていません。'
 }
 
 /** 前回の作戦の続き。残っている ToDo を並べ、そこから再開する */
