@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { decideInvite, decideSeatChange, findSeatItem, isSeatCacheFresh, memberLimit, normalizeEmail, seatsUsed, teamMonthlyGrant, SEAT_CACHE_TTL_MS } from './team'
+import { decideInvite, decideSeatChange, findSeatItem, isSeatCacheFresh, isValidOperationKey, jstMonthRemainingFraction, memberLimit, normalizeEmail, seatAddGrants, seatsUsed, teamMonthlyGrant, SEAT_CACHE_TTL_MS } from './team'
 import { subscriptionAmount, tieredAmount, tieredPriceIdsMissingTiers, type TierLike } from './amount'
 import { powerPackPriceId } from './prices'
 import { TEAM_SEAT_TIERS, teamMonthly, teamMonthlyPoints, withTax } from './plans'
@@ -53,12 +53,38 @@ test('入れる人数の上限: チーム＝買った人数、フリー＝3人�
 
 // ---------- 人数の変更 ----------
 
-test('増やす: その場で日割りを請求し、増えた人数の分のドヤパワーを足す', () => {
-  assert.deepEqual(decideSeatChange({ current: 5, requested: 8, used: 4 }), { ok: true, direction: 'up', prorationBehavior: 'always_invoice', addPoints: 900 })
+test('増やす: その場で日割りを請求する。増えた席の番号を返す', () => {
+  assert.deepEqual(decideSeatChange({ current: 5, requested: 8, used: 4 }), { ok: true, direction: 'up', prorationBehavior: 'always_invoice', addedSeats: [6, 7, 8] })
+})
+
+test('増えた席の付与: 席の番号ごとに月1回。量は 1人分 × 今月の残りの割合', () => {
+  const start = new Date('2026-10-31T15:00:00.000Z') // 11/1 0:00 JST
+  assert.equal(jstMonthRemainingFraction(start), 1)
+  const g = seatAddGrants({ subscriptionId: 'sub_1', monthKey: '2026-11', addedSeats: [6, 7], now: start })
+  assert.deepEqual(g, [
+    { sourceKey: 'seat-add:sub_1:2026-11:seat-6', amount: 300 },
+    { sourceKey: 'seat-add:sub_1:2026-11:seat-7', amount: 300 },
+  ])
+  // 月の半ば（11/16 0:00 JST）は半分
+  assert.equal(seatAddGrants({ subscriptionId: 'sub_1', monthKey: '2026-11', addedSeats: [6], now: new Date('2026-11-15T15:00:00.000Z') })[0]!.amount, 150)
+  // 月の終わりの直前は 0 で、付けない
+  assert.deepEqual(seatAddGrants({ subscriptionId: 'sub_1', monthKey: '2026-11', addedSeats: [6], now: new Date('2026-11-30T14:59:59.000Z') }), [])
+})
+
+test('減らしてまた増やしても、同じ月の同じ席の番号は同じ sourceKey（台帳で二重に付かない）', () => {
+  const now = new Date('2026-11-10T03:00:00.000Z')
+  const first = seatAddGrants({ subscriptionId: 'sub_1', monthKey: '2026-11', addedSeats: decideSeatChange({ current: 5, requested: 8, used: 1 }).ok ? [6, 7, 8] : [], now })
+  const again = seatAddGrants({ subscriptionId: 'sub_1', monthKey: '2026-11', addedSeats: [6, 7, 8], now })
+  assert.deepEqual(first.map((g) => g.sourceKey), again.map((g) => g.sourceKey))
+})
+
+test('操作 ID は 16〜64 文字の英数字・ハイフン・下線だけ', () => {
+  assert.ok(isValidOperationKey('a1b2c3d4e5f6g7h8'))
+  for (const v of ['short', 'x'.repeat(65), 'has space 1234567890', null, 1]) assert.ok(!isValidOperationKey(v))
 })
 
 test('減らす: 返金なし。使っている人数より下げられない', () => {
-  assert.deepEqual(decideSeatChange({ current: 8, requested: 6, used: 4 }), { ok: true, direction: 'down', prorationBehavior: 'none', addPoints: 0 })
+  assert.deepEqual(decideSeatChange({ current: 8, requested: 6, used: 4 }), { ok: true, direction: 'down', prorationBehavior: 'none', addedSeats: [] })
   assert.deepEqual(decideSeatChange({ current: 8, requested: 3, used: 4 }), { ok: false, status: 409, code: 'BELOW_USED' })
 })
 

@@ -49,14 +49,16 @@ export function TeamManage() {
     const ok = await confirmDialog({
       title: `人数を${draft}人に${up ? '増やします' : '減らします'}`,
       message: up
-        ? `今日から月の終わりまでの日割りの額を、いま請求します。毎月のドヤパワーは ${(draft - seats) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月の分もすぐに足します。`
+        ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(draft - seats) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
         : '減らした分の返金はありません。人数はすぐに減ります。',
       confirmLabel: up ? '増やして請求する' : '減らす',
     })
     if (!ok) return
     setBusy(true); setMessage(null)
     try {
-      const r = await call('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: draft }) })
+      // 確かめの画面の1回ごとに操作 ID を作る（同じ操作の二重送信は Stripe で1回にまとまる）
+      const operationKey = crypto.randomUUID().replace(/-/g, '')
+      const r = await call('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: draft, operationKey }) })
       setMessage(r.ok ? `人数を${r.data.seats}人にしました。` : (r.data.error ?? '人数を変えられたか確認できませんでした。'))
       await reload()
     } catch {
