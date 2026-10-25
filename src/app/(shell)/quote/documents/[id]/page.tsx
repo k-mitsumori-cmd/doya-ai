@@ -11,6 +11,8 @@
 import Link from 'next/link'
 import { useQuoteDocumentDetail } from '@/lib/quote/use-document-detail'
 import { useParams } from 'next/navigation'
+import { useEffect } from 'react'
+import { useNotice } from '@/components/notice/NoticeProvider'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
 import { DoyaKun } from '@/components/lp'
@@ -37,6 +39,12 @@ export default function QuoteDocumentPage() {
     discountType, discountValue, notes, paymentTerms, deliveryTerms, setClientCompany, setClientPerson,
     setDiscountType, setDiscountValue, setNotes, setPaymentTerms, setDeliveryTerms, updateItem,
     save, load, canApprove, pdfUrl } = useQuoteDocumentDetail(id)
+  // (14) 保存できたら、画面の上の文に加えてトーストでも知らせる（旗 GUIDE_POPUPS_ROLLOUT の内側だけ。off なら何もしない）
+  const notice = useNotice()
+  useEffect(() => {
+    if (message) notice.notify({ title: message, sub: 'PDF は保存した内容で作られます', durationMs: 4000 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message])
 
   if (loading) {
     return (
