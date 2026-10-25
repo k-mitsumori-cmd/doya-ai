@@ -118,7 +118,7 @@ export async function runDoyamarkeBodyCheck(opts: { dryRun?: boolean } = {}): Pr
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(voicePayload({ text })),
+      body: JSON.stringify(voicePayload({ text }, { app: 'ドヤマーケ', kind: 'error', severity: 'action' })),
     })
     if (!res.ok) throw new Error(`Slack webhook error: ${res.status}`)
     posted = true

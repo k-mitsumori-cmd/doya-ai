@@ -1,3 +1,5 @@
+import { postSlack } from '@/lib/slack/notify'
+
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ============================================================
@@ -19,7 +21,6 @@ const CLAUDE_MAX_OUTPUT_TOKENS = 16384
 // ============================================================
 // SLACK_WEBHOOK_URL 環境変数で設定。未設定なら通知スキップ。
 // 同じ種類の通知を1時間以内に連続送信しないようデデュプリケーション。
-let _lastCreditAlertAt = 0
 
 function isClaudeCreditError(status: number, body: string): boolean {
   // Anthropic APIのクレジット切れ: 400 + "credit" or "billing" in error body
@@ -33,21 +34,14 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL
   if (!webhookUrl) return
 
-  // 1時間以内の重複通知を抑制
-  const now = Date.now()
-  if (now - _lastCreditAlertAt < 60 * 60 * 1000) return
-  _lastCreditAlertAt = now
-
+  // 1時間以内の重複通知は postSlack の間引きで抑える
   const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
   try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    await postSlack(webhookUrl, {
         text: [
-          `<!channel>`,
-          `:warning: *[Claude APIクレジット切れ]* ${timestamp}`,
+          `*Claude API のクレジットが不足しています*`,
+          `発生時刻：${timestamp}（日本時間）`,
           ``,
           `Claude API（${CLAUDE_MODEL_DEFAULT}）のクレジットが不足しています。`,
           `現在 *Geminiフォールバック* で記事生成を継続中です。`,
@@ -59,8 +53,12 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
           `*エラー詳細:*`,
           `\`HTTP ${status}\``,
         ].join('\n'),
-      }),
-    })
+      }, {
+        // 記事生成は Gemini で続いているが、放置すると品質が落ちたままになるので人を呼ぶ
+        meta: { app: 'ドヤAI', kind: 'billing', severity: 'urgent' },
+        dedupeKey: 'claude-credit-exhausted',
+        dedupeWindowMs: 60 * 60 * 1000,
+      })
     console.log('[Slack] Credit exhaustion alert sent')
   } catch (e: any) {
     // 通知失敗で処理を止めない

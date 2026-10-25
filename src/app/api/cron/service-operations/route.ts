@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     else if (mode === 'weekly') result = await weeklyOperations(dry);
     else if (mode === 'cost') result = await monitorCost(dry);
     else if (mode === 'travel') {
-      result = '【旅行ツール】今日の集客チェック、いくよ！\n' + await dailyOperationsSection('travel');
+      result = '【旅行ツール】今日の集客チェック\n' + await dailyOperationsSection('travel');
       if (!dry) await sendOps('travel', String(result), 'travel-daily:' + jstDay(), 'steady');
     } else result = dry ? { note: 'watchは送信を伴うためdryでは実行しません' } : await monitorReportDelivery();
     if (!dry) await writeOps(doneKey, { at: new Date().toISOString(), ...(rolling ? { slot } : {}) });

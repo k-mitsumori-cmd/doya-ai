@@ -1,4 +1,5 @@
 import { voicePayload } from './slack-voice';
+import type { SlackKind } from './slack/notify';
 /**
  * 運用アラート（エラー急増・応答遅延・ダウン・依存障害）を Slack に通知する共通基盤。
  *
@@ -141,6 +142,8 @@ export async function notifyAlert(opts: {
   cooldownMs?: number
   /** そのまま AI に貼れる修正依頼文（あれば専用ブロックで表示） */
   aiRepair?: string
+  /** 通知の種類。既定はエラー。課金の異常は 'billing' */
+  kind?: SlackKind
 }): Promise<boolean> {
   const { title, detail, context, level = 'warn', extra, dedupKey, cooldownMs = 10 * 60_000, aiRepair } = opts
   const localKey = dedupKey ? `alert:${dedupKey}` : undefined
@@ -203,8 +206,14 @@ export async function notifyAlert(opts: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(voicePayload({
-        text: `【${opts.systemName || 'ドヤAI'}・${label}】${title}: ${detail ?? ''}`.slice(0, 200),
+        // 1行目は件名だけにする（通知の一行表示と見出しに使われるため）。詳細は2行目以降へ
+        text: `【${opts.systemName || 'ドヤAI'}・${label}】${title}${detail ? `\n${detail}` : ''}`.slice(0, 200),
         blocks,
+      }, {
+        app: opts.systemName || 'ドヤAI',
+        kind: opts.kind ?? 'error',
+        // 重大（ダウン・エラー急増・課金の不整合）は人を呼ぶ。要確認は呼ばない。
+        severity: level === 'critical' ? 'urgent' : 'action',
       })),
     })
     if (!res.ok) {

@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
   let notified = false
   for (let attempt = 0; attempt < 2 && !notified; attempt++) {
     try {
-      await postToSlackBlocks(title, blocks)
+      await postToSlackBlocks(title, blocks, undefined, { app: 'ドヤAI', kind: 'inquiry', severity: 'action' })
       notified = true
     } catch (e: any) {
       console.error("[api/campaign/case-study] failed")

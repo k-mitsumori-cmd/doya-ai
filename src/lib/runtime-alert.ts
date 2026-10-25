@@ -194,7 +194,7 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           ...(deployment.id ? [`デプロイID：${deployment.id}`] : []),
           '確認すること：この時刻のサーバーログを確認し、失敗した処理の原因を調べてください。',
           options.clientReported ? '端末報告は種類ごとに全実行環境で10分間まとめます。' : '同じ発生箇所の通知は、全実行環境で10分間まとめます。'
-        ].join('\n') })), signal: AbortSignal.timeout(5000),
+        ].join('\n') }, { app: 'ドヤAI', kind: 'error', severity: 'action' })), signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
     } catch {

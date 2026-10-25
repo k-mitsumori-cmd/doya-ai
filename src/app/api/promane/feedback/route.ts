@@ -1,4 +1,4 @@
-import { applyContextComment } from '../../../../lib/slack-context-comment';
+import { voicePayload } from '../../../../lib/slack-voice';
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -55,13 +55,13 @@ export async function POST(req: NextRequest) {
       webhookUrl = process.env.SLACK_WEBHOOK_URL || null
     }
 
-    const typeLabel = type === 'bug' ? '🐛 バグ報告' : type === 'feature' ? '💡 機能要望' : '💬 その他'
+    const typeLabel = type === 'bug' ? 'バグ報告' : type === 'feature' ? '機能要望' : 'その他'
     const slackPayload = {
-      text: `ドヤプロマネ フィードバック`,
+      text: `ドヤプロマネへのご意見（${typeLabel}）`,
       blocks: [
         {
           type: 'header',
-          text: { type: 'plain_text', text: `${typeLabel} - ドヤプロマネ`, emoji: true },
+          text: { type: 'plain_text', text: `ドヤプロマネへのご意見（${typeLabel}）`, emoji: false },
         },
         {
           type: 'section',
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       const r = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(applyContextComment(slackPayload)),
+        body: JSON.stringify(voicePayload(slackPayload, { app: 'ドヤプロマネ', kind: 'inquiry', severity: 'action' })),
         signal: AbortSignal.timeout(10_000),
       })
       if (!r.ok) {

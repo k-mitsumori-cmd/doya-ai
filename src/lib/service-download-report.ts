@@ -45,7 +45,7 @@ export async function sendServiceDownloadReports(dryRun = false) {
     if (fetchFailed) text = text.replace('Appleの直近3日分のレポートを取得できていません。', 'Appleとの通信・認証で取得に失敗しました。数値は未確認です。');
     if (app.id === '6808881452') text += '\n\n' + await oshiAcquisitionMessage();
     const serviceKey = app.id === '6808881452' ? 'oshi' : app.id === '6802064148' ? 'hitorijime' : 'heisha';
-    text = withSlackVoice(text, { current: latest ? countDownloads(latest.rows, app.id).first : null, seed: app.id });
+    text = withSlackVoice(text, { current: latest ? countDownloads(latest.rows, app.id).first : null, seed: app.id, app: app.name });
     // ヒトリジメは朝7:10の利用日報に追加情報を掲載。ほか2本はストア日報に集約。
     if (serviceKey !== 'hitorijime') text += await dailyOperationsSection(serviceKey);
     if (dryRun) return { app: app.name, text, sent: false };
@@ -55,7 +55,7 @@ export async function sendServiceDownloadReports(dryRun = false) {
       if (previous?.value === today) return { app: app.name, skipped: true };
       const url = process.env[app.webhook];
       if (!url) throw new Error('Notification destination missing');
-      const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(voicePayload({ text })), signal: AbortSignal.timeout(5000) });
+      const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(voicePayload({ text }, { app: app.name, kind: 'report', severity: 'info' })), signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
       await prisma.systemSetting.upsert({ where: { key }, create: { key, value: today }, update: { value: today } });
       await recordReportDelivered(serviceKey + '-downloads');
