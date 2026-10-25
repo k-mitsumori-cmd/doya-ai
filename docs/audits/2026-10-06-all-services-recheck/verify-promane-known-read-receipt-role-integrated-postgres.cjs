@@ -20,7 +20,7 @@ async function seed(name,overrides){const m=Prisma.dmmf.datamodel.models.find(x=
 
 await seed('User',{id:'synthetic',email:'synthetic@example.invalid'});await seed('User',{id:'pending',email:'pending@example.invalid'});
 const workspace=await seed('PromaneWorkspace',{userId:'synthetic',name:'Synthetic Private Workspace',slug:'owned'}),project=await seed('PromaneProject',{workspaceId:workspace.id,name:'Synthetic Private Project'});
-const apiFile='src/app/api/promane/workspaces/route.ts',timeFile='src/lib/promane/timesheet-read.ts',pageFile='src/app/promane/page.tsx',authFile='src/lib/promane/auth.ts';
+const apiFile='src/app/api/promane/workspaces/route.ts',timeFile='src/lib/promane/timesheet-read.ts',pageFile='src/app/(shell)/promane/page.tsx',authFile='src/lib/promane/auth.ts';
 let session={user:{id:'synthetic',email:'synthetic@example.invalid'}};
 const common={'next-auth':{getServerSession:async()=>session},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:url=>{throw Error('Unexpected redirect '+url)}},crypto};
 const api=load(apiFile,{...common,'next/server':{NextResponse:Response}}),times=load(timeFile,{'@prisma/client':{Prisma}}),auth=load(authFile,common);

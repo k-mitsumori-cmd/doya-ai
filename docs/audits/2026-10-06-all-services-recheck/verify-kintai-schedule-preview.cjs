@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto'),ts=require('typescript');
-const file='src/app/kintai/settings/page.tsx',source=fs.readFileSync(file,'utf8');
+const file='src/app/(shell)/kintai/settings/page.tsx',source=fs.readFileSync(file,'utf8');
 const fn=source.slice(source.indexOf('function computeSchedulePreview('),source.indexOf('export default function SettingsPage'));
 const context={};vm.runInNewContext(ts.transpileModule(fn,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
 const tests=[

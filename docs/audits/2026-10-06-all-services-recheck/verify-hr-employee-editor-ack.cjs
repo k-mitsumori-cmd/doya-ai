@@ -2,7 +2,7 @@ process.env.NODE_ENV='test'
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto')
 const req=n=>require(path.join(process.cwd(),'node_modules',n)),React=req('react'),{JSDOM}=req('jsdom'),ts=req('typescript')
 const dom=new JSDOM('<body></body>',{url:'https://example.invalid/hr/employees/employee/edit'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true
-const {createRoot}=req('react-dom/client'),file='src/app/hr/employees/[id]/edit/page.tsx',version='2026-10-07T00:00:00.000Z',cases=[],errors=[],navigations=[],writes=[]
+const {createRoot}=req('react-dom/client'),file='src/app/(shell)/hr/employees/[id]/edit/page.tsx',version='2026-10-07T00:00:00.000Z',cases=[],errors=[],navigations=[],writes=[]
 let currentId='employee',pendingPatch,delayOld=false,resolveOld
 const employee=id=>({id,updatedAt:version,firstName:'Synthetic',lastName:id,employmentType:'FULL_TIME'})
 const fetch=async(url,init={})=>{const parsed=new URL(url,dom.window.location.origin);url=parsed.pathname+parsed.search;assert.equal(new Headers(init.headers).get('X-HR-Selected-Actor'),'synthetic-editor-actor');assert.equal(new Headers(init.headers).get('X-HR-Selected-Organization'),'synthetic-org');
