@@ -153,6 +153,8 @@
 .funnelTrack { height: 8px; border-radius: 999px; background: var(--bg); overflow: hidden; }
 .funnelFill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
 .funnelFoot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; font-size: 12px; color: var(--sub); }
+/* 「営業タスク 1件」などは、項目の中で折り返さない（数字と単位が別の行に分かれないように） */
+.funnelFoot > span { white-space: nowrap; }
 .warn { color: var(--note-ink); display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
 
 /* カレンダー */

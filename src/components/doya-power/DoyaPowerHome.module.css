@@ -46,7 +46,7 @@
 .empty { margin: 12px 0 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
 
 .canDo { margin: 12px 0 0; font-size: 14px; line-height: 1.8; color: var(--ink); line-break: strict; overflow-wrap: anywhere; }
-.canDoItem { font-weight: 700; display: inline-block; }
+.canDoItem { font-weight: 700; display: inline-block; white-space: nowrap; }
 .emptyBox { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 12px 0 4px; }
 .emptyImg { max-width: 100%; height: auto; }
 .usage { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }

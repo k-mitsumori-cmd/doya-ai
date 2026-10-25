@@ -67,8 +67,9 @@ export function DoyaPowerDetail({ view, canEditOrg = false }: { view: DoyaPowerH
           <ExpiryNote view={view} />
           <p className={styles.canDo}>
             あと{' '}
-            {whatYouCanDo(view.remaining).slice(0, 4).map((w, i) => (
-              <span key={w.label} className={styles.canDoItem}>{i > 0 ? '・' : ''}{w.label}{fmt(w.count)}{w.unit}</span>
+            {/* 「・」は前の項目の後ろに付ける（行の頭に「・」が来ないように）。項目の中では折り返さない */}
+            {whatYouCanDo(view.remaining).slice(0, 4).map((w, i, all) => (
+              <span key={w.label} className={styles.canDoItem}>{w.label}{fmt(w.count)}{w.unit}{i < all.length - 1 ? '・' : ''}</span>
             ))}
             {' '}できます。
           </p>
