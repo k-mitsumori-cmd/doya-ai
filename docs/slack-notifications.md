@@ -237,7 +237,7 @@ Slack に送らないもの: Claude の定期タスク3つ（obsidian-dev-record
 
 | 変更 | 対象 | 必要な操作 |
 |---|---|---|
-| ドヤAI の統一を本番に出す | doya-ai のブランチ `claude/slack-notify-unify-rebased`（origin/main 5060455e の上に4件） | main への取り込みと push（Vercel が自動でデプロイ）。環境変数の変更は不要 |
+| ドヤAI の統一を本番に出す | doya-ai のブランチ `claude/slack-notify-unify-rebased`（origin/main 5060455e の上に5件） | main への取り込みと push（Vercel が自動でデプロイ）。環境変数の変更は不要 |
 | ゲーム4本の統一を本番に出す | 呪い日記・推しにマイル・ゆるせん・ヒトリジメの `claude/slack-unify-20261025` | 本体の未コミット分の整理、`pnpm install` 後の型チェックとビルド、main への取り込みと Vercel へのデプロイ |
 | 弊社、限界につき。の日報 | `~/Code/heisha-slack-unify-20261025` | 本体へ取り込む。最初の日報は `--dry` で文面を確かめる |
 | LINE配信管理・X投稿管理 | 各 worktree | 本体のブランチへ取り込み、`pnpm test`・`pnpm typecheck` のあと `pnpm deploy:worker` |
