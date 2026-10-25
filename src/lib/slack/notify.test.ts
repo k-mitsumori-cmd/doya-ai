@@ -147,3 +147,16 @@ test('postSlack: dedupeKey と時間を指定できる', async () => {
   assert.equal(await postSlack('https://hooks.invalid/a', { text: '1件目' }, { dedupeWindowMs: 0, fetchImpl: impl }), 'sent')
   assert.equal(calls.length, 2)
 })
+
+import { maskEmail, maskPhone, escapeSlackText, excerpt, ordinalLabel } from './notify'
+
+test('個人情報の伏せ字と冒頭だけの表示', () => {
+  assert.equal(maskEmail('taro.yamada@example.com'), 'ta***@example.com')
+  assert.equal(maskEmail(''), '（非表示）')
+  assert.equal(maskPhone('090-1234-5678'), '***-5678')
+  assert.equal(escapeSlackText('<!channel> *a*'), '&lt;!channel&gt; ​*a​*')
+  assert.equal(excerpt('あ'.repeat(100)), 'あ'.repeat(80) + '…（全100文字）')
+  assert.equal(excerpt('  \n '), '（未記入）')
+  assert.equal(ordinalLabel(1234), '1,234人目')
+  assert.equal(ordinalLabel(null), '人数は未取得')
+})

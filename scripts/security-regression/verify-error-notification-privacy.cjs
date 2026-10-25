@@ -12,6 +12,7 @@ const notifications = load('src/lib/notifications.ts', {
   './service-operations-daily': {},
   './service-operations-state': {},
   './slack-voice': { voicePayload: (payload) => payload },
+  './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
   './prisma': {
     prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } },
     withRetry: async (operation) => operation(),
@@ -72,6 +73,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
@@ -93,6 +95,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert); return true }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
@@ -135,6 +138,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
@@ -159,6 +163,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: {}, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': {
@@ -194,6 +199,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: {}, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': {
@@ -225,6 +231,7 @@ const notifications = load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: {}, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
       './alert': {
@@ -257,6 +264,7 @@ const notifications = load('src/lib/notifications.ts', {
     let attempts = 0
     const realAlert = load('src/lib/alert.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: {}, withRetry: async (operation) => operation() },
     }, {
       AbortSignal,
@@ -274,6 +282,7 @@ const notifications = load('src/lib/notifications.ts', {
     let attempts = 0
     const noWebhook = load('src/lib/alert.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
+      './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）'), ordinalLabel: (n) => (n ? n + '人目' : '人数は未取得') },
       './prisma': { prisma: { systemSetting: { findUnique: async () => null } }, withRetry: async (operation) => operation() },
     }, {
       process: { env: {} },

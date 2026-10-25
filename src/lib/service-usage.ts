@@ -17,6 +17,7 @@ import { waitUntil } from '@vercel/functions'
 import { prisma, withRetry } from './prisma'
 import { serviceLabelOf } from './attribution'
 import { postToSlackBlocks } from './notifications'
+import { maskEmail } from './slack/notify'
 import { shouldSend } from './alert'
 import { isPaidPlan } from './unified-plan'
 
@@ -155,7 +156,8 @@ export async function notifyFirstServiceUse(opts: {
       safe(() => prisma.generation.groupBy({ by: ['serviceId'], where: { userId } }), [] as { serviceId: string }[]),
     ])
 
-    const who = user?.name || user?.email || '不明なユーザー'
+    // 氏名は出さず、メールアドレスは一部を伏せる（個人情報を広げないため）
+    const who = user?.email ? maskEmail(user.email) : '（メール未登録）'
     const plan = user?.plan || 'FREE'
     const planLabel = isPaidPlan(plan) ? `${plan}（有料）` : `${plan}（無料）`
 
@@ -190,7 +192,7 @@ export async function notifyFirstServiceUse(opts: {
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: `*ユーザー*\n${who}${user?.email ? `\n${user.email}` : ''}` },
+          { type: 'mrkdwn', text: `*ユーザー*\n${who}` },
           { type: 'mrkdwn', text: `*プラン*\n${planLabel}` },
           { type: 'mrkdwn', text: `*登録日*\n${signupLine}` },
           { type: 'mrkdwn', text: `*登録したサービス・流入元*\n${acquisition}` },

@@ -2,6 +2,7 @@ import { dailyOperationsSection } from './service-operations-daily';
 import { createHash } from 'node:crypto';
 import { recordReportDelivered } from './service-operations-state';
 import { voicePayload, type SlackMeta } from './slack-voice';
+import { maskEmail, ordinalLabel } from './slack/notify';
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
@@ -281,19 +282,26 @@ export type EventNotification = {
   userEmail?: string | null
   userName?: string | null
   details?: string
+  /** 新規登録のとき、何人目の登録か（sendEventNotification が数える） */
+  ordinal?: number | null
+}
+
+/** Slack に出す利用者の表記。メールアドレスは一部を伏せ、氏名は出さない（個人情報を広げないため）。 */
+function slackUserLabel(email: string | null | undefined): string {
+  return email ? maskEmail(email) : '（メール未登録）'
 }
 
 function formatEventNotification(event: EventNotification): string {
   const now = new Date(event.occurredAt || Date.now()).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
   const label = EVENT_LABEL[event.type]
-  const who = event.userName || event.userEmail || '不明'
 
   const lines = [
     ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
     `*【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
-    `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
+    ...(event.type === 'signup' ? [`- 登録者: ${ordinalLabel(event.ordinal)}`] : []),
+    `- ユーザー: ${slackUserLabel(event.userEmail)}`,
   ]
-  if (event.type === 'signup' && event.userId) {
+  if (event.userId) {
     const userUrl = `https://doya-ai.surisuta.jp/admin/users?userId=${encodeURIComponent(event.userId)}`
     lines.push(`- ユーザーURL：<${userUrl}|このユーザーの登録情報を開く>（管理者ログインが必要）`)
   }
@@ -319,6 +327,10 @@ export async function sendEventNotification(event: EventNotification): Promise<v
     if (event.type === 'login') {
       const who = event.userEmail || event.userId || event.userName
       if (who && !shouldSend(`login:${who}`, LOGIN_NOTIFY_INTERVAL_MS)) return
+    }
+    if (event.type === 'signup' && event.ordinal === undefined) {
+      // 何人目の登録か。数えられなくても通知は送る
+      event = { ...event, ordinal: await withRetry(() => prisma.user.count()).catch(() => null) }
     }
     await postToSlack(formatEventNotification(event), undefined, eventMeta(event))
   } catch {
@@ -441,6 +453,11 @@ export async function sendDailySummary(): Promise<void> {
   const newGenerations = await prisma.generation.count({
     where: { createdAt: { gte: yesterday } },
   })
+  // 過去24時間に使った人数（ログイン利用者。ゲストは数えない）
+  const activeUsers = await prisma.generation
+    .groupBy({ by: ['userId'], where: { createdAt: { gte: yesterday } } })
+    .then((rows) => rows.filter((r) => r.userId).length)
+    .catch(() => null)
 
   // サービス別の利用（件数＋利用ユーザー数）
   const serviceStats = await getServiceUsageStats(yesterday)
@@ -494,17 +511,18 @@ export async function sendDailySummary(): Promise<void> {
           const extra = [svc ? `登録元: ${svc}` : null, u.signupSource ? `流入: ${u.signupSource}` : null]
             .filter(Boolean)
             .join(' ｜ ')
-          return `  - ${u.name || '名前未設定'} (${u.email})${extra ? `\n    ${extra}` : ''}`
+          return `  - ${slackUserLabel(u.email)}${extra ? `\n    ${extra}` : ''}`
         })
       : []),
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsers}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     ``,
     `*サービス利用（過去24時間）*`,
     `- 合計: ${newGenerations}件 / ${serviceStats.length}サービス`,
+    `- 使った人数: ${activeUsers === null ? '未集計' : `${activeUsers}人`}`,
     ...serviceLines,
     ``,
     `*初回利用（そのサービスを初めて使った人）*`,
@@ -586,7 +604,7 @@ export async function sendWeeklySummary(): Promise<void> {
     ``,
     `*新規ユーザー: ${weekNewUsers.length}人*`,
     ...(weekNewUsers.length > 0
-      ? weekNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      ? weekNewUsers.map((u) => `  - ${slackUserLabel(u.email)}`)
       : []),
     ``,
     `*サービス利用: ${weekGenerations}件 / ${weekServiceStats.length}サービス*`,
@@ -608,7 +626,7 @@ export async function sendWeeklySummary(): Promise<void> {
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsersList.length}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     `- 総生成数: ${totalGenerations}件`,
   ]
@@ -683,7 +701,7 @@ export async function sendMonthlySummary(): Promise<void> {
     ``,
     `*新規ユーザー: ${monthNewUsers.length}人*`,
     ...(monthNewUsers.length > 0
-      ? monthNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      ? monthNewUsers.map((u) => `  - ${slackUserLabel(u.email)}`)
       : []),
     ``,
     `*サービス利用: ${monthGenerations}件 / ${monthServiceStats.length}サービス*`,
@@ -705,7 +723,7 @@ export async function sendMonthlySummary(): Promise<void> {
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsersList.length}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     `- 総生成数: ${totalGenerations}件`,
   ]

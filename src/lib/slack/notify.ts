@@ -15,7 +15,7 @@
  * コピーして使う（決まりの文書: docs/slack-standard.md）。コピー先では下の版を書き換えない。
  */
 
-export const SLACK_NOTIFY_VERSION = '1.0.0'
+export const SLACK_NOTIFY_VERSION = '1.1.0'
 
 export type SlackKind = 'error' | 'billing' | 'usage' | 'inquiry' | 'report'
 export type SlackSeverity = 'urgent' | 'action' | 'info'
@@ -237,6 +237,53 @@ export function inferSlackMeta(payload: unknown, fallbackApp = 'ドヤAI'): Slac
         ? 'error'
         : /決済|課金|入金|解約|売上|契約|プラン|体験|購入|返金/.test(line) ? 'billing' : 'usage'
   return { app, kind, severity }
+}
+
+// ---------------------------------------------------------------
+// 個人情報と利用者の文字列（1.1.0 で追加）
+// ---------------------------------------------------------------
+/** メールアドレスを「先頭2文字＋***＋@ドメイン」にする。形が違えば「（非表示）」。 */
+export function maskEmail(email: string | null | undefined): string {
+  const m = (email ?? '').trim().match(/^([^@\s]+)@([^@\s]+)$/)
+  if (!m) return '（非表示）'
+  return `${m[1]!.slice(0, 2)}***@${m[2]}`
+}
+
+/** 電話番号を末尾4桁だけ残して伏せる。 */
+export function maskPhone(phone: string | null | undefined): string {
+  const digits = (phone ?? '').replace(/\D/g, '')
+  if (digits.length < 4) return '（非表示）'
+  return `***-${digits.slice(-4)}`
+}
+
+/**
+ * 利用者が書いた文字列を Slack に載せられる形にする。
+ * < > & を実体参照にして <!channel> やリンクの差し込みを防ぎ、mrkdwn の記号の前に
+ * ゼロ幅スペースを入れて書式として解釈されないようにする。
+ */
+export function escapeSlackText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/([*_~`])/g, '\u200b$1')
+}
+
+/**
+ * 気持ちや悩みが書かれた自由記述を、冒頭だけにして載せる（既定80文字）。
+ * 改行は空白にまとめ、切ったときは「…（全N文字）」を付ける。エスケープ済みで返す。
+ */
+export function excerpt(text: string | null | undefined, max = 80): string {
+  const t = (text ?? '').replace(/\s+/g, ' ').trim()
+  if (!t) return '（未記入）'
+  const chars = Array.from(t)
+  const cut = chars.length > max ? `${chars.slice(0, max).join('')}…（全${chars.length}文字）` : t
+  return escapeSlackText(cut)
+}
+
+/** 「N人目」の表記。数えられなかったときは null を渡す。 */
+export function ordinalLabel(n: number | null | undefined): string {
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? `${n.toLocaleString('ja-JP')}人目` : '人数は未取得'
 }
 
 // ---------------------------------------------------------------
