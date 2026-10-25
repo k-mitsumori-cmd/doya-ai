@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,console:{error(){}},require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
+function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,console:{error(){}},require:n=>{if(n in deps)return deps[n];if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];throw Error(n)}});return exported}
 const types=load('src/lib/kintai/types.ts',{}),access=load('src/lib/kintai/access.ts',{'./types':types,'next-auth':{},'@/lib/auth':{},'@/lib/prisma':{}}),manager=load('src/lib/kintai/manager-admission.ts',{});
 const cases=[
  {name:'unchanged-admin-role',actor:'hr_admin',old:'system_admin',role:'system_admin',http:200},
