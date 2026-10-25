@@ -157,6 +157,8 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
   const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentTaskError['power'] } | null
   if (res.ok && data?.result) return data.result
   if (res.status === 404) throw new AgentTaskError('この機能は、まだお使いいただけません。', 'auth')
+  // 本人ごとに同時に動かせるのは3つまで（それを超えると 429 { kind: 'limit' }）。ほかが終わってからやり直せる
+  if (res.status === 429) throw new AgentTaskError(data?.error || '同時に動かせるのは3つまでです。ほかの ToDo が終わってから、やり直してください。', 'limit', data?.resume, data?.href, data?.power)
   // 422 などの答えに付いた power を渡す（渡さないと、量が分からないまま「減っていません」と出てしまう）
   throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href, data?.power)
 }
