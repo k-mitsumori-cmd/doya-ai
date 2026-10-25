@@ -12,6 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # 失敗の要約（最後のステップ）が、この実行で書かれた記録だけを見るための開始時刻
+      - name: Record start time
+        run: echo "CI_STARTED_AT=$(date +%s%3N)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -22,6 +26,9 @@ jobs:
 
       - name: Prisma generate
         run: npx prisma generate
+
+      - name: Health-check report tests (offline)
+        run: npm run test:health-check
 
       - name: Install PostgreSQL for isolated operation regression
         run: |
@@ -310,3 +317,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      # どれかのステップが落ちたら、落ちた検査の名前と原因の行・ログの末尾を Summary に書く。
+      # 各 *-supervise.py は検査の出力をログファイルにしか残さないため、これが無いと「failed」しか分からない。
+      - name: Failure report
+        if: failure()
+        run: node scripts/ci-failure-report.cjs docs/audits

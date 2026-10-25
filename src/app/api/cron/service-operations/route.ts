@@ -5,6 +5,8 @@ import { pollStoreReviews } from '@/lib/service-operations-reviews';
 import { monitorCost } from '@/lib/service-operations-cost';
 import { claimOps, releaseOps, writeOps, readOps, sendOps } from '@/lib/service-operations-state';
 import { jstDay } from '@/lib/service-operations-data';
+import { notifyAlert } from '@/lib/alert';
+import { formatJobFailure, nextStreak, type FailureStreak } from '@/lib/health-check-report';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -40,9 +42,19 @@ export async function GET(request: Request) {
       if (!dry) await sendOps('travel', String(result), 'travel-daily:' + jstDay(), 'steady');
     } else result = dry ? { note: 'watchは送信を伴うためdryでは実行しません' } : await monitorReportDelivery();
     if (!dry) await writeOps(doneKey, { at: new Date().toISOString(), ...(rolling ? { slot } : {}) });
+    if (!dry && (await readOps<FailureStreak>('job-fail:' + mode).catch(() => null))?.count) await writeOps('job-fail:' + mode, { count: 0, since: '' }).catch(() => {});
     return NextResponse.json({ ok: true, mode, dry, result });
   } catch (error) {
-    console.error('[service-operations] job failed', mode);
-    return NextResponse.json({ ok: false, mode, error: 'collection_or_delivery_failed' }, { status: 503 });
+    // 「失敗した」だけで終わらせず、モード・エラー文・発生箇所・連続回数を Slack に出す（ログは種類と回数だけ）
+    const at = new Date().toISOString();
+    const previous = await readOps<FailureStreak>('job-fail:' + mode).catch(() => null);
+    const streak = nextStreak(previous, true, at);
+    if (!dry) await writeOps('job-fail:' + mode, streak).catch(() => {});
+    const detail = formatJobFailure({ mode, at, error, streak });
+    const errorType = error instanceof Error ? error.name : 'non-Error';
+    // ログには例外の本文を書かない決まり（verify-api-error-log-privacy）。本文は運用チャンネルの通知にだけ載せる
+    console.error('[service-operations] job failed', JSON.stringify({ mode, type: errorType, failures: streak?.count, at }));
+    if (!dry) await notifyAlert({ title: `運用ジョブの失敗（mode=${mode}）`, level: 'warn', context: '/api/cron/service-operations?mode=' + mode, detail, dedupKey: 'ops-job-' + mode, cooldownMs: 60 * 60_000 });
+    return NextResponse.json({ ok: false, mode, error: 'collection_or_delivery_failed', message: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300), failures: streak?.count, at }, { status: 503 });
   } finally { if (!dry) await releaseOps(key); }
 }
