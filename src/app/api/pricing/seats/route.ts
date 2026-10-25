@@ -86,7 +86,12 @@ export async function POST(req: NextRequest) {
     // 増やすときは、先にこの月の毎月の付与を、今の人数で済ませる（あとで増えた人数で毎月の分が付き、席の分と二重になるのを防ぐ。B2）
     if (d.direction === 'up' && doyaPowerLedgerAllowed()) {
       const { grantMonthlyForPlan } = await import('@/lib/doya-power')
-      await grantMonthlyForPlan(c.ctx.companyId, c.ctx.owner.plan)
+      // 失敗したら人数の変更に進まない（例外は下の catch で 503。付けられなかった結果も止める。統括の点検 軽）
+      const m = await grantMonthlyForPlan(c.ctx.companyId, c.ctx.owner.plan)
+      if (!m.ok) {
+        console.error(`[pricing/seats] monthly grant before the seat change failed: ${m.reason}`)
+        return json({ code: 'MONTHLY_GRANT_FAILED', error: '人数を変える準備ができませんでした。時間をおいて再度お試しください。人数は変わっていません。' }, 503)
+      }
     }
 
     // 同じ操作（確かめの画面の1回）を2回送っても、Stripe では1回だけ
