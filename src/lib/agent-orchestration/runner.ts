@@ -16,6 +16,12 @@ export interface AgentTaskSpec {
   dependsOn?: string[]
 }
 
+/** ドヤパワーの減った量と戻した量（減る量の表から数える目安。作り直しの半額などで実際と違うことがある） */
+export interface AgentPowerUse {
+  used: number
+  refunded: number
+}
+
 export interface AgentTaskResult {
   /** 結果の一文（30〜45字ほど） */
   summary: string
@@ -26,6 +32,8 @@ export interface AgentTaskResult {
   hrefLabel: string
   /** 次の作業に渡す材料（ペルソナの要約など）。画面には出さない */
   handoff?: Record<string, string>
+  /** このタスクで減ったドヤパワー（ドヤパワーを使わない人は 0） */
+  power?: AgentPowerUse
 }
 
 export interface AgentTaskState {
@@ -37,6 +45,8 @@ export interface AgentTaskState {
   error?: string
   /** 失敗の種類と、開くとよい画面 */
   failure?: { kind: AgentFailureKind; href?: string; hrefLabel?: string }
+  /** これまでの試みで減った・戻したドヤパワー（試みごとに足していく） */
+  power?: AgentPowerUse
   startedAt?: number
   endedAt?: number
   /** 途中まで作れたもの（スライドのプロジェクトの id など）。やり直しのときに execute へ渡し、二重に作らない */
@@ -57,6 +67,12 @@ export interface RunOptions<T extends AgentTaskSpec> {
   now?: () => number
 }
 
+/** ドヤパワーの使った量を足す */
+export function addPower(a?: AgentPowerUse, b?: AgentPowerUse): AgentPowerUse | undefined {
+  if (!a && !b) return undefined
+  return { used: (a?.used ?? 0) + (b?.used ?? 0), refunded: (a?.refunded ?? 0) + (b?.refunded ?? 0) }
+}
+
 /** 失敗の一文。Error の文はそのまま使わず、決まった文にする（中身に内部の言葉が混ざるため） */
 export function failureText(e: unknown): string {
   if (e instanceof AgentTaskError) return e.userMessage
@@ -75,6 +91,8 @@ export class AgentTaskError extends Error {
     public resume?: Record<string, string>,
     /** 失敗のときに開くとよい画面（組織の作成・料金など） */
     public href?: { href: string; label: string },
+    /** 失敗までに減った・戻したドヤパワー */
+    public power?: AgentPowerUse,
   ) {
     super(userMessage)
     this.name = 'AgentTaskError'
@@ -86,7 +104,7 @@ export function initialStates(tasks: readonly AgentTaskSpec[], prev?: AgentState
   const out: AgentStates = {}
   for (const t of tasks) {
     const p = prev?.[t.id]
-    out[t.id] = p && p.status === 'done' ? { ...p } : { id: t.id, status: 'waiting', attempts: p?.attempts ?? 0, resume: p?.resume }
+    out[t.id] = p && p.status === 'done' ? { ...p } : { id: t.id, status: 'waiting', attempts: p?.attempts ?? 0, resume: p?.resume, power: p?.power }
   }
   return out
 }
@@ -184,12 +202,13 @@ export async function runAgentTasks<T extends AgentTaskSpec>(opts: RunOptions<T>
         Promise.resolve()
           .then(() => opts.execute(t, { signal: ctrl.signal, upstream, resume }))
           .then(
-            (result) => set(t.id, { status: 'done', result, resume: undefined, endedAt: now() }),
+            (result) => set(t.id, { status: 'done', result, resume: undefined, power: addPower(states[t.id].power, result.power), endedAt: now() }),
             (e) => set(t.id, {
               status: ctrl.signal.aborted ? 'canceled' : 'failed',
               error: failureText(e),
               failure: e instanceof AgentTaskError ? { kind: e.kind, href: e.href?.href, hrefLabel: e.href?.label } : { kind: 'tool' },
               resume: e instanceof AgentTaskError && e.resume ? e.resume : resume,
+              power: addPower(states[t.id].power, e instanceof AgentTaskError ? e.power : undefined),
               endedAt: now(),
             }),
           )

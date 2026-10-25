@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { useNewPricing } from '@/components/pricing/useNewPricing'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
@@ -48,6 +49,8 @@ export function UnifiedPricingPlans({
   const pathname = usePathname()
   const returnTo = pathname || `/${serviceId}/pricing`
   const trialEligible = useTrialEligible()
+  // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプロの申し込みの代わりに /pricing へ案内する
+  const newPricing = useNewPricing()
 
   // 決済済みなのに反映されていない方の自己回復。押しても二重課金にはならない
   // （/api/stripe/sync/latest は Stripe を読んで DB に写すだけ）。
@@ -194,6 +197,13 @@ export function UnifiedPricingPlans({
             <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">{planSource === 'organization' ? '組織でご利用中のプラン' : 'ご利用中のプラン'}</span>
           ) : !canPurchase ? (
             <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">組織の契約変更はオーナーにご相談ください</span>
+          ) : newPricing ? (
+            <Link
+              href="/pricing"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#ffd400] px-6 py-4 text-center text-base font-black text-[#0a2540] shadow-xl ring-1 ring-[#ffe066] transition hover:bg-[#ffdd33]"
+            >
+              料金プランを見る
+            </Link>
           ) : (
             <CheckoutButton
               billingOrganization={billingOrganization}
@@ -206,7 +216,7 @@ export function UnifiedPricingPlans({
               {trialEligible ? '初月無料でプロを試す' : 'プロにアップグレード'}
             </CheckoutButton>
           )}
-          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible ? '初月無料' : '月額のみ'}・追加課金なし</p>
+          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible && !newPricing ? '初月無料' : '月額のみ'}・追加課金なし</p>
         </div>
       </div>
 

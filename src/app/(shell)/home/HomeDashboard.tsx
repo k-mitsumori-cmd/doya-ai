@@ -416,11 +416,13 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false }: {
+export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null }: {
   initial: HomeSummary
   setupHidden?: boolean
   /** ドヤパワーの欄（旗の内側だけ。page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
   powerCard?: ReactNode
+  /** 「ドヤくんに頼む」の舞台（page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
+  agentStage?: ReactNode
   /** ドヤパワーの旗が出すと決めた人か（page.tsx が isDoyaPowerEnabled() で決めて渡す。会社の登録の案内の文に使う） */
   doyaPower?: boolean
 }) {
@@ -457,6 +459,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
+      {agentStage}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} doyaPower={doyaPower} />

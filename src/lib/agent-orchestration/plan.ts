@@ -9,7 +9,7 @@
 import { doyaPowerCost, type DoyaPowerAction } from '@/lib/doya-power/costs'
 import { validateTasks } from './runner'
 import type { AgentRecipe, SalesPrepAnswers } from './recipes'
-import type { AgentActionId, AgentPillar, AgentPlan, AgentPlanTask } from './types'
+import { AGENT_CONTRACT_VERSION, type AgentActionId, type AgentPillar, type AgentPlan, type AgentPlanTask, type AgentReadiness } from './types'
 
 /** 実行できる操作の表。power は、各ツールのルートが withDoyaPowerCharge で減らす操作の名前（減らさないものは null） */
 export const ACTION_CATALOG: Record<AgentActionId, { tool: string; toolName: string; powerAction: DoyaPowerAction | null; minutes: number }> = {
@@ -32,8 +32,9 @@ export function actionPower(action: AgentActionId): number {
 
 const MAX_CONCURRENCY = 3
 
-/** 決まった組み合わせと答えから、作戦を作る（AI を使わない） */
-export function planFromRecipe(recipe: AgentRecipe, a: SalesPrepAnswers): AgentPlan {
+/** 決まった組み合わせと答えから、作戦を作る（AI を使わない）。readiness はツールごとの準備（sources.ts が読む） */
+export function planFromRecipe(recipe: AgentRecipe, a: SalesPrepAnswers, ctx: { readiness?: Record<string, AgentReadiness>; companyName?: string | null } = {}): AgentPlan {
+  const ready = (tool: string): AgentReadiness => ctx.readiness?.[tool] ?? { ok: true }
   const tasks: AgentPlanTask[] = recipe.tasks.map((t) => ({
     id: t.id,
     action: t.action,
@@ -46,18 +47,31 @@ export function planFromRecipe(recipe: AgentRecipe, a: SalesPrepAnswers): AgentP
     minutes: ACTION_CATALOG[t.action].minutes,
     after: t.dependsOn ?? [],
     stages: t.stages(a),
+    delegable: true,
+    delegate: ready(ACTION_CATALOG[t.action].tool).ok,
+    ready: ready(ACTION_CATALOG[t.action].tool),
   }))
-  const pillars: AgentPillar[] = recipe.pillars.map((p) => ({ ...p, tasks: tasks.filter((t) => recipe.tasks.find((r) => r.id === t.id)?.pillar === p.id) }))
+  const pillars: AgentPillar[] = recipe.pillars.map((p) => ({
+    id: p.id, name: p.name, why: p.why, teamGoal: p.teamGoal(a),
+    tasks: tasks.filter((t) => recipe.tasks.find((r) => r.id === t.id)?.pillar === p.id),
+  }))
+  const g = recipe.goal(a)
+  const missingTools = [...new Set(tasks.filter((t) => !t.ready.ok).map((t) => t.toolName))]
   return {
-    version: 1,
+    version: AGENT_CONTRACT_VERSION,
     source: 'recipe',
     recipeId: recipe.id,
-    goal: recipe.goal(a),
-    period: recipe.period,
+    goal: { ...g, period: recipe.period, now: 0, target: tasks.length, gap: tasks.length },
+    reasons: recipe.reasons(a, { missingTools, companyName: ctx.companyName ?? null }),
     pillars,
-    totalPower: tasks.reduce((s, t) => s + t.power, 0),
+    totalPower: delegatedPower(tasks),
     concurrency: MAX_CONCURRENCY,
   }
+}
+
+/** 任せる ToDo の減る量の合計 */
+export function delegatedPower(tasks: Pick<AgentPlanTask, 'power' | 'delegate'>[]): number {
+  return tasks.reduce((s, t) => s + (t.delegate ? t.power : 0), 0)
 }
 
 /** 作戦の中のタスクを、平らな一覧にする（runner に渡す形） */
@@ -101,22 +115,27 @@ export function sanitizeAiPlan(raw: unknown, opts: { recipeId?: string; maxTasks
         makes: text(t.makes, 120) ?? '', uses: '', power: actionPower(t.action), minutes,
         after: Array.isArray(t.after) ? t.after.filter((x): x is string => typeof x === 'string') : [],
         stages: opts.stagesOf?.({ action: t.action, title }) ?? [title, '仕上げています'],
+        delegable: true, delegate: true, ready: { ok: true },
       })
     }
-    if (tasks.length) pillars.push({ id: text(p.id, 40) ?? `p${pi + 1}`, name: text(p.name, 40) ?? `柱${pi + 1}`, why: text(p.why, 200) ?? '', tasks })
+    if (tasks.length) pillars.push({ id: text(p.id, 40) ?? `p${pi + 1}`, name: text(p.name, 40) ?? `柱${pi + 1}`, why: text(p.why, 200) ?? '', teamGoal: text(p.teamGoal, 80) ?? '', tasks })
   })
   const all = pillars.flatMap((p) => p.tasks)
   if (!all.length) return null
   for (const t of all) t.after = t.after.filter((d) => d !== t.id && seen.has(d))
   if (validateTasks(all.map((t) => ({ id: t.id, dependsOn: t.after })))) for (const t of all) t.after = []
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : null)
+  const g = (r.goal && typeof r.goal === 'object' ? r.goal : { statement: r.goal }) as Record<string, unknown>
+  const now = num(g.now) ?? 0
+  const target = num(g.target) ?? all.length
   return {
-    version: 1,
+    version: AGENT_CONTRACT_VERSION,
     source: 'ai',
     recipeId: opts.recipeId ?? 'ai',
-    goal: text(r.goal, 120) ?? '依頼を進める',
-    period: text(r.period, 40) ?? '',
+    goal: { statement: text(g.statement, 120) ?? '依頼を進める', period: text(r.period, 40) ?? '', measure: text(g.measure, 40) ?? 'ToDo', unit: text(g.unit, 8) ?? '件', now, target, gap: Math.max(0, target - now) },
+    reasons: (Array.isArray(r.reasons) ? r.reasons : []).map((x) => text(x, 120)).filter((x): x is string => !!x).slice(0, 5),
     pillars,
-    totalPower: all.reduce((s, t) => s + t.power, 0),
+    totalPower: delegatedPower(all),
     concurrency: MAX_CONCURRENCY,
   }
 }
