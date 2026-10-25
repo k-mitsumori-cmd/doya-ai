@@ -4,7 +4,8 @@ export const maxDuration = 30
 
 // POST /api/support-chat/ticket — 「運営に伝える」を受け付けて、Slack に送る
 // 旗 SUPPORT_CHAT_ROLLOUT の内側（off なら 404）。ログインした人だけ。
-// 保存は今ある ServiceFeedback（serviceId 'support'）。専用の表は設計書 7 の案（P1）。
+// 保存は support_ticket / support_message（表が無いあいだは ServiceFeedback の serviceId 'support'。store.ts）。
+// Slack の送り先は、今のドヤAIの通知と同じ SystemSetting の slack_webhook（postToSlackBlocks）。新しい送り先は作らない。
 // ⚠️ Slack が失敗しても、保存は巻き戻さない。黙らずにアラートの経路へ回す（/api/feedback と同じ考え方）。
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -12,13 +13,13 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { postToSlackBlocks } from '@/lib/notifications'
 import { notifyAlert } from '@/lib/alert'
-import { postSlack } from '@/lib/slack/notify'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 import { toolLabel } from '@/lib/support-chat/answer'
 import { toolIdForPath } from '@/lib/support-chat/knowledge'
 import { parseTicketBody, TICKET_DAILY_LIMIT } from '@/lib/support-chat/request'
-import { buildStoredText, buildTicketSlack, isBusinessHours, makeTicketNo, replyEtaText } from '@/lib/support-chat/ticket'
+import { buildTicketSlack, isBusinessHours, makeTicketNo, replyEtaText } from '@/lib/support-chat/ticket'
+import { saveTicket } from '@/lib/support-chat/store'
 import { consumeDailyQuota, quotaSubject } from '@/lib/server-daily-quota'
 
 export async function POST(req: NextRequest) {
@@ -43,12 +44,13 @@ export async function POST(req: NextRequest) {
     getAccountCompanyName().catch(() => null),
   ])
   const ticketNo = makeTicketNo()
+  const toolId = toolIdForPath(parsed.path)
   const input = {
     ticketNo,
     category: parsed.category,
     message: parsed.message,
     transcript: parsed.transcript,
-    toolLabel: toolLabel(toolIdForPath(parsed.path)),
+    toolLabel: toolLabel(toolId),
     pagePath: parsed.path,
     companyName: company?.name ?? null,
     plan: user?.plan ?? null,
@@ -57,19 +59,14 @@ export async function POST(req: NextRequest) {
     env: parsed.env,
   }
 
-  const saved = await prisma.serviceFeedback.create({
-    data: { userId, serviceId: 'support', text: buildStoredText(input), usageCount: 0 },
-    select: { id: true },
-  }).catch(() => null)
+  const saved = await saveTicket(userId, { ...input, toolId })
 
   const slack = buildTicketSlack(input)
   const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: slack.text.slice(0, 2900) } }]
-  const dedicated = process.env.SUPPORT_CHAT_SLACK_WEBHOOK_URL?.trim()
   let notified = false
   for (let attempt = 0; attempt < 2 && !notified; attempt++) {
     try {
-      if (dedicated) await postSlack(dedicated, { text: slack.title, blocks }, { meta: slack.meta, dedupeKey: `support:${ticketNo}` })
-      else await postToSlackBlocks(slack.title, blocks, undefined, slack.meta)
+      await postToSlackBlocks(slack.title, blocks, undefined, slack.meta)
       notified = true
     } catch {
       console.error('[api/support-chat/ticket] slack failed')
@@ -80,7 +77,7 @@ export async function POST(req: NextRequest) {
       level: 'critical',
       kind: 'inquiry',
       title: !saved ? 'サポートチャットのお問い合わせを保存できませんでした' : 'サポートチャットのお問い合わせを Slack に送れませんでした',
-      context: `受付番号 ${ticketNo}${saved ? `（ServiceFeedback id: ${saved.id}）` : '（保存なし。内容は下の本文だけ）'}`,
+      context: `受付番号 ${ticketNo}${saved ? `（${saved.store === 'ticket' ? 'support_ticket' : 'ServiceFeedback'} id: ${saved.id}）` : '（保存なし。内容は下の本文だけ）'}`,
       detail: slack.text.slice(0, 2500),
       dedupKey: `support-ticket-failed:${ticketNo}`,
     }).catch(() => false)
@@ -89,5 +86,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'お問い合わせを受け付けられませんでした。時間をおいてもう一度お試しください。' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, ticketNo, replyEta: replyEtaText(parsed.category), businessHours: isBusinessHours() })
+  return NextResponse.json({ ok: true, ticketNo, replyEta: replyEtaText(parsed.category), businessHours: isBusinessHours(), history: saved?.store === 'ticket' })
 }

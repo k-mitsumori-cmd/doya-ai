@@ -113,7 +113,7 @@ export function buildTicketSlack(input: TicketInput, now = Date.now()): { title:
     `- プラン: ${input.plan || '不明'}`,
     `- ツール: ${input.toolLabel}`,
     `- 画面: ${safeUserText(input.pagePath.split('?')[0], 120)}`,
-    `- 送信者: ${maskEmail(input.userEmail)}（返信先は管理画面のご意見の一覧で確認）`,
+    `- 送信者: ${maskEmail(input.userEmail)}（返信は管理画面のサポートの受付から）`,
     `- 返信の連絡: ${input.contactOk ? 'ログインのメールに返してよい' : 'メールでの返信は希望しない'}`,
     '',
     '*お問い合わせの内容*',
@@ -123,7 +123,7 @@ export function buildTicketSlack(input: TicketInput, now = Date.now()): { title:
   if (summary.length) lines.push('', '*チャットのやり取り（直近）*', ...summary)
   const env = envLines(input.env)
   if (env.length) lines.push('', '*端末の情報*', ...env)
-  lines.push('', 'リンク: <https://doya-ai.surisuta.jp/admin/feedback|管理画面のご意見の一覧を開く>')
+  lines.push('', `リンク: <https://doya-ai.surisuta.jp/admin/support?ticket=${encodeURIComponent(input.ticketNo)}|管理画面で受付を開く>`)
   return { title, text: lines.join('\n'), meta: ticketMeta(input.category) }
 }
 
@@ -142,4 +142,22 @@ export function buildStoredText(input: TicketInput): string {
   const env = envLines(input.env)
   if (env.length) parts.push('', '--- 端末の情報 ---', ...env)
   return parts.join('\n').slice(0, 4000)
+}
+
+/** 利用者が受付に追記したときの Slack の本文 */
+export function buildFollowUpSlack(input: { ticketNo: string; category: SupportCategory; message: string }, now = Date.now()): { title: string; text: string; meta: SlackMeta } {
+  const label = SUPPORT_CATEGORY_LABEL[input.category]
+  const title = `サポートチャット（${label}）追記 ${input.ticketNo}`
+  const time = new Date(now).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+  const text = [
+    `*${title}*`,
+    `発生時刻：${time}（日本時間）`,
+    'お客さまが受付に追記しました。内容を確認して、返信してください。',
+    '',
+    '*追記の内容*',
+    safeUserText(input.message, 1200),
+    '',
+    `リンク: <https://doya-ai.surisuta.jp/admin/support?ticket=${encodeURIComponent(input.ticketNo)}|管理画面で受付を開く>`,
+  ].join('\n')
+  return { title, text, meta: ticketMeta(input.category) }
 }

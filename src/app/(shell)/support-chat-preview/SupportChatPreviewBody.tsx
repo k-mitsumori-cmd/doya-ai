@@ -6,6 +6,7 @@ import { answerQuestion, mockAnswerer } from '@/lib/support-chat/answer'
 import { makeTicketNo, replyEtaText } from '@/lib/support-chat/ticket'
 import { parseAskBody, parseTicketBody } from '@/lib/support-chat/request'
 
+const SAMPLE = { ticketNo: 'DY-261026-K7PM', category: 'billing', status: 'waiting_user', createdAt: new Date(Date.now() - 86_400_000).toISOString() }
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 export default function SupportChatPreviewBody() {
@@ -13,6 +14,18 @@ export default function SupportChatPreviewBody() {
     const original = window.fetch
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/api/support-chat/tickets/')) {
+        await new Promise((r) => setTimeout(r, 300))
+        const now = Date.now()
+        return json({ ticket: { ...SAMPLE, messages: [
+          { role: 'user', body: '請求書払いに切り替えられますか。', createdAt: new Date(now - 86_400_000).toISOString() },
+          { role: 'staff', body: 'お問い合わせありがとうございます。請求書払いは、年払いの契約でご利用いただけます。手続きの書類をお送りしますので、会社名をお知らせください。', createdAt: new Date(now - 3_600_000).toISOString() },
+          ...(init?.method === 'POST' ? [{ role: 'user', body: String(JSON.parse(String(init.body)).message), createdAt: new Date().toISOString() }] : []),
+        ] } })
+      }
+      if (url.includes('/api/support-chat/tickets')) {
+        return json({ tickets: [{ ...SAMPLE, summary: '請求書払いに切り替えられますか。', unread: true }], unread: 1 })
+      }
       if (url.includes('/api/support-chat/ask')) {
         await new Promise((r) => setTimeout(r, 600))
         const parsed = parseAskBody(JSON.parse(String(init?.body ?? '{}')))
@@ -24,7 +37,7 @@ export default function SupportChatPreviewBody() {
         await new Promise((r) => setTimeout(r, 600))
         const parsed = parseTicketBody(JSON.parse(String(init?.body ?? '{}')))
         if ('error' in parsed) return json({ error: parsed.error }, 400)
-        return json({ ok: true, ticketNo: makeTicketNo(), replyEta: replyEtaText(parsed.category) })
+        return json({ ok: true, ticketNo: makeTicketNo(), replyEta: replyEtaText(parsed.category), history: true })
       }
       return original(input, init)
     }

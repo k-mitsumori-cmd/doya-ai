@@ -15,7 +15,12 @@ import styles from './support-chat.module.css'
 
 type Source = { label: string; href: string }
 type Msg = { id: number; role: 'user' | 'assistant'; text: string; sources?: Source[]; kind?: 'answer' | 'unknown' | 'staff'; category?: SupportCategory | null }
-type View = 'chat' | 'staff' | 'done'
+type View = 'chat' | 'staff' | 'done' | 'tickets' | 'ticket'
+type TicketSummary = { ticketNo: string; category: SupportCategory; status: string; summary: string; createdAt: string; unread: boolean }
+type TicketDetail = { ticketNo: string; category: SupportCategory; status: string; createdAt: string; messages: { role: 'user' | 'ai' | 'staff'; body: string; createdAt: string }[] }
+
+const STATUS_LABEL: Record<string, string> = { open: '受付済み', in_progress: '対応中', waiting_user: '運営から返信あり', closed: '完了' }
+const fmtDate = (iso: string) => new Date(iso).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 const DRAFT_KEY = 'doya:support-chat:draft'
 const MAX_ERRORS = 5
@@ -57,7 +62,11 @@ export default function SupportChat() {
   const [category, setCategory] = useState<SupportCategory>('howto')
   const [staffText, setStaffText] = useState('')
   const [contactOk, setContactOk] = useState(true)
-  const [done, setDone] = useState<{ ticketNo: string; replyEta: string } | null>(null)
+  const [done, setDone] = useState<{ ticketNo: string; replyEta: string; history: boolean } | null>(null)
+  const [tickets, setTickets] = useState<TicketSummary[] | null>(null)
+  const [unread, setUnread] = useState(0)
+  const [ticket, setTicket] = useState<TicketDetail | null>(null)
+  const [followUp, setFollowUp] = useState('')
   const nextId = useRef(1)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -79,6 +88,60 @@ export default function SupportChat() {
     const el = bodyRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, busy, view])
+
+  const loadTickets = useCallback(async () => {
+    try {
+      const res = await fetch('/api/support-chat/tickets')
+      if (!res.ok) return
+      const data = await res.json()
+      setTickets(Array.isArray(data.tickets) ? data.tickets : [])
+      setUnread(Number(data.unread) || 0)
+    } catch { /* 履歴が読めなくてもチャットは使える */ }
+  }, [])
+
+  const openTicket = useCallback(async (no: string) => {
+    setError(null)
+    setBusy(true)
+    setView('ticket')
+    try {
+      const res = await fetch(`/api/support-chat/tickets/${encodeURIComponent(no)}`)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(typeof data?.error === 'string' ? data.error : 'お問い合わせを開けませんでした。'); setTicket(null); return }
+      setTicket(data.ticket)
+      void loadTickets()
+    } catch {
+      setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
+    } finally {
+      setBusy(false)
+    }
+  }, [loadTickets])
+
+  // 運営の返信の未読の印（開く前から右下のボタンに出す）。メールのリンク（?support=受付番号）からは、その受付を開く
+  useEffect(() => {
+    void loadTickets()
+    const no = new URLSearchParams(window.location.search).get('support')
+    if (no && /^DY-\d{6}-[2-9A-HJ-NP-Z]{4}$/.test(no)) { setOpen(true); void openTicket(no) }
+  }, [loadTickets, openTicket])
+
+  const sendFollowUp = useCallback(async () => {
+    const text = followUp.trim()
+    if (!text || busy || !ticket) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/support-chat/tickets/${encodeURIComponent(ticket.ticketNo)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(typeof data?.error === 'string' ? data.error : '送れませんでした。'); return }
+      setFollowUp('')
+      if (data.ticket) setTicket(data.ticket)
+    } catch {
+      setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
+    } finally {
+      setBusy(false)
+    }
+  }, [busy, followUp, ticket])
 
   const close = useCallback(() => { setOpen(false); window.setTimeout(() => fabRef.current?.focus(), 0) }, [])
 
@@ -140,7 +203,8 @@ export default function SupportChat() {
         setError(typeof data?.error === 'string' ? data.error : '送れませんでした。時間をおいてもう一度お試しください。')
         return
       }
-      setDone({ ticketNo: String(data.ticketNo), replyEta: String(data.replyEta ?? '') })
+      setDone({ ticketNo: String(data.ticketNo), replyEta: String(data.replyEta ?? ''), history: data.history === true })
+      void loadTickets()
       setStaffText('')
       setView('done')
     } catch {
@@ -148,9 +212,10 @@ export default function SupportChat() {
     } finally {
       setBusy(false)
     }
-  }, [busy, category, contactOk, errors, messages, pathname, staffText])
+  }, [busy, category, contactOk, errors, loadTickets, messages, pathname, staffText])
 
-  const headTitle = view === 'staff' ? '運営に伝える' : view === 'done' ? '受け付けました' : 'お気軽にご質問ください'
+  const headTitle = view === 'staff' ? '運営に伝える' : view === 'done' ? '受け付けました' : view === 'tickets' ? 'お問い合わせの履歴' : view === 'ticket' ? (ticket?.ticketNo ?? 'お問い合わせ') : 'お気軽にご質問ください'
+  const backTo: View | null = view === 'staff' || view === 'tickets' ? 'chat' : view === 'ticket' ? 'tickets' : null
 
   return (
     <div className={styles.root}>
@@ -165,6 +230,7 @@ export default function SupportChat() {
         onClick={() => setOpen(true)}
       >
         <UiIcon name="chat" size={26} />
+        {unread > 0 ? <span className={styles.badge} aria-label={`運営からの返信 ${unread}件`}>{unread}</span> : null}
       </button>
       <div className={styles.scrim} data-open={open} onClick={close} aria-hidden="true" />
       <section
@@ -176,8 +242,8 @@ export default function SupportChat() {
         aria-labelledby="support-chat-title"
       >
         <header className={styles.head}>
-          {view === 'staff' ? (
-            <button type="button" className={styles.back} onClick={() => setView('chat')} aria-label="チャットに戻る"><UiIcon name="back" size={18} /></button>
+          {backTo ? (
+            <button type="button" className={styles.back} onClick={() => { setError(null); setView(backTo); if (backTo === 'tickets') void loadTickets() }} aria-label="戻る"><UiIcon name="back" size={18} /></button>
           ) : (
             <img src="/character/hello-256.webp" alt="" width={44} height={44} className={styles.kun} />
           )}
@@ -250,13 +316,46 @@ export default function SupportChat() {
             </div>
           ) : null}
 
+          {view === 'tickets' ? (
+            tickets === null ? <div className={styles.typing} aria-label="読み込んでいます"><i /><i /><i /></div>
+            : tickets.length === 0 ? <p className={styles.intro}>まだお問い合わせはありません。</p>
+            : (
+              <ul className={styles.tickets}>
+                {tickets.map((t) => (
+                  <li key={t.ticketNo}>
+                    <button type="button" className={styles.ticketRow} data-unread={t.unread} onClick={() => void openTicket(t.ticketNo)}>
+                      <span className={styles.meta}>{t.ticketNo}・{SUPPORT_CATEGORY_LABEL[t.category] ?? 'その他'}・{fmtDate(t.createdAt)}</span>
+                      <span className={styles.ticketSummary}>{t.summary}</span>
+                      <span className={styles.ticketStatus}>{t.unread ? '新しい返信があります' : STATUS_LABEL[t.status] ?? '受付済み'}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+
+          {view === 'ticket' ? (
+            !ticket ? (busy ? <div className={styles.typing} aria-label="読み込んでいます"><i /><i /><i /></div> : null) : (
+              <>
+                <p className={styles.note}>{SUPPORT_CATEGORY_LABEL[ticket.category] ?? 'その他'}・{STATUS_LABEL[ticket.status] ?? '受付済み'}・{fmtDate(ticket.createdAt)} に受付</p>
+                {ticket.messages.map((m, i) => (
+                  <div key={i} className={styles.msg} data-role={m.role === 'user' ? 'user' : 'assistant'} data-kind={m.role === 'staff' ? 'staff' : undefined}>
+                    {m.role === 'staff' ? <span className={styles.from}>運営の担当者</span> : m.role === 'ai' ? <span className={styles.from}>AI</span> : null}
+                    {m.body}
+                    <span className={styles.time}>{fmtDate(m.createdAt)}</span>
+                  </div>
+                ))}
+              </>
+            )
+          ) : null}
+
           {view === 'done' && done ? (
             <div className={styles.done}>
               <img src="/character/love-256.webp" alt="" width={96} height={96} className={styles.kunLarge} />
               <p className={styles.doneTitle}>お問い合わせを受け付けました</p>
               <div className={styles.box}>受付番号<br /><span className={styles.ticket}>{done.ticketNo}</span></div>
               <p className={styles.intro}>{done.replyEta}</p>
-              <p className={styles.note}>続けてお問い合わせいただくときは、この受付番号を添えてください。</p>
+              <p className={styles.note}>運営からの返信は、このチャットの「お問い合わせの履歴」にも届きます。</p>
             </div>
           ) : null}
         </div>
@@ -281,13 +380,33 @@ export default function SupportChat() {
                 />
                 <button type="submit" className={styles.send} disabled={!draft.trim() || busy} aria-label="送る"><UiIcon name="send" size={18} /></button>
               </form>
-              <button type="button" className={styles.staffLink} onClick={() => openStaff(null)}>運営の担当者に直接伝える</button>
+              <div className={styles.footLinks}>
+                <button type="button" className={styles.staffLink} onClick={() => openStaff(null)}>運営の担当者に直接伝える</button>
+                <button type="button" className={styles.staffLink} onClick={() => { setError(null); setView('tickets'); void loadTickets() }}>
+                  お問い合わせの履歴{unread > 0 ? `（返信 ${unread}件）` : ''}
+                </button>
+              </div>
             </>
           ) : null}
           {view === 'staff' ? (
             <button type="button" className={styles.btn} disabled={!staffText.trim() || busy} onClick={() => void sendTicket()}>
               {busy ? '送っています' : '運営に送る'}
             </button>
+          ) : null}
+          {view === 'ticket' && ticket ? (
+            <form className={styles.inputRow} onSubmit={(e) => { e.preventDefault(); void sendFollowUp() }}>
+              <textarea
+                ref={inputRef}
+                className={styles.input}
+                rows={1}
+                value={followUp}
+                maxLength={2000}
+                placeholder="運営への返信を書いてください"
+                aria-label="運営への返信"
+                onChange={(e) => setFollowUp(e.target.value)}
+              />
+              <button type="submit" className={styles.send} disabled={!followUp.trim() || busy} aria-label="送る"><UiIcon name="send" size={18} /></button>
+            </form>
           ) : null}
           {view === 'done' ? (
             <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { setView('chat'); setDone(null) }}>チャットに戻る</button>

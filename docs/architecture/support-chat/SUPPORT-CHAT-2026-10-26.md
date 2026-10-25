@@ -103,12 +103,12 @@
 | A2 | 根拠のリンクを出す | P0 | 済み |
 | A3 | 分からないときは無理に答えず、運営へ渡す | P0 | 済み |
 | A4 | まずはモックの答え（材料の中から言葉で探す）でテストする | P0 | 済み |
-| A5 | 本物の AI（5.6 の見込み額）に切り替える | P1 | まだ（ユーザーの承認が要る） |
+| A5 | 本物の AI（6 の見込み額）に切り替える | P1 | 済み（2026-10-26 承認。gemini-2.5-flash。`SUPPORT_CHAT_AI=mock` でいつでもモックに戻せる） |
 | A6 | AI の答えにも運営へ渡す判定をかける（AI が支払いの話をしたら止める） | P0 | 済み（モックでも同じ関数を通す） |
 | A7 | 会話の直前の数往復だけを AI に渡す（長くしない） | P1 | 済み（直近6件） |
 | A8 | 答えの「役に立った / 立たなかった」 | P1 | まだ（記録の表と一緒に作る。押しても残らないボタンは置かない） |
 | A9 | 料金の数字は `unified-plan.ts` から読む。新料金の旗が on の人には新しい料金ページへ | P1 | 前半は済み。新料金への切り替えはまだ |
-| A10 | ユーザーの入力の中の指示（「前の指示を無視して」など）に従わない | P1 | 本物の AI のときに要る |
+| A10 | ユーザーの入力の中の指示（「前の指示を無視して」など）に従わない | P1 | 済み（区切りの中に入れ、指示で禁じる。リンクは AI に書かせず材料の id から付ける） |
 
 ### 5.3 運営に伝える
 
@@ -122,9 +122,9 @@
 | E6 | 受付番号と返信の目安を画面に出す | P0 | 済み |
 | E7 | 営業時間外（平日 10〜18時の外、土日）は、そのことと返信の目安を出す | P0 | 済み（祝日はまだ） |
 | E8 | 不具合の再現の情報（ブラウザ・画面の幅・URL・直近のエラー）を添える | P0 | 済み（エラーは伏せ字をかけて最大5件） |
-| E9 | 保存は今ある `ServiceFeedback`（serviceId `support`）に残す。Slack が失敗してもアラートの経路に回す | P0 | 済み |
+| E9 | 保存は `support_ticket`。表が無いあいだは `ServiceFeedback`（serviceId `support`）。Slack が失敗してもアラートの経路に回す | P0 | 済み |
 | E10 | スクリーンショットの添付 | P1 | まだ（保存先は Supabase Storage の非公開の箱が要る） |
-| E11 | 運営からの返信を、画面とメールで返す | P1 | まだ（5.7 の表が要る） |
+| E11 | 運営からの返信を、画面とメールで返す。利用者は続けて書ける | P1 | 済み（7.1。表を流してから動く） |
 | E12 | 返信の連絡先（ログインのメールに返してよいか）を確かめる | P1 | 済み（チェック欄） |
 | E13 | 同じ人が同じ内容を続けて送ったら、まとめる | P1 | 済み（Slack の間引き5分） |
 | E14 | 緊急のもの（情報の漏れ・不正利用）は @channel | P0 | 済み |
@@ -145,12 +145,12 @@
 
 | 番号 | 項目 | 優先 | 今回 |
 |---|---|---|---|
-| M1 | 管理画面のご意見の一覧で、サポートの受付を見られる（serviceId `support`） | P0 | 今の一覧で見られる |
-| M2 | 受付の状態（未対応・対応中・完了）と担当 | P1 | まだ（5.7 の表が要る） |
+| M1 | 管理画面の「サポートの受付」（`/admin/support`）で一覧とやり取りを見る | P0 | 済み |
+| M2 | 受付の状態（未対応・対応中・お返事待ち・完了）と担当 | P1 | 済み（担当は最初に返信した管理者） |
 | M3 | よくある質問の候補を、届いた質問から見直す（週に1回） | P2 | まだ |
 | M4 | 答えられなかった質問の一覧（材料を足す候補） | P1 | まだ |
 | M5 | 1日の件数・運営へ渡した割合・満足度を日報に足す | P2 | まだ |
-| M6 | Slack の送り先を分けたいときの環境変数 `SUPPORT_CHAT_SLACK_WEBHOOK_URL` | P1 | 済み（未設定なら今の `slack_webhook`） |
+| M6 | Slack の送り先 | P1 | 今のドヤAIの通知と同じ送り先（DB の SystemSetting の `slack_webhook`、`/api/feedback` と同じ）。新しい送り先は作らない（2026-10-26 ユーザー決定） |
 
 ## 6. AI に使うモデルと見込み額
 
@@ -163,8 +163,16 @@
 - ドヤAI はすでに Gemini のキー（`GOOGLE_GENAI_API_KEY`）を持っている。
 - 単価が低い。
 
-⚠️ モデルIDは、切り替える直前に実 API で生きているかを確かめます（CLAUDE.md の決まり）。
-今回は有料の API を一度も呼んでいません。答えはすべてモックです。
+2026-10-26 にユーザーがこのモデルと見込み額を承認しました。実装は `src/lib/support-chat/gemini.ts` です。
+
+- キーは今の `GOOGLE_GENAI_API_KEY`（無ければ `GOOGLE_AI_API_KEY`・`GEMINI_API_KEY`）。URL ではなくヘッダーで送る。
+- モデルは `SUPPORT_CHAT_AI_MODEL` で変えられる（既定 `gemini-2.5-flash`、廃止の 404 のときだけ `gemini-flash-latest`）。
+- 思考のトークンは見込み額に入っていないので、`thinkingBudget: 0` にした。出力は 700 トークンまで。
+- AI が使えないとき（障害・上限・キーの不備）は、モックの答えに切り替える。
+- `SUPPORT_CHAT_AI=mock` で、いつでもモックに戻せる。
+
+⚠️ モデルIDは実 API で生きているかを確かめる決まりです（CLAUDE.md）。手元の .env のキーは無効で（API_KEY_INVALID。課金なし）、本番のキーを手元に取り出す操作は止められました。
+そのため、本番に反映したあと、preview でユーザーが1回質問して確かめます（9 の手順 3）。
 
 ### 6.2 1回あたりの見込み
 
@@ -190,91 +198,28 @@
 - 不具合や支払いの相談でポイントが減ると、苦情が増える。
 - 1回 約0.3円で、ドヤパワーの1ポイント（原価 3〜4円の想定）より安い。数える手間の方が高くつく。
 
-## 7. 運営からの返信と履歴のための表（案。P1）
+## 7. 運営からの返信と履歴のための表（最終の形）
 
-今回は表を作っていません。受付は今ある `ServiceFeedback` に残すので、本番の DB を変えずに preview で試せます。
-返信を画面とメールで返す段階（E11・M2）で、次の2つの表を足します。
+2026-10-26 にユーザーが「本番の DB に足す」と決めました。足すのは次の2つの表です。
 
-```prisma
-model SupportTicket {
-  id             String   @id @default(cuid())
-  /// 画面に出す受付番号（例: DY-261026-4F7K）
-  ticketNo       String   @unique
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category       String   // howto / bug / billing / cancel / data / complaint / security / other
-  status         String   @default("open") // open / in_progress / waiting_user / closed
-  severity       String   // urgent / action / info
-  toolId         String?
-  pagePath       String?
-  summary        String   @db.Text
-  env            Json?    // ブラウザ・画面の幅・直近のエラー（伏せ字のあと）
-  contactOk      Boolean  @default(true)
-  assigneeEmail  String?
-  firstReplyAt   DateTime?
-  closedAt       DateTime?
-  satisfaction   Int?     // 1〜5
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  messages       SupportMessage[]
+| 表 | 中身 |
+|---|---|
+| `support_ticket`（SupportTicket） | 受付1件。受付番号・分類・状態・重さ・画面・伏せ字のあとの内容・端末の情報・返信の希望・担当・初めて返信した時刻・最後に返信した時刻・利用者が読んだ時刻・完了の時刻・満足度 |
+| `support_message`（SupportMessage） | 受付ごとのやり取り。利用者・AI・運営の発言、AI の根拠のリンク、返信を書いた管理者、メールを送った時刻 |
 
-  @@index([userId, createdAt])
-  @@index([status, createdAt])
-  @@map("support_ticket")
-}
+- モデルは `prisma/schema.prisma` の末尾、User には `supportTickets SupportTicket[]` を足しました。
+- 本番に流す SQL は `prisma/manual-migrations/2026-10-26-support-chat.sql` です。`prisma migrate diff` の出力をもとに、`IF NOT EXISTS` をつけて何度流しても同じ結果になる形にしました。
+- 追加だけで、既存の表とデータは変えません。元に戻すときは、この2つの表を消します（この2つの表のデータだけが消えます）。
+- SQL はコードの反映より前に流します。流す前に旗を on にしても、受付は `ServiceFeedback`（serviceId `support`）に残るので、取りこぼしません（`src/lib/support-chat/store.ts`）。
+- 反映の手順は `doya-db-push` スキルに従います。流すのは、統括のセッションでユーザーの承認を得たあとです。
 
-model SupportMessage {
-  id        String        @id @default(cuid())
-  ticketId  String
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  role      String        // user / ai / staff
-  body      String        @db.Text
-  sources   Json?         // AI の答えの根拠のリンク
-  createdAt DateTime      @default(now())
+### 7.1 返信の流れ
 
-  @@index([ticketId, createdAt])
-  @@map("support_message")
-}
-```
-
-User には `supportTickets SupportTicket[]` を足します。migration の SQL は次のとおりです（本番には反映していません）。
-
-```sql
-CREATE TABLE IF NOT EXISTS "support_ticket" (
-  "id" TEXT PRIMARY KEY,
-  "ticketNo" TEXT NOT NULL,
-  "userId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  "category" TEXT NOT NULL,
-  "status" TEXT NOT NULL DEFAULT 'open',
-  "severity" TEXT NOT NULL,
-  "toolId" TEXT,
-  "pagePath" TEXT,
-  "summary" TEXT NOT NULL,
-  "env" JSONB,
-  "contactOk" BOOLEAN NOT NULL DEFAULT TRUE,
-  "assigneeEmail" TEXT,
-  "firstReplyAt" TIMESTAMP(3),
-  "closedAt" TIMESTAMP(3),
-  "satisfaction" INTEGER,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "support_ticket_ticketNo_key" ON "support_ticket"("ticketNo");
-CREATE INDEX IF NOT EXISTS "support_ticket_userId_createdAt_idx" ON "support_ticket"("userId", "createdAt");
-CREATE INDEX IF NOT EXISTS "support_ticket_status_createdAt_idx" ON "support_ticket"("status", "createdAt");
-
-CREATE TABLE IF NOT EXISTS "support_message" (
-  "id" TEXT PRIMARY KEY,
-  "ticketId" TEXT NOT NULL REFERENCES "support_ticket"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  "role" TEXT NOT NULL,
-  "body" TEXT NOT NULL,
-  "sources" JSONB,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS "support_message_ticketId_createdAt_idx" ON "support_message"("ticketId", "createdAt");
-```
-
-反映の手順は `doya-db-push` スキルに従います。表を足すのは、統括のセッションとユーザーの承認のあとです。
+1. 利用者が「運営に伝える」で送る → `support_ticket` と `support_message` に残り、Slack に「要対応」が届く。
+2. 運営は管理画面の「サポートの受付」（`/admin/support`、Slack のリンクから開ける）で読み、返信を書く。
+3. 返信は `support_message`（role staff）に残り、状態は「お返事待ち」になる。利用者が返信を希望していれば、Resend でメールも送る。
+4. 利用者のチャットのボタンに未読の数が出る。「お問い合わせの履歴」から返信を読み、続けて書ける（Slack に「追記」が届く）。
+5. メールのリンク（`/home?support=受付番号`）から開くと、チャットがその受付を開く。
 
 ## 8. ファイル
 
@@ -283,28 +228,48 @@ CREATE INDEX IF NOT EXISTS "support_message_ticketId_createdAt_idx" ON "support_
 | 旗（off / preview / all、既定 off） | `src/lib/support-chat/flag.ts` |
 | 運営へ渡す判定・分類・重さ | `src/lib/support-chat/rules.ts` |
 | 答えの材料とよくある質問 | `src/lib/support-chat/knowledge.ts` |
-| 答えを作る（モック。本物の AI の差し込み口） | `src/lib/support-chat/answer.ts` |
+| 答えを作る（選び方・安全の確かめ・モック） | `src/lib/support-chat/answer.ts` |
+| 本物の AI（Gemini） | `src/lib/support-chat/gemini.ts` |
 | 受付番号・営業時間・伏せ字・Slack の文面 | `src/lib/support-chat/ticket.ts` |
+| 受付と履歴の保存（表が無いときの代わりの保存も） | `src/lib/support-chat/store.ts` |
+| 返信のメールの文面 | `src/lib/support-chat/mail.ts` |
 | 入力の検査と回数の上限 | `src/lib/support-chat/request.ts` |
-| テスト | `src/lib/support-chat/support-chat.test.ts`（`npm run test:support-chat`、19件）、`scripts/security-regression/verify-support-chat.cjs`（`npm run test:security` から流れる） |
-| 確認ページ（本番では 404。ログインせずにモックで動かす） | `src/app/(shell)/support-chat-preview/` |
+| ログインしている人の userId | `src/lib/support-chat/session.ts` |
+| 表 | `prisma/schema.prisma`（SupportTicket・SupportMessage）、`prisma/manual-migrations/2026-10-26-support-chat.sql` |
 | 質問の API | `src/app/api/support-chat/ask/route.ts` |
 | 運営に伝える API | `src/app/api/support-chat/ticket/route.ts` |
+| 履歴の API（一覧・読む・追記） | `src/app/api/support-chat/tickets/route.ts`、`src/app/api/support-chat/tickets/[ticketNo]/route.ts` |
+| 管理の API（一覧・返信・状態） | `src/app/api/admin/support/route.ts`、`src/app/api/admin/support/[id]/route.ts` |
+| 管理画面 | `src/app/admin/support/page.tsx`（左のメニューの「サポートの受付」） |
 | ボタンと画面 | `src/components/support-chat/SupportChat.tsx`、`support-chat.module.css` |
 | つなぎ込み | `src/components/shell/ShellGate.tsx`、`src/app/(shell)/layout.tsx`、`src/app/pricing/page.tsx` |
+| テスト | `src/lib/support-chat/support-chat.test.ts`（`npm run test:support-chat`、30件）、`scripts/security-regression/verify-support-chat.cjs`（`npm run test:security` から流れる） |
+| 確認ページ（本番では 404。ログインせずにモックで動かす） | `src/app/(shell)/support-chat-preview/` |
 
-## 9. 公開までの手順
+## 9. 本番への反映の手順（統括のセッションで、ユーザーの承認を得てから）
 
-1. preview（`SUPPORT_CHAT_ROLLOUT=preview`、`UI_PREVIEW_EMAILS` の人だけ）で、モックの答えのまま試す。
-2. Slack の送り先を決める（今の `slack_webhook` のままか、専用のチャンネルか）。Slack の設定はユーザーが変える。
-3. 本物の AI に切り替える。モデル・回数・見込み額をメインに出し、ユーザーの承認を取ってから。
-4. 7 の表を足し、運営からの返信（E11）と状態の管理（M2）を作る。
-5. all にする。
+1. 本番の DB に `prisma/manual-migrations/2026-10-26-support-chat.sql` を流す（`doya-db-push` スキル）。確かめ: `SELECT to_regclass('public.support_ticket'), to_regclass('public.support_message');`
+2. ブランチを main に取り込む。旗は off のままなので、取り込んだだけでは画面は変わらない。
+3. Vercel の環境変数（Production）に `SUPPORT_CHAT_ROLLOUT=preview` を足し、`UI_PREVIEW_EMAILS` にユーザーのメールが入っていることを確かめる。空コミットで再デプロイする。
+4. ユーザーが本番で質問を1回して、本物の AI の答えが出ることを確かめる（モデルの生存確認を兼ねる）。「運営に伝える」も1回試し、Slack と管理画面に届くことを確かめる。
+5. 問題がなければ、あとで all にする。
+
+使う環境変数（どれも今あるものか、新しく足す旗だけ）:
+
+| 環境変数 | 使い方 |
+|---|---|
+| `SUPPORT_CHAT_ROLLOUT` | 新しく足す旗。off / preview / all |
+| `UI_PREVIEW_EMAILS` | 今あるもの。preview で試す人 |
+| `GOOGLE_GENAI_API_KEY` | 今あるもの。Gemini のキー |
+| `SUPPORT_CHAT_AI` / `SUPPORT_CHAT_AI_MODEL` / `SUPPORT_CHAT_AI_DAILY_LIMIT` | 任意。足さなければ Gemini・gemini-2.5-flash・800回/日 |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | 今あるもの。返信のメール |
+| Slack の送り先 | 環境変数ではなく、DB の SystemSetting の `slack_webhook`（今のドヤAIの通知と同じ） |
 
 ## 10. まだ良くない点
 
-- 答えはモックなので、材料の言葉と合わない聞き方には「運営に伝える」を出すことが多い。
-- 運営からの返信は、まだ画面に戻らない（Slack とメールで個別に返す運用になる）。
+- AI が使えないときのモックの答えは、材料の言葉と合わない聞き方には「運営に伝える」を出すことが多い。
+- 本物の AI の答えは、本番のキーではまだ一度も確かめていない（手元のキーが無効だったため）。
+- 運営の返信は管理画面から書く。Slack のスレッドからはまだ書けない。
 - 祝日を営業時間外として扱っていない。
 - スクリーンショットはまだ添付できない。
 - 知らせの部品（UIリニューアルのセッション）の見た目のトークンを、CSS に書き写している。部品の側にトークンが1つにまとまったら、そちらを読むように直す。

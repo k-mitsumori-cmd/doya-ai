@@ -1,12 +1,12 @@
 // ============================================
 // サポートチャットの答えを作る
 // ============================================
-// 今はモックだけ（材料の中から言葉で探して返す。有料の API は呼ばない）。
-// 本物の AI に切り替えるときは SupportAnswerer を実装し、getSupportAnswerer() で返す。
-// ⚠️ 本物の AI を呼ぶ前に、モデル・回数・見込み額をメインに出し、ユーザーの承認を取る（設計書 6）。
+// 本物の AI は gemini.ts（gemini-2.5-flash。2026-10-26 ユーザー承認）。モックはテストと、AI が使えないときの代わりに残す。
+// SUPPORT_CHAT_AI=mock で、いつでもモックに戻せる。キーが無いときもモック。
 // ⚠️ どの答え方でも、最後に answerNeedsStaff() を通す。材料に無い話は「分からない」で返す。
 import { knowledgeEntries, toolNameOf, type KnowledgeEntry, type SupportSource } from './knowledge'
 import { answerNeedsStaff, routeQuestion, SUPPORT_CATEGORY_LABEL, type SupportCategory } from './rules'
+import { createGeminiAnswerer, geminiApiKey } from './gemini'
 
 export type ChatTurn = { role: 'user' | 'assistant'; text: string }
 
@@ -88,9 +88,10 @@ export function staffText(category: SupportCategory): string {
   return `${label}のご相談は、運営の担当者がお答えします。下の「運営に伝える」から、状況をお書きください。`
 }
 
-/** 今使う答え方。SUPPORT_CHAT_AI が mock 以外でも、本物の AI の実装と承認が済むまではモックを返す */
-export function getSupportAnswerer(): SupportAnswerer {
-  return mockAnswerer
+/** 今使う答え方。SUPPORT_CHAT_AI=mock かキーが無ければモック、それ以外は Gemini */
+export function getSupportAnswerer(mode: string | undefined = process.env.SUPPORT_CHAT_AI, key: string = geminiApiKey()): SupportAnswerer {
+  if ((mode ?? '').trim().toLowerCase() === 'mock' || !key) return mockAnswerer
+  return createGeminiAnswerer({ apiKey: key })
 }
 
 /**
@@ -103,7 +104,16 @@ export async function answerQuestion(answerer: SupportAnswerer, input: AnswerInp
     return { kind: 'staff', category: routed.category, text: staffText(routed.category), sources: [] }
   }
   const history = input.history.slice(-6)
-  const res = await answerer.answer({ ...input, history })
+  let res: SupportAnswer
+  try {
+    res = await answerer.answer({ ...input, history })
+  } catch {
+    // 本物の AI が使えない（障害・上限・キーの不備）ときは、モックで答える。モックが失敗したら呼び出し元へ
+    if (answerer === mockAnswerer) throw new Error('mock answer failed')
+    console.error('[support-chat] AI answer failed, using mock')
+    res = await mockAnswerer.answer({ ...input, history })
+  }
+  if (res.kind === 'staff') return { ...res, text: res.text || staffText(res.category), sources: [] }
   if (res.kind !== 'answer') return res
   const needs = answerNeedsStaff(res.text)
   if (needs) return { kind: 'staff', category: needs, text: staffText(needs), sources: [] }

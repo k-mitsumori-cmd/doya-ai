@@ -74,6 +74,22 @@
 .note { margin: 0; font-size: 12px; color: var(--n-muted); word-break: auto-phrase; text-wrap: pretty; }
 .error { margin: 0; font-size: 13px; color: var(--n-bad); }
 
+/* ---- 未読の印・履歴 ---- */
+.badge {
+  position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; padding: 0 6px; display: grid; place-items: center;
+  border-radius: 999px; border: 2px solid #fff; background: var(--n-bad); color: #fff; font-size: 11px; font-weight: 800; line-height: 1;
+}
+.footLinks { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.tickets { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ticketRow { width: 100%; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--n-line); border-radius: 12px; background: var(--n-paper); color: var(--n-ink); font: inherit; text-align: left; cursor: pointer; }
+.ticketRow:hover { border-color: var(--n-blue); }
+.ticketRow[data-unread='true'] { border-color: var(--n-blue); box-shadow: inset 4px 0 0 var(--n-blue); }
+.meta { font-size: 12px; color: var(--n-muted); }
+.ticketSummary { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ticketStatus { font-size: 12px; font-weight: 700; color: var(--n-blue-deep); }
+.from { display: block; font-size: 12px; font-weight: 800; color: var(--n-blue-deep); }
+.time { display: block; margin-top: 4px; font-size: 11px; opacity: .7; }
+
 /* ---- 運営に伝える ---- */
 .form { display: grid; gap: 12px; }
 .field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--n-sub); }
