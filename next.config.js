@@ -58,8 +58,14 @@ const nextConfig = {
 
   // ⚠️ 画面が増えて、Vercel のビルドがコンパイルの途中でメモリ不足（SIGKILL）で止まった（2026-10-24）。
   // webpack のメモリの使い方を抑える（ビルドが少し遅くなる代わりに、ピークのメモリが下がる）。
+  // ⚠️ それでもエージェントの画面などが増えて、また止まった（2026-10-25）。独自の webpack() の設定があると、
+  // Next.js は webpack を別のプロセスで動かす仕組み（webpackBuildWorker）を自動で切る。明示して有効にし、
+  // サーバー用とブラウザ用のコンパイルを別のプロセスで順に動かして、メモリの山を下げる。
   experimental: {
     webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
+    parallelServerCompiles: false,
+    parallelServerBuildTraces: false,
   },
 
     // ------------------------------------------------------------------
