@@ -160,3 +160,25 @@ test('個人情報の伏せ字と冒頭だけの表示', () => {
   assert.equal(ordinalLabel(1234), '1,234人目')
   assert.equal(ordinalLabel(null), '人数は未取得')
 })
+
+import { redactSecrets } from './notify'
+
+test('エラーの通知では秘密と個人情報を伏せる（1.2.0）', () => {
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop'
+  const raw = `失敗: user=taro.yamada@example.com url=https://api.example.com/v1/x?token=abc123&q=1 auth=Bearer ${jwt} key=sk_live_1234567890abcd password=hunter2 id=0f8fad5b-d9cb-469f-a165-70867728950e`
+  const out = redactSecrets(raw)
+  assert.doesNotMatch(out, /taro\.yamada@|abc123|hunter2|sk_live_1234567890abcd|eyJhbGci/)
+  assert.match(out, /ta\*\*\*@example\.com/)
+  assert.match(out, /https:\/\/api\.example\.com\/v1\/x\?\[非表示\]/)
+  assert.match(out, /0f8fad5b-d9cb-469f-a165-70867728950e/)
+  const styled = styleSlackPayload({
+    text: `*処理に失敗しました*\n${raw}`,
+    blocks: [{ type: 'header', text: { type: 'plain_text', text: '処理に失敗しました' } }, { type: 'section', text: { type: 'mrkdwn', text: '```' + raw + '```' } }],
+  }, { app: 'ゆるせん', kind: 'error', severity: 'action' }) as P
+  assert.doesNotMatch(JSON.stringify(styled), /taro\.yamada@|hunter2|sk_live_1234567890abcd|eyJhbGci|token=abc123/)
+  const billing = styleSlackPayload({ text: '*Stripe webhook の処理に失敗*\nkey=sk_live_1234567890abcd' }, { app: 'ヒトリジメ', kind: 'billing', severity: 'urgent' }) as P
+  assert.doesNotMatch(billing.text, /sk_live_1234567890abcd/)
+  // エラーと課金以外の通知では本文を変えない（リンクのクエリなど）
+  const report = styleSlackPayload({ text: '*日報*\n<https://doya-ai.surisuta.jp/admin?tab=users|開く>' }, { app: 'ドヤAI', kind: 'report', severity: 'info' }) as P
+  assert.match(report.text, /\?tab=users/)
+})

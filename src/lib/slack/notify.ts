@@ -15,7 +15,7 @@
  * コピーして使う（決まりの文書: docs/slack-standard.md）。コピー先では下の版を書き換えない。
  */
 
-export const SLACK_NOTIFY_VERSION = '1.1.0'
+export const SLACK_NOTIFY_VERSION = '1.2.0'
 
 export type SlackKind = 'error' | 'billing' | 'usage' | 'inquiry' | 'report'
 export type SlackSeverity = 'urgent' | 'action' | 'info'
@@ -150,7 +150,12 @@ export function styleSlackPayload<T>(payload: T, meta: SlackMeta): T {
   const p = { ...(payload as Record<string, unknown>) }
   const mention = meta.mention ?? meta.severity === 'urgent'
   const keepBody = meta.kind === 'inquiry'
-  const clean = (s: string) => (keepBody ? s : stripEmoji(s))
+  // エラーと課金の通知は、例外の文面や外部サービスの応答が混ざりやすいので必ず伏せる
+  const redact = meta.kind === 'error' || meta.kind === 'billing'
+  const clean = (s: string) => {
+    const t = keepBody ? s : stripEmoji(s)
+    return redact ? redactSecrets(t) : t
+  }
 
   const rawText = typeof p.text === 'string' ? p.text : ''
   const lines = rawText.split('\n')
@@ -164,7 +169,7 @@ export function styleSlackPayload<T>(payload: T, meta: SlackMeta): T {
   const headerIndex = blocks ? blocks.findIndex((b) => b.type === 'header') : -1
   // header ブロックがあれば、件名はそちらを正とする（text は通知の一行表示用の要約のため）
   const sourceTitleLine = headerIndex >= 0 ? blockText(blocks![headerIndex]!) : (lines[0] ?? '')
-  const title = extractTitle(sourceTitleLine, meta.app)
+  const title = redact ? redactSecrets(extractTitle(sourceTitleLine, meta.app)) : extractTitle(sourceTitleLine, meta.app)
   const heading = slackHeading(meta, title)
 
   const bodyLines = lines.slice(1).map(clean)
@@ -177,7 +182,7 @@ export function styleSlackPayload<T>(payload: T, meta: SlackMeta): T {
 
   if (blocks) {
     const header = { type: 'header', text: { type: 'plain_text', text: heading.slice(0, 150), emoji: false } }
-    let rest = blocks.map((b) => (keepBody ? b : (mapStrings(b, stripEmoji) as Block)))
+    let rest = blocks.map((b) => (keepBody && !redact ? b : (mapStrings(b, clean) as Block)))
     if (headerIndex >= 0) rest = rest.filter((_, i) => i !== headerIndex)
     // 本文の最初の section が旧見出しだけなら重複するので外す
     const first = rest[0]
@@ -279,6 +284,23 @@ export function excerpt(text: string | null | undefined, max = 80): string {
   const chars = Array.from(t)
   const cut = chars.length > max ? `${chars.slice(0, max).join('')}…（全${chars.length}文字）` : t
   return escapeSlackText(cut)
+}
+
+/**
+ * エラーの文面に紛れ込んだ秘密や個人情報を伏せる（1.2.0 で追加。kind が error と billing の通知には styleSlackPayload が必ずかける）。
+ * 伏せるもの: Slack の Webhook の URL・トークン、Bearer、JWT、Stripe などのキー、token= や password= の値、
+ * メールアドレス、URL の ? から後ろ（クエリと #）。照合用の ID（UUID）は秘密ではないので残す。
+ */
+export function redactSecrets(input: string): string {
+  return input
+    .replace(/https:\/\/hooks\.slack\.com\/[^\s<>|`"']+/gi, '[Webhook 非表示]')
+    .replace(/\bxox[abprs]-[A-Za-z0-9-]+/g, '[Slack トークン非表示]')
+    .replace(/\bBearer\s+[^\s`"'<>]+/gi, 'Bearer [非表示]')
+    .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '[認証情報非表示]')
+    .replace(/\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}\b/g, '[キー非表示]')
+    .replace(/\b((?:access_?token|refresh_?token|token|secret|password|passwd|api[_-]?key|apikey|client_secret)\s*[=:]\s*)("?)[^\s,;&`"'<>]+\2/gi, '$1[非表示]')
+    .replace(/(https?:\/\/[^\s<>|`"'?#]+)[?#][^\s<>|`"']*/gi, '$1?[非表示]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, (m) => maskEmail(m))
 }
 
 /** 「N人目」の表記。数えられなかったときは null を渡す。 */
