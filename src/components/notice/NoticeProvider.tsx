@@ -327,6 +327,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
                     </>
                   ) : (
                     <>
+                      {current.tertiary ? <ActionButton a={current.tertiary} className={`${styles.btn} ${styles.plain}`} onDone={() => act(current.tertiary, false)} /> : null}
                       {current.secondary ? <ActionButton a={current.secondary} className={`${styles.btn} ${styles.ghost}`} onDone={() => act(current.secondary, false)} /> : null}
                       <ActionButton a={current.primary ?? { label: '閉じる' }} className={styles.btn} onDone={() => act(current.primary, true)} />
                     </>

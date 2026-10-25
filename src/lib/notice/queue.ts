@@ -62,6 +62,8 @@ export interface Notice extends NoticePage {
   pages?: NoticePage[]
   primary?: NoticeAction
   secondary?: NoticeAction
+  /** 3つめのボタン（控えめな見た目。例: ドヤパワーが尽きたときの「回復を待つ」） */
+  tertiary?: NoticeAction
 }
 
 export interface NoticeQueueState {
