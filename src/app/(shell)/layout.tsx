@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
+import { isGuidePopupsEnabled } from '@/lib/notice/flag'
 import { doyaPowerCharger } from '@/lib/doya-power/charge'
 import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
@@ -25,6 +26,8 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const signedIn = Boolean(session?.user)
   // ドヤパワー（DOYA_POWER_ROLLOUT）。ログインしている人のときだけ見る。off ならセッションも DB も読まずに false
   const doyaPower = signedIn ? await isDoyaPowerEnabled() : false
+  // ドヤくんの知らせ（GUIDE_POPUPS_ROLLOUT）。off ならセッションを読まずに false
+  const guide = signedIn ? await isGuidePopupsEnabled() : false
   // 左下の「登録会社」（UI 品質 B-1）。失敗しても枠は出す
   const [company, toolHrefs] = signedIn
     ? await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
@@ -38,7 +41,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const userId = (session?.user as { id?: string } | undefined)?.id
   const doyaPowerFx = doyaPower && userId ? (await loadDoyaPowerFxForUser(userId).catch(() => null))?.fx ?? undefined : undefined
   return (
-    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

@@ -20,13 +20,17 @@ import { ShellPowerProvider, type ShellPowerState } from './power'
 import { DoyaPowerFetchWatcher, ShellLowPowerNotice } from './low-power'
 import { DoyaPowerFxProvider } from '@/components/doya-power/fx-context'
 import type { DoyaPowerFx } from '@/lib/doya-power/fx'
+import NoticeProvider from '@/components/notice/NoticeProvider'
+import ShellNotices from '@/components/notice/ShellNotices'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
+  /** ドヤくんの知らせ（シート・カード・トースト・吹き出し）を出すか（サーバーの isGuidePopupsEnabled() で決めて渡す） */
+  guide?: boolean
   /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。ログインしている人のときだけ真になる） */
   doyaPower?: boolean
   /** ドヤパワーの残りと減る量の表（旗が出すと決めた人だけ。台帳の表が入るまでは null。src/components/shell/power.tsx） */
@@ -45,9 +49,15 @@ export default function ShellGate({ session, signedIn, userName, doyaPower = fal
   children: ReactNode
 }) {
   const pathname = usePathname()
-  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn }))
+  const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
+  const framed = shown
     ? <AppShell userName={userName} initialRecent={initialRecent}>{children}</AppShell>
     : <>{children}</>
+  // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
+  const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
+  const inner = guide && shown && userKey
+    ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /></NoticeProvider>
+    : framed
   const tree = (
       <AccountCompanyContext.Provider value={company}>
       <ShellToolHrefsContext.Provider value={toolHrefs ?? EMPTY}>

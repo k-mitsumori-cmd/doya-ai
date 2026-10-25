@@ -1,0 +1,113 @@
+/* ドヤくんの知らせ。767px 以下は下からのシート、768px 以上は右下のカード。
+   色は .root に置いたトークンから取る（枠の外に出るので、枠のトークンに頼らない）。動きは短く、動きを減らす設定では止める */
+.root {
+  --n-paper: #ffffff; --n-ink: #0b1b33; --n-sub: #4b5b74; --n-muted: #8a97ab; --n-line: #e3e9f3;
+  --n-blue: #0066ff; --n-blue-deep: #0047b3; --n-blue-soft: #edf3ff; --n-cyan: #00b8d9;
+  --n-ok: #12a150; --n-bad: #d42a4b; --n-warn: #b26a00; --n-scrim: rgba(11, 27, 51, .28);
+  --n-lift: 0 2px 6px rgba(11, 27, 51, .08), 0 18px 48px rgba(11, 27, 51, .16);
+  --n-ease: cubic-bezier(.22, .8, .26, 1);
+  font-family: Inter, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+
+/* ---- シート / カード ---- */
+.scrim { display: none; }
+.sheet {
+  position: fixed; z-index: 90; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: 380px; max-width: calc(100vw - 32px); display: grid; gap: 12px; padding: 18px;
+  border-radius: 20px; border: 1px solid var(--n-line); background: var(--n-paper); color: var(--n-ink); box-shadow: var(--n-lift);
+  opacity: 0; transform: translateY(16px); transition: transform .32s var(--n-ease), opacity .24s var(--n-ease);
+  line-height: 1.7; font-size: 15px;
+}
+.sheet[data-open='true'] { opacity: 1; transform: none; }
+.sheet[data-tone='error'] { border-color: color-mix(in srgb, var(--n-bad) 45%, var(--n-line)); }
+.handle { display: none; }
+.head { display: grid; grid-template-columns: 72px minmax(0, 1fr) 32px; gap: 12px; align-items: start; }
+.head[data-mascot='off'] { grid-template-columns: minmax(0, 1fr) 32px; }
+.kun { width: 72px; height: 72px; object-fit: contain; }
+.headText { display: grid; min-width: 0; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--n-blue-deep); }
+.sheet[data-tone='error'] .eyebrow { color: var(--n-bad); }
+.sheet[data-tone='warn'] .eyebrow { color: var(--n-warn); }
+.title { margin: 2px 0 0; font-size: 17px; font-weight: 800; line-height: 1.45; text-wrap: balance; }
+.x { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--n-blue-soft); color: var(--n-sub); cursor: pointer; }
+.body { margin: 0; font-size: 14px; color: var(--n-sub); text-wrap: pretty; }
+.points { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.points li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+.points li::before {
+  content: ''; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--n-blue-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230066ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center / 13px no-repeat;
+}
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--n-line); transition: width .25s var(--n-ease), background .25s; }
+.dots i[data-on='true'] { width: 18px; background: var(--n-blue); }
+.actions { display: flex; gap: 8px; margin-left: auto; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px;
+  background: var(--n-blue); color: #fff; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; text-decoration: none;
+  transition: transform .15s var(--n-ease);
+}
+.btn:active { transform: scale(.97); }
+.ghost { background: var(--n-blue-soft); color: var(--n-blue-deep); }
+.plain { background: none; color: var(--n-sub); }
+.never { font-size: 12px; color: var(--n-muted); }
+.btn:focus-visible, .x:focus-visible, .tAct:focus-visible, .tipRow button:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 2px; }
+
+/* ---- トースト（下のまん中。スマホは下のタブの上） ---- */
+.toast {
+  position: fixed; z-index: 95; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  width: max-content; max-width: min(460px, calc(100vw - 32px)); padding: 10px 10px 10px 14px; overflow: hidden;
+  border-radius: 14px; background: var(--n-ink); color: var(--n-paper); box-shadow: var(--n-lift); font-size: 14px; line-height: 1.5;
+  opacity: 0; transform: translate(-50%, 12px); pointer-events: none; transition: transform .28s var(--n-ease), opacity .2s var(--n-ease);
+}
+.toast[data-open='true'] { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.tIcon { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--n-ok); color: #fff; }
+.tIcon svg { width: 14px; height: 14px; }
+.toast[data-tone='error'] .tIcon { background: var(--n-bad); }
+.toast[data-tone='info'] .tIcon { background: var(--n-blue); }
+.tText { display: grid; min-width: 0; }
+.tText small { font-size: 12px; opacity: .75; }
+.tAct {
+  min-height: 34px; padding: 0 12px; display: inline-flex; align-items: center; border: 0; border-radius: 999px; white-space: nowrap;
+  background: color-mix(in srgb, var(--n-paper) 16%, transparent); color: var(--n-paper); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; text-decoration: none;
+}
+.tLife { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: var(--n-cyan); transform-origin: left; }
+.toast[data-open='true'] .tLife { animation: life var(--life, 5s) linear forwards; }
+.toast:hover .tLife { animation-play-state: paused; }
+@keyframes life { to { transform: scaleX(0); } }
+
+/* ---- 吹き出し ---- */
+.tip {
+  position: fixed; z-index: 92; width: 280px; max-width: calc(100vw - 32px); display: grid; gap: 2px;
+  padding: 12px 14px; border-radius: 14px; background: var(--n-blue-deep); color: #fff; font-size: 13px; line-height: 1.6; box-shadow: var(--n-lift);
+  animation: tipIn .2s var(--n-ease);
+}
+.tip b { font-size: 14px; }
+.tip::after { content: ''; position: absolute; left: var(--ax, 24px); top: -6px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
+.tipRow { display: flex; justify-content: flex-end; margin-top: 6px; }
+.tipRow button { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
+@keyframes tipIn { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---- 767px 以下: 下からのシート ---- */
+@media (max-width: 767px) {
+  .scrim { display: block; position: fixed; inset: 0; z-index: 89; background: var(--n-scrim); opacity: 0; transition: opacity .25s var(--n-ease); }
+  .scrim[data-open='true'] { opacity: 1; }
+  .sheet {
+    left: 0; right: 0; bottom: 0; width: auto; max-width: none; border-radius: 22px 22px 0 0; border-bottom: 0; opacity: 1;
+    padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+    transform: translateY(100%); touch-action: none;
+  }
+  .handle { display: block; justify-self: center; width: 40px; height: 5px; border-radius: 99px; background: var(--n-line); }
+  .head { grid-template-columns: 64px minmax(0, 1fr) 32px; }
+  .kun { width: 64px; height: 64px; }
+  .actions { width: 100%; }
+  .actions .btn { flex: 1; min-height: 46px; }
+  /* 下のタブ（約 68px）の上に出す */
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after { transition: none !important; animation: none !important; }
+}
+.root[data-reduce='true'] *, .root[data-reduce='true'] *::before, .root[data-reduce='true'] *::after { transition: none !important; animation: none !important; }
