@@ -22,7 +22,7 @@ export async function agentGate(opts: { store: boolean }): Promise<{ userId: str
   return { userId }
 }
 
-/** ToDo の失敗の答え（422）。内部の失敗の文は出さない。減ったままの操作（charges）は返さない */
+/** ToDo の失敗の答え（422）。内部の失敗の文は出さない */
 export function taskFailure(e: unknown, extra: Record<string, unknown> = {}) {
   const err = e instanceof AgentTaskError ? e : null
   if (!err) console.error('[agent] task failed')

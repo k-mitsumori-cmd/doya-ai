@@ -337,12 +337,13 @@ runAgentTasks({
   - 今の残りと次の回復の時刻は、作戦の答えの `power`（`AgentPowerView`）。台帳の `balanceView()` から読む。
   - 実行後の残りは「残り − 合計」。足りなければ、実行のボタンを押せなくする（画面の決まり）。
 - 減った量・戻した量は ToDo ごとに `AgentTodoView.power` で返します（数え方は §3.5）。完了の画面の「失敗して戻した分」は `todoCounts(views).powerRefunded` です。
-- **失敗した ToDo の戻し**（`execute.ts`・`routes.server.ts` の `refundKeptCharges`）: ToDo が失敗したら、その ToDo で減ったまま（包みが戻さなかった）の操作を、台帳で戻します。
-  - 例: 見積の品目の案は作れた（1 減った）が、見積書の保存で失敗した（無料プランの件数の上限など）。案は利用者に届かないので、1 を戻す。
-  - 台帳の操作の id は、包み（`charge-core.ts`）と同じ作り方で組み立てます（操作の名前:会社:キー:ルートの名前空間:量）。作り方が変わると、回帰の検査が落ちます。
-  - 台帳で「減ったまま」のものだけを戻します。戻し済み・見つからないものは何もしません。台帳も、同じ操作を2回は戻しません。
-  - 本人の会社（セッション）の分だけです。旗の外・会社が未登録なら、台帳に触れません。
-  - 気を付ける点: わざと保存で失敗させれば、品目の案の AI を無料で何度も呼べます。ただし、案は画面に返らないので、利用者は中身を受け取れません。1回の費用は約2円です。気になるようなら、見積書の件数の上限を、品目の案を作る前に確かめる形に変えます。
+- **戻すのは、AI の生成そのものが失敗したときだけ**（2026-10-25 ユーザー決定）。戻すのは各ツールのルートの包み（`withDoyaPowerCharge`）で、エージェントの側では台帳を戻しません。
+- **生成ができて、保存だけが失敗したとき**（例: 見積の品目の案はできたが、見積書の保存で失敗した。無料プランの件数の上限など）:
+  - 減ったドヤパワーは戻しません（`power.used` に残る）。
+  - できた案を `resume.quoteDraft` に残します（15行・各文 300字まで）。
+  - やり直しは、AI を呼ばずに、残した案で保存だけを行います（`tools.ts` の `quote`）。残した案も、AI の答えと同じ決まり（`normalizeQuoteItems`）で整えてから使います。壊れた案・大きすぎる案（24KB 超）は使わず、AI で作り直します。
+  - こうすることで、わざと保存で失敗させて、AI を無料で何度も呼ぶことはできません。
+- 作戦づくり（`agent.plan`）は 5 減ります（`costs.ts` に足した。2026-10-25 ユーザー決定。段階2で使う）。
 
 ## 8. 実行の記録の表と「続きを進める」（表は案。本番 DB への適用は、統括を通してユーザーの承認が要る）
 
@@ -356,7 +357,7 @@ runAgentTasks({
 |---|---|
 | `src/lib/agent-orchestration/runs.ts` | 決まり（保存・ToDo を取る・同時の上限・止まった ToDo・続き）。表は `RunRepo` でもらう |
 | `src/lib/agent-orchestration/runs.prisma.ts` | `RunRepo` の本番の形（Prisma）。どの読み書きも `userId` で絞る |
-| `src/lib/agent-orchestration/execute.ts` | ToDo を1つ動かす。失敗したら、減ったままのドヤパワーを戻す（§7）。同時の上限 |
+| `src/lib/agent-orchestration/execute.ts` | ToDo を1つ動かす。同時の上限（本人ごとに3つ） |
 | `src/app/api/agent/runs/route.ts` | `POST` 作戦を保存して実行を作る |
 | `src/app/api/agent/runs/active/route.ts` | `GET` 続きを進める（済んでいない ToDo が残った、最後の実行） |
 | `src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts` | `POST` 保存した作戦の ToDo を1つ動かす |
@@ -367,7 +368,7 @@ runAgentTasks({
 - ToDo を動かす API は本文を読みません。ツールへの入力は、保存した作戦と答えだけから作ります。`resume`（途中まで作れたもの）もサーバーが持ちます。
 - 任せない ToDo（画面のチェックを外したもの）と、始められない ToDo（組織が無い）は、`skipped` で保存し、動かしません。
 - 同じ ToDo を同時に2回動かしません（`status` を `running` にする更新を条件付きにする）。
-- 本人ごとに、同時に `running` の ToDo は3つまでです（`AGENT_MAX_CONCURRENT`。超えたら 429 `kind: 'limit'`）。
+- 本人ごとに、同時に `running` の ToDo は3つまでです（`AGENT_MAX_CONCURRENT`。超えたら 429 `kind: 'limit'`）。数えてから取るまでのあいだに、ほかの呼び出しが取ることがあるので、取ったあとにもう一度数え、上限を超えていたら取る前の状態に戻して断ります（同時に来た呼び出しが両方とも断られることはあるが、上限を超えて動くことはない）。
 - `running` のまま6分（関数の時間 300 秒 + 余裕）を過ぎた ToDo は、止まったとみなします。画面には失敗として見せ、取り直せます。
 - 前の ToDo（`after`）が済んでいなければ、動かしません。
 - 済んだ ToDo をもう一度呼ぶと、保存した結果をそのまま返します（ツールを呼び直さない）。
@@ -386,7 +387,6 @@ runAgentTasks({
 
 - 実行をやめる（`canceled`）API。画面で止めたときに、まだの ToDo を `canceled` にする。
 - 画面を閉じても動き続ける形（サーバーで順に動かす）。Vercel Queues か Workflow を候補にする。
-- 同時の上限を、表の行の鍵（`SELECT … FOR UPDATE`）で厳密にする。いまは「数えてから取る」ので、同時に来た呼び出しで、まれに4つ目が動くことがある。
 
 ## 9. 旗
 
@@ -397,7 +397,7 @@ runAgentTasks({
 | all | ログインしている全員 |
 
 - 実行の仕組みの API（`/api/agent/plan`・`/api/agent/tasks`）は `AGENT_ORCHESTRATION_ROLLOUT` で止めます（`src/lib/agent-orchestration/flag.ts`）。
-- 体験の設計書 §8 は、画面の旗として `HOME_AGENT_ROLLOUT` を挙げています。旗を1つにまとめるか、画面と API で分けるかは、統括に決めてもらいます（§12-1）。まとめる場合は、`flag.ts` の環境変数の名前を変えるだけで済みます。
+- 旗は `AGENT_ORCHESTRATION_ROLLOUT` の1つにまとめました（2026-10-25 ユーザー決定）。体験の設計書 §8 の `HOME_AGENT_ROLLOUT` は使いません。画面も API も、この旗を見ます。
 - 実行の記録の表を使うかは、別の旗 `AGENT_RUNS_STORE`（`db` のときだけ使う。既定 off）。表を本番 DB に足すまで off のまま（§8・MIGRATION.md）。
 - 開発の確認だけに使う値: `AGENT_ORCHESTRATION_FAKE_TOOLS=1`。各ツールを呼ばずに見本の結果を返します。`NODE_ENV=production` では値があっても効きません。本番の環境変数には置きません。
 
@@ -408,7 +408,7 @@ runAgentTasks({
 | `src/lib/agent-orchestration/runner.test.ts` | 同時に動かす数の上限、順番、失敗だけのやり直し、中断、順番の誤り |
 | `src/lib/agent-orchestration/tools.test.ts` | 答えの検査、ルートへの入力、結果のまとめ、失敗の種類、商談の準備を最後まで動かす（スライドの失敗だけを、作ったプロジェクトでやり直す）、ドヤパワーの減った量・戻した量の数え方 |
 | `src/lib/agent-orchestration/plan.test.ts` | 組み合わせからの作戦（ゴール・理由・チームのゴール・任せる初期値）、組織が無いツールの ToDo、減る量を costs.ts から引く、AI の作戦の検査、分析の材料を同時に読み読み終えた順に知らせる、ToDo の状態を画面の4つに寄せる |
-| `src/lib/agent-orchestration/runs.test.ts` | 記録（メモリの表）: 任せない ToDo、組織が無い ToDo、他人の実行、結果の保存、同じ ToDo を2回動かさない、止まった ToDo の取り直し、同時の上限、順番、続きを進める（画面の runner で残りだけ）、失敗したときの戻し |
+| `src/lib/agent-orchestration/runs.test.ts` | 記録（メモリの表）: 任せない ToDo、組織が無い ToDo、他人の実行、結果の保存、同じ ToDo を2回動かさない、止まった ToDo の取り直し、同時の上限、順番、続きを進める（画面の runner で残りだけ）、見積の保存だけ失敗したときに AI を呼ばずに保存をやり直す、同時の上限の取り合い |
 | `scripts/security-regression/verify-agent-orchestration.cjs` | 旗（off でセッションを読まない・preview の許可）、2つの API の 404・400・答えの形、作戦の NDJSON（材料 → 理由 → 答え）、決まった5つのルートだけを cookie 付きで呼び、操作のキーを返す、本番で見本に差し替えない、経営ホームの画面にまだつながない |
 
 - `npm run test:agent` と `npm run test:security` に入っています。どちらも `npm run build` で流れます。
@@ -491,15 +491,16 @@ runAgentTasks({
 - 入力: 約3,300トークン（決まりの文・依頼・経営ホームの数字・操作の一覧・返す形で、約3,000字と見た）
 - 出力: 約1,800トークン（ゴール・理由5行・柱3つ・ToDo 8つまでの JSON）。上限 4,096
 - 見込み額: 約 $0.012（約1.8円）。上限（出力が上限まで出て、直す呼び出しを1回足す）で約 $0.049（約7.3円）
+- 減るドヤパワー: 5（`agent.plan`。2026-10-25 ユーザー決定）
 - 作戦づくりを含めた1回の「商談の準備」: ふつう約8.3円、上限約31円
 
-## 12. 統括に決めてもらうこと
+## 12. 決めたこと（2026-10-25 ユーザー。メインのおすすめのとおり）
 
-1. 旗を1つにするか（`HOME_AGENT_ROLLOUT` と `AGENT_ORCHESTRATION_ROLLOUT`）。
-2. 同時に動かす数の上限（いま3。体験の設計書は2）。
-3. `agent.plan` のドヤパワーの量（段階2）。
-4. §8 の表を本番 DB に足す時期（`MIGRATION.md`）と、`AGENT_RUNS_STORE=db` にする時期。
-5. 失敗した ToDo の戻し（§7）を、このまま入れるか（わざと保存で失敗させると、品目の案の AI を無料で呼べる。1回約2円）。
+1. 旗は `AGENT_ORCHESTRATION_ROLLOUT` の1つにまとめる。`HOME_AGENT_ROLLOUT` は使わない。
+2. 同時に進める数は3のまま。
+3. 作戦づくり（`agent.plan`）のドヤパワーは 5（`costs.ts`）。
+4. 表を本番 DB に足すのは、ユーザーだけに見える preview で試して問題が無いと分かってから。その時点で改めてユーザーの承認を取る。今は `MIGRATION.md` の SQL まで。`AGENT_RUNS_STORE` は off のまま。
+5. 戻すのは AI の生成そのものが失敗したときだけ。生成ができて保存だけ失敗したときは、できた案を残し、AI を呼ばずに保存をやり直す（§7）。
 
 ## 13. まだ良くない点と、次の改善
 

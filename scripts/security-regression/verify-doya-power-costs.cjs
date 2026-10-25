@@ -11,7 +11,7 @@ function walk(dir){return fs.readdirSync(path.join(root,dir),{withFileTypes:true
 const costs=load('src/lib/doya-power/costs.ts',{});
 (async()=>{
   await check('Cost table matches the agreed provisional values',async()=>{
-    const expected={'text.generate':1,'banner.generate':10,'image.refine':7,'tenjikai.image':7,'transcribe.hour':10,'interview.article':20,'slide.generate':30,'seo.article':40,'persona.generate':50,'aio.scan.question':10,kintai:0,promane:0,income:0,expense:0};
+    const expected={'text.generate':1,'banner.generate':10,'image.refine':7,'tenjikai.image':7,'transcribe.hour':10,'interview.article':20,'slide.generate':30,'seo.article':40,'persona.generate':50,'aio.scan.question':10,'agent.plan':5,kintai:0,promane:0,income:0,expense:0};
     for(const [k,v] of Object.entries(expected))assert.equal(costs.DOYA_POWER_COSTS[k],v,k);
     // 音声は1分 5（2026-10-23 ユーザー決定。既定は high）。定数で切り替えられる
     assert.equal(costs.VOICE_COST_MODE,'high');

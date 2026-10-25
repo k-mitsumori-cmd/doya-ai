@@ -5,9 +5,9 @@ import assert from 'node:assert/strict'
 import { SALES_PREP, parseSalesPrepAnswers, type SalesPrepAnswers } from './recipes'
 import { planFromRecipe } from './plan'
 import { createMemoryRunRepo, createRun, latestOpenRun, runStoredTask, runViewOf, statesOfRun, STALE_MS } from './runs'
-import { AGENT_MAX_CONCURRENT, BUSY_MESSAGE, createLimiter, executeSalesPrepTask } from './execute'
-import { AgentTaskError, runAgentTasks, type AgentCharge } from './runner'
-import { fakeToolDeps, runSalesPrepTask, type SalesPrepTaskId, type ToolDeps } from './tools'
+import { AGENT_MAX_CONCURRENT, BUSY_MESSAGE, createLimiter } from './execute'
+import { AgentTaskError, runAgentTasks } from './runner'
+import { fakeToolDeps, runSalesPrepTask, type SalesPrepTaskId, type ToolDeps, type ToolRouteId } from './tools'
 
 const answers = { url: 'https://example.co.jp', offer: 'web', budget: '50to200', stage: 'proposal' }
 const a = (() => { const p = parseSalesPrepAnswers(answers); assert.ok(p.ok); return p.value as SalesPrepAnswers })()
@@ -125,27 +125,78 @@ test('続きを進める: 失敗した ToDo と、まだの ToDo だけが残り
   assert.equal(runViewOf(repo.runs[0], repo.tasks).status, 'done')
 })
 
-test('失敗したら、その ToDo で減ったままのドヤパワーを戻す（見積の案は作れたが、保存で失敗した）', async () => {
-  const deps: ToolDeps = fakeToolDeps({ delayMs: 0, powerOn: true })
-  const base = deps.call
-  deps.call = async (route, body) => (route === 'quote.create' ? { status: 402, data: { error: '無料プランは3件までです。', code: 'LIMIT_REACHED' } } : base(route, body))
-  const refunded: AgentCharge[][] = []
-  await assert.rejects(executeSalesPrepTask('quote', a, { tools: deps, refund: async (c) => { refunded.push(c); return c.reduce((n, x) => n + x.amount, 0) } }), (e: AgentTaskError) => {
+test('見積の案はできて保存だけ失敗した: 減ったドヤパワーは戻さず、案を残して、やり直しは AI を呼ばずに保存だけ行う', async () => {
+  const calls: ToolRouteId[] = []
+  let failCreate = true
+  const base = fakeToolDeps({ delayMs: 0, powerOn: true })
+  const deps: ToolDeps = { ...base, call: async (route, body) => {
+    calls.push(route)
+    if (route === 'quote.create' && failCreate) return { status: 402, data: { error: '無料プランは3件までです。', code: 'LIMIT_REACHED' } }
+    return base.call(route, body)
+  } }
+  const { repo, run } = await newRun(['quote'])
+  const exec = (c: { answers: Record<string, string>; resume?: Record<string, string> }) => runSalesPrepTask('quote', a, deps, c.resume)
+  await assert.rejects(runStoredTask(repo, { userId: U, runId: run.id, taskId: 'quote' }, exec), (e: AgentTaskError) => {
     assert.equal(e.kind, 'limit')
-    assert.deepEqual(e.power, { used: 0, refunded: 1 })
-    assert.equal(e.charges, undefined, '減ったままの操作の中身は画面に返さない')
+    // 品目の案の AI は使った（1 減った）。戻さない
+    assert.deepEqual(e.power, { used: 1, refunded: 0 })
     return true
   })
-  assert.deepEqual(refunded, [[{ route: 'quote.suggest', action: 'text.generate', opKey: 'op-quote.suggest', amount: 1 }]])
-  // 戻せなかった（台帳が戻し済みなど）ときは、量を変えない
-  await assert.rejects(executeSalesPrepTask('quote', a, { tools: deps, refund: async () => 0 }), (e: AgentTaskError) => { assert.deepEqual(e.power, { used: 1, refunded: 0 }); return true })
-  // 包みが自分で戻した失敗（構成の失敗）は、減ったままの操作が無いので、戻しを呼ばない
-  let calls = 0
-  await assert.rejects(executeSalesPrepTask('slides', a, { tools: fakeToolDeps({ delayMs: 0, powerOn: true, failSlidesOnce: { done: false } }), refund: async () => { calls++; return 0 } }))
-  assert.equal(calls, 0)
-  // 成功したときは戻さない
-  const ok = await executeSalesPrepTask('quote', a, { tools: fakeToolDeps({ delayMs: 0, powerOn: true }), refund: async () => { throw new Error('呼ばれない') } })
-  assert.deepEqual(ok.power, { used: 1, refunded: 0 })
+  const t = repo.tasks.find((x) => x.taskId === 'quote')!
+  assert.deepEqual([t.powerUsed, t.powerRefunded], [1, 0])
+  const draft = JSON.parse(t.resume!.quoteDraft)
+  assert.equal(draft.length, 3)
+  assert.equal(draft[0].itemName, '要件の整理と設計')
+  // やり直し: 品目の案（AI）は呼ばず、保存だけ
+  failCreate = false
+  calls.length = 0
+  const r = await runStoredTask(repo, { userId: U, runId: run.id, taskId: 'quote' }, exec)
+  assert.deepEqual(calls, ['quote.create'])
+  assert.equal(r.href, '/quote/documents/quote_sample')
+  assert.deepEqual(r.power, { used: 0, refunded: 0 })
+  assert.deepEqual([t.powerUsed, t.powerRefunded, t.attempts], [1, 0, 2])
+})
+
+test('残した品目の案は、もう一度整えてから保存に使う（壊れた案・大きすぎる案は使わず、AI で作り直す）', async () => {
+  const seen: Record<string, unknown>[] = []
+  const base = fakeToolDeps({ delayMs: 0 })
+  const deps: ToolDeps = { ...base, call: async (route, body) => { if (route === 'quote.create') seen.push(body); return base.call(route, body) } }
+  const long = 'x'.repeat(5000)
+  const r = await runSalesPrepTask('quote', a, deps, { quoteDraft: JSON.stringify([{ itemName: '手作業', spec: long, qty: -3, unitPrice: 1e15, taxRate: 99, unit: 'あいうえおかきくけこさしすせそ' }]) })
+  assert.ok(r.href)
+  const item = (seen[0].items as Record<string, unknown>[])[0]
+  assert.equal((item.spec as string).length, 300)
+  assert.deepEqual([item.qty, item.unitPrice, item.taxRate, (item.unit as string).length], [1, 1_000_000_000, 10, 12])
+  // 壊れた JSON なら、案を使わずに AI で作り直す
+  const calls: string[] = []
+  await runSalesPrepTask('quote', a, { ...base, call: async (route, body) => { calls.push(route); return base.call(route, body) } }, { quoteDraft: '{broken' })
+  assert.deepEqual(calls, ['quote.suggest', 'quote.create'])
+})
+
+test('AI の生成そのものが失敗したときは、包み（ルート）が戻した分が refunded に入る（ここでは戻しを足さない）', async () => {
+  await assert.rejects(runSalesPrepTask('slides', a, fakeToolDeps({ delayMs: 0, powerOn: true, failSlidesOnce: { done: false } })), (e: AgentTaskError) => {
+    assert.deepEqual(e.power, { used: 0, refunded: 30 })
+    return true
+  })
+})
+
+test('同時の上限は、取ったあとにもう一度数え、超えていたら取る前に戻す（数えるのと取るのが同時に来ても、上限を超えて動かない）', async () => {
+  const repo = createMemoryRunRepo()
+  const runs = await Promise.all([1, 2].map(() => createRun(repo, { userId: U, recipeId: 'sales-prep', title: 't', request: null, answers, plan, delegate: ['research', 'quote', 'slides'] })))
+  // 2つは動いている。数えたときは2つだったが、取るまでのあいだに、ほかの呼び出しがもう1つ取った、という順をまねる
+  const mine = repo.tasks.filter((x) => x.runId === runs[0].id)
+  for (const t of mine.slice(0, 2)) Object.assign(t, { status: 'running', startedAt: new Date() })
+  const realCount = repo.countRunning.bind(repo)
+  let first = true
+  repo.countRunning = async (u, s) => {
+    const n = await realCount(u, s)
+    if (first) { first = false; Object.assign(mine[2], { status: 'running', startedAt: new Date() }) }
+    return n
+  }
+  const target = repo.tasks.find((x) => x.runId === runs[1].id && x.taskId === 'quote')!
+  await assert.rejects(runStoredTask(repo, { userId: U, runId: runs[1].id, taskId: 'quote' }, execOk('quote')), (e: AgentTaskError) => e.userMessage === BUSY_MESSAGE)
+  assert.deepEqual([target.status, target.attempts, target.startedAt], ['waiting', 0, null], '取る前の状態に戻す')
+  assert.equal(repo.tasks.filter((x) => x.status === 'running').length, AGENT_MAX_CONCURRENT)
 })
 
 test('このサーバーの中の同時の上限: 本人ごとに数え、終わったら空く', () => {

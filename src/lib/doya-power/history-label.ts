@@ -16,6 +16,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'persona.generate': 'ペルソナの生成',
   'voice.minute': '音声の AI商談・AI面接',
   'aio.scan.question': 'AI検索対策の調査',
+  'agent.plan': 'ドヤくんの作戦づくり',
 }
 
 /** 付与の種類 → 画面の名前（内訳と履歴で同じ名前を使う） */
