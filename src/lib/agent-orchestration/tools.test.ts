@@ -107,3 +107,44 @@ test('商談の準備を最後まで動かす: 3つを同時に動かし、ス�
   assert.equal(second.slides.status, 'done')
   assert.equal(progressOf(second).done, 3)
 })
+
+test('ドヤパワー: 包みが付いたルートで減ったまま（操作のキーあり）を used、失敗して戻したものを refunded に数える', async () => {
+  const a = parsed()
+  const ok = await runSalesPrepTask('slides', a, fakeToolDeps({ delayMs: 0, powerOn: true }))
+  assert.deepEqual(ok.power, { used: 30, refunded: 0 })
+  const q = await runSalesPrepTask('quote', a, fakeToolDeps({ delayMs: 0, powerOn: true }))
+  assert.deepEqual(q.power, { used: 1, refunded: 0 })
+  // 構成で失敗 → 包みが戻した
+  await assert.rejects(runSalesPrepTask('slides', a, fakeToolDeps({ delayMs: 0, powerOn: true, failSlidesOnce: { done: false } })), (e: { power?: unknown }) => {
+    assert.deepEqual(e.power, { used: 0, refunded: 30 })
+    return true
+  })
+  // 見積の品目の案は作れたが、保存で失敗した → 案の分は減ったまま（戻していない）
+  const half: ToolDeps = fakeToolDeps({ delayMs: 0, powerOn: true })
+  const base = half.call
+  half.call = async (route, body) => (route === 'quote.create' ? { status: 503, data: { error: '保存できませんでした。' } } : base(route, body))
+  await assert.rejects(runSalesPrepTask('quote', a, half), (e: { power?: unknown }) => {
+    assert.deepEqual(e.power, { used: 1, refunded: 0 })
+    return true
+  })
+  // ドヤパワーを使わない人は、どちらも 0
+  assert.deepEqual((await runSalesPrepTask('slides', a, fakeToolDeps({ delayMs: 0 }))).power, { used: 0, refunded: 0 })
+  // 残りが足りずに断られた（DOYA_POWER_INSUFFICIENT）ときは、減っていないので戻してもいない
+  const short: ToolDeps = { ...fakeToolDeps({ delayMs: 0, powerOn: true }), call: async () => ({ status: 402, data: { error: 'ドヤパワーが足りません。', code: 'DOYA_POWER_INSUFFICIENT' } }) }
+  await assert.rejects(runSalesPrepTask('quote', a, short), (e: { power?: unknown; kind?: string }) => {
+    assert.equal(e.kind, 'power')
+    assert.deepEqual(e.power, { used: 0, refunded: 0 })
+    return true
+  })
+})
+
+test('runner は、試みごとのドヤパワーを足していく', async () => {
+  const a = parsed()
+  const flag = { done: false }
+  const deps = fakeToolDeps({ delayMs: 0, powerOn: true, failSlidesOnce: flag })
+  const execute = (t: { id: string }, ctx: { resume?: Record<string, string> }) => runSalesPrepTask(t.id as SalesPrepTaskId, a, deps, ctx.resume)
+  const first = await runAgentTasks({ tasks: SALES_PREP.tasks, execute })
+  const second = await runAgentTasks({ tasks: SALES_PREP.tasks, execute, prev: first })
+  assert.deepEqual(second.slides.power, { used: 30, refunded: 30 })
+  assert.deepEqual(second.quote.power, { used: 1, refunded: 0 })
+})
