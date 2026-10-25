@@ -2,9 +2,10 @@
 // ドヤくんの知らせの決まり（順番・作業中・once・旗）の回帰テスト。DB・ネットワーク・画面には触れない。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { EMPTY_QUEUE, closeNotice, enqueueNotice, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
+import { EMPTY_QUEUE, allowedAtLevel, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
 import { addSeen, parseSeen, seenKey, SEEN_MAX } from './seen'
 import { decideGuidePopups, guidePopupsRollout } from './flag'
+import { activeAnnouncements, newToolIds, type Announcement } from './announcements'
 
 const n = (id: string, kind: NoticeKind, once = false): Notice => ({ id, kind, once, eyebrow: id, title: id })
 const none = new Set<string>()
@@ -74,4 +75,23 @@ test('旗: 既定は off。preview は許可した人だけ、all は全員', ()
   assert.equal(decideGuidePopups({ rollout: 'preview', email: 'a@x.jp', allow: ['a@x.jp'] }), true)
   assert.equal(decideGuidePopups({ rollout: 'preview', email: 'b@x.jp', allow: ['a@x.jp'] }), false)
   assert.equal(decideGuidePopups({ rollout: 'all', email: null, allow: [] }), true)
+})
+
+test('知らせの量: 少なめは承認待ちとエラーだけ、エラーだけはエラーだけ。知らない値はふつう', () => {
+  assert.equal(parseNoticeLevel('x'), 'normal')
+  assert.equal(parseNoticeLevel('less'), 'less')
+  assert.deepEqual((['error', 'approval', 'feature', 'hint'] as NoticeKind[]).filter((k) => allowedAtLevel(k, 'less')), ['error', 'approval'])
+  assert.deepEqual((['error', 'approval', 'feature', 'hint'] as NoticeKind[]).filter((k) => allowedAtLevel(k, 'errors')), ['error'])
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('h', 'hint'), none, 'less').queue.length, 0)
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('e', 'error'), none, 'errors').queue.length, 1)
+})
+
+test('新機能: お知らせは30日、メニューの札は7日で消える', () => {
+  const list: Announcement[] = [{ id: 'a', date: '2026-10-01', title: 't', body: 'b', toolId: 'quote' }]
+  const at = (d: string) => new Date(`${d}T12:00:00+09:00`)
+  assert.equal(activeAnnouncements(at('2026-09-30'), list).length, 0)
+  assert.equal(activeAnnouncements(at('2026-10-30'), list).length, 1)
+  assert.equal(activeAnnouncements(at('2026-10-31'), list).length, 0)
+  assert.ok(newToolIds(at('2026-10-07'), list).has('quote'))
+  assert.equal(newToolIds(at('2026-10-08'), list).size, 0)
 })

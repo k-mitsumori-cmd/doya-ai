@@ -1,6 +1,8 @@
 'use client'
 // 開発用の確認ページの中身。知らせの部品を1つずつ出せる（本番では page.tsx が 404 にする）
 import toast from 'react-hot-toast'
+import { Toaster as SonnerToaster, toast as sonner } from 'sonner'
+import { SONNER_NOTICE_PROPS } from '@/components/notice/sonner-look'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { seenKey } from '@/lib/notice/seen'
 
@@ -20,8 +22,10 @@ export default function NoticePreviewBody() {
         <button type="button" style={btn} onClick={() => toast.success('コピーしました')}>今のトースト（成功）</button>
         <button type="button" style={btn} onClick={() => toast.error('保存に失敗しました。もう一度お試しください。')}>今のトースト（失敗）</button>
         <button type="button" style={btn} onClick={() => { const id = toast.loading('作っています…'); setTimeout(() => toast.success('できました', { id }), 2500) }}>今のトースト（作成中）</button>
+        <button type="button" style={btn} onClick={() => sonner.success('タスクを保存しました')}>プロマネのトースト（sonner）</button>
         <button type="button" style={btn} onClick={() => { try { localStorage.removeItem(seenKey('preview')) } catch {} location.reload() }}>見た記録を消して開き直す</button>
       </div>
+      <SonnerToaster {...SONNER_NOTICE_PROPS} />
       <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 700 }}>入力欄（ここに入ると作業中になり、知らせを待たせます）
         <input style={{ minHeight: 44, padding: '0 12px', borderRadius: 10, border: '1px solid #e3e9f3' }} defaultValue="35%" />
       </label>

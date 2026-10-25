@@ -4,17 +4,30 @@
 // ============================================
 // (1) 初回のようこそ3枚 / (3)(6) ツールを初めて開いたときの「できること」3点
 // (10) 新機能のお知らせ / (18) ドヤパワーの残りが2割
+// (2) はじめの手順チェックリスト / (37) 通信が切れたときの知らせ / (36) 調整中のツール
 // ⚠️ NoticeProvider の中だけで動く（旗が off なら ShellGate がこの部品を置かない）。
 // ⚠️ 出す・出さないの決まり（順番・作業中・once）は queue.ts。ここは「何を足すか」だけ。
 import { usePathname } from 'next/navigation'
 import { useContext, useEffect, useRef } from 'react'
 import { ALL_SHELL_TOOLS, type ShellTool } from '@/components/shell/tools'
 import { ShellPowerContext } from '@/components/shell/power'
+import { useAccountCompany } from '@/components/shell/company-context'
 import { getServiceById } from '@/lib/services'
 import { activeAnnouncements } from '@/lib/notice/announcements'
 import { useNotice } from './NoticeProvider'
 
 export const WELCOME_ID = 'welcome:v1'
+export const CHECKLIST_ID = 'checklist:v1'
+
+/** はじめの手順。済んだかどうかは、この端末で分かることだけで決める（DB は読まない） */
+function startSteps(company: ReturnType<typeof useAccountCompany>): { label: string; done: boolean; href?: string }[] {
+  const has = (key: string, test: (v: string) => boolean) => { try { const v = window.localStorage.getItem(key); return v ? test(v) : false } catch { return false } }
+  return [
+    { label: '会社を登録する', done: Boolean(company), href: '/home' },
+    { label: 'ツールを1つ使ってみる', done: has('doya-shell-recent-v1', (v) => /"[a-z]/.test(v)), href: '/home' },
+    { label: 'ドヤくんに仕事を頼む（経営ホーム）', done: has('doya-home-agent:v1', () => true), href: '/home' },
+  ]
+}
 
 function toolForPath(pathname: string): ShellTool | undefined {
   return ALL_SHELL_TOOLS.find((t) => {
@@ -24,6 +37,12 @@ function toolForPath(pathname: string): ShellTool | undefined {
   })
 }
 
+/** 日ごとに1回（日本時間の年月日） */
+function dayKey(d: Date): string {
+  const j = new Date(d.getTime() + 9 * 3_600_000)
+  return j.toISOString().slice(0, 10)
+}
+
 /** 月ごとに1回（日本時間の年月） */
 function monthKey(d: Date): string {
   const j = new Date(d.getTime() + 9 * 3_600_000)
@@ -31,7 +50,8 @@ function monthKey(d: Date): string {
 }
 
 export default function ShellNotices() {
-  const { enabled: on, ready, push, hasSeen } = useNotice()
+  const { enabled: on, ready, push, hasSeen, notify } = useNotice()
+  const company = useAccountCompany()
   // 見た記録を読み終えてから足す
   const enabled = on && ready
   const pathname = usePathname() || '/'
@@ -53,18 +73,42 @@ export default function ShellNotices() {
       ],
       primary: { label: 'はじめる' },
     })
+    // (2) はじめの手順。ようこそのあとに出し、全部済んでいれば出さない
+    const steps = startSteps(company)
+    if (steps.some((x) => !x.done)) {
+      push({ id: CHECKLIST_ID, kind: 'hint', once: true, pose: 'point', eyebrow: 'はじめの手順', title: 'この3つで、ドヤAI の使い方がつかめます',
+        checklist: steps, primary: { label: 'わかった' } })
+    }
     for (const a of welcomed ? activeAnnouncements(new Date()) : []) {
       push({ id: a.id, kind: 'feature', once: true, pose: a.pose ?? 'jump', eyebrow: '新機能', title: a.title, body: a.body,
         primary: a.href ? { label: '試してみる', href: a.href } : { label: 'わかった' }, secondary: { label: 'あとで', done: false } })
     }
-  }, [enabled, push, hasSeen])
+  }, [enabled, push, hasSeen, company])
+
+  // (37) 通信が切れたとき。作業中でも出す（エラーと同じ扱い）。つながったらトーストで知らせる
+  useEffect(() => {
+    if (!enabled) return
+    const off = () => push({ id: 'offline', kind: 'error', tone: 'warn', pose: 'focus', eyebrow: '通信が切れました',
+      title: 'インターネットにつながっていません', body: '入力した内容は、この画面に残っています。つながったら、続きから進められます。', primary: { label: 'わかった' } })
+    const back = () => notify({ tone: 'info', title: 'インターネットにつながりました', sub: '続きから進められます', durationMs: 3000 })
+    window.addEventListener('offline', off); window.addEventListener('online', back)
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) off()
+    return () => { window.removeEventListener('offline', off); window.removeEventListener('online', back) }
+  }, [enabled, push, notify])
 
   // (3)(6) ツールを初めて開いた・切り替えたとき、そのツールでできることを3つ
   useEffect(() => {
     if (!enabled) return
     const tool = toolForPath(pathname)
     if (!tool) return
-    const features = getServiceById(tool.id)?.features?.slice(0, 3) ?? []
+    const service = getServiceById(tool.id)
+    // (36) 調整中のツール（services.ts の status: 'maintenance'）を開いたら、その日に1回知らせる。エラーと同じ扱いで先に出す
+    if (service?.status === 'maintenance') {
+      push({ id: `maintenance:${tool.id}:${dayKey(new Date())}`, kind: 'error', tone: 'warn', once: true, pose: 'focus', eyebrow: '調整中のツール',
+        title: `${tool.name} は、いま調整中です`, body: '一部の機能が動かないことがあります。作ったものの確認と編集は、そのままできます。直ったら、新機能のお知らせで知らせます。',
+        primary: { label: 'わかった' } })
+    }
+    const features = service?.features?.slice(0, 3) ?? []
     if (!features.length) return
     push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
   }, [enabled, pathname, push])

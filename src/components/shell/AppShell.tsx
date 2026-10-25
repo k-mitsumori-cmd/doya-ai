@@ -24,6 +24,16 @@ import { useToolHref } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
+import { useNotice } from '@/components/notice/NoticeProvider'
+import { newToolIds } from '@/lib/notice/announcements'
+
+// 日付で変わるので、開くたびに作る（同じ描画の中では1回だけ）
+let newToolCache: { day: string; ids: Set<string> } | null = null
+function NEW_TOOL_IDS(): Set<string> {
+  const day = new Date().toDateString()
+  if (!newToolCache || newToolCache.day !== day) newToolCache = { day, ids: newToolIds(new Date()) }
+  return newToolCache.ids
+}
 import styles from './AppShell.module.css'
 import { ShellPowerMeter } from './power'
 import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
@@ -50,6 +60,9 @@ function readRecent(): string[] {
 
 function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean; mirror?: boolean }) {
   const active = isActive(pathname, tool)
+  // 「新機能」の札（提案リスト (11)）。ドヤくんの知らせの旗が出すと決めた人だけ。載せた日から7日で消える
+  const notice = useNotice()
+  const isNew = notice.enabled && NEW_TOOL_IDS().has(tool.id)
   // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const href = useToolHref()(tool.href)
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
@@ -58,6 +71,7 @@ function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: Shell
       <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
+      {!tool.beta && isNew ? <span className={styles.newTag}>新機能</span> : null}
     </Link>
   )
 }

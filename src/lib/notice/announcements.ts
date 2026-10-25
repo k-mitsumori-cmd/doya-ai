@@ -15,9 +15,13 @@ export interface Announcement {
   href?: string
   /** ドヤくんの絵（/character/{pose}-256.webp） */
   pose?: string
+  /** そのツールのメニューの項目に「新機能」の札を出す（tools.ts の id。提案リスト (11)） */
+  toolId?: string
 }
 
 export const ANNOUNCEMENT_DAYS = 30
+/** メニューの「新機能」の札を出す日数 */
+export const NEW_TAG_DAYS = 7
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
@@ -38,4 +42,14 @@ export function activeAnnouncements(now: Date, list: Announcement[] = ANNOUNCEME
       return Number.isFinite(start) && t >= start && t < start + ANNOUNCEMENT_DAYS * 86_400_000
     })
     .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+/** メニューに「新機能」の札を出すツールの id（載せた日から NEW_TAG_DAYS 日以内） */
+export function newToolIds(now: Date, list: Announcement[] = ANNOUNCEMENTS): Set<string> {
+  const t = now.getTime()
+  const ids = list.filter((a) => {
+    const start = Date.parse(`${a.date}T00:00:00+09:00`)
+    return a.toolId && Number.isFinite(start) && t >= start && t < start + NEW_TAG_DAYS * 86_400_000
+  }).map((a) => a.toolId as string)
+  return new Set(ids)
 }

@@ -163,7 +163,7 @@
   .shell { grid-template-columns: 76px minmax(0, 1fr); }
   .sidebar { padding: 16px 10px 12px; }
   .sideHead { justify-content: center; padding: 0 0 12px; }
-  .navLabel, .beta, .groupLabel, .userLine, .usage { display: none; }
+  .navLabel, .beta, .newTag, .groupLabel, .userLine, .usage { display: none; }
   .search { justify-content: center; padding: 0; }
   .navItem { justify-content: center; padding: 0; }
   .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -236,3 +236,6 @@
 }
 @keyframes shell-progress { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 @media (prefers-reduced-motion: reduce) { .progress::after { animation: none; width: 100%; opacity: 0.6; } }
+
+/* メニューの「新機能」の札（ドヤくんの知らせ。7日で消える） */
+.newTag { flex: none; margin-left: auto; padding: 0 7px; border-radius: 999px; background: #ff1e72; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px; }
