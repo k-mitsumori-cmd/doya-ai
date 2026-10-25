@@ -15,6 +15,8 @@ import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
 import { EMPTY_QUEUE, closeNotice, enqueueNotice, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeQueueState } from '@/lib/notice/queue'
 import { addSeen, loadSeen, saveSeen } from '@/lib/notice/seen'
+import toastStore from 'react-hot-toast'
+import HotToastBridge from './HotToastBridge'
 import styles from './notice.module.css'
 
 export interface ToastInput {
@@ -164,9 +166,11 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   const [toastOpen, setToastOpen] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
   const hover = useRef(false)
+  // 1つずつ: 自分のトーストを出すときは今のトースト（react-hot-toast）を閉じ、向こうが出たらこちらを閉じる
   const notify = useCallback((t: ToastInput) => {
-    setToast({ ...t, key: Date.now() }); setToastOpen(true)
+    toastStore.dismiss(); setToast({ ...t, key: Date.now() }); setToastOpen(true)
   }, [])
+  const onHotShow = useCallback(() => setToastOpen(false), [])
   useEffect(() => {
     if (!toast) return
     clearTimeout(toastTimer.current)
@@ -262,6 +266,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
             <span className={styles.tLife} aria-hidden="true" />
           </div>
         ) : null}
+
+        <HotToastBridge onShow={onHotShow} />
 
         {tipState ? (
           <div className={styles.tip} role="tooltip" style={{ left: tipState.left, top: tipState.top, ['--ax' as string]: `${tipState.arrow}px` }}>

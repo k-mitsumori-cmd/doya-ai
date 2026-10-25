@@ -189,7 +189,9 @@ export default function RootLayout({
           <LogoutToastListener />
           {/* Stripe決済からの戻りを全サービス共通で検知してプランを即時反映（Webhook不達の保険） */}
           <StripeSuccessSync />
+          {/* containerClassName: ドヤくんの知らせ（旗 GUIDE_POPUPS_ROLLOUT）が出ている画面では、この Toaster を隠して同じトーストを知らせの見た目で出す（src/components/notice/HotToastBridge.tsx） */}
           <Toaster
+            containerClassName="doya-hot-toaster"
             position="top-center"
             toastOptions={{
               duration: 4000,

@@ -1,5 +1,6 @@
 'use client'
 // 開発用の確認ページの中身。知らせの部品を1つずつ出せる（本番では page.tsx が 404 にする）
+import toast from 'react-hot-toast'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { seenKey } from '@/lib/notice/seen'
 
@@ -16,6 +17,9 @@ export default function NoticePreviewBody() {
         <button type="button" style={btn} onClick={() => n.push({ id: 'preview:approval', kind: 'approval', pose: 'point', eyebrow: '承認待ち', title: '佐藤さんの見積書が、承認を待っています', body: 'Webサイトの制作・税抜 930,000 円。', primary: { label: '内容を見る' }, secondary: { label: 'あとで', done: false } })}>承認待ちのシート</button>
         <button type="button" style={btn} onClick={(e) => n.tip(e.currentTarget, { id: 'preview:tip', title: '粗利率', body: '売上から原価を引いた額が、売上のうち何割かを表します。' })}>吹き出し</button>
         <button type="button" style={btn} onClick={() => { const release = n.holdBusy(); n.notify({ tone: 'info', title: '作業中にしました（5秒）', durationMs: 5000 }); setTimeout(release, 5000) }}>5秒だけ作業中</button>
+        <button type="button" style={btn} onClick={() => toast.success('コピーしました')}>今のトースト（成功）</button>
+        <button type="button" style={btn} onClick={() => toast.error('保存に失敗しました。もう一度お試しください。')}>今のトースト（失敗）</button>
+        <button type="button" style={btn} onClick={() => { const id = toast.loading('作っています…'); setTimeout(() => toast.success('できました', { id }), 2500) }}>今のトースト（作成中）</button>
         <button type="button" style={btn} onClick={() => { try { localStorage.removeItem(seenKey('preview')) } catch {} location.reload() }}>見た記録を消して開き直す</button>
       </div>
       <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 700 }}>入力欄（ここに入ると作業中になり、知らせを待たせます）

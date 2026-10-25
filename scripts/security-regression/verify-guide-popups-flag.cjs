@@ -22,7 +22,7 @@ check('Guide popups flag: off reads no session, and the shell mounts the notice 
 })
 
 check('Guide popups: the notice parts touch no DB, billing or outside service, and use no emoji', () => {
-  const files = ['src/components/notice/NoticeProvider.tsx', 'src/components/notice/ShellNotices.tsx', 'src/lib/notice/queue.ts', 'src/lib/notice/seen.ts', 'src/lib/notice/announcements.ts']
+  const files = ['src/components/notice/NoticeProvider.tsx', 'src/components/notice/HotToastBridge.tsx', 'src/components/notice/ShellNotices.tsx', 'src/lib/notice/queue.ts', 'src/lib/notice/seen.ts', 'src/lib/notice/announcements.ts']
   for (const f of files) {
     const src = read(f)
     assert.equal(/@\/lib\/prisma|from 'stripe'|@\/lib\/stripe|https?:\/\/(?!claude\.ai)/.test(src), false, f)
