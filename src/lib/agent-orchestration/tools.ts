@@ -1,13 +1,14 @@
 // ============================================
 // 各ツールを内部から呼ぶ部品（商談の準備の3つ）
 // ============================================
-// 設計: docs/architecture/agent-orchestration/DESIGN.md §7
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §5
 // - 各ツールの API のルート（POST）を、そのまま内部で呼ぶ。ルートの中の決まり（ログイン・組織のスコープ・
 //   ドヤパワーの withDoyaPowerCharge・各ツールの利用枠）は、ルートが今までどおり確かめる。ここで飛ばさない。
 // - どのルートを呼ぶかは、この表（ToolRouteId）に書いたものだけ。画面から届いた値でルートを選ばない。
 // - 呼び方（call）と組織の名前（shodanSlug）は引数でもらう。本番は routes.server.ts、テストは差し替え。
 // ⚠️ 失敗の文は、ルートが返した利用者向けの error の文を使う（短い文字列だけ）。ステータスコードは見せない。
-import { AgentTaskError, type AgentFailureKind, type AgentTaskResult } from './runner'
+import { AgentTaskError, type AgentFailureKind, type AgentPowerUse, type AgentTaskResult } from './runner'
+import { doyaPowerCost } from '@/lib/doya-power/costs'
 import { quoteInputOf, slideInputOf, type SalesPrepAnswers } from './recipes'
 
 export type ToolRouteId = 'shodan.prepare' | 'quote.suggest' | 'quote.create' | 'slide.project' | 'slide.structure'
@@ -15,12 +16,41 @@ export type ToolRouteId = 'shodan.prepare' | 'quote.suggest' | 'quote.create' | 
 export interface ToolCallResult {
   status: number
   data: unknown
+  /** ドヤパワーの包みが返す操作のキー（DOYA_POWER_OP_HEADER）。あれば、この呼び出しで減ったまま（戻していない） */
+  opKey?: string | null
 }
 
 export interface ToolDeps {
   call: (route: ToolRouteId, body: Record<string, unknown>) => Promise<ToolCallResult>
   /** 商談準備の組織の slug（結果の画面のリンクに使う）。分からなければ null */
   shodanSlug: () => Promise<string | null>
+  /** この人にドヤパワーの包みが効くか（旗の内側で、会社が登録済み）。戻した量を数えるのに使う */
+  powerOn?: boolean
+}
+
+/** ドヤパワーの包み（withDoyaPowerCharge）が付いているルートと、その操作の名前 */
+const CHARGED: Partial<Record<ToolRouteId, string>> = { 'quote.suggest': 'text.generate', 'slide.structure': 'slide.generate' }
+
+/** ルートの呼び出しを数えて、減った量と戻した量を出す */
+function meter(deps: ToolDeps) {
+  const power: AgentPowerUse = { used: 0, refunded: 0 }
+  const call: ToolDeps['call'] = async (route, body) => {
+    const res = await deps.call(route, body)
+    const action = CHARGED[route]
+    if (action) {
+      const cost = doyaPowerCost(action) ?? 0
+      const code = (obj(res.data).code as string | undefined) ?? ''
+      if (res.opKey) power.used += cost
+      else if (deps.powerOn && res.status >= 400 && !code.startsWith('DOYA_POWER')) power.refunded += cost
+    }
+    return res
+  }
+  /** 失敗に、ここまでの量を付ける */
+  const fail = (e: unknown): never => {
+    if (e instanceof AgentTaskError) { e.power = { ...power }; throw e }
+    throw new AgentTaskError('うまく作れませんでした。もう一度お試しください。', 'tool', undefined, undefined, { ...power })
+  }
+  return { deps: { ...deps, call }, power, fail }
 }
 
 export type SalesPrepTaskId = 'research' | 'quote' | 'slides'
@@ -60,7 +90,11 @@ export function toTaskError(tool: 'shodan' | 'quote' | 'doyaslide', res: ToolCal
 const ok = (res: ToolCallResult) => res.status >= 200 && res.status < 300
 
 /** ドヤ商談準備: 相手の会社を調べる（POST /api/shodan/preparations） */
-export async function runResearch(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
+export async function runResearch(a: SalesPrepAnswers, raw: ToolDeps): Promise<AgentTaskResult> {
+  const m = meter(raw)
+  try { return { ...(await research(a, m.deps)), power: { ...m.power } } } catch (e) { return m.fail(e) }
+}
+async function research(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
   const res = await deps.call('shodan.prepare', { url: a.url })
   if (!ok(res)) throw toTaskError('shodan', res, '会社を調べられませんでした。URLを確かめて、もう一度お試しください。')
   const d = obj(res.data)
@@ -88,7 +122,11 @@ export async function runResearch(a: SalesPrepAnswers, deps: ToolDeps): Promise<
 interface SuggestedItemLike { itemName?: unknown; spec?: unknown; qty?: unknown; unit?: unknown; unitPrice?: unknown; taxRate?: unknown; priceSource?: unknown; sourceRef?: unknown; rangeMin?: unknown; rangeMax?: unknown }
 
 /** ドヤ見積もりAI: 品目の案を作り（suggest）、下書きの見積書として保存する（documents） */
-export async function runQuote(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
+export async function runQuote(a: SalesPrepAnswers, raw: ToolDeps): Promise<AgentTaskResult> {
+  const m = meter(raw)
+  try { return { ...(await quote(a, m.deps)), power: { ...m.power } } } catch (e) { return m.fail(e) }
+}
+async function quote(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
   const input = quoteInputOf(a)
   const sug = await deps.call('quote.suggest', { productName: input.productName, profile: input.profile, situation: input.situation, budget: input.budget })
   if (!ok(sug)) throw toTaskError('quote', sug, '見積の品目を作れませんでした。もう一度お試しください。')
@@ -123,7 +161,11 @@ export async function runQuote(a: SalesPrepAnswers, deps: ToolDeps): Promise<Age
 }
 
 /** ドヤスライド: プロジェクトを作り（projects）、構成を作る（structure）。構成で失敗したら、プロジェクトの id を残してやり直しに使う */
-export async function runSlides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+export async function runSlides(a: SalesPrepAnswers, raw: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+  const m = meter(raw)
+  try { return { ...(await slides(a, m.deps, resume)), power: { ...m.power } } } catch (e) { return m.fail(e) }
+}
+async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   let projectId = str(resume?.projectId, 128)
   if (!projectId) {
     const res = await deps.call('slide.project', slideInputOf(a))
@@ -150,11 +192,9 @@ export async function runSalesPrepTask(taskId: SalesPrepTaskId, a: SalesPrepAnsw
 }
 
 /** 見本の結果（開発の確認用の差し替え。AGENT_ORCHESTRATION_FAKE_TOOLS=1 のときだけ。本番では使わない） */
-export function fakeToolDeps(opts: { delayMs?: number; failSlidesOnce?: { done: boolean } } = {}): ToolDeps {
+export function fakeToolDeps(opts: { delayMs?: number; failSlidesOnce?: { done: boolean }; powerOn?: boolean } = {}): ToolDeps {
   const wait = () => new Promise((r) => setTimeout(r, opts.delayMs ?? 1200 + Math.random() * 1500))
-  return {
-    shodanSlug: async () => 'sample',
-    call: async (route, body) => {
+  const base: ToolDeps['call'] = async (route, body) => {
       await wait()
       switch (route) {
         case 'shodan.prepare':
@@ -176,6 +216,14 @@ export function fakeToolDeps(opts: { delayMs?: number; failSlidesOnce?: { done: 
           }
           return { status: 200, data: { slides: ['今日お話ししたいこと', '御社の現状と課題', 'ご提案の全体像', '進め方と期間', 'お見積りの概要', '次のご相談'].map((headline) => ({ headline })) } }
       }
+  }
+  return {
+    shodanSlug: async () => 'sample',
+    powerOn: opts.powerOn,
+    // ドヤパワーを使う見本では、包みが付いたルートの成功に操作のキーを付ける（本番の包みと同じ）
+    call: async (route, body) => {
+      const res = await base(route, body)
+      return opts.powerOn && CHARGED[route] && res.status < 400 ? { ...res, opKey: `op-${route}` } : res
     },
   }
 }

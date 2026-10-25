@@ -19,7 +19,7 @@ function loadTs(file,mocks={},env={}){
   const exports={};const module={exports};
   const out=ts.transpileModule(read(file),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const req=n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)};
-  vm.runInNewContext(out,{exports,module,require:req,URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,Promise,Object,Array,Number,String,Math,JSON,Symbol,Proxy,AbortController,setTimeout,clearTimeout,process:{env},console:{log(){},warn(){},error(){}}},{filename:file});
+  vm.runInNewContext(out,{exports,module,require:req,URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,Promise,Object,Array,Number,String,Math,JSON,Symbol,Proxy,AbortController,setTimeout,clearTimeout,TextEncoder,TextDecoder,ReadableStream,process:{env},console:{log(){},warn(){},error(){}}},{filename:file});
   return module.exports;
 }
 function sessionMock(email,counter){
@@ -34,7 +34,7 @@ const envOf=(rollout)=>{const e={UI_NEXT_ROLLOUT:'all',UI_PREVIEW_EMAILS:ALLOWED
 function loadCore(){
   const runner=loadTs('src/lib/agent-orchestration/runner.ts');
   const recipes=loadTs('src/lib/agent-orchestration/recipes.ts');
-  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes});
+  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts')});
   return {runner,recipes,tools};
 }
 function loadTaskRoute(env,email,log){
@@ -114,7 +114,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
 
   await check('Agent tool routes: only the five fixed routes, called through their exported POST with the same cookie',async()=>{
     const seen=[];
-    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),body:await req.json()});return Response.json({ok:true},{status:201})}});
+    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),body:await req.json()});return Response.json({ok:true},{status:201,headers:name==='suggest'?{'x-doya-power-op':'op-1'}:{}})}});
     const tools=loadCore().tools;
     const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
       'next/server':nextServer,'./tools':tools,
@@ -124,12 +124,18 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
       '@/app/api/doyaslide/projects/route':mod('project'),
       '@/app/api/doyaslide/structure/route':mod('structure'),
       '@/lib/shodan/access':{getShodanContext:async()=>({organizationSlug:'acme'})},
+      '@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
+      './sources.server':{doyaPowerOnForRequest:async()=>true},
     },{NODE_ENV:'production',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'});
     const outer=new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST',headers:{cookie:'next-auth.session-token=s'}});
+    const keys=[];
     for(const id of ['shodan.prepare','quote.suggest','quote.create','slide.project','slide.structure']){
       const r=await rs.callToolRoute(outer,id,{a:1});
       assert.equal(r.status,201);
+      keys.push(r.opKey);
     }
+    // ドヤパワーの包みが付けた操作のキーを、そのまま返す（減ったままかどうかを数えるため）
+    assert.deepEqual(keys,[null,'op-1',null,null,null]);
     assert.deepEqual(seen.map(s=>s.path),['/api/shodan/preparations','/api/quote/documents/suggest','/api/quote/documents','/api/doyaslide/projects','/api/doyaslide/structure']);
     assert.ok(seen.every(s=>s.cookie==='next-auth.session-token=s'&&s.body.a===1));
     await assert.rejects(()=>rs.callToolRoute(outer,'../admin',{}));
@@ -137,19 +143,24 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'production',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'}),false);
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'development',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'}),true);
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'development'}),false);
-    const deps=rs.toolDepsFor(outer);
+    const deps=await rs.toolDepsFor(outer);
     assert.equal(await deps.shodanSlug(),'acme');
+    assert.equal(deps.powerOn,true);
   });
 
-  function loadPlanRoute(env,email,log){
+  function loadPlanRoute(env,email,log,readers){
     const core=loadCore();
-    const costs=loadTs('src/lib/doya-power/costs.ts');
-    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':costs,'./runner':core.runner});
+    const types=loadTs('src/lib/agent-orchestration/types.ts');
+    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts'),'./runner':core.runner,'./types':types});
+    const sources=loadTs('src/lib/agent-orchestration/sources.ts');
+    const fallback={company:async()=>{log.push('read:company');return 'サンプル株式会社'},toolOrgs:async()=>{log.push('read:tools');return {shodan:true,quote:false}},power:async()=>{log.push('read:power');return {enabled:true,remaining:120,nextRecoveryAt:null}}};
     return loadTs('src/app/api/agent/plan/route.ts',{
       'next/server':nextServer,
       '@/lib/agent-orchestration/flag':loadFlag(env,email,log),
       '@/lib/agent-orchestration/recipes':core.recipes,
       '@/lib/agent-orchestration/plan':plan,
+      '@/lib/agent-orchestration/sources':sources,
+      '@/lib/agent-orchestration/sources.server':{realSourceReaders:()=>readers||fallback},
       '@/lib/operational-json':{readOperationalJson:async(r)=>{log.push('body');return r.json()}},
     },env);
   }
@@ -157,9 +168,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
   await check('Agent plan API: 404 when off or not allowed; otherwise questions, then a plan with Doya Power from costs.ts (no AI)',async()=>{
     for(const [env,email] of [...OFF_VALUES.map(v=>[envOf(v),ALLOWED]),[envOf('preview'),'other@example.invalid']]){
       const log=[];
-      const res=await loadPlanRoute(env,email,log).POST(planReq({text:'商談の準備'}));
+      const res=await loadPlanRoute(env,email,log).POST(planReq({recipeId:'sales-prep',answers}));
       assert.equal(res.status,404);
-      assert.equal(log.includes('body'),false);
+      assert.equal(log.some(l=>l==='body'||l.startsWith('read:')),false,JSON.stringify(log));
     }
     const route=loadPlanRoute(envOf('preview'),ALLOWED,[]);
     assert.deepEqual(await (await route.POST(planReq({text:'今月の売上は？'}))).json(),{kind:'none'});
@@ -171,9 +182,35 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.equal(bad.error.questionId,'url');
     const ok=await (await route.POST(planReq({recipeId:'sales-prep',answers}))).json();
     assert.equal(ok.kind,'plan');
+    assert.equal(ok.plan.version,2);
     const tasks=ok.plan.pillars.flatMap(p=>p.tasks);
     assert.deepEqual(tasks.map(t=>[t.id,t.action,t.power]),[['research','shodan.research',0],['quote','quote.draft',1],['slides','slide.structure',30]]);
-    assert.equal(ok.plan.totalPower,31);
+    // 見積もりAIの組織が無い → その ToDo は任せない初期値。合計は任せる ToDo だけ
+    assert.equal(tasks[1].delegate,false);
+    assert.equal(tasks[1].ready.href,'/quote');
+    assert.equal(ok.plan.totalPower,30);
+    assert.deepEqual([ok.plan.goal.now,ok.plan.goal.target,ok.plan.goal.gap],[0,3,3]);
+    assert.ok(ok.plan.reasons.length>=3);
+    assert.ok(ok.plan.pillars.every(p=>p.teamGoal));
+    assert.deepEqual(ok.sources.map(s=>[s.id,s.status]),[['request','read'],['company','read'],['tools','read'],['power','read']]);
+    assert.deepEqual(ok.power,{enabled:true,remaining:120,nextRecoveryAt:null});
+  });
+  await check('Agent plan API: streams sources (reading → read), reasons and the result as NDJSON',async()=>{
+    const route=loadPlanRoute(envOf('preview'),ALLOWED,[]);
+    const res=await route.POST(new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/plan',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({recipeId:'sales-prep',answers})}));
+    assert.match(res.headers.get('content-type'),/application\/x-ndjson/);
+    const events=(await res.text()).trim().split('\n').map(l=>JSON.parse(l));
+    const src=events.filter(e=>e.type==='source');
+    assert.equal(src.filter(e=>e.source.status==='reading').length,4);
+    assert.equal(src.filter(e=>e.source.status==='read').length,4);
+    assert.ok(events.findIndex(e=>e.type==='reason')>events.findIndex(e=>e.type==='source'&&e.source.status==='read'));
+    assert.equal(events.at(-1).type,'result');
+    assert.equal(events.at(-1).response.kind,'plan');
+    // 作れなかったときは error で終わる（古い振り分けに黙って戻さない）
+    const broken=loadPlanRoute(envOf('preview'),ALLOWED,[],{company:async()=>null,toolOrgs:async()=>({shodan:true,quote:true}),power:async()=>({enabled:false,remaining:null,nextRecoveryAt:null})});
+    const ok2=(await (await broken.POST(new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/plan',{method:'POST',headers:{accept:'application/x-ndjson'},body:JSON.stringify({recipeId:'sales-prep',answers})}))).text()).trim().split('\n').map(l=>JSON.parse(l));
+    assert.equal(ok2.at(-1).type,'result');
+    assert.equal(ok2.find(e=>e.type==='source'&&e.source.id==='company'&&e.source.status!=='reading').source.status,'skipped');
   });
 
   await check('Agent orchestration: the home screen is left to the UI renewal; the sample screen is dev-only and behind the flag',async()=>{

@@ -4,6 +4,8 @@ import assert from 'node:assert/strict'
 import { SALES_PREP, parseSalesPrepAnswers, type SalesPrepAnswers } from './recipes'
 import { ACTION_CATALOG, actionPower, planFromRecipe, planTasks, sanitizeAiPlan } from './plan'
 import { DOYA_POWER_COSTS } from '@/lib/doya-power/costs'
+import { readSources } from './sources'
+import { STAGE_MS, todoCounts, todoViewOf } from './view'
 
 const a = (() => {
   const p = parseSalesPrepAnswers({ url: 'https://example.co.jp', offer: 'ads', budget: 'u50', stage: 'first' })
@@ -13,7 +15,7 @@ const a = (() => {
 
 test('組み合わせから作戦を作る: 柱ごとのタスク・減るドヤパワー・同時に動かす数', () => {
   const plan = planFromRecipe(SALES_PREP, a)
-  assert.equal(plan.version, 1)
+  assert.equal(plan.version, 2)
   assert.equal(plan.source, 'recipe')
   assert.deepEqual(plan.pillars.map((p) => p.name), ['相手を知る', '条件を示す', '提案を形にする'])
   const tasks = planTasks(plan)
@@ -21,7 +23,11 @@ test('組み合わせから作戦を作る: 柱ごとのタスク・減るドヤ
   assert.deepEqual(tasks.map((t) => t.power), [0, DOYA_POWER_COSTS['text.generate'], DOYA_POWER_COSTS['slide.generate']])
   assert.equal(plan.totalPower, DOYA_POWER_COSTS['text.generate'] + DOYA_POWER_COSTS['slide.generate'])
   assert.equal(plan.concurrency, 3)
-  assert.match(plan.goal, /example\.co\.jp/)
+  assert.match(plan.goal.statement, /example\.co\.jp/)
+  assert.deepEqual([plan.goal.now, plan.goal.target, plan.goal.gap, plan.goal.unit], [0, 3, 3, '点'])
+  assert.ok(plan.reasons.length >= 3)
+  assert.ok(plan.pillars.every((p) => p.teamGoal.length > 0))
+  assert.ok(tasks.every((t) => t.delegable && t.delegate && t.ready.ok))
   assert.equal(tasks[2].title, '提案スライドの構成を作る（6枚）')
   assert.ok(tasks.every((t) => t.stages.at(-1)?.endsWith('仕上げています')))
 })
@@ -65,4 +71,48 @@ test('AI の作戦の循環は、順番を外して同時に動かす。タス�
   // タスクの数に上限を付ける
   const many = sanitizeAiPlan({ pillars: [{ tasks: Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, action: 'quote.draft', title: `T${i}` })) }] }, { maxTasks: 5 })
   assert.equal(planTasks(many!).length, 5)
+})
+
+test('ツールの組織が無いと、その ToDo は任せない初期値にし、理由と先にする画面を付ける。合計は任せる ToDo だけ', () => {
+  const plan = planFromRecipe(SALES_PREP, a, { readiness: { quote: { ok: false, reason: '無い', href: '/quote', hrefLabel: '開く' } } })
+  const q = planTasks(plan).find((t) => t.id === 'quote')!
+  assert.equal(q.delegate, false)
+  assert.equal(q.ready.href, '/quote')
+  assert.equal(plan.totalPower, DOYA_POWER_COSTS['slide.generate'])
+  assert.ok(plan.reasons.some((r) => r.includes('ドヤ見積もりAI') && r.includes('組織')))
+})
+
+test('分析の材料を同時に読み、読み始め→読み終わりを読み終えた順に知らせる。読めない材料は skipped で、作戦は止めない', async () => {
+  const events: string[] = []
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const res = await readSources(a, {
+    company: async () => { await wait(20); return 'サンプル株式会社' },
+    toolOrgs: async () => { await wait(5); return { shodan: false, quote: true } },
+    power: async () => { throw new Error('boom') },
+  }, (s) => events.push(`${s.id}:${s.status}`))
+  assert.deepEqual(events.slice(0, 4), ['request:reading', 'company:reading', 'tools:reading', 'power:reading'])
+  const reads = events.slice(4)
+  assert.ok(reads.indexOf('tools:read') < reads.indexOf('company:read'), '早く読み終えた材料から先に知らせる')
+  assert.ok(reads.includes('power:skipped'))
+  assert.deepEqual(res.sources.map((s) => s.id), ['request', 'company', 'tools', 'power'])
+  assert.equal(res.companyName, 'サンプル株式会社')
+  assert.equal(res.readiness.shodan.href, '/shodan')
+  assert.equal(res.readiness.quote, undefined)
+  assert.equal(res.power.enabled, false)
+})
+
+test('ToDo の状態を画面の4つに寄せる（待つ・進む・できた・失敗した）', () => {
+  const t = { id: 'x', stages: ['a', 'b', '仕上げています'] }
+  assert.equal(todoViewOf(t, undefined).status, 'waiting')
+  assert.equal(todoViewOf(t, { id: 'x', status: 'running', attempts: 1, startedAt: 0 }, STAGE_MS * 1.5).stage, 1)
+  assert.equal(todoViewOf(t, { id: 'x', status: 'running', attempts: 1, startedAt: 0 }, STAGE_MS * 99).stage, 2)
+  const done = todoViewOf(t, { id: 'x', status: 'done', attempts: 1, power: { used: 30, refunded: 0 }, result: { summary: 's', points: [], href: '/d', hrefLabel: '開く' } })
+  assert.equal(done.draft?.href, '/d')
+  for (const status of ['failed', 'blocked', 'canceled'] as const) {
+    const v = todoViewOf(t, { id: 'x', status, attempts: 1, error: 'e', failure: { kind: 'limit' }, power: { used: 0, refunded: 30 } })
+    assert.equal(v.status, 'failed')
+    assert.equal(v.retryable, true)
+  }
+  const c = todoCounts([done, todoViewOf(t, { id: 'x', status: 'failed', attempts: 1, power: { used: 0, refunded: 30 } })])
+  assert.deepEqual([c.done, c.failed, c.powerUsed, c.powerRefunded], [1, 1, 30, 30])
 })

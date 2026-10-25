@@ -5,7 +5,7 @@ export const maxDuration = 300
 // ============================================
 // POST /api/agent/tasks — エージェントの作業を1つ動かす（経営ホームの「まとめて進める」）
 // ============================================
-// 設計: docs/architecture/agent-orchestration/DESIGN.md §6・§7
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §3.6・§5
 // - 画面は、計画の作業ごとにこの API を同時に呼ぶ（1回の呼び出しで1つのツール）。
 // - 届くのは「組み合わせの id・作業の id・質問への答え・やり直しの材料」だけ。ツールへの入力はサーバーが答えから作る。
 // - 旗（AGENT_ORCHESTRATION_ROLLOUT）が出すと決めた人でなければ 404。off ならセッションも読まない。
@@ -43,13 +43,13 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return NextResponse.json({ error: parsed.error, questionId: parsed.questionId, kind: 'input' }, { status: 400, headers: NO_STORE })
 
   try {
-    const result = await runSalesPrepTask(taskId, parsed.value, toolDepsFor(req), parseResume(body.resume))
+    const result = await runSalesPrepTask(taskId, parsed.value, await toolDepsFor(req), parseResume(body.resume))
     return NextResponse.json({ result }, { headers: NO_STORE })
   } catch (e) {
     const err = e instanceof AgentTaskError ? e : null
     if (!err) console.error('[agent/tasks] task failed', { taskId })
     return NextResponse.json(
-      { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href },
+      { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href, power: err?.power },
       { status: 422, headers: NO_STORE },
     )
   }

@@ -2,122 +2,216 @@
 
 この文書は、経営ホームの新しい体験のうち、**実行の仕組み**を書きます。
 
-- 土台にした設計書: `docs/architecture/management-agent/HOME-AGENT-EXPERIENCE-2026-10-25.md`（ブランチ `docs/home-agent-experience`、3da80541。以下「体験の設計書」）
+- 土台にした設計書: `docs/architecture/management-agent/HOME-AGENT-EXPERIENCE-2026-10-25.md`（ブランチ `docs/home-agent-experience`、c6cf281c。以下「体験の設計書」）
+- 見本 v3: https://claude.ai/artifact/VBMZGeCJFiWZ7MVoXuezAG
 - 分担（統括の指示、2026-10-25）
   - このブランチ（`feat/agent-orchestration`）: 作戦づくり・タスクの実行・同時実行・失敗のやり直し・ドヤパワー・保存の表
-  - UIリニューアル: 画面（考える演出・作戦・ToDo の一覧・実行中の見せ方）。置き場所は `src/components/home-agent/`
-- 画面と実行の仕組みは、§3 の型と API だけでつなぎます。経営ホームの画面のファイル（`HomeDashboard.tsx` など）は、このブランチでは変えません。
+  - UIリニューアル: 画面（分析の演出・作戦・ToDo の一覧・実行中の見せ方）と、経営ホームの画面のファイル。置き場所は `src/components/home-agent/`
+- 画面と実行の仕組みは、§3 の型と API だけでつなぎます。このブランチは、経営ホームの画面のファイル（`HomeDashboard.tsx` など）を変えません。
 
 ---
 
 ## 1. 流れと、どちらが受け持つか
 
-体験の設計書 §3 の場面に、この設計の API を当てはめます。
+体験の設計書 §3 の場面に、この設計の API と型を当てはめます。
 
-| 場面 | 画面（UIリニューアル） | 実行の仕組み（このブランチ） |
+| 場面 | 画面（UIリニューアル） | 実行の仕組み（このブランチ）が渡すもの |
 |---|---|---|
-| 0. 入力 | 入力欄・依頼の例 | — |
-| 1. 考える | ドヤくんの演出（最短1.5秒） | `POST /api/agent/plan` が質問か作戦を返す |
-| 1.5 質問 | 2〜4問の質問（選択肢つき。文字の欄は1つまで） | 質問の定義（`AgentQuestionView`）と、答えの検査 |
-| 2. 戦略 | 目的・柱・期間のカード | `AgentPlan` の `goal`・`period`・`pillars` |
-| 3. タスク | 柱ごとのタスクの一覧 | `AgentPlanTask`（ツール・題・減るドヤパワー・所要の目安・順番） |
-| 4. 確かめ | 合計で減るドヤパワーと、残り | `AgentPlan.totalPower`（`costs.ts` から計算） |
-| 5. 実行 | タスクごとの進み具合 | `runAgentTasks`（同時に3つまで）と `POST /api/agent/tasks`（1回で1タスク） |
-| 6. 完了 | できた物の一覧と、次に人がする操作 | `AgentTaskResult`（一文・要点・各ツールの画面へのリンク） |
+| 0. 入力 | 入力欄・依頼の例・続きを進める | `POST /api/agent/plan`（`text` か `recipeId`）。合わなければ `{ kind: 'none' }` |
+| 0.5 質問 | 2〜4問の質問（選択肢つき。文字の欄は1つまで） | `{ kind: 'questions', questions }`（`AgentQuestionView`）と、答えの誤り（`error`） |
+| 1. 分析 | 材料の札が流れ込み、それぞれの棒が同時に進む。考えたことが1行ずつ出る | **型1** `AgentSourceView`（読んでいる・読んだ）と **型2** `reasons`。NDJSON で届いた順に描く |
+| 2. ゴール・柱・ToDo | ゴールのカード（今・ゴール・差）→ 柱 → ToDo の木 | **型3** `AgentGoalView`、**型4** `AgentPillar` と `AgentPlanTask` |
+| 3. 確かめ | 合計で減るドヤパワーと、今の残り・実行後の残り | `AgentPlan.totalPower`（任せる ToDo だけ）と `AgentPowerView` |
+| 4. 実行 | 任せた ToDo を3件ずつ同時に進める | `runAgentTasks` と `POST /api/agent/tasks`。**型5** `AgentTodoView`（`todoViewOf` が作る） |
+| 5. 完了と記憶 | できた物の一覧・失敗して戻した分 | `AgentTodoView.draft`、`todoCounts().powerRefunded`。記憶（続きを進める）は §8 の表のあと |
 
-体験の設計書との違いは、「1.5 質問」を足したことです。統括から最初に受けた指示（足りない情報を2〜4問だけ聞く）によります。
-作戦を AI が作る段階（§4.3）では、AI が質問も返す形にできます。型は同じです。
+体験の設計書との違いは、「0.5 質問」があることです。統括から最初に受けた指示（足りない情報を2〜4問だけ聞く）によります。
+作戦を AI が作る段階（§4.3）では、足りない情報があれば AI が質問を返す形にします。型は同じです。
 
 ## 2. 全体の作り
 
 ```
-画面（src/components/home-agent/）                 サーバー
-  依頼の文 ───────────────────────────────────▶ POST /api/agent/plan
-  ◀── { kind: 'questions' | 'plan' | 'none' }       旗 → 本文 → 組み合わせを選ぶ → 答えを検査 → 作戦
-  答え ──────────────────────────────────────▶ POST /api/agent/plan（answers 付き）
-  ◀── { kind: 'plan', plan }
+画面（src/components/home-agent/）                     サーバー
+  依頼の文 ─────────────────────────────────────▶ POST /api/agent/plan
+  ◀── { kind: 'questions' | 'none' }                   旗 → 本文 → 組み合わせを選ぶ
+  答え ────────────────────────────────────────▶ POST /api/agent/plan（answers 付き、Accept: application/x-ndjson）
+  ◀── {type:'source'} … 材料を読み始め・読み終わり       答えを検査 → 材料を同時に読む（sources.ts）
+  ◀── {type:'reason'} … 考えたことの1行                  → 作戦を作る（plan.ts）
+  ◀── {type:'result', response:{ kind:'plan', plan, sources, power }}
   「まとめて進める」（確かめは1回）
-  runAgentTasks（同時に3つまで。src/lib/agent-orchestration/runner.ts）
-    タスクごとに ─────────────────────────────▶ POST /api/agent/tasks { recipeId, taskId, answers, resume }
-                                                   旗 → 本文 → 答えを検査 → ツールへの入力を作る
-                                                   → 各ツールの API ルートの POST を、同じ cookie で内部から呼ぶ
-    ◀── { result } または { error, kind, resume, href }
+  runAgentTasks（同時に3つまで。runner.ts）
+    ToDo ごとに ────────────────────────────────▶ POST /api/agent/tasks { recipeId, taskId, answers, resume }
+                                                      旗 → 本文 → 答えを検査 → ツールへの入力を作る
+                                                      → 各ツールの API ルートの POST を、同じ cookie で内部から呼ぶ
+    ◀── { result }（下書きと power）か { error, kind, resume, href, power }
+  todoViews(tasks, states) で札に描く
 ```
 
 決めたこと:
 
-- 同時に動かすのは画面です。画面が、タスクごとに `/api/agent/tasks` を同時に呼びます。
+- 同時に動かすのは画面です。画面が、ToDo ごとに `/api/agent/tasks` を同時に呼びます。
   - 1回の呼び出しが1つのツールなので、Vercel の関数の時間（300秒）に収まります。
-  - タスクごとに別の関数として動くので、本当に同時に進みます。
-  - 進み具合を、タスクごとにすぐ画面に出せます。
+  - ToDo ごとに別の関数として動くので、本当に同時に進みます。
+  - 進み具合を、ToDo ごとにすぐ画面に出せます。
+- 分析の材料は、サーバーが同時に読み、読み終えた順に NDJSON で流します。画面は届いた順に札を描くだけにします（作り話の進み具合を出さない）。
 - 順番と同時に動かす数の決まりは `runner.ts` の1か所に置き、画面もテストも同じ部品を使います。
 - 画面を移っても進み続ける形（体験の設計書 §7 の段階3）は、§8 の表を足したあとにサーバーの実行へ移します。
 
 ## 3. 型の約束（画面とつなぐところ）
 
-正本は `src/lib/agent-orchestration/types.ts` です。画面はこの型だけを見て作り、中の実装（`tools.ts` など）を直接呼びません。形を変えるときは `AgentPlan.version` を上げ、両方の側に知らせます。
+正本は `src/lib/agent-orchestration/types.ts`（`AGENT_CONTRACT_VERSION = 2`）です。
+画面はこの型だけを見て作ります。画面が呼んでよい関数は、次の4つです。
 
-### 3.1 作戦
+| 関数 | 場所 | 使い道 |
+|---|---|---|
+| `runAgentTasks` | `runner.ts` | ToDo を順番どおりに同時に動かす（§3.6） |
+| `progressOf` | `runner.ts` | 動いている数・済んだ数 |
+| `todoViews` / `todoViewOf` | `view.ts` | runner の状態を、札の形（型5）にする |
+| `todoCounts` | `view.ts` | 札の数と、減った量・戻した量の合計 |
+
+形を変えるときは `AGENT_CONTRACT_VERSION` を上げ、両方の側に知らせます。
+
+### 3.1 型1 分析の材料と、その進み具合
 
 ```ts
-type AgentActionId = 'shodan.research' | 'quote.draft' | 'slide.structure'
-
-interface AgentPlanTask {
+type AgentSourceKind = 'request' | 'company' | 'tools' | 'power' | 'history'
+interface AgentSourceView {
   id: string
-  action: AgentActionId
-  tool: string          // shell/tools.ts のツールの id（shodan / quote / doyaslide）
-  toolName: string
-  title: string
-  makes: string         // 何ができるか
-  uses: string          // 数える利用枠
-  power: number         // 減るドヤパワー（costs.ts から。減らないものは 0）
-  minutes: number       // 所要の目安
-  after: string[]       // 先に済んでいる必要があるタスクの id
-  stages: string[]      // 動いている間に出す段。最後は「…仕上げています」
-}
-interface AgentPillar { id: string; name: string; why: string; tasks: AgentPlanTask[] }
-interface AgentPlan {
-  version: 1
-  source: 'recipe' | 'ai'
-  recipeId: string
-  goal: string
-  period: string
-  pillars: AgentPillar[]
-  totalPower: number
-  concurrency: number   // 同時に動かす数の上限（いまは3）
+  kind: AgentSourceKind
+  label: string                        // 札の名前（例: 「登録会社の情報」）
+  status: 'reading' | 'read' | 'skipped'
+  note?: string                        // 読んだ結果の一文（例: 「サンプル株式会社」）
 }
 ```
 
-体験の設計書 §5 の JSON（`pillars[].tasks[]` に `tool`・`action`・`title`・`units`・`minutes`・`after`）と同じ並びにしています。
-`power` と `tool` は、AI の答えではなく表（`ACTION_CATALOG` と `costs.ts`）から決めます。
+いま読む材料は4つです。どれも本人の分だけを、同時に読みます（`sources.ts` / `sources.server.ts`）。
 
-### 3.2 API
+| id | 札の名前 | 読むもの | 読めないとき |
+|---|---|---|---|
+| request | 依頼と答え | 答えた内容（相手・提案・場） | — |
+| company | 登録会社の情報 | 本人が登録した会社（`getAccountCompanyName`） | skipped「まだ登録されていません」 |
+| tools | 使うツールの準備 | 商談準備と見積もりAI の組織があるか | 組織が無いツールの ToDo は `ready.ok: false` |
+| power | ドヤパワーの残り | 旗の内側で会社が登録済みのときだけ、台帳の残りと次の回復の時刻 | skipped「ドヤパワーを使わない設定です」 |
+
+- `history`（前回の作戦）は、§8 の表ができてから読みます。型にだけ先に入れてあります。
+- 読めなかった材料は `skipped` にし、作戦づくりは止めません。
+
+### 3.2 型2 作戦の理由の文
+
+`AgentPlan.reasons: string[]`（3〜5行）。考えたことの行（Blur Text / Text Effect）にそのまま出します。
+
+- 答えと、読んだ材料から作ります。例:「見積もりAIは、先に組織を作る必要があります。」（tools の材料から）
+- NDJSON では、材料を読み終えたあとに `{ type: 'reason', text }` で1行ずつ届きます。
+
+### 3.3 型3 ゴール（今・ゴール・差）
+
+```ts
+interface AgentGoalView {
+  statement: string     // 例: 「example.co.jp との提案の場に、資料をそろえて臨む」
+  period: string        // 例: 「今日」
+  measure: string       // 何を数えるか（例: 「商談の資料」）
+  unit: string          // 例: 「点」
+  now: number           // Number Ticker でそのまま数え上げる整数
+  target: number
+  gap: number           // target − now（0 より小さくしない）
+}
+```
+
+商談の準備では、今 0・ゴール 3（ToDo の数）・差 3 です。AI の作戦（段階2）では、AI が返した数を整数に直して使い、無ければ ToDo の数にします。
+
+### 3.4 型4 柱と ToDo
+
+```ts
+interface AgentPillar {
+  id: string
+  name: string          // 例: 「相手を知る」
+  why: string           // 柱を置く理由
+  teamGoal: string      // チームのゴール（例: 「example.co.jp の事業と最近の動きを、3行で話せる」）
+  tasks: AgentPlanTask[]
+}
+interface AgentPlanTask {
+  id: string
+  action: AgentActionId           // 'shodan.research' | 'quote.draft' | 'slide.structure'
+  tool: string                    // shell/tools.ts のツールの id
+  toolName: string
+  title: string                   // 内容
+  makes: string                   // 何ができるか
+  uses: string                    // 数える利用枠
+  power: number                   // 減る量（costs.ts から。AI に決めさせない）
+  minutes: number                 // 所要の目安
+  after: string[]                 // 先に済んでいる必要がある ToDo
+  stages: string[]                // 動いている間の段。最後は「…仕上げています」
+  delegable: boolean              // ドヤくんに任せられるか（false は人がする ToDo）
+  delegate: boolean               // 「ドヤくんに任せる」の最初の値（画面で外せる）
+  ready: { ok: boolean; reason?: string; href?: string; hrefLabel?: string }  // 始められるか
+}
+interface AgentPlan {
+  version: 2
+  source: 'recipe' | 'ai'
+  recipeId: string
+  goal: AgentGoalView
+  reasons: string[]
+  pillars: AgentPillar[]
+  totalPower: number              // 任せる ToDo の power の合計（最初の値）
+  concurrency: number             // 同時に動かす数の上限（いまは3）
+}
+```
+
+- 組織が無いツールの ToDo は、`delegate: false` と `ready.ok: false` で返します。`ready.href` は組織を作る画面です。
+- 画面でチェックを外したら、合計は画面で計算し直します（`plan.ts` の `delegatedPower` と同じ足し方）。
+- 実行するのは `delegate` が true の ToDo だけです。画面は、`runAgentTasks` に任せる ToDo だけを渡します。任せない ToDo に頼る ToDo（`after`）は、渡す前に外すか、人が済ませてから動かします。
+
+### 3.5 型5 ToDo の実行の状態と、できた下書き
+
+```ts
+type AgentTodoStatus = 'waiting' | 'running' | 'done' | 'failed'   // 待つ・進む・できた・失敗した
+interface AgentTodoView {
+  id: string
+  status: AgentTodoStatus
+  stage: number | null                           // 今の段（running のとき）
+  power: { used: number; refunded: number }      // 減った量・戻した量（試みごとに足していく）
+  draft?: { summary: string; points: string[]; href: string; hrefLabel: string }  // できた下書きと、各ツールの画面へのリンク
+  error?: { text: string; kind: AgentFailureKind; href?: string; hrefLabel?: string }
+  retryable: boolean
+  attempts: number
+}
+```
+
+- runner の6つの状態を、画面の4つに寄せます。`failed`・`blocked`（前の ToDo が済まなかった）・`canceled`（止めた）は、どれも `failed` で、やり直せます。
+- 「失敗して戻した」は `power.refunded` です。数え方:
+  - ドヤパワーの包みは、減ったまま（戻していない）の応答にだけ、操作のキー（`x-doya-power-op`）を付けます。キーがあれば `used` に足します。
+  - 包みが付いたルート（見積の suggest・スライドの構成）が失敗し、キーが無ければ、包みが戻したので `refunded` に足します。
+  - ドヤパワーの残りが足りずに断られたとき（`DOYA_POWER_*`）は、減っていないので、どちらにも足しません。
+  - 量は `costs.ts` の表から数えた目安です。作り直しの半額などで、台帳の実際の量と違うことがあります。正確な量は §8 の表に台帳の操作のキーを残してから出します。
+- 「今◯個のツールが動いています」は `todoCounts(views).running` です。
+
+### 3.6 API
 
 | API | 本文 | 答え |
 |---|---|---|
-| `POST /api/agent/plan` | `{ text?, recipeId?, answers? }` | `{ kind: 'questions', recipeId, title, lead, questions, error? }` / `{ kind: 'plan', recipeId, title, lead, plan, answers }` / `{ kind: 'none' }` |
-| `POST /api/agent/tasks` | `{ recipeId, taskId, answers, resume? }` | 200 `{ result }` / 422 `{ error, kind, resume?, href? }` / 400 入力の誤り / 404 旗の外 |
+| `POST /api/agent/plan` | `{ text?, recipeId?, answers? }` | `{ kind: 'questions', recipeId, title, lead, questions, error? }` / `{ kind: 'plan', recipeId, title, lead, plan, sources, power, answers }` / `{ kind: 'none' }` |
+| `POST /api/agent/plan`（`Accept: application/x-ndjson`） | 同じ | 1行ずつ `AgentPlanEvent`: `source` → `reason` → `result`（失敗は `error` で終わる） |
+| `POST /api/agent/tasks` | `{ recipeId, taskId, answers, resume? }` | 200 `{ result }`（`result.power` 付き）/ 422 `{ error, kind, resume?, href?, power? }` / 400 入力の誤り / 404 旗の外 |
 
 - `kind: 'none'` のときは、今の経営ホームの振り分け（`matchHomeIntent` と `planAgent`）に戻します。
 - 失敗の `kind`: `setup`（ツールの組織が無い）・`auth`（ログイン切れ）・`power`（ドヤパワー不足）・`limit`（ツールの上限）・`input`・`tool`。
 - `href` は、失敗のときに開くとよい中の画面です（組織を作る・料金を見る）。外のサイトは返しません。
-- `resume` は「途中まで作れたもの」です。画面は、失敗したタスクの `resume` を、やり直しのときにそのまま送り返します。
+- `resume` は「途中まで作れたもの」です。画面は、失敗した ToDo の `resume` を、やり直しのときにそのまま送り返します（`runAgentTasks` の `prev` に前の状態を渡せば、自動で送られます）。
 
-### 3.3 同時に動かす部品
+### 3.7 同時に動かす部品
 
 ```ts
 runAgentTasks({
-  tasks,                 // planTasks(plan)（after を dependsOn にした平らな一覧）
-  execute,               // (task, { signal, upstream, resume }) => Promise<AgentTaskResult>
+  tasks,                 // 任せる ToDo を planTasks(plan) から選んだもの（after を dependsOn にした平らな一覧）
+  execute,               // (task, { signal, upstream, resume }) => Promise<AgentTaskResult>。中で /api/agent/tasks を呼ぶ
   concurrency,           // plan.concurrency
   prev,                  // 前の実行の状態（失敗だけのやり直し）
   signal,                // 中断
-  onChange,              // (states) => void。画面の進み具合
+  onChange,              // (states) => void。todoViews(tasks, states) で札に描く
 })
 ```
 
-`AgentTaskState.status` は `waiting`・`running`・`done`・`failed`・`blocked`（前のタスクが済まなかった）・`canceled` の6つです。
-「今◯個のツールが動いています」は `progressOf(states).running` です。
+`execute` で `/api/agent/tasks` が 422 を返したら、`AgentTaskError(error, kind, resume, href, power)` を投げます。見本の画面（`AgentOrchestrator.tsx` の `runViaApi`）が、この書き方の例です。
 
 ## 4. 作戦づくり
 
@@ -224,8 +318,11 @@ runAgentTasks({
 
 - 減る量は、`ACTION_CATALOG` の `powerAction` と `costs.ts` の表から計算します。数をほかに書きません。
 - 実際に減らす・戻すのは、各ツールのルートの `withDoyaPowerCharge` です。エージェントの API は包みません（二重に減らさない）。
-- 確かめの画面（体験の設計書 §6）の「合計」は `AgentPlan.totalPower` を使います。今の残りは、枠のゲージと同じ `doyaPowerCharger.shellState()` から読みます。
-- 失敗して戻した分は、タスクの失敗（`kind` が `power` 以外の失敗）から数えられます。完了の画面で「戻した分」を出すには、§8 の表に、タスクごとの減った量と戻した量を残します。
+- 確かめの画面（体験の設計書 §6）:
+  - 合計は `AgentPlan.totalPower`（任せる ToDo だけ）。チェックを外したら画面で計算し直す。
+  - 今の残りと次の回復の時刻は、作戦の答えの `power`（`AgentPowerView`）。台帳の `balanceView()` から読む。
+  - 実行後の残りは「残り − 合計」。足りなければ、実行のボタンを押せなくする（画面の決まり）。
+- 減った量・戻した量は ToDo ごとに `AgentTodoView.power` で返します（数え方は §3.5）。完了の画面の「失敗して戻した分」は `todoCounts(views).powerRefunded` です。
 
 ## 8. 保存の表（案。本番 DB の変更なので、統括を通してユーザーの承認が要る）
 
@@ -291,9 +388,9 @@ model HomeAgentTask {
 | テスト | 中身 |
 |---|---|
 | `src/lib/agent-orchestration/runner.test.ts` | 同時に動かす数の上限、順番、失敗だけのやり直し、中断、順番の誤り |
-| `src/lib/agent-orchestration/tools.test.ts` | 答えの検査、ルートへの入力、結果のまとめ、失敗の種類、商談の準備を最後まで動かす（スライドの失敗だけを、作ったプロジェクトでやり直す） |
-| `src/lib/agent-orchestration/plan.test.ts` | 組み合わせからの作戦、減る量を costs.ts から引く、AI の作戦の検査 |
-| `scripts/security-regression/verify-agent-orchestration.cjs` | 旗（off でセッションを読まない・preview の許可）、2つの API の 404・400・答えの形、決まった5つのルートだけを cookie 付きで呼ぶ、本番で見本に差し替えない、経営ホームの画面にまだつながない |
+| `src/lib/agent-orchestration/tools.test.ts` | 答えの検査、ルートへの入力、結果のまとめ、失敗の種類、商談の準備を最後まで動かす（スライドの失敗だけを、作ったプロジェクトでやり直す）、ドヤパワーの減った量・戻した量の数え方 |
+| `src/lib/agent-orchestration/plan.test.ts` | 組み合わせからの作戦（ゴール・理由・チームのゴール・任せる初期値）、組織が無いツールの ToDo、減る量を costs.ts から引く、AI の作戦の検査、分析の材料を同時に読み読み終えた順に知らせる、ToDo の状態を画面の4つに寄せる |
+| `scripts/security-regression/verify-agent-orchestration.cjs` | 旗（off でセッションを読まない・preview の許可）、2つの API の 404・400・答えの形、作戦の NDJSON（材料 → 理由 → 答え）、決まった5つのルートだけを cookie 付きで呼び、操作のキーを返す、本番で見本に差し替えない、経営ホームの画面にまだつながない |
 
 - `npm run test:agent` と `npm run test:security` に入っています。どちらも `npm run build` で流れます。
 - 見本の画面: 開発の確認ページ `/home/agent-lab`（本番と、旗が off のときは 404）。見本の結果で、聞く → 計画 → 3つを同時に → 一部の失敗 → 残りだけやり直し → まとめ、を最後まで動かせます。画面の部品 `src/components/agent-orchestration/AgentOrchestrator.tsx` は、この確認のための見本です。本番の画面は UIリニューアルが作ります。

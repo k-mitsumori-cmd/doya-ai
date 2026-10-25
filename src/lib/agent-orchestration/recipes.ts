@@ -1,7 +1,7 @@
 // ============================================
 // エージェントの「組み合わせ」（やりたいこと → 聞くこと → 動かすツール）
 // ============================================
-// 設計: docs/architecture/agent-orchestration/DESIGN.md §4・§5
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §4.2
 // ⚠️ 画面（クライアント）とサーバーの両方が使う。秘密や DB の処理は書かない。
 // ⚠️ サーバーは、画面から届いた答えを parseAnswers でもう一度確かめてから、ツールへの入力を作る
 //    （画面が作った入力をそのまま各ツールへ流さない）。
@@ -48,11 +48,13 @@ export interface AgentRecipe {
   title: string
   /** 計画の最初に出す一文 */
   lead: string
-  /** 作戦の目的と期間（答えから作る） */
-  goal: (a: SalesPrepAnswers) => string
+  /** ゴール（答えから作る）。今は 0、ゴールは ToDo の数（資料の数） */
+  goal: (a: SalesPrepAnswers) => { statement: string; measure: string; unit: string }
   period: string
-  /** 作戦の柱 */
-  pillars: { id: string; name: string; why: string }[]
+  /** 考えたことの行（答えと、読んだ材料から作る） */
+  reasons: (a: SalesPrepAnswers, ctx: { missingTools: string[]; companyName: string | null }) => string[]
+  /** 作戦の柱（チームのゴール） */
+  pillars: { id: string; name: string; why: string; teamGoal: (a: SalesPrepAnswers) => string }[]
   /** 入力した文にこの言葉があれば、この組み合わせを出す */
   keywords: string[]
   /** 入口のチップの文 */
@@ -102,12 +104,19 @@ export const SALES_PREP: AgentRecipe = {
   id: 'sales-prep',
   title: '商談の準備をまとめて進める',
   lead: '相手の会社を調べながら、見積の下書きと提案スライドの構成を同時に作ります。',
-  goal: (a) => `${a.domain} との${a.stageLabel}に、資料をそろえて臨む`,
+  goal: (a) => ({ statement: `${a.domain} との${a.stageLabel}に、資料をそろえて臨む`, measure: '商談の資料', unit: '点' }),
   period: '今日',
+  reasons: (a, ctx) => [
+    `${a.domain} への${a.offerLabel}の提案で、場は「${a.stageLabel}」です。`,
+    '相手の事業を知り、条件と話の流れを先にそろえれば、その場で話を進められます。',
+    a.budgetYen ? `予算の目安が${BUDGETS[a.budget].label}なので、見積はその範囲の品目から考えます。` : '予算がまだ分からないので、見積は相場の幅で出します。',
+    ...(ctx.missingTools.length ? [`${ctx.missingTools.join('と')}は、先に組織を作る必要があります。`] : []),
+    '3つの作業は互いに待たないので、同時に進めます。',
+  ],
   pillars: [
-    { id: 'know', name: '相手を知る', why: '会社の事業と最近の動きを押さえ、話の入口を作るため' },
-    { id: 'price', name: '条件を示す', why: '予算の目安に合う見積の案を、先に用意しておくため' },
-    { id: 'propose', name: '提案を形にする', why: '話の流れをスライドにして、その場で見せられるようにするため' },
+    { id: 'know', name: '相手を知る', why: '会社の事業と最近の動きを押さえ、話の入口を作るため', teamGoal: (a) => `${a.domain} の事業と最近の動きを、3行で話せる` },
+    { id: 'price', name: '条件を示す', why: '予算の目安に合う見積の案を、先に用意しておくため', teamGoal: (a) => `${a.offerLabel}の見積の案を、その場で見せられる` },
+    { id: 'propose', name: '提案を形にする', why: '話の流れをスライドにして、その場で見せられるようにするため', teamGoal: (a) => `${a.slideCount}枚の提案の流れが決まっている` },
   ],
   keywords: ['商談の準備', '商談準備', '商談に行く', '商談前', '提案の準備', '訪問の準備', '営業の準備'],
   chip: '商談の準備をまとめて進めたい',
