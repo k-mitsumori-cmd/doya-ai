@@ -137,7 +137,8 @@
 
 ## 8. 旗と出す相手
 
-- 新しい見た目（`isUiNext()`）の内側で、さらに新しい旗 `HOME_AGENT_ROLLOUT`（off / preview / all）を見ます。どちらかが外れていれば、今の経営ホームのままです。
+- 旗は、実行の仕組みと同じ `AGENT_ORCHESTRATION_ROLLOUT`（off / preview / all）の1つだけです。`HOME_AGENT_ROLLOUT` は使いません（2026-10-25 ユーザーの決定。agent-orchestration の DESIGN.md §12）。旗が off なら、今の経営ホームのままです。
+- 実行の記録（`AGENT_RUNS_STORE`）は、表を足すまで off です。そのあいだ、「続きを進める」は端末に残した続きを使います。
 - preview のときは、`UI_PREVIEW_EMAILS` に書いた人（最初はユーザーだけ）にだけ出します。
 - 旗が off のときは、戦略づくりの API も呼びません（サーバーで先に旗を見る）。
 
