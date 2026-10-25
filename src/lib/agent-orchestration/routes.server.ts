@@ -1,7 +1,7 @@
 // ============================================
 // 各ツールの API ルートを、同じリクエストの中から呼ぶ（本番の部品）
 // ============================================
-// 設計: docs/architecture/agent-orchestration/DESIGN.md §7
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §5.1
 // - 呼ぶのは、各ルートが export している POST（withDoyaPowerCharge で包んだもの）。中の postHandler を直接呼ばない。
 //   こうすると、ログイン・組織のスコープ・ドヤパワー・利用枠の決まりを、各ツールの画面から使ったときと同じに通せる。
 // - ログインは、ルートの中の getServerSession が、今のリクエスト（エージェントの API）の cookie から読む。同じ本人になる。
@@ -10,6 +10,7 @@
 import { NextRequest } from 'next/server'
 import type { ToolCallResult, ToolDeps, ToolRouteId } from './tools'
 import { fakeToolDeps } from './tools'
+import { DOYA_POWER_OP_HEADER } from '@/lib/doya-power/retry'
 
 type Handler = (req: NextRequest, ...rest: any[]) => Promise<Response>
 
@@ -31,7 +32,8 @@ export async function callToolRoute(outer: NextRequest, route: ToolRouteId, body
   const req = new NextRequest(new URL(r.path, outer.nextUrl.origin), { method: 'POST', headers, body: JSON.stringify(body) })
   const res = await POST(req)
   const data = await res.json().catch(() => null)
-  return { status: res.status, data }
+  // ドヤパワーの包みは、減ったまま（戻していない）の呼び出しにだけ操作のキーを付ける
+  return { status: res.status, data, opKey: res.headers.get(DOYA_POWER_OP_HEADER) }
 }
 
 /** 見本の結果に差し替えるか（開発のときだけ。本番の環境では、値があっても差し替えない） */
@@ -39,9 +41,11 @@ export function fakeToolsEnabled(env: Record<string, string | undefined> = proce
   return env.NODE_ENV !== 'production' && env.AGENT_ORCHESTRATION_FAKE_TOOLS === '1'
 }
 
-export function toolDepsFor(outer: NextRequest): ToolDeps {
+export async function toolDepsFor(outer: NextRequest): Promise<ToolDeps> {
   if (fakeToolsEnabled()) return fakeToolDeps()
+  const { doyaPowerOnForRequest } = await import('./sources.server')
   return {
+    powerOn: await doyaPowerOnForRequest().catch(() => false),
     call: (route, body) => callToolRoute(outer, route, body),
     shodanSlug: async () => {
       const { getShodanContext } = await import('@/lib/shodan/access')
@@ -49,3 +53,4 @@ export function toolDepsFor(outer: NextRequest): ToolDeps {
     },
   }
 }
+

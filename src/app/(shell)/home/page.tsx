@@ -16,6 +16,8 @@ import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
 import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
 import HomeDashboard from './HomeDashboard'
+import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
+import HomeAgent from '@/components/home-agent/HomeAgent'
 
 export const metadata: Metadata = {
   title: '経営ホーム',
@@ -36,5 +38,7 @@ export default async function HomePage() {
   const doyaPower = await isDoyaPowerEnabled()
   // ドヤパワーの欄（読めないときは null で、欄を出さない）と、会社の登録の案内の文（登録するとゲージが出る）の両方に使う
   const power = doyaPower ? await loadDoyaPowerHome() : null
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} />
+  // 「ドヤくんに頼む」（分析 → ゴール・柱・ToDo → まとめて進める）。旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ（off ならセッションも読まない）
+  const agent = await isAgentOrchestrationEnabled()
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} agentStage={agent ? <HomeAgent /> : null} />
 }

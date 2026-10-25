@@ -6040,3 +6040,56 @@ model DoyaPowerTransaction {
   @@index([accountId, createdAt])
   @@map("doya_power_transactions")
 }
+
+// ============================================
+// 経営ホームのエージェント（ドヤくんに頼む）の実行の記録
+// ============================================
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §8。SQL の案: docs/architecture/agent-orchestration/MIGRATION.md
+// ⚠️ 本番DBにはまだ無い。旗 AGENT_RUNS_STORE=db のときだけ読む・書く（既定は off で、表に触れない）。
+// ⚠️ 本人の分だけを userId で絞って読む（他人の実行は読めない）。User への外部キーは付けない（User の表を変えないため）。
+model HomeAgentRun {
+  id            String          @id @default(cuid())
+  userId        String
+  recipeId      String // 'sales-prep'。AI の作戦は 'ai'
+  title         String
+  request       String? // 依頼の文
+  answers       Json // サーバーで確かめた答え
+  plan          Json // AgentPlan（検査したあとの形）
+  status        String          @default("planned") // planned / running / done / partial / canceled
+  powerUsed     Int             @default(0)
+  powerRefunded Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  tasks         HomeAgentTask[]
+
+  @@index([userId, createdAt])
+  @@map("home_agent_runs")
+}
+
+model HomeAgentTask {
+  id            String       @id @default(cuid())
+  runId         String
+  run           HomeAgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId        String // 同時に動かす数を本人ごとに数えるため（run の userId と同じ）
+  taskId        String // 作戦の中の id（'research' など）
+  action        String // 'shodan.research' など
+  delegated     Boolean      @default(true) // false は「ドヤくんに任せない」（動かさない）
+  status        String       @default("waiting") // waiting / running / done / failed / blocked / canceled / skipped
+  attempts      Int          @default(0)
+  result        Json? // AgentTaskResult
+  resume        Json? // 途中まで作れたもの（スライドのプロジェクトの id など）
+  error         String? // 利用者向けの文
+  failKind      String?
+  failHref      String?
+  failHrefLabel String?
+  powerUsed     Int          @default(0)
+  powerRefunded Int          @default(0)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([runId, taskId])
+  @@index([userId, status])
+  @@map("home_agent_tasks")
+}
