@@ -130,7 +130,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           </div>
         </article>
 
-        <article className={`${base.plan} ${base.planPro} ${styles.team}`}>
+        <article id="team" className={`${base.plan} ${base.planPro} ${styles.team}`}>
           <span className={base.recommend}>おすすめ</span>
           <h2 className={base.planName}>{PLAN_COPY.team.name}</h2>
           <p className={base.planFor}>会社で毎日使う方に</p>

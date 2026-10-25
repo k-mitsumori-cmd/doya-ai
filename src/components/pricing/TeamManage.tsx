@@ -90,7 +90,7 @@ export function TeamManage() {
   const diff = seats !== null ? (teamMonthly(draft) ?? 0) - (teamMonthly(seats) ?? 0) : 0
 
   return (
-    <section className={styles.manage} aria-labelledby="manage-title">
+    <section id="manage" className={styles.manage} aria-labelledby="manage-title">
       <h2 id="manage-title" className={base.sectionTitle}>チームの管理</h2>
       <div className={styles.manageGrid}>
         <div className={styles.manageCard}>
@@ -157,7 +157,7 @@ export function PowerPackBuy() {
     setBusy(false)
   }
   return (
-    <div className={styles.packBox}>
+    <div id="power-pack" className={styles.packBox}>
       <div>
         <p className={styles.manageHead}>ドヤパワーを追加で買う</p>
         <p className={styles.manageSub}>{POWER_PACK.points.toLocaleString('ja-JP')}ごとに {yen(POWER_PACK.price)}（税込 {yen(withTax(POWER_PACK.price))}）。買った分は6か月使えます。</p>

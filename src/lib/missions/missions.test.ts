@@ -103,10 +103,17 @@ test('会社情報は、会社名と業種かサイトがあれば達成。招�
   assert.equal(q(noFacts({ actions: [quote()] })).first_quote, true)
 })
 
-test('クエストの報酬は 会社情報 +50・招待 +100', () => {
+test('クエストの報酬は 会社情報 0（最初の100に含む）・招待 +50。はじめの手順の合計は100（2026-10-26 見直し）', () => {
   const r = Object.fromEntries(ONBOARDING_QUESTS.map((q) => [q.id, q.reward]))
-  assert.equal(r.company_profile, 50)
-  assert.equal(r.invite_member, 100)
+  assert.equal(r.company_profile, 0)
+  assert.equal(r.invite_member, 50)
+  assert.equal(ONBOARDING_QUESTS.reduce((s, q) => s + q.reward, 0), 100)
+})
+
+test('報酬のない手順（会社情報）は、達成しても付与しない', () => {
+  const f = noFacts({ company: { name: 'A社', industry: '製造', websiteUrl: null, at: '2026-10-02T00:00:00Z' } })
+  const d = decideAward({ type: 'quest', questId: 'company_profile', facts: f }, [], NOW)
+  assert.equal(!d.ok && d.reason, 'invalid')
 })
 
 // ---- 付与してよいか ----
@@ -134,9 +141,9 @@ test('クエストは達成していなければ付与せず、会社ごとに1�
   const f = noFacts({ acceptedInvites: [{ at: '2026-10-02T00:00:00Z' }] })
   assert.equal(decideAward({ type: 'quest', questId: 'company_profile', facts: f }, [], NOW).ok, false)
   const ok = decideAward({ type: 'quest', questId: 'invite_member', facts: f }, [], NOW)
-  assert.deepEqual(ok, { ok: true, key: 'quest:invite_member', amount: 100, clamped: false })
+  assert.deepEqual(ok, { ok: true, key: 'quest:invite_member', amount: 50, clamped: false })
   // 前の月にもらっていても、もう一度はもらえない
-  const again = decideAward({ type: 'quest', questId: 'invite_member', facts: f }, [{ key: 'quest:invite_member', amount: 100, at: '2026-08-01T00:00:00Z' }], NOW)
+  const again = decideAward({ type: 'quest', questId: 'invite_member', facts: f }, [{ key: 'quest:invite_member', amount: 50, at: '2026-08-01T00:00:00Z' }], NOW)
   assert.equal(!again.ok && again.reason, 'already_awarded')
 })
 

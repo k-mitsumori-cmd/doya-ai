@@ -3,7 +3,7 @@
 - ブランチ: `claude/doya-new-pricing-dd27ff`。main には入れていない
 - 仕様: `docs/architecture/management-agent/PRICING-NEW-2026-10-25.md`（§10）
 - **⚠️ この SQL はまだ流していない。** 流すのは統括が、ユーザーの承認を取ったあと（`doya-db-push` スキルの手順に合わせる）。
-- 既存の表は変えない。新しい表を2つ作り、索引を付けるだけ。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
+- 既存の表は変えない。新しい表を3つ作り、索引を付けるだけ。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
 - 下の SQL は `npx prisma migrate diff --from-schema-datamodel <origin/main 5d876e59 の schema> --to-schema-datamodel prisma/schema.prisma --script` の出力と同じ表・列・索引（2026-10-25 に出して一致を確認）。外部キーを CREATE TABLE の中にまとめ、CHECK 制約と `IF NOT EXISTS` を足した。
 
 ## 足す表
@@ -11,6 +11,7 @@
 | 表 | 役割 | 書く処理 |
 |---|---|---|
 | `account_company_members` | 会社のメンバー（招待中・参加・外れた）。会社の持ち主は行を持たず、1人目として数える | `src/lib/pricing-v2/team.server.ts`（招待・参加・外す） |
+| `doya_power_starter_claims` | はじめの付与（最初の100）を受け取った記録。ユーザーとメールの SHA-256 で1回だけ。外部キーなし（会社や利用者を消しても残す） | `src/lib/pricing-v2/starter.server.ts` |
 | `account_company_billing` | 買った人数の控え。正は Stripe の契約の数量。`User.plan` は書かない（課金の反映の経路ではない） | `/api/pricing/seats`（人数の変更）と、1日たった控えの読み直し |
 
 ## 流す前の前提
@@ -65,6 +66,21 @@ CREATE TABLE IF NOT EXISTS "account_company_billing" (
     CONSTRAINT "account_company_billing_interval_check" CHECK ("billingInterval" IN ('month', 'year'))
 );
 
+-- ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26。同じ人に二度付けない。メールは SHA-256 だけ）
+CREATE TABLE IF NOT EXISTS "doya_power_starter_claims" (
+    "id" TEXT NOT NULL,
+    "emailHash" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "doya_power_starter_claims_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "doya_power_starter_claims_amount_check" CHECK ("amount" > 0),
+    CONSTRAINT "doya_power_starter_claims_emailHash_check" CHECK ("emailHash" ~ '^[0-9a-f]{64}$')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "doya_power_starter_claims_emailHash_key" ON "doya_power_starter_claims"("emailHash");
+CREATE UNIQUE INDEX IF NOT EXISTS "doya_power_starter_claims_userId_key" ON "doya_power_starter_claims"("userId");
 CREATE UNIQUE INDEX IF NOT EXISTS "account_company_members_inviteToken_key" ON "account_company_members"("inviteToken");
 CREATE INDEX IF NOT EXISTS "account_company_members_userId_idx" ON "account_company_members"("userId");
 CREATE INDEX IF NOT EXISTS "account_company_members_companyId_status_idx" ON "account_company_members"("companyId", "status");
@@ -81,12 +97,14 @@ COMMIT;
 SELECT to_regclass('public.account_company_members'), to_regclass('public.account_company_billing');
 SELECT count(*) FROM "account_company_members";  -- 0
 SELECT count(*) FROM "account_company_billing";  -- 0
+SELECT count(*) FROM "doya_power_starter_claims";  -- 0
 ```
 
 ## 元に戻す（旗が off で、行が無いときだけ）
 
 ```sql
 BEGIN;
+DROP TABLE IF EXISTS "doya_power_starter_claims";
 DROP TABLE IF EXISTS "account_company_billing";
 DROP TABLE IF EXISTS "account_company_members";
 COMMIT;

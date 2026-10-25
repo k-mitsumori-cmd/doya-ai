@@ -5965,6 +5965,20 @@ model AccountCompanyBilling {
   @@map("account_company_billing")
 }
 
+// ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26）。同じ人に二度付けないため
+// ⚠️ メールそのものは持たない（emailHash は小文字にそろえたメールの SHA-256）。退会して作り直しても、同じメールなら付けない
+// ⚠️ 会社を消しても記録は残す（外部キーを付けない）。処理は src/lib/pricing-v2/starter.server.ts
+model DoyaPowerStarterClaim {
+  id        String   @id @default(cuid())
+  emailHash String   @unique
+  userId    String   @unique
+  companyId String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  @@map("doya_power_starter_claims")
+}
+
 // ============================================
 // ドヤパワー（会社ごとのポイントの台帳。案。2026-10-19）
 // ============================================

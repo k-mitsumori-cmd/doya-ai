@@ -124,9 +124,11 @@ export interface Quest {
   href: string
 }
 
+// 報酬（仮。2026-10-26 見直し）: 最初の100（はじめの付与。src/lib/pricing-v2/starter.ts）と合わせて多すぎないよう、
+// 会社情報は 0（会社を登録すると最初の100が付くため）、招待は 100 → 50 に下げた。はじめの手順の合計は 100（最初の100と合わせて最大200）
 export const ONBOARDING_QUESTS: Quest[] = [
-  { id: 'company_profile', title: '会社情報を登録する', condition: '会社名と、業種かサイトの URL を登録する', reward: 50, href: '/home' },
-  { id: 'invite_member', title: 'メンバーを招待する', condition: '招待した人が参加する（招待を送っただけでは数えません）', reward: 100, href: '/sfa' },
+  { id: 'company_profile', title: '会社情報を登録する', condition: '会社名と、業種かサイトの URL を登録する', reward: 0, href: '/home' },
+  { id: 'invite_member', title: 'メンバーを招待する', condition: '招待した人が参加する（招待を送っただけでは数えません）', reward: 50, href: '/sfa' },
   { id: 'first_quote', title: '最初の見積を発行する', condition: '中身の入った見積を、確定か送付する', reward: 30, href: '/quote' },
   { id: 'first_activity', title: '最初の商談の記録を残す', condition: '本文のある商談の記録を保存する', reward: 20, href: '/sfa' },
 ]
@@ -216,6 +218,8 @@ export function decideAward(req: AwardRequest, ledger: AwardEntry[], now: Date |
     key = `quest:${q.id}`
     if (questDoneAt(q.id, req.facts) === null) return { ok: false, key, reason: 'not_done', message: 'まだ達成していません' }
     amount = q.reward
+    // 報酬のない手順（会社情報。最初の100に含む）は付与しない
+    if (amount <= 0) return { ok: false, key, reason: 'invalid', message: 'この手順にドヤパワーは付きません（最初の100に含まれます）' }
   } else {
     if (!req.id || !Number.isInteger(req.amount) || req.amount <= 0) return { ok: false, key: null, reason: 'invalid', message: 'ボーナスの中身が正しくありません' }
     key = `bonus:${req.id}`

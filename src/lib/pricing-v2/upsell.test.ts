@@ -1,0 +1,139 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { decideUpsell, isLowPower, upsellFrequencyKey, type UpsellInput } from './upsell'
+import { decideStarter, starterEmailHash, STARTER_POWER } from './starter'
+import { createDoyaPowerLedger } from '../doya-power/ledger'
+import { createMemoryDb } from '../doya-power/memory-db'
+import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP } from '../doya-power/rules'
+
+const base: UpsellInput = { kind: 'free', isOwner: true, trigger: 'insufficient', seats: null, canBuyPack: true, canCheckoutTeam: true, required: 30 }
+
+// ---------- 足りない・少ない・尽きたときの導線 ----------
+
+test('フリー: 主は「チームに上げる」。回復の時刻も伝える。追加購入は出さない', () => {
+  const v = decideUpsell({ ...base, recoveryLabel: '10月27日 0:00' })
+  assert.equal(v.primary.kind, 'link')
+  assert.equal(v.primary.label, 'チームに上げる')
+  assert.ok(v.primary.kind === 'link' && v.primary.href === '/pricing#team')
+  assert.match(v.body, /10月27日 0:00 に回復/)
+  assert.ok([v.primary, ...v.secondary].every((a) => a.kind !== 'buy_pack'))
+  assert.match(v.title, /30 要ります/)
+})
+
+test('フリー: チームの申し込みが準備できていなければ、料金プランを見るに案内する', () => {
+  const v = decideUpsell({ ...base, canCheckoutTeam: false })
+  assert.equal(v.primary.label, '料金プランを見る')
+})
+
+test('チーム: 主は「追加で買う」（1パック）。人数を増やす案内。人数が多ければ個別見積も', () => {
+  const small = decideUpsell({ ...base, kind: 'team', seats: 5 })
+  assert.deepEqual(small.primary.kind === 'buy_pack' && small.primary.packs, 1)
+  assert.deepEqual(small.secondary.map((a) => a.label), ['人数を増やす'])
+  const big = decideUpsell({ ...base, kind: 'team', seats: 45 })
+  assert.deepEqual(big.secondary.map((a) => a.label), ['人数を増やす', '個別見積を相談する'])
+})
+
+test('追加購入が準備できていなければ「準備中」（押せない）', () => {
+  const v = decideUpsell({ ...base, kind: 'team', seats: 5, canBuyPack: false })
+  assert.equal(v.primary.kind, 'disabled')
+  assert.match(v.primary.label, /準備中/)
+})
+
+test('据え置き: 主は「追加で買う」。チームへ移る相談には、戻れないことの確かめが付く', () => {
+  const v = decideUpsell({ ...base, kind: 'legacy' })
+  assert.equal(v.primary.kind, 'buy_pack')
+  const move = v.secondary[0]!
+  assert.ok(move.kind === 'link' && move.confirm)
+  assert.match(move.kind === 'link' ? move.confirm!.title : '', /戻れません/)
+})
+
+test('会社の持ち主でないメンバーには、買う・上げるを出さず、持ち主への相談を案内する', () => {
+  for (const kind of ['free', 'team', 'legacy'] as const) {
+    const v = decideUpsell({ ...base, kind, isOwner: false })
+    assert.match(v.body, /持ち主の方/)
+    assert.ok([v.primary, ...v.secondary].every((a) => a.kind !== 'buy_pack'))
+  }
+})
+
+test('場面ごとの見出し: 足りない・使い切り・残り少ない', () => {
+  assert.match(decideUpsell({ ...base, trigger: 'empty' }).title, /使い切りました/)
+  assert.match(decideUpsell({ ...base, trigger: 'low' }).title, /残り少なく/)
+})
+
+test('残りが2割を切ったら「少ない」。0 は別（使い切り）', () => {
+  assert.ok(isLowPower(19, 100))
+  assert.ok(!isLowPower(20, 100))
+  assert.ok(!isLowPower(0, 100))
+  assert.ok(!isLowPower(5, 0))
+})
+
+test('やさしい知らせは、少ないは月1回・使い切りは1日1回（日本時間）', () => {
+  const a = new Date('2026-10-31T14:59:00Z') // 10/31 23:59 JST
+  const b = new Date('2026-10-31T15:00:00Z') // 11/1 0:00 JST
+  assert.equal(upsellFrequencyKey('low', a), 'doya-upsell:low:2026-10')
+  assert.equal(upsellFrequencyKey('low', b), 'doya-upsell:low:2026-11')
+  assert.equal(upsellFrequencyKey('empty', a), 'doya-upsell:empty:2026-10-31')
+  assert.equal(upsellFrequencyKey('empty', b), 'doya-upsell:empty:2026-11-01')
+})
+
+// ---------- はじめの付与（最初の100） ----------
+
+const ok = { ledgerAllowed: true, tablesAllowed: true, hasCompany: true, isOwner: true, email: 'a@example.com', verified: true, claimed: false }
+
+test('はじめの付与: 旗が off・会社が無い・持ち主でない・確認の済んでいない人・受け取り済みには付けない', () => {
+  assert.deepEqual(decideStarter(ok), { ok: true })
+  assert.deepEqual(decideStarter({ ...ok, ledgerAllowed: false }), { ok: false, reason: 'flag_off' })
+  assert.deepEqual(decideStarter({ ...ok, tablesAllowed: false }), { ok: false, reason: 'flag_off' })
+  assert.deepEqual(decideStarter({ ...ok, hasCompany: false }), { ok: false, reason: 'no_company' })
+  assert.deepEqual(decideStarter({ ...ok, isOwner: false }), { ok: false, reason: 'not_owner' })
+  assert.deepEqual(decideStarter({ ...ok, verified: false }), { ok: false, reason: 'not_verified' })
+  assert.deepEqual(decideStarter({ ...ok, email: null }), { ok: false, reason: 'no_email' })
+  assert.deepEqual(decideStarter({ ...ok, claimed: true }), { ok: false, reason: 'already_claimed' })
+})
+
+test('メールの要約は、大文字・小文字と前後の空白をそろえる（作り直しでも同じ人と分かる）。メールそのものは含まない', () => {
+  const h = starterEmailHash('  Taro@Example.com ')
+  assert.equal(h, starterEmailHash('taro@example.com'))
+  assert.match(h, /^[0-9a-f]{64}$/)
+  assert.ok(!h.includes('taro'))
+  assert.notEqual(h, starterEmailHash('jiro@example.com'))
+})
+
+test('新しい会社は 100 から始まり、使った分が1日10ずつ回復する（上限100）。同じ会社に二度は付かない', async () => {
+  let t = new Date('2026-10-26T03:00:00.000Z')
+  const clock = () => new Date(t.getTime())
+  const mem = createMemoryDb({ now: clock })
+  mem.rows('accountCompany').push({ id: 'co_new', userId: 'u_new', name: '新しい会社' })
+  const ledger = createDoyaPowerLedger(mem.db, { now: clock })
+  const first = await ledger.grant('co_new', 'daily_recovery', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
+  // その日の回復（10）が先に付くので、はじめの付与は 90 になり、合わせて 100 から始まる
+  assert.equal(first.ok && first.granted, STARTER_POWER - DAILY_RECOVERY_AMOUNT)
+  assert.equal((await ledger.balance('co_new'))!.total, DAILY_RECOVERY_CAP)
+  const again = await ledger.grant('co_new', 'daily_recovery', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
+  assert.equal(again.ok && again.duplicated, true)
+  assert.equal((await ledger.balance('co_new'))!.total, 100)
+  // 30 使う → 次の日（日本時間）に 10 回復
+  const c = await ledger.consume('co_new', 30, 'op-1')
+  assert.equal(c.ok, true)
+  t = new Date('2026-10-26T15:00:00.000Z') // 10/27 0:00 JST
+  assert.equal((await ledger.balance('co_new'))!.total, 70 + DAILY_RECOVERY_AMOUNT)
+})
+
+// ---------- プランの設定の一覧 ----------
+import { PLAN_MATRIX, planRow } from './plan-matrix'
+
+test('プランの一覧: フリーは回復あり・追加購入なし。有料は回復なし・繰り越し1か月・追加購入あり。最初は全員100', () => {
+  assert.deepEqual(PLAN_MATRIX.map((r) => r.id), ['free', 'team', 'enterprise', 'legacy'])
+  const free = planRow('free')
+  assert.equal(free.dailyRecovery, 10)
+  assert.equal(free.recoveryCap, 100)
+  assert.equal(free.pack, null)
+  for (const id of ['team', 'enterprise', 'legacy'] as const) {
+    const r = planRow(id)
+    assert.equal(r.dailyRecovery, 0)
+    assert.equal(r.carryoverMonths, 1)
+    assert.deepEqual(r.pack, { points: 1000, price: 5980, months: 6 })
+  }
+  for (const r of PLAN_MATRIX) assert.equal(r.starter, 100)
+  assert.equal(planRow('legacy').monthly, '1,500')
+})
