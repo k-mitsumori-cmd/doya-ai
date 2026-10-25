@@ -34,7 +34,8 @@ function fixture(respond, env = {}) {
     const r = respond(p, body, String(url))
     return new Response(JSON.stringify(r.json ?? {}), { status: r.status ?? 200, headers: { 'Content-Type': 'application/json' } })
   }
-  const mod = load('seo/lib/gemini.ts', {}, {
+  // Slack 送信は共通の送り口を通る。SLACK_WEBHOOK_URL は空なので呼ばれないが、呼ばれたら fetch に流して数える。
+  const mod = load('seo/lib/gemini.ts', { '@/lib/slack/notify': { postSlack: async (url, payload) => { await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); return 'sent' } } }, {
     process: { env: { ...ENV, ...env } },
     fetch,
     setTimeout: (fn) => { fn(); return 0 },

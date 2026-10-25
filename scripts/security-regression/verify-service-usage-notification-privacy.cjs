@@ -15,6 +15,7 @@ const usage = load('src/lib/service-usage.ts', {
   './notifications': { postToSlackBlocks: async (text, blocks) => { sent = JSON.stringify({ text, blocks }) } },
   './alert': { shouldSend: () => true },
   './unified-plan': { isPaidPlan: () => false },
+  './slack/notify': { maskEmail: (e) => (e ? e.slice(0, 2) + '***' : '（非表示）') },
 })
 
 ;(async () => {

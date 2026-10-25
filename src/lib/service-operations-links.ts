@@ -16,9 +16,9 @@ export async function checkServiceLinks(service: ServiceKey, dry = false): Promi
     lines.push(`${link.label}：${state === 'ok' ? 'HTTP応答あり' : state === 'redirect' ? '転送先の確認が必要' : '要確認（' + state + '）'}`);
     if (!dry) {
       const previous = await readOps<{ state: string }>('link:' + service + ':' + link.label);
-      if (state !== 'ok' && state !== 'redirect' && previous?.state !== state) await sendOps(service, `【リンク・要確認】${link.label}に接続できなかったよ\n確認先：${link.url}\n確認結果：${state}\nサイトがHEAD接続を拒否している場合もあります。通常のブラウザーで確認してね。`, `link:${service}:${link.label}:${state}:${new Date().toISOString().slice(0,10)}`, 'error');
+      if (state !== 'ok' && state !== 'redirect' && previous?.state !== state) await sendOps(service, `【リンク・要確認】${link.label}に接続できませんでした\n確認先：${link.url}\n確認結果：${state}\nサイトがHEAD接続を拒否している場合もあります。通常のブラウザーで確認してください。`, `link:${service}:${link.label}:${state}:${new Date().toISOString().slice(0,10)}`, 'error');
       await writeOps('link:' + service + ':' + link.label, { state, at: new Date().toISOString() });
     }
   }
-  return [...lines, configured ? '計測用リンクは自動クリックしていないよ。申込受付・販売終了の判定は別途確認が必要です。' : '紹介先の直接URL一覧は未登録。公式ページの接続だけを確認し、計測用リンクはクリックしていません。'];
+  return [...lines, configured ? '計測用リンクは自動でクリックしていません。申込受付・販売終了の判定は別途確認が必要です。' : '紹介先の直接URL一覧は未登録。公式ページの接続だけを確認し、計測用リンクはクリックしていません。'];
 }

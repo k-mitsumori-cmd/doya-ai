@@ -1,7 +1,8 @@
 import { dailyOperationsSection } from './service-operations-daily';
 import { createHash } from 'node:crypto';
 import { recordReportDelivered } from './service-operations-state';
-import { voicePayload } from './slack-voice';
+import { voicePayload, type SlackMeta } from './slack-voice';
+import { maskEmail, ordinalLabel } from './slack/notify';
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
@@ -110,7 +111,7 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
             signal: AbortSignal.timeout(5000),
             body: JSON.stringify(voicePayload({
               text: `${formatErrorMessage(safe)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
-            })),
+            }, ERROR_META)),
           })
           if (!response.ok) throw new Error('Slack delivery failed')
         }
@@ -150,6 +151,8 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
   }
 }
 
+const ERROR_META: SlackMeta = { app: 'ドヤAI', kind: 'error', severity: 'action' }
+
 function formatErrorMessage(data: ErrorNotificationData): string {
   const lines: string[] = []
   lines.push(`*【ドヤAI・要対応】処理中にエラーが発生しました*\n発生時刻：${data.timestamp}\n対応：発生箇所と下記のエラーを確認してください。\n\n*調査用の詳細*`)
@@ -172,7 +175,7 @@ async function getSlackWebhookUrl(): Promise<string> {
   return row?.value || ''
 }
 
-async function postSlackPayload(payload: Record<string, unknown>, signal?: AbortSignal): Promise<void> {
+async function postSlackPayload(payload: Record<string, unknown>, signal?: AbortSignal, meta?: SlackMeta): Promise<void> {
   const url = await getSlackWebhookUrl()
   if (!url) {
     throw new Error('Slack webhook URL is not configured (slack_webhook not found in SystemSetting)')
@@ -180,7 +183,7 @@ async function postSlackPayload(payload: Record<string, unknown>, signal?: Abort
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(voicePayload(payload)),
+    body: JSON.stringify(voicePayload(payload, meta)),
     signal,
   })
   if (!res.ok) {
@@ -189,21 +192,23 @@ async function postSlackPayload(payload: Record<string, unknown>, signal?: Abort
   }
 }
 
-async function postToSlack(text: string, signal?: AbortSignal): Promise<void> {
-  await postSlackPayload({ text }, signal)
+const REPORT_META: SlackMeta = { app: 'ドヤAI', kind: 'report', severity: 'info' }
+
+async function postToSlack(text: string, signal?: AbortSignal, meta?: SlackMeta): Promise<void> {
+  await postSlackPayload({ text }, signal, meta)
 }
 
 /** プレーンテキストで運用チャンネルに投稿する（課金監査レポート等） */
-export async function postPlainToSlack(text: string): Promise<void> {
-  await postToSlack(text)
+export async function postPlainToSlack(text: string, meta?: SlackMeta): Promise<void> {
+  await postToSlack(text, undefined, meta)
 }
 
 /**
  * Block Kit 形式で投稿する。
  * `text` は通知バナー／未対応クライアント向けのフォールバックなので必ず渡すこと。
  */
-export async function postToSlackBlocks(text: string, blocks: unknown[], signal?: AbortSignal): Promise<void> {
-  await postSlackPayload({ text, blocks }, signal)
+export async function postToSlackBlocks(text: string, blocks: unknown[], signal?: AbortSignal, meta?: SlackMeta): Promise<void> {
+  await postSlackPayload({ text, blocks }, signal, meta)
 }
 
 // ========================================
@@ -225,15 +230,16 @@ type EventType =
   | 'cancellation_incomplete'
   | 'payment_failed'
 
-const EVENT_EMOJI: Record<EventType, string> = {
-  signup: ':tada:',
-  login: ':door:',
-  trial_start: ':hourglass_flowing_sand:',
-  subscription: ':credit_card:',
-  payment: ':moneybag:',
-  cancellation: ':wave:',
-  cancellation_incomplete: ':warning:',
-  payment_failed: ':warning:',
+/** 種類と重さ。絵文字は使わない。人を呼ぶ（@channel）かは CHANNEL_PING で決める。 */
+const EVENT_META: Record<EventType, Pick<SlackMeta, 'kind' | 'severity'>> = {
+  signup: { kind: 'usage', severity: 'info' },
+  login: { kind: 'usage', severity: 'info' },
+  trial_start: { kind: 'billing', severity: 'info' },
+  subscription: { kind: 'billing', severity: 'info' },
+  payment: { kind: 'billing', severity: 'info' },
+  cancellation: { kind: 'billing', severity: 'action' },
+  cancellation_incomplete: { kind: 'billing', severity: 'urgent' },
+  payment_failed: { kind: 'billing', severity: 'urgent' },
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
@@ -276,20 +282,26 @@ export type EventNotification = {
   userEmail?: string | null
   userName?: string | null
   details?: string
+  /** 新規登録のとき、何人目の登録か（sendEventNotification が数える） */
+  ordinal?: number | null
+}
+
+/** Slack に出す利用者の表記。メールアドレスは一部を伏せ、氏名は出さない（個人情報を広げないため）。 */
+function slackUserLabel(email: string | null | undefined): string {
+  return email ? maskEmail(email) : '（メール未登録）'
 }
 
 function formatEventNotification(event: EventNotification): string {
   const now = new Date(event.occurredAt || Date.now()).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-  const emoji = EVENT_EMOJI[event.type]
   const label = EVENT_LABEL[event.type]
-  const who = event.userName || event.userEmail || '不明'
 
   const lines = [
     ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
-    `${emoji} *【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
-    `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
+    `*【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
+    ...(event.type === 'signup' ? [`- 登録者: ${ordinalLabel(event.ordinal)}`] : []),
+    `- ユーザー: ${slackUserLabel(event.userEmail)}`,
   ]
-  if (event.type === 'signup' && event.userId) {
+  if (event.userId) {
     const userUrl = `https://doya-ai.surisuta.jp/admin/users?userId=${encodeURIComponent(event.userId)}`
     lines.push(`- ユーザーURL：<${userUrl}|このユーザーの登録情報を開く>（管理者ログインが必要）`)
   }
@@ -299,13 +311,28 @@ function formatEventNotification(event: EventNotification): string {
 }
 
 /** Webhookの再送可能な通知キューで使う。失敗を呼び出し元へ返す。 */
+function eventMeta(event: EventNotification): SlackMeta {
+  return { app: 'ドヤAI', ...EVENT_META[event.type], mention: CHANNEL_PING[event.type] }
+}
+
+/** ログイン通知は同じ人について6時間に1回まで（同じ人の連続ログインで流れが埋まるため）。 */
+const LOGIN_NOTIFY_INTERVAL_MS = 6 * 3_600_000
+
 export async function sendEventNotificationStrict(event: EventNotification): Promise<void> {
-  await postToSlack(formatEventNotification(event), AbortSignal.timeout(8_000))
+  await postToSlack(formatEventNotification(event), AbortSignal.timeout(8_000), eventMeta(event))
 }
 
 export async function sendEventNotification(event: EventNotification): Promise<void> {
   try {
-    await postToSlack(formatEventNotification(event))
+    if (event.type === 'login') {
+      const who = event.userEmail || event.userId || event.userName
+      if (who && !shouldSend(`login:${who}`, LOGIN_NOTIFY_INTERVAL_MS)) return
+    }
+    if (event.type === 'signup' && event.ordinal === undefined) {
+      // 何人目の登録か。数えられなくても通知は送る
+      event = { ...event, ordinal: await withRetry(() => prisma.user.count()).catch(() => null) }
+    }
+    await postToSlack(formatEventNotification(event), undefined, eventMeta(event))
   } catch {
     console.error('[Notification] Failed to sendEventNotification')
   }
@@ -426,6 +453,11 @@ export async function sendDailySummary(): Promise<void> {
   const newGenerations = await prisma.generation.count({
     where: { createdAt: { gte: yesterday } },
   })
+  // 過去24時間に使った人数（ログイン利用者。ゲストは数えない）
+  const activeUsers = await prisma.generation
+    .groupBy({ by: ['userId'], where: { createdAt: { gte: yesterday } } })
+    .then((rows) => rows.filter((r) => r.userId).length)
+    .catch(() => null)
 
   // サービス別の利用（件数＋利用ユーザー数）
   const serviceStats = await getServiceUsageStats(yesterday)
@@ -467,11 +499,11 @@ export async function sendDailySummary(): Promise<void> {
   const serviceLines = formatServiceUsageLines(serviceStats)
 
   const lines = [
-    `📊 *[日次レポート]* ${dateStr}`,
+    `*日次レポート ${dateStr}*`,
     ``,
     greeting,
     ``,
-    `*👥 ユーザー*`,
+    `*ユーザー*`,
     `- 新規登録: ${newUsers}人`,
     ...(newUsersList.length > 0
       ? newUsersList.map((u) => {
@@ -479,23 +511,24 @@ export async function sendDailySummary(): Promise<void> {
           const extra = [svc ? `登録元: ${svc}` : null, u.signupSource ? `流入: ${u.signupSource}` : null]
             .filter(Boolean)
             .join(' ｜ ')
-          return `  - ${u.name || '名前未設定'} (${u.email})${extra ? `\n    ${extra}` : ''}`
+          return `  - ${slackUserLabel(u.email)}${extra ? `\n    ${extra}` : ''}`
         })
       : []),
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsers}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     ``,
-    `*⚡ サービス利用（過去24時間）*`,
+    `*サービス利用（過去24時間）*`,
     `- 合計: ${newGenerations}件 / ${serviceStats.length}サービス`,
+    `- 使った人数: ${activeUsers === null ? '未集計' : `${activeUsers}人`}`,
     ...serviceLines,
     ``,
-    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    `*初回利用（そのサービスを初めて使った人）*`,
     ...firstUseLines,
     ``,
-    `*🏆 利用件数トップ3*`,
+    `*利用件数トップ3*`,
     ...(topGenerators.length > 0
       ? topGenerators.map((g, i) => {
           const u = topUserMap.get(g.userId)
@@ -505,7 +538,7 @@ export async function sendDailySummary(): Promise<void> {
       : ['  - (生成なし)']),
   ]
 
-  await postToSlack(lines.join('\n') + await dailyOperationsSection('doya'))
+  await postToSlack(lines.join('\n') + await dailyOperationsSection('doya'), undefined, REPORT_META)
   await recordReportDelivered('doya-daily')
 }
 
@@ -563,24 +596,24 @@ export async function sendWeeklySummary(): Promise<void> {
   const greeting = getWeeklyGreeting(weekNewUsers.length, weekGenerations, paidUsersList.length)
 
   const lines = [
-    `📅 *[週次レポート]* ${weekStr}`,
+    `*週次レポート ${weekStr}*`,
     ``,
     greeting,
     ``,
     `*--- 先週の結果 ---*`,
     ``,
-    `*👥 新規ユーザー: ${weekNewUsers.length}人*`,
+    `*新規ユーザー: ${weekNewUsers.length}人*`,
     ...(weekNewUsers.length > 0
-      ? weekNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      ? weekNewUsers.map((u) => `  - ${slackUserLabel(u.email)}`)
       : []),
     ``,
-    `*⚡ サービス利用: ${weekGenerations}件 / ${weekServiceStats.length}サービス*`,
+    `*サービス利用: ${weekGenerations}件 / ${weekServiceStats.length}サービス*`,
     ...serviceLines,
     ``,
-    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    `*初回利用（そのサービスを初めて使った人）*`,
     ...weekFirstUseLines,
     ``,
-    `*🏆 利用件数トップ3*`,
+    `*利用件数トップ3*`,
     ...(weekTopGenerators.length > 0
       ? weekTopGenerators.map((g, i) => {
           const u = weekTopUserMap.get(g.userId)
@@ -593,12 +626,12 @@ export async function sendWeeklySummary(): Promise<void> {
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsersList.length}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     `- 総生成数: ${totalGenerations}件`,
   ]
 
-  await postToSlack(lines.join('\n'))
+  await postToSlack(lines.join('\n'), undefined, REPORT_META)
 }
 
 // ========================================
@@ -660,24 +693,24 @@ export async function sendMonthlySummary(): Promise<void> {
   const greeting = getMonthlyGreeting(monthNewUsers.length, monthGenerations, paidUsersList.length)
 
   const lines = [
-    `📆 *[月次レポート]* ${lastMonthName}`,
+    `*月次レポート ${lastMonthName}*`,
     ``,
     greeting,
     ``,
     `*--- 先月の結果 ---*`,
     ``,
-    `*👥 新規ユーザー: ${monthNewUsers.length}人*`,
+    `*新規ユーザー: ${monthNewUsers.length}人*`,
     ...(monthNewUsers.length > 0
-      ? monthNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      ? monthNewUsers.map((u) => `  - ${slackUserLabel(u.email)}`)
       : []),
     ``,
-    `*⚡ サービス利用: ${monthGenerations}件 / ${monthServiceStats.length}サービス*`,
+    `*サービス利用: ${monthGenerations}件 / ${monthServiceStats.length}サービス*`,
     ...serviceLines,
     ``,
-    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    `*初回利用（そのサービスを初めて使った人）*`,
     ...monthFirstUseLines,
     ``,
-    `*🏆 利用件数トップ3*`,
+    `*利用件数トップ3*`,
     ...(monthTopGenerators.length > 0
       ? monthTopGenerators.map((g, i) => {
           const u = monthTopUserMap.get(g.userId)
@@ -690,12 +723,12 @@ export async function sendMonthlySummary(): Promise<void> {
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsersList.length}人`,
     ...(paidUsersList.length > 0
-      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      ? paidUsersList.map((u) => `  - ${slackUserLabel(u.email)} [${u.plan}]`)
       : []),
     `- 総生成数: ${totalGenerations}件`,
   ]
 
-  await postToSlack(lines.join('\n'))
+  await postToSlack(lines.join('\n'), undefined, REPORT_META)
 }
 
 // ========================================
@@ -755,78 +788,23 @@ function formatJSTDate(date: Date): string {
 // ========================================
 // 所感メッセージ
 // ========================================
-// 数値に応じた明るい所感メッセージ
+// 冒頭の一文。数字は本文にあるので、ここでは繰り返さない。
 function getDailyGreeting(newUsers: number, generations: number, paidUsers: number): string {
-  const greetings = [
-    'おはようございます！今日も一日がんばりましょう 💪',
-    'おはようございます！昨日の成果をチェックしましょう ☀️',
-    'おはようございます！新しい一日のスタートです 🌅',
-  ]
-  const base = greetings[Math.floor(Math.random() * greetings.length)]
-
-  const highlights: string[] = []
-  if (newUsers >= 10) highlights.push(`🎉 新規ユーザー ${newUsers}人！すごい伸びです！`)
-  else if (newUsers >= 5) highlights.push(`✨ 新規ユーザー ${newUsers}人、いい調子です！`)
-  else if (newUsers >= 1) highlights.push(`👋 新しい仲間が ${newUsers}人増えました！`)
-
-  if (generations >= 100) highlights.push(`🔥 生成数 ${generations}件！大活躍の一日でした！`)
-  else if (generations >= 30) highlights.push(`⚡ ${generations}件の生成、たくさん使われています！`)
-  else if (generations >= 1) highlights.push(`🚀 ${generations}件生成されました、着実に成長中！`)
-
-  if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、ありがたいですね！`)
-
-  return highlights.length > 0
-    ? `${base}\n${highlights.join('\n')}`
-    : base
+  void generations
+  void paidUsers
+  return newUsers > 0 ? `過去24時間の登録と利用の数字をお知らせします。新規登録は${newUsers}人でした。` : '過去24時間の登録と利用の数字をお知らせします。'
 }
 
 function getWeeklyGreeting(newUsers: number, generations: number, paidUsers: number): string {
-  const greetings = [
-    '今週もお疲れさまでした！先週の振り返りです 📋',
-    '新しい一週間のスタート！先週を振り返りましょう 🗓️',
-    '月曜日です！先週の成果をチェックしましょう 📊',
-  ]
-  const base = greetings[Math.floor(Math.random() * greetings.length)]
-
-  const highlights: string[] = []
-  if (newUsers >= 20) highlights.push(`🎊 先週は ${newUsers}人が新規登録！大躍進の一週間でした！`)
-  else if (newUsers >= 10) highlights.push(`🎉 先週 ${newUsers}人の新規登録、素晴らしい成長です！`)
-  else if (newUsers >= 1) highlights.push(`👋 先週 ${newUsers}人の新しい仲間が加わりました！`)
-
-  if (generations >= 500) highlights.push(`🔥 ${generations}件の生成！すごい活用度です！`)
-  else if (generations >= 100) highlights.push(`⚡ ${generations}件の生成、活発に利用されています！`)
-  else if (generations >= 1) highlights.push(`🚀 ${generations}件生成、着実に伸びています！`)
-
-  if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、頼もしいですね！`)
-
-  return highlights.length > 0
-    ? `${base}\n${highlights.join('\n')}`
-    : base
+  void generations
+  void paidUsers
+  return newUsers > 0 ? `先週の登録と利用の数字をお知らせします。新規登録は${newUsers}人でした。` : '先週の登録と利用の数字をお知らせします。'
 }
 
 function getMonthlyGreeting(newUsers: number, generations: number, paidUsers: number): string {
-  const greetings = [
-    '新しい月のスタートです！先月を振り返りましょう 🌸',
-    '月初のご報告です！先月の成果をまとめました 📈',
-    'お疲れさまでした！先月の実績レポートです 🏆',
-  ]
-  const base = greetings[Math.floor(Math.random() * greetings.length)]
-
-  const highlights: string[] = []
-  if (newUsers >= 50) highlights.push(`🏅 先月は ${newUsers}人が新規登録！過去最高かも？！`)
-  else if (newUsers >= 20) highlights.push(`🎊 先月 ${newUsers}人の新規登録、好調です！`)
-  else if (newUsers >= 1) highlights.push(`👥 先月 ${newUsers}人の新しい仲間が加わりました！`)
-
-  if (generations >= 2000) highlights.push(`🔥 ${generations}件の生成！圧倒的な活用度です！`)
-  else if (generations >= 500) highlights.push(`⚡ ${generations}件の生成、しっかり使われています！`)
-  else if (generations >= 1) highlights.push(`🚀 ${generations}件生成、来月も楽しみです！`)
-
-  if (paidUsers >= 5) highlights.push(`💎 有料ユーザー ${paidUsers}人！ビジネスが育っています！`)
-  else if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、ありがたいですね！`)
-
-  return highlights.length > 0
-    ? `${base}\n${highlights.join('\n')}`
-    : base
+  void generations
+  void paidUsers
+  return newUsers > 0 ? `先月の登録と利用の数字をお知らせします。新規登録は${newUsers}人でした。` : '先月の登録と利用の数字をお知らせします。'
 }
 
 // ========================================
@@ -852,7 +830,8 @@ async function postDripToSlack(text: string): Promise<void> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(voicePayload({ text })),
+    body: JSON.stringify(voicePayload({ text }, REPORT_META)),
+    signal: AbortSignal.timeout(8_000),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -872,7 +851,7 @@ export async function sendHubspotSyncNotification(
   try {
     const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     const lines = [
-      `:email: *[自動メール配信に追加できました]* ${now}`,
+      `*自動メール配信に追加しました* ${now}`,
       `HubSpotの新規コンタクト${leads.length}件を自動メール配信（ナーチャリング）に追加しました。`,
       ...leads.map((l) => `- ${l.name || '(名前なし)'}（${l.email}）`),
     ]
@@ -1003,11 +982,11 @@ export async function sendDripReport(slot: 'morning' | 'evening'): Promise<void>
   const dateStr = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
   const isMorning = slot === 'morning'
   const header = isMorning
-    ? `☀️ *[ドリップ配信レポート・朝]* ${dateStr}`
-    : `🌙 *[ドリップ配信レポート・夜]* ${dateStr}`
+    ? `*ドリップ配信レポート（朝） ${dateStr}*`
+    : `*ドリップ配信レポート（夜） ${dateStr}*`
   const greeting = isMorning
-    ? 'おはようございます！本日のメール配信予定と昨日の結果です 📬'
-    : 'お疲れさまでした！本日のメール配信実績のまとめです 📊'
+    ? '本日のメール配信予定と、昨日の結果をお知らせします。'
+    : '本日のメール配信の実績をお知らせします。'
   const actualLabel = isMorning ? '現時点' : '本日分'
 
   const lines: string[] = [
@@ -1015,10 +994,10 @@ export async function sendDripReport(slot: 'morning' | 'evening'): Promise<void>
     ``,
     greeting,
     ``,
-    `*📮 本日の配信予定*`,
+    `*本日の配信予定*`,
     `- 配信予定件数: ${scheduledToday}件`,
     ``,
-    `*📤 本日の配信実績（${actualLabel}）*`,
+    `*本日の配信実績（${actualLabel}）*`,
     `- 配信済み: ${todayStats.sent}件${todayStats.failed > 0 ? ` / 失敗: ${todayStats.failed}件` : ''}`,
     `- 開封: ${todayStats.opened}件（開封率 ${todayStats.openRate}%）`,
     `- クリック: ${todayStats.clicked}件（クリック率 ${todayStats.clickRate}%）`,
@@ -1026,7 +1005,7 @@ export async function sendDripReport(slot: 'morning' | 'evening'): Promise<void>
       ? [`- バウンス: ${todayStats.bounced}件（${todayStats.bounceRate}%）`]
       : []),
     ``,
-    `*📈 昨日の最終実績*`,
+    `*昨日の最終実績*`,
     `- 配信: ${yStats.sent}件${yStats.failed > 0 ? ` / 失敗: ${yStats.failed}件` : ''}`,
     `- 開封率: ${yStats.openRate}%（${yStats.opened}件）`,
     `- クリック率: ${yStats.clickRate}%（${yStats.clicked}件）`,
@@ -1044,17 +1023,17 @@ export async function sendGCPUsageReport(): Promise<void> {
   const dateStr = new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
   const lines: string[] = [
-    `☁️ *[GCP日次使用量レポート]* ${dateStr}`,
+    `*GCP日次使用量レポート ${dateStr}*`,
     ``,
   ]
 
   if (report.error) {
-    lines.push(`⚠️ データ取得エラー: ${report.error}`)
+    lines.push(`【要確認】データ取得エラー: ${report.error}`)
     lines.push(``)
   }
 
   // Gemini API セクション
-  lines.push(`*🤖 Gemini API（過去24時間）*`)
+  lines.push(`*Gemini API（過去24時間）*`)
   if (report.geminiApi.totalRequests > 0) {
     lines.push(`- リクエスト数: ${report.geminiApi.totalRequests.toLocaleString()}件`)
     for (const m of report.geminiApi.requestsByMethod) {
@@ -1063,7 +1042,7 @@ export async function sendGCPUsageReport(): Promise<void> {
     if (report.geminiApi.errorCount > 0) {
       lines.push(`- エラー数: ${report.geminiApi.errorCount.toLocaleString()}件（エラー率: ${report.geminiApi.errorRate.toFixed(1)}%）`)
     } else {
-      lines.push(`- エラー: なし ✅`)
+      lines.push(`- エラー: なし`)
     }
   } else if (!report.error) {
     lines.push(`- リクエスト数: 0件`)
@@ -1071,7 +1050,7 @@ export async function sendGCPUsageReport(): Promise<void> {
 
   // コスト推定セクション（日次）
   lines.push(``)
-  lines.push(`*💰 推定コスト（過去24時間）*`)
+  lines.push(`*推定コスト（過去24時間）*`)
   if (report.estimatedCost.totalJpy > 0) {
     lines.push(`- Gemini API: *¥${report.estimatedCost.geminiApiJpy.toLocaleString()}*（$${report.estimatedCost.geminiApiUsd.toFixed(2)}）`)
   } else {
@@ -1081,7 +1060,7 @@ export async function sendGCPUsageReport(): Promise<void> {
   // 月間累計セクション
   const monthLabel = new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long' })
   lines.push(``)
-  lines.push(`*📅 月間累計（${monthLabel}）*`)
+  lines.push(`*月間累計（${monthLabel}）*`)
   lines.push(`- リクエスト数: ${report.monthly.totalRequests.toLocaleString()}件`)
   if (report.monthly.estimatedCost.totalJpy > 0) {
     lines.push(`- 推定コスト: *¥${report.monthly.estimatedCost.totalJpy.toLocaleString()}*（$${report.monthly.estimatedCost.totalUsd.toFixed(2)}）`)
@@ -1093,7 +1072,7 @@ export async function sendGCPUsageReport(): Promise<void> {
   // 他のAPIサービス セクション
   if (report.otherApis.length > 0) {
     lines.push(``)
-    lines.push(`*🔧 その他のAPIサービス*`)
+    lines.push(`*その他のAPIサービス*`)
     for (const api of report.otherApis.slice(0, 10)) {
       const shortName = api.service.replace('.googleapis.com', '')
       lines.push(`- ${shortName}: ${api.count.toLocaleString()}件`)
@@ -1104,5 +1083,5 @@ export async function sendGCPUsageReport(): Promise<void> {
   lines.push(``)
   lines.push(`_Project: ${report.projectId}_`)
 
-  await postToSlack(lines.join('\n'))
+  await postToSlack(lines.join('\n'), undefined, REPORT_META)
 }

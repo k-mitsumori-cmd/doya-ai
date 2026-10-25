@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   try {
     await postToSlackBlocks('お問い合わせメールが届きました', [
       { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
-    ])
+    ], undefined, { app: 'ドヤAI', kind: 'inquiry', severity: 'action' })
   } catch {
     // 通知経路が落ちていること自体を見えるようにする（黙って捨てない）
     await notifyAlert({

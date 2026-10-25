@@ -277,7 +277,7 @@ export async function buildSpendReport(now = new Date()): Promise<SpendReport> {
 const yen = (n: number) => `¥${n.toLocaleString()}`
 
 export function formatSpendReport(r: SpendReport): string {
-  const lines: string[] = [`💸 *[日次コストレポート]* ${r.dateLabel} 分`, ``]
+  const lines: string[] = [`*日次コストレポート ${r.dateLabel} 分*`, ``]
 
   // --- 昨日の実費 ---
   lines.push(`*使った額（${r.dateLabel}）*`)
@@ -326,7 +326,7 @@ export function formatSpendReport(r: SpendReport): string {
   for (const u of r.usage) lines.push(`- ${u.label}: ${u.detail}`)
 
   if (r.errors.length > 0) {
-    lines.push(``, `⚠️ ${r.errors.join(' / ')}`)
+    lines.push(``, `【要確認】${r.errors.join(' / ')}`)
   }
 
   return lines.join('\n')
@@ -335,5 +335,5 @@ export function formatSpendReport(r: SpendReport): string {
 /** 組み立てて運用チャンネルへ送る */
 export async function sendSpendReport(): Promise<void> {
   const report = await buildSpendReport()
-  await postPlainToSlack(formatSpendReport(report))
+  await postPlainToSlack(formatSpendReport(report), { app: 'ドヤAI', kind: 'report', severity: 'info' })
 }
