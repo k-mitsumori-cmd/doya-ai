@@ -45,3 +45,12 @@ export function saveSeen(userKey: string, list: string[]): void {
     // 保存できなくても、この画面の中では覚えている
   }
 }
+
+// ---- 知らせの量（提案リスト (34)）。見た記録と同じく、ユーザーごとに端末へ残す ----
+const LEVEL_PREFIX = 'doya-notice-level:v1:'
+export function loadLevelRaw(userKey: string): string | null {
+  try { return window.localStorage.getItem(LEVEL_PREFIX + (userKey || 'anon')) } catch { return null }
+}
+export function saveLevelRaw(userKey: string, level: string): void {
+  try { window.localStorage.setItem(LEVEL_PREFIX + (userKey || 'anon'), level) } catch { /* 保存できなくても、この画面の中では効く */ }
+}

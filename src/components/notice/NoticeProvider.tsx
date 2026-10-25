@@ -13,8 +13,8 @@ import Link from 'next/link'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
-import { EMPTY_QUEUE, closeNotice, enqueueNotice, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeQueueState } from '@/lib/notice/queue'
-import { addSeen, loadSeen, saveSeen } from '@/lib/notice/seen'
+import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
+import { addSeen, loadLevelRaw, loadSeen, saveLevelRaw, saveSeen } from '@/lib/notice/seen'
 import toastStore from 'react-hot-toast'
 import HotToastBridge from './HotToastBridge'
 import styles from './notice.module.css'
@@ -47,10 +47,13 @@ interface NoticeApi {
   hasSeen: (id: string) => boolean
   /** 作業中にする。返り値を呼ぶと戻る（長い生成の間など、ツールから使う） */
   holdBusy: () => () => void
+  /** 知らせの量（ふつう・少なめ・エラーだけ） */
+  level: NoticeLevel
+  setLevel: (l: NoticeLevel) => void
 }
 
 const noop = () => {}
-const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop })
+const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop, level: 'normal', setLevel: noop })
 
 /** 知らせの部品。旗が off のとき（Provider の外）は、どれも何もしない */
 export function useNotice(): NoticeApi {
@@ -91,7 +94,16 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   const [seen, setSeen] = useState<string[]>([])
   const [ready, setReady] = useState(false)
   const seenRef = useRef<Set<string>>(new Set())
-  useEffect(() => { const s = loadSeen(userKey); setSeen(s); seenRef.current = new Set(s); setReady(true) }, [userKey])
+  const [level, setLevelState] = useState<NoticeLevel>('normal')
+  const levelRef = useRef<NoticeLevel>('normal')
+  useEffect(() => {
+    const s = loadSeen(userKey); setSeen(s); seenRef.current = new Set(s)
+    const l = parseNoticeLevel(loadLevelRaw(userKey)); setLevelState(l); levelRef.current = l
+    setReady(true)
+  }, [userKey])
+  const setLevel = useCallback((l: NoticeLevel) => { setLevelState(l); levelRef.current = l; saveLevelRaw(userKey, l) }, [userKey])
+  // 知らせの量を選ぶ画面（シートの中で切り替える）
+  const [levelOpen, setLevelOpen] = useState(false)
   const remember = useCallback((id: string) => {
     setSeen((cur) => { const next = addSeen(cur, id); saveSeen(userKey, next); seenRef.current = new Set(next); return next })
   }, [userKey])
@@ -113,7 +125,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   const [q, setQ] = useState<NoticeQueueState>(EMPTY_QUEUE)
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState(false)
-  const push = useCallback((n: Notice) => setQ((s) => enqueueNotice(s, n, seenRef.current)), [])
+  const push = useCallback((n: Notice) => setQ((s) => enqueueNotice(s, n, seenRef.current, levelRef.current)), [])
   // 同時に来たものをまとめてから、順番どおりに出す。作業中になったら、表示中のエラー以外を列に戻す
   useEffect(() => {
     if (busy) { setQ((s) => pauseNotice(s)); }
@@ -122,7 +134,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   }, [busy, q.queue.length, q.current])
   const current = q.current
   useEffect(() => {
-    setPage(0)
+    setPage(0); setLevelOpen(false)
     if (!current) { setOpen(false); return }
     const r = requestAnimationFrame(() => setOpen(true))
     return () => cancelAnimationFrame(r)
@@ -203,7 +215,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   }, [tipState, hideTip])
 
   const seenSet = useMemo(() => new Set(seen), [seen])
-  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy }), [ready, push, notify, tip, seenSet, holdBusy])
+  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy, level, setLevel }), [ready, push, notify, tip, seenSet, holdBusy, level, setLevel])
 
   const p = current ? (current.pages ? current.pages[Math.min(page, current.pages.length - 1)] : current) : null
   const last = !current?.pages || page >= current.pages.length - 1
@@ -230,6 +242,28 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
               </div>
               {p.body ? <p className={styles.body}>{p.body}</p> : null}
               {p.points?.length ? <ul className={styles.points}>{p.points.map((t) => <li key={t}>{t}</li>)}</ul> : null}
+              {p.checklist?.length ? (
+                <ol className={styles.check}>
+                  {p.checklist.map((c) => (
+                    <li key={c.label} data-done={c.done ? 'true' : undefined}>
+                      <span className={styles.checkMark} aria-hidden="true" />
+                      {c.href && !c.done ? <Link href={c.href} onClick={() => close(false)}>{c.label}</Link> : <span>{c.label}</span>}
+                      <span className={styles.checkState}>{c.done ? '済み' : 'まだ'}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+              {levelOpen ? (
+                <fieldset className={styles.level}>
+                  <legend>知らせの量</legend>
+                  {NOTICE_LEVELS.map((l) => (
+                    <label key={l.id} className={styles.levelRow}>
+                      <input type="radio" name="doya-notice-level" value={l.id} checked={level === l.id} onChange={() => setLevel(l.id)} />
+                      <span><b>{l.label}</b><small>{l.note}</small></span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : null}
               <div className={styles.foot}>
                 {current.pages ? <span className={styles.dots} aria-label={`${page + 1} / ${current.pages.length}`}>{current.pages.map((_, i) => <i key={i} data-on={i === page ? 'true' : undefined} />)}</span> : null}
                 <span className={styles.actions}>
@@ -246,7 +280,10 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
                   )}
                 </span>
               </div>
-              {current.once ? <span className={styles.never}>閉じると、この知らせは次から出ません。</span> : null}
+              <span className={styles.never}>
+                {current.once ? '閉じると、この知らせは次から出ません。' : ''}
+                {current.kind !== 'error' ? <button type="button" className={styles.levelLink} onClick={() => setLevelOpen((v) => !v)} aria-expanded={levelOpen}>{levelOpen ? '量の設定を閉じる' : '知らせの量を変える'}</button> : null}
+              </span>
             </div>
           </>
         ) : null}
