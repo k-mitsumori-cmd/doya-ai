@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && tsc --noEmit && next build",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && tsc --noEmit && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -23,6 +23,7 @@
     "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts src/lib/expense/members.test.ts",
     "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts src/lib/doya-power/charge.test.ts src/lib/doya-power/voice.test.ts src/lib/doya-power/count.test.ts src/lib/doya-power/history.test.ts src/lib/doya-power/retry.test.ts src/lib/doya-power/whatyoucando.test.ts src/components/doya-power/insufficient.test.ts src/lib/collection/collection.test.ts src/lib/missions/missions.test.ts",
     "test:shell": "tsx --test src/components/shell/registry.test.ts",
+    "test:agent": "tsx --test src/lib/agent-orchestration/runner.test.ts src/lib/agent-orchestration/tools.test.ts src/lib/agent-orchestration/plan.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
