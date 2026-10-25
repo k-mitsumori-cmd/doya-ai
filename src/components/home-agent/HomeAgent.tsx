@@ -21,6 +21,7 @@ import { fakeToolDeps, runSalesPrepTask, type SalesPrepTaskId } from '@/lib/agen
 import { todoViews, todoCounts } from '@/lib/agent-orchestration/view'
 import type {
   AgentPlan, AgentPlanEvent, AgentPlanRequest, AgentPlanResponse, AgentPlanTask, AgentPowerView, AgentQuestionView, AgentSourceView, AgentTodoView,
+  AgentRunCreateRequest, AgentRunView,
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
 import styles from './home-agent.module.css'
@@ -45,6 +46,59 @@ interface SavedRun {
   delegate: Record<string, boolean>
   states: AgentStates
   savedAt: number
+  /** サーバーの実行の記録の id（記録が使える設定のときだけ。AGENT_RUNS_STORE=db） */
+  runId?: string
+}
+
+/** サーバーの実行の記録を、画面の「前回の作戦の続き」の形にする */
+function savedFromRun(r: AgentRunView): SavedRun {
+  const delegated = new Set(r.delegated)
+  return {
+    recipeId: r.recipeId, title: r.title, answers: r.answers, plan: r.plan, states: r.states,
+    delegate: Object.fromEntries(planTasks(r.plan).map((t) => [t.id, delegated.has(t.id)])),
+    savedAt: Date.parse(r.updatedAt) || Date.now(), runId: r.id,
+  }
+}
+
+type RunStore = 'unknown' | 'db' | 'off'
+
+/** 続きを読む（記録が使えない設定なら off を返し、画面は端末に残した続きを使う） */
+async function readActiveRun(): Promise<{ store: RunStore; saved: SavedRun | null }> {
+  try {
+    const res = await fetch('/api/agent/runs/active', { cache: 'no-store' })
+    if (res.status === 404) return { store: 'off', saved: loadSaved() }
+    if (!res.ok) return { store: 'unknown', saved: loadSaved() }
+    const data = await res.json().catch(() => null) as { run?: AgentRunView | null } | null
+    return { store: 'db', saved: data?.run ? savedFromRun(data.run) : null }
+  } catch {
+    return { store: 'unknown', saved: loadSaved() }
+  }
+}
+
+/** 実行の記録を作る。記録を使わない設定（404）なら null */
+async function createRun(req: AgentRunCreateRequest): Promise<{ run: AgentRunView | null; off: boolean }> {
+  const res = await fetch('/api/agent/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) })
+  if (res.status === 404) return { run: null, off: true }
+  const data = await res.json().catch(() => null) as { run?: AgentRunView; error?: string; kind?: AgentTaskError['kind'] } | null
+  if (res.status === 201 && data?.run) return { run: data.run, off: false }
+  throw new AgentTaskError(data?.error || '作戦を保存できませんでした。時間をおいて、もう一度お試しください。', data?.kind ?? 'tool')
+}
+
+/** 記録のある実行で、ToDo を1つ進める（resume はサーバーが持つので送らない） */
+async function taskViaRun(runId: string, taskId: string, signal: AbortSignal): Promise<AgentTaskResult> {
+  let res: Response
+  try {
+    res = await fetch(`/api/agent/runs/${encodeURIComponent(runId)}/tasks/${encodeURIComponent(taskId)}`, { method: 'POST', signal })
+  } catch (e) {
+    if ((e as { name?: string })?.name === 'AbortError') throw e
+    throw new AgentTaskError('通信が切れました。もう一度お試しください。')
+  }
+  const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentTaskError['power'] } | null
+  if (res.ok && data?.result) return data.result
+  if (res.status === 404) throw new AgentTaskError('この機能は、まだお使いいただけません。', 'auth')
+  if (res.status === 429) throw new AgentTaskError(data?.error || '同時に動かせるのは3つまでです。ほかの ToDo が終わってから、やり直してください。', 'limit', data?.resume, data?.href, data?.power)
+  // 422 の run は読めないとき入らないことがあるので、画面の今の状態を使う（power だけ受け取る）
+  throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href, data?.power)
 }
 
 function loadSaved(): SavedRun | null {
@@ -191,7 +245,16 @@ export default function HomeAgent({ executor = 'api' }: {
   const kunRef = useRef<HTMLDivElement | null>(null)
   const sampleDeps = useMemo(() => (executor === 'sample' ? fakeToolDeps({ failSlidesOnce: { done: false } }) : null), [executor])
 
-  useEffect(() => { setSaved(loadSaved()) }, [])
+  // 続き: 本物の API のときは、まずサーバーの実行の記録を読む（記録を使わない設定なら、端末に残したもの）
+  const [store, setStore] = useState<RunStore>(executor === 'api' ? 'unknown' : 'off')
+  const runIdRef = useRef<string | null>(null)
+  const runDelegatedRef = useRef<string[]>([])
+  useEffect(() => {
+    if (executor !== 'api') { setSaved(loadSaved()); return }
+    let live = true
+    void readActiveRun().then((r) => { if (live) { setStore(r.store); setSaved(r.saved) } })
+    return () => { live = false }
+  }, [executor])
   useEffect(() => () => ctrl.current?.abort(), [])
   // ポーズの絵を先に読み込む（切り替えのときに白く抜けない）
   useEffect(() => { for (const p of new Set(Object.values(POSE))) { const im = new Image(); im.src = `/character/${p}-512.webp` } }, [])
@@ -214,6 +277,7 @@ export default function HomeAgent({ executor = 'api' }: {
 
   const reset = () => {
     ctrl.current?.abort()
+    runIdRef.current = null; runDelegatedRef.current = []
     setSources([]); setReasons([]); setPlan(null); setStates({}); setError(null); setQError(null)
   }
 
@@ -267,9 +331,30 @@ export default function HomeAgent({ executor = 'api' }: {
     const c = new AbortController()
     ctrl.current = c
     setScene('run')
+    // 記録が使える設定なら、実行の記録を作ってから進める（任せる ToDo が変わったら、作り直す）
+    let useStore = executor === 'api' && store !== 'off'
+    if (useStore) {
+      const ids = chosen.map((t) => t.id)
+      const same = runIdRef.current && ids.every((id) => runDelegatedRef.current.includes(id))
+      if (!same) {
+        try {
+          const made = await createRun({ recipeId, answers, delegate: ids, text: title })
+          if (made.off) { setStore('off'); useStore = false }
+          else if (made.run) { runIdRef.current = made.run.id; runDelegatedRef.current = made.run.delegated; setStore('db') }
+        } catch (e) {
+          if (c.signal.aborted) return
+          setError(e instanceof AgentTaskError ? e.userMessage : '作戦を保存できませんでした。時間をおいて、もう一度お試しください。')
+          setScene('plan')
+          return
+        }
+      }
+    }
+    if (c.signal.aborted) return
+    const runId = useStore ? runIdRef.current : null
     const execute = (t: AgentPlanTask, ctx: { signal: AbortSignal; resume?: Record<string, string> }) =>
       executor === 'sample' && sampleDeps
         ? (() => { const p = parseSalesPrepAnswers(answers); if (!p.ok) throw new AgentTaskError(p.error, 'input'); return runSalesPrepTask(t.id as SalesPrepTaskId, p.value, sampleDeps, ctx.resume) })()
+        : runId ? taskViaRun(runId, t.id, ctx.signal)
         : taskViaApi(recipeId, t.id, answers, ctx.signal, ctx.resume)
     const final = await runAgentTasks({
       tasks: chosen,
@@ -279,18 +364,26 @@ export default function HomeAgent({ executor = 'api' }: {
       signal: c.signal,
       onChange: (s) => {
         setStates(s)
-        saveRun({ recipeId, title, answers, plan, delegate, states: s, savedAt: Date.now() })
+        // 記録があるときはサーバーが残す。無いときだけ端末に残す
+        if (!runId) saveRun({ recipeId, title, answers, plan, delegate, states: s, savedAt: Date.now() })
       },
     })
     if (c.signal.aborted) return
     setStates(final)
     if (progressOf(final).finished) setScene('done')
-  }, [plan, chosen, executor, sampleDeps, answers, recipeId, title, delegate])
+  }, [plan, chosen, executor, sampleDeps, answers, recipeId, title, delegate, store])
+
+  /** 入力に戻るとき、続きを読み直す（記録があればサーバーから、無ければ端末から） */
+  const refreshSaved = () => {
+    if (executor === 'api' && store !== 'off') { void readActiveRun().then((r) => { setStore(r.store); setSaved(r.saved) }); return }
+    setSaved(loadSaved())
+  }
 
   /** 続きを進める（残っている ToDo から） */
   const resume = (s: SavedRun) => {
     reset()
     setRecipeId(s.recipeId); setTitle(s.title); setAnswers(s.answers); setPlan(s.plan); setDelegate(s.delegate); setStates(s.states)
+    if (s.runId) { runIdRef.current = s.runId; runDelegatedRef.current = Object.entries(s.delegate).filter(([, v]) => v).map(([k]) => k) }
     setScene('plan')
   }
 
@@ -486,7 +579,7 @@ export default function HomeAgent({ executor = 'api' }: {
               <div className={styles.memory}>
                 <b>作戦に残しました</b>
                 <span>ゴール・3つの柱と、できた下書きを、この作戦に残しました。次に経営ホームを開くと「続きを進める」から再開できます。送る・公開する操作は、各ツールで内容を確かめてから行ってください。</span>
-                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); setSaved(loadSaved()); setScene('input') }}>経営ホームの入力に戻る</button>
+                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
               </div>
             ) : null}
           </div>
