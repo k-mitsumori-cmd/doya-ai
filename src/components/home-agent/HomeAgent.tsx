@@ -349,17 +349,7 @@ export default function HomeAgent({ executor = 'api' }: {
 
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
-            {saved ? (
-              <button type="button" className={styles.resume} onClick={() => resume(saved)}>
-                <ProgressRing done={progressOf(saved.states).done} total={progressOf(saved.states).total} />
-                <span className={styles.resumeText}>
-                  <span className={styles.muted}>前回の作戦の続き</span>
-                  <b>{saved.plan.goal.statement}</b>
-                  <span className={styles.muted}>ToDo {progressOf(saved.states).done} / {progressOf(saved.states).total} 件が完了</span>
-                </span>
-                <span className={styles.resumeGo}>{progressOf(saved.states).finished ? '作戦を見る' : '続きを進める'}</span>
-              </button>
-            ) : null}
+            {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
             <div className={styles.card}>
               <p className={styles.eyebrow}>新しい依頼</p>
               <label className={styles.title} htmlFor="home-agent-ask">どんなゴールを目指しますか？</label>
@@ -594,6 +584,42 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
         <span className={styles.muted}>任せる ToDo で <strong className={styles.sum}><Ticker value={total} reduce={reduce} /></strong> 減ります{power.enabled && power.remaining !== null ? `（今の残り ${power.remaining.toLocaleString('ja-JP')}）` : ''}</span>
         <button type="button" className={styles.btn} onClick={onGo} disabled={chosen === 0}>{chosen === 0 && tasks.some((t) => states[t.id]?.status === 'done') ? 'すべて済んでいます' : 'まとめて進める'}</button>
       </div>
+    </div>
+  )
+}
+
+/** 前回の作戦の続き。残っている ToDo を並べ、そこから再開する */
+function ResumeCard({ saved, onResume }: { saved: SavedRun; onResume: () => void }) {
+  const p = progressOf(saved.states)
+  const left = planTasks(saved.plan)
+    .filter((t) => (saved.delegate[t.id] ?? t.delegate) && saved.states[t.id]?.status !== 'done')
+  const shown = left.slice(0, 4)
+  return (
+    <div className={styles.resume}>
+      <div className={styles.resumeHead}>
+        <ProgressRing done={p.done} total={p.total} />
+        <span className={styles.resumeText}>
+          <span className={styles.muted}>前回の作戦の続き</span>
+          <b>{saved.plan.goal.statement}</b>
+          <span className={styles.muted}>ToDo {p.done} / {p.total} 件が完了</span>
+        </span>
+      </div>
+      {shown.length ? (
+        <ul className={styles.resumeList} aria-label="残っている ToDo">
+          {shown.map((t) => (
+            <li key={t.id}>
+              <span>{t.title}</span>
+              <span className={styles.resumeState} data-status={saved.states[t.id]?.status ?? 'queued'}>
+                {saved.states[t.id]?.status === 'failed' ? 'やり直し待ち' : 'まだ'}
+              </span>
+            </li>
+          ))}
+          {left.length > shown.length ? <li className={styles.muted}>ほか {left.length - shown.length} 件</li> : null}
+        </ul>
+      ) : null}
+      <button type="button" className={styles.btn} onClick={onResume}>
+        {left.length ? `残り ${left.length} 件を進める` : '作戦を見る'}
+      </button>
     </div>
   )
 }

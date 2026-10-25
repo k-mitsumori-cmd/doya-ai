@@ -46,17 +46,19 @@
 .btn:hover { transform: translateY(-1px); }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: none; }
 .ghost { background: transparent; color: var(--blue); border: 1px solid var(--line); box-shadow: none; }
-.btn:focus-visible, .chip:focus-visible, .resume:focus-visible, .option:focus-within, .ask:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
+.btn:focus-visible, .chip:focus-visible, .option:focus-within, .ask:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
 .cost { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); font-weight: 800; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cost svg { width: 12px; height: 12px; }
 
 /* 続きを進める */
-.resume { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; box-shadow: var(--shadow); transition: border-color .2s, transform .2s var(--ease); }
-.resume:hover { border-color: var(--blue); transform: translateY(-1px); }
-.ring { width: 44px; height: 44px; }
+.resume { display: grid; gap: 12px; width: 100%; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); color: var(--ink); box-shadow: var(--shadow); justify-items: start; }
+.resumeHead { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; }
+.resumeList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; }
+.resumeList li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--blue-soft) 55%, var(--paper)); font-size: 14px; }
+.resumeState { flex: none; font-size: 12px; font-weight: 700; color: var(--sub); }
+.resumeState[data-status='failed'] { color: var(--bad-ink); }
 .resumeText { display: grid; min-width: 0; }
 .resumeText b { font-size: 15px; line-height: 1.5; }
-.resumeGo { font-size: 13px; font-weight: 800; color: var(--blue); white-space: nowrap; }
 
 /* 質問 */
 .questions { display: grid; gap: 14px; margin-top: 4px; }
@@ -129,6 +131,7 @@
 }
 @property --ha-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @keyframes borderBeam { to { --ha-a: 360deg; } }
+@keyframes edgeFlow { from { background-position: 0 200%, 0 0; } to { background-position: 0 -100%, 0 0; } }
 .run[data-status='failed'] { border-color: color-mix(in srgb, var(--bad-ink) 40%, var(--line)); }
 .run[data-status='failed'] .rstate { color: var(--bad-ink); }
 .memory { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--r); background: var(--blue-soft); font-size: 13px; color: var(--ink); justify-items: start; }
@@ -139,9 +142,15 @@
   .hero { position: static; grid-template-columns: 88px minmax(0, 1fr); justify-items: start; align-items: center; }
   .kun { width: 88px; }
   .say { max-width: none; text-align: left; }
-  .resume { grid-template-columns: 40px minmax(0, 1fr); }
+  .resumeHead { grid-template-columns: 40px minmax(0, 1fr); }
   .resume .ring { width: 40px; height: 40px; }
-  .resumeGo { grid-column: 2; }
+  .resume .btn { width: 100%; }
+  /* スマホでは、動いている札の左の縁を光が上から下へ流れる */
+  .run[data-status='running']::after {
+    inset: 0 auto 0 -1px; width: 3px; padding: 0; border-radius: 3px;
+    background: linear-gradient(180deg, transparent 0%, var(--cyan) 45%, var(--blue) 55%, transparent 100%) 0 0 / 100% 200% no-repeat, var(--line);
+    -webkit-mask: none; mask: none; animation: edgeFlow 1.6s linear infinite;
+  }
   .src, .run { grid-template-columns: 32px minmax(0, 1fr); }
   .sstate, .run .rstate { grid-column: 2; }
   .todo { grid-template-columns: 32px minmax(0, 1fr); }
