@@ -4,7 +4,7 @@
 // ============================================
 // (1) 初回のようこそ3枚 / (3)(6) ツールを初めて開いたときの「できること」3点
 // (10) 新機能のお知らせ / (18) ドヤパワーの残りが2割
-// (2) はじめの手順チェックリスト / (37) 通信が切れたときの知らせ
+// (2) はじめの手順チェックリスト / (37) 通信が切れたときの知らせ / (36) 調整中のツール
 // ⚠️ NoticeProvider の中だけで動く（旗が off なら ShellGate がこの部品を置かない）。
 // ⚠️ 出す・出さないの決まり（順番・作業中・once）は queue.ts。ここは「何を足すか」だけ。
 import { usePathname } from 'next/navigation'
@@ -35,6 +35,12 @@ function toolForPath(pathname: string): ShellTool | undefined {
     const base = t.href.split('?')[0].replace(/\/$/, '')
     return pathname === base || pathname.startsWith(`${base}/`)
   })
+}
+
+/** 日ごとに1回（日本時間の年月日） */
+function dayKey(d: Date): string {
+  const j = new Date(d.getTime() + 9 * 3_600_000)
+  return j.toISOString().slice(0, 10)
 }
 
 /** 月ごとに1回（日本時間の年月） */
@@ -95,7 +101,14 @@ export default function ShellNotices() {
     if (!enabled) return
     const tool = toolForPath(pathname)
     if (!tool) return
-    const features = getServiceById(tool.id)?.features?.slice(0, 3) ?? []
+    const service = getServiceById(tool.id)
+    // (36) 調整中のツール（services.ts の status: 'maintenance'）を開いたら、その日に1回知らせる。エラーと同じ扱いで先に出す
+    if (service?.status === 'maintenance') {
+      push({ id: `maintenance:${tool.id}:${dayKey(new Date())}`, kind: 'error', tone: 'warn', once: true, pose: 'focus', eyebrow: '調整中のツール',
+        title: `${tool.name} は、いま調整中です`, body: '一部の機能が動かないことがあります。作ったものの確認と編集は、そのままできます。直ったら、新機能のお知らせで知らせます。',
+        primary: { label: 'わかった' } })
+    }
+    const features = service?.features?.slice(0, 3) ?? []
     if (!features.length) return
     push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
   }, [enabled, pathname, push])
