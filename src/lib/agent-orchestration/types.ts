@@ -207,8 +207,14 @@ export interface AgentTodoView {
   status: AgentTodoStatus
   /** 今の段（stages の何番目か。running のときだけ。0 から） */
   stage: number | null
-  /** 減ったドヤパワーと、戻したドヤパワー */
+  /**
+   * 減ったドヤパワーと、戻したドヤパワー（試みごとに足した量。減る量の表から数えた目安）。
+   * 失敗の文の出し分け: used > 0 なら「N 減りました（途中まで作れた分）」、used が 0 で refunded > 0 なら「減った分（N）は戻しました」、
+   * どちらも 0 なら「ドヤパワーは減っていません」。ただし powerKnown が false のときは、量を言わない（通信が切れて答えが届かなかった）
+   */
   power: AgentPowerUse
+  /** 量が分かっているか（サーバーの答えが一度でも届いた）。false のときは、減ったかどうかを言わない */
+  powerKnown: boolean
   draft?: AgentDraftView
   /** 失敗の一文と、開くとよい画面 */
   error?: { text: string; kind: AgentFailureKind; href?: string; hrefLabel?: string }

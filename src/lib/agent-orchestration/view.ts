@@ -13,7 +13,7 @@ export const STAGE_MS = 2600
 
 export function todoViewOf(task: Pick<AgentPlanTask, 'id' | 'stages'>, st: AgentTaskState | undefined, now: number = Date.now()): AgentTodoView {
   const power = st?.power ?? { used: 0, refunded: 0 }
-  const base = { id: task.id, power, attempts: st?.attempts ?? 0, retryable: false, stage: null as number | null }
+  const base = { id: task.id, power, powerKnown: st?.power !== undefined, attempts: st?.attempts ?? 0, retryable: false, stage: null as number | null }
   if (!st || st.status === 'waiting') return { ...base, status: 'waiting' }
   if (st.status === 'running') {
     const last = Math.max(0, task.stages.length - 1)

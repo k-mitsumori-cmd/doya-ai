@@ -170,6 +170,7 @@ interface AgentTodoView {
   status: AgentTodoStatus
   stage: number | null                           // 今の段（running のとき）
   power: { used: number; refunded: number }      // 減った量・戻した量（試みごとに足していく）
+  powerKnown: boolean                            // 量が分かっているか（答えが一度でも届いた）
   draft?: { summary: string; points: string[]; href: string; hrefLabel: string }  // できた下書きと、各ツールの画面へのリンク
   error?: { text: string; kind: AgentFailureKind; href?: string; hrefLabel?: string }
   retryable: boolean
@@ -183,6 +184,16 @@ interface AgentTodoView {
   - 包みが付いたルート（見積の suggest・スライドの構成）が失敗し、キーが無ければ、包みが戻したので `refunded` に足します。
   - ドヤパワーの残りが足りずに断られたとき（`DOYA_POWER_*`）は、減っていないので、どちらにも足しません。
   - 量は `costs.ts` の表から数えた目安です。作り直しの半額などで、台帳の実際の量と違うことがあります。正確な量は §8 の表に台帳の操作のキーを残してから出します。
+- 失敗の文の出し分け（画面の決まり）:
+
+  | 条件 | 文の例 |
+  |---|---|
+  | `powerKnown` が false | 量を言わない（例:「通信が切れました。もう一度お試しください。」だけ） |
+  | `used` > 0 | 「N 減りました（途中まで作れた分）」。見積の品目の案は作れたが保存で失敗した、など |
+  | `used` が 0 で `refunded` > 0 | 「減った分（N）は戻しました」 |
+  | どちらも 0 | 「ドヤパワーは減っていません」 |
+
+- 画面の `execute` は、422 の答えの `power` を `AgentTaskError` の5つ目の引数に渡します。渡さないと、量が分からないまま「減っていません」と出てしまいます。
 - 「今◯個のツールが動いています」は `todoCounts(views).running` です。
 
 ### 3.6 API
