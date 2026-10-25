@@ -1,0 +1,181 @@
+// ============================================
+// 各ツールを内部から呼ぶ部品（商談の準備の3つ）
+// ============================================
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §7
+// - 各ツールの API のルート（POST）を、そのまま内部で呼ぶ。ルートの中の決まり（ログイン・組織のスコープ・
+//   ドヤパワーの withDoyaPowerCharge・各ツールの利用枠）は、ルートが今までどおり確かめる。ここで飛ばさない。
+// - どのルートを呼ぶかは、この表（ToolRouteId）に書いたものだけ。画面から届いた値でルートを選ばない。
+// - 呼び方（call）と組織の名前（shodanSlug）は引数でもらう。本番は routes.server.ts、テストは差し替え。
+// ⚠️ 失敗の文は、ルートが返した利用者向けの error の文を使う（短い文字列だけ）。ステータスコードは見せない。
+import { AgentTaskError, type AgentFailureKind, type AgentTaskResult } from './runner'
+import { quoteInputOf, slideInputOf, type SalesPrepAnswers } from './recipes'
+
+export type ToolRouteId = 'shodan.prepare' | 'quote.suggest' | 'quote.create' | 'slide.project' | 'slide.structure'
+
+export interface ToolCallResult {
+  status: number
+  data: unknown
+}
+
+export interface ToolDeps {
+  call: (route: ToolRouteId, body: Record<string, unknown>) => Promise<ToolCallResult>
+  /** 商談準備の組織の slug（結果の画面のリンクに使う）。分からなければ null */
+  shodanSlug: () => Promise<string | null>
+}
+
+export type SalesPrepTaskId = 'research' | 'quote' | 'slides'
+
+type Json = Record<string, unknown>
+const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {})
+const str = (v: unknown, max = 200): string | null => (typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : null)
+/** 中の画面だけ（外のサイト・//で始まる道すじは使わない） */
+const safePath = (v: unknown): string | null => (typeof v === 'string' && /^\/(?!\/)[\w\-./?=&%]*$/.test(v) ? v : null)
+const man = (n: number) => (n >= 10_000 ? `${(Math.round(n / 1000) / 10).toLocaleString('ja-JP')}万円` : `${Math.round(n).toLocaleString('ja-JP')}円`)
+
+const SETUP: Record<'shodan' | 'quote', { message: string; href: string; label: string }> = {
+  shodan: { message: 'ドヤ商談準備の組織がまだありません。商談準備を開いて、組織を作ってください。', href: '/shodan', label: '商談準備を開く' },
+  quote: { message: 'ドヤ見積もりAIの組織がまだありません。見積もりAIを開いて、組織を作ってください。', href: '/quote', label: '見積もりAIを開く' },
+}
+
+/** ルートの失敗を、利用者に見せる失敗に直す */
+export function toTaskError(tool: 'shodan' | 'quote' | 'doyaslide', res: ToolCallResult, fallback: string, resume?: Record<string, string>): AgentTaskError {
+  const d = obj(res.data)
+  const code = typeof d.code === 'string' ? d.code : ''
+  const message = str(d.error) ?? fallback
+  const upgrade = safePath(d.upgradeUrl)
+  let kind: AgentFailureKind = 'tool'
+  let href: { href: string; label: string } | undefined
+  if (res.status === 401) {
+    if (tool === 'doyaslide') return new AgentTaskError('ログインが切れました。ログインし直してください。', 'auth', resume, { href: '/auth/signin?callbackUrl=/home', label: 'ログインする' })
+    const s = SETUP[tool]
+    return new AgentTaskError(s.message, 'setup', resume, { href: s.href, label: s.label })
+  }
+  if (code.startsWith('DOYA_POWER')) kind = 'power'
+  else if (res.status === 402 || res.status === 429 || /LIMIT/.test(code)) kind = 'limit'
+  else if (res.status === 400 || res.status === 404 || res.status === 409 || res.status === 422) kind = 'input'
+  if (kind === 'limit' && upgrade) href = { href: upgrade, label: '料金プランを見る' }
+  return new AgentTaskError(message, kind, resume, href)
+}
+
+const ok = (res: ToolCallResult) => res.status >= 200 && res.status < 300
+
+/** ドヤ商談準備: 相手の会社を調べる（POST /api/shodan/preparations） */
+export async function runResearch(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
+  const res = await deps.call('shodan.prepare', { url: a.url })
+  if (!ok(res)) throw toTaskError('shodan', res, '会社を調べられませんでした。URLを確かめて、もう一度お試しください。')
+  const d = obj(res.data)
+  const id = str(d.id, 128)
+  const r = obj(d.research)
+  if (!id) throw new AgentTaskError('会社を調べられませんでした。もう一度お試しください。')
+  const name = str(r.companyName, 120) ?? a.domain
+  const services = Array.isArray(r.services) ? r.services.filter((s): s is string => typeof s === 'string').slice(0, 3) : []
+  const points = [
+    str(r.description, 400),
+    str(r.industry, 100) ? `業種: ${r.industry}` : null,
+    typeof r.employeeCount === 'number' ? `従業員: ${r.employeeCount.toLocaleString('ja-JP')}名` : null,
+    services.length ? `主な事業: ${services.join('、')}` : null,
+  ].filter((p): p is string => !!p)
+  const slug = await deps.shodanSlug().catch(() => null)
+  return {
+    summary: `${name}の概要をまとめました。`,
+    points: points.length ? points : ['サイトから読み取れた情報は多くありませんでした。'],
+    href: slug ? `/shodan/${encodeURIComponent(slug)}/p/${encodeURIComponent(id)}` : '/shodan',
+    hrefLabel: '商談準備で提案資料まで作る',
+    handoff: { companyName: name },
+  }
+}
+
+interface SuggestedItemLike { itemName?: unknown; spec?: unknown; qty?: unknown; unit?: unknown; unitPrice?: unknown; taxRate?: unknown; priceSource?: unknown; sourceRef?: unknown; rangeMin?: unknown; rangeMax?: unknown }
+
+/** ドヤ見積もりAI: 品目の案を作り（suggest）、下書きの見積書として保存する（documents） */
+export async function runQuote(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
+  const input = quoteInputOf(a)
+  const sug = await deps.call('quote.suggest', { productName: input.productName, profile: input.profile, situation: input.situation, budget: input.budget })
+  if (!ok(sug)) throw toTaskError('quote', sug, '見積の品目を作れませんでした。もう一度お試しください。')
+  const raw = Array.isArray(obj(sug.data).items) ? (obj(sug.data).items as SuggestedItemLike[]) : []
+  const items = raw
+    .filter((i) => typeof i?.itemName === 'string' && i.itemName.trim())
+    .slice(0, 30)
+    .map((i) => ({
+      itemName: String(i.itemName).slice(0, 200),
+      spec: typeof i.spec === 'string' ? i.spec.slice(0, 1000) : undefined,
+      qty: typeof i.qty === 'number' && i.qty >= 1 ? Math.floor(i.qty) : 1,
+      unit: typeof i.unit === 'string' ? i.unit.slice(0, 12) : '式',
+      unitPrice: typeof i.unitPrice === 'number' && i.unitPrice >= 0 ? Math.floor(i.unitPrice) : 0,
+      taxRate: typeof i.taxRate === 'number' ? i.taxRate : 10,
+      priceSource: i.priceSource,
+      sourceRef: typeof i.sourceRef === 'string' ? i.sourceRef.slice(0, 1000) : undefined,
+      rangeMin: typeof i.rangeMin === 'number' ? Math.floor(i.rangeMin) : null,
+      rangeMax: typeof i.rangeMax === 'number' ? Math.floor(i.rangeMax) : null,
+    }))
+  if (!items.length) throw new AgentTaskError('見積の品目の案が出ませんでした。もう一度お試しください。')
+  const doc = await deps.call('quote.create', { title: `${a.offerLabel}のお見積り`, items, notes: 'ドヤAIのエージェントが作った下書きです。内容を確かめてから確定してください。' })
+  if (!ok(doc)) throw toTaskError('quote', doc, '見積書を保存できませんでした。もう一度お試しください。')
+  const id = str(obj(doc.data).id, 128)
+  if (!id) throw new AgentTaskError('見積書を保存できませんでした。もう一度お試しください。')
+  const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
+  return {
+    summary: `品目${items.length}行の見積の下書きを作りました（税抜 ${man(subtotal)}）。`,
+    points: items.slice(0, 4).map((i) => `${i.itemName}　${i.qty}${i.unit} × ${man(i.unitPrice)}`),
+    href: `/quote/documents/${encodeURIComponent(id)}`,
+    hrefLabel: '見積書を確かめる',
+  }
+}
+
+/** ドヤスライド: プロジェクトを作り（projects）、構成を作る（structure）。構成で失敗したら、プロジェクトの id を残してやり直しに使う */
+export async function runSlides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+  let projectId = str(resume?.projectId, 128)
+  if (!projectId) {
+    const res = await deps.call('slide.project', slideInputOf(a))
+    if (!ok(res)) throw toTaskError('doyaslide', res, 'スライドを作り始められませんでした。もう一度お試しください。')
+    projectId = str(obj(obj(res.data).project).id, 128)
+    if (!projectId) throw new AgentTaskError('スライドを作り始められませんでした。もう一度お試しください。')
+  }
+  const st = await deps.call('slide.structure', { projectId, referenceUrl: a.url })
+  if (!ok(st)) throw toTaskError('doyaslide', st, 'スライドの構成を作れませんでした。もう一度お試しください。', { projectId })
+  const slides = Array.isArray(obj(st.data).slides) ? (obj(st.data).slides as unknown[]).map(obj) : []
+  const heads = slides.map((s) => str(s.headline, 500)).filter((h): h is string => !!h)
+  return {
+    summary: `${heads.length || a.slideCount}枚のスライドの構成を作りました。`,
+    points: heads.slice(0, 5).map((h, i) => `${i + 1}. ${h}`),
+    href: `/doyaslide/${encodeURIComponent(projectId)}`,
+    hrefLabel: 'スライドの画像を作る',
+  }
+}
+
+export async function runSalesPrepTask(taskId: SalesPrepTaskId, a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+  if (taskId === 'research') return runResearch(a, deps)
+  if (taskId === 'quote') return runQuote(a, deps)
+  return runSlides(a, deps, resume)
+}
+
+/** 見本の結果（開発の確認用の差し替え。AGENT_ORCHESTRATION_FAKE_TOOLS=1 のときだけ。本番では使わない） */
+export function fakeToolDeps(opts: { delayMs?: number; failSlidesOnce?: { done: boolean } } = {}): ToolDeps {
+  const wait = () => new Promise((r) => setTimeout(r, opts.delayMs ?? 1200 + Math.random() * 1500))
+  return {
+    shodanSlug: async () => 'sample',
+    call: async (route, body) => {
+      await wait()
+      switch (route) {
+        case 'shodan.prepare':
+          return { status: 200, data: { id: 'prep_sample', status: 'researched', research: { companyName: '見本株式会社', url: body.url, description: '業務用のクラウドサービスを開発し、中小企業の営業と経理を支援している会社です。', industry: '情報通信業', employeeCount: 120, services: ['営業支援クラウド', '請求書の自動化', '導入の支援'], marketing: {} } } }
+        case 'quote.suggest':
+          return { status: 200, data: { items: [
+            { itemName: '要件の整理と設計', spec: 'ヒアリング2回と設計書', qty: 1, unit: '式', unitPrice: 300000, taxRate: 10, priceSource: 'market', sourceRef: '' },
+            { itemName: 'ページの制作', spec: 'トップと下層8ページ', qty: 9, unit: 'ページ', unitPrice: 60000, taxRate: 10, priceSource: 'market', sourceRef: '' },
+            { itemName: '公開後の保守', spec: '3か月', qty: 3, unit: '月', unitPrice: 30000, taxRate: 10, priceSource: 'market', sourceRef: '' },
+          ] } }
+        case 'quote.create':
+          return { status: 200, data: { id: 'quote_sample', quoteNo: 'Q-0001' } }
+        case 'slide.project':
+          return { status: 201, data: { project: { id: 'slide_sample' } } }
+        case 'slide.structure':
+          if (opts.failSlidesOnce && !opts.failSlidesOnce.done) {
+            opts.failSlidesOnce.done = true
+            return { status: 502, data: { error: '構成の生成に失敗しました。もう一度お試しください。' } }
+          }
+          return { status: 200, data: { slides: ['今日お話ししたいこと', '御社の現状と課題', 'ご提案の全体像', '進め方と期間', 'お見積りの概要', '次のご相談'].map((headline) => ({ headline })) } }
+      }
+    },
+  }
+}
