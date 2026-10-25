@@ -15,7 +15,7 @@
  * コピーして使う（決まりの文書: docs/slack-standard.md）。コピー先では下の版を書き換えない。
  */
 
-export const SLACK_NOTIFY_VERSION = '1.2.0'
+export const SLACK_NOTIFY_VERSION = '1.2.1'
 
 export type SlackKind = 'error' | 'billing' | 'usage' | 'inquiry' | 'report'
 export type SlackSeverity = 'urgent' | 'action' | 'info'
@@ -121,13 +121,25 @@ export function extractTitle(line: string, app?: string): string {
 
 type Block = Record<string, unknown>
 
-function mapStrings(value: unknown, fn: (s: string) => string): unknown {
+/**
+ * 文字列をすべて fn で変える。url の値は既定では変えない（絵文字の除去でリンクを壊さないため）。
+ * urlFn を渡すと、url の値にはそちらをかける（伏せるときはクエリと # を外す）。
+ */
+function mapStrings(value: unknown, fn: (s: string) => string, urlFn?: (s: string) => string): unknown {
   if (typeof value === 'string') return fn(value)
-  if (Array.isArray(value)) return value.map((v) => mapStrings(v, fn))
+  if (Array.isArray(value)) return value.map((v) => mapStrings(v, fn, urlFn))
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, k === 'url' ? v : mapStrings(v, fn)]))
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [
+      k,
+      k === 'url' ? (urlFn && typeof v === 'string' ? urlFn(v) : v) : mapStrings(v, fn, urlFn),
+    ]))
   }
   return value
+}
+
+/** URL のクエリと # から後ろを外す（伏せるとき用）。 */
+function stripUrlQuery(url: string): string {
+  return url.replace(/[?#].*$/, '')
 }
 
 function blockText(b: Block): string {
@@ -182,7 +194,7 @@ export function styleSlackPayload<T>(payload: T, meta: SlackMeta): T {
 
   if (blocks) {
     const header = { type: 'header', text: { type: 'plain_text', text: heading.slice(0, 150), emoji: false } }
-    let rest = blocks.map((b) => (keepBody && !redact ? b : (mapStrings(b, clean) as Block)))
+    let rest = blocks.map((b) => (keepBody && !redact ? b : (mapStrings(b, clean, redact ? stripUrlQuery : undefined) as Block)))
     if (headerIndex >= 0) rest = rest.filter((_, i) => i !== headerIndex)
     // 本文の最初の section が旧見出しだけなら重複するので外す
     const first = rest[0]
@@ -202,6 +214,10 @@ export function styleSlackPayload<T>(payload: T, meta: SlackMeta): T {
       ? [{ type: 'section', text: { type: 'mrkdwn', text: '<!channel>' } }]
       : []
     p.blocks = [...mentionBlock, header, ...rest].slice(0, 50)
+  }
+  // 古い形の attachments にも、伏せる処理と絵文字の除去をかける
+  if (Array.isArray(p.attachments) && (redact || !keepBody)) {
+    p.attachments = mapStrings(p.attachments, clean, redact ? stripUrlQuery : undefined)
   }
   return p as T
 }
@@ -287,7 +303,8 @@ export function excerpt(text: string | null | undefined, max = 80): string {
 }
 
 /**
- * エラーの文面に紛れ込んだ秘密や個人情報を伏せる（1.2.0 で追加。kind が error と billing の通知には styleSlackPayload が必ずかける）。
+ * エラーの文面に紛れ込んだ秘密や個人情報を伏せる（1.2.0 で追加。kind が error と billing の通知には styleSlackPayload が必ずかける。
+ * 1.2.1 からは blocks の url の値と attachments にもかける）。
  * 伏せるもの: Slack の Webhook の URL・トークン、Bearer、JWT、Stripe などのキー、token= や password= の値、
  * メールアドレス、URL の ? から後ろ（クエリと #）。照合用の ID（UUID）は秘密ではないので残す。
  */
