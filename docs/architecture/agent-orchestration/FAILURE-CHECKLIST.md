@@ -8,7 +8,7 @@
 - 対象: 会社を調べる（`shodan.research`）・見積の品目の案（`quote.draft`）・スライドの構成（`slide.structure`）・作戦づくり（`agent.plan`。段階2）と、全体に関わる所
 - 失敗の文の決まり: 何が起きたか（原因）＋ どうすればよいか（次の一手）＋ 代わりの道。ステータスコード・モデル名・英語のエラーは出さない
 - 失敗の形（`types.ts`）: `error`（文）・`kind`（種類）・`cause`（原因の短い名前）・`actions`（押せる次の一手。やり直す・画面を開く・値を入れてやり直す）
-- テストの列: `M` はモック（`src/lib/agent-orchestration/*.test.ts`）、`R` は本物に近い形（手元の HTTP サーバーで失敗するサイトを返す。`src/lib/shodan/research-sites.test.ts`）、`V` は回帰の検査（`scripts/security-regression/verify-agent-orchestration.cjs`）
+- テストの列: `M` はモック（`src/lib/agent-orchestration/*.test.ts`）、`R` は本物に近い形（手元の HTTP サーバーで失敗するサイトを返す。本物の `safe-fetch.ts` と `research.ts` を動かす。`scripts/security-regression/verify-shodan-research-sites.cjs`）、`V` は回帰の検査（`scripts/security-regression/verify-agent-orchestration.cjs`）
 
 ---
 
@@ -38,7 +38,7 @@
 | S9 | 大きすぎる（2MB 超） | `reason = 'body'` | — | 会社名で調べ直す | 「サイトが大きすぎて読み切れませんでした。会社名で調べ直してください。」 | R |
 | S10 | 社内・ローカルの宛先（SSRF を防ぐため断る） | `reason = 'url_rejected'` | — | 公開のサイトを入れる | 「このアドレスは調べられません（社内のアドレスなど）。公開している会社のサイトを入れてください。」 | R V |
 | S11 | 文字化け（Shift_JIS・EUC-JP のサイト） | `Content-Type` と `<meta charset>` | 宣言どおりに読み直す（`decodeHtml`） | — | （文字化けしないので、知らせは要らない） | R |
-| S12 | JavaScript で描くサイト（本文がほぼ空） | 本文の文字数が 200 未満 | 題・meta の説明・og・JSON-LD（Organization）を足して AI に渡す | 会社名で補う | 結果に「サイトの文が少なかったため、題と説明から読み取りました。」を足す | R |
+| S12 | JavaScript で描くサイト（本文がほぼ空） | 本文の文字数が 200 未満 | 題・meta の説明・og・JSON-LD（Organization）を足して AI に渡す（読むのは `<head>` の 64KB まで・meta 200個・JSON-LD 5つまで。外の HTML で正規表現が遅くならないように） | 会社名で補う | 結果に「サイトの文が少なかったため、題と説明から読み取りました。」を足す | R |
 | S13 | 外のサイトの文に NUL・制御文字 | — | 取り除く（`stripControlChars`） | — | （知らせは要らない） | M R |
 
 ### 2.2 調べる・保存する
@@ -47,6 +47,7 @@
 |---|---|---|---|---|---|---|
 | S20 | 会社の情報を取り出す AI（gemini-2.5-flash）が失敗・形が崩れる・空 | `extractWithAI` が null | 題・gBizINFO・PR TIMES の情報で続ける（AI なしで部分の結果） | — | 結果に「サイトから会社の情報を読み取れませんでした。分かった範囲でまとめています。」 | M |
 | S21 | 何も分からなかった（サイトも会社名も無い） | `homepage failed && !companyName && !description` | — | 会社名で調べ直す | S2〜S10 の文（原因ごと）。原因が分からなければ「サイトから会社の情報を読み取れませんでした。会社名で調べ直してください。」 | M R |
+| S21b | サイトは読めた（AI を呼んだ）が、会社名も説明も取れなかった | `homepage ok && !companyName && !description` | 失敗にしない。成功として保存し、商談準備の今月の件数に数える（失敗にすると、繰り返して AI を無料で呼べてしまう。2026-10-26 の自動のセキュリティ点検の指摘） | 商談準備の画面で手で補う | 結果に「サイトから会社の情報を読み取れなかったため、分かった範囲でまとめています。」 | V |
 | S22 | 会社名で調べ直したが、公的な情報も記事も無い | gBizINFO・PR TIMES が0件 | — | 手で入れる（商談準備の画面） | 「会社名で調べましたが、公開の情報が見つかりませんでした。商談準備の画面で、分かっていることを入れてください。」 | M |
 | S23 | 調査の結果の保存の失敗（DB） | ルートの catch | — | あとでやり直す | 「調査の結果を保存できませんでした。時間をおいてやり直してください。今月の利用枠は減っていません。」。記録に例外の名前とコードを残す | V |
 | S24 | 今月の上限（無料3件など） | 402 `LIMIT` | — | 料金の画面・来月 | ルートの文（「無料プランは月3件までです…」）＋「料金プランを見る」 | M |
@@ -110,7 +111,7 @@
 |---|---|---|
 | エージェントの単体テスト（失敗の見本を含む） | `npm run test:agent` | ビルドのたび |
 | 回帰の検査（旗・API・ルート・戻し） | `npm run test:security` の `verify-agent-orchestration.cjs` | ビルドのたび |
-| 失敗するサイトの見本（手元の HTTP サーバー） | `npx tsx --test src/lib/shodan/research-sites.test.ts` | ビルドのたび |
+| 失敗するサイトの見本（手元の HTTP サーバー） | `node scripts/security-regression/verify-shodan-research-sites.cjs` | ビルドのたび |
 | 本番の API が旗の外の人に 404 を返す | `curl -X POST https://doya-ai.surisuta.jp/api/agent/tasks` が 404（ログインなし） | 毎日 |
 | 本物のサイトを AI なしで読めるか（取得・文字コード・本文の長さ・NUL） | 見本の URL（ユーザーの会社・大手の会社の JS のサイト・Shift_JIS のサイト）を `researchCompany` で、AI のキーなしで読む | 毎日 |
 | 本番のログに `[shodan/preparations] research failed` と `[agent] task failed` が出ていないか | `vercel logs --query` | 毎日 |

@@ -284,18 +284,31 @@ async function fetchHomepage(targetUrl: string, timeouts: [number, number] = [HO
 
 /** JavaScript で描くサイト向け: 題・説明・og・JSON-LD（会社の情報）から、AI に渡す短い文を作る */
 export function pageSummaryText(html: string): string {
-  const meta = (attr: 'name' | 'property', key: string) =>
-    html.match(new RegExp(`<meta[^>]+${attr}=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1]
-    || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attr}=["']${key}["']`, 'i'))?.[1]
-  const parts = [
-    html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1],
-    meta('name', 'description'),
-    meta('property', 'og:site_name'),
-    meta('property', 'og:title'),
-    meta('property', 'og:description'),
+  // 読むのは <head> まで（無ければ先頭 64KB）。外のサイトの HTML なので、正規表現が遅くならないよう、長さと数に上限を付ける
+  const headEnd = html.search(/<\/head>/i)
+  const head = html.slice(0, Math.min(headEnd >= 0 ? headEnd : html.length, 64 * 1024))
+  const metas: Record<string, string> = {}
+  // <meta> を1つずつ読み、属性を単純な形で取り出す（1つのタグは 2,000 文字まで・200 個まで）
+  let count = 0
+  for (const m of head.matchAll(/<meta\b[^>]{0,2000}>/gi)) {
+    if (++count > 200) break
+    const attrs: Record<string, string> = {}
+    for (const a of m[0].matchAll(/([a-zA-Z:-]{1,40})\s*=\s*["']([^"']{0,2000})["']/g)) attrs[a[1].toLowerCase()] = a[2]
+    const key = (attrs.name || attrs.property || '').toLowerCase()
+    if (key && attrs.content && !(key in metas)) metas[key] = attrs.content
+  }
+  const parts: (string | undefined)[] = [
+    head.match(/<title[^>]{0,200}>([^<]{1,500})<\/title>/i)?.[1],
+    metas['description'],
+    metas['og:site_name'],
+    metas['og:title'],
+    metas['og:description'],
   ]
   // JSON-LD の Organization / Corporation / LocalBusiness
-  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+  // JSON-LD は 5 つまで・1つ 50KB まで
+  let blocks = 0
+  for (const m of html.slice(0, 512 * 1024).matchAll(/<script\b[^>]{0,300}application\/ld\+json[^>]{0,300}>([\s\S]{0,51200}?)<\/script>/gi)) {
+    if (++blocks > 5) break
     try {
       const data = JSON.parse(m[1])
       const nodes: unknown[] = Array.isArray(data) ? data : Array.isArray(data?.['@graph']) ? data['@graph'] : [data]

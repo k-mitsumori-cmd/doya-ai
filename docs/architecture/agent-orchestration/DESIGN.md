@@ -179,6 +179,11 @@ interface AgentTodoView {
 ```
 
 - runner の6つの状態を、画面の4つに寄せます。`failed`・`blocked`（前の ToDo が済まなかった）・`canceled`（止めた）は、どれも `failed` で、やり直せます。
+- 失敗の知らせ（2026-10-26。`FAILURE-CHECKLIST.md`）: `error.text` は「何が原因で、どうすればよいか」の文です。`error.cause` は原因の短い名前（`timeout`・`dns`・`http`・`js_rendered`・`limit_reached`・`ai_failed` など）、`error.actions` は押せる次の一手です。
+  - `{ kind: 'retry' }`: そのままやり直す（`runAgentTasks` に `prev` を渡す）
+  - `{ kind: 'href', href, label }`: 画面を開く（組織を作る・料金を見る・ログインする）
+  - `{ kind: 'input', field: 'companyName', label, placeholder }`: 会社名を入れてやり直す。入れた値は、記録なしの形では `resume.companyName` に足して `/api/agent/tasks` へ、記録ありの形では本文 `{ companyName }` で `/api/agent/runs/[id]/tasks/research` へ送る
+  - 次の一手が無い失敗（止めた・前の ToDo が済まなかった）は、`todoViewOf` が「やり直す」を足します。
 - 「失敗して戻した」は `power.refunded` です。数え方:
   - ドヤパワーの包みは、減ったまま（戻していない）の応答にだけ、操作のキー（`x-doya-power-op`）を付けます。キーがあれば `used` に足します。
   - 包みが付いたルート（見積の suggest・スライドの構成）が失敗し、キーが無ければ、包みが戻したので `refunded` に足します。

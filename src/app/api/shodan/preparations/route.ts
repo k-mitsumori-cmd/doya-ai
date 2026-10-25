@@ -184,8 +184,10 @@ export async function POST(req: NextRequest) {
     // 不正な調査結果を保存すると、成功表示と月次枠の両方が誤って確定する。
     if (!isCompanyResearch(research)) throw new Error('invalid company research response')
     // 企業情報を一切取得できなかった調査は成功扱いにせず、月次枠を消費しない。
-    // 何が原因で、どうすればよいか（会社名で調べ直す など）を、診断から具体的に返す
-    if (!research.companyName && !research.description) {
+    // 何が原因で、どうすればよいか（会社名で調べ直す など）を、診断から具体的に返す。
+    // ⚠️ 枠を減らさない失敗は、サイトを読めなかったとき（AI を呼んでいない）だけ。サイトが読めて AI を呼んだのに
+    //    何も分からなかったときは、今までどおり成功として保存し枠を数える（失敗を繰り返して AI を無料で呼べないように）
+    if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
       noFacts = research
       throw new Error('company research yielded no usable facts')
     }
