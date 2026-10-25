@@ -27,6 +27,7 @@ import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice, FirstSteps
 import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
 import { ShellCostBadge } from '@/components/shell/power'
+import { useNotice } from '@/components/notice/NoticeProvider'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -160,6 +161,8 @@ export default function QuoteTool() {
   const [selectedProduct, setSelectedProduct, selectedProductRef] = useQuoteDraftState<string>('')
   const [situation, setSituation, situationRef] = useQuoteDraftState('')
   const [budget, setBudget, budgetRef] = useQuoteDraftState('')
+  // ドヤくんの知らせ（旗 GUIDE_POPUPS_ROLLOUT）。旗が off なら enabled は false で、下の「例を入れる」も出ない
+  const notice = useNotice()
   const [suggesting, setSuggesting] = useState(false)
   const [items, setItemsState] = useState<SuggestedItem[]>([])
   const itemsRef = useRef<SuggestedItem[]>([])
@@ -830,6 +833,22 @@ export default function QuoteTool() {
               {analyzing ? '解析中...' : '解析する'}
             </button>
           </div>
+          {/* (25) 入れる内容に迷ったときの「例を入れる」。URL だけでなく、品目の案に使う予算と状況も入れる。解析はユーザーが押したときだけ */}
+          {notice.enabled && !url.trim() ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!context.isCurrent(epoch)) return
+                setUrl('https://doya-ai.surisuta.jp')
+                if (!budget.trim()) setBudget('300000')
+                if (!situation.trim()) setSituation('自社サイトの流入が伸び悩んでいる')
+                notice.notify({ tone: 'info', title: '例を入れました', sub: '自分のサービスの URL に書き換えてから、解析してください', durationMs: 4000 })
+              }}
+              className={`mt-2 min-h-11 ${FOCUS} text-sm font-bold text-blue-700 underline`}
+            >
+              例を入れる
+            </button>
+          ) : null}
 
           {draftProfile && (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
