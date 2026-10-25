@@ -216,7 +216,7 @@ export function UnifiedPricingPlans({
               {trialEligible ? '初月無料でプロを試す' : 'プロにアップグレード'}
             </CheckoutButton>
           )}
-          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible ? '初月無料' : '月額のみ'}・追加課金なし</p>
+          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible && !newPricing ? '初月無料' : '月額のみ'}・追加課金なし</p>
         </div>
       </div>
 

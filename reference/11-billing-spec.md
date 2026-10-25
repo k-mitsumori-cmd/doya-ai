@@ -660,6 +660,13 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - 日次監査の MRR は、全部の明細の合計で計算する（段階別の価格は、価格ごとに1回だけ段階の表を取る）。
 - 各ツールの料金ページ（`UnifiedPricingPlans`）と旧 HR の申し込みは、旗が on の、まだ契約していない人には今のプランを売らない（ボタンは「料金プランを見る」、API は 410）。
 
+### 15.3.1 旗が off のときに変わらないこと（2026-10-26 統括の点検）
+
+- 旗 NEW_PRICING_ROLLOUT が off（または preview で対象でない人）なら、料金・Checkout・webhook・sync・User.plan・トライアル・ドヤパワーの量（有料 3,000）・はじめの手順の報酬は、今と同じ。新しい表3つ（account_company_members / account_company_billing / doya_power_starter_claims）は読まない。
+- 検査: `src/lib/pricing-v2/flag-off.test.ts`（`npm run test:pricing`）と `scripts/security-regression/verify-new-pricing-flag-off.cjs`（`npm run test:security`）。
+- チームの初月無料は既定で付けない（`TEAM_TRIAL_DAYS = 0`）。無料の期間のあいだは人数を変えない。
+- 追加購入の Webhook: 直せない失敗は Slack（課金の異常）に知らせて 200。一時的な失敗だけ例外で再送させる。
+
 ### 15.4 環境変数（新しい料金）
 
 | 変数 | 用途 |

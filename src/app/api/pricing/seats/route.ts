@@ -81,6 +81,13 @@ export async function POST(req: NextRequest) {
       return json({ code: d.code, error: messages[d.code], used }, d.status)
     }
     const seats = requested as number
+    // 無料の期間のあいだは人数を変えない（請求が0円のまま席とドヤパワーだけが増えるため。統括の点検 B1）
+    if (t.status === 'trialing') return json({ code: 'TRIALING', error: '無料の期間のあいだは、人数を変えられません。期間が終わってからお手続きください。' }, 409)
+    // 増やすときは、先にこの月の毎月の付与を、今の人数で済ませる（あとで増えた人数で毎月の分が付き、席の分と二重になるのを防ぐ。B2）
+    if (d.direction === 'up' && doyaPowerLedgerAllowed()) {
+      const { grantMonthlyForPlan } = await import('@/lib/doya-power')
+      await grantMonthlyForPlan(c.ctx.companyId, c.ctx.owner.plan)
+    }
 
     // 同じ操作（確かめの画面の1回）を2回送っても、Stripe では1回だけ
     stage = 'stripe'

@@ -3,12 +3,12 @@
 // ============================================
 // 決まりは starter.ts（テストあり）。ここは DB と台帳をつなぐだけ。
 // ⚠️ ドヤパワーの旗（DOYA_POWER_ROLLOUT）と新しい料金の旗（NEW_PRICING_ROLLOUT）の両方が off でないときだけ動く。
-//    どちらかが off なら、表（doya_power_starter_claims）も台帳も読まない。
-// ⚠️ 先に受け取りの記録を作り（ユーザーとメールの一意の制約で、同時の2回目は失敗する）、そのあと台帳に付ける。
-//    台帳への付与に失敗したら、記録を消して、次の機会にやり直せるようにする。
+//    どちらかが off なら、表（doya_power_starter_claims）も台帳も読まない。新しい料金は人ごとに判定する（preview なら許可した人だけ）。
+// ⚠️ 受け取りの記録と台帳への付与は、台帳の1つのトランザクションの中で行う（GrantOptions.inTransaction）。
+//    片方だけが残ることはない。ユーザーとメールの一意の制約で、同時の2回目も止まる。
 import { prisma } from '@/lib/prisma'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
-import { newPricingRollout } from './rollout'
+import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
 import { decideStarter, starterEmailHash, STARTER_POWER, STARTER_SOURCE_KEY, type StarterDecision } from './starter'
 
 /** 付け終わった（または受け取り済みと分かった）人。同じサーバーの中で、毎回 DB を見に行かないため */
@@ -29,6 +29,8 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
   if (settled.has(userId)) return { granted: 0, decision: { ok: false, reason: 'already_claimed' } }
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, emailVerified: true } })
+    // 人ごとの判定（preview なら許可した人だけ）。対象でなければ、受け取りの表を読まない
+    if (!isNewPricingEnabledFor(user?.email)) return { granted: 0, decision: { ok: false, reason: 'flag_off' } }
     const company = await prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } })
     const email = user?.email ?? null
     const google = await prisma.account.findFirst({ where: { userId, provider: 'google' }, select: { id: true } })
@@ -45,28 +47,26 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
     if (!decision.ok && decision.reason === 'already_claimed') settled.add(userId)
     if (!decision.ok || !company || !emailHash) return { granted: 0, decision }
 
-    // 受け取りの記録を先に作る（一意の制約。同時の2回目・作り直しの2回目はここで止まる）
-    let claimId: string
-    try {
-      claimId = (await prisma.doyaPowerStarterClaim.create({ data: { emailHash, userId, companyId: company.id, amount: STARTER_POWER }, select: { id: true } })).id
-    } catch (e) {
-      if ((e as { code?: string })?.code === 'P2002') {
-        settled.add(userId)
-        return { granted: 0, decision: { ok: false, reason: 'already_claimed' } }
-      }
-      throw e
-    }
+    // 受け取りの記録と台帳への付与を、1つのトランザクションで行う（統括の点検 C）。
+    // 同じトランザクションの中で、もう受け取っていないかを確かめ直してから記録を作る。同時の2回目は、やり直したときに記録を見つけて止まる
     const { grant } = await import('@/lib/doya-power')
-    const r = await grant(company.id, 'daily_recovery', STARTER_POWER, null, { sourceKey: STARTER_SOURCE_KEY, note: 'starter' })
+    const r = await grant(company.id, 'daily_recovery', STARTER_POWER, null, {
+      sourceKey: STARTER_SOURCE_KEY,
+      note: 'starter',
+      inTransaction: async (tx) => {
+        const exists = await tx.doyaPowerStarterClaim.findFirst({ where: { OR: [{ userId }, { emailHash }] }, select: { id: true } })
+        if (exists) return false
+        await tx.doyaPowerStarterClaim.create({ data: { emailHash, userId, companyId: company.id, amount: STARTER_POWER } })
+        return true
+      },
+    })
     if (!r.ok) {
-      // 回復の上限に届いていた（recovery_cap）などで付かなかったときも、記録は残す（もう100ある＝はじめの状態）。
-      // それ以外の失敗は、記録を消してやり直せるようにする
-      if (r.reason !== 'recovery_cap') await prisma.doyaPowerStarterClaim.delete({ where: { id: claimId } }).catch(() => {})
-      else settled.add(userId)
-      return { granted: 0, decision }
+      // precondition ＝ もう受け取っている。recovery_cap ＝ 回復の上限に届いていて付かなかった（記録は残る＝はじめの状態）
+      if (r.reason === 'precondition' || r.reason === 'recovery_cap') settled.add(userId)
+      return { granted: 0, decision: r.reason === 'precondition' ? { ok: false, reason: 'already_claimed' } : decision }
     }
     settled.add(userId)
-    return { granted: r.granted, decision }
+    return { granted: r.duplicated ? 0 : r.granted, decision }
   } catch {
     console.error('[starter] could not grant the starter power')
     return { granted: 0, decision: { ok: false, reason: 'flag_off' } }

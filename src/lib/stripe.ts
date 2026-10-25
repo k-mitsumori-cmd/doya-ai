@@ -513,6 +513,7 @@ export async function createCheckoutSession({
   idempotencyKey,
   expiresAt,
   lineItems,
+  allowPromotionCodes = true,
 }: {
   priceId: string
   userId: string
@@ -527,6 +528,8 @@ export async function createCheckoutSession({
   expiresAt?: number
   /** 複数の明細（新しい料金のチーム: 基本料＋人数）。無いときは priceId を数量1で使う（今までどおり） */
   lineItems?: Array<{ price: string; quantity: number; tax_rates?: string[] }>
+  /** 割引コードの欄を出すか（既定は今までどおり出す。ドヤパワーの追加購入は出さない） */
+  allowPromotionCodes?: boolean
 }) {
   // 1日以上のときだけトライアルを付与（0/未指定はトライアル無し）
   const trial = mode === 'subscription' && typeof trialDays === 'number' && trialDays >= 1
@@ -536,7 +539,7 @@ export async function createCheckoutSession({
   const session = await stripe.checkout.sessions.create({
     mode,
     payment_method_types: ['card'],
-    allow_promotion_codes: true,
+    allow_promotion_codes: allowPromotionCodes,
     ...(expiresAt ? { expires_at: expiresAt } : {}),
     line_items: lineItems && lineItems.length > 0 ? lineItems : [
       {

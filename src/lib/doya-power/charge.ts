@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { currentUserId } from '@/lib/shell/company.server'
-import { resolveCompanyForUser } from '@/lib/pricing-v2/team.server'
+import { newPricingMonthlyGrant, resolveCompanyForUser } from '@/lib/pricing-v2/team.server'
 import { ensureStarterGrant } from '@/lib/pricing-v2/starter.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
 import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
@@ -37,7 +37,10 @@ export const doyaPowerCharger = createDoyaPowerCharger({
     const company = await resolveCompanyForUser(userId)
     // はじめの付与（最初の100）。持ち主に1回だけ。旗（新しい料金）が off なら何もしない（src/lib/pricing-v2/starter.server.ts）
     if (company?.role === 'owner') await ensureStarterGrant(userId)
-    return company ? { companyId: company.companyId, plan: company.plan } : null
+    if (!company) return null
+    // 新しい料金の対象の会社だけ、毎月の量をゲージの上限の基準にする（対象でなければ null で今までどおり）
+    const monthlyGrant = isPaidPlan(company.plan) ? await newPricingMonthlyGrant(company.companyId) : null
+    return { companyId: company.companyId, plan: company.plan, monthlyGrant }
   },
   ledger: { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume },
   isPaidPlan,

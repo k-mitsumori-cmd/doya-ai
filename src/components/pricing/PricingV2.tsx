@@ -20,7 +20,7 @@ import { DOYA_POWER_COSTS, whatYouCanDo, type DoyaPowerAction } from '@/lib/doya
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { getListedServiceCount } from '@/lib/services'
 import {
-  ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, LEGACY_PRO_PRICE_TAX_INCLUDED, PLAN_COPY, POWER_PACK, TEAM_BASE_MONTHLY,
+  ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, TEAM_TRIAL_DAYS, LEGACY_PRO_PRICE_TAX_INCLUDED, PLAN_COPY, POWER_PACK, TEAM_BASE_MONTHLY,
   TEAM_MONTHLY_POINTS_BASE, TEAM_MONTHLY_POINTS_PER_SEAT, TEAM_SEAT_TIERS, YEARLY_FREE_MONTHS, seatBreakdown,
   teamMonthly, teamMonthlyPoints, teamPrice, withTax, type BillingInterval,
 } from '@/lib/pricing-v2/plans'
@@ -72,7 +72,8 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
   const lines = useMemo(() => seatBreakdown(seats), [seats])
   const canDo = points ? whatYouCanDo(points).slice(0, 3) : []
   // 有料の人（据え置き・チーム）には、トライアルの文言を出さない（PricingNext と同じ決まり）
-  const trialEligible = trialEligibleRaw && view === 'new' && interval === 'monthly'
+  // チームの初月無料は TEAM_TRIAL_DAYS（既定 0 ＝ 付けない）。付けないときは「初月無料」を出さない
+  const trialEligible = TEAM_TRIAL_DAYS > 0 && trialEligibleRaw && view === 'new' && interval === 'monthly'
   const clampSeats = (n: number) => Math.max(1, Math.min(ENTERPRISE_MIN_SEATS, Math.round(n) || 1))
   const costs = (Object.keys(COST_LABELS) as DoyaPowerAction[]).map((a) => ({ label: COST_LABELS[a]!, amount: DOYA_POWER_COSTS[a] }))
 

@@ -5,7 +5,7 @@ import {
   LEGACY_PRO_PRICE_TAX_INCLUDED, POWER_PACK, TEAM_BASE_MONTHLY, TEAM_SEAT_TIERS, grossMarginRate, isEnterpriseSeatCount,
   isTeamSeatCount, seatBreakdown, teamMonthly, teamMonthlyPoints, teamPrice, teamYearly, withTax,
 } from './plans'
-import { decideNewPricing, newPricingRollout } from './rollout'
+import { decideNewPricing, parseNewPricingRollout as newPricingRollout } from './rollout'
 import { buildTeamLineItems, legacyPriceIds, newPricingPlanIdForPriceId, newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from './prices'
 import { decideLegacyPlanCheckout, decidePricingView, decideTeamCheckout, subscriberKind } from './view'
 

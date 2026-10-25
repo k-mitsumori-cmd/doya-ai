@@ -48,6 +48,12 @@ export const LEGACY_PRO_MONTHLY_POINTS = 1500
 /** 追加購入（1パック）。有効期限は doya-power/rules.ts の PURCHASE_MAX_MONTHS（6か月）に従う */
 export const POWER_PACK = { points: 1000, price: 5980 } as const
 
+/**
+ * チームの初月無料の日数。0 = 付けない（既定。統括の点検 B1）。
+ * 付けると、無料の期間のあいだに人数を増やしても請求が0円になり、ドヤパワーだけが付くため。付けるかはユーザーの決定が要る（設計書 §11-1）
+ */
+export const TEAM_TRIAL_DAYS = 0
+
 /** 今の統一プロ（据え置き）の月額（税込）。表示と比較のためだけ。請求は Stripe の既存の価格のまま */
 export const LEGACY_PRO_PRICE_TAX_INCLUDED = 9980
 

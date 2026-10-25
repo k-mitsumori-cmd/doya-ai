@@ -79,7 +79,8 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
     assert.match(code('src/lib/doya-power/charge.ts'),/const userId = await currentUserId\(\)[\s\S]*const company = await resolveCompanyForUser\(userId\)/);
     const team=code('src/lib/pricing-v2/team.server.ts');
     assert.match(team,/prisma\.accountCompany\.findUnique\(\{ where: \{ userId \}/);
-    assert.match(team,/if \(!teamTablesAllowed\(\)\) return null\s*const m = await prisma\.accountCompanyMember\.findFirst\(\{\s*where: \{ userId, status: 'active' \}/);
+    // 参加している会社は、旗が off でなく、本人が対象のとき（人ごと）だけ探す（2026-10-26 統括の点検 B3）
+    assert.match(team,/if \(!teamTablesAllowed\(\)\) return null\s*const me = await prisma\.user\.findUnique\(\{ where: \{ id: userId \}, select: \{ email: true \} \}\)\s*if \(!teamTablesAllowedFor\(me\?\.email\)\) return null\s*const m = await prisma\.accountCompanyMember\.findFirst\(\{\s*where: \{ userId, status: 'active' \}/);
   });
   await check('Shell gauge reads the ledger only when the flag allows it',async()=>{
     assert.match(code('src/app/(shell)/layout.tsx'),/const doyaPowerState = doyaPower \? await doyaPowerCharger\.shellState\(\)\.catch\(\(\) => null\) : null/);

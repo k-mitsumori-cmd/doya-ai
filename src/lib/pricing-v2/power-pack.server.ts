@@ -11,8 +11,9 @@ import { prisma } from '@/lib/prisma'
 import { stripe, createCheckoutSession } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
-import { POWER_PACK } from './plans'
+import { POWER_PACK, withTax } from './plans'
 import { sendEventNotification } from '@/lib/notifications'
+import { notifyAlert } from '@/lib/alert'
 import { powerPackPriceId, POWER_PACK_MAX_PER_ORDER } from './prices'
 
 export const POWER_PACK_KIND = 'power_pack'
@@ -45,6 +46,8 @@ export async function createPowerPackCheckout(input: { userId: string; email: st
     cancelUrl: `${input.baseUrl}/pricing?power_pack=cancel`,
     metadata: { kind: POWER_PACK_KIND, companyId: company.id, packs: String(packs), points: String(packs * POWER_PACK.points) },
     idempotencyKey: `doya-power-pack:${input.userId}:${packs}:${Math.floor(Date.now() / 60_000)}`,
+    // 割引コードは使えない（値引きした額でポイントだけが付くのを防ぐ。付けるときも支払いの額を確かめる）
+    allowPromotionCodes: false,
   })
   if (!session.url) throw new Error('power pack checkout has no url')
   return { ok: true, url: session.url, sessionId: session.id }
@@ -74,6 +77,8 @@ export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Check
   const items = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 })
   const qty = items.data.filter((i) => i.price?.id === priceId).reduce((s, i) => s + (i.quantity ?? 0), 0)
   if (!priceId || qty !== packs || items.data.length !== 1) return { ok: false, reason: 'mismatch' }
+  // 支払いの額が、税込の単価 × パックの数と同じであること（割引・価格の設定の誤りで、少ない額のままポイントが付かないように）
+  if (session.currency !== 'jpy' || session.amount_total !== packs * withTax(POWER_PACK.price)) return { ok: false, reason: 'mismatch' }
   if (!doyaPowerLedgerAllowed()) return { ok: false, reason: 'ledger_off' }
   const { grant } = await import('@/lib/doya-power')
   const r = await grant(md.companyId, 'purchase', packs * POWER_PACK.points, null, { sourceKey: `purchase:${session.id}`, note: 'power-pack' })
@@ -83,4 +88,18 @@ export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Check
     void sendEventNotification({ type: 'payment', userId, userEmail: session.customer_details?.email ?? session.customer_email ?? null, details: `ドヤパワーの追加購入（${(packs * POWER_PACK.points).toLocaleString('ja-JP')}）` })
   }
   return { ok: true, points: r.granted, duplicated: r.duplicated }
+}
+
+/**
+ * Webhook で付けられなかった追加購入を、運営に知らせる（直せない失敗。Stripe に再送させても直らないもの）。
+ * 知らせられたら true。知らせられなければ false（呼ぶ側が例外にして、Stripe の再送で知らせ直す）。
+ */
+export async function reportPowerPackFailure(sessionId: string, reason: string): Promise<boolean> {
+  return notifyAlert({
+    title: 'ドヤパワーの追加購入を付けられませんでした（支払いは済んでいる可能性があります）',
+    level: 'critical',
+    kind: 'billing',
+    detail: '支払い済みの追加購入に、ドヤパワーを付けられませんでした。Stripe の決済と台帳を確かめ、必要なら /api/admin/doya-power/adjust で付けるか、返金してください。',
+    extra: { 決済: sessionId, 理由: reason },
+  }).catch(() => false)
 }

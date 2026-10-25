@@ -10,10 +10,16 @@ import { canPreviewUiNext, uiPreviewEmails } from '@/lib/ui-next'
 
 export type NewPricingRollout = 'off' | 'preview' | 'all'
 
-export function newPricingRollout(raw: string | undefined = process.env.NEW_PRICING_ROLLOUT): NewPricingRollout {
+/** 旗の値を読む（渡した値だけを見る。環境変数は読まない） */
+export function parseNewPricingRollout(raw: string | undefined | null): NewPricingRollout {
   const v = (raw ?? '').trim().toLowerCase()
   if (v === 'preview' || v === 'all') return v
   return 'off'
+}
+
+/** 今の旗の値（環境変数 NEW_PRICING_ROLLOUT） */
+export function newPricingRollout(raw: string | undefined = process.env.NEW_PRICING_ROLLOUT): NewPricingRollout {
+  return parseNewPricingRollout(raw)
 }
 
 /** 判定の中身（テストのため、旗・メール・許可の一覧を引数で受け取る） */

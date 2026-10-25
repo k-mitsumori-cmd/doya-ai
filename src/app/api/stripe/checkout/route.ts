@@ -10,7 +10,7 @@ import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/c
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
 import { buildTeamLineItems, newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from '@/lib/pricing-v2/prices'
 import { decideLegacyPlanCheckout, decideTeamCheckout, subscriberKind } from '@/lib/pricing-v2/view'
-import { isEnterpriseSeatCount, isTeamSeatCount } from '@/lib/pricing-v2/plans'
+import { isEnterpriseSeatCount, isTeamSeatCount, TEAM_TRIAL_DAYS } from '@/lib/pricing-v2/plans'
 
 /** 同一オリジン内のパスだけを戻り先として許可する（オープンリダイレクト防止） */
 function safeReturnPath(raw: unknown): string | null {
@@ -255,8 +255,9 @@ export async function POST(request: NextRequest) {
     // 初月無料（30日トライアル）の付与条件:
     //  (a) 月額プランのみ（年額や enterprise/bundle には付けない＝「初月無料」訴求の範囲に一致）
     //  (b) 新規顧客のみ（DB で有料なら対象外。そうでなければメール横断で実サブスク履歴を照会。trial cycling防止）
+    // チーム（新しい料金）は TEAM_TRIAL_DAYS（既定 0 ＝ 付けない）。今のプランは今までどおり
     const trialablePlan =
-      billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
+      billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle' && (!isTeam || TEAM_TRIAL_DAYS > 0)
     let trialDays: number | undefined
     if (trialablePlan) {
       try {
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
           stripeCustomerId: dbUser.stripeCustomerId,
           plan: dbUser.plan,
           servicePlans: dbUser.serviceSubscriptions?.map(s => s.plan),
-        })) trialDays = UNIFIED_TRIAL_DAYS
+        })) trialDays = isTeam ? TEAM_TRIAL_DAYS : UNIFIED_TRIAL_DAYS
       } catch {
         return NextResponse.json({
           code: 'TRIAL_CHECK_UNAVAILABLE',

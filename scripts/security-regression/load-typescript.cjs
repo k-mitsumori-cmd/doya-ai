@@ -13,7 +13,7 @@ lazyReal('@/lib/pricing-v2/amount',()=>load('src/lib/pricing-v2/amount.ts'));
 lazyReal('@/lib/pricing-v2/team',()=>load('src/lib/pricing-v2/team.ts',{'./plans':DEFAULT_MOCKS['@/lib/pricing-v2/plans']}));
 // チームの表を読むサーバーの部品は、旗が off と同じ動き（表を読まない）にする
 lazyReal('@/lib/pricing-v2/team.server',()=>({teamTablesAllowed:()=>false,teamSeatsForCompany:async()=>null,teamSeatsUsed:async()=>1,resolveCompanyForUser:async()=>null,ownerTeamContext:async()=>null,readOwnerTeamSubscription:async()=>null,saveSeatCache:async()=>{}}));
-lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));
+lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',reportPowerPackFailure:async()=>true,fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));
 lazyReal('@/lib/pricing-v2/starter.server',()=>({starterTablesAllowed:()=>false,ensureStarterGrant:async()=>({granted:0,decision:{ok:false,reason:'flag_off'}})}));
 lazyReal('@/lib/pricing-v2/rollout',()=>load('src/lib/pricing-v2/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};

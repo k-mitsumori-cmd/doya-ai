@@ -19,6 +19,26 @@ export interface MemberLike {
   email: string
   userId: string | null
   status: string
+  /** 招待した日時。招待中で期限（INVITE_TTL_DAYS）が切れたものは、席に数えない */
+  invitedAt?: Date | string | null
+}
+
+/** 招待の期限（日）。切れた招待は参加に使えず、席にも数えない（統括の点検 C） */
+export const INVITE_TTL_DAYS = 7
+
+/** 招待がまだ使えるか（期限の内か）。招待の日時が分からないものは使えるとみなさない */
+export function isInviteAlive(invitedAt: Date | string | null | undefined, now: Date = new Date()): boolean {
+  if (!invitedAt) return false
+  const t = new Date(invitedAt).getTime()
+  return Number.isFinite(t) && t <= now.getTime() && now.getTime() - t < INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+}
+
+/** 席を取っている行か（参加、または期限の内の招待中） */
+function holdsSeat(m: MemberLike, now: Date): boolean {
+  if (m.status === 'active') return true
+  if (m.status !== 'invited') return false
+  // 招待の日時を持たない呼び出し（古い形）は、今までどおり数える
+  return m.invitedAt === undefined ? true : isInviteAlive(m.invitedAt, now)
 }
 
 /** メールを比べる形にそろえる（前後の空白を除き、小文字）。形が明らかに違えば null */
@@ -30,10 +50,11 @@ export function normalizeEmail(raw: unknown): string | null {
 }
 
 /** 席を取っている人数（持ち主1人 ＋ 招待中・参加のメンバー。持ち主と同じ人の行は重ねて数えない） */
-export function seatsUsed(input: { ownerUserId: string; ownerEmail: string | null; members: MemberLike[] }): number {
+export function seatsUsed(input: { ownerUserId: string; ownerEmail: string | null; members: MemberLike[]; now?: Date }): number {
   const ownerEmail = input.ownerEmail ? normalizeEmail(input.ownerEmail) : null
+  const now = input.now ?? new Date()
   const counted = input.members.filter((m) => {
-    if (m.status !== 'invited' && m.status !== 'active') return false
+    if (!holdsSeat(m, now)) return false
     if (m.userId && m.userId === input.ownerUserId) return false
     if (ownerEmail && normalizeEmail(m.email) === ownerEmail) return false
     return true
@@ -46,11 +67,13 @@ export type InviteDecision =
   | { ok: false; status: number; code: 'NO_SEAT' | 'INVALID_EMAIL' | 'ALREADY_MEMBER' | 'OWNER_SELF' }
 
 /** メンバーを招待してよいか */
-export function decideInvite(input: { email: unknown; ownerEmail: string | null; members: MemberLike[]; used: number; seats: number }): InviteDecision {
+export function decideInvite(input: { email: unknown; ownerEmail: string | null; members: MemberLike[]; used: number; seats: number; now?: Date }): InviteDecision {
   const email = normalizeEmail(input.email)
   if (!email) return { ok: false, status: 400, code: 'INVALID_EMAIL' }
   if (input.ownerEmail && normalizeEmail(input.ownerEmail) === email) return { ok: false, status: 400, code: 'OWNER_SELF' }
-  if (input.members.some((m) => normalizeEmail(m.email) === email && (m.status === 'invited' || m.status === 'active'))) {
+  const now = input.now ?? new Date()
+  // 期限の切れた招待は、招待し直せる
+  if (input.members.some((m) => normalizeEmail(m.email) === email && holdsSeat(m, now))) {
     return { ok: false, status: 409, code: 'ALREADY_MEMBER' }
   }
   if (input.used >= input.seats) return { ok: false, status: 409, code: 'NO_SEAT' }

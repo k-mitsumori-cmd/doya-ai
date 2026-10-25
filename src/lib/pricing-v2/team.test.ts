@@ -192,3 +192,21 @@ test('解約の予約は、期間の終わりまで使えて取り消せると�
 test('カスタマーポータルの戻り先は料金ページ', () => {
   assert.equal(decodeURIComponent(BILLING_PORTAL_HREF.split('returnTo=')[1]!), '/pricing')
 })
+
+// ---------- 招待の期限（7日） ----------
+import { INVITE_TTL_DAYS, isInviteAlive } from './team'
+
+test('招待の期限: 7日を過ぎた招待は使えず、席にも数えない。招待し直せる', () => {
+  const now = new Date('2026-10-26T00:00:00Z')
+  const fresh = new Date(now.getTime() - 6 * 24 * 3600_000)
+  const old = new Date(now.getTime() - INVITE_TTL_DAYS * 24 * 3600_000)
+  assert.ok(isInviteAlive(fresh, now))
+  assert.ok(!isInviteAlive(old, now))
+  assert.ok(!isInviteAlive(null, now))
+  const members = [
+    { email: 'a@example.com', userId: null, status: 'invited', invitedAt: fresh },
+    { email: 'b@example.com', userId: null, status: 'invited', invitedAt: old },
+  ]
+  assert.equal(seatsUsed({ ...owner, members, now }), 2)
+  assert.deepEqual(decideInvite({ email: 'b@example.com', ownerEmail: owner.ownerEmail, members, used: 2, seats: 3, now }), { ok: true })
+})

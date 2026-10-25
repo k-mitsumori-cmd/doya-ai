@@ -2,7 +2,8 @@
 // 追加購入の決済の直後に、ドヤパワーを付ける /api/pricing/power-pack/confirm
 // ============================================
 // Webhook が遅れても、決済の直後に付くようにする保険（同じ決済には1回だけ。sourceKey = purchase:<決済の ID>）。
-// ⚠️ 決済の持ち主がログインしている本人のときだけ付ける。旗が off でも、支払い済みの分は付ける（台帳の旗が on のとき）。
+// ⚠️ 決済の持ち主がログインしている本人のときだけ付ける。新しい料金の旗の対象でない人は 404（統括の点検 A）。
+//    旗を off に戻したあとに支払い済みの分は、Webhook の経路が付ける（Webhook は旗を見ない。台帳の旗が on のとき）。
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { fulfillPowerPackSession } from '@/lib/pricing-v2/power-pack.server'
+import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 
@@ -18,6 +20,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as { id?: string } | undefined)?.id
     if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401, headers: NO_STORE })
+    if (!isNewPricingEnabledFor(session?.user?.email ?? null)) return NextResponse.json({ error: '見つかりません。' }, { status: 404, headers: NO_STORE })
     const body = await req.json().catch(() => null)
     const sessionId = typeof body?.sessionId === 'string' ? body.sessionId.trim() : ''
     if (!/^cs_(test|live)_[A-Za-z0-9]{10,200}$/.test(sessionId)) return NextResponse.json({ error: '決済を確かめられませんでした。' }, { status: 400, headers: NO_STORE })
