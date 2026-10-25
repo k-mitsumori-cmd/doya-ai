@@ -36,7 +36,8 @@ function loadCore(){
   const runner=loadTs('src/lib/agent-orchestration/runner.ts');
   const recipes=loadTs('src/lib/agent-orchestration/recipes.ts');
   const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts')});
-  return {runner,recipes,tools};
+  const execute=loadTs('src/lib/agent-orchestration/execute.ts',{'./runner':runner,'./recipes':recipes,'./tools':tools});
+  return {runner,recipes,tools,execute};
 }
 function loadTaskRoute(env,email,log){
   const core=loadCore();
@@ -48,7 +49,9 @@ function loadTaskRoute(env,email,log){
     '@/lib/agent-orchestration/recipes':core.recipes,
     '@/lib/agent-orchestration/runner':core.runner,
     '@/lib/agent-orchestration/tools':core.tools,
-    '@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>{log.push('deps');return deps}},
+    '@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>{log.push('deps');return deps},refundKeptCharges:async()=>{log.push('refund');return 0}},
+    '@/lib/agent-orchestration/execute':core.execute,
+    '@/lib/shell/company.server':{currentUserId:async()=>{log.push('user');return email?'u_1':null}},
     '@/lib/operational-json':{readOperationalJson:async(r)=>{log.push('body');return r.json()}},
   },env);
 }
@@ -302,5 +305,94 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const tools=read('src/lib/agent-orchestration/tools.ts');
     assert.equal(/from '@\/app\/api/.test(tools),false);
     assert.equal(/fetch\(/.test(tools),false);
+  });
+  // 実行の記録の API（/api/agent/runs…）
+  function loadGate(env,email,log){
+    const runner=loadCore().runner;
+    return loadTs('src/lib/agent-orchestration/api.server.ts',{
+      'next/server':nextServer,'./flag':loadFlag(env,email,log),'./store-flag':loadTs('src/lib/agent-orchestration/store-flag.ts',{},env),'./runner':runner,
+      '@/lib/shell/company.server':{currentUserId:async()=>{log.push('user');return email?'u_1':null}},
+    },env);
+  }
+  await check('Agent runs store: AGENT_RUNS_STORE=db only; the runs APIs need both flags (off: 404 without reading the session or the table)',async()=>{
+    const sf=loadTs('src/lib/agent-orchestration/store-flag.ts');
+    for(const v of [undefined,'','off','true','1','DBX']) assert.equal(sf.agentRunsStoreEnabled(v),false,String(v));
+    assert.equal(sf.agentRunsStoreEnabled(' DB '),true);
+    for(const v of OFF_VALUES){
+      const log=[];
+      const g=await loadGate({...envOf(v),AGENT_RUNS_STORE:'db'},ALLOWED,log).agentGate({store:true});
+      assert.equal(g.response.status,404);
+      assert.deepEqual(log,[],String(v));
+    }
+    let log=[];
+    let g=await loadGate(envOf('preview'),ALLOWED,log).agentGate({store:true});
+    assert.equal(g.response.status,404);
+    assert.equal((await g.response.json()).store,'off');
+    assert.equal(log.includes('user'),false,'store off must not read the user');
+    g=await loadGate({...envOf('preview'),AGENT_RUNS_STORE:'db'},'other@example.invalid',[]).agentGate({store:true});
+    assert.equal(g.response.status,404);
+    g=await loadGate({...envOf('preview'),AGENT_RUNS_STORE:'db'},ALLOWED,[]).agentGate({store:true});
+    assert.equal(g.userId,'u_1');
+    // 記録を使わない API（/api/agent/tasks の入口）は、記録の設定を見ない
+    g=await loadGate(envOf('preview'),ALLOWED,[]).agentGate({store:false});
+    assert.equal(g.userId,'u_1');
+    // 記録の API は、どれも入口（agentGate）を最初に通る。表（prismaRunRepo）や本文はそのあと
+    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+      const src=read(f);
+      const gate=src.indexOf('agentGate({ store: true })');
+      assert.ok(gate>0,f);
+      for(const later of ['readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+        const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
+      }
+    }
+    // ToDo を動かす API は、本文を読まない（保存した作戦と答えだけから、ツールへの入力を作る）
+    assert.equal(/readOperationalJson|req\.json\(/.test(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts')),false);
+    // 表を読む・書くのは runs.prisma.ts だけで、どの読み書きも userId で絞る
+    const repo=read('src/lib/agent-orchestration/runs.prisma.ts');
+    const calls=repo.match(/prisma\.homeAgent(Run|Task)\.\w+\(\{[^]*?\}\)/g)||[];
+    assert.ok(calls.length>=7);
+    for(const c of calls) if(!/\.create\(/.test(c)) assert.match(c,/userId/,c.slice(0,80));
+  });
+  await check('Agent refund: the ledger operation id is built the same way as the charge wrapper, and only kept (consumed) charges are refunded',async()=>{
+    // 包み（charge-core.ts）の操作の id の作り方が変わったら、この検査で気づく
+    assert.match(read('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{opKey\}\$\{scope \? `:\$\{scope\}` : ''\}:\$\{amount\}`/);
+    const seen=[];
+    const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
+      'next/server':nextServer,'./tools':loadCore().tools,'@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
+      '@/lib/doya-power/charge':{doyaPowerCharger:{target:async()=>({companyId:'co_1',plan:null})},routeScope:(r)=>'r-'+new URL(r.url).pathname.replace(/\W/g,'')},
+      '@/lib/doya-power':{operationStatus:async(id)=>{seen.push('status:'+id);return id.includes('op-done')?'refunded':'consumed'},refund:async(id,o)=>{seen.push('refund:'+id+':'+o.companyId);return {ok:true,operationId:id,amount:1,duplicated:false}}},
+    },{});
+    const outer=new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST'});
+    const back=await rs.refundKeptCharges(outer,[{route:'quote.suggest',action:'text.generate',opKey:'op-1',amount:1},{route:'quote.suggest',action:'text.generate',opKey:'op-done',amount:1},{route:'../admin',action:'x',opKey:'y',amount:9}]);
+    assert.equal(back,1);
+    assert.deepEqual(seen,['status:text.generate:co_1:op-1:r-apiquotedocumentssuggest:1','refund:text.generate:co_1:op-1:r-apiquotedocumentssuggest:1:co_1','status:text.generate:co_1:op-done:r-apiquotedocumentssuggest:1']);
+    // 旗の外・会社が未登録なら、台帳に触れない
+    const none=[];
+    const rs2=loadTs('src/lib/agent-orchestration/routes.server.ts',{
+      'next/server':nextServer,'./tools':loadCore().tools,'@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
+      '@/lib/doya-power/charge':{doyaPowerCharger:{target:async()=>null},routeScope:()=>'r'},
+      '@/lib/doya-power':{operationStatus:async()=>{none.push(1)},refund:async()=>{none.push(1)}},
+    },{});
+    assert.equal(await rs2.refundKeptCharges(outer,[{route:'quote.suggest',action:'text.generate',opKey:'op-1',amount:1}]),0);
+    assert.deepEqual(none,[]);
+  });
+  await check('Agent tasks API: one user runs at most 3 tasks at once, and a failed task refunds its kept charges',async()=>{
+    const src=read('src/app/api/agent/tasks/route.ts');
+    assert.match(src,/limiter\.acquire\(userId\)/);
+    assert.match(src,/status: 429/);
+    assert.match(src,/finally \{\s*release\(\)/);
+    assert.match(src,/refund: \(c\) => refundKeptCharges\(req, c\)/);
+    assert.match(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts'),/refund: \(c\) => refundKeptCharges\(req, c\)/);
+    // 減ったままの操作（charges）は、画面への答えに入れない
+    const core=loadCore();
+    const api=loadTs('src/lib/agent-orchestration/api.server.ts',{'next/server':nextServer,'./flag':loadFlag(envOf('preview'),ALLOWED),'./store-flag':loadTs('src/lib/agent-orchestration/store-flag.ts'),'./runner':core.runner,'@/lib/shell/company.server':{currentUserId:async()=>'u_1'}},{});
+    const failed=await api.taskFailure(new core.runner.AgentTaskError('保存できませんでした。','tool',undefined,undefined,{used:1,refunded:0},[{route:'quote.suggest',action:'text.generate',opKey:'op-secret',amount:1}])).json();
+    assert.equal(failed.error,'保存できませんでした。');
+    assert.deepEqual(failed.power,{used:1,refunded:0});
+    assert.equal(JSON.stringify(failed).includes('op-secret'),false);
+    const log=[];
+    const res=await loadTaskRoute(envOf('preview'),ALLOWED,log).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
+    assert.equal(res.status,200);
+    assert.equal(JSON.stringify(await res.json()).includes('opKey'),false);
   });
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -16,6 +16,14 @@ export interface AgentTaskSpec {
   dependsOn?: string[]
 }
 
+/** 減ったまま（戻していない）のドヤパワーの操作（どのルートで・どの操作の名前で・どのキーで・いくつ） */
+export interface AgentCharge {
+  route: string
+  action: string
+  opKey: string
+  amount: number
+}
+
 /** ドヤパワーの減った量と戻した量（減る量の表から数える目安。作り直しの半額などで実際と違うことがある） */
 export interface AgentPowerUse {
   used: number
@@ -93,6 +101,8 @@ export class AgentTaskError extends Error {
     public href?: { href: string; label: string },
     /** 失敗までに減った・戻したドヤパワー */
     public power?: AgentPowerUse,
+    /** 減ったまま（戻していない）のドヤパワーの操作。サーバーだけが使う（ToDo が失敗したら戻すため）。画面には返さない */
+    public charges?: AgentCharge[],
   ) {
     super(userMessage)
     this.name = 'AgentTaskError'

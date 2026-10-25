@@ -9,6 +9,7 @@
 // ⚠️ 呼べるルートは ROUTES の表のものだけ。画面から届いた値で道すじを作らない。
 import { NextRequest } from 'next/server'
 import type { ToolCallResult, ToolDeps, ToolRouteId } from './tools'
+import type { AgentCharge } from './runner'
 import { fakeToolDeps } from './tools'
 import { DOYA_POWER_OP_HEADER } from '@/lib/doya-power/retry'
 
@@ -52,4 +53,32 @@ export async function toolDepsFor(outer: NextRequest): Promise<ToolDeps> {
       return (await getShodanContext())?.organizationSlug ?? null
     },
   }
+}
+
+/**
+ * ToDo が失敗したときに、その ToDo で減ったままのドヤパワーを戻す（execute.ts の refund）。
+ * 台帳の操作の id は、包み（charge-core.ts）と同じ作り方で組み立てる: 操作の名前:会社:キー:ルートの名前空間:量。
+ * 台帳で「減ったまま」のものだけを戻す（戻し済み・見つからないものは何もしない）。戻した量を返す。
+ * ⚠️ 本人の会社（セッション）の分だけ。旗の外・会社が未登録なら何もしない。
+ */
+export async function refundKeptCharges(outer: NextRequest, charges: AgentCharge[]): Promise<number> {
+  if (!charges.length) return 0
+  const [{ doyaPowerCharger, routeScope }, ledger] = await Promise.all([import('@/lib/doya-power/charge'), import('@/lib/doya-power')])
+  const who = await doyaPowerCharger.target().catch(() => null)
+  if (!who) return 0
+  let back = 0
+  for (const c of charges) {
+    const r = ROUTES[c.route as ToolRouteId]
+    if (!r) continue
+    const scope = routeScope({ url: new URL(r.path, outer.nextUrl.origin).toString() })
+    const operationId = `${c.action}:${who.companyId}:${c.opKey}:${scope}:${c.amount}`
+    try {
+      if ((await ledger.operationStatus(operationId)) !== 'consumed') continue
+      const res = await ledger.refund(operationId, { companyId: who.companyId })
+      if (res.ok && !res.duplicated) back += res.amount
+    } catch {
+      console.error('[agent] refund failed')
+    }
+  }
+  return back
 }
