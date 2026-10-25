@@ -165,6 +165,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         await tx.kintaiMember.update({ where: { id: employee.member.id }, data: { role } })
         employee.member.role = role
       }
+      // 招待中にメールを直したら、前のメールあての招待リンクを使えなくする（招待は出し直す）
+      if (email !== undefined && email !== existingEmp.email && employee.member && employee.member.status !== 'ACTIVE') {
+        await tx.kintaiMember.update({ where: { id: employee.member.id }, data: { inviteEmail: email, inviteToken: null } })
+        employee.member.inviteToken = null
+      }
 
       return NextResponse.json({ employee })
     })
@@ -194,6 +199,17 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
       if (existingEmp.member?.role === 'system_admin') {
         return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
+      }
+      // PATCH の無効化と同じ決まり。自分自身は無効化できない。システム管理者以外は、自分と同じか上の権限の人を無効化できない
+      // （hr_admin どうしで互いを無効化し合えないように。ROLES-2026-10-26.md §2.1）。未知のロールは安全側（同格以上）に倒す。
+      if (existingEmp.id === kctx.employeeId) {
+        return NextResponse.json({ error: '自分自身は無効化できません' }, { status: 403 })
+      }
+      if (actorRole !== 'system_admin') {
+        const targetRole = existingEmp.member?.role
+        if (targetRole && (hasMinRole(targetRole, actorRole) || !hasMinRole(targetRole, 'employee'))) {
+          return NextResponse.json({ error: '自分と同じか上の権限を持つ人は無効化できません' }, { status: 403 })
+        }
       }
       await tx.kintaiEmployee.update({
         where: { id: p.id },

@@ -10,7 +10,9 @@
 // - shadow なら、判定はするが止めない。止めるはずだったことを記録の関数に渡す。
 // 実際の DB の読み方は access.server.ts。テストは company-roles.test.ts（偽の DB を渡す）。
 import { decideCompanyPermission, type CompanyPermission, type PermissionDecision, type PermissionTarget } from './permissions'
+import { normalizeRolePolicy, DEFAULT_ROLE_POLICY, type CompanyRolePolicy } from './policy'
 import { isMemberRowRole, type CompanyRole } from './roles'
+import { effectiveToolRole, type ToolId } from './tool-roles'
 import type { CompanyRolesMode } from './rollout'
 
 export interface CompanyRoleDb {
@@ -18,6 +20,13 @@ export interface CompanyRoleDb {
   findOwnedCompany(userId: string): Promise<{ id: string } | null>
   /** 本人が参加している会社のメンバーの行（status = active のいちばん古いもの） */
   findActiveMembership(userId: string): Promise<{ companyId: string; role: string } | null>
+  /** 会社ごとの切り替え（account_company_role_settings.policy）。無ければ null */
+  findPolicy?(companyId: string): Promise<unknown | null>
+}
+
+export async function loadRolePolicy(companyId: string, db: CompanyRoleDb): Promise<CompanyRolePolicy> {
+  if (!db.findPolicy) return DEFAULT_ROLE_POLICY
+  return normalizeRolePolicy(await db.findPolicy(companyId))
 }
 
 export interface CompanyRoleContext {
@@ -63,8 +72,9 @@ export async function authorizeCompanyAction(input: {
 }): Promise<CompanyAuthorization> {
   if (input.mode === 'off') return { checked: false, allowed: true, mode: 'off' }
   const context = await resolveCompanyRole(input.userId, input.db)
+  const policy = context ? await loadRolePolicy(context.companyId, input.db) : DEFAULT_ROLE_POLICY
   const decision = context
-    ? decideCompanyPermission(context.role, input.permission, input.target)
+    ? decideCompanyPermission(context.role, input.permission, input.target, policy)
     : ({ ok: false, reason: 'NO_COMPANY' } as const)
   if (input.mode === 'shadow') {
     if (!decision.ok) {
@@ -81,10 +91,37 @@ export async function authorizeCompanyAction(input: {
   return { checked: true, allowed: decision.ok, mode: 'enforce', context, decision }
 }
 
+/**
+ * ツールの入口（get{Svc}Context）で、ツールの役割に会社の上限を当てる。
+ * - off: そのまま返す（DB を読まない）
+ * - shadow: 下がるはずだったら記録し、そのまま返す
+ * - enforce: 下げた役割を返す（null はこのツールを使えない）。会社に入っていない人（自分だけで使う人）は、そのまま
+ * ⚠️ 会社の上限は、その人の会社の役割で決める。ツールの組織が会社のものかどうかは、まだ見ていない（ROLES §10）。
+ */
+export async function applyCompanyCeiling(input: {
+  tool: ToolId
+  userId: string
+  toolRole: string
+  mode: CompanyRolesMode
+  db: CompanyRoleDb
+  onShadowClamp?: (d: { userId: string; tool: ToolId; toolRole: string; companyRole: CompanyRole; effective: string | null }) => void
+}): Promise<string | null> {
+  if (input.mode === 'off') return input.toolRole
+  const context = await resolveCompanyRole(input.userId, input.db)
+  if (!context) return input.toolRole
+  const e = effectiveToolRole(input.tool, input.toolRole, context.role)
+  if (!e.clamped) return e.role
+  if (input.mode === 'shadow') {
+    input.onShadowClamp?.({ userId: input.userId, tool: input.tool, toolRole: input.toolRole, companyRole: context.role, effective: e.role })
+    return input.toolRole
+  }
+  return e.role
+}
+
 // ============================================
 // 役割の変更の記録（誰が・いつ・誰を・何から何へ）
 // ============================================
-export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated'
+export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated' | 'policy_changed'
 
 export interface RoleEventRecord {
   companyId: string

@@ -60,11 +60,11 @@ test('契約と支払い・ドヤパワーの追加購入・会社の削除は�
   }
 })
 
-test('見積の確定はマネージャー以上。請求の発行は管理者以上', () => {
+test('見積の確定はマネージャー以上。請求書の発行は初期値でマネージャー以上', () => {
   assert.equal(canCompany('member', 'quote.finalize'), false)
   assert.equal(canCompany('manager', 'quote.finalize'), true)
-  assert.equal(canCompany('manager', 'invoice.issue'), false)
-  assert.equal(canCompany('admin', 'invoice.issue'), true)
+  assert.equal(canCompany('member', 'invoice.issue'), false)
+  assert.equal(canCompany('manager', 'invoice.issue'), true)
 })
 
 test('HR: 部下の評価はマネージャーの自分の部署だけ。機微な情報は管理者以上', () => {
@@ -86,12 +86,24 @@ test('知らない役割・知らない操作は、すべて拒否する', () =>
   assert.equal(hasMinCompanyRole('superuser', 'guest'), false)
 })
 
-test('できること表は、上の役割ほど広い（下の役割ができることは上の役割もできる）', () => {
+test('できること表は、上の役割ほど広い（請求の担当を除く順番の役割で、下ができることは上もできる）', () => {
+  const ladder: CompanyRole[] = ['owner', 'admin', 'manager', 'member', 'guest']
   for (const row of permissionMatrix()) {
-    const idx = row.allowed.map((r) => ROLES.indexOf(r))
-    // owner から順に連続している
+    const idx = row.allowed.filter((r) => r !== 'billing').map((r) => ladder.indexOf(r))
     idx.forEach((v, i) => assert.equal(v, i, row.permission))
   }
+})
+
+test('請求の担当: 料金と請求を見て、請求書を発行できる。支払いの変更・承認・設定はできない', () => {
+  assert.equal(canCompany('billing', 'billing.view'), true)
+  assert.equal(canCompany('billing', 'invoice.issue'), true)
+  assert.equal(canCompany('billing', 'invoice.void'), true)
+  assert.equal(canCompany('billing', 'billing.manage'), false)
+  assert.equal(canCompany('billing', 'power.purchase'), false)
+  assert.equal(canCompany('billing', 'kintai.request.approve.department', { isSelf: false, sameDepartment: true }), false)
+  assert.equal(canCompany('billing', 'kintai.attendance.edit.all', { isSelf: false }), false)
+  assert.equal(canCompany('billing', 'kintai.clock.self', { isSelf: true }), true)
+  assert.equal(canCompany('billing', 'members.invite'), false)
 })
 
 // ---- 役割の変更 ----
@@ -106,8 +118,8 @@ test('役割の変更: 自分自身とオーナーは変えられない。管理
 })
 
 test('付けられる役割: オーナーは管理者まで、管理者はマネージャーまで。オーナーは誰も付けられない', () => {
-  assert.deepEqual(grantableCompanyRoles('owner'), ['admin', 'manager', 'member', 'guest'])
-  assert.deepEqual(grantableCompanyRoles('admin'), ['manager', 'member', 'guest'])
+  assert.deepEqual(grantableCompanyRoles('owner'), ['admin', 'manager', 'billing', 'member', 'guest'])
+  assert.deepEqual(grantableCompanyRoles('admin'), ['manager', 'billing', 'member', 'guest'])
   assert.deepEqual(grantableCompanyRoles('manager'), [])
   for (const r of ROLES) assert.equal(canGrantCompanyRole(r, 'owner'), false, r)
 })
@@ -115,12 +127,14 @@ test('付けられる役割: オーナーは管理者まで、管理者はマネ
 // ---- ツールの役割とのつながり ----
 
 test('ツールの中の役割は、会社の役割の上限で下がる（勤怠のシステム管理者でも、会社のメンバーなら一般）', () => {
-  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'member'), { role: 'employee', readOnly: false, clamped: true })
-  assert.deepEqual(effectiveToolRole('kintai', 'hr_admin', 'admin'), { role: 'hr_admin', readOnly: false, clamped: false })
-  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'admin'), { role: 'hr_admin', readOnly: false, clamped: true })
-  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'owner'), { role: 'system_admin', readOnly: false, clamped: false })
-  assert.deepEqual(effectiveToolRole('hr', 'OWNER', 'manager'), { role: 'MANAGER', readOnly: false, clamped: true })
-  assert.equal(effectiveToolRole('sfa', 'owner', 'guest').readOnly, true)
+  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'member'), { role: 'employee', clamped: true })
+  assert.deepEqual(effectiveToolRole('kintai', 'hr_admin', 'admin'), { role: 'hr_admin', clamped: false })
+  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'admin'), { role: 'hr_admin', clamped: true })
+  assert.deepEqual(effectiveToolRole('kintai', 'system_admin', 'owner'), { role: 'system_admin', clamped: false })
+  assert.deepEqual(effectiveToolRole('hr', 'OWNER', 'manager'), { role: 'MANAGER', clamped: true })
+  assert.deepEqual(effectiveToolRole('sfa', 'owner', 'guest'), { role: null, clamped: true })
+  assert.deepEqual(effectiveToolRole('promane', 'member', 'guest'), { role: 'guest', clamped: true })
+  assert.deepEqual(effectiveToolRole('kintai', 'hr_admin', 'billing'), { role: 'employee', clamped: true })
   assert.equal(effectiveToolRole('kintai', 'superuser', 'owner').role, null)
 })
 
@@ -130,7 +144,7 @@ test('会社の役割で、ツールの役割が上がることはない', () =>
     for (const toolRole of order) {
       for (const r of ROLES) {
         const e = effectiveToolRole(tool, toolRole, r)
-        assert.ok(e.role !== null && order.indexOf(e.role) <= order.indexOf(toolRole), `${tool} ${toolRole} ${r}`)
+        assert.ok(e.role === null || order.indexOf(e.role) <= order.indexOf(toolRole), `${tool} ${toolRole} ${r}`)
       }
     }
   }

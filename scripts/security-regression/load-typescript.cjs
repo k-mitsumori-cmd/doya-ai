@@ -16,5 +16,13 @@ lazyReal('@/lib/pricing-v2/team.server',()=>({teamTablesAllowed:()=>false,teamSe
 lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',reportPowerPackFailure:async()=>true,fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));
 lazyReal('@/lib/pricing-v2/starter.server',()=>({starterTablesAllowed:()=>false,ensureStarterGrant:async()=>({granted:0,decision:{ok:false,reason:'flag_off'}})}));
 lazyReal('@/lib/pricing-v2/rollout',()=>load('src/lib/pricing-v2/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
+// 会社の役割（src/lib/company-roles）は、各サービスのテストでは旗が off と同じ動き（ツールの役割をそのまま使い、止めない）にする。
+// 役割ごとの判定そのものは src/lib/company-roles/company-roles.test.ts と verify-company-roles-*.cjs が確かめる（2026-10-26）
+lazyReal('@/lib/company-roles/roles',()=>load('src/lib/company-roles/roles.ts'));
+lazyReal('@/lib/company-roles/tool-roles',()=>load('src/lib/company-roles/tool-roles.ts',{'./roles':DEFAULT_MOCKS['@/lib/company-roles/roles']}));
+lazyReal('@/lib/company-roles/policy',()=>load('src/lib/company-roles/policy.ts'));
+lazyReal('@/lib/company-roles/rollout',()=>load('src/lib/company-roles/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
+lazyReal('@/lib/company-roles/permissions',()=>load('src/lib/company-roles/permissions.ts',{'./roles':DEFAULT_MOCKS['@/lib/company-roles/roles'],'./policy':DEFAULT_MOCKS['@/lib/company-roles/policy']}));
+lazyReal('@/lib/company-roles/access.server',()=>({ceilToolRole:async(i)=>i.toolRole,authorizeCompanyActionForSession:async()=>({checked:false,allowed:true,mode:'off'}),companyRoleForSession:async()=>null,writeRoleEvent:async()=>false,recordAuthor:async()=>{},findRecordAuthor:async()=>null,prismaCompanyRoleDb:{}}));
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
 module.exports={load,check,results,DEFAULT_MOCKS};

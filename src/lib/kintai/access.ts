@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { KintaiMemberRole, KintaiContext, ROLE_HIERARCHY } from './types'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -23,12 +24,15 @@ export async function getKintaiContext(): Promise<KintaiContext | null> {
     orderBy: { createdAt: 'desc' },
   })
   if (!membership || !membership.employee || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
+  // 無効化後も本人の勤怠履歴は読めるが、以前の管理権限は使わせない。
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（会社のメンバーは勤怠の中では一般。ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'kintai', userId, email: session?.user?.email ?? null, toolRole: membership.employee.isActive ? membership.role : 'employee' })
+  if (!role) return null
 
   return {
     userId,
     organizationId: membership.organizationId,
-    // 無効化後も本人の勤怠履歴は読めるが、以前の管理権限は使わせない。
-    role: membership.employee.isActive ? membership.role as KintaiMemberRole : 'employee',
+    role: role as KintaiMemberRole,
     isActive: membership.employee.isActive,
     memberId: membership.id,
     employeeId: membership.employee.id,

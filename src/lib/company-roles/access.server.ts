@@ -5,29 +5,20 @@
 //   const auth = await authorizeCompanyActionForSession({ userId, email, permission: 'kintai.attendance.edit.all', target: { isSelf } })
 //   if (!auth.allowed) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 // ⚠️ 旗 COMPANY_ROLES_ROLLOUT が off なら、DB を一切読まない（新しい表が本番DBに無いうちに落ちないように）。
-// ⚠️ account_company_members は新しい料金のブランチ（claude/doya-new-pricing-dd27ff）で足す表。
-//    そのブランチが main に入るまで、この型は Prisma の生成物に無いので、読むところだけを狭い型で書いている。
-//    main に入ったら、prisma.accountCompanyMember をそのまま使う形に直す（ROLES-2026-10-26.md §8）。
+// ⚠️ account_company_members は新しい料金の表。新しい料金の表を使えないとき（teamTablesAllowed が false）は、読まない。
+//    COMPANY_ROLES_ROLLOUT を off 以外にするのは、新しい料金の表と ROLES §8.2 の表を本番DBに流したあと。
 import { prisma } from '@/lib/prisma'
-import { authorizeCompanyAction, type CompanyAuthorization, type CompanyRoleDb, type RoleEventRecord, type ShadowDenial } from './access'
+import { newPricingRollout } from '@/lib/pricing-v2/rollout'
+import { teamPriceConfig } from '@/lib/pricing-v2/prices'
+import { applyCompanyCeiling, authorizeCompanyAction, loadRolePolicy, resolveCompanyRole, type CompanyAuthorization, type CompanyRoleContext, type CompanyRoleDb, type RoleEventRecord, type ShadowDenial } from './access'
 import type { CompanyPermission, PermissionTarget } from './permissions'
+import type { CompanyRolePolicy } from './policy'
 import { companyRolesModeFor, companyRolesRollout } from './rollout'
+import type { ToolId } from './tool-roles'
 
-interface MemberDelegate {
-  findFirst(args: {
-    where: { userId: string; status: string }
-    orderBy: { joinedAt: 'asc' }
-    select: { companyId: true; role: true }
-  }): Promise<{ companyId: string; role: string } | null>
-}
-
-interface RoleEventDelegate {
-  create(args: { data: RoleEventRecord }): Promise<unknown>
-}
-
-function memberDelegate(): MemberDelegate | null {
-  const d = (prisma as unknown as { accountCompanyMember?: MemberDelegate }).accountCompanyMember
-  return d ?? null
+// team.server.ts の teamTablesAllowed と同じ判定（Stripe を読み込まないよう、ここで同じことを書く）
+function teamTablesAllowed(): boolean {
+  return newPricingRollout() !== 'off' && teamPriceConfig().ok
 }
 
 export const prismaCompanyRoleDb: CompanyRoleDb = {
@@ -35,9 +26,16 @@ export const prismaCompanyRoleDb: CompanyRoleDb = {
     return prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } })
   },
   async findActiveMembership(userId) {
-    const d = memberDelegate()
-    if (!d) return null
-    return d.findFirst({ where: { userId, status: 'active' }, orderBy: { joinedAt: 'asc' }, select: { companyId: true, role: true } })
+    if (!teamTablesAllowed()) return null
+    return prisma.accountCompanyMember.findFirst({
+      where: { userId, status: 'active' },
+      orderBy: { joinedAt: 'asc' },
+      select: { companyId: true, role: true },
+    })
+  },
+  async findPolicy(companyId) {
+    const row = await prisma.accountCompanyRoleSetting.findUnique({ where: { companyId }, select: { policy: true } })
+    return row?.policy ?? null
   },
 }
 
@@ -65,17 +63,77 @@ export async function authorizeCompanyActionForSession(input: {
     })
   } catch (e) {
     // 読めなかったとき: 止める旗なら拒否（fail-closed）。shadow なら今の判定のまま通す
-    console.error('[company-roles] 判定に失敗しました', e)
+    console.error('[company-roles] 判定に失敗しました')
     if (mode === 'enforce') return { checked: true, allowed: false, mode, context: null, decision: { ok: false, reason: 'NO_COMPANY' } }
     return { checked: false, allowed: true, mode: 'off' }
   }
 }
 
-/** 役割の変更の記録を書く。表が無い（旗が off・未反映）ときは書かない */
-export async function writeRoleEvent(event: RoleEventRecord): Promise<boolean> {
+/** 役割の変更の記録を書く。旗が off なら書かない。tx を渡せば、変更と同じトランザクションで書く */
+export async function writeRoleEvent(event: RoleEventRecord, tx: Pick<typeof prisma, 'accountCompanyRoleEvent'> = prisma): Promise<boolean> {
   if (companyRolesRollout() === 'off') return false
-  const d = (prisma as unknown as { accountCompanyRoleEvent?: RoleEventDelegate }).accountCompanyRoleEvent
-  if (!d) return false
-  await d.create({ data: event })
+  await tx.accountCompanyRoleEvent.create({ data: event })
   return true
+}
+
+/** 今の人の会社の役割と、会社の決まり（画面の出し分けをサーバーで決めるため）。旗が off なら null */
+export async function companyRoleForSession(input: { userId: string; email: string | null | undefined }): Promise<(CompanyRoleContext & { policy: CompanyRolePolicy; mode: 'shadow' | 'enforce' }) | null> {
+  const mode = companyRolesModeFor(input.email)
+  if (mode === 'off') return null
+  const ctx = await resolveCompanyRole(input.userId, prismaCompanyRoleDb)
+  if (!ctx) return null
+  return { ...ctx, policy: await loadRolePolicy(ctx.companyId, prismaCompanyRoleDb), mode }
+}
+
+function logShadowClamp(d: unknown) {
+  console.warn('[company-roles:shadow-clamp]', JSON.stringify(d))
+}
+
+async function sessionEmail(): Promise<string | null> {
+  try {
+    const [{ getServerSession }, { authOptions }] = await Promise.all([import('next-auth'), import('@/lib/auth')])
+    const session = await getServerSession(authOptions)
+    return session?.user?.email ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 各ツールの get{Svc}Context の最後で呼ぶ。ツールの役割に会社の上限を当てる。
+ * 旗が off なら、セッションも DB も読まずにそのまま返す。読めなかったときは、止める旗なら null（使えない）、shadow ならそのまま。
+ * email を渡さなければ、旗が off でないときだけセッションから読む（preview の判定のため）。
+ */
+export async function ceilToolRole(input: { tool: ToolId; userId: string; email?: string | null; toolRole: string }): Promise<string | null> {
+  if (companyRolesRollout() === 'off') return input.toolRole
+  const email = input.email !== undefined ? input.email : await sessionEmail()
+  const mode = companyRolesModeFor(email)
+  if (mode === 'off') return input.toolRole
+  try {
+    return await applyCompanyCeiling({ tool: input.tool, userId: input.userId, toolRole: input.toolRole, mode, db: prismaCompanyRoleDb, onShadowClamp: logShadowClamp })
+  } catch (e) {
+    console.error('[company-roles] 上限の判定に失敗しました')
+    return mode === 'enforce' ? null : input.toolRole
+  }
+}
+
+/** 記録を作った人を残す（旗が off なら残さない）。同じ記録には1回だけ */
+export async function recordAuthor(input: { tool: ToolId; recordId: string; userId: string }): Promise<void> {
+  if (companyRolesRollout() === 'off') return
+  try {
+    await prisma.accountCompanyRecordAuthor.upsert({
+      where: { tool_recordId: { tool: input.tool, recordId: input.recordId } },
+      create: input,
+      update: {},
+    })
+  } catch (e) {
+    console.error('[company-roles] 作った人を残せませんでした')
+  }
+}
+
+/** 記録を作った人（分からなければ null） */
+export async function findRecordAuthor(tool: ToolId, recordId: string): Promise<string | null> {
+  if (companyRolesRollout() === 'off') return null
+  const row = await prisma.accountCompanyRecordAuthor.findUnique({ where: { tool_recordId: { tool, recordId } }, select: { userId: true } })
+  return row?.userId ?? null
 }

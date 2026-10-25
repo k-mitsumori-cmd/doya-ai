@@ -6,19 +6,22 @@
 // ⚠️ オーナーは会社の持ち主（account_companies.userId）。account_company_members には行を持たない（新しい料金の決まりと同じ）。
 // ⚠️ この表は DB にも Stripe にも触らない（テストあり: company-roles.test.ts）。
 
-export const COMPANY_ROLES = ['owner', 'admin', 'manager', 'member', 'guest'] as const
+export const COMPANY_ROLES = ['owner', 'admin', 'manager', 'billing', 'member', 'guest'] as const
 export type CompanyRole = (typeof COMPANY_ROLES)[number]
 
 /** メンバーの行に入れてよい役割（オーナーは行を持たない） */
-export const MEMBER_ROW_ROLES = ['admin', 'manager', 'member', 'guest'] as const
+export const MEMBER_ROW_ROLES = ['admin', 'manager', 'billing', 'member', 'guest'] as const
 export type MemberRowRole = (typeof MEMBER_ROW_ROLES)[number]
 
-export const COMPANY_ROLE_RANK: Record<CompanyRole, number> = { guest: 0, member: 1, manager: 2, admin: 3, owner: 4 }
+// 請求の担当（billing）は、ふだんの操作はメンバーと同じ。料金と請求の操作だけを、できること表（permissions.ts の extra）で足す。
+// 順番の上ではメンバーと同じ（ツールの中の役割の上限もメンバーと同じ）。
+export const COMPANY_ROLE_RANK: Record<CompanyRole, number> = { guest: 0, member: 1, billing: 1, manager: 2, admin: 3, owner: 4 }
 
 export const COMPANY_ROLE_LABEL: Record<CompanyRole, string> = {
   owner: 'オーナー',
   admin: '管理者',
   manager: 'マネージャー',
+  billing: '請求の担当',
   member: 'メンバー',
   guest: 'ゲスト',
 }
@@ -28,6 +31,7 @@ export const COMPANY_ROLE_DESCRIPTION: Record<CompanyRole, string> = {
   owner: '契約と支払い、役割の変更、会社の削除ができます。会社に1人です。',
   admin: 'すべてのツールの設定と承認、ほかの人のデータの修正ができます。',
   manager: '自分の部署の人の申請を承認できます。ほかの人のデータは直せません。',
+  billing: 'メンバーと同じことに加えて、料金と請求を見て、請求書を発行できます。支払い方法は変えられません。',
   member: '自分のデータだけを扱えます。勤怠は打刻と申請だけです。',
   guest: '共有された画面を見るだけです。書き込みはできません。',
 }
