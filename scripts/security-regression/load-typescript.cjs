@@ -11,6 +11,7 @@ lazyReal('@/lib/pricing-v2/prices',()=>load('src/lib/pricing-v2/prices.ts'));
 lazyReal('@/lib/pricing-v2/view',()=>load('src/lib/pricing-v2/view.ts',{'@/lib/unified-plan':load('src/lib/unified-plan.ts')}));
 lazyReal('@/lib/pricing-v2/amount',()=>load('src/lib/pricing-v2/amount.ts'));
 lazyReal('@/lib/pricing-v2/team',()=>load('src/lib/pricing-v2/team.ts',{'./plans':DEFAULT_MOCKS['@/lib/pricing-v2/plans']}));
+lazyReal('@/lib/doyaslide/quote-handoff',()=>load('src/lib/doyaslide/quote-handoff.ts'));
 // チームの表を読むサーバーの部品は、旗が off と同じ動き（表を読まない）にする
 lazyReal('@/lib/pricing-v2/team.server',()=>({teamTablesAllowed:()=>false,teamSeatsForCompany:async()=>null,teamSeatsUsed:async()=>1,resolveCompanyForUser:async()=>null,ownerTeamContext:async()=>null,readOwnerTeamSubscription:async()=>null,saveSeatCache:async()=>{}}));
 lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',reportPowerPackFailure:async()=>true,fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));

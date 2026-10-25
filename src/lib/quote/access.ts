@@ -137,3 +137,30 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   }
   throw new Error('Organization creation retry exhausted')
 }
+
+/**
+ * 「材料にする」用に、見積書を1件だけ読む。
+ * 注意: id だけでは読まない。同じ1回の問い合わせの中で「自分が ACTIVE で所属する組織の見積書」に絞る。
+ *       他組織・存在しない・招待中のままは、どれも null（呼び出し側は同じ404にする）。
+ * 注意: 選ぶ項目は最小限。発行者情報（invoiceNo・印影）・confirmedBy・notes は読まない。
+ */
+export async function loadQuoteForHandoff(userId: string, documentId: string) {
+  return prisma.quoteDocument.findFirst({
+    where: {
+      id: documentId,
+      organization: { members: { some: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } } } },
+    },
+    select: {
+      title: true,
+      clientCompany: true,
+      status: true,
+      totalExclTax: true,
+      totalInclTax: true,
+      lineItems: {
+        orderBy: { ord: 'asc' },
+        take: 50,
+        select: { itemName: true, qty: true, unit: true, unitPrice: true },
+      },
+    },
+  })
+}
