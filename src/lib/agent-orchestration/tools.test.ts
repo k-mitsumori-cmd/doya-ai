@@ -119,6 +119,14 @@ test('ドヤパワー: 包みが付いたルートで減ったまま（操作の
     assert.deepEqual(e.power, { used: 0, refunded: 30 })
     return true
   })
+  // 見積の品目の案は作れたが、保存で失敗した → 案の分は減ったまま（戻していない）
+  const half: ToolDeps = fakeToolDeps({ delayMs: 0, powerOn: true })
+  const base = half.call
+  half.call = async (route, body) => (route === 'quote.create' ? { status: 503, data: { error: '保存できませんでした。' } } : base(route, body))
+  await assert.rejects(runSalesPrepTask('quote', a, half), (e: { power?: unknown }) => {
+    assert.deepEqual(e.power, { used: 1, refunded: 0 })
+    return true
+  })
   // ドヤパワーを使わない人は、どちらも 0
   assert.deepEqual((await runSalesPrepTask('slides', a, fakeToolDeps({ delayMs: 0 }))).power, { used: 0, refunded: 0 })
   // 残りが足りずに断られた（DOYA_POWER_INSUFFICIENT）ときは、減っていないので戻してもいない

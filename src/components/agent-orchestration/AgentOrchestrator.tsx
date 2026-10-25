@@ -59,10 +59,11 @@ async function runViaApi(recipeId: string, taskId: string, answers: Record<strin
     if ((e as { name?: string })?.name === 'AbortError') throw e
     throw new AgentTaskError('通信が切れました。もう一度お試しください。')
   }
-  const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string } } | null
+  const data = await res.json().catch(() => null) as { result?: AgentTaskResult; error?: string; kind?: AgentTaskError['kind']; resume?: Record<string, string>; href?: { href: string; label: string }; power?: AgentTaskError['power'] } | null
   if (res.ok && data?.result) return data.result
   if (res.status === 404) throw new AgentTaskError('この機能は、まだお使いいただけません。', 'auth')
-  throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href)
+  // 失敗までに減った・戻したドヤパワー（power）も渡す。渡さないと、画面が「減っていない」と言い切ってしまう
+  throw new AgentTaskError(data?.error || 'うまく作れませんでした。もう一度お試しください。', data?.kind ?? 'tool', data?.resume, data?.href, data?.power)
 }
 
 const STATUS_LABEL: Record<AgentTaskState['status'], string> = {

@@ -113,6 +113,9 @@ test('ToDo の状態を画面の4つに寄せる（待つ・進む・できた�
     assert.equal(v.status, 'failed')
     assert.equal(v.retryable, true)
   }
+  assert.equal(done.powerKnown, true)
+  // 答えが届かなかった（通信が切れた）ときは、量が分からない
+  assert.equal(todoViewOf(t, { id: 'x', status: 'failed', attempts: 1, error: 'e' }).powerKnown, false)
   const c = todoCounts([done, todoViewOf(t, { id: 'x', status: 'failed', attempts: 1, power: { used: 0, refunded: 30 } })])
   assert.deepEqual([c.done, c.failed, c.powerUsed, c.powerRefunded], [1, 1, 30, 30])
 })
