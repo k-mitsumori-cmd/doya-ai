@@ -36,7 +36,8 @@ function loadCore(){
   const runner=loadTs('src/lib/agent-orchestration/runner.ts');
   const recipes=loadTs('src/lib/agent-orchestration/recipes.ts');
   const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts')});
-  return {runner,recipes,tools};
+  const execute=loadTs('src/lib/agent-orchestration/execute.ts',{'./runner':runner,'./recipes':recipes,'./tools':tools});
+  return {runner,recipes,tools,execute};
 }
 function loadTaskRoute(env,email,log){
   const core=loadCore();
@@ -49,6 +50,8 @@ function loadTaskRoute(env,email,log){
     '@/lib/agent-orchestration/runner':core.runner,
     '@/lib/agent-orchestration/tools':core.tools,
     '@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>{log.push('deps');return deps}},
+    '@/lib/agent-orchestration/execute':core.execute,
+    '@/lib/shell/company.server':{currentUserId:async()=>{log.push('user');return email?'u_1':null}},
     '@/lib/operational-json':{readOperationalJson:async(r)=>{log.push('body');return r.json()}},
   },env);
 }
@@ -302,5 +305,100 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const tools=read('src/lib/agent-orchestration/tools.ts');
     assert.equal(/from '@\/app\/api/.test(tools),false);
     assert.equal(/fetch\(/.test(tools),false);
+  });
+  // 実行の記録の API（/api/agent/runs…）
+  function loadGate(env,email,log){
+    const runner=loadCore().runner;
+    return loadTs('src/lib/agent-orchestration/api.server.ts',{
+      'next/server':nextServer,'./flag':loadFlag(env,email,log),'./store-flag':loadTs('src/lib/agent-orchestration/store-flag.ts',{},env),'./runner':runner,
+      '@/lib/shell/company.server':{currentUserId:async()=>{log.push('user');return email?'u_1':null}},
+    },env);
+  }
+  await check('Agent runs store: AGENT_RUNS_STORE=db only; the runs APIs need both flags (off: 404 without reading the session or the table)',async()=>{
+    const sf=loadTs('src/lib/agent-orchestration/store-flag.ts');
+    for(const v of [undefined,'','off','true','1','DBX']) assert.equal(sf.agentRunsStoreEnabled(v),false,String(v));
+    assert.equal(sf.agentRunsStoreEnabled(' DB '),true);
+    for(const v of OFF_VALUES){
+      const log=[];
+      const g=await loadGate({...envOf(v),AGENT_RUNS_STORE:'db'},ALLOWED,log).agentGate({store:true});
+      assert.equal(g.response.status,404);
+      assert.deepEqual(log,[],String(v));
+    }
+    let log=[];
+    let g=await loadGate(envOf('preview'),ALLOWED,log).agentGate({store:true});
+    assert.equal(g.response.status,404);
+    assert.equal((await g.response.json()).store,'off');
+    assert.equal(log.includes('user'),false,'store off must not read the user');
+    g=await loadGate({...envOf('preview'),AGENT_RUNS_STORE:'db'},'other@example.invalid',[]).agentGate({store:true});
+    assert.equal(g.response.status,404);
+    g=await loadGate({...envOf('preview'),AGENT_RUNS_STORE:'db'},ALLOWED,[]).agentGate({store:true});
+    assert.equal(g.userId,'u_1');
+    // 記録を使わない API（/api/agent/tasks の入口）は、記録の設定を見ない
+    g=await loadGate(envOf('preview'),ALLOWED,[]).agentGate({store:false});
+    assert.equal(g.userId,'u_1');
+    // 記録の API は、どれも入口（agentGate）を最初に通る。表（prismaRunRepo）や本文はそのあと
+    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+      const src=read(f);
+      const gate=src.indexOf('agentGate({ store: true })');
+      assert.ok(gate>0,f);
+      for(const later of ['readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+        const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
+      }
+    }
+    // ToDo を動かす API は、本文を読まない（保存した作戦と答えだけから、ツールへの入力を作る）
+    assert.equal(/readOperationalJson|req\.json\(/.test(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts')),false);
+    // 表を読む・書くのは runs.prisma.ts だけで、どの読み書きも userId で絞る
+    const repo=read('src/lib/agent-orchestration/runs.prisma.ts');
+    const calls=repo.match(/prisma\.homeAgent(Run|Task)\.\w+\(\{[^]*?\}\)/g)||[];
+    assert.ok(calls.length>=7);
+    for(const c of calls) if(!/\.create\(/.test(c)) assert.match(c,/userId/,c.slice(0,80));
+  });
+  await check('Agent quote retry: when only the save failed, the kept draft is saved again without calling the AI, and nothing is refunded',async()=>{
+    // 戻すのは、AI の生成そのものが失敗したときだけ（包みが行う）。エージェントの側に、台帳を戻す処理を置かない（2026-10-25 ユーザー決定）
+    for(const f of ['src/lib/agent-orchestration/execute.ts','src/lib/agent-orchestration/routes.server.ts','src/app/api/agent/tasks/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+      assert.equal(/refund\(|refundKeptCharges|@\/lib\/doya-power'\)|from '@\/lib\/doya-power'/.test(read(f)),false,f);
+    }
+    let log=[];
+    // 1回目: 保存（quote.create）だけが失敗 → 案を resume で返す
+    const core=loadCore();
+    const failing={shodanSlug:async()=>'acme',call:async(route,body)=>{log.push('call:'+route);if(route==='quote.create')return {status:402,data:{error:'無料プランは3件までです。',code:'LIMIT_REACHED'}};return core.tools.fakeToolDeps({delayMs:0}).call(route,body)}};
+    const routeWith=(deps)=>loadTs('src/app/api/agent/tasks/route.ts',{
+      'next/server':nextServer,'@/lib/agent-orchestration/flag':loadFlag(envOf('preview'),ALLOWED,log),'@/lib/agent-orchestration/recipes':core.recipes,'@/lib/agent-orchestration/runner':core.runner,
+      '@/lib/agent-orchestration/tools':core.tools,'@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>deps},'@/lib/agent-orchestration/execute':core.execute,
+      '@/lib/shell/company.server':{currentUserId:async()=>'u_1'},'@/lib/operational-json':{readOperationalJson:async(r)=>r.json()},
+    },envOf('preview'));
+    let res=await routeWith(failing).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
+    assert.equal(res.status,422);
+    const bad=await res.json();
+    assert.equal(bad.kind,'limit');
+    assert.ok(bad.resume&&typeof bad.resume.quoteDraft==='string');
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.suggest','call:quote.create']);
+    // 2回目: 残した案で、保存だけ（AI は呼ばない）
+    log=[];
+    const ok={shodanSlug:async()=>'acme',call:async(route,body)=>{log.push('call:'+route);return core.tools.fakeToolDeps({delayMs:0}).call(route,body)}};
+    res=await routeWith(ok).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers,resume:bad.resume}));
+    assert.equal(res.status,200);
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.create']);
+    // 大きすぎる案は受け取らない（AI で作り直す）
+    log=[];
+    res=await routeWith(ok).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers,resume:{quoteDraft:'['+'1,'.repeat(13000)+'1]'}}));
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.suggest','call:quote.create']);
+  });
+  await check('Agent tasks API: one user runs at most 3 tasks at once, and failures return only user-facing fields',async()=>{
+    const src=read('src/app/api/agent/tasks/route.ts');
+    assert.match(src,/limiter\.acquire\(userId\)/);
+    assert.match(src,/status: 429/);
+    assert.match(src,/finally \{\s*release\(\)/);
+    // 減ったままの操作（charges）は、画面への答えに入れない
+    const core=loadCore();
+    const api=loadTs('src/lib/agent-orchestration/api.server.ts',{'next/server':nextServer,'./flag':loadFlag(envOf('preview'),ALLOWED),'./store-flag':loadTs('src/lib/agent-orchestration/store-flag.ts'),'./runner':core.runner,'@/lib/shell/company.server':{currentUserId:async()=>'u_1'}},{});
+    const failed=await api.taskFailure(new core.runner.AgentTaskError('保存できませんでした。','tool',undefined,undefined,{used:1,refunded:0})).json();
+    assert.equal(failed.error,'保存できませんでした。');
+    assert.deepEqual(failed.power,{used:1,refunded:0});
+    assert.deepEqual(Object.keys(failed).sort(),['error','kind','power']);
+    const log=[];
+    const res=await loadTaskRoute(envOf('preview'),ALLOWED,log).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
+    assert.equal(res.status,200);
+    assert.equal(JSON.stringify(await res.json()).includes('opKey'),false);
   });
 })().catch(e=>{console.error(e);process.exit(1)});

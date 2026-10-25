@@ -122,33 +122,46 @@ async function research(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskR
 interface SuggestedItemLike { itemName?: unknown; spec?: unknown; qty?: unknown; unit?: unknown; unitPrice?: unknown; taxRate?: unknown; priceSource?: unknown; sourceRef?: unknown; rangeMin?: unknown; rangeMax?: unknown }
 
 /** ドヤ見積もりAI: 品目の案を作り（suggest）、下書きの見積書として保存する（documents） */
-export async function runQuote(a: SalesPrepAnswers, raw: ToolDeps): Promise<AgentTaskResult> {
+export async function runQuote(a: SalesPrepAnswers, raw: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   const m = meter(raw)
-  try { return { ...(await quote(a, m.deps)), power: { ...m.power } } } catch (e) { return m.fail(e) }
+  try { return { ...(await quote(a, m.deps, resume)), power: { ...m.power } } } catch (e) { return m.fail(e) }
 }
-async function quote(a: SalesPrepAnswers, deps: ToolDeps): Promise<AgentTaskResult> {
-  const input = quoteInputOf(a)
-  const sug = await deps.call('quote.suggest', { productName: input.productName, profile: input.profile, situation: input.situation, budget: input.budget })
-  if (!ok(sug)) throw toTaskError('quote', sug, '見積の品目を作れませんでした。もう一度お試しください。')
-  const raw = Array.isArray(obj(sug.data).items) ? (obj(sug.data).items as SuggestedItemLike[]) : []
-  const items = raw
+/** 品目の案を、見積書の保存に渡せる形に整える（AI の答えも、やり直しのときに残した案も、同じ決まりで通す） */
+export function normalizeQuoteItems(raw: unknown, limits = { items: 30, text: 1000 }) {
+  const list = Array.isArray(raw) ? (raw as SuggestedItemLike[]) : []
+  return list
     .filter((i) => typeof i?.itemName === 'string' && i.itemName.trim())
-    .slice(0, 30)
+    .slice(0, limits.items)
     .map((i) => ({
       itemName: String(i.itemName).slice(0, 200),
-      spec: typeof i.spec === 'string' ? i.spec.slice(0, 1000) : undefined,
-      qty: typeof i.qty === 'number' && i.qty >= 1 ? Math.floor(i.qty) : 1,
+      spec: typeof i.spec === 'string' ? i.spec.slice(0, limits.text) : undefined,
+      qty: typeof i.qty === 'number' && i.qty >= 1 ? Math.min(1_000_000, Math.floor(i.qty)) : 1,
       unit: typeof i.unit === 'string' ? i.unit.slice(0, 12) : '式',
-      unitPrice: typeof i.unitPrice === 'number' && i.unitPrice >= 0 ? Math.floor(i.unitPrice) : 0,
-      taxRate: typeof i.taxRate === 'number' ? i.taxRate : 10,
-      priceSource: i.priceSource,
-      sourceRef: typeof i.sourceRef === 'string' ? i.sourceRef.slice(0, 1000) : undefined,
-      rangeMin: typeof i.rangeMin === 'number' ? Math.floor(i.rangeMin) : null,
-      rangeMax: typeof i.rangeMax === 'number' ? Math.floor(i.rangeMax) : null,
+      unitPrice: typeof i.unitPrice === 'number' && i.unitPrice >= 0 ? Math.min(1_000_000_000, Math.floor(i.unitPrice)) : 0,
+      taxRate: i.taxRate === 8 || i.taxRate === 0 ? i.taxRate : 10,
+      priceSource: typeof i.priceSource === 'string' ? i.priceSource.slice(0, 20) : undefined,
+      sourceRef: typeof i.sourceRef === 'string' ? i.sourceRef.slice(0, limits.text) : undefined,
+      rangeMin: typeof i.rangeMin === 'number' && i.rangeMin >= 0 ? Math.floor(i.rangeMin) : null,
+      rangeMax: typeof i.rangeMax === 'number' && i.rangeMax >= 0 ? Math.floor(i.rangeMax) : null,
     }))
+}
+
+/** やり直しのために残す品目の案（resume.quoteDraft）。大きくなりすぎないよう、15行・各文 300字に切る */
+export const QUOTE_DRAFT_LIMITS = { items: 15, text: 300 }
+
+async function quote(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
+  // 前の試みで品目の案ができていて、保存だけが失敗していたら、AI を呼ばずに、その案で保存をやり直す（2026-10-25 ユーザー決定）
+  let items = (() => { try { return resume?.quoteDraft ? normalizeQuoteItems(JSON.parse(resume.quoteDraft), QUOTE_DRAFT_LIMITS) : [] } catch { return [] } })()
+  if (!items.length) {
+    const input = quoteInputOf(a)
+    const sug = await deps.call('quote.suggest', { productName: input.productName, profile: input.profile, situation: input.situation, budget: input.budget })
+    if (!ok(sug)) throw toTaskError('quote', sug, '見積の品目を作れませんでした。もう一度お試しください。')
+    items = normalizeQuoteItems(obj(sug.data).items)
+  }
   if (!items.length) throw new AgentTaskError('見積の品目の案が出ませんでした。もう一度お試しください。')
   const doc = await deps.call('quote.create', { title: `${a.offerLabel}のお見積り`, items, notes: 'ドヤAIのエージェントが作った下書きです。内容を確かめてから確定してください。' })
-  if (!ok(doc)) throw toTaskError('quote', doc, '見積書を保存できませんでした。もう一度お試しください。')
+  // 保存で失敗したら、できた案を resume に残す（やり直しは保存だけ。AI は呼ばない。減ったドヤパワーは戻さない）
+  if (!ok(doc)) throw toTaskError('quote', doc, '見積書を保存できませんでした。もう一度お試しください。', { quoteDraft: JSON.stringify(normalizeQuoteItems(items, QUOTE_DRAFT_LIMITS)) })
   const id = str(obj(doc.data).id, 128)
   if (!id) throw new AgentTaskError('見積書を保存できませんでした。もう一度お試しください。')
   const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
@@ -187,7 +200,7 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
 
 export async function runSalesPrepTask(taskId: SalesPrepTaskId, a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   if (taskId === 'research') return runResearch(a, deps)
-  if (taskId === 'quote') return runQuote(a, deps)
+  if (taskId === 'quote') return runQuote(a, deps, resume)
   return runSlides(a, deps, resume)
 }
 
