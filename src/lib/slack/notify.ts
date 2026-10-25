@@ -10,8 +10,12 @@
  * - 絵文字は使わない。見出しからは必ず、本文からは利用者の文章を含む通知（お問い合わせ）以外で取り除く。
  * - 同じ内容の連続は間引く（インスタンス内メモリ。サーバーレスのインスタンスをまたぐ重複は防げない）。
  *
- * このファイルは外部に依存しない（prisma なども import しない）。テストで読み込みやすくするため。
+ * このファイルは外部に依存しない（prisma なども import しない）。fetch と AbortSignal だけを使うので、
+ * Next.js・Cloudflare Workers・Node 18 以降のどれでも動く。ほかのリポジトリへはこのファイルをそのまま
+ * コピーして使う（決まりの文書: docs/slack-standard.md）。コピー先では下の版を書き換えない。
  */
+
+export const SLACK_NOTIFY_VERSION = '1.0.0'
 
 export type SlackKind = 'error' | 'billing' | 'usage' | 'inquiry' | 'report'
 export type SlackSeverity = 'urgent' | 'action' | 'info'
@@ -48,7 +52,7 @@ const TAG_WORDS = new Set([
 /** 見出しの札として使われてきたアプリ名。 */
 const KNOWN_APPS = [
   'ドヤAI', 'ドヤマーケ', 'ドヤマーケAI', '呪い日記', 'ゆるせん', '許せん', '推しにマイル', 'ヒトリジメ',
-  '弊社、限界につき。', '旅行ツール', 'LINE', 'X',
+  '弊社、限界につき。', '旅行ツール', 'LINE', 'X', 'LINE配信管理', 'X投稿管理', 'AI商談', 'ドヤプロマネ', 'AI秘書',
 ]
 
 const KNOWN_APPS_LONGEST_FIRST = [...KNOWN_APPS].sort((x, y) => y.length - x.length)
