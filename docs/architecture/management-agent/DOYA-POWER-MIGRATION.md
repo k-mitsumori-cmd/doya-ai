@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS "doya_power_grants" (
     CONSTRAINT "doya_power_grants_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "doya_power_grants_accountId_fkey" FOREIGN KEY ("accountId")
         REFERENCES "doya_power_accounts"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "doya_power_grants_kind_check" CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase')),
+    CONSTRAINT "doya_power_grants_kind_check" CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase', 'starter')),
     CONSTRAINT "doya_power_grants_amount_check" CHECK ("amount" > 0 AND "remaining" >= 0 AND "remaining" <= "amount")
 );
 

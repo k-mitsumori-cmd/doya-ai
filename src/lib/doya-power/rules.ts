@@ -3,7 +3,13 @@
 // （Intl のタイムゾーンの表に頼らない。サーバーの TZ の設定にも左右されない）。
 
 /** 付与の種類 */
-export const GRANT_KINDS = ['monthly', 'daily_recovery', 'bonus', 'mission', 'purchase'] as const
+/**
+ * 付与の種類。starter は「はじめの付与（最初の100）」（2026-10-26。src/lib/pricing-v2/starter.ts）。
+ * 期限なし・回復の上限で削られない。毎日の回復の計算では、starter の残りも回復でためた分に数える（100 から始まり、使った分が戻る）
+ */
+export const GRANT_KINDS = ['monthly', 'daily_recovery', 'bonus', 'mission', 'purchase', 'starter'] as const
+/** 毎日の回復の計算で「回復でためた分」に数える種類 */
+export const RECOVERY_POOL_KINDS: readonly string[] = ['daily_recovery', 'starter']
 export type GrantKind = (typeof GRANT_KINDS)[number]
 export function isGrantKind(v: unknown): v is GrantKind {
   return typeof v === 'string' && (GRANT_KINDS as readonly string[]).includes(v)

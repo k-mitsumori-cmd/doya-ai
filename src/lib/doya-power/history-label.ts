@@ -26,6 +26,7 @@ export const KIND_LABELS: Record<GrantKind, string> = {
   bonus: 'ボーナス',
   mission: 'ミッションの達成',
   purchase: '追加の購入',
+  starter: 'はじめの付与',
 }
 
 export function actionLabel(action: string | null): string {

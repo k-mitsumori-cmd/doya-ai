@@ -8,6 +8,7 @@
 // ⚠️ DB の外（有料の API など）は呼ばない。db は Prisma のクライアント（テストでは memory-db）を渡す
 import { isPaidPlan } from '@/lib/unified-plan'
 import {
+  RECOVERY_POOL_KINDS,
   BONUS_KINDS,
   DAILY_RECOVERY_CAP,
   GRANT_KINDS,
@@ -157,7 +158,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
 
     const today = jstDayKey(now)
     if (account.lastRecoveryDay !== today) {
-      const recovering = grants.filter((g) => g.kind === 'daily_recovery').reduce((s, g) => s + g.remaining, 0)
+      const recovering = grants.filter((g) => RECOVERY_POOL_KINDS.includes(g.kind)).reduce((s, g) => s + g.remaining, 0)
       // 毎日の回復は無料プランだけ。有料の会社は毎月の付与だけ（日付は進めて、無料に戻ったときに溜まった日数を一度に付けない）
       const add = paid ? 0 : dailyRecoveryToAdd(account.lastRecoveryDay, today, recovering)
       if (add > 0) {
@@ -273,7 +274,8 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         }
       }
       if (opts.inTransaction && !(await opts.inTransaction(tx))) return { ok: false, reason: 'precondition' }
-      const grants = await settle(tx, account, now, paid)
+      // はじめの付与（starter）を付ける回は、その日の回復を足さない（ちょうど 100 から始める）
+      const grants = await settle(tx, account, now, kind === 'starter' ? true : paid)
 
       let granted = amount
       let expires: Date | null = expiresAt
@@ -282,9 +284,12 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         expires = expires && expires.getTime() < max.getTime() ? expires : max
       } else if (kind === 'daily_recovery') {
         expires = null
-        const recovering = grants.filter((g) => g.kind === 'daily_recovery').reduce((s, g) => s + g.remaining, 0)
+        const recovering = grants.filter((g) => RECOVERY_POOL_KINDS.includes(g.kind)).reduce((s, g) => s + g.remaining, 0)
         granted = Math.min(amount, Math.max(0, DAILY_RECOVERY_CAP - recovering))
         if (granted <= 0) return { ok: false, reason: 'recovery_cap' }
+      } else if (kind === 'starter') {
+        // はじめの付与: 期限なし。回復の上限で削らない（いつも決めた量を付ける）
+        expires = null
       } else if (kind === 'purchase') {
         expires = clampPurchaseExpiresAt(now, expiresAt)
         if (!expires) return { ok: false, reason: 'invalid' }
@@ -344,7 +349,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         companyId,
         total,
         byKind,
-        nextRecoveryAt: !paid && byKind.daily_recovery < DAILY_RECOVERY_CAP ? jstNextDayStart(now) : null,
+        nextRecoveryAt: !paid && byKind.daily_recovery + byKind.starter < DAILY_RECOVERY_CAP ? jstNextDayStart(now) : null,
         nextExpiry,
       }
     })
