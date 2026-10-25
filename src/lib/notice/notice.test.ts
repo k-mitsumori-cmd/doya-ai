@@ -95,3 +95,23 @@ test('新機能: お知らせは30日、メニューの札は7日で消える', 
   assert.ok(newToolIds(at('2026-10-07'), list).has('quote'))
   assert.equal(newToolIds(at('2026-10-08'), list).size, 0)
 })
+
+test('離れる前の確認: 別の画面へ移るリンクだけを数える', async () => {
+  const { isLeavingLink, countsAsDraft, shouldNotifyFinished } = await import('./leave')
+  const o = 'https://doya-ai.example'
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote' }), true)
+  assert.equal(isLeavingLink({ href: '/quote?x=1', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: '#top', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote', target: '_blank' }), false)
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote', modifier: true }), false)
+  assert.equal(isLeavingLink({ href: 'https://other.example/x', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: 'mailto:a@b.jp', origin: o, currentPath: '/quote' }), false)
+  assert.equal(countsAsDraft({ tagName: 'TEXTAREA', inDialog: false, ignored: false }), true)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'search', inDialog: false, ignored: false }), false)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'text', inDialog: true, ignored: false }), false)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'url', inDialog: false, ignored: false }), true)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 8000, ok: true }), true)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/quote', ms: 8000, ok: true }), false)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 2000, ok: true }), false)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 8000, ok: false }), false)
+})

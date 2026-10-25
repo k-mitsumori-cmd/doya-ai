@@ -10,11 +10,13 @@
 // ⚠️ ドヤくんの表示オフ（DoyaPowerFx の mascot）なら文字だけ。動きを減らす設定では動かさない。絵文字は使わない。
 // ⚠️ 旗（GUIDE_POPUPS_ROLLOUT）が出すと決めた人だけ、ShellGate がこの部品で包む。外では useNotice() が何もしない。
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
 import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
 import { addSeen, loadLevelRaw, loadSeen, saveLevelRaw, saveSeen } from '@/lib/notice/seen'
+import { countsAsDraft, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
 import toastStore from 'react-hot-toast'
 import HotToastBridge from './HotToastBridge'
 import styles from './notice.module.css'
@@ -68,8 +70,10 @@ function unspot(el: HTMLElement | null) { if (!el) return; el.style.boxShadow = 
 const isEditable = (el: Element | null) =>
   !!el && (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit'].includes(el.type)) || (el as HTMLElement).isContentEditable)
 
-/** 同じサイトの /api/ への POST が終わっていない間は「作業中」 */
-function useApiBusy(): number {
+type ApiFinish = { startPath: string; ms: number; ok: boolean }
+
+/** 同じサイトの /api/ への POST が終わっていない間は「作業中」。終わったら onFinish を呼ぶ */
+function useApiBusy(onFinish: { current: (f: ApiFinish) => void }): number {
   const [pending, setPending] = useState(0)
   useEffect(() => {
     const original = window.fetch
@@ -80,7 +84,12 @@ function useApiBusy(): number {
       try { const u = new URL(url, window.location.origin); own = u.origin === window.location.origin && u.pathname.startsWith('/api/') } catch {}
       if (!own || method === 'GET') return original(input, init)
       setPending((p) => p + 1)
-      try { return await original(input, init) } finally { setPending((p) => Math.max(0, p - 1)) }
+      const startPath = window.location.pathname, t0 = Date.now()
+      let ok = false
+      try { const res = await original(input, init); ok = res.ok; return res } finally {
+        setPending((p) => Math.max(0, p - 1))
+        try { onFinish.current({ startPath, ms: Date.now() - t0, ok }) } catch { /* 知らせが失敗しても、通信の結果はそのまま返す */ }
+      }
     }
     window.fetch = watched
     return () => { if (window.fetch === watched) window.fetch = original }
@@ -109,7 +118,10 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   }, [userKey])
 
   // ---- 作業中（入力中・保存や生成の通信中・ツールが holdBusy した間） ----
-  const apiBusy = useApiBusy()
+  const pathname = usePathname() || '/'
+  const router = useRouter()
+  const finishRef = useRef<(f: ApiFinish) => void>(() => {})
+  const apiBusy = useApiBusy(finishRef)
   const [typing, setTyping] = useState(false)
   const [holds, setHolds] = useState(0)
   useEffect(() => {
@@ -190,6 +202,47 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
     toastTimer.current = setTimeout(hide, toast.durationMs ?? 5000)
     return () => clearTimeout(toastTimer.current)
   }, [toast])
+
+  // ---- (15) 裏で終わった作業の知らせ／(27) 離れる前の下書きの確認 ----
+  const dirtyRef = useRef(false)
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  // 画面が変わったら、書きかけは数え直す
+  useEffect(() => { dirtyRef.current = false; setLeaveTo(null) }, [pathname])
+  useEffect(() => {
+    finishRef.current = (f) => {
+      // 保存や生成がうまくいったら、書きかけではなくなったとみなす
+      if (f.ok && f.startPath === window.location.pathname) dirtyRef.current = false
+      if (shouldNotifyFinished({ ...f, nowPath: window.location.pathname })) {
+        notify({ tone: 'ok', title: '裏で進めていた作業が終わりました', sub: '前の画面で始めた作業です', action: { label: '開く', href: f.startPath }, durationMs: 8000 })
+      }
+    }
+  }, [notify])
+  useEffect(() => {
+    const onInput = (e: Event) => {
+      const el = e.target as HTMLElement | null
+      if (!el || !el.tagName) return
+      const input = el as HTMLInputElement
+      if (countsAsDraft({ tagName: el.tagName, type: input.type, readOnly: input.readOnly, contentEditable: el.isContentEditable,
+        inDialog: Boolean(el.closest('[role="dialog"], [role="alertdialog"]')), ignored: Boolean(el.closest('[data-notice-ignore]')) })) dirtyRef.current = true
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { if (dirtyRef.current) { e.preventDefault(); e.returnValue = '' } }
+    const onClick = (e: MouseEvent) => {
+      if (!dirtyRef.current || e.defaultPrevented || e.button !== 0) return
+      const a = (e.target as HTMLElement | null)?.closest?.('a') as HTMLAnchorElement | null
+      if (!a) return
+      if (!isLeavingLink({ href: a.getAttribute('href'), origin: window.location.origin, currentPath: window.location.pathname, target: a.target, download: a.hasAttribute('download'), modifier: e.metaKey || e.ctrlKey || e.shiftKey || e.altKey })) return
+      e.preventDefault(); e.stopPropagation()
+      setLeaveTo(a.href)
+    }
+    document.addEventListener('input', onInput, true)
+    document.addEventListener('click', onClick, true)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => { document.removeEventListener('input', onInput, true); document.removeEventListener('click', onClick, true); window.removeEventListener('beforeunload', onBeforeUnload) }
+  }, [])
+  const leaveNow = () => {
+    const to = leaveTo; dirtyRef.current = false; setLeaveTo(null)
+    if (to) { const u = new URL(to); router.push(u.pathname + u.search + u.hash) }
+  }
 
   // ---- 吹き出し ----
   const [tipState, setTipState] = useState<(TipInput & { left: number; top: number; arrow: number }) | null>(null)
@@ -288,6 +341,32 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
           </>
         ) : null}
 
+        {leaveTo ? (
+          <>
+            <div className={styles.scrim} data-open="true" onClick={() => setLeaveTo(null)} aria-hidden="true" />
+            <div className={styles.sheet} data-open="true" data-tone="warn" role="alertdialog" aria-modal="true" aria-labelledby="doya-leave-title" aria-describedby="doya-leave-body">
+              <span className={styles.handle} aria-hidden="true" />
+              <div className={styles.head} data-mascot={fx.mascot ? 'on' : 'off'}>
+                {fx.mascot ? <img src="/character/focus-256.webp" alt="" width={72} height={72} className={styles.kun} /> : null}
+                <div className={styles.headText}>
+                  <span className={styles.eyebrow}>書きかけの内容</span>
+                  <h2 id="doya-leave-title" className={styles.title}>入力した内容は、まだ保存されていません</h2>
+                </div>
+                <button type="button" className={styles.x} onClick={() => setLeaveTo(null)} aria-label="閉じる">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
+              </div>
+              <p id="doya-leave-body" className={styles.body}>このまま別の画面に移ると、書きかけの内容が消えることがあります。保存してから移るか、このまま移るかを選んでください。</p>
+              <div className={styles.foot}>
+                <span className={styles.actions}>
+                  <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={leaveNow}>このまま移る</button>
+                  <button type="button" className={styles.btn} onClick={() => setLeaveTo(null)} autoFocus>この画面に残る</button>
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
+
         {toast ? (
           <div key={toast.key} className={styles.toast} data-open={toastOpen ? 'true' : undefined} data-tone={toast.tone ?? 'ok'} role="status" aria-live="polite"
             onMouseEnter={() => (hover.current = true)} onMouseLeave={() => (hover.current = false)} style={{ ['--life' as string]: `${toast.durationMs ?? 5000}ms` }}>
@@ -319,6 +398,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
 }
 
 function ActionButton({ a, className, onDone }: { a: NoticeAction; className: string; onDone: () => void }) {
+  // /api/ への行き先（支払い方法の更新など）は、画面の移動ではなくサーバーへ行くので、ふつうのリンクにする
+  if (a.href?.startsWith('/api/')) return <a href={a.href} className={className} onClick={onDone}>{a.label}</a>
   return a.href
     ? <Link href={a.href} className={className} onClick={onDone}>{a.label}</Link>
     : <button type="button" className={className} onClick={onDone}>{a.label}</button>
