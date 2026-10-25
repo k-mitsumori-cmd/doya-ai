@@ -38,6 +38,23 @@ export function effectivePrepStatus(status: string, updatedAt: Date | string): s
 }
 
 // ---- リサーチ（深掘り調査）の構造 ----
+/** 調査の診断（失敗の理由を利用者に具体的に伝えるため。FAILURE-CHECKLIST.md） */
+export interface ResearchDiagnostics {
+  homepage: { ok: true } | { ok: false; reason: 'url_rejected' | 'dns' | 'network' | 'timeout' | 'http' | 'content_type' | 'redirect' | 'body'; status?: number }
+  /** サイトを読んだ回数（失敗の理由に合わせて1回だけ読み直す） */
+  attempts: number
+  /** 本文の文字数 */
+  bodyChars: number
+  /** 本文がほぼ空（JavaScript で描くサイト） */
+  jsRendered: boolean
+  /** 題・説明・JSON-LD を足して AI に渡したか */
+  usedPageSummary: boolean
+  /** 会社の情報を取り出す AI の答えがあったか */
+  aiExtracted: boolean
+  /** 会社名をどこから取ったか */
+  companyNameFrom: 'input' | 'site' | 'title' | null
+}
+
 export interface CompanyResearch {
   companyName?: string
   url: string
@@ -85,6 +102,8 @@ export interface CompanyResearch {
   pressReleases?: PressRelease[]
   // 取得した生テキスト（分析用、保存はしない/短縮）
   rawNotes?: string
+  /** 調査の診断（無い古い記録もある） */
+  diagnostics?: ResearchDiagnostics
 }
 
 export interface ProposalSlide {

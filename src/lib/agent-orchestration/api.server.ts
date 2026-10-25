@@ -27,7 +27,7 @@ export function taskFailure(e: unknown, extra: Record<string, unknown> = {}) {
   const err = e instanceof AgentTaskError ? e : null
   if (!err) console.error('[agent] task failed')
   return NextResponse.json(
-    { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href, power: err?.power, ...extra },
+    { error: failureText(e), kind: err?.kind ?? 'tool', resume: err?.resume, href: err?.href, power: err?.power, cause: err?.cause, actions: err?.actions, ...extra },
     { status: 422, headers: NO_STORE },
   )
 }
