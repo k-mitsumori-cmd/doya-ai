@@ -185,7 +185,7 @@ export async function notifyFirstServiceUse(opts: {
     const blocks: unknown[] = [
       {
         type: 'header',
-        text: { type: 'plain_text', text: `【初めての利用】${label}`, emoji: true },
+        text: { type: 'plain_text', text: `【初めての利用】${label}`, emoji: false },
       },
       {
         type: 'section',
@@ -214,7 +214,7 @@ export async function notifyFirstServiceUse(opts: {
       },
     ]
 
-    await postToSlackBlocks(`[初回利用] ${label} - ${who}`, blocks)
+    await postToSlackBlocks(`[初回利用] ${label} - ${who}`, blocks, undefined, { app: 'ドヤAI', kind: 'usage', severity: 'info' })
   } catch (e) {
     console.error('[Usage] notifyFirstServiceUse failed:')
   }
@@ -230,6 +230,6 @@ export async function notifyServiceActivity(opts: Pick<ServiceUsageOptions, 'ser
       `利用区分：${opts.userId ? 'ログイン利用' : 'ゲスト利用'}`,
       `日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
     ].join('\n');
-    await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }]);
+    await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }], undefined, { app: 'ドヤAI', kind: 'usage', severity: 'info' });
   } catch (error) { console.error('[Usage] notification failed'); }
 }

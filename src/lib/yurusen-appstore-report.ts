@@ -48,7 +48,7 @@ async function postSlack(text: string): Promise<void> {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(voicePayload({ text })),
+    body: JSON.stringify(voicePayload({ text }, { app: 'ゆるせん', kind: 'report', severity: 'info' })),
   })
   if (!res.ok) {
     throw new Error(`Slack webhook error: ${res.status} ${await res.text().catch(() => '')}`)

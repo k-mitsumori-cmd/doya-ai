@@ -22,10 +22,10 @@ export async function pollStoreReviews(dry = false) {
       const esc = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       for (const review of fresh) {
         const a = review.attributes;
-        const text = [`【${service.name}】${previous ? 'レビューに新しい動き！' : '初回チェック・最近のレビューだよ'}${a.rating <= 2 ? '【要確認・低評価】' : ''}`,
+        const text = [`【${service.name}】${previous ? '新しいレビューが届きました' : '最近のレビュー（初回の確認）'}${a.rating <= 2 ? '【要確認・低評価】' : ''}`,
           `評価：星 ${a.rating}／5`, `レビュー日：${a.createdDate}`, `ストア地域：${a.territory || '未確認'}`,
           `タイトル：${esc(a.title)}`, `内容：${esc(a.body).slice(0, 2200)}`, `確認先：https://appstoreconnect.apple.com/apps/${service.appId}/distribution/ratings`,
-          '自動返信はしていないよ。困っている内容があれば、原因と案内を確認してね。'].join('\n');
+          '自動返信はしていません。困っている内容があれば、原因と案内を確認してください。'].join('\n');
         if (!dry) await sendOps(service.key, text, `review:${review.id}:${signatures[review.id]}`, a.rating <= 2 ? 'error' : 'activity');
       }
       if (!dry) { await writeOps('reviews:' + service.key, signatures); await writeOps('review-status:' + service.key, { ok: true, at: new Date().toISOString(), count: reviews.length }); }

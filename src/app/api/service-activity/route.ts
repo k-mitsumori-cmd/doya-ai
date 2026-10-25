@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   seen.set(body.eventId, Date.now());
   try {
     const text = ['【弊社、限界につき。】利用されました', '操作：記録の保存', '結果：端末に1件保存されました。', `通知日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`, 'メモ・会社名・給与・記録の内容は送信していません。'].join('\n');
-    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(voicePayload({ text })), signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(voicePayload({ text }, { app: '弊社、限界につき。', kind: 'usage', severity: 'info' })), signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error('Slack delivery failed');
     return NextResponse.json({ ok: true });
   } catch { seen.delete(body.eventId); return NextResponse.json({ ok: false }, { status: 502 }); }

@@ -5,7 +5,7 @@ function fixture({ webhook = 'https://hooks.example.invalid/feedback', delivery 
   let calls = 0, saves = 0
   const logs = []
   const route = load('src/app/api/promane/feedback/route.ts', {
-    '../../../../lib/slack-context-comment': { applyContextComment: value => value },
+    '../../../../lib/slack-voice': { voicePayload: value => value },
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => authenticated ? { user: { id: 'user', email: 'private@example.invalid', name: 'Private User' } } : null },
     '@/lib/auth': { authOptions: {} },
