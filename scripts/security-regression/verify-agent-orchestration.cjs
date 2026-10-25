@@ -5,7 +5,8 @@
 // - 各ツールは、決まった5つのルートの export された POST（ドヤパワーの包みの外側）だけを、本人の cookie を付けて呼ぶ
 // - 見本の結果への差し替えは、本番（NODE_ENV=production）では値があっても効かない
 // - 作戦の API は、質問 → 作戦（減るドヤパワーは costs.ts から）を返し、AI を呼ばない
-// - 経営ホームの画面のファイルには、まだつながない（UIリニューアルが型でつなぐ）。見本の画面は開発の確認ページだけ
+// - 経営ホームは、旗の内側だけでエージェントの画面を出す（off なら何も出さず、旗のためにセッションを読まない）
+// - 画面の部品は、サーバーの部品（読み方・旗・ルート・DB）を読み込まない。見本の画面は本番で 404
 // 値はすべてテストの中で渡す。git・DB・課金・外部 API・AI には触れない。
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{load,check}=require('./load-typescript.cjs');
 const root=path.resolve(__dirname,'../..');
@@ -213,20 +214,91 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.equal(ok2.find(e=>e.type==='source'&&e.source.id==='company'&&e.source.status!=='reading').source.status,'skipped');
   });
 
-  await check('Agent orchestration: the home screen is left to the UI renewal; the sample screen is dev-only and behind the flag',async()=>{
-    // 経営ホームの画面のファイルには、まだつながない（UIリニューアルの src/components/home-agent/ が型でつなぐ）
-    for(const f of ['src/app/(shell)/home/HomeDashboard.tsx','src/app/(shell)/home/page.tsx']){
-      assert.equal(/agent-orchestration/.test(read(f)),false,f);
+  // 経営ホームの page.tsx を読み込む（JSX は react/jsx-runtime。画面の部品は印だけの関数にする）
+  const React=require(path.join(root,'node_modules/react'));
+  const jsxRuntime=require(path.join(root,'node_modules/react/jsx-runtime'));
+  function loadPage(file,mocks,env){
+    const exports={};const module={exports};
+    const out=ts.transpileModule(read(file),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    const req=n=>{if(n in mocks)return mocks[n];if(n==='react')return React;if(n==='react/jsx-runtime')return jsxRuntime;if(/\.css$/.test(n))return {};throw Error('Unmocked '+n)};
+    vm.runInNewContext(out,{exports,module,require:req,URL,Response,Headers,Date,Set,Map,Error,Promise,Object,Array,Number,String,Math,JSON,Symbol,process:{env},console:{log(){},warn(){},error(){}}},{filename:file});
+    return module.exports;
+  }
+  const exists=f=>fs.existsSync(path.join(root,f));
+  const HOME='src/app/(shell)/home/page.tsx';
+  await check('Agent orchestration: the home page shows the agent only behind the flag (off: nothing, and the session is not read for it)',async()=>{
+    const src=read(HOME);
+    if(!/agent-orchestration/.test(src)){
+      // 経営ホームにまだつないでいない（このブランチだけのとき）。画面の部品も読み込まない
+      assert.equal(/home-agent/.test(src),false);
+      return;
     }
-    const lab=read('src/app/(shell)/home/agent-lab/page.tsx');
-    assert.match(lab,/process\.env\.NODE_ENV === 'production' \|\| agentOrchestrationRollout\(\) === 'off'\) notFound\(\)/);
-    assert.match(lab,/executor="sample"/);
-    // 作業と作戦の API は、旗を見てから本文を読む
+    const HomeAgent=function HomeAgent(){return null};
+    const HomeDashboard=function HomeDashboard(){return null};
+    const render=async(env,email)=>{
+      const log=[];
+      const page=loadPage(HOME,{
+        'next/navigation':{redirect:(to)=>{throw Object.assign(Error('NEXT_REDIRECT'),{to})},notFound:()=>{throw Error('NEXT_NOT_FOUND')}},
+        'next-auth':{getServerSession:async()=>({user:{id:'u_1',email,name:'テスト'}})},
+        '@/lib/auth':{authOptions:{}},
+        '@/lib/home/summary':{getHomeSummary:async()=>({})},
+        'next/headers':{cookies:async()=>({get:()=>undefined})},
+        './cookies':{SETUP_HIDE_COOKIE:'x'},
+        '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>false},
+        '@/lib/doya-power/home.server':{loadDoyaPowerHome:async()=>null},
+        '@/components/doya-power/DoyaPowerHome':{DoyaPowerHomeCard:()=>null},
+        './HomeDashboard':{__esModule:true,default:HomeDashboard},
+        '@/lib/agent-orchestration/flag':loadFlag(env,email,log),
+        '@/components/home-agent/HomeAgent':{__esModule:true,default:HomeAgent},
+      },env);
+      const el=await page.default();
+      assert.equal(el.type,HomeDashboard);
+      // エージェントの部品を渡す props を探す（名前は画面の担当が決める）。HomeAgent の要素が入っているものだけを見る
+      const stages=Object.values(el.props).filter(v=>v&&typeof v==='object'&&v.type===HomeAgent);
+      return {stages,log};
+    };
+    for(const v of OFF_VALUES){
+      const r=await render(envOf(v),ALLOWED);
+      assert.equal(r.stages.length,0,'off must render no agent: '+String(v));
+      assert.equal(r.log.includes('session'),false,'the flag must not read the session when off: '+String(v));
+    }
+    assert.equal((await render(envOf('preview'),'other@example.invalid')).stages.length,0);
+    assert.equal((await render(envOf('preview'),ALLOWED)).stages.length,1);
+    assert.equal((await render(envOf('all'),'other@example.invalid')).stages.length,1);
+  });
+  await check('Agent orchestration: the home screen part imports only client-safe pieces (no server readers, flag, routes or DB)',async()=>{
+    const dir='src/components/home-agent';
+    const files=exists(dir)?fs.readdirSync(path.join(root,dir)).filter(f=>/\.(tsx?|ts)$/.test(f)&&!/\.test\./.test(f)):[];
+    for(const f of [...files.map(f=>dir+'/'+f),'src/components/agent-orchestration/AgentOrchestrator.tsx']){
+      const src=read(f);
+      for(const bad of [/agent-orchestration\/routes\.server/,/agent-orchestration\/sources\.server/,/agent-orchestration\/flag/,/@\/lib\/prisma/,/@\/app\/api\//]){
+        assert.equal(bad.test(src),false,f+' must not import '+bad);
+      }
+    }
+  });
+  await check('Agent orchestration: the sample screens (agent-lab, agent-preview) are 404 in production',async()=>{
+    for(const f of ['src/app/(shell)/home/agent-lab/page.tsx','src/app/(shell)/home/agent-preview/page.tsx'].filter(exists)){
+      let notFound=0;
+      const page=loadPage(f,{
+        'next/navigation':{notFound:()=>{notFound++;throw Error('NEXT_NOT_FOUND')}},
+        'next-auth':{getServerSession:async()=>null},'@/lib/auth':{authOptions:{}},
+        '@/components/shell/AppShell':{__esModule:true,default:()=>null},
+        '@/components/agent-orchestration/AgentOrchestrator':{__esModule:true,default:()=>null},
+        '@/components/home-agent/HomeAgent':{__esModule:true,default:()=>null},
+        '@/lib/agent-orchestration/flag':loadFlag(envOf('all'),ALLOWED),
+        '@/lib/agent-orchestration/recipes':loadCore().recipes,
+      },{NODE_ENV:'production',AGENT_ORCHESTRATION_ROLLOUT:'all'});
+      await assert.rejects(()=>Promise.resolve().then(()=>page.default()),/NEXT_NOT_FOUND/,f);
+      assert.equal(notFound,1,f);
+    }
+    // 見本の結果で動かすのは、見本の画面だけ（経営ホームの本物は API で動かす）
+    assert.equal(/executor="sample"/.test(read(HOME)),false);
+  });
+  await check('Agent orchestration: the APIs read the flag before the body, and tool inputs come from checked answers',async()=>{
     for(const f of ['src/app/api/agent/tasks/route.ts','src/app/api/agent/plan/route.ts']){
       const src=read(f);
       assert.ok(src.indexOf('isAgentOrchestrationEnabled()')>0&&src.indexOf('isAgentOrchestrationEnabled()')<src.indexOf('readOperationalJson(req'),f);
     }
-    // ツールへの入力は、サーバーで確かめた答えから作る（画面の値で道すじを選ばない）
     const tools=read('src/lib/agent-orchestration/tools.ts');
     assert.equal(/from '@\/app\/api/.test(tools),false);
     assert.equal(/fetch\(/.test(tools),false);
