@@ -74,6 +74,11 @@ export type LedgerOptions = {
   now?: () => Date
   /** その会社が有料か。有料の会社には毎日の回復を付けない（毎月の付与だけ）。既定は無料扱い */
   isPaidCompany?: (companyId: string) => Promise<boolean>
+  /**
+   * 新しい料金（チーム）の毎月の量。チームの会社なら人数から決めた量、そうでなければ null（今までの量を使う）。
+   * 無ければ今までどおり（src/lib/pricing-v2/team.server.ts の teamSeatsForCompany を index.ts がつなぐ）
+   */
+  teamMonthlyGrantFor?: (companyId: string) => Promise<number | null>
 }
 
 class RetryableError extends Error {}
@@ -298,10 +303,14 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
-  /** プランに合わせた毎月の付与（無料は付けない。今の 1人の PRO はチームと同じ量）。月に1回だけ */
+  /** プランに合わせた毎月の付与（無料は付けない。チームは人数から、据え置きの PRO は決まった量）。月に1回だけ */
   async function grantMonthlyForPlan(companyId: string, plan: string | null | undefined): Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }> {
-    const amount = monthlyGrantForPlan(plan, isPaidPlan)
+    let amount = monthlyGrantForPlan(plan, isPaidPlan)
     if (amount <= 0) return { ok: true, granted: 0, skipped: 'free_plan' }
+    if (options.teamMonthlyGrantFor) {
+      const team = await options.teamMonthlyGrantFor(companyId)
+      if (typeof team === 'number' && team > 0) amount = team
+    }
     return grant(companyId, 'monthly', amount, null)
   }
 

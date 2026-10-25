@@ -5911,7 +5911,58 @@ model AccountCompany {
   // ドヤパワーの台帳（Prisma の上だけの関連。account_companies の列は増えない）
   doyaPowerAccount DoyaPowerAccount?
 
+  // 新しい料金（組織単位）のメンバーと、買った人数の控え（Prisma の上だけの関連。account_companies の列は増えない）
+  members AccountCompanyMember[]
+  billing AccountCompanyBilling?
+
   @@map("account_companies")
+}
+
+// ============================================
+// 新しい料金（組織単位。2026-10-25）の会社のメンバーと、買った人数の控え
+// ============================================
+// 仕様: docs/architecture/management-agent/PRICING-NEW-2026-10-25.md §10 / PRICING-NEW-MIGRATION.md
+// ⚠️ 本番DBにはまだ無い。流す SQL は PRICING-NEW-MIGRATION.md（統括がユーザーの承認を取って流す）
+// ⚠️ 旗 NEW_PRICING_ROLLOUT が off のあいだは、この2つの表を読む・書くコードは動かない（src/lib/pricing-v2/team.server.ts）
+
+// 会社のメンバー。会社の持ち主（account_companies.userId）は行が無くても1人目として数える
+model AccountCompanyMember {
+  id          String         @id @default(cuid())
+  companyId   String
+  company     AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email       String // 小文字にそろえて入れる
+  userId      String? // 参加した人の User.id（招待中は null）
+  role        String         @default("member") // admin | member（持ち主は行を持たない）
+  status      String         @default("invited") // invited | active | removed
+  inviteToken String?        @unique
+  invitedBy   String? // 招待した人の User.id
+  invitedAt   DateTime       @default(now())
+  joinedAt    DateTime?
+  removedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([companyId, email])
+  @@index([userId])
+  @@index([companyId, status])
+  @@map("account_company_members")
+}
+
+// 買った人数の控え（正は Stripe の契約の数量。User.plan は書かない＝課金の反映の経路ではない）
+// 人数の変更（/api/pricing/seats）と、古くなったとき（1日）の読み直しで更新する
+model AccountCompanyBilling {
+  id                   String         @id @default(cuid())
+  companyId            String         @unique
+  company              AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String
+  seats                Int
+  billingInterval      String // month | year
+  checkedAt            DateTime
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([stripeSubscriptionId])
+  @@map("account_company_billing")
 }
 
 // ============================================

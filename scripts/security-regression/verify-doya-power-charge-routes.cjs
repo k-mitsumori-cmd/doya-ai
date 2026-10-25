@@ -75,7 +75,11 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
     const src=code('src/app/api/doya-power/balance/route.ts');
     assert.match(src,/export async function GET\(\) \{\s*if \(doyaPowerRollout\(\) === 'off'\) return NextResponse\.json/);
     assert.doesNotMatch(src,/searchParams|companyId|req\.json/);
-    assert.match(code('src/lib/doya-power/charge.ts'),/prisma\.accountCompany\.findUnique\(\{ where: \{ userId \}/);
+    // 会社はセッションの本人から決める。持ち主の会社 → 参加している会社（新しい料金の旗の内側）の順（src/lib/pricing-v2/team.server.ts。2026-10-25）
+    assert.match(code('src/lib/doya-power/charge.ts'),/const userId = await currentUserId\(\)[\s\S]*const company = await resolveCompanyForUser\(userId\)/);
+    const team=code('src/lib/pricing-v2/team.server.ts');
+    assert.match(team,/prisma\.accountCompany\.findUnique\(\{ where: \{ userId \}/);
+    assert.match(team,/if \(!teamTablesAllowed\(\)\) return null\s*const m = await prisma\.accountCompanyMember\.findFirst\(\{\s*where: \{ userId, status: 'active' \}/);
   });
   await check('Shell gauge reads the ledger only when the flag allows it',async()=>{
     assert.match(code('src/app/(shell)/layout.tsx'),/const doyaPowerState = doyaPower \? await doyaPowerCharger\.shellState\(\)\.catch\(\(\) => null\) : null/);

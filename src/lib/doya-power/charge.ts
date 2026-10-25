@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { currentUserId } from '@/lib/shell/company.server'
+import { resolveCompanyForUser } from '@/lib/pricing-v2/team.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
 import { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume } from './index'
 import { createDoyaPowerCharger } from './charge-core'
@@ -30,11 +31,10 @@ export const doyaPowerCharger = createDoyaPowerCharger({
   account: async () => {
     const userId = await currentUserId()
     if (!userId) return null
-    const [company, user] = await Promise.all([
-      prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } }),
-      prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }),
-    ])
-    return company ? { companyId: company.id, plan: user?.plan ?? null } : null
+    // 本人が持ち主の会社を先に見る。無ければ、参加しているチームの会社（旗 NEW_PRICING_ROLLOUT が on のときだけ）。
+    // plan は会社の持ち主のプラン（チームの料金を払っているのは持ち主）
+    const company = await resolveCompanyForUser(userId)
+    return company ? { companyId: company.companyId, plan: company.plan } : null
   },
   ledger: { consume, refund, grantMonthlyForPlan, balance, operationStatus, recentConsume },
   isPaidPlan,

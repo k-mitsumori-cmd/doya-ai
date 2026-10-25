@@ -26,7 +26,7 @@ export const PURCHASE_MAX_MONTHS = 6
 export const MONTHLY_CARRYOVER_MONTHS = 1
 
 /**
- * 毎月の付与（仮の値。料金と一緒に統括が決める）。数は料金の表（src/lib/pricing-v2/plans.ts）だけに書く。
+ * 毎月の付与。数は料金の表（src/lib/pricing-v2/plans.ts）だけに書く（2026-10-25 ユーザー決定: 据え置きは 1,500）。
  * 今の 1人 9,980円 の契約者（統一プラン PRO など isPaidPlan の人）への量は LEGACY_PRO_MONTHLY_POINTS。
  * 新しい料金（チーム）の量は人数で変わる（teamMonthlyPoints）。台帳の付与を作るときにそちらを使う。
  */

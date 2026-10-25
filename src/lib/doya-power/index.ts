@@ -9,6 +9,8 @@ import { isPaidPlan } from '@/lib/unified-plan'
 import type { LedgerDb } from './ledger'
 import { doyaPowerLedgerAllowed } from './flag'
 import { createGatedLedger } from './gate'
+import { teamSeatsForCompany } from '@/lib/pricing-v2/team.server'
+import { teamMonthlyGrant } from '@/lib/pricing-v2/team'
 
 // 毎日の回復は無料プランだけ。会社の持ち主（userId）のプランが有料なら付けない
 async function isPaidCompany(companyId: string): Promise<boolean> {
@@ -18,7 +20,12 @@ async function isPaidCompany(companyId: string): Promise<boolean> {
   return isPaidPlan(user?.plan)
 }
 
-export const doyaPower = createGatedLedger(() => prisma as unknown as LedgerDb, () => doyaPowerLedgerAllowed(), { isPaidCompany })
+// 新しい料金（チーム）の会社は、買った人数から毎月の量を決める。旗 NEW_PRICING_ROLLOUT が off なら表を読まずに null
+async function teamMonthlyGrantFor(companyId: string): Promise<number | null> {
+  return teamMonthlyGrant(await teamSeatsForCompany(companyId))
+}
+
+export const doyaPower = createGatedLedger(() => prisma as unknown as LedgerDb, () => doyaPowerLedgerAllowed(), { isPaidCompany, teamMonthlyGrantFor })
 
 export const consume = doyaPower.consume
 export const refund = doyaPower.refund

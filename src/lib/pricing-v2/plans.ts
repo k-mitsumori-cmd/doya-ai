@@ -2,7 +2,7 @@
 // 新しい料金の表（組織単位・2026-10-25 案）
 // ============================================
 // ⚠️ 金額・付与のポイント・人数の段階は、ここだけに書く。料金ページ・Checkout・テストはこの表から読む。
-// ⚠️ まだ案。ユーザーが最終決定するまで、旗 NEW_PRICING_ROLLOUT（rollout.ts）は off のまま。
+// 案C を正式の案にした（2026-10-25 ユーザー「こちらの内容で進めてください」）。公開（旗 NEW_PRICING_ROLLOUT を on）は統括がユーザーの承認を取って行う。
 // ⚠️ 今の契約者（1人 9,980円 の統一プロ）は、今の金額のまま据え置く（legacy.ts）。この表の金額で請求しない。
 // 設計書: docs/architecture/management-agent/PRICING-NEW-2026-10-25.md
 // DB にも Stripe にも触らない（計算だけ）。テスト: pricing-v2.test.ts
@@ -40,12 +40,10 @@ export const TEAM_MONTHLY_POINTS_PER_SEAT = 300
 
 /**
  * 今の 1人 9,980円 の契約者（据え置き）への毎月の付与。
- * ⚠️ src/lib/doya-power/rules.ts の SOLO_PRO_MONTHLY_GRANT はここを読む。
- * ⚠️ 今の値 3,000 は仮（2026-10-19）。全部使われると原価が売上を上回る（設計書 §4.3）。おすすめは 1,500。
- *    ユーザーの決定の前なので、値はまだ変えていない。
+ * src/lib/doya-power/rules.ts の SOLO_PRO_MONTHLY_GRANT はここを読む。
+ * 2026-10-25 ユーザー決定: 仮の 3,000 から 1,500 に下げた（3,000 は全部使われると原価が売上を上回る。設計書 §4.6）。
  */
-export const LEGACY_PRO_MONTHLY_POINTS = 3000
-export const LEGACY_PRO_MONTHLY_POINTS_RECOMMENDED = 1500
+export const LEGACY_PRO_MONTHLY_POINTS = 1500
 
 /** 追加購入（1パック）。有効期限は doya-power/rules.ts の PURCHASE_MAX_MONTHS（6か月）に従う */
 export const POWER_PACK = { points: 1000, price: 5980 } as const

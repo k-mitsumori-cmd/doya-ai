@@ -100,3 +100,14 @@ export function buildTeamLineItems(
     { price: c.seat[input.interval], quantity: input.seats, ...tax },
   ]
 }
+
+/** 追加購入（一回払い）の価格 ID。未設定・形が違う・今の価格やチームの価格と同じなら null（売らない） */
+export function powerPackPriceId(env: Env = process.env): string | null {
+  const id = read(env, NEW_PRICE_ENV.powerPack)
+  if (!id) return null
+  if (legacyPriceIds(env).has(id) || newPricingPriceIds(env).has(id)) return null
+  return id
+}
+
+/** 追加購入の一回の数（パックの数）の上限 */
+export const POWER_PACK_MAX_PER_ORDER = 10

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  COST_PER_POINT_TYPICAL, COST_PER_POINT_WORST, ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, LEGACY_PRO_MONTHLY_POINTS_RECOMMENDED,
+  COST_PER_POINT_TYPICAL, COST_PER_POINT_WORST, ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, LEGACY_PRO_MONTHLY_POINTS,
   LEGACY_PRO_PRICE_TAX_INCLUDED, POWER_PACK, TEAM_BASE_MONTHLY, TEAM_SEAT_TIERS, grossMarginRate, isEnterpriseSeatCount,
   isTeamSeatCount, seatBreakdown, teamMonthly, teamMonthlyPoints, teamPrice, teamYearly, withTax,
 } from './plans'
@@ -97,9 +97,9 @@ test('付与を全部使い、原価が高い側に振れても、チームは�
   }
 })
 
-test('据え置きの 9,980円 は、おすすめの付与 1,500 なら全部使っても赤字にならない', () => {
+test('据え置きの 9,980円 は、毎月の付与（1,500）を全部使っても赤字にならない', () => {
   const revenue = Math.round(LEGACY_PRO_PRICE_TAX_INCLUDED / 1.1)
-  const rate = grossMarginRate({ revenueMonthly: revenue, points: LEGACY_PRO_MONTHLY_POINTS_RECOMMENDED, usage: 1, costPerPoint: COST_PER_POINT_WORST })
+  const rate = grossMarginRate({ revenueMonthly: revenue, points: LEGACY_PRO_MONTHLY_POINTS, usage: 1, costPerPoint: COST_PER_POINT_WORST })
   assert.ok(rate > 0.25, `${(rate * 100).toFixed(1)}%`)
 })
 

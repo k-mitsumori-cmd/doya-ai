@@ -246,3 +246,29 @@ test('正しくない入力は DB に触らずに拒む', async () => {
   ]) assert.equal((r as { reason?: string }).reason, 'invalid')
   assert.equal(s.calls.length, 0)
 })
+
+test('新しい料金のチームは、人数から毎月の量を決める。チームでない会社と無料は今までどおり（2026-10-25）', async () => {
+  const t = new Date('2026-10-25T03:00:00.000Z')
+  const clock = () => new Date(t.getTime())
+  const mem = createMemoryDb({ now: clock })
+  mem.rows('accountCompany').push(
+    { id: 'co_team', userId: 'team', name: 'チーム株式会社' },
+    { id: 'co_solo', userId: 'solo', name: '据え置き株式会社' },
+    { id: 'co_free', userId: 'free', name: '無料株式会社' },
+  )
+  // co_team は12人のチーム（1,500 ＋ 300 × 12 ＝ 5,100）。それ以外は null（チームでない）
+  const ledger = createDoyaPowerLedger(mem.db, { now: clock, teamMonthlyGrantFor: async (id) => (id === 'co_team' ? 5100 : null) })
+  const team = await ledger.grantMonthlyForPlan('co_team', 'PRO')
+  assert.equal(team.ok && team.granted, 5100)
+  const solo = await ledger.grantMonthlyForPlan('co_solo', 'PRO')
+  assert.equal(solo.ok && solo.granted, TEAM_MONTHLY_GRANT)
+  // 無料はチームの量を問い合わせない（付けない）
+  assert.deepEqual(await ledger.grantMonthlyForPlan('co_free', 'FREE'), { ok: true, granted: 0, skipped: 'free_plan' })
+  // 同じ月の2回目は付けない
+  const again = await ledger.grantMonthlyForPlan('co_team', 'PRO')
+  assert.equal(again.ok && 'duplicated' in again && again.duplicated, true)
+})
+
+test('据え置きの毎月の量は 1,500（2026-10-25 ユーザー決定。3,000 だと全部使われると赤字）', () => {
+  assert.equal(TEAM_MONTHLY_GRANT, 1500)
+})

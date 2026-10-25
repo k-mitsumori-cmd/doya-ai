@@ -26,6 +26,7 @@ import {
 } from '@/lib/pricing-v2/plans'
 import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP, PURCHASE_MAX_MONTHS } from '@/lib/doya-power/rules'
 import type { PricingView } from '@/lib/pricing-v2/view'
+import { PowerPackBuy, PowerPackReturn, TeamManage } from './TeamManage'
 import base from './PricingNext.module.css'
 import styles from './PricingV2.module.css'
 
@@ -49,11 +50,16 @@ const COST_LABELS: Partial<Record<DoyaPowerAction, string>> = {
 
 const SEAT_STOPS = [1, 3, 5, 10, 20, 30]
 
-export default function PricingV2({ view, canceled, inShell = false, serverSignedIn }: {
+export default function PricingV2({ view, canceled, inShell = false, serverSignedIn, canBuyPack = false, powerPackSessionId = null, powerPackCanceled = false }: {
   view: Exclude<PricingView, 'current'>
   canceled: boolean
   inShell?: boolean
   serverSignedIn: boolean
+  /** 追加購入を出すか（サーバーが決める: 価格の設定とドヤパワーの台帳の旗。買えるかの最終の判定は API） */
+  canBuyPack?: boolean
+  /** 追加購入の決済から戻ったとき（/pricing?power_pack=done&cs=...） */
+  powerPackSessionId?: string | null
+  powerPackCanceled?: boolean
 }) {
   const [interval, setBilling] = useState<BillingInterval>('monthly')
   const [seats, setSeats] = useState(5)
@@ -87,6 +93,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
       </header>
 
       {canceled ? <p className={base.notice} role="status">決済がキャンセルされました。もう一度お試しください。</p> : null}
+      <PowerPackReturn sessionId={powerPackSessionId} canceled={powerPackCanceled} />
 
       {view === 'legacy' ? (
         <section className={styles.legacy} aria-labelledby="legacy-title">
@@ -213,6 +220,9 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           </div>
         </article>
       </section>
+
+      {view === 'team' ? <TeamManage /> : null}
+      {canBuyPack && (view === 'team' || view === 'legacy') ? <PowerPackBuy /> : null}
 
       <section className={base.section} aria-labelledby="power-title">
         <h2 id="power-title" className={base.sectionTitle}>ドヤパワーとは</h2>
