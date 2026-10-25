@@ -199,6 +199,7 @@ function LowPowerNoticeBody({
   blockedText,
   addHref = '/pricing',
   teamHref = '/pricing',
+  actions,
 }: {
   remaining: number
   limit: number
@@ -216,6 +217,11 @@ function LowPowerNoticeBody({
   addHref?: string
   /** 残りが 0 のときの選択肢「チームにする」の行き先 */
   teamHref?: string
+  /**
+   * 行動の欄を差し替えるとき（新しい料金の導線。src/components/pricing/UpsellActions.tsx）。
+   * 渡すと、残りが 0 のときの3つの選択肢と「増やし方への案内」の代わりに、これを出す
+   */
+  actions?: ReactNode
   /** 増やし方への案内の行き先 */
   moreHref?: string
   moreLabel?: string
@@ -241,7 +247,7 @@ function LowPowerNoticeBody({
             : <><span className={styles.nobr}>{recovery} に</span> {fmt(limit)} まで回復します。</>) : null}
           {blockedText ?? (value > 0 ? 'いま作っているものは、そのまま続けられます。' : '回復するまで、作ったものの確認や編集はそのままできます。')}
         </p>
-        {value <= 0 ? (
+        {actions ? actions : value <= 0 ? (
           <ul className={styles.choices} aria-label="残りが 0 のときの選択肢">
             <li className={styles.choice}>
               <span className={styles.choiceIcon}><Clock size={18} aria-hidden /></span>
@@ -272,7 +278,7 @@ function LowPowerNoticeBody({
             </li>
           </ul>
         ) : null}
-        {moreHref && value > 0 ? (
+        {!actions && moreHref && value > 0 ? (
           <a href={moreHref} className={styles.noticeLink}>{moreLabel}<ArrowRight size={14} aria-hidden /></a>
         ) : null}
       </div>

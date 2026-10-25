@@ -77,7 +77,7 @@ test('許可された人は、表の量だけ減る（有料の人には今月�
   const outcome = await s.charger.charge('banner.generate', { units: 2 })
   assert.equal(outcome.kind, 'charged')
   if (outcome.kind === 'charged') assert.equal(outcome.amount, DOYA_POWER_COSTS['banner.generate'] * 2)
-  // 今月の付与（3000）だけ（有料の人には毎日の回復は付かない）から 20 減る
+  // 今月の付与（SOLO_PRO_MONTHLY_GRANT）だけ（有料の人には毎日の回復は付かない）から 20 減る
   assert.equal(await s.remaining(), SOLO_PRO_MONTHLY_GRANT - 20)
 })
 

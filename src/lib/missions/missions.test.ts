@@ -6,7 +6,7 @@ import { formatMinutes, monthlyAchievements, OUTSOURCE_RATES } from './achieveme
 import { jstDateKey, jstMonthKey, jstMonthRange } from './jst'
 import {
   applyAwards, dailyMissionState, decideAward, missionsForDay, monthTotal, projectAwards, questStates,
-  DAILY_MISSION_REWARD, MONTHLY_CAP, ONBOARDING_QUESTS, type AwardEntry, type QuestFacts,
+  DAILY_MISSION_REWARD, MONTHLY_CAP, ONBOARDING_QUESTS, onboardingQuests, type AwardEntry, type QuestFacts,
 } from './rules'
 import { sampleMissionsInput } from './sample'
 import { buildMissionsView } from './view'
@@ -103,10 +103,27 @@ test('会社情報は、会社名と業種かサイトがあれば達成。招�
   assert.equal(q(noFacts({ actions: [quote()] })).first_quote, true)
 })
 
-test('クエストの報酬は 会社情報 +50・招待 +100', () => {
+test('クエストの報酬（旗が off・対象でない人）は 今の値: 会社情報 +50・招待 +100', () => {
   const r = Object.fromEntries(ONBOARDING_QUESTS.map((q) => [q.id, q.reward]))
   assert.equal(r.company_profile, 50)
   assert.equal(r.invite_member, 100)
+  assert.equal(onboardingQuests(false), ONBOARDING_QUESTS)
+})
+
+test('新しい料金の人の報酬: 会社情報 0（最初の100に含む）・招待 +50。合計は100（2026-10-26 見直し）', () => {
+  const quests = onboardingQuests(true)
+  const r = Object.fromEntries(quests.map((q) => [q.id, q.reward]))
+  assert.equal(r.company_profile, 0)
+  assert.equal(r.invite_member, 50)
+  assert.equal(quests.reduce((s, q) => s + q.reward, 0), 100)
+})
+
+test('報酬のない手順（新しい料金の会社情報）は、達成しても付与しない。今の値なら +50', () => {
+  const f = noFacts({ company: { name: 'A社', industry: '製造', websiteUrl: null, at: '2026-10-02T00:00:00Z' } })
+  const d = decideAward({ type: 'quest', questId: 'company_profile', facts: f, quests: onboardingQuests(true) }, [], NOW)
+  assert.equal(!d.ok && d.reason, 'invalid')
+  const old = decideAward({ type: 'quest', questId: 'company_profile', facts: f }, [], NOW)
+  assert.equal(old.ok && old.amount, 50)
 })
 
 // ---- 付与してよいか ----

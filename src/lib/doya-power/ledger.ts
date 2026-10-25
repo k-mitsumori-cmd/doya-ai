@@ -56,7 +56,7 @@ export type RefundResult =
 
 export type GrantResult =
   | { ok: true; grantId: string; granted: number; balance: number; duplicated: boolean }
-  | { ok: false; reason: 'invalid' | 'company_not_found' | 'monthly_bonus_cap' | 'recovery_cap' }
+  | { ok: false; reason: 'invalid' | 'company_not_found' | 'monthly_bonus_cap' | 'recovery_cap' | 'precondition' }
 
 export type BalanceResult = {
   companyId: string
@@ -68,12 +68,25 @@ export type BalanceResult = {
   nextExpiry: { at: Date; amount: number } | null
 }
 
-export type GrantOptions = { sourceKey?: string; note?: string }
+export type GrantOptions = {
+  sourceKey?: string
+  note?: string
+  /**
+   * 付与と同じトランザクションの中で、先に行う確かめと記録（例: はじめの付与の受け取りの記録。src/lib/pricing-v2/starter.server.ts）。
+   * false を返したら付けない（precondition）。例外はトランザクションごと戻す（一意の衝突はやり直す）
+   */
+  inTransaction?: (tx: any) => Promise<boolean>
+}
 
 export type LedgerOptions = {
   now?: () => Date
   /** その会社が有料か。有料の会社には毎日の回復を付けない（毎月の付与だけ）。既定は無料扱い */
   isPaidCompany?: (companyId: string) => Promise<boolean>
+  /**
+   * 新しい料金（旗 NEW_PRICING_ROLLOUT の対象の人）の毎月の量。チームは人数から、据え置きは 1,500。
+   * 対象でない・分からないときは null（今までの量を使う）。index.ts が src/lib/pricing-v2/team.server.ts の newPricingMonthlyGrant をつなぐ
+   */
+  newPricingMonthlyGrantFor?: (companyId: string) => Promise<number | null>
 }
 
 class RetryableError extends Error {}
@@ -259,6 +272,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
           return { ok: true, grantId: dup.id, granted: dup.amount, balance: usableTotal(grants, now), duplicated: true }
         }
       }
+      if (opts.inTransaction && !(await opts.inTransaction(tx))) return { ok: false, reason: 'precondition' }
       const grants = await settle(tx, account, now, paid)
 
       let granted = amount
@@ -298,10 +312,14 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
-  /** プランに合わせた毎月の付与（無料は付けない。今の 1人の PRO はチームと同じ量）。月に1回だけ */
+  /** プランに合わせた毎月の付与（無料は付けない。チームは人数から、据え置きの PRO は決まった量）。月に1回だけ */
   async function grantMonthlyForPlan(companyId: string, plan: string | null | undefined): Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }> {
-    const amount = monthlyGrantForPlan(plan, isPaidPlan)
+    let amount = monthlyGrantForPlan(plan, isPaidPlan)
     if (amount <= 0) return { ok: true, granted: 0, skipped: 'free_plan' }
+    if (options.newPricingMonthlyGrantFor) {
+      const v = await options.newPricingMonthlyGrantFor(companyId)
+      if (typeof v === 'number' && v > 0) amount = v
+    }
     return grant(companyId, 'monthly', amount, null)
   }
 

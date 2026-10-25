@@ -183,3 +183,12 @@ a.choice:focus-visible { outline: 2px solid var(--blue, #0066ff); outline-offset
   .gauge .fill, .shine, .gaugeMascot, .toast { transition: none !important; animation: none !important; }
   .shine { display: none; }
 }
+
+/* ---- 新しい料金の導線（UpsellActions）。button の選択肢と、主の行動 ---- */
+button.choice { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+button.choice:hover { border-color: var(--blue, #0066ff); }
+button.choice:focus-visible { outline: 2px solid var(--blue, #0066ff); outline-offset: 2px; }
+button.choice:disabled { opacity: 0.6; cursor: default; }
+.choice[data-primary='true'] { border-color: var(--blue, #0066ff); background: var(--blue-soft, #e8f0ff); }
+.choice[data-primary='true'] .choiceIcon { background: var(--blue, #0066ff); color: #fff; }
+.choice[aria-disabled='true'] { opacity: 0.6; }
