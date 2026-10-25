@@ -178,6 +178,15 @@ test('エラーの通知では秘密と個人情報を伏せる（1.2.0）', () 
   assert.doesNotMatch(JSON.stringify(styled), /taro\.yamada@|hunter2|sk_live_1234567890abcd|eyJhbGci|token=abc123/)
   const billing = styleSlackPayload({ text: '*Stripe webhook の処理に失敗*\nkey=sk_live_1234567890abcd' }, { app: 'ヒトリジメ', kind: 'billing', severity: 'urgent' }) as P
   assert.doesNotMatch(billing.text, /sk_live_1234567890abcd/)
+  // ボタンの url と attachments も伏せる（1.2.1）
+  const withButton = styleSlackPayload({
+    text: '*処理に失敗しました*',
+    blocks: [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '開く' }, url: 'https://admin.example.com/x?token=abc123#frag' }] }],
+    attachments: [{ text: 'password=hunter2 user=taro.yamada@example.com' }],
+  }, { app: 'ドヤAI', kind: 'error', severity: 'action' })
+  const w = JSON.stringify(withButton)
+  assert.doesNotMatch(w, /abc123|frag|hunter2|taro\.yamada@/)
+  assert.match(w, /https:\/\/admin\.example\.com\/x"/)
   // エラーと課金以外の通知では本文を変えない（リンクのクエリなど）
   const report = styleSlackPayload({ text: '*日報*\n<https://doya-ai.surisuta.jp/admin?tab=users|開く>' }, { app: 'ドヤAI', kind: 'report', severity: 'info' }) as P
   assert.match(report.text, /\?tab=users/)
