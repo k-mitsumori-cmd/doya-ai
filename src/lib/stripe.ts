@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createHash } from 'node:crypto'
+import { newPricingPlanIdForPriceId, TEAM_PLAN_ID } from '@/lib/pricing-v2/prices'
 
 // ========================================
 // Stripe設定
@@ -232,7 +233,7 @@ export const ALL_SERVICE_IDS = [
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-starter' | 'banner-business' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'hr-starter' | 'hr-pro' | 'hr-enterprise' | 'bundle'
+export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-starter' | 'banner-business' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'hr-starter' | 'hr-pro' | 'hr-enterprise' | 'bundle' | typeof TEAM_PLAN_ID
 export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'hr' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
@@ -266,6 +267,8 @@ const DOYA_PLAN_IDS = new Set<string>([
   ...['seo', 'banner', 'interview', 'copy', 'lp', 'voice', 'movie', 'adsim', 'hr']
     .flatMap((service) => ['light', 'pro', 'enterprise'].map((tier) => `${service}-${tier}`)),
   'banner-basic', 'banner-starter', 'banner-business', 'hr-starter',
+  // 新しい料金（組織単位・旗 NEW_PRICING_ROLLOUT の内側）。src/lib/pricing-v2/prices.ts
+  TEAM_PLAN_ID,
 ])
 
 export function isDoyaPlanId(planId: string | null | undefined): boolean {
@@ -453,6 +456,9 @@ export function resolvePlanIdFromSubscription(subscription: {
 
 export function getPlanIdFromStripePriceId(priceId: string | null | undefined): PlanId | null {
   if (!priceId) return null
+  // 新しい料金の価格（環境変数がそろい、今の価格と重ならないときだけ）。今の価格の対応は下の表のまま変えない
+  const teamPlanId = newPricingPlanIdForPriceId(priceId)
+  if (teamPlanId) return teamPlanId
   const entries: Array<[PlanId, { monthly: string; yearly: string }]> = [
     ['seo-light', STRIPE_PRICE_IDS.seo.light],
     ['seo-pro', STRIPE_PRICE_IDS.seo.pro],
@@ -506,6 +512,7 @@ export async function createCheckoutSession({
   trialDays,
   idempotencyKey,
   expiresAt,
+  lineItems,
 }: {
   priceId: string
   userId: string
@@ -518,6 +525,8 @@ export async function createCheckoutSession({
   trialDays?: number
   idempotencyKey?: string
   expiresAt?: number
+  /** 複数の明細（新しい料金のチーム: 基本料＋人数）。無いときは priceId を数量1で使う（今までどおり） */
+  lineItems?: Array<{ price: string; quantity: number; tax_rates?: string[] }>
 }) {
   // 1日以上のときだけトライアルを付与（0/未指定はトライアル無し）
   const trial = mode === 'subscription' && typeof trialDays === 'number' && trialDays >= 1
@@ -529,7 +538,7 @@ export async function createCheckoutSession({
     payment_method_types: ['card'],
     allow_promotion_codes: true,
     ...(expiresAt ? { expires_at: expiresAt } : {}),
-    line_items: [
+    line_items: lineItems && lineItems.length > 0 ? lineItems : [
       {
         price: priceId,
         quantity: 1,

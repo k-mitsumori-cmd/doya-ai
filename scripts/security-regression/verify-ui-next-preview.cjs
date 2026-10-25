@@ -67,7 +67,11 @@ const exists=f=>fs.existsSync(path.join(root,f));
   await check('Pricing page, shell chrome and CSS use only the new look',async()=>{
     assert.equal(exists('src/app/pricing/PricingLegacy.tsx'),false);
     assert.doesNotMatch(read('src/app/pricing/page.tsx'),/PricingLegacy|uiNext/);
-    assert.match(read('src/app/pricing/page.tsx'),/if \(!session\?\.user\) return <PricingNext/);
+    // 旗 NEW_PRICING_ROLLOUT が off（view === 'current'）なら、ログインの有無にかかわらず PricingNext を出す（新しい料金は PricingV2。2026-10-25）
+    const pricingPage=read('src/app/pricing/page.tsx');
+    assert.match(pricingPage,/const view = await resolvePricingView\(/);
+    assert.match(pricingPage,/view === 'current'\s*\? <PricingNext canceled=\{canceled\} serverSignedIn=\{false\} \/>/);
+    assert.match(pricingPage,/view === 'current'\s*\? <PricingNext canceled=\{canceled\} inShell serverSignedIn /);
     // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     // 有料のプランの人には、トライアルの表示を出さない（trial-eligibility の API と TrialCallout は変えない）

@@ -625,3 +625,42 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - 上限の理由は当該操作の応答として保持し、別操作や現在のプランについて推測しない。完了・終了・別操作では解除し、上限応答から自動再生成はしない。
 - 組織の選択はタブごとに保持する。HRの取得・変更・課金開始要求は選択した組織と利用者を送信し、サーバーは現在の所属・役割を確認する。別組織のオーナーであることや個人のPRO契約では、選択中の組織の課金権限を取得できない。
 - 選択した組織の所属が失われた場合は別の組織へ自動的に切り替えない。利用者が所属のある組織を明示的に選び直す。
+
+---
+
+## 15. 新しい料金（組織単位・2026-10-25 案。旗 `NEW_PRICING_ROLLOUT` の内側）
+
+設計書: `docs/architecture/management-agent/PRICING-NEW-2026-10-25.md`。金額は案で、ユーザーの最終決定の前。
+
+### 15.1 決まり
+
+| ID | 決まり | 破ったときに起きること |
+|----|------|------|
+| **INV-13** | 今の契約者（有料で、今の価格が新しい料金の価格でない人）は「据え置き」。新しい料金の Checkout を作らせない（409 `LEGACY_KEEPS_PRICE`）。見分けは `subscriberKind()`（`src/lib/pricing-v2/view.ts`）だけで行う | 今の契約者に新しい金額を請求する |
+| **INV-14** | 新しい料金の価格 ID が、今の `STRIPE_PRICE_*` のどれかと同じなら使わない（`teamPriceConfig()` が `overlaps_legacy`） | 今の契約者が `team-pro` に見え、据え置きの見分けが崩れる |
+| **INV-15** | 今の価格（`STRIPE_PRICE_BANNER_PRO_MONTHLY` など）を Stripe で消さない・アーカイブしない。ポータルのプラン変更の候補（`collectRealPriceIds()`）に新しい価格を足さない | 今の契約の更新・判定が壊れる／据え置きの人がポータルから新しい価格へ移れてしまう |
+
+### 15.2 仕組み
+
+- 料金の表の正本: `src/lib/pricing-v2/plans.ts`（基本料・人数の段階・付与のポイント・追加購入）。`unified-plan.ts` は今の料金（据え置き）の正本のまま。
+- 新しい料金の planId は `team-pro`。末尾が `-pro` なので `planTierFromPlanId()` は `PRO`。`User.plan` も `PRO` で、INV-1〜12 はそのまま守られる。
+- `getPlanIdFromStripePriceId()` は、新しい価格を先に `team-pro` に読む（`newPricingPlanIdForPriceId()`）。環境変数が無い・重なるときは何もしない。
+- チームの契約は明細が2つ（基本料×1 ＋ 人数×N。人数は段階別の価格）。`User.stripePriceId` には最初の明細の価格が入る（どちらも新しい価格の一覧に入る）。
+- 旗が on の人には、今のプラン（`banner-pro` など）を新しく売らない（410 `LEGACY_PLAN_CLOSED`）。据え置きの人のプラン変更（旧ライト → プロ）は止めない。
+- 旗が off なら、DB を読まずに今の料金ページ（`PricingNext`）を出し、`team-pro` の Checkout は 404。
+
+### 15.3 公開の前に直すもの
+
+- `billing-audit.ts` の MRR は最初の明細の単価だけで計算する。段階別の人数の明細は `unit_amount` が無いので、チームの売上を少なく出す。明細ごとの金額で計算するよう直す。
+- 人数の変更（数量の更新と日割り）の API。ポータルでは明細が2つの契約の人数を変えられないことがある。
+- 各ツールの料金ページ（`UnifiedPricingPlans`）と旧 HR の申し込み（`/api/hr/billing/checkout`）を、`all` の前に新しい料金へ向ける。
+
+### 15.4 環境変数（新しい料金）
+
+| 変数 | 用途 |
+|------|------|
+| `NEW_PRICING_ROLLOUT` | off（既定）/ preview（`UI_PREVIEW_EMAILS` の人だけ）/ all |
+| `STRIPE_PRICE_TEAM_BASE_MONTHLY` / `_YEARLY` | チームの基本料（定額） |
+| `STRIPE_PRICE_TEAM_SEAT_MONTHLY` / `_YEARLY` | チームの人数（段階別・graduated） |
+| `STRIPE_TAX_RATE_JP_10` | 任意。消費税 10%（内税）の税率 ID。Checkout の明細に付ける |
+| `STRIPE_PRICE_POWER_PACK` | 追加購入（未使用。購入の流れを作るときに使う） |

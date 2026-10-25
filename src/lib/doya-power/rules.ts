@@ -1,4 +1,6 @@
 // ドヤパワーの決まり（定数と、DB に触らない計算）。
+import { LEGACY_PRO_MONTHLY_POINTS } from '@/lib/pricing-v2/plans'
+
 // 日付・月の切り替えは日本時間（Asia/Tokyo）。日本には夏時間が無いので、UTC+9 の固定で計算する
 // （Intl のタイムゾーンの表に頼らない。サーバーの TZ の設定にも左右されない）。
 
@@ -24,11 +26,12 @@ export const PURCHASE_MAX_MONTHS = 6
 export const MONTHLY_CARRYOVER_MONTHS = 1
 
 /**
- * チームの契約の毎月の付与（仮の値。料金と一緒に統括が決める）。
- * 今の 1人 9,980円 の契約者（統一プラン PRO など isPaidPlan の人）にも同じ量を付ける。
+ * 毎月の付与（仮の値。料金と一緒に統括が決める）。数は料金の表（src/lib/pricing-v2/plans.ts）だけに書く。
+ * 今の 1人 9,980円 の契約者（統一プラン PRO など isPaidPlan の人）への量は LEGACY_PRO_MONTHLY_POINTS。
+ * 新しい料金（チーム）の量は人数で変わる（teamMonthlyPoints）。台帳の付与を作るときにそちらを使う。
  */
-export const TEAM_MONTHLY_GRANT = 3000
-export const SOLO_PRO_MONTHLY_GRANT = TEAM_MONTHLY_GRANT
+export const TEAM_MONTHLY_GRANT = LEGACY_PRO_MONTHLY_POINTS
+export const SOLO_PRO_MONTHLY_GRANT = LEGACY_PRO_MONTHLY_POINTS
 
 /** 一度に動かせる量の上限（打ち間違い・桁あふれの防止） */
 export const MAX_AMOUNT_PER_OPERATION = 1_000_000
