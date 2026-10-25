@@ -202,7 +202,10 @@ interface AgentTodoView {
 |---|---|---|
 | `POST /api/agent/plan` | `{ text?, recipeId?, answers? }` | `{ kind: 'questions', recipeId, title, lead, questions, error? }` / `{ kind: 'plan', recipeId, title, lead, plan, sources, power, answers }` / `{ kind: 'none' }` |
 | `POST /api/agent/plan`（`Accept: application/x-ndjson`） | 同じ | 1行ずつ `AgentPlanEvent`: `source` → `reason` → `result`（失敗は `error` で終わる） |
-| `POST /api/agent/tasks` | `{ recipeId, taskId, answers, resume? }` | 200 `{ result }`（`result.power` 付き）/ 422 `{ error, kind, resume?, href?, power? }` / 400 入力の誤り / 404 旗の外 |
+| `POST /api/agent/tasks` | `{ recipeId, taskId, answers, resume? }` | 200 `{ result }`（`result.power` 付き）/ 422 `{ error, kind, resume?, href?, power? }` / 400 入力の誤り / 429 同時に3つを超えた / 401 未ログイン / 404 旗の外 |
+| `POST /api/agent/runs` | `AgentRunCreateRequest`（`{ recipeId, answers, delegate, text? }`） | 201 `{ run: AgentRunView }` / 400 / 404（記録を使わない設定なら `{ store: 'off' }`） |
+| `GET /api/agent/runs/active` | — | 200 `{ run: AgentRunView \| null }`（続きを進める） / 404 |
+| `POST /api/agent/runs/[id]/tasks/[taskId]` | 本文なし | 200 `{ result, run }` / 422 `{ error, kind, resume?, href?, power?, run }` / 429 / 404 |
 
 - `kind: 'none'` のときは、今の経営ホームの振り分け（`matchHomeIntent` と `planAgent`）に戻します。
 - 失敗の `kind`: `setup`（ツールの組織が無い）・`auth`（ログイン切れ）・`power`（ドヤパワー不足）・`limit`（ツールの上限）・`input`・`tool`。
@@ -334,53 +337,56 @@ runAgentTasks({
   - 今の残りと次の回復の時刻は、作戦の答えの `power`（`AgentPowerView`）。台帳の `balanceView()` から読む。
   - 実行後の残りは「残り − 合計」。足りなければ、実行のボタンを押せなくする（画面の決まり）。
 - 減った量・戻した量は ToDo ごとに `AgentTodoView.power` で返します（数え方は §3.5）。完了の画面の「失敗して戻した分」は `todoCounts(views).powerRefunded` です。
+- **失敗した ToDo の戻し**（`execute.ts`・`routes.server.ts` の `refundKeptCharges`）: ToDo が失敗したら、その ToDo で減ったまま（包みが戻さなかった）の操作を、台帳で戻します。
+  - 例: 見積の品目の案は作れた（1 減った）が、見積書の保存で失敗した（無料プランの件数の上限など）。案は利用者に届かないので、1 を戻す。
+  - 台帳の操作の id は、包み（`charge-core.ts`）と同じ作り方で組み立てます（操作の名前:会社:キー:ルートの名前空間:量）。作り方が変わると、回帰の検査が落ちます。
+  - 台帳で「減ったまま」のものだけを戻します。戻し済み・見つからないものは何もしません。台帳も、同じ操作を2回は戻しません。
+  - 本人の会社（セッション）の分だけです。旗の外・会社が未登録なら、台帳に触れません。
+  - 気を付ける点: わざと保存で失敗させれば、品目の案の AI を無料で何度も呼べます。ただし、案は画面に返らないので、利用者は中身を受け取れません。1回の費用は約2円です。気になるようなら、見積書の件数の上限を、品目の案を作る前に確かめる形に変えます。
 
-## 8. 保存の表（案。本番 DB の変更なので、統括を通してユーザーの承認が要る）
+## 8. 実行の記録の表と「続きを進める」（表は案。本番 DB への適用は、統括を通してユーザーの承認が要る）
 
-段階1は、最後の実行を利用者のブラウザ（localStorage、7日まで）に置くだけです。作った物は各ツールの表に保存されます。
+- スキーマ: `prisma/schema.prisma` の `HomeAgentRun`（`home_agent_runs`）と `HomeAgentTask`（`home_agent_tasks`）。体験の設計書 §7 の名前に合わせた。
+- 本番 DB に流す SQL の案: `docs/architecture/agent-orchestration/MIGRATION.md`（`prisma migrate diff` の出力。まだ流していない）。
+- 表を読む・書くのは、旗 `AGENT_RUNS_STORE=db` のときだけ（`store-flag.ts`。既定は off）。off のあいだ、記録の API は 404 `{ store: 'off' }` を返す。画面は、そのときは端末（localStorage）に残す形で動く。
 
-体験の設計書 §7 の名前（`home_agent_runs` と `home_agent_tasks`）に合わせた案です。
+### 8.1 作り
 
-```prisma
-model HomeAgentRun {
-  id          String   @id @default(cuid())
-  userId      String
-  recipeId    String               // 'sales-prep'、AI の作戦は 'ai'
-  request     String               // 依頼の文
-  answers     Json                 // サーバーで確かめた答え
-  plan        Json                 // AgentPlan（AI の作戦も、検査したあとの形で保存）
-  status      String               // planned / running / done / partial / canceled
-  powerUsed   Int      @default(0)
-  powerRefund Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tasks       HomeAgentTask[]
-  @@index([userId, createdAt])
-  @@map("home_agent_runs")
-}
+| ファイル | 中身 |
+|---|---|
+| `src/lib/agent-orchestration/runs.ts` | 決まり（保存・ToDo を取る・同時の上限・止まった ToDo・続き）。表は `RunRepo` でもらう |
+| `src/lib/agent-orchestration/runs.prisma.ts` | `RunRepo` の本番の形（Prisma）。どの読み書きも `userId` で絞る |
+| `src/lib/agent-orchestration/execute.ts` | ToDo を1つ動かす。失敗したら、減ったままのドヤパワーを戻す（§7）。同時の上限 |
+| `src/app/api/agent/runs/route.ts` | `POST` 作戦を保存して実行を作る |
+| `src/app/api/agent/runs/active/route.ts` | `GET` 続きを進める（済んでいない ToDo が残った、最後の実行） |
+| `src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts` | `POST` 保存した作戦の ToDo を1つ動かす |
 
-model HomeAgentTask {
-  id         String    @id @default(cuid())
-  runId      String
-  taskId     String               // 'research' など（作戦の中の id）
-  action     String               // 'shodan.research' など
-  status     String               // waiting / running / done / failed / blocked / canceled
-  attempts   Int       @default(0)
-  result     Json?                // AgentTaskResult
-  resume     Json?                // 途中まで作れたもの
-  error      String?              // 利用者向けの文
-  failKind   String?
-  startedAt  DateTime?
-  endedAt    DateTime?
-  run        HomeAgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  @@unique([runId, taskId])
-  @@map("home_agent_tasks")
-}
-```
+### 8.2 決まり
 
-- 表があると、`/api/agent/tasks` は `runId` と `taskId` だけを受け取り、`userId` で絞って作戦を読みます。他人の実行は読めません。`resume` もサーバーが持ちます。
-- 画面を移っても進み続ける形は、この表のあとに、サーバーで順に動かす仕組み（Vercel Queues か Workflow）で作ります。
-- 同じ `taskId` を同時に2回動かさないよう、`status` を `running` にする更新を条件付き（`updateMany` の `where: { status: { in: ['waiting','failed'] } }`）にします。
+- 作戦と答えは、サーバーが確かめてから保存します（`POST /api/agent/runs` は、答えを検査し、材料を読み、作戦を作り直してから保存する。画面から届いた作戦は使わない）。
+- ToDo を動かす API は本文を読みません。ツールへの入力は、保存した作戦と答えだけから作ります。`resume`（途中まで作れたもの）もサーバーが持ちます。
+- 任せない ToDo（画面のチェックを外したもの）と、始められない ToDo（組織が無い）は、`skipped` で保存し、動かしません。
+- 同じ ToDo を同時に2回動かしません（`status` を `running` にする更新を条件付きにする）。
+- 本人ごとに、同時に `running` の ToDo は3つまでです（`AGENT_MAX_CONCURRENT`。超えたら 429 `kind: 'limit'`）。
+- `running` のまま6分（関数の時間 300 秒 + 余裕）を過ぎた ToDo は、止まったとみなします。画面には失敗として見せ、取り直せます。
+- 前の ToDo（`after`）が済んでいなければ、動かしません。
+- 済んだ ToDo をもう一度呼ぶと、保存した結果をそのまま返します（ツールを呼び直さない）。
+- 「続きを進める」は、7日以内の最後の実行のうち、済んでいない ToDo が残っているものです。
+
+### 8.3 画面の使い方（記録あり）
+
+1. `POST /api/agent/runs`（`AgentRunCreateRequest`: `recipeId`・`answers`・`delegate`）→ 201 `{ run }`
+2. `runAgentTasks({ tasks: 任せた ToDo, prev: run.states, execute })`。`execute` の中で `POST /api/agent/runs/{run.id}/tasks/{task.id}` を呼ぶ（本文なし）
+3. 経営ホームを開き直したら、`GET /api/agent/runs/active` → `{ run }`。`run.remaining` があれば「続きを進める」を出し、`prev: run.states` で残りだけを動かす
+4. 404 `{ store: 'off' }` が返ったら、記録なしの形（`/api/agent/tasks` と端末への保存）に戻す
+
+`AgentRunView` の中身: `id`・`recipeId`・`title`・`plan`・`answers`・`status`（planned / running / done / partial / canceled）・`delegated`・`remaining`・`states`（runner の状態）・`power`（減った・戻した合計）・`createdAt`・`updatedAt`。
+
+### 8.4 まだ作っていないこと
+
+- 実行をやめる（`canceled`）API。画面で止めたときに、まだの ToDo を `canceled` にする。
+- 画面を閉じても動き続ける形（サーバーで順に動かす）。Vercel Queues か Workflow を候補にする。
+- 同時の上限を、表の行の鍵（`SELECT … FOR UPDATE`）で厳密にする。いまは「数えてから取る」ので、同時に来た呼び出しで、まれに4つ目が動くことがある。
 
 ## 9. 旗
 
@@ -392,6 +398,7 @@ model HomeAgentTask {
 
 - 実行の仕組みの API（`/api/agent/plan`・`/api/agent/tasks`）は `AGENT_ORCHESTRATION_ROLLOUT` で止めます（`src/lib/agent-orchestration/flag.ts`）。
 - 体験の設計書 §8 は、画面の旗として `HOME_AGENT_ROLLOUT` を挙げています。旗を1つにまとめるか、画面と API で分けるかは、統括に決めてもらいます（§12-1）。まとめる場合は、`flag.ts` の環境変数の名前を変えるだけで済みます。
+- 実行の記録の表を使うかは、別の旗 `AGENT_RUNS_STORE`（`db` のときだけ使う。既定 off）。表を本番 DB に足すまで off のまま（§8・MIGRATION.md）。
 - 開発の確認だけに使う値: `AGENT_ORCHESTRATION_FAKE_TOOLS=1`。各ツールを呼ばずに見本の結果を返します。`NODE_ENV=production` では値があっても効きません。本番の環境変数には置きません。
 
 ## 10. 確かめ方
@@ -401,6 +408,7 @@ model HomeAgentTask {
 | `src/lib/agent-orchestration/runner.test.ts` | 同時に動かす数の上限、順番、失敗だけのやり直し、中断、順番の誤り |
 | `src/lib/agent-orchestration/tools.test.ts` | 答えの検査、ルートへの入力、結果のまとめ、失敗の種類、商談の準備を最後まで動かす（スライドの失敗だけを、作ったプロジェクトでやり直す）、ドヤパワーの減った量・戻した量の数え方 |
 | `src/lib/agent-orchestration/plan.test.ts` | 組み合わせからの作戦（ゴール・理由・チームのゴール・任せる初期値）、組織が無いツールの ToDo、減る量を costs.ts から引く、AI の作戦の検査、分析の材料を同時に読み読み終えた順に知らせる、ToDo の状態を画面の4つに寄せる |
+| `src/lib/agent-orchestration/runs.test.ts` | 記録（メモリの表）: 任せない ToDo、組織が無い ToDo、他人の実行、結果の保存、同じ ToDo を2回動かさない、止まった ToDo の取り直し、同時の上限、順番、続きを進める（画面の runner で残りだけ）、失敗したときの戻し |
 | `scripts/security-regression/verify-agent-orchestration.cjs` | 旗（off でセッションを読まない・preview の許可）、2つの API の 404・400・答えの形、作戦の NDJSON（材料 → 理由 → 答え）、決まった5つのルートだけを cookie 付きで呼び、操作のキーを返す、本番で見本に差し替えない、経営ホームの画面にまだつながない |
 
 - `npm run test:agent` と `npm run test:security` に入っています。どちらも `npm run build` で流れます。
@@ -477,12 +485,21 @@ model HomeAgentTask {
 3. 各ツールの画面に、調査の記録・見積書の下書き・スライドの構成が残る
 4. 組織の無いツールが、そのツールだけ失敗し、リンクから組織を作ってやり直せる
 
+### 11.8 作戦づくり（agent.plan。段階2。まだ作っていない）の見込み
+
+- モデル: 見積・スライドと同じ順（`claude-haiku-4-5-20251001` → `gemini-2.5-flash` → `gemini-pro-latest` → `gpt-4o-mini`）
+- 入力: 約3,300トークン（決まりの文・依頼・経営ホームの数字・操作の一覧・返す形で、約3,000字と見た）
+- 出力: 約1,800トークン（ゴール・理由5行・柱3つ・ToDo 8つまでの JSON）。上限 4,096
+- 見込み額: 約 $0.012（約1.8円）。上限（出力が上限まで出て、直す呼び出しを1回足す）で約 $0.049（約7.3円）
+- 作戦づくりを含めた1回の「商談の準備」: ふつう約8.3円、上限約31円
+
 ## 12. 統括に決めてもらうこと
 
 1. 旗を1つにするか（`HOME_AGENT_ROLLOUT` と `AGENT_ORCHESTRATION_ROLLOUT`）。
 2. 同時に動かす数の上限（いま3。体験の設計書は2）。
 3. `agent.plan` のドヤパワーの量（段階2）。
-4. §8 の表を本番 DB に足す時期。
+4. §8 の表を本番 DB に足す時期（`MIGRATION.md`）と、`AGENT_RUNS_STORE=db` にする時期。
+5. 失敗した ToDo の戻し（§7）を、このまま入れるか（わざと保存で失敗させると、品目の案の AI を無料で呼べる。1回約2円）。
 
 ## 13. まだ良くない点と、次の改善
 

@@ -7,7 +7,7 @@
 // - どのルートを呼ぶかは、この表（ToolRouteId）に書いたものだけ。画面から届いた値でルートを選ばない。
 // - 呼び方（call）と組織の名前（shodanSlug）は引数でもらう。本番は routes.server.ts、テストは差し替え。
 // ⚠️ 失敗の文は、ルートが返した利用者向けの error の文を使う（短い文字列だけ）。ステータスコードは見せない。
-import { AgentTaskError, type AgentFailureKind, type AgentPowerUse, type AgentTaskResult } from './runner'
+import { AgentTaskError, type AgentCharge, type AgentFailureKind, type AgentPowerUse, type AgentTaskResult } from './runner'
 import { doyaPowerCost } from '@/lib/doya-power/costs'
 import { quoteInputOf, slideInputOf, type SalesPrepAnswers } from './recipes'
 
@@ -34,21 +34,22 @@ const CHARGED: Partial<Record<ToolRouteId, string>> = { 'quote.suggest': 'text.g
 /** ルートの呼び出しを数えて、減った量と戻した量を出す */
 function meter(deps: ToolDeps) {
   const power: AgentPowerUse = { used: 0, refunded: 0 }
+  const charges: AgentCharge[] = []
   const call: ToolDeps['call'] = async (route, body) => {
     const res = await deps.call(route, body)
     const action = CHARGED[route]
     if (action) {
       const cost = doyaPowerCost(action) ?? 0
       const code = (obj(res.data).code as string | undefined) ?? ''
-      if (res.opKey) power.used += cost
+      if (res.opKey) { power.used += cost; charges.push({ route, action, opKey: res.opKey, amount: cost }) }
       else if (deps.powerOn && res.status >= 400 && !code.startsWith('DOYA_POWER')) power.refunded += cost
     }
     return res
   }
   /** 失敗に、ここまでの量を付ける */
   const fail = (e: unknown): never => {
-    if (e instanceof AgentTaskError) { e.power = { ...power }; throw e }
-    throw new AgentTaskError('うまく作れませんでした。もう一度お試しください。', 'tool', undefined, undefined, { ...power })
+    if (e instanceof AgentTaskError) { e.power = { ...power }; e.charges = [...charges]; throw e }
+    throw new AgentTaskError('うまく作れませんでした。もう一度お試しください。', 'tool', undefined, undefined, { ...power }, [...charges])
   }
   return { deps: { ...deps, call }, power, fail }
 }

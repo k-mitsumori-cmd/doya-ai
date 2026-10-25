@@ -6,7 +6,7 @@
 // ⚠️ 画面（src/components/home-agent/）は、この型だけを見て作る。中の実装（tools.ts など）を直接呼ばない。
 //    画面で使ってよい関数は view.ts の todoViewOf・todoCounts と、runner.ts の runAgentTasks・progressOf だけ。
 // ⚠️ 形を変えるときは AGENT_CONTRACT_VERSION を上げ、両方の側に知らせる。
-import type { AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
+import type { AgentFailureKind, AgentPowerUse, AgentStates, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
 
 export type { AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus }
 
@@ -222,3 +222,47 @@ export interface AgentTodoView {
   retryable: boolean
   attempts: number
 }
+
+/* ---------------- 実行の記録（旗 AGENT_RUNS_STORE=db のときだけ。DESIGN.md §8） ---------------- */
+
+/** 実行の全体の状態。planned=まだ動かしていない / running=動いている / done=すべて済んだ / partial=済んでいない ToDo が残った / canceled=やめた */
+export type AgentRunStatus = 'planned' | 'running' | 'done' | 'partial' | 'canceled'
+
+/** 保存した実行（「続きを進める」に使う） */
+export interface AgentRunView {
+  id: string
+  recipeId: string
+  title: string
+  plan: AgentPlan
+  answers: Record<string, string>
+  status: AgentRunStatus
+  /** 任せた ToDo の id */
+  delegated: string[]
+  /** 任せた ToDo のうち、まだ済んでいないもの（「続きを進める」で動かすもの） */
+  remaining: string[]
+  /** runner の状態（runAgentTasks の prev にそのまま渡す。todoViews にも渡せる） */
+  states: AgentStates
+  /** この実行で減った・戻したドヤパワーの合計 */
+  power: AgentPowerUse
+  createdAt: string
+  updatedAt: string
+}
+
+/** POST /api/agent/runs の本文（作戦を保存して、実行を作る） */
+export interface AgentRunCreateRequest {
+  recipeId: string
+  answers: Record<string, string>
+  /** ドヤくんに任せる ToDo の id（画面のチェック） */
+  delegate: string[]
+  /** 依頼の文（記録に残す） */
+  text?: string
+}
+
+/**
+ * 記録の API の答え
+ * - POST /api/agent/runs → 201 { run }
+ * - GET /api/agent/runs/active → 200 { run }（無ければ run: null）
+ * - POST /api/agent/runs/[id]/tasks/[taskId] → 200 { result, run } / 422 { error, kind, resume?, href?, power?, run? }
+ * - 記録を使わない設定（AGENT_RUNS_STORE が db でない）→ 404 { error, store: 'off' }（画面は端末に残す形に戻す）
+ */
+export type AgentRunResponse = { run: AgentRunView | null }
