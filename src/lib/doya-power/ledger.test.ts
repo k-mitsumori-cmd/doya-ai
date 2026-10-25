@@ -246,3 +246,51 @@ test('正しくない入力は DB に触らずに拒む', async () => {
   ]) assert.equal((r as { reason?: string }).reason, 'invalid')
   assert.equal(s.calls.length, 0)
 })
+
+test('新しい料金の対象の会社は、差し込み口の量（チームは人数から・据え置きは 1,500）。対象でない会社と無料は今までどおり（2026-10-26）', async () => {
+  const t = new Date('2026-10-25T03:00:00.000Z')
+  const clock = () => new Date(t.getTime())
+  const mem = createMemoryDb({ now: clock })
+  mem.rows('accountCompany').push(
+    { id: 'co_team', userId: 'team', name: 'チーム株式会社' },
+    { id: 'co_legacy', userId: 'legacy', name: '据え置き株式会社' },
+    { id: 'co_old', userId: 'old', name: '旗の対象でない株式会社' },
+    { id: 'co_free', userId: 'free', name: '無料株式会社' },
+  )
+  // co_team は12人のチーム（1,500 ＋ 300 × 12 ＝ 5,100）、co_legacy は旗の対象の据え置き（1,500）、それ以外は null（今までの量）
+  const amounts: Record<string, number> = { co_team: 5100, co_legacy: 1500 }
+  const ledger = createDoyaPowerLedger(mem.db, { now: clock, newPricingMonthlyGrantFor: async (id: string) => amounts[id] ?? null })
+  const team = await ledger.grantMonthlyForPlan('co_team', 'PRO')
+  assert.equal(team.ok && team.granted, 5100)
+  const legacy = await ledger.grantMonthlyForPlan('co_legacy', 'PRO')
+  assert.equal(legacy.ok && legacy.granted, 1500)
+  const old = await ledger.grantMonthlyForPlan('co_old', 'PRO')
+  assert.equal(old.ok && old.granted, TEAM_MONTHLY_GRANT)
+  // 無料は量を問い合わせない（付けない）
+  assert.deepEqual(await ledger.grantMonthlyForPlan('co_free', 'FREE'), { ok: true, granted: 0, skipped: 'free_plan' })
+  // 同じ月の2回目は付けない
+  const again = await ledger.grantMonthlyForPlan('co_team', 'PRO')
+  assert.equal(again.ok && 'duplicated' in again && again.duplicated, true)
+})
+
+test('旗が off（差し込み口が無い）なら、有料の毎月の量は今までどおり 3,000', async () => {
+  assert.equal(TEAM_MONTHLY_GRANT, 3000)
+  const s = setup('2026-10-25T03:00:00.000Z')
+  const r = await s.ledger.grantMonthlyForPlan('co_alice', 'PRO')
+  assert.equal(r.ok && r.granted, 3000)
+})
+
+test('付与と同じトランザクションの確かめ（inTransaction）: false なら付けず、true なら付ける（はじめの付与の受け取りの記録に使う）', async () => {
+  const s = setup('2026-10-26T03:00:00.000Z')
+  const no = await s.ledger.grant('co_alice', 'daily_recovery', 100, null, { sourceKey: 'starter', inTransaction: async () => false })
+  assert.deepEqual(no, { ok: false, reason: 'precondition' })
+  assert.equal(s.grantsOf('co_alice').filter((g) => g.sourceKey === 'starter').length, 0)
+  let called = 0
+  const yes = await s.ledger.grant('co_alice', 'daily_recovery', 100, null, { sourceKey: 'starter', inTransaction: async () => { called++; return true } })
+  assert.equal(yes.ok, true)
+  assert.equal(called, 1)
+  // 同じ sourceKey の2回目は、確かめを呼ぶ前に「付与済み」で返る
+  const again = await s.ledger.grant('co_alice', 'daily_recovery', 100, null, { sourceKey: 'starter', inTransaction: async () => { called++; return true } })
+  assert.equal(again.ok && again.duplicated, true)
+  assert.equal(called, 1)
+})

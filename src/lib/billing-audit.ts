@@ -21,6 +21,7 @@ import {
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { subscriptionAmount, tieredPriceIdsMissingTiers, type TierLike } from '@/lib/pricing-v2/amount'
 import { getManualGrantEmails } from '@/lib/billing-manual-grants'
 
 export const BILLING_WEBHOOK_EXPECTED_URL =
@@ -77,6 +78,23 @@ function jstDate(d: Date): string {
 
 function jstDateTime(d: Date): string {
   return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+}
+
+/**
+ * 段階別の価格（新しい料金の人数の明細）の段階の表。一覧では付かない（expand は4段まで）ので、価格ごとに1回だけ取りに行く。
+ * 段階別の価格が無ければ（今の契約だけなら）Stripe を呼ばない
+ */
+async function loadTiersByPrice(subs: any[]): Promise<Map<string, TierLike[]>> {
+  const tiersByPrice = new Map<string, TierLike[]>()
+  for (const priceId of new Set(subs.flatMap((s) => tieredPriceIdsMissingTiers(s.items?.data ?? [])))) {
+    try {
+      const p: any = await stripe.prices.retrieve(priceId, { expand: ['tiers'] })
+      if (Array.isArray(p?.tiers)) tiersByPrice.set(priceId, p.tiers)
+    } catch {
+      console.error('[billing-audit] could not read price tiers')
+    }
+  }
+  return tiersByPrice
 }
 
 /** Stripe の全サブスクリプションをページングして取得 */
@@ -182,6 +200,8 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   const userByEmail = new Map(usersByEmail.map((u) => [String(u.email).toLowerCase(), u]))
   const resolvedUserById = new Map([...usersByEmail, ...usersById].map((u) => [u.id, u]))
 
+  const tiersByPrice = await loadTiersByPrice(live)
+
   const subscriptions: AuditSubscription[] = live.map((s) => {
     const cust = typeof s.customer === 'object' ? s.customer : null
     const customerEmail = (cust?.email as string | undefined)?.toLowerCase() || null
@@ -189,10 +209,11 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     const dbUser = metadataUserId ? userById.get(metadataUserId) : customerEmail ? userByEmail.get(customerEmail) : undefined
     const email = dbUser?.email?.toLowerCase() || customerEmail
     const { planId } = resolvePlanIdFromSubscription(s)
-    const price = s.items?.data?.[0]?.price
-    const interval = price?.recurring?.interval
-    const intervalCount = Math.max(1, Number(price?.recurring?.interval_count || 1))
-    const amount = Number(price?.unit_amount || 0)
+    // 全部の明細の合計（新しい料金のチームは 基本料＋人数 の2つ。人数は段階別の価格）
+    const total = subscriptionAmount(s.items?.data ?? [], tiersByPrice)
+    const interval = total.interval
+    const intervalCount = total.intervalCount
+    const amount = total.amount
     const billingInterval: AuditSubscription['billingInterval'] = interval === 'year' ? 'year' : interval === 'month' ? 'month' : 'other'
     const monthlyAmount = billingInterval === 'year' ? amount / (12 * intervalCount) :
       billingInterval === 'month' ? amount / intervalCount : 0
@@ -598,12 +619,14 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   ).length
 
   // トライアル中の方がいつ売上になるか（見込みの根拠）
-  const upcoming = live
-    .filter((s) => s.status === 'trialing')
+  const trialing = live.filter((s) => s.status === 'trialing')
+  const upcomingTiers = await loadTiersByPrice(trialing)
+  const upcoming = trialing
     .map((s) => ({
       email: (typeof s.customer === 'object' ? (s.customer?.email as string | undefined) : null) || null,
       at: new Date(s.current_period_end * 1000),
-      amount: s.items?.data?.[0]?.price?.unit_amount ?? 0,
+      // 全部の明細の合計。段階別の価格（チームの人数）は、段階の表を取りに行って数える
+      amount: subscriptionAmount(s.items?.data ?? [], upcomingTiers).amount,
     }))
     .sort((a, b) => a.at.getTime() - b.at.getTime())
 

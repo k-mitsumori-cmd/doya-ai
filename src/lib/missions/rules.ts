@@ -124,12 +124,26 @@ export interface Quest {
   href: string
 }
 
+/** 今の報酬（旗 NEW_PRICING_ROLLOUT が off のとき・対象でない人） */
 export const ONBOARDING_QUESTS: Quest[] = [
   { id: 'company_profile', title: '会社情報を登録する', condition: '会社名と、業種かサイトの URL を登録する', reward: 50, href: '/home' },
   { id: 'invite_member', title: 'メンバーを招待する', condition: '招待した人が参加する（招待を送っただけでは数えません）', reward: 100, href: '/sfa' },
   { id: 'first_quote', title: '最初の見積を発行する', condition: '中身の入った見積を、確定か送付する', reward: 30, href: '/quote' },
   { id: 'first_activity', title: '最初の商談の記録を残す', condition: '本文のある商談の記録を保存する', reward: 20, href: '/sfa' },
 ]
+
+/**
+ * 新しい料金（旗 NEW_PRICING_ROLLOUT の対象の人）の報酬（仮。2026-10-26 見直し）。
+ * 最初の100（はじめの付与。src/lib/pricing-v2/starter.ts）と合わせて多すぎないよう、
+ * 会社情報は 0（会社を登録すると最初の100が付くため）、招待は 100 → 50 に下げた。合計は 100（最初の100と合わせて最大200）
+ */
+export const ONBOARDING_QUESTS_NEW_PRICING: Quest[] = ONBOARDING_QUESTS.map((q) =>
+  q.id === 'company_profile' ? { ...q, reward: 0 } : q.id === 'invite_member' ? { ...q, reward: 50 } : q)
+
+/** 使う報酬の表（新しい料金の対象の人か） */
+export function onboardingQuests(newPricing: boolean): Quest[] {
+  return newPricing ? ONBOARDING_QUESTS_NEW_PRICING : ONBOARDING_QUESTS
+}
 
 export interface QuestState extends Quest {
   done: boolean
@@ -162,8 +176,8 @@ export function questDoneAt(id: QuestId, f: QuestFacts): string | null {
   }
 }
 
-export function questStates(f: QuestFacts): QuestState[] {
-  return ONBOARDING_QUESTS.map((q) => {
+export function questStates(f: QuestFacts, quests: Quest[] = ONBOARDING_QUESTS): QuestState[] {
+  return quests.map((q) => {
     const doneAt = questDoneAt(q.id, f)
     return { ...q, done: doneAt !== null, doneAt }
   })
@@ -181,7 +195,7 @@ export interface AwardEntry {
 
 export type AwardRequest =
   | { type: 'daily'; action: MissionAction }
-  | { type: 'quest'; questId: QuestId; facts: QuestFacts }
+  | { type: 'quest'; questId: QuestId; facts: QuestFacts; /** 報酬の表（既定は今の値。新しい料金の人は onboardingQuests(true)） */ quests?: Quest[] }
   /** 運営からのボーナスなど。上限の中で数える */
   | { type: 'bonus'; id: string; amount: number }
 
@@ -211,11 +225,13 @@ export function decideAward(req: AwardRequest, ledger: AwardEntry[], now: Date |
     key = `daily:${dateKey}`
     amount = DAILY_MISSION_REWARD
   } else if (req.type === 'quest') {
-    const q = ONBOARDING_QUESTS.find((x) => x.id === req.questId)
+    const q = (req.quests ?? ONBOARDING_QUESTS).find((x) => x.id === req.questId)
     if (!q) return { ok: false, key: null, reason: 'invalid', message: 'クエストが見つかりません' }
     key = `quest:${q.id}`
     if (questDoneAt(q.id, req.facts) === null) return { ok: false, key, reason: 'not_done', message: 'まだ達成していません' }
     amount = q.reward
+    // 報酬のない手順（会社情報。最初の100に含む）は付与しない
+    if (amount <= 0) return { ok: false, key, reason: 'invalid', message: 'この手順にドヤパワーは付きません（最初の100に含まれます）' }
   } else {
     if (!req.id || !Number.isInteger(req.amount) || req.amount <= 0) return { ok: false, key: null, reason: 'invalid', message: 'ボーナスの中身が正しくありません' }
     key = `bonus:${req.id}`
@@ -245,11 +261,11 @@ export function applyAwards(requests: { req: AwardRequest; at: string }[], ledge
  * 記録から、ドヤパワーの見込みを出す（台帳ができるまでの表示用）。
  * クエストは達成した日時、今日のミッションは各日の最初の数える操作の日時で付与したとみなす。
  */
-export function projectAwards(facts: QuestFacts, now: Date | number, cap: number = MONTHLY_CAP): { ledger: AwardEntry[]; thisMonth: number; cap: number } {
+export function projectAwards(facts: QuestFacts, now: Date | number, cap: number = MONTHLY_CAP, quests: Quest[] = ONBOARDING_QUESTS): { ledger: AwardEntry[]; thisMonth: number; cap: number } {
   const nowMs = new Date(now).getTime()
   const requests: { req: AwardRequest; at: string }[] = []
-  for (const q of questStates(facts)) {
-    if (q.doneAt && Date.parse(q.doneAt) <= nowMs) requests.push({ req: { type: 'quest', questId: q.id, facts }, at: q.doneAt })
+  for (const q of questStates(facts, quests)) {
+    if (q.doneAt && Date.parse(q.doneAt) <= nowMs) requests.push({ req: { type: 'quest', questId: q.id, facts, quests }, at: q.doneAt })
   }
   const seenDays = new Set<string>()
   for (const a of [...facts.actions].sort((x, y) => Date.parse(x.at) - Date.parse(y.at))) {

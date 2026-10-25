@@ -11,6 +11,7 @@ import type { AchievementKind } from './achievements'
 import { jstMonthRange } from './jst'
 import type { QuestFacts } from './rules'
 import { buildMissionsView, type MissionsView } from './view'
+import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
 
 const ROLES = ['owner', 'admin', 'manager', 'member']
 
@@ -132,5 +133,7 @@ export async function loadMissionsView(userId: string, now: Date = new Date()): 
     acceptedInvites: invites,
     actions: [...qa, ...sa],
   }
-  return buildMissionsView({ companyName: company?.name ?? null, facts, counts, tools: { quote: Boolean(quoteOrg), sfa: Boolean(sfaOrg) } }, now)
+  // はじめの手順の報酬の表は、新しい料金（旗 NEW_PRICING_ROLLOUT）の対象の人だけ新しい値（旗が off なら今の値）
+  const email = await soft(prisma.user.findUnique({ where: { id: userId }, select: { email: true } }).then((u) => u?.email ?? null), null)
+  return buildMissionsView({ companyName: company?.name ?? null, facts, counts, tools: { quote: Boolean(quoteOrg), sfa: Boolean(sfaOrg) } }, now, { newPricing: isNewPricingEnabledFor(email) })
 }

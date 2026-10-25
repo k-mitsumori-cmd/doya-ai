@@ -24,8 +24,9 @@ export const PURCHASE_MAX_MONTHS = 6
 export const MONTHLY_CARRYOVER_MONTHS = 1
 
 /**
- * チームの契約の毎月の付与（仮の値。料金と一緒に統括が決める）。
- * 今の 1人 9,980円 の契約者（統一プラン PRO など isPaidPlan の人）にも同じ量を付ける。
+ * 毎月の付与（旗 NEW_PRICING_ROLLOUT が off のとき・対象でない人の量。今までどおり）。
+ * 新しい料金の対象の人は、料金の表（src/lib/pricing-v2/plans.ts）の量を使う（据え置き 1,500・チームは人数から）。
+ * 切り替えは台帳の newPricingMonthlyGrantFor（index.ts → src/lib/pricing-v2/team.server.ts の newPricingMonthlyGrant）。
  */
 export const TEAM_MONTHLY_GRANT = 3000
 export const SOLO_PRO_MONTHLY_GRANT = TEAM_MONTHLY_GRANT
