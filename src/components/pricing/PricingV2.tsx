@@ -96,11 +96,15 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
       <PowerPackReturn sessionId={powerPackSessionId} canceled={powerPackCanceled} />
 
       {view === 'legacy' ? (
-        <section className={styles.legacy} aria-labelledby="legacy-title">
+        <section id="legacy" className={styles.legacy} aria-labelledby="legacy-title">
           <p id="legacy-title" className={styles.legacyTitle}>今のご契約は、<wbr />今の料金のまま<wbr />変わりません</p>
           <p className={styles.legacyBody}>
-            {`プロプラン（月${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）を、これからも同じ料金でお使いいただけます。新しい料金に切り替える手続きは要りません。人数を増やしたいときは、下の「お問い合わせ」からご相談ください。`}
+            {`プロプラン（月${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）を、これからも同じ料金でお使いいただけます。新しい料金に切り替える手続きは要りません。`}
           </p>
+          <p className={styles.legacyBody}>
+            {`会社のメンバーで使いたいときは、チームに移ることもできます。ただし、チームに移ったあとは、今の料金（月${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）に戻すことはできません。まずはご相談ください。`}
+          </p>
+          <a href={ENTERPRISE_CONTACT_MAILTO} className={styles.legacyLink}>チームに移る相談をする</a>
         </section>
       ) : null}
 

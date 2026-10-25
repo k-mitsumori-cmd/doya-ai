@@ -137,3 +137,37 @@ test('プランの一覧: フリーは回復あり・追加購入なし。有料
   for (const r of PLAN_MATRIX) assert.equal(r.starter, 100)
   assert.equal(planRow('legacy').monthly, '1,500')
 })
+
+// ---------- 知らせのシートに渡す形（UI リニューアルとの分担） ----------
+import { powerOutView, POWER_OUT_HREF } from './power-out'
+
+const info = { kind: 'free' as const, isOwner: true, seats: null, canBuyPack: true, canCheckoutTeam: true }
+
+test('知らせの中身: 足りない・0・2割未満のときだけ。行き先はすべて href・最大3つ', () => {
+  assert.equal(powerOutView({ ...info, remaining: 50, limit: 100 }), null)
+  assert.equal(powerOutView({ ...info, remaining: 19, limit: 100 })?.trigger, 'low')
+  assert.equal(powerOutView({ ...info, remaining: 0, limit: 100 })?.trigger, 'empty')
+  const v = powerOutView({ ...info, remaining: 5, limit: 100, required: 30, nextRecoveryAt: '2026-10-26T15:00:00.000Z' })!
+  assert.equal(v.trigger, 'insufficient')
+  assert.deepEqual(v.actions[0], { label: 'チームに上げる', href: POWER_OUT_HREF.team })
+  assert.match(v.body, /10月27日 0:00 に回復/)
+  for (const k of ['free', 'team', 'legacy'] as const) {
+    const w = powerOutView({ ...info, kind: k, seats: 45, remaining: 0, limit: 100 })!
+    assert.ok(w.actions.length >= 1 && w.actions.length <= 3)
+    assert.ok(w.actions.every((a) => typeof a.href === 'string' && a.href.length > 0))
+  }
+})
+
+test('知らせの中身: チームと据え置きの主は「追加で買う」（料金ページの追加購入へ）。据え置きの移行は「戻れない」の説明へ', () => {
+  const team = powerOutView({ ...info, kind: 'team', seats: 5, remaining: 0, limit: 3000 })!
+  assert.deepEqual(team.actions[0], { label: '追加で買う', href: POWER_OUT_HREF.pack })
+  const legacy = powerOutView({ ...info, kind: 'legacy', remaining: 0, limit: 1500 })!
+  assert.deepEqual(legacy.actions.map((a) => a.href), [POWER_OUT_HREF.pack, POWER_OUT_HREF.legacyMove])
+})
+
+test('知らせの中身: 追加購入が準備中なら出さず、押せるものが無ければ料金ページを主にする', () => {
+  const legacy = powerOutView({ ...info, kind: 'legacy', canBuyPack: false, remaining: 0, limit: 1500 })!
+  assert.equal(legacy.actions[0]!.href, POWER_OUT_HREF.legacyMove)
+  const team = powerOutView({ ...info, kind: 'team', seats: 5, canBuyPack: false, remaining: 0, limit: 3000 })!
+  assert.deepEqual(team.actions.map((a) => a.href), [POWER_OUT_HREF.manage])
+})

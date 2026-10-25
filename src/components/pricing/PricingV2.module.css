@@ -3,6 +3,7 @@
 .legacy { margin: 0 auto 28px; padding: 18px 22px; border-radius: var(--r-sm); background: var(--ok-bg); color: var(--ok-ink); }
 .legacyTitle { margin: 0; font-size: 16px; font-weight: 800; word-break: keep-all; text-wrap: balance; }
 .legacyBody { margin: 6px 0 0; font-size: 14px; line-height: 1.8; color: var(--ink); }
+.legacyLink { display: inline-block; margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--blue); }
 
 .toggleRow { display: flex; justify-content: center; margin-bottom: 28px; }
 .toggle { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
