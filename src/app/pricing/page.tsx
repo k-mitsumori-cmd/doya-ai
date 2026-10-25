@@ -15,6 +15,7 @@ import PricingV2 from '@/components/pricing/PricingV2'
 import { resolvePricingView } from '@/lib/pricing-v2/view.server'
 import { powerPackPriceId } from '@/lib/pricing-v2/prices'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
+import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 
 export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams
@@ -32,10 +33,10 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       ? <PricingNext canceled={canceled} serverSignedIn={false} />
       : <PricingV2 view={view} canceled={canceled} serverSignedIn={false} {...v2Extra} />
   }
-  const [company, toolHrefs] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
+  const [company, toolHrefs, supportChat] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({})), isSupportChatEnabled()])
   const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <ShellGate signedIn userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+    <ShellGate signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
       {view === 'current'
         ? <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
         : <PricingV2 view={view} canceled={canceled} inShell serverSignedIn {...v2Extra} />}
