@@ -8,7 +8,7 @@ export const maxDuration = 300
 // 設計: docs/architecture/agent-orchestration/DESIGN.md §8
 // - 本文は読まない。ツールへの入力は、保存した作戦と答えだけから作る（画面の値を使わない）。
 // - 同じ ToDo を同時に2回動かさない（表の条件付きの更新）。本人ごとに同時に3つまで（limit）。
-// - 失敗したら、その ToDo で減ったままのドヤパワーを戻す。結果・失敗・量・途中まで作れたものを表に残す。
+// - 結果・失敗・ドヤパワーの量・途中まで作れたもの（スライドのプロジェクト・見積の品目の案）を表に残す。
 // - 旗と記録の設定（AGENT_RUNS_STORE=db）の両方が有効なときだけ。
 import { NextRequest, NextResponse } from 'next/server'
 import { agentGate, NO_STORE, taskFailure } from '@/lib/agent-orchestration/api.server'
@@ -16,7 +16,7 @@ import { parseSalesPrepAnswers } from '@/lib/agent-orchestration/recipes'
 import { runStoredTask, runViewOf } from '@/lib/agent-orchestration/runs'
 import { prismaRunRepo } from '@/lib/agent-orchestration/runs.prisma'
 import { BUSY_MESSAGE, executeSalesPrepTask } from '@/lib/agent-orchestration/execute'
-import { refundKeptCharges, toolDepsFor } from '@/lib/agent-orchestration/routes.server'
+import { toolDepsFor } from '@/lib/agent-orchestration/routes.server'
 import { AgentTaskError } from '@/lib/agent-orchestration/runner'
 import type { SalesPrepTaskId } from '@/lib/agent-orchestration/tools'
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId }, async ({ answers, resume }) => {
       const parsed = parseSalesPrepAnswers(answers)
       if (!parsed.ok) throw new AgentTaskError(parsed.error, 'input')
-      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req), refund: (c) => refundKeptCharges(req, c) }, resume)
+      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req) }, resume)
     })
     return NextResponse.json({ result, run: await view() }, { headers: NO_STORE })
   } catch (e) {

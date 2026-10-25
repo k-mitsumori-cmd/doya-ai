@@ -71,6 +71,8 @@ export interface RunRepo {
    * status が waiting / failed / blocked / canceled か、running でも startedAt が staleBefore より古い
    */
   claimTask(userId: string, runId: string, taskId: string, now: Date, staleBefore: Date): Promise<boolean>
+  /** 取った ToDo を、取る前の状態に戻す（同時の上限を超えたと分かったとき）。running で startedAt が同じものだけ */
+  unclaimTask(userId: string, runId: string, taskId: string, startedAt: Date, back: Pick<TaskRow, 'status' | 'attempts' | 'startedAt'>): Promise<void>
   /** 取った ToDo の結果を書く（running のものだけ） */
   finishTask(userId: string, runId: string, taskId: string, patch: Partial<TaskRow>): Promise<void>
   /** 実行の状態と、ドヤパワーの合計を書く */
@@ -181,8 +183,15 @@ export async function runStoredTask(
 
   const staleBefore = new Date(now().getTime() - STALE_MS)
   if ((await repo.countRunning(input.userId, staleBefore)) >= AGENT_MAX_CONCURRENT) throw new AgentTaskError(BUSY_MESSAGE, 'limit')
-  if (!(await repo.claimTask(input.userId, input.runId, input.taskId, now(), staleBefore))) {
+  const claimedAt = now()
+  if (!(await repo.claimTask(input.userId, input.runId, input.taskId, claimedAt, staleBefore))) {
     throw new AgentTaskError('この ToDo は、いま動いています。終わるまでお待ちください。', 'input')
+  }
+  // 数えてから取るまでのあいだに、ほかの ToDo が取られることがある。取ったあとにもう一度数え、上限を超えていたら戻して断る
+  // （同時に来た呼び出しが両方とも戻すことはあるが、上限を超えて動くことはない）
+  if ((await repo.countRunning(input.userId, staleBefore)) > AGENT_MAX_CONCURRENT) {
+    await repo.unclaimTask(input.userId, input.runId, input.taskId, claimedAt, { status: task.status === 'running' ? 'failed' : task.status, attempts: task.attempts, startedAt: task.startedAt })
+    throw new AgentTaskError(BUSY_MESSAGE, 'limit')
   }
   await repo.updateRun(input.userId, input.runId, { status: 'running' })
 
@@ -252,6 +261,10 @@ export function createMemoryRunRepo(): RunRepo & { runs: RunRow[]; tasks: TaskRo
       if (!free) return false
       Object.assign(t, { status: 'running', attempts: t.attempts + 1, startedAt: now, endedAt: null })
       return true
+    },
+    async unclaimTask(userId, runId, taskId, startedAt, back) {
+      const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running' && x.startedAt?.getTime() === startedAt.getTime())
+      if (t) Object.assign(t, back)
     },
     async finishTask(userId, runId, taskId, patch) {
       const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running')

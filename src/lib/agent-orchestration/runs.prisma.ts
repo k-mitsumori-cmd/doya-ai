@@ -46,6 +46,9 @@ export const prismaRunRepo: RunRepo = {
     })
     return r.count === 1
   },
+  async unclaimTask(userId, runId, taskId, startedAt, back) {
+    await prisma.homeAgentTask.updateMany({ where: { runId, taskId, userId, status: 'running', startedAt }, data: { status: back.status, attempts: back.attempts, startedAt: back.startedAt } })
+  },
   async finishTask(userId, runId, taskId, patch) {
     const { result, resume, ...rest } = patch
     await prisma.homeAgentTask.updateMany({

@@ -49,7 +49,7 @@ function loadTaskRoute(env,email,log){
     '@/lib/agent-orchestration/recipes':core.recipes,
     '@/lib/agent-orchestration/runner':core.runner,
     '@/lib/agent-orchestration/tools':core.tools,
-    '@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>{log.push('deps');return deps},refundKeptCharges:async()=>{log.push('refund');return 0}},
+    '@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>{log.push('deps');return deps}},
     '@/lib/agent-orchestration/execute':core.execute,
     '@/lib/shell/company.server':{currentUserId:async()=>{log.push('user');return email?'u_1':null}},
     '@/lib/operational-json':{readOperationalJson:async(r)=>{log.push('body');return r.json()}},
@@ -353,43 +353,49 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.ok(calls.length>=7);
     for(const c of calls) if(!/\.create\(/.test(c)) assert.match(c,/userId/,c.slice(0,80));
   });
-  await check('Agent refund: the ledger operation id is built the same way as the charge wrapper, and only kept (consumed) charges are refunded',async()=>{
-    // 包み（charge-core.ts）の操作の id の作り方が変わったら、この検査で気づく
-    assert.match(read('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{opKey\}\$\{scope \? `:\$\{scope\}` : ''\}:\$\{amount\}`/);
-    const seen=[];
-    const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
-      'next/server':nextServer,'./tools':loadCore().tools,'@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
-      '@/lib/doya-power/charge':{doyaPowerCharger:{target:async()=>({companyId:'co_1',plan:null})},routeScope:(r)=>'r-'+new URL(r.url).pathname.replace(/\W/g,'')},
-      '@/lib/doya-power':{operationStatus:async(id)=>{seen.push('status:'+id);return id.includes('op-done')?'refunded':'consumed'},refund:async(id,o)=>{seen.push('refund:'+id+':'+o.companyId);return {ok:true,operationId:id,amount:1,duplicated:false}}},
-    },{});
-    const outer=new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST'});
-    const back=await rs.refundKeptCharges(outer,[{route:'quote.suggest',action:'text.generate',opKey:'op-1',amount:1},{route:'quote.suggest',action:'text.generate',opKey:'op-done',amount:1},{route:'../admin',action:'x',opKey:'y',amount:9}]);
-    assert.equal(back,1);
-    assert.deepEqual(seen,['status:text.generate:co_1:op-1:r-apiquotedocumentssuggest:1','refund:text.generate:co_1:op-1:r-apiquotedocumentssuggest:1:co_1','status:text.generate:co_1:op-done:r-apiquotedocumentssuggest:1']);
-    // 旗の外・会社が未登録なら、台帳に触れない
-    const none=[];
-    const rs2=loadTs('src/lib/agent-orchestration/routes.server.ts',{
-      'next/server':nextServer,'./tools':loadCore().tools,'@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
-      '@/lib/doya-power/charge':{doyaPowerCharger:{target:async()=>null},routeScope:()=>'r'},
-      '@/lib/doya-power':{operationStatus:async()=>{none.push(1)},refund:async()=>{none.push(1)}},
-    },{});
-    assert.equal(await rs2.refundKeptCharges(outer,[{route:'quote.suggest',action:'text.generate',opKey:'op-1',amount:1}]),0);
-    assert.deepEqual(none,[]);
+  await check('Agent quote retry: when only the save failed, the kept draft is saved again without calling the AI, and nothing is refunded',async()=>{
+    // 戻すのは、AI の生成そのものが失敗したときだけ（包みが行う）。エージェントの側に、台帳を戻す処理を置かない（2026-10-25 ユーザー決定）
+    for(const f of ['src/lib/agent-orchestration/execute.ts','src/lib/agent-orchestration/routes.server.ts','src/app/api/agent/tasks/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+      assert.equal(/refund\(|refundKeptCharges|@\/lib\/doya-power'\)|from '@\/lib\/doya-power'/.test(read(f)),false,f);
+    }
+    let log=[];
+    // 1回目: 保存（quote.create）だけが失敗 → 案を resume で返す
+    const core=loadCore();
+    const failing={shodanSlug:async()=>'acme',call:async(route,body)=>{log.push('call:'+route);if(route==='quote.create')return {status:402,data:{error:'無料プランは3件までです。',code:'LIMIT_REACHED'}};return core.tools.fakeToolDeps({delayMs:0}).call(route,body)}};
+    const routeWith=(deps)=>loadTs('src/app/api/agent/tasks/route.ts',{
+      'next/server':nextServer,'@/lib/agent-orchestration/flag':loadFlag(envOf('preview'),ALLOWED,log),'@/lib/agent-orchestration/recipes':core.recipes,'@/lib/agent-orchestration/runner':core.runner,
+      '@/lib/agent-orchestration/tools':core.tools,'@/lib/agent-orchestration/routes.server':{toolDepsFor:()=>deps},'@/lib/agent-orchestration/execute':core.execute,
+      '@/lib/shell/company.server':{currentUserId:async()=>'u_1'},'@/lib/operational-json':{readOperationalJson:async(r)=>r.json()},
+    },envOf('preview'));
+    let res=await routeWith(failing).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
+    assert.equal(res.status,422);
+    const bad=await res.json();
+    assert.equal(bad.kind,'limit');
+    assert.ok(bad.resume&&typeof bad.resume.quoteDraft==='string');
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.suggest','call:quote.create']);
+    // 2回目: 残した案で、保存だけ（AI は呼ばない）
+    log=[];
+    const ok={shodanSlug:async()=>'acme',call:async(route,body)=>{log.push('call:'+route);return core.tools.fakeToolDeps({delayMs:0}).call(route,body)}};
+    res=await routeWith(ok).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers,resume:bad.resume}));
+    assert.equal(res.status,200);
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.create']);
+    // 大きすぎる案は受け取らない（AI で作り直す）
+    log=[];
+    res=await routeWith(ok).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers,resume:{quoteDraft:'['+'1,'.repeat(13000)+'1]'}}));
+    assert.deepEqual(log.filter(l=>l.startsWith('call:')),['call:quote.suggest','call:quote.create']);
   });
-  await check('Agent tasks API: one user runs at most 3 tasks at once, and a failed task refunds its kept charges',async()=>{
+  await check('Agent tasks API: one user runs at most 3 tasks at once, and failures return only user-facing fields',async()=>{
     const src=read('src/app/api/agent/tasks/route.ts');
     assert.match(src,/limiter\.acquire\(userId\)/);
     assert.match(src,/status: 429/);
     assert.match(src,/finally \{\s*release\(\)/);
-    assert.match(src,/refund: \(c\) => refundKeptCharges\(req, c\)/);
-    assert.match(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts'),/refund: \(c\) => refundKeptCharges\(req, c\)/);
     // 減ったままの操作（charges）は、画面への答えに入れない
     const core=loadCore();
     const api=loadTs('src/lib/agent-orchestration/api.server.ts',{'next/server':nextServer,'./flag':loadFlag(envOf('preview'),ALLOWED),'./store-flag':loadTs('src/lib/agent-orchestration/store-flag.ts'),'./runner':core.runner,'@/lib/shell/company.server':{currentUserId:async()=>'u_1'}},{});
-    const failed=await api.taskFailure(new core.runner.AgentTaskError('保存できませんでした。','tool',undefined,undefined,{used:1,refunded:0},[{route:'quote.suggest',action:'text.generate',opKey:'op-secret',amount:1}])).json();
+    const failed=await api.taskFailure(new core.runner.AgentTaskError('保存できませんでした。','tool',undefined,undefined,{used:1,refunded:0})).json();
     assert.equal(failed.error,'保存できませんでした。');
     assert.deepEqual(failed.power,{used:1,refunded:0});
-    assert.equal(JSON.stringify(failed).includes('op-secret'),false);
+    assert.deepEqual(Object.keys(failed).sort(),['error','kind','power']);
     const log=[];
     const res=await loadTaskRoute(envOf('preview'),ALLOWED,log).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
     assert.equal(res.status,200);

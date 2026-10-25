@@ -35,6 +35,8 @@ export const DOYA_POWER_COSTS = {
   'voice.minute': VOICE_COST_PER_MINUTE[VOICE_COST_MODE],
   /** AIO の手動スキャン 質問1件ごと */
   'aio.scan.question': 10,
+  /** 経営ホームのエージェントの作戦づくり 1回（2026-10-25 ユーザー決定。src/lib/agent-orchestration の段階2で使う） */
+  'agent.plan': 5,
   /** 勤怠・プロマネ・収入・支出は減らない */
   'kintai': 0,
   'promane': 0,
