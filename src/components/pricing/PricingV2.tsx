@@ -26,7 +26,7 @@ import {
 } from '@/lib/pricing-v2/plans'
 import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP, PURCHASE_MAX_MONTHS } from '@/lib/doya-power/rules'
 import type { PricingView } from '@/lib/pricing-v2/view'
-import { PowerPackBuy, PowerPackReturn, TeamManage } from './TeamManage'
+import { BillingSummary, PowerPackBuy, PowerPackReturn, TeamManage } from './TeamManage'
 import base from './PricingNext.module.css'
 import styles from './PricingV2.module.css'
 
@@ -222,6 +222,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
       </section>
 
       {view === 'team' ? <TeamManage /> : null}
+      {view === 'team' || view === 'legacy' ? <BillingSummary /> : null}
       {canBuyPack && (view === 'team' || view === 'legacy') ? <PowerPackBuy /> : null}
 
       <section className={base.section} aria-labelledby="power-title">

@@ -25,6 +25,7 @@ import { teamMonthly, teamMonthlyPoints } from '@/lib/pricing-v2/plans'
 import { ownerTeamContext, readOwnerTeamSubscription, saveSeatCache, teamSeatsUsed, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { jstMonthKey } from '@/lib/doya-power/rules'
+import { sendEventNotification } from '@/lib/notifications'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE })
@@ -110,6 +111,10 @@ export async function POST(req: NextRequest) {
         const r = await grant(c.ctx.companyId, 'monthly', g.amount, null, { sourceKey: g.sourceKey, note: 'seat-add' })
         if (r.ok && !r.duplicated) addedPoints += r.granted
       }
+    }
+    // 運営への知らせ（人数を増やしたときだけ。日割りの請求が済んでいる）。メールは伏せ字で出る（notifications.ts）
+    if (d.direction === 'up') {
+      void sendEventNotification({ type: 'payment', userId: c.ctx.owner.id, userEmail: c.ctx.owner.email, details: `チームの人数を ${t.seats}人 から ${seats}人 に増やしました（日割りを請求済み）` })
     }
     return json({ ok: true, seats, used, monthly: teamMonthly(seats), points: teamMonthlyPoints(seats), addedPoints })
   } catch (e) {

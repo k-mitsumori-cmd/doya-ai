@@ -94,6 +94,12 @@ section.plans { max-width: 1120px; }
 .memberStatus { flex: none; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 12px; font-weight: 700; color: var(--sub); }
 .linkBtn { flex: none; border: 0; background: none; padding: 6px 4px; font: inherit; font-size: 13px; font-weight: 700; color: var(--bad-ink); cursor: pointer; }
 .linkBtn:disabled { opacity: 0.5; cursor: default; }
+.billingState { margin-top: 16px; display: grid; gap: 8px; justify-items: start; padding: 16px 20px; border-radius: var(--r-sm); background: var(--ok-bg); }
+.billingState[data-tone='note'] { background: var(--note-bg); }
+.billingState[data-tone='bad'] { background: var(--bad-bg); }
+.billingState .secondary, .billingState a { width: auto; }
+.linkBtnBlue { flex: none; padding: 6px 4px; font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: none; }
+.linkBtnBlue:hover { text-decoration: underline; }
 .packBox { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 24px; border-radius: var(--r); background: var(--bg); }
 .packRow { display: flex; align-items: center; gap: 12px; flex: none; }
 .packRow .stepper { margin-top: 0; grid-template-columns: 44px 6em 44px; }

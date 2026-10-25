@@ -171,3 +171,24 @@ test('追加購入の価格: 未設定・形が違う・今の価格やチーム
   assert.equal(powerPackPriceId({ ...base, STRIPE_PRICE_POWER_PACK: 'price_legacy' }), null)
   assert.equal(powerPackPriceId({ ...base, STRIPE_PRICE_POWER_PACK: 'price_ts_m' }), null)
 })
+
+// ---------- 支払いの状態の見せ方 ----------
+import { billingStatusView, BILLING_PORTAL_HREF } from './billing'
+
+test('支払いの遅れ（past_due）は、今のプランのままと伝え、お支払い方法の更新へ案内する', () => {
+  const v = billingStatusView({ status: 'past_due', cancelAtPeriodEnd: false })
+  assert.equal(v.tone, 'bad')
+  assert.equal(v.action?.href, BILLING_PORTAL_HREF)
+  assert.match(v.body, /今のプランのまま/)
+})
+
+test('解約の予約は、期間の終わりまで使えて取り消せると伝える。ふつうの契約は案内を出さない', () => {
+  assert.equal(billingStatusView({ status: 'active', cancelAtPeriodEnd: true }).tone, 'note')
+  assert.equal(billingStatusView({ status: 'active', cancelAtPeriodEnd: false }).action, null)
+  assert.equal(billingStatusView({ status: 'unpaid', cancelAtPeriodEnd: false }).tone, 'bad')
+  assert.equal(billingStatusView({ status: 'trialing', cancelAtPeriodEnd: false }).tone, 'ok')
+})
+
+test('カスタマーポータルの戻り先は料金ページ', () => {
+  assert.equal(decodeURIComponent(BILLING_PORTAL_HREF.split('returnTo=')[1]!), '/pricing')
+})

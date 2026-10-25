@@ -191,3 +191,61 @@ export function PowerPackReturn({ sessionId, canceled }: { sessionId: string | n
   }, [sessionId])
   return message ? <p className={base.notice} role="status">{message}</p> : null
 }
+
+type BillingData = {
+  subscription: null | { view: { tone: 'ok' | 'note' | 'bad'; title: string; body: string; action: { label: string; href: string } | null }; currentPeriodEnd: string }
+  upcoming: null | { amount: number; at: string }
+  invoices: { id: string; number: string | null; createdAt: string; total: number; status: string | null; url: string | null; pdf: string | null }[]
+}
+
+const jstDate = (iso: string) => new Date(iso).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
+const INVOICE_STATUS: Record<string, string> = { paid: '支払い済み', open: '未払い', void: '取り消し', uncollectible: '回収できず' }
+
+/** 請求のまとめ（支払いの状態・次回の請求・請求の履歴と領収書）。チームの人と据え置きの人 */
+export function BillingSummary() {
+  const [data, setData] = useState<BillingData | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    let alive = true
+    void call('/api/pricing/billing').then((r) => { if (alive) { if (r.ok) setData(r.data); else setFailed(true) } }).catch(() => { if (alive) setFailed(true) })
+    return () => { alive = false }
+  }, [])
+  const sub = data?.subscription
+  return (
+    <section className={styles.manage} aria-labelledby="billing-title">
+      <h2 id="billing-title" className={base.sectionTitle}>請求</h2>
+      {failed ? <p className={base.notice} role="status">請求の情報を読み込めませんでした。時間をおいて、画面を読み込み直してください。</p> : null}
+      {sub ? (
+        <div className={styles.billingState} data-tone={sub.view.tone}>
+          <p className={styles.manageHead}>{sub.view.title}</p>
+          {sub.view.body ? <p className={styles.manageSub}>{sub.view.body}</p> : null}
+          {sub.view.action ? <a href={sub.view.action.href} className={base.secondary}>{sub.view.action.label}</a> : null}
+        </div>
+      ) : null}
+      <div className={styles.manageGrid}>
+        <div className={styles.manageCard}>
+          <p className={styles.manageHead}>次回の請求</p>
+          <p className={styles.manageSub}>
+            {data === null && !failed ? '読み込んでいます…' : data?.upcoming ? `${jstDate(data.upcoming.at)} に ${yen(data.upcoming.amount)}（税込）` : '次回の請求の予定はありません。'}
+          </p>
+          <a href="/api/stripe/portal?returnTo=%2Fpricing" className={base.secondary}>お支払い方法・宛名を変える</a>
+        </div>
+        <div className={styles.manageCard}>
+          <p className={styles.manageHead}>請求の履歴と領収書</p>
+          <ul className={styles.memberList}>
+            {(data?.invoices ?? []).length === 0
+              ? <li className={styles.manageSub}>{data === null && !failed ? '読み込んでいます…' : 'まだ請求はありません。'}</li>
+              : data!.invoices.map((i) => (
+                <li key={i.id}>
+                  <span className={styles.memberEmail}>{jstDate(i.createdAt)}・{yen(i.total)}</span>
+                  <span className={styles.memberStatus}>{INVOICE_STATUS[i.status ?? ''] ?? '確認中'}</span>
+                  {i.url ? <a href={i.url} target="_blank" rel="noopener noreferrer" className={styles.linkBtnBlue}>表示</a> : null}
+                  {i.pdf ? <a href={i.pdf} target="_blank" rel="noopener noreferrer" className={styles.linkBtnBlue}>PDF</a> : null}
+                </li>
+              ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  )
+}

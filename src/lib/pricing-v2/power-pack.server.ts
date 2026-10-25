@@ -12,6 +12,7 @@ import { stripe, createCheckoutSession } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { POWER_PACK } from './plans'
+import { sendEventNotification } from '@/lib/notifications'
 import { powerPackPriceId, POWER_PACK_MAX_PER_ORDER } from './prices'
 
 export const POWER_PACK_KIND = 'power_pack'
@@ -77,5 +78,9 @@ export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Check
   const { grant } = await import('@/lib/doya-power')
   const r = await grant(md.companyId, 'purchase', packs * POWER_PACK.points, null, { sourceKey: `purchase:${session.id}`, note: 'power-pack' })
   if (!r.ok) return { ok: false, reason: 'grant_failed' }
+  // 運営への知らせは、初めて付けたときだけ（2つの経路のどちらか一方。メールは伏せ字で出る）
+  if (!r.duplicated) {
+    void sendEventNotification({ type: 'payment', userId, userEmail: session.customer_details?.email ?? session.customer_email ?? null, details: `ドヤパワーの追加購入（${(packs * POWER_PACK.points).toLocaleString('ja-JP')}）` })
+  }
   return { ok: true, points: r.granted, duplicated: r.duplicated }
 }
