@@ -15,6 +15,7 @@ import { useAccountCompany } from '@/components/shell/company-context'
 import { getServiceById } from '@/lib/services'
 import { activeAnnouncements } from '@/lib/notice/announcements'
 import { useNotice } from './NoticeProvider'
+import { loadUpsellInfo } from '@/components/pricing/UpsellActions'
 
 export const WELCOME_ID = 'welcome:v1'
 export const CHECKLIST_ID = 'checklist:v1'
@@ -136,12 +137,15 @@ export default function ShellNotices() {
   const limit = power.balance?.limit
   useEffect(() => {
     if (!enabled || remaining == null || !limit || remaining / limit > 0.2) return
-    push({
+    // 新料金の旗が on（upsell が読める）なら、PowerOutNotices が powerOutView で出すので、ここは出さない
+    let live = true
+    void loadUpsellInfo().then((info) => { if (live && !info) push({
       id: `power-low:${monthKey(new Date())}`, kind: 'hint', tone: 'warn', once: true, pose: 'focus', eyebrow: 'ドヤパワー',
       title: `ドヤパワーの残りが ${remaining.toLocaleString('ja-JP')} になりました`,
       body: `上限 ${limit.toLocaleString('ja-JP')} の2割を切りました。毎朝、少しずつ戻ります。足りないときは、プランで増やせます。`,
       primary: { label: 'プランを見る', href: '/pricing' }, secondary: { label: '閉じる' },
-    })
+    }) })
+    return () => { live = false }
   }, [enabled, remaining, limit, push])
 
   return null

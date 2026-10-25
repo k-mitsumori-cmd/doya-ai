@@ -22,6 +22,7 @@ import { DoyaPowerFxProvider } from '@/components/doya-power/fx-context'
 import type { DoyaPowerFx } from '@/lib/doya-power/fx'
 import NoticeProvider from '@/components/notice/NoticeProvider'
 import ShellNotices from '@/components/notice/ShellNotices'
+import PowerOutNotices from '@/components/notice/PowerOutNotices'
 
 const EMPTY: Record<string, string> = {}
 
@@ -56,7 +57,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const inner = guide && shown && userKey
-    ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /></NoticeProvider>
+    ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /><PowerOutNotices /></NoticeProvider>
     : framed
   const tree = (
       <AccountCompanyContext.Provider value={company}>
@@ -67,7 +68,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
       {inner}
       {/* 「ドヤパワーが足りない」（402）の知らせ。旗が出すと決めた人だけ動く */}
       <DoyaPowerFetchWatcher />
-      <ShellLowPowerNotice />
+      <ShellLowPowerNotice handledByNotice={Boolean(guide && shown && userKey)} />
       </DoyaPowerFxProvider>
       {/* 表示の速さを測る（外には送らない。UI 品質 S-45） */}
       {signedIn ? <ShellVitals /> : null}

@@ -62,22 +62,26 @@ function markSeen(key: string) {
  * さらに、残りが2割を切ったとき（月1回）と、0になったとき（1日1回）にも、やさしく出す。
  * ⚠️ 旗が off（/api/pricing/upsell が 404）なら、今までどおり「足りない」ときだけ、今までの案内で出す。
  */
-export function ShellLowPowerNotice() {
+export function ShellLowPowerNotice({ handledByNotice = false }: {
+  /** ドヤくんの知らせ（旗 GUIDE_POPUPS_ROLLOUT）が出ていて、新料金の upsell も読めたときは、知らせのシート（PowerOutNotices）が受け持つ */
+  handledByNotice?: boolean
+} = {}) {
   const enabled = useDoyaPower()
   const info = useUpsellInfo(enabled)
+  const takeover = handledByNotice && Boolean(info)
   const power = useContext(ShellPowerContext)
   const [detail, setDetail] = useState<DoyaPowerInsufficient | null>(null)
   const [nudge, setNudge] = useState<'low' | 'empty' | null>(null)
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || takeover) return
     const on = (e: Event) => { setNudge(null); setDetail((e as CustomEvent<DoyaPowerInsufficient>).detail) }
     window.addEventListener(DOYA_POWER_INSUFFICIENT_EVENT, on)
     return () => window.removeEventListener(DOYA_POWER_INSUFFICIENT_EVENT, on)
-  }, [enabled])
+  }, [enabled, takeover])
   // 残りが少ない・0 のやさしい知らせ（新しい料金のときだけ。足りない知らせが出ていれば出さない）
   const balance = power.balance
   useEffect(() => {
-    if (!enabled || !info || !balance || detail) return
+    if (!enabled || !info || !balance || detail || takeover) return
     const now = new Date()
     const trigger = balance.remaining <= 0 ? 'empty' : isLowPower(balance.remaining, balance.limit) ? 'low' : null
     if (!trigger) return
@@ -85,8 +89,8 @@ export function ShellLowPowerNotice() {
     if (seen(key)) return
     markSeen(key)
     setNudge(trigger)
-  }, [enabled, info, balance, detail])
-  if (!enabled) return null
+  }, [enabled, info, balance, detail, takeover])
+  if (!enabled || takeover) return null
   if (detail) {
     return (
       <div className={styles.lowPower} role="region" aria-label="ドヤパワーの知らせ">
