@@ -3,6 +3,7 @@
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
 import { buildSchedule } from '@/lib/income/schedule'
 import {
@@ -71,6 +72,15 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
   const { markClean } = useUnsavedGuard({ f, rows })
+
+  // 契約番号の見本は、設定の「契約番号の頭」を反映する（読めなければ既定の C）
+  const [noHead, setNoHead] = useState(DEFAULT_CONTRACT_NO_HEAD)
+  useEffect(() => {
+    if (initial) return
+    fetchJson<{ issuer: { contractNoPrefix?: string | null } | null }>('/api/income/issuer')
+      .then((d) => { if (d.issuer?.contractNoPrefix) setNoHead(d.issuer.contractNoPrefix) })
+      .catch(() => { /* 見本の表示だけなので、失敗しても既定のまま */ })
+  }, [initial])
 
   useEffect(() => {
     fetchJson<{ clients: ClientOpt[] }>('/api/income/clients')
@@ -181,7 +191,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
           <Field label="契約名（必須）" error={err('title')}>
             <input className={inputCls} value={f.title} onChange={set('title')} onBlur={touch('title')} maxLength={120} placeholder="例: 保守運用契約" />
           </Field>
-          <Field label="契約番号" hint={initial ? undefined : '空欄のまま登録すると、C-2026-0001 のような番号が自動で入ります'}>
+          <Field label="契約番号" hint={initial ? undefined : `空欄のまま登録すると、${noHead}-${todayJst().slice(0, 4)}-0001 のような番号が自動で入ります`}>
             <input className={inputCls} value={f.contractNo} onChange={set('contractNo')} maxLength={60} placeholder={initial ? undefined : '自動で振られます'} />
           </Field>
           <Field label="種類">

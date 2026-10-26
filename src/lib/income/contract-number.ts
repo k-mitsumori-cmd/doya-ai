@@ -6,6 +6,10 @@ import { todayJst } from './dates'
 
 type Tx = Prisma.TransactionClient
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export const DEFAULT_CONTRACT_NO_HEAD = 'C'
 export const DEFAULT_INVOICE_NO_HEAD = 'INV'
 
@@ -43,7 +47,8 @@ export async function nextContractNo(tx: Tx, organizationId: string, today: stri
   })
   let max = 0
   for (const r of rows) {
-    const m = new RegExp(`^${prefix}(\\d+)$`).exec(r.contractNo ?? '')
+    // 頭は英数字に限っているが、正規表現の記号が入っても壊れないように逃がす
+    const m = new RegExp(`^${escapeRegExp(prefix)}(\\d+)$`).exec(r.contractNo ?? '')
     if (m) max = Math.max(max, Number(m[1]))
   }
   return `${prefix}${String(max + 1).padStart(4, '0')}`

@@ -14,13 +14,19 @@ export function isRetryableTxError(error: unknown): boolean {
   return typeof code === 'string' && (RETRYABLE_TX_CODES as readonly string[]).includes(code)
 }
 
-/** run を最大 attempts 回まで実行する。やり直せるエラーのときだけ次を試し、最後のエラーはそのまま投げる */
-export async function runWithTxRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
+/** やり直す前に待つ時間（ms）。回数ごとに長くし、同時の処理がまた同じ時刻にぶつからないよう少しずらす */
+export function retryDelayMs(attempt: number, random: () => number = Math.random): number {
+  return Math.round(25 * 2 ** (attempt - 1) * (0.5 + random()))
+}
+
+/** run を最大 attempts 回まで実行する。やり直せるエラーのときだけ、少し待って次を試す。最後のエラーはそのまま投げる */
+export async function runWithTxRetry<T>(run: () => Promise<T>, attempts = 3, sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await run()
     } catch (error) {
       if (attempt >= attempts || !isRetryableTxError(error)) throw error
+      await sleep(retryDelayMs(attempt))
     }
   }
 }
