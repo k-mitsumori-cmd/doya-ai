@@ -169,6 +169,15 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
   }
 }
 
+/**
+ * temperature を送ってよいモデルか。新しいモデル（Claude Haiku 5.5・Sonnet 5.5・Sonnet 5・Opus 5.x・Opus 4.7/4.8・Fable・Mythos）は、
+ * 既定以外の temperature / top_p / top_k を送ると 400 を返す（Anthropic のモデルの表。2026-10-26 本番の B1 で見積とスライドが Gemini に落ちていた）。
+ * そのモデルには送らない。既定の claude-haiku-4-5 などは今までどおり送る
+ */
+export function claudeAcceptsTemperature(model: string): boolean {
+  return !/^claude-(haiku-5|sonnet-5|opus-5|opus-4-[78]|fable|mythos)/.test(model)
+}
+
 async function generateTextWithClaude(
   prompt: string,
   budget: RequestBudget,
@@ -192,7 +201,7 @@ async function generateTextWithClaude(
     max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }],
     system: systemPrompt,
-    temperature: options?.temperature ?? 0.4,
+    ...(claudeAcceptsTemperature(model) ? { temperature: options?.temperature ?? 0.4 } : {}),
   })
 
   // リトライロジック（429/5xx対応 — 最大 TEXT_CALL_LIMITS.claudeAttempts 回。空の応答のやり直しは1回まで）
@@ -628,7 +637,9 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
     } catch (e: any) {
       rethrowDeadline(e)
       const msg = e?.message || ''
-      console.warn('[Claude] Primary failed, falling back to Gemini')
+      // 理由の種類と状態コードだけを書く（例外の本文やプロンプトは書かない）
+      const status = /^Claude API Error: (\d{3})$/.exec(String(e?.message ?? ''))?.[1]
+      console.warn(`[Claude] Primary failed (${status ? `status ${status}` : String(e?.name || 'Error').slice(0, 40)}), falling back to Gemini`)
 
       // クレジット切れの場合はSlack通知（エラーメッセージから判定）
       if (/credit|billing|balance|payment|insufficient|402/i.test(msg)) {

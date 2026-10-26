@@ -97,5 +97,34 @@ const within = (p, ms = 5000) => Promise.race([p, new Promise((_r, rej) => setTi
     assert.equal(llmArgs.requestTimeoutMs, 150_000)
     assert.equal(searchArgs.timeoutMs, 10_000)
   })
+  // 2026-10-26 本番の B1: 見積とスライド（tier=light → claude-haiku-5-5）が temperature のせいで 400 になり、Gemini に落ちていた
+  await check('LLM: no temperature for models that reject non-default sampling; unchanged for the default model; the fallback log has only the status', async () => {
+    const bodies = []
+    const warns = []
+    const mod = load('seo/lib/gemini.ts', {}, {
+      process: { env: ENV }, AbortSignal, setTimeout: (fn) => { fn(); return 0 },
+      console: { log() {}, error() {}, warn: (...a) => warns.push(a.join(' ')) },
+      fetch: async (url, init) => {
+        const body = JSON.parse(init.body)
+        bodies.push(body)
+        const status = String(url).includes('anthropic') && body.model === 'claude-sonnet-5-5' ? 400 : 200
+        return new Response(JSON.stringify(status === 400 ? { error: { message: 'secret detail' } } : { content: [{ type: 'text', text: 'ok' }] }), { status, headers: { 'Content-Type': 'application/json' } })
+      },
+    })
+    for (const m of ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-sonnet-5', 'claude-opus-5-5', 'claude-opus-4-8', 'claude-fable-5-1']) assert.equal(mod.claudeAcceptsTemperature(m), false, m)
+    for (const m of ['claude-haiku-4-5-20251001', 'claude-haiku-4-5', 'claude-sonnet-4-6', 'claude-opus-4-6']) assert.equal(mod.claudeAcceptsTemperature(m), true, m)
+    await mod.geminiGenerateText(req({ claudeModel: 'claude-haiku-5-5' }))
+    assert.equal(bodies[0].model, 'claude-haiku-5-5')
+    assert.equal('temperature' in bodies[0], false)
+    bodies.length = 0
+    await mod.geminiGenerateText(req())
+    assert.equal(bodies[0].model, 'claude-haiku-4-5-20251001')
+    assert.equal(bodies[0].temperature, 0.4, 'the default model keeps its temperature')
+    // 400 で Gemini に落ちたときのログは、状態コードだけ（応答の本文は書かない）
+    await mod.geminiGenerateText(req({ claudeModel: 'claude-sonnet-5-5' }))
+    const line = warns.find((w) => w.includes('Primary failed'))
+    assert.equal(line, '[Claude] Primary failed (status 400), falling back to Gemini')
+    assert.equal(warns.join('\n').includes('secret detail'), false)
+  })
   clearInterval(keepAlive)
 })().catch((e) => { console.error(e); process.exit(1) })
