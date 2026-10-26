@@ -50,7 +50,7 @@ function loadModules(env) {
     '@/lib/prisma': { prisma }, '@/lib/stripe': { stripe, findActiveLikeSubscriptions: async () => { throw new Error('stripe touched') } },
     '@/lib/unified-plan': unifiedPlan, './rollout': rollout, './plans': plans, './prices': prices, './team': team,
   }, globals)
-  const starter = load('src/lib/pricing-v2/starter.ts', { 'node:crypto': require('node:crypto') }, globals)
+  const starter = load('src/lib/pricing-v2/starter.ts', { 'node:crypto': require('node:crypto'), './starter-welcome': load('src/lib/pricing-v2/starter-welcome.ts', {}, globals) }, globals)
   const starterServer = load('src/lib/pricing-v2/starter.server.ts', {
     '@/lib/prisma': { prisma }, '@/lib/doya-power/flag': { doyaPowerLedgerAllowed: () => true },
     './rollout': rollout, './starter': starter,

@@ -177,3 +177,16 @@ test('知らせの中身: 追加購入が準備中なら出さず、押せるも
   const team = powerOutView({ ...info, kind: 'team', seats: 5, canBuyPack: false, remaining: 0, limit: 3000 })!
   assert.deepEqual(team.actions.map((a) => a.href), [POWER_OUT_HREF.manage])
 })
+
+// ---------- 画面から読むファイルは node: を使わない（2026-10-26 UI リニューアルの依頼） ----------
+import { readFileSync } from 'node:fs'
+import { STARTER_WELCOME as WELCOME_FROM_STARTER, STARTER_POWER as POWER_FROM_STARTER } from './starter'
+import { STARTER_WELCOME, STARTER_POWER as POWER_FROM_WELCOME } from './starter-welcome'
+
+test('ようこその知らせの文と量は starter-welcome.ts にあり、node: を使わない。starter.ts からも同じ値が読める', () => {
+  const src = readFileSync(new URL('./starter-welcome.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(src, /from ['"]node:/)
+  assert.equal(WELCOME_FROM_STARTER, STARTER_WELCOME)
+  assert.equal(POWER_FROM_STARTER, POWER_FROM_WELCOME)
+  assert.equal(STARTER_WELCOME.action.href, '/home/doya-power')
+})

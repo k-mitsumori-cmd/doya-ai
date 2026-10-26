@@ -9,8 +9,8 @@
 // - メールはそのまま残さず、小文字にそろえた形の SHA-256 だけを記録する（doya_power_starter_claims）。
 import { createHash } from 'node:crypto'
 
-/** はじめの付与の量 */
-export const STARTER_POWER = 100
+// 量とようこその知らせの文は、画面からも読めるよう starter-welcome.ts（node: を使わない）に置き、ここから出し直す
+export { STARTER_POWER, STARTER_WELCOME } from './starter-welcome'
 
 /** 台帳の sourceKey（会社ごとに1回。ユーザー・メールの1回は doya_power_starter_claims で守る） */
 export const STARTER_SOURCE_KEY = 'starter'
@@ -45,12 +45,3 @@ export function decideStarter(input: {
   return { ok: true }
 }
 
-/**
- * 最初のログインの「ようこそ」の知らせの文（見た目と出し方は UI リニューアルの知らせの部品）。
- * 出す条件: /api/pricing/upsell の starter が null でなく、その知らせをまだ見ていない（利用者の端末で1回）。
- */
-export const STARTER_WELCOME = {
-  title: 'ドヤパワー 100 からスタートです',
-  body: 'AIで作るときに使うポイントです。使った分は、毎日10ずつ回復します（たまる上限は100）。',
-  action: { label: 'ドヤパワーを見る', href: '/home/doya-power' },
-} as const
