@@ -2,9 +2,10 @@
 // ドヤ収入管理: 契約の保存と売上予定の同期
 // ============================================
 import type { Prisma } from '@prisma/client'
-import { audit, IncomeError, type IncomeContext } from './access'
+import { IncomeError, type IncomeContext } from './access'
 import { addMonthsYm, daysInMonth, formatYmd, fromDbDate, parseYmd, startOfMonth, toDbDate, todayJst, type Ymd } from './dates'
-import { nextContractNo } from './contract-number'
+import { findOrCreateClientByName } from './client-quick'
+import { DEFAULT_CONTRACT_NO_HEAD, nextContractNo } from './contract-number'
 import { asBody, bool, date, int, lines, oneOf, reqStr, str } from './parse'
 import {
   BILLING_CYCLES, CONTRACT_TYPES, ISSUE_TIMINGS, PRORATES, SCHEDULE_HORIZON_MONTHS, buildSchedule,
@@ -139,9 +140,8 @@ export async function saveContract(tx: Tx, ctx: IncomeContext, input: ContractIn
   } else {
     // 取引先をその場で登録する（名前だけ。詳しい項目は取引先の画面であとから足せる）
     if (contractId) throw new IncomeError('取引先を選択してください')
-    const created = await tx.incomeClient.create({ data: { organizationId: ctx.organizationId, name: input.newClientName! } })
-    await audit(tx, ctx, 'client.create', 'client', created.id)
-    clientId = created.id
+    // 同じ名前の取引先があれば、それを使う（二重に作らない）
+    clientId = (await findOrCreateClientByName(tx, ctx, input.newClientName!, 'contract')).id
   }
   let contractNo = input.contractNo
   if (contractNo) {
@@ -151,7 +151,9 @@ export async function saveContract(tx: Tx, ctx: IncomeContext, input: ContractIn
     })
     if (dup) throw new IncomeError(`契約番号「${contractNo}」はすでに使われています。別の番号にするか、空欄にして自動で振ってください`)
   } else if (!contractId) {
-    contractNo = await nextContractNo(tx, ctx.organizationId)
+    // 番号の頭は請求元の設定（未設定なら C）
+    const issuer = await tx.incomeIssuer.findUnique({ where: { organizationId: ctx.organizationId }, select: { contractNoPrefix: true } })
+    contractNo = await nextContractNo(tx, ctx.organizationId, undefined, issuer?.contractNoPrefix || DEFAULT_CONTRACT_NO_HEAD)
   }
   const data = {
     clientId,

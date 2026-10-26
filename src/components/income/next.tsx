@@ -57,10 +57,11 @@ export function OnboardingSteps() {
     'onboarding',
   )
   const st = res.data
+  // 契約から始める順（2026-10-26。取引先は契約の画面で名前だけ登録でき、詳しい項目はあとから足す）
   const steps = [
-    { done: st?.issuer, title: '請求元を登録する', body: '自社名と振込先を入れると、請求書に載ります。', href: '/income/settings', cta: '設定を開く', art: '/income/step-1.webp' },
-    { done: st?.clients, title: '取引先を登録する', body: '請求書の宛先と、支払条件（締め日・支払日）を決めます。', href: '/income/clients', cta: '取引先を開く', art: '/income/step-2.webp' },
-    { done: st?.contracts, title: '契約を登録する', body: '月額や期間を入れると、月ごとの売上予定が自動で作られます。', href: '/income/contracts/new', cta: '契約を登録する', art: '/income/step-3.webp' },
+    { done: st?.contracts, title: '契約を登録する', body: '月額と期間を入れると、月ごとの売上予定が自動で作られます。取引先も同じ画面で登録できます。', href: '/income/contracts/new', cta: '契約を登録する', art: '/income/step-1.webp' },
+    { done: st?.issuer, title: '請求元を登録する', body: '自社名と振込先を入れると、請求書に載ります。請求書を確定する前に登録します。', href: '/income/settings', cta: '設定を開く', art: '/income/step-2.webp' },
+    { done: st?.clients, title: '取引先の請求先を整える', body: '請求書の宛先と、支払条件（締め日・支払日）を足します。', href: '/income/clients', cta: '取引先を開く', art: '/income/step-3.webp' },
   ]
   const doneCount = steps.filter((x) => x.done).length
   const next = steps.findIndex((x) => !x.done)

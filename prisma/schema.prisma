@@ -5300,6 +5300,10 @@ model IncomeIssuer {
   /// 支払日。31 = 月末
   defaultPaymentDay    Int                @default(31)
   invoiceNotes         String?            @db.Text
+  /// 契約番号の頭（例: C → C-2026-0001）。null は C（2026-10-26）
+  contractNoPrefix     String?
+  /// 請求書番号の頭（例: INV → INV-2026-0001）。null は INV（2026-10-26）
+  invoiceNoPrefix      String?
   updatedAt            DateTime           @updatedAt
 
   @@map("income_issuers")

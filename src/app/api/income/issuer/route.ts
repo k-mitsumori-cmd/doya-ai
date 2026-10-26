@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { IncomeError, audit } from '@/lib/income/access'
 import { asBody, oneOf, paymentTerms, reqStr, str } from '@/lib/income/parse'
+import { isValidNoHead, normalizeNoHead } from '@/lib/income/contract-number'
 import { readJson, withIncome } from '@/lib/income/route'
 
 export async function GET(req: NextRequest) {
@@ -20,6 +21,12 @@ export async function PUT(req: NextRequest) {
     const invoiceRegNo = str(body, 'invoiceRegNo', '登録番号', { max: 14 })
     if (invoiceRegNo && !/^T\d{13}$/.test(invoiceRegNo)) throw new IncomeError('登録番号は T＋13 桁の数字で入力してください')
     const terms = paymentTerms(body)
+    // 番号の頭（英数字 1〜8 文字。空なら既定の C / INV）。2026-10-26
+    const contractNoPrefix = normalizeNoHead(str(body, 'contractNoPrefix', '契約番号の頭', { max: 8 }))
+    const invoiceNoPrefix = normalizeNoHead(str(body, 'invoiceNoPrefix', '請求書番号の頭', { max: 8 }))
+    for (const [label, v] of [['契約番号の頭', contractNoPrefix], ['請求書番号の頭', invoiceNoPrefix]] as const) {
+      if (v && !isValidNoHead(v)) throw new IncomeError(`${label}は、英字と数字で8文字までにしてください`)
+    }
     const data = {
       companyName: reqStr(body, 'companyName', '自社名', 120),
       postalCode: str(body, 'postalCode', '郵便番号', { max: 10 }),
@@ -33,6 +40,8 @@ export async function PUT(req: NextRequest) {
       bankAccountNo: str(body, 'bankAccountNo', '口座番号', { max: 20 }),
       bankAccountHolder: str(body, 'bankAccountHolder', '口座名義', { max: 100 }),
       invoiceNotes: str(body, 'invoiceNotes', '請求書の備考', { max: 1000 }),
+      contractNoPrefix,
+      invoiceNoPrefix,
       defaultClosingDay: terms.closingDay ?? 31,
       defaultPaymentMonths: terms.paymentMonths ?? 1,
       defaultPaymentDay: terms.paymentDay ?? 31,

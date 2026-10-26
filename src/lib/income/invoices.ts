@@ -6,6 +6,7 @@
 import type { Prisma } from '@prisma/client'
 import type { prisma } from '@/lib/prisma'
 import { IncomeError, type IncomeContext } from './access'
+import { DEFAULT_INVOICE_NO_HEAD, formatInvoiceNo } from './contract-number'
 import { runWithTxRetry } from './retry'
 import { dueDateFor, fromDbDate, isYmd, parseYmd, toDbDate, todayJst, type Ymd } from './dates'
 import { computeInvoiceTotals } from './tax'
@@ -158,7 +159,8 @@ export async function confirmInvoice(tx: Tx, ctx: IncomeContext, invoiceId: stri
     create: { organizationId: ctx.organizationId, year, lastNo: 1 },
     update: { lastNo: { increment: 1 } },
   })
-  const invoiceNo = `INV-${year}-${String(seq.lastNo).padStart(4, '0')}`
+  // 番号の頭は請求元の設定（未設定なら INV）。連番は頭を変えても年ごとに続く
+  const invoiceNo = formatInvoiceNo(year, seq.lastNo, issuer.invoiceNoPrefix || DEFAULT_INVOICE_NO_HEAD)
   const { organizationId: _o, updatedAt: _u, ...issuerSnapshot } = issuer
   return tx.incomeInvoice.update({
     where: { id: inv.id },
