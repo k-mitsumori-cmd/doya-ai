@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:27:43.897Z",
+  "checkedAt": "2026-10-26T03:34:13.615Z",
   "expected": 6,
   "behaviorPassed": 6,
   "passed": 6,
@@ -42,8 +42,8 @@
     }
   ],
   "sourceHashes": {
-    "src/app/api/hr/organization/route.ts": "9ae0383575cb67ade1b4a46b3abae1bc91553782df07ca3f276a48309ad10876",
-    "src/app/api/hr/settings/route.ts": "b7d132d1688cea4747a7d765408e5c327e3b004fdb880881e53eb1e70dd04fbd",
+    "src/app/api/hr/organization/route.ts": "5b4c34a8ad3e26099fcee80db6e25e9ec950134e1284387b66f4ea0cadd45d26",
+    "src/app/api/hr/settings/route.ts": "00a40f19ab68b5c1d264a7ca810bb9a952c4be186262866be5aa1759c6deafbd",
     "src/lib/hr/organization-choices.ts": "6a1b8975de15150a7fc7c1c26a460cdf727291f16fbbf9d775b69ef0d32d8b13",
     "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
   },

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:30:32.409Z",
+  "checkedAt": "2026-10-26T03:33:33.698Z",
   "expected": 10,
   "passed": 10,
   "cases": [
@@ -45,7 +45,7 @@
     }
   ],
   "sourceHashes": {
-    "src/app/api/seo/articles/route.ts": "0c2ed76ff587e36b100eeb1b36ea0f3bf7103e018b32f3aa2c26ee7b704b5827",
+    "src/app/api/seo/articles/route.ts": "f8459b7785ae7d780fe5a60feb1cf3702ecf0636c86c1054cd34460e9b99ff9b",
     "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9"
   },
   "scope": "Actual selected POST route and actual operation ID parser; original legacy assertions retained; synthetic admission/session/usage only. Atomic actual PostgreSQL tested separately. No browser/provider/production writes."
