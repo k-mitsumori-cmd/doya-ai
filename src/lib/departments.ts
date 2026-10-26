@@ -16,9 +16,10 @@ export interface Department {
   toolIds: readonly string[]
 }
 
+// ⚠️ ベータで隠しているツール（cunning）は、どの部署にも入れない（ユーザー決定。メイン経由 2026-10-26）。
 export const DEPARTMENTS: readonly Department[] = [
   { id: 'marketing', name: 'ドヤマーケAI', short: 'マーケ', toolIds: ['aio', 'seo', 'banner', 'adimage', 'persona', 'interview', 'asklink', 'popup', 'tenjikai'] },
-  { id: 'sales', name: 'ドヤセールスAI', short: 'セールス', toolIds: ['sfa', 'shodan', 'aishodan', 'doyalist', 'doyaslide', 'quote', 'cunning'] },
+  { id: 'sales', name: 'ドヤセールスAI', short: 'セールス', toolIds: ['sfa', 'shodan', 'aishodan', 'doyalist', 'doyaslide', 'quote'] },
   { id: 'hr', name: 'ドヤ人事AI', short: '人事', toolIds: ['hr', 'mensetsu', 'shanai', 'kintai'] },
   { id: 'admin', name: 'ドヤ管理AI', short: '管理', toolIds: ['income', 'expense', 'promane'] },
 ]
