@@ -101,7 +101,7 @@ const within = (p, ms = 5000) => Promise.race([p, new Promise((_r, rej) => setTi
   await check('LLM: no temperature for models that reject non-default sampling; unchanged for the default model; the fallback log has only the status', async () => {
     const bodies = []
     const warns = []
-    const mod = load('seo/lib/gemini.ts', {}, {
+    const mod = load('seo/lib/gemini.ts', { '@/lib/slack/notify': { postSlack: async () => true } }, {
       process: { env: ENV }, AbortSignal, setTimeout: (fn) => { fn(); return 0 },
       console: { log() {}, error() {}, warn: (...a) => warns.push(a.join(' ')) },
       fetch: async (url, init) => {
