@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit, IncomeError, notFound } from '@/lib/income/access'
 import { parseContract, saveContract } from '@/lib/income/contracts'
+import { runWithTxRetry } from '@/lib/income/retry'
 import { idFrom, readJson, withIncome, type IdCtx } from '@/lib/income/route'
 
 export async function GET(req: NextRequest, c: IdCtx) {
@@ -27,7 +28,7 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'member', async (ctx) => {
     const id = await idFrom(c)
     const input = parseContract(await readJson(req))
-    await prisma.$transaction((tx) => saveContract(tx, ctx, input, id), { timeout: 30000, isolationLevel: 'Serializable' })
+    await runWithTxRetry(() => prisma.$transaction((tx) => saveContract(tx, ctx, input, id), { timeout: 30000, isolationLevel: 'Serializable' }))
     await audit(prisma, ctx, 'contract.update', 'contract', id, { status: input.status, amountExclTax: input.amountExclTax })
     return NextResponse.json({ id })
   }, { permission: 'income.contract.edit' })

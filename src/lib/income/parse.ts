@@ -118,8 +118,13 @@ export function invoiceDraft(raw: unknown) {
   const ls = lines(body, 'lines', { allowNegative: true })
   const rawLines = body.lines as Body[]
   const issueDate = date(body, 'issueDate', '請求日', true)!
+  // 取引先は「既存を選ぶ」か「名前だけで新しく作る」（2026-10-26。取引先を先に登録しなくても請求書を作れる）
+  const clientId = str(body, 'clientId', '取引先', { max: 64 })
+  const newClientName = clientId ? null : str(body, 'newClientName', '取引先名', { max: 120 })
+  if (!clientId && !newClientName) throw new IncomeError('取引先を選ぶか、取引先名を入力してください')
   return {
-    clientId: reqStr(body, 'clientId', '取引先', 64),
+    clientId: clientId ?? '',
+    newClientName,
     title: str(body, 'title', '件名', { max: 120 }),
     issueDate,
     dueDate: date(body, 'dueDate', '支払期日'),

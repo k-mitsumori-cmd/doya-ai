@@ -131,6 +131,8 @@ export function errorResponse(error: unknown) {
   if (error instanceof IncomeError) return NextResponse.json({ error: error.message }, { status: error.status })
   // Serializable の競合（同時操作）。やり直せば通る
   if ((error as { code?: string })?.code === 'P2034') return NextResponse.json({ error: '同時に別の操作が行われました。もう一度お試しください。' }, { status: 409 })
+  // 一意制約の違反。確定のやり直し（INC-F03）でも解消しなかった場合など。中身の重複か同時操作のどちらか
+  if ((error as { code?: string })?.code === 'P2002') return NextResponse.json({ error: '同じ内容がすでに登録されているか、同時に別の操作が行われました。画面を更新してから、もう一度お試しください。' }, { status: 409 })
   // ⚠️ 例外の中身（message/stack）はログに出さない（個人情報・取引先名が混ざりうる。verify-api-error-log-privacy）
   console.error('[income] unexpected error', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
   return NextResponse.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })

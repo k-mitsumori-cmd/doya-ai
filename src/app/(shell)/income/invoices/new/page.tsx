@@ -1,8 +1,7 @@
 'use client'
 
 // 請求書の手入力（下書き）
-import { useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { todayJst } from '@/lib/income/dates'
 import {
@@ -10,11 +9,16 @@ import {
   useUnsavedGuard, type LineRow,
 } from '@/components/income/ui'
 
+/** 取引先の選択欄で「新しい取引先を登録する」を表す値 */
+const NEW_CLIENT = '__new__'
+
 export default function NewInvoicePage() {
   const router = useRouter()
   const clientsRes = useResource(() => fetchJson<{ clients: { id: string; name: string }[] }>('/api/income/clients').then((d) => d.clients), 'clients')
   const clients = clientsRes.data ?? []
   const [clientId, setClientId] = useState('')
+  // 取引先をその場で作るときの名前（2026-10-26。取引先を先に登録しなくても請求書を作れる）
+  const [newClientName, setNewClientName] = useState('')
   const [title, setTitle] = useState('')
   const [issueDate, setIssueDate] = useState(todayJst())
   const [dueDate, setDueDate] = useState('')
@@ -24,11 +28,16 @@ export default function NewInvoicePage() {
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
-  const { markClean } = useUnsavedGuard({ clientId, title, issueDate, dueDate, notes, rows })
+  // 取引先が 0 件のときは、最初から「新しい取引先」の入力にする
+  useEffect(() => {
+    if (clientsRes.data && clientsRes.data.length === 0) setClientId((c) => c || NEW_CLIENT)
+  }, [clientsRes.data])
+  // 自動で「新しい取引先」にしただけでは、未保存の確認を出さない
+  const { markClean } = useUnsavedGuard({ clientId: clientId === NEW_CLIENT && !newClientName ? '' : clientId, newClientName, title, issueDate, dueDate, notes, rows })
   const touch = (k: string) => () => setTouched((t) => ({ ...t, [k]: true }))
 
   const errors: Record<string, string | undefined> = {
-    clientId: clientId ? undefined : '取引先を選択してください',
+    clientId: !clientId ? '取引先を選ぶか、新しい取引先を登録してください' : clientId === NEW_CLIENT && !newClientName.trim() ? '新しい取引先の名前を入力してください' : undefined,
     issueDate: issueDate ? undefined : '請求日を入力してください',
     dueDate: dueDate && issueDate && dueDate < issueDate ? '支払期日は請求日以降にしてください' : undefined,
   }
@@ -46,7 +55,10 @@ export default function NewInvoicePage() {
     try {
       const d = await fetchJson<{ invoice: { id: string } }>('/api/income/invoices', {
         method: 'POST',
-        body: { clientId, title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows) },
+        body: {
+          ...(clientId === NEW_CLIENT ? { newClientName: newClientName.trim() } : { clientId }),
+          title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows),
+        },
       })
       markClean()
       toast('請求書の下書きを保存しました')
@@ -67,11 +79,27 @@ export default function NewInvoicePage() {
       <form onSubmit={submit} noValidate className="space-y-4">
         <Card title="宛先と日付">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="取引先（必須）" error={err('clientId')}>
-              <select className={inputCls} value={clientId} onChange={(e) => setClientId(e.target.value)} onBlur={touch('clientId')}>
-                <option value="">選択してください</option>
+            <Field
+              label="取引先（必須）"
+              error={err('clientId')}
+              hint={clientId === NEW_CLIENT ? '名前だけで登録できます。住所や請求先のメールは、あとから取引先の画面で足せます' : undefined}
+            >
+              <select className={inputCls} value={clientId} onChange={(e) => setClientId(e.target.value)} onBlur={touch('clientId')} disabled={!clientsRes.data && !clientsRes.error}>
+                <option value="">{clientsRes.data || clientsRes.error ? '選択してください' : '読み込み中です'}</option>
+                <option value={NEW_CLIENT}>新しい取引先を登録する</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              {clientId === NEW_CLIENT && (
+                <input
+                  className={`${inputCls} mt-2`}
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  onBlur={touch('clientId')}
+                  maxLength={120}
+                  placeholder="例: 株式会社サンプル商事"
+                  aria-label="新しい取引先の名前"
+                />
+              )}
             </Field>
             <Field label="件名">
               <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="例: 11月分 制作費" />
@@ -83,9 +111,6 @@ export default function NewInvoicePage() {
               <input type="date" className={inputCls} value={dueDate} onChange={(e) => setDueDate(e.target.value)} onBlur={touch('dueDate')} />
             </Field>
           </div>
-          {clientsRes.data && clients.length === 0 && (
-            <p className={s.note} style={{ margin: '16px 0 0' }}>取引先がまだありません。先に <Link href="/income/clients" className={s.link}>取引先を登録</Link> してください。</p>
-          )}
           {clientsRes.error && <div style={{ marginTop: 16 }}><ErrorText message={clientsRes.error.status === 403 ? '取引先を見る権限がありません。組織の管理者（オーナー）に権限の変更を依頼してください' : '取引先を読み込めませんでした。ページを開き直してください。'} /></div>}
         </Card>
         <Card title="明細">
