@@ -556,6 +556,22 @@ runAgentTasks({
 4. 表を本番 DB に足すのは、ユーザーだけに見える preview で試して問題が無いと分かってから。その時点で改めてユーザーの承認を取る。今は `MIGRATION.md` の SQL まで。`AGENT_RUNS_STORE` は off のまま。
 5. 戻すのは AI の生成そのものが失敗したときだけ。生成ができて保存だけ失敗したときは、できた案を残し、AI を呼ばずに保存をやり直す（§7）。
 
+### 12.1 自動点検（B1）が作った物を、利用者の枠に数えない（2026-10-26 ユーザー決定）
+
+- 合図は `x-doya-system-watch`（`CRON_SECRET` から作る HMAC、`src/lib/system-watch/marker.ts`）。エージェントの API が、ツールのルートへそのまま渡す。
+- 合図が正しいときだけ、ルートが作った記録の ID を `SystemSetting`（`watch:v1:marked:<種類>:<組織か利用者>:<日本時間の月>`）に残す。名前の「【自動点検】」では外さない。利用者が自分で付けられるためです。
+
+| ツール | ID を残す所 | 数えるときに ID を除く所 | 合図が正しいときに増やさない台帳 |
+|---|---|---|---|
+| 商談準備 | `/api/shodan/preparations` | 月の枠の予約 | —（数えるだけ） |
+| 見積書 | `/api/quote/documents`（作成と同じトランザクション） | 累計と今月の件数（トランザクションの外と中） | 組織の台帳 `org-quota:v1:quoteDocuments:…` |
+| スライド | `/api/doyaslide/projects`（作成と同じトランザクション） | 今月の件数（作成時・`countProjects`） | `doyaslide-projects` の `monthlyUsage` |
+| スライドの構成 | — | — | 1日の文章生成の回数（`reserveDoyaSlideTextCall`） |
+
+- 確かめ方: `scripts/security-regression/verify-system-watch-quote-slide.cjs`。合図が正しい・無い・偽・名前だけ「【自動点検】」の4通りを、本物の `marker.ts` と `marked-records.ts` で回す。
+- 限り: ID は月ごとに分けて残し、読むのは今月の分だけです。無料プランの見積書（累計3件）では、先月までに自動点検が作った分は累計に入ります。B1 はプロの組織で回すので、困りません。
+- 利用の記録（`recordServiceUsage`）・図鑑・ミッション・年間の報告は、システム点検の担当が直します（`usage-summary.ts` など）。
+
 ## 13. まだ良くない点と、次の改善
 
 まだ良くない点:

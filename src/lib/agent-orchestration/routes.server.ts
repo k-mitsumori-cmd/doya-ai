@@ -19,6 +19,8 @@ import { isSystemWatchRequest, SYSTEM_WATCH_HEADER, SYSTEM_WATCH_PREFIX, withSys
  * 1. 合図が正しいときだけ、見積書・スライドの名前に「【自動点検】」を付け、商談準備には印を渡す（ルートも合図を確かめる）
  * 2. 合図をツールのルートまで渡す（callToolRoute）
  * 3. 商談準備のルートが、合図が正しいときだけ作った記録の ID を残し、月の枠の数え方からその ID を外す（名前の印では外さない）
+ * 4. 見積書・スライドのルートも同じく ID を残し、枠の数え方から外し、台帳（見積書の組織の台帳・スライドの月の件数・1日の文章生成の回数）を増やさない
+ *    （verify-system-watch-quote-slide.cjs）
  */
 export const SYSTEM_WATCH_MARKER_SUPPORTED = true
 

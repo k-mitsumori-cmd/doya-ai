@@ -14,6 +14,7 @@ import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
 import { z } from 'zod'
 import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { isSystemWatchRequest } from '@/lib/system-watch/marker'
 
 const SlideSchema = z.object({
   role: z.string().trim().min(1).max(120),
@@ -62,7 +63,10 @@ async function postHandler(req: NextRequest) {
     }
     claimedProjectId = projectId
     claimedAt = claimTime
-    await reserveDoyaSlideTextCall(userId, 'structure')
+    // 自動点検（system-watch の B1）の合図が正しいときは、利用者の1日の文章生成の回数に数えない
+    let systemWatch = false
+    try { systemWatch = isSystemWatchRequest(req.headers) } catch { systemWatch = false }
+    if (!systemWatch) await reserveDoyaSlideTextCall(userId, 'structure')
 
     // 参考URLがあれば内容を取得して参考情報に加える（失敗しても構成生成は続行）
     let ref = referenceText || ''

@@ -14,6 +14,8 @@ import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/o
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
+import { isSystemWatchRequest } from '@/lib/system-watch/marker'
+import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -95,15 +97,22 @@ export async function POST(req: NextRequest) {
   }
   const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
+  // 自動点検（system-watch の B1）の合図が正しいか。正しいときだけ、作った見積書の ID を残し、台帳を増やさない。
+  // 枠を数えるときは、残した ID（今月の分）を除く。名前の「【自動点検】」では除かない（利用者が付けられるため）。
+  let systemWatch = false
+  try { systemWatch = isSystemWatchRequest(req.headers) } catch { systemWatch = false }
+  const watchedIds = async (db: Parameters<typeof systemWatchRecordIds>[0]) =>
+    excludeIds(await systemWatchRecordIds(db, 'quote-document', [ctx.organizationId]))
+
   // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
   const checkQuota = () => assertFreeLimit(
     'quoteDocuments',
-    () => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'lifetime', () =>
-      prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } })),
+    () => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'lifetime', async () =>
+      prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId, ...await watchedIds(prisma) } })),
     ownerUserId,
-    (since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'monthly', () =>
+    (since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'monthly', async () =>
       prisma.quoteDocument.count({
-        where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
+        where: { organizationId: ctx.organizationId, createdAt: { gte: since }, ...await watchedIds(prisma) },
       }), since)
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
@@ -176,10 +185,11 @@ export async function POST(req: NextRequest) {
         // 上限確認と作成を同一の Serializable トランザクションにする。
         // 複数タブで同時に作っても、片方は競合として再試行され上限を超えない。
         const now = new Date()
+        const watched = await watchedIds(tx)
         const lifetime = await getOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, 'lifetime', () =>
-          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId } }), now)
+          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId, ...watched } }), now)
         const monthly = await getOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, 'monthly', () =>
-          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: jstStartOfMonthUtc(now) } } }), now)
+          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: jstStartOfMonthUtc(now) }, ...watched } }), now)
         if (quota.limit !== undefined && (quota.limit === FREE_LIMITS.quoteDocuments ? lifetime : monthly) >= quota.limit) return { kind: 'limit' } as const
         const created = await tx.quoteDocument.create({
           data: {
@@ -215,7 +225,8 @@ export async function POST(req: NextRequest) {
           select: { id: true, quoteNo: true },
         })
         await recalcDocument(created.id, tx)
-        await recordOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, lifetime, monthly, now)
+        if (systemWatch) await markSystemWatchRecord(tx, 'quote-document', ctx.organizationId, created.id, now)
+        else await recordOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, lifetime, monthly, now)
         return { kind: 'created', doc: created } as const
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
       break

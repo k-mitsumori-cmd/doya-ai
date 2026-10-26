@@ -8,6 +8,8 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { getUserDoyaSlideLimits, DOYASLIDE_PROJECT_SERVICE_ID, isSameMonth, monthStart } from '@/lib/doyaslide/limits'
 import { getDocType, DOC_TYPES, ASPECT_TO_SIZE, STYLE_PRESETS, MIN_SLIDES, MAX_SLIDES } from '@/lib/doyaslide/constants'
 import { errorSuffix } from '@/lib/doyaslide/errors'
+import { isSystemWatchRequest } from '@/lib/system-watch/marker'
+import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
 export async function GET(req: NextRequest) {
@@ -96,15 +98,24 @@ export async function POST(req: NextRequest) {
       stylePreset: stylePreset || 'corporate',
       status: 'draft',
     }
+    // 自動点検（system-watch の B1）の合図が正しいときだけ、作ったプロジェクトの ID を残し、月の件数の台帳を増やさない。
+    // 数えるときは、残した ID（今月の分）を除く。名前の「【自動点検】」では除かない（利用者が付けられるため）。
+    let systemWatch = false
+    try { systemWatch = isSystemWatchRequest(req.headers) } catch { systemWatch = false }
     const limits = await getUserDoyaSlideLimits(userId)
     const project = limits.maxProjects === -1
-      ? await prisma.doyaSlideProject.create({ data })
+      ? await prisma.$transaction(async (tx) => {
+        const project = await tx.doyaSlideProject.create({ data })
+        if (systemWatch) await markSystemWatchRecord(tx, 'doyaslide-project', userId, project.id)
+        return project
+      })
       : await prisma.$transaction(async (tx) => {
         const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
         if (users.length === 0) throw new Error('DoyaSlide account not found')
         const now = new Date()
+        const watched = excludeIds(await systemWatchRecordIds(tx, 'doyaslide-project', [userId], now))
         const [existing, ledger] = await Promise.all([
-          tx.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) } } }),
+          tx.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) }, ...watched } }),
           tx.userServiceSubscription.findUnique({
             where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
             select: { monthlyUsage: true, lastUsageReset: true },
@@ -113,6 +124,10 @@ export async function POST(req: NextRequest) {
         const used = Math.max(existing, ledger && isSameMonth(ledger.lastUsageReset, now) ? ledger.monthlyUsage : 0)
         if (used >= limits.maxProjects) return null
         const project = await tx.doyaSlideProject.create({ data })
+        if (systemWatch) {
+          await markSystemWatchRecord(tx, 'doyaslide-project', userId, project.id, now)
+          return project
+        }
         await tx.userServiceSubscription.upsert({
           where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
           create: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID, monthlyUsage: used + 1, lastUsageReset: now },
