@@ -6021,6 +6021,22 @@ model AccountCompanyRecordAuthor {
   @@map("account_company_record_authors")
 }
 
+// ツールの組織と会社のつながり（全体設計書の CompanyServiceLink の簡易版。統括の再監査 2026-10-26 中A・中B への対応）
+// 1つの組織は1つの会社にだけつながる。つながった組織にだけ、会社の役割の上限と決まりを当てる。つながりは消えない（作った人が外されても変わらない）
+// つなぐ時: ①会社の持ち主が作った組織を、旗が off でない間に初めて判定したとき（自動）②会社の管理者以上が、自分が最上位の役割の組織をつなぐ（/api/company/tool-orgs）
+model AccountCompanyToolOrg {
+  id             String   @id @default(cuid())
+  companyId      String
+  tool           String // kintai | hr | quote | income | expense | promane | sfa | shodan | aio | mensetsu | aishodan
+  organizationId String // 各ツールの組織の id（プロマネはワークスペースの id）
+  linkedBy       String // つないだ人の User.id（自動のときは会社の持ち主）
+  createdAt      DateTime @default(now())
+
+  @@unique([tool, organizationId])
+  @@index([companyId])
+  @@map("account_company_tool_orgs")
+}
+
 // 社員ごとの部署（部署ごとの入口の段階3。ROLES-2026-10-26.md §11）。持ち主も行を持てる（持ち主は account_company_members に行が無いため、companyId と userId で持つ）
 // 部署の id: marketing | sales | hr | admin（正本は src/lib/departments.ts）。オーナーと管理者は、行に関係なく全部を見る
 model AccountCompanyMemberDepartment {

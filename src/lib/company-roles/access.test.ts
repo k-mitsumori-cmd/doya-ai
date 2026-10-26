@@ -134,10 +134,10 @@ test('authorizeCompanyAction: scope があれば、組織が属する会社で�
   assert.deepEqual(inC1.checked && inC1.context, { companyId: 'c1', role: 'guest' })
   const inC9 = await authorizeCompanyAction({ userId: 'u6', permission: 'invoice.issue', mode: 'enforce', db, scope: { tool: 'income', organizationId: 'o9' } })
   assert.equal(inC9.allowed, true)
-  // 会社が決まらない組織でも、本人が会社のメンバーなら、その会社の役割を当てる（止める側に倒す。再監査の中1）
+  // 会社につながっていない組織では、止めない（設計書 §4.1。再監査の中B: 会社のゲストが自分で作った組織は、本人が管理できる）
   const free = await authorizeCompanyAction({ userId: 'u6', permission: 'invoice.issue', mode: 'enforce', db, scope: { tool: 'income', organizationId: 'nobody-org' } })
-  assert.equal(free.allowed, false)
-  assert.deepEqual(free.checked && free.context, { companyId: 'c1', role: 'guest' })
+  assert.equal(free.allowed, true)
+  assert.equal(free.checked && free.context, null)
 })
 
 test('authorizeCompanyAction: policy を DB から読んで使う（請求書の発行をマネージャーからはずす）', async () => {
@@ -214,8 +214,8 @@ test('applyCompanyCeiling: 会社のメンバーでない人（ツールだけ�
   assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'outsider', toolRole: 'hr_admin', mode: 'enforce', db }), 'employee')
 })
 
-test('applyCompanyCeiling: 会社が決まらない組織では、会社のメンバーには本人の会社の上限、会社に入っていない人には上限なし', async () => {
+test('applyCompanyCeiling: 会社につながっていない組織では、会社のメンバーにも会社に入っていない人にも上限を当てない（再監査の中B）', async () => {
   const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
-  assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'employee')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
   assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'solo', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
 })

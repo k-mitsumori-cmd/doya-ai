@@ -12,9 +12,10 @@ import { POLICY_KEYS, POLICY_LABEL, type CompanyRolePolicy } from '@/lib/company
 import type { MigrationPlanRow } from '@/lib/company-roles/migration'
 import { DEPARTMENT_IDS, type DepartmentId } from '@/lib/company-roles/departments'
 
+import styles from './CompanyRoles.module.css'
+
 // 部署の名前（正本は UI の src/lib/departments.ts。入ったらそちらの名前を使う）
 const DEPARTMENT_LABEL: Record<DepartmentId, string> = { marketing: 'マーケ', sales: 'セールス', hr: '人事', admin: '管理' }
-import styles from './CompanyRoles.module.css'
 
 export interface MemberRow {
   id: string | null
