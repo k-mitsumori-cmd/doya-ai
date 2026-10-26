@@ -26,14 +26,14 @@
 /* メンバーの一覧: 広い画面は表、375px では縦に積むカード */
 .members { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 .member {
-  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(132px, auto); gap: 12px; align-items: center;
   padding: 14px 0; border-bottom: 1px solid var(--line);
 }
 .member:last-child { border-bottom: 0; }
 .who { min-width: 0; }
 .name { margin: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
-.email { margin: 2px 0 0; font-size: 12px; color: var(--sub); overflow-wrap: anywhere; }
-.status { font-size: 12px; color: var(--muted); }
+.email { margin: 2px 0 0; font-size: 12px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .select {
   min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
   color: var(--ink); padding: 0 10px; font-size: 14px; max-width: 100%;
@@ -54,7 +54,8 @@
 
 /* 決まり */
 .policies { display: grid; gap: 14px; }
-.policy { display: grid; gap: 6px; }
+.policy { display: grid; gap: 6px; min-width: 0; }
+.policy .select { width: 100%; }
 .policyTitle { font-size: 14px; font-weight: 700; }
 
 /* 記録 */
@@ -67,12 +68,13 @@
 .error { margin: 0; font-size: 13px; color: var(--danger, #c62828); }
 .more { margin-top: 10px; }
 
-.grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 18px; align-items: start; }
 
 @media (max-width: 767px) {
   .page { padding: 20px 16px 96px; }
-  .grid { grid-template-columns: minmax(0, 1fr); }
-  .member { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .member { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .member > :last-child { grid-column: 1 / -1; }
+  .member .select { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

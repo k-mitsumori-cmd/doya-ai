@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, c: IdCtx) {
     await prisma.$transaction((tx) => allocate(tx, ctx, id, rows), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'payment.allocate', 'payment', id, { rows })
     return NextResponse.json({ ok: true })
-  })
+  }, { permission: 'invoice.issue' })
 }
 
 /** 消込を外す: ?invoiceId= */
@@ -33,5 +33,5 @@ export async function DELETE(req: NextRequest, c: IdCtx) {
     await prisma.$transaction((tx) => unallocate(tx, ctx, id, invoiceId), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'payment.unallocate', 'payment', id, { invoiceId })
     return NextResponse.json({ ok: true })
-  })
+  }, { permission: 'invoice.issue' })
 }

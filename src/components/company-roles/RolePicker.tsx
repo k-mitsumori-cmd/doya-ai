@@ -4,7 +4,7 @@
 // ============================================
 // ⚠️ 選べる役割（roles）はサーバーが決めて渡す（/api/company/roles の members[].grantable や、招待する人の grantableCompanyRoles）。ここは出すだけ。
 // ⚠️ 375px では縦に並べる（いつも縦の一覧なので、幅で崩れない）。
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { COMPANY_ROLE_DESCRIPTION, COMPANY_ROLE_LABEL, type CompanyRole } from '@/lib/company-roles/roles'
 import styles from './CompanyRoles.module.css'
 
@@ -30,4 +30,10 @@ export function RolePicker({ roles, value, onChange, legend = '役割', disabled
       ))}
     </fieldset>
   )
+}
+
+/** 見本（/ds-preview/company-roles）。選んだ値を自分で持つ */
+export function RolePickerPreview({ roles, legend }: { roles: readonly CompanyRole[]; legend?: string }) {
+  const [value, setValue] = useState<CompanyRole>('member')
+  return <RolePicker roles={roles} value={value} onChange={setValue} legend={legend} />
 }

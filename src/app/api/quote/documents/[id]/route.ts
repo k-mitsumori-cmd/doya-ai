@@ -172,6 +172,12 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         if (next === 'confirmed') {
           const author = await findRecordAuthor('quote', existing.id)
           const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: 'quote.finalize', target: { isSelf: author === ctx.userId } })
+          // 作った人が分からない見積（旗を入れる前に作ったもの）は、止める側に倒す: 自分で作ったかもしれないので、管理者かオーナーだけが確定できる
+          const unknownAuthorBlocked = company.checked && company.mode === 'enforce' && author === null && company.context !== null
+            && company.context.role !== 'owner' && company.context.role !== 'admin'
+          if (unknownAuthorBlocked) {
+            return NextResponse.json({ error: 'この見積書は作った人の記録が無いため、管理者かオーナーが確定します。' }, { status: 403 })
+          }
           if (!company.allowed) {
             const self = company.checked && !company.decision.ok && company.decision.reason === 'SELF_APPROVAL'
             return NextResponse.json({ error: self ? 'ご自身で作った見積書は、ほかの方が確定します。マネージャーか管理者に確定を依頼してください。' : '見積書を確定する権限がありません。会社の管理者に依頼してください。' }, { status: 403 })

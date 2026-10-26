@@ -28,5 +28,5 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
     const updated = await prisma.incomeRevenueSchedule.findFirst({ where: { id, organizationId: ctx.organizationId } })
     await audit(prisma, ctx, skip ? 'schedule.skip' : 'schedule.unskip', 'schedule', id, { reason })
     return NextResponse.json({ schedule: updated })
-  })
+  }, { permission: 'income.contract.edit' })
 }

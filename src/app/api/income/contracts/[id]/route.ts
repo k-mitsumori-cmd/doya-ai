@@ -46,5 +46,5 @@ export async function DELETE(req: NextRequest, c: IdCtx) {
     }, { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.delete', 'contract', id)
     return NextResponse.json({ ok: true })
-  })
+  }, { permission: 'income.contract.edit' })
 }
