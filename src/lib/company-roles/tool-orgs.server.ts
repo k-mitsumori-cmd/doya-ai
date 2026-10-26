@@ -4,7 +4,8 @@
 // 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §4
 // 決まり（統括の再監査 2026-10-26 中A・中B を受けて、つながりを表に持つ形にした）:
 // - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）が正。つながりは消えない・移らない。
-// - 表に無い組織は、作った人（いちばん古いメンバーの行。プロマネはワークスペースの作成者）が会社の持ち主のときだけ、初めて判定したときにつなぐ（自動）。
+// - 表に無い組織は、作った人（いちばん古いメンバーの行。プロマネはワークスペースの作成者）が会社の持ち主で、今も最上位の役割で組織にいるときだけ、初めて判定したときにつなぐ（自動）。
+// - 会社の管理者以上は、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら記録に残す。
 //   作った人が会社の持ち主でない組織（社員が自分で作った組織・会社を持たない人の組織）は、どの会社にもつながない。上限も決まりも当てない。
 // - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
 import { prisma } from '@/lib/prisma'
@@ -57,6 +58,8 @@ export async function companyOfToolOrg(tool: ToolId, organizationId: string): Pr
   if (!creator) return null
   const own = await prisma.accountCompany.findUnique({ where: { userId: creator }, select: { id: true, userId: true } })
   if (!own) return null
+  // 作った人が今も最上位の役割で組織にいるときだけ、自動でつなぐ（引き継いだあとの組織を、前の持ち主の会社につながない。自動の点検の指摘）
+  if (!(await isToolOrgTopMember(tool, organizationId, creator))) return null
   try {
     const row = await prisma.accountCompanyToolOrg.upsert({
       where: { tool_organizationId: { tool, organizationId } },
@@ -104,4 +107,11 @@ export async function linkToolOrg(input: { companyId: string; actorUserId: strin
   if (existing) return existing.companyId === input.companyId ? { ok: true, created: false } : { ok: false, status: 409, code: 'LINKED_ELSEWHERE' }
   await prisma.accountCompanyToolOrg.create({ data: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId, linkedBy: input.actorUserId } })
   return { ok: true, created: true }
+}
+
+/** 会社の管理者以上が、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため） */
+export async function unlinkToolOrg(input: { companyId: string; actorIsAdmin: boolean; tool: ToolId; organizationId: string }): Promise<{ ok: true } | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_FOUND' }> {
+  if (!input.actorIsAdmin) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
+  const r = await prisma.accountCompanyToolOrg.deleteMany({ where: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId } })
+  return r.count === 1 ? { ok: true } : { ok: false, status: 404, code: 'NOT_FOUND' }
 }

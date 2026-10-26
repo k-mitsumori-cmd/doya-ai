@@ -1,8 +1,8 @@
 // ============================================
-// ツールの組織と会社のつながり GET（一覧）/ POST（つなぐ） /api/company/tool-orgs
+// ツールの組織と会社のつながり GET（一覧）/ POST（つなぐ）/ DELETE（外す） /api/company/tool-orgs
 // ============================================
 // ⚠️ 旗 COMPANY_ROLES_ROLLOUT の内側。つなぐのは会社の管理者以上で、そのツールの組織の最上位の役割の人だけ。
-// ⚠️ つながりは消さない・移さない（ほかの会社につながっている組織は 409）。仕様: ROLES-2026-10-26.md §4.1
+// ⚠️ つながりは、自分の会社の管理者以上が外すとき以外は消さない・移さない（ほかの会社につながっている組織は 409）。仕様: ROLES-2026-10-26.md §4.1
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +11,9 @@ import { prisma } from '@/lib/prisma'
 import { companyRolesApi, json } from '@/lib/company-roles/api.server'
 import { hasMinCompanyRole } from '@/lib/company-roles/roles'
 import { TOOL_ROLE_TABLES, type ToolId } from '@/lib/company-roles/tool-roles'
-import { linkToolOrg } from '@/lib/company-roles/tool-orgs.server'
+import { linkToolOrg, unlinkToolOrg } from '@/lib/company-roles/tool-orgs.server'
+import { buildRoleEvent } from '@/lib/company-roles/access'
+import { writeRoleEvent } from '@/lib/company-roles/access.server'
 
 const isToolId = (v: unknown): v is ToolId => typeof v === 'string' && Object.prototype.hasOwnProperty.call(TOOL_ROLE_TABLES, v)
 
@@ -37,6 +39,23 @@ export async function POST(req: NextRequest) {
       } as const
       return json({ code: d.code, error: messages[d.code] }, d.status)
     }
+    if (d.created) {
+      const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
+      await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_linked', fromRole: null, toRole: null, note: `${body.tool}:${body.organizationId}` }))
+    }
     return json({ ok: true, created: d.created }, d.created ? 201 : 200)
+  })
+}
+
+export async function DELETE(req: NextRequest) {
+  return companyRolesApi(async (s) => {
+    const q = new URL(req.url).searchParams
+    const tool = q.get('tool'), organizationId = q.get('organizationId') ?? ''
+    if (!isToolId(tool) || !organizationId || organizationId.length > 128) return json({ error: 'ツールと組織を選び直してください。' }, 400)
+    const d = await unlinkToolOrg({ companyId: s.companyId, actorIsAdmin: hasMinCompanyRole(s.role, 'admin'), tool, organizationId })
+    if (!d.ok) return json({ code: d.code, error: d.code === 'NOT_ALLOWED' ? 'つながりを外せるのは、管理者とオーナーです。' : 'この会社につながった組織が見つかりませんでした。' }, d.status)
+    const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
+    await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_unlinked', fromRole: null, toRole: null, note: `${tool}:${organizationId}` }))
+    return json({ ok: true })
   })
 }

@@ -5984,7 +5984,7 @@ model AccountCompanyRoleEvent {
   actorUserId    String
   targetMemberId String?
   targetEmail    String // 小文字にそろえる
-  kind           String // invited | joined | role_changed | removed | migrated | policy_changed | departments_changed
+  kind           String // invited | joined | role_changed | removed | migrated | policy_changed | departments_changed | tool_org_linked | tool_org_unlinked
   fromRole       String?
   toRole         String?
   note           String?

@@ -158,7 +158,7 @@ export async function applyCompanyCeiling(input: {
 // ============================================
 // 役割の変更の記録（誰が・いつ・誰を・何から何へ）
 // ============================================
-export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated' | 'policy_changed' | 'departments_changed'
+export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated' | 'policy_changed' | 'departments_changed' | 'tool_org_linked' | 'tool_org_unlinked'
 
 export interface RoleEventRecord {
   companyId: string

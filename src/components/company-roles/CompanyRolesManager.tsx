@@ -58,6 +58,8 @@ function eventText(e: EventRow): string {
     case 'migrated': return `${e.targetEmail} の役割を、今までのツールの役割から「${label(e.toRole)}」に決めました。`
     case 'policy_changed': return `${who} が権限の決まりを変えました。`
     case 'departments_changed': return `${who} が ${e.targetEmail} の部署を変えました。`
+    case 'tool_org_linked': return `${who} がツールの組織を会社につなぎました。`
+    case 'tool_org_unlinked': return `${who} がツールの組織のつながりを外しました。`
     default: return `${who} が変更しました。`
   }
 }
