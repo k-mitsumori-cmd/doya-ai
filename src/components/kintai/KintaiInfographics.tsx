@@ -12,7 +12,7 @@ import { BigFigure, InfoEmpty, InfoPanel, InfoReserve, Pictogram } from '@/compo
 
 /** 出勤の状況の枠の高さ（px。読み込み中の枠と同じ。1280px と 375px の実測） */
 export const TEAM_TODAY_H = 132
-export const TEAM_TODAY_H_SM = 306
+export const TEAM_TODAY_H_SM = 312
 import { CountUp } from '@/components/ds/motion'
 import { businessDaysOf } from '@/lib/kintai/jp-holidays'
 

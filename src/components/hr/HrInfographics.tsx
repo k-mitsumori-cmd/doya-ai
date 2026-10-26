@@ -9,8 +9,8 @@ import { Button } from '@/components/ds'
 import { InfoEmpty, InfoPanel, InfoPanelLoading, InfoReserve } from '@/components/ds/infographic'
 
 /** 読み込み中の枠の高さ（px。6部署のときの中身の実測。1280px と 375px） */
-const HEADCOUNT_H = 330
-const HEADCOUNT_H_SM = 630
+const HEADCOUNT_H = 310
+const HEADCOUNT_H_SM = 589
 import { CountUp } from '@/components/ds/motion'
 
 export function HeadcountInfo({ rows, total }: { rows: { name: string; count: number }[]; total: number }) {
