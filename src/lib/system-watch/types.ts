@@ -32,6 +32,8 @@ export type CheckDef = {
   threshold: number
   /** 失敗が続くとき、知らせ直す間隔（既定 6時間）。直すのに日数がかかる設定の不足は 24時間にする */
   repeatMs?: number
+  /** 確認そのものの時間の上限（既定 25秒）。エージェントの作業のように長くかかる確認だけ長くする */
+  timeoutMs?: number
   /** 直し方の候補 */
   hints: string[]
   run: () => Promise<CheckOutcome>

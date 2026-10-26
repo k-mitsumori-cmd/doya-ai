@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { diffSnapshots, handlePaidRequest, type PaidRouteDeps } from './paid-route'
+import { diffSnapshots, handlePaidRequest, type PaidRouteDeps, type Snapshot } from './paid-route'
 import { wrapWithDailyCap } from './paid-run'
 import type { CheckDef, CheckResult } from './types'
 
@@ -25,7 +25,7 @@ function makeDeps(over: Partial<PaidRouteDeps> = {}) {
     readSpend: async () => ({ yen: 0 }),
     capYen: 10,
     switchKeys: ['watch:v1:paid-enabled', 'watch:v1:paid-agent-enabled'],
-    snapshot: async () => (snaps++ === 0
+    snapshot: async (): Promise<Snapshot> => (snaps++ === 0
       ? { settings: { 'watch:v1:marked:quote-document:org1:2026-10': '["q0"]', 'org-quota:v1:quoteDocuments:h:2026-10': '3' }, powerLeft: 2969 }
       : { settings: { 'watch:v1:marked:quote-document:org1:2026-10': '["q0","q1"]', 'watch:v1:marked:shodan-preparation:org1:2026-10': '["s1"]', 'org-quota:v1:quoteDocuments:h:2026-10': '3' }, powerLeft: 2938 }) as { settings: Record<string, string>; powerLeft: number },
     ...over,

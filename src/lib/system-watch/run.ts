@@ -16,7 +16,7 @@ async function runOne(c: CheckDef): Promise<CheckResult> {
   try {
     const out = await Promise.race([
       c.run(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`確認そのものが ${PER_CHECK_TIMEOUT_MS / 1000}秒で終わりませんでした`)), PER_CHECK_TIMEOUT_MS)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`確認そのものが ${(c.timeoutMs ?? PER_CHECK_TIMEOUT_MS) / 1000}秒で終わりませんでした`)), c.timeoutMs ?? PER_CHECK_TIMEOUT_MS)),
     ])
     return { ...base, ...out, ms: Date.now() - started }
   } catch (e) {
