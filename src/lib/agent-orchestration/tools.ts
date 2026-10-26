@@ -40,7 +40,7 @@ export interface ToolDeps {
    * 前の試みで作ったまま、構成の無いスライドの ID（本人の、少し前に同じ名前・種類・枚数で作ったもの）。無ければ null。
    * 記録の表が無いとき、時間切れのあとのやり直しで、同じ名前のスライドを作り増やさないために使う
    */
-  reusableSlideProject?: (input: { title: string; docType: string; slideCount: number }) => Promise<string | null>
+  reusableSlideProject?: (input: { title: string; docType: string; slideCount: number; customBrief: string }) => Promise<string | null>
   /** スライドの構成を待つ時間（ミリ秒）。無ければ SLIDE_STRUCTURE_WAIT_MS。テストで短くするためのもの */
   slideStructureWaitMs?: number
 }
@@ -237,7 +237,7 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
     const input = slideInputOf(a)
     const title = labeled(deps, input.title, 120)
     // 前の試みが時間切れで終わり、ID が残っていないときは、そのとき作ったスライドを使う（同じ名前のスライドを増やさない）
-    projectId = (await deps.reusableSlideProject?.({ title, docType: input.docType, slideCount: input.slideCount }).catch(() => null)) ?? null
+    projectId = (await deps.reusableSlideProject?.({ title, docType: input.docType, slideCount: input.slideCount, customBrief: input.customBrief }).catch(() => null)) ?? null
     if (!projectId) {
       const res = await deps.call('slide.project', { ...input, title })
       if (!ok(res)) throw toTaskError('doyaslide', res, 'スライドを作り始められませんでした。もう一度お試しください。')
@@ -249,6 +249,20 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
   }
   const st = await withWait(deps.call('slide.structure', { projectId, referenceUrl: a.url }), deps.slideStructureWaitMs ?? SLIDE_STRUCTURE_WAIT_MS)
   if (st === TIMED_OUT) throw new AgentTaskError('スライドの構成づくりに時間がかかっています。数分おいてからやり直すと、同じスライドで続けます。', 'tool', { projectId })
+  const stCode = obj(st.data).code
+  // 前の試みで構成までできていた（そのあと記録だけが止められた）: 作り直さず、できたものとして返す（2026-10-26 統括の監査）
+  if (st.status === 409 && stCode === 'DOYASLIDE_STRUCTURE_EXISTS') {
+    return {
+      summary: 'スライドの構成はできています。',
+      points: [],
+      href: `/doyaslide/${encodeURIComponent(projectId)}`,
+      hrefLabel: 'スライドの画像を作る',
+    }
+  }
+  // 前の試みの構成づくりが、まだ動いている
+  if (st.status === 409 && stCode === 'DOYASLIDE_STRUCTURE_BUSY') {
+    throw new AgentTaskError('スライドの構成を作っています。数分おいてからやり直すと、同じスライドで続けます。', 'tool', { projectId })
+  }
   if (!ok(st)) throw toTaskError('doyaslide', st, 'スライドの構成を作れませんでした。もう一度お試しください。', { projectId })
   const slides = Array.isArray(obj(st.data).slides) ? (obj(st.data).slides as unknown[]).map(obj) : []
   const heads = slides.map((s) => str(s.headline, 500)).filter((h): h is string => !!h)

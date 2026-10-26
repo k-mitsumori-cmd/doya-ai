@@ -262,3 +262,15 @@ test('checkpoint は、自分が取った ToDo にだけ書く（取り直され
   await repo.saveResume(U, run.id, 'slides', new Date('2026-10-26T03:10:00Z'), { projectId: 'p9' })
   assert.deepEqual(task.resume, { projectId: 'p9' })
 })
+
+test('結果は、自分が取った試みにだけ書く（6分たって取り直されたあとに古い試みが終わっても、新しい試みを書き換えない）', async () => {
+  const { repo, run } = await newRun()
+  const task = repo.tasks.find((x) => x.taskId === 'slides')!
+  const newer = new Date('2026-10-26T03:10:00Z')
+  Object.assign(task, { status: 'running', startedAt: newer })
+  await repo.finishTask(U, run.id, 'slides', new Date('2026-10-26T03:00:00Z'), { status: 'failed', error: '古い試み' })
+  assert.equal(task.status, 'running')
+  assert.equal(task.error ?? null, null)
+  await repo.finishTask(U, run.id, 'slides', newer, { status: 'done' })
+  assert.equal(task.status, 'done')
+})

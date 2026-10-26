@@ -542,10 +542,10 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
       './sources.server':{doyaPowerOnForRequest:async()=>false},
     },{NODE_ENV:'production'});
     const now=new Date('2026-10-26T03:00:00Z');
-    assert.equal(await rs.reusableSlideProject('u-1',{title:'t',docType:'proposal',slideCount:8},now),'p-left');
+    assert.equal(await rs.reusableSlideProject('u-1',{title:'t',docType:'proposal',slideCount:8,customBrief:'b'},now),'p-left');
     const w=seen.where;
     assert.equal(w.userId,'u-1');
-    assert.deepEqual([w.title,w.docType,w.slideCount],['t','proposal',8]);
+    assert.deepEqual([w.title,w.docType,w.slideCount,w.customBrief],['t','proposal',8,'b'],'the brief from the answers must match too');
     assert.equal(JSON.stringify(w.slides),JSON.stringify({none:{}}),'never a project that already has slides');
     assert.equal(JSON.stringify(w.status.in),JSON.stringify(['draft','error','structuring']));
     assert.equal(w.createdAt.gte.getTime(),now.getTime()-30*60*1000);

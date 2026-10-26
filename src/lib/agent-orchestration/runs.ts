@@ -75,8 +75,11 @@ export interface RunRepo {
   unclaimTask(userId: string, runId: string, taskId: string, startedAt: Date, back: Pick<TaskRow, 'status' | 'attempts' | 'startedAt'>): Promise<void>
   /** 動いている ToDo の resume を、終わる前に書く（running で startedAt が同じもの＝自分が取ったものだけ） */
   saveResume(userId: string, runId: string, taskId: string, startedAt: Date, resume: Record<string, string>): Promise<void>
-  /** 取った ToDo の結果を書く（running のものだけ） */
-  finishTask(userId: string, runId: string, taskId: string, patch: Partial<TaskRow>): Promise<void>
+  /**
+   * 取った ToDo の結果を書く（running で startedAt が同じもの＝自分が取ったものだけ）。
+   * 古い試みが、6分たって取り直されたあとに終わっても、新しい試みの記録を書き換えない
+   */
+  finishTask(userId: string, runId: string, taskId: string, startedAt: Date, patch: Partial<TaskRow>): Promise<void>
   /** 実行の状態と、ドヤパワーの合計を書く */
   updateRun(userId: string, runId: string, patch: Partial<Pick<RunRow, 'status' | 'powerUsed' | 'powerRefunded'>>): Promise<void>
 }
@@ -208,7 +211,7 @@ export async function runStoredTask(
   try {
     const result = await execute({ answers: got.run.answers, resume, checkpoint })
     const p = result.power ?? { used: 0, refunded: 0 }
-    await repo.finishTask(input.userId, input.runId, input.taskId, {
+    await repo.finishTask(input.userId, input.runId, input.taskId, claimedAt, {
       status: 'done', result, resume: null, error: null, failKind: null, failHref: null, failHrefLabel: null,
       powerUsed: before.used + p.used, powerRefunded: before.refunded + p.refunded, endedAt: now(),
     })
@@ -216,7 +219,7 @@ export async function runStoredTask(
   } catch (e) {
     const err = e instanceof AgentTaskError ? e : new AgentTaskError('うまく作れませんでした。もう一度お試しください。')
     const p = err.power ?? { used: 0, refunded: 0 }
-    await repo.finishTask(input.userId, input.runId, input.taskId, {
+    await repo.finishTask(input.userId, input.runId, input.taskId, claimedAt, {
       status: 'failed', error: err.userMessage, failKind: err.kind, failHref: err.href?.href ?? null, failHrefLabel: err.href?.label ?? null,
       resume: err.resume ?? current ?? null,
       powerUsed: before.used + p.used, powerRefunded: before.refunded + p.refunded, endedAt: now(),
@@ -279,8 +282,8 @@ export function createMemoryRunRepo(): RunRepo & { runs: RunRow[]; tasks: TaskRo
       const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running' && x.startedAt?.getTime() === startedAt.getTime())
       if (t) t.resume = { ...resume }
     },
-    async finishTask(userId, runId, taskId, patch) {
-      const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running')
+    async finishTask(userId, runId, taskId, startedAt, patch) {
+      const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running' && x.startedAt?.getTime() === startedAt.getTime())
       if (t) Object.assign(t, patch)
     },
     async updateRun(userId, runId, patch) {

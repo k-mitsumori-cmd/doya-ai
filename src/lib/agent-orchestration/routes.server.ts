@@ -68,20 +68,22 @@ export function fakeToolsEnabled(env: Record<string, string | undefined> = proce
   return env.NODE_ENV !== 'production' && env.AGENT_ORCHESTRATION_FAKE_TOOLS === '1'
 }
 
-type SlideProjectKey = { title: string; docType: string; slideCount: number }
+type SlideProjectKey = { title: string; docType: string; slideCount: number; customBrief: string }
 
 /** 使い直してよいスライドの作成から経った時間の上限（関数の上限 300 秒と、構成の止まった判定 6 分より長くとる） */
 export const REUSABLE_SLIDE_PROJECT_MS = 30 * 60 * 1000
 
 /**
- * 前の試みで作ったまま構成の無いスライド（本人の、30分以内に同じ名前・種類・枚数で作ったもの）の ID。
+ * 前の試みで作ったまま構成の無いスライド（本人の、30分以内に同じ名前・種類・枚数・作戦の中身で作ったもの）の ID。
+ * 作戦の中身（customBrief）は、エージェントが段階・提案・予算の答えから作る文。手で作ったスライドや、答えの違う作戦のものは使わない
+ * （2026-10-26 統括の監査で、名前・種類・枚数だけでは広すぎると指摘された）。
  * 構成の途中のもの（structuring）も返す。構成のルートが、動いている間は 409 で断り、6分止まっていれば取り直す
  */
 export async function reusableSlideProject(userId: string, input: SlideProjectKey, now: Date = new Date()): Promise<string | null> {
   const { prisma } = await import('@/lib/prisma')
   const found = await prisma.doyaSlideProject.findFirst({
     where: {
-      userId, title: input.title, docType: input.docType, slideCount: input.slideCount,
+      userId, title: input.title, docType: input.docType, slideCount: input.slideCount, customBrief: input.customBrief,
       status: { in: ['draft', 'error', 'structuring'] },
       createdAt: { gte: new Date(now.getTime() - REUSABLE_SLIDE_PROJECT_MS) },
       slides: { none: {} },
