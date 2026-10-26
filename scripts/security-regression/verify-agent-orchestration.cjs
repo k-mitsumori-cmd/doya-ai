@@ -118,7 +118,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
 
   await check('Agent tool routes: only the five fixed routes, called through their exported POST with the same cookie',async()=>{
     const seen=[];
-    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),body:await req.json()});return Response.json({ok:true},{status:201,headers:name==='suggest'?{'x-doya-power-op':'op-1'}:{}})}});
+    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),tier:req.headers.get('x-doya-agent-tier'),body:await req.json()});return Response.json({ok:true},{status:201,headers:name==='suggest'?{'x-doya-power-op':'op-1'}:{}})}});
     const tools=loadCore().tools;
     const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
       'next/server':nextServer,'./tools':tools,
@@ -142,6 +142,10 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.deepEqual(keys,[null,'op-1',null,null,null]);
     assert.deepEqual(seen.map(s=>s.path),['/api/shodan/preparations','/api/quote/documents/suggest','/api/quote/documents','/api/doyaslide/projects','/api/doyaslide/structure']);
     assert.ok(seen.every(s=>s.cookie==='next-auth.session-token=s'&&s.body.a===1));
+    // 決まった形の下書き（見積の品目の案・スライドの構成）だけ、軽いモデルの印を付ける（DESIGN.md §11.9）
+    assert.deepEqual(seen.map(s=>s.tier),[null,'light',null,null,'light']);
+    for(const f of ['src/app/api/quote/documents/suggest/route.ts','src/app/api/doyaslide/structure/route.ts']) assert.match(read(f),/x-doya-agent-tier'\) === 'light'/,f);
+    assert.match(read('seo/lib/gemini.ts'),/const model = options\?\.model \|\| CLAUDE_MODEL_DEFAULT/);
     await assert.rejects(()=>rs.callToolRoute(outer,'../admin',{}));
     // 本番では、見本の結果に差し替えない（値があっても）
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'production',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'}),false);

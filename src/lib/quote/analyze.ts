@@ -13,7 +13,7 @@
 // ⚠️ **LLMの内部知識だけで金額を出すことは禁止。** 見積書は取引の意思表示であり、
 //    もっともらしいだけの数字を印字させると実害になる。根拠が無いものは空欄にする。
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT, CLAUDE_MODEL_LIGHT } from '@seo/lib/gemini'
 import { lookupMarket, marketTableForPrompt } from './market'
 import { isQuoteSuggestedItem } from './response-shape'
 import type { ProductProfile, SuggestedItem, PriceSource } from './types'
@@ -128,6 +128,8 @@ export interface SuggestInput {
   situation?: string
   /** 想定予算（円）。あれば構成を寄せる */
   budget?: number | null
+  /** light のときは軽いモデル（経営ホームのエージェントから呼ばれたとき。DESIGN.md §11.9） */
+  tier?: 'light'
 }
 
 /** 見積書の品目候補を出す */
@@ -189,7 +191,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
     .join('\n')
 
   const raw = await geminiGenerateJson<{ items: SuggestedItem[] }>(
-    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, ...(input.tier === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
     'QuoteItems'
   )
 

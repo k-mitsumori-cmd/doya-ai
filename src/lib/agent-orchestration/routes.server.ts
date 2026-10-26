@@ -14,6 +14,9 @@ import { DOYA_POWER_OP_HEADER } from '@/lib/doya-power/retry'
 
 type Handler = (req: NextRequest, ...rest: any[]) => Promise<Response>
 
+/** 軽いモデルで作るルート（AI を呼ぶもののうち、決まった形の下書き） */
+const LIGHT_ROUTES = new Set<ToolRouteId>(['quote.suggest', 'slide.structure'])
+
 const ROUTES: Record<ToolRouteId, { path: string; load: () => Promise<{ POST: Handler }> }> = {
   'shodan.prepare': { path: '/api/shodan/preparations', load: () => import('@/app/api/shodan/preparations/route') },
   'quote.suggest': { path: '/api/quote/documents/suggest', load: () => import('@/app/api/quote/documents/suggest/route') },
@@ -29,6 +32,8 @@ export async function callToolRoute(outer: NextRequest, route: ToolRouteId, body
   const headers = new Headers({ 'content-type': 'application/json' })
   const cookie = outer.headers.get('cookie')
   if (cookie) headers.set('cookie', cookie)
+  // 決まった形の下書き（見積の品目の案・スライドの構成）は、軽いモデルで作る印（DESIGN.md §11.9。2026-10-26 ユーザー承認）
+  if (LIGHT_ROUTES.has(route)) headers.set('x-doya-agent-tier', 'light')
   const req = new NextRequest(new URL(r.path, outer.nextUrl.origin), { method: 'POST', headers, body: JSON.stringify(body) })
   const res = await POST(req)
   const data = await res.json().catch(() => null)
