@@ -11,12 +11,44 @@ import { buildTicketSlack, isBusinessHours, makeTicketNo, redactPersonal, replyE
 import { aiDailyLimit, parseAskBody, parseTicketBody } from './request'
 import { styleSlackPayload } from '@/lib/slack/notify'
 
+// ⚠️ 本番のビルド（Vercel）では、このテストが本番の環境変数のまま流れる（npm run build → test:security）。
+//    旗やモデルの関数は、引数が undefined のとき環境変数を読む。本番で SUPPORT_CHAT_ROLLOUT=preview にしたら、
+//    「既定は off」のテストが落ちてビルドが止まった（2026-10-26 round9）。テストは環境変数が無い前提で書くので、最初に消す。
+//    環境変数を読むこと自体は、下の「環境変数を読む」のテストで、値を入れて確かめる。
+const SUPPORT_ENV_KEYS = [
+  'SUPPORT_CHAT_ROLLOUT', 'SUPPORT_CHAT_AI', 'SUPPORT_CHAT_AI_MODEL', 'SUPPORT_CHAT_GEMINI_MODEL',
+  'SUPPORT_CHAT_AI_DAILY_LIMIT', 'UI_PREVIEW_EMAILS', 'NEXTAUTH_URL',
+] as const
+for (const k of SUPPORT_ENV_KEYS) delete process.env[k]
+
+function withEnv(values: Partial<Record<(typeof SUPPORT_ENV_KEYS)[number], string>>, fn: () => void) {
+  const before = Object.fromEntries(SUPPORT_ENV_KEYS.map((k) => [k, process.env[k]]))
+  Object.assign(process.env, values)
+  try { fn() } finally {
+    for (const k of SUPPORT_ENV_KEYS) { if (before[k] === undefined) delete process.env[k]; else process.env[k] = before[k] }
+  }
+}
+
 test('旗: 既定は off。preview と all だけを受け付ける', () => {
   assert.equal(supportChatRollout(undefined), 'off')
   assert.equal(supportChatRollout(''), 'off')
   assert.equal(supportChatRollout('on'), 'off')
   assert.equal(supportChatRollout(' Preview '), 'preview')
   assert.equal(supportChatRollout('all'), 'all')
+})
+
+test('環境変数を読む: 本番と同じ値を入れたとき、既定値の関数はその値を使う', () => {
+  withEnv({ SUPPORT_CHAT_ROLLOUT: 'preview', SUPPORT_CHAT_AI_MODEL: 'claude-haiku-5-5', SUPPORT_CHAT_GEMINI_MODEL: 'gemini-flash-latest', SUPPORT_CHAT_AI_DAILY_LIMIT: '50', SUPPORT_CHAT_AI: 'mock', NEXTAUTH_URL: 'https://doya-ai.surisuta.jp' }, () => {
+    assert.equal(supportChatRollout(), 'preview')
+    assert.equal(supportClaudeModel(), 'claude-haiku-5-5')
+    assert.deepEqual(supportAiModels(), ['gemini-flash-latest'])
+    assert.equal(aiDailyLimit(), 50)
+    assert.equal(getSupportAnswerer(undefined, { anthropic: 'k', gemini: 'k' }).name, 'mock')
+    assert.equal(supportBaseUrl(), 'https://doya-ai.surisuta.jp')
+  })
+  // 戻したあとは既定に戻る
+  assert.equal(supportChatRollout(), 'off')
+  assert.equal(aiDailyLimit(), 800)
 })
 
 test('旗: preview は許可した人だけ、all はメールのある人だけ', () => {
