@@ -45,9 +45,14 @@ export function freshestArtifact(list: RecentArtifact[], kind: ArtifactKind, now
   return list.find((a) => a.kind === kind && now - a.at < ARTIFACT_FRESH_MS) ?? null
 }
 
-/** 作ったプロジェクトの画面へ移るときの行き先。サーバーが返した id から作り、形を確かめる（統括の点検 5） */
-export function slideProjectPath(projectId: unknown): string | null {
-  return typeof projectId === 'string' && ARTIFACT_ID_PATTERN.test(projectId) ? `/doyaslide/${projectId}?generate=1` : null
+/**
+ * 作ったプロジェクトの画面へ移るときの行き先。サーバーが返した id から作り、形を確かめる（統括の点検 5）
+ * generate=false のとき（同じ見積書から前に作った資料を開くとき）は ?generate=1 を付けない。
+ * 付けると、構成のある資料で未生成の絵の生成が自動で始まり、月の枠を使うため（統括の点検 2026-10-26）。
+ */
+export function slideProjectPath(projectId: unknown, generate = true): string | null {
+  if (typeof projectId !== 'string' || !ARTIFACT_ID_PATTERN.test(projectId)) return null
+  return generate ? `/doyaslide/${projectId}?generate=1` : `/doyaslide/${projectId}`
 }
 
 export function loadArtifacts(userKey: string): RecentArtifact[] {

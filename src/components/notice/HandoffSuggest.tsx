@@ -29,8 +29,8 @@ function HandoffActions({ artifact, close }: { artifact: RecentArtifact; close: 
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: artifact.kind, id: artifact.id }),
       })
       const data = await res.json().catch(() => null) as { projectId?: unknown; error?: string; code?: string } | null
-      // 201 は新しく作った資料、200 は同じ見積書から前に作った資料（同じ見積書から何度押しても1つだけ）
-      const path = res.status === 201 || res.status === 200 ? slideProjectPath(data?.projectId) : null
+      // 201 は新しく作った資料（開いたら構成と絵を作る）。200 は同じ見積書から前に作った資料で、開くだけにする（自動で生成しない）
+      const path = res.status === 201 ? slideProjectPath(data?.projectId) : res.status === 200 ? slideProjectPath(data?.projectId, false) : null
       if (path) { close(true); router.push(path); return }
       if (res.status === 403 && data?.code === 'LIMIT_REACHED') notify({ tone: 'error', title: '今月のスライドの上限に達しています', sub: 'プランを見直すと、続けて作れます', action: { label: 'プランを見る', href: '/doyaslide/pricing' } })
       else if (res.status === 404) notify({ tone: 'error', title: '見積書が見つかりませんでした', sub: '消されたか、ほかの組織の見積書です' })

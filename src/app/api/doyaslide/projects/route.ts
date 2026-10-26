@@ -47,11 +47,14 @@ export async function GET(req: NextRequest) {
     ])
     let [rows, total] = await query()
     // 止まったままの資料（構成中 6 分・生成中 15 分を超えたもの）を、読むときに戻す。戻したら読み直す
-    const stale = rows.slice(0, limit).filter((row) => isDoyaSlideStaleCandidate(row))
-    if (stale.length) {
-      const settled = await Promise.all(stale.map((row) => settleStaleDoyaSlideProject(userId, row.id).catch(() => 'none' as const)))
-      if (settled.some((r) => r !== 'none')) [rows, total] = await query()
+    // 1回の読み込みで戻すのは5件まで、1件ずつ（同じ人の行を順にロックするため、まとめて走らせない）
+    const stale = rows.slice(0, limit).filter((row) => isDoyaSlideStaleCandidate(row)).slice(0, 5)
+    let settledAny = false
+    for (const row of stale) {
+      const result = await settleStaleDoyaSlideProject(userId, row.id).catch(() => 'none' as const)
+      if (result !== 'none') settledAny = true
     }
+    if (settledAny) [rows, total] = await query()
     const page = rows.slice(0, limit)
     return NextResponse.json({
       projects: page.map((project) => ({
