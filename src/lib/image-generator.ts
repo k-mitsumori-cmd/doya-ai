@@ -50,6 +50,8 @@ export interface ImageGenRequest {
    */
   background?: GptImageBackground
   // 以下は Nano Banana Pro Preview 経路でのみ使用
+  /** Gemini の解像度（imageConfig.imageSize）。渡したときだけ送る（渡さないと既定の 1K） */
+  geminiImageSize?: '1K' | '2K' | '4K'
   responseModalities?: string[]
   temperature?: number
   safetySettings?: Array<{ category: string; threshold: string }>
@@ -96,6 +98,18 @@ export async function generateImageWithFallback(
     const r = await callNanoBananaProPreview(req)
     return { ...r, fallbackUsed: true, primaryError: 'メインの画像編集サービスを利用できませんでした' }
   }
+}
+
+/**
+ * Nano Banana Pro（gemini-3-pro-image）だけで作る入口。モデルを替えない（gpt-image-2 にも、ほかの Gemini にも）。
+ * 見込み額を Nano Banana Pro の単価で承認している呼び出し元（ドヤ展示会の面の画像など）が使う。
+ * 解像度は geminiImageSize で必ず指定する（未指定は 1K になり、承認した見込みとずれるため、ここで断る）。
+ * 失敗の Error には、上流の HTTP の状態を status に付ける（課金されたかどうかを呼び出し元が数えるため）。
+ */
+export async function generateImageGeminiPro(req: ImageGenRequest & { geminiImageSize: '1K' | '2K' | '4K' }): Promise<ImageGenResult> {
+  if (!req.geminiImageSize) throw new Error('geminiImageSize is required')
+  const r = await callNanoBananaProPreview(req)
+  return { ...r, fallbackUsed: false }
 }
 
 async function callOpenAIEdit(req: ImageGenRequest): Promise<Omit<ImageGenResult, 'fallbackUsed' | 'primaryError'>> {
@@ -166,7 +180,7 @@ async function callNanoBananaProPreview(
       responseModalities: req.responseModalities || ['IMAGE'],
       temperature: typeof req.temperature === 'number' ? req.temperature : 0.4,
       candidateCount: 1,
-      imageConfig: { aspectRatio },
+      imageConfig: req.geminiImageSize ? { aspectRatio, imageSize: req.geminiImageSize } : { aspectRatio },
     },
     safetySettings: req.safetySettings || DEFAULT_SAFETY_SETTINGS,
   }
@@ -186,7 +200,7 @@ async function callNanoBananaProPreview(
 
     if (!res.ok) {
       const errText = await readLimitedGeminiResponse(res, GEMINI_ERROR_RESPONSE_MAX_BYTES)
-      throw new Error(`Nano Banana Pro failed (${res.status}): ${errText.slice(0, 300)}`)
+      throw Object.assign(new Error(`Nano Banana Pro failed (${res.status}): ${errText.slice(0, 300)}`), { status: res.status })
     }
 
     const json = JSON.parse(await readLimitedGeminiResponse(res, GEMINI_IMAGE_RESPONSE_MAX_BYTES))

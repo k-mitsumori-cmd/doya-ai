@@ -18,23 +18,22 @@ export const USD_JPY = 150
 export const IMAGE_MODELS: ImageModel[] = [
   { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '文字入りのデザインに強い。ドヤバナーAIの既定（src/lib/nanobanner.ts）と同じ ID' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image（プレビュー名）', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '上の ID が使えないときの予備' },
-  { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', usdPerImage: { '1K': 0.039, '2K': 0.039, '4K': 0.039 }, note: '最後の予備。解像度は1K相当' },
+  // gemini-2.5-flash-image（Nano Banana 無印）は、プロジェクトの決まりで画像に使わない（CLAUDE.md「画像生成の禁止事項」。2026-10-26 に予備から外した）
 ]
 
 /** 使う解像度（固定） */
 export const IMAGE_SIZE: ImageSize = '2K'
 
 /**
- * 呼ぶ順番。404（廃止・未提供）のときだけ次へ進む。
- * 2026-10-19 に本番のキーで3つとも生存を確かめた（文字だけの返事で各1回。どれも 200）。
- *    画像モデルのエイリアス（*-latest）と gemini-3.1-flash-image は、呼んで確かめていないので鎖には入れていない。
- *    環境変数 TENJIKAI_IMAGE_MODEL で先頭を差し替えられる。
+ * 単価の表。見込み額は先頭（gemini-3-pro-image）の単価で数える。
+ * 実際に呼ぶのは TENJIKAI_IMAGE_MODEL_ID（gemini-3-pro-image）だけで、統一ディスパッチャ（src/lib/image-generator.ts）を通す。
+ * 2026-10-19 に本番のキーで生存を確かめた（文字だけの返事で1回。200）。
  */
-export function imageModelChain(): string[] {
-  const head = process.env.TENJIKAI_IMAGE_MODEL?.trim()
-  const ids = IMAGE_MODELS.map((m) => m.id)
-  return head ? [head, ...ids.filter((id) => id !== head)] : ids
-}
+/**
+ * 使うモデル。画像の生成は統一ディスパッチャの generateImageGeminiPro（src/lib/image-generator.ts）を通し、
+ * gemini-3-pro-image だけを使う。環境変数でモデルを替えられないようにした（禁止のモデルに替わらないため。2026-10-26 統括の点検）
+ */
+export const TENJIKAI_IMAGE_MODEL_ID = 'gemini-3-pro-image'
 
 /** 上限額を数えるための見込み額。いちばん高い単価（先頭のモデル）で数える */
 export function estimateQuotaYen(count: number) {

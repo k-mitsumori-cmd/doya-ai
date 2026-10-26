@@ -1,18 +1,20 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { clsx } from 'clsx'
-import { Download, Footprints, ImagePlus } from 'lucide-react'
+import { AlertCircle, Check, Circle, Download, Footprints, ImagePlus, Loader2, Ruler } from 'lucide-react'
 import IsoBooth from './IsoBooth'
 import Booth3D from './Booth3D'
 import GraphicPlanner from './GraphicPlanner'
 import ImageGenModal from './ImageGenModal'
 import EmptyState from './EmptyState'
+import BoothSizeInput from './BoothSizeInput'
 import { CountUp, Modal, PageHeader } from './ui'
-import { remainingLabel, requestImages, useImageQuota, type ImageGenFailure } from './useImageGen'
+import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestImages, useImageQuota, type ImageGenFailure } from './useImageGen'
 import { nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
+import { batchSummary, runPanelBatch, type BatchFace } from '@/lib/tenjikai/batch'
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
@@ -58,6 +60,8 @@ interface StudioProps {
   analysis: SiteAnalysis
   panelImages: Images
   setPanelImages: (f: (m: Images) => Images) => void
+  /** 小間の横と奥行を変える（3D と面の数・大きさが変わる）。作った面の画像は外す */
+  onResize?: (widthM: number, depthM: number) => void
 }
 
 const VIEW_LABEL = { '3d': '3D', iso: '等角模型', plan: '平面図' } as const
@@ -98,7 +102,7 @@ async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Image
   }
 }
 
-export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages }: StudioProps) {
+export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize }: StudioProps) {
   const [view, setView] = useState<'3d' | 'iso' | 'plan'>('3d')
   const [selectedId, setSelectedId] = useState<string>()
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
@@ -109,7 +113,16 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const [panelTarget, setPanelTarget] = useState<GraphicPanel | null>(null)
   const { quota, refresh } = useImageQuota()
   const [batchOpen, setBatchOpen] = useState(false)
-  const [batch, setBatch] = useState<{ running: boolean; done: number; total: number; error?: ImageGenFailure }>({ running: false, done: 0, total: 0 })
+  // まとめて作るときの、面ごとの状態（待ち・作成中・完成・失敗・作っていない）と理由
+  const [faces, setFaces] = useState<BatchFace[]>([])
+  const [stopReason, setStopReason] = useState<ImageGenFailure>()
+  const summary = batchSummary(faces)
+  const running = summary.running
+  // 小間の大きさの下書き（「この大きさにする」で反映する）
+  const [sizeDraft, setSizeDraft] = useState<{ w: number; d: number }>({ w: plan.widthM, d: plan.depthM })
+  useEffect(() => setSizeDraft({ w: plan.widthM, d: plan.depthM }), [plan.widthM, plan.depthM])
+  const [sizeOk, setSizeOk] = useState(true)
+  const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   const threeRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
 
@@ -128,29 +141,29 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
     setSelectedId(panels.find((p) => p.id === id)?.elementId)
   }
 
-  // まだ画像の無い面を、1面ずつ順に作る。できた面から 3D に貼られる。止まったら、残りの面から作り直せる
-  const runBatch = async () => {
-    setBatchOpen(false)
+  // まだ画像の無い面を、1面ずつ順に作る。できた面から 3D に貼られる。
+  // 押したら、確認の画面（画面の真ん中）のまま「作り始めました」と面ごとの進み具合・失敗の理由を出す（2026-10-26 ユーザーの指摘）。
+  // ⚠️ 前は確認の画面を閉じて 3D へ移っていたため、進み具合や「準備中」の知らせが画面の外に出て、作っているのか分からなかった
+  const runBatch = async (targets: GraphicPanel[] = missing) => {
+    if (targets.length === 0) return
+    setBatchOpen(true)
     setView('3d')
-    threeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    const todo = missing
-    setBatch({ running: true, done: 0, total: todo.length })
-    for (const [i, p] of todo.entries()) {
-      const r = await requestImages({ prompt: buildPanelPrompt(p, analysis), aspectRatio: nearestRatio(p.widthMm, p.heightMm), kind: 'graphic_panel' })
-      if (!r.ok) {
-        setBatch({ running: false, done: i, total: todo.length, error: r })
-        void refresh()
-        return
-      }
-      setPanelImages((m) => ({ ...m, [p.id]: r.images[0] }))
-      setBatch({ running: true, done: i + 1, total: todo.length })
-    }
-    setBatch({ running: false, done: todo.length, total: todo.length })
+    setStopReason(undefined)
+    const stop = await runPanelBatch(
+      targets,
+      (p) => requestImages({ prompt: buildPanelPrompt(p, analysis), aspectRatio: nearestRatio(p.widthMm, p.heightMm), kind: 'graphic_panel' }),
+      { onUpdate: setFaces, onImage: (p, img) => setPanelImages((m) => ({ ...m, [p.id]: img })) },
+    )
+    setStopReason(stop)
     void refresh()
   }
 
   const left = remainingLabel(quota)
   const notEnough = quota?.enabled && quota.remaining !== null && quota.remaining < missing.length
+  // サーバーが画像の生成を止めている（TENJIKAI_IMAGEGEN_ENABLED が未設定）。押す前から分かるように出す
+  const disabled = isImageGenDisabled(quota)
+  const failedPanels = panels.filter((p) => !panelImages[p.id] && faces.some((f) => f.id === p.id && (f.status === 'failed' || f.status === 'skipped')))
+  const sizeChanged = sizeDraft.w !== plan.widthM || sizeDraft.d !== plan.depthM
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
@@ -160,33 +173,68 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
 
       {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品） */}
       <NextStepBar
-        state={allMade ? 'done' : batch.running ? 'working' : batch.error ? 'error' : 'empty'}
-        text={allMade ? 'すべての面に画像を貼りました。書き出して、印刷会社に渡せます。' : batch.running ? `面の画像を作っています（${batch.done}/${batch.total}面）。できた面から3Dに貼られます。` : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`}
+        state={allMade ? 'done' : running ? 'working' : disabled || summary.failed > 0 ? 'error' : 'empty'}
+        text={
+          allMade
+            ? 'すべての面に画像を貼りました。書き出して、印刷会社に渡せます。'
+            : running
+              ? `面の画像を作っています（${summary.finished}/${summary.total}面）。できた面から3Dに貼られます。`
+              : disabled
+                ? IMAGEGEN_DISABLED_MESSAGE
+                : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`
+        }
         sub={left && !allMade ? left : undefined}
         action={allMade ? (
           <NextStepAction onClick={() => void exportPack(plan, panels, panelImages)} iconNode={<Download className="h-4 w-4" aria-hidden />}>
             書き出す
           </NextStepAction>
+        ) : running ? (
+          <NextStepAction onClick={() => setBatchOpen(true)} iconNode={<Loader2 className="h-4 w-4 animate-spin" aria-hidden />}>
+            進み具合を見る（{summary.finished}/{summary.total}面）
+          </NextStepAction>
         ) : (
-          <NextStepAction busy={batch.running} onClick={() => setBatchOpen(true)} iconNode={<ImagePlus className="h-4 w-4" aria-hidden />}>
-            {batch.running ? '作っています' : `面の画像をまとめて作る（${missing.length}面）`}
+          <NextStepAction onClick={() => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }} iconNode={<ImagePlus className="h-4 w-4" aria-hidden />}>
+            {`面の画像をまとめて作る（${missing.length}面）`}
             {/* 減る量は、作る面の数ぶん（ドヤパワーの旗の内側だけ） */}
             <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
           </NextStepAction>
         )}
       />
 
-      {batch.error && !batch.running && (
+      {/* 確認の画面を閉じたあとも、作れなかった面があれば知らせる */}
+      {!running && !batchOpen && summary.failed > 0 && (
         <div className="rounded-[var(--r)] border border-gray-200 bg-white">
           <EmptyState
             compact
-            tone={batch.error.tone === 'forbidden' ? 'forbidden' : batch.error.tone === 'error' ? 'error' : 'empty'}
-            image={batch.error.tone === 'disabled' ? '/empty/preparing.svg' : undefined}
-            title={batch.error.message}
-            description={batch.done > 0 ? `${batch.done}面ぶんは3Dに貼りました。残りの面から作り直せます。` : undefined}
-            action={batch.error.tone === 'error' ? { label: '残りの面を作る', onClick: () => void runBatch() } : batch.error.tone === 'forbidden' ? { label: 'ログインする', href: '/auth/signin?callbackUrl=%2Ftenjikai%2Fbooth' } : undefined}
+            tone={stopReason?.tone === 'forbidden' ? 'forbidden' : 'error'}
+            image={stopReason?.tone === 'disabled' ? '/empty/preparing.svg' : undefined}
+            title={stopReason?.message ?? `${summary.failed}面は作れませんでした。`}
+            description={summary.done > 0 ? `${summary.done}面ぶんは3Dに貼りました。` : undefined}
+            action={stopReason?.tone === 'forbidden' ? { label: 'ログインする', href: '/auth/signin?callbackUrl=%2Ftenjikai%2Fbooth' } : { label: '面ごとの結果を見る', onClick: () => setBatchOpen(true) }}
           />
         </div>
+      )}
+
+      {/* 小間の大きさ。変えると 3D と面の数・大きさが変わる（2026-10-26 ユーザー指示） */}
+      {onResize && (
+        <section className="flex flex-col gap-3 rounded-[var(--r)] border border-gray-200 bg-white p-5 lg:flex-row lg:items-end lg:justify-between" aria-label="小間の大きさ">
+          <BoothSizeInput label="小間の大きさ（3Dと面の数は、この大きさで決まります）" widthM={sizeDraft.w} depthM={sizeDraft.d} onChange={(w, d) => setSizeDraft({ w, d })} onValidChange={onSizeValid} />
+          <div className="flex flex-col items-start gap-1 lg:items-end">
+            {sizeChanged && madeCount > 0 && <p className="text-[12px] font-bold text-amber-800">大きさを変えると、作った面の画像（{madeCount}面）は外れます。先に書き出しておけます。</p>}
+            <button
+              type="button"
+              disabled={!sizeOk || !sizeChanged || running}
+              onClick={() => {
+                onResize(sizeDraft.w, sizeDraft.d)
+                setFaces([])
+                setStopReason(undefined)
+              }}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Ruler className="h-4 w-4" aria-hidden /> この大きさにする
+            </button>
+          </div>
+        </section>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
@@ -293,17 +341,69 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       </div>
 
       <Modal open={batchOpen} onClose={() => setBatchOpen(false)} title="面の画像をまとめて作る">
-        <div className="flex flex-col gap-4">
-          <p className="text-[15px] leading-relaxed text-ink">まだ画像の無い {missing.length} 面ぶんを、1面ずつ順に作ります。できた面から、3Dの壁面に貼られます。</p>
-          {left && <p className="text-[13px] text-[var(--sub)]">{left}</p>}
-          {notEnough && <p className="rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">きょう作れる残りが足りません。作れる面まで作り、残りは明日作れます。</p>}
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setBatchOpen(false)} className="min-h-[44px] rounded-xl px-4 text-sm font-bold text-gray-500 hover:bg-gray-100">キャンセル</button>
-            <button onClick={() => void runBatch()} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white">
-              <ImagePlus className="h-4 w-4" /> 作りはじめる
-            </button>
+        {faces.length === 0 ? (
+          <div className="flex flex-col gap-4" data-batch-state="confirm">
+            <p className="text-[15px] leading-relaxed text-ink">まだ画像の無い {missing.length} 面ぶんを、1面ずつ順に作ります。できた面から、3Dの壁面に貼られます。</p>
+            {disabled && (
+              <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>
+            )}
+            {left && <p className="text-[13px] text-[var(--sub)]">{left}</p>}
+            {notEnough && <p className="rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">きょう作れる残りが足りません。作れる面まで作り、残りは明日作れます。</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setBatchOpen(false)} className="min-h-[44px] rounded-xl px-4 text-sm font-bold text-gray-500 hover:bg-gray-100">キャンセル</button>
+              <button type="button" disabled={disabled || missing.length === 0} onClick={() => void runBatch()} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <ImagePlus className="h-4 w-4" /> 作りはじめる
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-4" data-batch-state={running ? 'running' : 'finished'}>
+            <div aria-live="polite" aria-atomic="true">
+              <p className="text-[15px] font-bold text-ink">
+                {running
+                  ? `作り始めました。${summary.finished}/${summary.total}面が終わりました。`
+                  : summary.failed === 0
+                    ? `${summary.done}面の画像を作りました。3Dの壁面に貼っています。`
+                    : `${summary.done}面を作り、${summary.failed}面は作れませんでした。`}
+              </p>
+              {running && <p className="mt-1 text-[13px] text-[var(--sub)]">1面ずつ作ります。この画面を閉じても、作り続けます。</p>}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="面の画像の進み具合" aria-valuemin={0} aria-valuemax={summary.total} aria-valuenow={summary.finished}>
+              <div className="h-full rounded-full bg-doya-500 transition-[width] duration-300" style={{ width: `${summary.total ? (summary.finished / summary.total) * 100 : 0}%` }} />
+            </div>
+            <ul className="flex max-h-[45vh] flex-col gap-1.5 overflow-y-auto" aria-label="面ごとの状態">
+              {faces.map((f) => {
+                const bad = f.status === 'failed' || f.status === 'skipped'
+                return (
+                  <li key={f.id} data-face-status={f.status} className={clsx('flex items-start gap-2 rounded-[var(--r-sm)] border px-3 py-2', bad ? 'border-rose-200 bg-rose-50' : f.status === 'done' ? 'border-emerald-200 bg-emerald-50' : f.status === 'working' ? 'border-doya-200 bg-doya-50' : 'border-gray-200 bg-white')}>
+                    <span className="mt-0.5 flex-shrink-0">
+                      {f.status === 'working' ? <Loader2 className="h-4 w-4 animate-spin text-doya-600" aria-hidden /> : f.status === 'done' ? <Check className="h-4 w-4 text-emerald-600" aria-hidden /> : f.status === 'waiting' ? <Circle className="h-4 w-4 text-gray-300" aria-hidden /> : <AlertCircle className="h-4 w-4 text-rose-600" aria-hidden />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold text-ink">{f.name}</span>
+                      <span className={clsx('block text-[12px]', bad ? 'font-bold text-rose-700' : 'text-[var(--sub)]')}>
+                        {f.status === 'working' ? '作っています' : f.status === 'done' ? 'できました' : f.status === 'waiting' ? '順番を待っています' : f.message}
+                      </span>
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="flex flex-wrap justify-end gap-2">
+              {stopReason?.tone === 'forbidden' && (
+                <a href="/auth/signin?callbackUrl=%2Ftenjikai%2Fbooth" className="inline-flex min-h-[44px] items-center rounded-xl px-4 text-sm font-bold text-doya-600 hover:bg-doya-50">ログインする</a>
+              )}
+              {!running && failedPanels.length > 0 && !disabled && (stopReason === undefined || stopReason.tone === 'error') && (
+                <button type="button" onClick={() => void runBatch(failedPanels)} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-doya-500 px-4 text-sm font-black text-doya-600">
+                  <ImagePlus className="h-4 w-4" /> 作れなかった面をもう一度（{failedPanels.length}面）
+                </button>
+              )}
+              <button type="button" onClick={() => setBatchOpen(false)} className="inline-flex min-h-[44px] items-center rounded-xl bg-doya-500 px-5 text-sm font-black text-white">
+                {running ? '閉じる（作り続けます）' : '閉じる'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {panelTarget && (

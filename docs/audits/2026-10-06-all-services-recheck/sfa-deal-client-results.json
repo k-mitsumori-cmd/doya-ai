@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:36:04.331Z",
+  "checkedAt": "2026-10-26T12:28:06.956Z",
   "passed": 13,
   "cases": [
     "Same-frame create submits one UUID and never clears a newer draft",
@@ -17,11 +17,11 @@
     "Stage selection never optimistically changes confirmed board and sends one versioned write"
   ],
   "sourceHashes": {
-    "src/app/sfa/[orgSlug]/deals/page.tsx": "cc907b6b1ebd5417fcd6df0f0067e5a17301d9f6bdd63c8f8c1405e0b5010ff6",
-    "src/lib/sfa/use-client-mutations.ts": "4115c3e0923f713180ee51b25512408ed56268f7dc19ef90a72dd81bc985e918",
+    "src/app/(shell)/sfa/[orgSlug]/deals/page.tsx": "eee43e4610f453d355f4027a5f5c0e6a78398d2d0de5245dd4b84ae2aaad8e81",
+    "src/lib/sfa/use-client-mutations.ts": "791cb9176954efb80679c8a4647a36a73545db4ccb9b660a99ac2db607d89fb1",
     "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
-    "src/components/sfa/MutationRecovery.tsx": "2227ba375d2fa315ca07bd21d0cd128b2a25ad7f7be30e3cab498a9479666167",
-    "scripts/security-regression/sfa-client-fixture.cjs": "dbeb9975b0ba4137287d477422d777455668176f68ac5aae8a1aa3e745db30e4"
+    "src/components/sfa/MutationRecovery.tsx": "d66315703ee358a6c83ac6f3e6d73fc6a0263b0cf0ca913bcbe902e7318659de",
+    "scripts/security-regression/sfa-client-fixture.cjs": "8684a806fac4722263b1a7b80b090aac1bfd92b1daa35231b0091745c23e981c"
   },
   "scope": "Actual deal page, shared mutation/recovery/session guard and bounded transport mounted in StrictMode. Synthetic browser DOM/navigation/auth/API; not real Next routing/private production/customer writes."
 }

@@ -1,7 +1,7 @@
 {
-  "checkedAt": "2026-10-18T09:27:48.179Z",
+  "checkedAt": "2026-10-26T12:23:39.890Z",
   "source": "src/components/banner/BannerLimitModal.tsx",
-  "sourceHash": "65444b2c801eb163303aa4c64e1ca6d7a1bb1379f04cdc06e310cc62e4a739ca",
+  "sourceHash": "fdd94754e0682ca3542262d2421142ced69d53359f452ee41721fc951d430c5d",
   "passed": 13,
   "expected": 13,
   "violations": [],

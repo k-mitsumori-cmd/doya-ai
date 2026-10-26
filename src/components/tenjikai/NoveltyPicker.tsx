@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ExternalLink, Gift } from 'lucide-react'
 import { clsx } from 'clsx'
 import { CountUp, PageHeader, cardIn } from './ui'
-import { expectedVisitors, noveltyQty, recommendPrinters, yen, type Novelty, type ProjectInput } from '@/lib/tenjikai/engine'
+import { noveltyQty, recommendPrinters, yen, type Novelty, type ProjectInput } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 
 const TIERS: Novelty['tier'][] = ['商談者', '名刺交換者', '来場者全員']
@@ -18,7 +18,7 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader
         title="ノベルティ"
-        desc={`想定の来場者は ${expectedVisitors(input).toLocaleString()} 人です。商談者・名刺交換者・来場者全員の3段に分けて、渡すものと数量を提案します。`}
+        desc="商談者・名刺交換者・来場者全員の3段に分けて、渡すものを提案します。数量は、小間の広さと日数から出した目安です。発注するときは、配る見込みに合わせて数を決めてください。"
         right={
           <div className="rounded-[var(--r-sm)] border border-gray-200 bg-white px-4 py-3 text-right">
             <p className="text-[11px] font-black text-gray-500">選択中の合計</p>

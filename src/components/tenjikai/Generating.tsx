@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Loader2 } from 'lucide-react'
-import { boothSize, expectedVisitors, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
+import { boothSize, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
 
@@ -18,7 +18,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
     `${venue.name} の規定を確認（高さ ${venue.maxHeightM}m）`,
     `${w}m × ${d}m のブースを3案設計`,
     '制作物6点のコピーと構成を作成',
-    `来場 ${expectedVisitors(input).toLocaleString()} 人分のノベルティを試算`,
+    'ノベルティの品目と数量の目安を試算',
     '費目別に予算を配分',
     '業者候補をマッチング',
     '会期から締切を逆算',

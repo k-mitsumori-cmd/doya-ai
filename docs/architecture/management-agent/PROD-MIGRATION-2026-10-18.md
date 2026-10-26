@@ -51,7 +51,8 @@
 
 合計の見込みは、約 1 時間 30 分。
 
-段 8 で Vercel の環境変数を触るときも、`TENJIKAI_IMAGEGEN_ENABLED` は設定しない（未設定のままにする）。展示会の画像生成の上限は、まだプロセス内の変数で数えていて、インスタンスをまたぐと上限を守れないため（点検 A 級）。未設定なら API は 403 で止まる。共通の上限処理（`src/lib/server-daily-quota.ts`）に置き換えるまで、この変数は入れない。
+段 8 で Vercel の環境変数を触るときも、`TENJIKAI_IMAGEGEN_ENABLED` は設定しない（未設定のままにする）。未設定なら API は 403 で止まる。
+（2026-10-26 追記）上限は今、`src/lib/tenjikai/image-quota.ts` が SystemSetting で数えていて、インスタンスをまたいでも守れる。許す相手は `TENJIKAI_IMAGEGEN_ROLLOUT`（off / preview / all）で決める。まず preview（`UI_PREVIEW_EMAILS` の人だけ）で本人が1回試すことを、ユーザーが決めた。入れるのは統括でのユーザーの承認のあと。all にする前に、1人1日の枚数と全体の1日の金額の上限を決める。
 
 既存ツール（見積・営業管理・勤怠など）は、この段階では新しい枠に載せない。`UI_SHELL_SERVICES` に入れない限り、今の画面のまま動く。
 

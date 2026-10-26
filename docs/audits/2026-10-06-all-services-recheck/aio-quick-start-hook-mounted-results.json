@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:28:17.430Z",
+  "checkedAt": "2026-10-26T12:23:57.860Z",
   "passed": 23,
   "expected": 23,
   "checks": [
@@ -32,7 +32,7 @@
     "src/lib/aio/quick-start-intent-client.ts": "383b83958db7a5322387faa683d834c9ea89137a1132bcf33659991823c22da5",
     "src/lib/aio/quick-start-response-client.ts": "6a722c2c76753bca98a5af3a92f10101753e99e42fc5c785a6818108cd79cacf",
     "scripts/security-regression/verify-aio-quick-start-hook-mounted.cjs": "82b8241c3abaaa9b59cbea2694b445d33177ee8c66545cde2e356c1f2e27c749",
-    "src/components/aio/quick-start-status.tsx": "59449f27a3c6b3ff45185562cbc7e5a7ec574e349f72f276b1ba6868c8bdfd0b"
+    "src/components/aio/quick-start-status.tsx": "702c32f1f242ca3d59d511cfe5a59ae4043c38f155f58ea0966158b63c25644f"
   },
   "scope": "Actual integrated hook under mounted React StrictMode, real bounded reader and metadata helper; JSDOM storage and synthetic fetch/WebLocks. No native browser/API/Next/production proof."
 }

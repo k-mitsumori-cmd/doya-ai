@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { assertLimitForTier, planTierOf, type QuotaResult } from '@/lib/plan-limit'
 import { aiGeneratePlan } from '@/lib/tenjikai/ai'
-import { VENUES, boothSize, mockGeneratedPlan, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
+import { VENUES, boothSize, isValidBoothMeter, mockGeneratedPlan, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
 
 // ドヤ展示会: サイト解析・ブース案・制作物の文面を LLM で作る。
 // ⚠️ ログイン必須。利用枠（plan-limit.ts の tenjikaiPlans）は TenjikaiProject の作成数で数える。
@@ -33,7 +33,12 @@ function parseInput(b: any): ProjectInput | null {
   if (!serviceUrl || !eventName || !eventStart || Number.isNaN(Date.parse(eventStart))) return null
   if (days == null || komaCols == null || komaRows == null || budgetYen == null || staff == null) return null
   if (!VENUES.some((v) => v.id === b.venueId) || !POSITIONS.includes(b.position) || !GOALS.includes(b.goal)) return null
-  return { serviceUrl, eventName, venueId: b.venueId, eventStart, days, komaCols, komaRows, position: b.position, budgetYen, goal: b.goal, staff }
+  // 小間の横と奥行（m）。画面と同じ決まり（1〜30m・0.5m 刻み。engine.ts の isValidBoothMeter）。
+  // 前の版の画面から来たときは無いので、そのときは小間の列と行から決める。片方だけ・範囲の外は受け付けない
+  const hasSize = b.widthM !== undefined || b.depthM !== undefined
+  if (hasSize && !(isValidBoothMeter(b.widthM) && isValidBoothMeter(b.depthM))) return null
+  const size = hasSize ? { widthM: b.widthM as number, depthM: b.depthM as number } : {}
+  return { serviceUrl, eventName, venueId: b.venueId, eventStart, days, komaCols, komaRows, ...size, position: b.position, budgetYen, goal: b.goal, staff }
 }
 
 async function createProjectWithinQuota(userId: string, input: ProjectInput): Promise<{ ok: true; projectId: string } | { ok: false; quota: QuotaResult }> {

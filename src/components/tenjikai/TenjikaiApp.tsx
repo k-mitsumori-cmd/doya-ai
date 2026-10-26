@@ -26,6 +26,7 @@ import {
   generateNovelties,
   mockGeneratedPlan,
   requestGeneratedPlan,
+  withBoothSize,
   type GeneratedPlan,
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
@@ -117,6 +118,12 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
 
   const onGeneratingDone = useCallback(() => setAnimDone(true), [])
 
+  // ブース設計の画面で小間の大きさを変える。面の数と大きさが変わるので、作った面の画像は外す（画面で先に知らせている）
+  const resizeBooth = (widthM: number, depthM: number) => {
+    setInput((p) => withBoothSize(p, widthM, depthM))
+    setPanelImages({})
+  }
+
   // 演出と API の両方が終わってから結果画面へ
   useEffect(() => {
     if (phase === 'generating' && animDone && !pending) {
@@ -160,7 +167,7 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} onResize={resizeBooth} />
       case 'creatives':
         return <CreativeStudio creatives={creatives} analysis={analysis} />
       case 'novelty':

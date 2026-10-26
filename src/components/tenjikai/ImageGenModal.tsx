@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { ImagePlus, Loader2 } from 'lucide-react'
 import { Modal } from './ui'
 import EmptyState from './EmptyState'
-import { remainingLabel, requestImages, useImageQuota, type ImageGenFailure, type ImageGenKind } from './useImageGen'
+import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestImages, useImageQuota, type ImageGenFailure, type ImageGenKind } from './useImageGen'
 import { ds } from '@/lib/tenjikai/tokens'
 import { ShellCostBadge } from '@/components/shell/power'
 
@@ -51,12 +51,15 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
 
   const left = remainingLabel(quota)
   const noneLeft = quota?.enabled && quota.remaining === 0
+  // サーバーが画像の生成を止めている（準備中）。押す前に分かるように出す
+  const disabled = isImageGenDisabled(quota)
 
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <div className="flex flex-col gap-5">
         <p className="text-[15px] leading-relaxed text-[var(--sub)]">ブースの案とサイトの内容から、画像を1枚作ります。できた画像は、この画面に表示されます。</p>
         {left && <p className="text-[13px] font-medium text-[var(--sub)]">{left}</p>}
+        {disabled && !error && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>}
 
         <details className="rounded-[var(--r-sm)] border border-gray-200 p-3">
           <summary className="cursor-pointer text-[13px] font-bold text-ink">画像への指示を見る・直す</summary>
@@ -83,7 +86,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="min-h-[44px] rounded-xl px-4 text-sm font-bold text-gray-500 hover:bg-gray-100">キャンセル</button>
-          <button disabled={busy || noneLeft} onClick={run} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:cursor-not-allowed disabled:opacity-40">
+          <button disabled={busy || noneLeft || disabled} onClick={run} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:cursor-not-allowed disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             {busy ? '作っています' : '画像を作る'}
             <ShellCostBadge action="tenjikai.image" />

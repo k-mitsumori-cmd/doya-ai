@@ -103,7 +103,8 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
       if (!el.clientWidth || !el.clientHeight) return
       const diag = Math.hypot(W, D)
       const fit = Math.min(el.clientWidth / (diag * 1.2), el.clientHeight / ((diag * 0.6 + wallH) * 1.25))
-      zoom.set(Math.max(0.2, Math.min(1.6, fit)))
+      // 30m 角の大きなブースでも枠に収まるよう、下限を小さくしている（小間の大きさは利用者が 1〜30m で入れる）
+      zoom.set(Math.max(0.05, Math.min(1.6, fit)))
     }
     fitNow()
     const ro = new ResizeObserver(fitNow)
@@ -203,7 +204,7 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
         ))}
       </div>
       <div className="absolute right-2 top-2 flex gap-1 rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur sm:right-3 sm:top-3" onPointerDown={(e) => e.stopPropagation()}>
-        <button aria-label="縮小" onClick={() => zoom.set(Math.max(0.35, zoom.get() * 0.85))} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><Minus className="h-3.5 w-3.5" /></button>
+        <button aria-label="縮小" onClick={() => zoom.set(Math.max(0.05, zoom.get() * 0.85))} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><Minus className="h-3.5 w-3.5" /></button>
         <button aria-label="拡大" onClick={() => zoom.set(Math.min(2.4, zoom.get() * 1.18))} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><Plus className="h-3.5 w-3.5" /></button>
         <button aria-label="視点を戻す" onClick={() => go('diagonal')} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><RotateCcw className="h-3.5 w-3.5" /></button>
       </div>

@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { clsx } from 'clsx'
-import { Eye, ImagePlus, Layers, Ruler } from 'lucide-react'
+import { Check, Eye, ImagePlus, Layers, Ruler } from 'lucide-react'
 import { PanelArt } from './Booth3D'
 import type { SiteAnalysis } from '@/lib/tenjikai/engine'
 import type { GraphicPanel } from '@/lib/tenjikai/graphics'
@@ -86,32 +86,56 @@ export default function GraphicPlanner({ panels, analysis, images, selectedPanel
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-black text-ink"><Layers className="h-4 w-4 text-doya-500" />グラフィック割付</h2>
-          <p className="text-xs text-gray-500">壁面・カウンター・バナーのどこに、どの高さで、何を描くかを決めています。上段は遠くから読ませ、下段は什器で隠れるので文字を置きません。</p>
+          <p className="text-[13px] leading-relaxed text-gray-700">壁面・カウンター・バナーのどこに、どの高さで、何を描くかを決めています。上段は遠くから読ませ、下段は什器で隠れるので文字を置きません。</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-28 overflow-hidden rounded-full bg-gray-100">
+          <div className="h-2 w-28 overflow-hidden rounded-full bg-gray-200">
             <motion.div className="h-full rounded-full bg-doya-500" animate={{ width: `${(done / panels.length) * 100}%` }} />
           </div>
-          <span className="font-mono text-[11px] text-gray-500">画像 {done}/{panels.length} 面</span>
+          <span className="font-mono text-[12px] font-bold text-ink">画像 {done}/{panels.length} 面</span>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <ul className="flex max-h-[520px] flex-col gap-1.5 overflow-y-auto pr-1">
-          {panels.map((x, i) => (
-            <motion.li key={x.id} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-              <button onClick={() => onSelectPanel(x.id)} className={clsx('flex w-full items-center gap-3 rounded-[var(--r-sm)] p-2 text-left transition-colors', p.id === x.id ? 'bg-doya-50 ring-2 ring-doya-500' : 'hover:bg-gray-50')}>
-                <div className="h-12 flex-shrink-0 overflow-hidden rounded-md border border-gray-200" style={{ aspectRatio: `${x.widthMm} / ${x.heightMm}`, maxWidth: 72 }}>
-                  <PanelArt p={x} a={analysis} image={images[x.id]} compact />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-black text-ink">{x.name}</p>
-                  <p className="font-mono text-[10px] text-gray-500">{x.widthMm.toLocaleString()} × {x.heightMm.toLocaleString()} mm</p>
-                </div>
-                {images[x.id] && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">生成済</span>}
-              </button>
-            </motion.li>
-          ))}
+      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+        {/* 面の一覧。見本を大きく、選んだ面は青い枠と印で分かるようにする（2026-10-26 ユーザーの指摘「見やすく、はっきり」） */}
+        <ul className="flex max-h-[560px] flex-col gap-2 overflow-y-auto pr-1" aria-label="面の一覧">
+          {panels.map((x, i) => {
+            const on = p.id === x.id
+            return (
+              <motion.li key={x.id} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => onSelectPanel(x.id)}
+                  className={clsx(
+                    'relative flex w-full items-center gap-3 rounded-[var(--r-sm)] border-2 p-2.5 text-left transition-colors',
+                    on ? 'border-doya-500 bg-doya-50 shadow-[0_0_0_3px_var(--blue-line)]' : 'border-gray-200 bg-white hover:border-doya-200 hover:bg-gray-50',
+                  )}
+                >
+                  <div className="flex h-20 w-28 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 p-1">
+                    {/* 横長の面は幅に、縦長の面は高さに合わせる（縦横比を崩さない） */}
+                    <div className="overflow-hidden rounded border border-gray-300 bg-white" style={{ aspectRatio: `${x.widthMm} / ${x.heightMm}`, ...(x.widthMm / x.heightMm > 104 / 72 ? { width: '100%' } : { height: '100%' }) }}>
+                      <PanelArt p={x} a={analysis} image={images[x.id]} compact />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={clsx('text-[13px] font-black leading-snug', on ? 'text-doya-700' : 'text-ink')}>{x.name}</p>
+                    <p className="mt-0.5 font-mono text-[12px] text-gray-700">{x.widthMm.toLocaleString()} × {x.heightMm.toLocaleString()} mm</p>
+                    {images[x.id] ? (
+                      <span className="mt-1 inline-block rounded bg-emerald-600 px-1.5 py-0.5 text-[11px] font-bold text-white">画像あり</span>
+                    ) : (
+                      <span className="mt-1 inline-block rounded border border-gray-300 px-1.5 py-0.5 text-[11px] font-bold text-gray-600">画像なし</span>
+                    )}
+                  </div>
+                  {on && (
+                    <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-doya-500 text-white" aria-hidden>
+                      <Check className="h-4 w-4" />
+                    </span>
+                  )}
+                </button>
+              </motion.li>
+            )
+          })}
         </ul>
 
         <AnimatePresence mode="wait">

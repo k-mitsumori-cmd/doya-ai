@@ -11,13 +11,13 @@ import { BUDGET_META, KIND_LABEL, POSITION_LABEL, PRINT_PARTNERS, VENDORS, booth
 const CATS: Vendor['category'][] = ['装飾・施工', '印刷', 'ノベルティ', '人材']
 
 function specText(input: ProjectInput, plan: BoothPlan, creatives: Creative[], analysis: SiteAnalysis, picked: Vendor[]) {
-  const { venue } = boothSize(input)
+  const { venue, komas } = boothSize(input)
   const dl = generateDeadlines(input)
   return [
     `【発注仕様書】${input.eventName} 出展ブース`,
     `出展社：${analysis.brand}`,
     `会場：${venue.name} / 会期：${input.eventStart} から${input.days}日間`,
-    `小間：${input.komaCols * input.komaRows}小間（${plan.widthM}m × ${plan.depthM}m）${POSITION_LABEL[input.position]} / 高さ制限 ${venue.maxHeightM}m`,
+    `小間：横 ${plan.widthM}m × 奥行 ${plan.depthM}m（小間料の計算は${komas}小間分）${POSITION_LABEL[input.position]} / 高さ制限 ${venue.maxHeightM}m`,
     `設営案：${plan.variant} ${plan.name} ─ ${plan.concept}`,
     '',
     '■ 部材',

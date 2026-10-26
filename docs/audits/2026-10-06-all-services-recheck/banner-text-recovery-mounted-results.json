@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:27:57.035Z",
+  "checkedAt": "2026-10-26T12:23:44.456Z",
   "passed": 13,
   "cases": [
     "metadata is saved before POST; same-frame and cross-instance new intents cannot duplicate",

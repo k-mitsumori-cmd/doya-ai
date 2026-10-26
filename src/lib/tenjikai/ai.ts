@@ -29,9 +29,10 @@ const hex = (v: unknown) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v
 
 function brief(input: ProjectInput) {
   const { w, d, venue } = boothSize(input)
+  // ⚠️ 来場者の人数は渡さない（根拠の無い人数を AI に書かせないため。2026-10-26 ユーザー指示）
   return [
     `展示会: ${input.eventName}（${venue.name}、${input.days}日間）`,
-    `ブース: ${input.komaCols * input.komaRows}小間 ${w}m × ${d}m、${POSITION_LABEL[input.position]}、高さ上限 ${venue.maxHeightM}m`,
+    `ブース: 横 ${w}m × 奥行 ${d}m、${POSITION_LABEL[input.position]}、高さ上限 ${venue.maxHeightM}m`,
     `出展の目的: ${GOAL_LABEL[input.goal]}`,
     `当日のスタッフ: ${input.staff}名`,
   ].join('\n')
@@ -105,7 +106,7 @@ export async function aiBoothCopy(a: SiteAnalysis, input: ProjectInput): Promise
   const prompt = [
     'あなたはBtoB展示会のブース企画を担当するプランナーです。',
     '3つのブース案（A/B/C）の型と配置は決まっています。各案の名前・コンセプト・来場者の動線を、この出展者向けに書き直してください。',
-    '部材の追加や寸法・金額には触れないこと。',
+    '部材の追加や寸法・金額には触れないこと。来場者の人数や集客の見込み（「○日間で○人」など）は書かないこと。',
     '- name は全角12字以内。concept は全角90字以内で、何をどう見せて誰を止めるか。flow は「通路 → … → …」の形で全角50字以内。',
     '',
     '【出展者】',
@@ -137,7 +138,7 @@ export async function aiCreativeCopy(a: SiteAnalysis, input: ProjectInput): Prom
   const prompt = [
     'あなたはBtoB展示会の制作物を担当するコピーライターです。',
     '以下の制作物それぞれに、載せるコピー（copy）と、その制作物の狙い・置き方（purpose）を書いてください。',
-    'サイズ・数量・金額は決まっているので触れないこと。サイトに無い実績や数字を作らないこと。',
+    'サイズ・数量・金額は決まっているので触れないこと。サイトに無い実績や数字を作らないこと。来場者の人数や集客の見込みは書かないこと。',
     '- copy は全角30字以内（loop はカットごとに「 / 」で区切って3つ）。purpose は全角60字以内。',
     '',
     '【出展者】',

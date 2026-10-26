@@ -14,6 +14,10 @@ export interface ProjectInput {
   days: number
   komaCols: number
   komaRows: number
+  /** 小間の横幅（m）。利用者が入れた値。無いとき（前の版で保存した内容）は会場の基礎小間 × 小間数で決める */
+  widthM?: number
+  /** 小間の奥行（m）。widthM と組で使う */
+  depthM?: number
   position: BoothPosition
   budgetYen: number
   goal: Goal
@@ -58,6 +62,8 @@ export const SAMPLE_INPUT: ProjectInput = {
   days: 3,
   komaCols: 2,
   komaRows: 2,
+  widthM: 6,
+  depthM: 6,
   position: 'corner',
   budgetYen: 4500000,
   goal: 'lead',
@@ -191,9 +197,56 @@ export const KIND_LABEL: Record<ElementKind, string> = {
   sign: '吊り看板',
 }
 
+// ---------- 小間の大きさ ----------
+// 横と奥行は利用者が m で入れる（2026-10-26 ユーザー指示）。画面とサーバーで同じ決まりを使う。
+
+export const BOOTH_SIZE_LIMIT = { minM: 1, maxM: 30, stepM: 0.5 } as const
+
+/** よく使う大きさ。押すと横と奥行に入る */
+export const BOOTH_SIZE_PRESETS: { label: string; widthM: number; depthM: number }[] = [
+  { label: '1小間', widthM: 3, depthM: 3 },
+  { label: '2小間（横並び）', widthM: 6, depthM: 3 },
+  { label: '4小間', widthM: 6, depthM: 6 },
+  { label: '6小間', widthM: 9, depthM: 6 },
+  { label: '9小間', widthM: 9, depthM: 9 },
+]
+
+/** 1〜30m で、0.5m 刻みの数か */
+export function isValidBoothMeter(v: unknown): v is number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return false
+  if (v < BOOTH_SIZE_LIMIT.minM || v > BOOTH_SIZE_LIMIT.maxM) return false
+  const steps = v / BOOTH_SIZE_LIMIT.stepM
+  return Math.abs(steps - Math.round(steps)) < 1e-9
+}
+
+/** 入力欄の文字を確かめる。正しくないときは、直し方を日本語で返す */
+export function checkBoothMeter(label: '横' | '奥行', raw: string): { ok: true; value: number } | { ok: false; message: string } {
+  const t = raw.trim().replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+  if (!t) return { ok: false, message: `${label}の長さを入れてください。` }
+  const n = Number(t)
+  if (!Number.isFinite(n)) return { ok: false, message: `${label}は数字で入れてください。` }
+  if (n < BOOTH_SIZE_LIMIT.minM || n > BOOTH_SIZE_LIMIT.maxM) return { ok: false, message: `${label}は${BOOTH_SIZE_LIMIT.minM}〜${BOOTH_SIZE_LIMIT.maxM}mで入れてください。` }
+  if (!isValidBoothMeter(n)) return { ok: false, message: `${label}は0.5m刻みで入れてください（例：3、4.5）。` }
+  return { ok: true, value: n }
+}
+
+/** 小間の大きさ（m）と、小間料の計算に使う小間の数 */
 export function boothSize(input: ProjectInput) {
   const v = VENUES.find((x) => x.id === input.venueId) ?? VENUES[0]
-  return { w: +(v.komaM * input.komaCols).toFixed(2), d: +(v.komaM * input.komaRows).toFixed(2), venue: v }
+  if (isValidBoothMeter(input.widthM) && isValidBoothMeter(input.depthM)) {
+    const w = input.widthM
+    const d = input.depthM
+    // 小間料は会場の基礎小間の面積で割って数える（最低1小間）
+    return { w, d, venue: v, komas: Math.max(1, Math.round((w * d) / (v.komaM * v.komaM))), custom: true as const }
+  }
+  return { w: +(v.komaM * input.komaCols).toFixed(2), d: +(v.komaM * input.komaRows).toFixed(2), venue: v, komas: input.komaCols * input.komaRows, custom: false as const }
+}
+
+/** 横と奥行を入れた内容にする。小間の列と行（DB の項目）も、会場の基礎小間からおおよそに合わせる */
+export function withBoothSize(input: ProjectInput, widthM: number, depthM: number): ProjectInput {
+  const v = VENUES.find((x) => x.id === input.venueId) ?? VENUES[0]
+  const fit = (m: number) => Math.min(10, Math.max(1, Math.round(m / v.komaM)))
+  return { ...input, widthM, depthM, komaCols: fit(widthM), komaRows: fit(depthM) }
 }
 
 export function generateBoothPlans(input: ProjectInput): BoothPlan[] {
@@ -275,7 +328,7 @@ export function generateBoothPlans(input: ProjectInput): BoothPlan[] {
 }
 
 export function planCost(plan: BoothPlan, input: ProjectInput) {
-  const komas = input.komaCols * input.komaRows
+  const { komas } = boothSize(input)
   const parts = plan.elements.reduce((s, e) => s + e.costYen, 0)
   const carpet = Math.round(plan.widthM * plan.depthM * UNIT.carpetPerM2)
   return { parts, carpet, design: UNIT.designFee, labor: UNIT.laborPerKoma * komas, total: parts + carpet + UNIT.designFee + UNIT.laborPerKoma * komas }
@@ -299,13 +352,13 @@ export interface Creative {
 
 export function generateCreatives(a: SiteAnalysis, input: ProjectInput): Creative[] {
   const { w } = boothSize(input)
-  const visitors = expectedVisitors(input)
+  const base = handoutBase(input)
   const wallMm = Math.round(w * 1000)
   return [
     { kind: 'backwall', name: '背面壁グラフィック', size: `${wallMm.toLocaleString()} × 2,700 mm`, widthMm: wallMm, heightMm: 2700, qty: 1, unitYen: Math.round(w * 42000), copy: a.headline.replace('\n', ''), purpose: '通路の15m先から何の会社かわかる。文字は上部1,800mmより上に置く' },
     { kind: 'rollup', name: 'ロールアップバナー', size: '850 × 2,000 mm', widthMm: 850, heightMm: 2000, qty: 2, unitYen: 9800, copy: a.valueProps[0].title, purpose: '通路側の角に立て、足を止めるきっかけを作る' },
-    { kind: 'flyer', name: 'A4チラシ', size: '210 × 297 mm', widthMm: 210, heightMm: 297, qty: Math.round(visitors * 1.2 / 100) * 100, unitYen: 12, copy: a.subline, purpose: '持ち帰って社内で回覧される前提で、料金と導入事例を載せる' },
-    { kind: 'clearfile', name: 'A4クリアファイル', size: '220 × 310 mm', widthMm: 220, heightMm: 310, qty: Math.round(visitors * 0.6 / 100) * 100, unitYen: 48, copy: a.brand, purpose: 'チラシを挟んで配布。会場で他社の資料も入れてもらえる' },
+    { kind: 'flyer', name: 'A4チラシ', size: '210 × 297 mm', widthMm: 210, heightMm: 297, qty: Math.max(100, Math.round(base * 1.2 / 100) * 100), unitYen: 12, copy: a.subline, purpose: '持ち帰って社内で回覧される前提で、料金と導入事例を載せる' },
+    { kind: 'clearfile', name: 'A4クリアファイル', size: '220 × 310 mm', widthMm: 220, heightMm: 310, qty: Math.max(100, Math.round(base * 0.6 / 100) * 100), unitYen: 48, copy: a.brand, purpose: 'チラシを挟んで配布。会場で他社の資料も入れてもらえる' },
     { kind: 'card', name: 'QRカード', size: '91 × 55 mm', widthMm: 91, heightMm: 55, qty: 1000, unitYen: 4, copy: '資料のダウンロードはこちら', purpose: '名刺交換できなかった人にも後から接点を残す' },
     { kind: 'loop', name: 'モニター用ループ動画', size: '1920 × 1080 / 15秒', widthMm: 1920, heightMm: 1080, qty: 1, unitYen: 120000, copy: a.valueProps.map((v) => v.title).join(' / '), purpose: '音なしで伝わる構成。3カットを15秒で繰り返す' },
   ]
@@ -323,8 +376,13 @@ export interface Novelty {
   recommended: boolean
 }
 
-export function expectedVisitors(input: ProjectInput) {
-  const komas = input.komaCols * input.komaRows
+/**
+ * 制作物とノベルティの数量の初期値を決めるための目安の数。
+ * ⚠️ 来場者の人数の推計ではない。根拠のある人数ではないので、画面に「○人」として出さない（2026-10-26 ユーザー指示）。
+ *    数量は目安として出し、配る見込みに合わせて利用者が直す前提。
+ */
+export function handoutBase(input: ProjectInput) {
+  const { komas } = boothSize(input)
   const perKomaPerDay = input.goal === 'brand' ? 140 : input.goal === 'demo' ? 90 : 110
   return Math.round(komas * perKomaPerDay * input.days)
 }
@@ -341,7 +399,7 @@ export function generateNovelties(input: ProjectInput): Novelty[] {
 }
 
 export function noveltyQty(n: Novelty, input: ProjectInput) {
-  const v = expectedVisitors(input)
+  const v = handoutBase(input)
   const rate = n.tier === '来場者全員' ? 0.9 : n.tier === '名刺交換者' ? 0.35 : 0.06
   return Math.max(50, Math.ceil((v * rate) / 50) * 50)
 }
@@ -367,8 +425,7 @@ export interface BudgetLine {
 }
 
 export function computeBudget(input: ProjectInput, plan: BoothPlan, creatives: Creative[], novelties: Novelty[], selectedNovelty: string[]): BudgetLine[] {
-  const { venue } = boothSize(input)
-  const komas = input.komaCols * input.komaRows
+  const { venue, komas } = boothSize(input)
   const pc = planCost(plan, input)
   const monitors = plan.elements.filter((e) => e.kind === 'monitor').length
   const print = creatives.reduce((s, c) => s + c.unitYen * c.qty, 0)
