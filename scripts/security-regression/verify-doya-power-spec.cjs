@@ -15,7 +15,7 @@ for (const t of ['回復するのを待つ', '追加する', 'チームにする
 assert.ok(ui.includes('size={64}'));
 const cat = read('src/lib/collection/catalog.ts'); assert.match(cat, /label: '一人前'/); assert.ok(!cat.includes("label: 'プロ'"));
 // はじめの手順の報酬: 旗が off なら今の値（会社情報 +50・招待 +100）。新しい料金の人だけ、最初の100と合わせて見直した値（会社情報 0・招待 +50。2026-10-26）
-assert.match(read('src/lib/missions/rules.ts'), /company_profile.*reward: 50/); assert.match(read('src/lib/missions/rules.ts'), /invite_member.*reward: 100/); assert.match(read('src/lib/missions/rules.ts'), /q\.id === 'company_profile' \? \{ \.\.\.q, reward: 0 \} : q\.id === 'invite_member' \? \{ \.\.\.q, reward: 50 \}/); assert.match(read('src/lib/pricing-v2/starter.ts'), /export const STARTER_POWER = 100/);
+assert.match(read('src/lib/missions/rules.ts'), /company_profile.*reward: 50/); assert.match(read('src/lib/missions/rules.ts'), /invite_member.*reward: 100/); assert.match(read('src/lib/missions/rules.ts'), /q\.id === 'company_profile' \? \{ \.\.\.q, reward: 0 \} : q\.id === 'invite_member' \? \{ \.\.\.q, reward: 50 \}/); assert.match(read('src/lib/pricing-v2/starter-welcome.ts'), /export const STARTER_POWER = 100/); assert.doesNotMatch(read('src/lib/pricing-v2/starter-welcome.ts'), /from 'node:/);
 assert.match(read('src/lib/collection/bonus-actions.ts'), /sourceKey: stampSetKey/);
 for (const f of ['CollectionView', 'MissionsBoard', 'AnnualReportView']) {
   const p = f === 'CollectionView' ? 'collection' : f === 'MissionsBoard' ? 'missions' : 'annual-report';
