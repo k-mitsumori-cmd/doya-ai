@@ -300,6 +300,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         './HomeDashboard':{__esModule:true,default:HomeDashboard},
         '@/lib/agent-orchestration/flag':loadFlag(env,email,log),
         '@/components/home-agent/HomeAgent':{__esModule:true,default:HomeAgent},
+        // 部署ごとの入口（DEPARTMENTS_ROLLOUT）は、このテストでは off（ホームは今のまま）として通す。旗そのものは verify-departments-flag.cjs が見る
+        '@/lib/departments/flag':{isDepartmentsEnabled:async()=>false},
+        '@/lib/departments':{DEPARTMENTS_COOKIE:'doya_departments',parseDepartmentsCookie:()=>[],parseDeptQuery:()=>null},
       },env);
       const el=await page.default();
       assert.equal(el.type,HomeDashboard);
