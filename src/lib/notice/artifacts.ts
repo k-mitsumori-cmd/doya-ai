@@ -1,9 +1,10 @@
 // ============================================
 // 最近作った物の記録（提案リスト (7) 成果物の受け渡し。NOTICE-PARTS §6.2）
 // ============================================
-// 次のツールで「さっき作った見積書を材料にしますか」と出すために、種類・id・表示名・時刻だけを、ユーザーごとに端末へ残す。
-// ⚠️ 中身は残さない。中身は、本人が「材料にする」を押したときに、次のツールのサーバーが本人の組織の範囲で読み直す。
-// ⚠️ 表示名（title）には顧客名が入りえるので、ログアウトしたときに消す（clearAllRecentArtifacts。統括の点検 8）。
+// 次のツールで「さっき作った見積書を材料にしますか」と出すために、種類・id・時刻だけを、ユーザーごとに端末へ残す。
+// ⚠️ 中身も表示名も残さない（表示名には顧客名が入りえるため。統括の点検 8、セキュリティの点検 2026-10-26）。
+//    中身は、本人が「材料にする」を押したときに、次のツールのサーバーが本人の組織の範囲で読み直す。
+// ⚠️ ログアウトのときも消す（clearAllRecentArtifacts）。残るのは種類・id・時刻だけなので、消し漏れがあっても顧客の情報は残らない。
 // ⚠️ 直近の3件だけ。1日より古いものは使わない。
 
 export type ArtifactKind = 'quote'
@@ -13,7 +14,7 @@ export const ARTIFACT_ID_PATTERN = /^[a-z0-9]{20,40}$/i
 export const ARTIFACT_MAX = 3
 export const ARTIFACT_FRESH_MS = 24 * 60 * 60 * 1000
 
-export interface RecentArtifact { kind: ArtifactKind; id: string; title: string; at: number }
+export interface RecentArtifact { kind: ArtifactKind; id: string; at: number }
 
 const PREFIX = 'doya-recent-artifacts:v1:'
 export function artifactsKey(userKey: string): string { return PREFIX + (userKey || 'anon') }
@@ -26,16 +27,16 @@ export function parseArtifacts(raw: string | null | undefined): RecentArtifact[]
     if (!Array.isArray(v)) return []
     return v.filter((a): a is RecentArtifact =>
       a && typeof a === 'object' && ARTIFACT_KINDS.includes(a.kind) && typeof a.id === 'string' && ARTIFACT_ID_PATTERN.test(a.id)
-      && typeof a.title === 'string' && typeof a.at === 'number').slice(0, ARTIFACT_MAX)
+      && typeof a.at === 'number').map((a) => ({ kind: a.kind, id: a.id, at: a.at })).slice(0, ARTIFACT_MAX)
   } catch {
     return []
   }
 }
 
-/** 1つ足す（同じものは先頭に移す。表示名は80字まで） */
+/** 1つ足す（同じものは先頭に移す。種類・id・時刻のほかは残さない） */
 export function addArtifact(list: RecentArtifact[], a: RecentArtifact): RecentArtifact[] {
   if (!ARTIFACT_KINDS.includes(a.kind) || !ARTIFACT_ID_PATTERN.test(a.id)) return list
-  const item = { ...a, title: a.title.trim().slice(0, 80) }
+  const item: RecentArtifact = { kind: a.kind, id: a.id, at: a.at }
   return [item, ...list.filter((x) => !(x.kind === a.kind && x.id === a.id))].slice(0, ARTIFACT_MAX)
 }
 

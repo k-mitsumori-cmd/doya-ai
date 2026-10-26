@@ -144,7 +144,7 @@ const release = notice.holdBusy() // 長い生成の間。終わったら releas
 
 - サーバー: ブランチ `feat/quote-slide-handoff`（main から）。`loadQuoteForHandoff`、`POST /api/doyaslide/projects/from-quote`、構成づくりの Web 検索を内部の目印で止める分岐、回帰の検査 `verify-doyaslide-quote-handoff.cjs`。
 - 画面: ブランチ `feat/notice-handoff-ui`（`feat/notice-parts` から）。
-  - 見積書の詳細を開いたとき、種類・id・表示名だけを端末に残す（3件まで・1日以内だけ使う）。
+  - 見積書の詳細を開いたとき、種類・id・時刻だけを端末に残す（3件まで・1日以内だけ使う）。表示名は残さない（顧客名が入りえるため。セキュリティの点検 2026-10-26）。
   - スライドの作成・一覧を開いたとき、知らせのカードで「材料にしますか」を1回だけ出す。押したときだけサーバーに `{ kind, id }` を送る。
   - 移る先は、サーバーが返した id から作り、形を確かめる。
   - ログアウトのとき、記録を消す。

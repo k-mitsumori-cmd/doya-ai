@@ -43,9 +43,9 @@ export default function QuoteDocumentPage() {
   const notice = useNotice()
   // (7) 最近作った見積書として記録する（次のツールで「材料にしますか」と出すため。中身は残さない）
   useEffect(() => {
-    if (doc?.id && doc.title) notice.rememberArtifact({ kind: 'quote', id: doc.id, title: doc.title })
+    if (doc?.id) notice.rememberArtifact({ kind: 'quote', id: doc.id })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc?.id, doc?.title])
+  }, [doc?.id])
   useEffect(() => {
     if (!message) return
     // 「保存しました」のときだけ、6秒のあいだ「取り消す」を出す（保存の前の内容に戻す）

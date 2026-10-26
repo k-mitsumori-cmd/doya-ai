@@ -59,7 +59,7 @@ export default function HandoffSuggest() {
     push({
       id: `handoff:quote:${a.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: 'さっき作った見積書',
       title: '見積書を、スライドの材料に使いますか？',
-      body: `「${a.title}」の品目と金額から、提案スライドの構成を作ります。相手の会社名や金額は、外の検索には使いません。`,
+      body: 'さっき開いた見積書の品目と金額から、提案スライドの構成を作ります。相手の会社名や金額は、外の検索には使いません。',
       content: (close) => <HandoffActions artifact={a} close={close} />,
     })
   }, [enabled, ready, pathname, push, recentArtifacts])
