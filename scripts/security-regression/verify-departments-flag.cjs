@@ -2,6 +2,7 @@
 // - 旗が off（既定・値なし・知らない値）のとき: セッションを読まずに false
 // - layout は、サーバーの旗が on のときだけ ShellGate に departments を渡す（画面側で旗を決めない）
 // - src/lib/departments.ts はサーバー専用の部品（next/headers・prisma・next-auth など）を import しない（画面からも使う純粋な表）
+// - 主に使う部署の API（/api/account/departments）は旗を先に見て、cookie だけに書く（DB に書かない）
 // - 部署の表・cookie・並びのテスト（src/lib/departments.test.ts）を流す
 // git を使わない。DB・課金・外部 API には触れない。
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process')
@@ -31,6 +32,21 @@ check('Departments flag: the shell layout passes departments only from the serve
   const page = read('src/app/(shell)/home/page.tsx')
   assert.match(page, /const departmentsOn = await isDepartmentsEnabled\(\)/)
   assert.match(page, /departmentsOn\s*\n?\s*\? \{/)
+})
+
+check('Departments choice API: flag first, cookie only, HttpOnly, no DB writes', () => {
+  const api = read('src/app/api/account/departments/route.ts')
+  for (const m of ['GET', 'PUT']) {
+    const body = api.slice(api.indexOf('export async function ' + m))
+    assert.match(body, /^export async function \w+\([^)]*\) \{\s*\n\s*if \(!\(await isDepartmentsEnabled\(\)\)\) return notFound\(\)/, m + ' must check the flag first')
+  }
+  assert.doesNotMatch(api, /prisma|@\/lib\/auth|getServerSession/)
+  assert.match(api, /parseDepartmentsCookie\(/)
+  assert.match(api, /httpOnly: true/)
+  assert.match(api, /sameSite: 'lax'/)
+  const dialog = read('src/components/shell/CompanyDialog.tsx')
+  assert.match(dialog, /fetch\('\/api\/account\/departments'/)
+  assert.match(dialog, /\{depts \? \(/, 'the department field shows only when the API answered')
 })
 
 check('Departments table: pure and client-safe (no server-only imports)', () => {
