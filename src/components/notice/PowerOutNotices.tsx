@@ -16,13 +16,8 @@ import { useUpsellInfo, type UpsellInfo } from '@/components/pricing/UpsellActio
 import { ShellPowerContext } from '@/components/shell/power'
 import { powerOutView, type PowerOutView } from '@/lib/pricing-v2/power-out'
 import { isLowPower, upsellFrequencyKey } from '@/lib/pricing-v2/upsell'
-// ⚠️ starter.ts は node:crypto を使うので、画面（クライアント）からは import できない。
-//    文と行き先は starter.ts の STARTER_WELCOME の写し（新料金の担当に、画面から読める置き場所へ移す相談中。2026-10-26）
-const STARTER_WELCOME = {
-  title: 'ドヤパワー 100 からスタートです',
-  body: 'AIで作るときに使うポイントです。使った分は、毎日10ずつ回復します（たまる上限は100）。',
-  action: { label: 'ドヤパワーを見る', href: '/home/doya-power' },
-} as const
+// starter-welcome.ts は node: を使わないので、画面から読める（新料金の 3404707b で starter.ts から移った）
+import { STARTER_WELCOME } from '@/lib/pricing-v2/starter-welcome'
 import type { Notice, NoticeAction } from '@/lib/notice/queue'
 import { useNotice } from './NoticeProvider'
 
