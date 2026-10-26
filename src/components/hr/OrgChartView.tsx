@@ -151,11 +151,26 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
 }
 
 export default function OrgChartView({ departments, orgName, unassignedEmployees = [] }: OrgChartViewProps) {
-  // 組織図が画面より広いときは、はじめに一番上（会社名）が真ん中に来る位置まで横に送る（2026-10-27）
+  // 組織図が画面より広いときの見せ方（2026-10-27）
+  // - 少しだけ広い（70% まで縮めれば入る）ときは、全体を縮めて横に送らずに見られるようにする
+  // - それでも入らないときは縮めず、はじめに一番上（会社名）が真ん中に来る位置まで横に送る
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const innerRef = useRef<HTMLDivElement | null>(null)
+  const [zoom, setZoom] = useState(1)
   useEffect(() => {
-    const el = scrollRef.current
-    if (el && el.scrollWidth > el.clientWidth) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+    const fit = () => {
+      const el = scrollRef.current, inner = innerRef.current
+      if (!el || !inner) return
+      const cur = Number(getComputedStyle(inner).zoom) || 1
+      const natural = inner.getBoundingClientRect().width / cur
+      const ratio = el.clientWidth / natural
+      const next = ratio >= 1 ? 1 : ratio >= 0.7 ? Math.floor(ratio * 100) / 100 : 1
+      setZoom((z) => (Math.abs(z - next) < 0.01 ? z : next))
+      if (next === 1 && el.scrollWidth > el.clientWidth) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
   }, [departments.length])
   if (departments.length === 0 && unassignedEmployees.length === 0) {
     // 新しい見た目: 空の状態は絵＋次にやること1つ
@@ -196,7 +211,7 @@ export default function OrgChartView({ departments, orgName, unassignedEmployees
 
   return (
     <div ref={scrollRef} className="overflow-x-auto">
-      <div className="inline-flex flex-col items-center min-w-full py-8 px-4">
+      <div ref={innerRef} className="inline-flex flex-col items-center min-w-full py-8 px-4" style={zoom < 1 ? { zoom } : undefined}>
         {/* Org Name */}
         {orgName && (
           <div className="mb-6">

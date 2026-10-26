@@ -47,7 +47,8 @@ const BEAR_FOOTER: Record<string, { motion: Motion; line: string }> = {
 
 export default function ToolBearFooter({ serviceId }: { serviceId: string }) {
   const conf = BEAR_FOOTER[serviceId]
-  const { ref, seen } = useInViewOnce<HTMLDivElement>('0px 0px -40px 0px')
+  // 絵はいつも見えているので、画面に入らないまま動きを出す救済（fallback）はしない（0）。画面の外で動いても見えないため
+  const { ref, seen } = useInViewOnce<HTMLDivElement>('0px 0px -40px 0px', 0)
   // 押すたびに key を変えて、動きをはじめからもう一度出す
   const [round, setRound] = useState(0)
   if (!conf) return null
