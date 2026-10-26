@@ -43,7 +43,8 @@ export function isSystemWatchFor(
   try {
     const testUser = systemWatchUserId(env)
     if (!testUser || !userId || userId !== testUser) return false
-    const expected = systemWatchTokenFor(userId, at, env.CRON_SECRET)
+    // 渡された env だけを見る（env に秘密が無いときに、引数の既定値で本物の環境変数を読まないように '' を渡す）
+    const expected = systemWatchTokenFor(userId, at, env.CRON_SECRET ?? '')
     const got = headers?.get?.(SYSTEM_WATCH_HEADER) ?? null
     if (!expected || !got || got.length !== expected.length) return false
     return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected))
