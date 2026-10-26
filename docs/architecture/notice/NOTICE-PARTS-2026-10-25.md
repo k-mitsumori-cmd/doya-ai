@@ -139,3 +139,12 @@ const release = notice.holdBusy() // 長い生成の間。終わったら releas
     - href の確かめ方（`//evil`、`https:`、`/\evil`、`javascript:` を拒む）
 
 6.2 は、スライドのサーバー（`src/app/api/doyaslide/*`）と見積書の読み方（`src/lib/quote/access.ts`）に手を入れます。始める前に、触るファイルをメインに伝えます。
+
+#### 6.2 の実装（2026-10-26）
+
+- サーバー: ブランチ `feat/quote-slide-handoff`（main から）。`loadQuoteForHandoff`、`POST /api/doyaslide/projects/from-quote`、構成づくりの Web 検索を内部の目印で止める分岐、回帰の検査 `verify-doyaslide-quote-handoff.cjs`。
+- 画面: ブランチ `feat/notice-handoff-ui`（`feat/notice-parts` から）。
+  - 見積書の詳細を開いたとき、種類・id・表示名だけを端末に残す（3件まで・1日以内だけ使う）。
+  - スライドの作成・一覧を開いたとき、知らせのカードで「材料にしますか」を1回だけ出す。押したときだけサーバーに `{ kind, id }` を送る。
+  - 移る先は、サーバーが返した id から作り、形を確かめる。
+  - ログアウトのとき、記録を消す。

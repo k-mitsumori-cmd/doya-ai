@@ -26,6 +26,7 @@ import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { newToolIds } from '@/lib/notice/announcements'
+import { clearAllRecentArtifacts } from '@/lib/notice/artifacts'
 
 // 日付で変わるので、開くたびに作る（同じ描画の中では1回だけ）
 let newToolCache: { day: string; ids: Set<string> } | null = null
@@ -305,7 +306,7 @@ export default function AppShell({ children, userName, initialRecent }: {
             <CreditCard size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>料金プラン</span>
           </Link>
-          <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => signOut({ callbackUrl: '/' })} title="ログアウト">
+          <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => { clearAllRecentArtifacts(); void signOut({ callbackUrl: '/' }) }} title="ログアウト">
             <LogOut size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>ログアウト</span>
           </button>
