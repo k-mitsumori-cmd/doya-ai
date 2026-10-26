@@ -16,7 +16,8 @@ import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { bodySnippet, describeFetchError } from '@/lib/health-check-report'
 import { httpCheck, siteBase } from './http'
-import { SYSTEM_WATCH_HEADER, systemWatchToken } from './marker'
+import { SYSTEM_WATCH_HEADER } from './marker'
+import { systemWatchTokenFor } from './watch-gate'
 import type { CheckDef, CheckOutcome } from './types'
 
 export const PAID_AGENT_ENABLED_KEY = 'watch:v1:paid-agent-enabled'
@@ -171,14 +172,14 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
         // 本人の作業に足りなくならないよう、ドヤパワーの残りが少ないときは回さない
         const left = await powerLeftFor(testUserId)
         if (left !== null && left < MIN_POWER_FOR_B1) return { ok: true, skipped: true, detail: `ドヤパワーの残りが ${left} で、${MIN_POWER_FOR_B1} を切っているため回していない` }
-        const token = systemWatchToken()
-        if (!token) return { ok: true, skipped: true, detail: 'CRON_SECRET が無いため、自動点検の合図を作れず回していない' }
+        // 合図は本人（SYSTEM_WATCH_TEST_USER_ID）と今日の日付に結び付く（watch-gate.ts）。日付の変わり目をまたがないよう、送る直前に作る
+        if (!systemWatchTokenFor(testUserId)) return { ok: true, skipped: true, detail: 'CRON_SECRET が無いため、自動点検の合図を作れず回していない' }
         const answers = { url, offer: 'web', budget: 'u50', stage: 'first' }
         const outcomes = await withTestUserSession(async cookie => Promise.all((['research', 'quote', 'slides'] as const).map(async (taskId): Promise<TaskOutcome> => {
           try {
             const res = await fetch(base + '/api/agent/tasks', {
               method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(280_000),
-              headers: { 'content-type': 'application/json', cookie, origin: base, [SYSTEM_WATCH_HEADER]: token },
+              headers: { 'content-type': 'application/json', cookie, origin: base, [SYSTEM_WATCH_HEADER]: systemWatchTokenFor(testUserId) ?? '' },
               body: JSON.stringify({ recipeId: 'sales-prep', taskId, answers }),
             })
             const text = await res.text().catch(() => '')

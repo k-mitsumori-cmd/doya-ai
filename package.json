@@ -26,7 +26,7 @@
     "test:agent": "tsx --test src/lib/agent-orchestration/runner.test.ts src/lib/agent-orchestration/tools.test.ts src/lib/agent-orchestration/plan.test.ts src/lib/agent-orchestration/runs.test.ts",
     "test:slack": "tsx --test src/lib/slack/notify.test.ts",
     "test:pricing": "tsx --test src/lib/pricing-v2/pricing-v2.test.ts src/lib/pricing-v2/team.test.ts src/lib/pricing-v2/upsell.test.ts src/lib/pricing-v2/flag-off.test.ts",
-    "test:health-check": "tsx --test src/lib/health-check-report.test.ts scripts/ci-failure-report.test.cjs src/lib/system-watch/decide.test.ts src/lib/system-watch/http.test.ts src/lib/system-watch/checks.test.ts src/lib/system-watch/marker.test.ts src/lib/system-watch/marked-records.test.ts src/lib/system-watch/marked-records-range.test.ts",
+    "test:health-check": "tsx --test src/lib/health-check-report.test.ts scripts/ci-failure-report.test.cjs src/lib/system-watch/decide.test.ts src/lib/system-watch/http.test.ts src/lib/system-watch/checks.test.ts src/lib/system-watch/marker.test.ts src/lib/system-watch/watch-gate.test.ts src/lib/system-watch/marked-records.test.ts src/lib/system-watch/marked-records-range.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

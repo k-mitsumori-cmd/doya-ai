@@ -92,11 +92,11 @@
 - 合計の見込み: 1日 約4.2円、1か月 約130円（承認は1日 約10円まで）。上限の日は1日 約12円になり得るが、次の止める仕組みで10円台に収める。
 - 1日の上限: 安い確認から順に1つずつ回す。回す前にその日の累計の見込み額（SystemSetting `watch:v1:paid-spend:<日本時間の日付>`）を見て、10円に届いていたら残りを回さない。失敗した確認も、費用は出たとみなして足す。前提がそろわず回さなかった確認は足さない。
 - B1 はユーザー本人のアカウント（k-mitsumori@surisuta.jp、株式会社スリスタ、プロ）で回す（2026-10-26 ユーザー指示）。`SYSTEM_WATCH_TEST_USER_ID` に本人のユーザー ID を入れる。cron の中で本人に15分だけ有効なセッションを作り、`/api/agent/tasks` を3つ呼び、終わったら消す。値が無いうちは回さず、費用にも数えない（失敗として知らせない）。
-- B1 は本人の会社に、見積の下書き・スライドのプロジェクト・商談準備の記録を1日1件ずつ作る。名前の先頭には必ず「【自動点検】」を付ける（`src/lib/system-watch/marker.ts`。B1 はヘッダ `x-doya-system-watch` に CRON_SECRET から作った合図を付け、エージェントの側が名前に印を付ける）。エージェントの側が印に対応し、`routes.server.ts` から `SYSTEM_WATCH_MARKER_SUPPORTED = true` を出すまでは、B1 は回さない。
+- B1 は本人の会社に、見積の下書き・スライドのプロジェクト・商談準備の記録を1日1件ずつ作る。名前の先頭には必ず「【自動点検】」を付ける（`src/lib/system-watch/marker.ts`）。B1 はヘッダ `x-doya-system-watch` に合図を付け、エージェントの側が名前に印を付ける。合図は `watch-gate.ts` の `systemWatchTokenFor(本人の userId)` で作り、HMAC(CRON_SECRET, 日本時間の日付と本人の userId) なので、その日のその人にしか通らない。受ける側は `isSystemWatchFor(headers, ログインしている本人)` で確かめ、本人が `SYSTEM_WATCH_TEST_USER_ID` でなければ何も外さない。見積書と商談準備は、組織の契約者が本人であることも確かめる（2026-10-26 統括の監査を受けて、エージェントの担当が直した）。エージェントの側が印に対応し、`routes.server.ts` から `SYSTEM_WATCH_MARKER_SUPPORTED = true` を出すまでは、B1 は回さない。
 - 経営ホームの「下書きのままの見積」の件数からは、自動点検の記録の ID で外す（`src/lib/home/summary.ts`。名前で外すと、利用者が自分で印を付けた下書きまで消えるため。2026-10-26 統括の監査）。
 - 本人の枠の使い方（2026-10-26 エージェントの担当の答え）。どれも避けられないが、一覧では名前の印で見分けられる。
   - 商談準備: 2026-10-26 ユーザー決定（A）で、B1 が作った商談準備は今月の件数（プロは月50件）に数えない。商談準備の一覧には並ぶ。
-    - 名前の印は、相手のサイトの社名から偽れる（社名を「【自動点検】…」にすれば枠を抜けられる）。そのため、数えから外すのは記録の ID で行う（`src/lib/system-watch/marked-records.ts`）。合図（`marker.ts`）を確かめたツールのルートだけが ID を SystemSetting（`watch:v1:marked:shodan-preparation:<組織>:<YYYY-MM>`）に残し、数えるときにその ID を除く。
+    - 名前の印は、相手のサイトの社名から偽れる（社名を「【自動点検】…」にすれば枠を抜けられる）。そのため、数えから外すのは記録の ID で行う（`src/lib/system-watch/marked-records.ts`）。合図（`watch-gate.ts` の `isSystemWatchFor`）を確かめたツールのルートだけが ID を SystemSetting（`watch:v1:marked:shodan-preparation:<組織>:<YYYY-MM>`）に残し、数えるときにその ID を除く。
     - 直す所: 画面の今月の件数（`src/lib/usage-summary.ts`、済み）と、上限の判定（`/api/shodan/preparations` の reserve、エージェントの担当が対応中）。
   - 見積書: 今月の件数（プロは月100件）に1日1件。見積書の一覧にも並ぶ。数えから外すことはできる（同じ ID の方式。ただし削除の対策の台帳 `org-quota:v1:quoteDocuments` も増やさないようにする必要がある）。今回のユーザーの決定の対象外なので、外していない。
   - 経営ホームの「下書きのままの見積」も、記録の ID で外す（見積の側で ID を残すようになった）。

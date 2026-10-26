@@ -25,7 +25,8 @@ export { DOYA_POWER_CONSUMED_HEADER } from './charge-core'
 /** 包みが本文を読むときの上限（課金の判定に使う短い項目だけを見る） */
 const CHARGE_BODY_MAX_BYTES = 64 * 1024
 import type { DoyaPowerAction } from './costs'
-import { isSystemWatchRequest } from '@/lib/system-watch/marker'
+import { SYSTEM_WATCH_HEADER } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 
 export const doyaPowerCharger = createDoyaPowerCharger({
   rollout: () => doyaPowerRollout(),
@@ -125,7 +126,7 @@ export function withDoyaPowerCharge<R extends unknown[]>(spec: ChargeSpec, handl
     if (bad) return NextResponse.json({ error: bad }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     const action = typeof spec.action === 'function' ? spec.action(body) : spec.action
     if (!action) return handler(req, ...rest)
-    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body) ?? (spec.retry ? req.headers.get(DOYA_POWER_RETRY_HEADER) : undefined), target: spec.target ? await Promise.resolve().then(() => spec.target!(body, req, ...rest)).catch(() => null) : undefined, scope: routeScope(req), watch: isSystemWatchRequest(req.headers) })
+    const outcome = await doyaPowerCharger.charge(action, { units: spec.units?.(body), key: spec.key?.(body), retryOf: spec.retryOf?.(body) ?? (spec.retry ? req.headers.get(DOYA_POWER_RETRY_HEADER) : undefined), target: spec.target ? await Promise.resolve().then(() => spec.target!(body, req, ...rest)).catch(() => null) : undefined, scope: routeScope(req), watch: req.headers.get(SYSTEM_WATCH_HEADER) ? isSystemWatchFor(req.headers, await currentUserId().catch(() => null)) : false })
     return doyaPowerCharger.run(outcome, () => handler(req, ...rest))
   }
 }
