@@ -23,7 +23,7 @@ function gemini({ hang }) {
       if (s) s.addEventListener('abort', () => rej(s.reason || new Error('aborted')))
     })
   }
-  const mod = load('seo/lib/gemini.ts', {}, { process: { env: ENV }, fetch, AbortSignal, setTimeout: (fn) => { fn(); return 0 } })
+  const mod = load('seo/lib/gemini.ts', { '@/lib/slack/notify': { postSlack: async () => true } }, { process: { env: ENV }, fetch, AbortSignal, setTimeout: (fn) => { fn(); return 0 } })
   return { mod, calls }
 }
 const req = (extra = {}) => ({ model: 'gemini-2.5-flash', parts: [{ text: 'hello' }], ...extra })
