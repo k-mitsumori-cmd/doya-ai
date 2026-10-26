@@ -264,7 +264,13 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
   const HOME='src/app/(shell)/home/page.tsx';
   await check('Agent orchestration: when the new home is shown, the old ask panel is not (one input); flag off keeps the old panel',async()=>{
     const dash=read('src/app/(shell)/home/HomeDashboard.tsx');
-    assert.match(dash,/\{agentStage\}\s*\n[\s\S]{0,400}\{agentStage \? null : <AgentPanel /);
+    assert.match(dash,/\{agentStage \? null : <AgentPanel /);
+    assert.match(dash,/cloneElement\(agentStage, \{ greeting:/,'the greeting moves into the new home');
+    // 見出しは「今日は、何をしますか？」の1つだけ。新しい欄の「どんなゴールを目指しますか？」は出さない
+    const agent=read('src/components/home-agent/HomeAgent.tsx');
+    assert.match(agent,/<h1 id="home-agent-title" className=\{styles\.headTitle\}>今日は、何をしますか？<\/h1>/);
+    assert.doesNotMatch(agent,/どんなゴールを目指しますか/);
+    assert.match(agent,/aria-labelledby="home-agent-title"/);
     // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
     const css=read('src/components/home-agent/home-agent.module.css');
     assert.match(css,/@media \(max-width: 600px\) \{\s*\n\s*\.exampleChips \{ flex-wrap: nowrap; overflow-x: auto;/);
