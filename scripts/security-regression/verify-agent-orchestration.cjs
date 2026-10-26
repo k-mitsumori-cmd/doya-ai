@@ -516,6 +516,31 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     await call({},{});
     assert.equal(counts.at(-1).id.notIn.includes(fakeId),false,'a fake label must still be counted');
   });
+  // 2026-10-26 統括の指摘: 時間切れのあとのやり直しで、同じ名前のスライドを作り増やさない
+  await check('Agent slides retry: reuses only the signed-in user\'s own recent slide project without slides, and only with a user',async()=>{
+    let seen=null;
+    const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
+      'next/server':nextServer,'./tools':loadCore().tools,
+      '@/lib/prisma':{prisma:{doyaSlideProject:{findFirst:async(a)=>{seen=a;return {id:'p-left'}}}}},
+      '@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
+      '@/lib/system-watch/marker':loadTs('src/lib/system-watch/marker.ts',{'node:crypto':require('node:crypto')},{CRON_SECRET:'test-cron-secret'}),
+      '@/lib/system-watch/watch-gate':loadWatchGate(),
+      './sources.server':{doyaPowerOnForRequest:async()=>false},
+    },{NODE_ENV:'production'});
+    const now=new Date('2026-10-26T03:00:00Z');
+    assert.equal(await rs.reusableSlideProject('u-1',{title:'t',docType:'proposal',slideCount:8},now),'p-left');
+    const w=seen.where;
+    assert.equal(w.userId,'u-1');
+    assert.deepEqual([w.title,w.docType,w.slideCount],['t','proposal',8]);
+    assert.equal(JSON.stringify(w.slides),JSON.stringify({none:{}}),'never a project that already has slides');
+    assert.equal(JSON.stringify(w.status.in),JSON.stringify(['draft','error','structuring']));
+    assert.equal(w.createdAt.gte.getTime(),now.getTime()-30*60*1000);
+    const req=new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST'});
+    assert.equal(typeof (await rs.toolDepsFor(req,'u-1')).reusableSlideProject,'function');
+    assert.equal((await rs.toolDepsFor(req)).reusableSlideProject,undefined,'no lookup without the signed-in user');
+    // 記録の表のある経路は、途中の resume を残す部品を渡す
+    assert.match(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts'),/tools: \{ \.\.\.await toolDepsFor\(req, gate\.userId\), checkpoint \}/);
+  });
   await check('Agent tool routes forward only the system-watch signal header to the tool routes',async()=>{
     assert.match(read('src/lib/agent-orchestration/routes.server.ts'),/const watch = outer\.headers\.get\(SYSTEM_WATCH_HEADER\)\n  if \(watch\) headers\.set\(SYSTEM_WATCH_HEADER, watch\)/);
   });

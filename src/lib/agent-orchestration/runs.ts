@@ -73,6 +73,8 @@ export interface RunRepo {
   claimTask(userId: string, runId: string, taskId: string, now: Date, staleBefore: Date): Promise<boolean>
   /** 取った ToDo を、取る前の状態に戻す（同時の上限を超えたと分かったとき）。running で startedAt が同じものだけ */
   unclaimTask(userId: string, runId: string, taskId: string, startedAt: Date, back: Pick<TaskRow, 'status' | 'attempts' | 'startedAt'>): Promise<void>
+  /** 動いている ToDo の resume を、終わる前に書く（running で startedAt が同じもの＝自分が取ったものだけ） */
+  saveResume(userId: string, runId: string, taskId: string, startedAt: Date, resume: Record<string, string>): Promise<void>
   /** 取った ToDo の結果を書く（running のものだけ） */
   finishTask(userId: string, runId: string, taskId: string, patch: Partial<TaskRow>): Promise<void>
   /** 実行の状態と、ドヤパワーの合計を書く */
@@ -169,7 +171,7 @@ export async function latestOpenRun(repo: RunRepo, userId: string, now: Date = n
 export async function runStoredTask(
   repo: RunRepo,
   input: { userId: string; runId: string; taskId: string; now?: () => Date; /** 利用者がやり直しのときに入れた値（会社名だけ）。保存した resume に足す */ extraResume?: Record<string, string> },
-  execute: (ctx: { answers: Record<string, string>; resume?: Record<string, string> }) => Promise<AgentTaskResult>,
+  execute: (ctx: { answers: Record<string, string>; resume?: Record<string, string>; checkpoint: (resume: Record<string, string>) => Promise<void> }) => Promise<AgentTaskResult>,
 ): Promise<AgentTaskResult> {
   const now = input.now ?? (() => new Date())
   const got = await repo.getRun(input.userId, input.runId)
@@ -196,9 +198,15 @@ export async function runStoredTask(
   await repo.updateRun(input.userId, input.runId, { status: 'running' })
 
   const before = { used: task.powerUsed, refunded: task.powerRefunded }
+  const resume = input.extraResume ? { ...(task.resume ?? {}), ...input.extraResume } : task.resume ?? undefined
+  // 途中まで作れたもの。checkpoint で足していき、関数が時間の上限で止められても、次の試みが使えるように表に書く
+  let current: Record<string, string> | undefined = resume
+  const checkpoint = async (r: Record<string, string>) => {
+    current = { ...(current ?? {}), ...r }
+    await repo.saveResume(input.userId, input.runId, input.taskId, claimedAt, current)
+  }
   try {
-    const resume = input.extraResume ? { ...(task.resume ?? {}), ...input.extraResume } : task.resume ?? undefined
-    const result = await execute({ answers: got.run.answers, resume })
+    const result = await execute({ answers: got.run.answers, resume, checkpoint })
     const p = result.power ?? { used: 0, refunded: 0 }
     await repo.finishTask(input.userId, input.runId, input.taskId, {
       status: 'done', result, resume: null, error: null, failKind: null, failHref: null, failHrefLabel: null,
@@ -210,7 +218,7 @@ export async function runStoredTask(
     const p = err.power ?? { used: 0, refunded: 0 }
     await repo.finishTask(input.userId, input.runId, input.taskId, {
       status: 'failed', error: err.userMessage, failKind: err.kind, failHref: err.href?.href ?? null, failHrefLabel: err.href?.label ?? null,
-      resume: err.resume ?? (input.extraResume ? { ...(task.resume ?? {}), ...input.extraResume } : task.resume) ?? null,
+      resume: err.resume ?? current ?? null,
       powerUsed: before.used + p.used, powerRefunded: before.refunded + p.refunded, endedAt: now(),
     })
     throw err
@@ -266,6 +274,10 @@ export function createMemoryRunRepo(): RunRepo & { runs: RunRow[]; tasks: TaskRo
     async unclaimTask(userId, runId, taskId, startedAt, back) {
       const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running' && x.startedAt?.getTime() === startedAt.getTime())
       if (t) Object.assign(t, back)
+    },
+    async saveResume(userId, runId, taskId, startedAt, resume) {
+      const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running' && x.startedAt?.getTime() === startedAt.getTime())
+      if (t) t.resume = { ...resume }
     },
     async finishTask(userId, runId, taskId, patch) {
       const t = tasks.find((x) => x.runId === runId && x.taskId === taskId && x.userId === userId && x.status === 'running')
