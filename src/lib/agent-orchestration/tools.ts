@@ -26,7 +26,15 @@ export interface ToolDeps {
   shodanSlug: () => Promise<string | null>
   /** この人にドヤパワーの包みが効くか（旗の内側で、会社が登録済み）。戻した量を数えるのに使う */
   powerOn?: boolean
+  /**
+   * 作る物の名前の先頭に付ける印（システム点検の自動の確認のときだけ「【自動点検】」。本人の物と見分けるため）。
+   * 名前に付ける関数は、システム点検の部品（src/lib/system-watch/marker.ts の withSystemWatchPrefix）が決める
+   */
+  label?: { prefix: string; apply: (name: string, maxLength: number) => string }
 }
+
+/** 名前に印を付ける（印が無ければそのまま。長さの上限は守る） */
+const labeled = (deps: ToolDeps, name: string, maxLength: number) => (deps.label ? deps.label.apply(name, maxLength) : name.slice(0, maxLength))
 
 /** ドヤパワーの包み（withDoyaPowerCharge）が付いているルートと、その操作の名前 */
 const CHARGED: Partial<Record<ToolRouteId, string>> = { 'quote.suggest': 'text.generate', 'slide.structure': 'slide.generate' }
@@ -118,7 +126,8 @@ export async function runResearch(a: SalesPrepAnswers, raw: ToolDeps, resume?: R
 async function research(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   // 会社名（失敗のあとに利用者が入れたもの）があれば、サイトが読めなくても会社名で調べる
   const companyName = str(resume?.companyName, 100)
-  const res = await deps.call('shodan.prepare', { url: a.url, ...(companyName ? { companyName } : {}) })
+  // 商談準備の記録の名前（targetName）は、ツールのルートが調べた社名から決める。印は labelPrefix で渡し、ルートが付ける
+  const res = await deps.call('shodan.prepare', { url: a.url, ...(companyName ? { companyName } : {}), ...(deps.label ? { labelPrefix: deps.label.prefix } : {}) })
   if (!ok(res)) throw toTaskError('shodan', res, '会社を調べられませんでした。URLを確かめて、もう一度お試しください。')
   const d = obj(res.data)
   const id = str(d.id, 128)
@@ -188,7 +197,7 @@ async function quote(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string
     items = normalizeQuoteItems(obj(sug.data).items)
   }
   if (!items.length) throw new AgentTaskError('見積の品目の案が出ませんでした。もう一度お試しください。')
-  const doc = await deps.call('quote.create', { title: `${a.offerLabel}のお見積り`, items, notes: 'ドヤAIのエージェントが作った下書きです。内容を確かめてから確定してください。' })
+  const doc = await deps.call('quote.create', { title: labeled(deps, `${a.offerLabel}のお見積り`, 200), items, notes: 'ドヤAIのエージェントが作った下書きです。内容を確かめてから確定してください。' })
   // 保存で失敗したら、できた案を resume に残す（やり直しは保存だけ。AI は呼ばない。減ったドヤパワーは戻さない）
   if (!ok(doc)) throw toTaskError('quote', doc, '見積書を保存できませんでした。もう一度お試しください。', { quoteDraft: JSON.stringify(normalizeQuoteItems(items, QUOTE_DRAFT_LIMITS)) })
   const id = str(obj(doc.data).id, 128)
@@ -210,7 +219,8 @@ export async function runSlides(a: SalesPrepAnswers, raw: ToolDeps, resume?: Rec
 async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string, string>): Promise<AgentTaskResult> {
   let projectId = str(resume?.projectId, 128)
   if (!projectId) {
-    const res = await deps.call('slide.project', slideInputOf(a))
+    const input = slideInputOf(a)
+    const res = await deps.call('slide.project', { ...input, title: labeled(deps, input.title, 120) })
     if (!ok(res)) throw toTaskError('doyaslide', res, 'スライドを作り始められませんでした。もう一度お試しください。')
     projectId = str(obj(obj(res.data).project).id, 128)
     if (!projectId) throw new AgentTaskError('スライドを作り始められませんでした。もう一度お試しください。')

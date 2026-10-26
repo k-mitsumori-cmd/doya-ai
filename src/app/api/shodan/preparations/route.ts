@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '会社名は100文字以内で入力してください' }, { status: 400 })
   }
   const companyName = typeof body?.companyName === 'string' ? body.companyName.trim() || undefined : undefined
+  // 記録の名前の先頭の印。システム点検の自動の確認（経営ホームのエージェント経由）のときだけ、この値ちょうどが届く。
+  // 本人の物と見分けるための印なので、ほかの値は受け付けない（値は src/lib/system-watch/marker.ts の SYSTEM_WATCH_PREFIX と同じ）
+  const labelPrefix = body?.labelPrefix === '【自動点検】' ? '【自動点検】' : ''
 
   // プラン制限（組織単位・月次）
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
@@ -194,7 +197,7 @@ export async function POST(req: NextRequest) {
     stage = 'save'
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { research: research as any, targetName: research.companyName || null, status: 'researched' },
+      data: { research: research as any, targetName: research.companyName ? `${labelPrefix}${research.companyName}`.slice(0, 200) : labelPrefix || null, status: 'researched' },
     })
     return NextResponse.json({ id: prep.id, status: 'researched', research })
   } catch (e) {
