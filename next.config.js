@@ -66,6 +66,8 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerCompiles: false,
     parallelServerBuildTraces: false,
+    // ページのデータ集めと静的な生成を1つずつ動かし、同時に動くプロセスの数を抑える（2026-10-26 にまた OOM。3回中2回）
+    cpus: 1,
   },
 
     // ------------------------------------------------------------------
