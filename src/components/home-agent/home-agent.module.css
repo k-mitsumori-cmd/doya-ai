@@ -173,4 +173,14 @@
 .shortcut:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .shortcut .muted { font-size: 11px; }
 @media (max-width: 860px) { .shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* スマホでは、例のボタンを1行にして横に流す（6つを縦に積むと、前回の続きのカードが最初の画面から押し出されるため。2026-10-26 メインの指摘）。
+   右の端を薄くして、横に続くことを見せる */
+@media (max-width: 600px) {
+  .exampleChips { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin-inline: -4px; padding: 2px 24px 4px 4px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .exampleChips::-webkit-scrollbar { display: none; }
+  .exampleChips .chip { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+  /* 入力欄は2行の高さにする（続きのカードを最初の画面に入れるため。下の端を引けば広げられる） */
+  .textarea { min-height: 0; height: 76px; }
+}
 @media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }

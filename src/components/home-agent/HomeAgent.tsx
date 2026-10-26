@@ -457,7 +457,7 @@ export default function HomeAgent({ executor = 'api' }: {
               <textarea id="home-agent-ask" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
                 placeholder="例: 来週の商談の準備をまとめて進めたい" />
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
-              <div className={styles.chips}>
+              <div className={`${styles.chips} ${styles.exampleChips}`}>
                 {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
               </div>
               {error ? <p className={styles.error} role="alert">{error}</p> : null}

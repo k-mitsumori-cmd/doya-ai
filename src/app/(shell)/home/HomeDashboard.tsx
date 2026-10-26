@@ -460,7 +460,9 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       {agentStage}
-      <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+      {/* 新しい経営ホーム（旗 AGENT_ORCHESTRATION_ROLLOUT）が出ているときは、旧の「今日は、何をしますか？」を出さない（入力欄を1つにする。2026-10-26 メインの指摘）。
+          旗が off の人は今までどおり */}
+      {agentStage ? null : <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />}
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} doyaPower={doyaPower} />
 

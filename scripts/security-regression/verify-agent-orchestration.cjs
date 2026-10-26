@@ -262,6 +262,14 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
   }
   const exists=f=>fs.existsSync(path.join(root,f));
   const HOME='src/app/(shell)/home/page.tsx';
+  await check('Agent orchestration: when the new home is shown, the old ask panel is not (one input); flag off keeps the old panel',async()=>{
+    const dash=read('src/app/(shell)/home/HomeDashboard.tsx');
+    assert.match(dash,/\{agentStage\}\s*\n[\s\S]{0,400}\{agentStage \? null : <AgentPanel /);
+    // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
+    const css=read('src/components/home-agent/home-agent.module.css');
+    assert.match(css,/@media \(max-width: 600px\) \{\s*\n\s*\.exampleChips \{ flex-wrap: nowrap; overflow-x: auto;/);
+    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/className=\{`\$\{styles\.chips\} \$\{styles\.exampleChips\}`\}/);
+  });
   await check('Agent orchestration: the home page shows the agent only behind the flag (off: nothing, and the session is not read for it)',async()=>{
     const src=read(HOME);
     if(!/agent-orchestration/.test(src)){
