@@ -441,6 +441,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
           take: limit,
           select: { type: true, amount: true, balanceAfter: true, operationId: true, refundOf: true, note: true, createdAt: true },
         })
+      const watchOps = new Set(rows.filter((r) => r.type === 'consume' && r.operationId && (r.note ?? '').split(' ').includes('watch:1')).map((r) => r.operationId as string))
       // メモリの DB（テスト）は orderBy・take を見ないので、ここでも並べて切る
       return rows
         .slice()
@@ -448,6 +449,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         .slice(0, limit)
         .map((r): HistoryEntry => {
           const op = r.type === 'consume' ? r.operationId : r.type === 'refund' ? r.refundOf : null
+          // 自動点検（system-watch の B1）の消費と、その戻し。消費の note の watch:1 で見分ける
           return {
             at: r.createdAt,
             type: r.type === 'consume' || r.type === 'refund' || r.type === 'grant' || r.type === 'expire' ? r.type : 'grant',
@@ -455,6 +457,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
             balanceAfter: r.balanceAfter,
             action: op ? op.split(':')[0] || null : null,
             kind: r.type === 'grant' && r.note && !r.note.startsWith('target:') ? r.note.slice(0, 40) : null,
+            ...(op && watchOps.has(op) ? { watch: true } : {}),
           }
         })
     })
@@ -474,6 +477,8 @@ export type HistoryEntry = {
   action: string | null
   /** 付与の種類（monthly・daily_recovery・bonus・mission など）。付与でなければ null */
   kind: string | null
+  /** 自動点検（system-watch の B1）が減らした分（とその戻し）なら true */
+  watch?: boolean
 }
 
 export type DoyaPowerLedger = ReturnType<typeof createDoyaPowerLedger>

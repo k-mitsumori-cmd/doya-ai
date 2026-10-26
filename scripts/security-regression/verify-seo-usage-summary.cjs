@@ -22,6 +22,7 @@ const prisma = {
 }
 const { getUsageSummary } = load('src/lib/usage-summary.ts', {
   '@/lib/system-watch/marked-records': load('src/lib/system-watch/marked-records.ts'),
+  '@/lib/system-watch/marked-records-range': load('src/lib/system-watch/marked-records-range.ts', { './marked-records': load('src/lib/system-watch/marked-records.ts') }),
   '@/lib/prisma': { prisma },
   '@/lib/persona/usage': {},
   '@/lib/seo-article-admission': { getSeoArticleMonthlyUsage: async (db, userId) => {

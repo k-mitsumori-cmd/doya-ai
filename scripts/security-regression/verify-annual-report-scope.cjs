@@ -42,7 +42,7 @@ function fixture({session='alice',doyaPower=true,roles={},env={}}={}){
   const {prisma,calls}=recordingPrisma(roles);
   const rendered=[];
   const report=load('src/lib/annual-report/report.ts',{});
-  const loader=load('src/lib/annual-report/load.server.ts',{'./report':report},{Promise});
+  const watchMarked=load('src/lib/system-watch/marked-records.ts'),loader=load('src/lib/annual-report/load.server.ts',{'./report':report,'@/lib/system-watch/marked-records':watchMarked,'@/lib/system-watch/marked-records-range':load('src/lib/system-watch/marked-records-range.ts',{'./marked-records':watchMarked})},{Promise});
   const sample=load('src/lib/annual-report/sample.ts',{});
   const route=load('src/app/api/annual-report/image/route.ts',{
     'next/server':nextServer,
@@ -72,6 +72,8 @@ function assertOnlyAlice(f){
     if(MEMBER_MODELS.includes(m)&&op==='findFirst'){assert.equal(a.where.userId,'alice');assert.equal(a.where.status,'ACTIVE');continue}
     const w=a.where||{};
     const scoped=w.userId==='alice'||w.concept?.campaign?.userId==='alice'||(typeof w.organizationId==='string'&&w.organizationId.endsWith('-alice-org'));
+    // 自動点検の記録の ID（SystemSetting）は、キーに本人の会社の ID を含むものだけを読む（ほかの会社のキーは読まない）
+    if(m==='systemSetting'&&op==='findMany'){const keys=w.key?.in||[];assert.ok(keys.length>0&&keys.every(k=>/^watch:v1:marked:[a-z-]+:[^:]+-alice-org:\d{4}-\d{2}$/.test(k)),`systemSetting.findMany のキーが本人の会社に絞られていない: ${JSON.stringify(w)}`);continue}
     assert.ok(scoped,`${m}.${op} が本人・本人の会社に絞られていない: ${JSON.stringify(w)}`);
   }
 }

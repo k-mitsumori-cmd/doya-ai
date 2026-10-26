@@ -350,3 +350,14 @@ test('ハンドラが印（DOYA_POWER_CONSUMED_HEADER）を付けた失敗（課
   await s2.charger.run(await s2.charger.charge('persona.generate'), async () => new Response('{}', { status: 502 }))
   assert.equal(await s2.remaining(), full)
 })
+
+test('自動点検（watch）の消費だけ note に watch:1 が付き、作り直しの半額の判定は変わらない', async () => {
+  const s = setup()
+  await s.charger.charge('banner.generate', { units: 1, watch: true })
+  await s.charger.charge('banner.generate', { units: 1, target: 'p1' })
+  await s.charger.charge('banner.generate', { units: 1, target: 'p2', watch: true })
+  const notes = s.mem.rows('doyaPowerTransaction').filter((r) => r.type === 'consume').map((r) => r.note ?? null)
+  assert.equal(notes[0], 'watch:1')
+  assert.ok(notes[1] === null || !String(notes[1]).includes('watch:1'))
+  assert.match(String(notes[2] ?? ''), /^target:\S+ watch:1$/)
+})
