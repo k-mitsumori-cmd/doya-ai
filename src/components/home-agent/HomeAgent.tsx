@@ -450,7 +450,6 @@ export default function HomeAgent({ executor = 'api' }: {
 
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
-            {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
             <div className={styles.card}>
               <p className={styles.eyebrow}>新しい依頼</p>
               <label className={styles.title} htmlFor="home-agent-ask">どんなゴールを目指しますか？</label>
@@ -467,6 +466,8 @@ export default function HomeAgent({ executor = 'api' }: {
                 <button type="button" className={styles.btn} onClick={send} disabled={!text.trim()}>分析して作戦を立てる</button>
               </div>
             </div>
+            {/* 新しい依頼を先に置き、前回の続きはその下にする（主な操作はゴールを書くこと。2026-10-26 統括の点検で、続きが上だと欄が 375px で y=507 まで下がっていた） */}
+            {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
             <ToolShortcuts />
           </div>
         ) : null}
@@ -590,7 +591,7 @@ export default function HomeAgent({ executor = 'api' }: {
               <div className={styles.memory}>
                 <b>作戦に残しました</b>
                 <span>ゴール・3つの柱と、できた下書きを、この作戦に残しました。次に経営ホームを開くと「続きを進める」から再開できます。送る・公開する操作は、各ツールで内容を確かめてから行ってください。</span>
-                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
+                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); setText(''); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
               </div>
             ) : null}
           </div>
