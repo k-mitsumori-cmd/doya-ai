@@ -11,6 +11,25 @@ import { NextRequest } from 'next/server'
 import type { ToolCallResult, ToolDeps, ToolRouteId } from './tools'
 import { fakeToolDeps } from './tools'
 import { DOYA_POWER_OP_HEADER } from '@/lib/doya-power/retry'
+import { isSystemWatchRequest, SYSTEM_WATCH_HEADER, SYSTEM_WATCH_PREFIX, withSystemWatchPrefix } from '@/lib/system-watch/marker'
+
+/**
+ * システム点検の自動の確認（B1）を受け入れられるか。B1 はこの値が true のときだけ回る（2026-10-26 システム点検の担当との取り決め）。
+ * true にした条件（どれも回帰の検査 verify-agent-orchestration.cjs で確かめる）:
+ * 1. 合図が正しいときだけ、見積書・スライドの名前に「【自動点検】」を付け、商談準備には印を渡す（ルートも合図を確かめる）
+ * 2. 合図をツールのルートまで渡す（callToolRoute）
+ * 3. 商談準備のルートが、合図が正しいときだけ作った記録の ID を残し、月の枠の数え方からその ID を外す（名前の印では外さない）
+ */
+export const SYSTEM_WATCH_MARKER_SUPPORTED = true
+
+/** 自動点検のリクエスト（CRON_SECRET から作る合図が正しい）なら、作る物の名前に付ける印 */
+function labelFor(outer: NextRequest): ToolDeps['label'] {
+  try {
+    return isSystemWatchRequest(outer.headers) ? { prefix: SYSTEM_WATCH_PREFIX, apply: withSystemWatchPrefix } : undefined
+  } catch {
+    return undefined
+  }
+}
 
 type Handler = (req: NextRequest, ...rest: any[]) => Promise<Response>
 
@@ -32,6 +51,9 @@ export async function callToolRoute(outer: NextRequest, route: ToolRouteId, body
   const headers = new Headers({ 'content-type': 'application/json' })
   const cookie = outer.headers.get('cookie')
   if (cookie) headers.set('cookie', cookie)
+  // 自動点検（B1）の合図を、ツールのルートへそのまま渡す（ルートが合図を確かめて、記録の ID を残し、名前の印を受け付ける）
+  const watch = outer.headers.get(SYSTEM_WATCH_HEADER)
+  if (watch) headers.set(SYSTEM_WATCH_HEADER, watch)
   // 決まった形の下書き（見積の品目の案・スライドの構成）は、軽いモデルで作る印（DESIGN.md §11.9。2026-10-26 ユーザー承認）
   if (LIGHT_ROUTES.has(route)) headers.set('x-doya-agent-tier', 'light')
   const req = new NextRequest(new URL(r.path, outer.nextUrl.origin), { method: 'POST', headers, body: JSON.stringify(body) })
@@ -47,9 +69,11 @@ export function fakeToolsEnabled(env: Record<string, string | undefined> = proce
 }
 
 export async function toolDepsFor(outer: NextRequest): Promise<ToolDeps> {
-  if (fakeToolsEnabled()) return fakeToolDeps()
+  const label = labelFor(outer)
+  if (fakeToolsEnabled()) return { ...fakeToolDeps(), label }
   const { doyaPowerOnForRequest } = await import('./sources.server')
   return {
+    label,
     powerOn: await doyaPowerOnForRequest().catch(() => false),
     call: (route, body) => callToolRoute(outer, route, body),
     shodanSlug: async () => {
