@@ -4,11 +4,19 @@
 // 新しい見た目（ドヤAI の青）にそろえる。古いブランドの紫のグラデーションと、
 // 今は無い入口（カンタンドヤAI・ドヤバナーAI）へのリンクは出さない（2026-10-24 メインの全画面の点検）。
 // ⚠️ ログインの有無で中身を変えない（どの画面の下でも同じ文字にする）。行き先は、経営ホーム・トップ・料金の3つだけ
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import tokens from '@/components/ds/tokens.module.css'
 import { Button, EmptyState } from '@/components/ds'
 import DoyaLogo from '@/components/brand/DoyaLogo'
 import { ServicePopupHide } from '@/components/ServicePopupGuard'
+
+// タブの題も 404 にする。ページが notFound() を呼んだときは、そのページの題ではなく、ここの題が使われる
+// （/home/roles が 404 なのに「メンバーと権限」と出ていた。2026-10-26 統括の指摘）
+export const metadata: Metadata = {
+  title: 'ページが見つかりません',
+  robots: { index: false, follow: false },
+}
 
 export default function NotFound() {
   return (
