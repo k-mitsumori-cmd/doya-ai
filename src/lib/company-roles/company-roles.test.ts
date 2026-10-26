@@ -163,7 +163,8 @@ test('移行の案: いちばん高いツールの役割を写す。ツールの
 // ---- 旗 ----
 
 test('旗: 既定は off。知らない値も off', () => {
-  assert.equal(companyRolesRollout(undefined), 'off')
+  // undefined を渡すと process.env.COMPANY_ROLES_ROLLOUT を読む。本番に旗を入れるとビルドのテストが落ちるので、空の値で確かめる
+  assert.equal(companyRolesRollout(''), 'off')
   assert.equal(companyRolesRollout('on'), 'off')
   assert.equal(companyRolesRollout(' SHADOW '), 'shadow')
   assert.equal(decideCompanyRolesMode({ rollout: 'preview', email: 'a@example.com', allow: ['a@example.com'] }), 'enforce')
