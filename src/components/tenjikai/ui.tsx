@@ -14,7 +14,8 @@ export function PageHeader({ eyebrow, title, desc, right }: { eyebrow?: string; 
             {eyebrow}
           </motion.span>
         )}
-        <h1 className="text-balance font-display text-2xl text-ink md:text-3xl">{title}</h1>
+        {/* ページの h1 は枠（ToolFrame）の「ドヤ展示会」。各画面の見出しは h2（h1 を1つにする） */}
+        <h2 className="m-0 text-balance font-display text-2xl text-ink md:text-3xl">{title}</h2>
         {desc && <p className="text-sm leading-relaxed text-gray-600">{desc}</p>}
       </div>
       {right}
