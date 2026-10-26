@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM hr_organization_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('OWNER', 'ADMIN') FOR UPDATE`
-      if (actor.length === 0) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      if (actor.length === 0 || (ctx.role !== 'OWNER' && ctx.role !== 'ADMIN')) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
 
       const existingMember = await tx.hrOrganizationMember.findFirst({
         where: { organizationId: ctx.organizationId, user: { email: emailNorm }, status: 'ACTIVE' },

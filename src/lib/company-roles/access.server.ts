@@ -46,11 +46,13 @@ function logShadowDenial(d: ShadowDenial) {
 
 export async function authorizeCompanyActionForSession(input: {
   userId: string
-  email: string | null | undefined
+  /** 渡さなければ、旗が off でないときだけセッションから読む */
+  email?: string | null
   permission: CompanyPermission
   target?: PermissionTarget
 }): Promise<CompanyAuthorization> {
-  const mode = companyRolesModeFor(input.email)
+  if (companyRolesRollout() === 'off') return { checked: false, allowed: true, mode: 'off' }
+  const mode = companyRolesModeFor(input.email !== undefined ? input.email : await sessionEmail())
   if (mode === 'off') return { checked: false, allowed: true, mode: 'off' }
   try {
     return await authorizeCompanyAction({
@@ -77,8 +79,9 @@ export async function writeRoleEvent(event: RoleEventRecord, tx: Pick<typeof pri
 }
 
 /** 今の人の会社の役割と、会社の決まり（画面の出し分けをサーバーで決めるため）。旗が off なら null */
-export async function companyRoleForSession(input: { userId: string; email: string | null | undefined }): Promise<(CompanyRoleContext & { policy: CompanyRolePolicy; mode: 'shadow' | 'enforce' }) | null> {
-  const mode = companyRolesModeFor(input.email)
+export async function companyRoleForSession(input: { userId: string; email?: string | null }): Promise<(CompanyRoleContext & { policy: CompanyRolePolicy; mode: 'shadow' | 'enforce' }) | null> {
+  if (companyRolesRollout() === 'off') return null
+  const mode = companyRolesModeFor(input.email !== undefined ? input.email : await sessionEmail())
   if (mode === 'off') return null
   const ctx = await resolveCompanyRole(input.userId, prismaCompanyRoleDb)
   if (!ctx) return null

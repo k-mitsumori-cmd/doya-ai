@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const read=f=>fs.readFileSync(path.join(__dirname,'../../',f),'utf8');
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-function load(file,deps){const exports={};vm.runInNewContext(compile(read(file)),{exports,require:n=>{assert(n in deps,n);return deps[n];}});return exports;}
+function load(file,deps){const exports={};vm.runInNewContext(compile(read(file)),{exports,require:n=>{if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];assert(n in deps,n);return deps[n];}});return exports;}
 (async()=>{
  const results=[];
  for(const field of ['notes','paymentTerms','deliveryTerms']) for(const length of [2000,2001]) {

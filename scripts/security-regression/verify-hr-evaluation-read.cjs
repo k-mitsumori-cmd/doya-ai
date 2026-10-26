@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
-function load(file,deps){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,URL,Headers,Request,Response,require:n=>{assert(n in deps,n);return deps[n];}});return exports;}
+function load(file,deps){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,URL,Headers,Request,Response,require:n=>{if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];assert(n in deps,n);return deps[n];}});return exports;}
 (async()=>{const results=[];
 for(const role of ['OWNER','ADMIN','MANAGER','MEMBER','UNKNOWN'])for(const relation of ['self','evaluator','unrelated','unlinked','inactive','role-changed','foreign-org']){
  const ctx={organizationId:'o',userId:'u',memberId:'m',role};

@@ -19,7 +19,7 @@ function fixture({ active = true, conflict = false } = {}) {
           assert.equal(where.userId, 'u')
           assert.equal(where.status, 'ACTIVE')
           assert.deepEqual(Array.from(where.role.in), ['owner', 'admin'])
-          return memberActive ? { id: 'm' } : null
+          return memberActive ? { id: 'm', role: 'admin' } : null
         } },
         quoteIssuer: { upsert: async ({ where, create, update }) => {
           assert.equal(where.organizationId, 'o')

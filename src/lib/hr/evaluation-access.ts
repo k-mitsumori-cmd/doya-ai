@@ -2,6 +2,7 @@ import { evaluationOrganizationWhere } from '@/lib/hr/evaluation-scope'
 import { prisma } from '@/lib/prisma'
 import type { HrContext } from './types'
 import type { Prisma } from '@prisma/client'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 type EvaluationAccessDb = Pick<Prisma.TransactionClient, 'hrOrganizationMember' | 'hrEmployee'>
 
 /** nullは閲覧不可。employeeId=nullは組織管理者、それ以外は本人／指定評価者。 */
@@ -11,8 +12,9 @@ export async function getEvaluationReader(ctx: HrContext, db: EvaluationAccessDb
     where: { id: ctx.memberId, userId: ctx.userId, organizationId: ctx.organizationId, status: 'ACTIVE' },
     select: { employeeId: true, role: true },
   })
-  if (!member || member.role !== ctx.role) return null
-  if (member.role === 'OWNER' || member.role === 'ADMIN') return { employeeId: null }
+  // DB の役割が下がっていたら止める。DB の役割が ctx 以上なら通し、判定は ctx の役割（会社の上限を当てたもの）で行う
+  if (!member || lowerToolRole('hr', member.role, ctx.role) !== ctx.role) return null
+  if (ctx.role === 'OWNER' || ctx.role === 'ADMIN') return { employeeId: null }
   if (!member.employeeId) return null
   const ownEmployee = await db.hrEmployee.count({ where: { id: member.employeeId, organizationId: ctx.organizationId } })
   return ownEmployee === 1 ? { employeeId: member.employeeId } : null

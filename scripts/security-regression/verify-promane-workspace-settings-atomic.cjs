@@ -14,8 +14,8 @@ function fixture({ role = 'admin', revokeOnConflict = false, duplicate = false, 
       const before = writes
       let row = { id: 'w', name: '旧名', slug: 'old', userId: 'u', updatedAt: new Date('2026-09-30T00:00:00.000Z') }
       const result = await fn({
-        $queryRaw: async strings => strings.join('').includes('promane_members') ? (['owner','admin'].includes(currentRole) ? [{ id: 'actor' }] : []) : [{ id: 'u' }],
-        promaneMember: { findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor' } : null },
+        $queryRaw: async strings => strings.join('').includes('promane_members') ? (['owner','admin'].includes(currentRole) ? [{ id: 'actor', role: currentRole }] : []) : [{ id: 'u' }],
+        promaneMember: { findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor', role: currentRole } : null },
         promaneWorkspace: {
           findUnique: async () => row,
           findFirst: async ({ where }) => {

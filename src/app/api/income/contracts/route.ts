@@ -25,5 +25,5 @@ export async function POST(req: NextRequest) {
     const id = await prisma.$transaction((tx) => saveContract(tx, ctx, input), { timeout: 30000, isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.create', 'contract', id)
     return NextResponse.json({ id }, { status: 201 })
-  })
+  }, { permission: 'income.contract.edit' })
 }

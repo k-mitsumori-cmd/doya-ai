@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
     await prisma.$transaction((tx) => saveContract(tx, ctx, input, id), { timeout: 30000, isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.update', 'contract', id, { status: input.status, amountExclTax: input.amountExclTax })
     return NextResponse.json({ id })
-  })
+  }, { permission: 'income.contract.edit' })
 }
 
 /** 請求済みの月がある契約は消さない（解約・終了にする） */

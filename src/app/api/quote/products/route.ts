@@ -10,6 +10,7 @@ import { FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { isQuoteProductProfile } from '@/lib/quote/response-shape'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 async function retryProductTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     const now = new Date()
     const usedLifetime = await getOrganizationQuotaUsage(tx, 'quoteProducts', ctx.organizationId, 'lifetime', () =>
       tx.quoteProduct.count({ where: { organizationId: ctx.organizationId } }), now)
-    const canManageBilling = ctx.userId === owner?.userId && actor.role === 'owner'
+    const canManageBilling = ctx.userId === owner?.userId && lowerToolRole('quote', actor.role, ctx.role) === 'owner'
     if (!isPaidPlan(ownerPlan?.plan) && usedLifetime >= FREE_LIMITS.quoteProducts) {
       return { kind: 'limit' as const, used: usedLifetime, canManageBilling }
     }

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 type Ctx = { params: Promise<{ id: string }> }
 const ROLES: AishodanRole[] = ['admin', 'manager', 'member']
@@ -25,15 +26,18 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
+        // 会社の役割の上限（ctx の役割）より上には上げない
+        const actorRole = lowerToolRole('aishodan', actor.role, c.role)
+        if (!actorRole) return { kind: 'forbidden' as const }
         const target = await tx.aishodanMember.findFirst({ where: { id: targetId, organizationId: c.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.id === actor.id || target.userId === c.userId) return { kind: 'self' as const }
         const targetRank = ROLE_HIERARCHY[target.role as AishodanRole]
-        if (target.role === 'owner' || targetRank === undefined || targetRank >= ROLE_HIERARCHY[actor.role as AishodanRole]) {
+        if (target.role === 'owner' || targetRank === undefined || targetRank >= ROLE_HIERARCHY[actorRole as AishodanRole]) {
           return { kind: 'peer' as const }
         }
         if (action === 'update') {
-          if (!role || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor.role as AishodanRole]) return { kind: 'role' as const }
+          if (!role || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as AishodanRole]) return { kind: 'role' as const }
           await tx.aishodanMember.update({ where: { id: target.id }, data: { role } })
           return { kind: 'updated' as const }
         }

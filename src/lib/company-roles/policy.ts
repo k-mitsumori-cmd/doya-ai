@@ -20,7 +20,7 @@ export interface CompanyRolePolicy {
   hrSelfFinalize: 'nobody' | 'owner_only' | 'owner_and_admin'
 }
 
-/** 初期値（メインに返す案。ROLES §3.4） */
+/** 初期値（2026-10-26 ユーザーが「おすすめで」と決定。ROLES §3.4） */
 export const DEFAULT_ROLE_POLICY: CompanyRolePolicy = Object.freeze({
   invoiceIssueMin: 'manager',
   contractEditMin: 'manager',

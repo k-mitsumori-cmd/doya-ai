@@ -121,7 +121,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneMember: {
       findFirst: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
-        if (where.userId) return active ? { id: 'actor' } : null
+        if (where.userId) return active ? { id: 'actor', role: 'admin' } : null
         return foreignTarget ? null : { id: 'm', hourlyRate: 2500 }
       },
       updateMany: async ({ where }) => {
@@ -170,7 +170,7 @@ function rateApiFixture({ foreignTarget = false } = {}) {
     },
     promaneWorkspace: { findFirst: async () => ({ id: 'w' }) },
     promaneMember: {
-      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor' } : null,
+      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor', role: 'admin' } : null,
       updateMany: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
         writes++

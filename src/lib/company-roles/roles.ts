@@ -75,3 +75,47 @@ export function canGrantCompanyRole(actor: CompanyRole, role: CompanyRole): bool
 export function grantableCompanyRoles(actor: CompanyRole): MemberRowRole[] {
   return [...MEMBER_ROW_ROLES].filter((r) => canGrantCompanyRole(actor, r))
 }
+
+export type RoleChangeDecision =
+  | { ok: true; from: MemberRowRole; to: MemberRowRole }
+  | { ok: false; status: number; code: 'INVALID_ROLE' | 'NOT_ALLOWED' | 'CANNOT_GRANT' | 'NO_CHANGE' | 'NOT_ACTIVE' }
+
+/**
+ * メンバーの役割を変えてよいか（招待中・参加の人だけ）。
+ * 決まり: 自分自身とオーナーは変えられない。管理者は、自分より下の役割の人を、自分より下の役割にだけ変えられる。
+ */
+export function decideRoleChange(input: {
+  actor: CompanyRole
+  isSelf: boolean
+  targetRole: unknown
+  targetStatus: string
+  requested: unknown
+}): RoleChangeDecision {
+  if (!isMemberRowRole(input.requested)) return { ok: false, status: 400, code: 'INVALID_ROLE' }
+  if (input.targetStatus !== 'active' && input.targetStatus !== 'invited') return { ok: false, status: 409, code: 'NOT_ACTIVE' }
+  // 行の役割が知らない値なら、ゲストとして扱う（resolveCompanyRole と同じ）
+  const from: MemberRowRole = isMemberRowRole(input.targetRole) ? input.targetRole : 'guest'
+  if (!canManageCompanyMember({ actor: input.actor, target: from, isSelf: input.isSelf })) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
+  if (!canGrantCompanyRole(input.actor, input.requested)) return { ok: false, status: 403, code: 'CANNOT_GRANT' }
+  if (from === input.requested) return { ok: false, status: 400, code: 'NO_CHANGE' }
+  return { ok: true, from, to: input.requested }
+}
+
+export const ROLE_CHANGE_MESSAGE: Record<Exclude<RoleChangeDecision, { ok: true }>['code'], string> = {
+  INVALID_ROLE: '役割を選び直してください。',
+  NOT_ACTIVE: 'このメンバーは外れています。',
+  NOT_ALLOWED: 'この方の役割は変えられません（ご自身・オーナー・同じか上の役割の方は変えられません）。',
+  CANNOT_GRANT: 'この役割は付けられません。ご自身より下の役割を選んでください。',
+  NO_CHANGE: '今と同じ役割です。',
+}
+
+/** 役割を下げたときに、できなくなる主なこと（確かめの画面に出す） */
+export function lostAbilities(from: CompanyRole, to: CompanyRole): string[] {
+  const out: string[] = []
+  const r = COMPANY_ROLE_RANK
+  if (r[from] >= r.admin && r[to] < r.admin) out.push('ツールの設定と、ほかの人のデータの修正ができなくなります。', 'メンバーの招待と役割の変更ができなくなります。')
+  if (r[from] >= r.manager && r[to] < r.manager && from !== 'billing') out.push('部署の人の申請の承認ができなくなります。')
+  if (from === 'billing' && to !== 'billing') out.push('料金と請求を見ることと、請求書の発行ができなくなります。')
+  if (to === 'guest' && from !== 'guest') out.push('打刻・申請・ツールへの書き込みができなくなります（見るだけになります）。')
+  return out
+}

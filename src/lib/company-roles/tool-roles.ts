@@ -47,7 +47,8 @@ export const TOOL_ROLE_TABLES: Record<ToolId, ToolRoleTable> = {
     toCompany: { owner: 'admin', admin: 'admin', member: 'member', guest: 'guest' },
   },
   expense: OWNER_ADMIN_MANAGER_MEMBER,
-  income: OWNER_ADMIN_MANAGER_MEMBER,
+  // 収入（請求書）は請求の担当の仕事なので、請求の担当の上限を管理者にする（請求書の発行・取り消しを会社の決まりで許すため）
+  income: { ...OWNER_ADMIN_MANAGER_MEMBER, ceiling: { ...OWNER_ADMIN_MANAGER_MEMBER.ceiling, billing: 'admin' } },
   quote: OWNER_ADMIN_MANAGER_MEMBER,
   sfa: OWNER_ADMIN_MANAGER_MEMBER,
   shodan: OWNER_ADMIN_MANAGER_MEMBER,

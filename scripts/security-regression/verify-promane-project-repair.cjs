@@ -46,7 +46,7 @@ function fixture(kind, { changed = false, revoke = false, failSecond = false, co
         promaneMember: { findFirst: async ({ where }) => {
           assert.deepEqual(Array.from(where.role.in), ['owner', 'admin'])
           assert.equal(where.workspaceId, 'w')
-          return active ? { id: 'actor' } : null
+          return active ? { id: 'actor', role: 'admin' } : null
         } },
         promaneTask: table,
         promaneProject: table,

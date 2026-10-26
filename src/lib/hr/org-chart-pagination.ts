@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import type { HrContext } from '@/lib/hr/types'
 import { hasMinRole } from '@/lib/hr/access'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const PAGE_SIZE = 50
 const identifier = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value)
@@ -30,8 +31,8 @@ export async function readHrOrgChartPage(db: PrismaClient, ctx: HrContext, encod
   if (!hasMinRole(ctx.role, 'MEMBER')) throw new HrOrgChartPageError(401, 'ORG_CHART_ACCESS_CHANGED')
   const readAllEmployees = hasMinRole(ctx.role, 'MANAGER')
   return db.$transaction(async tx => {
-    const member = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId, userId: ctx.userId, organizationId: ctx.organizationId, status: 'ACTIVE', role: ctx.role }, select: { id: true, employeeId: true } })
-    if (!member || member.employeeId !== ctx.employeeId) throw new HrOrgChartPageError(401, 'ORG_CHART_ACCESS_CHANGED')
+    const member = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId, userId: ctx.userId, organizationId: ctx.organizationId, status: 'ACTIVE' }, select: { id: true, employeeId: true, role: true } })
+    if (!member || lowerToolRole('hr', member.role, ctx.role) !== ctx.role || member.employeeId !== ctx.employeeId) throw new HrOrgChartPageError(401, 'ORG_CHART_ACCESS_CHANGED')
     const org = await tx.hrOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } })
     // MVCC tuple revisions detect edits, including direct SQL changes, without rehashing photo/name payloads on every page.
     const departmentState = await tx.$queryRaw<{ fingerprint: string; total: bigint }[]>`
