@@ -79,7 +79,8 @@ function apiFixture() {
       committed = true
       return result
     },
-    promaneWorkspace: { findFirst: async () => active ? { id: 'w' } : null },
+    // 本物の DB は、本人のメンバーの行（役割）も返す（会社の役割の上限を当てるため）
+    promaneWorkspace: { findFirst: async () => active ? { id: 'w', members: [{ role: 'member' }] } : null },
     promaneMember: { findFirst: async () => active ? { id: 'actor' } : null },
     promaneProject: { findFirst: async () => ({ id: 'p' }) },
     promaneExpense: {

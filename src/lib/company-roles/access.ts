@@ -31,14 +31,21 @@ export interface CompanyRoleDb {
 /**
  * ツールの組織での、会社の役割（監査 2026-10-26 の重大1への対応）。
  * - その組織が属する会社を先に決め、その会社での本人の役割を返す。本人が自分で別の会社を作っても、ほかの会社の組織では使えない。
- * - 組織が会社に属していない（作った人が会社を持っていない）なら null（上限を当てない。1人で使う人と同じ）。
+ * - 組織が会社に属していない（作った人が会社の持ち主でもメンバーでもない）なら、本人の会社のメンバーの役割を当てる。本人も会社に入っていなければ null（上限を当てない。1人で使う人と同じ）。
  * - 会社の持ち主はオーナー。会社のメンバーの行があればその役割（知らない値はゲスト）。
  * - 会社のメンバーでない人（ツールだけに招かれた人）は、メンバーとして扱う（ツールの中で一般の役割まで）。
  */
 export async function resolveCompanyRoleForOrg(userId: string, tool: ToolId, organizationId: string, db: CompanyRoleDb): Promise<CompanyRoleContext | null> {
   if (!userId || !organizationId || !db.findCompanyOfToolOrg) return null
   const org = await db.findCompanyOfToolOrg(tool, organizationId)
-  if (!org) return null
+  if (!org) {
+    // 組織の会社が決まらないとき: 本人がどこかの会社のメンバーなら、その会社の役割を当てる（止める側に倒す）。
+    // 引き継ぎなどで組織の作った人が会社を持たない人になっても、会社の社員の上限が外れないように（再監査 2026-10-26 中1）。
+    // 会社に入っていない人（1人で使う人）には当てない。
+    const mine = await db.findActiveMembership(userId)
+    if (!mine) return null
+    return { companyId: mine.companyId, role: isMemberRowRole(mine.role) ? mine.role : 'guest' }
+  }
   if (org.ownerUserId === userId) return { companyId: org.companyId, role: 'owner' }
   const m = db.findMembershipIn ? await db.findMembershipIn(userId, org.companyId) : null
   if (!m) return { companyId: org.companyId, role: 'member' }
@@ -158,7 +165,7 @@ export async function applyCompanyCeiling(input: {
 // ============================================
 // 役割の変更の記録（誰が・いつ・誰を・何から何へ）
 // ============================================
-export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated' | 'policy_changed'
+export type RoleEventKind = 'invited' | 'joined' | 'role_changed' | 'removed' | 'migrated' | 'policy_changed' | 'departments_changed'
 
 export interface RoleEventRecord {
   companyId: string

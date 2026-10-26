@@ -151,6 +151,12 @@ export async function recordAuthor(input: { tool: ToolId; recordId: string; user
 /** 記録を作った人（分からなければ null） */
 export async function findRecordAuthor(tool: ToolId, recordId: string): Promise<string | null> {
   if (companyRolesRollout() === 'off') return null
-  const row = await prisma.accountCompanyRecordAuthor.findUnique({ where: { tool_recordId: { tool, recordId } }, select: { userId: true } })
-  return row?.userId ?? null
+  try {
+    const row = await prisma.accountCompanyRecordAuthor.findUnique({ where: { tool_recordId: { tool, recordId } }, select: { userId: true } })
+    return row?.userId ?? null
+  } catch {
+    // 表が無い・読めないときは「作った人が分からない」として扱う（見積の確定は止める側に倒れる。500 にしない。再監査の軽微4）
+    console.error('[company-roles] 作った人を読めませんでした')
+    return null
+  }
 }

@@ -21,12 +21,12 @@ export default function CompanyRolesPreviewPage() {
           can: { viewMembers: true, changeRoles: true, viewEvents: false, changePolicy: true },
           policy: DEFAULT_ROLE_POLICY,
           members: [
-            { id: null, email: 'owner@example.com', name: '三森 太郎', role: 'owner', status: 'owner', isSelf: true, canChange: false, grantable: [] },
-            { id: 'm1', email: 'admin@example.com', name: '佐藤 花子', role: 'admin', status: 'active', isSelf: false, canChange: true, grantable },
-            { id: 'm2', email: 'manager@example.com', name: '鈴木 一郎', role: 'manager', status: 'active', isSelf: false, canChange: true, grantable },
-            { id: 'm3', email: 'keiri@example.com', name: '高橋 恵', role: 'billing', status: 'active', isSelf: false, canChange: true, grantable },
-            { id: 'm4', email: 'staff@example.com', name: '田中 次郎', role: 'member', status: 'active', isSelf: false, canChange: true, grantable },
-            { id: 'm5', email: 'partner@example.co.jp', name: null, role: 'guest', status: 'invited', isSelf: false, canChange: true, grantable },
+            { id: null, email: 'owner@example.com', name: '三森 太郎', role: 'owner', status: 'owner', isSelf: true, canChange: false, grantable: [], departments: ['marketing', 'sales'], canSetDepartments: true },
+            { id: 'm1', email: 'admin@example.com', name: '佐藤 花子', role: 'admin', status: 'active', isSelf: false, canChange: true, grantable, departments: ['sales'], canSetDepartments: true },
+            { id: 'm2', email: 'manager@example.com', name: '鈴木 一郎', role: 'manager', status: 'active', isSelf: false, canChange: true, grantable, departments: ['sales'], canSetDepartments: true },
+            { id: 'm3', email: 'keiri@example.com', name: '高橋 恵', role: 'billing', status: 'active', isSelf: false, canChange: true, grantable, departments: ['sales'], canSetDepartments: true },
+            { id: 'm4', email: 'staff@example.com', name: '田中 次郎', role: 'member', status: 'active', isSelf: false, canChange: true, grantable, departments: ['sales'], canSetDepartments: true },
+            { id: 'm5', email: 'partner@example.co.jp', name: null, role: 'guest', status: 'invited', isSelf: false, canChange: true, grantable, departments: ['sales'], canSetDepartments: true },
           ],
         }}
         plan={[

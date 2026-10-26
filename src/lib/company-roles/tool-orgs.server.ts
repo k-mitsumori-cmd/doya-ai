@@ -11,7 +11,7 @@ import type { ToolId } from './tool-roles'
 
 export type OrgMemberDelegate = {
   findMany(args: { where: Record<string, unknown>; select: Record<string, true> }): Promise<Array<{ organizationId: string; userId: string | null; role: string }>>
-  findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, 'asc' | 'desc'>; select: Record<string, true> }): Promise<{ userId: string | null } | null>
+  findFirst(args: { where: Record<string, unknown>; orderBy: Array<Record<string, 'asc' | 'desc'>>; select: Record<string, true> }): Promise<{ userId: string | null } | null>
 }
 
 // 組織とメンバーの表が同じ形（organizationId・userId・role・status=ACTIVE・createdAt）のツール
@@ -38,7 +38,7 @@ export async function toolOrgCreator(tool: ToolId, organizationId: string): Prom
   if (!t) return null
   const row = await t.delegate().findFirst({
     where: { organizationId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     select: { userId: true },
   })
   return row?.userId ?? null

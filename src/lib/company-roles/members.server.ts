@@ -10,7 +10,8 @@ import { buildRoleEvent } from './access'
 import { companyRoleForSession, writeRoleEvent } from './access.server'
 import { canCompany } from './permissions'
 import { decidePolicyUpdate, POLICY_LABEL, type CompanyRolePolicy } from './policy'
-import { canManageCompanyMember, decideRoleChange, grantableCompanyRoles, isMemberRowRole, type CompanyRole, type RoleChangeDecision } from './roles'
+import { canManageCompanyMember, decideRoleChange, grantableCompanyRoles, hasMinCompanyRole, isMemberRowRole, type CompanyRole, type RoleChangeDecision } from './roles'
+import { normalizeDepartments } from './departments'
 
 export type CompanyRolesSession = NonNullable<Awaited<ReturnType<typeof companyRoleForSession>>> & { userId: string }
 
@@ -29,6 +30,10 @@ export interface MemberView {
   isSelf: boolean
   canChange: boolean
   grantable: CompanyRole[]
+  /** 部署（marketing・sales・hr・admin）。参加前の人は空 */
+  departments: string[]
+  /** 部署を決められるか（管理者以上で、参加している人） */
+  canSetDepartments: boolean
 }
 
 /** メンバーと役割の一覧（オーナーを先頭に） */
@@ -48,6 +53,9 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
       .map((u) => [u.id, u.name]),
   )
   const grantable = grantableCompanyRoles(s.role)
+  const deptRows = await prisma.accountCompanyMemberDepartment.findMany({ where: { companyId: s.companyId }, select: { userId: true, departments: true } })
+  const depts = new Map(deptRows.map((r) => [r.userId, normalizeDepartments(r.departments)]))
+  const canSetDepts = hasMinCompanyRole(s.role, 'admin')
   const owner: MemberView = {
     id: null,
     email: company.user?.email ?? '',
@@ -57,6 +65,8 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
     isSelf: company.userId === s.userId,
     canChange: false,
     grantable: [],
+    departments: depts.get(company.userId) ?? [],
+    canSetDepartments: canSetDepts,
   }
   return [
     owner,
@@ -73,6 +83,8 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
         isSelf,
         canChange,
         grantable: canChange ? grantable : [],
+        departments: r.userId ? depts.get(r.userId) ?? [] : [],
+        canSetDepartments: canSetDepts && r.status === 'active' && !!r.userId,
       }
     }),
   ]
@@ -85,18 +97,20 @@ export async function changeMemberRole(s: CompanyRolesSession, memberId: string,
     // 操作する人の役割を、トランザクションの中で読み直す（同時に自分の役割が下げられていたら、下がった役割で判定する。監査の中3）
     const company = await tx.accountCompany.findUnique({ where: { id: s.companyId }, select: { userId: true } })
     if (!company) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
+    // 操作する人の行と相手の行を、1回で ID の順に押さえる（押さえる順番を固定して、行の取り合いで止まらないように。再監査の軽微3）
+    await tx.$queryRaw`SELECT id FROM account_company_members
+      WHERE "companyId" = ${s.companyId} AND (id = ${memberId} OR ("userId" = ${s.userId} AND status = 'active'))
+      ORDER BY id FOR UPDATE`
     let actor: CompanyRole
     if (company.userId === s.userId) {
       actor = 'owner'
     } else {
-      await tx.$queryRaw`SELECT id FROM account_company_members WHERE "companyId" = ${s.companyId} AND "userId" = ${s.userId} AND status = 'active' FOR UPDATE`
       const me = await tx.accountCompanyMember.findFirst({ where: { companyId: s.companyId, userId: s.userId, status: 'active' }, select: { role: true } })
       if (!me) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
       actor = isMemberRowRole(me.role) ? me.role : 'guest'
     }
     if (!canCompany(actor, 'members.role.change', {}, s.policy)) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
-    // 会社と ID の二重の条件（他の会社の行は変えられない）。同時の変更を直列にするため行を押さえる
-    await tx.$queryRaw`SELECT id FROM account_company_members WHERE id = ${memberId} AND "companyId" = ${s.companyId} FOR UPDATE`
+    // 会社と ID の二重の条件（他の会社の行は変えられない）。行は上で押さえてある
     const target = await tx.accountCompanyMember.findFirst({
       where: { id: memberId, companyId: s.companyId },
       select: { id: true, email: true, userId: true, role: true, status: true },

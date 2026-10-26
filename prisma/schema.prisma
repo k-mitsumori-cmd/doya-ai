@@ -5984,7 +5984,7 @@ model AccountCompanyRoleEvent {
   actorUserId    String
   targetMemberId String?
   targetEmail    String // 小文字にそろえる
-  kind           String // invited | joined | role_changed | removed | migrated | policy_changed
+  kind           String // invited | joined | role_changed | removed | migrated | policy_changed | departments_changed
   fromRole       String?
   toRole         String?
   note           String?
@@ -6019,6 +6019,21 @@ model AccountCompanyRecordAuthor {
 
   @@unique([tool, recordId])
   @@map("account_company_record_authors")
+}
+
+// 社員ごとの部署（部署ごとの入口の段階3。ROLES-2026-10-26.md §11）。持ち主も行を持てる（持ち主は account_company_members に行が無いため、companyId と userId で持つ）
+// 部署の id: marketing | sales | hr | admin（正本は src/lib/departments.ts）。オーナーと管理者は、行に関係なく全部を見る
+model AccountCompanyMemberDepartment {
+  id          String   @id @default(cuid())
+  companyId   String
+  userId      String
+  departments String[]
+  updatedBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, userId])
+  @@map("account_company_member_departments")
 }
 
 // ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26）。同じ人に二度付けないため

@@ -52,6 +52,15 @@
 .optionLabel { display: block; font-size: 14px; font-weight: 700; }
 .optionText { display: block; margin-top: 2px; font-size: 12px; color: var(--sub); line-height: 1.6; }
 
+/* 部署 */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 999px; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.chip[data-on='true'] { border-color: var(--blue); background: var(--blue-soft, #eef4ff); color: var(--blue); font-weight: 700; }
+.chip input { margin: 0; }
+
 /* 決まり */
 .policies { display: grid; gap: 14px; }
 .policy { display: grid; gap: 6px; min-width: 0; }

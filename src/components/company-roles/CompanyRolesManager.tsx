@@ -10,6 +10,10 @@ import { confirmDialog } from '@/components/ds'
 import { COMPANY_ROLE_DESCRIPTION, COMPANY_ROLE_LABEL, lostAbilities, type CompanyRole } from '@/lib/company-roles/roles'
 import { POLICY_KEYS, POLICY_LABEL, type CompanyRolePolicy } from '@/lib/company-roles/policy'
 import type { MigrationPlanRow } from '@/lib/company-roles/migration'
+import { DEPARTMENT_IDS, type DepartmentId } from '@/lib/company-roles/departments'
+
+// 部署の名前（正本は UI の src/lib/departments.ts。入ったらそちらの名前を使う）
+const DEPARTMENT_LABEL: Record<DepartmentId, string> = { marketing: 'マーケ', sales: 'セールス', hr: '人事', admin: '管理' }
 import styles from './CompanyRoles.module.css'
 
 export interface MemberRow {
@@ -21,6 +25,8 @@ export interface MemberRow {
   isSelf: boolean
   canChange: boolean
   grantable: CompanyRole[]
+  departments: string[]
+  canSetDepartments: boolean
 }
 
 export interface CompanyRolesView {
@@ -50,6 +56,7 @@ function eventText(e: EventRow): string {
     case 'removed': return `${who} が ${e.targetEmail} を外しました。`
     case 'migrated': return `${e.targetEmail} の役割を、今までのツールの役割から「${label(e.toRole)}」に決めました。`
     case 'policy_changed': return `${who} が権限の決まりを変えました。`
+    case 'departments_changed': return `${who} が ${e.targetEmail} の部署を変えました。`
     default: return `${who} が変更しました。`
   }
 }
@@ -94,6 +101,20 @@ export function CompanyRolesManager({ initial, plan = [] }: { initial: CompanyRo
       if (!r.ok) { setError(r.data.error ?? '役割を変えられませんでした。'); return }
       setMessage(`${m.name ?? m.email} さんの役割を「${COMPANY_ROLE_LABEL[to]}」に変えました。`)
       await Promise.all([reload(), loadEvents()])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleDepartment = async (m: MemberRow, d: DepartmentId) => {
+    if (busy || !m.canSetDepartments) return
+    const next = m.departments.includes(d) ? m.departments.filter((x) => x !== d) : [...m.departments, d]
+    setBusy(true); setMessage(null); setError(null)
+    try {
+      const r = await call(`/api/company/members/${encodeURIComponent(m.id ?? 'owner')}/departments`, { method: 'PUT', body: JSON.stringify({ departments: next }) })
+      if (!r.ok) { setError(r.data.error ?? '部署を変えられませんでした。'); return }
+      setView((v) => ({ ...v, members: v.members.map((x) => (x === m ? { ...x, departments: r.data.departments } : x)) }))
+      setMessage(`${m.name ?? m.email} さんの部署を変えました。`)
     } finally {
       setBusy(false)
     }
@@ -190,6 +211,31 @@ export function CompanyRolesManager({ initial, plan = [] }: { initial: CompanyRo
           {!view.can.changePolicy ? <p className={styles.note}>決まりを変えられるのは、オーナーだけです。</p> : null}
         </section>
       </div>
+
+      {view.can.viewMembers ? (
+        <section className={styles.card} aria-labelledby="departments">
+          <h2 id="departments" className={styles.cardTitle}>部署</h2>
+          <p className={styles.note}>部署は、メニューの並びを決めるために使います。権限は変わりません。オーナーと管理者は、すべての部署を見られます。</p>
+          <ul className={styles.members}>
+            {view.members.map((m) => (
+              <li key={`d-${m.id ?? 'owner'}`} className={styles.member}>
+                <div className={styles.who}>
+                  <p className={styles.name}>{m.name ?? m.email}</p>
+                </div>
+                <span />
+                <div className={styles.chips} role="group" aria-label={`${m.name ?? m.email} さんの部署`}>
+                  {DEPARTMENT_IDS.map((d) => (
+                    <label key={d} className={styles.chip} data-on={m.departments.includes(d) ? 'true' : undefined}>
+                      <input type="checkbox" checked={m.departments.includes(d)} disabled={busy || !m.canSetDepartments} onChange={() => void toggleDepartment(m, d)} />
+                      {DEPARTMENT_LABEL[d]}
+                    </label>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {plan.length ? (
         <section className={styles.card} aria-labelledby="plan">

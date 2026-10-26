@@ -6,7 +6,7 @@ const operationId='10000000-0000-4000-8000-000000000001';
 function adaptTimePrisma(prisma){
   const receipts=new Map();
   const adapt=tx=>({...tx,
-    $queryRaw:async(strings,...values)=>{assert(strings.join('?').includes('FOR UPDATE'));assert(strings.join('?').includes('promane_members'));const actor=await tx.promaneMember.findFirst({where:{workspaceId:values[0],userId:values[1],isActive:true,role:{in:['owner','admin','member']}},select:{id:true}});return actor?[actor]:[]},
+    $queryRaw:async(strings,...values)=>{assert(strings.join('?').includes('FOR UPDATE'));assert(strings.join('?').includes('promane_members'));const actor=await tx.promaneMember.findFirst({where:{workspaceId:values[0],userId:values[1],isActive:true,role:{in:['owner','admin','member']}},select:{id:true,role:true}});return actor?[{role:'member',...actor}]:[]},
     $executeRaw:async()=>0,
     systemSetting:{findUnique:async({where})=>receipts.has(where.key)?{value:receipts.get(where.key)}:null,create:async({data})=>{assert(!receipts.has(data.key));receipts.set(data.key,data.value);return data}},
     promaneExpense:tx.promaneExpense?{...tx.promaneExpense,create:tx.promaneExpense.create?async args=>({id:'synthetic-expense',...await tx.promaneExpense.create(args)}):undefined}:undefined,
