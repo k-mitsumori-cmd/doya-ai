@@ -1,23 +1,18 @@
 // 有料の API を使う確認（1日1回）。モデルの情報を読むだけでは分からない「実際に生成できるか」
 // （クレジット切れ・利用上限・課金の停止）を、いちばん安いモデルに短い文を1回返させて確かめる。
-// ⚠️ 従量課金。SystemSetting の watch:v1:paid-enabled が 'true' のときだけ動く（ユーザーの承認後に有効にする）。
+// ⚠️ 従量課金。SystemSetting の watch:v1:paid-enabled が 'true' のときだけ動く（ユーザーの承認後に有効にする。判定は paid-run.ts）。
 //
 // 見込み額（2026-10-26 時点の単価。1回あたりの入出力はおよそ 30 / 5 トークン）
 //   Gemini gemini-2.5-flash（思考なし）  $0.30 / $2.50 per 1M → 約 $0.00002 / 回
 //   Claude claude-haiku-4-5-20251001     $1.00 / $5.00 per 1M → 約 $0.00006 / 回
 //   OpenAI gpt-4o-mini                   $0.15 / $0.60 per 1M → 約 $0.00001 / 回
 //   合計 約 $0.0001 / 日、約 $0.003 / 月
-import { prisma } from '@/lib/prisma'
 import { callClaudeMessages } from '@/lib/mitsuboshi/_shared/anthropic'
 import { bodySnippet, describeFetchError } from '@/lib/health-check-report'
 import type { CheckDef, CheckOutcome } from './types'
 
 export const PAID_ENABLED_KEY = 'watch:v1:paid-enabled'
 
-export async function paidChecksEnabled(): Promise<boolean> {
-  const row = await prisma.systemSetting.findUnique({ where: { key: PAID_ENABLED_KEY } })
-  return row?.value === 'true'
-}
 
 async function postJson(url: string, headers: Record<string, string>, body: unknown, pick: (j: any) => string | undefined): Promise<CheckOutcome> {
   let res: Response
@@ -38,10 +33,11 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
 
 const PROMPT = 'OK とだけ返してください。'
 
-export function paidChecks(): CheckDef[] {
+/** costYen は1回の見込み額（円、1ドル=150円）。1日の上限の計算に使う */
+export function paidChecks(): (CheckDef & { costYen: number })[] {
   return [
     {
-      id: 'paid:gemini-generate', area: '外部サービス', label: 'Gemini で実際に生成できるか（gemini-2.5-flash）', severity: 'urgent', threshold: 1,
+      id: 'paid:gemini-generate', area: '外部サービス', label: 'Gemini で実際に生成できるか（gemini-2.5-flash）', severity: 'urgent', threshold: 1, costYen: 0.003,
       hints: ['429 なら利用上限、403 ならキーの制限か課金の停止。Google AI Studio の課金と上限を見る', '記事作成・インタビュー・バナーの文章など、Gemini を使うツールがすべて止まっている可能性がある'],
       run: async () => {
         const key = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY
@@ -52,7 +48,7 @@ export function paidChecks(): CheckDef[] {
       },
     },
     {
-      id: 'paid:claude-generate', area: '外部サービス', label: 'Claude で実際に生成できるか（claude-haiku-4-5）', severity: 'urgent', threshold: 1,
+      id: 'paid:claude-generate', area: '外部サービス', label: 'Claude で実際に生成できるか（claude-haiku-4-5）', severity: 'urgent', threshold: 1, costYen: 0.009,
       hints: ['400 で credit balance と出ていれば、Anthropic Console でクレジットを足す', '記事作成（SEO）・展開・ミツボシ・AIO が Claude を使っている'],
       run: async () => {
         try {
@@ -64,7 +60,7 @@ export function paidChecks(): CheckDef[] {
       },
     },
     {
-      id: 'paid:openai-generate', area: '外部サービス', label: 'OpenAI で実際に生成できるか（gpt-4o-mini）', severity: 'action', threshold: 1,
+      id: 'paid:openai-generate', area: '外部サービス', label: 'OpenAI で実際に生成できるか（gpt-4o-mini）', severity: 'action', threshold: 1, costYen: 0.002,
       hints: ['429 の insufficient_quota なら OpenAI の課金の残高を見る（画像生成の gpt-image-2 も止まる）'],
       run: async () => {
         if (!process.env.OPENAI_API_KEY) return { ok: false, error: 'OPENAI_API_KEY が本番に設定されていません' }

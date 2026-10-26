@@ -4,16 +4,16 @@
 import { prisma } from '@/lib/prisma'
 import { SERVICES, RETIRED_SERVICE_IDS } from '@/lib/services'
 import { doyaPowerRollout } from '@/lib/doya-power/flag'
-import { httpCheck, jsonBody } from './http'
+import { httpCheck, jsonBody, siteBase } from './http'
+import { agentFreeChecks } from './agent-checks'
+
+export { siteBase }
 import type { CheckDef, CheckOutcome } from './types'
 
 const HOUR = 3_600_000
 const ok = (detail?: string, extra: Partial<CheckOutcome> = {}): CheckOutcome => ({ ok: true, detail, ...extra })
 const ng = (error: string, extra: Partial<CheckOutcome> = {}): CheckOutcome => ({ ok: false, error, ...extra })
 
-export function siteBase(): string {
-  return (process.env.SYSTEM_WATCH_BASE_URL || 'https://doya-ai.surisuta.jp').replace(/\/$/, '')
-}
 
 const PAGE_HINTS = [
   'Vercel の最新のデプロイが Ready か、Runtime Logs に同じ URL のエラーが出ていないかを見る',
@@ -441,5 +441,5 @@ export function configChecks(base = siteBase()): CheckDef[] {
 
 /** 有料の API を使わない確認のすべて（10分ごと）。 */
 export function freeChecks(): CheckDef[] {
-  return [...pageChecks(), ...apiChecks(), ...dbChecks(), ...cronChecks(), ...externalChecks(), ...configChecks()]
+  return [...pageChecks(), ...apiChecks(), ...agentFreeChecks(), ...dbChecks(), ...cronChecks(), ...externalChecks(), ...configChecks()]
 }

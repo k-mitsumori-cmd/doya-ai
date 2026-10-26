@@ -9,7 +9,13 @@ const UA = 'DoyaAI-SystemWatch/1.0 (+https://doya-ai.surisuta.jp)'
 /** サーバーの描画が失敗したときに本文へ出る文言（200 で返る場合もあるため本文も見る）。 */
 const ERROR_PAGE_MARKERS = [/Application error: a (?:server|client)-side exception/i, /Internal Server Error/i, /This page could not be found/i, /ページを表示できませんでした/]
 
+export function siteBase(): string {
+  return (process.env.SYSTEM_WATCH_BASE_URL || 'https://doya-ai.surisuta.jp').replace(/\/$/, '')
+}
+
 export type HttpExpect = {
+  /** 既定は GET。POST は本文を送らない（旗や認証で門前払いされることを確かめる用） */
+  method?: 'GET' | 'POST'
   /** 期待する状態コード。省略時は 200 */
   status?: number | number[]
   /** 3xx を許す（同じサイト内への転送だけ） */
@@ -25,7 +31,7 @@ export async function httpCheck(url: string, expect: HttpExpect = {}): Promise<C
   const started = Date.now()
   let res: Response
   try {
-    res = await fetch(url, { redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { 'user-agent': UA, ...expect.headers } })
+    res = await fetch(url, { method: expect.method ?? 'GET', redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { 'user-agent': UA, ...expect.headers } })
   } catch (e) {
     return { ok: false, url, error: describeFetchError(e, FETCH_TIMEOUT_MS), detail: `${Date.now() - started}ms で打ち切り` }
   }

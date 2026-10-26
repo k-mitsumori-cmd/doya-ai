@@ -2,10 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { freeChecks, pageChecks } from './checks'
 import { paidChecks } from './paid-checks'
+import { paidAgentChecks } from './agent-checks'
+import { canSpend, DAILY_CAP_YEN, jstDay } from './budget'
 import { SERVICES, RETIRED_SERVICE_IDS } from '@/lib/services'
 
 test('確認の名前は重複せず、どれにも直し方の候補がある', () => {
-  const all = [...freeChecks(), ...paidChecks()]
+  const all = [...freeChecks(), ...paidChecks(), ...paidAgentChecks()]
   const ids = all.map(c => c.id)
   assert.equal(new Set(ids).size, ids.length, `重複: ${ids.filter((x, i) => ids.indexOf(x) !== i).join(', ')}`)
   for (const c of all) {
@@ -25,5 +27,29 @@ test('公開中のツールの入口は、すべて画面の確認に入る（�
 
 test('有料の確認は、無料の確認の一覧に混ざらない', () => {
   assert.ok(freeChecks().every(c => !c.id.startsWith('paid:')))
-  assert.ok(paidChecks().every(c => c.id.startsWith('paid:')))
+  assert.ok([...paidChecks(), ...paidAgentChecks()].every(c => c.id.startsWith('paid:')))
+})
+
+test('有料の確認には、どれも1回の見込み額があり、ふだんの1日の合計は上限より小さい', () => {
+  const paid = [...paidChecks(), ...paidAgentChecks()]
+  for (const c of paid) assert.ok(c.costYen > 0, `${c.id} に見込み額が無い`)
+  const total = paid.reduce((s, c) => s + c.costYen, 0)
+  assert.ok(total < DAILY_CAP_YEN, `1日の合計 ${total}円 が上限 ${DAILY_CAP_YEN}円 以上`)
+})
+
+test('1日の上限: 累計が上限に届いたら次を回さない', () => {
+  assert.equal(canSpend(0), true)
+  assert.equal(canSpend(9.99), true)
+  assert.equal(canSpend(10), false)
+  assert.equal(canSpend(17), false)
+})
+
+test('上限の日付は日本時間で切り替わる', () => {
+  assert.equal(jstDay(Date.parse('2026-10-26T14:59:00Z')), '2026-10-26')
+  assert.equal(jstDay(Date.parse('2026-10-26T15:00:00Z')), '2026-10-27')
+})
+
+test('エージェントの API の門前払いの確認が、無料の確認に入っている', () => {
+  assert.ok(freeChecks().some(c => c.id === 'api:agent-guard'))
+  assert.ok(freeChecks().some(c => c.id === 'agent:sample-sites'))
 })

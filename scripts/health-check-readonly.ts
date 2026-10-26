@@ -1,5 +1,6 @@
 // 本番 DB を「読むだけ」で点検する手動スクリプト（作成・更新・削除・送信はしない）。
 // 使い方: AIO_ENV_FILE=/path/to/.env.local npx tsx scripts/health-check-readonly.ts
+// ⚠️ 本番 DB を読む。ユーザーが直接許可するまで使わない（Obsidian のドヤAI_03 の決まり）。
 // 出力: 項目ごとに OK / NG / 確認不可 と根拠を JSON で出す。秘密の値（Webhook URL 等）は出さない。
 import { loadEnv } from './_env'
 loadEnv()

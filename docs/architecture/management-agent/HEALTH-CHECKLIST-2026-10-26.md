@@ -77,12 +77,30 @@
 
 - 回数: 1日1回ずつ、合わせて1日3回（毎朝 8:40）
 - 見込み額: 1日 約 $0.0001（約0.02円）、1か月 約 $0.003（約0.5円）
-- 画像の生成（gpt-image-2）と、エージェントで会社の調査を1件回す確認は入れていない。単価と回数が決まってから別に承認を取る。
-- 有効にする方法: ユーザーの承認の後、SystemSetting に `watch:v1:paid-enabled` = `true` の行を足す。値が `true` でなければ、cron は何も呼ばずに終わる。
+- 画像の生成（gpt-image-2）の確認は入れていない。単価と回数が決まってから別に承認を取る。
+- 有効にする方法: ユーザーの承認の後、SystemSetting に `watch:v1:paid-enabled` = `true` の行を足す。値が `true` でなければ、この3つは呼ばない。
+
+#### エージェントの有料の確認（B1・B2。2026-10-26 ユーザー承認、1日 約10円まで）
+
+エージェントの担当（local_bf659a4c）の `FAILURE-CHECKLIST.md` §7.2 を、system-watch-paid に入れた（`src/lib/system-watch/agent-checks.ts`）。スイッチは別で、`watch:v1:paid-agent-enabled` = `true` のときだけ動く。本番で有効にするのは、統合のときに統括の承認の流れで行う。
+
+| 確認 | 中身 | 1回の見込み | 1日 |
+|---|---|---|---|
+| `paid:agent-research-samples`（B2） | 会社の調査だけを、見本の URL 3つで通す（gemini-2.5-flash を3回） | 約3.6円 | 1回 |
+| `paid:agent-sales-prep`（B1） | 商談の準備を1回通す（会社の調査・見積の案・スライドの構成を同時に）。見積とスライドは Haiku 5.5 | 約1.8円（上限 約10円） | 1回 |
+
+- 合計の見込み: 1日 約5.4円、1か月 約160円。上限の日は1日 約17円になり得るが、次の止める仕組みで10円台に収める。
+- 1日の上限: 安い確認から順に1つずつ回す。回す前にその日の累計の見込み額（SystemSetting `watch:v1:paid-spend:<日本時間の日付>`）を見て、10円に届いていたら残りを回さない。失敗した確認も、費用は出たとみなして足す。
+- B1 はテスト用のユーザー（`SYSTEM_WATCH_TEST_USER_ID`）として呼ぶ。cron の中で、そのユーザーだけに15分有効なセッションを作り、`/api/agent/tasks` を3つ呼び、終わったら消す。テスト用のアカウントが無いうちは「未設定」の失敗として知らせる。
+- B1 は見積とスライドのプロジェクトを、テスト用の会社に1日1件ずつ作る。ドヤパワーの旗が on なら、その会社の台帳から 31 減る。無料のプランは1日10しか回復しないので、テスト用の会社はプロにしておく必要がある。
+- 見本の URL は SystemSetting `watch:v1:sample-company-urls`（か環境変数 `SYSTEM_WATCH_SAMPLE_COMPANY_URLS`）に、空白かカンマで区切って3つまで入れる。未設定なら B1・B2 と無料の「見本のサイトを読めるか」は回さない。
+- 見る所: 3つの ToDo の結果（失敗したら札の cause と actions）と、本番のログの `[shodan/preparations] research failed` の stage・code・reason。
 
 ### 1.5 手元からの試し
 
 本番に向けて、状態を書かず Slack にも送らずに、全項目を回せます。
+
+⚠️ このスクリプトは手元から本番 DB を読みます。Obsidian の [[ドヤAI_03_システム徹底チェック]] の決まり（本番DBの読み取りはユーザーが直接許可するまで行わない）に従い、ユーザーの許可を得てから使います。
 
 ```bash
 AIO_ENV_FILE=/Users/mitsumori_katsuki/Code/09_Cursol/.env.local npx tsx scripts/system-watch-dry.ts
@@ -144,7 +162,10 @@ AIO_ENV_FILE=/Users/mitsumori_katsuki/Code/09_Cursol/.env.local npx tsx scripts/
 |---|---|
 | 旗 `AGENT_ORCHESTRATION_ROLLOUT` の意図しない変更 | 自動（`flag:agent`。値の変化を知らせる） |
 | 実行の記録を DB に残す設定で、表 `home_agent_runs` `home_agent_tasks` が無い | 自動（`db:tables`。`AGENT_RUNS_STORE=db` のときだけ） |
-| ToDo（企業調査→見積→スライド構成）のどこかが失敗する | 未対応。エージェントの担当（local_bf659a4c）が洗い出し中。定期に回す確認を受け取ったら system-watch に足す |
+| ToDo（企業調査→見積→スライド構成）のどこかが失敗する | 自動（有料）。B1 `paid:agent-sales-prep` が1日1回、商談の準備を通す（テスト用のアカウント待ち） |
+| 会社の調査が失敗する（取得・文字コード・NUL・AI） | 自動（有料）。B2 `paid:agent-research-samples`。AI を使わない取得は自動（`agent:sample-sites`） |
+| エージェントの API が旗の外の人に見える | 自動（`api:agent-guard`。ログインなしの POST が 404 か） |
+| 本番のログの `[agent] task failed` `[shodan/preparations] research failed` | 未対応。実行時から Vercel のログを読む鍵が無い。B1・B2 の失敗の通知で代わりに見る |
 | ToDo が各ツールの月の件数とドヤパワーを実際に使う | 仕様。有料の確認で1件回すなら、テスト用の会社で行う（4章） |
 
 ### 2.6 ドヤパワー
