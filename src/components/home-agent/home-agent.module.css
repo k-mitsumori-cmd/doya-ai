@@ -14,6 +14,11 @@
 .beamFlow { fill: none; stroke: url(#ha-beam); stroke: var(--cyan); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 48 600; animation: beam 1.4s linear infinite; }
 @keyframes beam { from { stroke-dashoffset: 648; } to { stroke-dashoffset: 0; } }
 
+/* 見出し（今日は、何をしますか？）。左右の列をまたいで、いちばん上に大きく出す */
+.head { grid-column: 1 / -1; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 4px 0 4px; }
+.headGreeting { margin: 0; font-size: 13px; font-weight: 700; color: var(--sub); letter-spacing: .04em; }
+.headCompany { display: flex; justify-content: center; }
+.headTitle { margin: 0; font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; color: var(--ink); text-wrap: balance; }
 .hero { position: sticky; top: 16px; z-index: 2; display: grid; justify-items: center; gap: 10px; }
 .kun { position: relative; width: 220px; aspect-ratio: 1; }
 .pose { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: scale(.97); transition: opacity .35s var(--ease), transform .35s var(--ease); }
@@ -141,7 +146,10 @@
 
 @media (max-width: 860px) {
   .stage { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 12px; min-height: 0; }
-  .hero { position: static; grid-template-columns: 88px minmax(0, 1fr); justify-items: start; align-items: center; }
+  .hero { position: static; grid-template-columns: 88px minmax(0, 1fr); justify-items: start; align-items: center; order: 2; }
+  /* スマホでは、見出し → 入力 → 前回の続き の順に先に出し、ドヤくんはその下にする */
+  .head { order: 0; }
+  .panel { order: 1; }
   .kun { width: 88px; }
   .say { max-width: none; text-align: left; }
   .resumeHead { grid-template-columns: 40px minmax(0, 1fr); }
@@ -173,4 +181,14 @@
 .shortcut:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .shortcut .muted { font-size: 11px; }
 @media (max-width: 860px) { .shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* スマホでは、例のボタンを1行にして横に流す（6つを縦に積むと、前回の続きのカードが最初の画面から押し出されるため。2026-10-26 メインの指摘）。
+   右の端を薄くして、横に続くことを見せる */
+@media (max-width: 600px) {
+  .exampleChips { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin-inline: -4px; padding: 2px 24px 4px 4px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .exampleChips::-webkit-scrollbar { display: none; }
+  .exampleChips .chip { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+  /* 入力欄は2行の高さにする（続きのカードを最初の画面に入れるため。下の端を引けば広げられる） */
+  .textarea { min-height: 0; height: 76px; }
+}
 @media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }
