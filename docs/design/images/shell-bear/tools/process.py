@@ -1,4 +1,4 @@
-# 使い方: python3 process.py <raw.png> <out.webp>
+# 使い方: python3 process.py <raw.png> <out.webp> [大きさ(既定128)]
 import sys
 import numpy as np
 from PIL import Image, ImageFilter
@@ -45,7 +45,8 @@ ring = dil.filter(ImageFilter.MaxFilter(5))
 navy = Image.new('RGBA', (S, S), (26, 43, 95, 0))
 navy.putalpha(ring.point(lambda v: int(v * 0.35)))
 final = Image.alpha_composite(navy, final)
-final = final.resize((128, 128), Image.LANCZOS)
+size = int(sys.argv[3]) if len(sys.argv) > 3 else 128
+final = final.resize((size, size), Image.LANCZOS)
 final.save(out, 'WEBP', quality=90, method=6)
 # 残ったマゼンタの数
 f = np.asarray(final).astype(int)

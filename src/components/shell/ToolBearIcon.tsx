@@ -1,7 +1,10 @@
 // ============================================
 // 左のメニューのツールのアイコン（ドヤくんがツールに合った行動をしている絵）
 // ============================================
-// 絵は public/shell/bear/<ツールid>.webp（128×128・透過・白い縁取り）。作り方とプロンプトは docs/design/images/shell-bear/PROMPTS.md
+// メニューに出すのは、上半身に寄せて道具を大きく描いた版（public/shell/bear/menu/<ツールid>-32.webp と -64.webp〈Retina〉）。
+//   全身の大きい絵（public/shell/bear/<ツールid>.webp、128×128）は、ホームなど大きく出す所のために残す。
+//   32px では全身だと顔が大半を占めて道具が見分けにくいため（2026-10-26 ユーザーの選んだ案 A）。
+//   作り方とプロンプトは docs/design/images/shell-bear/PROMPTS.md
 // ⚠️ 絵の無いツール（経営ホーム・新しく増えたツール）は、今までどおり lucide のアイコン（tools.ts の icon の名前）を出す。
 //    新しいツールを足したら、絵を作って BEAR_TOOL_IDS に足す。
 // ⚠️ public/renewal/icons（LP とトップのサービス一覧の絵）とは別の絵。そちらは上書きしない。
@@ -33,7 +36,8 @@ export function ToolBearIcon({ id, icon, size = 32, iconSize = 18 }: {
     // 小さな固定の絵なので next/image の変換は通さない（幅と高さを決めて、読み込みでずれないようにする）
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`/shell/bear/${id}.webp`}
+      src={`/shell/bear/menu/${id}-32.webp`}
+      srcSet={`/shell/bear/menu/${id}-32.webp 1x, /shell/bear/menu/${id}-64.webp 2x`}
       width={size}
       height={size}
       alt=""
