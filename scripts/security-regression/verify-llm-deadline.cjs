@@ -23,7 +23,7 @@ function gemini({ hang }) {
       if (s) s.addEventListener('abort', () => rej(s.reason || new Error('aborted')))
     })
   }
-  const mod = load('seo/lib/gemini.ts', {}, { process: { env: ENV }, fetch, AbortSignal, setTimeout: (fn) => { fn(); return 0 } })
+  const mod = load('seo/lib/gemini.ts', { '@/lib/slack/notify': { postSlack: async () => true } }, { process: { env: ENV }, fetch, AbortSignal, setTimeout: (fn) => { fn(); return 0 } })
   return { mod, calls }
 }
 const req = (extra = {}) => ({ model: 'gemini-2.5-flash', parts: [{ text: 'hello' }], ...extra })
@@ -101,7 +101,7 @@ const within = (p, ms = 5000) => Promise.race([p, new Promise((_r, rej) => setTi
   await check('LLM: no temperature for models that reject non-default sampling; unchanged for the default model; the fallback log has only the status', async () => {
     const bodies = []
     const warns = []
-    const mod = load('seo/lib/gemini.ts', {}, {
+    const mod = load('seo/lib/gemini.ts', { '@/lib/slack/notify': { postSlack: async () => true } }, {
       process: { env: ENV }, AbortSignal, setTimeout: (fn) => { fn(); return 0 },
       console: { log() {}, error() {}, warn: (...a) => warns.push(a.join(' ')) },
       fetch: async (url, init) => {
