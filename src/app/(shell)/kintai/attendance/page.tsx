@@ -2,6 +2,8 @@
 
 import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { MiniStack } from '@/components/ds/charts'
+import { DailyWorkChart } from '@/components/kintai/KintaiInfographics'
+import { InfoPanelLoading } from '@/components/ds/infographic'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
@@ -180,6 +182,9 @@ export default function AttendancePage() {
             warning={overtimeWarning}
           />
         </div>}
+
+        {/* ===== 日ごとの勤務時間（インフォグラフィック。2026-10-27） ===== */}
+        {loading ? <InfoPanelLoading title="日ごとの勤務時間" height={248} /> : !loadError && hasData && <DailyWorkChart data={data} year={year} month={month} />}
 
         {/* ===== Table ===== */}
         {loading ? (

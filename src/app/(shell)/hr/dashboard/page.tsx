@@ -1,6 +1,7 @@
 'use client'
 import { PageTitle } from '@/components/hr/ui-next'
 import { Button, EmptyState, StatTile, ToolHero } from '@/components/ds'
+import { HeadcountInfo, HeadcountInfoLoading } from '@/components/hr/HrInfographics'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import HrLoadError, { HrStatusError } from '@/components/hr/HrLoadError'
 
@@ -107,6 +108,7 @@ export default function HrDashboardPage() {
   })
   const [, setRecentOneOnOnes] = useState<RecentOneOnOne[]>([])
   const [evaluationPeriods, setEvaluationPeriods] = useState<EvaluationPeriod[]>([])
+  const [departmentHeadcount, setDepartmentHeadcount] = useState<{ name: string; count: number }[]>([])
   const [loading, setLoading] = useState(true)
   // 失敗の状態コード（分からないときは true）。新しい見た目で出し分けに使う
   const [loadError, setLoadError] = useState<boolean | number>(false)
@@ -150,6 +152,7 @@ export default function HrDashboardPage() {
         })
         setRecentOneOnOnes(data.recentOneOnOnes)
         setEvaluationPeriods(data.evaluationPeriods)
+        setDepartmentHeadcount(Array.isArray(data.departmentHeadcount) ? data.departmentHeadcount : [])
       } catch (error) {
         if (!controller.signal.aborted) { const status = (error as { status?: unknown } | null)?.status; setLoadError(typeof status === 'number' ? status : true) }
       } finally {
@@ -208,6 +211,13 @@ export default function HrDashboardPage() {
             />
           ))}
         </div>
+
+      {/* 部署ごとの人数（インフォグラフィック。2026-10-27） */}
+      {loading ? (
+        <div className="mb-8"><HeadcountInfoLoading /></div>
+      ) : departmentHeadcount.length > 0 ? (
+        <div className="mb-8"><HeadcountInfo rows={departmentHeadcount} total={stats.employeeCount} /></div>
+      ) : null}
 
       {/* Setup Guide — shown when no employees */}
       {!loading && stats.employeeCount === 0 && (

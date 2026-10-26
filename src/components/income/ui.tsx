@@ -490,7 +490,7 @@ export function LineItemsEditor({
                   <input className={inputCls} inputMode="numeric" value={r.quantity} disabled={disabled} onChange={(e) => update(i, { quantity: e.target.value })} />
                 </Field>
                 <Field label="単価（円）" error={er.unitPrice} className="col-span-4 sm:col-span-2">
-                  <input className={inputCls} inputMode="text" value={r.unitPrice} disabled={disabled} placeholder="100000" onChange={(e) => update(i, { unitPrice: e.target.value })} />
+                  <input className={`${inputCls} ${s.inputAmount}`} inputMode="text" value={r.unitPrice} disabled={disabled} placeholder="100000" onChange={(e) => update(i, { unitPrice: e.target.value })} />
                 </Field>
                 <Field label="税率" className="col-span-3 sm:col-span-2">
                   <select className={inputCls} value={r.taxRate} disabled={disabled} onChange={(e) => update(i, { taxRate: Number(e.target.value) })}>

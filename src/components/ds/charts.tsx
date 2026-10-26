@@ -191,8 +191,13 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
         <svg viewBox={`0 0 ${w} ${height}`} width="100%" height={height} className={styles.svgFixed} aria-hidden>
           <defs>
             <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor={first} stopOpacity="0.18" />
+              <stop offset="0%" stopColor={first} stopOpacity="0.32" />
               <stop offset="100%" stopColor={first} stopOpacity="0" />
+            </linearGradient>
+            {/* 最初の系列の線は、左の水色から右の濃い青へ（インフォグラフィックの見せ方。2026-10-27） */}
+            <linearGradient id={`${gid}-line`} x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="var(--sky, #009bff)" />
+              <stop offset="100%" stopColor="var(--blue-deep, #0047d6)" />
             </linearGradient>
           </defs>
           {grids.map((t) => <line key={t} x1={padL} x2={w - padR} y1={y(t)} y2={y(t)} className={t === 0 && !legacy ? styles.zero : styles.grid} />)}
@@ -203,15 +208,19 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
             const pts = s.values.map((v, i) => [padL + i * step, yy(Number.isFinite(v) ? v : 0)] as const)
             if (!pts.length) return null
             const stroke = colorOf(s, si)
+            const lineStroke = si === 0 && !s.tone && pts.length > 1 ? `url(#${gid}-line)` : stroke
             const dash = SERIES_DASH[si % SERIES_DASH.length]
+            const [lx, ly] = pts[pts.length - 1]
             return (
               <g key={s.name}>
                 {si === 0 ? <path d={`${linePath(pts)} L${pts[pts.length - 1][0]},${base} L${pts[0][0]},${base} Z`} fill={`url(#${gid})`} className={styles.fadeIn} /> : null}
                 <DrawIn duration={1000 + si * 200} extent={w}>
-                  <path d={linePath(pts)} fill="none" stroke={stroke} strokeWidth={2.5} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={linePath(pts)} fill="none" stroke={lineStroke} strokeWidth={si === 0 ? 3 : 2.5} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
                 </DrawIn>
+                {/* いちばん新しい点に、広がる輪を2回だけ出す（目が最新の値に行くように） */}
+                {si === 0 ? <circle cx={lx} cy={ly} r={4} className={styles.pulse} style={{ stroke }} aria-hidden /> : null}
                 {pts.map(([px, py], i) => (
-                  <circle key={i} cx={px} cy={py} r={3.5} className={styles.point} style={{ stroke }}>
+                  <circle key={i} cx={px} cy={py} r={i === pts.length - 1 ? 4.5 : 3.5} className={styles.point} style={{ stroke }}>
                     <title>{`${labels[i]} ${s.name} ${(s.format ?? fmt)(s.values[i])}`}</title>
                   </circle>
                 ))}
@@ -276,7 +285,7 @@ export function Bars({ data, format, basis = 'max' }: {
               </span>
             </div>
             <div className={styles.barTrack}>
-              <div className={styles.barFill} style={{ '--w': `${Math.max(2, widths[i])}%`, '--i': i, ...(fill ? { background: fill } : {}) } as CSSProperties} />
+              <div className={styles.barFill} style={{ '--w': `${Math.max(2, widths[i])}%`, '--i': i, ...(fill ? { backgroundColor: fill, backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${fill} 55%, white), ${fill})` } : {}) } as CSSProperties} />
             </div>
           </li>
         )
@@ -316,12 +325,22 @@ export function Ring({ value, size = 96, label, children, tone, thresholds, tone
   const meaning = toneLabel ?? th?.label ?? (t ? TONE_TEXT[t as ChartTone] : undefined)
   const stroke = t ? seriesColor(0, t) : undefined
   const pct = Math.round(v * 100)
+  // 色の指定が無いときは、青から水色へのグラデーションで描く（インフォグラフィックの見せ方。2026-10-27）
+  const gid = `ds-ring-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   const ring = (
     <div className={styles.ring} style={{ width: size, height: size }}>
       <svg viewBox="0 0 100 100" aria-hidden>
+        {stroke ? null : (
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="var(--sky, #009bff)" />
+              <stop offset="100%" stopColor="var(--blue-deep, #0047d6)" />
+            </linearGradient>
+          </defs>
+        )}
         <circle cx="50" cy="50" r={r} className={styles.ringTrack} />
         <DrawIn mode="stroke">
-          <circle cx="50" cy="50" r={r} pathLength={1} className={styles.ringValue} style={{ strokeDasharray: `${v} 1`, ...(stroke ? { stroke } : {}) } as CSSProperties} transform="rotate(-90 50 50)" />
+          <circle cx="50" cy="50" r={r} pathLength={1} className={styles.ringValue} style={{ strokeDasharray: `${v} 1`, stroke: stroke ?? `url(#${gid})` } as CSSProperties} transform="rotate(-90 50 50)" />
         </DrawIn>
       </svg>
       {children ? <div className={styles.ringCenter} aria-hidden>{children}</div> : null}
@@ -360,6 +379,7 @@ export function Donut({ data, size = 120, label, center, colors, palette, empty 
   empty?: React.ReactNode
 }) {
   const { percents, labels: pctLabels, total } = percentStack(data.map((d) => d.value))
+  const maskId = `ds-donut-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   const usePalette = palette ?? (data.length > DONUT_BLUE.length ? 'brand' : 'blue')
   const colorOf = (i: number) => {
     const t = data[i]?.tone ?? colors?.[i]
@@ -383,16 +403,32 @@ export function Donut({ data, size = 120, label, center, colors, palette, empty 
   return (
     <figure className={styles.donut}>
       <div className={styles.donutChart} style={{ width: size, height: size }}>
-        <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label}>
+        <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label} className={styles.donutSpin}>
+          <defs>
+            {/* 区分ごとに開始位置（dashoffset）を持つので、区分ではなく「見える範囲」を円に沿って描き出す（回って出る。2026-10-27） */}
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+              <DrawIn mode="stroke" duration={1100}>
+                <circle cx="50" cy="50" r="38" pathLength={1} fill="none" stroke="#fff" strokeWidth={18} transform="rotate(-90 50 50)" />
+              </DrawIn>
+            </mask>
+          </defs>
           <circle cx="50" cy="50" r="38" className={styles.ringTrack} />
-          {/* 区分ごとに開始位置（dashoffset）を持つので、DrawIn ではなくふわっと出す */}
-          <g className={styles.fadeIn}>
+          <g mask={`url(#${maskId})`}>
             {data.map((d, i) => {
               const part = percents[i] / 100
               const el = <circle key={d.label} cx="50" cy="50" r="38" pathLength={1} fill="none" stroke={colorOf(i)} strokeWidth={14} style={{ strokeDasharray: `${part} 1`, strokeDashoffset: -acc } as CSSProperties} transform="rotate(-90 50 50)" />
               acc += part
               return el
             })}
+            {/* 区分の境目に細い白い線を入れて、色の切り替わりをはっきりさせる */}
+            {percents.length > 1 ? (() => {
+              let at = 0
+              return percents.map((p, i) => {
+                const a = (at * 360 - 90) * (Math.PI / 180)
+                at += p / 100
+                return p > 0 ? <line key={'sep' + i} x1={50 + 31 * Math.cos(a)} y1={50 + 31 * Math.sin(a)} x2={50 + 45 * Math.cos(a)} y2={50 + 45 * Math.sin(a)} stroke="var(--paper, #fff)" strokeWidth={1.2} /> : null
+              })
+            })() : null}
           </g>
         </svg>
         {center ? <div className={styles.donutCenter}>{center}</div> : null}
@@ -453,13 +489,14 @@ function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, 
                     <div className={styles.colGrow} style={{ '--i': gi, transformOrigin: `center ${100 - zero}%` } as CSSProperties}>
                       {s.segs.map((g, k) => {
                         const a = pct(Math.min(g.from, g.to)), b = pct(Math.max(g.from, g.to))
-                        return <div key={k} className={styles.colSeg} title={g.title} style={{ bottom: `${a}%`, height: `${Math.max(b - a, g.to === g.from ? 0 : 0.6)}%`, background: g.color }} />
+                        // 上を明るくしたグラデーション（color-mix に対応しないブラウザでは、単色の backgroundColor が残る）
+                        return <div key={k} className={styles.colSeg} title={g.title} style={{ bottom: `${a}%`, height: `${Math.max(b - a, g.to === g.from ? 0 : 0.6)}%`, backgroundColor: g.color, backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${g.color} 55%, white), ${g.color} 85%)` }} />
                       })}
                     </div>
                     {showValues && s.valueLabel ? (
                       s.top > 0 || s.bottom >= 0
-                        ? <span className={styles.colValue} style={{ bottom: `calc(${pct(s.top)}% + 2px)` }}>{s.valueLabel}</span>
-                        : <span className={styles.colValue} style={{ top: `calc(${100 - pct(s.bottom)}% + 2px)` }}>{s.valueLabel}</span>
+                        ? <span className={styles.colValue} style={{ bottom: `calc(${pct(s.top)}% + 2px)`, '--i': gi } as CSSProperties}>{s.valueLabel}</span>
+                        : <span className={styles.colValue} style={{ top: `calc(${100 - pct(s.bottom)}% + 2px)`, '--i': gi } as CSSProperties}>{s.valueLabel}</span>
                     ) : null}
                   </div>
                 ))}

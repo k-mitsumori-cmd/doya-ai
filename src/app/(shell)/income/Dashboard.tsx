@@ -9,7 +9,7 @@ import {
   Button, Card, Gate, ListSkeleton, MonthSwitcher, PageHeader, PageShell, StatTile, StatsSkeleton, Skeleton,
   fetchJson, monthLabel, s, useResource, yen,
 } from '@/components/income/ui'
-import { IncomeHero, OnboardingSteps, TrendChart, YenCount } from '@/components/income/next'
+import { IncomeHero, MoneyFlow, OnboardingSteps, TrendChart, YenCount } from '@/components/income/next'
 
 type Action = { kind: string; title: string; detail: string; amount: number | null; href: string; dueOn: string }
 type TrendRow = { month: string; revenue: number; received: number; expense: number | null; profit: number | null }
@@ -102,6 +102,8 @@ export default function Dashboard() {
                 <StatTile label="入金済" value={n(k.received)} unit="円" tone="ok" />
                 <StatTile label="未入金（税込）" value={n(k.unpaid)} unit="円" sub={`うち遅延 ${k.overdueCount} 件`} tone={k.overdueCount > 0 ? 'bad' : 'default'} />
               </div>
+
+              {!empty && <MoneyFlow kpi={k} />}
 
               {data.expense.connected ? (
                 <div className={s.stackY} style={{ gap: 8 }}>

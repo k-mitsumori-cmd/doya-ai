@@ -23,7 +23,7 @@ export async function GET() {
     const orgId = ctx.organizationId
     const month = hrJstMonthRange()
 
-    const [org, employeeCount, departmentCount, activeEvaluationPeriods, monthlyOneOnOnes, recentOneOnOneRecords] =
+    const [org, employeeCount, departmentCount, activeEvaluationPeriods, monthlyOneOnOnes, recentOneOnOneRecords, departmentRows] =
       await Promise.all([
         prisma.hrOrganization.findUnique({ where: { id: orgId }, select: { name: true } }),
         prisma.hrEmployee.count({ where: { organizationId: orgId, status: 'ACTIVE' } }),
@@ -53,7 +53,18 @@ export async function GET() {
           orderBy: { scheduledAt: 'desc' },
           take: 5,
         }),
+        // 部署ごとの在籍人数（ダッシュボードのインフォグラフィック。組織図と同じ情報で、名前と人数だけを返す。2026-10-27）
+        prisma.hrDepartment.findMany({
+          where: { organizationId: orgId, isActive: true },
+          select: { name: true, sortOrder: true, _count: { select: { employees: { where: { status: 'ACTIVE' } } } } },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        }),
       ])
+
+    const departmentHeadcount = departmentRows
+      .map((d) => ({ name: d.name, count: d._count.employees }))
+      .filter((d) => d.count > 0)
+      .sort((a, b) => b.count - a.count)
 
     const activeEvaluations = activeEvaluationPeriods.reduce(
       (sum, p) => sum + p.evaluations.filter((e) => e.status !== 'FINALIZED').length,
@@ -88,6 +99,7 @@ export async function GET() {
       monthlyOneOnOnes,
       recentOneOnOnes,
       evaluationPeriods,
+      departmentHeadcount,
     })
   } catch (e: any) {
     console.error('[hr/dashboard] unexpected error')

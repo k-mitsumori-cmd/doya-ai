@@ -6,7 +6,8 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { Button as DsButton, ToolHero } from '@/components/ds'
-import { AreaChart, Ring } from '@/components/ds/charts'
+import { AreaChart, Bars, Ring } from '@/components/ds/charts'
+import { BigFigure, InfoPanel } from '@/components/ds/infographic'
 import { CountUp, Stagger, StaggerItem } from '@/components/ds/motion'
 import { Card, fetchJson, s, useResource, yen } from './ui'
 
@@ -28,18 +29,56 @@ export function IncomeHero() {
   )
 }
 
-/** 月別推移のグラフ（売上予定と入金）。表の上に出す */
-export function TrendChart({ rows }: { rows: { month: string; revenue: number; received: number }[] }) {
+/** 月別推移のグラフ（売上予定・入金・支出）。表の上に出す。支出は取り込めている月があるときだけ */
+export function TrendChart({ rows }: { rows: { month: string; revenue: number; received: number; expense?: number | null }[] }) {
   if (rows.length === 0) return null
+  const hasExpense = rows.some((r) => r.expense !== null && r.expense !== undefined && r.expense > 0)
   return (
     <AreaChart
       labels={rows.map((r) => `${Number(r.month.slice(5, 7))}月`)}
       series={[
         { name: '売上予定（税抜）', values: rows.map((r) => r.revenue) },
         { name: '入金', values: rows.map((r) => r.received), tone: 'cyan' },
+        ...(hasExpense ? [{ name: '支出', values: rows.map((r) => r.expense ?? 0), tone: 'pink' as const }] : []),
       ]}
+      height={240}
+      yTicks
       format={(n) => yen(Math.round(n))}
     />
+  )
+}
+
+/**
+ * 今月のお金の流れ（売上予定 → 請求 → 入金）。インフォグラフィックの帯（2026-10-27）。
+ * ⚠️ 集計はしない。API の値（kpi）をそのまま並べる
+ */
+export function MoneyFlow({ kpi }: {
+  kpi: { scheduled: number; invoiced: number; received: number; unpaid: number; overdueCount: number; scheduleCount: number; invoicedCount: number }
+}) {
+  const rate = kpi.scheduleCount > 0 ? kpi.invoicedCount / kpi.scheduleCount : 0
+  return (
+    <InfoPanel title="今月のお金の流れ" meta="売上予定から入金まで">
+      <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-[auto_minmax(0,1fr)]">
+        <div className="flex items-center gap-5">
+          <Ring value={rate} size={120} label={`請求の進み具合 ${kpi.invoicedCount} / ${kpi.scheduleCount} 件`} showToneLabel={false}>
+            <span className={s.num} style={{ display: 'grid', lineHeight: 1.15 }}>
+              <span style={{ fontSize: 26 }}><CountUp value={Math.round(rate * 100)} /><small style={{ fontSize: 13 }}>%</small></span>
+              <small style={{ fontSize: 11, fontWeight: 700, color: 'var(--sub)' }}>請求済</small>
+            </span>
+          </Ring>
+          <BigFigure value={kpi.received} unit="円" label="今月の入金" tone="blueDeep" format={(n) => Math.round(n).toLocaleString('ja-JP')} />
+        </div>
+        <Bars
+          format={(n) => yen(Math.round(n))}
+          data={[
+            { label: '売上予定（税抜）', value: kpi.scheduled, sub: `${kpi.scheduleCount} 件`, tone: 'sky' },
+            { label: '請求済（税抜）', value: kpi.invoiced, sub: `${kpi.invoicedCount} 件`, tone: 'blue' },
+            { label: '入金済', value: kpi.received, tone: 'blueDeep' },
+            { label: '未入金（税込）', value: kpi.unpaid, sub: kpi.overdueCount > 0 ? `うち遅延 ${kpi.overdueCount} 件` : undefined, tone: kpi.overdueCount > 0 ? 'pink' : 'muted' },
+          ]}
+        />
+      </div>
+    </InfoPanel>
   )
 }
 

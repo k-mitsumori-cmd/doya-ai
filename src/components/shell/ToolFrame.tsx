@@ -14,6 +14,7 @@ import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
 import { useToolUsageBody } from './ShellUsage'
+import ToolBearFooter from './ToolBearFooter'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -117,6 +118,8 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
         <div className={styles.content}>{children}</div>
         {aside ? <aside className={styles.aside}>{aside}</aside> : null}
       </div>
+      {/* 画面の一番下のドヤくん（ツールに合った短い動き。絵の無いツールでは出さない。2026-10-27） */}
+      <ToolBearFooter serviceId={serviceId} />
     </div>
   )
 }

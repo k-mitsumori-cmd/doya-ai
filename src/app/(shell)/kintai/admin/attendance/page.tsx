@@ -1,6 +1,8 @@
 'use client'
 
 import { Skeleton } from '@/components/ds'
+import { TeamTodayInfo } from '@/components/kintai/KintaiInfographics'
+import { InfoPanelLoading } from '@/components/ds/infographic'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
@@ -163,6 +165,9 @@ export default function AdminAttendancePage() {
             <button onClick={() => setDepartmentsRetryCount(count => count + 1)} className="ml-3 font-bold underline hover:text-red-950">再試行</button>
           </div>
         )}
+
+        {/* 出勤の状況（インフォグラフィック。2026-10-27） */}
+        {loading ? <InfoPanelLoading title="出勤の状況" height={132} /> : !loadError && filtered.length > 0 && <TeamTodayInfo stats={stats} dateLabel={dateLabel} />}
 
         {/* Summary stats with bears */}
         {!loading && filtered.length > 0 && (

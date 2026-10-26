@@ -5,7 +5,8 @@
 // ⚠️ 計算・集計はしない。API の値を並べ替えて表示するだけ
 import tokens from '@/components/ds/tokens.module.css'
 import { ToolHero } from '@/components/ds'
-import { Donut } from '@/components/ds/charts'
+import { Donut, Ring } from '@/components/ds/charts'
+import { BigFigure, InfoPanel } from '@/components/ds/infographic'
 import { CountUp, Stagger, StaggerItem } from '@/components/ds/motion'
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import type { ForecastMatrix } from './types'
@@ -134,5 +135,36 @@ export function MonthDonut({ cash, month }: { cash: ForecastMatrix; month: strin
   if (rows.length === 0) return null
   const data = rows.length > 5 ? [...rows.slice(0, 4), { label: 'その他', value: rows.slice(4).reduce((a, r) => a + r.value, 0), color: CATEGORY_OTHER_COLOR }] : rows
   // 色は積み上げの棒（CashBars）と同じ費目の色にする
-  return <Donut data={data.map(({ label, value }) => ({ label, value }))} colors={data.map((d) => d.color)} size={128} label="今月の出金のカテゴリ別の割合" />
+  const total = data.reduce((a, d) => a + d.value, 0)
+  return (
+    <Donut
+      data={data.map(({ label, value }) => ({ label, value }))}
+      colors={data.map((d) => d.color)}
+      size={168}
+      label="今月の出金のカテゴリ別の割合"
+      center={<span style={{ display: 'grid', lineHeight: 1.2 }}><small style={{ fontSize: 11, fontWeight: 700, color: 'var(--sub)' }}>今月の合計</small><span style={{ fontSize: 16 }}><CountUp value={total} /><small style={{ fontSize: 11 }}>円</small></span></span>}
+    />
+  )
+}
+
+/**
+ * 今月の支払いの進み具合（インフォグラフィックの帯。2026-10-27）。
+ * ⚠️ 集計はしない。API の値（kpi）をそのまま並べる
+ */
+export function PaymentProgress({ kpi }: { kpi: { thisMonthOut: number; thisMonthCount: number; paid: number; paidCount: number } }) {
+  const rate = kpi.thisMonthCount > 0 ? kpi.paidCount / kpi.thisMonthCount : 0
+  return (
+    <InfoPanel title="今月の支払いの進み具合" meta={`${kpi.paidCount} / ${kpi.thisMonthCount} 件が支払済`}>
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-6">
+        <Ring value={rate} size={128} label={`今月の支払い ${kpi.paidCount} / ${kpi.thisMonthCount} 件が支払済`} showToneLabel={false}>
+          <span style={{ display: 'grid', lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 28 }}><CountUp value={Math.round(rate * 100)} /><small style={{ fontSize: 13 }}>%</small></span>
+            <small style={{ fontSize: 11, fontWeight: 700, color: 'var(--sub)' }}>支払済</small>
+          </span>
+        </Ring>
+        <BigFigure value={kpi.paid} unit="円" label="支払済の金額" tone="blueDeep" format={(n) => Math.round(n).toLocaleString('ja-JP')} />
+        <BigFigure value={kpi.thisMonthOut} unit="円" label="今月の出金予定" format={(n) => Math.round(n).toLocaleString('ja-JP')} />
+      </div>
+    </InfoPanel>
+  )
 }
