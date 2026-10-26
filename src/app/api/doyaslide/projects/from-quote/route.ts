@@ -1,7 +1,9 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
 import { getUserDoyaSlideLimits } from '@/lib/doyaslide/limits'
 import { createProjectWithinLimit, limitReachedBody } from '@/lib/doyaslide/create-project'
@@ -12,6 +14,13 @@ import { isGuidePopupsEnabled } from '@/lib/notice/flag'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
+
+// 同じ見積書から何度「材料にする」を押しても、資料は1つだけにする（統括の指摘 2026-10-26）。
+// 表を足さずに、本人と見積書の組み合わせから作ったキーで、作った資料の id を SystemSetting に覚える。
+// キーには見積書の id をそのまま入れない（ハッシュにする）。資料が消されていたら、新しく作る。
+function handoffKey(userId: string, quoteId: string) {
+  return 'doyaslide-from-quote:v1:' + createHash('sha256').update(JSON.stringify([userId, quoteId])).digest('hex')
+}
 
 // POST /api/doyaslide/projects/from-quote — 見積書を材料に、新しいスライドのプロジェクトを作る
 // ブラウザが送るのは { kind: 'quote', id } だけ。タイトルやリンクは受け取らない（送られても読まない）。
@@ -45,6 +54,13 @@ export async function POST(req: NextRequest) {
     const doc = await loadQuoteForHandoff(userId, id)
     if (!doc) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
+    const key = handoffKey(userId, id)
+    const remembered = await prisma.systemSetting.findUnique({ where: { key }, select: { value: true } })
+    if (remembered && /^[A-Za-z0-9_-]{1,128}$/.test(remembered.value)) {
+      const existing = await prisma.doyaSlideProject.findFirst({ where: { id: remembered.value, userId }, select: { id: true } })
+      if (existing) return NextResponse.json({ projectId: existing.id, reused: true }, { status: 200, headers: NO_STORE })
+    }
+
     const dt = getDocType('proposal')
     const limits = await getUserDoyaSlideLimits(userId)
     const project = await createProjectWithinLimit({
@@ -62,6 +78,7 @@ export async function POST(req: NextRequest) {
     if (!project) {
       return NextResponse.json(limitReachedBody(limits.maxProjects), { status: 403, headers: NO_STORE })
     }
+    await prisma.systemSetting.upsert({ where: { key }, create: { key, value: project.id }, update: { value: project.id } })
     return NextResponse.json({ projectId: project.id }, { status: 201, headers: NO_STORE })
   } catch (e: any) {
     console.error('[doyaslide/projects/from-quote][POST] failed')

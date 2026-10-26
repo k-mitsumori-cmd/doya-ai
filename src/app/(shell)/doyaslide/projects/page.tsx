@@ -251,6 +251,12 @@ export default function DoyaSlideProjectsPage() {
                       {STATUS_LABEL[p.status] || p.status}
                     </span>
                     <span>{p.generatedSlides}枚</span>
+                    {/* 止まった・失敗した資料は、開いて続きから作り直せる（構成の再試行・未生成の生成） */}
+                    {p.status === 'error' && (
+                      <Link href={`/doyaslide/${p.id}`} className="ml-auto rounded-full bg-blue-600 px-3 py-1 text-xs font-black text-white hover:bg-blue-700">
+                        もう一度
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

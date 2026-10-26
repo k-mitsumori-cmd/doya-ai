@@ -30,5 +30,8 @@ lazyReal('@/lib/company-roles/policy',()=>load('src/lib/company-roles/policy.ts'
 lazyReal('@/lib/company-roles/rollout',()=>load('src/lib/company-roles/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
 lazyReal('@/lib/company-roles/permissions',()=>load('src/lib/company-roles/permissions.ts',{'./roles':DEFAULT_MOCKS['@/lib/company-roles/roles'],'./policy':DEFAULT_MOCKS['@/lib/company-roles/policy']}));
 lazyReal('@/lib/company-roles/access.server',()=>({ceilToolRole:async(i)=>i.toolRole,authorizeCompanyActionForSession:async()=>({checked:false,allowed:true,mode:'off'}),companyRoleForSession:async()=>null,writeRoleEvent:async()=>false,recordAuthor:async()=>{},findRecordAuthor:async()=>null,prismaCompanyRoleDb:{}}));
+// ドヤスライドの止まった資料を戻す部品（generation-operation.ts の settleStaleDoyaSlideProject）は、一覧・詳細の GET を読む各テストでは「戻すものは無い」として通す。
+// 戻す動きそのものは verify-doyaslide-stale-recovery.cjs が確かめる（2026-10-26）
+DEFAULT_MOCKS['@/lib/doyaslide/generation-operation']={DOYASLIDE_OPERATION_LEASE_MS:15*60*1000,DOYASLIDE_STRUCTURE_STALE_MS:6*60*1000,isDoyaSlideStaleCandidate:()=>false,settleStaleDoyaSlideProject:async()=>'none'};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
 module.exports={load,check,results,DEFAULT_MOCKS};

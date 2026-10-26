@@ -15,9 +15,17 @@ import { canCompany } from '@/lib/company-roles/permissions'
 import { COMPANY_ROLE_DESCRIPTION, COMPANY_ROLE_LABEL } from '@/lib/company-roles/roles'
 import { CompanyRolesManager } from '@/components/company-roles/CompanyRolesManager'
 
-export const metadata: Metadata = {
-  title: 'メンバーと権限',
-  robots: { index: false, follow: false },
+// 404 のとき（旗が off・会社に入っていない）は、タブの題も 404 にする（統括の指摘 2026-10-26）。
+// 旗が off のときは、ここでもセッションと DB を読まない。
+const NOT_FOUND_TITLE = 'ページが見つかりません'
+export async function generateMetadata(): Promise<Metadata> {
+  const robots = { index: false, follow: false }
+  if (companyRolesRollout() === 'off') return { title: NOT_FOUND_TITLE, robots }
+  const session = await getServerSession(authOptions).catch(() => null)
+  const userId = (session?.user as { id?: string } | undefined)?.id
+  if (!userId) return { title: 'メンバーと権限', robots }
+  const s = await companyRolesSession(userId, session?.user?.email ?? null).catch(() => null)
+  return { title: s ? 'メンバーと権限' : NOT_FOUND_TITLE, robots }
 }
 
 export const dynamic = 'force-dynamic'
