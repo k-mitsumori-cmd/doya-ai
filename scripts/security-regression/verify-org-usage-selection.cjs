@@ -33,6 +33,7 @@ const prisma = {
   },
 }
 const summary = load('src/lib/usage-summary.ts', {
+  '@/lib/system-watch/marked-records': load('src/lib/system-watch/marked-records.ts'),
   '@/lib/prisma': { prisma },
   '@/lib/persona/usage': { getPersonaUsage: async () => null },
   '@/lib/seo-article-admission': {},
