@@ -37,6 +37,24 @@ check('One button: booth and slide editor show the bar only with the flag, witho
   assert.match(slide, /\) : oneButton \? null : \(\s*<button\s*onClick=\{runGenerate\}/)
 })
 
+check('One button: every tool page shows the bar only behind the flag', () => {
+  // 2026-10-27 ユーザーの指示「展示会に限らず、すべてのツールを分かりやすく」。帯を入れたツールの一覧
+  const files = [
+    'src/app/(shell)/persona/Tool.tsx', 'src/app/(shell)/asklink/Tool.tsx', 'src/app/(shell)/popup/Tool.tsx',
+    'src/app/(shell)/aio/[orgSlug]/scan/page.tsx', 'src/app/(shell)/aishodan/Tool.tsx', 'src/app/(shell)/mensetsu/Tool.tsx',
+    'src/app/(shell)/adimage/Tool.tsx', 'src/app/(shell)/seo/create/page.tsx', 'src/app/(shell)/quote/Tool.tsx',
+    'src/app/(shell)/doyalist/Tool.tsx', 'src/components/doyaslide/NewDoyaSlideWizard.tsx',
+    'src/app/(shell)/banner/dashboard/create/page.tsx', 'src/app/(shell)/shodan/[orgSlug]/new/page.tsx', 'src/app/(shell)/interview/Tool.tsx',
+    'src/app/(shell)/sfa/[orgSlug]/page.tsx', 'src/components/promane/ui-next/DashboardNext.tsx',
+  ]
+  for (const f of files) {
+    const src = read(f)
+    assert.match(src, /const oneButton = useOneButton\(\)/, f)
+    assert.match(src, /<OneButtonBar/, f)
+    assert.match(src, /\{oneButton[^}\n]*(?:\?|&&) \(?\s*(?:<div[^>]*>\s*)?<OneButtonBar/, f)
+  }
+})
+
 check('One button bar: no emoji in the part', () => {
   for (const f of ['src/components/one-button/OneButtonBar.tsx', 'src/components/one-button/one-button.module.css']) {
     // コメントの「⚠️」は画面に出ないので除く（画面に出る文字と属性だけを見る）

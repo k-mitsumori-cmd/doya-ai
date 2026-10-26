@@ -28,6 +28,8 @@ import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
 import { ShellCostBadge } from '@/components/shell/power'
 import { useNotice } from '@/components/notice/NoticeProvider'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -75,6 +77,8 @@ class QuoteLoadError extends Error {
 }
 
 export default function QuoteTool() {
+  // 旗 ONE_BUTTON_ROLLOUT（フックは早い return より前に呼ぶ）
+  const oneButton = useOneButton()
   const { data: session, status: authStatus } = useSession()
   // 新しい見た目（UI 品質の直し））
   const lastActor = useRef('')
@@ -746,6 +750,9 @@ export default function QuoteTool() {
     )
   }
 
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す（品目ができたら見積書の作成に切り替わる）
+  const oneButtonCreate = items.length > 0
+
   return (
     <div className="pb-24">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
@@ -773,6 +780,26 @@ export default function QuoteTool() {
       {/* ⚠️ 新しい見た目では、見出し（h1）と組織の切り替えは枠（ToolFrame）の1か所だけにする（S-31・S-57） */}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        {oneButton ? (
+          <OneButtonBar
+            eyebrow="ドヤ見積"
+            cta={oneButtonCreate
+              ? (creating ? '見積書を作成しています。このまま待ってね' : '品目と金額を確認できたら、押してね')
+              : (analyzing ? 'サービスを解析しています。このまま待ってね' : '自社サービスのURLを入れたら、押してね')}
+            label={oneButtonCreate
+              ? (creating ? '作成しています…' : createdDocument ? '送信した内容の見積書を作成しました' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : '見積書を作成する')
+              : (analyzing ? '解析中...' : '解析する')}
+            scope={oneButtonCreate
+              ? '下の品目と税区分から、見積書を1通作ります。PDFの出力は作成後にできます。'
+              : 'URLのページを読み取り、提供形態・課金の軸・公開している価格を取り込みます。見積書はまだ作りません。'}
+            onRun={oneButtonCreate ? () => void createDocument() : () => void analyze()}
+            disabled={oneButtonCreate
+              ? creating || documentUncertain || documentLimited || !!createdDocument
+              : analyzing || !url.trim()}
+            disabledReason={oneButtonCreate ? undefined : 'サービスのURLを入れると押せます。'}
+            running={analyzing || creating}
+          />
+        ) : null}
         <>
             <ToolHero
               title="URLを入れるだけで、相場つきの見積書"
