@@ -186,8 +186,10 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
       if (sheetRef.current) sheetRef.current.style.transform = ''
       if (d > 80) close(false)
     }
-    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
-    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+    // スマホの知らせは中で送れるので、ブラウザが送りに切り替えると pointercancel になる。そのときは閉じずに元の位置へ戻す
+    const cancel = () => { drag.current = null; if (sheetRef.current) sheetRef.current.style.transform = '' }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel)
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel) }
   }, [close])
 
   // ---- トースト（1つずつ。新しいものが来たら入れ替える） ----
@@ -287,8 +289,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
       <div className={styles.root} data-reduce={reduced ? 'true' : undefined}>
         {current && p ? (
           <>
-            <div className={styles.scrim} data-open={open ? 'true' : undefined} onClick={() => close(false)} aria-hidden="true" />
-            <div ref={sheetRef} className={styles.sheet} data-open={open ? 'true' : undefined} data-tone={current.tone} role="dialog" aria-modal="false" aria-labelledby="doya-notice-title" onPointerDown={onPointerDown}>
+            <div className={styles.scrim} data-variant="notice" data-open={open ? 'true' : undefined} onClick={() => close(false)} aria-hidden="true" />
+            <div ref={sheetRef} className={styles.sheet} data-variant="notice" data-open={open ? 'true' : undefined} data-tone={current.tone} role="dialog" aria-modal="false" aria-labelledby="doya-notice-title" onPointerDown={onPointerDown}>
               <span className={styles.handle} aria-hidden="true" />
               <div className={styles.head} data-mascot={fx.mascot && p.pose ? 'on' : 'off'}>
                 {fx.mascot && p.pose ? <img src={`/character/${p.pose}-256.webp`} alt="" width={72} height={72} className={styles.kun} /> : null}
