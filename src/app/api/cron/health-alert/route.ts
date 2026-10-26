@@ -167,6 +167,7 @@ export async function GET(req: NextRequest) {
   const [results, systemWatch] = await Promise.all([Promise.all(TARGETS.map((t) => checkTarget(t))), checkSystemWatch()])
   // 落ちた項目があれば ok:false にし、Vercel のログでもどれが落ちたか分かるようにする
   const failed = results.filter((r) => !r.ok)
-  if (failed.length) console.error('[health-alert] failed', JSON.stringify(failed))
+  // console.error にしない（runtime-alert が汎用のエラー通知を送り、上の詳しい通知と二重になるため）
+  if (failed.length) console.warn('[health-alert] failed', JSON.stringify(failed))
   return NextResponse.json({ ok: failed.length === 0 && systemWatch.ok, checkedAt: new Date().toISOString(), failed, results, systemWatch })
 }
