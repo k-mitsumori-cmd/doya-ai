@@ -93,3 +93,60 @@ test('前後の差: 台帳の値が変わったら ledgerChanges に出す', () 
   assert.deepEqual(d.ledgerChanges, [{ key: 'org-quota:v1:a', before: '3', after: '4' }])
   assert.equal(d.powerLeft.diff, null)
 })
+
+/** 足すと累計に反映される、費用の記録の偽物 */
+function spendStore(start: number) {
+  let yen = start
+  const log: [string, number][] = []
+  return { log, get yen() { return yen }, deps: { readSpend: async () => ({ yen }), addSpend: async (id: string, v: number) => { await new Promise(r => setTimeout(r, 5)); yen += v; log.push([id, v]) } } }
+}
+const paid = (id: string, costYen: number, run: () => Promise<{ ok: boolean; skipped?: boolean }>) => ({ id, area: '外部サービス' as const, label: id, severity: 'urgent' as const, threshold: 1, hints: ['x'], costYen, run })
+
+test('同時に回しても上限を超えない: 累計7円なら、1.8円は回し、2.4円は足すと10円を超えるので回さない', async () => {
+  const store = spendStore(7)
+  const ran: string[] = []
+  const { checks, skipped } = wrapWithDailyCap([
+    paid('paid:agent-research-samples', 2.4, async () => { ran.push('B2'); return { ok: true } }),
+    paid('paid:agent-sales-prep', 1.8, async () => { ran.push('B1'); return { ok: true } }),
+  ], store.deps)
+  await Promise.all(checks.map(c => c.run()))
+  assert.deepEqual(ran, ['B1'])
+  assert.deepEqual(skipped, ['paid:agent-research-samples'])
+  assert.ok(store.yen <= 10, `累計 ${store.yen} 円`)
+})
+
+test('同時に回しても、余りがあれば両方回す（累計0円）', async () => {
+  const store = spendStore(0)
+  const ran: string[] = []
+  const { checks } = wrapWithDailyCap([
+    paid('a', 2.4, async () => { ran.push('a'); return { ok: true } }),
+    paid('b', 1.8, async () => { ran.push('b'); return { ok: true } }),
+  ], store.deps)
+  await Promise.all(checks.map(c => c.run()))
+  assert.deepEqual(ran.sort(), ['a', 'b'])
+  assert.equal(Math.round(store.yen * 10) / 10, 4.2)
+})
+
+test('前提がそろわず回さなかった確認は、予約を戻す', async () => {
+  const store = spendStore(0)
+  const { checks } = wrapWithDailyCap([paid('b1', 1.8, async () => ({ ok: true, skipped: true }))], store.deps)
+  await checks[0].run()
+  assert.equal(store.yen, 0)
+  assert.deepEqual(store.log, [['b1', 1.8], ['b1', -1.8]])
+})
+
+test('失敗した確認は、費用は出たとみなして予約を残す', async () => {
+  const store = spendStore(0)
+  const { checks } = wrapWithDailyCap([paid('b1', 1.8, async () => ({ ok: false }))], store.deps)
+  await checks[0].run()
+  assert.equal(store.yen, 1.8)
+})
+
+test('予約を書けなければ回さない', async () => {
+  let ran = false
+  const { checks, skipped } = wrapWithDailyCap([paid('b1', 1.8, async () => { ran = true; return { ok: true } })], { readSpend: async () => ({ yen: 0 }), addSpend: async () => { throw new Error('db down') } })
+  const out = await checks[0].run()
+  assert.equal(ran, false)
+  assert.equal(out.skipped, true)
+  assert.deepEqual(skipped, ['b1'])
+})

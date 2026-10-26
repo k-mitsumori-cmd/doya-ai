@@ -15,6 +15,11 @@ export function canSpend(spent: number, cap = DAILY_CAP_YEN): boolean {
   return spent < cap
 }
 
+/** この費用の確認を、上限を超えずに回せるか（純粋関数）。累計＋この確認の費用が上限以下なら回せる */
+export function fitsDailyCap(spent: number, costYen: number, cap = DAILY_CAP_YEN): boolean {
+  return spent + costYen <= cap + 1e-9
+}
+
 export async function readSpend(day = jstDay()): Promise<SpendState> {
   const row = await prisma.systemSetting.findUnique({ where: { key: key(day) } })
   if (!row) return { yen: 0, runs: [] }
