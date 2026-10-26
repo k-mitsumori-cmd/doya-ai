@@ -216,3 +216,10 @@ test('確認の画面は body の直下に描く（親の transform で画面の
   assert.match(studio, /作り始めました/)
   assert.match(studio, /data-face-status/)
 })
+
+test('展示会の画面は h1 を出さない（ページの h1 は枠の「ドヤ展示会」の1つだけ。2026-10-26 統括の本番の確認）', () => {
+  const dir = join(process.cwd(), 'src/components/tenjikai')
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.tsx'))) {
+    assert.doesNotMatch(readFileSync(join(dir, f), 'utf8'), /<h1[\s>]/, f)
+  }
+})

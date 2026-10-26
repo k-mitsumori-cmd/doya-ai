@@ -48,13 +48,14 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1fr_1.15fr] lg:py-12">
       {/* 見出しは入りのアニメーションを付けない（F-12。最初の薄い色のまま止まって見えるのを防ぐ） */}
       <div className="flex flex-col gap-5 lg:pt-6">
-        <h1 className="flex flex-col font-display text-[28px] leading-[1.25] text-ink md:text-4xl xl:text-5xl">
+        {/* ページの h1 は枠（ToolFrame）の「ドヤ展示会」。ここは h2 にする（h1 を1つにする。2026-10-26 統括の本番の確認） */}
+        <h2 className="m-0 flex flex-col font-display text-[28px] leading-[1.25] text-ink md:text-4xl xl:text-5xl">
           <span className="whitespace-nowrap">URLひとつで、</span>
           <span className="whitespace-nowrap">
             <span className="text-doya-500">展示会の準備</span>を
           </span>
           <span className="whitespace-nowrap">まるごと。</span>
-        </h1>
+        </h2>
         <p className="max-w-md text-[15px] leading-relaxed text-[var(--sub)]">
           条件を入れると、ブースの3D完成予想図ができます。面の画像を作って3Dで確かめ、割付表と一緒に書き出せます。
         </p>
