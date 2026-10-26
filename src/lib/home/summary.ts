@@ -23,7 +23,8 @@ import { ROLE_HIERARCHY as INCOME_ROLES } from '@/lib/income/roles'
 import { EXPENSE_ROLES } from '@/lib/expense/constants'
 import { homeIncomeSummary } from '@/lib/income/summary-read'
 import { getExpenseSummary } from '@/lib/expense/expense-read'
-import { SYSTEM_WATCH_PREFIX } from '@/lib/system-watch/marker'
+import { excludeIds } from '@/lib/system-watch/marked-records'
+import { systemWatchRecordIdsAll } from '@/lib/system-watch/marked-records-range'
 
 const QUOTE_ROLES = ['owner', 'admin', 'manager', 'member']
 const PROMANE_ROLES = ['owner', 'admin', 'member', 'guest']
@@ -286,14 +287,16 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
     }))
   if (!membership) return null
   const orgId = membership.organizationId
+  // 自動点検（system-watch の B1）が毎日作る下書きは数えない。名前の印ではなく、合図を確かめたルートが残した記録の ID で外す
+  // （名前で外すと、利用者が自分で付けた「【自動点検】…」の下書きまで消えるため。2026-10-26 統括の監査）
+  const watchQuoteIds = await systemWatchRecordIdsAll(prisma, 'quote-document', [orgId]).catch(() => [])
   const [confirmed, draftCount, sentCount, expiring] = await Promise.all([
     prisma.quoteDocument.findMany({
       where: { organizationId: orgId, status: { in: ['confirmed', 'sent'] }, confirmedAt: { gte: trendStart } },
       select: { totalExclTax: true, confirmedAt: true },
       take: 5000,
     }),
-    // 自動点検（system-watch の B1）が毎日作る下書きは数えない（名前の先頭が「【自動点検】」）
-    prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft', NOT: { title: { startsWith: SYSTEM_WATCH_PREFIX } } } }),
+    prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft', ...excludeIds(watchQuoteIds) } }),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'sent' } }),
     prisma.quoteDocument.findMany({
       where: { organizationId: orgId, status: 'sent', expiryDate: { gte: new Date() } },
