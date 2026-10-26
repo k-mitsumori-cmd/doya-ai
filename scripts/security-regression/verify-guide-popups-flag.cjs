@@ -54,7 +54,7 @@ check('Handoff (7): sign-out on any path clears the record, the card does not fe
   assert.match(use, /fetch\('\/api\/doyaslide\/projects\/from-quote'/)
   assert.match(use, /JSON\.stringify\(\{ kind: artifact\.kind, id: artifact\.id \}\)/, 'only kind and id are sent')
   const gate = read('src/components/shell/ShellGate.tsx')
-  assert.match(gate, /guide && shown && userKey\s*\n?\s*\? <NoticeProvider userKey=\{userKey\}>\{framed\}<ShellNotices \/><HandoffSuggest \/><\/NoticeProvider>/)
+  assert.match(gate, /guide && shown && userKey\s*\n?\s*\? <NoticeProvider userKey=\{userKey\}>\{framed\}<ShellNotices \/><HandoffSuggest \/><PowerOutNotices \/><\/NoticeProvider>/)
   assert.equal((gate.match(/<HandoffSuggest/g) || []).length, 1)
 })
 
