@@ -408,7 +408,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
 
 function ActionButton({ a, className, onDone }: { a: NoticeAction; className: string; onDone: () => void }) {
   // /api/ への行き先（支払い方法の更新など）は、画面の移動ではなくサーバーへ行くので、ふつうのリンクにする
-  if (a.href?.startsWith('/api/')) return <a href={a.href} className={className} onClick={onDone}>{a.label}</a>
+  // /api/ への行き先と、mailto: などサイトの外の行き先も、ふつうのリンクにする
+  if (a.href && (a.href.startsWith('/api/') || !a.href.startsWith('/'))) return <a href={a.href} className={className} onClick={onDone}>{a.label}</a>
   return a.href
     ? <Link href={a.href} className={className} onClick={onDone}>{a.label}</Link>
     : <button type="button" className={className} onClick={onDone}>{a.label}</button>
