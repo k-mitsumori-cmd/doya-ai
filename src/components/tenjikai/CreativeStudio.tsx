@@ -161,7 +161,14 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
                   className="overflow-hidden rounded-md bg-white shadow-[0_12px_30px_-12px_rgba(16,22,51,.45)]"
                   style={{ aspectRatio: `${c.widthMm} / ${c.heightMm}`, height: ratio > 1.2 ? 'auto' : '100%', width: ratio > 1.2 ? '100%' : 'auto', maxHeight: '100%', maxWidth: '100%' }}
                 >
-                  {imgs?.length ? <img src={imgs[shown[c.kind] ?? 0]} alt={`${c.name}の生成画像`} className="h-full w-full object-cover" /> : <CreativePreview c={c} a={analysis} />}
+                  {/* 作る前は、仮の絵（見本）を出さない。名前と大きさだけの枠にする（2026-10-27 ユーザーの指摘「生成の前のサンプルがめちゃくちゃ」） */}
+                  {imgs?.length ? <img src={imgs[shown[c.kind] ?? 0]} alt={`${c.name}の生成画像`} className="h-full w-full object-cover" /> : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-300 bg-white p-3 text-center" data-wireframe="creative">
+                      <span className="text-xs font-black text-gray-700">{c.name}</span>
+                      <span className="font-mono text-[10px] text-gray-500">{c.size}</span>
+                      <span className="text-[10px] text-gray-400">まだ作っていません</span>
+                    </div>
+                  )}
                 </motion.div>
               </div>
               {imgs && imgs.length > 1 && (

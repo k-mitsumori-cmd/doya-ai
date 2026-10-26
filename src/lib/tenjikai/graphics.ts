@@ -190,14 +190,28 @@ export function generateGraphicPlan(plan: BoothPlan, a: SiteAnalysis): GraphicPa
   return plan.elements.flatMap((e) => panelFor(e, a))
 }
 
+/**
+ * ブース全体で1つのデザインの決まり（全部の面に同じ文を入れて、面ごとにばらばらにならないようにする）。
+ * 2026-10-27 ユーザーの指摘「面ごとに色・字体・レイアウトがばらばらで、統一感がない」。
+ */
+export function boothDesignRules(a: SiteAnalysis) {
+  return [
+    '【ブース全体のデザインの決まり（全部の面で同じにする）】',
+    `・色: 背景の主色 ${a.colors.primary}、差し色 ${a.colors.accent}、サブ ${a.colors.secondary}。この3色と白だけを使う。ほかの色は足さない。`,
+    `・絵柄: フラットなベクターのイラストと幾何学の形（大きな斜めの帯と円）で統一する。写真・人物の写真・3D の描写は使わない。トーンは「${a.tone}」。`,
+    '・構図: 上から約3割は、あとで見出しの文字を重ねるため、主色の無地の帯として空けておく。下の約2割も、無地に近い落ち着いた面にする。',
+    '・隣の面とつながって見えるよう、帯と円は面の端で切れてよい。中央に大きな装飾を1つだけ置く。',
+  ].join('\n')
+}
+
 export function buildPanelPrompt(p: GraphicPanel, a: SiteAnalysis) {
   return [
-    `展示会ブースの「${p.name}」に貼る装飾グラフィックの入稿デザイン。仕上がりサイズ 幅${p.widthMm.toLocaleString()}mm × 高さ${p.heightMm.toLocaleString()}mm。`,
+    `展示会ブースの「${p.name}」に貼る装飾グラフィックの背景デザイン。仕上がりサイズ 幅${p.widthMm.toLocaleString()}mm × 高さ${p.heightMm.toLocaleString()}mm（この縦横比で、引き伸ばさずに作る）。`,
     `役割：${p.role}（想定視認距離 ${p.viewDistanceM}m）。`,
     `描く内容：${p.visual}。`,
-    '高さごとの割付：',
-    ...p.zones.map((z) => `・${z.label}（床から${z.fromMm}〜${z.toMm}mm）：${z.content}`),
-    `ブランドカラー：メイン ${a.colors.primary}、サブ ${a.colors.secondary}、アクセント ${a.colors.accent}。トーンは「${a.tone}」。`,
-    '日本語は正確に、太いゴシック体で。絵文字・実在しないロゴや認証マークは描かない。平面のデザインデータとして、写真のような斜めのアングルにはしない。',
+    boothDesignRules(a),
+    // 文字は画像に描かせない。見出しは画面とデータの側で、正しい字体で重ねる（画像の中の小さな日本語は崩れるため）
+    '文字・数字・ロゴ・記号・認証マーク・QR コードは、一切描かない。看板や画面の中も無地にする。絵文字も描かない。',
+    '平面のデザインデータとして作る。写真のような斜めのアングルや、ブースの立体の絵にはしない。',
   ].join('\n')
 }
