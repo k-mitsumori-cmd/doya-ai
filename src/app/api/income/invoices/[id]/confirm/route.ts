@@ -23,5 +23,5 @@ export async function POST(req: NextRequest, c: IdCtx) {
     }
     await audit(prisma, ctx, 'invoice.confirm', 'invoice', id, { invoiceNo: invoice.invoiceNo })
     return NextResponse.json({ invoice })
-  })
+  }, { permission: 'invoice.issue' })
 }

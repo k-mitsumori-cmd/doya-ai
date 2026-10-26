@@ -15,6 +15,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { getEvaluationRatingField } from '@/lib/hr/evaluation-access'
+import { authorizeCompanyActionForSession } from '@/lib/company-roles/access.server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -143,6 +144,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       const privilegedFields = ['evaluatorId', 'status', 'finalRating']
       const denied = ratingField === 'selfRating' ? [...privilegedFields, 'managerRating', 'managerComment'] : ratingField === 'managerRating' ? [...privilegedFields, 'selfRating', 'selfComment'] : []
       if (denied.some(field => field in input.body)) return privateApiJson({ error: 'この評価項目を変更する権限がありません' }, { status: 403 })
+      // 会社の役割の旗の内側: 自分が評価される側の評価に、管理者として最終評価を付ける・確定することを、会社の決まりで止める（ROLES-2026-10-26.md §3.4）
+      if (ratingField === 'finalRating' && hrCtx.employeeId && existing.employeeId === hrCtx.employeeId) {
+        const company = await authorizeCompanyActionForSession({ userId: hrCtx.userId, email: session?.user?.email ?? null, permission: 'hr.evaluation.finalize', target: { isSelf: true }, scope: { tool: 'hr', organizationId: hrCtx.organizationId } })
+        if (!company.allowed) return privateApiJson({ error: 'ご自身の評価は、ほかの管理者かオーナーが確定します。' }, { status: 403 })
+      }
       if (operationId) {
         const replay = await replayHrEvaluationSaveOperation(tx, hrCtx, operationId, id, body)
         if (replay) return privateApiJson({ success: true, operation: operationAck(replay) })

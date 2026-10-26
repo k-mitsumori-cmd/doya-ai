@@ -50,7 +50,7 @@ function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, se
     '@/lib/quote/response-shape': load('src/lib/quote/response-shape.ts'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/quote/access': { getQuoteContext: async () => ({ organizationId: 'org', userId: actor === 'owner' ? 'owner-user' : 'staff-user' }), orgSlugFrom: () => 'org' },
+    '@/lib/quote/access': { getQuoteContext: async () => ({ organizationId: 'org', role: actor, userId: actor === 'owner' ? 'owner-user' : 'staff-user' }), orgSlugFrom: () => 'org' },
     '@/lib/plan-limit': { FREE_LIMITS: { quoteProducts: 1 }, jstStartOfMonthUtc: () => new Date('2026-09-30T15:00:00Z') },
     '@/lib/organization-quota-ledger': ledger,
     '@/lib/unified-plan': { isPaidPlan: value => value === 'PRO' },

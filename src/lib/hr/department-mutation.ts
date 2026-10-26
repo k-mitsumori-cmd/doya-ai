@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 import type { HrContext } from '@/lib/hr/types'
 import { prisma } from '@/lib/prisma'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 /** All department mutations share the organization lock, including parent-chain validation. */
 export async function runHrDepartmentMutation<T>(
@@ -20,7 +21,7 @@ export async function runHrDepartmentMutation<T>(
       FOR UPDATE
     `
     const member = members[0]
-    if (member?.status !== 'ACTIVE' || (member.role !== 'ADMIN' && member.role !== 'OWNER')) return { allowed: false as const }
+    if (member?.status !== 'ACTIVE' || !['ADMIN', 'OWNER'].includes(lowerToolRole('hr', member.role, ctx.role) ?? '')) return { allowed: false as const }
     return { allowed: true as const, value: await action(tx) }
   }, { maxWait: 10000, timeout: 15000 })
 }

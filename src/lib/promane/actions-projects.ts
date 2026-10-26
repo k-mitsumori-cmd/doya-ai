@@ -37,6 +37,7 @@ const STALE_PROJECT_ERROR = '別の画面で案件が更新されています。
 import type { Prisma } from '@prisma/client';
 import { parsePromaneProjectInput, type PromaneProjectInput, type PromaneProjectPatch } from './project-input';
 import { runPromaneProjectOnce, recoverPromaneProjectOperation, promaneProjectOperationId, isPromaneProjectReceiptConflict, type PromaneProjectOperationScope } from './project-operation';
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function lockProjectWriter(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
   const members = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
@@ -167,9 +168,11 @@ export async function repairInvalidProjects(workspaceSlug: string): Promise<{ re
   const repaired = await retryProjectTransaction(() => prisma.$transaction(async tx => {
     const member = await tx.promaneMember.findFirst({
       where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!member) throw new Error('データ修復はオーナー・管理者のみ実行できます');
+    // 会社の役割の上限より上には上げない
+    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: member.role }) : null;
+    if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error('データ修復はオーナー・管理者のみ実行できます');
     const projects = await tx.promaneProject.findMany({
       where: { workspaceId: workspace.id },
       select: { id: true, contractAmount: true, monthlyAmount: true, hourlyRate: true, estimatedHours: true, startDate: true, endDate: true },

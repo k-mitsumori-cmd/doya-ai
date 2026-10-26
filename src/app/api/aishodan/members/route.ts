@@ -13,6 +13,7 @@ import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/acce
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const ROLES: AishodanRole[] = ['owner', 'admin', 'manager', 'member']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -79,7 +80,9 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: AishodanRole }[]>`SELECT role FROM aishodan_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      const actorRole = actor.length ? lowerToolRole('aishodan', actor[0].role, c.role) : null
+      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as AishodanRole]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.aishodanMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },

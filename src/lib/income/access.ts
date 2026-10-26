@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 import { ROLE_HIERARCHY, hasMinRole, type IncomeRole } from './roles'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 export { ROLE_HIERARCHY, hasMinRole, type IncomeRole }
 const VALID_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -90,12 +91,15 @@ export async function getIncomeContext(req?: NextRequest): Promise<IncomeContext
   if (slug && !membership) return null
   if (!membership) membership = await createOwnOrganization(user.id, user.name)
   if (!membership || !hasMinRole(membership.role, 'member')) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'income', userId: user.id, organizationId: membership.organizationId, toolRole: membership.role })
+  if (!role) return null
   return {
     userId: user.id,
     organizationId: membership.organizationId,
     organizationSlug: membership.organization.slug,
     organizationName: membership.organization.name,
-    role: membership.role as IncomeRole,
+    role: role as IncomeRole,
     memberId: membership.id,
   }
 }

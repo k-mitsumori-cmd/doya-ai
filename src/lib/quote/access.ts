@@ -10,6 +10,7 @@ import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, hasMinRole, type QuoteContext, type QuoteRole } from './types'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -84,13 +85,16 @@ export async function getQuoteContext(orgSlug?: string): Promise<QuoteContext | 
     })
   }
   if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'quote', userId, organizationId: membership.organizationId, toolRole: membership.role })
+  if (!role) return null
 
   return {
     userId,
     organizationId: membership.organizationId,
     organizationName: membership.organization.name,
     organizationSlug: membership.organization.slug,
-    role: membership.role as QuoteRole,
+    role: role as QuoteRole,
   }
 }
 

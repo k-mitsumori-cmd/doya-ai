@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { normalizeQuoteIssuer } from '@/lib/quote/issuer-input'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -41,9 +42,11 @@ export async function PUT(req: NextRequest) {
   const result = await retryIssuerTransaction(() => prisma.$transaction(async tx => {
     const member = await tx.quoteMember.findFirst({
       where: { organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE', role: { in: ['owner', 'admin'] } },
-      select: { id: true },
+      select: { id: true, role: true },
     })
-    if (!member) return { status: 403 as const, issuer: null }
+    // 会社の役割の上限（ctx の役割）より上には上げない
+    const effectiveRole = member ? lowerToolRole('quote', member.role, ctx.role) : null
+    if (!member || (effectiveRole !== 'owner' && effectiveRole !== 'admin')) return { status: 403 as const, issuer: null }
     const issuer = await tx.quoteIssuer.upsert({
       where: { organizationId: ctx.organizationId },
       create: { organizationId: ctx.organizationId, ...data },

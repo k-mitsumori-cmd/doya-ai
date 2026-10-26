@@ -29,7 +29,7 @@ if (mounted.error || mounted.status !== 0) process.exit(1);
       '@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role}),hasMinRole:()=>role==='manager',orgSlugFrom:()=> 'org'},
       '@/lib/quote/document':{recalcDocument:async()=>{}}};
     const exported = {};
-    vm.runInNewContext(compile(read('src/app/api/quote/documents/[id]/route.ts')), {exports:exported,require:n=>{assert(n in deps,n);return deps[n];}});
+    vm.runInNewContext(compile(read('src/app/api/quote/documents/[id]/route.ts')), {exports:exported,require:n=>{if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];assert(n in deps,n);return deps[n];}});
     const response = await exported.PATCH({json:async()=>({...body,expectedRevision:'a'.repeat(64)})},{params:Promise.resolve({id:'d'})});
     assert.equal(response.status,expected);
     assert.equal(writes,0);

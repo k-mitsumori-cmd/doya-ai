@@ -6,7 +6,7 @@ const ts = require('typescript');
 const read = p => fs.readFileSync(path.join(__dirname,'../../',p),'utf8');
 const compile = s => ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function moduleAt(file,deps) {
-  const exports={};vm.runInNewContext(compile(read(file)),{exports,require:n=>{assert(n in deps,n);return deps[n];}});return exports;
+  const exports={};vm.runInNewContext(compile(read(file)),{exports,require:n=>{if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];assert(n in deps,n);return deps[n];}});return exports;
 }
 (async()=>{
  const results=[];

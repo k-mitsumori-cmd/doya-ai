@@ -13,6 +13,7 @@ import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type QuoteRole } from '@/lib/quote/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const ROLES: QuoteRole[] = ['owner', 'admin', 'manager', 'member']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -79,7 +80,9 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: QuoteRole }[]>`SELECT role FROM quote_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      const actorRole = actor.length ? lowerToolRole('quote', actor[0].role, c.role) : null
+      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as QuoteRole]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.quoteMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },

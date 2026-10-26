@@ -79,7 +79,8 @@ function apiFixture() {
       committed = true
       return result
     },
-    promaneWorkspace: { findFirst: async () => active ? { id: 'w' } : null },
+    // 本物の DB は、本人のメンバーの行（役割）も返す（会社の役割の上限を当てるため）
+    promaneWorkspace: { findFirst: async () => active ? { id: 'w', members: [{ role: 'member' }] } : null },
     promaneMember: { findFirst: async () => active ? { id: 'actor' } : null },
     promaneProject: { findFirst: async () => ({ id: 'p' }) },
     promaneExpense: {
@@ -121,7 +122,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneMember: {
       findFirst: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
-        if (where.userId) return active ? { id: 'actor' } : null
+        if (where.userId) return active ? { id: 'actor', role: 'admin' } : null
         return foreignTarget ? null : { id: 'm', hourlyRate: 2500 }
       },
       updateMany: async ({ where }) => {
@@ -170,7 +171,7 @@ function rateApiFixture({ foreignTarget = false } = {}) {
     },
     promaneWorkspace: { findFirst: async () => ({ id: 'w' }) },
     promaneMember: {
-      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor' } : null,
+      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor', role: 'admin' } : null,
       updateMany: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
         writes++

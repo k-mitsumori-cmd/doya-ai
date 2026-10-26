@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { Prisma, QuoteDocument, QuoteLineItem } from '@prisma/client'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 export class QuoteDocumentRevisionError extends Error { constructor(public status: number, message: string) { super(message) } }
 type Document = QuoteDocument & { lineItems: QuoteLineItem[] }
 type Store = Pick<Prisma.TransactionClient, 'systemSetting'>
@@ -34,11 +35,13 @@ export async function assertQuoteDocumentRevision(db: Store, doc: Document, expe
   if ((await withQuoteDocumentRevision(db,doc)).revision !== expected) throw new QuoteDocumentRevisionError(409, 'この見積書は別の操作で変更されています。変更は保存されていません。最新の内容をご確認ください。')
 }
 /** Lock fresh membership before the document, including role revocation/deletion races. */
-export async function lockQuoteDocumentActor(tx: Prisma.TransactionClient, ctx: {organizationId:string;userId:string}, id:string): Promise<{role:string}|null> {
+export async function lockQuoteDocumentActor(tx: Prisma.TransactionClient, ctx: {organizationId:string;userId:string;role?:string}, id:string): Promise<{role:string}|null> {
   const actors = await tx.$queryRaw<Array<{role:string}>>`SELECT role FROM quote_members WHERE "organizationId" = ${ctx.organizationId} AND "userId" = ${ctx.userId} AND status = 'ACTIVE' FOR UPDATE`
   if (actors.length !== 1) return null
   await tx.$queryRaw`SELECT id FROM quote_documents WHERE id = ${id} AND "organizationId" = ${ctx.organizationId} FOR UPDATE`
-  return actors[0]
+  // 会社の役割の上限（ctx の役割）より上には上げない（ctx の役割が渡っていなければ DB のまま）
+  const role = ctx.role === undefined ? actors[0].role : lowerToolRole('quote', actors[0].role, ctx.role)
+  return role ? { role } : null
 }
 
 /** Raw row-lock conflicts use SQLSTATE inside Prisma P2010; they are not save failures. */

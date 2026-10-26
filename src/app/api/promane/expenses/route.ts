@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function retryExpenseTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -32,9 +33,12 @@ async function scopedOperation<T>(workspaceSlug: string, projectId: string, user
           where: { ...(workspaceId === undefined ? { slug: workspaceSlug } : { id: workspaceId }), members: { some: { userId, isActive: true, role: { in: ['owner','admin','member'] } } } }, select: { id: true, slug: true },
         });
         if (!workspace) throw new ExpenseAccessError(403, 'ワークスペースにアクセスできません');
-        const actors = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
+        const actors = await tx.$queryRaw<{ id: string; role: string }[]>`SELECT id, role FROM promane_members
           WHERE "workspaceId"=${workspace.id} AND "userId"=${userId} AND "isActive"=true
             AND role IN ('owner','admin','member') FOR UPDATE`;
+        // 会社の役割の旗の内側では、会社の上限を当てる（会社のゲストはプロマネの guest になり、書き込めない。監査 2026-10-26 中2）
+        const ceiled = actors.length === 1 ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: actors[0].role }) : null;
+        if (!ceiled || !['owner', 'admin', 'member'].includes(ceiled)) throw new ExpenseAccessError(403, 'ワークスペースの変更権限がありません');
         if (actors.length !== 1) throw new ExpenseAccessError(403, 'ワークスペースの変更権限がありません');
         const project = await tx.promaneProject.findFirst({ where: { id: projectId, workspaceId: workspace.id }, select: { id: true } });
         if (!project) throw new ExpenseAccessError(404, 'プロジェクトが見つかりません');
@@ -136,9 +140,12 @@ export async function DELETE(req: NextRequest) {
     const result = await retryExpenseTransaction(() => prisma.$transaction(async tx => {
       const workspace = await tx.promaneWorkspace.findFirst({
         where: { slug: workspaceSlug, members: { some: { userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } } } },
-        select: { id: true },
+        select: { id: true, members: { where: { userId, isActive: true }, select: { role: true } } },
       })
       if (!workspace) return { status: 403 as const, error: 'アクセス権なし' }
+      // 会社の役割の旗の内側では、会社の上限を当てる（会社のゲストは消せない）
+      const ceiled = workspace.members.length === 1 ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: workspace.members[0].role }) : null
+      if (!ceiled || !['owner', 'admin', 'member'].includes(ceiled)) return { status: 403 as const, error: 'アクセス権なし' }
       const deleted = await tx.promaneExpense.deleteMany({
         where: { id, project: { workspaceId: workspace.id } },
       })

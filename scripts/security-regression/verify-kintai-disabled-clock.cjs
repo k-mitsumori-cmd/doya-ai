@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,URL,console,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
+function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,URL,console,require:n=>{if(n in deps)return deps[n];if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];throw Error(n)}});return exported}
 const shift=load('src/lib/kintai/shift-records.ts',{});
 const types=load('src/lib/kintai/types.ts',{});
 (async()=>{const results=[];

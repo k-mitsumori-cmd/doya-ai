@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function retryRateTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -58,9 +59,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!workspace) return { status: 403 as const, error: 'ワークスペースにアクセスできません' }
       const actor = await tx.promaneMember.findFirst({
         where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-        select: { id: true },
+        select: { id: true, role: true },
       })
-      if (!actor) return { status: 403 as const, error: '時間単価を変更する権限がありません（owner/admin のみ）' }
+      // 会社の役割の上限より上には上げない
+      const ceiled = actor ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: actor.role }) : null
+      if (!actor || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: '時間単価を変更する権限がありません（owner/admin のみ）' }
       const updated = await tx.promaneMember.updateMany({
         where: { id: memberId, workspaceId: workspace.id },
         data: { hourlyRate: rate },

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserPromaneLimits, countUserWorkspaces } from '@/lib/promane/limits';
 import { parsePromaneWorkspaceCreate, parsePromaneWorkspacePatch } from './workspace-input';
 import { runPromaneWorkspaceOnce, recoverPromaneWorkspaceOperation, promaneWorkspaceOperationId, isPromaneWorkspaceReceiptConflict, type PromaneWorkspaceOperationScope } from './workspace-operation';
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 export class PromaneWorkspaceRequestError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); }
@@ -26,8 +27,10 @@ async function lockAccount(tx: Prisma.TransactionClient, userId: string) {
   if (users.length !== 1) throw new PromaneWorkspaceRequestError(401,'AUTH_REQUIRED','ログイン状態を確認してください');
 }
 async function lockManager(tx: Prisma.TransactionClient, userId: string, workspaceId: string) {
-  const members=await tx.$queryRaw<{id:string}[]>`SELECT id FROM promane_members WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true AND role IN ('owner','admin') FOR UPDATE`;
-  if (members.length !== 1) throw new PromaneWorkspaceRequestError(403,'FORBIDDEN','ワークスペース設定の編集権限がありません');
+  const members=await tx.$queryRaw<{id:string;role:string}[]>`SELECT id, role FROM promane_members WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true AND role IN ('owner','admin') FOR UPDATE`;
+  // 会社の役割の上限より上には上げない
+  const ceiled=members.length===1?await ceilToolRole({tool:'promane',userId,organizationId:workspaceId,toolRole:members[0].role}):null;
+  if (members.length !== 1 || (ceiled!=='owner' && ceiled!=='admin')) throw new PromaneWorkspaceRequestError(403,'FORBIDDEN','ワークスペース設定の編集権限がありません');
 }
 async function transaction<T>(work: (tx: Prisma.TransactionClient)=>Promise<T>): Promise<T> {
   for (let attempt=0;attempt<3;attempt++) {

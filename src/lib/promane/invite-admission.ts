@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getUserPromaneLimits } from '@/lib/promane/limits'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 type AdmissionError = {
   status: number
@@ -34,7 +35,9 @@ export async function issuePromaneInvitation(args: {
         const inviter = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
-        if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role)) {
+        // 会社の役割の上限より上には上げない
+        const ceiled = inviter?.isActive ? await ceilToolRole({ tool: 'promane', userId: args.userId, organizationId: args.workspaceId, toolRole: inviter.role }) : null
+        if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
           return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
         }
         const existingMember = await tx.promaneMember.findFirst({

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 import crypto from 'crypto'
 
 const VALID_MEMBER_ROLES = ['owner', 'admin', 'member', 'guest']
@@ -60,7 +61,7 @@ export async function getOrCreateWorkspace(userId: string) {
 }
 
 export async function getWorkspaceBySlug(slug: string, userId: string) {
-  return prisma.promaneWorkspace.findFirst({
+  const workspace = await prisma.promaneWorkspace.findFirst({
     where: {
       slug,
       members: { some: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } },
@@ -69,22 +70,42 @@ export async function getWorkspaceBySlug(slug: string, userId: string) {
       members: { where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } },
     },
   })
+  return workspace ? ceilWorkspaceMembers(workspace, userId) : null
+}
+
+/** 会社の役割の旗の内側では、本人のメンバーの役割に会社の上限を当てる。使えない（null）なら、ワークスペースにアクセスできないのと同じ扱い。旗が off ならそのまま返す。 */
+async function ceilWorkspaceMembers<W extends { id: string; members: { userId: string; role: string }[] }>(workspace: W, userId: string): Promise<W | null> {
+  const members: W['members'][number][] = []
+  for (const m of workspace.members) {
+    if (m.userId !== userId) { members.push(m); continue }
+    const role = await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: m.role })
+    if (role) members.push(role === m.role ? m : ({ ...m, role } as typeof m))
+  }
+  if (members.length === 0 && workspace.members.length > 0) return null
+  return members.length === workspace.members.length && members.every((m, i) => m === workspace.members[i]) ? workspace : { ...workspace, members } as W
 }
 
 export async function getCurrentMember(workspaceId: string, userId: string) {
-  return prisma.promaneMember.findUnique({
+  const member = await prisma.promaneMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId }, role: { in: VALID_MEMBER_ROLES } },
   })
+  if (!member) return member
+  const role = await ceilToolRole({ tool: 'promane', userId, organizationId: workspaceId, toolRole: member.role })
+  if (!role) return null
+  return role === member.role ? member : { ...member, role }
 }
 
 /** Server Action用。閲覧用の所属確認と、更新・管理の権限確認を分離する。 */
 export async function requireWritableWorkspace(slug: string, userId: string, adminOnly = false, workspaceId?: string) {
   // A supplied immutable operation ID never falls back to a mutable/reused slug.
   if (workspaceId !== undefined && (typeof workspaceId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(workspaceId))) throw new Error('ワークスペースを確認してください');
-  const workspace = workspaceId === undefined ? await getWorkspaceBySlug(slug, userId) : await prisma.promaneWorkspace.findFirst({
-    where: { id: workspaceId, members: { some: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
-    include: { members: { where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
-  })
+  const workspace = workspaceId === undefined ? await getWorkspaceBySlug(slug, userId) : await (async () => {
+    const found = await prisma.promaneWorkspace.findFirst({
+      where: { id: workspaceId, members: { some: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
+      include: { members: { where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
+    })
+    return found ? ceilWorkspaceMembers(found, userId) : null
+  })()
   if (!workspace) throw new Error('ワークスペースにアクセスできません')
   const member = workspace.members.find((m) => m.userId === userId && m.isActive)
   const allowedRoles = adminOnly ? ['owner', 'admin'] : ['owner', 'admin', 'member']

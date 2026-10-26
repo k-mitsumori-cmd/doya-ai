@@ -22,7 +22,7 @@ function fixture({ role = 'member', revokeDuringCommit = false, foreign = false 
       return result
     },
     promaneWorkspace: { findFirst: async ({ where }) =>
-      where.members.some.role.in.includes(currentRole) ? { id: 'w' } : null },
+      where.members.some.role.in.includes(currentRole) ? { id: 'w', members: [{ role: currentRole }] } : null },
     promaneMember: { findFirst: async ({ where }) =>
       where.role.in.includes(currentRole) ? { id: 'actor' } : null },
     promaneClient: {

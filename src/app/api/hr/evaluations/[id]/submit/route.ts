@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { getEvaluationRatingField } from '@/lib/hr/evaluation-access'
+import { authorizeCompanyActionForSession } from '@/lib/company-roles/access.server'
 import { privateApiJson } from '@/lib/private-api-response'
 import { runHrEvaluationMutation } from '@/lib/hr/evaluation-mutation'
 import { readHrEvaluationVersionOnly, HrEvaluationInputError, HrEvaluationWorkflowError, resolveHrEvaluationSubmit, getHrEvaluationWorkflowData } from '@/lib/hr/evaluation-input'
@@ -41,6 +42,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       await tx.$queryRaw`SELECT id FROM hr_employees WHERE id IN (${Prisma.join(employeeIds)}) AND "organizationId" = ${hrCtx.organizationId} ORDER BY id FOR UPDATE`
       const ratingField = await getEvaluationRatingField(hrCtx, existing, tx)
       if (!ratingField) return privateApiJson({ error: 'この評価を操作する権限がありません' }, { status: 403 })
+      // 会社の役割の旗の内側: 自分が評価される側の評価を、管理者として進めることを会社の決まりで止める（ROLES-2026-10-26.md §3.4）
+      if (ratingField === 'finalRating' && hrCtx.employeeId && existing.employeeId === hrCtx.employeeId) {
+        const company = await authorizeCompanyActionForSession({ userId: hrCtx.userId, email: session?.user?.email ?? null, permission: 'hr.evaluation.finalize', target: { isSelf: true }, scope: { tool: 'hr', organizationId: hrCtx.organizationId } })
+        if (!company.allowed) return privateApiJson({ error: 'ご自身の評価は、ほかの管理者かオーナーが確定します。' }, { status: 403 })
+      }
       if (!['DRAFT', 'SELF', 'SELF_REVIEW', 'SELF_EVALUATION', 'IN_REVIEW', 'MANAGER_REVIEW', 'SUBMITTED', 'REVIEWED', 'FINALIZED'].includes(existing.status)) return privateApiJson({ error: '評価の状態を確認できません。再取得して内容を確認してください。' }, { status: 409 })
       if (existing.status === 'FINALIZED') return privateApiJson({ error: '確定済みの評価は提出できません' }, { status: 409 })
       if (existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) return privateApiJson({ error: '評価が更新されています。再取得してから提出してください。', code: 'EVALUATION_CHANGED' }, { status: 409 })

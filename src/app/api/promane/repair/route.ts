@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function retryRepairTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -49,9 +50,11 @@ export async function POST(req: NextRequest) {
       if (!workspace) return { status: 403 as const, error: 'アクセス権がありません' }
       const member = await tx.promaneMember.findFirst({
         where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-        select: { id: true },
+        select: { id: true, role: true },
       })
-      if (!member) return { status: 403 as const, error: 'データ修復は owner/admin のみ実行可能です' }
+      // 会社の役割の上限より上には上げない
+      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: member.role }) : null
+      if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: 'データ修復は owner/admin のみ実行可能です' }
 
       const badExpenses = await tx.promaneExpense.updateMany({
         where: { project: { workspaceId: workspace.id }, amount: { lt: 0 } }, data: { amount: 0 },

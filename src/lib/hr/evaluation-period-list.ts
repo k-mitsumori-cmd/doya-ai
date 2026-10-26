@@ -4,6 +4,7 @@ import type { HrContext } from '@/lib/hr/types'
 import { getEvaluationReader } from '@/lib/hr/evaluation-access'
 import { evaluationOrganizationWhere } from '@/lib/hr/evaluation-scope'
 import type { HrEvaluationPeriodListRow } from '@/lib/hr/evaluation-period-list-client'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const PAGE_CHARACTERS = 65536
 const FRAGMENT_CHARACTERS = 8192
@@ -48,8 +49,8 @@ export async function readHrEvaluationPeriodListPage(db: PrismaClient, ctx: HrCo
   const previous = cursor(encoded)
   return db.$transaction(async tx => {
     const member = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId, userId: ctx.userId,
-      organizationId: ctx.organizationId, status: 'ACTIVE', role: ctx.role }, select: { employeeId: true } })
-    if (!member || member.employeeId !== ctx.employeeId || !['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(ctx.role)) throw new HrEvaluationPeriodListError(401, 'PERIOD_LIST_ACCESS_CHANGED')
+      organizationId: ctx.organizationId, status: 'ACTIVE' }, select: { employeeId: true, role: true } })
+    if (!member || lowerToolRole('hr', member.role, ctx.role) !== ctx.role || member.employeeId !== ctx.employeeId || !['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(ctx.role)) throw new HrEvaluationPeriodListError(401, 'PERIOD_LIST_ACCESS_CHANGED')
     const reader = await getEvaluationReader(ctx, tx), canCreatePeriods = ['OWNER', 'ADMIN'].includes(ctx.role)
     const periodState = await tx.$queryRaw<{ fingerprint: string; total: bigint }[]>`
       SELECT md5(COALESCE(string_agg(md5(row_to_json(p)::text), '' ORDER BY p.id), '')) AS fingerprint, count(*) AS total

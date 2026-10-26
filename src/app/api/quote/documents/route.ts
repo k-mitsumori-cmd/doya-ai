@@ -14,6 +14,7 @@ import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/o
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
+import { recordAuthor } from '@/lib/company-roles/access.server'
 
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -237,6 +238,8 @@ export async function POST(req: NextRequest) {
   }
   if (!result) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
   const doc = result.doc
+  // 作った人を残す（会社の役割の旗の内側だけ。「自分で作った見積を自分で確定しない」の判定に使う。ROLES-2026-10-26.md §3.4）
+  await recordAuthor({ tool: 'quote', recordId: doc.id, userId: ctx.userId })
 
 
   // 利用記録。⚠️ 失敗しても見積書作成は壊さない（throwしない実装）
