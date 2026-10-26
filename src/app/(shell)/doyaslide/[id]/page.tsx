@@ -412,7 +412,9 @@ function EditorInner() {
       if (search.get('generate') === '1' && !triggered.current) {
         triggered.current = true
         router.replace(`/doyaslide/${id}`)
-        if (p.slides.some((s) => !s.imageUrl)) runGenerate()
+        // 見積書から作った直後など、構成がまだ無い下書きは、先に構成を作る（作れたら retryStructure が続けて画像を作る）
+        if (p.status === 'draft' && p.slides.length === 0) void retryStructure()
+        else if (p.slides.some((s) => !s.imageUrl)) runGenerate()
       }
     })()
     return () => {

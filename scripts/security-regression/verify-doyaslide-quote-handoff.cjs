@@ -57,10 +57,11 @@ const matches = (project, where) => project.id === where.id
   && (!where.status || project.status === where.status)
   && (!where.updatedAt || project.updatedAt.getTime() === where.updatedAt.getTime())
   && (!where.slides || slides.filter((s) => s.projectId === project.id).length === 0);
+let projectSeq = 0;
 const projectStore = {
   count: async ({ where }) => projects.filter((p) => p.userId === where.userId && p.createdAt >= where.createdAt.gte).length,
   create: async ({ data }) => {
-    const project = { id: `project-${projects.length + 1}`, createdAt: new Date(), updatedAt: new Date(0), ...data };
+    const project = { id: `project-${++projectSeq}`, createdAt: new Date(), updatedAt: new Date(0), ...data };
     projects.push(project);
     return project;
   },
@@ -82,9 +83,15 @@ const subscriptionStore = {
   findUnique: async () => ledger,
   upsert: async ({ create, update }) => { ledger = ledger ? { ...ledger, ...update } : create; return ledger; },
 };
+// 同じ見積書から作った資料を覚える場所（SystemSetting）。作り直しの確認では、clear() で忘れさせる
+const settings = new Map();
+const settingStore = {
+  findUnique: async ({ where }) => (settings.has(where.key) ? { value: settings.get(where.key) } : null),
+  upsert: async ({ where, create, update }) => { settings.set(where.key, settings.has(where.key) ? update.value : create.value); return { key: where.key }; },
+};
 const tx = {
   $queryRaw: async () => [{ id: 'user' }],
-  doyaSlideProject: projectStore, doyaSlideSlide: slideStore, userServiceSubscription: subscriptionStore,
+  doyaSlideProject: projectStore, doyaSlideSlide: slideStore, userServiceSubscription: subscriptionStore, systemSetting: settingStore,
 };
 const prisma = { ...tx, quoteDocument, $transaction: async (operation) => operation(tx) };
 
@@ -114,6 +121,8 @@ const route = load('src/app/api/doyaslide/projects/from-quote/route.ts', {
   '@/lib/quote/access': quoteAccess,
   '@/lib/notice/flag': { isGuidePopupsEnabled: async () => { flagReads++; return flagOn; } },
   '@/lib/doyaslide/errors': { errorSuffix: () => '' },
+  '@/lib/prisma': { prisma },
+  'node:crypto': require('node:crypto'),
 });
 const structure = load('src/app/api/doyaslide/structure/route.ts', {
   'next/server': { NextResponse: Response },
@@ -194,8 +203,38 @@ const noExternalCalls = () => assert.deepEqual(counters, { gemini: 0, serp: 0, s
     assert.ok(!stored.includes('SECRET'), 'secrets must not reach the project');
   });
 
+  await check('same quote twice: returns the same project (200) and creates nothing new', async () => {
+    currentUser = 'user-a';
+    const before = projects.length;
+    const first = projects[before - 1];
+    const again = await post({ kind: 'quote', id: DOC_A });
+    assert.equal(again.status, 200);
+    assert.equal((await again.json()).projectId, first.id);
+    assert.equal(projects.length, before, 'no second project for the same quote');
+    for (const key of settings.keys()) assert.ok(!key.includes(DOC_A), 'the quote id is hashed in the key');
+    // 別の人は、同じ見積書の id でも前の資料を受け取らない（覚えるキーに本人を含む）
+    currentUser = 'user-b';
+    assert.equal((await post({ kind: 'quote', id: DOC_A })).status, 404);
+    currentUser = 'user-a';
+    // 覚えていた資料が消えていたら、新しく作る
+    const idx = projects.findIndex((p) => p.id === first.id);
+    const [removed] = projects.splice(idx, 1);
+    const savedLedger = ledger && { ...ledger };
+    const recreated = await post({ kind: 'quote', id: DOC_A });
+    assert.equal(recreated.status, 201);
+    const recreatedId = (await recreated.json()).projectId;
+    assert.notEqual(recreatedId, first.id);
+    // 後の確認（月の上限）に響かないよう、作り直した分を片づけ、元の資料を戻す
+    projects.splice(projects.findIndex((p) => p.id === recreatedId), 1);
+    projects.splice(idx, 0, removed);
+    ledger = savedLedger;
+    settings.clear();
+    noExternalCalls();
+  });
+
   await check('client title/href are ignored; title is the server title without the client name', async () => {
     currentUser = 'user-a';
+    settings.clear();
     const res = await post({ kind: 'quote', id: DOC_A, title: '改ざんタイトル', href: 'https://evil.invalid/x', referenceUrl: 'https://evil.invalid/y', customBrief: 'x' });
     assert.equal(res.status, 201);
     const project = projects[projects.length - 1];
@@ -239,6 +278,7 @@ const noExternalCalls = () => assert.deepEqual(counters, { gemini: 0, serp: 0, s
     const used = projects.length;
     maxProjects = used;
     currentUser = 'user-a';
+    settings.clear();
     const res = await post({ kind: 'quote', id: DOC_A });
     assert.equal(res.status, 403);
     assert.equal((await res.json()).code, 'LIMIT_REACHED');

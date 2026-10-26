@@ -10,6 +10,7 @@ import { createProjectWithinLimit, limitReachedBody } from '@/lib/doyaslide/crea
 import { getDocType, DOC_TYPES, ASPECT_TO_SIZE, STYLE_PRESETS, MIN_SLIDES, MAX_SLIDES } from '@/lib/doyaslide/constants'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
+import { isDoyaSlideStaleCandidate, settleStaleDoyaSlideProject } from '@/lib/doyaslide/generation-operation'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
 export async function GET(req: NextRequest) {
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (cursor && !await prisma.doyaSlideProject.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
       return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
-    const [rows, total] = await Promise.all([
+    const query = () => Promise.all([
       prisma.doyaSlideProject.findMany({
         where,
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
@@ -44,6 +45,13 @@ export async function GET(req: NextRequest) {
       }),
       prisma.doyaSlideProject.count({ where }),
     ])
+    let [rows, total] = await query()
+    // 止まったままの資料（構成中 6 分・生成中 15 分を超えたもの）を、読むときに戻す。戻したら読み直す
+    const stale = rows.slice(0, limit).filter((row) => isDoyaSlideStaleCandidate(row))
+    if (stale.length) {
+      const settled = await Promise.all(stale.map((row) => settleStaleDoyaSlideProject(userId, row.id).catch(() => 'none' as const)))
+      if (settled.some((r) => r !== 'none')) [rows, total] = await query()
+    }
     const page = rows.slice(0, limit)
     return NextResponse.json({
       projects: page.map((project) => ({

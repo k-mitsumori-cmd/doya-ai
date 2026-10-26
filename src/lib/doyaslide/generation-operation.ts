@@ -142,7 +142,7 @@ export async function beginDoyaSlideOperation(input: Input, db: Db = prisma) {
     }
     const project = await tx.doyaSlideProject.findFirst({ where: { id: input.projectId, userId: input.actor }, include: { slides: { orderBy: { index: 'asc' } } } })
     if (!project) throw new DoyaSlideOperationError(404, 'PROJECT_UNAVAILABLE', '資料を確認できません。')
-    if (['generating', 'structuring'].includes(project.status) || project.slides.some(slide => slide.status === 'generating')) throw new DoyaSlideOperationError(409, 'LEGACY_UNCONFIRMED', '以前の処理結果を確認できません。再生成せず、資料IDを添えてお問い合わせください。')
+    if (['generating', 'structuring'].includes(project.status) || project.slides.some(slide => slide.status === 'generating')) throw new DoyaSlideOperationError(409, 'LEGACY_UNCONFIRMED', '前の処理が止まったままです。15分ほどたってからこのページを開き直すと、もう一度作れます。')
     const targets = input.kind === 'batch' ? project.slides.filter(slide => !input.onlyPending || !slide.imageUrl) : project.slides.filter(slide => slide.id === input.slideId)
     if (!targets.length) {
       // Fence this UUID even when no work was needed. A delayed duplicate must
@@ -237,5 +237,58 @@ export async function recoverDoyaSlideOperation(input: Input, cancelMissing = fa
     const cancelled = unadmittedReceipt(input)
     await write(tx, key, cancelled)
     return { state: 'cancelled' as const, receipt: cancelled }
+  }, options)
+}
+
+// ============================================
+// 止まったままの資料を、利用者が操作できる状態に戻す（統括の指摘 2026-10-26）
+// ============================================
+// 一覧と詳細の GET から呼ぶ。有料の処理は一切呼ばない。
+// - 構成中（structuring）のまま 6 分を超え、スライドが 0 枚 → error（/structure の finally と同じ条件）
+// - 生成中（generating）で操作の記録がある → 15 分の期限を過ぎていれば expire() と同じく閉じる（使わなかった枠は戻す）
+// - 生成中・構成中で操作の記録が無い（以前の仕組みで止まったもの = LEGACY_UNCONFIRMED） → 15 分を過ぎていれば
+//   絵のあるスライドは done、無いものは error、資料は絵が1枚でもあれば completed、無ければ error
+// ロックの順番は、ほかの操作と同じく User → 資料。
+export const DOYASLIDE_STRUCTURE_STALE_MS = 6 * 60 * 1000
+export type DoyaSlideStaleResult = 'none' | 'structure' | 'expired' | 'legacy'
+export function isDoyaSlideStaleCandidate(project: { status: string; updatedAt: Date }, now = Date.now()) {
+  const age = now - project.updatedAt.getTime()
+  return (project.status === 'structuring' && age >= DOYASLIDE_STRUCTURE_STALE_MS) || (project.status === 'generating' && age >= DOYASLIDE_OPERATION_LEASE_MS)
+}
+export async function settleStaleDoyaSlideProject(actor: string, projectId: string, db: Db = prisma): Promise<DoyaSlideStaleResult> {
+  if (!identifier(actor) || !identifier(projectId)) return 'none'
+  return db.$transaction(async tx => {
+    const base: Input = { actor, projectId, operationId: '00000000-0000-4000-8000-000000000000', kind: 'batch' }
+    const owner = await lock(tx, base)
+    if (!owner.ownsProject) return 'none' as const
+    const project = await tx.doyaSlideProject.findFirst({ where: { id: projectId, userId: actor }, select: { status: true, updatedAt: true, _count: { select: { slides: true } } } })
+    if (!project) return 'none' as const
+    const now = Date.now(), age = now - project.updatedAt.getTime()
+    const active = 'doyaslide-active:v1:' + digest([actor, projectId])
+    const pointer = await tx.systemSetting.findUnique({ where: { key: active }, select: { value: true } })
+    if (pointer && /^doyaslide-operation:v1:[a-f0-9]{64}$/.test(pointer.value)) {
+      const running = await read(tx, pointer.value, base).catch(() => null)
+      if (running?.phase === 'pending') {
+        // まだ動いている操作は、期限を過ぎたときだけ閉じる（期限の内なら何もしない）
+        const input: Input = { actor, projectId, operationId: running.operationId, kind: running.kind }
+        const after = await expire(tx, input, pointer.value, active, running)
+        return after?.phase !== 'pending' ? 'expired' as const : 'none' as const
+      }
+    }
+    if (project.status === 'structuring' && project._count.slides === 0 && age >= DOYASLIDE_STRUCTURE_STALE_MS) {
+      const changed = await tx.doyaSlideProject.updateMany({ where: { id: projectId, userId: actor, status: 'structuring', updatedAt: project.updatedAt, slides: { none: {} } }, data: { status: 'error' } })
+      return changed.count ? 'structure' as const : 'none' as const
+    }
+    // 操作の記録が無いまま止まったもの（以前の仕組み）。期限は生成の期限にそろえる
+    if (age < DOYASLIDE_OPERATION_LEASE_MS) return 'none' as const
+    const stuckSlides = await tx.doyaSlideSlide.count({ where: { projectId, status: 'generating' } })
+    if (!['generating', 'structuring'].includes(project.status) && !stuckSlides) return 'none' as const
+    await tx.doyaSlideSlide.updateMany({ where: { projectId, status: 'generating', imageUrl: { not: null } }, data: { status: 'done' } })
+    await tx.doyaSlideSlide.updateMany({ where: { projectId, status: 'generating', imageUrl: null }, data: { status: 'error' } })
+    if (['generating', 'structuring'].includes(project.status)) {
+      const anyDone = await tx.doyaSlideSlide.count({ where: { projectId, imageUrl: { not: null } } })
+      await tx.doyaSlideProject.updateMany({ where: { id: projectId, userId: actor, status: project.status, updatedAt: project.updatedAt }, data: { status: anyDone ? 'completed' : 'error' } })
+    }
+    return 'legacy' as const
   }, options)
 }
