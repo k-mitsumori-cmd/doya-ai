@@ -73,3 +73,12 @@ test('JSON の中身の確認と、読めない JSON', async () => {
   const broken = await httpCheck('https://doya-ai.surisuta.jp/api/health', { body: jsonBody(() => true) })
   assert.match(broken.error ?? '', /JSON として読めません/)
 })
+
+test('POST を指定でき、本文は送らない', async () => {
+  let seen: RequestInit | undefined
+  globalThis.fetch = (async (_u: unknown, init?: RequestInit) => { seen = init; return new Response('{"error":"見つかりません"}', { status: 404 }) }) as typeof fetch
+  const r = await httpCheck('https://doya-ai.surisuta.jp/api/agent/tasks', { method: 'POST', status: 404 })
+  assert.equal(r.ok, true)
+  assert.equal(seen?.method, 'POST')
+  assert.equal(seen?.body, undefined)
+})

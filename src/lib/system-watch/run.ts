@@ -26,10 +26,10 @@ async function runOne(c: CheckDef): Promise<CheckResult> {
   }
 }
 
-export async function runChecks(checks: CheckDef[]): Promise<CheckResult[]> {
+export async function runChecks(checks: CheckDef[], concurrency = CONCURRENCY): Promise<CheckResult[]> {
   const results: CheckResult[] = new Array(checks.length)
   let i = 0
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, checks.length) }, async () => {
+  await Promise.all(Array.from({ length: Math.min(concurrency, checks.length) }, async () => {
     while (i < checks.length) {
       const idx = i++
       results[idx] = await runOne(checks[idx])
@@ -68,8 +68,8 @@ async function send(title: string, text: string, severity: 'urgent' | 'action' |
 export type WatchReport = { tier: string; checkedAt: string; total: number; failed: CheckResult[]; events: WatchEvent[]; sent: string[]; results: CheckResult[] }
 
 /** dry=true のときは、状態を書かず、Slack にも送らない（手動の試し用）。 */
-export async function runWatch(tier: string, checks: CheckDef[], opts: { dry?: boolean } = {}): Promise<WatchReport> {
-  const results = await runChecks(checks)
+export async function runWatch(tier: string, checks: CheckDef[], opts: { dry?: boolean; concurrency?: number } = {}): Promise<WatchReport> {
+  const results = await runChecks(checks, opts.concurrency)
   const now = new Date().toISOString()
   const previous = opts.dry ? {} : await loadState(tier).catch(() => ({}))
   const thresholds = Object.fromEntries(checks.map(c => [c.id, c.threshold]))
