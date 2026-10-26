@@ -3,7 +3,13 @@
 // （Intl のタイムゾーンの表に頼らない。サーバーの TZ の設定にも左右されない）。
 
 /** 付与の種類 */
-export const GRANT_KINDS = ['monthly', 'daily_recovery', 'bonus', 'mission', 'purchase'] as const
+/**
+ * 付与の種類。starter は「はじめの付与（最初の100）」（2026-10-26。src/lib/pricing-v2/starter.ts）。
+ * 期限なし・回復の上限で削られない。毎日の回復の計算では、starter の残りも回復でためた分に数える（100 から始まり、使った分が戻る）
+ */
+export const GRANT_KINDS = ['monthly', 'daily_recovery', 'bonus', 'mission', 'purchase', 'starter'] as const
+/** 毎日の回復の計算で「回復でためた分」に数える種類 */
+export const RECOVERY_POOL_KINDS: readonly string[] = ['daily_recovery', 'starter']
 export type GrantKind = (typeof GRANT_KINDS)[number]
 export function isGrantKind(v: unknown): v is GrantKind {
   return typeof v === 'string' && (GRANT_KINDS as readonly string[]).includes(v)
@@ -24,8 +30,9 @@ export const PURCHASE_MAX_MONTHS = 6
 export const MONTHLY_CARRYOVER_MONTHS = 1
 
 /**
- * チームの契約の毎月の付与（仮の値。料金と一緒に統括が決める）。
- * 今の 1人 9,980円 の契約者（統一プラン PRO など isPaidPlan の人）にも同じ量を付ける。
+ * 毎月の付与（旗 NEW_PRICING_ROLLOUT が off のとき・対象でない人の量。今までどおり）。
+ * 新しい料金の対象の人は、料金の表（src/lib/pricing-v2/plans.ts）の量を使う（据え置き 1,500・チームは人数から）。
+ * 切り替えは台帳の newPricingMonthlyGrantFor（index.ts → src/lib/pricing-v2/team.server.ts の newPricingMonthlyGrant）。
  */
 export const TEAM_MONTHLY_GRANT = 3000
 export const SOLO_PRO_MONTHLY_GRANT = TEAM_MONTHLY_GRANT

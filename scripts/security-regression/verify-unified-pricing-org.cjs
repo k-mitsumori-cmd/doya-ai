@@ -26,6 +26,8 @@ const mocks = {
   '@/lib/pricing': { ENTERPRISE_CONTACT_MAILTO: 'mailto:example@example.invalid' },
   '@/components/CheckoutButton': { CheckoutButton: () => { checkoutCount++; return React.createElement('button', null, 'CHECKOUT') } },
   '@/components/TrialCallout': { TrialBadge: empty, TrialNote: empty, useTrialEligible: () => false },
+  // 新しい料金の旗（NEW_PRICING_ROLLOUT）は off と同じ（2026-10-25）
+  '@/components/pricing/useNewPricing': { useNewPricing: () => false },
   '@/lib/services': { getServiceById: () => service, getPublicServices: () => [service] },
   '@/lib/plan-utils': { higherPlan: (_a, b) => b, tierFrom: value => value === 'STARTER' ? 'PRO' : value },
   '@/lib/unified-plan': {

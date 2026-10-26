@@ -105,6 +105,14 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/system-watch",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/system-watch-paid",
+      "schedule": "40 23 * * *"
+    },
+    {
       "path": "/api/cron/mensetsu-purge",
       "schedule": "40 1 * * *"
     },

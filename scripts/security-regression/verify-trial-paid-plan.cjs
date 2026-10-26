@@ -182,8 +182,10 @@ async function postCheckout(api) {
     const a = {}, b = {}
     await postCheckout(loadCheckout(mod, dbUser('FREE', []), a))
     await loadEligibility(mod, dbUser('FREE', []), b).GET()
-    const { id, ...checkoutRest } = a.select
+    // stripePriceId は、新しい料金の据え置きの見分け（src/lib/pricing-v2/view.ts）に使う（2026-10-25）。トライアルの判定には使わない
+    const { id, stripePriceId, ...checkoutRest } = a.select
     assert.equal(id, true)
+    assert.equal(stripePriceId, true)
     sameShape(checkoutRest, b.select)
     sameShape(b.select, mod.TRIAL_USER_SELECT)
   })

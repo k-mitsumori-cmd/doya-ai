@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && tsc --noEmit && next build",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && npm run test:pricing && npm run test:support-chat && npm run test:health-check && tsc --noEmit && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -23,12 +23,15 @@
     "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts src/lib/expense/members.test.ts",
     "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts src/lib/doya-power/charge.test.ts src/lib/doya-power/voice.test.ts src/lib/doya-power/count.test.ts src/lib/doya-power/history.test.ts src/lib/doya-power/retry.test.ts src/lib/doya-power/whatyoucando.test.ts src/components/doya-power/insufficient.test.ts src/lib/collection/collection.test.ts src/lib/missions/missions.test.ts",
     "test:shell": "tsx --test src/components/shell/registry.test.ts",
-    "test:agent": "tsx --test src/lib/agent-orchestration/runner.test.ts src/lib/agent-orchestration/tools.test.ts src/lib/agent-orchestration/plan.test.ts",
+    "test:agent": "tsx --test src/lib/shodan/clean-text.test.ts src/lib/agent-orchestration/runner.test.ts src/lib/agent-orchestration/tools.test.ts src/lib/agent-orchestration/plan.test.ts src/lib/agent-orchestration/runs.test.ts src/lib/agent-orchestration/failures.test.ts",
     "test:slack": "tsx --test src/lib/slack/notify.test.ts",
-    "test:health-check": "tsx --test src/lib/health-check-report.test.ts scripts/ci-failure-report.test.cjs",
+    "test:pricing": "tsx --test src/lib/pricing-v2/pricing-v2.test.ts src/lib/pricing-v2/team.test.ts src/lib/pricing-v2/upsell.test.ts src/lib/pricing-v2/flag-off.test.ts",
+    "test:support-chat": "tsx --test src/lib/support-chat/support-chat.test.ts",
+    "test:health-check": "tsx --test src/lib/health-check-report.test.ts scripts/ci-failure-report.test.cjs src/lib/system-watch/decide.test.ts src/lib/system-watch/http.test.ts src/lib/system-watch/checks.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.133.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

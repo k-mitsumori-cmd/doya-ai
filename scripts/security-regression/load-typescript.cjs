@@ -4,5 +4,17 @@ function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.tra
 // ドヤパワーの減らす包み（src/lib/doya-power/charge.ts）と音声の部品（voice.ts）は、各サービスのテストでは「減らさない」（旗が off と同じ）として通す。
 // 減らす動きそのものは src/lib/doya-power/charge.test.ts が台帳（memory-db）で確かめる（2026-10-23）
 const DEFAULT_MOCKS={'@/lib/shodan/ai-quota':{shodanAiLimitFor:()=>600,reserveShodanAi:async()=>({ok:true,used:1,key:'shodan-ai-quota:v1:org:2026-10'}),refundShodanAi:async()=>{},shodanAiLimitResponse:(limit,canManageBilling)=>({error:'limit',code:'LIMIT',canManageBilling})},'@/lib/doya-power/voice':{voiceCharger:{hold:async()=>({kind:'skip'}),allowance:async()=>null,settle:async()=>{},target:async()=>null},voiceTokenKey:(p)=>p+'-key'},'@/lib/doya-power/voice-core':{voiceChargeMinutes:(d)=>(Number.isFinite(d)&&d>0?Math.ceil(d):10)+3,voiceActualMinutes:()=>0,VOICE_CHARGE_GRACE_MINUTES:3},'@/lib/doya-power/flag':{doyaPowerRollout:()=>'off',isDoyaPowerEnabled:async()=>false,doyaPowerLedgerAllowed:()=>false},'@/lib/doya-power/charge':{withDoyaPowerCharge:(_spec,h)=>h,intIn:(v,min,max,f)=>{const n=typeof v==='number'?v:Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,Math.floor(n))):f},doyaPowerCharger:{charge:async()=>({kind:'skip'}),run:(o,fn)=>fn(),shellState:async()=>null,balanceView:async()=>null}}};
+// 新しい料金（src/lib/pricing-v2）は、本物の計算をそのまま使う。環境変数は空なので、価格は「未設定」、旗は off（今の料金のまま）として動く（2026-10-25）
+const lazyReal=(name,make)=>{let v;Object.defineProperty(DEFAULT_MOCKS,name,{enumerable:true,get(){return v??=make()}})};
+lazyReal('@/lib/pricing-v2/plans',()=>load('src/lib/pricing-v2/plans.ts'));
+lazyReal('@/lib/pricing-v2/prices',()=>load('src/lib/pricing-v2/prices.ts'));
+lazyReal('@/lib/pricing-v2/view',()=>load('src/lib/pricing-v2/view.ts',{'@/lib/unified-plan':load('src/lib/unified-plan.ts')}));
+lazyReal('@/lib/pricing-v2/amount',()=>load('src/lib/pricing-v2/amount.ts'));
+lazyReal('@/lib/pricing-v2/team',()=>load('src/lib/pricing-v2/team.ts',{'./plans':DEFAULT_MOCKS['@/lib/pricing-v2/plans']}));
+// チームの表を読むサーバーの部品は、旗が off と同じ動き（表を読まない）にする
+lazyReal('@/lib/pricing-v2/team.server',()=>({teamTablesAllowed:()=>false,teamSeatsForCompany:async()=>null,teamSeatsUsed:async()=>1,resolveCompanyForUser:async()=>null,ownerTeamContext:async()=>null,readOwnerTeamSubscription:async()=>null,saveSeatCache:async()=>{}}));
+lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',reportPowerPackFailure:async()=>true,fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));
+lazyReal('@/lib/pricing-v2/starter.server',()=>({starterTablesAllowed:()=>false,ensureStarterGrant:async()=>({granted:0,decision:{ok:false,reason:'flag_off'}})}));
+lazyReal('@/lib/pricing-v2/rollout',()=>load('src/lib/pricing-v2/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
 module.exports={load,check,results,DEFAULT_MOCKS};

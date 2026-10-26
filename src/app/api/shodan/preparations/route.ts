@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
-import { researchCompany } from '@/lib/shodan/research'
+import { researchCompany, researchFailureMessage } from '@/lib/shodan/research'
 import { isCompanyResearch } from '@/lib/shodan/research-response'
 import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
@@ -88,6 +88,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const targetUrl = normalizeUrl(body?.url)
   if (!targetUrl) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
+  // 会社名（任意）。サイトが読めないときに、会社名で調べ直すために使う（FAILURE-CHECKLIST.md S21）
+  if (body?.companyName != null && (typeof body.companyName !== 'string' || body.companyName.length > 100)) {
+    return NextResponse.json({ error: '会社名は100文字以内で入力してください' }, { status: 400 })
+  }
+  const companyName = typeof body?.companyName === 'string' ? body.companyName.trim() || undefined : undefined
 
   // プラン制限（組織単位・月次）
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
@@ -168,30 +173,47 @@ export async function POST(req: NextRequest) {
 
   // 外部調査は組織ロックを解放してから実行する。
   const prep = reservation.prep
+  let stage: 'research' | 'save' = 'research'
+  let noFacts: Awaited<ReturnType<typeof researchCompany>> | null = null
 
   try {
     // フェーズ1: 深掘りリサーチのみ（提案生成は /[id]/generate で実行）。
     // リサーチ結果を即返すことで、画面に「実際に調べた内容」を表示できる。
-    const research = await researchCompany(targetUrl)
+    stage = 'research'
+    const research = await researchCompany(targetUrl, { companyName })
     // 不正な調査結果を保存すると、成功表示と月次枠の両方が誤って確定する。
     if (!isCompanyResearch(research)) throw new Error('invalid company research response')
     // 企業情報を一切取得できなかった調査は成功扱いにせず、月次枠を消費しない。
+    // 何が原因で、どうすればよいか（会社名で調べ直す など）を、診断から具体的に返す。
+    // ⚠️ 枠を減らさない失敗は、サイトを読めなかったとき（AI を呼んでいない）だけ。サイトが読めて AI を呼んだのに
+    //    何も分からなかったときは、今までどおり成功として保存し枠を数える（失敗を繰り返して AI を無料で呼べないように）
     if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
+      noFacts = research
       throw new Error('company research yielded no usable facts')
     }
+    stage = 'save'
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
       data: { research: research as any, targetName: research.companyName || null, status: 'researched' },
     })
     return NextResponse.json({ id: prep.id, status: 'researched', research })
-  } catch {
-    console.error('[shodan/preparations] research failed')
+  } catch (e) {
+    // 原因を後で追えるよう、例外の名前とコード（Prisma の P2xxx・Postgres の 22P05 など）と段階を残す。URL や本文は残さない
+    const err = e as { name?: string; code?: string; meta?: { code?: string } }
+    console.error('[shodan/preparations] research failed', { stage, name: err?.name, code: err?.code ?? err?.meta?.code, reason: noFacts?.diagnostics?.homepage && !noFacts.diagnostics.homepage.ok ? noFacts.diagnostics.homepage.reason : undefined })
+    const message = noFacts
+      ? researchFailureMessage(noFacts.diagnostics)
+      : stage === 'save'
+        ? '調査の結果を保存できませんでした。時間をおいてやり直してください。今月の利用枠は減っていません。'
+        : '企業調査に失敗しました。URLを確認して、もう一度お試しください。今月の利用枠は減っていません。'
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { status: 'failed', errorMessage: '企業調査に失敗しました。URLを確認して再実行してください。' },
+      data: { status: 'failed', errorMessage: message.slice(0, 500) },
     }).catch(() => {})
     // 調査の失敗は「結果が確定した失敗」。failed は月次枠に数えない（上の usedThisMonth を参照）ので、
     // 枠は消費されず、そのままやり直せる。5xx にすると画面が「結果不明」とみなして止まるため 422 で返す。
-    return NextResponse.json({ id: prep.id, status: 'failed', code: 'RESEARCH_FAILED', retryable: true, error: '企業調査に失敗しました。URLを確認して、もう一度お試しください。今月の利用枠は減っていません。' }, { status: 422 })
+    const d = noFacts?.diagnostics
+    const reason = d ? (d.homepage.ok ? (d.jsRendered ? 'js_rendered' : 'no_facts') : d.homepage.reason) : stage === 'save' ? 'save' : 'unknown'
+    return NextResponse.json({ id: prep.id, status: 'failed', code: 'RESEARCH_FAILED', reason, retryable: true, error: message }, { status: 422 })
   }
 }

@@ -38,8 +38,11 @@ export type ChargeDeps = {
   rollout: () => string
   /** 今の人にドヤパワーを出すか（preview の許可を含む） */
   isEnabled: () => Promise<boolean>
-  /** セッションの本人の会社とプラン。会社が未登録なら null */
-  account: () => Promise<{ companyId: string; plan: string | null } | null>
+  /**
+   * セッションの本人の会社とプラン。会社が未登録なら null。
+   * monthlyGrant は、新しい料金（旗 NEW_PRICING_ROLLOUT の対象）の毎月の量。対象でなければ無い（ゲージの上限は今までどおり）
+   */
+  account: () => Promise<{ companyId: string; plan: string | null; monthlyGrant?: number | null } | null>
   ledger: ChargeLedger
   isPaidPlan: (plan?: string | null) => boolean
   now?: () => Date
@@ -72,9 +75,13 @@ function jstLabel(d: Date): string {
   return `${j.getUTCMonth() + 1}月${j.getUTCDate()}日 ${j.getUTCHours()}:${String(j.getUTCMinutes()).padStart(2, '0')}`
 }
 
-/** 枠のゲージの「上限」。有料の人は毎月の付与の量、無料の人は回復で貯まる上限（残りがそれより多ければ残り） */
-export function gaugeLimit(total: number, plan: string | null, isPaidPlan: (p?: string | null) => boolean): number {
-  return Math.max(total, isPaidPlan(plan) ? SOLO_PRO_MONTHLY_GRANT : DAILY_RECOVERY_CAP)
+/**
+ * 枠のゲージの「上限」。有料の人は毎月の付与の量、無料の人は回復で貯まる上限（残りがそれより多ければ残り）。
+ * monthlyGrant（新しい料金の対象の人の毎月の量）を渡したときは、有料の人の基準をそれにする
+ */
+export function gaugeLimit(total: number, plan: string | null, isPaidPlan: (p?: string | null) => boolean, monthlyGrant?: number | null): number {
+  const paidBase = typeof monthlyGrant === 'number' && monthlyGrant > 0 ? monthlyGrant : SOLO_PRO_MONTHLY_GRANT
+  return Math.max(total, isPaidPlan(plan) ? paidBase : DAILY_RECOVERY_CAP)
 }
 
 export function createDoyaPowerCharger(deps: ChargeDeps) {
@@ -83,7 +90,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
   const log = deps.log ?? ((msg, info) => console.error(msg, info))
 
   /** 減らす相手（会社とプラン）。減らさない人なら null。off なら何も読まない */
-  async function target(): Promise<{ companyId: string; plan: string | null } | null> {
+  async function target(): Promise<{ companyId: string; plan: string | null; monthlyGrant?: number | null } | null> {
     if (deps.rollout() === 'off') return null
     if (!(await deps.isEnabled())) return null
     return deps.account()
@@ -159,7 +166,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
               code: 'DOYA_POWER_INSUFFICIENT',
               balance: r.balance,
               required: amount,
-              limit: gaugeLimit(r.balance, who.plan, deps.isPaidPlan),
+              limit: gaugeLimit(r.balance, who.plan, deps.isPaidPlan, who.monthlyGrant),
               recoveryAmount: DAILY_RECOVERY_AMOUNT,
               nextRecoveryAt: next.toISOString(),
             },
@@ -218,7 +225,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
       const b = await deps.ledger.balance(who.companyId)
       if (!b) return null
-      return { balance: { remaining: b.total, limit: gaugeLimit(b.total, who.plan, deps.isPaidPlan) }, costs: {} }
+      return { balance: { remaining: b.total, limit: gaugeLimit(b.total, who.plan, deps.isPaidPlan, who.monthlyGrant) }, costs: {} }
     } catch (e) {
       log('[doya-power] balance failed', { name: (e as { name?: string })?.name, code: (e as { code?: string })?.code })
       return null
@@ -234,7 +241,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     if (!b) return null
     return {
       remaining: b.total,
-      limit: gaugeLimit(b.total, who.plan, deps.isPaidPlan),
+      limit: gaugeLimit(b.total, who.plan, deps.isPaidPlan, who.monthlyGrant),
       byKind: b.byKind,
       nextRecoveryAt: b.nextRecoveryAt ? b.nextRecoveryAt.toISOString() : null,
       nextExpiry: b.nextExpiry ? { at: b.nextExpiry.at.toISOString(), amount: b.nextExpiry.amount } : null,

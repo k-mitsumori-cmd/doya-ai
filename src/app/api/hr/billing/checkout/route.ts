@@ -12,6 +12,9 @@ import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
+import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
+import { newPricingPriceIds } from '@/lib/pricing-v2/prices'
+import { decideLegacyPlanCheckout, subscriberKind } from '@/lib/pricing-v2/view'
 
 // HR用Stripe価格IDマッピング（統一課金のSTRIPE_PRICE_IDSから取得）
 const HR_PLAN_PRICES: Record<string, { monthly: string; yearly: string }> = {
@@ -66,10 +69,18 @@ export async function POST(req: NextRequest) {
     // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { stripeCustomerId: true, email: true, name: true },
+      select: { stripeCustomerId: true, email: true, name: true, plan: true, stripePriceId: true },
     })
     if (!dbUser) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+    }
+    // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプランを新しく売らない（据え置きの人のプラン変更は通す）
+    const legacyDecision = decideLegacyPlanCheckout({
+      enabled: isNewPricingEnabledFor(dbUser.email || user.email),
+      kind: subscriberKind({ plan: dbUser.plan, stripePriceId: dbUser.stripePriceId, newPriceIds: newPricingPriceIds() }),
+    })
+    if (!legacyDecision.ok) {
+      return NextResponse.json({ code: legacyDecision.code, error: 'このプランの新しいお申し込みは終了しました。料金ページのチームプランをご覧ください。' }, { status: legacyDecision.status })
     }
     const expectedEmail = String(dbUser.email || user.email || '').trim().toLowerCase()
     if (!expectedEmail) {

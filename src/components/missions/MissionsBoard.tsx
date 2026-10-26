@@ -132,7 +132,7 @@ function MissionsBody({ view, canEditOrgFx, sample }: { view: MissionsView; canE
                   <p className={styles.itemTitle}>{q.title}</p>
                   <p className={styles.itemSub}>{q.condition}</p>
                 </div>
-                <span className={styles.reward}>+{q.reward}</span>
+                {q.reward > 0 ? <span className={styles.reward}>+{q.reward}</span> : null}
               </li>
             ))}
           </ul>

@@ -15,6 +15,16 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
 
 // ============================================================
+// 呼び出しごとの Claude のモデル（2026-10-26 ユーザー承認。経営ホームのエージェントの AI の使い分け）
+// ============================================================
+// 決まった形の下書き（見積の品目の案・スライドの構成）は軽いモデル、作戦づくりは頭を使うモデル。
+// 呼び出し側が claudeModel を渡したときだけ使う。渡さなければ今までどおり CLAUDE_MODEL_DEFAULT。
+// 2026-10-26 に実 API で生存を確かめた（claude-haiku-5-5・claude-sonnet-5-5 とも 200）。
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §11.9
+export const CLAUDE_MODEL_LIGHT = process.env.SEO_CLAUDE_LIGHT_MODEL || 'claude-haiku-5-5'
+export const CLAUDE_MODEL_PLAN = process.env.SEO_CLAUDE_PLAN_MODEL || 'claude-sonnet-5-5'
+
+// ============================================================
 // 出力トークンの上限（2026-10-19 費用削減）
 // ============================================================
 // 呼び出し側が generationConfig.maxOutputTokens を渡さないときは既定の 4,096 を使う。
@@ -132,14 +142,14 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
 async function generateTextWithClaude(
   prompt: string,
   budget: RequestBudget,
-  options?: { temperature?: number; maxTokens?: number; system?: string }
+  options?: { temperature?: number; maxTokens?: number; system?: string; model?: string }
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません。Claude APIを使用するにはANTHROPIC_API_KEYが必要です。')
   }
 
-  const model = CLAUDE_MODEL_DEFAULT
+  const model = options?.model || CLAUDE_MODEL_DEFAULT
   const maxTokens = resolveMaxOutputTokens(options?.maxTokens)
 
   const systemPrompt = options?.system ??
@@ -291,6 +301,8 @@ type GeminiPart =
 
 interface GenerateContentRequest {
   model: string
+  /** Claude を先に使うときのモデル（無ければ CLAUDE_MODEL_DEFAULT）。CLAUDE_MODEL_LIGHT / CLAUDE_MODEL_PLAN を渡す */
+  claudeModel?: string
   parts: GeminiPart[]
   generationConfig?: {
     temperature?: number
@@ -573,6 +585,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       const result = await generateTextWithClaude(promptText, budget, {
         temperature,
         maxTokens: requestedTokens,
+        model: req.claudeModel,
       })
       if (result) return result
       console.warn('[Claude] Primary returned empty, falling back to Gemini...')
@@ -707,6 +720,7 @@ export async function geminiGenerateJson<T>(
 
   const text = await geminiGenerateText({
     model: req.model,
+    claudeModel: req.claudeModel,
     parts: [{ text: strictPrompt }],
     generationConfig: { ...(req.generationConfig || {}), maxOutputTokens },
   })
@@ -742,6 +756,7 @@ export async function geminiGenerateJson<T>(
 
           const fixedText = await geminiGenerateText({
             model: req.model,
+            claudeModel: req.claudeModel,
             parts: [{ text: fixPrompt }],
             generationConfig: { temperature: 0, maxOutputTokens },
           })

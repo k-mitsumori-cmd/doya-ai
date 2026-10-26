@@ -54,6 +54,8 @@ async function fixture(kind) {
     'framer-motion': { AnimatePresence: ({ children }) => children, motion: { div: ({ children }) => React.createElement('div', null, children) } },
     'react-hot-toast': { __esModule: true, default: { error: inert, success: inert, loading: inert }, Toaster: inert },
     '@/components/UnifiedPricingPlans': { UnifiedPricingPlans: inert },
+    // 新しい料金の旗（NEW_PRICING_ROLLOUT）は off と同じ。今のプロの申し込みと再同期のボタンを確かめる（2026-10-25）
+    '@/components/pricing/useNewPricing': { useNewPricing: () => false },
   };
   const location = { reload: () => { if (callbackFails) throw Error('synthetic private callback error'); navigations.push('reload'); } };
   const windowMock = { location, dispatchEvent: event => { if (callbackFails) throw Error('synthetic private callback error'); events.push(event); return true; } };
