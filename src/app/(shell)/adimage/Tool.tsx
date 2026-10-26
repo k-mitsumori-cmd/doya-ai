@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useSession } from 'next-auth/react'
+import { FEEDBACK_ITEM_MAX, feedbackTotalMax } from '@/lib/adimage/score-max'
 import { useAdImageRecovery } from '@/lib/adimage/use-operation-recovery'
 import type { AdImageLogoContext } from '@/lib/adimage/logo-context'
 import type { AdImageResult } from '@/lib/adimage/operation-client'
@@ -1074,7 +1075,7 @@ export default function AdImageTool() {
                     <p className="text-lg font-black text-[#0a0f3c]">AIの採点</p>
                     <p className="text-3xl font-black leading-none text-[#0066ff]">
                       {scores.total}
-                      <span className="ml-1 text-base font-black text-[#8a94ad]">/ 25</span>
+                      <span className="ml-1 text-base font-black text-[#8a94ad]">/ {feedbackTotalMax()}</span>
                     </p>
                   </div>
 
@@ -1089,13 +1090,13 @@ export default function AdImageTool() {
                       <div key={label as string} className="animate-ai-feedback" style={{ ['--stagger' as string]: `${idx * 70}ms` } as CSSProperties}>
                         <div className="flex items-baseline justify-between">
                           <span className="text-sm font-black text-[#425071]">{label}</span>
-                          <span className="text-sm font-black text-[#0a0f3c]">{v} / 5</span>
+                          <span className="text-sm font-black text-[#0a0f3c]">{v} / {FEEDBACK_ITEM_MAX}</span>
                         </div>
                         <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-white ring-1 ring-[#e3edff]">
                           <div
                             className="animate-score-bar h-full rounded-full"
                             style={{
-                              ['--score-w' as string]: `${(Number(v) / 5) * 100}%`,
+                              ['--score-w' as string]: `${(Number(v) / FEEDBACK_ITEM_MAX) * 100}%`,
                               ['--stagger' as string]: `${idx * 70 + 120}ms`,
                               backgroundImage: 'linear-gradient(90deg, #0066ff, #00e0ff)',
                             } as CSSProperties}
