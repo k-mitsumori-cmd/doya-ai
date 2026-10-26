@@ -54,7 +54,7 @@
 |---|---|---|
 | UIリニューアル（このセッション） | 部署の表・旗・メニューの並び・経営ホームの部署の切り替え・ドヤくんの例 | `src/lib/departments.ts`（新）、`src/lib/departments/flag.ts`（新）、`src/components/shell/tools.ts`・`AppShell.tsx`、`src/components/home-agent/*`、`src/app/(shell)/home/*` |
 | 権限の担当（local_21ded680） | メンバーごとの部署（表の列・API・管理画面での設定） | 権限の正本のファイル。部署の値は `departments.ts` の id を使う |
-| 新料金の担当（local_f6301b2d） | はじめの設定の画面で「主に使う部署」を選ぶ | はじめの設定の部品。保存した値は、UI が読む API（または cookie）で渡す |
+| UIリニューアル（このセッション。2026-10-26 にメインが割り振り直した） | はじめの設定（会社情報の画面）で「主に使う部署」を選ぶ | `src/components/shell/CompanyDialog.tsx`、`src/app/api/account/departments/route.ts`（新）。`/api/account/company` と `company.server.ts` は触らない |
 
 - 部署の値の受け渡しの形は、`{ primary: DepartmentId[]; all: boolean }` にそろえます（all は社長・管理者）。
 - DB の表を変える（部署の列を足す）ときは、`doya-db-push` の手順と、統括を通したユーザーの承認が要ります。段1では、DB を変えずに、はじめの設定の選択を cookie に残し、メニューの並びだけを変えます。
@@ -64,6 +64,15 @@
 | 段階 | 中身 | DB |
 |---|---|---|
 | 1 | 部署の表・旗・メニューの見出しと並び・経営ホームの部署の切り替え・部署ごとの例 | 変えない（選択は cookie） |
-| 2 | はじめの設定で部署を選ぶ（新料金の担当） | 変えない |
+| 2 | はじめの設定で部署を選ぶ（UIリニューアル。会社情報の画面のチップ → `PUT /api/account/departments` → cookie） | 変えない |
 | 3 | 社員ごとの部署（権限の担当） | 列を足す（承認のあと） |
 | 4 | 部署ごとの数字と、最近の作業 | 変えない |
+
+## 8. 段2の作り（2026-10-26）
+
+- 会社情報の画面（`CompanyDialog`）に「主に使う部署」のチップを出す。複数を選べる。
+- 画面を開くと `GET /api/account/departments` を読む。旗が off の人には 404 を返し、部署の欄そのものを出さない。
+- 保存すると、会社情報を保存したあとに `PUT /api/account/departments` で選択を送る。サーバーは cookie `doya_departments` に書く。
+- cookie の属性: Path=/、SameSite=Lax、Max-Age=1年、HttpOnly、本番では Secure。何も選ばないときは cookie を消す。
+- 知らない id は捨て、同じものは1つにまとめる（`parseDepartmentsCookie`）。DB には書かない。
+- 段3では、権限の担当の `getMemberDepartments()`（`src/lib/company-roles/departments.server.ts`）の値を、cookie より先に使う。
