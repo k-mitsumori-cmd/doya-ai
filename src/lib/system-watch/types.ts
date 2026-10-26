@@ -17,6 +17,8 @@ export type CheckOutcome = {
   detail?: string
   /** 旗の値など、変化を知らせたい値。失敗とは別に扱う */
   observed?: string
+  /** 前提がそろわず回さなかった（有料の確認では費用に数えない） */
+  skipped?: boolean
 }
 
 export type CheckDef = {

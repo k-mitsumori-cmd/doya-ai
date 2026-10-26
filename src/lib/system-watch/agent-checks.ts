@@ -113,7 +113,7 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
       run: async (): Promise<CheckOutcome> => {
         // 1つ目は B1 が読むので、2つ目と3つ目だけを読む（1URL 1日1回まで）
         const samples = (await sampleCompanies()).slice(1)
-        if (!samples.length) return { ok: true, detail: '見本が1つしか無いため回していない' }
+        if (!samples.length) return { ok: true, skipped: true, detail: '見本が1つしか無いため回していない' }
         const { researchCompany } = await import('@/lib/shodan/research')
         const bad: string[] = []
         const lines: string[] = []
@@ -142,7 +142,9 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
       hints: ['落ちた ToDo の札（cause と actions）を見る。会社の調査なら "[shodan/preparations] research failed" の stage・code・reason を見る', '402 ならテスト用の会社のドヤパワーが足りない。429 なら同時に動かす数の上限', 'テスト用のユーザーが UI_PREVIEW_EMAILS に入っているか（旗が preview のとき）を見る'],
       run: async (): Promise<CheckOutcome> => {
         const url = (await sampleCompanies())[0]?.url
-        if (!url) return { ok: true, detail: '見本の URL が無いため回していない' }
+        if (!url) return { ok: true, skipped: true, detail: '見本の URL が無いため回していない' }
+        // テスト用のアカウントができるまでは回さない（毎日「未設定」で知らせない。費用にも数えない）
+        if (!process.env.SYSTEM_WATCH_TEST_USER_ID) return { ok: true, skipped: true, detail: 'テスト用のアカウント（SYSTEM_WATCH_TEST_USER_ID）が未設定のため回していない' }
         const answers = { url, offer: 'web', budget: 'u50', stage: 'first' }
         const outcomes = await withTestUserSession(async cookie => Promise.all((['research', 'quote', 'slides'] as const).map(async (taskId): Promise<TaskOutcome> => {
           try {
