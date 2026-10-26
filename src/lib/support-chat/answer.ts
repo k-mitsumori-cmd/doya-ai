@@ -1,12 +1,11 @@
 // ============================================
 // サポートチャットの答えを作る
 // ============================================
-// 本物の AI は gemini.ts（gemini-2.5-flash。2026-10-26 ユーザー承認）。モックはテストと、AI が使えないときの代わりに残す。
-// SUPPORT_CHAT_AI=mock で、いつでもモックに戻せる。キーが無いときもモック。
+// 本物の AI は claude.ts（Claude Haiku 5.5。2026-10-26 ユーザー決定）。どれを使うかは select.ts（サーバーだけ）が決める。
+// モックはテストと、AI が使えないときの代わりに残す。⚠️ このファイルは画面の確認ページからも読むので、SDK を import しない。
 // ⚠️ どの答え方でも、最後に answerNeedsStaff() を通す。材料に無い話は「分からない」で返す。
 import { knowledgeEntries, toolNameOf, type KnowledgeEntry, type SupportSource } from './knowledge'
 import { answerNeedsStaff, routeQuestion, SUPPORT_CATEGORY_LABEL, type SupportCategory } from './rules'
-import { createGeminiAnswerer, geminiApiKey } from './gemini'
 
 export type ChatTurn = { role: 'user' | 'assistant'; text: string }
 
@@ -88,11 +87,6 @@ export function staffText(category: SupportCategory): string {
   return `${label}のご相談は、運営の担当者がお答えします。下の「運営に伝える」から、状況をお書きください。`
 }
 
-/** 今使う答え方。SUPPORT_CHAT_AI=mock かキーが無ければモック、それ以外は Gemini */
-export function getSupportAnswerer(mode: string | undefined = process.env.SUPPORT_CHAT_AI, key: string = geminiApiKey()): SupportAnswerer {
-  if ((mode ?? '').trim().toLowerCase() === 'mock' || !key) return mockAnswerer
-  return createGeminiAnswerer({ apiKey: key })
-}
 
 /**
  * 答えを作り、最後に安全の確かめをかける（答え方が本物の AI でも、この関数を通す）。
