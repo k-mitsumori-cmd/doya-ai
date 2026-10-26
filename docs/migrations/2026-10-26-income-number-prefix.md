@@ -6,6 +6,20 @@
 
 同じ日の `2026-10-26-income-contract-no-unique.md`（契約番号の一意の索引）と一緒に流してよい。どちらも追加だけで、既存の行は書き換えない。
 
+流す順番（統括の点検 2026-10-26）: 列の確認 → ALTER（2 列）→ 契約番号の重なりの確認（0 行のはず）→ 一意の索引 → main に push。
+
+### 列が無いままコードを出したときに失敗する所
+
+Prisma は `select` を付けない読み取りで全部の列を読むため、`income_issuers` を読む所はすべて 500 になる。
+
+| 場所 | 使っている画面・機能 |
+|---|---|
+| `src/lib/income/invoices.ts` の `termsFor`（42 行目） | 請求書の作成（手入力・月次売上からのまとめての作成）、下書きの更新、確定。エージェント道具の `income.draftInvoice` と `income.issueInvoice` も同じ関数を通る |
+| `src/lib/income/contracts.ts`（155 行目） | 契約の登録で、契約番号を自動で振るとき |
+| `src/app/api/income/issuer/route.ts`（GET・PUT） | 設定の請求元の表示と保存、ダッシュボードの「はじめの 3 ステップ」 |
+| `src/app/api/income/organization/route.ts`（GET） | 設定の画面（組織と支出の取り込み元） |
+| `src/app/api/income/invoices/[id]/route.ts`（GET） | 下書きの請求書の詳細（請求元のプレビュー） |
+
 ## 1. 反映前の確認（読み取りだけ）
 
 ```sql

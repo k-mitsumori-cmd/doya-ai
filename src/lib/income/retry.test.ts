@@ -2,7 +2,7 @@
 // 請求書の確定で、同時実行の衝突（P2002 / P2034）をやり直すこと（INC-F03）
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isRetryableTxError, runWithTxRetry } from './retry'
+import { isRetryableTxError, retryDelayMs, runWithTxRetry } from './retry'
 import { confirmInvoiceWithRetry } from './invoices'
 import { IncomeError, type IncomeContext } from './access'
 
@@ -68,4 +68,18 @@ test('確定 API・エージェント道具の確定は、年初の同時確定�
   assert.equal((inv as { invoiceNo: string }).invoiceNo, 'INV-2027-0002')
   assert.equal(calls, 2)
   assert.deepEqual(isolation, ['Serializable', 'Serializable'])
+})
+
+test('やり直す前に少し待つ。回数ごとに長くし、少しずらす', async () => {
+  assert.equal(retryDelayMs(1, () => 0.5), 25)
+  assert.equal(retryDelayMs(2, () => 0.5), 50)
+  assert.ok(retryDelayMs(1, () => 0) < retryDelayMs(1, () => 0.99))
+  const waits: number[] = []
+  let calls = 0
+  await runWithTxRetry(async () => {
+    calls++
+    if (calls < 3) throw err('P2034')
+    return 'ok'
+  }, 3, async (ms) => { waits.push(ms) })
+  assert.equal(waits.length, 2)
 })
