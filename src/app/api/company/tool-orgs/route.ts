@@ -52,8 +52,8 @@ export async function DELETE(req: NextRequest) {
     const q = new URL(req.url).searchParams
     const tool = q.get('tool'), organizationId = q.get('organizationId') ?? ''
     if (!isToolId(tool) || !organizationId || organizationId.length > 128) return json({ error: 'ツールと組織を選び直してください。' }, 400)
-    const d = await unlinkToolOrg({ companyId: s.companyId, actorIsAdmin: hasMinCompanyRole(s.role, 'admin'), tool, organizationId })
-    if (!d.ok) return json({ code: d.code, error: d.code === 'NOT_ALLOWED' ? 'つながりを外せるのは、管理者とオーナーです。' : 'この会社につながった組織が見つかりませんでした。' }, d.status)
+    const d = await unlinkToolOrg({ companyId: s.companyId, actorIsOwner: s.role === 'owner', tool, organizationId })
+    if (!d.ok) return json({ code: d.code, error: d.code === 'NOT_ALLOWED' ? 'つながりを外せるのは、オーナーだけです。' : 'この会社につながった組織が見つかりませんでした。' }, d.status)
     const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
     await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_unlinked', fromRole: null, toRole: null, note: `${tool}:${organizationId}` }))
     return json({ ok: true })

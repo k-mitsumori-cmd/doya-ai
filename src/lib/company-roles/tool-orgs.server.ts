@@ -5,7 +5,8 @@
 // 決まり（統括の再監査 2026-10-26 中A・中B を受けて、つながりを表に持つ形にした）:
 // - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）が正。つながりは消えない・移らない。
 // - 表に無い組織は、作った人（いちばん古いメンバーの行。プロマネはワークスペースの作成者）が会社の持ち主で、今も最上位の役割で組織にいるときだけ、初めて判定したときにつなぐ（自動）。
-// - 会社の管理者以上は、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら記録に残す。
+// - 会社のオーナーだけが、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら記録に残す。
+// - 作った人が引き継いだあとの組織は表につながず、作った人の会社の社員にだけ、その会社の役割を当てる（linked: false）。
 //   作った人が会社の持ち主でない組織（社員が自分で作った組織・会社を持たない人の組織）は、どの会社にもつながない。上限も決まりも当てない。
 // - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
 import { prisma } from '@/lib/prisma'
@@ -46,20 +47,25 @@ export async function toolOrgCreator(tool: ToolId, organizationId: string): Prom
   return row?.userId ?? null
 }
 
-/** ツールの組織が属する会社（つながっていなければ null） */
-export async function companyOfToolOrg(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string } | null> {
+/**
+ * ツールの組織が属する会社（つながっていなければ null）。
+ * linked: false は「表にはつないでいないが、作った人の会社が分かる」組織（作った人が引き継いだあと）。
+ * この組織では、その会社の持ち主とメンバーにだけ会社の役割を当て、会社に入っていない人には当てない（access.ts）。
+ */
+export async function companyOfToolOrg(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string; linked: boolean } | null> {
   const link = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
   if (link) {
     const company = await prisma.accountCompany.findUnique({ where: { id: link.companyId }, select: { id: true, userId: true } })
-    return company ? { companyId: company.id, ownerUserId: company.userId } : null
+    return company ? { companyId: company.id, ownerUserId: company.userId, linked: true } : null
   }
   // 表に無い: 作った人が会社の持ち主なら、その会社につなぐ（初めの1回だけ。同時でも1つにまとまる）
   const creator = await toolOrgCreator(tool, organizationId)
   if (!creator) return null
   const own = await prisma.accountCompany.findUnique({ where: { userId: creator }, select: { id: true, userId: true } })
   if (!own) return null
-  // 作った人が今も最上位の役割で組織にいるときだけ、自動でつなぐ（引き継いだあとの組織を、前の持ち主の会社につながない。自動の点検の指摘）
-  if (!(await isToolOrgTopMember(tool, organizationId, creator))) return null
+  // 作った人が今も最上位の役割で組織にいるときだけ、自動でつなぐ（引き継いだあとの組織を、前の持ち主の会社につながない）。
+  // つながないときも「作った人の会社」は返し、その会社の社員には上限を当てる（社員が最上位を引き継いで上限を外すことを防ぐ。自動の点検の指摘 2026-10-26）
+  if (!(await isToolOrgTopMember(tool, organizationId, creator))) return { companyId: own.id, ownerUserId: own.userId, linked: false }
   try {
     const row = await prisma.accountCompanyToolOrg.upsert({
       where: { tool_organizationId: { tool, organizationId } },
@@ -69,16 +75,16 @@ export async function companyOfToolOrg(tool: ToolId, organizationId: string): Pr
     })
     if (row.companyId !== own.id) {
       const other = await prisma.accountCompany.findUnique({ where: { id: row.companyId }, select: { id: true, userId: true } })
-      return other ? { companyId: other.id, ownerUserId: other.userId } : null
+      return other ? { companyId: other.id, ownerUserId: other.userId, linked: true } : null
     }
   } catch {
     // 同時に作られた（unique の衝突）: 読み直す
     const again = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
     if (!again) return null
     const c = await prisma.accountCompany.findUnique({ where: { id: again.companyId }, select: { id: true, userId: true } })
-    return c ? { companyId: c.id, ownerUserId: c.userId } : null
+    return c ? { companyId: c.id, ownerUserId: c.userId, linked: true } : null
   }
-  return { companyId: own.id, ownerUserId: own.userId }
+  return { companyId: own.id, ownerUserId: own.userId, linked: true }
 }
 
 /** 本人が、そのツールの組織の最上位の役割（ACTIVE）か */
@@ -109,9 +115,9 @@ export async function linkToolOrg(input: { companyId: string; actorUserId: strin
   return { ok: true, created: true }
 }
 
-/** 会社の管理者以上が、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため） */
-export async function unlinkToolOrg(input: { companyId: string; actorIsAdmin: boolean; tool: ToolId; organizationId: string }): Promise<{ ok: true } | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_FOUND' }> {
-  if (!input.actorIsAdmin) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
+/** 会社のオーナーだけが、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため。外すと上限が外れるので、管理者には許さない） */
+export async function unlinkToolOrg(input: { companyId: string; actorIsOwner: boolean; tool: ToolId; organizationId: string }): Promise<{ ok: true } | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_FOUND' }> {
+  if (!input.actorIsOwner) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
   const r = await prisma.accountCompanyToolOrg.deleteMany({ where: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId } })
   return r.count === 1 ? { ok: true } : { ok: false, status: 404, code: 'NOT_FOUND' }
 }

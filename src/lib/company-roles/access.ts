@@ -23,7 +23,7 @@ export interface CompanyRoleDb {
   /** 会社ごとの切り替え（account_company_role_settings.policy）。無ければ null */
   findPolicy?(companyId: string): Promise<unknown | null>
   /** ツールの組織が属する会社（組織の最上位の人＝作った人が持ち主の会社）。分からなければ null */
-  findCompanyOfToolOrg?(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string } | null>
+  findCompanyOfToolOrg?(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string; linked?: boolean } | null>
   /** その会社での、本人のメンバーの行（status = active） */
   findMembershipIn?(userId: string, companyId: string): Promise<{ role: string } | null>
 }
@@ -41,6 +41,8 @@ export async function resolveCompanyRoleForOrg(userId: string, tool: ToolId, org
   if (!org) return null
   if (org.ownerUserId === userId) return { companyId: org.companyId, role: 'owner' }
   const m = db.findMembershipIn ? await db.findMembershipIn(userId, org.companyId) : null
+  // 表にはつないでいない組織（作った人が引き継いだあと）では、会社に入っていない人に上限を当てない
+  if (!m && org.linked === false) return null
   if (!m) return { companyId: org.companyId, role: 'member' }
   return { companyId: org.companyId, role: isMemberRowRole(m.role) ? m.role : 'guest' }
 }
