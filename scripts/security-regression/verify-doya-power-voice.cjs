@@ -68,7 +68,7 @@ const before=(src,a,b,msg)=>{const i=src.indexOf(a),j=src.indexOf(b);assert.ok(i
     assert.match(w,/if \(window\.fetch === watched\) window\.fetch = original/);
     const gate=code('src/components/shell/ShellGate.tsx');
     assert.match(gate,/<DoyaPowerFetchWatcher \/>/);
-    assert.match(gate,/<ShellLowPowerNotice \/>/);
+    assert.match(gate,/<ShellLowPowerNotice(?: handledByNotice=\{[^}]*\})? \/>/);
     assert.match(code('src/lib/doya-power/charge-core.ts'),/recoveryAmount: DAILY_RECOVERY_AMOUNT/);
   });
   console.log(JSON.stringify({scope:'DoyaPower voice wiring and the shared insufficient notice. Static checks; behavior in voice.test.ts and insufficient.test.ts.'}));
