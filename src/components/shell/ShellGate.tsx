@@ -22,6 +22,7 @@ import { DoyaPowerFxProvider } from '@/components/doya-power/fx-context'
 import type { DoyaPowerFx } from '@/lib/doya-power/fx'
 import NoticeProvider from '@/components/notice/NoticeProvider'
 import ShellNotices from '@/components/notice/ShellNotices'
+import HandoffSuggest from '@/components/notice/HandoffSuggest'
 import SupportChat from '@/components/support-chat/SupportChat'
 
 const EMPTY: Record<string, string> = {}
@@ -59,7 +60,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const inner = guide && shown && userKey
-    ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /></NoticeProvider>
+    ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /><HandoffSuggest /></NoticeProvider>
     : framed
   const tree = (
       <AccountCompanyContext.Provider value={company}>

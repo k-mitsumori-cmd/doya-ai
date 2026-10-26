@@ -41,6 +41,11 @@ export default function QuoteDocumentPage() {
     save, load, canApprove, pdfUrl, undoLastSave } = useQuoteDocumentDetail(id)
   // (14) 保存できたら、画面の上の文に加えてトーストでも知らせる（旗 GUIDE_POPUPS_ROLLOUT の内側だけ。off なら何もしない）
   const notice = useNotice()
+  // (7) 最近作った見積書として記録する（次のツールで「材料にしますか」と出すため。中身は残さない）
+  useEffect(() => {
+    if (doc?.id) notice.rememberArtifact({ kind: 'quote', id: doc.id })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc?.id])
   useEffect(() => {
     if (!message) return
     // 「保存しました」のときだけ、6秒のあいだ「取り消す」を出す（保存の前の内容に戻す）

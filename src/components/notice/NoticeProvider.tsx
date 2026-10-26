@@ -17,6 +17,7 @@ import { usePrefersReducedMotion } from '@/components/ds/motion'
 import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
 import { addSeen, loadLevelRaw, loadSeen, saveLevelRaw, saveSeen } from '@/lib/notice/seen'
 import { countsAsDraft, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
+import { addArtifact, loadArtifacts, saveArtifacts, type RecentArtifact } from '@/lib/notice/artifacts'
 import toastStore from 'react-hot-toast'
 import HotToastBridge from './HotToastBridge'
 import styles from './notice.module.css'
@@ -52,10 +53,14 @@ interface NoticeApi {
   /** 知らせの量（ふつう・少なめ・エラーだけ） */
   level: NoticeLevel
   setLevel: (l: NoticeLevel) => void
+  /** 最近作った物を記録する（成果物の受け渡し (7)）。中身も表示名も残さず、種類・id・時刻だけ */
+  rememberArtifact: (a: Omit<RecentArtifact, 'at'>) => void
+  /** 最近作った物（新しい順・3件まで） */
+  recentArtifacts: () => RecentArtifact[]
 }
 
 const noop = () => {}
-const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop, level: 'normal', setLevel: noop })
+const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop, level: 'normal', setLevel: noop, rememberArtifact: noop, recentArtifacts: () => [] })
 
 /** 知らせの部品。旗が off のとき（Provider の外）は、どれも何もしない */
 export function useNotice(): NoticeApi {
@@ -267,8 +272,10 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
     return () => { window.removeEventListener('scroll', off, { capture: true }); window.removeEventListener('resize', off) }
   }, [tipState, hideTip])
 
+  const rememberArtifact = useCallback((a: Omit<RecentArtifact, 'at'>) => { saveArtifacts(userKey, addArtifact(loadArtifacts(userKey), { ...a, at: Date.now() })) }, [userKey])
+  const recentArtifacts = useCallback(() => loadArtifacts(userKey), [userKey])
   const seenSet = useMemo(() => new Set(seen), [seen])
-  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy, level, setLevel }), [ready, push, notify, tip, seenSet, holdBusy, level, setLevel])
+  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy, level, setLevel, rememberArtifact, recentArtifacts }), [ready, push, notify, tip, seenSet, holdBusy, level, setLevel, rememberArtifact, recentArtifacts])
 
   const p = current ? (current.pages ? current.pages[Math.min(page, current.pages.length - 1)] : current) : null
   const last = !current?.pages || page >= current.pages.length - 1

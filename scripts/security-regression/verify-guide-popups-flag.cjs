@@ -22,7 +22,7 @@ check('Guide popups flag: off reads no session, and the shell mounts the notice 
 })
 
 check('Guide popups: the notice parts touch no DB, billing or outside service, and use no emoji', () => {
-  const files = ['src/components/notice/NoticeProvider.tsx', 'src/components/notice/HotToastBridge.tsx', 'src/components/notice/sonner-look.ts', 'src/components/notice/ShellNotices.tsx', 'src/lib/notice/queue.ts', 'src/lib/notice/seen.ts', 'src/lib/notice/announcements.ts']
+  const files = ['src/components/notice/NoticeProvider.tsx', 'src/components/notice/HotToastBridge.tsx', 'src/components/notice/sonner-look.ts', 'src/components/notice/HandoffSuggest.tsx', 'src/lib/notice/artifacts.ts', 'src/components/notice/ShellNotices.tsx', 'src/lib/notice/queue.ts', 'src/lib/notice/seen.ts', 'src/lib/notice/announcements.ts']
   for (const f of files) {
     const src = read(f)
     assert.equal(/@\/lib\/prisma|from 'stripe'|@\/lib\/stripe|https?:\/\/(?!claude\.ai)/.test(src), false, f)
@@ -36,6 +36,26 @@ check('Guide popups: queue, seen and flag rules (node:test)', () => {
   const tsx = path.join(root, 'node_modules/.bin/tsx')
   const r = spawnSync(tsx, ['--test', 'src/lib/notice/notice.test.ts'], { cwd: root, encoding: 'utf8', timeout: 60000 })
   assert.equal(r.status, 0, (r.stdout || '') + (r.stderr || ''))
+})
+
+
+check('Handoff (7): sign-out on any path clears the record, the card does not fetch on display, and the card is mounted only inside the flag', () => {
+  // 統括の点検 2026-10-26 中3
+  const layout = read('src/app/layout.tsx')
+  assert.match(layout, /<ClearArtifactsOnSignOut \/>/)
+  const clear = read('src/components/notice/ClearArtifactsOnSignOut.tsx')
+  assert.match(clear, /status === 'unauthenticated'\) clearAllRecentArtifacts\(\)/)
+  const art = read('src/lib/notice/artifacts.ts')
+  assert.match(art, /export interface RecentArtifact \{ kind: ArtifactKind; id: string; at: number \}/, 'the record keeps no display name')
+  const hs = read('src/components/notice/HandoffSuggest.tsx')
+  const main = hs.slice(hs.indexOf('export default function HandoffSuggest'))
+  assert.equal(/fetch\(/.test(main), false, 'showing the card must not fetch')
+  const use = hs.slice(hs.indexOf('const use = async'), hs.indexOf('export default function HandoffSuggest'))
+  assert.match(use, /fetch\('\/api\/doyaslide\/projects\/from-quote'/)
+  assert.match(use, /JSON\.stringify\(\{ kind: artifact\.kind, id: artifact\.id \}\)/, 'only kind and id are sent')
+  const gate = read('src/components/shell/ShellGate.tsx')
+  assert.match(gate, /guide && shown && userKey\s*\n?\s*\? <NoticeProvider userKey=\{userKey\}>\{framed\}<ShellNotices \/><HandoffSuggest \/><\/NoticeProvider>/)
+  assert.equal((gate.match(/<HandoffSuggest/g) || []).length, 1)
 })
 
 if (failed) { console.error('Security regression failed: verify-guide-popups-flag.cjs'); process.exit(1) }

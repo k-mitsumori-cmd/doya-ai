@@ -124,3 +124,24 @@ test('離れる前の確認: 別の画面へ移るリンクだけを数える', 
   assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 2000, ok: true }), false)
   assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 8000, ok: false }), false)
 })
+
+test('成果物の記録: 3件まで・同じものは先頭へ・表示名は残さない・形の違う id は捨てる・1日より古いものは使わない・行き先の形を確かめる', async () => {
+  const { addArtifact, parseArtifacts, freshestArtifact, slideProjectPath, ARTIFACT_FRESH_MS } = await import('./artifacts')
+  const id = (n: number) => `ck${String(n).padStart(20, '0')}`
+  let list = addArtifact([], { kind: 'quote', id: id(1), at: 1 })
+  for (let i = 2; i <= 5; i++) list = addArtifact(list, { kind: 'quote', id: id(i), at: i, title: '株式会社サンプル様' } as never)
+  assert.equal(list.length, 3)
+  assert.equal(list[0].id, id(5))
+  assert.equal('title' in list[0], false)
+  assert.equal('title' in parseArtifacts(JSON.stringify([{ kind: 'quote', id: id(1), at: 1, title: '株式会社サンプル様' }]))[0], false)
+  list = addArtifact(list, { kind: 'quote', id: id(3), at: 9 })
+  assert.equal(list[0].id, id(3))
+  assert.equal(list.length, 3)
+  assert.equal(addArtifact([], { kind: 'quote', id: '../evil', at: 1 }).length, 0)
+  assert.deepEqual(parseArtifacts('[{"kind":"quote","id":"bad id","at":1},{"kind":"seo","id":"' + id(1) + '","at":1}]'), [])
+  const now = 10 * ARTIFACT_FRESH_MS
+  assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - ARTIFACT_FRESH_MS - 1 }], 'quote', now), null)
+  assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - 1000 }], 'quote', now)?.id, id(1))
+  assert.equal(slideProjectPath(id(1)), `/doyaslide/${id(1)}?generate=1`)
+  for (const bad of ['//evil.example', 'https://evil.example', '/\\evil', 'javascript:alert(1)', 123, null]) assert.equal(slideProjectPath(bad), null)
+})
