@@ -53,3 +53,24 @@ test('エージェントの API の門前払いの確認が、無料の確認に
   assert.ok(freeChecks().some(c => c.id === 'api:agent-guard'))
   assert.ok(freeChecks().some(c => c.id === 'agent:sample-sites'))
 })
+
+test('見本の会社は3つで、B1 が1つ目、B2 が残りを読む（1URL 1日1回）', async () => {
+  const { DEFAULT_SAMPLE_COMPANIES } = await import('./agent-checks')
+  assert.equal(DEFAULT_SAMPLE_COMPANIES.length, 3)
+  assert.deepEqual(DEFAULT_SAMPLE_COMPANIES.map(s => s.url), ['https://surisuta.jp/', 'https://doyamarke.surisuta.jp/', 'https://doya-ai.surisuta.jp/'])
+  assert.equal(DEFAULT_SAMPLE_COMPANIES[0].expectName, 'スリスタ')
+  // 毎日読むので、自社のサイトだけにする
+  assert.ok(DEFAULT_SAMPLE_COMPANIES.every(s => new URL(s.url).hostname.endsWith('surisuta.jp')))
+  assert.equal(DEFAULT_SAMPLE_COMPANIES[0].jsRendered, true)
+})
+
+test('Shift_JIS のサイトを文字化けさせずに読む', async () => {
+  const { decodeBody } = await import('./agent-checks')
+  // 「カカクコム」を Shift_JIS にしたバイト列
+  const sjis = Buffer.from([0x83, 0x4a, 0x83, 0x4a, 0x83, 0x4e, 0x83, 0x52, 0x83, 0x80])
+  assert.equal(decodeBody(sjis, 'text/html; charset=Shift_JIS'), 'カカクコム')
+  assert.equal(decodeBody(sjis, 'text/html; charset=windows-31j'), 'カカクコム')
+  const meta = Buffer.concat([Buffer.from('<meta charset="shift_jis">'), sjis])
+  assert.match(decodeBody(meta, 'text/html'), /カカクコム/)
+  assert.equal(decodeBody(Buffer.from('トヨタ自動車'), 'text/html; charset=UTF-8'), 'トヨタ自動車')
+})

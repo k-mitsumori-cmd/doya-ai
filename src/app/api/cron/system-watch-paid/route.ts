@@ -13,7 +13,7 @@ export const maxDuration = 300
 // ドヤAIの常時確認（有料の API を使う分・1日1回）
 // ⚠️ 従量課金。グループごとに SystemSetting のスイッチが 'true' のときだけ動く（どちらも既定は止まっている）。
 //    watch:v1:paid-enabled       … 3社の安いモデルに短い文を返させる（1日 約0.02円）
-//    watch:v1:paid-agent-enabled … エージェントの B1・B2（1日 約5.4円。2026-10-26 ユーザー承認・1日 約10円まで）
+//    watch:v1:paid-agent-enabled … エージェントの B1・B2（1日 約4.2円。2026-10-26 ユーザー承認・1日 約10円まで）
 // 1日の累計の見込み額が 10円に届いたら、残りは回さない（src/lib/system-watch/budget.ts）。
 // 認証: Authorization: Bearer ${CRON_SECRET}。
 // ============================================

@@ -28,11 +28,13 @@ export async function budgetedPaidChecks(): Promise<{ checks: CheckDef[]; groups
         skipped.push(c.id)
         return { ok: true, detail: `今日の累計の見込み額が ${spent.toFixed(1)}円で、上限 ${DAILY_CAP_YEN}円に届いたため回していません` }
       }
+      let out
       try {
-        return await c.run()
+        out = await c.run()
+        return out
       } finally {
-        // 失敗しても費用は出ているとみなして足す（安全側）
-        await addSpend(c.id, c.costYen).catch(() => {})
+        // 回さなかったもの以外は、失敗しても費用は出ているとみなして足す（安全側）
+        if (!out?.skipped) await addSpend(c.id, c.costYen).catch(() => {})
       }
     },
   }))
