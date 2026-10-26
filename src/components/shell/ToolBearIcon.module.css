@@ -1,0 +1,19 @@
+/* 左のメニューのドヤくんの絵（ToolBearIcon.tsx） */
+.bear {
+  flex: none; display: block; object-fit: contain;
+  transition: transform 0.18s var(--ease, ease);
+}
+/* 行にカーソルを乗せた・選んでいるときだけ、少し大きくする */
+a:hover > .bear,
+a:focus-visible > .bear { transform: scale(1.1) rotate(-4deg); }
+a[aria-current='page'] > .bear { transform: scale(1.08); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bear { transition: none; }
+  a:hover > .bear,
+  a:focus-visible > .bear,
+  a[aria-current='page'] > .bear { transform: none; }
+}
+
+/* 絵は文字の行より大きいので、左の余白を少し詰めて、文字の位置を lucide のアイコンの行とそろえる */
+a > .bear { margin: -4px -7px; }

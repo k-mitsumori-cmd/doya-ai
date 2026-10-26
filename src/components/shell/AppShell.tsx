@@ -17,6 +17,7 @@ import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
+import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
 import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, type ShellTool } from './tools'
@@ -68,7 +69,7 @@ function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: Shell
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
     <Link href={href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(href)} title={tool.name} prefetch={prefetch}>
-      <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
+      <ToolBearIcon id={tool.id} icon={tool.icon} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
       {!tool.beta && isNew ? <span className={styles.newTag}>新機能</span> : null}
@@ -145,7 +146,7 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
             return (
               <li key={t.key} role="option" aria-selected={i === index}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
-                  <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : <ShellIcon name={t.icon ?? 'LayoutGrid'} size={16} />}</span>
+                  <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : <ToolBearIcon id={t.key} icon={t.icon ?? 'LayoutGrid'} size={28} iconSize={16} />}</span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
@@ -323,7 +324,7 @@ export default function AppShell({ children, userName, initialRecent }: {
         {[SHELL_HOME, ...tabTools].map((t) => {
           return (
             <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
-              <ShellIcon name={t.icon} size={20} />
+              <ToolBearIcon id={t.id} icon={t.icon} size={26} iconSize={20} />
               <span>{t.id === 'home' ? 'ホーム' : t.name}</span>
             </Link>
           )
