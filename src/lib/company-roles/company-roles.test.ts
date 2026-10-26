@@ -2,7 +2,7 @@
 // 会社の役割（ROLES-2026-10-26.md）の決まりを確かめる。DB には触らない（偽の DB を渡す）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { canGrantCompanyRole, canManageCompanyMember, grantableCompanyRoles, hasMinCompanyRole, COMPANY_ROLES, type CompanyRole } from './roles'
 import { canCompany, decideCompanyPermission, permissionMatrix, PERMISSIONS } from './permissions'
@@ -230,8 +230,11 @@ test('変更の記録: メールは小文字、メモは500文字まで', () => 
 
 // ---- 設計書と表がずれていない ----
 
-test('設計書の「できること表」に、すべての操作が載っている', () => {
-  const doc = readFileSync(join(process.cwd(), 'docs/architecture/management-agent/ROLES-2026-10-26.md'), 'utf8')
+test('設計書の「できること表」に、すべての操作が載っている', (t) => {
+  const file = join(process.cwd(), 'docs/architecture/management-agent/ROLES-2026-10-26.md')
+  // Vercel のビルドでは .vercelignore で docs/ を送らないので、設計書が無いときは飛ばす（手元と CI では確かめる）
+  if (!existsSync(file)) { t.skip('docs/ が無い（Vercel のビルド）'); return }
+  const doc = readFileSync(file, 'utf8')
   for (const p of Object.keys(PERMISSIONS)) assert.ok(doc.includes('`' + p + '`'), p)
 })
 
