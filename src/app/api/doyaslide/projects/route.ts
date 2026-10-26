@@ -8,7 +8,7 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { getUserDoyaSlideLimits, DOYASLIDE_PROJECT_SERVICE_ID, isSameMonth, monthStart } from '@/lib/doyaslide/limits'
 import { getDocType, DOC_TYPES, ASPECT_TO_SIZE, STYLE_PRESETS, MIN_SLIDES, MAX_SLIDES } from '@/lib/doyaslide/constants'
 import { errorSuffix } from '@/lib/doyaslide/errors'
-import { isSystemWatchRequest } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
@@ -98,10 +98,10 @@ export async function POST(req: NextRequest) {
       stylePreset: stylePreset || 'corporate',
       status: 'draft',
     }
-    // 自動点検（system-watch の B1）の合図が正しいときだけ、作ったプロジェクトの ID を残し、月の件数の台帳を増やさない。
+    // 自動点検（system-watch の B1）のときだけ、作ったプロジェクトの ID を残し、月の件数の台帳を増やさない。
     // 数えるときは、残した ID（今月の分）を除く。名前の「【自動点検】」では除かない（利用者が付けられるため）。
-    let systemWatch = false
-    try { systemWatch = isSystemWatchRequest(req.headers) } catch { systemWatch = false }
+    // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図がある（watch-gate.ts）
+    const systemWatch = isSystemWatchFor(req.headers, userId)
     const limits = await getUserDoyaSlideLimits(userId)
     const project = limits.maxProjects === -1
       ? await prisma.$transaction(async (tx) => {

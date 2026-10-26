@@ -6,10 +6,20 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),{z}=require('zod'),{load,check}=require('./load-typescript.cjs');
 
 const SECRET='test-cron-secret';
-const TOKEN=crypto.createHmac('sha256',SECRET).update('doya-system-watch:v1').digest('hex');
-const FAKES=[{},{'x-doya-system-watch':'0'.repeat(64)},{'x-doya-system-watch':TOKEN.slice(0,-1)}];
 const G={Promise,JSON,Array};
-const marker=()=>load('src/lib/system-watch/marker.ts',{'node:crypto':crypto},{process:{env:{CRON_SECRET:SECRET}}});
+// 合図は watch-gate.ts で確かめる。本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の値のときだけ通る（2026-10-26 統括の監査）
+const WATCH_USER='u';
+const GATE_ENV={CRON_SECRET:SECRET,SYSTEM_WATCH_TEST_USER_ID:WATCH_USER};
+const markerMod=load('src/lib/system-watch/marker.ts',{'node:crypto':crypto},{process:{env:{CRON_SECRET:SECRET}}});
+const gate=load('src/lib/system-watch/watch-gate.ts',{'node:crypto':crypto,'@/lib/system-watch/marker':markerMod},{process:{env:GATE_ENV}});
+const TOKEN=gate.systemWatchTokenFor(WATCH_USER);
+// 数えるべき合図: 無い・でたらめ・1文字違い・前の日の値・古い形（v1）の値・ほかの利用者の値
+const FAKES=[{},{'x-doya-system-watch':'0'.repeat(64)},{'x-doya-system-watch':TOKEN.slice(0,-1)},
+  {'x-doya-system-watch':gate.systemWatchTokenFor(WATCH_USER,new Date(Date.now()-86_400_000))},
+  {'x-doya-system-watch':crypto.createHmac('sha256',SECRET).update('doya-system-watch:v1').digest('hex')},
+  {'x-doya-system-watch':gate.systemWatchTokenFor('intruder')}];
+/** 点検用の利用者を外した間だけ fn を動かす（未設定なら何も外さない） */
+async function withoutTestUser(fn){delete GATE_ENV.SYSTEM_WATCH_TEST_USER_ID;try{return await fn()}finally{GATE_ENV.SYSTEM_WATCH_TEST_USER_ID=WATCH_USER}}
 const marked=()=>load('src/lib/system-watch/marked-records.ts',{},G);
 
 /** SystemSetting の見本（prisma でも tx でも同じものを使う） */
@@ -24,23 +34,23 @@ const markedIds=(map,prefix)=>{const k=[...map.keys()].find(k=>k.startsWith(pref
 const notInOf=(where)=>where.id?.notIn??[];
 
 (async()=>{
-  await check('Quote documents + system watch: a valid signal marks the id and leaves the org quota ledger alone; others are counted',async()=>{
-    const s=settingStore();let seq=0;const counts=[];
+  await check('Quote documents + system watch: a valid signal marks the id and leaves the org quota ledger and service usage alone; others are counted',async()=>{
+    const s=settingStore();let seq=0;const counts=[];const usage=[];let who=WATCH_USER,owner=WATCH_USER;
     const quoteDocument={count:async({where})=>{counts.push(where);return 0},create:async({data})=>({id:'q-'+(++seq),quoteNo:'Q-'+seq,title:data.title}),findFirst:async()=>null};
     const tx={systemSetting:s.systemSetting,quoteDocument};
     const prisma={systemSetting:s.systemSetting,quoteDocument,quoteIssuer:{findUnique:async()=>null},quoteProduct:{findFirst:async()=>null},$transaction:async(fn)=>fn(tx)};
     const route=load('src/app/api/quote/documents/route.ts',{
       'next/server':{NextResponse:Response},
       '@/lib/prisma':{prisma},
-      '@/lib/organization-billing':{getOrganizationOwnerUserId:async()=>'u'},
-      '@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'org-a',userId:'u',role:'owner'}),orgSlugFrom:()=>'alpha'},
+      '@/lib/organization-billing':{getOrganizationOwnerUserId:async()=>owner},
+      '@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'org-a',userId:who,role:'owner'}),orgSlugFrom:()=>'alpha'},
       '@/lib/quote/document':{defaultExpiry:()=>new Date('2026-11-30T00:00:00Z'),nextQuoteNo:async()=>'Q',recalcDocument:async()=>{}},
       // 枠の確認は、ルートが渡す数え方（累計・今月）を両方呼ぶ
       '@/lib/plan-limit':{assertFreeLimit:async(_k,countUsed,_o,countSince)=>{await countUsed();await countSince(new Date('2026-10-01T00:00:00Z'));return {ok:true,used:0,limit:100}},FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date('2026-10-01T00:00:00Z')},
       '@/lib/organization-quota-ledger':load('src/lib/organization-quota-ledger.ts',{'node:crypto':crypto},G),
       '@/lib/pricing':{SUPPORT_CONTACT_URL:'https://example.invalid/contact'},
-      '@/lib/service-usage':{recordServiceUsage:async()=>{}},
-      '@/lib/system-watch/marker':marker(),
+      '@/lib/service-usage':{recordServiceUsage:async(a)=>{usage.push(a)}},
+      '@/lib/system-watch/watch-gate':gate,
       '@/lib/system-watch/marked-records':marked(),
     },G);
     const post=(headers,title)=>route.POST({headers:new Headers(headers),json:async()=>({title})});
@@ -51,6 +61,7 @@ const notInOf=(where)=>where.id?.notIn??[];
     assert.equal((await post({'x-doya-system-watch':TOKEN},'【自動点検】お見積り')).status,200);
     assert.deepEqual(markedIds(s.map,MARK),['q-1']);
     assert.equal(ledger(),'','a signalled quote must not touch the org quota ledger');
+    assert.equal(usage.length,0,'a signalled quote must not record service usage (Slack notice, daily summary)');
     // 2. 合図が無い・偽の合図: 数え方から q-1 を除き、台帳を増やし、ID は残さない
     for(const h of FAKES){
       counts.length=0;
@@ -60,10 +71,18 @@ const notInOf=(where)=>where.id?.notIn??[];
     }
     assert.deepEqual(markedIds(s.map,MARK),['q-1'],'no extra ids without a valid signal');
     assert.notEqual(ledger(),'','unsignalled quotes are recorded in the ledger');
-    // 3. 名前を「【自動点検】…」にした利用者の見積書（q-2〜q-4）は除かない
+    assert.equal(usage.length,FAKES.length,'unsignalled quotes record service usage');
+    // 3. 名前を「【自動点検】…」にした利用者の見積書は除かない
     counts.length=0;
     await post({},'次');
-    for(const w of counts)for(const id of ['q-2','q-3','q-4'])assert.equal(notInOf(w).includes(id),false);
+    for(const w of counts)for(let i=2;i<=seq-1;i++)assert.equal(notInOf(w).includes('q-'+i),false);
+    // 4. 正しい合図でも外さない: 点検用の利用者が未設定・組織の契約者が本人でない・ほかの利用者が自分の値を付けた
+    const before=usage.length;
+    await withoutTestUser(()=>post({'x-doya-system-watch':TOKEN},'【自動点検】未設定'));
+    owner='someone-else';await post({'x-doya-system-watch':TOKEN},'【自動点検】契約者でない');
+    who='intruder';owner='intruder';await post({'x-doya-system-watch':gate.systemWatchTokenFor('intruder')},'【自動点検】ほかの人');
+    assert.deepEqual(markedIds(s.map,MARK),['q-1'],'none of these may mark ids');
+    assert.equal(usage.length,before+3,'and all of them record service usage');
   });
 
   await check('DoyaSlide projects + system watch: a valid signal is not counted against the free monthly limit and leaves monthlyUsage alone',async()=>{
@@ -82,7 +101,7 @@ const notInOf=(where)=>where.id?.notIn??[];
       '@/lib/doyaslide/limits':{getUserDoyaSlideLimits:async()=>({maxProjects}),DOYASLIDE_PROJECT_SERVICE_ID:'doyaslide-projects',isSameMonth:()=>true,monthStart:()=>new Date('2026-09-30T15:00:00Z')},
       '@/lib/doyaslide/constants':{getDocType:()=>({value:'proposal',defaultCount:8,defaultAspect:'16:9'}),DOC_TYPES:[{value:'proposal'}],ASPECT_TO_SIZE:{'16:9':{}},STYLE_PRESETS:[{value:'corporate'}],MIN_SLIDES:1,MAX_SLIDES:30},
       '@/lib/doyaslide/errors':{errorSuffix:()=>''},
-      '@/lib/system-watch/marker':marker(),
+      '@/lib/system-watch/watch-gate':gate,
       '@/lib/system-watch/marked-records':marked(),
     },G);
     const post=(headers,title)=>route.POST({headers:new Headers(headers),json:async()=>({title})});
@@ -93,7 +112,7 @@ const notInOf=(where)=>where.id?.notIn??[];
     assert.deepEqual(markedIds(s.map,MARK),['p-1','p-2','p-3','p-4','p-5']);
     assert.equal(usage,null,'a signalled project must not touch monthlyUsage');
     // 2. 合図が無い・偽の合図・名前の偽の印: いつも通り数え、3件目の次で止める
-    const plain=[[FAKES[0],'【自動点検】自分で付けた名前'],[FAKES[1],'提案'],[FAKES[2],'提案']];
+    const plain=[[FAKES[0],'【自動点検】自分で付けた名前'],[FAKES[3],'提案'],[FAKES[5],'提案']];
     for(const [h,title] of plain)assert.equal((await post(h,title)).status,201,JSON.stringify(h));
     assert.equal(usage.monthlyUsage,3);
     assert.deepEqual(notInOf(counts.at(-1)),['p-1','p-2','p-3','p-4','p-5']);
@@ -101,6 +120,7 @@ const notInOf=(where)=>where.id?.notIn??[];
     assert.equal(res.status,403);
     assert.equal((await res.json()).code,'LIMIT_REACHED');
     for(const h of FAKES.slice(1))assert.equal((await post(h,'4件目')).status,403,JSON.stringify(h));
+    assert.equal((await withoutTestUser(()=>post({'x-doya-system-watch':TOKEN},'未設定'))).status,403,'unset SYSTEM_WATCH_TEST_USER_ID excludes nothing');
     assert.deepEqual(markedIds(s.map,MARK),['p-1','p-2','p-3','p-4','p-5'],'no extra ids without a valid signal');
     // 3. プロ（上限なし）でも、合図が正しいときだけ ID を残す
     maxProjects=-1;
@@ -144,7 +164,7 @@ const notInOf=(where)=>where.id?.notIn??[];
       '@/lib/doyaslide/scrape':{scrapeUrlText:async()=>({title:'',text:''})},
       '@seo/lib/serpapi':{hasSerpApiKey:()=>false},
       '@/lib/doyaslide/errors':{errorSuffix:()=>''},
-      '@/lib/system-watch/marker':marker(),
+      '@/lib/system-watch/watch-gate':gate,
     },G);
     const post=(headers)=>{reset();return route.POST({headers:new Headers(headers),json:async()=>({projectId:'project-1'})})};
     assert.equal((await post({'x-doya-system-watch':TOKEN})).status,200);
@@ -154,5 +174,7 @@ const notInOf=(where)=>where.id?.notIn??[];
       assert.equal((await post(h)).status,200,JSON.stringify(h));
       assert.equal(reserves,before+1,JSON.stringify(h));
     }
+    await withoutTestUser(()=>post({'x-doya-system-watch':TOKEN}));
+    assert.equal(reserves,FAKES.length+1,'unset SYSTEM_WATCH_TEST_USER_ID still counts');
   });
 })().catch(e=>{console.error(e);process.exit(1)});

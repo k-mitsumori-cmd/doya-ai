@@ -14,7 +14,7 @@ import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/o
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
-import { isSystemWatchRequest } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 export async function GET(req: NextRequest) {
@@ -97,10 +97,10 @@ export async function POST(req: NextRequest) {
   }
   const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
-  // 自動点検（system-watch の B1）の合図が正しいか。正しいときだけ、作った見積書の ID を残し、台帳を増やさない。
+  // 自動点検（system-watch の B1）か。正しいときだけ、作った見積書の ID を残し、台帳と利用の記録を増やさない。
   // 枠を数えるときは、残した ID（今月の分）を除く。名前の「【自動点検】」では除かない（利用者が付けられるため）。
-  let systemWatch = false
-  try { systemWatch = isSystemWatchRequest(req.headers) } catch { systemWatch = false }
+  // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図があり、組織の契約者が本人（watch-gate.ts）
+  const systemWatch = canManageBilling && isSystemWatchFor(req.headers, ctx.userId)
   const watchedIds = async (db: Parameters<typeof systemWatchRecordIds>[0]) =>
     excludeIds(await systemWatchRecordIds(db, 'quote-document', [ctx.organizationId]))
 
@@ -251,7 +251,8 @@ export async function POST(req: NextRequest) {
 
 
   // 利用記録。⚠️ 失敗しても見積書作成は壊さない（throwしない実装）
-  void recordServiceUsage({
+  // 自動点検（合図が正しいとき）は残さない。残すと運用の Slack の利用のお知らせと、日次の集計の生成数に入るため
+  if (!systemWatch) void recordServiceUsage({
     userId: ctx.userId,
     serviceId: 'quote',
     action: '見積書を作成',

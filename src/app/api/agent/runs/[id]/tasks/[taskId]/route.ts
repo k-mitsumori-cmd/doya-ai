@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId, extraResume }, async ({ answers, resume }) => {
       const parsed = parseSalesPrepAnswers(answers)
       if (!parsed.ok) throw new AgentTaskError(parsed.error, 'input')
-      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req) }, resume)
+      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req, gate.userId) }, resume)
     })
     return NextResponse.json({ result, run: await view() }, { headers: NO_STORE })
   } catch (e) {

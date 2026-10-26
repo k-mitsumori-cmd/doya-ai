@@ -11,12 +11,14 @@ import { NextRequest } from 'next/server'
 import type { ToolCallResult, ToolDeps, ToolRouteId } from './tools'
 import { fakeToolDeps } from './tools'
 import { DOYA_POWER_OP_HEADER } from '@/lib/doya-power/retry'
-import { isSystemWatchRequest, SYSTEM_WATCH_HEADER, SYSTEM_WATCH_PREFIX, withSystemWatchPrefix } from '@/lib/system-watch/marker'
+import { SYSTEM_WATCH_HEADER, SYSTEM_WATCH_PREFIX, withSystemWatchPrefix } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 
 /**
  * システム点検の自動の確認（B1）を受け入れられるか。B1 はこの値が true のときだけ回る（2026-10-26 システム点検の担当との取り決め）。
  * true にした条件（どれも回帰の検査 verify-agent-orchestration.cjs で確かめる）:
  * 1. 合図が正しいときだけ、見積書・スライドの名前に「【自動点検】」を付け、商談準備には印を渡す（ルートも合図を確かめる）
+ *    合図は watch-gate.ts で確かめる。本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の値のときだけ通る（2026-10-26 統括の監査）
  * 2. 合図をツールのルートまで渡す（callToolRoute）
  * 3. 商談準備のルートが、合図が正しいときだけ作った記録の ID を残し、月の枠の数え方からその ID を外す（名前の印では外さない）
  * 4. 見積書・スライドのルートも同じく ID を残し、枠の数え方から外し、台帳（見積書の組織の台帳・スライドの月の件数・1日の文章生成の回数）を増やさない
@@ -24,13 +26,9 @@ import { isSystemWatchRequest, SYSTEM_WATCH_HEADER, SYSTEM_WATCH_PREFIX, withSys
  */
 export const SYSTEM_WATCH_MARKER_SUPPORTED = true
 
-/** 自動点検のリクエスト（CRON_SECRET から作る合図が正しい）なら、作る物の名前に付ける印 */
-function labelFor(outer: NextRequest): ToolDeps['label'] {
-  try {
-    return isSystemWatchRequest(outer.headers) ? { prefix: SYSTEM_WATCH_PREFIX, apply: withSystemWatchPrefix } : undefined
-  } catch {
-    return undefined
-  }
+/** 自動点検のリクエスト（本人が点検用の利用者で、今日のその人の合図がある）なら、作る物の名前に付ける印 */
+function labelFor(outer: NextRequest, userId: string | null | undefined): ToolDeps['label'] {
+  return isSystemWatchFor(outer.headers, userId) ? { prefix: SYSTEM_WATCH_PREFIX, apply: withSystemWatchPrefix } : undefined
 }
 
 type Handler = (req: NextRequest, ...rest: any[]) => Promise<Response>
@@ -70,8 +68,8 @@ export function fakeToolsEnabled(env: Record<string, string | undefined> = proce
   return env.NODE_ENV !== 'production' && env.AGENT_ORCHESTRATION_FAKE_TOOLS === '1'
 }
 
-export async function toolDepsFor(outer: NextRequest): Promise<ToolDeps> {
-  const label = labelFor(outer)
+export async function toolDepsFor(outer: NextRequest, userId?: string | null): Promise<ToolDeps> {
+  const label = labelFor(outer, userId)
   if (fakeToolsEnabled()) return { ...fakeToolDeps(), label }
   const { doyaPowerOnForRequest } = await import('./sources.server')
   return {

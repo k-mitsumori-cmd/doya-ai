@@ -11,7 +11,8 @@ import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { getShodanBilling } from '@/lib/shodan/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
-import { isSystemWatchRequest, SYSTEM_WATCH_PREFIX } from '@/lib/system-watch/marker'
+import { SYSTEM_WATCH_PREFIX } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 // ⚠️ 上限の正本は lib/shodan/types.ts。ここに数字を書かない
@@ -97,7 +98,9 @@ export async function POST(req: NextRequest) {
   const companyName = typeof body?.companyName === 'string' ? body.companyName.trim() || undefined : undefined
   // システム点検の自動の確認（B1）か。合図（CRON_SECRET から作る HMAC）が正しいときだけ true。外の人は作れない
   // 2026-10-26 ユーザー決定（A）: 自動点検が作った商談準備は、月の枠に数えない。名前の印は偽れるので、記録の ID で外す
-  const systemWatch = (() => { try { return req.headers ? isSystemWatchRequest(req.headers) : false } catch { return false } })()
+  // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図があり、組織の契約者が本人（watch-gate.ts）
+  const systemWatch = isSystemWatchFor(req.headers, ctx.userId) && ctx.role === 'owner'
+    && (await getShodanBilling(prisma, ctx.organizationId).catch(() => null))?.ownerUserId === ctx.userId
   // 記録の名前の先頭の印。合図が正しく、値がちょうど「【自動点検】」のときだけ付ける（偽の印で一覧を紛らわしくしない）
   const labelPrefix = systemWatch && body?.labelPrefix === SYSTEM_WATCH_PREFIX ? SYSTEM_WATCH_PREFIX : ''
 

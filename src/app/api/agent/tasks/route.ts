@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   const release = limiter.acquire(userId)
   if (!release) return NextResponse.json({ error: BUSY_MESSAGE, kind: 'limit' }, { status: 429, headers: NO_STORE })
   try {
-    const result = await executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req) }, parseResume(body.resume))
+    const result = await executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req, userId) }, parseResume(body.resume))
     return NextResponse.json({ result }, { headers: NO_STORE })
   } catch (e) {
     const err = e instanceof AgentTaskError ? e : null
