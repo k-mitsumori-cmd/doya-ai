@@ -1,7 +1,7 @@
 'use client'
 
 // 契約の登録・編集フォーム、単価の入力欄
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -91,6 +91,14 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
   })
   const [vendorMode, setVendorMode] = useState<'existing' | 'new'>(contractor0 ? 'new' : 'existing')
   const [vendorId, setVendorId] = useState('')
+  // 取引先が1件もないときは、最初から「新しく登録する」を開いて、契約から始められるようにする
+  const [autoOpened, setAutoOpened] = useState(false)
+  useEffect(() => {
+    if (mode === 'create' && !autoOpened && vendors.data && vendors.data.vendors.length === 0) {
+      setAutoOpened(true)
+      setVendorMode('new')
+    }
+  }, [mode, autoOpened, vendors.data])
   const [vendor, setVendor] = useState<VendorDraft>(emptyVendor(contractor0 ? { kind: 'individual', withholdingDefault: true } : {}))
   const [price, setPrice] = useState<PriceDraft>(emptyPrice())
   const [busy, setBusy] = useState(false)
