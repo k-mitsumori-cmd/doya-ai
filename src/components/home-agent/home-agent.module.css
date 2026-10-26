@@ -163,3 +163,14 @@
 @media (prefers-reduced-motion: reduce) {
   .stage *, .stage *::before, .stage *::after { animation: none !important; transition: none !important; }
 }
+
+/* 例のボタンの見出しと、ツールですぐ始める */
+.chipsLabel { margin: 4px 0 -2px; font-size: 12px; font-weight: 700; color: var(--sub); }
+.chip[aria-pressed='true'] { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-deep); }
+.shortcuts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.shortcut { display: grid; gap: 2px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.45; transition: border-color .2s, transform .2s var(--ease); }
+.shortcut:hover { border-color: var(--blue); transform: translateY(-1px); }
+.shortcut:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.shortcut .muted { font-size: 11px; }
+@media (max-width: 860px) { .shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }
