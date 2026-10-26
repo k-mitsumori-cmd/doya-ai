@@ -1,7 +1,7 @@
 // ============================================
 // ツールの組織と会社のつながり GET（一覧）/ POST（つなぐ）/ DELETE（外す） /api/company/tool-orgs
 // ============================================
-// ⚠️ 旗 COMPANY_ROLES_ROLLOUT の内側。つなぐのは会社の管理者以上で、そのツールの組織の最上位の役割の人だけ。
+// ⚠️ 旗 COMPANY_ROLES_ROLLOUT の内側。見るのは管理者以上。つなぐのは会社の管理者以上で、その組織の最上位の役割の人（最上位の人が全員自分の会社の人のときだけ）。外すのはオーナーだけ。
 // ⚠️ つながりは、自分の会社の管理者以上が外すとき以外は消さない・移さない（ほかの会社につながっている組織は 409）。仕様: ROLES-2026-10-26.md §4.1
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,21 +29,22 @@ export async function POST(req: NextRequest) {
   return companyRolesApi(async (s) => {
     const body = await req.json().catch(() => null)
     if (!isToolId(body?.tool) || typeof body?.organizationId !== 'string') return json({ error: 'ツールと組織を選び直してください。' }, 400)
-    const d = await linkToolOrg({ companyId: s.companyId, actorUserId: s.userId, actorIsAdmin: hasMinCompanyRole(s.role, 'admin'), tool: body.tool, organizationId: body.organizationId })
+    const d = await linkToolOrg({ companyId: s.companyId, actorUserId: s.userId, tool: body.tool, organizationId: body.organizationId })
     if (!d.ok) {
       const messages = {
         NOT_ALLOWED: '会社につなげるのは、管理者とオーナーです。',
         NOT_TOP_MEMBER: 'つなげるのは、そのツールの組織の最上位の役割の方だけです。',
         LINKED_ELSEWHERE: 'この組織は、ほかの会社につながっています。',
+        FOREIGN_TOP_MEMBER: 'この組織の最上位の役割に、ほかの会社の方がいるため、つなげません。',
         INVALID: 'ツールと組織を選び直してください。',
       } as const
       return json({ code: d.code, error: messages[d.code] }, d.status)
     }
-    if (d.created) {
+    if (d.action === 'create') {
       const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
       await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_linked', fromRole: null, toRole: null, note: `${body.tool}:${body.organizationId}` }))
     }
-    return json({ ok: true, created: d.created }, d.created ? 201 : 200)
+    return json({ ok: true, created: d.action === 'create' }, d.action === 'create' ? 201 : 200)
   })
 }
 

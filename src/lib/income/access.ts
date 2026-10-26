@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 
 import { ROLE_HIERARCHY, hasMinRole, type IncomeRole } from './roles'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 export { ROLE_HIERARCHY, hasMinRole, type IncomeRole }
 const VALID_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -53,7 +54,9 @@ async function resolveUser(): Promise<{ id: string; name: string | null } | unde
 
 /** 初回アクセスで自分の組織を作る（設計書 §12 Q2a）。同時アクセスでも 1 つだけ */
 async function createOwnOrganization(userId: string, userName: string | null) {
-  return prisma.$transaction(async (tx) => {
+  const createdOrgIds: string[] = []
+  const membership = await prisma.$transaction(async (tx) => {
+    createdOrgIds.length = 0
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
     const existing = await tx.incomeMember.findFirst({
       where: { userId, status: 'ACTIVE', role: { in: VALID_ROLES } },
@@ -66,11 +69,15 @@ async function createOwnOrganization(userId: string, userName: string | null) {
     const org = await tx.incomeOrganization.create({
       data: { name: userName ? `${userName}の会社` : 'マイカンパニー', slug: `inc-${crypto.randomBytes(8).toString('hex')}` },
     })
+    createdOrgIds.push(org.id)
     return tx.incomeMember.create({
       data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE' },
       include: { organization: true },
     })
   })
+  // 組織が新しく作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+  if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'income', organizationId: createdOrgIds[0], creatorUserId: userId })
+  return membership
 }
 
 export async function getIncomeContext(req?: NextRequest): Promise<IncomeContext | null> {

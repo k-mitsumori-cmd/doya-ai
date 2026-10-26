@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
 import { ROLE_HIERARCHY, type SfaContext, type SfaRole } from './types'
 import { DEFAULT_STAGES } from './constants'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -104,9 +105,11 @@ export function hasMinRole(currentRole: string, minRole: SfaRole): boolean {
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName: string) {
   // 組織・オーナー・初期データを一括保存し、途中失敗時に使えない組織を残さない。
   // Serializable は同一ユーザーの同時オンボーディングも再試行可能な競合として検出する。
+  const createdOrgIds: string[] = []
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      createdOrgIds.length = 0
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.sfaMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
@@ -119,6 +122,7 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         const dup = await tx.sfaOrganization.findUnique({ where: { slug: base } })
         const slug = dup ? `${base}-${Date.now()}` : base
         const org = await tx.sfaOrganization.create({ data: { name: orgName, slug } })
+        createdOrgIds.push(org.id)
 
         await tx.sfaMember.create({
           data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
@@ -159,6 +163,9 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         })
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      // 会社の役割の上限は、組織が作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'sfa', organizationId: createdOrgIds[0], creatorUserId: userId })
+      return result
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error

@@ -22,8 +22,8 @@ export interface CompanyRoleDb {
   findActiveMembership(userId: string): Promise<{ companyId: string; role: string } | null>
   /** 会社ごとの切り替え（account_company_role_settings.policy）。無ければ null */
   findPolicy?(companyId: string): Promise<unknown | null>
-  /** ツールの組織が属する会社（組織の最上位の人＝作った人が持ち主の会社）。分からなければ null */
-  findCompanyOfToolOrg?(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string; linked?: boolean } | null>
+  /** ツールの組織が属する会社（表 account_company_tool_orgs のつながり）。つながっていなければ null */
+  findCompanyOfToolOrg?(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string } | null>
   /** その会社での、本人のメンバーの行（status = active） */
   findMembershipIn?(userId: string, companyId: string): Promise<{ role: string } | null>
 }
@@ -31,7 +31,7 @@ export interface CompanyRoleDb {
 /**
  * ツールの組織での、会社の役割（監査 2026-10-26 の重大1への対応）。
  * - その組織が属する会社を先に決め、その会社での本人の役割を返す。本人が自分で別の会社を作っても、ほかの会社の組織では使えない。
- * - 組織が会社につながっていない（account_company_tool_orgs に無く、作った人が会社の持ち主でもない）なら null。上限も決まりも当てない（設計書 §4.1。再監査の中B）。
+ * - 組織が会社につながっていない（account_company_tool_orgs に無い）なら null。上限も決まりも当てない（設計書 §4.1）。
  * - 会社の持ち主はオーナー。会社のメンバーの行があればその役割（知らない値はゲスト）。
  * - 会社のメンバーでない人（ツールだけに招かれた人）は、メンバーとして扱う（ツールの中で一般の役割まで）。
  */
@@ -41,8 +41,6 @@ export async function resolveCompanyRoleForOrg(userId: string, tool: ToolId, org
   if (!org) return null
   if (org.ownerUserId === userId) return { companyId: org.companyId, role: 'owner' }
   const m = db.findMembershipIn ? await db.findMembershipIn(userId, org.companyId) : null
-  // 表にはつないでいない組織（作った人が引き継いだあと）では、会社に入っていない人に上限を当てない
-  if (!m && org.linked === false) return null
   if (!m) return { companyId: org.companyId, role: 'member' }
   return { companyId: org.companyId, role: isMemberRowRole(m.role) ? m.role : 'guest' }
 }

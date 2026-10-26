@@ -1,16 +1,20 @@
 // ============================================
-// ツールの組織と会社のつながり（サーバーだけ。読むだけ）
+// ツールの組織と会社のつながり（サーバーだけ）
 // ============================================
-// 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §4
-// 決まり（統括の再監査 2026-10-26 中A・中B を受けて、つながりを表に持つ形にした）:
-// - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）が正。つながりは消えない・移らない。
-// - 表に無い組織は、作った人（いちばん古いメンバーの行。プロマネはワークスペースの作成者）が会社の持ち主で、今も最上位の役割で組織にいるときだけ、初めて判定したときにつなぐ（自動）。
-// - 会社のオーナーだけが、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら記録に残す。
-// - 作った人が引き継いだあとの組織は表につながず、作った人の会社の社員にだけ、その会社の役割を当てる（linked: false）。
-//   作った人が会社の持ち主でない組織（社員が自分で作った組織・会社を持たない人の組織）は、どの会社にもつながない。上限も決まりも当てない。
-// - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
+// 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §4.1
+// 決まり（2026-10-26 統括の決定。推し量る決まりが点検のたびに逆向きの指摘を受けたため、明示のつながりだけを正にする）:
+// - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）だけで決める。作った人などからは推し量らない。
+// - つなぐ時は3つ。①組織を作るその時（linkToolOrgAtCreation。作った人が会社の持ち主か管理者なら、その会社につなぐ）
+//   ②旗を入れる前からある組織は、一度だけ流す SQL（ROLES §8.3）でつなぐ ③会社の管理者以上が、自分が最上位の役割の組織を明示してつなぐ（linkToolOrg）。
+// - 表に無い組織は、どの会社にも属さない。上限も決まりも当てない。
+// - つながりを外せるのは、会社のオーナーだけ（unlinkToolOrg）。外したら記録に残す。
 import { prisma } from '@/lib/prisma'
 import { TOOL_ROLE_TABLES, type ToolId } from './tool-roles'
+import { companyRolesRollout } from './rollout'
+import type { Prisma } from '@prisma/client'
+import { isMemberRowRole, type CompanyRole } from './roles'
+import { decideToolOrgLink, type ToolOrgLinkDecision } from './tool-org-link'
+export type { ToolOrgLinkDecision }
 
 export type OrgMemberDelegate = {
   findMany(args: { where: Record<string, unknown>; select: Record<string, true> }): Promise<Array<{ organizationId: string; userId: string | null; role: string }>>
@@ -31,60 +35,42 @@ export const ORG_TOOLS: Array<{ tool: Exclude<ToolId, 'promane'>; delegate: () =
   { tool: 'aishodan', delegate: () => prisma.aishodanMember as unknown as OrgMemberDelegate },
 ]
 
-/** ツールの組織を作った人（いちばん古いメンバーの行。プロマネはワークスペースの userId）。自動でつなぐときだけ使う */
-export async function toolOrgCreator(tool: ToolId, organizationId: string): Promise<string | null> {
-  if (tool === 'promane') {
-    const ws = await prisma.promaneWorkspace.findUnique({ where: { id: organizationId }, select: { userId: true } })
-    return ws?.userId ?? null
-  }
-  const t = ORG_TOOLS.find((x) => x.tool === tool)
-  if (!t) return null
-  const row = await t.delegate().findFirst({
-    where: { organizationId },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    select: { userId: true },
-  })
-  return row?.userId ?? null
+/** ツールの組織が属する会社（表につながっていなければ null） */
+export async function companyOfToolOrg(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string } | null> {
+  const link = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
+  if (!link) return null
+  const company = await prisma.accountCompany.findUnique({ where: { id: link.companyId }, select: { id: true, userId: true } })
+  return company ? { companyId: company.id, ownerUserId: company.userId } : null
 }
 
 /**
- * ツールの組織が属する会社（つながっていなければ null）。
- * linked: false は「表にはつないでいないが、作った人の会社が分かる」組織（作った人が引き継いだあと）。
- * この組織では、その会社の持ち主とメンバーにだけ会社の役割を当て、会社に入っていない人には当てない（access.ts）。
+ * 組織を作るその時に、会社とのつながりを書く。各ツールの組織を作る処理から、作成のトランザクションが確定した直後に呼ぶ
+ * （トランザクションの中で失敗すると、組織の作成まで失敗するため。中では呼ばない）。
+ * - 作った人が会社の持ち主なら、その会社。持ち主でなく、会社の管理者（account_company_members の role=admin、active）なら、その会社。
+ * - それ以外（社員が自分で作った組織・会社を持たない人の組織）は、つながない。
+ * ⚠️ 旗 COMPANY_ROLES_ROLLOUT が off のときは、何もしない（表が本番DBに無いうちに落ちないように）。旗を入れたあとに、§8.3 の SQL で抜けを埋める。
+ * ⚠️ 失敗しても、組織の作成は止めない（つながらなかった組織は、管理者があとでつなげる）。
  */
-export async function companyOfToolOrg(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string; linked: boolean } | null> {
-  const link = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
-  if (link) {
-    const company = await prisma.accountCompany.findUnique({ where: { id: link.companyId }, select: { id: true, userId: true } })
-    return company ? { companyId: company.id, ownerUserId: company.userId, linked: true } : null
-  }
-  // 表に無い: 作った人が会社の持ち主なら、その会社につなぐ（初めの1回だけ。同時でも1つにまとまる）
-  const creator = await toolOrgCreator(tool, organizationId)
-  if (!creator) return null
-  const own = await prisma.accountCompany.findUnique({ where: { userId: creator }, select: { id: true, userId: true } })
-  if (!own) return null
-  // 作った人が今も最上位の役割で組織にいるときだけ、自動でつなぐ（引き継いだあとの組織を、前の持ち主の会社につながない）。
-  // つながないときも「作った人の会社」は返し、その会社の社員には上限を当てる（社員が最上位を引き継いで上限を外すことを防ぐ。自動の点検の指摘 2026-10-26）
-  if (!(await isToolOrgTopMember(tool, organizationId, creator))) return { companyId: own.id, ownerUserId: own.userId, linked: false }
+export async function linkToolOrgAtCreation(input: { tool: ToolId; organizationId: string; creatorUserId: string }): Promise<boolean> {
+  if (companyRolesRollout() === 'off' || !input.organizationId || !input.creatorUserId) return false
   try {
-    const row = await prisma.accountCompanyToolOrg.upsert({
-      where: { tool_organizationId: { tool, organizationId } },
-      create: { tool, organizationId, companyId: own.id, linkedBy: own.userId },
-      update: {},
-      select: { companyId: true },
-    })
-    if (row.companyId !== own.id) {
-      const other = await prisma.accountCompany.findUnique({ where: { id: row.companyId }, select: { id: true, userId: true } })
-      return other ? { companyId: other.id, ownerUserId: other.userId, linked: true } : null
+    const own = await prisma.accountCompany.findUnique({ where: { userId: input.creatorUserId }, select: { id: true } })
+    let companyId = own?.id ?? null
+    if (!companyId) {
+      const m = await prisma.accountCompanyMember.findFirst({ where: { userId: input.creatorUserId, status: 'active', role: 'admin' }, orderBy: { joinedAt: 'asc' }, select: { companyId: true } })
+      companyId = m?.companyId ?? null
     }
+    if (!companyId) return false
+    await prisma.accountCompanyToolOrg.upsert({
+      where: { tool_organizationId: { tool: input.tool, organizationId: input.organizationId } },
+      create: { tool: input.tool, organizationId: input.organizationId, companyId, linkedBy: input.creatorUserId },
+      update: {},
+    })
+    return true
   } catch {
-    // 同時に作られた（unique の衝突）: 読み直す
-    const again = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
-    if (!again) return null
-    const c = await prisma.accountCompany.findUnique({ where: { id: again.companyId }, select: { id: true, userId: true } })
-    return c ? { companyId: c.id, ownerUserId: c.userId, linked: true } : null
+    console.error('[company-roles] 組織のつながりを書けませんでした')
+    return false
   }
-  return { companyId: own.id, ownerUserId: own.userId, linked: true }
 }
 
 /** 本人が、そのツールの組織の最上位の役割（ACTIVE）か */
@@ -100,19 +86,54 @@ export async function isToolOrgTopMember(tool: ToolId, organizationId: string, u
   return !!row
 }
 
-export type LinkToolOrgDecision =
-  | { ok: true; created: boolean }
-  | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_TOP_MEMBER' | 'LINKED_ELSEWHERE' | 'INVALID' }
+/** 組織の最上位の役割（ACTIVE）の人の User.id */
+async function toolOrgTopMemberIds(tool: ToolId, organizationId: string, db: typeof prisma | Prisma.TransactionClient): Promise<string[]> {
+  if (tool === 'promane') {
+    const rows = await db.promaneMember.findMany({ where: { workspaceId: organizationId, isActive: true, role: 'owner' }, select: { userId: true } })
+    return rows.map((r) => r.userId)
+  }
+  const t = ORG_TOOLS.find((x) => x.tool === tool)
+  if (!t) return []
+  const order = TOOL_ROLE_TABLES[tool].order
+  const rows = await t.delegate().findMany({ where: { organizationId, role: order[order.length - 1], status: 'ACTIVE' }, select: { organizationId: true, userId: true, role: true } })
+  return rows.map((r) => r.userId).filter((v): v is string => !!v)
+}
 
-/** 会社の管理者以上が、自分が最上位の役割の組織を、会社につなぐ。ほかの会社につながっていればつながない */
-export async function linkToolOrg(input: { companyId: string; actorUserId: string; actorIsAdmin: boolean; tool: ToolId; organizationId: string }): Promise<LinkToolOrgDecision> {
-  if (!input.actorIsAdmin) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
+/** その人が、会社の持ち主か active のメンバーなら、その会社での役割 */
+async function roleInCompany(userId: string, companyId: string, db: typeof prisma | Prisma.TransactionClient): Promise<CompanyRole | null> {
+  const company = await db.accountCompany.findUnique({ where: { id: companyId }, select: { userId: true } })
+  if (!company) return null
+  if (company.userId === userId) return 'owner'
+  const m = await db.accountCompanyMember.findFirst({ where: { companyId, userId, status: 'active' }, select: { role: true } })
+  if (!m) return null
+  return isMemberRowRole(m.role) ? m.role : 'guest'
+}
+
+/**
+ * 会社の管理者以上が、自分が最上位の役割の組織を、会社につなぐ（POST /api/company/tool-orgs）。
+ * 決まりは tool-org-link.ts（テストあり）。役割はトランザクションの中で読み直す。同時に送られて一意の制約に当たったら、読み直して返す（503 にしない）。
+ */
+export async function linkToolOrg(input: { companyId: string; actorUserId: string; tool: ToolId; organizationId: string }): Promise<ToolOrgLinkDecision> {
   if (!input.organizationId || input.organizationId.length > 128) return { ok: false, status: 400, code: 'INVALID' }
-  if (!(await isToolOrgTopMember(input.tool, input.organizationId, input.actorUserId))) return { ok: false, status: 403, code: 'NOT_TOP_MEMBER' }
-  const existing = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool: input.tool, organizationId: input.organizationId } }, select: { companyId: true } })
-  if (existing) return existing.companyId === input.companyId ? { ok: true, created: false } : { ok: false, status: 409, code: 'LINKED_ELSEWHERE' }
-  await prisma.accountCompanyToolOrg.create({ data: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId, linkedBy: input.actorUserId } })
-  return { ok: true, created: true }
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const actorRole = await roleInCompany(input.actorUserId, input.companyId, tx)
+      const top = await toolOrgTopMemberIds(input.tool, input.organizationId, tx)
+      const inCompany = await Promise.all(top.map(async (uid) => (await roleInCompany(uid, input.companyId, tx)) !== null))
+      const existing = await tx.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool: input.tool, organizationId: input.organizationId } }, select: { companyId: true } })
+      const d = decideToolOrgLink({ actorRole, actorIsTopMember: top.includes(input.actorUserId), topMembersInCompany: inCompany, linkedCompanyId: existing?.companyId ?? null, companyId: input.companyId })
+      if (!d.ok || d.action === 'none') return d
+      await tx.accountCompanyToolOrg.create({ data: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId, linkedBy: input.actorUserId } })
+      return d
+    }, { isolationLevel: 'Serializable' })
+  } catch (e) {
+    const code = (e as { code?: string })?.code
+    if (code !== 'P2002' && code !== 'P2034') throw e
+    // 同時につながれた: 読み直す
+    const again = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool: input.tool, organizationId: input.organizationId } }, select: { companyId: true } })
+    if (again?.companyId === input.companyId) return { ok: true, action: 'none' }
+    return { ok: false, status: 409, code: 'LINKED_ELSEWHERE' }
+  }
 }
 
 /** 会社のオーナーだけが、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため。外すと上限が外れるので、管理者には許さない） */

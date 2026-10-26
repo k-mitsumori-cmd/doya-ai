@@ -11,6 +11,7 @@ import { getAioBilling } from '@/lib/aio/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 import { beginAioQuickStart, recoverAioQuickStart, finishAioQuickStart, failAioQuickStart, AioStartError } from '@/lib/aio/quick-start-operation'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
@@ -54,9 +55,12 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
     if (current.state !== 'pending') return response(current)
     const setup = await suggestBrandSetup({ brandName, url })
     const memberName = (session?.user?.name?.trim() || 'オーナー').slice(0, 80)
+    let createdOrgId: string | null = null as string | null
     const operation = await finishAioQuickStart(worker, async tx => {
+      createdOrgId = null
       const slug = 'aio-' + createHash('sha256').update(JSON.stringify([userId, operationId])).digest('hex').slice(0, 32)
       const organization = await tx.aioOrganization.create({ data: { name: brandName, slug } })
+      createdOrgId = organization.id
       await tx.aioMember.create({ data: { organizationId: organization.id, userId, name: memberName, role: 'owner', status: 'ACTIVE', acceptedAt: new Date() } })
       await tx.aioBrandProfile.create({ data: { organizationId: organization.id, brandName, brandUrl: url,
         category: setup.category, ...(setup.aliases.length ? { aliases: setup.aliases } : {}), ...(setup.competitors.length ? { competitors: setup.competitors } : {}) } })
@@ -67,6 +71,8 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
       if (prompts.length) await tx.aioPrompt.createMany({ data: prompts.map(text => ({ organizationId: organization.id, text, isActive: true })) })
       return organization
     })
+    // 組織が新しく作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+    if (createdOrgId) await linkToolOrgAtCreation({ tool: 'aio', organizationId: createdOrgId, creatorUserId: userId })
     return response(operation)
   } catch (error) {
     if (worker) {

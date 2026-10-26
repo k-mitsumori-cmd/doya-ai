@@ -6,7 +6,7 @@ import { applyCompanyCeiling, authorizeCompanyAction, loadRolePolicy, resolveCom
 import { DEFAULT_ROLE_POLICY } from './policy'
 import type { CompanyRolesMode } from './rollout'
 
-function fakeDb(opts: { owned?: Record<string, string>; members?: Record<string, { companyId: string; role: string }>; policy?: Record<string, unknown>; withPolicy?: boolean; orgs?: Record<string, { companyId: string; ownerUserId: string; linked?: boolean }> }) {
+function fakeDb(opts: { owned?: Record<string, string>; members?: Record<string, { companyId: string; role: string }>; policy?: Record<string, unknown>; withPolicy?: boolean; orgs?: Record<string, { companyId: string; ownerUserId: string }> }) {
   const calls = { owned: 0, member: 0, policy: 0 }
   const db: CompanyRoleDb = {
     async findOwnedCompany(userId) {
@@ -218,14 +218,4 @@ test('applyCompanyCeiling: 会社につながっていない組織では、会�
   const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
   assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
   assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'solo', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
-})
-
-test('applyCompanyCeiling: 作った人が引き継いだあとの組織（表につないでいない）では、作った人の会社の社員にだけ上限を当てる', async () => {
-  const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } }, orgs: { ox: { companyId: 'c1', ownerUserId: 'u1', linked: false } } })
-  // 会社 c1 の社員は、最上位を引き継いでも上限が当たる（上限を外す抜け道にしない）
-  assert.equal(await applyCompanyCeiling({ organizationId: 'ox', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'employee')
-  // 会社 c1 に入っていない人（引き継いだ本人など）には当てない
-  assert.equal(await applyCompanyCeiling({ organizationId: 'ox', tool: 'kintai', userId: 'newowner', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
-  // 作った人（会社 c1 の持ち主）はオーナー
-  assert.equal(await applyCompanyCeiling({ organizationId: 'ox', tool: 'kintai', userId: 'u1', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
 })

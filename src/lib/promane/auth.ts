@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 import crypto from 'crypto'
 
 const VALID_MEMBER_ROLES = ['owner', 'admin', 'member', 'guest']
@@ -33,7 +34,9 @@ export async function requirePromaneAuthAction() {
 }
 
 export async function getOrCreateWorkspace(userId: string) {
-  return prisma.$transaction(async (tx) => {
+  const createdIds: string[] = []
+  const result = await prisma.$transaction(async (tx) => {
+    createdIds.length = 0
     const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
     if (users.length === 0) throw new Error('Promane account not found')
 
@@ -49,7 +52,7 @@ export async function getOrCreateWorkspace(userId: string) {
     if (owned) return null
 
     const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } })
-    return tx.promaneWorkspace.create({
+    const created = await tx.promaneWorkspace.create({
       data: {
         userId,
         name: 'マイワークスペース',
@@ -57,7 +60,12 @@ export async function getOrCreateWorkspace(userId: string) {
         members: { create: { userId, role: 'owner', displayName: user?.name || 'オーナー' } },
       },
     })
+    createdIds.push(created.id)
+    return created
   })
+  // ワークスペースが新しく作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+  if (createdIds[0]) await linkToolOrgAtCreation({ tool: 'promane', organizationId: createdIds[0], creatorUserId: userId })
+  return result
 }
 
 export async function getWorkspaceBySlug(slug: string, userId: string) {

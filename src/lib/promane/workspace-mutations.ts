@@ -5,6 +5,7 @@ import { getUserPromaneLimits, countUserWorkspaces } from '@/lib/promane/limits'
 import { parsePromaneWorkspaceCreate, parsePromaneWorkspacePatch } from './workspace-input';
 import { runPromaneWorkspaceOnce, recoverPromaneWorkspaceOperation, promaneWorkspaceOperationId, isPromaneWorkspaceReceiptConflict, type PromaneWorkspaceOperationScope } from './workspace-operation';
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 export class PromaneWorkspaceRequestError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); }
@@ -47,7 +48,9 @@ const select={id:true,userId:true,name:true,slug:true,updatedAt:true} as const;
 const stale='別の画面でワークスペースが更新されています。入力を保管してから最新版を開き直してください';
 export async function createPromaneWorkspaceOperation(userId: string, body: unknown) {
   const {data,operationId}=intent(userId,body), input=validated(()=>parsePromaneWorkspaceCreate(data));
-  return transaction(async tx=>{
+  const createdIds: string[]=[];
+  const result=await transaction(async tx=>{
+    createdIds.length=0;
     await lockAccount(tx,userId);
     return runPromaneWorkspaceOnce(tx,{userId,mode:'create',workspaceId:null},operationId,input,
       id=>tx.promaneWorkspace.findFirst({where:{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}},select}),async()=>{
@@ -61,9 +64,13 @@ export async function createPromaneWorkspaceOperation(userId: string, body: unkn
         const user=await tx.user.findUnique({where:{id:userId},select:{name:true}});
         const entry=await tx.promaneWorkspace.create({data:{userId,name:input.name,slug:`ws-${crypto.randomBytes(8).toString('hex')}`,
           members:{create:{userId,role:'owner',displayName:user?.name||'オーナー'}}},select});
+        createdIds.push(entry.id);
         return {state:'saved',entry};
       });
   });
+  // ワークスペースが新しく作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+  if (createdIds[0]) await linkToolOrgAtCreation({tool:'promane',organizationId:createdIds[0],creatorUserId:userId});
+  return result;
 }
 export async function updatePromaneWorkspaceOperation(userId: string, workspace: unknown, body: unknown) {
   const workspaceId=target(workspace),{data,operationId}=intent(userId,body),input=validated(()=>parsePromaneWorkspacePatch(data));

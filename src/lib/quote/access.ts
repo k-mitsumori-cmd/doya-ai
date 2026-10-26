@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, hasMinRole, type QuoteContext, type QuoteRole } from './types'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -116,9 +117,11 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
 
 /** 初回オンボーディング：組織＋オーナーを作成（冪等） */
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName?: string) {
+  const createdOrgIds: string[] = []
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      createdOrgIds.length = 0
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.quoteMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
@@ -129,11 +132,15 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         const dup = await tx.quoteOrganization.findUnique({ where: { slug: base } })
         const slug = dup ? `${base}-${Date.now()}` : base
         const org = await tx.quoteOrganization.create({ data: { name: orgName, slug } })
+        createdOrgIds.push(org.id)
         await tx.quoteMember.create({
           data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName || null, acceptedAt: new Date() },
         })
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      // 会社の役割の上限は、組織が作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'quote', organizationId: createdOrgIds[0], creatorUserId: userId })
+      return result
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error

@@ -9,6 +9,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
 import { ROLE_HIERARCHY, type AioContext, type AioRole } from './types'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -110,9 +111,11 @@ export function hasMinRole(currentRole: string, minRole: AioRole): boolean {
 
 /** 初回オンボーディング：組織＋オーナーを作成（冪等） */
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName: string) {
+  const createdOrgIds: string[] = []
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      createdOrgIds.length = 0
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.aioMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
@@ -124,11 +127,15 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         const dup = await tx.aioOrganization.findUnique({ where: { slug: base } })
         const slug = dup ? `${base}-${Date.now()}` : base
         const org = await tx.aioOrganization.create({ data: { name: orgName, slug } })
+        createdOrgIds.push(org.id)
         await tx.aioMember.create({
           data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
         })
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      // 会社の役割の上限は、組織が作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'aio', organizationId: createdOrgIds[0], creatorUserId: userId })
+      return result
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
@@ -153,7 +160,7 @@ export async function createAioOrganization(
   for (let attempt = 0; attempt < 4; attempt++) {
     const slug = attempt === 0 ? base : `${base}-${Date.now()}-${attempt}`
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const org = await tx.aioOrganization.create({ data: { name: orgName, slug } })
         await tx.aioMember.create({
           data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
@@ -161,6 +168,9 @@ export async function createAioOrganization(
         if (initialize) await initialize(tx, org)
         return org
       })
+      // 組織が作られた直後に、会社とのつながりを表へ書く（トランザクションの外）
+      await linkToolOrgAtCreation({ tool: 'aio', organizationId: result.id, creatorUserId: userId })
+      return result
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (attempt === 3 || code !== 'P2002') throw error

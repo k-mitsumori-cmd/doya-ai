@@ -5,6 +5,7 @@
 // 作るもの: 組織（決算月）・オーナー・既定の支払方法（銀行振込）。契約や取引先は作らない（空のまま始める）
 // ⚠️ 呼ぶ側（ウィザード）が companyId の所有者であることを確かめてから呼ぶ。
 import { prisma } from '@/lib/prisma'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 export type ExpenseWizardInput = {
   companyId: string
@@ -20,7 +21,7 @@ export async function initExpenseForCompany(input: ExpenseWizardInput): Promise<
   const month = input.fiscalYearEndMonth && Number.isInteger(input.fiscalYearEndMonth) && input.fiscalYearEndMonth >= 1 && input.fiscalYearEndMonth <= 12 ? input.fiscalYearEndMonth : 3
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.expenseOrganization.findUnique({ where: { companyId: input.companyId }, select: { id: true, slug: true } })
         if (existing) return { organizationId: existing.id, slug: existing.slug, created: false }
         const base = input.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || `org-${Date.now()}`
@@ -38,6 +39,9 @@ export async function initExpenseForCompany(input: ExpenseWizardInput): Promise<
         await tx.expensePaymentMethod.create({ data: { organizationId: org.id, type: 'transfer', label: '銀行振込' } })
         return { organizationId: org.id, slug: org.slug, created: true }
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 20000 })
+      // 組織が新しく作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (result.created) await linkToolOrgAtCreation({ tool: 'expense', organizationId: result.organizationId, creatorUserId: input.userId })
+      return result
     } catch (e) {
       const code = (e as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw e

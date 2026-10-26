@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { HrMemberRole, HrContext } from './types'
 import { ROLE_HIERARCHY } from './constants'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -52,9 +53,11 @@ export async function getOrCreateOrganization(
   orgName: string,
   options?: { slug?: string; industry?: string; size?: string }
 ) {
+  const createdOrgIds: string[] = []
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      createdOrgIds.length = 0
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.hrOrganizationMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
@@ -64,13 +67,18 @@ export async function getOrCreateOrganization(
         const base = options?.slug || orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const existingSlug = await tx.hrOrganization.findUnique({ where: { slug: base } })
         const slug = existingSlug || attempt > 0 ? `${base}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : base
-        return tx.hrOrganization.create({
+        const created = await tx.hrOrganization.create({
           data: {
             name: orgName, slug, industry: options?.industry || null, size: options?.size || null,
             members: { create: { userId, role: HrMemberRole.OWNER, status: 'ACTIVE', acceptedAt: new Date() } },
           },
         })
+        createdOrgIds.push(created.id)
+        return created
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      // 会社の役割の上限は、組織が作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'hr', organizationId: createdOrgIds[0], creatorUserId: userId })
+      return result
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error

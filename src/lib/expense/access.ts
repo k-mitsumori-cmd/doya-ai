@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EXPENSE_ROLES, ROLE_RANK, type ExpenseRole } from './constants'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { linkToolOrgAtCreation } from '@/lib/company-roles/tool-orgs.server'
 
 export type ExpenseContext = {
   userId: string
@@ -145,9 +146,11 @@ export async function audit(
 
 /** 初回オンボーディング: 組織とオーナーを作る（既に所属があればそれを返す） */
 export async function createOrganization(userId: string, orgName: string, memberName: string) {
+  const createdOrgIds: string[] = []
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      createdOrgIds.length = 0
+      const result = await prisma.$transaction(async (tx) => {
         const existing = await tx.expenseMember.findFirst({ where: { userId, status: 'ACTIVE' }, include: { organization: true } })
         if (existing) return existing.organization
         // slug は ASCII のみ（URL 安全）。日本語の社名は org-<時刻> にする
@@ -155,11 +158,15 @@ export async function createOrganization(userId: string, orgName: string, member
         const dup = await tx.expenseOrganization.findUnique({ where: { slug: base } })
         const slug = dup ? `${base}-${Date.now()}` : base
         const org = await tx.expenseOrganization.create({ data: { name: orgName, slug } })
+        createdOrgIds.push(org.id)
         await tx.expenseMember.create({ data: { organizationId: org.id, userId, name: memberName, role: 'owner', status: 'ACTIVE' } })
         // 振込は取引先ごとの条件で計算するので、支払方法の初期値は「振込」1件だけ
         await tx.expensePaymentMethod.create({ data: { organizationId: org.id, type: 'transfer', label: '銀行振込' } })
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 20000 })
+      // 会社の役割の上限は、組織が作られた直後にだけ、会社とのつながりを表へ書く（トランザクションの外）
+      if (createdOrgIds[0]) await linkToolOrgAtCreation({ tool: 'expense', organizationId: createdOrgIds[0], creatorUserId: userId })
+      return result
     } catch (e) {
       const code = (e as { code?: string })?.code
       if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw e
