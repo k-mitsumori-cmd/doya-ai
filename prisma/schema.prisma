@@ -5916,6 +5916,9 @@ model AccountCompany {
   members AccountCompanyMember[]
   billing AccountCompanyBilling?
 
+  // 会社の役割の切り替え（Prisma の上だけの関連。account_companies の列は増えない）
+  roleSetting AccountCompanyRoleSetting?
+
   @@map("account_companies")
 }
 
@@ -5933,7 +5936,7 @@ model AccountCompanyMember {
   company     AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   email       String // 小文字にそろえて入れる
   userId      String? // 参加した人の User.id（招待中は null）
-  role        String         @default("member") // admin | member（持ち主は行を持たない）
+  role        String         @default("member") // admin | member（持ち主は行を持たない）。会社の役割の旗の内側では manager | billing | guest も（ROLES-2026-10-26.md）
   status      String         @default("invited") // invited | active | removed
   inviteToken String?        @unique
   invitedBy   String? // 招待した人の User.id
@@ -5964,6 +5967,58 @@ model AccountCompanyBilling {
 
   @@index([stripeSubscriptionId])
   @@map("account_company_billing")
+}
+
+// ============================================
+// 会社の中の役割（2026-10-26）
+// ============================================
+// 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §8
+// ⚠️ 本番DBにはまだ無い。流す SQL は ROLES-2026-10-26.md §8.2（統括がユーザーの承認を取って流す）
+// ⚠️ 旗 COMPANY_ROLES_ROLLOUT が off のあいだは、この3つの表を読む・書くコードは動かない（src/lib/company-roles/）
+// ⚠️ account_company_members には列を足さない（新しい料金の表を先に流したときに、Prisma の読み込みが落ちないように）
+
+// 役割の変更の記録。追記だけ（DB のトリガーで UPDATE と DELETE を止める）。会社を消しても残す（外部キーを付けない）
+model AccountCompanyRoleEvent {
+  id             String   @id @default(cuid())
+  companyId      String
+  actorUserId    String
+  targetMemberId String?
+  targetEmail    String // 小文字にそろえる
+  kind           String // invited | joined | role_changed | removed | migrated | policy_changed
+  fromRole       String?
+  toRole         String?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([targetMemberId])
+  @@map("account_company_role_events")
+}
+
+// 会社ごとに切り替えられる決まり（src/lib/company-roles/policy.ts。行が無ければ初期値）
+model AccountCompanyRoleSetting {
+  id        String         @id @default(cuid())
+  companyId String         @unique
+  company   AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  policy    Json
+  updatedBy String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("account_company_role_settings")
+}
+
+// 記録を作った人（「自分で作った見積を自分で確定しない」を判定するため）。既存の表に列を足さずに持つ
+// 旗が off でない間に作られた記録だけに残る。行が無い記録は「作った人が分からない」として、確定を止めない
+model AccountCompanyRecordAuthor {
+  id        String   @id @default(cuid())
+  tool      String // quote | income など
+  recordId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([tool, recordId])
+  @@map("account_company_record_authors")
 }
 
 // ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26）。同じ人に二度付けないため

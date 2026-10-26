@@ -5,9 +5,14 @@ import type { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { errorResponse, forbidden, getIncomeContext, hasMinRole, unauthorized, type IncomeContext, type IncomeRole } from './access'
+import { authorizeCompanyActionForSession } from '@/lib/company-roles/access.server'
+import type { CompanyPermission } from '@/lib/company-roles/permissions'
 
-/** ログイン・組織・ロールを確かめてから fn を実行する。業務エラーは 400 系、それ以外は 500 */
-export async function withIncome(req: NextRequest, minRole: IncomeRole, fn: (ctx: IncomeContext) => Promise<Response>): Promise<Response> {
+/**
+ * ログイン・組織・ロールを確かめてから fn を実行する。業務エラーは 400 系、それ以外は 500。
+ * permission を渡すと、会社の役割の旗の内側で、会社の決まり（契約の金額・請求書の確定など）でも確かめる（ROLES-2026-10-26.md §3.4）
+ */
+export async function withIncome(req: NextRequest, minRole: IncomeRole, fn: (ctx: IncomeContext) => Promise<Response>, opts: { permission?: CompanyPermission } = {}): Promise<Response> {
   try {
     const ctx = await getIncomeContext(req)
     if (!ctx) {
@@ -16,6 +21,10 @@ export async function withIncome(req: NextRequest, minRole: IncomeRole, fn: (ctx
       return session?.user ? forbidden('この組織を見る権限がありません') : unauthorized()
     }
     if (!hasMinRole(ctx.role, minRole)) return forbidden()
+    if (opts.permission) {
+      const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: opts.permission })
+      if (!company.allowed) return forbidden('この操作は、会社の決まりで許されていません。会社の管理者に依頼してください。')
+    }
     return await fn(ctx)
   } catch (error) {
     return errorResponse(error)

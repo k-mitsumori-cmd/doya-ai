@@ -1,0 +1,82 @@
+/* 会社のメンバーと権限（/home/roles）。色はトークン名だけで書く */
+.page { max-width: 1080px; margin: 0 auto; padding: 28px 28px 64px; display: grid; gap: 18px; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--blue); }
+.pageTitle { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.01em; }
+.subtitle { margin: 6px 0 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.cardTitle { margin: 0 0 12px; font-size: 17px; font-weight: 800; }
+.note { margin: 8px 0 0; color: var(--sub); font-size: 13px; line-height: 1.7; }
+.shadowNote { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--blue-soft, #eef4ff); color: var(--ink); font-size: 13px; line-height: 1.7; }
+
+.myRole { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.roleBadge {
+  display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px;
+  border-radius: 999px; background: var(--blue-soft, #eef4ff); color: var(--blue);
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+
+/* メンバーの一覧: 広い画面は表、375px では縦に積むカード */
+.members { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.member {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(132px, auto); gap: 12px; align-items: center;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+}
+.member:last-child { border-bottom: 0; }
+.who { min-width: 0; }
+.name { margin: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.email { margin: 2px 0 0; font-size: 12px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.select {
+  min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+  color: var(--ink); padding: 0 10px; font-size: 14px; max-width: 100%;
+}
+
+/* 役割を選ぶ（招待のとき） */
+.picker { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pickerLegend { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.option {
+  display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.option:has(input:checked) { border-color: var(--blue); background: var(--blue-soft, #eef4ff); }
+.option input { margin-top: 3px; }
+.optionLabel { display: block; font-size: 14px; font-weight: 700; }
+.optionText { display: block; margin-top: 2px; font-size: 12px; color: var(--sub); line-height: 1.6; }
+
+/* 決まり */
+.policies { display: grid; gap: 14px; }
+.policy { display: grid; gap: 6px; min-width: 0; }
+.policy .select { width: 100%; }
+.policyTitle { font-size: 14px; font-weight: 700; }
+
+/* 記録 */
+.events { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.event { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.7; }
+.event:last-child { border-bottom: 0; }
+.eventTime { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.message { margin: 0; font-size: 13px; color: var(--ink); }
+.error { margin: 0; font-size: 13px; color: var(--danger, #c62828); }
+.more { margin-top: 10px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 18px; align-items: start; }
+
+@media (max-width: 767px) {
+  .page { padding: 20px 16px 96px; }
+  .member { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .member > :last-child { grid-column: 1 / -1; }
+  .member .select { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option { transition: none; }
+}

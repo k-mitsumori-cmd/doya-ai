@@ -13,5 +13,5 @@ export async function DELETE(req: NextRequest, c: IdCtx) {
     await prisma.$transaction((tx) => deletePayment(tx, ctx, id), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'payment.delete', 'payment', id)
     return NextResponse.json({ ok: true })
-  })
+  }, { permission: 'invoice.issue' })
 }

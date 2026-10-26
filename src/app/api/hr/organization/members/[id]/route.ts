@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole, type HrContext } from '@/lib/hr/types'
 import { ROLE_HIERARCHY } from '@/lib/hr/constants'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -34,11 +35,14 @@ async function mutateMember(ctx: HrContext, id: string, action: Action) {
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
+        // 会社の役割の上限（ctx の役割）より上には上げない
+        const actorRole = lowerToolRole('hr', actor.role, ctx.role)
+        if (!actorRole) return { kind: 'forbidden' as const }
         const target = await tx.hrOrganizationMember.findFirst({ where: { id, organizationId: ctx.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.role === HrMemberRole.OWNER) return { kind: 'owner' as const }
         if (target.id === actor.id) return { kind: 'self' as const }
-        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actor.role)) {
+        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actorRole)) {
           return { kind: 'peer' as const }
         }
         if (action.kind === 'delete') {
@@ -47,7 +51,7 @@ async function mutateMember(ctx: HrContext, id: string, action: Action) {
           })
           return { kind: deleted.count === 1 ? 'deleted' as const : 'changed' as const }
         }
-        if (action.data.role && rank(action.data.role) >= rank(actor.role)) return { kind: 'role' as const }
+        if (action.data.role && rank(action.data.role) >= rank(actorRole)) return { kind: 'role' as const }
         if (action.data.employeeId) {
           const employee = await tx.hrEmployee.findFirst({
             where: { id: action.data.employeeId, organizationId: ctx.organizationId }, select: { id: true },

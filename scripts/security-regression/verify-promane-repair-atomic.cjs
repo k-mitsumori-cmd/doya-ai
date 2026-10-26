@@ -19,7 +19,7 @@ function fixture({ role = 'admin', revokeOnConflict = false, failAtRate = false,
           return { id: 'w' }
         } },
         promaneMember: {
-          findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor' } : null,
+          findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor', role: currentRole } : null,
           updateMany: async ({ where }) => {
             assert.equal(where.workspaceId, 'w')
             if (failAtRate) throw new Error('synthetic write failure')

@@ -55,5 +55,5 @@ export async function POST(req: NextRequest) {
     })
     await audit(prisma, ctx, 'payment.create', 'payment', payment.id, { amount: payment.amount })
     return NextResponse.json({ payment }, { status: 201 })
-  })
+  }, { permission: 'invoice.issue' })
 }

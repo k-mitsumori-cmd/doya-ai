@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const read=f=>fs.readFileSync(path.join(__dirname,'../../',f),'utf8');
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-function load(f,deps){const exports={};vm.runInNewContext(compile(read(f)),{exports,Date,URL,Headers,Request,Response,require:n=>{assert(n in deps,n);return deps[n];}});return exports;}
+function load(f,deps){const exports={};vm.runInNewContext(compile(read(f)),{exports,Date,URL,Headers,Request,Response,require:n=>{if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];assert(n in deps,n);return deps[n];}});return exports;}
 const request=body=>new Request('https://synthetic.invalid/evaluation',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
 (async()=>{const results=[];
 for(const actor of ['self','manager','admin']){

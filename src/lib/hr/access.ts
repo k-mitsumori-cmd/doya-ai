@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { HrMemberRole, HrContext } from './types'
 import { ROLE_HIERARCHY } from './constants'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -22,11 +23,14 @@ export async function getHrContext(): Promise<HrContext | null> {
     orderBy: { createdAt: 'desc' },
   })
   if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'hr', userId, email: session?.user?.email ?? null, toolRole: membership.role })
+  if (!role) return null
 
   return {
     userId,
     organizationId: membership.organizationId,
-    role: membership.role as HrMemberRole,
+    role: role as HrMemberRole,
     memberId: membership.id,
     employeeId: membership.employeeId,
   }

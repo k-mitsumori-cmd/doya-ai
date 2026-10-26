@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { PrismaClient, Prisma } from '@prisma/client'
 import type { HrContext } from '@/lib/hr/types'
 import { evaluationOrganizationWhere, redactEvaluationDepartment } from '@/lib/hr/evaluation-scope'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 export class HrEvaluationOverviewError extends Error {
   constructor(readonly status: 400 | 401 | 403 | 404 | 409) { super('評価期間を再取得して、ログイン状態と権限を確認してください。') }
@@ -28,10 +29,11 @@ export async function readHrEvaluationPeriodOverview(db: PrismaClient, ctx: HrCo
   const previous = parseCursor(encoded)
   return db.$transaction(async tx => {
     const member = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId, userId: ctx.userId,
-      organizationId: ctx.organizationId, status: 'ACTIVE', role: ctx.role }, select: { role: true, employeeId: true } })
-    if (!member || member.employeeId !== (ctx.employeeId ?? null)) throw new HrEvaluationOverviewError(401)
-    if (!['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(member.role)) throw new HrEvaluationOverviewError(403)
-    const admin = member.role === 'OWNER' || member.role === 'ADMIN'
+      organizationId: ctx.organizationId, status: 'ACTIVE' }, select: { role: true, employeeId: true } })
+    // DB の役割が ctx の役割より下がっていたら止める（DB の役割が上でも、ctx の役割より上には上げない）
+    if (!member || lowerToolRole('hr', member.role, ctx.role) !== ctx.role || member.employeeId !== (ctx.employeeId ?? null)) throw new HrEvaluationOverviewError(401)
+    if (!['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(ctx.role)) throw new HrEvaluationOverviewError(403)
+    const admin = ctx.role === 'OWNER' || ctx.role === 'ADMIN'
     if (!admin && (!member.employeeId || await tx.hrEmployee.count({ where: { id: member.employeeId, organizationId: ctx.organizationId } }) !== 1)) throw new HrEvaluationOverviewError(403)
     const period = await tx.hrEvaluationPeriod.findFirst({ where: { id: periodId, organizationId: ctx.organizationId },
       select: { id: true, organizationId: true, name: true, startDate: true, endDate: true, status: true, updatedAt: true } })

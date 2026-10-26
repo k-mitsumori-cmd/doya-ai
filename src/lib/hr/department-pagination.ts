@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import type { HrContext } from '@/lib/hr/types'
 import type { DepartmentHierarchyRow } from '@/lib/hr/department-hierarchy'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const PAGE_CHARACTERS = 65536
 const FRAGMENT_CHARACTERS = 8192
@@ -46,8 +47,8 @@ export async function readHrDepartmentPage(db: PrismaClient, ctx: HrContext, enc
   const previous = cursor(encoded)
   return db.$transaction(async tx => {
     const member = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId, userId: ctx.userId,
-      organizationId: ctx.organizationId, status: 'ACTIVE', role: ctx.role }, select: { id: true, employeeId: true } })
-    if (!member || member.employeeId !== ctx.employeeId) throw new HrDepartmentPageError(401, 'DEPARTMENT_ACCESS_CHANGED')
+      organizationId: ctx.organizationId, status: 'ACTIVE' }, select: { id: true, employeeId: true, role: true } })
+    if (!member || lowerToolRole('hr', member.role, ctx.role) !== ctx.role || member.employeeId !== ctx.employeeId) throw new HrDepartmentPageError(401, 'DEPARTMENT_ACCESS_CHANGED')
     const departmentState = await tx.$queryRaw<{ fingerprint: string; total: bigint }[]>`
       SELECT md5(COALESCE(string_agg(md5(row_to_json(d)::text), '' ORDER BY d.id), '')) AS fingerprint, count(*) AS total
       FROM (SELECT id, xmin::text AS row_version FROM hr_departments WHERE "organizationId" = ${ctx.organizationId}) d

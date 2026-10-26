@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 /** 数値バリデーション */
 function validateAmount(v: number | undefined | null, field: string): number {
@@ -218,9 +219,11 @@ export async function updateMemberRate(workspaceSlug: string, memberId: string, 
   await retryTimeTransaction(() => prisma.$transaction(async tx => {
     const actor = await tx.promaneMember.findFirst({
       where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!actor) throw new Error("時給を変更する権限がありません（owner/admin のみ）");
+    // 会社の役割の上限より上には上げない
+    const ceiled = actor ? await ceilToolRole({ tool: 'promane', userId, toolRole: actor.role }) : null;
+    if (!actor || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error("時給を変更する権限がありません（owner/admin のみ）");
     const updated = await tx.promaneMember.updateMany({
       where: { id: memberId, workspaceId: workspace.id },
       data: { hourlyRate: rate },

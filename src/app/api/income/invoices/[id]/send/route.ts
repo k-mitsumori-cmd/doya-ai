@@ -17,5 +17,5 @@ export async function POST(req: NextRequest, c: IdCtx) {
     const invoice = await prisma.$transaction((tx) => markSent(tx, ctx, id, sentTo), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.sent', 'invoice', id, { sentTo })
     return NextResponse.json({ invoice })
-  })
+  }, { permission: 'invoice.issue' })
 }

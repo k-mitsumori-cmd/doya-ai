@@ -8,6 +8,7 @@ import { parsePromaneWorkDate } from "./time-input";
 
 import { createPromaneTaskOnce, recoverPromaneTask, promaneTaskOperationId, isPromaneTaskReceiptConflict } from './task-creation';
 import { parsePromaneTaskCreate } from './task-input';
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function lockTaskWriter(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
   const actors = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
@@ -243,9 +244,11 @@ export async function repairInvalidTaskDates(workspaceSlug: string): Promise<{ r
   const repaired = await retryTaskTransaction(() => prisma.$transaction(async tx => {
     const member = await tx.promaneMember.findFirst({
       where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ["owner", "admin"] } },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!member) throw new Error("データ修復はオーナー・管理者のみ実行できます");
+    // 会社の役割の上限より上には上げない
+    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null;
+    if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error("データ修復はオーナー・管理者のみ実行できます");
     const tasks = await tx.promaneTask.findMany({
       where: {
         project: { workspaceId: workspace.id },

@@ -3,7 +3,7 @@ const taskCreation=require('./load-typescript.cjs').load('src/lib/promane/task-c
 const {timeCreation,expenseCreation,adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
 const clientCreation=require('./load-typescript.cjs').load('src/lib/promane/client-creation.ts',{'node:crypto':require('node:crypto')});
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
+function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,require:n=>{if(n in deps)return deps[n];if(n.startsWith('@/lib/company-roles/'))return require('./load-typescript.cjs').DEFAULT_MOCKS[n];throw Error(n)}});return exported}
 (async()=>{const results=[];const files=fs.readdirSync(path.join(__dirname,'../../src/lib/promane')).filter(f=>f.startsWith('actions-'));
 for(const mode of ['inactive','missing','anonymous','foreign-slug','active-control','guest','unknown-role','member-repair']){
  let writes=0,unexpected=0,workspaceQueries=0;
