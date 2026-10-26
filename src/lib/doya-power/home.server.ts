@@ -15,7 +15,7 @@ export type DoyaPowerHomeView = {
   nextRecoveryAt: string | null
   nextExpiry: { at: string; amount: number } | null
   /** 新しい順。history を読まないとき（ホームの欄）は空 */
-  history: { at: string; label: string; amount: number; balanceAfter: number; type?: string; action?: string | null }[]
+  history: { at: string; label: string; amount: number; balanceAfter: number; type?: string; action?: string | null; watch?: boolean }[]
 }
 
 export async function loadDoyaPowerHome(opts: { withHistory?: boolean; limit?: number } = {}): Promise<DoyaPowerHomeView | null> {
@@ -32,7 +32,7 @@ export async function loadDoyaPowerHome(opts: { withHistory?: boolean; limit?: n
       byKind: view.byKind,
       nextRecoveryAt: view.nextRecoveryAt,
       nextExpiry: view.nextExpiry,
-      history: rows.map((r) => ({ at: r.at.toISOString(), label: historyLabel(r), amount: r.amount, balanceAfter: r.balanceAfter, type: r.type, action: r.action })),
+      history: rows.map((r) => ({ at: r.at.toISOString(), label: historyLabel(r), amount: r.amount, balanceAfter: r.balanceAfter, type: r.type, action: r.action, ...(r.watch ? { watch: true } : {}) })),
     }
   } catch (e) {
     if ((e as { name?: string })?.name === 'DoyaPowerDisabledError') return null

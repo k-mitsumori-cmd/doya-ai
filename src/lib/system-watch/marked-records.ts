@@ -3,7 +3,7 @@
 //
 // ⚠️ 名前の印（【自動点検】）だけで外すと偽れる。商談準備の名前は相手のサイトの社名から決まるので、
 //    社名を「【自動点検】…」にしたサイトを作れば枠を抜けられてしまう。
-//    そこで、合図（marker.ts の isSystemWatchRequest）を確かめたツールのルートだけが、作った記録の ID をここに残す。
+//    そこで、合図（watch-gate.ts の isSystemWatchFor）を確かめたツールのルートだけが、作った記録の ID をここに残す。
 //    数えるときは、その ID を除く。外の人は合図を作れないので、ID の一覧は偽れない。DB の列は足さない。
 //
 // 置き場所: SystemSetting（watch:v1:marked:<種類>:<組織などの ID>:<日本時間の YYYY-MM>）に ID の JSON 配列。
@@ -41,7 +41,7 @@ function parseIds(value: string | undefined | null): string[] {
 }
 
 /**
- * 自動点検が作った記録として ID を残す。⚠️ 呼ぶのは、isSystemWatchRequest(req.headers) が true のときだけ。
+ * 自動点検が作った記録として ID を残す。⚠️ 呼ぶのは、isSystemWatchFor(req.headers, 本人の userId) が true のときだけ。
  * 作った記録と同じトランザクションの tx を渡すと、記録と印が一緒に残る。
  */
 export async function markSystemWatchRecord(db: SettingDb, kind: MarkedKind, scopeId: string, id: string, at: Date = new Date()): Promise<void> {

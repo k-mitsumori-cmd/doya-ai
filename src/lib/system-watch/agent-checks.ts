@@ -6,7 +6,9 @@
 //   - 見本の会社のサイトを、AI を使わずに読めるか（取得・本文の長さ・NUL）
 // 有料（1日1回。SystemSetting watch:v1:paid-agent-enabled が 'true' のときだけ。2026-10-26 ユーザー承認・1日 約10円まで）
 //   - B1: 商談の準備を1回通す（会社の調査・見積の案・スライドの構成）。1回 約1.8円（上限 約10円）。
-//         テスト用のユーザー（SYSTEM_WATCH_TEST_USER_ID）として呼ぶ。ドヤパワーの旗が on なら、その会社の台帳から 31 減る
+//         ユーザー本人のアカウント（SYSTEM_WATCH_TEST_USER_ID。2026-10-26 ユーザー指示）として呼ぶ。
+//         ドヤパワーの旗が on なら、本人の会社の台帳から 31 減る。残りが MIN_POWER_FOR_B1 を切ったら回さない。
+//         作る物には「【自動点検】」を付ける（marker.ts）。エージェントの側が印に対応するまでは回さない
 //   - B2: 会社の調査だけを見本の URL で通す（gemini-2.5-flash を1つ1回）。B1 が使う1つ目を除いた2つで 約2.4円
 // 見本のサイトは1日1回・1URL 1回まで読む（エージェントの担当の条件。今は自社のサイト）。
 //   B1 は1つ目、B2 は2つ目と3つ目を読む。無料の「AI なしで読めるか」は、有料の確認が止まっているときだけ1日1回読む。
@@ -14,9 +16,27 @@ import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { bodySnippet, describeFetchError } from '@/lib/health-check-report'
 import { httpCheck, siteBase } from './http'
+import { SYSTEM_WATCH_HEADER } from './marker'
+import { systemWatchTokenFor } from './watch-gate'
 import type { CheckDef, CheckOutcome } from './types'
 
 export const PAID_AGENT_ENABLED_KEY = 'watch:v1:paid-agent-enabled'
+
+/** 本人の作業に足りなくならないよう、ドヤパワーの残りがこれを切ったら B1 を回さない（2026-10-26 ユーザー指示の例の値） */
+export const MIN_POWER_FOR_B1 = 300
+
+/** 本人の会社のドヤパワーの残り（読むだけ。台帳の表を SQL で読む。旗が off・会社が無いときは null） */
+export async function powerLeftFor(userId: string): Promise<number | null> {
+  const { doyaPowerRollout } = await import('@/lib/doya-power/flag')
+  if (doyaPowerRollout() === 'off') return null
+  const rows = await prisma.$queryRaw<{ remaining: bigint | null }[]>`
+    SELECT COALESCE(SUM(g.remaining), 0)::bigint AS remaining
+    FROM account_companies c
+    JOIN doya_power_accounts a ON a."companyId" = c.id
+    LEFT JOIN doya_power_grants g ON g."accountId" = a.id AND (g."expiresAt" IS NULL OR g."expiresAt" > now())
+    WHERE c."userId" = ${userId}`
+  return rows.length ? Number(rows[0].remaining ?? 0) : null
+}
 
 /** 見本の会社。毎日読みに行くので、他社ではなく自社のサイト3つにする（2026-10-26 ユーザー指示、メイン経由）。
  *  2026-10-26 に手元で AI なしで読んで確かめた（取得・文字コード・本文の長さ・NUL）。社名の取り出しは AI なので、
@@ -143,14 +163,23 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
       run: async (): Promise<CheckOutcome> => {
         const url = (await sampleCompanies())[0]?.url
         if (!url) return { ok: true, skipped: true, detail: '見本の URL が無いため回していない' }
-        // テスト用のアカウントができるまでは回さない（毎日「未設定」で知らせない。費用にも数えない）
-        if (!process.env.SYSTEM_WATCH_TEST_USER_ID) return { ok: true, skipped: true, detail: 'テスト用のアカウント（SYSTEM_WATCH_TEST_USER_ID）が未設定のため回していない' }
+        // テスト用のアカウントが決まるまでは回さない（毎日「未設定」で知らせない。費用にも数えない）
+        const testUserId = process.env.SYSTEM_WATCH_TEST_USER_ID
+        if (!testUserId) return { ok: true, skipped: true, detail: 'テスト用のアカウント（SYSTEM_WATCH_TEST_USER_ID）が未設定のため回していない' }
+        // 本人の会社に印の無い物を作らないよう、エージェントの側が「【自動点検】」に対応するまでは回さない
+        const routes = await import('@/lib/agent-orchestration/routes.server') as Record<string, unknown>
+        if (routes.SYSTEM_WATCH_MARKER_SUPPORTED !== true) return { ok: true, skipped: true, detail: 'エージェントの側が「【自動点検】」の印にまだ対応していないため回していない（routes.server の SYSTEM_WATCH_MARKER_SUPPORTED）' }
+        // 本人の作業に足りなくならないよう、ドヤパワーの残りが少ないときは回さない
+        const left = await powerLeftFor(testUserId)
+        if (left !== null && left < MIN_POWER_FOR_B1) return { ok: true, skipped: true, detail: `ドヤパワーの残りが ${left} で、${MIN_POWER_FOR_B1} を切っているため回していない` }
+        // 合図は本人（SYSTEM_WATCH_TEST_USER_ID）と今日の日付に結び付く（watch-gate.ts）。日付の変わり目をまたがないよう、送る直前に作る
+        if (!systemWatchTokenFor(testUserId)) return { ok: true, skipped: true, detail: 'CRON_SECRET が無いため、自動点検の合図を作れず回していない' }
         const answers = { url, offer: 'web', budget: 'u50', stage: 'first' }
         const outcomes = await withTestUserSession(async cookie => Promise.all((['research', 'quote', 'slides'] as const).map(async (taskId): Promise<TaskOutcome> => {
           try {
             const res = await fetch(base + '/api/agent/tasks', {
               method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(280_000),
-              headers: { 'content-type': 'application/json', cookie, origin: base },
+              headers: { 'content-type': 'application/json', cookie, origin: base, [SYSTEM_WATCH_HEADER]: systemWatchTokenFor(testUserId) ?? '' },
               body: JSON.stringify({ recipeId: 'sales-prep', taskId, answers }),
             })
             const text = await res.text().catch(() => '')

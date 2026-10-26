@@ -28,6 +28,7 @@ import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
 import { getOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
+import { excludeIds, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -384,11 +385,13 @@ export async function getUsageSummary(
         key: 'quoteDocuments',
         plan: orgPlan,
         orgIds,
-        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', () =>
-          prisma.quoteDocument.count({ where: { organizationId: { in: ids } } })),
-        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', () =>
+        // 自動点検（system-watch の B1）が作った見積書は数えない（2026-10-26 ユーザー決定。ルートと同じく記録の ID で外す。
+        // 台帳はルートが合図つきのときに増やさない）。⚠️ 累計もルート（api/quote/documents）と同じく今月の ID だけを除く（2026-10-26 統括の再監査）
+        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', async () =>
+          prisma.quoteDocument.count({ where: { organizationId: { in: ids }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) } })),
+        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', async () =>
           prisma.quoteDocument.count({
-            where: { organizationId: { in: ids }, createdAt: { gte: since } },
+            where: { organizationId: { in: ids }, createdAt: { gte: since }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) },
           }), since),
       })
     }
@@ -406,11 +409,14 @@ export async function getUsageSummary(
       //    失敗した調査や、止まったままの processing を含めて数えていたため、
       //    APIはまだ受け付けるのに画面だけ「使い切りました」と赤くなっていた。
       const staleBefore = new Date(Date.now() - PREP_STALE_MS)
+      // 自動点検（system-watch の B1）が作った商談準備は、月の枠に数えない（2026-10-26 ユーザー決定。ルートと同じ）
+      const watchIds = await systemWatchRecordIds(prisma, 'shodan-preparation', orgIds).catch(() => [])
       const used = orgIds.length
         ? await prisma.shodanPreparation.count({
             where: {
               organizationId: { in: orgIds },
               createdAt: { gte: jstStartOfMonthUtc() },
+              ...excludeIds(watchIds),
               OR: [
                 { status: 'done' },
                 { status: 'researched' },

@@ -104,7 +104,7 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
    * - 同じ会社・同じ操作の名前・同じルート（scope）で、5分以内に減らした
    * - 前の操作は全額で減らしたもの（半分で減らした操作は土台にしない。連鎖させない）で、まだ戻していない
    */
-  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown; scope?: unknown } = {}): Promise<ChargeOutcome> {
+  async function charge(action: DoyaPowerAction, opts: { units?: number; key?: unknown; retryOf?: unknown; target?: unknown; scope?: unknown; watch?: boolean } = {}): Promise<ChargeOutcome> {
     const who = await target()
     if (!who) return { kind: 'skip' }
     const fullAmount = doyaPowerCost(action, opts.units ?? 1)
@@ -140,7 +140,9 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
       // ⚠️ 前に失敗して戻した操作の ID がもう一度来たら、新しい操作として減らし直す（戻した操作をタダで動かさない）
       if (key && (await deps.ledger.operationStatus(operationId)) === 'refunded') operationId = `${operationId}:retry-${newKey()}`
-      const r = await deps.ledger.consume(who.companyId, amount, operationId, targetKey ? { note: `target:${targetKey}${halved ? ' halved:1' : ''}` } : undefined)
+      // 自動点検（system-watch の B1）の消費には watch:1 を足す。内訳と履歴で「自動点検」と分けて出すため（作り直しの判定は先頭の target: と halved:1 だけを見る）
+      const noteParts = [targetKey ? `target:${targetKey}${halved ? ' halved:1' : ''}` : '', opts.watch === true ? 'watch:1' : ''].filter(Boolean)
+      const r = await deps.ledger.consume(who.companyId, amount, operationId, noteParts.length ? { note: noteParts.join(' ') } : undefined)
       if (r.ok) {
         // ⚠️ 同じ ID の2回目（duplicated）は、この呼び出しでは減らしていないので、失敗しても戻さない。
         //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）。

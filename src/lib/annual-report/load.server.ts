@@ -7,6 +7,8 @@
 // ⚠️ 顧客名・金額・社員名は、利用者が選び、その組織で本人が owner・admin のときだけ読む。選んでいなければ DB から取らない。
 // ⚠️ 1つのツールが読めなくても、ほかのツールは出す（そのツールは 0 件）。失敗の中身はログに出さない。
 import { yearRange, type AnnualRawData, type AnnualToolId, type RevealKey } from './report'
+import { excludeIds } from '@/lib/system-watch/marked-records'
+import { systemWatchRecordIdsBetween } from '@/lib/system-watch/marked-records-range'
 
 /** 会社（組織）ごとに数えるツールと、その所属の表 */
 export const ORG_MEMBER_MODELS = {
@@ -83,7 +85,11 @@ export async function loadAnnualRawData(
     ['interview', async () => dates(await db.interviewProject.findMany({ where: { userId, createdAt }, ...listOpts }))],
   ]
   const q = org('quote')
-  if (q) queries.push(['quote', async () => dates(await db.quoteDocument.findMany({ where: { organizationId: q, createdAt }, ...listOpts }))])
+  // 自動点検（system-watch の B1）が毎日作る見積の下書きは数えない（2026-10-26 ユーザー決定。記録の ID で外す）
+  if (q) queries.push(['quote', async () => {
+    const watch = await systemWatchRecordIdsBetween(db, 'quote-document', [q], start, end).catch(() => [])
+    return dates(await db.quoteDocument.findMany({ where: { organizationId: q, createdAt, ...excludeIds(watch) }, ...listOpts }))
+  }])
   const s = org('shodan')
   if (s) queries.push(['shodan', async () => dates(await db.shodanPreparation.findMany({ where: { organizationId: s, status: 'done', createdAt }, ...listOpts }))])
   const m = org('mensetsu')

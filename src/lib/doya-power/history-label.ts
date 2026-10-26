@@ -34,9 +34,11 @@ export function actionLabel(action: string | null): string {
 }
 
 /** 履歴の1行の名前 */
-export function historyLabel(e: Pick<HistoryEntry, 'type' | 'action' | 'kind'>): string {
-  if (e.type === 'consume') return actionLabel(e.action)
-  if (e.type === 'refund') return `${actionLabel(e.action)}（失敗したので戻した分）`
+export function historyLabel(e: Pick<HistoryEntry, 'type' | 'action' | 'kind' | 'watch'>): string {
+  // 自動点検（system-watch の B1）が毎日減らす分は、本人の操作と分かるように名前を分ける（2026-10-26 ユーザー決定）
+  const watch = e.watch ? '（自動点検）' : ''
+  if (e.type === 'consume') return `${actionLabel(e.action)}${watch}`
+  if (e.type === 'refund') return `${actionLabel(e.action)}${watch}（失敗したので戻した分）`
   if (e.type === 'expire') return '期限切れ'
   return (e.kind && (KIND_LABELS as Record<string, string>)[e.kind]) || '付与'
 }
