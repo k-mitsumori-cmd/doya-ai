@@ -25,6 +25,7 @@ import type {
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
 import { AGENT_EXAMPLES } from './examples'
+import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
 import styles from './home-agent.module.css'
 
@@ -221,9 +222,13 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
 
 /* ---------- 本体 ---------- */
 
-export default function HomeAgent({ executor = 'api' }: {
+export default function HomeAgent({ executor = 'api', greeting, company }: {
   /** sample は見本の結果で最後まで動かす（開発の確認ページ用。API も各ツールも呼ばない） */
   executor?: Executor
+  /** 見出しの上のあいさつ（例「おつかれさまです、〇〇さん」）。経営ホームが渡す */
+  greeting?: string
+  /** 見出しの上の会社の札。経営ホームが渡す */
+  company?: ReactNode
 }) {
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
@@ -433,6 +438,14 @@ export default function HomeAgent({ executor = 'api' }: {
         </svg>
       ) : null}
 
+      {/* 見出しは「今日は、何をしますか？」の1つだけ（旧の欄と新しい欄をまとめた。2026-10-26 ユーザーの指示）。
+          入力の画面では大きく出し、ほかの画面では読み上げ用だけにする */}
+      <header className={scene === 'input' ? styles.head : styles.srOnly}>
+        {greeting ? <p className={styles.headGreeting}>{greeting}</p> : null}
+        {company ? <div className={styles.headCompany}>{company}</div> : null}
+        <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
+      </header>
+
       <div className={styles.hero}>
         <div className={styles.kun} ref={kunRef}>
           <span className={styles.halo} aria-hidden="true" />
@@ -446,16 +459,13 @@ export default function HomeAgent({ executor = 'api' }: {
       </div>
 
       <div className={styles.panel}>
-        <h2 id="home-agent-title" className={styles.srOnly}>ドヤくんに頼む</h2>
 
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
             <div className={styles.card}>
-              <p className={styles.eyebrow}>新しい依頼</p>
-              <label className={styles.title} htmlFor="home-agent-ask">どんなゴールを目指しますか？</label>
-              <p className={styles.lead}>ドヤくんが材料を読み、ゴールまでの差を ToDo に分けます。動かす前に、内容と減る量を確かめます。</p>
-              <textarea id="home-agent-ask" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
+              <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
                 placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              <p id="home-agent-lead" className={styles.lead}>やりたいことやゴールを書くと、ドヤくんが材料を読み、ゴールまでの差を ToDo に分けます。動かす前に、内容と減る量を確かめます。</p>
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={`${styles.chips} ${styles.exampleChips}`}>
                 {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}

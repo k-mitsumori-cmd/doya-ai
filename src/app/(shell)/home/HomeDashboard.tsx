@@ -4,7 +4,7 @@
 // ============================================
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, Send, StopCircle, CheckCircle2, Loader2, RefreshCw, TrendingUp, Wallet, FileText, FolderKanban,
   Clock, Users, CreditCard, AlertTriangle, ChevronLeft, ChevronRight, X,
@@ -459,7 +459,9 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
-      {agentStage}
+      {isValidElement<{ greeting?: string; company?: ReactNode }>(agentStage)
+        ? cloneElement(agentStage, { greeting: `${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`, company: <ShellCompanyTag /> })
+        : agentStage}
       {/* 新しい経営ホーム（旗 AGENT_ORCHESTRATION_ROLLOUT）が出ているときは、旧の「今日は、何をしますか？」を出さない（入力欄を1つにする。2026-10-26 メインの指摘）。
           旗が off の人は今までどおり */}
       {agentStage ? null : <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />}
