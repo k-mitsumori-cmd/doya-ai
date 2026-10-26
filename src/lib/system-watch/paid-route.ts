@@ -9,7 +9,7 @@ import type { CheckDef, CheckResult } from './types'
 /**
  * 有料の確認を同時に回す数。B1 は最大 270秒（agent-checks.ts の B1_CHECK_TIMEOUT_MS）かかり、
  * B2 と順に回すとルートの maxDuration（300秒）を超えるため、2つずつ同時に回す。
- * 1日の上限は回す前に累計を見るので、同時に回した分だけ上限を少し超えることがある（最大で B1 と B2 の 約4.2円）。
+ * 同時に回しても、費用は回す前に1つずつ予約するので、1日の上限は超えない（paid-run.ts の wrapWithDailyCap）。
  */
 export const PAID_CONCURRENCY = 2
 
