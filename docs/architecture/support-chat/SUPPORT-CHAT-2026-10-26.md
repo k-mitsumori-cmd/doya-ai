@@ -103,7 +103,7 @@
 | A2 | 根拠のリンクを出す | P0 | 済み |
 | A3 | 分からないときは無理に答えず、運営へ渡す | P0 | 済み |
 | A4 | まずはモックの答え（材料の中から言葉で探す）でテストする | P0 | 済み |
-| A5 | 本物の AI（6 の見込み額）に切り替える | P1 | 済み（2026-10-26 承認。gemini-2.5-flash。`SUPPORT_CHAT_AI=mock` でいつでもモックに戻せる） |
+| A5 | 本物の AI（6 の見込み額）に切り替える | P1 | 済み（2026-10-26 ユーザー決定。Claude Haiku 5.5。`SUPPORT_CHAT_AI=mock` でいつでもモックに戻せる） |
 | A6 | AI の答えにも運営へ渡す判定をかける（AI が支払いの話をしたら止める） | P0 | 済み（モックでも同じ関数を通す） |
 | A7 | 会話の直前の数往復だけを AI に渡す（長くしない） | P1 | 済み（直近6件） |
 | A8 | 答えの「役に立った / 立たなかった」 | P1 | まだ（記録の表と一緒に作る。押しても残らないボタンは置かない） |
@@ -154,45 +154,50 @@
 
 ## 6. AI に使うモデルと見込み額
 
-### 6.1 モデル
+### 6.1 モデル（2026-10-26 ユーザー決定: Claude Haiku 5.5）
 
-おすすめは Gemini の Flash 系（`gemini-2.5-flash`）で、フォールバックの末尾に `gemini-flash-latest` を置きます。
-理由は次の3つです。
+答えは Claude Haiku 5.5（`claude-haiku-5-5`）で作ります。実装は `src/lib/support-chat/claude.ts` です。
 
-- 答えは短く、材料の中から選ぶだけなので、上位のモデルは要らない。
-- ドヤAI はすでに Gemini のキー（`GOOGLE_GENAI_API_KEY`）を持っている。
-- 単価が低い。
+決めた経緯は次のとおりです。
 
-2026-10-26 にユーザーがこのモデルと見込み額を承認しました。実装は `src/lib/support-chat/gemini.ts` です。
+1. 最初は gemini-2.5-flash を提案し、ユーザーが承認した（1回 約0.3円）。
+2. 開発ルールに「製品の中の AI も、頭を使う所は Opus、軽い所は Sonnet 以下」とあることが分かった（Obsidian の開発ルール）。
+3. A（Gemini）・B（Claude Sonnet 5.5）・C（Claude Haiku 5.5）を示し、ユーザーが C を選んだ。答えは資料から選んで短く書く軽い仕事なので、一番軽いモデルで足りる。
 
-- キーは今の `GOOGLE_GENAI_API_KEY`（無ければ `GOOGLE_AI_API_KEY`・`GEMINI_API_KEY`）。URL ではなくヘッダーで送る。
-- モデルは `SUPPORT_CHAT_AI_MODEL` で変えられる（既定 `gemini-2.5-flash`、廃止の 404 のときだけ `gemini-flash-latest`）。
-- 思考のトークンは見込み額に入っていないので、`thinkingBudget: 0` にした。出力は 700 トークンまで。
-- AI が使えないとき（障害・上限・キーの不備）は、モックの答えに切り替える。
-- `SUPPORT_CHAT_AI=mock` で、いつでもモックに戻せる。
+呼び方の決まり（claude-api スキルの資料「Migrating to Claude Haiku 5.5」で確かめた）:
 
-⚠️ モデルIDは実 API で生きているかを確かめる決まりです（CLAUDE.md）。手元の .env のキーは無効で（API_KEY_INVALID。課金なし）、本番のキーを手元に取り出す操作は止められました。
-そのため、本番に反映したあと、preview でユーザーが1回質問して確かめます（9 の手順 3）。
+- モデル ID は日付の付かない `claude-haiku-5-5`。`SUPPORT_CHAT_AI_MODEL` で変えられる。
+- 公式の SDK `@anthropic-ai/sdk` を使う（0.133.0 に固定。2週間以上前に出た版）。キーは今の `ANTHROPIC_API_KEY`。
+- Haiku 5.5 は `temperature` などを送ると 400 になるので送らない。思考は止めず、`effort: 'low'` にする（資料のおすすめ）。
+- 前置き（prefill）は 400 なので、JSON は構造化出力（`output_config.format`）で受け取る。
+- 思考の分も `max_tokens` に入るので、上限を 1,500 にした。
+- 安全の判定で断られた（`stop_reason: refusal`）ときは「分からない」にし、「運営に伝える」を出す。
+- 失敗したら再試行は1回だけで、そのあとはモックの答えにする。
 
-### 6.2 1回あたりの見込み
+### 6.2 Gemini を残すか
 
-2026-10 時点の公表の単価を前提にした見込みです。切り替える前に、最新の単価で計算し直します。
+Gemini（`gemini.ts`）は、自動の切り替え先にはしません。1回の質問で有料の AI を2つ呼ぶと、見込み額が読めなくなるからです。
+Claude が長く止まったときに人の判断で替えられるよう、`SUPPORT_CHAT_AI=gemini` で選べる予備として残します（承認済みの gemini-2.5-flash）。
+`SUPPORT_CHAT_AI=mock` にすると、有料の AI を呼ばずにモックで答えます。
+
+### 6.3 1回あたりの見込み
 
 | 項目 | 見込み |
 |---|---|
-| 入力 | 約3,000トークン（材料 2,000 ＋ 会話 1,000） |
-| 出力 | 約400トークン |
-| gemini-2.5-flash の単価 | 入力 100万トークンあたり 0.30ドル、出力 2.50ドル |
-| 1回あたり | 約0.0019ドル（約0.3円） |
-| 参考: Flash-Lite を使う場合 | 約0.0005ドル（約0.08円） |
+| 入力 | 約3,000トークン（資料 2,000 ＋ 会話 1,000） |
+| 出力 | 約400トークン（思考を含めて最大 1,500） |
+| Claude Haiku 5.5 の単価（入力 10万トークン以下） | 入力 100万トークンあたり 0.10ドル、出力 0.50ドル |
+| 1回あたり | 約0.0005ドル（約0.08円）。思考が増えて出力が 1,500 になっても 約0.001ドル（約0.15円） |
 
-### 6.3 1日の上限と月の見込み
+単価は claude-api スキルの料金表（2026-10-06 時点）です。1ドル=150円で計算しました。
 
-- 全体の1日の上限は 800回（`SUPPORT_CHAT_AI_DAILY_LIMIT`）にします。上限に達したら AI を止め、「運営に伝える」だけにします。
-- 上限まで毎日使われた場合で、1日 約1.5ドル（約230円）、月 約45ドル（約7,000円）です。
-- 1人1日30回の上限があるので、1人が使える額は 1日 約9円までです。
+### 6.4 1日の上限と月の見込み
 
-### 6.4 ドヤパワーを使わない理由
+- 全体の1日の上限は 800回（`SUPPORT_CHAT_AI_DAILY_LIMIT`）にします。上限に達したら AI を止め、モックの答えと「運営に伝える」だけにします。
+- 上限まで毎日使われた場合で、1日 約0.4ドル（約60円）、月 約12ドル（約1,800円）です。
+- 1人1日30回の上限があるので、1人が使える額は 1日 約2.4円までです。
+
+### 6.5 ドヤパワーを使わない理由
 
 - 問い合わせは、利用者の困りごとを減らすためのもので、成果物を作る機能ではない。
 - 不具合や支払いの相談でポイントが減ると、苦情が増える。
@@ -229,7 +234,10 @@
 | 運営へ渡す判定・分類・重さ | `src/lib/support-chat/rules.ts` |
 | 答えの材料とよくある質問 | `src/lib/support-chat/knowledge.ts` |
 | 答えを作る（選び方・安全の確かめ・モック） | `src/lib/support-chat/answer.ts` |
-| 本物の AI（Gemini） | `src/lib/support-chat/gemini.ts` |
+| AI への指示と答えの読み方（共通） | `src/lib/support-chat/prompt.ts` |
+| 本物の AI（Claude Haiku 5.5） | `src/lib/support-chat/claude.ts` |
+| 予備の AI（Gemini。`SUPPORT_CHAT_AI=gemini` のときだけ） | `src/lib/support-chat/gemini.ts` |
+| 答え方を選ぶ（サーバーだけ） | `src/lib/support-chat/select.ts` |
 | 受付番号・営業時間・伏せ字・Slack の文面 | `src/lib/support-chat/ticket.ts` |
 | 受付と履歴の保存（表が無いときの代わりの保存も） | `src/lib/support-chat/store.ts` |
 | 返信のメールの文面 | `src/lib/support-chat/mail.ts` |
@@ -243,7 +251,7 @@
 | 管理画面 | `src/app/admin/support/page.tsx`（左のメニューの「サポートの受付」） |
 | ボタンと画面 | `src/components/support-chat/SupportChat.tsx`、`support-chat.module.css` |
 | つなぎ込み | `src/components/shell/ShellGate.tsx`、`src/app/(shell)/layout.tsx`、`src/app/pricing/page.tsx` |
-| テスト | `src/lib/support-chat/support-chat.test.ts`（`npm run test:support-chat`、30件）、`scripts/security-regression/verify-support-chat.cjs`（`npm run test:security` から流れる） |
+| テスト | `src/lib/support-chat/support-chat.test.ts`（`npm run test:support-chat`、33件）、`scripts/security-regression/verify-support-chat.cjs`（`npm run test:security` から流れる） |
 | 確認ページ（本番では 404。ログインせずにモックで動かす） | `src/app/(shell)/support-chat-preview/` |
 
 ## 9. 本番への反映の手順（統括のセッションで、ユーザーの承認を得てから）
@@ -260,15 +268,16 @@
 |---|---|
 | `SUPPORT_CHAT_ROLLOUT` | 新しく足す旗。off / preview / all |
 | `UI_PREVIEW_EMAILS` | 今あるもの。preview で試す人 |
-| `GOOGLE_GENAI_API_KEY` | 今あるもの。Gemini のキー |
-| `SUPPORT_CHAT_AI` / `SUPPORT_CHAT_AI_MODEL` / `SUPPORT_CHAT_AI_DAILY_LIMIT` | 任意。足さなければ Gemini・gemini-2.5-flash・800回/日 |
+| `ANTHROPIC_API_KEY` | 今あるもの。Claude のキー |
+| `GOOGLE_GENAI_API_KEY` | 今あるもの。予備の Gemini を選んだときだけ使う |
+| `SUPPORT_CHAT_AI` / `SUPPORT_CHAT_AI_MODEL` / `SUPPORT_CHAT_AI_DAILY_LIMIT` | 任意。足さなければ Claude・claude-haiku-5-5・800回/日 |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | 今あるもの。返信のメール |
 | Slack の送り先 | 環境変数ではなく、DB の SystemSetting の `slack_webhook`（今のドヤAIの通知と同じ） |
 
 ## 10. まだ良くない点
 
 - AI が使えないときのモックの答えは、材料の言葉と合わない聞き方には「運営に伝える」を出すことが多い。
-- 本物の AI の答えは、本番のキーではまだ一度も確かめていない（手元のキーが無効だったため）。
+- 本物の AI（Claude Haiku 5.5）の答えは、まだ一度も実際には確かめていない。手元から本番のキーを使う操作は止められたので、反映のあと preview で1回試す。
 - 運営の返信は管理画面から書く。Slack のスレッドからはまだ書けない。
 - 祝日を営業時間外として扱っていない。
 - スクリーンショットはまだ添付できない。
