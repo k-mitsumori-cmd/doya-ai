@@ -6,6 +6,13 @@
 //   スイッチの状態は変えない。1日10円の上限はそのまま守る。作った記録の ID と、台帳の前後を返す。
 import type { CheckDef, CheckResult } from './types'
 
+/**
+ * 有料の確認を同時に回す数。B1 は最大 270秒（agent-checks.ts の B1_CHECK_TIMEOUT_MS）かかり、
+ * B2 と順に回すとルートの maxDuration（300秒）を超えるため、2つずつ同時に回す。
+ * 1日の上限は回す前に累計を見るので、同時に回した分だけ上限を少し超えることがある（最大で B1 と B2 の 約4.2円）。
+ */
+export const PAID_CONCURRENCY = 2
+
 /** 前後を比べるための写し。SystemSetting のキーと値、ドヤパワーの残り */
 export type Snapshot = { settings: Record<string, string>; powerLeft: number | null }
 
@@ -58,7 +65,7 @@ export async function handlePaidRequest(request: Request, method: 'GET' | 'POST'
     const spentBefore = (await deps.readSpend()).yen
     const before = await deps.snapshot()
     // 1回だけ。上限に届いていれば、各確認は回さずに「回していない」を返す
-    const report = await deps.runWatch('paid-once', checks, { concurrency: 1 })
+    const report = await deps.runWatch('paid-once', checks, { concurrency: PAID_CONCURRENCY })
     const after = await deps.snapshot()
     const spentAfter = (await deps.readSpend()).yen
     return {
@@ -79,8 +86,7 @@ export async function handlePaidRequest(request: Request, method: 'GET' | 'POST'
 
   const { checks, groups, skipped } = await deps.budgetedPaidChecks()
   if (!checks.length) return { status: 200, body: { skipped: true, reason: `${deps.switchKeys.join(' と ')} がどちらも true ではないため、有料の確認は動かしていません` } }
-  // 上限を正しく数えるため、1つずつ回す
-  const report = await deps.runWatch('paid', checks, { concurrency: 1 })
+  const report = await deps.runWatch('paid', checks, { concurrency: PAID_CONCURRENCY })
   const spend = await deps.readSpend()
   return {
     status: 200,

@@ -115,6 +115,7 @@
   - 無料の「AI なしで読めるか」（`agent:sample-sites`）は、有料の確認が止まっている日だけ1日1回読む。結果はその日のあいだ使い回す。
   - 差し替えは SystemSetting `watch:v1:sample-company-urls`（か環境変数 `SYSTEM_WATCH_SAMPLE_COMPANY_URLS`）。差し替えたときは社名を見ない。
 - 手で1回だけ回す入口（2026-10-26 統括の依頼）: `POST /api/cron/system-watch-paid?once=agent`（`Authorization: Bearer ${CRON_SECRET}` が要る）。B1・B2 だけを、スイッチ2に関係なく1回だけ回す。スイッチの状態は変えず、1日10円の上限は守る。返す中身は、作った記録の ID（`createdIds`）、本人の分の台帳の変化（`ledgerChanges`。見積書の枠の台帳・構成づくりの回数。空なら期待どおり）、ドヤパワーの残りの前後（`powerLeft`）。本番で初めて動かすときの手順: `SYSTEM_WATCH_TEST_USER_ID` だけを入れて再デプロイ → この入口で1回回す → 記録の ID が残り、`ledgerChanges` が空であることを確かめる → スイッチを入れる（どれも統括のセッションでユーザーの承認を取る）。
+- B1 の時間（2026-10-26 本番の手動の1回を受けて）: 1つの ToDo は230秒、確認そのものは270秒まで待つ（ほかの確認は25秒）。応答が時間内に届かなくても、その ToDo の自動点検の記録ができていれば、作業は済んだとみなす（前後の記録の ID の差で確かめる）。4xx・5xx の応答は、記録があっても失敗とする。有料の確認は2つずつ同時に回し、ルートの300秒に収める。
 - 見る所: 3つの ToDo の結果（失敗したら札の cause と actions）と、本番のログの `[shodan/preparations] research failed` の stage・code・reason。
 
 ### 1.5 手元からの試し

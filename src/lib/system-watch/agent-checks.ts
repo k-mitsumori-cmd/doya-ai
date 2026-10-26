@@ -125,6 +125,54 @@ async function withTestUserSession<T>(fn: (cookie: string) => Promise<T>): Promi
 
 type TaskOutcome = { taskId: string; status: number; ok: boolean; message: string }
 
+/** B1 の ToDo と、その ToDo が残す自動点検の記録の種類 */
+export const TASK_RECORD_KIND = { research: 'shodan-preparation', quote: 'quote-document', slides: 'doyaslide-project' } as const
+export type SalesPrepTask = keyof typeof TASK_RECORD_KIND
+
+/** B1 の1つの ToDo の時間の上限。エージェントの作業は、スライドの構成で数分かかる（2026-10-26 本番の手動の1回で 25秒を超えた） */
+export const B1_TASK_TIMEOUT_MS = 230_000
+/** B1 の確認そのものの時間の上限（ToDo の上限のあと、記録を確かめる時間を足す）。ルートの maxDuration（300秒）に収める */
+export const B1_CHECK_TIMEOUT_MS = 270_000
+
+/**
+ * B1 の結果を判定する（純粋関数）。
+ * - 応答が成功なら、その ToDo はできた。
+ * - 応答が届かなかった（時間切れ・通信が切れた・504）が、その ToDo の自動点検の記録ができていれば、作業は済んだとみなす
+ *   （本番の手動の1回で、記録はできたのに確認の時間切れで NG になった。2026-10-26 統括の報告）。
+ * - それ以外（4xx・5xx の応答、記録も無い時間切れ）は失敗。
+ */
+export function judgeSalesPrep(outcomes: TaskOutcome[], created: Partial<Record<SalesPrepTask, string[]>>): CheckOutcome & { createdIds: Partial<Record<SalesPrepTask, string[]>> } {
+  const lines: string[] = []
+  const bad: string[] = []
+  for (const o of outcomes) {
+    const ids = created[o.taskId as SalesPrepTask] ?? []
+    const noResponse = o.status === 0 || o.status === 504
+    if (o.ok) lines.push(`${o.taskId}: HTTP ${o.status} できました${ids.length ? `（記録 ${ids.join(',')}）` : ''}`)
+    else if (noResponse && ids.length) lines.push(`${o.taskId}: 応答は届かなかったが、記録ができた（${ids.join(',')}）。作業は済んだとみなす（${o.message}）`)
+    else { bad.push(`${o.taskId}: ${o.message}${noResponse ? '（記録も見つからない）' : ''}`); lines.push(`${o.taskId}: HTTP ${o.status || 'なし'} ${o.message}`) }
+  }
+  const detail = lines.join(' / ')
+  const firstBad = outcomes.find(o => bad.some(b => b.startsWith(`${o.taskId}:`)))
+  return bad.length
+    ? { ok: false, status: firstBad?.status || undefined, error: bad.join(' / '), detail, createdIds: created }
+    : { ok: true, detail, createdIds: created }
+}
+
+/** 本人の、今月の自動点検の記録の ID（ToDo ごと）。B1 の前後の差で、作った記録を知る */
+async function markedFor(userId: string): Promise<Record<SalesPrepTask, string[]>> {
+  const { systemWatchRecordIds } = await import('./marked-records')
+  const [shodanOrgs, quoteOrgs] = await Promise.all([
+    prisma.shodanMember.findMany({ where: { userId, status: 'ACTIVE' }, select: { organizationId: true } }).catch(() => []),
+    prisma.quoteMember.findMany({ where: { userId, status: 'ACTIVE' }, select: { organizationId: true } }).catch(() => []),
+  ])
+  const [research, quote, slides] = await Promise.all([
+    systemWatchRecordIds(prisma, 'shodan-preparation', shodanOrgs.map(o => o.organizationId)).catch(() => []),
+    systemWatchRecordIds(prisma, 'quote-document', quoteOrgs.map(o => o.organizationId)).catch(() => []),
+    systemWatchRecordIds(prisma, 'doyaslide-project', [userId]).catch(() => []),
+  ])
+  return { research, quote, slides }
+}
+
 export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: number })[] {
   return [
     {
@@ -158,7 +206,7 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
       },
     },
     {
-      id: 'paid:agent-sales-prep', area: '外部サービス', label: 'B1 商談の準備を1回通す（会社の調査・見積の案・スライドの構成）', severity: 'urgent', threshold: 1, costYen: 1.8,
+      id: 'paid:agent-sales-prep', area: '外部サービス', label: 'B1 商談の準備を1回通す（会社の調査・見積の案・スライドの構成）', severity: 'urgent', threshold: 1, costYen: 1.8, timeoutMs: B1_CHECK_TIMEOUT_MS,
       hints: ['落ちた ToDo の札（cause と actions）を見る。会社の調査なら "[shodan/preparations] research failed" の stage・code・reason を見る', '402 ならテスト用の会社のドヤパワーが足りない。429 なら同時に動かす数の上限', 'テスト用のユーザーが UI_PREVIEW_EMAILS に入っているか（旗が preview のとき）を見る'],
       run: async (): Promise<CheckOutcome> => {
         const url = (await sampleCompanies())[0]?.url
@@ -175,10 +223,11 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
         // 合図は本人（SYSTEM_WATCH_TEST_USER_ID）と今日の日付に結び付く（watch-gate.ts）。日付の変わり目をまたがないよう、送る直前に作る
         if (!systemWatchTokenFor(testUserId)) return { ok: true, skipped: true, detail: 'CRON_SECRET が無いため、自動点検の合図を作れず回していない' }
         const answers = { url, offer: 'web', budget: 'u50', stage: 'first' }
+        const before = await markedFor(testUserId)
         const outcomes = await withTestUserSession(async cookie => Promise.all((['research', 'quote', 'slides'] as const).map(async (taskId): Promise<TaskOutcome> => {
           try {
             const res = await fetch(base + '/api/agent/tasks', {
-              method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(280_000),
+              method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(B1_TASK_TIMEOUT_MS),
               headers: { 'content-type': 'application/json', cookie, origin: base, [SYSTEM_WATCH_HEADER]: systemWatchTokenFor(testUserId) ?? '' },
               body: JSON.stringify({ recipeId: 'sales-prep', taskId, answers }),
             })
@@ -188,12 +237,14 @@ export function paidAgentChecks(base = siteBase()): (CheckDef & { costYen: numbe
             if (res.ok && j.result) return { taskId, status: res.status, ok: true, message: 'できました' }
             return { taskId, status: res.status, ok: false, message: j.error ? `${j.error}（kind=${j.kind ?? '?'}）` : bodySnippet(text, 160) }
           } catch (e) {
-            return { taskId, status: 0, ok: false, message: describeFetchError(e, 280_000) }
+            return { taskId, status: 0, ok: false, message: describeFetchError(e, B1_TASK_TIMEOUT_MS) }
           }
         })))
-        const failed = outcomes.filter(o => !o.ok)
-        const detail = outcomes.map(o => `${o.taskId}: HTTP ${o.status || 'なし'} ${o.message}`).join(' / ')
-        return failed.length ? { ok: false, url: base + '/api/agent/tasks', status: failed[0].status || undefined, error: failed.map(o => `${o.taskId}: ${o.message}`).join(' / '), detail } : { ok: true, url: base + '/api/agent/tasks', detail }
+        // 作った記録は、前後の自動点検の記録の ID の差で知る（応答が時間内に届かなくても分かる）
+        const after = await markedFor(testUserId)
+        const created = Object.fromEntries((Object.keys(TASK_RECORD_KIND) as SalesPrepTask[]).map(k => [k, after[k].filter(id => !before[k].includes(id))])) as Record<SalesPrepTask, string[]>
+        const { createdIds: _ids, ...judged } = judgeSalesPrep(outcomes, created)
+        return { ...judged, url: base + '/api/agent/tasks' }
       },
     },
   ]
