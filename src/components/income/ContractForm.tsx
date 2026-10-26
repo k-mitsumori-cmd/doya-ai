@@ -32,6 +32,9 @@ export type ContractDto = {
 
 type ClientOpt = { id: string; name: string }
 
+// 取引先の選択肢で「その場で新しく登録する」を表す値
+const NEW_CLIENT = '__new__'
+
 function horizonEndOf(today: string): string {
   const t = parseYmd(today)
   const h = addMonthsYm(t.y, t.m, 12)
@@ -61,6 +64,8 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       ? initial.items.map((i) => ({ name: i.name, quantity: String(i.quantity), unitPrice: String(i.unitPrice), taxRate: i.taxRate }))
       : [emptyLine()],
   )
+  const [newClientName, setNewClientName] = useState('')
+  const [clientsLoaded, setClientsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -69,8 +74,13 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
   useEffect(() => {
     fetchJson<{ clients: ClientOpt[] }>('/api/income/clients')
-      .then((d) => setClients(d.clients))
+      .then((d) => {
+        setClients(d.clients)
+        // 取引先が1件もなければ、最初から「新しく登録する」状態にして、契約から始められるようにする
+        if (d.clients.length === 0) setF((x) => (x.clientId ? x : { ...x, clientId: NEW_CLIENT }))
+      })
       .catch((e) => setError(errMsg(e)))
+      .finally(() => setClientsLoaded(true))
   }, [])
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value })
@@ -79,7 +89,8 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
   // 入力しながら検証する（触った項目か、保存を押したあとだけ出す）
   const errors: Record<string, string | undefined> = {
-    clientId: f.clientId ? undefined : '取引先を選択してください',
+    clientId: f.clientId ? undefined : '取引先を選ぶか、新しく登録してください',
+    newClientName: f.clientId === NEW_CLIENT && !newClientName.trim() ? '取引先名を入力してください' : undefined,
     title: f.title.trim() ? undefined : '契約名を入力してください',
     startDate: isYmd(f.startDate) ? undefined : '開始日を入力してください',
     endDate: f.endDate && !isYmd(f.endDate) ? '終了日の形式が正しくありません' : f.endDate && isYmd(f.startDate) && f.endDate < f.startDate ? '終了日は開始日以降にしてください' : undefined,
@@ -123,8 +134,12 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
     setBusy(true)
     setError(null)
     try {
+      const isNewClient = f.clientId === NEW_CLIENT
       const body = {
         ...f,
+        clientId: isNewClient ? '' : f.clientId,
+        ...(isNewClient ? { newClientName: newClientName.trim() } : {}),
+        contractNo: f.contractNo.trim(),
         renewalNoticeDays: f.renewalNoticeDays.trim() === '' ? null : Number(f.renewalNoticeDays.normalize('NFKC')),
         endDate: f.endDate || null,
         items: linesToPayload(rows).map(({ name, quantity, unitPrice, taxRate }) => ({ name, quantity, unitPrice, taxRate })),
@@ -155,13 +170,19 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
             <select className={inputCls} value={f.clientId} onChange={set('clientId')} onBlur={touch('clientId')}>
               <option value="">選択してください</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {!initial && <option value={NEW_CLIENT}>＋ 新しい取引先を登録する</option>}
             </select>
           </Field>
+          {f.clientId === NEW_CLIENT && (
+            <Field label="新しい取引先の名前（必須）" error={err('newClientName')} hint={clientsLoaded && clients.length === 0 ? '取引先がまだありません。名前だけで登録できます。住所や支払条件はあとで取引先の画面から足せます。' : '名前だけで登録できます。住所や支払条件はあとで足せます。'}>
+              <input className={inputCls} value={newClientName} onChange={(e) => setNewClientName(e.target.value)} onBlur={touch('newClientName')} maxLength={120} placeholder="例: 株式会社サンプル" autoFocus={clients.length > 0} />
+            </Field>
+          )}
           <Field label="契約名（必須）" error={err('title')}>
             <input className={inputCls} value={f.title} onChange={set('title')} onBlur={touch('title')} maxLength={120} placeholder="例: 保守運用契約" />
           </Field>
-          <Field label="契約番号">
-            <input className={inputCls} value={f.contractNo} onChange={set('contractNo')} maxLength={60} />
+          <Field label="契約番号" hint={initial ? undefined : '空欄のまま登録すると、C-2026-0001 のような番号が自動で入ります'}>
+            <input className={inputCls} value={f.contractNo} onChange={set('contractNo')} maxLength={60} placeholder={initial ? undefined : '自動で振られます'} />
           </Field>
           <Field label="種類">
             <select className={inputCls} value={f.type} onChange={set('type')}>

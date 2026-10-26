@@ -2,8 +2,9 @@
 // ドヤ収入管理: 契約の保存と売上予定の同期
 // ============================================
 import type { Prisma } from '@prisma/client'
-import { IncomeError, type IncomeContext } from './access'
+import { audit, IncomeError, type IncomeContext } from './access'
 import { addMonthsYm, daysInMonth, formatYmd, fromDbDate, parseYmd, startOfMonth, toDbDate, todayJst, type Ymd } from './dates'
+import { nextContractNo } from './contract-number'
 import { asBody, bool, date, int, lines, oneOf, reqStr, str } from './parse'
 import {
   BILLING_CYCLES, CONTRACT_TYPES, ISSUE_TIMINGS, PRORATES, SCHEDULE_HORIZON_MONTHS, buildSchedule,
@@ -20,7 +21,9 @@ export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
 type Tx = Prisma.TransactionClient
 
 export type ContractInput = {
-  clientId: string
+  /** 既存の取引先。null のときは newClientName で取引先をその場で作る（新規登録のみ） */
+  clientId: string | null
+  newClientName: string | null
   title: string
   contractNo: string | null
   type: ContractType
@@ -50,8 +53,12 @@ export function parseContract(raw: unknown): ContractInput {
   const type = oneOf(body, 'type', '契約の種類', CONTRACT_TYPES, 'recurring')
   const autoRenew = bool(body, 'autoRenew')
   if (autoRenew && !endDate) throw new IncomeError('自動更新にする場合は終了日（更新日）を入力してください')
+  const clientId = str(body, 'clientId', '取引先', { max: 64 })
+  const newClientName = clientId ? null : str(body, 'newClientName', '取引先名', { max: 120 })
+  if (!clientId && !newClientName) throw new IncomeError('取引先を選ぶか、取引先名を入力してください')
   return {
-    clientId: reqStr(body, 'clientId', '取引先', 64),
+    clientId,
+    newClientName,
     title: reqStr(body, 'title', '契約名', 120),
     contractNo: str(body, 'contractNo', '契約番号', { max: 60 }),
     type,
@@ -125,12 +132,31 @@ export async function syncContractSchedule(tx: Tx, contractId: string, organizat
 }
 
 export async function saveContract(tx: Tx, ctx: IncomeContext, input: ContractInput, contractId?: string) {
-  const client = await tx.incomeClient.findFirst({ where: { id: input.clientId, organizationId: ctx.organizationId }, select: { id: true } })
-  if (!client) throw new IncomeError('取引先が見つかりません', 404)
+  let clientId = input.clientId
+  if (clientId) {
+    const client = await tx.incomeClient.findFirst({ where: { id: clientId, organizationId: ctx.organizationId }, select: { id: true } })
+    if (!client) throw new IncomeError('取引先が見つかりません', 404)
+  } else {
+    // 取引先をその場で登録する（名前だけ。詳しい項目は取引先の画面であとから足せる）
+    if (contractId) throw new IncomeError('取引先を選択してください')
+    const created = await tx.incomeClient.create({ data: { organizationId: ctx.organizationId, name: input.newClientName! } })
+    await audit(tx, ctx, 'client.create', 'client', created.id)
+    clientId = created.id
+  }
+  let contractNo = input.contractNo
+  if (contractNo) {
+    const dup = await tx.incomeContract.findFirst({
+      where: { organizationId: ctx.organizationId, contractNo, ...(contractId ? { id: { not: contractId } } : {}) },
+      select: { id: true },
+    })
+    if (dup) throw new IncomeError(`契約番号「${contractNo}」はすでに使われています。別の番号にするか、空欄にして自動で振ってください`)
+  } else if (!contractId) {
+    contractNo = await nextContractNo(tx, ctx.organizationId)
+  }
   const data = {
-    clientId: input.clientId,
+    clientId,
     title: input.title,
-    contractNo: input.contractNo,
+    contractNo,
     type: input.type,
     status: input.status,
     startDate: toDbDate(input.startDate),
@@ -147,7 +173,7 @@ export async function saveContract(tx: Tx, ctx: IncomeContext, input: ContractIn
   if (id) {
     const own = await tx.incomeContract.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, clientId: true } })
     if (!own) throw new IncomeError('契約が見つかりません', 404)
-    if (own.clientId !== input.clientId) {
+    if (own.clientId !== clientId) {
       const billed = await tx.incomeRevenueSchedule.count({ where: { contractId: id, organizationId: ctx.organizationId, status: { not: 'planned' } } })
       if (billed) throw new IncomeError('請求済みの月がある契約は取引先を変えられません')
     }

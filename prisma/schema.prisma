@@ -5379,6 +5379,8 @@ model IncomeContract {
   items     IncomeContractItem[]
   schedules IncomeRevenueSchedule[]
 
+  /// 契約番号は会社（組織）の中で重ならない（NULL は何件でも可）
+  @@unique([organizationId, contractNo])
   @@index([organizationId, status])
   @@index([organizationId, endDate])
   @@map("income_contracts")
