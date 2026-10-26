@@ -103,6 +103,12 @@ const notInOf=(where)=>where.id?.notIn??[];
       '@/lib/doyaslide/errors':{errorSuffix:()=>''},
       '@/lib/system-watch/watch-gate':gate,
       '@/lib/system-watch/marked-records':marked(),
+      // 上限の判定と作成は、見積からの受け渡しと共通の部品（create-project.ts）にある。本物をそのまま読む（round10 の統合）
+      '@/lib/doyaslide/create-project':load('src/lib/doyaslide/create-project.ts',{
+        '@/lib/prisma':{prisma:{...tx,$transaction:async(fn)=>fn(tx)}},
+        '@/lib/doyaslide/limits':{DOYASLIDE_PROJECT_SERVICE_ID:'doyaslide-projects',isSameMonth:()=>true,monthStart:()=>new Date('2026-09-30T15:00:00Z')},
+        '@/lib/system-watch/marked-records':marked(),
+      },G),
     },G);
     const post=(headers,title)=>route.POST({headers:new Headers(headers),json:async()=>({title})});
     const MARK='watch:v1:marked:doyaslide-project:u:';
