@@ -23,6 +23,7 @@ import { ROLE_HIERARCHY as INCOME_ROLES } from '@/lib/income/roles'
 import { EXPENSE_ROLES } from '@/lib/expense/constants'
 import { homeIncomeSummary } from '@/lib/income/summary-read'
 import { getExpenseSummary } from '@/lib/expense/expense-read'
+import { SYSTEM_WATCH_PREFIX } from '@/lib/system-watch/marker'
 
 const QUOTE_ROLES = ['owner', 'admin', 'manager', 'member']
 const PROMANE_ROLES = ['owner', 'admin', 'member', 'guest']
@@ -291,7 +292,8 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
       select: { totalExclTax: true, confirmedAt: true },
       take: 5000,
     }),
-    prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft' } }),
+    // 自動点検（system-watch の B1）が毎日作る下書きは数えない（名前の先頭が「【自動点検】」）
+    prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft', NOT: { title: { startsWith: SYSTEM_WATCH_PREFIX } } } }),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'sent' } }),
     prisma.quoteDocument.findMany({
       where: { organizationId: orgId, status: 'sent', expiryDate: { gte: new Date() } },
