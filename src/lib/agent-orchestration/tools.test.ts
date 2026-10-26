@@ -148,3 +148,24 @@ test('runner は、試みごとのドヤパワーを足していく', async () =
   assert.deepEqual(second.slides.power, { used: 30, refunded: 30 })
   assert.deepEqual(second.quote.power, { used: 1, refunded: 0 })
 })
+
+test('システム点検の印: 印があるときだけ、見積書・スライドの名前の先頭に付け、商談準備には labelPrefix を渡す', async () => {
+  const a = parsed()
+  const prefix = '【自動点検】'
+  const apply = (name: string, max: number) => (name.startsWith(prefix) ? name : `${prefix}${name}`).slice(0, max)
+  const { deps, calls } = recording({ ...fakeToolDeps({ delayMs: 1 }), label: { prefix, apply } })
+  await runSalesPrepTask('research', a, deps)
+  await runSalesPrepTask('quote', a, deps)
+  await runSalesPrepTask('slides', a, deps)
+  const body = (r: ToolRouteId) => calls.find((c) => c.route === r)!.body
+  assert.equal(body('shodan.prepare').labelPrefix, prefix)
+  assert.equal(body('quote.create').title, `${prefix}Webサイトの制作のお見積り`)
+  assert.ok(String(body('slide.project').title).startsWith(prefix))
+  assert.ok(String(body('slide.project').title).length <= 120)
+  // 印が無いときは、何も付けない（ふつうの利用者）
+  const plain = recording()
+  await runSalesPrepTask('research', a, plain.deps)
+  await runSalesPrepTask('quote', a, plain.deps)
+  assert.equal('labelPrefix' in plain.calls[0].body, false)
+  assert.equal(plain.calls.find((c) => c.route === 'quote.create')!.body.title, 'Webサイトの制作のお見積り')
+})

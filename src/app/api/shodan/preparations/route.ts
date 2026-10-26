@@ -11,6 +11,9 @@ import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { getShodanBilling } from '@/lib/shodan/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { SYSTEM_WATCH_PREFIX } from '@/lib/system-watch/marker'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
+import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 // ⚠️ 上限の正本は lib/shodan/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
@@ -93,6 +96,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '会社名は100文字以内で入力してください' }, { status: 400 })
   }
   const companyName = typeof body?.companyName === 'string' ? body.companyName.trim() || undefined : undefined
+  // システム点検の自動の確認（B1）か。合図（CRON_SECRET から作る HMAC）が正しいときだけ true。外の人は作れない
+  // 2026-10-26 ユーザー決定（A）: 自動点検が作った商談準備は、月の枠に数えない。名前の印は偽れるので、記録の ID で外す
+  // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図があり、組織の契約者が本人（watch-gate.ts）
+  const systemWatch = isSystemWatchFor(req.headers, ctx.userId) && ctx.role === 'owner'
+    && (await getShodanBilling(prisma, ctx.organizationId).catch(() => null))?.ownerUserId === ctx.userId
+  // 記録の名前の先頭の印。合図が正しく、値がちょうど「【自動点検】」のときだけ付ける（偽の印で一覧を紛らわしくしない）
+  const labelPrefix = systemWatch && body?.labelPrefix === SYSTEM_WATCH_PREFIX ? SYSTEM_WATCH_PREFIX : ''
 
   // プラン制限（組織単位・月次）
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
@@ -128,6 +138,8 @@ export async function POST(req: NextRequest) {
     const usedThisMonth = await tx.shodanPreparation.count({
       where: {
         organizationId: sc.organizationId,
+        // 自動点検（B1）が作った記録は数えない（合図を確かめて残した ID。marked-records.ts）
+        ...excludeIds(await systemWatchRecordIds(tx, 'shodan-preparation', [sc.organizationId])),
         createdAt: { gte: since },
         OR: [
           { status: 'done' },
@@ -143,6 +155,8 @@ export async function POST(req: NextRequest) {
     const prep = await tx.shodanPreparation.create({
       data: { organizationId: sc.organizationId, createdByMemberId: sc.memberId, targetUrl: targetUrl as string, status: 'processing' },
     })
+    // 自動点検（B1）が作った記録として ID を残す（同じトランザクション。組織の行の鍵で、ほかの予約と順に並ぶ）
+    if (systemWatch) await markSystemWatchRecord(tx, 'shodan-preparation', sc.organizationId, prep.id)
     return { kind: 'created', prep } as const
   }) }
 
@@ -194,7 +208,7 @@ export async function POST(req: NextRequest) {
     stage = 'save'
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { research: research as any, targetName: research.companyName || null, status: 'researched' },
+      data: { research: research as any, targetName: research.companyName ? `${labelPrefix}${research.companyName}`.slice(0, 200) : labelPrefix || null, status: 'researched' },
     })
     return NextResponse.json({ id: prep.id, status: 'researched', research })
   } catch (e) {
