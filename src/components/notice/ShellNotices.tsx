@@ -4,7 +4,7 @@
 // ============================================
 // (1) 初回のようこそ3枚 / (3)(6) ツールを初めて開いたときの「できること」3点
 // (10) 新機能のお知らせ / (18) ドヤパワーの残りが2割
-// (2) はじめの手順チェックリスト / (37) 通信が切れたときの知らせ / (36) 調整中のツール
+// (2) はじめの手順チェックリスト / (37) 通信が切れたときの知らせ / (36) 調整中のツール / (35) お支払いがうまくいかなかったとき
 // ⚠️ NoticeProvider の中だけで動く（旗が off なら ShellGate がこの部品を置かない）。
 // ⚠️ 出す・出さないの決まり（順番・作業中・once）は queue.ts。ここは「何を足すか」だけ。
 import { usePathname } from 'next/navigation'
@@ -84,6 +84,24 @@ export default function ShellNotices() {
         primary: a.href ? { label: '試してみる', href: a.href } : { label: 'わかった' }, secondary: { label: 'あとで', done: false } })
     }
   }, [enabled, push, hasSeen, company])
+
+  // (35) お支払いがうまくいかなかったとき（past_due・unpaid）。文と行き先は新料金の正本（/api/pricing/billing の subscription.view）だけが持つ。
+  // ⚠️ 新料金の旗（NEW_PRICING_ROLLOUT）が off なら 404 になるので、何も出さない。tone が bad のときだけ、その日に1回。
+  // 支払いは大事なので、知らせの量が「エラーだけ」でも出す（kind: error）
+  useEffect(() => {
+    if (!enabled) return
+    let live = true
+    void fetch('/api/pricing/billing', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { subscription?: { view?: { tone?: string; title?: string; body?: string; action?: { label: string; href: string } | null } } | null } | null) => {
+        const v = data?.subscription?.view
+        if (!live || !v || v.tone !== 'bad' || !v.title) return
+        push({ id: `billing:${v.title}:${dayKey(new Date())}`, kind: 'error', tone: 'warn', once: true, pose: 'focus', eyebrow: 'お支払い',
+          title: v.title, body: v.body || undefined, primary: v.action ? { label: v.action.label, href: v.action.href } : { label: 'わかった' }, secondary: v.action ? { label: 'あとで', done: false } : undefined })
+      })
+      .catch(() => { /* 読めなくても画面はそのまま */ })
+    return () => { live = false }
+  }, [enabled, push])
 
   // (37) 通信が切れたとき。作業中でも出す（エラーと同じ扱い）。つながったらトーストで知らせる
   useEffect(() => {

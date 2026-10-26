@@ -2,6 +2,7 @@ import { observeServiceHealth } from '@/lib/service-operations-monitor';
 import { NextRequest, NextResponse } from 'next/server'
 import { notifyAlert } from '@/lib/alert'
 import { readOps, writeOps } from '@/lib/service-operations-state'
+import { prisma } from '@/lib/prisma'
 import { bodySnippet, describeFetchError, formatHealthFailure, nextStreak, type FailureStreak } from '@/lib/health-check-report'
 
 export const runtime = 'nodejs'
@@ -129,6 +130,33 @@ async function checkTarget(t: Target): Promise<CheckResult> {
   return { name: t.name, ok: true, rtt, status: res.status }
 }
 
+/**
+ * 常時確認（system-watch・10分ごと）が止まっていないかを見る。互いに見張る形にして、
+ * 確認の仕組みそのものが止まったときにも気づけるようにする。記録がまだ無い（初回の前）は見ない。
+ */
+const WATCH_STALE_MS = 35 * 60_000
+async function checkSystemWatch(): Promise<{ ok: boolean; lastRun?: string }> {
+  const row = await prisma.systemSetting.findUnique({ where: { key: 'watch:v1:last-run:free' } }).catch(() => null)
+  if (!row) return { ok: true }
+  let lastRun = ''
+  try { lastRun = JSON.parse(row.value).at ?? '' } catch { /* 壊れた値は止まっているとみなす */ }
+  const ageMs = lastRun ? Date.now() - Date.parse(lastRun) : Infinity
+  if (ageMs <= WATCH_STALE_MS) return { ok: true, lastRun }
+  // 間引きは DB の記録で行う（インスタンスをまたいでも6時間に1回だけ知らせる）
+  const notified = await readOps<{ at: string }>('system-watch-stale-notified').catch(() => null)
+  if (notified && Date.now() - Date.parse(notified.at) < 6 * 3_600_000) return { ok: false, lastRun }
+  const sent = await notifyAlert({
+    level: 'warn',
+    title: '常時確認（system-watch）が止まっています',
+    context: '/api/cron/system-watch',
+    detail: `最後に動いた時刻：${lastRun || '読めません'}（${Number.isFinite(ageMs) ? `約${Math.round(ageMs / 60000)}分前` : '不明'}。10分ごとに動く予定）\n確認すること：Vercel の Cron Jobs で /api/cron/system-watch の実行結果と Runtime Logs を見る。vercel.json に登録が残っているかを見る。`,
+    dedupKey: 'system-watch-stale',
+    cooldownMs: 6 * 3_600_000,
+  })
+  if (sent) await writeOps('system-watch-stale-notified', { at: new Date().toISOString() }).catch(() => {})
+  return { ok: false, lastRun }
+}
+
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
@@ -136,9 +164,9 @@ export async function GET(req: NextRequest) {
     return new NextResponse('unauthorized', { status: 401 })
   }
 
-  const results = await Promise.all(TARGETS.map((t) => checkTarget(t)))
+  const [results, systemWatch] = await Promise.all([Promise.all(TARGETS.map((t) => checkTarget(t))), checkSystemWatch()])
   // 落ちた項目があれば ok:false にし、Vercel のログでもどれが落ちたか分かるようにする
   const failed = results.filter((r) => !r.ok)
   if (failed.length) console.error('[health-alert] failed', JSON.stringify(failed))
-  return NextResponse.json({ ok: failed.length === 0, checkedAt: new Date().toISOString(), failed, results })
+  return NextResponse.json({ ok: failed.length === 0 && systemWatch.ok, checkedAt: new Date().toISOString(), failed, results, systemWatch })
 }

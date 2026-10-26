@@ -26,10 +26,12 @@ export function useQuoteDocumentDetail(id: string | undefined) {
   const state=useRef<{doc:QuoteDetailDocument|null;issuer:{companyName:string}|null;draft:QuoteDetailDraft;revision:number;dirty:boolean;org:string|null}>(
     {doc:null,issuer:null,draft:emptyDraft(),revision:0,dirty:false,org:null})
   const pending=useRef<{body:ReturnType<typeof quoteDocumentWrite>;revision:number;preserveDraft:boolean}|null>(null)
+  // 保存の取り消し（ドヤくんの知らせの (14)）。直前の保存の前の内容と、その保存でできた版。版が変わっていたら取り消さない
+  const undoable=useRef<{before:QuoteDetailDocument;savedRevision:unknown;until:number}|null>(null)
   if (lastIdentity.current!==identity) {
     lastIdentity.current=identity
     state.current={doc:null,issuer:null,draft:emptyDraft(),revision:0,dirty:false,org:null}
-    pending.current=null
+    pending.current=null;undoable.current=null
   }
   const [,redraw]=useState(0)
   const [ready,setReady]=useState<{epoch:number;slug:string;role:string}|null>(null)
@@ -104,11 +106,28 @@ export function useQuoteDocumentDetail(id: string | undefined) {
       const saved=parseQuoteDetailDocument(data.document,id)
       if(!isQuoteDocumentWriteAcknowledgement(saved,body))throw new Error('保存内容との一致を確認できませんでした。再読み込みして状態をご確認ください。')
       pending.current=null;state.current.doc=saved
+      // 下書きの中身の保存だけを取り消せる（承認などの状態の変更は取り消さない）。6秒のあいだだけ
+      undoable.current=extra.status===undefined?{before:doc,savedRevision:saved.revision,until:Date.now()+6000}:null
       if(state.current.revision===revision&&!preserveDraft)state.current.draft=quoteDraftFromDocument(saved)
       state.current.dirty=!quoteDocumentDraftMatches(saved,state.current.draft)
       setMessage(state.current.dirty?'送信時点の内容を保存しました。新しい変更は未保存です。':'保存しました')
     }catch(e){if(ticket.current())setError(e instanceof Error?e.message:'保存結果を確認できませんでした')}
     finally{if(ticket.current()){setSaving(false);redraw(n=>n+1)}ticket.end()}
+  }
+  /** 直前の保存を取り消す（保存の前の内容を、同じ保存の道すじでもう一度保存する）。取り消せたら true */
+  const undoLastSave=async():Promise<boolean>=>{
+    const u=undoable.current
+    undoable.current=null
+    const doc=state.current.doc
+    if(!u||!doc||Date.now()>u.until||doc.revision!==u.savedRevision||state.current.dirty||pending.current||doc.status!=='draft'){
+      if(u)setError('ほかの変更があったか、時間がたったため、取り消せませんでした。')
+      return false
+    }
+    state.current.draft=quoteDraftFromDocument(u.before);state.current.revision++;state.current.dirty=true
+    await save()
+    undoable.current=null
+    if(!pending.current&&!state.current.dirty){setMessage('保存の前の内容に戻しました');return true}
+    return false
   }
   const currentDoc=loaded?state.current.doc:null
   const unknown=!!pending.current&&!saving
@@ -119,7 +138,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
     loading:status==='loading'||status==='authenticated'&&loading&&!loaded,saving,unknown,
     error:status==='unauthenticated'?'ログインして見積書をご確認ください。':error,message,
     canApprove:loaded&&!!ready&&['owner','admin','manager'].includes(ready.role),pdfUrl,
-    hasUnsavedChanges:state.current.dirty,load,save,
+    hasUnsavedChanges:state.current.dirty,load,save,undoLastSave,
     setClientCompany:(v:string)=>edit('clientCompany',v),setClientPerson:(v:string)=>edit('clientPerson',v),
     setDiscountType:(v:string)=>edit('discountType',v),setDiscountValue:(v:string)=>edit('discountValue',v),
     setNotes:(v:string)=>edit('notes',v),setPaymentTerms:(v:string)=>edit('paymentTerms',v),setDeliveryTerms:(v:string)=>edit('deliveryTerms',v),

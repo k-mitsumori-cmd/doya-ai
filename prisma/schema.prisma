@@ -153,6 +153,7 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   serviceFeedback     ServiceFeedback[]
+  supportTickets      SupportTicket[]
   feedbackPromptState FeedbackPromptState?
 
   // ドヤ展示会（開発中）
@@ -6147,4 +6148,69 @@ model HomeAgentTask {
   @@unique([runId, taskId])
   @@index([userId, status])
   @@map("home_agent_tasks")
+}
+
+// ============================================
+// サポートチャット（気軽に聞けるチャット）の受付と、やり取りの履歴
+// ============================================
+// 設計: docs/architecture/support-chat/SUPPORT-CHAT-2026-10-26.md
+// 本番 DB への反映: prisma/manual-migrations/2026-10-26-support-chat.sql（追加だけ。既存の表は変えない）
+// ⚠️ 表が無いあいだ（反映の前）は、受付を ServiceFeedback（serviceId 'support'）に残す（src/lib/support-chat/store.ts）
+
+/// 「運営に伝える」で受け付けた1件
+model SupportTicket {
+  id               String           @id @default(cuid())
+  /// 画面に出す受付番号（例: DY-261026-4F7K）
+  ticketNo         String           @unique
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// howto / bug / billing / cancel / data / complaint / consult / security / other
+  category         String
+  /// open（未対応）/ in_progress（対応中）/ waiting_user（お客さまの返事待ち）/ closed（完了）
+  status           String           @default("open")
+  /// urgent / action / info（Slack の重さ）
+  severity         String
+  toolId           String?
+  pagePath         String?
+  /// 利用者が書いた内容（伏せ字のあと）
+  summary          String           @db.Text
+  /// ブラウザ・画面の幅・直近のエラー（伏せ字のあと）
+  env              Json?
+  /// ログインのメールに返してよいか
+  contactOk        Boolean          @default(true)
+  assigneeEmail    String?
+  firstReplyAt     DateTime?
+  lastStaffReplyAt DateTime?
+  /// 利用者が最後に返信を読んだ時刻（未読の印に使う）
+  userLastReadAt   DateTime?
+  closedAt         DateTime?
+  /// 満足度 1〜5（任意）
+  satisfaction     Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  messages         SupportMessage[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("support_ticket")
+}
+
+/// 受付ごとのやり取り（利用者・AI・運営）
+model SupportMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  /// user / ai / staff
+  role        String
+  body        String        @db.Text
+  /// AI の答えの根拠のリンク [{ label, href }]
+  sources     Json?
+  /// 運営の返信を書いた管理者のメール
+  authorEmail String?
+  /// 運営の返信をメールで送れたか（null は送っていない）
+  emailedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("support_message")
 }

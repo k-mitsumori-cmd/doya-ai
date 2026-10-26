@@ -99,23 +99,29 @@ test('メールの要約は、大文字・小文字と前後の空白をそろ�
   assert.notEqual(h, starterEmailHash('jiro@example.com'))
 })
 
-test('新しい会社は 100 から始まり、使った分が1日10ずつ回復する（上限100）。同じ会社に二度は付かない', async () => {
+test('新しい会社は ちょうど 100 から始まり、使った分が1日10ずつ回復する（上限100）。同じ会社に二度は付かない（種類 starter）', async () => {
   let t = new Date('2026-10-26T03:00:00.000Z')
   const clock = () => new Date(t.getTime())
   const mem = createMemoryDb({ now: clock })
   mem.rows('accountCompany').push({ id: 'co_new', userId: 'u_new', name: '新しい会社' })
   const ledger = createDoyaPowerLedger(mem.db, { now: clock })
-  const first = await ledger.grant('co_new', 'daily_recovery', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
-  // その日の回復（10）が先に付くので、はじめの付与は 90 になり、合わせて 100 から始まる
-  assert.equal(first.ok && first.granted, STARTER_POWER - DAILY_RECOVERY_AMOUNT)
+  const first = await ledger.grant('co_new', 'starter', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
+  // 回復の上限で削られず、いつも 100 付く。その回は回復を足さないので、ちょうど 100
+  assert.equal(first.ok && first.granted, STARTER_POWER)
   assert.equal((await ledger.balance('co_new'))!.total, DAILY_RECOVERY_CAP)
-  const again = await ledger.grant('co_new', 'daily_recovery', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
+  const b0 = (await ledger.balance('co_new'))!
+  assert.equal(b0.byKind.starter, 100)
+  assert.equal(b0.nextRecoveryAt, null, '100 あるあいだは回復しない')
+  const again = await ledger.grant('co_new', 'starter', STARTER_POWER, null, { sourceKey: 'starter', note: 'starter' })
   assert.equal(again.ok && again.duplicated, true)
+  assert.equal((await ledger.balance('co_new'))!.total, 100)
+  // 次の日も、100 あるので回復しない
+  t = new Date('2026-10-26T15:00:00.000Z') // 10/27 0:00 JST
   assert.equal((await ledger.balance('co_new'))!.total, 100)
   // 30 使う → 次の日（日本時間）に 10 回復
   const c = await ledger.consume('co_new', 30, 'op-1')
   assert.equal(c.ok, true)
-  t = new Date('2026-10-26T15:00:00.000Z') // 10/27 0:00 JST
+  t = new Date('2026-10-27T15:00:00.000Z') // 10/28 0:00 JST
   assert.equal((await ledger.balance('co_new'))!.total, 70 + DAILY_RECOVERY_AMOUNT)
 })
 

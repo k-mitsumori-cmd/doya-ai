@@ -6,7 +6,9 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--blue-soft) 60%, var(--paper)) 0%, var(--paper) 100%);
   box-shadow: var(--shadow); overflow: hidden; min-height: 520px;
 }
-.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* 読み上げ用の見出し。共通の見出しの決まり（ds の :is(h1, h2…) の text-wrap: balance）が折り返しを戻すので、ここだけは必ず1行にする。
+   1px の幅で折り返すと、目に見えないのに「1文字だけの行」として点検に引っかかるため */
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap !important; text-wrap: nowrap !important; }
 .beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
 .beamTrack { fill: none; stroke: var(--line); stroke-width: 2; }
 .beamFlow { fill: none; stroke: url(#ha-beam); stroke: var(--cyan); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 48 600; animation: beam 1.4s linear infinite; }
