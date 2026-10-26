@@ -11,6 +11,7 @@
 //    adbanner は advice を appeal に文字列連結していたため、
 //    何を指示したか・効いたかを後から追えず、世代を重ねるほど意図が薄まっていた。
 import { visionJson } from './vision'
+import { FEEDBACK_ITEM_MAX, FEEDBACK_SCORE_KEYS } from './score-max'
 import type { AdCopy, FeedbackScores, RefineDirective } from './types'
 
 export interface FeedbackInput {
@@ -29,7 +30,7 @@ export interface FeedbackResult {
 }
 
 const TARGETS: RefineDirective['target'][] = ['copy', 'color', 'layout', 'contrast', 'visual']
-const SCORE_KEYS = ['visibility', 'appeal', 'cta', 'fit', 'brand'] as const
+const SCORE_KEYS = FEEDBACK_SCORE_KEYS
 
 function invalidFeedback(): never {
   throw new Error('画像の採点結果を読み取れませんでした')
@@ -52,7 +53,7 @@ export function parseAdImageFeedback(value: unknown): FeedbackResult {
   const scores: FeedbackScores = { visibility: 0, appeal: 0, cta: 0, fit: 0, brand: 0, total: 0 }
   for (const key of SCORE_KEYS) {
     const score = suppliedScores[key]
-    if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 5) return invalidFeedback()
+    if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > FEEDBACK_ITEM_MAX) return invalidFeedback()
     scores[key] = score
     scores.total += score
   }
