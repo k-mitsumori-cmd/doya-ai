@@ -79,7 +79,8 @@ export interface ShadowDenial {
 
 /**
  * 操作を通すか。scope（ツールと組織）を渡したら、その組織が属する会社で判定する（ツールの中の操作は必ず渡す）。
- * 会社に属していない組織・会社に入っていない人は、止めない（ツールの上限 applyCompanyCeiling と同じ扱い。監査の重大2）。
+ * scope ありで、組織が会社に属していないときは止めない（ツールの上限 applyCompanyCeiling と同じ扱い。監査の重大2）。
+ * scope なしで、会社に入っていない人は止める（会社そのものの操作）。DB を読めないときは access.server.ts が止める側に倒す。
  * - off: 判定しない（allowed: true。今の各ツールの判定だけが効く）
  * - shadow: 判定して、拒否なら onShadowDenial に渡すが、allowed は true
  * - enforce: 判定どおり
@@ -98,7 +99,17 @@ export async function authorizeCompanyAction(input: {
   const context = input.scope
     ? await resolveCompanyRoleForOrg(input.userId, input.scope.tool, input.scope.organizationId, input.db)
     : await resolveCompanyRole(input.userId, input.db)
-  if (!context) return { checked: true, allowed: true, mode: input.mode, context: null, decision: { ok: true } }
+  if (!context) {
+    // scope あり: 組織が会社に属していない（1人で使う人の組織）と確かめられたので、止めない（ツールの上限と同じ扱い）。
+    // scope なし: 会社の画面などの会社そのものの操作。会社に入っていない人は止める（自動の点検の指摘 2026-10-26）。
+    if (input.scope) return { checked: true, allowed: true, mode: input.mode, context: null, decision: { ok: true } }
+    const decision = { ok: false, reason: 'NO_COMPANY' } as const
+    if (input.mode === 'shadow') {
+      input.onShadowDenial?.({ userId: input.userId, permission: input.permission, companyId: null, role: null, reason: decision.reason })
+      return { checked: true, allowed: true, mode: 'shadow', context: null, decision }
+    }
+    return { checked: true, allowed: false, mode: 'enforce', context: null, decision }
+  }
   const policy = await loadRolePolicy(context.companyId, input.db)
   const decision = decideCompanyPermission(context.role, input.permission, input.target, policy)
   if (input.mode === 'shadow') {

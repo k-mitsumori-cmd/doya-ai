@@ -107,15 +107,23 @@ test('authorizeCompanyAction: enforce は判定どおりに止める', async () 
   assert.equal(other.checked && !other.decision.ok && other.decision.reason, 'NOT_DEPARTMENT')
 })
 
-test('authorizeCompanyAction: 会社に入っていない人は、止めない（ツールの上限と同じ扱い。監査の重大2）', async () => {
+test('authorizeCompanyAction: scope なしで会社に入っていない人は、enforce で止まる（NO_COMPANY）。shadow は通して記録する', async () => {
   const { db } = fakeDb({})
+  const r = await authorizeCompanyAction({ userId: 'x', permission: 'company.view', mode: 'enforce', db })
+  assert.equal(r.allowed, false)
+  assert.deepEqual(r.checked && r.decision, { ok: false, reason: 'NO_COMPANY' })
   const seen: ShadowDenial[] = []
+  const s2 = await authorizeCompanyAction({ userId: 'x', permission: 'company.view', mode: 'shadow', db, onShadowDenial: (d) => seen.push(d) })
+  assert.equal(s2.allowed, true)
+  assert.equal(seen.length, 1)
+})
+
+test('authorizeCompanyAction: scope ありで、組織が会社に属していないなら止めない（1人で使う人。監査の重大2）', async () => {
+  const { db } = fakeDb({ orgs: {} })
   for (const mode of ['shadow', 'enforce'] as CompanyRolesMode[]) {
-    const r = await authorizeCompanyAction({ userId: 'x', permission: 'invoice.issue', mode, db, onShadowDenial: (d) => seen.push(d) })
+    const r = await authorizeCompanyAction({ userId: 'x', permission: 'invoice.issue', mode, db, scope: { tool: 'income', organizationId: 'solo' } })
     assert.equal(r.allowed, true, mode)
-    assert.equal(r.checked && r.context, null, mode)
   }
-  assert.equal(seen.length, 0)
 })
 
 test('authorizeCompanyAction: scope があれば、組織が属する会社で判定する（自分で作った別の会社の持ち主でも、ほかの会社の組織ではその会社の役割）', async () => {

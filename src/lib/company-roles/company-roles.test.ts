@@ -216,10 +216,10 @@ test('enforce: メンバーが他人の勤怠を直そうとすると止まる�
   assert.equal(denials.length, 1)
 })
 
-test('会社に入っていない人は、止めない（ツールの上限と同じ扱い）', async () => {
+test('会社に入っていない人は、会社そのものの操作（scope なし）では enforce で止まる', async () => {
   const { db } = fakeDb({})
   const r = await authorizeCompanyAction({ userId: 'u9', permission: 'tool.use', mode: 'enforce', db })
-  assert.equal(r.allowed, true)
+  assert.equal(r.allowed, false)
 })
 
 test('変更の記録: メールは小文字、メモは500文字まで', () => {
