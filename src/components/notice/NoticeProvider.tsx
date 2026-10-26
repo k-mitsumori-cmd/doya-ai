@@ -53,7 +53,7 @@ interface NoticeApi {
   /** 知らせの量（ふつう・少なめ・エラーだけ） */
   level: NoticeLevel
   setLevel: (l: NoticeLevel) => void
-  /** 最近作った物を記録する（成果物の受け渡し (7)）。中身は残さず、種類・id・表示名だけ */
+  /** 最近作った物を記録する（成果物の受け渡し (7)）。中身も表示名も残さず、種類・id・時刻だけ */
   rememberArtifact: (a: Omit<RecentArtifact, 'at'>) => void
   /** 最近作った物（新しい順・3件まで） */
   recentArtifacts: () => RecentArtifact[]

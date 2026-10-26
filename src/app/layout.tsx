@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import ClearArtifactsOnSignOut from '@/components/notice/ClearArtifactsOnSignOut'
 import FeedbackMount from '@/components/feedback/FeedbackMount'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema, generateWebSiteSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
@@ -187,6 +188,8 @@ export default function RootLayout({
               HubSpotのポップアップを出さない」除外条件を書くために必要 */}
           <UserStateSignal />
           <LogoutToastListener />
+          {/* ログアウトしたら、最近作った物の記録を消す（どのログアウトの道すじでも。src/components/notice/ClearArtifactsOnSignOut.tsx） */}
+          <ClearArtifactsOnSignOut />
           {/* Stripe決済からの戻りを全サービス共通で検知してプランを即時反映（Webhook不達の保険） */}
           <StripeSuccessSync />
           {/* containerClassName: ドヤくんの知らせ（旗 GUIDE_POPUPS_ROLLOUT）が出ている画面では、この Toaster を隠して同じトーストを知らせの見た目で出す（src/components/notice/HotToastBridge.tsx） */}

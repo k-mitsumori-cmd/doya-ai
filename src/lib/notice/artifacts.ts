@@ -64,3 +64,13 @@ export function clearAllRecentArtifacts(): void {
     for (const k of keys) window.localStorage.removeItem(k)
   } catch { /* 消せなくてもログアウトは続ける */ }
 }
+
+/** ログインしている人のほかの記録（同じ端末で前に使った人の分）を消す */
+export function clearOtherUsersArtifacts(userKey: string): void {
+  try {
+    const keep = artifactsKey(userKey)
+    const keys: string[] = []
+    for (let i = 0; i < window.localStorage.length; i++) { const k = window.localStorage.key(i); if (k?.startsWith(PREFIX) && k !== keep) keys.push(k) }
+    for (const k of keys) window.localStorage.removeItem(k)
+  } catch { /* 消せなくても画面は動く */ }
+}

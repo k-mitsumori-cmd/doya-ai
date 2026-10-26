@@ -31,7 +31,7 @@ function HandoffActions({ artifact, close }: { artifact: RecentArtifact; close: 
       const data = await res.json().catch(() => null) as { projectId?: unknown; error?: string; code?: string } | null
       const path = res.status === 201 ? slideProjectPath(data?.projectId) : null
       if (path) { close(true); router.push(path); return }
-      if (res.status === 403 && data?.code === 'LIMIT_REACHED') notify({ tone: 'error', title: '今月のスライドの上限に達しています', sub: 'プランを見直すと、続けて作れます', action: { label: 'プランを見る', href: '/pricing' } })
+      if (res.status === 403 && data?.code === 'LIMIT_REACHED') notify({ tone: 'error', title: '今月のスライドの上限に達しています', sub: 'プランを見直すと、続けて作れます', action: { label: 'プランを見る', href: '/doyaslide/pricing' } })
       else if (res.status === 404) notify({ tone: 'error', title: '見積書が見つかりませんでした', sub: '消されたか、ほかの組織の見積書です' })
       else notify({ tone: 'error', title: '材料にできませんでした', sub: data?.error || '時間をおいて、もう一度お試しください' })
       close(true)
@@ -57,7 +57,7 @@ export default function HandoffSuggest() {
     const a = freshestArtifact(recentArtifacts(), 'quote', Date.now())
     if (!a) return
     push({
-      id: `handoff:quote:${a.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: 'さっき作った見積書',
+      id: `handoff:quote:${a.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: 'さっき開いた見積書',
       title: '見積書を、スライドの材料に使いますか？',
       body: 'さっき開いた見積書の品目と金額から、提案スライドの構成を作ります。相手の会社名や金額は、外の検索には使いません。',
       content: (close) => <HandoffActions artifact={a} close={close} />,

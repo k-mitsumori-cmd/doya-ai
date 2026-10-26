@@ -38,5 +38,25 @@ check('Guide popups: queue, seen and flag rules (node:test)', () => {
   assert.equal(r.status, 0, (r.stdout || '') + (r.stderr || ''))
 })
 
+
+check('Handoff (7): sign-out on any path clears the record, the card does not fetch on display, and the card is mounted only inside the flag', () => {
+  // 統括の点検 2026-10-26 中3
+  const layout = read('src/app/layout.tsx')
+  assert.match(layout, /<ClearArtifactsOnSignOut \/>/)
+  const clear = read('src/components/notice/ClearArtifactsOnSignOut.tsx')
+  assert.match(clear, /status === 'unauthenticated'\) clearAllRecentArtifacts\(\)/)
+  const art = read('src/lib/notice/artifacts.ts')
+  assert.match(art, /export interface RecentArtifact \{ kind: ArtifactKind; id: string; at: number \}/, 'the record keeps no display name')
+  const hs = read('src/components/notice/HandoffSuggest.tsx')
+  const main = hs.slice(hs.indexOf('export default function HandoffSuggest'))
+  assert.equal(/fetch\(/.test(main), false, 'showing the card must not fetch')
+  const use = hs.slice(hs.indexOf('const use = async'), hs.indexOf('export default function HandoffSuggest'))
+  assert.match(use, /fetch\('\/api\/doyaslide\/projects\/from-quote'/)
+  assert.match(use, /JSON\.stringify\(\{ kind: artifact\.kind, id: artifact\.id \}\)/, 'only kind and id are sent')
+  const gate = read('src/components/shell/ShellGate.tsx')
+  assert.match(gate, /guide && shown && userKey\s*\n?\s*\? <NoticeProvider userKey=\{userKey\}>\{framed\}<ShellNotices \/><HandoffSuggest \/><\/NoticeProvider>/)
+  assert.equal((gate.match(/<HandoffSuggest/g) || []).length, 1)
+})
+
 if (failed) { console.error('Security regression failed: verify-guide-popups-flag.cjs'); process.exit(1) }
 console.log(JSON.stringify({ scope: 'GUIDE_POPUPS_ROLLOUT flag, shell mounting, no DB/billing/outside calls in notice parts, queue/seen/flag unit tests. No DB, billing or AI.' }))
