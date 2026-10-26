@@ -55,11 +55,12 @@ async function postHandler(req: NextRequest) {
 
     const existingSlides = await prisma.doyaSlideSlide.count({ where: { projectId } })
     if (existingSlides > 0) {
-      return NextResponse.json({ error: 'このプロジェクトには構成が存在します。既存のスライドと履歴を保護するため、構成の作り直しはできません。' }, { status: 409 })
+      // code はエージェントが見分けるためのもの（やり直しで、もう構成があるなら成功として扱う）
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_EXISTS', error: 'このプロジェクトには構成が存在します。既存のスライドと履歴を保護するため、構成の作り直しはできません。' }, { status: 409 })
     }
     const stale = project.status === 'structuring' && project.updatedAt.getTime() < Date.now() - 6 * 60 * 1000
     if (project.status !== 'draft' && project.status !== 'error' && !stale) {
-      return NextResponse.json({ error: '構成を生成中です。完了後にお試しください。' }, { status: 409 })
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_BUSY', error: '構成を生成中です。完了後にお試しください。' }, { status: 409 })
     }
     const claimTime = new Date()
     const claimed = await prisma.doyaSlideProject.updateMany({

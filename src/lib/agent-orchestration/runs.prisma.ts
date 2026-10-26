@@ -52,10 +52,10 @@ export const prismaRunRepo: RunRepo = {
   async saveResume(userId, runId, taskId, startedAt, resume) {
     await prisma.homeAgentTask.updateMany({ where: { runId, taskId, userId, status: 'running', startedAt }, data: { resume: json(resume) } as Prisma.HomeAgentTaskUpdateManyMutationInput })
   },
-  async finishTask(userId, runId, taskId, patch) {
+  async finishTask(userId, runId, taskId, startedAt, patch) {
     const { result, resume, ...rest } = patch
     await prisma.homeAgentTask.updateMany({
-      where: { runId, taskId, userId, status: 'running' },
+      where: { runId, taskId, userId, status: 'running', startedAt },
       data: {
         ...(rest as Record<string, unknown>),
         ...(result !== undefined ? { result: result === null ? Prisma.DbNull : json(result) } : {}),

@@ -2,7 +2,7 @@
 // 商談の準備を、各ツールの呼び出しを差し替えて最後まで動かす（AI・DB・課金には触れない）
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SALES_PREP, matchRecipe, normalizeCompanyUrl, parseSalesPrepAnswers, sampleAnswers, type SalesPrepAnswers } from './recipes'
+import { SALES_PREP, matchRecipe, normalizeCompanyUrl, parseSalesPrepAnswers, sampleAnswers, slideInputOf, type SalesPrepAnswers } from './recipes'
 import { runAgentTasks, progressOf } from './runner'
 import { fakeToolDeps, runSalesPrepTask, toTaskError, type ToolDeps, type ToolRouteId, type SalesPrepTaskId } from './tools'
 
@@ -197,7 +197,8 @@ test('スライド: ID が残っていなくても、前の試みで作ったス
   await runSalesPrepTask('slides', a, deps)
   assert.deepEqual(calls.map((c) => c.route), ['slide.structure'])
   assert.equal(calls[0].body.projectId, 'slide_left')
-  assert.deepEqual(asked, [{ title: 'example.co.jp 様へのWebサイトの制作のご提案', docType: 'proposal', slideCount: 8 }])
+  // 作戦の中身（段階・提案・予算から作る文）も渡し、答えの違う作戦や手で作ったスライドは使わない
+  assert.deepEqual(asked, [{ title: 'example.co.jp 様へのWebサイトの制作のご提案', docType: 'proposal', slideCount: 8, customBrief: slideInputOf(a).customBrief }])
   // 探す部品が失敗しても、作って進む
   const f = recording(fakeToolDeps({ delayMs: 0 }))
   f.deps.reusableSlideProject = async () => { throw new Error('db down') }
@@ -246,4 +247,22 @@ test('スライド: 1回目が構成の途中で止められても、やり直�
   const r = await runSalesPrepTask('slides', a, deps)
   assert.equal(made.length, 1)
   assert.equal(r.href, '/doyaslide/slide_1')
+})
+
+test('スライド: やり直しで、構成がもうあれば成功にし、構成を作っている途中なら待つように伝える', async () => {
+  const a = parsed()
+  const reply = (data: Record<string, unknown>): ToolDeps => {
+    const base = fakeToolDeps({ delayMs: 0 })
+    return { ...base, call: async (route, body) => (route === 'slide.structure' ? { status: 409, data } : base.call(route, body)) }
+  }
+  const done = await runSalesPrepTask('slides', a, reply({ code: 'DOYASLIDE_STRUCTURE_EXISTS', error: 'x' }), { projectId: 'slide_done' })
+  assert.equal(done.href, '/doyaslide/slide_done')
+  assert.match(done.summary, /構成はできています/)
+  await assert.rejects(runSalesPrepTask('slides', a, reply({ code: 'DOYASLIDE_STRUCTURE_BUSY', error: 'x' }), { projectId: 'slide_busy' }), (e: { resume?: Record<string, string>; userMessage?: string }) => {
+    assert.deepEqual(e.resume, { projectId: 'slide_busy' })
+    assert.match(String(e.userMessage), /数分おいてから/)
+    return true
+  })
+  // 印の無い 409 は、今までどおり失敗
+  await assert.rejects(runSalesPrepTask('slides', a, reply({ error: 'x' }), { projectId: 'slide_x' }))
 })

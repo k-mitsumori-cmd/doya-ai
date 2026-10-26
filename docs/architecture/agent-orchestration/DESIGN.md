@@ -593,6 +593,12 @@ runAgentTasks({
 - `seo/lib/gemini.ts` に `deadlineAt` と `requestTimeoutMs` を足しました。渡さない呼び出しは今までどおりで、fetch に signal を付けません。締め切りを過ぎたら `LlmDeadlineError` を投げ、フォールバックへ進みません。
 - 確かめ方: `verify-llm-deadline.cjs`、`tools.test.ts` と `runs.test.ts` のスライドの節、`verify-agent-orchestration.cjs` の「Agent slides retry」。
 
+統括の監査のあとに直したこと（2026-10-26）:
+
+- 使い直すスライドは、作戦の中身（`customBrief`。段階・提案・予算の答えから作る文）も同じものに絞りました。手で作ったスライドや、答えの違う作戦のスライドは使いません。
+- やり直しで構成がもうある（409 `DOYASLIDE_STRUCTURE_EXISTS`）ときは、成功として返します。構成を作っている途中（409 `DOYASLIDE_STRUCTURE_BUSY`）なら、数分おいてからやり直すよう伝え、ID を resume に残します。
+- 実行の記録の `finishTask` は、自分が取った試み（`startedAt` が同じもの）にだけ書きます。
+
 ## 13. まだ良くない点と、次の改善
 
 まだ良くない点:
