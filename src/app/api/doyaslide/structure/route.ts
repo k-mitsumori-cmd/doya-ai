@@ -9,6 +9,7 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
 import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
+import { isQuoteHandoffBrief } from '@/lib/doyaslide/quote-handoff'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
@@ -76,7 +77,9 @@ async function postHandler(req: NextRequest) {
     }
 
     // Webで調べて原稿の素材にする（SERPER_API_KEY があれば。失敗しても構成生成は続行）
-    if (hasSerpApiKey()) {
+    // 注意: 見積書から作った資料（customBrief の先頭に内部の目印）は、Web検索をしない。
+    //       検索語に取引先名・金額が入って外部へ出るのを、サーバー側で確実に止める（quote-handoff.ts）。
+    if (!isQuoteHandoffBrief(project.customBrief) && hasSerpApiKey()) {
       try {
         const q = [project.title, project.customBrief].filter(Boolean).join(' ').slice(0, 200)
         const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6 })
