@@ -68,7 +68,16 @@ test('見た記録: ユーザーごとのキー・壊れた値は空・上限で
 })
 
 test('旗: 既定は off。preview は許可した人だけ、all は全員', () => {
-  assert.equal(guidePopupsRollout(undefined), 'off')
+  // 本番で GUIDE_POPUPS_ROLLOUT を入れても通るよう、この確かめの間だけ環境変数を外す（統括の指摘 2026-10-26。round9 の問い合わせチャットと同じ）
+  const saved = process.env.GUIDE_POPUPS_ROLLOUT
+  delete process.env.GUIDE_POPUPS_ROLLOUT
+  try {
+    assert.equal(guidePopupsRollout(undefined), 'off')
+    assert.equal(guidePopupsRollout(), 'off')
+  } finally {
+    if (saved === undefined) delete process.env.GUIDE_POPUPS_ROLLOUT
+    else process.env.GUIDE_POPUPS_ROLLOUT = saved
+  }
   assert.equal(guidePopupsRollout(' ALL '), 'all')
   assert.equal(guidePopupsRollout('yes'), 'off')
   assert.equal(decideGuidePopups({ rollout: 'off', email: 'a@x.jp', allow: ['a@x.jp'] }), false)
