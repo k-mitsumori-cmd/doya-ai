@@ -11,6 +11,7 @@
 // ⚠️ ここはナビの表示だけ。各ツールの認可・課金判定はツール側が持つ。
 // 仕様: docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md §2・§8（U-1〜U-4）
 import type { ShellIconName } from './icons'
+import { DEPARTMENTS, getDepartment, orderDepartments, type DepartmentId } from '@/lib/departments'
 import { BETA_HIDDEN_SERVICE_IDS, getActiveServices, getServiceById, UNLISTED_SERVICE_IDS, type Service } from '@/lib/services'
 
 export type ShellStage = 'sell' | 'collect' | 'hire' | 'operate' | 'other'
@@ -118,6 +119,36 @@ function groupsOf(labels: { stage: ShellStage; label: string }[], tools: ShellTo
 export const SHELL_GROUPS: ShellGroup[] = groupsOf(STAGE_LABELS, TOOLS)
 
 export const ALL_SHELL_TOOLS: ShellTool[] = [SHELL_HOME, ...TOOLS]
+
+export interface DepartmentShellGroup {
+  /** 部署の id。表に入っていないツールを集めた最後の組は null */
+  department: DepartmentId | null
+  label: string
+  tools: ShellTool[]
+  /** 主の部署か（先に開いて並べる）。主の部署がまだ無いときは全部 true。false は「ほかの部署」に畳む */
+  primary: boolean
+}
+
+/**
+ * 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT が on のとき）の並び。部署の表の正本は src/lib/departments.ts。
+ * 主の部署を先に、残りを既定の順で後ろに並べる。ツールの並びは部署の表の順。
+ * ⚠️ 部署の表に入っていないツール（新しく services.ts に足したもの）は、最後の「その他」にまとめる。メニューから消さない。
+ * ⚠️ 旗が off のときは使わない（SHELL_GROUPS のまま）。
+ */
+export function buildDepartmentGroups(primary: DepartmentId[]): DepartmentShellGroup[] {
+  const byId = new Map(TOOLS.map((t) => [t.id, t]))
+  const main = orderDepartments(primary).filter((id) => primary.includes(id))
+  const groups: DepartmentShellGroup[] = orderDepartments(primary).map((id) => ({
+    department: id,
+    primary: main.length === 0 || main.includes(id),
+    label: getDepartment(id).name,
+    tools: getDepartment(id).toolIds.map((tid) => byId.get(tid)).filter((t): t is ShellTool => Boolean(t)),
+  }))
+  const covered = new Set(DEPARTMENTS.flatMap((d) => d.toolIds))
+  const rest = TOOLS.filter((t) => !covered.has(t.id))
+  if (rest.length) groups.push({ department: null, label: 'その他', tools: rest, primary: true })
+  return groups.filter((g) => g.tools.length > 0)
+}
 
 /**
  * id からツールを引く（パンくず・見出しの名前用）。

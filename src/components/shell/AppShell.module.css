@@ -73,6 +73,19 @@
 .navItem:hover { background: var(--bg); color: var(--ink); }
 .navItem[aria-current='page'] { background: var(--blue-soft); color: var(--blue); }
 
+/* 部署ごとの入口（DEPARTMENTS_ROLLOUT）。「ほかの部署」の畳み */
+.deptBlock { margin-top: 2px; }
+.deptToggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--sub); text-align: left;
+}
+.deptToggle:hover { background: var(--bg); color: var(--ink); }
+.deptToggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.deptChevron { flex: none; transition: transform 0.15s var(--ease); }
+.deptChevron[data-open='true'] { transform: rotate(90deg); }
+.deptBody[data-open='false'] { display: none; }
+
 .navLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .beta {
@@ -164,6 +177,9 @@
   .sidebar { padding: 16px 10px 12px; }
   .sideHead { justify-content: center; padding: 0 0 12px; }
   .navLabel, .beta, .newTag, .groupLabel, .userLine, .usage { display: none; }
+  /* アイコンだけの幅では畳まない（部署の名前のボタンは出さず、全部のアイコンを出す） */
+  .deptToggle { display: none; }
+  .deptBody[data-open='false'] { display: block; }
   .search { justify-content: center; padding: 0; }
   .navItem { justify-content: center; padding: 0; }
   .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -221,7 +237,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar, .scrim, .navItem { transition: none; }
+  .sidebar, .scrim, .navItem, .deptChevron { transition: none; }
 }
 
 /* 移っている間の細い線（UI 品質 C-3）。前のページはそのまま見せる */
