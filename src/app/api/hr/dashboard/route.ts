@@ -54,11 +54,14 @@ export async function GET() {
           take: 5,
         }),
         // 部署ごとの在籍人数（ダッシュボードのインフォグラフィック。組織図と同じ情報で、名前と人数だけを返す。2026-10-27）
-        prisma.hrDepartment.findMany({
-          where: { organizationId: orgId, isActive: true },
-          select: { name: true, sortOrder: true, _count: { select: { employees: { where: { status: 'ACTIVE' } } } } },
-          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-        }),
+        // ⚠️ 飾りの情報なので、読めなくてもダッシュボードは返す（空の配列にする）
+        Promise.resolve()
+          .then(() => prisma.hrDepartment.findMany({
+            where: { organizationId: orgId, isActive: true },
+            select: { name: true, sortOrder: true, _count: { select: { employees: { where: { status: 'ACTIVE' } } } } },
+            orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+          }))
+          .catch(() => [] as { name: string; sortOrder: number; _count: { employees: number } }[]),
       ])
 
     const departmentHeadcount = departmentRows

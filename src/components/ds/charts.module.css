@@ -61,6 +61,12 @@
 /* 円は少し回りながら大きくなって出る（位置と回転だけを動かし、止まっても見える。2026-10-27） */
 .donutSpin { transform-origin: 50% 50%; animation: ds-donut-spin 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes ds-donut-spin { from { transform: rotate(-60deg) scale(0.88); } to { transform: none; } }
+/* 円の見える範囲（mask の線）。箱（donutChart）の data-* で動かす */
+.donutSweep { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.donutChart[data-armed='true'] .donutSweep { stroke-dashoffset: 1; }
+.donutChart[data-seen='true'] .donutSweep { animation: ds-sweep 1100ms cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+.donutChart[data-done='true'] .donutSweep { stroke-dashoffset: 0 !important; animation: none !important; }
+@keyframes ds-sweep { to { stroke-dashoffset: 0; } }
 .donutChart::after {
   content: ''; position: absolute; inset: 18%; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, var(--blue-soft), transparent 70%);
@@ -141,6 +147,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fadeIn { animation: none; }
+  .donutSweep, .donutChart[data-armed='true'] .donutSweep, .donutChart[data-seen='true'] .donutSweep { stroke-dashoffset: 0; animation: none; }
   .donutSpin, .pulse, .bars[data-seen='true'] .barFill::after, .colPlot[data-seen='true'] .colValue { animation: none; }
   .barFill::after { display: none; }
   .barFill, .bars[data-seen='true'] .barFill, .bars[data-armed='true'] .barFill { transform: none; animation: none; }

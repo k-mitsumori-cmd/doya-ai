@@ -194,8 +194,9 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
               <stop offset="0%" stopColor={first} stopOpacity="0.32" />
               <stop offset="100%" stopColor={first} stopOpacity="0" />
             </linearGradient>
-            {/* 最初の系列の線は、左の水色から右の濃い青へ（インフォグラフィックの見せ方。2026-10-27） */}
-            <linearGradient id={`${gid}-line`} x1="0" x2="1" y1="0" y2="0">
+            {/* 最初の系列の線は、左の水色から右の濃い青へ（インフォグラフィックの見せ方。2026-10-27）。
+                ⚠️ グラフの座標（userSpaceOnUse）で決める。線の外枠（objectBoundingBox）だと、値がすべて同じ水平な線は高さ0になり、線が消えるため */}
+            <linearGradient id={`${gid}-line`} gradientUnits="userSpaceOnUse" x1={padL} x2={Math.max(padL + 1, w - padR)} y1={0} y2={0}>
               <stop offset="0%" stopColor="var(--sky, #009bff)" />
               <stop offset="100%" stopColor="var(--blue-deep, #0047d6)" />
             </linearGradient>
@@ -380,6 +381,8 @@ export function Donut({ data, size = 120, label, center, colors, palette, empty 
 }) {
   const { percents, labels: pctLabels, total } = percentStack(data.map((d) => d.value))
   const maskId = `ds-donut-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  // 描き出しの合図は、見えている円の箱で取る（<mask> の中の要素は描かれないので、画面に入ったかを判定できない）
+  const sweep = useReveal<HTMLDivElement>(1100 + 400)
   const usePalette = palette ?? (data.length > DONUT_BLUE.length ? 'brand' : 'blue')
   const colorOf = (i: number) => {
     const t = data[i]?.tone ?? colors?.[i]
@@ -402,14 +405,13 @@ export function Donut({ data, size = 120, label, center, colors, palette, empty 
   let acc = 0
   return (
     <figure className={styles.donut}>
-      <div className={styles.donutChart} style={{ width: size, height: size }}>
+      <div ref={sweep.ref} {...sweep.attrs} className={styles.donutChart} style={{ width: size, height: size }}>
         <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label} className={styles.donutSpin}>
           <defs>
-            {/* 区分ごとに開始位置（dashoffset）を持つので、区分ではなく「見える範囲」を円に沿って描き出す（回って出る。2026-10-27） */}
+            {/* 区分ごとに開始位置（dashoffset）を持つので、区分ではなく「見える範囲」を円に沿って描き出す（回って出る。2026-10-27）。
+                隠すのはスクリプトが動いたあとだけ。描き終わるはずの時間が過ぎたら、止まっていても全部見せる（F-12） */}
             <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-              <DrawIn mode="stroke" duration={1100}>
-                <circle cx="50" cy="50" r="38" pathLength={1} fill="none" stroke="#fff" strokeWidth={18} transform="rotate(-90 50 50)" />
-              </DrawIn>
+              <circle cx="50" cy="50" r="38" pathLength={1} fill="none" stroke="#fff" strokeWidth={18} transform="rotate(-90 50 50)" className={styles.donutSweep} />
             </mask>
           </defs>
           <circle cx="50" cy="50" r="38" className={styles.ringTrack} />

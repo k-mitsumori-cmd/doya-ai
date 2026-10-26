@@ -62,11 +62,16 @@
 
 /* 読み込みの間の枠 */
 .loading {
+  height: var(--h);
   border-radius: var(--r-sm);
   background: linear-gradient(90deg, var(--bg) 0%, var(--line) 50%, var(--bg) 100%);
   background-size: 200% 100%;
   animation: ig-shimmer 1.4s var(--ease-io) infinite;
 }
+@media (max-width: 560px) { .loading { height: var(--h-sm); } }
+.reserve { min-height: var(--h); }
+@media (max-width: 560px) { .reserve { min-height: var(--h-sm); } }
+.empty { margin: 0; padding: 24px 0; text-align: center; font-size: 15px; font-weight: 700; color: var(--sub); }
 @keyframes ig-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 @media (prefers-reduced-motion: reduce) {

@@ -101,11 +101,24 @@ export function Pictogram({ groups, label, max = 60 }: {
   )
 }
 
-/** 読み込みの間に、同じ見出しと高さの枠を出しておく（読み込みのあとに下を押し下げない） */
-export function InfoPanelLoading({ title, height }: { title: ReactNode; height: number }) {
+/**
+ * 読み込みの間に、同じ見出しと高さの枠を出しておく（読み込みのあとに下を押し下げない）。
+ * height は中身の高さ（px）。560px 以下で高さが変わるときは mobileHeight も渡す（中身を実際に測った値にする）
+ */
+export function InfoPanelLoading({ title, height, mobileHeight }: { title: ReactNode; height: number; mobileHeight?: number }) {
   return (
     <InfoPanel title={title}>
-      <div aria-busy="true" aria-label="読み込み中" className={styles.loading} style={{ height }} />
+      <div aria-busy="true" aria-label="読み込み中" className={styles.loading} style={{ '--h': `${height}px`, '--h-sm': `${mobileHeight ?? height}px` } as CSSProperties} />
     </InfoPanel>
   )
+}
+
+/** 中身の高さを、読み込み中の枠（InfoPanelLoading）と同じだけ取っておく。中身が少なくても下を押し上げない */
+export function InfoReserve({ height, mobileHeight, children }: { height: number; mobileHeight?: number; children: ReactNode }) {
+  return <div className={styles.reserve} style={{ '--h': `${height}px`, '--h-sm': `${mobileHeight ?? height}px` } as CSSProperties}>{children}</div>
+}
+
+/** 数が0のときの一言（枠ごと消さず、同じ場所に出す） */
+export function InfoEmpty({ children }: { children: ReactNode }) {
+  return <p className={styles.empty}>{children}</p>
 }

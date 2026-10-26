@@ -1,7 +1,7 @@
 'use client'
 
 import { Skeleton } from '@/components/ds'
-import { TeamTodayInfo } from '@/components/kintai/KintaiInfographics'
+import { TEAM_TODAY_H, TEAM_TODAY_H_SM, TeamTodayInfo } from '@/components/kintai/KintaiInfographics'
 import { InfoPanelLoading } from '@/components/ds/infographic'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
@@ -167,7 +167,7 @@ export default function AdminAttendancePage() {
         )}
 
         {/* 出勤の状況（インフォグラフィック。2026-10-27） */}
-        {loading ? <InfoPanelLoading title="出勤の状況" height={132} /> : !loadError && filtered.length > 0 && <TeamTodayInfo stats={stats} dateLabel={dateLabel} />}
+        {loading ? <InfoPanelLoading title="出勤の状況" height={TEAM_TODAY_H} mobileHeight={TEAM_TODAY_H_SM} /> : !loadError && <TeamTodayInfo stats={stats} dateLabel={dateLabel} />}
 
         {/* Summary stats with bears */}
         {!loading && filtered.length > 0 && (

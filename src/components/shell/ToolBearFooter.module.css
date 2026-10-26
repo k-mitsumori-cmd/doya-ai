@@ -18,6 +18,8 @@
     linear-gradient(180deg, transparent, var(--blue-soft));
   overflow: hidden;
 }
+/* 読み込みの間は見えないまま場所だけ取る（ToolBearFooter.tsx の settled） */
+.footer:not([data-settled='true']) { visibility: hidden; }
 .ground {
   position: absolute;
   left: 8%;
@@ -82,7 +84,7 @@
 @media (max-width: 480px) {
   .footer { margin-top: 32px; min-height: 136px; gap: 4px 8px; padding: 12px 8px 0; }
   .actor, .bear { width: 88px; height: 88px; }
-  .bubble { margin-bottom: 52px; font-size: 13px; padding: 8px 12px; white-space: normal; word-break: auto-phrase; text-wrap: balance; max-width: 200px; }
+  .bubble { margin-bottom: 52px; font-size: 13px; padding: 8px 12px; }
 }
 
 /* ---- 効果の粒（飾り）。普段は見えない ---- */

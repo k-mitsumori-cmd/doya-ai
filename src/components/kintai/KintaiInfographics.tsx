@@ -8,23 +8,16 @@
 // ⚠️ 取得はしない。各画面が持っている値を受け取って並べるだけ
 // ⚠️ 色はトークン。色だけで伝えず、凡例と数を出す。動きを減らす設定では動かさない（ds の部品が対応）
 import { Bars, Ring, StackedBar100, StackedColumnChart } from '@/components/ds/charts'
-import { BigFigure, InfoPanel, Pictogram } from '@/components/ds/infographic'
+import { BigFigure, InfoEmpty, InfoPanel, InfoReserve, Pictogram } from '@/components/ds/infographic'
+
+/** 出勤の状況の枠の高さ（px。読み込み中の枠と同じ。1280px と 375px の実測） */
+export const TEAM_TODAY_H = 132
+export const TEAM_TODAY_H_SM = 306
 import { CountUp } from '@/components/ds/motion'
+import { businessDaysOf } from '@/lib/kintai/jp-holidays'
 
 const h1 = (min: number) => Math.round((Math.max(0, min || 0) / 60) * 10) / 10
 const fmtH = (n: number) => `${(Math.round(n * 10) / 10).toFixed(1)}時間`
-
-/** 月の平日の数（今日までに限ると、今日までの平日） */
-export function weekdaysOf(year: number, month: number, untilDay?: number): number {
-  const last = new Date(year, month, 0).getDate()
-  const end = untilDay ? Math.min(untilDay, last) : last
-  let n = 0
-  for (let d = 1; d <= end; d++) {
-    const w = new Date(year, month - 1, d).getDay()
-    if (w !== 0 && w !== 6) n++
-  }
-  return n
-}
 
 /** 残業の上限の目安（月45時間。36協定の原則の上限） */
 const OVERTIME_LIMIT_MIN = 45 * 60
@@ -34,7 +27,8 @@ export function MonthWorkInfo({ summary, now }: {
   now: Date
 }) {
   const jst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
-  const businessDays = weekdaysOf(jst.getFullYear(), jst.getMonth() + 1, jst.getDate())
+  // 今日までの平日（土日と祝日を除く。会社ごとの休みは含まない）
+  const businessDays = businessDaysOf(jst.getFullYear(), jst.getMonth() + 1, jst.getDate())
   const rate = businessDays > 0 ? Math.min(1, summary.totalWorkDays / businessDays) : 0
   const overtime = Math.max(0, summary.totalOvertimeMinutes || 0)
   const regular = Math.max(0, (summary.totalWorkMinutes || 0) - overtime)
@@ -43,7 +37,7 @@ export function MonthWorkInfo({ summary, now }: {
     <InfoPanel title="今月の勤務" meta={`${jst.getMonth() + 1}月1日から今日まで`}>
       <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-[auto_minmax(0,1fr)]">
         <div className="flex items-center gap-5">
-          <Ring value={rate} size={128} label={`今日までの平日 ${businessDays} 日のうち ${summary.totalWorkDays} 日出勤`} showToneLabel={false}>
+          <Ring value={rate} size={128} label={`今日までの平日（祝日を除く）${businessDays} 日のうち ${summary.totalWorkDays} 日出勤`} showToneLabel={false}>
             <span style={{ display: 'grid', lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
               <span style={{ fontSize: 28 }}><CountUp value={summary.totalWorkDays} /><small style={{ fontSize: 13 }}>日</small></span>
               <small style={{ fontSize: 11, fontWeight: 700, color: 'var(--sub)' }}>平日 {businessDays} 日中</small>
@@ -82,12 +76,19 @@ export function TeamTodayInfo({ stats, dateLabel }: {
   dateLabel: string
 }) {
   const total = stats.working + stats.clockedOut + stats.notClocked + stats.nonWorking
-  if (total === 0) return null
+  if (total === 0) {
+    return (
+      <InfoPanel title="出勤の状況" meta={dateLabel}>
+        <InfoReserve height={TEAM_TODAY_H} mobileHeight={TEAM_TODAY_H_SM}><InfoEmpty>この日に出勤する予定の人はいません。</InfoEmpty></InfoReserve>
+      </InfoPanel>
+    )
+  }
   const came = stats.working + stats.clockedOut
   const expected = total - stats.nonWorking
   const rate = expected > 0 ? came / expected : 0
   return (
     <InfoPanel title="出勤の状況" meta={dateLabel}>
+      <InfoReserve height={TEAM_TODAY_H} mobileHeight={TEAM_TODAY_H_SM}>
       <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-[auto_minmax(0,1fr)]">
         <Ring value={rate} size={132} label={`出勤する予定の ${expected} 名のうち ${came} 名が出勤`} showToneLabel={false}>
           <span style={{ display: 'grid', lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }}>
@@ -105,6 +106,7 @@ export function TeamTodayInfo({ stats, dateLabel }: {
           ]}
         />
       </div>
+      </InfoReserve>
     </InfoPanel>
   )
 }

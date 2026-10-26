@@ -53,8 +53,7 @@
 .tab[aria-current='page'] { color: var(--blue); border-bottom-color: var(--blue); }
 .tab:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 8px; }
 
-/* 一番下のドヤくん（ToolBearFooter）を、読み込みの間は画面の外に置く（中身が出たときに押し下げて、ずれを数えさせない。2026-10-27） */
-.body { min-width: 0; min-height: 100vh; }
+.body { min-width: 0; }
 .content { min-width: 0; }
 .aside { display: none; }
 
