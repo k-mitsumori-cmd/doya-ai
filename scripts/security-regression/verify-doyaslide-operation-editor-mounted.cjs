@@ -21,7 +21,7 @@ const Page=load('src/app/(shell)/doyaslide/[id]/page.tsx',{
  '@/lib/doyaslide/file-urls':{doyaslideImageSrc:u=>u||''},'@/components/doyaslide/SlideImage':p=>React.createElement('img',{src:p.src,alt:p.alt||''}),
  'next-auth/react':{useSession:()=>({status,data:{user:{id:actor}}})},
  '@/lib/doyaslide/use-operation-recovery':hook,'@/components/doyaslide/DoyaSlideOperationRecovery':Panel,
- '@/components/ds':{Skeleton:()=>React.createElement('div',{'aria-busy':'true'})},'@/components/ds/dialog':{confirmDialog:async()=>{throw Error('Unexpected confirmDialog')}},
+ '@/components/ds':{Skeleton:()=>React.createElement('div',{'aria-busy':'true'})},'@/components/ds/dialog':{confirmDialog:async()=>{throw Error('Unexpected confirmDialog')}},'@/components/one-button/context':{useOneButton:()=>false},'@/components/one-button/OneButtonBar':{OneButtonBar:()=>null},
 }).default;
 let root,host,project,mode,receipts,hold;
 const clone=v=>JSON.parse(JSON.stringify(v));
