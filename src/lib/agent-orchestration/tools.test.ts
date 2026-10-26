@@ -169,3 +169,81 @@ test('システム点検の印: 印があるときだけ、見積書・スライ
   assert.equal('labelPrefix' in plain.calls[0].body, false)
   assert.equal(plain.calls.find((c) => c.route === 'quote.create')!.body.title, 'Webサイトの制作のお見積り')
 })
+
+// 2026-10-26 統括の指摘: 構成づくりの途中で関数の時間の上限に当たると、作ったスライドの ID が残らず、
+// やり直しのたびに同じ名前のスライドが増えていた
+test('スライド: 作ったらすぐ projectId を残し、そのあと構成を作る', async () => {
+  const a = parsed()
+  const order: string[] = []
+  const base = fakeToolDeps({ delayMs: 0 })
+  const deps: ToolDeps = {
+    ...base,
+    call: async (route, body) => { order.push(route); return base.call(route, body) },
+    checkpoint: async (r) => { order.push(`checkpoint:${r.projectId}`) },
+  }
+  await runSalesPrepTask('slides', a, deps)
+  assert.deepEqual(order, ['slide.project', 'checkpoint:slide_sample', 'slide.structure'])
+  // resume に ID があるときは、作らず、残し直しもしない
+  order.length = 0
+  await runSalesPrepTask('slides', a, deps, { projectId: 'slide_prev' })
+  assert.deepEqual(order, ['slide.structure'])
+})
+
+test('スライド: ID が残っていなくても、前の試みで作ったスライドがあれば使う（同じ名前のスライドを増やさない）', async () => {
+  const a = parsed()
+  const { deps, calls } = recording(fakeToolDeps({ delayMs: 0 }))
+  const asked: unknown[] = []
+  deps.reusableSlideProject = async (input) => { asked.push(input); return 'slide_left' }
+  await runSalesPrepTask('slides', a, deps)
+  assert.deepEqual(calls.map((c) => c.route), ['slide.structure'])
+  assert.equal(calls[0].body.projectId, 'slide_left')
+  assert.deepEqual(asked, [{ title: 'example.co.jp 様へのWebサイトの制作のご提案', docType: 'proposal', slideCount: 8 }])
+  // 探す部品が失敗しても、作って進む
+  const f = recording(fakeToolDeps({ delayMs: 0 }))
+  f.deps.reusableSlideProject = async () => { throw new Error('db down') }
+  await runSalesPrepTask('slides', a, f.deps)
+  assert.deepEqual(f.calls.map((c) => c.route), ['slide.project', 'slide.structure'])
+})
+
+test('スライド: 構成が待つ時間を過ぎたら、作ったスライドの ID を resume に入れて失敗にする', async () => {
+  const a = parsed()
+  const base = fakeToolDeps({ delayMs: 0 })
+  const deps: ToolDeps = {
+    ...base,
+    slideStructureWaitMs: 20,
+    call: async (route, body) => (route === 'slide.structure' ? new Promise(() => {}) : base.call(route, body)),
+  }
+  await assert.rejects(runSalesPrepTask('slides', a, deps), (e: { resume?: Record<string, string>; userMessage?: string }) => {
+    assert.deepEqual(e.resume, { projectId: 'slide_sample' })
+    assert.match(String(e.userMessage), /同じスライドで続けます/)
+    return true
+  })
+})
+
+test('スライド: 1回目が構成の途中で止められても、やり直しで作るスライドは1つだけ', async () => {
+  const a = parsed()
+  const made: { id: string; title: string; structured: boolean }[] = []
+  let hang = true
+  const deps: ToolDeps = {
+    ...fakeToolDeps({ delayMs: 0 }),
+    slideStructureWaitMs: 30,
+    call: async (route, body) => {
+      if (route === 'slide.project') { const id = `slide_${made.length + 1}`; made.push({ id, title: String(body.title), structured: false }); return { status: 201, data: { project: { id } } } }
+      if (route === 'slide.structure') {
+        if (hang) return new Promise(() => {})
+        made.find((m) => m.id === body.projectId)!.structured = true
+        return { status: 200, data: { slides: [{ headline: '表紙' }] } }
+      }
+      return { status: 500, data: {} }
+    },
+    // 本番は DB を探す（routes.server.ts の reusableSlideProject）。ここでは作った物の一覧から探す
+    reusableSlideProject: async ({ title }) => made.find((m) => m.title === title && !m.structured)?.id ?? null,
+  }
+  // 1回目: 構成の途中で関数が止められた（失敗の記録も resume も残らなかったとして、答えを捨てる）
+  await runSalesPrepTask('slides', a, deps).catch(() => null)
+  // 2回目: resume 無しでやり直す
+  hang = false
+  const r = await runSalesPrepTask('slides', a, deps)
+  assert.equal(made.length, 1)
+  assert.equal(r.href, '/doyaslide/slide_1')
+})

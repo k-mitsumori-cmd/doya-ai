@@ -23,8 +23,16 @@ const SlideSchema = z.object({
   visualPrompt: z.string().trim().min(1).max(10000),
 })
 
+// 時間の上限（2026-10-26 統括の指摘。関数の上限 300 秒より前に、失敗として終わらせ、finally で状態を error に戻すため）
+// - 全体: 始まりから 240 秒で、AI の呼び出しを止める（seo/lib/gemini.ts の deadlineAt）
+// - AI の1回: 150 秒 / Web 検索: 10 秒（参考URLの読み込みは scrape.ts の 15 秒）
+const STRUCTURE_DEADLINE_MS = 240_000
+const STRUCTURE_LLM_REQUEST_MS = 150_000
+const STRUCTURE_SEARCH_MS = 10_000
+
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
 async function postHandler(req: NextRequest) {
+  const deadlineAt = Date.now() + STRUCTURE_DEADLINE_MS
   let claimedProjectId: string | null = null
   let claimedAt: Date | null = null
   try {
@@ -82,7 +90,7 @@ async function postHandler(req: NextRequest) {
     if (hasSerpApiKey()) {
       try {
         const q = [project.title, project.customBrief].filter(Boolean).join(' ').slice(0, 200)
-        const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6 })
+        const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6, timeoutMs: STRUCTURE_SEARCH_MS })
         if (organic.length) {
           const research = organic
             .map((r, i) => `${i + 1}. ${r.title}\n${r.snippet || ''}\n(${r.url})`)
@@ -105,7 +113,7 @@ async function postHandler(req: NextRequest) {
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(
       // 最大12枚分の見出し・本文・画像指示を返すため、既定の4,096トークンより大きくする
       // 経営ホームのエージェントからの呼び出し（印のヘッダー）だけ、軽いモデルを使う（DESIGN.md §11.9）。画面からの呼び出しは今までどおり
-      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 }, ...(req.headers?.get?.('x-doya-agent-tier') === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
+      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 }, deadlineAt, requestTimeoutMs: STRUCTURE_LLM_REQUEST_MS, ...(req.headers?.get?.('x-doya-agent-tier') === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
       'SlideStructure'
     )
 
@@ -147,6 +155,10 @@ async function postHandler(req: NextRequest) {
         code: 'DOYASLIDE_TEXT_DAILY_LIMIT',
         error: `本日の資料構成生成の運用上限（${e.limit}回）に達しました。明日お試しください。`,
       }, { status: 429 })
+    }
+    if (e?.name === 'LlmDeadlineError') {
+      console.error('[doyaslide/structure] deadline exceeded')
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_TIMEOUT', error: '構成づくりに時間がかかりすぎたため、止めました。もう一度お試しください。' }, { status: 504 })
     }
     console.error('[doyaslide/structure]')
     return NextResponse.json({ error: `構成の生成に失敗しました${errorSuffix(e)}` }, { status: 500 })

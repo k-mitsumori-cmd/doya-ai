@@ -31,7 +31,22 @@ export interface ToolDeps {
    * 名前に付ける関数は、システム点検の部品（src/lib/system-watch/marker.ts の withSystemWatchPrefix）が決める
    */
   label?: { prefix: string; apply: (name: string, maxLength: number) => string }
+  /**
+   * 途中まで作れたもの（resume）を、ToDo が終わる前に残す（記録の表があるときだけ。2026-10-26 統括の指摘）。
+   * 関数の時間の上限で止められると、失敗の記録（catch）が走らず、作ったスライドの ID が消えていた
+   */
+  checkpoint?: (resume: Record<string, string>) => Promise<void>
+  /**
+   * 前の試みで作ったまま、構成の無いスライドの ID（本人の、少し前に同じ名前・種類・枚数で作ったもの）。無ければ null。
+   * 記録の表が無いとき、時間切れのあとのやり直しで、同じ名前のスライドを作り増やさないために使う
+   */
+  reusableSlideProject?: (input: { title: string; docType: string; slideCount: number }) => Promise<string | null>
+  /** スライドの構成を待つ時間（ミリ秒）。無ければ SLIDE_STRUCTURE_WAIT_MS。テストで短くするためのもの */
+  slideStructureWaitMs?: number
 }
+
+/** スライドの構成を待つ時間。構成のルートは 240 秒で自分で止まる（structure/route.ts）。ここは、それより遅れたときの備え */
+export const SLIDE_STRUCTURE_WAIT_MS = 270_000
 
 /** 名前に印を付ける（印が無ければそのまま。長さの上限は守る） */
 const labeled = (deps: ToolDeps, name: string, maxLength: number) => (deps.label ? deps.label.apply(name, maxLength) : name.slice(0, maxLength))
@@ -220,12 +235,20 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
   let projectId = str(resume?.projectId, 128)
   if (!projectId) {
     const input = slideInputOf(a)
-    const res = await deps.call('slide.project', { ...input, title: labeled(deps, input.title, 120) })
-    if (!ok(res)) throw toTaskError('doyaslide', res, 'スライドを作り始められませんでした。もう一度お試しください。')
-    projectId = str(obj(obj(res.data).project).id, 128)
-    if (!projectId) throw new AgentTaskError('スライドを作り始められませんでした。もう一度お試しください。')
+    const title = labeled(deps, input.title, 120)
+    // 前の試みが時間切れで終わり、ID が残っていないときは、そのとき作ったスライドを使う（同じ名前のスライドを増やさない）
+    projectId = (await deps.reusableSlideProject?.({ title, docType: input.docType, slideCount: input.slideCount }).catch(() => null)) ?? null
+    if (!projectId) {
+      const res = await deps.call('slide.project', { ...input, title })
+      if (!ok(res)) throw toTaskError('doyaslide', res, 'スライドを作り始められませんでした。もう一度お試しください。')
+      projectId = str(obj(obj(res.data).project).id, 128)
+      if (!projectId) throw new AgentTaskError('スライドを作り始められませんでした。もう一度お試しください。')
+    }
+    // 作ったらすぐ残す。このあと構成づくりの途中で止められても、やり直しは同じスライドを使う
+    await deps.checkpoint?.({ projectId }).catch(() => {})
   }
-  const st = await deps.call('slide.structure', { projectId, referenceUrl: a.url })
+  const st = await withWait(deps.call('slide.structure', { projectId, referenceUrl: a.url }), deps.slideStructureWaitMs ?? SLIDE_STRUCTURE_WAIT_MS)
+  if (st === TIMED_OUT) throw new AgentTaskError('スライドの構成づくりに時間がかかっています。数分おいてからやり直すと、同じスライドで続けます。', 'tool', { projectId })
   if (!ok(st)) throw toTaskError('doyaslide', st, 'スライドの構成を作れませんでした。もう一度お試しください。', { projectId })
   const slides = Array.isArray(obj(st.data).slides) ? (obj(st.data).slides as unknown[]).map(obj) : []
   const heads = slides.map((s) => str(s.headline, 500)).filter((h): h is string => !!h)
@@ -234,6 +257,17 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
     points: heads.slice(0, 5).map((h, i) => `${i + 1}. ${h}`),
     href: `/doyaslide/${encodeURIComponent(projectId)}`,
     hrefLabel: 'スライドの画像を作る',
+  }
+}
+
+const TIMED_OUT = Symbol('timed-out')
+/** 待つ時間を過ぎたら TIMED_OUT を返す（呼び出しそのものは止めない。構成のルートは自分の締め切りで止まる） */
+async function withWait<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([p, new Promise<typeof TIMED_OUT>((r) => { timer = setTimeout(() => r(TIMED_OUT), ms) })])
+  } finally {
+    if (timer) clearTimeout(timer)
   }
 }
 

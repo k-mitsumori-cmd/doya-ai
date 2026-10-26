@@ -53,10 +53,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
   try {
     const extraResume = taskId === 'research' ? await companyNameFrom(req) : undefined
-    const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId, extraResume }, async ({ answers, resume }) => {
+    const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId, extraResume }, async ({ answers, resume, checkpoint }) => {
       const parsed = parseSalesPrepAnswers(answers)
       if (!parsed.ok) throw new AgentTaskError(parsed.error, 'input')
-      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req, gate.userId) }, resume)
+      return executeSalesPrepTask(taskId, parsed.value, { tools: { ...await toolDepsFor(req, gate.userId), checkpoint } }, resume)
     })
     return NextResponse.json({ result, run: await view() }, { headers: NO_STORE })
   } catch (e) {

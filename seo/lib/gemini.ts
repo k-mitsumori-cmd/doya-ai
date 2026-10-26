@@ -67,10 +67,22 @@ export const JSON_CALL_MAX_REQUESTS = TEXT_CALL_MAX_REQUESTS * JSON_CALL_MAX_TEX
 // 最後の手段の OpenAI モデル。gpt-4o より安い gpt-4o-mini に固定する。
 export const OPENAI_FALLBACK_MODEL = 'gpt-4o-mini'
 
-type RequestBudget = { remaining: number }
+// deadlineAt / requestTimeoutMs は、呼び出し側が渡したときだけ使う（渡さなければ、今までどおり時間の上限なし）
+type RequestBudget = { remaining: number; deadlineAt?: number; requestTimeoutMs?: number }
 
-function createRequestBudget(): RequestBudget {
-  return { remaining: TEXT_CALL_MAX_REQUESTS }
+function createRequestBudget(time?: { deadlineAt?: number; requestTimeoutMs?: number }): RequestBudget {
+  return { remaining: TEXT_CALL_MAX_REQUESTS, deadlineAt: time?.deadlineAt, requestTimeoutMs: time?.requestTimeoutMs }
+}
+
+/**
+ * 呼び出し全体の締め切り（deadlineAt）を過ぎた。フォールバックへは進まず、呼び出し元まで投げる。
+ * 呼び出し元（例: スライドの構成）は、これを受けて失敗として終わらせる（finally で状態を戻せるように）
+ */
+export class LlmDeadlineError extends Error {
+  constructor() {
+    super('LLM call deadline exceeded')
+    this.name = 'LlmDeadlineError'
+  }
 }
 
 class RequestBudgetExhaustedError extends Error {
@@ -81,10 +93,26 @@ class RequestBudgetExhaustedError extends Error {
 }
 
 // 外部APIへのリクエストは必ずここを通す。上限を超える分は送らずに止める。
+// 時間の上限: 1回ごと（requestTimeoutMs）と、呼び出し全体の締め切り（deadlineAt）の短い方で fetch を止める。
+// どちらも無いときは、今までどおり fetch(url, init) をそのまま呼ぶ。
 async function budgetedFetch(budget: RequestBudget, url: string, init: RequestInit): Promise<Response> {
+  if (budget.deadlineAt !== undefined && Date.now() >= budget.deadlineAt) throw new LlmDeadlineError()
   if (budget.remaining <= 0) throw new RequestBudgetExhaustedError()
   budget.remaining -= 1
-  return fetch(url, init)
+  if (budget.deadlineAt === undefined && budget.requestTimeoutMs === undefined) return fetch(url, init)
+  const left = budget.deadlineAt !== undefined ? budget.deadlineAt - Date.now() : Infinity
+  const ms = Math.max(1, Math.min(budget.requestTimeoutMs ?? Infinity, left))
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(ms) })
+  } catch (e) {
+    if (budget.deadlineAt !== undefined && Date.now() >= budget.deadlineAt - 50) throw new LlmDeadlineError()
+    throw e
+  }
+}
+
+/** 締め切りの失敗は、フォールバックやリトライで飲み込まずに投げ直す */
+function rethrowDeadline(e: unknown): void {
+  if (e instanceof LlmDeadlineError) throw e
 }
 
 // ============================================================
@@ -228,6 +256,7 @@ async function generateTextWithClaude(
 
       throw new Error(`Claude API Error: ${response.status}`)
     } catch (e: any) {
+      rethrowDeadline(e)
       if (e instanceof RequestBudgetExhaustedError) throw e
       // 明示的にthrowされた4xxエラーはそのまま再throw
       if (e?.message?.startsWith('Claude API Error:') && !/429|529|5\d\d/.test(e.message)) {
@@ -305,6 +334,10 @@ interface GenerateContentRequest {
   model: string
   /** Claude を先に使うときのモデル（無ければ CLAUDE_MODEL_DEFAULT）。CLAUDE_MODEL_LIGHT / CLAUDE_MODEL_PLAN を渡す */
   claudeModel?: string
+  /** 呼び出し全体の締め切り（Date.now() の値）。過ぎたら LlmDeadlineError を投げる。無ければ時間の上限なし（今までどおり） */
+  deadlineAt?: number
+  /** 外部 API への1回ごとの時間の上限（ミリ秒）。無ければ上限なし（今までどおり） */
+  requestTimeoutMs?: number
   parts: GeminiPart[]
   generationConfig?: {
     temperature?: number
@@ -558,6 +591,7 @@ async function fetchWithRetry(
       return res
     } catch (e: any) {
       if (e instanceof RequestBudgetExhaustedError) throw e
+      rethrowDeadline(e)
       lastError = e
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt)
@@ -572,8 +606,8 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   const promptText = joinPartsText(req.parts)
   const temperature = req.generationConfig?.temperature ?? 0.4
   const requestedTokens = resolveMaxOutputTokens(req.generationConfig?.maxOutputTokens)
-  // この呼び出しで外部APIへ送れるリクエストは最大 TEXT_CALL_MAX_REQUESTS 回
-  const budget = createRequestBudget()
+  // この呼び出しで外部APIへ送れるリクエストは最大 TEXT_CALL_MAX_REQUESTS 回（時間の上限は、渡されたときだけ）
+  const budget = createRequestBudget({ deadlineAt: req.deadlineAt, requestTimeoutMs: req.requestTimeoutMs })
 
   // ──────────────────────────────────────────────────────
   // プライマリ: Claude（既定 Haiku 4.5）
@@ -592,6 +626,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       if (result) return result
       console.warn('[Claude] Primary returned empty, falling back to Gemini...')
     } catch (e: any) {
+      rethrowDeadline(e)
       const msg = e?.message || ''
       console.warn('[Claude] Primary failed, falling back to Gemini')
 
@@ -663,6 +698,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
         console.log(`[Gemini] Fallback succeeded with model: ${model}`)
         return text
       } catch (e: any) {
+        rethrowDeadline(e)
         if (e instanceof RequestBudgetExhaustedError) break
         const msg = String(e?.message || '')
         const isNotFound = /404|NOT_FOUND|not found/i.test(msg)
@@ -694,6 +730,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
         maxTokens: requestedTokens,
       })
     } catch (e: any) {
+      rethrowDeadline(e)
       console.warn('[ChatGPT] Last resort also failed:')
     }
   }
@@ -723,6 +760,8 @@ export async function geminiGenerateJson<T>(
   const text = await geminiGenerateText({
     model: req.model,
     claudeModel: req.claudeModel,
+    deadlineAt: req.deadlineAt,
+    requestTimeoutMs: req.requestTimeoutMs,
     parts: [{ text: strictPrompt }],
     generationConfig: { ...(req.generationConfig || {}), maxOutputTokens },
   })
@@ -759,12 +798,15 @@ export async function geminiGenerateJson<T>(
           const fixedText = await geminiGenerateText({
             model: req.model,
             claudeModel: req.claudeModel,
+            deadlineAt: req.deadlineAt,
+            requestTimeoutMs: req.requestTimeoutMs,
             parts: [{ text: fixPrompt }],
             generationConfig: { temperature: 0, maxOutputTokens },
           })
           const fixed = repairJsonLike(fixedText)
           return JSON.parse(fixed) as T
         } catch (e4: any) {
+          rethrowDeadline(e4)
           // Step 5: 閉じ括弧補完のみで再パース
           try {
             const closed = closeIncompleteJson(text)

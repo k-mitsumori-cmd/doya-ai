@@ -210,3 +210,55 @@ test('このサーバーの中の同時の上限: 本人ごとに数え、終わ
   assert.ok(lim.acquire('a'))
   r2()
 })
+
+// 2026-10-26 統括の指摘: 関数の時間の上限で止められると catch が走らず、作ったスライドの ID が表に残らなかった
+test('途中の checkpoint は表に残り、止められたあとのやり直し（6分後に取り直す）で使われる', async () => {
+  const { repo, run } = await newRun()
+  let t0 = new Date('2026-10-26T03:00:00Z')
+  const now = () => t0
+  const made: string[] = []
+  const deps = (structure: 'hang' | 'ok'): ToolDeps => ({
+    ...fakeToolDeps({ delayMs: 0 }),
+    slideStructureWaitMs: 300,
+    call: async (route: ToolRouteId, body: Record<string, unknown>) => {
+      if (route === 'slide.project') { made.push('p' + (made.length + 1)); return { status: 201, data: { project: { id: made.at(-1) } } } }
+      if (route === 'slide.structure') return structure === 'hang' ? new Promise(() => {}) : { status: 200, data: { slides: [{ headline: String(body.projectId) }] } }
+      return { status: 500, data: {} }
+    },
+  })
+  const exec = (structure: 'hang' | 'ok') => async ({ answers: ans, resume, checkpoint }: { answers: Record<string, string>; resume?: Record<string, string>; checkpoint: (r: Record<string, string>) => Promise<void> }) => {
+    const p = parseSalesPrepAnswers(ans)
+    assert.ok(p.ok)
+    return runSalesPrepTask('slides', (p as { value: SalesPrepAnswers }).value, { ...deps(structure), checkpoint }, resume)
+  }
+  // 1回目: 構成の途中で止められた（runStoredTask は終わらない）
+  const first = runStoredTask(repo, { userId: U, runId: run.id, taskId: 'slides', now }, exec('hang')).catch(() => null)
+  await new Promise((r) => setTimeout(r, 10))
+  const task = repo.tasks.find((x) => x.taskId === 'slides')!
+  assert.equal(task.status, 'running')
+  assert.deepEqual(task.resume, { projectId: 'p1' })
+  // 動いている間は、取り直せない
+  await assert.rejects(runStoredTask(repo, { userId: U, runId: run.id, taskId: 'slides', now }, exec('ok')), /いま動いています/)
+  // 6分たったら取り直し、残った ID のスライドで構成を作る（新しく作らない）
+  t0 = new Date(t0.getTime() + STALE_MS + 1000)
+  const r = await runStoredTask(repo, { userId: U, runId: run.id, taskId: 'slides', now }, exec('ok'))
+  assert.equal(r.href, '/doyaslide/p1')
+  assert.deepEqual(made, ['p1'])
+  assert.equal(task.status, 'done')
+  assert.equal(task.resume, null)
+  // 古い試みがあとから終わっても、済んだ ToDo を書き換えない
+  await first
+  assert.equal(task.status, 'done')
+})
+
+test('checkpoint は、自分が取った ToDo にだけ書く（取り直されたあとの古い試みは書かない）', async () => {
+  const { repo, run } = await newRun()
+  const task = repo.tasks.find((x) => x.taskId === 'slides')!
+  Object.assign(task, { status: 'running', startedAt: new Date('2026-10-26T03:10:00Z') })
+  await repo.saveResume(U, run.id, 'slides', new Date('2026-10-26T03:00:00Z'), { projectId: 'old' })
+  assert.equal(task.resume ?? null, null)
+  await repo.saveResume('u_2', run.id, 'slides', new Date('2026-10-26T03:10:00Z'), { projectId: 'x' })
+  assert.equal(task.resume ?? null, null)
+  await repo.saveResume(U, run.id, 'slides', new Date('2026-10-26T03:10:00Z'), { projectId: 'p9' })
+  assert.deepEqual(task.resume, { projectId: 'p9' })
+})
