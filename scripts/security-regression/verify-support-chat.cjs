@@ -73,7 +73,7 @@ check('Support chat: no Doya Power, billing or direct paid AI; Slack only throug
 
 check('Support chat: rules, mock answers, ticket and redaction (node:test)', () => {
   const tsx = path.join(root, 'node_modules/.bin/tsx')
-  const r = spawnSync(tsx, ['--test', 'src/lib/support-chat/support-chat.test.ts'], { cwd: root, encoding: 'utf8', timeout: 60000 })
+  const r = spawnSync(tsx, ['--test', 'src/lib/support-chat/support-chat.test.ts'], { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, SUPPORT_CHAT_ROLLOUT: '' } })
   assert.equal(r.status, 0, (r.stdout || '') + (r.stderr || ''))
 })
 
