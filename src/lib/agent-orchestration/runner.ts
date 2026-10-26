@@ -44,7 +44,7 @@ export interface AgentTaskState {
   /** 利用者に見せる失敗の一文（ステータスコードは入れない） */
   error?: string
   /** 失敗の種類と、開くとよい画面 */
-  failure?: { kind: AgentFailureKind; href?: string; hrefLabel?: string }
+  failure?: { kind: AgentFailureKind; href?: string; hrefLabel?: string; cause?: string; actions?: AgentFailureAction[] }
   /** これまでの試みで減った・戻したドヤパワー（試みごとに足していく） */
   power?: AgentPowerUse
   startedAt?: number
@@ -82,6 +82,17 @@ export function failureText(e: unknown): string {
 
 export type AgentFailureKind = 'limit' | 'power' | 'auth' | 'setup' | 'input' | 'tool'
 
+/**
+ * 失敗のときに出す「次の一手」（FAILURE-CHECKLIST.md）
+ * - retry: そのままやり直す
+ * - href: 画面を開く（組織を作る・料金を見る・ログインする）
+ * - input: 値を入れてやり直す（いまは会社名だけ。入れた値は resume に入れて送り返す）
+ */
+export type AgentFailureAction =
+  | { kind: 'retry'; label: string }
+  | { kind: 'href'; label: string; href: string }
+  | { kind: 'input'; label: string; field: 'companyName'; placeholder: string }
+
 /** 利用者に見せてよい文を持つ失敗（上限・ドヤパワー不足・未ログインなど） */
 export class AgentTaskError extends Error {
   constructor(
@@ -96,6 +107,18 @@ export class AgentTaskError extends Error {
   ) {
     super(userMessage)
     this.name = 'AgentTaskError'
+  }
+
+  /** 原因の短い名前（timeout・dns・limit_reached など）。画面の出し分けと記録に使う */
+  cause?: string
+  /** 次の一手 */
+  actions?: AgentFailureAction[]
+
+  /** 原因と次の一手を付ける */
+  withHelp(cause: string, actions: AgentFailureAction[]): this {
+    this.cause = cause
+    this.actions = actions
+    return this
   }
 }
 
@@ -206,7 +229,7 @@ export async function runAgentTasks<T extends AgentTaskSpec>(opts: RunOptions<T>
             (e) => set(t.id, {
               status: ctrl.signal.aborted ? 'canceled' : 'failed',
               error: failureText(e),
-              failure: e instanceof AgentTaskError ? { kind: e.kind, href: e.href?.href, hrefLabel: e.href?.label } : { kind: 'tool' },
+              failure: e instanceof AgentTaskError ? { kind: e.kind, href: e.href?.href, hrefLabel: e.href?.label, cause: e.cause, actions: e.actions } : { kind: 'tool', cause: 'unknown', actions: [{ kind: 'retry', label: 'やり直す' }] },
               resume: e instanceof AgentTaskError && e.resume ? e.resume : resume,
               power: addPower(states[t.id].power, e instanceof AgentTaskError ? e.power : undefined),
               endedAt: now(),

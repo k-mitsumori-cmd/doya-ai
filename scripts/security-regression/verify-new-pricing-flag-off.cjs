@@ -95,5 +95,70 @@ async function assertUnchanged(env, label) {
     assert.equal(await m.teamServer.newPricingMonthlyGrant('co'), 1500)
     assert.ok(m.touched.includes('accountCompanyBilling.findUnique'), '許可された人は、人数の控えを読みに行く')
   })
+  // ---- つなぎ（Checkout・charge.ts・load.server.ts）。旗が off（process.env が空）で、今のままか ----
+  await check('wiring: checkout with the flag off refuses team-pro (404) and sells the current plan with the trial as before', async () => {
+    const { DEFAULT_MOCKS } = require('./load-typescript.cjs')
+    const calls = []
+    const prices = load('src/lib/stripe.ts', { stripe: function () {}, 'node:crypto': require('node:crypto') }).STRIPE_PRICE_IDS
+    const route = () => load('src/app/api/stripe/checkout/route.ts', {
+      '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
+      'next/server': { NextResponse: Response },
+      'next-auth': { getServerSession: async () => ({ user: { email: 'buyer@example.com' } }) },
+      '@/lib/auth': {},
+      '@/lib/prisma': { prisma: { user: { findUnique: async () => ({ id: 'u', stripeCustomerId: null, stripePriceId: null, plan: 'FREE', serviceSubscriptions: [] }) } } },
+      '@/lib/unified-plan': load('src/lib/unified-plan.ts'),
+      '@/lib/trial': { isTrialEligible: async () => true, TRIAL_USER_SELECT: { stripeCustomerId: true, plan: true, serviceSubscriptions: { select: { plan: true } } } },
+      '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {}, createReservedCheckoutSession: ({ create }) => create('k', 1900000000) },
+      '@/lib/stripe': { STRIPE_PRICE_IDS: prices, findActiveLikeSubscriptions: async () => [], createCheckoutSession: async (a) => { calls.push(a); return { id: 'cs', url: 'https://offline.invalid' } } },
+      '@/lib/pricing-v2/rollout': DEFAULT_MOCKS['@/lib/pricing-v2/rollout'],
+    })
+    const post = (body) => route().POST(new Request('https://offline.invalid', { method: 'POST', body: JSON.stringify(body) }))
+    const team = await post({ planId: 'team-pro', seats: 5, billingPeriod: 'monthly' })
+    assert.equal(team.status, 404)
+    assert.equal(calls.length, 0, 'チームの Checkout は作らない')
+    const pro = await post({ planId: 'banner-pro', billingPeriod: 'monthly' })
+    assert.equal(pro.status, 200)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].trialDays, 30, '今のプロは今までどおり初月無料')
+    assert.equal(calls[0].lineItems, undefined, '明細は今までどおり1つ（priceId）')
+    assert.equal(calls[0].allowPromotionCodes, undefined, '割引コードの欄は今までどおり（既定）')
+  })
+
+  await check('wiring: charge.ts account() with the flag off returns the own company and no new-pricing amount (gauge stays 3,000)', async () => {
+    const m = loadModules({ ...TEAM_ENV })
+    let deps = null
+    load('src/lib/doya-power/charge.ts', {
+      'node:crypto': require('node:crypto'),
+      'next/server': { NextResponse: Response },
+      '@/lib/prisma': { prisma: {} },
+      '@/lib/unified-plan': load('src/lib/unified-plan.ts'),
+      '@/lib/shell/company.server': { currentUserId: async () => 'u_owner' },
+      '@/lib/pricing-v2/team.server': m.teamServer,
+      '@/lib/pricing-v2/starter.server': m.starterServer,
+      './flag': { doyaPowerRollout: () => 'all', isDoyaPowerEnabled: async () => true },
+      './index': {},
+      './charge-core': { createDoyaPowerCharger: (d) => { deps = d; return {} }, DOYA_POWER_CONSUMED_HEADER: 'x' },
+      './retry': { DOYA_POWER_RETRY_HEADER: 'x' },
+      '@/lib/operational-json': { readOperationalJson: async () => null, OperationalBodyError: class extends Error {} },
+      './count': { parseCount: () => 1 },
+    }, { process: { env: { ...TEAM_ENV } } })
+    const who = await deps.account()
+    same(who, { companyId: 'co', plan: 'PRO', monthlyGrant: null }, '持ち主の会社・プランのまま、新しい料金の量は無い')
+    const bad = m.touched.filter((t) => NEW_TABLES.has(t.split('.')[0]))
+    same(bad, [], 'charge.ts から新しい表に触れない')
+  })
+
+  await check('wiring: load.server.ts with the flag off builds the missions with the current rewards', async () => {
+    let opts = null
+    const missions = load('src/lib/missions/load.server.ts', {
+      '@/lib/prisma': { prisma: new Proxy({}, { get: () => new Proxy({}, { get: () => async () => null }) }) },
+      './jst': load('src/lib/missions/jst.ts'),
+      './view': { buildMissionsView: (_input, _now, o) => { opts = o; return { ok: true } } },
+      '@/lib/pricing-v2/rollout': loadModules({}).rollout,
+    }, { process: { env: {} } })
+    await missions.loadMissionsView('u_owner', new Date('2026-10-26T03:00:00Z'))
+    same(opts, { newPricing: false }, 'はじめの手順は今の報酬の表（newPricing: false）')
+  })
+
   console.log(JSON.stringify({ passed: results.length, results, scope: 'Actual pricing-v2 server modules with a recording fake Prisma. New tables throw if touched. No real DB or Stripe.' }))
 })().catch((e) => { console.error(e); process.exitCode = 1 })

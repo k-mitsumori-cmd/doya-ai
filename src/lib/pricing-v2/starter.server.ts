@@ -50,7 +50,7 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
     // 受け取りの記録と台帳への付与を、1つのトランザクションで行う（統括の点検 C）。
     // 同じトランザクションの中で、もう受け取っていないかを確かめ直してから記録を作る。同時の2回目は、やり直したときに記録を見つけて止まる
     const { grant } = await import('@/lib/doya-power')
-    const r = await grant(company.id, 'daily_recovery', STARTER_POWER, null, {
+    const r = await grant(company.id, 'starter', STARTER_POWER, null, {
       sourceKey: STARTER_SOURCE_KEY,
       note: 'starter',
       inTransaction: async (tx) => {
@@ -61,8 +61,8 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
       },
     })
     if (!r.ok) {
-      // precondition ＝ もう受け取っている。recovery_cap ＝ 回復の上限に届いていて付かなかった（記録は残る＝はじめの状態）
-      if (r.reason === 'precondition' || r.reason === 'recovery_cap') settled.add(userId)
+      // precondition ＝ もう受け取っている（記録はトランザクションごと戻るので、付かなければ記録も残らない）
+      if (r.reason === 'precondition') settled.add(userId)
       return { granted: 0, decision: r.reason === 'precondition' ? { ok: false, reason: 'already_claimed' } : decision }
     }
     settled.add(userId)

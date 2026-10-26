@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT, CLAUDE_MODEL_LIGHT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
@@ -104,7 +104,8 @@ async function postHandler(req: NextRequest) {
 
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(
       // 最大12枚分の見出し・本文・画像指示を返すため、既定の4,096トークンより大きくする
-      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } },
+      // 経営ホームのエージェントからの呼び出し（印のヘッダー）だけ、軽いモデルを使う（DESIGN.md §11.9）。画面からの呼び出しは今までどおり
+      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 }, ...(req.headers?.get?.('x-doya-agent-tier') === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
       'SlideStructure'
     )
 

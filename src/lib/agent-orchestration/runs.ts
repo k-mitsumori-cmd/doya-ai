@@ -168,7 +168,7 @@ export async function latestOpenRun(repo: RunRepo, userId: string, now: Date = n
  */
 export async function runStoredTask(
   repo: RunRepo,
-  input: { userId: string; runId: string; taskId: string; now?: () => Date },
+  input: { userId: string; runId: string; taskId: string; now?: () => Date; /** 利用者がやり直しのときに入れた値（会社名だけ）。保存した resume に足す */ extraResume?: Record<string, string> },
   execute: (ctx: { answers: Record<string, string>; resume?: Record<string, string> }) => Promise<AgentTaskResult>,
 ): Promise<AgentTaskResult> {
   const now = input.now ?? (() => new Date())
@@ -197,7 +197,8 @@ export async function runStoredTask(
 
   const before = { used: task.powerUsed, refunded: task.powerRefunded }
   try {
-    const result = await execute({ answers: got.run.answers, resume: task.resume ?? undefined })
+    const resume = input.extraResume ? { ...(task.resume ?? {}), ...input.extraResume } : task.resume ?? undefined
+    const result = await execute({ answers: got.run.answers, resume })
     const p = result.power ?? { used: 0, refunded: 0 }
     await repo.finishTask(input.userId, input.runId, input.taskId, {
       status: 'done', result, resume: null, error: null, failKind: null, failHref: null, failHrefLabel: null,
@@ -209,7 +210,7 @@ export async function runStoredTask(
     const p = err.power ?? { used: 0, refunded: 0 }
     await repo.finishTask(input.userId, input.runId, input.taskId, {
       status: 'failed', error: err.userMessage, failKind: err.kind, failHref: err.href?.href ?? null, failHrefLabel: err.href?.label ?? null,
-      resume: err.resume ?? task.resume ?? null,
+      resume: err.resume ?? (input.extraResume ? { ...(task.resume ?? {}), ...input.extraResume } : task.resume) ?? null,
       powerUsed: before.used + p.used, powerRefunded: before.refunded + p.refunded, endedAt: now(),
     })
     throw err

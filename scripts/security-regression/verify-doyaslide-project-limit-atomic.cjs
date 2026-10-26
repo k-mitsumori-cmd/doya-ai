@@ -44,7 +44,7 @@ const createProject = load('src/lib/doyaslide/create-project.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/doyaslide/limits': limits,
 });
-const docTypes =[{ value: 'proposal', defaultCount: 10, defaultAspect: 'wide' }];
+const docTypes = [{ value: 'proposal', defaultCount: 10, defaultAspect: 'wide' }];
 const route = load('src/app/api/doyaslide/projects/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },

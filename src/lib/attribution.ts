@@ -59,6 +59,7 @@ export function serviceLabelOf(seg: string | null): string {
     adbanner: 'ドヤ広告バナーAI',
     shodan: 'ドヤ商談準備',
     auth: 'ログインページ',
+    support: 'サポートチャット',
   }
   return extra[seg] || seg
 }
