@@ -26,7 +26,7 @@ export const PAID_AGENT_ENABLED_KEY = 'watch:v1:paid-agent-enabled'
 export const MIN_POWER_FOR_B1 = 300
 
 /** 本人の会社のドヤパワーの残り（読むだけ。台帳の表を SQL で読む。旗が off・会社が無いときは null） */
-async function powerLeftFor(userId: string): Promise<number | null> {
+export async function powerLeftFor(userId: string): Promise<number | null> {
   const { doyaPowerRollout } = await import('@/lib/doya-power/flag')
   if (doyaPowerRollout() === 'off') return null
   const rows = await prisma.$queryRaw<{ remaining: bigint | null }[]>`

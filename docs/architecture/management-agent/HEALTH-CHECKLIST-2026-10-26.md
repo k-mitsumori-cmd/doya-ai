@@ -114,6 +114,7 @@
   - Shift_JIS のサイトの見本は、他社のサイトになるので外した。文字コードの読み分けはテスト（`checks.test.ts`）で確かめる。
   - 無料の「AI なしで読めるか」（`agent:sample-sites`）は、有料の確認が止まっている日だけ1日1回読む。結果はその日のあいだ使い回す。
   - 差し替えは SystemSetting `watch:v1:sample-company-urls`（か環境変数 `SYSTEM_WATCH_SAMPLE_COMPANY_URLS`）。差し替えたときは社名を見ない。
+- 手で1回だけ回す入口（2026-10-26 統括の依頼）: `POST /api/cron/system-watch-paid?once=agent`（`Authorization: Bearer ${CRON_SECRET}` が要る）。B1・B2 だけを、スイッチ2に関係なく1回だけ回す。スイッチの状態は変えず、1日10円の上限は守る。返す中身は、作った記録の ID（`createdIds`）、本人の分の台帳の変化（`ledgerChanges`。見積書の枠の台帳・構成づくりの回数。空なら期待どおり）、ドヤパワーの残りの前後（`powerLeft`）。本番で初めて動かすときの手順: `SYSTEM_WATCH_TEST_USER_ID` だけを入れて再デプロイ → この入口で1回回す → 記録の ID が残り、`ledgerChanges` が空であることを確かめる → スイッチを入れる（どれも統括のセッションでユーザーの承認を取る）。
 - 見る所: 3つの ToDo の結果（失敗したら札の cause と actions）と、本番のログの `[shodan/preparations] research failed` の stage・code・reason。
 
 ### 1.5 手元からの試し
