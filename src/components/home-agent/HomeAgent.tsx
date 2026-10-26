@@ -24,6 +24,8 @@ import type {
   AgentRunCreateRequest, AgentRunView,
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
+import { AGENT_EXAMPLES } from './examples'
+import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
 import styles from './home-agent.module.css'
 
 type Scene = 'input' | 'questions' | 'analyze' | 'plan' | 'confirm' | 'run' | 'done' | 'none'
@@ -225,7 +227,10 @@ export default function HomeAgent({ executor = 'api' }: {
 }) {
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
-  const [text, setText] = useState(AGENT_RECIPES[0].chip)
+  // 欄は空で始める（例の文を最初から入れると、書き足したときに後ろへつながってしまう）
+  const [text, setText] = useState('')
+  const askRef = useRef<HTMLTextAreaElement | null>(null)
+  const putExample = (t: string) => { setText(t); requestAnimationFrame(() => askRef.current?.focus()) }
   const [saved, setSaved] = useState<SavedRun | null>(null)
   const [recipeId, setRecipeId] = useState<string>(AGENT_RECIPES[0].id)
   const [title, setTitle] = useState('')
@@ -445,14 +450,15 @@ export default function HomeAgent({ executor = 'api' }: {
 
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
-            {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
             <div className={styles.card}>
               <p className={styles.eyebrow}>新しい依頼</p>
               <label className={styles.title} htmlFor="home-agent-ask">どんなゴールを目指しますか？</label>
               <p className={styles.lead}>ドヤくんが材料を読み、ゴールまでの差を ToDo に分けます。動かす前に、内容と減る量を確かめます。</p>
-              <textarea id="home-agent-ask" className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3} />
+              <textarea id="home-agent-ask" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
+                placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={styles.chips}>
-                {AGENT_RECIPES.map((r) => <button key={r.id} type="button" className={styles.chip} onClick={() => setText(r.chip)}>{r.chip}</button>)}
+                {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
               </div>
               {error ? <p className={styles.error} role="alert">{error}</p> : null}
               <div className={styles.row}>
@@ -460,14 +466,20 @@ export default function HomeAgent({ executor = 'api' }: {
                 <button type="button" className={styles.btn} onClick={send} disabled={!text.trim()}>分析して作戦を立てる</button>
               </div>
             </div>
+            {/* 新しい依頼を先に置き、前回の続きはその下にする（主な操作はゴールを書くこと。2026-10-26 統括の点検で、続きが上だと欄が 375px で y=507 まで下がっていた） */}
+            {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
+            <ToolShortcuts />
           </div>
         ) : null}
 
         {scene === 'none' ? (
           <div className={`${styles.card} ${styles.sceneIn}`}>
             <p className={styles.title}>その依頼は、まだ作戦にできません</p>
-            <p className={styles.lead}>今は「{AGENT_RECIPES.map((r) => r.chip).join('」「')}」のような依頼を、作戦に分けられます。ほかの依頼は、下の入力から各ツールへ移れます。</p>
-            <div className={styles.row}><span /><button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => setScene('input')}>依頼を書き直す</button></div>
+            <p className={styles.lead}>今は「{AGENT_RECIPES.map((r) => r.chip).join('」「')}」のような依頼を、作戦に分けられます。{matchHomeIntent(text) ? 'この依頼は、次のツールで進められます。' : 'ほかの依頼は、各ツールで進められます。'}</p>
+            <div className={styles.row}>
+              {matchHomeIntent(text) ? <Link href={matchHomeIntent(text)!.href} className={styles.btn}>{matchHomeIntent(text)!.label.replace(/たい$/, 'る')}</Link> : <span />}
+              <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => setScene('input')}>依頼を書き直す</button>
+            </div>
           </div>
         ) : null}
 
@@ -579,7 +591,7 @@ export default function HomeAgent({ executor = 'api' }: {
               <div className={styles.memory}>
                 <b>作戦に残しました</b>
                 <span>ゴール・3つの柱と、できた下書きを、この作戦に残しました。次に経営ホームを開くと「続きを進める」から再開できます。送る・公開する操作は、各ツールで内容を確かめてから行ってください。</span>
-                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
+                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); setText(''); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
               </div>
             ) : null}
           </div>
@@ -678,6 +690,22 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
         <button type="button" className={styles.btn} onClick={onGo} disabled={chosen === 0}>{chosen === 0 && tasks.some((t) => states[t.id]?.status === 'done') ? 'すべて済んでいます' : 'まとめて進める'}</button>
       </div>
     </div>
+  )
+}
+
+/** ツールですぐ始める（経営ホームから、各ツールの主な操作へ1回で移る。区分ごとに2つずつ） */
+function ToolShortcuts() {
+  const items = HOME_INTENT_GROUPS.flatMap((g) => g.intents.slice(0, 2).map((i) => ({ ...i, group: g.label })))
+  return (
+    <nav className={styles.card} aria-labelledby="home-agent-tools">
+      <p className={styles.eyebrow}>ツールですぐ始める</p>
+      <p id="home-agent-tools" className={styles.title}>よく使う操作</p>
+      <ul className={styles.shortcuts}>
+        {items.map((i) => (
+          <li key={i.href}><Link href={i.href} className={styles.shortcut}><span className={styles.muted}>{i.group}</span><b>{i.label}</b></Link></li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 
