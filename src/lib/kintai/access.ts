@@ -26,7 +26,7 @@ export async function getKintaiContext(): Promise<KintaiContext | null> {
   if (!membership || !membership.employee || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
   // 無効化後も本人の勤怠履歴は読めるが、以前の管理権限は使わせない。
   // 会社の役割の旗の内側では、会社の役割の上限を当てる（会社のメンバーは勤怠の中では一般。ROLES-2026-10-26.md §4）
-  const role = await ceilToolRole({ tool: 'kintai', userId, email: session?.user?.email ?? null, toolRole: membership.employee.isActive ? membership.role : 'employee' })
+  const role = await ceilToolRole({ tool: 'kintai', userId, organizationId: membership.organizationId, email: session?.user?.email ?? null, toolRole: membership.employee.isActive ? membership.role : 'employee' })
   if (!role) return null
 
   return {

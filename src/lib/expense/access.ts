@@ -49,7 +49,7 @@ export async function getExpenseContext(orgSlug?: string): Promise<ExpenseContex
   })
   if (!membership || !isRole(membership.role)) return null
   // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
-  const role = await ceilToolRole({ tool: 'expense', userId, toolRole: membership.role })
+  const role = await ceilToolRole({ tool: 'expense', userId, organizationId: membership.organizationId, toolRole: membership.role })
   if (!role || !isRole(role)) return null
   return { userId, organizationId: membership.organizationId, organizationSlug: membership.organization.slug, role, memberId: membership.id }
 }

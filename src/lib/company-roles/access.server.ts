@@ -15,15 +15,26 @@ import type { CompanyPermission, PermissionTarget } from './permissions'
 import type { CompanyRolePolicy } from './policy'
 import { companyRolesModeFor, companyRolesRollout } from './rollout'
 import type { ToolId } from './tool-roles'
+import { companyOfToolOrg } from './tool-orgs.server'
 
 // team.server.ts の teamTablesAllowed と同じ判定（Stripe を読み込まないよう、ここで同じことを書く）
 function teamTablesAllowed(): boolean {
   return newPricingRollout() !== 'off' && teamPriceConfig().ok
 }
 
+// ⚠️ 会社のメンバーの表（新しい料金）を使えないときは、会社の役割を何も決めない（どの判定も止めない）。監査の軽微7
 export const prismaCompanyRoleDb: CompanyRoleDb = {
   async findOwnedCompany(userId) {
+    if (!teamTablesAllowed()) return null
     return prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } })
+  },
+  async findCompanyOfToolOrg(tool, organizationId) {
+    if (!teamTablesAllowed()) return null
+    return companyOfToolOrg(tool, organizationId)
+  },
+  async findMembershipIn(userId, companyId) {
+    if (!teamTablesAllowed()) return null
+    return prisma.accountCompanyMember.findFirst({ where: { userId, companyId, status: 'active' }, select: { role: true } })
   },
   async findActiveMembership(userId) {
     if (!teamTablesAllowed()) return null
@@ -50,6 +61,8 @@ export async function authorizeCompanyActionForSession(input: {
   email?: string | null
   permission: CompanyPermission
   target?: PermissionTarget
+  /** ツールの中の操作は必ず渡す（その組織が属する会社で判定する） */
+  scope?: { tool: ToolId; organizationId: string }
 }): Promise<CompanyAuthorization> {
   if (companyRolesRollout() === 'off') return { checked: false, allowed: true, mode: 'off' }
   const mode = companyRolesModeFor(input.email !== undefined ? input.email : await sessionEmail())
@@ -59,6 +72,7 @@ export async function authorizeCompanyActionForSession(input: {
       userId: input.userId,
       permission: input.permission,
       target: input.target,
+      scope: input.scope,
       mode,
       db: prismaCompanyRoleDb,
       onShadowDenial: logShadowDenial,
@@ -107,13 +121,13 @@ async function sessionEmail(): Promise<string | null> {
  * 旗が off なら、セッションも DB も読まずにそのまま返す。読めなかったときは、止める旗なら null（使えない）、shadow ならそのまま。
  * email を渡さなければ、旗が off でないときだけセッションから読む（preview の判定のため）。
  */
-export async function ceilToolRole(input: { tool: ToolId; userId: string; email?: string | null; toolRole: string }): Promise<string | null> {
+export async function ceilToolRole(input: { tool: ToolId; userId: string; organizationId: string; email?: string | null; toolRole: string }): Promise<string | null> {
   if (companyRolesRollout() === 'off') return input.toolRole
   const email = input.email !== undefined ? input.email : await sessionEmail()
   const mode = companyRolesModeFor(email)
   if (mode === 'off') return input.toolRole
   try {
-    return await applyCompanyCeiling({ tool: input.tool, userId: input.userId, toolRole: input.toolRole, mode, db: prismaCompanyRoleDb, onShadowClamp: logShadowClamp })
+    return await applyCompanyCeiling({ tool: input.tool, userId: input.userId, organizationId: input.organizationId, toolRole: input.toolRole, mode, db: prismaCompanyRoleDb, onShadowClamp: logShadowClamp })
   } catch (e) {
     console.error('[company-roles] 上限の判定に失敗しました')
     return mode === 'enforce' ? null : input.toolRole

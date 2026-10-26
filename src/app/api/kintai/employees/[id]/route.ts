@@ -98,6 +98,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (isActive === false && existingEmp.member?.role === 'system_admin') {
         return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
       }
+      // 自分自身は無効化できない（DELETE と同じ決まり。監査の軽微6）
+      if (isActive === false && existingEmp.id === kctx.employeeId) {
+        return NextResponse.json({ error: '自分自身は無効化できません' }, { status: 403 })
+      }
       if (isActive === true && !existingEmp.isActive) {
         const limit = await reachedKintaiEmployeeLimit(tx, kctx.organizationId)
         if (limit !== null) {

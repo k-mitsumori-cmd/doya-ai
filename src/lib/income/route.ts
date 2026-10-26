@@ -22,7 +22,7 @@ export async function withIncome(req: NextRequest, minRole: IncomeRole, fn: (ctx
     }
     if (!hasMinRole(ctx.role, minRole)) return forbidden()
     if (opts.permission) {
-      const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: opts.permission })
+      const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: opts.permission, scope: { tool: 'income', organizationId: ctx.organizationId } })
       if (!company.allowed) return forbidden('この操作は、会社の決まりで許されていません。会社の管理者に依頼してください。')
     }
     return await fn(ctx)

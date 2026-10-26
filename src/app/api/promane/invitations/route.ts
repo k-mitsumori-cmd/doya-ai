@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
         where: { workspaceId_userId: { workspaceId, userId } },
       })
       // 会社の役割の上限より上には上げない
-      const ceiled = member?.isActive ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null
+      const ceiled = member?.isActive ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspaceId, toolRole: member.role }) : null
       if (!member?.isActive || !['owner', 'admin'].includes(member.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
@@ -145,7 +145,7 @@ export async function DELETE(req: NextRequest) {
         select: { id: true, role: true },
       })
       // 会社の役割の上限より上には上げない
-      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null
+      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: invitation.workspaceId, toolRole: member.role }) : null
       if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: '権限がありません' }
       const deleted = await tx.promaneInvitation.deleteMany({
         where: { id, workspaceId: invitation.workspaceId, acceptedAt: null },

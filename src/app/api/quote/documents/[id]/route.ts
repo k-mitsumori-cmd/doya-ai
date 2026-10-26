@@ -171,7 +171,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         // 会社の役割の旗の内側: 確定できる役割と「自分で作った見積を自分で確定しない」を、会社の決まりで判定する（ROLES-2026-10-26.md §3.4）
         if (next === 'confirmed') {
           const author = await findRecordAuthor('quote', existing.id)
-          const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: 'quote.finalize', target: { isSelf: author === ctx.userId } })
+          const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: 'quote.finalize', target: { isSelf: author === ctx.userId }, scope: { tool: 'quote', organizationId: ctx.organizationId } })
           // 作った人が分からない見積（旗を入れる前に作ったもの）は、止める側に倒す: 自分で作ったかもしれないので、管理者かオーナーだけが確定できる
           const unknownAuthorBlocked = company.checked && company.mode === 'enforce' && author === null && company.context !== null
             && company.context.role !== 'owner' && company.context.role !== 'admin'

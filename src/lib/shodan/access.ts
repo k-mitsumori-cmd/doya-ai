@@ -65,7 +65,7 @@ export async function getShodanContext(orgSlug?: string): Promise<ShodanContext 
   }
   if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
   // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
-  const role = await ceilToolRole({ tool: 'shodan', userId, toolRole: membership.role })
+  const role = await ceilToolRole({ tool: 'shodan', userId, organizationId: membership.organizationId, toolRole: membership.role })
   if (!role) return null
 
   return {

@@ -58,6 +58,11 @@ const patch = (api, body) => api.PATCH({ json: async () => body }, { params: Pro
     assert.equal((await del(api)).status, 403)
     assert.equal(state.employeeUpdates.length, 0)
   })
+  await check('hr_admin は自分自身を PATCH（isActive:false）でも無効化できない（403）', async () => {
+    const { api, state } = makeApi({ actorRole: 'hr_admin', actorEmployeeId: 'target', target: target('hr_admin') })
+    assert.equal((await patch(api, { isActive: false })).status, 403)
+    assert.equal(state.employeeUpdates.length, 0)
+  })
   for (const role of ['employee', 'manager']) {
     await check(`hr_admin は ${role} を無効化できる（200）`, async () => {
       const { api, state } = makeApi({ actorRole: 'hr_admin', target: target(role) })

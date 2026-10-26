@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         select: { id: true, role: true },
       })
       // 会社の役割の上限より上には上げない
-      const ceiled = actor ? await ceilToolRole({ tool: 'promane', userId, toolRole: actor.role }) : null
+      const ceiled = actor ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: actor.role }) : null
       if (!actor || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: '時間単価を変更する権限がありません（owner/admin のみ）' }
       const updated = await tx.promaneMember.updateMany({
         where: { id: memberId, workspaceId: workspace.id },

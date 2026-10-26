@@ -63,7 +63,7 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
     ...rows.map((r): MemberView => {
       const role: CompanyRole = isMemberRowRole(r.role) ? r.role : 'guest'
       const isSelf = r.userId === s.userId
-      const canChange = canCompany(s.role, 'members.role.change') && canManageCompanyMember({ actor: s.role, target: role, isSelf })
+      const canChange = canCompany(s.role, 'members.role.change', {}, s.policy) && canManageCompanyMember({ actor: s.role, target: role, isSelf })
       return {
         id: r.id,
         email: r.email,
@@ -80,8 +80,21 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
 
 /** 役割を変える。変更と記録を同じトランザクションで書く */
 export async function changeMemberRole(s: CompanyRolesSession, memberId: string, requested: unknown): Promise<RoleChangeDecision> {
-  if (!canCompany(s.role, 'members.role.change')) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
+  if (!canCompany(s.role, 'members.role.change', {}, s.policy)) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
   return prisma.$transaction(async (tx) => {
+    // 操作する人の役割を、トランザクションの中で読み直す（同時に自分の役割が下げられていたら、下がった役割で判定する。監査の中3）
+    const company = await tx.accountCompany.findUnique({ where: { id: s.companyId }, select: { userId: true } })
+    if (!company) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
+    let actor: CompanyRole
+    if (company.userId === s.userId) {
+      actor = 'owner'
+    } else {
+      await tx.$queryRaw`SELECT id FROM account_company_members WHERE "companyId" = ${s.companyId} AND "userId" = ${s.userId} AND status = 'active' FOR UPDATE`
+      const me = await tx.accountCompanyMember.findFirst({ where: { companyId: s.companyId, userId: s.userId, status: 'active' }, select: { role: true } })
+      if (!me) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
+      actor = isMemberRowRole(me.role) ? me.role : 'guest'
+    }
+    if (!canCompany(actor, 'members.role.change', {}, s.policy)) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
     // 会社と ID の二重の条件（他の会社の行は変えられない）。同時の変更を直列にするため行を押さえる
     await tx.$queryRaw`SELECT id FROM account_company_members WHERE id = ${memberId} AND "companyId" = ${s.companyId} FOR UPDATE`
     const target = await tx.accountCompanyMember.findFirst({
@@ -89,7 +102,7 @@ export async function changeMemberRole(s: CompanyRolesSession, memberId: string,
       select: { id: true, email: true, userId: true, role: true, status: true },
     })
     if (!target) return { ok: false as const, status: 404, code: 'NOT_ACTIVE' as const }
-    const d = decideRoleChange({ actor: s.role, isSelf: target.userId === s.userId, targetRole: target.role, targetStatus: target.status, requested })
+    const d = decideRoleChange({ actor, isSelf: target.userId === s.userId, targetRole: target.role, targetStatus: target.status, requested })
     if (!d.ok) return d
     await tx.accountCompanyMember.update({ where: { id: target.id }, data: { role: d.to } })
     await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: target.id, targetEmail: target.email, kind: 'role_changed', fromRole: d.from, toRole: d.to }), tx)
@@ -110,7 +123,7 @@ export interface RoleEventView {
 
 /** 役割の変更の記録（新しい順。管理者以上） */
 export async function listRoleEvents(s: CompanyRolesSession, opts: { before?: string; take?: number } = {}): Promise<{ events: RoleEventView[]; next: string | null } | null> {
-  if (!canCompany(s.role, 'members.role_events.view')) return null
+  if (!canCompany(s.role, 'members.role_events.view', {}, s.policy)) return null
   const take = Math.min(Math.max(opts.take ?? 30, 1), 100)
   const before = opts.before ? new Date(opts.before) : null
   const rows = await prisma.accountCompanyRoleEvent.findMany({

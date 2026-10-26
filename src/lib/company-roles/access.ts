@@ -22,6 +22,27 @@ export interface CompanyRoleDb {
   findActiveMembership(userId: string): Promise<{ companyId: string; role: string } | null>
   /** 会社ごとの切り替え（account_company_role_settings.policy）。無ければ null */
   findPolicy?(companyId: string): Promise<unknown | null>
+  /** ツールの組織が属する会社（組織の最上位の人＝作った人が持ち主の会社）。分からなければ null */
+  findCompanyOfToolOrg?(tool: ToolId, organizationId: string): Promise<{ companyId: string; ownerUserId: string } | null>
+  /** その会社での、本人のメンバーの行（status = active） */
+  findMembershipIn?(userId: string, companyId: string): Promise<{ role: string } | null>
+}
+
+/**
+ * ツールの組織での、会社の役割（監査 2026-10-26 の重大1への対応）。
+ * - その組織が属する会社を先に決め、その会社での本人の役割を返す。本人が自分で別の会社を作っても、ほかの会社の組織では使えない。
+ * - 組織が会社に属していない（作った人が会社を持っていない）なら null（上限を当てない。1人で使う人と同じ）。
+ * - 会社の持ち主はオーナー。会社のメンバーの行があればその役割（知らない値はゲスト）。
+ * - 会社のメンバーでない人（ツールだけに招かれた人）は、メンバーとして扱う（ツールの中で一般の役割まで）。
+ */
+export async function resolveCompanyRoleForOrg(userId: string, tool: ToolId, organizationId: string, db: CompanyRoleDb): Promise<CompanyRoleContext | null> {
+  if (!userId || !organizationId || !db.findCompanyOfToolOrg) return null
+  const org = await db.findCompanyOfToolOrg(tool, organizationId)
+  if (!org) return null
+  if (org.ownerUserId === userId) return { companyId: org.companyId, role: 'owner' }
+  const m = db.findMembershipIn ? await db.findMembershipIn(userId, org.companyId) : null
+  if (!m) return { companyId: org.companyId, role: 'member' }
+  return { companyId: org.companyId, role: isMemberRowRole(m.role) ? m.role : 'guest' }
 }
 
 export async function loadRolePolicy(companyId: string, db: CompanyRoleDb): Promise<CompanyRolePolicy> {
@@ -46,6 +67,7 @@ export async function resolveCompanyRole(userId: string, db: CompanyRoleDb): Pro
 export type CompanyAuthorization =
   | { checked: false; allowed: true; mode: 'off' }
   | { checked: true; allowed: boolean; mode: 'shadow' | 'enforce'; context: CompanyRoleContext | null; decision: PermissionDecision | { ok: false; reason: 'NO_COMPANY' } }
+  // context が null のときは、会社に属していない組織（止めない）
 
 export interface ShadowDenial {
   userId: string
@@ -56,7 +78,8 @@ export interface ShadowDenial {
 }
 
 /**
- * 操作を通すか。
+ * 操作を通すか。scope（ツールと組織）を渡したら、その組織が属する会社で判定する（ツールの中の操作は必ず渡す）。
+ * 会社に属していない組織・会社に入っていない人は、止めない（ツールの上限 applyCompanyCeiling と同じ扱い。監査の重大2）。
  * - off: 判定しない（allowed: true。今の各ツールの判定だけが効く）
  * - shadow: 判定して、拒否なら onShadowDenial に渡すが、allowed は true
  * - enforce: 判定どおり
@@ -68,14 +91,16 @@ export async function authorizeCompanyAction(input: {
   target?: PermissionTarget
   mode: CompanyRolesMode
   db: CompanyRoleDb
+  scope?: { tool: ToolId; organizationId: string }
   onShadowDenial?: (d: ShadowDenial) => void
 }): Promise<CompanyAuthorization> {
   if (input.mode === 'off') return { checked: false, allowed: true, mode: 'off' }
-  const context = await resolveCompanyRole(input.userId, input.db)
-  const policy = context ? await loadRolePolicy(context.companyId, input.db) : DEFAULT_ROLE_POLICY
-  const decision = context
-    ? decideCompanyPermission(context.role, input.permission, input.target, policy)
-    : ({ ok: false, reason: 'NO_COMPANY' } as const)
+  const context = input.scope
+    ? await resolveCompanyRoleForOrg(input.userId, input.scope.tool, input.scope.organizationId, input.db)
+    : await resolveCompanyRole(input.userId, input.db)
+  if (!context) return { checked: true, allowed: true, mode: input.mode, context: null, decision: { ok: true } }
+  const policy = await loadRolePolicy(context.companyId, input.db)
+  const decision = decideCompanyPermission(context.role, input.permission, input.target, policy)
   if (input.mode === 'shadow') {
     if (!decision.ok) {
       input.onShadowDenial?.({
@@ -96,18 +121,19 @@ export async function authorizeCompanyAction(input: {
  * - off: そのまま返す（DB を読まない）
  * - shadow: 下がるはずだったら記録し、そのまま返す
  * - enforce: 下げた役割を返す（null はこのツールを使えない）。会社に入っていない人（自分だけで使う人）は、そのまま
- * ⚠️ 会社の上限は、その人の会社の役割で決める。ツールの組織が会社のものかどうかは、まだ見ていない（ROLES §10）。
+ * 会社の上限は、そのツールの組織が属する会社での役割で決める（resolveCompanyRoleForOrg）。
  */
 export async function applyCompanyCeiling(input: {
   tool: ToolId
   userId: string
+  organizationId: string
   toolRole: string
   mode: CompanyRolesMode
   db: CompanyRoleDb
   onShadowClamp?: (d: { userId: string; tool: ToolId; toolRole: string; companyRole: CompanyRole; effective: string | null }) => void
 }): Promise<string | null> {
   if (input.mode === 'off') return input.toolRole
-  const context = await resolveCompanyRole(input.userId, input.db)
+  const context = await resolveCompanyRoleForOrg(input.userId, input.tool, input.organizationId, input.db)
   if (!context) return input.toolRole
   const e = effectiveToolRole(input.tool, input.toolRole, context.role)
   if (!e.clamped) return e.role

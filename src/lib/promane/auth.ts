@@ -74,11 +74,11 @@ export async function getWorkspaceBySlug(slug: string, userId: string) {
 }
 
 /** 会社の役割の旗の内側では、本人のメンバーの役割に会社の上限を当てる。使えない（null）なら、ワークスペースにアクセスできないのと同じ扱い。旗が off ならそのまま返す。 */
-async function ceilWorkspaceMembers<W extends { members: { userId: string; role: string }[] }>(workspace: W, userId: string): Promise<W | null> {
+async function ceilWorkspaceMembers<W extends { id: string; members: { userId: string; role: string }[] }>(workspace: W, userId: string): Promise<W | null> {
   const members: W['members'][number][] = []
   for (const m of workspace.members) {
     if (m.userId !== userId) { members.push(m); continue }
-    const role = await ceilToolRole({ tool: 'promane', userId, toolRole: m.role })
+    const role = await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: m.role })
     if (role) members.push(role === m.role ? m : ({ ...m, role } as typeof m))
   }
   if (members.length === 0 && workspace.members.length > 0) return null
@@ -90,7 +90,7 @@ export async function getCurrentMember(workspaceId: string, userId: string) {
     where: { workspaceId_userId: { workspaceId, userId }, role: { in: VALID_MEMBER_ROLES } },
   })
   if (!member) return member
-  const role = await ceilToolRole({ tool: 'promane', userId, toolRole: member.role })
+  const role = await ceilToolRole({ tool: 'promane', userId, organizationId: workspaceId, toolRole: member.role })
   if (!role) return null
   return role === member.role ? member : { ...member, role }
 }

@@ -171,7 +171,7 @@ export async function repairInvalidProjects(workspaceSlug: string): Promise<{ re
       select: { id: true, role: true },
     });
     // 会社の役割の上限より上には上げない
-    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null;
+    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: member.role }) : null;
     if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error('データ修復はオーナー・管理者のみ実行できます');
     const projects = await tx.promaneProject.findMany({
       where: { workspaceId: workspace.id },

@@ -92,7 +92,7 @@ export async function getIncomeContext(req?: NextRequest): Promise<IncomeContext
   if (!membership) membership = await createOwnOrganization(user.id, user.name)
   if (!membership || !hasMinRole(membership.role, 'member')) return null
   // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
-  const role = await ceilToolRole({ tool: 'income', userId: user.id, toolRole: membership.role })
+  const role = await ceilToolRole({ tool: 'income', userId: user.id, organizationId: membership.organizationId, toolRole: membership.role })
   if (!role) return null
   return {
     userId: user.id,

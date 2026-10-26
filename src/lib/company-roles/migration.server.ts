@@ -9,27 +9,10 @@
 // ⚠️ ここでは何も書かない。オーナーが画面で決めたら、/api/company/members/[id]/role で変える（記録は kind=role_changed）。
 import { prisma } from '@/lib/prisma'
 import { buildMigrationPlan, type MigrationPlanRow } from './migration'
-import type { ToolId, ToolMembershipLike } from './tool-roles'
+import type { ToolMembershipLike } from './tool-roles'
+import { ORG_TOOLS } from './tool-orgs.server'
 
 export type { MigrationPlanRow }
-
-type OrgMemberDelegate = {
-  findMany(args: { where: Record<string, unknown>; select: Record<string, true> }): Promise<Array<{ organizationId: string; userId: string | null; role: string }>>
-}
-
-// 組織とメンバーの表が同じ形（organizationId・userId・role・status=ACTIVE）のツール
-const ORG_TOOLS: Array<{ tool: ToolId; delegate: () => OrgMemberDelegate }> = [
-  { tool: 'kintai', delegate: () => prisma.kintaiMember as unknown as OrgMemberDelegate },
-  { tool: 'hr', delegate: () => prisma.hrOrganizationMember as unknown as OrgMemberDelegate },
-  { tool: 'quote', delegate: () => prisma.quoteMember as unknown as OrgMemberDelegate },
-  { tool: 'income', delegate: () => prisma.incomeMember as unknown as OrgMemberDelegate },
-  { tool: 'expense', delegate: () => prisma.expenseMember as unknown as OrgMemberDelegate },
-  { tool: 'sfa', delegate: () => prisma.sfaMember as unknown as OrgMemberDelegate },
-  { tool: 'shodan', delegate: () => prisma.shodanMember as unknown as OrgMemberDelegate },
-  { tool: 'aio', delegate: () => prisma.aioMember as unknown as OrgMemberDelegate },
-  { tool: 'mensetsu', delegate: () => prisma.mensetsuMember as unknown as OrgMemberDelegate },
-  { tool: 'aishodan', delegate: () => prisma.aishodanMember as unknown as OrgMemberDelegate },
-]
 
 /** 会社の移行の案（オーナーの画面で見せる） */
 export async function loadMigrationPlan(companyId: string): Promise<MigrationPlanRow[]> {

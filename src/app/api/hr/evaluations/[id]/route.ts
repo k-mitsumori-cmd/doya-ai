@@ -146,7 +146,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (denied.some(field => field in input.body)) return privateApiJson({ error: 'この評価項目を変更する権限がありません' }, { status: 403 })
       // 会社の役割の旗の内側: 自分が評価される側の評価に、管理者として最終評価を付ける・確定することを、会社の決まりで止める（ROLES-2026-10-26.md §3.4）
       if (ratingField === 'finalRating' && hrCtx.employeeId && existing.employeeId === hrCtx.employeeId) {
-        const company = await authorizeCompanyActionForSession({ userId: hrCtx.userId, email: session?.user?.email ?? null, permission: 'hr.evaluation.finalize', target: { isSelf: true } })
+        const company = await authorizeCompanyActionForSession({ userId: hrCtx.userId, email: session?.user?.email ?? null, permission: 'hr.evaluation.finalize', target: { isSelf: true }, scope: { tool: 'hr', organizationId: hrCtx.organizationId } })
         if (!company.allowed) return privateApiJson({ error: 'ご自身の評価は、ほかの管理者かオーナーが確定します。' }, { status: 403 })
       }
       if (operationId) {

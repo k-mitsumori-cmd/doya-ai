@@ -29,7 +29,7 @@ async function lockAccount(tx: Prisma.TransactionClient, userId: string) {
 async function lockManager(tx: Prisma.TransactionClient, userId: string, workspaceId: string) {
   const members=await tx.$queryRaw<{id:string;role:string}[]>`SELECT id, role FROM promane_members WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true AND role IN ('owner','admin') FOR UPDATE`;
   // 会社の役割の上限より上には上げない
-  const ceiled=members.length===1?await ceilToolRole({tool:'promane',userId,toolRole:members[0].role}):null;
+  const ceiled=members.length===1?await ceilToolRole({tool:'promane',userId,organizationId:workspaceId,toolRole:members[0].role}):null;
   if (members.length !== 1 || (ceiled!=='owner' && ceiled!=='admin')) throw new PromaneWorkspaceRequestError(403,'FORBIDDEN','ワークスペース設定の編集権限がありません');
 }
 async function transaction<T>(work: (tx: Prisma.TransactionClient)=>Promise<T>): Promise<T> {

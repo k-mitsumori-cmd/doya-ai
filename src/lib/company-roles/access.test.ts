@@ -6,7 +6,7 @@ import { applyCompanyCeiling, authorizeCompanyAction, loadRolePolicy, resolveCom
 import { DEFAULT_ROLE_POLICY } from './policy'
 import type { CompanyRolesMode } from './rollout'
 
-function fakeDb(opts: { owned?: Record<string, string>; members?: Record<string, { companyId: string; role: string }>; policy?: Record<string, unknown>; withPolicy?: boolean }) {
+function fakeDb(opts: { owned?: Record<string, string>; members?: Record<string, { companyId: string; role: string }>; policy?: Record<string, unknown>; withPolicy?: boolean; orgs?: Record<string, { companyId: string; ownerUserId: string }> }) {
   const calls = { owned: 0, member: 0, policy: 0 }
   const db: CompanyRoleDb = {
     async findOwnedCompany(userId) {
@@ -17,6 +17,15 @@ function fakeDb(opts: { owned?: Record<string, string>; members?: Record<string,
     async findActiveMembership(userId) {
       calls.member++
       return opts.members?.[userId] ?? null
+    },
+    // ツールの組織 → 会社（既定: o1 は会社 c1 の組織で、持ち主は u1）
+    async findCompanyOfToolOrg(_tool, organizationId) {
+      calls.member++
+      return (opts.orgs ?? { o1: { companyId: 'c1', ownerUserId: 'u1' } })[organizationId] ?? null
+    },
+    async findMembershipIn(userId, companyId) {
+      const m = opts.members?.[userId]
+      return m && m.companyId === companyId ? { role: m.role } : null
     },
   }
   if (opts.withPolicy !== false && opts.policy) {
@@ -98,16 +107,28 @@ test('authorizeCompanyAction: enforce は判定どおりに止める', async () 
   assert.equal(other.checked && !other.decision.ok && other.decision.reason, 'NOT_DEPARTMENT')
 })
 
-test('authorizeCompanyAction: 会社に入っていない人は、enforce で止まる（NO_COMPANY）。shadow は通して記録する', async () => {
+test('authorizeCompanyAction: 会社に入っていない人は、止めない（ツールの上限と同じ扱い。監査の重大2）', async () => {
   const { db } = fakeDb({})
-  const r = await authorizeCompanyAction({ userId: 'x', permission: 'company.view', mode: 'enforce', db })
-  assert.equal(r.allowed, false)
-  assert.equal(r.checked && r.context, null)
-  assert.deepEqual(r.checked && r.decision, { ok: false, reason: 'NO_COMPANY' })
   const seen: ShadowDenial[] = []
-  const s = await authorizeCompanyAction({ userId: 'x', permission: 'company.view', mode: 'shadow', db, onShadowDenial: (d) => seen.push(d) })
-  assert.equal(s.allowed, true)
-  assert.deepEqual(seen, [{ userId: 'x', permission: 'company.view', companyId: null, role: null, reason: 'NO_COMPANY' }])
+  for (const mode of ['shadow', 'enforce'] as CompanyRolesMode[]) {
+    const r = await authorizeCompanyAction({ userId: 'x', permission: 'invoice.issue', mode, db, onShadowDenial: (d) => seen.push(d) })
+    assert.equal(r.allowed, true, mode)
+    assert.equal(r.checked && r.context, null, mode)
+  }
+  assert.equal(seen.length, 0)
+})
+
+test('authorizeCompanyAction: scope があれば、組織が属する会社で判定する（自分で作った別の会社の持ち主でも、ほかの会社の組織ではその会社の役割）', async () => {
+  // u6 は会社 c1 のゲスト。自分で会社 c9 を作った（持ち主）
+  const { db } = fakeDb({ owned: { u6: 'c9' }, members: { u6: { companyId: 'c1', role: 'guest' } }, orgs: { o1: { companyId: 'c1', ownerUserId: 'u1' }, o9: { companyId: 'c9', ownerUserId: 'u6' } } })
+  const inC1 = await authorizeCompanyAction({ userId: 'u6', permission: 'invoice.issue', mode: 'enforce', db, scope: { tool: 'income', organizationId: 'o1' } })
+  assert.equal(inC1.allowed, false)
+  assert.deepEqual(inC1.checked && inC1.context, { companyId: 'c1', role: 'guest' })
+  const inC9 = await authorizeCompanyAction({ userId: 'u6', permission: 'invoice.issue', mode: 'enforce', db, scope: { tool: 'income', organizationId: 'o9' } })
+  assert.equal(inC9.allowed, true)
+  // 会社に属していない組織では止めない
+  const free = await authorizeCompanyAction({ userId: 'u6', permission: 'invoice.issue', mode: 'enforce', db, scope: { tool: 'income', organizationId: 'nobody-org' } })
+  assert.equal(free.allowed, true)
 })
 
 test('authorizeCompanyAction: policy を DB から読んで使う（請求書の発行をマネージャーからはずす）', async () => {
@@ -128,21 +149,21 @@ test('authorizeCompanyAction: policy の JSON が壊れていても、既定に�
 
 test('applyCompanyCeiling: off はそのまま返し、DB を読まない', async () => {
   const { db, calls } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'off', db }), 'system_admin')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'off', db }), 'system_admin')
   assert.deepEqual(calls, { owned: 0, member: 0, policy: 0 })
 })
 
-test('applyCompanyCeiling: 会社に入っていない人は、どのモードでもそのまま', async () => {
-  const { db } = fakeDb({})
+test('applyCompanyCeiling: 会社に属していない組織の人は、どのモードでもそのまま', async () => {
+  const { db } = fakeDb({ orgs: {} })
   for (const mode of ['shadow', 'enforce'] as CompanyRolesMode[]) {
-    assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'x', toolRole: 'system_admin', mode, db }), 'system_admin', mode)
+    assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'x', toolRole: 'system_admin', mode, db }), 'system_admin', mode)
   }
 })
 
 test('applyCompanyCeiling: shadow は下がるはずだったことを記録して、そのまま返す', async () => {
   const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
   const seen: unknown[] = []
-  const r = await applyCompanyCeiling({ tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'shadow', db, onShadowClamp: (d) => seen.push(d) })
+  const r = await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'shadow', db, onShadowClamp: (d) => seen.push(d) })
   assert.equal(r, 'system_admin')
   assert.deepEqual(seen, [{ userId: 'u2', tool: 'kintai', toolRole: 'system_admin', companyRole: 'member', effective: 'employee' }])
 })
@@ -150,7 +171,7 @@ test('applyCompanyCeiling: shadow は下がるはずだったことを記録し�
 test('applyCompanyCeiling: shadow でも、下がらないなら記録しない', async () => {
   const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
   const seen: unknown[] = []
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u2', toolRole: 'employee', mode: 'shadow', db, onShadowClamp: (d) => seen.push(d) }), 'employee')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u2', toolRole: 'employee', mode: 'shadow', db, onShadowClamp: (d) => seen.push(d) }), 'employee')
   assert.equal(seen.length, 0)
 })
 
@@ -159,16 +180,32 @@ test('applyCompanyCeiling: enforce は下げる。ゲストはプロマネ以外
     owned: { u1: 'c1' },
     members: { u2: { companyId: 'c1', role: 'member' }, u6: { companyId: 'c1', role: 'guest' }, u7: { companyId: 'c1', role: 'admin' }, u8: { companyId: 'c1', role: 'billing' } },
   })
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'employee')
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u7', toolRole: 'system_admin', mode: 'enforce', db }), 'hr_admin')
-  assert.equal(await applyCompanyCeiling({ tool: 'expense', userId: 'u6', toolRole: 'member', mode: 'enforce', db }), null)
-  assert.equal(await applyCompanyCeiling({ tool: 'promane', userId: 'u6', toolRole: 'admin', mode: 'enforce', db }), 'guest')
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u1', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
-  assert.equal(await applyCompanyCeiling({ tool: 'income', userId: 'u8', toolRole: 'owner', mode: 'enforce', db }), 'admin')
-  assert.equal(await applyCompanyCeiling({ tool: 'expense', userId: 'u8', toolRole: 'admin', mode: 'enforce', db }), 'member')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'employee')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u7', toolRole: 'system_admin', mode: 'enforce', db }), 'hr_admin')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'expense', userId: 'u6', toolRole: 'member', mode: 'enforce', db }), null)
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'promane', userId: 'u6', toolRole: 'admin', mode: 'enforce', db }), 'guest')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u1', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'income', userId: 'u8', toolRole: 'owner', mode: 'enforce', db }), 'admin')
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'expense', userId: 'u8', toolRole: 'admin', mode: 'enforce', db }), 'member')
 })
 
 test('applyCompanyCeiling: ツールの役割が知らない値なら、enforce で null（使えない）', async () => {
   const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
-  assert.equal(await applyCompanyCeiling({ tool: 'kintai', userId: 'u2', toolRole: 'bogus', mode: 'enforce', db }), null)
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u2', toolRole: 'bogus', mode: 'enforce', db }), null)
+})
+
+test('applyCompanyCeiling: 自分で会社を作っても、ほかの会社の組織では上限が当たる（監査の重大1）', async () => {
+  const { db } = fakeDb({ owned: { u6: 'c9' }, members: { u6: { companyId: 'c1', role: 'guest' } }, orgs: { o1: { companyId: 'c1', ownerUserId: 'u1' }, o9: { companyId: 'c9', ownerUserId: 'u6' } } })
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'u6', toolRole: 'system_admin', mode: 'enforce', db }), null)
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o9', tool: 'kintai', userId: 'u6', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
+})
+
+test('applyCompanyCeiling: 会社のメンバーでない人（ツールだけに招かれた人）は、メンバーの上限', async () => {
+  const { db } = fakeDb({})
+  assert.equal(await applyCompanyCeiling({ organizationId: 'o1', tool: 'kintai', userId: 'outsider', toolRole: 'hr_admin', mode: 'enforce', db }), 'employee')
+})
+
+test('applyCompanyCeiling: 会社に属していない組織では、上限を当てない', async () => {
+  const { db } = fakeDb({ members: { u2: { companyId: 'c1', role: 'member' } } })
+  assert.equal(await applyCompanyCeiling({ organizationId: 'own-org', tool: 'kintai', userId: 'u2', toolRole: 'system_admin', mode: 'enforce', db }), 'system_admin')
 })

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         select: { id: true, role: true },
       })
       // 会社の役割の上限より上には上げない
-      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null
+      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: member.role }) : null
       if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: 'データ修復は owner/admin のみ実行可能です' }
 
       const badExpenses = await tx.promaneExpense.updateMany({

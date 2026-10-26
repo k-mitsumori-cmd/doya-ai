@@ -36,7 +36,7 @@ export async function issuePromaneInvitation(args: {
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
         // 会社の役割の上限より上には上げない
-        const ceiled = inviter?.isActive ? await ceilToolRole({ tool: 'promane', userId: args.userId, toolRole: inviter.role }) : null
+        const ceiled = inviter?.isActive ? await ceilToolRole({ tool: 'promane', userId: args.userId, organizationId: args.workspaceId, toolRole: inviter.role }) : null
         if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
           return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
         }

@@ -247,7 +247,7 @@ export async function repairInvalidTaskDates(workspaceSlug: string): Promise<{ r
       select: { id: true, role: true },
     });
     // 会社の役割の上限より上には上げない
-    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, toolRole: member.role }) : null;
+    const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: member.role }) : null;
     if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error("データ修復はオーナー・管理者のみ実行できます");
     const tasks = await tx.promaneTask.findMany({
       where: {

@@ -6009,7 +6009,7 @@ model AccountCompanyRoleSetting {
 }
 
 // 記録を作った人（「自分で作った見積を自分で確定しない」を判定するため）。既存の表に列を足さずに持つ
-// 旗が off でない間に作られた記録だけに残る。行が無い記録は「作った人が分からない」として、確定を止めない
+// 旗が off でない間に作られた記録だけに残る。行が無い記録は「作った人が分からない」として、止める側に倒す（見積は管理者とオーナーだけが確定できる）
 model AccountCompanyRecordAuthor {
   id        String   @id @default(cuid())
   tool      String // quote | income など
