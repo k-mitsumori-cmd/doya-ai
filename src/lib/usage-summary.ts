@@ -29,7 +29,6 @@ import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
 import { getOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 import { excludeIds, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
-import { systemWatchRecordIdsAll } from '@/lib/system-watch/marked-records-range'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -387,9 +386,9 @@ export async function getUsageSummary(
         plan: orgPlan,
         orgIds,
         // 自動点検（system-watch の B1）が作った見積書は数えない（2026-10-26 ユーザー決定。ルートと同じく記録の ID で外す。
-        // 台帳はルートが合図つきのときに増やさない）
+        // 台帳はルートが合図つきのときに増やさない）。⚠️ 累計もルート（api/quote/documents）と同じく今月の ID だけを除く（2026-10-26 統括の再監査）
         countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', async () =>
-          prisma.quoteDocument.count({ where: { organizationId: { in: ids }, ...excludeIds(await systemWatchRecordIdsAll(prisma, 'quote-document', ids).catch(() => [])) } })),
+          prisma.quoteDocument.count({ where: { organizationId: { in: ids }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) } })),
         countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', async () =>
           prisma.quoteDocument.count({
             where: { organizationId: { in: ids }, createdAt: { gte: since }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) },

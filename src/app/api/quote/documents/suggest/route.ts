@@ -54,6 +54,8 @@ async function postHandler(req: NextRequest) {
       productName,
       situation: body.situation ? body.situation.slice(0, 1000) : undefined,
       budget: budgetRaw && budgetRaw > 0 ? budgetRaw : null,
+      // 経営ホームのエージェントからの呼び出し（印のヘッダー）だけ、軽いモデルを使う（DESIGN.md §11.9）。画面からの呼び出しは今までどおり
+      ...(req.headers?.get?.('x-doya-agent-tier') === 'light' ? { tier: 'light' as const } : {}),
     })
     return NextResponse.json({ items })
   } catch (err) {

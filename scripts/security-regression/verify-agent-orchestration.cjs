@@ -30,6 +30,13 @@ function loadFlag(env,email,counter){
   const uiNext=load('src/lib/ui-next.ts',{},{process:{env},Promise});
   return loadTs('src/lib/agent-orchestration/flag.ts',{'@/lib/ui-next':uiNext,'next-auth':sessionMock(email,counter),'@/lib/auth':{authOptions:{}}},env);
 }
+// 自動点検の合図の確かめ方（watch-gate.ts）。本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の値のときだけ通る
+const WATCH_USER='u-watch',WATCH_SECRET='test-cron-secret';
+function loadWatchGate(env={CRON_SECRET:WATCH_SECRET,SYSTEM_WATCH_TEST_USER_ID:WATCH_USER}){
+  const crypto=require('node:crypto');
+  const marker=load('src/lib/system-watch/marker.ts',{'node:crypto':crypto},{process:{env:{CRON_SECRET:env.CRON_SECRET}}});
+  return load('src/lib/system-watch/watch-gate.ts',{'node:crypto':crypto,'@/lib/system-watch/marker':marker},{process:{env}});
+}
 const envOf=(rollout)=>{const e={UI_NEXT_ROLLOUT:'all',UI_PREVIEW_EMAILS:ALLOWED,UI_SHELL_SERVICES:'all'};if(rollout!==undefined)e.AGENT_ORCHESTRATION_ROLLOUT=rollout;return e};
 
 function loadCore(){
@@ -118,7 +125,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
 
   await check('Agent tool routes: only the five fixed routes, called through their exported POST with the same cookie',async()=>{
     const seen=[];
-    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),body:await req.json()});return Response.json({ok:true},{status:201,headers:name==='suggest'?{'x-doya-power-op':'op-1'}:{}})}});
+    const mod=(name)=>({POST:async(req)=>{seen.push({name,path:new URL(req.url).pathname,cookie:req.headers.get('cookie'),tier:req.headers.get('x-doya-agent-tier'),watch:req.headers.get('x-doya-system-watch'),body:await req.json()});return Response.json({ok:true},{status:201,headers:name==='suggest'?{'x-doya-power-op':'op-1'}:{}})}});
     const tools=loadCore().tools;
     const rs=loadTs('src/lib/agent-orchestration/routes.server.ts',{
       'next/server':nextServer,'./tools':tools,
@@ -128,7 +135,8 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
       '@/app/api/doyaslide/projects/route':mod('project'),
       '@/app/api/doyaslide/structure/route':mod('structure'),
       '@/lib/shodan/access':{getShodanContext:async()=>({organizationSlug:'acme'})},
-      '@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},
+      '@/lib/doya-power/retry':{DOYA_POWER_OP_HEADER:'x-doya-power-op'},'@/lib/system-watch/marker':loadTs('src/lib/system-watch/marker.ts',{'node:crypto':require('node:crypto')},{CRON_SECRET:'test-cron-secret'}),
+      '@/lib/system-watch/watch-gate':loadWatchGate(),
       './sources.server':{doyaPowerOnForRequest:async()=>true},
     },{NODE_ENV:'production',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'});
     const outer=new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST',headers:{cookie:'next-auth.session-token=s'}});
@@ -142,11 +150,36 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     assert.deepEqual(keys,[null,'op-1',null,null,null]);
     assert.deepEqual(seen.map(s=>s.path),['/api/shodan/preparations','/api/quote/documents/suggest','/api/quote/documents','/api/doyaslide/projects','/api/doyaslide/structure']);
     assert.ok(seen.every(s=>s.cookie==='next-auth.session-token=s'&&s.body.a===1));
+    // 決まった形の下書き（見積の品目の案・スライドの構成）だけ、軽いモデルの印を付ける（DESIGN.md §11.9）
+    assert.deepEqual(seen.map(s=>s.tier),[null,'light',null,null,'light']);
+    assert.ok(seen.every(s=>s.watch===null),'no signal header unless the outer request has one');
+    seen.length=0;
+    await rs.callToolRoute(new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST',headers:{cookie:'c','x-doya-system-watch':'sig'}}),'shodan.prepare',{a:1});
+    assert.equal(seen[0].watch,'sig');
+    for(const f of ['src/app/api/quote/documents/suggest/route.ts','src/app/api/doyaslide/structure/route.ts']) assert.match(read(f),/x-doya-agent-tier'\) === 'light'/,f);
+    assert.match(read('seo/lib/gemini.ts'),/const model = options\?\.model \|\| CLAUDE_MODEL_DEFAULT/);
     await assert.rejects(()=>rs.callToolRoute(outer,'../admin',{}));
     // 本番では、見本の結果に差し替えない（値があっても）
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'production',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'}),false);
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'development',AGENT_ORCHESTRATION_FAKE_TOOLS:'1'}),true);
     assert.equal(rs.fakeToolsEnabled({NODE_ENV:'development'}),false);
+    // システム点検の自動の確認（B1）: 合図が正しいときだけ「【自動点検】」の印を付ける。合図が無い・違うときは付けない
+    assert.equal(rs.SYSTEM_WATCH_MARKER_SUPPORTED,true);
+    const crypto=require('node:crypto');
+    const token=loadWatchGate().systemWatchTokenFor(WATCH_USER);
+    const watchReq=(h)=>new nextServer.NextRequest('https://doya-ai.example.invalid/api/agent/tasks',{method:'POST',headers:h});
+    const watched=await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),WATCH_USER);
+    assert.equal(watched.label.prefix,'【自動点検】');
+    assert.equal(watched.label.apply('お見積り',200),'【自動点検】お見積り');
+    for(const bad of ['', 'x', token.slice(0,-1)+'0', crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
+      const d=await rs.toolDepsFor(watchReq(bad?{'x-doya-system-watch':bad}:{}),WATCH_USER);
+      assert.equal(d.label,undefined,'wrong or missing signal must not label: '+bad);
+    }
+    // 正しい値でも、ほかの利用者・ログインの分からないリクエストには付けない
+    assert.equal((await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),'someone-else')).label,undefined);
+    assert.equal((await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}))).label,undefined);
+    // 商談準備のルートは、合図が正しく、印がちょうど「【自動点検】」のときだけ受け付ける（動きは下の Shodan + system watch の検査）
+    assert.match(read('src/app/api/shodan/preparations/route.ts'),/systemWatch && body\?\.labelPrefix === SYSTEM_WATCH_PREFIX \? SYSTEM_WATCH_PREFIX : ''/);
     const deps=await rs.toolDepsFor(outer);
     assert.equal(await deps.shodanSlug(),'acme');
     assert.equal(deps.powerOn,true);
@@ -341,12 +374,17 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
       const src=read(f);
       const gate=src.indexOf('agentGate({ store: true })');
       assert.ok(gate>0,f);
-      for(const later of ['readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+      // 本文を読む呼び出し（readOperationalJson を直接、または会社名だけを読む companyNameFrom）も、入口のあと
+      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
         const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
       }
     }
-    // ToDo を動かす API は、本文を読まない（保存した作戦と答えだけから、ツールへの入力を作る）
-    assert.equal(/readOperationalJson|req\.json\(/.test(read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts')),false);
+    // ToDo を動かす API が本文から読むのは、会社名だけ（会社の調査のやり直し）。ほかはすべて、保存した作戦と答えから作る
+    const runTask=read('src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts');
+    assert.equal((runTask.match(/readOperationalJson\(/g)||[]).length,1);
+    assert.match(runTask,/const raw = body\.companyName/);
+    assert.equal(/body\.(?!companyName)\w+/.test(runTask),false);
+    assert.equal(/req\.json\(/.test(runTask),false);
     // 表を読む・書くのは runs.prisma.ts だけで、どの読み書きも userId で絞る
     const repo=read('src/lib/agent-orchestration/runs.prisma.ts');
     const calls=repo.match(/prisma\.homeAgent(Run|Task)\.\w+\(\{[^]*?\}\)/g)||[];
@@ -400,5 +438,85 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const res=await loadTaskRoute(envOf('preview'),ALLOWED,log).POST(taskReq({recipeId:'sales-prep',taskId:'quote',answers}));
     assert.equal(res.status,200);
     assert.equal(JSON.stringify(await res.json()).includes('opKey'),false);
+  });
+  // 自動点検（B1）の記録は、月の枠の数え方から「合図を確かめて残した ID」で外す（2026-10-26 ユーザー決定 A。名前の印では外さない）
+  await check('Shodan + system watch: only a valid signal marks the record id and the label; marked ids are excluded from the monthly count, fake labels are not',async()=>{
+    const crypto=require('node:crypto');
+    const SECRET='test-cron-secret';
+    const gateEnv={CRON_SECRET:SECRET,SYSTEM_WATCH_TEST_USER_ID:WATCH_USER};
+    const gate=loadWatchGate(gateEnv);
+    const token=gate.systemWatchTokenFor(WATCH_USER);
+    const marker=load('src/lib/system-watch/marker.ts',{'node:crypto':crypto},{process:{env:{CRON_SECRET:SECRET}}});
+    let who=WATCH_USER,role='owner',owner=WATCH_USER;
+    const marked=load('src/lib/system-watch/marked-records.ts',{},{Promise,JSON,Array});
+    const settings=new Map();const writes=[];const counts=[];let seq=0;
+    const tx={
+      $queryRaw:async()=>[{id:'org-a'}],
+      systemSetting:{findUnique:async({where})=>settings.has(where.key)?{value:settings.get(where.key)}:null,upsert:async({where,create,update})=>{settings.set(where.key,settings.has(where.key)?update.value:create.value)}},
+      shodanPreparation:{count:async({where})=>{counts.push(where);return 0},create:async({data})=>({id:'prep-'+(++seq),...data})},
+    };
+    let companyName='サンプル商事';
+    const route=load('src/app/api/shodan/preparations/route.ts',{
+      'next/server':{NextResponse:Response},
+      '@/lib/prisma':{prisma:{$transaction:fn=>fn(tx),shodanPreparation:{update:async a=>writes.push(a)}}},
+      '@/lib/shodan/access':{getShodanContext:async()=>({organizationId:'org-a',organizationSlug:'alpha',userId:who,memberId:'m',role}),orgSlugFrom:()=>'alpha'},
+      '@/lib/shodan/research':{researchCompany:async()=>({companyName,url:'https://example.invalid/',marketing:{},ownedMedia:{}}),researchFailureMessage:()=>'x'},
+      '@/lib/shodan/research-response':{isCompanyResearch:()=>true},
+      '@/lib/shodan/types':load('src/lib/shodan/types.ts'),
+      '@/lib/plan-limit':{jstStartOfMonthUtc:()=>new Date('2026-10-01T00:00:00Z')},
+      '@/lib/shodan/billing':{getShodanBilling:async()=>({plan:'PRO',ownerUserId:owner})},
+      '@/lib/unified-plan':{isPaidPlan:()=>true},
+      '@/lib/system-watch/marker':marker,
+      '@/lib/system-watch/watch-gate':gate,
+      '@/lib/system-watch/marked-records':marked,
+    },{process:{env:gateEnv}});
+    const call=(headers,body)=>route.POST({headers:new Headers(headers),json:async()=>({url:'https://example.invalid',...body})});
+    // 1. 合図が正しい: ID を残し、名前に印を付ける
+    let res=await call({'x-doya-system-watch':token},{labelPrefix:'【自動点検】'});
+    assert.equal(res.status,200);
+    const key=[...settings.keys()].find(k=>k.startsWith('watch:v1:marked:shodan-preparation:org-a:'));
+    assert.ok(key,'marked id must be stored');
+    assert.deepEqual(JSON.parse(settings.get(key)),['prep-1']);
+    assert.equal(writes.at(-1).data.targetName,'【自動点検】サンプル商事');
+    // 2. 次の予約の数え方は、残した ID を外す
+    res=await call({},{});
+    assert.equal(JSON.stringify(counts.at(-1).id),JSON.stringify({notIn:['prep-1']}));
+    // 3. 合図が無い・偽の合図: ID を残さず、印も付けない（labelPrefix を送っても受け付けない）
+    for(const h of [{},{'x-doya-system-watch':'0'.repeat(64)},{'x-doya-system-watch':token.slice(0,-1)}]){
+      writes.length=0;
+      await call(h,{labelPrefix:'【自動点検】'});
+      assert.equal(writes.at(-1).data.targetName,'サンプル商事',JSON.stringify(h));
+    }
+    assert.deepEqual(JSON.parse(settings.get(key)),['prep-1'],'no extra ids without a valid signal');
+    // 3b. 正しい値でも外さない: 前の日の値・古い形（v1）の値・ほかの利用者・契約者でない人・点検用の利用者が未設定
+    const yesterday=gate.systemWatchTokenFor(WATCH_USER,new Date(Date.now()-86_400_000));
+    const v1=crypto.createHmac('sha256',SECRET).update('doya-system-watch:v1').digest('hex');
+    for(const h of [{'x-doya-system-watch':yesterday},{'x-doya-system-watch':v1}]){
+      writes.length=0;await call(h,{labelPrefix:'【自動点検】'});
+      assert.equal(writes.at(-1).data.targetName,'サンプル商事',JSON.stringify(h));
+    }
+    who='intruder';owner='intruder';
+    writes.length=0;await call({'x-doya-system-watch':gate.systemWatchTokenFor('intruder')},{labelPrefix:'【自動点検】'});
+    assert.equal(writes.at(-1).data.targetName,'サンプル商事','another user with their own signal must not be excluded');
+    who=WATCH_USER;owner='someone-else';
+    writes.length=0;await call({'x-doya-system-watch':token},{labelPrefix:'【自動点検】'});
+    assert.equal(writes.at(-1).data.targetName,'サンプル商事','not the contract owner of the organization');
+    owner=WATCH_USER;role='member';
+    writes.length=0;await call({'x-doya-system-watch':token},{labelPrefix:'【自動点検】'});
+    assert.equal(writes.at(-1).data.targetName,'サンプル商事','not an owner of the organization');
+    role='owner';delete gateEnv.SYSTEM_WATCH_TEST_USER_ID;
+    writes.length=0;await call({'x-doya-system-watch':token},{labelPrefix:'【自動点検】'});
+    assert.equal(writes.at(-1).data.targetName,'サンプル商事','unset SYSTEM_WATCH_TEST_USER_ID excludes nothing');
+    gateEnv.SYSTEM_WATCH_TEST_USER_ID=WATCH_USER;
+    assert.deepEqual(JSON.parse(settings.get(key)),['prep-1'],'none of these may mark ids');
+    // 4. 社名そのものが「【自動点検】…」のサイト（偽の印）でも、ID が無いので数える
+    companyName='【自動点検】偽の会社';
+    await call({},{});
+    const fakeId='prep-'+seq;
+    await call({},{});
+    assert.equal(counts.at(-1).id.notIn.includes(fakeId),false,'a fake label must still be counted');
+  });
+  await check('Agent tool routes forward only the system-watch signal header to the tool routes',async()=>{
+    assert.match(read('src/lib/agent-orchestration/routes.server.ts'),/const watch = outer\.headers\.get\(SYSTEM_WATCH_HEADER\)\n  if \(watch\) headers\.set\(SYSTEM_WATCH_HEADER, watch\)/);
   });
 })().catch(e=>{console.error(e);process.exit(1)});

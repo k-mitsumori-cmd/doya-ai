@@ -36,6 +36,13 @@ test('設定が欠けたら何も通さない（fail-closed）', () => {
   assert.equal(systemWatchUserId({ SYSTEM_WATCH_TEST_USER_ID: '  ' }), null)
   assert.equal(isSystemWatchFor(headers(token), 'u-watch', at, { CRON_SECRET: env.CRON_SECRET }), false)
   assert.equal(isSystemWatchFor(headers(token), 'u-watch', at, { SYSTEM_WATCH_TEST_USER_ID: 'u-watch' }), false)
-  assert.equal(systemWatchTokenFor('u-watch', at, undefined), null)
+  // 引数が undefined のときは環境変数を読む。Vercel のビルドには CRON_SECRET があるので、この確かめの間だけ外す
+  const saved = process.env.CRON_SECRET
+  delete process.env.CRON_SECRET
+  try {
+    assert.equal(systemWatchTokenFor('u-watch', at, undefined), null)
+  } finally {
+    if (saved !== undefined) process.env.CRON_SECRET = saved
+  }
   assert.equal(systemWatchTokenFor('', at, env.CRON_SECRET), null)
 })

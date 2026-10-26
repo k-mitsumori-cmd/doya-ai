@@ -441,7 +441,18 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
           take: limit,
           select: { type: true, amount: true, balanceAfter: true, operationId: true, refundOf: true, note: true, createdAt: true },
         })
-      const watchOps = new Set(rows.filter((r) => r.type === 'consume' && r.operationId && (r.note ?? '').split(' ').includes('watch:1')).map((r) => r.operationId as string))
+      const isWatch = (note: string | null) => (note ?? '').split(' ').includes('watch:1')
+      const watchOps = new Set(rows.filter((r) => r.type === 'consume' && r.operationId && isWatch(r.note)).map((r) => r.operationId as string))
+      // 戻しの行の、もとの消費が読んだ範囲の外にあるときは、その消費だけを読んで印を確かめる（2026-10-26 統括の再監査）
+      const seenConsume = new Set(rows.filter((r) => r.type === 'consume' && r.operationId).map((r) => r.operationId as string))
+      const missing = [...new Set(rows.filter((r) => r.type === 'refund' && r.refundOf && !seenConsume.has(r.refundOf)).map((r) => r.refundOf as string))]
+      if (missing.length) {
+        const origins: { operationId: string | null; note: string | null }[] = await tx.doyaPowerTransaction.findMany({
+          where: { accountId: account.id, type: 'consume', operationId: { in: missing } },
+          select: { operationId: true, note: true },
+        })
+        for (const o of origins) if (o.operationId && isWatch(o.note)) watchOps.add(o.operationId)
+      }
       // メモリの DB（テスト）は orderBy・take を見ないので、ここでも並べて切る
       return rows
         .slice()

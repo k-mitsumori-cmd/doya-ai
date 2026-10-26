@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT, CLAUDE_MODEL_LIGHT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
@@ -14,6 +14,7 @@ import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
 import { z } from 'zod'
 import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 
 const SlideSchema = z.object({
   role: z.string().trim().min(1).max(120),
@@ -62,7 +63,9 @@ async function postHandler(req: NextRequest) {
     }
     claimedProjectId = projectId
     claimedAt = claimTime
-    await reserveDoyaSlideTextCall(userId, 'structure')
+    // 自動点検（system-watch の B1）のときは、利用者の1日の文章生成の回数に数えない
+    // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図がある（watch-gate.ts）
+    if (!isSystemWatchFor(req.headers, userId)) await reserveDoyaSlideTextCall(userId, 'structure')
 
     // 参考URLがあれば内容を取得して参考情報に加える（失敗しても構成生成は続行）
     let ref = referenceText || ''
@@ -101,7 +104,8 @@ async function postHandler(req: NextRequest) {
 
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(
       // 最大12枚分の見出し・本文・画像指示を返すため、既定の4,096トークンより大きくする
-      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } },
+      // 経営ホームのエージェントからの呼び出し（印のヘッダー）だけ、軽いモデルを使う（DESIGN.md §11.9）。画面からの呼び出しは今までどおり
+      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 }, ...(req.headers?.get?.('x-doya-agent-tier') === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
       'SlideStructure'
     )
 

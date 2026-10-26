@@ -43,3 +43,20 @@ test('履歴の名前と内訳で、自動点検の分を別の行にする', ()
   assert.equal(b.find((e) => e.label.includes('自動点検'))?.total, 30)
   assert.equal(b.find((e) => !e.label.includes('自動点検'))?.total, 60)
 })
+
+test('戻しの行のもとの消費が、読んだ範囲（limit）の外にあっても、戻しに自動点検の印が付く', async () => {
+  // 記録ごとに時刻を進める（同じ時刻だと、新しい順に並べたときの順番が決まらない）
+  let t = Date.parse('2026-10-26T03:00:00.000Z')
+  const mem = createMemoryDb({ now: () => new Date(t) })
+  mem.rows('accountCompany').push({ id: 'co_s', userId: 'u', name: '株式会社スリスタ' })
+  const ledger = createDoyaPowerLedger(mem.db, { now: () => new Date(t) })
+  const tick = () => { t += 60_000 }
+  await ledger.grant('co_s', 'bonus', 200); tick()
+  await ledger.consume('co_s', 30, 'slide.generate:co_s:old:/api/doyaslide/structure:30', { note: 'watch:1' }); tick()
+  for (let i = 0; i < 5; i++) { await ledger.consume('co_s', 1, `text.generate:co_s:n${i}:/x:1`); tick() }
+  await ledger.refund('slide.generate:co_s:old:/api/doyaslide/structure:30')
+  const h = await ledger.history('co_s', { limit: 2 })
+  const refund = h.find((e) => e.type === 'refund')
+  assert.ok(refund, '戻しの行が読めている')
+  assert.equal(refund?.watch, true)
+})

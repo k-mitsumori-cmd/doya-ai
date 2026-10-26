@@ -6,7 +6,8 @@ export const maxDuration = 300
 // POST /api/agent/runs/[id]/tasks/[taskId] — 保存した作戦の ToDo を1つ動かす
 // ============================================
 // 設計: docs/architecture/agent-orchestration/DESIGN.md §8
-// - 本文は読まない。ツールへの入力は、保存した作戦と答えだけから作る（画面の値を使わない）。
+// - ツールへの入力は、保存した作戦と答えだけから作る。本文から読むのは、やり直しのときに利用者が入れた会社名だけ
+//   （会社の調査がサイトを読めなかったとき。FAILURE-CHECKLIST.md S21）。
 // - 同じ ToDo を同時に2回動かさない（表の条件付きの更新）。本人ごとに同時に3つまで（limit）。
 // - 結果・失敗・ドヤパワーの量・途中まで作れたもの（スライドのプロジェクト・見積の品目の案）を表に残す。
 // - 旗と記録の設定（AGENT_RUNS_STORE=db）の両方が有効なときだけ。
@@ -19,6 +20,21 @@ import { BUSY_MESSAGE, executeSalesPrepTask } from '@/lib/agent-orchestration/ex
 import { toolDepsFor } from '@/lib/agent-orchestration/routes.server'
 import { AgentTaskError } from '@/lib/agent-orchestration/runner'
 import type { SalesPrepTaskId } from '@/lib/agent-orchestration/tools'
+import { readOperationalJson } from '@/lib/operational-json'
+
+/** 本文から会社名だけを読む（無い・読めないなら undefined）。2KB まで */
+async function companyNameFrom(req: NextRequest): Promise<Record<string, string> | undefined> {
+  if (!req.headers.get('content-length') || req.headers.get('content-length') === '0') return undefined
+  try {
+    const body = await readOperationalJson(req, 2 * 1024)
+    const raw = body.companyName
+    if (typeof raw !== 'string') return undefined
+    const name = raw.replace(/[\u0000-\u001F\u007F]/g, '').trim()
+    return name && name.length <= 100 ? { companyName: name } : undefined
+  } catch {
+    return undefined
+  }
+}
 
 type Ctx = { params: Promise<{ id: string; taskId: string }> | { id: string; taskId: string } }
 const ID = /^[A-Za-z0-9_-]{1,64}$/
@@ -36,10 +52,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return got ? runViewOf(got.run, got.tasks) : undefined
   }
   try {
-    const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId }, async ({ answers, resume }) => {
+    const extraResume = taskId === 'research' ? await companyNameFrom(req) : undefined
+    const result = await runStoredTask(prismaRunRepo, { userId: gate.userId, runId: p.id, taskId, extraResume }, async ({ answers, resume }) => {
       const parsed = parseSalesPrepAnswers(answers)
       if (!parsed.ok) throw new AgentTaskError(parsed.error, 'input')
-      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req) }, resume)
+      return executeSalesPrepTask(taskId, parsed.value, { tools: await toolDepsFor(req, gate.userId) }, resume)
     })
     return NextResponse.json({ result, run: await view() }, { headers: NO_STORE })
   } catch (e) {
