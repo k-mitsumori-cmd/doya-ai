@@ -12,7 +12,14 @@ import { aiDailyLimit, parseAskBody, parseTicketBody } from './request'
 import { styleSlackPayload } from '@/lib/slack/notify'
 
 test('旗: 既定は off。preview と all だけを受け付ける', () => {
-  assert.equal(supportChatRollout(undefined), 'off')
+  // 引数が無いときは環境変数を読む。本番のビルドでは旗が入っているので、この確かめの間だけ外す（2026-10-26 本番ビルドの失敗の直し）
+  const saved = process.env.SUPPORT_CHAT_ROLLOUT
+  delete process.env.SUPPORT_CHAT_ROLLOUT
+  try {
+    assert.equal(supportChatRollout(undefined), 'off')
+  } finally {
+    if (saved !== undefined) process.env.SUPPORT_CHAT_ROLLOUT = saved
+  }
   assert.equal(supportChatRollout(''), 'off')
   assert.equal(supportChatRollout('on'), 'off')
   assert.equal(supportChatRollout(' Preview '), 'preview')
