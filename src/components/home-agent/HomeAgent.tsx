@@ -24,6 +24,9 @@ import type {
   AgentRunCreateRequest, AgentRunView,
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
+import { agentPlansForDepartment, intentsOfDepartment } from './examples'
+import { useToolHref } from '@/components/shell/ui-next-context'
+import type { DepartmentId } from '@/lib/departments'
 import styles from './home-agent.module.css'
 
 type Scene = 'input' | 'questions' | 'analyze' | 'plan' | 'confirm' | 'run' | 'done' | 'none'
@@ -219,10 +222,14 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
 
 /* ---------- 本体 ---------- */
 
-export default function HomeAgent({ executor = 'api' }: {
+export default function HomeAgent({ executor = 'api', dept = null }: {
   /** sample は見本の結果で最後まで動かす（開発の確認ページ用。API も各ツールも呼ばない） */
   executor?: Executor
+  /** 経営ホームで選んでいる部署（旗 DEPARTMENTS_ROLLOUT が on のときだけ渡される。null は「すべて」）。セールス以外の部署では依頼の欄の代わりに道具へのリンクを出す（examples.ts） */
+  dept?: DepartmentId | null
 }) {
+  const toHref = useToolHref()
+  const toolsOnly = !agentPlansForDepartment(dept)
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
   const [text, setText] = useState(AGENT_RECIPES[0].chip)
@@ -446,6 +453,16 @@ export default function HomeAgent({ executor = 'api' }: {
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
             {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
+            {toolsOnly && dept ? (
+              <div className={styles.card}>
+                <p className={styles.eyebrow}>この部署でよく使う操作</p>
+                <p className={styles.title}>どれから始めますか？</p>
+                <p className={styles.lead}>ドヤくんの作戦づくりは、いまは営業の依頼に使えます。この部署では、道具の画面へ直接移れます。</p>
+                <div className={styles.chips}>
+                  {intentsOfDepartment(dept).map((it) => <Link key={it.label} href={toHref(it.href)} className={styles.chipLink} prefetch={false}>{it.label}</Link>)}
+                </div>
+              </div>
+            ) : (
             <div className={styles.card}>
               <p className={styles.eyebrow}>新しい依頼</p>
               <label className={styles.title} htmlFor="home-agent-ask">どんなゴールを目指しますか？</label>
@@ -460,6 +477,7 @@ export default function HomeAgent({ executor = 'api' }: {
                 <button type="button" className={styles.btn} onClick={send} disabled={!text.trim()}>分析して作戦を立てる</button>
               </div>
             </div>
+            )}
           </div>
         ) : null}
 

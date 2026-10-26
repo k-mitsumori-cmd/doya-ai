@@ -14,6 +14,7 @@ import { SHELL_GROUPS } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
+import { DEPARTMENTS, orderDepartments, departmentOfPath, type DepartmentId } from '@/lib/departments'
 import { todayItems } from './today'
 import { SETUP_HIDE_COOKIE } from './cookies'
 import { CountUp } from '@/components/ds/motion'
@@ -42,7 +43,33 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
-function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
+/**
+ * 部署の切り替え（旗 DEPARTMENTS_ROLLOUT が on のときだけ）。URL の ?dept= で持つ（新しいページは増やさない）。
+ * 並びは「すべて」→ 主の部署 → ほかの部署。選ぶと、よく使う操作・数字をたずねる・ドヤくんの例がその部署の分だけになる。
+ */
+function DepartmentSwitcher({ primary, dept }: { primary: DepartmentId[]; dept: DepartmentId | null }) {
+  const items: { id: DepartmentId | null; label: string; href: string }[] = [
+    { id: null, label: 'すべて', href: '/home' },
+    ...orderDepartments(primary).map((id) => ({ id, label: DEPARTMENTS.find((d) => d.id === id)?.short ?? id, href: `/home?dept=${id}` })),
+  ]
+  return (
+    <nav className={styles.deptSwitch} aria-label="部署の切り替え">
+      {items.map((it) => (
+        <Link key={it.id ?? 'all'} href={it.href} replace scroll={false} prefetch={false} className={styles.deptChip} aria-current={it.id === dept ? 'page' : undefined}>
+          {it.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+function AgentPanel({ summary, greeting, dept = null }: { summary: HomeSummary; greeting: string; dept?: DepartmentId | null }) {
+  // 部署を選んだときは、その部署のツールへ行く操作だけにする（dept が null なら今のまま全部）
+  const intentGroups = dept
+    ? HOME_INTENT_GROUPS.map((g) => ({ ...g, intents: g.intents.filter((i) => departmentOfPath(i.href) === dept) })).filter((g) => g.intents.length > 0)
+    : HOME_INTENT_GROUPS
+  // 「数字をたずねる」は売上・支出・残業・パイプラインなど会社全体の数字。部署を選んだときは、お金を扱う「管理」だけに残す
+  const showSuggestions = !dept || dept === 'admin'
   // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const toHref = useToolHref()
   const router = useRouter()
@@ -110,7 +137,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
       </form>
       {opening ? <p className={styles.opening} role="status">「{opening}」の画面を開いています</p> : null}
       <div className={styles.intents}>
-        {HOME_INTENT_GROUPS.map((g) => (
+        {intentGroups.map((g) => (
           <div key={g.label} className={styles.intentGroup}>
             <p className={styles.intentLabel}>{g.label}</p>
             <div className={styles.chips}>
@@ -120,6 +147,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
             </div>
           </div>
         ))}
+        {showSuggestions ? (
         <div className={styles.intentGroup}>
           <p className={styles.intentLabel}>数字をたずねる</p>
           <div className={styles.chips}>
@@ -128,6 +156,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
             ))}
           </div>
         </div>
+        ) : null}
       </div>
 
       {run ? (
@@ -416,7 +445,7 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null }: {
+export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null, departments }: {
   initial: HomeSummary
   setupHidden?: boolean
   /** ドヤパワーの欄（旗の内側だけ。page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
@@ -425,6 +454,8 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   agentStage?: ReactNode
   /** ドヤパワーの旗が出すと決めた人か（page.tsx が isDoyaPowerEnabled() で決めて渡す。会社の登録の案内の文に使う） */
   doyaPower?: boolean
+  /** 部署の切り替え（旗 DEPARTMENTS_ROLLOUT が on のときだけ page.tsx が渡す。渡されなければ今のホームのまま） */
+  departments?: { primary: DepartmentId[]; dept: DepartmentId | null }
 }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
@@ -459,8 +490,9 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
+      {departments ? <DepartmentSwitcher primary={departments.primary} dept={departments.dept} /> : null}
       {agentStage}
-      <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+      <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} dept={departments?.dept ?? null} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} doyaPower={doyaPower} />
 

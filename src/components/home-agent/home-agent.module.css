@@ -44,6 +44,10 @@
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .chip:hover { border-color: var(--blue); color: var(--blue); }
+/* 部署の「よく使う操作」のリンク（セールス以外。押す場所の高さは 44px 以上） */
+.chipLink { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 0 16px; font-size: 14px; font-weight: 700; text-decoration: none; }
+.chipLink:hover { border-color: var(--blue); color: var(--blue); }
+.chipLink:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--blue); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform .15s var(--ease), box-shadow .2s; box-shadow: 0 4px 14px color-mix(in srgb, var(--blue) 24%, transparent); }
 .btn:hover { transform: translateY(-1px); }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: none; }
