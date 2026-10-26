@@ -69,10 +69,10 @@ test('有効化のフラグが無ければ、何もせずに断る', () => {
 
 test('画像の生成の旗: 既定は off。preview は許可した人だけ、all は全員。以前の ENABLED=true は ROLLOUT が無いときだけ all', async () => {
   const { tenjikaiImagegenRollout, decideTenjikaiImagegen } = await import('./imagegen-flag')
-  assert.equal(tenjikaiImagegenRollout(undefined, undefined), 'off')
-  assert.equal(tenjikaiImagegenRollout('yes', undefined), 'off')
-  assert.equal(tenjikaiImagegenRollout(' Preview ', undefined), 'preview')
-  assert.equal(tenjikaiImagegenRollout(undefined, 'true'), 'all')
+  assert.equal(tenjikaiImagegenRollout('', ''), 'off')
+  assert.equal(tenjikaiImagegenRollout('yes', ''), 'off')
+  assert.equal(tenjikaiImagegenRollout(' Preview ', ''), 'preview')
+  assert.equal(tenjikaiImagegenRollout('', 'true'), 'all')
   // ROLLOUT を書いたら、以前の ENABLED より優先する（preview にすれば、ENABLED=true が残っていても本人だけ）
   assert.equal(tenjikaiImagegenRollout('preview', 'true'), 'preview')
   assert.equal(tenjikaiImagegenRollout('off', 'true'), 'off')
