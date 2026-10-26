@@ -43,9 +43,28 @@ test('失敗したとき、外部 API の応答の本文を利用者に返さな
 
 test('有効化のフラグが無ければ、何もせずに断る', () => {
   const post = at('async function postHandler')
-  const gate = src.indexOf('if (!mock && !enabled())', post)
+  const gate = src.indexOf('if (!mock && !(await enabled()))', post)
   assert.ok(gate > post && gate < src.indexOf('await req.json()', post))
-  assert.match(src, /const enabled = \(\) => process\.env\.TENJIKAI_IMAGEGEN_ENABLED === 'true'/)
+  assert.match(src, /const enabled = \(\) => isTenjikaiImagegenAllowed\(\)/)
+})
+
+test('画像の生成の旗: 既定は off。preview は許可した人だけ、all は全員。以前の ENABLED=true は ROLLOUT が無いときだけ all', async () => {
+  const { tenjikaiImagegenRollout, decideTenjikaiImagegen } = await import('./imagegen-flag')
+  assert.equal(tenjikaiImagegenRollout(undefined, undefined), 'off')
+  assert.equal(tenjikaiImagegenRollout('yes', undefined), 'off')
+  assert.equal(tenjikaiImagegenRollout(' Preview ', undefined), 'preview')
+  assert.equal(tenjikaiImagegenRollout(undefined, 'true'), 'all')
+  // ROLLOUT を書いたら、以前の ENABLED より優先する（preview にすれば、ENABLED=true が残っていても本人だけ）
+  assert.equal(tenjikaiImagegenRollout('preview', 'true'), 'preview')
+  assert.equal(tenjikaiImagegenRollout('off', 'true'), 'off')
+  assert.equal(decideTenjikaiImagegen({ rollout: 'preview', email: 'a@x.jp', allow: ['a@x.jp'] }), true)
+  assert.equal(decideTenjikaiImagegen({ rollout: 'preview', email: 'b@x.jp', allow: ['a@x.jp'] }), false)
+  assert.equal(decideTenjikaiImagegen({ rollout: 'preview', email: null, allow: ['a@x.jp'] }), false)
+  assert.equal(decideTenjikaiImagegen({ rollout: 'off', email: 'a@x.jp', allow: ['a@x.jp'] }), false)
+  assert.equal(decideTenjikaiImagegen({ rollout: 'all', email: null, allow: [] }), true)
+  // off のときは、セッションを読まない
+  const flag = readFileSync(join(process.cwd(), 'src/lib/tenjikai/imagegen-flag.ts'), 'utf8')
+  assert.ok(flag.indexOf("if (rollout === 'off') return false") < flag.indexOf('getServerSession('))
 })
 
 test('失敗したとき、戻すのは上流に送っていない分だけ（送った要求・時間切れの要求は戻さない）', () => {

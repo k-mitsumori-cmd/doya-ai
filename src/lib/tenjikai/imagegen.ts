@@ -18,7 +18,7 @@ export const USD_JPY = 150
 export const IMAGE_MODELS: ImageModel[] = [
   { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '文字入りのデザインに強い。ドヤバナーAIの既定（src/lib/nanobanner.ts）と同じ ID' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image（プレビュー名）', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '上の ID が使えないときの予備' },
-  { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', usdPerImage: { '1K': 0.039, '2K': 0.039, '4K': 0.039 }, note: '最後の予備。解像度は1K相当' },
+  // gemini-2.5-flash-image（Nano Banana 無印）は、プロジェクトの決まりで画像に使わない（CLAUDE.md「画像生成の禁止事項」。2026-10-26 に予備から外した）
 ]
 
 /** 使う解像度（固定） */

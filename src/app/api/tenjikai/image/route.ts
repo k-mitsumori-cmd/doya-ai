@@ -10,6 +10,7 @@ import { IMAGE_SIZE, RATIOS, estimateQuotaYen, imageModelChain, type ImageGenReq
 import { perUserDailyImages, remainingImagesToday, refundImageQuota, reserveImageQuota } from '@/lib/tenjikai/image-quota'
 import { mockPanelImage } from '@/lib/tenjikai/mock-image'
 import { withDoyaPowerCharge, parseCount, DOYA_POWER_CONSUMED_HEADER } from '@/lib/doya-power/charge'
+import { isTenjikaiImagegenAllowed } from '@/lib/tenjikai/imagegen-flag'
 
 const MAX_COUNT = 4
 const MAX_PROMPT_CHARS = 4000
@@ -25,7 +26,8 @@ const JOB_KINDS = ['creative_image', 'booth_render', 'graphic_panel'] as const
 // 実行の記録は TenjikaiGenerationJob に残す（見込み額・結果・失敗の理由）。
 
 const fail = (status: number, error: string) => NextResponse.json({ error }, { status })
-const enabled = () => process.env.TENJIKAI_IMAGEGEN_ENABLED === 'true'
+// 誰に許すかは TENJIKAI_IMAGEGEN_ROLLOUT（off / preview / all）で決める（src/lib/tenjikai/imagegen-flag.ts）。off ならセッションも読まない
+const enabled = () => isTenjikaiImagegenAllowed()
 // 開発中の画面確認用。課金 API を呼ばずに見本の画像を返す。開発サーバー（next dev）でだけ効く
 const mockMode = () => process.env.NODE_ENV === 'development' && process.env.TENJIKAI_IMAGEGEN_MOCK === 'true'
 
@@ -37,7 +39,7 @@ async function currentUserId() {
 // 画面に出す「きょう作れる残りの枚数」
 export async function GET() {
   if (mockMode()) return NextResponse.json({ enabled: true, remaining: perUserDailyImages(), perDay: perUserDailyImages() })
-  if (!enabled()) return NextResponse.json({ enabled: false, remaining: 0, perDay: perUserDailyImages() })
+  if (!(await enabled())) return NextResponse.json({ enabled: false, remaining: 0, perDay: perUserDailyImages() })
   const userId = await currentUserId()
   if (!userId) return fail(401, 'ログインが必要です。')
   return NextResponse.json({ enabled: true, remaining: await remainingImagesToday(userId), perDay: perUserDailyImages() })
@@ -50,8 +52,8 @@ export async function GET() {
 // 4. リクエストに approved: true がある（利用者が「作る」を押した）
 async function postHandler(req: NextRequest) {
   const mock = mockMode()
-  // ⚠️ 本番で「準備中」と出る理由はここ。TENJIKAI_IMAGEGEN_ENABLED が 'true' でないと、課金の API を呼ぶ前に止める（変えるのは管理者）
-  if (!mock && !enabled()) return fail(403, '画像の生成は準備中です。')
+  // ⚠️ 本番で「準備中」と出る理由はここ。TENJIKAI_IMAGEGEN_ROLLOUT で許された人でないと、課金の API を呼ぶ前に止める（変えるのは管理者）
+  if (!mock && !(await enabled())) return fail(403, '画像の生成は準備中です。')
 
   let body: ImageGenRequest
   try {
