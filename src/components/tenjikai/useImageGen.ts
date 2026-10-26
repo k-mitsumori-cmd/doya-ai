@@ -35,7 +35,7 @@ export function useImageQuota() {
   return { quota, refresh }
 }
 
-/** サーバーの設定（TENJIKAI_IMAGEGEN_ENABLED）で画像の生成を止めているときの文言 */
+/** サーバーの設定（TENJIKAI_IMAGEGEN_ROLLOUT）で画像の生成を止めている・この人に許していないときの文言 */
 export const IMAGEGEN_DISABLED_MESSAGE = '画像の生成は、管理者の設定でまだ止めています（準備中）。設定が済むまで、面の画像は作れません。'
 
 /** サーバーが「止めている」と答えたか（未ログイン・通信の失敗は含めない） */

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:36:12.259Z",
+  "checkedAt": "2026-10-26T12:28:11.546Z",
   "passed": 14,
   "cases": [
     "Same-frame manual create submits one durable UUID",
@@ -19,9 +19,9 @@
   ],
   "sourceHashes": {
     "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
-    "src/lib/sfa/use-client-mutations.ts": "4115c3e0923f713180ee51b25512408ed56268f7dc19ef90a72dd81bc985e918",
-    "src/components/sfa/MutationRecovery.tsx": "2227ba375d2fa315ca07bd21d0cd128b2a25ad7f7be30e3cab498a9479666167",
-    "src/app/sfa/[orgSlug]/leads/page.tsx": "0777fd7f1ea6d4614e4bfe71874c8cc663cdd94bf3b7283a315afec27e20f241"
+    "src/lib/sfa/use-client-mutations.ts": "791cb9176954efb80679c8a4647a36a73545db4ccb9b660a99ac2db607d89fb1",
+    "src/components/sfa/MutationRecovery.tsx": "d66315703ee358a6c83ac6f3e6d73fc6a0263b0cf0ca913bcbe902e7318659de",
+    "src/app/(shell)/sfa/[orgSlug]/leads/page.tsx": "e0ea30ec926838d02b61a13736e5fa93e67ea98fbfde2e898b1a8d0b9922acbe"
   },
   "scope": "Actual leads page/shared hook/transport/guard mounted in StrictMode with synthetic DOM/auth/router/network. No paid provider or customer DB calls."
 }

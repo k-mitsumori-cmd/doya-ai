@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:27:43.397Z",
+  "checkedAt": "2026-10-26T12:23:37.174Z",
   "expected": 9,
   "passed": 9,
   "cases": [
@@ -47,7 +47,7 @@
     }
   ],
   "sourceHashes": {
-    "src/app/api/hr/dashboard/route.ts": "30c3ca9bf5a3ce626867dd2ce5da9fe0169264fdfc8964c2b7a0cf759a6a3260",
+    "src/app/api/hr/dashboard/route.ts": "7940ca80654fc6d32c098d8e5831745725e889e46628705b2f9b4c0003e86a8f",
     "src/app/api/kintai/dashboard/route.ts": "9385a7a9beb32fa973cad7347d97394d930e1f72f2218d204a708ff21fe99b64",
     "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
   },

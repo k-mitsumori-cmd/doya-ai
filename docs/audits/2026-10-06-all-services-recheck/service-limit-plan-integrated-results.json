@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:33:36.106Z",
+  "checkedAt": "2026-10-26T12:26:47.333Z",
   "expected": 139,
   "passed": 139,
   "cases": [
@@ -564,7 +564,7 @@
     "src/components/limits/ServiceLimitProvider.tsx": "80fffd613d05d070f329734372a91b843a6653166a478a4debb15ef36b439af8",
     "src/components/Providers.tsx": "ad65db076b6298637d58ea9057a0b9e7493f1e8d141edde71f6f912d6f891f2b",
     "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
-    "src/lib/services.ts": "c5e1ec2db7dbaf3a27340ed05bcbd23d2f3e306b6489f7fb3db9014404298832",
+    "src/lib/services.ts": "ec23934bf99d861a4f8e1efa9358cd9b014d5f0ae95a66a44372f9457547e1f1",
     "src/lib/unified-plan.ts": "b15b8773e24358283e89d20601c63cdf55248bdec9945d92c296c3e647d7ef80",
     "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
   },

@@ -25,16 +25,15 @@ export const IMAGE_MODELS: ImageModel[] = [
 export const IMAGE_SIZE: ImageSize = '2K'
 
 /**
- * 呼ぶ順番。404（廃止・未提供）のときだけ次へ進む。
- * 2026-10-19 に本番のキーで3つとも生存を確かめた（文字だけの返事で各1回。どれも 200）。
- *    画像モデルのエイリアス（*-latest）と gemini-3.1-flash-image は、呼んで確かめていないので鎖には入れていない。
- *    環境変数 TENJIKAI_IMAGE_MODEL で先頭を差し替えられる。
+ * 単価の表。見込み額は先頭（gemini-3-pro-image）の単価で数える。
+ * 実際に呼ぶのは TENJIKAI_IMAGE_MODEL_ID（gemini-3-pro-image）だけで、統一ディスパッチャ（src/lib/image-generator.ts）を通す。
+ * 2026-10-19 に本番のキーで生存を確かめた（文字だけの返事で1回。200）。
  */
-export function imageModelChain(): string[] {
-  const head = process.env.TENJIKAI_IMAGE_MODEL?.trim()
-  const ids = IMAGE_MODELS.map((m) => m.id)
-  return head ? [head, ...ids.filter((id) => id !== head)] : ids
-}
+/**
+ * 使うモデル。画像の生成は統一ディスパッチャの generateImageGeminiPro（src/lib/image-generator.ts）を通し、
+ * gemini-3-pro-image だけを使う。環境変数でモデルを替えられないようにした（禁止のモデルに替わらないため。2026-10-26 統括の点検）
+ */
+export const TENJIKAI_IMAGE_MODEL_ID = 'gemini-3-pro-image'
 
 /** 上限額を数えるための見込み額。いちばん高い単価（先頭のモデル）で数える */
 export function estimateQuotaYen(count: number) {

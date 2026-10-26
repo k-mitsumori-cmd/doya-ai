@@ -23,8 +23,27 @@ test('生成の前に、ログイン・上限の消費・実行の記録をこ�
   const login = src.indexOf('await currentUserId()', post)
   const quota = at('reserveImageQuota(userId')
   const job = at('tenjikaiGenerationJob.create(')
-  const call = at('await fetch(')
+  const call = at('await generateImageGeminiPro(')
   assert.ok(post < login && login < quota && quota < job && job < call)
+})
+
+test('画像は統一ディスパッチャの Nano Banana Pro の入口だけで作り、解像度を必ず渡す。モデルは環境変数で替えられない（統括の点検 2026-10-26）', () => {
+  assert.match(src, /import \{ generateImageGeminiPro \} from '@\/lib\/image-generator'/)
+  assert.doesNotMatch(src, /generativelanguage\.googleapis\.com/)
+  assert.doesNotMatch(src, /await fetch\(/)
+  assert.match(src, /geminiImageSize: IMAGE_SIZE,/)
+  const imagegen = readFileSync(join(process.cwd(), 'src/lib/tenjikai/imagegen.ts'), 'utf8')
+  assert.doesNotMatch(imagegen, /process\.env\.TENJIKAI_IMAGE_MODEL\b/)
+  assert.doesNotMatch(imagegen, /gemini-2\.5-flash-image'/)
+  assert.match(imagegen, /export const TENJIKAI_IMAGE_MODEL_ID = 'gemini-3-pro-image'/)
+  const dispatcher = readFileSync(join(process.cwd(), 'src/lib/image-generator.ts'), 'utf8')
+  assert.match(dispatcher, /export async function generateImageGeminiPro/)
+  assert.match(dispatcher, /if \(!req\.geminiImageSize\) throw new Error/)
+  assert.match(dispatcher, /imageConfig: req\.geminiImageSize \? \{ aspectRatio, imageSize: req\.geminiImageSize \} : \{ aspectRatio \}/)
+})
+
+test('参照画像が入るよう、課金のための読み込みの上限を 6MB にする（既定の 64KB だと 413）', () => {
+  assert.match(src, /withDoyaPowerCharge\(\{ action: 'tenjikai\.image', bodyMaxBytes: 6 \* 1024 \* 1024,/)
 })
 
 test('見本の画像（課金なし）は開発サーバーでだけ返す', () => {
@@ -71,7 +90,9 @@ test('失敗したとき、戻すのは上流に送っていない分だけ（�
   // 上流が応答を返した数と、応答待ちの要求を数える
   assert.match(src, /let billed = 0/)
   assert.match(src, /let inFlight = false/)
-  assert.match(src, /if \(res\?\.ok\) billed\+\+/)
+  // 応答が返った（画像があった・無かった）ときだけ、作られた（課金された）と数える。上流の失敗（status あり）は数えない
+  assert.match(src, /inFlight = false\n\s*billed\+\+\n\s*images\.push/)
+  assert.match(src, /if \(typeof status === 'number'\) \{\n\s*\/\/[^\n]*\n\s*inFlight = false/)
   // 戻す量 = count - 課金された数 - 応答待ち(時間切れで結果が分からない1件)
   assert.match(src, /refundImageQuota\(quota\.reserved, count - billed - \(inFlight \? 1 : 0\)\)/)
   // 予約の全部を無条件に戻す呼び方をしない

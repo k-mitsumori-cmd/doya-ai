@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:36:09.811Z",
+  "checkedAt": "2026-10-26T12:28:10.053Z",
   "passed": 22,
   "cases": [
     "Fresh actor authority rejects all create/update/delete and recovery methods",

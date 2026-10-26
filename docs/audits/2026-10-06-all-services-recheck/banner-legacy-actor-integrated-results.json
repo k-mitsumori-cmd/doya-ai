@@ -1,11 +1,11 @@
 {
-  "checkedAt": "2026-10-18T09:27:49.906Z",
+  "checkedAt": "2026-10-26T12:23:40.734Z",
   "sourceRoot": "integrated",
   "sourceHashes": {
-    "src/app/(shell)/banner/dashboard/page.tsx": "f3954070f9ac7c61cfedd55823764d4165237f112526f17576f6648aa217fb8f",
+    "src/app/(shell)/banner/dashboard/page.tsx": "b56f0674df0b9bdbbe936b990418f1f316b46f1091cd7b65e74dcf3c23755d02",
     "src/app/(shell)/banner/test/page.tsx": "0bd712b5c3d027a007348dc9ecaf3889bffb86b582e4373f27abd3af7471589c",
     "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
-    "scripts/security-regression/verify-banner-legacy-actor-mounted.cjs": "162a5264e709bff2f113455a9c0c55037f54534a23fefe59e5c6f8b03d02be46"
+    "scripts/security-regression/verify-banner-legacy-actor-mounted.cjs": "30e50f9cfa8a125f1191c559b9262a277cec36b5aa203698b093de64fb3ae78a"
   },
   "passed": 22,
   "expected": 22,

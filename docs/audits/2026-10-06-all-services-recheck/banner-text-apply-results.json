@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:27:54.672Z",
+  "checkedAt": "2026-10-26T12:23:43.422Z",
   "baseline": false,
   "passed": 5,
   "cases": [
@@ -30,7 +30,7 @@
     }
   ],
   "sourceHashes": {
-    "src/app/(shell)/banner/dashboard/chat/page.tsx": "e21e5de44f2fdadf3c287710434db9e5e26e7a7234ae01c9d8388e83d788acf1",
+    "src/app/(shell)/banner/dashboard/chat/page.tsx": "e1f285962eda6197304826466d2e46f7e80d664c5745b58418e69714e45929d4",
     "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
     "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
   },

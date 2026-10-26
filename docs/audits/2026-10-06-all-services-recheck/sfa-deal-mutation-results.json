@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:36:01.839Z",
+  "checkedAt": "2026-10-26T12:28:05.363Z",
   "passed": 19,
   "cases": [
     "20 deal replays create once, usage once and full-quota replay still returns committed row",

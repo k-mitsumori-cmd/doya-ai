@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T09:36:17.179Z",
+  "checkedAt": "2026-10-26T12:28:14.230Z",
   "passed": 3,
   "cases": [
     "Nonowner gets owner guidance without own upgrade action",
@@ -8,7 +8,7 @@
   ],
   "sourceHashes": {
     "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
-    "src/lib/services.ts": "c5e1ec2db7dbaf3a27340ed05bcbd23d2f3e306b6489f7fb3db9014404298832"
+    "src/lib/services.ts": "ec23934bf99d861a4f8e1efa9358cd9b014d5f0ae95a66a44372f9457547e1f1"
   },
   "scope": "Actual shared limit classifier and service registry; no browser modal, real checkout or network."
 }
