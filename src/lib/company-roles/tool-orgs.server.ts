@@ -16,23 +16,25 @@ import { isMemberRowRole, type CompanyRole } from './roles'
 import { decideToolOrgLink, type ToolOrgLinkDecision } from './tool-org-link'
 export type { ToolOrgLinkDecision }
 
+type Db = typeof prisma | Prisma.TransactionClient
+
 export type OrgMemberDelegate = {
   findMany(args: { where: Record<string, unknown>; select: Record<string, true> }): Promise<Array<{ organizationId: string; userId: string | null; role: string }>>
   findFirst(args: { where: Record<string, unknown>; orderBy: Array<Record<string, 'asc' | 'desc'>>; select: Record<string, true> }): Promise<{ userId: string | null } | null>
 }
 
 // 組織とメンバーの表が同じ形（organizationId・userId・role・status=ACTIVE・createdAt）のツール
-export const ORG_TOOLS: Array<{ tool: Exclude<ToolId, 'promane'>; delegate: () => OrgMemberDelegate }> = [
-  { tool: 'kintai', delegate: () => prisma.kintaiMember as unknown as OrgMemberDelegate },
-  { tool: 'hr', delegate: () => prisma.hrOrganizationMember as unknown as OrgMemberDelegate },
-  { tool: 'quote', delegate: () => prisma.quoteMember as unknown as OrgMemberDelegate },
-  { tool: 'income', delegate: () => prisma.incomeMember as unknown as OrgMemberDelegate },
-  { tool: 'expense', delegate: () => prisma.expenseMember as unknown as OrgMemberDelegate },
-  { tool: 'sfa', delegate: () => prisma.sfaMember as unknown as OrgMemberDelegate },
-  { tool: 'shodan', delegate: () => prisma.shodanMember as unknown as OrgMemberDelegate },
-  { tool: 'aio', delegate: () => prisma.aioMember as unknown as OrgMemberDelegate },
-  { tool: 'mensetsu', delegate: () => prisma.mensetsuMember as unknown as OrgMemberDelegate },
-  { tool: 'aishodan', delegate: () => prisma.aishodanMember as unknown as OrgMemberDelegate },
+export const ORG_TOOLS: Array<{ tool: Exclude<ToolId, 'promane'>; delegate: (db?: Db) => OrgMemberDelegate }> = [
+  { tool: 'kintai', delegate: (db: Db = prisma) => db.kintaiMember as unknown as OrgMemberDelegate },
+  { tool: 'hr', delegate: (db: Db = prisma) => db.hrOrganizationMember as unknown as OrgMemberDelegate },
+  { tool: 'quote', delegate: (db: Db = prisma) => db.quoteMember as unknown as OrgMemberDelegate },
+  { tool: 'income', delegate: (db: Db = prisma) => db.incomeMember as unknown as OrgMemberDelegate },
+  { tool: 'expense', delegate: (db: Db = prisma) => db.expenseMember as unknown as OrgMemberDelegate },
+  { tool: 'sfa', delegate: (db: Db = prisma) => db.sfaMember as unknown as OrgMemberDelegate },
+  { tool: 'shodan', delegate: (db: Db = prisma) => db.shodanMember as unknown as OrgMemberDelegate },
+  { tool: 'aio', delegate: (db: Db = prisma) => db.aioMember as unknown as OrgMemberDelegate },
+  { tool: 'mensetsu', delegate: (db: Db = prisma) => db.mensetsuMember as unknown as OrgMemberDelegate },
+  { tool: 'aishodan', delegate: (db: Db = prisma) => db.aishodanMember as unknown as OrgMemberDelegate },
 ]
 
 /** ツールの組織が属する会社（表につながっていなければ null） */
@@ -68,7 +70,8 @@ export async function linkToolOrgAtCreation(input: { tool: ToolId; organizationI
     })
     return true
   } catch {
-    console.error('[company-roles] 組織のつながりを書けませんでした')
+    // 監視のための印。ログで [company-roles:link-failed] を探す。つながらなかった組織は、ROLES §8.3 の②を流し直すと埋まる（何度流してもよい）
+    console.error('[company-roles:link-failed]', JSON.stringify({ tool: input.tool, organizationId: input.organizationId }))
     return false
   }
 }
@@ -95,7 +98,7 @@ async function toolOrgTopMemberIds(tool: ToolId, organizationId: string, db: typ
   const t = ORG_TOOLS.find((x) => x.tool === tool)
   if (!t) return []
   const order = TOOL_ROLE_TABLES[tool].order
-  const rows = await t.delegate().findMany({ where: { organizationId, role: order[order.length - 1], status: 'ACTIVE' }, select: { organizationId: true, userId: true, role: true } })
+  const rows = await t.delegate(db).findMany({ where: { organizationId, role: order[order.length - 1], status: 'ACTIVE' }, select: { organizationId: true, userId: true, role: true } })
   return rows.map((r) => r.userId).filter((v): v is string => !!v)
 }
 
