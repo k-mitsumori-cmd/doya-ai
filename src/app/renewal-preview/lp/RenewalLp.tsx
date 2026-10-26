@@ -10,7 +10,7 @@ import {
   Layers,
   ListChecks,
   Megaphone,
-  Handshake,
+  Briefcase,
   Users,
   Calculator,
   Target,
@@ -147,7 +147,7 @@ const DEPTS: Dept[] = [
     lead: "リスト作りから商談の準備、見積もりまで。",
     ask: "来週の商談5件の準備をまとめて進めたい",
     mascot: "/ui-renewal/mascots/sfa.webp",
-    icon: <Handshake size={20} />,
+    icon: <Briefcase size={20} />,
     tools: [
       { id: "sfa", name: "営業管理" },
       { id: "shodan", name: "商談準備" },
