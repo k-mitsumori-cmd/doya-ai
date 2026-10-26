@@ -50,6 +50,7 @@ export async function GET() {
 // 4. リクエストに approved: true がある（利用者が「作る」を押した）
 async function postHandler(req: NextRequest) {
   const mock = mockMode()
+  // ⚠️ 本番で「準備中」と出る理由はここ。TENJIKAI_IMAGEGEN_ENABLED が 'true' でないと、課金の API を呼ぶ前に止める（変えるのは管理者）
   if (!mock && !enabled()) return fail(403, '画像の生成は準備中です。')
 
   let body: ImageGenRequest
@@ -76,7 +77,7 @@ async function postHandler(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
   if (!apiKey) {
     console.error('[tenjikai/image] GEMINI_API_KEY is not set')
-    return fail(500, '画像を作れません。時間をおいて、もう一度お試しください。')
+    return fail(500, '画像を作るための設定が済んでいないため、作れません。管理者に連絡してください。')
   }
 
   const kind = (JOB_KINDS as readonly string[]).includes(String(body.kind)) ? String(body.kind) : 'creative_image'

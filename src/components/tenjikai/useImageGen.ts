@@ -11,6 +11,8 @@ export type ImageGenResult = { ok: true; images: string[] } | ({ ok: false } & I
 
 export interface ImageQuota {
   enabled: boolean
+  /** 残りを数えられなかった（未ログイン・通信の失敗）。このときの enabled: false は「止めている」の意味ではない */
+  unknown?: boolean
   /** きょう作れる残りの枚数。数えられないときは null */
   remaining: number | null
   perDay: number
@@ -21,16 +23,24 @@ export function useImageQuota() {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch('/api/tenjikai/image', { cache: 'no-store' })
-      if (!res.ok) return setQuota({ enabled: false, remaining: null, perDay: 0 })
+      if (!res.ok) return setQuota({ enabled: false, unknown: true, remaining: null, perDay: 0 })
       setQuota(await res.json())
     } catch {
-      setQuota({ enabled: false, remaining: null, perDay: 0 })
+      setQuota({ enabled: false, unknown: true, remaining: null, perDay: 0 })
     }
   }, [])
   useEffect(() => {
     void refresh()
   }, [refresh])
   return { quota, refresh }
+}
+
+/** サーバーの設定（TENJIKAI_IMAGEGEN_ENABLED）で画像の生成を止めているときの文言 */
+export const IMAGEGEN_DISABLED_MESSAGE = '画像の生成は、管理者の設定でまだ止めています（準備中）。設定が済むまで、面の画像は作れません。'
+
+/** サーバーが「止めている」と答えたか（未ログイン・通信の失敗は含めない） */
+export function isImageGenDisabled(q: ImageQuota | null): boolean {
+  return !!q && q.enabled === false && !q.unknown
 }
 
 export async function requestImages(input: { prompt: string; aspectRatio: string; kind: ImageGenKind; referencePng?: string; count?: number }): Promise<ImageGenResult> {
@@ -41,11 +51,13 @@ export async function requestImages(input: { prompt: string; aspectRatio: string
       body: JSON.stringify({ ...input, count: input.count ?? 1, approved: true }),
     })
     const json = await res.json().catch(() => ({}))
-    // ステータスコードなどの技術的な文言は出さない（統合仕様 §11）
+    // ステータスコードなどの技術的な文言は出さない（統合仕様 §11）。サーバーの文言（日本語で書いたもの）があれば、それを理由として出す
+    const serverMessage = typeof json.error === 'string' && json.error ? json.error : null
     if (res.status === 401) return { ok: false, tone: 'forbidden', message: 'ログインすると、画像を作れます。' }
-    if (res.status === 403) return { ok: false, tone: 'disabled', message: '画像の生成は準備中です。いまは使えません。' }
-    if (res.status === 429) return { ok: false, tone: 'limit', message: typeof json.error === 'string' ? json.error : 'きょう作れる枚数の上限に達しました。' }
-    if (res.status >= 500) return { ok: false, tone: 'error', message: '画像を作れませんでした。時間をおいて、もう一度お試しください。' }
+    if (res.status === 403) return { ok: false, tone: 'disabled', message: IMAGEGEN_DISABLED_MESSAGE }
+    if (res.status === 402 || res.status === 429) return { ok: false, tone: 'limit', message: serverMessage ?? 'きょう作れる枚数の上限に達しました。' }
+    if (res.status === 504) return { ok: false, tone: 'error', message: '時間がかかりすぎたため、途中で止まりました。もう一度お試しください。' }
+    if (res.status >= 500) return { ok: false, tone: 'error', message: serverMessage ?? '画像を作れませんでした。時間をおいて、もう一度お試しください。' }
     if (!res.ok || !Array.isArray(json.images)) return { ok: false, tone: 'error', message: typeof json.error === 'string' ? json.error : '画像を作れませんでした。' }
     return { ok: true, images: json.images }
   } catch {

@@ -6,7 +6,7 @@ import IsoBooth from './IsoBooth'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { StackedBar100 } from '@/components/ds/charts'
 import type { Section } from './TenjikaiSidebar'
-import { BUDGET_META, POSITION_LABEL, boothSize, daysUntil, expectedVisitors, man, type BoothPlan, type BudgetLine, type Creative, type Deadline, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
+import { BUDGET_META, POSITION_LABEL, boothSize, daysUntil, man, type BoothPlan, type BudgetLine, type Creative, type Deadline, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 
 interface Props {
   input: ProjectInput
@@ -28,7 +28,8 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
   const kpis = [
     { label: '見積合計 / 予算', value: total, fmt: man, sub: diff >= 0 ? `予算内（残り ${man(diff)}）` : `${man(-diff)} 超過`, tone: diff >= 0 ? 'text-emerald-600' : 'text-rose-600' },
     { label: '会期まで', value: toEvent, fmt: (n: number) => `${Math.round(n)}日`, sub: `${input.eventStart} から${input.days}日間`, tone: 'text-gray-500' },
-    { label: '想定来場者', value: expectedVisitors(input), fmt: (n: number) => `${Math.round(n).toLocaleString()}人`, sub: '小間数・目的・日数から推計', tone: 'text-gray-500' },
+    // 来場者の人数は根拠が無いので出さない（2026-10-26 ユーザー指示）。代わりに、入れた小間の大きさを出す
+    { label: 'ブースの広さ', value: w * d, fmt: (n: number) => `${(Math.round(n * 4) / 4).toLocaleString()}㎡`, sub: `横 ${w}m × 奥行 ${d}m`, tone: 'text-gray-500' },
     { label: '用意した制作物', value: creatives.length, fmt: (n: number) => `${Math.round(n)}点`, sub: 'ポスター・チラシ・A4ファイルほか', tone: 'text-gray-500' },
   ]
 

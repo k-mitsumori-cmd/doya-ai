@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Globe } from 'lucide-react'
 import { clsx } from 'clsx'
-import { GOAL_LABEL, POSITION_LABEL, VENUES, boothSize, expectedVisitors, man, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
+import { GOAL_LABEL, POSITION_LABEL, VENUES, boothSize, isValidBoothMeter, man, withBoothSize, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
+import BoothSizeInput from './BoothSizeInput'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
 
@@ -28,14 +29,20 @@ function PositionIcon({ p, active }: { p: BoothPosition; active: boolean }) {
 }
 
 export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; onSubmit: (i: ProjectInput) => void }) {
-  const [f, setF] = useState<ProjectInput>(initial)
-  const [hover, setHover] = useState<{ c: number; r: number } | null>(null)
+  // 前の版で保存した内容（横・奥行が無い）は、会場の基礎小間から出した大きさを 0.5m 刻みに丸めて欄に入れる
+  const [f, setF] = useState<ProjectInput>(() => {
+    if (isValidBoothMeter(initial.widthM) && isValidBoothMeter(initial.depthM)) return initial
+    const { w, d } = boothSize(initial)
+    const r = (m: number) => Math.min(30, Math.max(1, Math.round(m * 2) / 2))
+    return withBoothSize(initial, r(w), r(d))
+  })
+  const [sizeOk, setSizeOk] = useState(true)
+  const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   // 読み込みが終わる前に押されると、ブラウザーがフォームをそのまま送ってページが読み直される。終わるまで押せないようにする
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
   const set = <K extends keyof ProjectInput>(k: K, v: ProjectInput[K]) => setF((p) => ({ ...p, [k]: v }))
   const size = boothSize(f)
-  const komas = f.komaCols * f.komaRows
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1fr_1.15fr] lg:py-12">
@@ -67,7 +74,8 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
       <motion.form
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit(f)
+          if (!sizeOk) return
+          onSubmit(withBoothSize(f, size.w, size.d))
         }}
         className="flex flex-col gap-6 rounded-[var(--r)] border border-gray-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(0,102,255,.45)] md:p-7"
       >
@@ -105,44 +113,23 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
 
         <div className="flex flex-col gap-2">
           <span className="text-xs font-black text-gray-500">会場</span>
+          <span className="-mt-1 text-[12px] text-gray-500">小間料の目安と、壁の高さの上限に使います。ブースの大きさは下の欄で決めます。</span>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {VENUES.map((v) => (
               <button type="button" key={v.id} onClick={() => set('venueId', v.id)} className={clsx('relative rounded-xl border-2 px-3 py-2 text-left transition-colors', f.venueId === v.id ? 'border-doya-500 bg-doya-50' : 'border-gray-200 hover:border-doya-200')}>
                 <p className="text-xs font-black text-ink">{v.name}</p>
-                <p className="font-mono text-[10px] text-gray-500">{v.komaM}m 角</p>
+                <p className="font-mono text-[10px] text-gray-500">高さ {v.maxHeightM}m まで</p>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-[auto_1fr]">
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-black text-gray-500">小間数（マスを選択）</span>
-            <div className="grid w-fit grid-cols-4 gap-1 rounded-xl bg-gray-50 p-2" onMouseLeave={() => setHover(null)}>
-              {Array.from({ length: 16 }).map((_, i) => {
-                const c = (i % 4) + 1
-                const r = Math.floor(i / 4) + 1
-                const target = hover ?? { c: f.komaCols, r: f.komaRows }
-                const on = c <= target.c && r <= target.r
-                return (
-                  <motion.button
-                    type="button"
-                    key={i}
-                    aria-label={`${c}×${r}小間`}
-                    onMouseEnter={() => setHover({ c, r })}
-                    onClick={() => {
-                      set('komaCols', c)
-                      set('komaRows', r)
-                    }}
-                    animate={{ backgroundColor: on ? ds.blue : ds.paper, scale: on ? 1 : 0.92 }}
-                    transition={{ duration: 0.15 }}
-                    className="h-8 w-8 rounded-md border border-gray-200"
-                  />
-                )
-              })}
-            </div>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            {/* 横と奥行を m で入れる（2026-10-26 ユーザー指示）。3D と面の数・大きさはこの値で決まる */}
+            <BoothSizeInput widthM={size.w} depthM={size.d} onChange={(w, d) => setF((p) => withBoothSize(p, w, d))} onValidChange={onSizeValid} />
             <p className="font-mono text-[11px] text-gray-500">
-              {komas}小間 / {size.w}m × {size.d}m
+              {(size.w * size.d).toLocaleString()}㎡ / 小間料は{size.komas}小間分で計算
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -195,9 +182,9 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
 
         <div className="flex flex-col gap-3 rounded-[var(--r-sm)] bg-doya-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-bold leading-relaxed text-doya-700">
-            想定来場 <span className="font-mono text-sm">{expectedVisitors(f).toLocaleString()}</span> 人（{f.days}日間）をもとに、制作物とノベルティの数量を計算します。
+            小間の大きさと{f.days}日間の会期をもとに、制作物とノベルティの数量の目安を出します。
           </p>
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" disabled={!hydrated} className="group inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-60">
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" disabled={!hydrated || !sizeOk} className="group inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-60">
             展示会の準備を一括作成
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </motion.button>
