@@ -143,5 +143,8 @@ test('成果物の記録: 3件まで・同じものは先頭へ・表示名は�
   assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - ARTIFACT_FRESH_MS - 1 }], 'quote', now), null)
   assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - 1000 }], 'quote', now)?.id, id(1))
   assert.equal(slideProjectPath(id(1)), `/doyaslide/${id(1)}?generate=1`)
+  // 同じ見積書から前に作った資料を開くときは、自動で生成しない（?generate=1 を付けない）
+  assert.equal(slideProjectPath(id(1), false), `/doyaslide/${id(1)}`)
+  assert.equal(slideProjectPath('//evil.example', false), null)
   for (const bad of ['//evil.example', 'https://evil.example', '/\\evil', 'javascript:alert(1)', 123, null]) assert.equal(slideProjectPath(bad), null)
 })

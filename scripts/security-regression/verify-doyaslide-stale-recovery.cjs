@@ -151,6 +151,8 @@ function addReceipt(projectId, minutesAgo) {
     const list = read('src/app/api/doyaslide/projects/route.ts');
     assert.match(list, /filter\(\(row\) => isDoyaSlideStaleCandidate\(row\)\)/);
     assert.match(list, /settleStaleDoyaSlideProject\(userId, row\.id\)/);
+    assert.match(list, /isDoyaSlideStaleCandidate\(row\)\)\.slice\(0, 5\)/, 'at most 5 per read');
+    assert.doesNotMatch(list, /Promise\.all\(stale/, 'settle one at a time');
     const detail = read('src/app/api/doyaslide/projects/[id]/route.ts');
     assert.match(detail, /settleStaleDoyaSlideProject\(userId, project\.id\)/);
     const page = read('src/app/(shell)/doyaslide/projects/page.tsx');
@@ -159,7 +161,12 @@ function addReceipt(projectId, minutesAgo) {
     const editor = read('src/app/(shell)/doyaslide/[id]/page.tsx');
     assert.match(editor, /if \(p\.status === 'draft' && p\.slides\.length === 0\) void retryStructure\(\)/);
     const suggest = read('src/components/notice/HandoffSuggest.tsx');
-    assert.match(suggest, /res\.status === 201 \|\| res\.status === 200/);
+    // 同じ見積書の資料（200）を開くときは ?generate=1 を付けない（構成のある資料で絵の生成が自動で始まり、月の枠を使うため）
+    assert.match(suggest, /res\.status === 201 \? slideProjectPath\(data\?\.projectId\) : res\.status === 200 \? slideProjectPath\(data\?\.projectId, false\)/);
+    const artifacts = load('src/lib/notice/artifacts.ts');
+    const id = 'c' + 'a'.repeat(24);
+    assert.equal(artifacts.slideProjectPath(id), `/doyaslide/${id}?generate=1`);
+    assert.equal(artifacts.slideProjectPath(id, false), `/doyaslide/${id}`);
   });
 
   await check('/home/roles: the tab title is the 404 title when the flag is off, without reading the session', async () => {
