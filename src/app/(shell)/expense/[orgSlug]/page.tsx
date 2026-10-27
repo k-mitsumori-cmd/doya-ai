@@ -7,7 +7,8 @@ import { useExpenseQuery } from '@/components/expense/api'
 import type { ForecastMatrix, Schedule } from '@/components/expense/types'
 import CashBars from '@/components/expense/CashBars'
 import { Button as DsButton, StatTile } from '@/components/ds'
-import { ExpenseHero, MonthDonut, YenCount } from '@/components/expense/next'
+import { ExpenseHero, MonthDonut, PaymentProgress, YenCount } from '@/components/expense/next'
+import { InfoPanel } from '@/components/ds/infographic'
 import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone, useExpenseOrg } from '@/components/expense/ui'
 
 interface ActionItem { kind: string; scheduleId: string; title: string; dueOn: string; amount: number; detail: string }
@@ -72,6 +73,8 @@ export default function DashboardPage() {
         <Kpi count={true} label="SaaS 合計" value={s.kpi.saasMonthly} sub={`${s.kpi.saasCount} サービス`} />
       </div>
 
+      {s.kpi.thisMonthCount > 0 && <div className="mt-4"><PaymentProgress kpi={s.kpi} /></div>}
+
       <Card className="mt-4">
         <h2 className="mb-3 flex items-center gap-2 text-[18px] font-bold text-[var(--ink)]">
           <AlertTriangle className="h-4 w-4 text-[var(--note-ink)]" />
@@ -101,16 +104,17 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      <Card className="mt-4">
-        <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">12か月の出金（カテゴリ別）</h2>
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mt-4">
+        <InfoPanel title="12か月の出金（カテゴリ別）" meta="確定と見込み">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="min-w-0"><CashBars cash={s.cash} /></div>
             <div className="min-w-0">
-              <p className="mb-2 text-[13px] font-medium text-[var(--sub)]">今月の内訳</p>
+              <p className="mb-2 text-[14px] font-bold text-[var(--ink)]">今月の内訳</p>
               <MonthDonut cash={s.cash} month={s.month} />
             </div>
           </div>
-      </Card>
+        </InfoPanel>
+      </div>
 
       <Card className="mt-4">
         <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">今後14日の支払</h2>

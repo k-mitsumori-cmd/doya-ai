@@ -48,8 +48,9 @@ export function addMonths(ym: string, n: number) {
 export const isYm = (v: string | null | undefined): v is string => !!v && /^\d{4}-(0[1-9]|1[0-2])$/.test(v)
 
 // ---------- 見た目 ----------
+// 入れた字は 600 の太さ・16px。金額（type=number）は 18px の太字で桁をそろえる（2026-10-27 ユーザー「入力するときのフォントが細い」）
 export const inputCls =
-  'w-full rounded-[var(--r-sm)] border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-2 min-h-[44px] text-[15px] font-medium text-[var(--ink)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/20 disabled:bg-[var(--bg)] disabled:text-[var(--muted)]'
+  'w-full rounded-[var(--r-sm)] border-[1.5px] border-[var(--line-strong)] bg-[var(--paper)] px-3 py-2 min-h-[48px] text-[16px] font-semibold text-[var(--ink)] outline-none transition-[border-color,box-shadow] placeholder:font-medium placeholder:text-[var(--muted)] hover:border-[var(--blue-line)] focus:border-[var(--blue)] focus:shadow-[0_0_0_4px_var(--blue-soft)] disabled:bg-[var(--bg)] disabled:text-[var(--muted)] [&[type=number]]:text-[18px] [&[type=number]]:font-bold [&[type=number]]:tabular-nums'
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <DsCard className={className}>{children}</DsCard>
@@ -135,9 +136,9 @@ export const tdCls =
 export function Field({ label, hint, children, className = '' }: { label: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1 block text-[13px] font-medium text-[var(--sub)]">{label}</span>
+      <span className="mb-1.5 block text-[14px] font-bold text-[var(--ink)]">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] font-bold text-[var(--muted)]">{hint}</span>}
+      {hint && <span className="mt-1 block text-[12px] font-bold text-[var(--sub)]">{hint}</span>}
     </label>
   )
 }

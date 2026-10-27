@@ -19,19 +19,28 @@
 
 /* ---- StatTile ---- */
 .stat {
+  position: relative; overflow: hidden;
   display: grid; gap: 4px; padding: 20px 24px;
-  background: var(--paper); border: 1px solid var(--line); border-radius: var(--r);
+  /* インフォグラフィックの見せ方: 右上の淡い光と、上の帯のグラデーション（2026-10-27） */
+  background: radial-gradient(120% 90% at 100% 0%, var(--blue-soft), transparent 55%), var(--paper);
+  border: 1px solid var(--line); border-radius: var(--r);
   color: var(--ink); text-decoration: none; min-width: 0;
   transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
+.stat::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
+  background: linear-gradient(90deg, var(--blue), var(--sky));
+}
+.stat[data-muted='true']::before { background: var(--line-strong); }
 a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .statIcon {
-  width: 32px; height: 32px; border-radius: 10px; margin-bottom: 8px;
+  width: 36px; height: 36px; border-radius: 12px; margin-bottom: 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--blue-soft); color: var(--blue);
+  background: linear-gradient(135deg, var(--blue), var(--sky)); color: var(--paper);
+  box-shadow: 0 6px 14px -6px var(--blue);
 }
-.statLabel { font-size: 13px; line-height: 1.5; font-weight: 500; color: var(--sub); }
-.statValue { font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.statLabel { font-size: 14px; line-height: 1.5; font-weight: 700; color: var(--sub); }
+.statValue { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .statUnit { font-size: 14px; font-weight: 700; margin-left: 2px; color: var(--sub); }
 .statSub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stat[data-muted='true'] .statValue { color: var(--muted); }
