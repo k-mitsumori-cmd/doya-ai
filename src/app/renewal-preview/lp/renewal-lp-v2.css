@@ -366,11 +366,11 @@
 }
 .v-hero-title {
   margin-top: 24px !important;
-  font-size: 84px;
-  line-height: 1.1;
+  font-size: 64px;
+  line-height: 1.12;
   font-weight: 800;
   letter-spacing: -0.02em;
-  max-width: 820px;
+  max-width: 680px;
   text-shadow: 0 4px 32px rgba(5, 11, 36, 0.45);
 }
 .v-hero-title > span {
@@ -1366,7 +1366,7 @@
     display: inline-block;
   }
   .v-hero-title {
-    font-size: 64px;
+    font-size: 56px;
   }
   .v-story-grid {
     grid-template-columns: 1fr;
@@ -1389,7 +1389,7 @@
     display: none;
   }
   .v-hero {
-    min-height: 100svh;
+    min-height: calc(100svh + 200px);
     justify-content: flex-end;
     padding: 96px 16px 32px;
   }
@@ -1413,8 +1413,7 @@
     line-height: 1.22;
   }
   .v-hero-sub {
-    margin-top: 16px !important;
-    font-size: 15px;
+    display: none;
   }
   .v-hero-cta {
     margin-top: 24px;
