@@ -24,6 +24,9 @@
 .label { text-wrap: balance; text-align: center; }
 .extra { display: inline-flex; flex: 0 0 auto; }
 .scope { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ob-sub); text-wrap: pretty; }
+/* 「このツールでできること」の1行（知らせのカードの代わり）。長いときは2行まで */
+.intro { margin: 0; font-size: 12px; line-height: 1.6; color: var(--ob-sub); text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.introLabel { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 99px; background: color-mix(in srgb, currentColor 10%, transparent); font-weight: 700; }
 .progress { display: flex; align-items: center; gap: 10px; }
 .track { flex: 1; height: 8px; border-radius: 99px; background: var(--ob-line); overflow: hidden; }
 .fill { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ob-blue), var(--ob-cyan)); transition: width .4s ease; }
@@ -34,7 +37,7 @@
   .bar { grid-template-columns: 56px minmax(0, 1fr); gap: 10px 12px; padding: 14px; }
   .kun { width: 56px; height: 56px; grid-row: span 2; align-self: center; }
   .cta { font-size: 16px; }
-  .button, .progress, .scope { grid-column: 1 / -1; }
+  .button, .progress, .scope, .intro { grid-column: 1 / -1; }
   .main { display: contents; }
   .eyebrow, .cta { grid-column: 2; }
   .button { font-size: 16px; min-height: 52px; }

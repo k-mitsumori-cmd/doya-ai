@@ -129,7 +129,7 @@ export default function ShellNotices() {
     }
     const features = service?.features?.slice(0, 3) ?? []
     if (!features.length) return
-    push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, paced: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
+    push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, paced: true, hideWithBand: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
   }, [enabled, pathname, push])
 
   // (18) ドヤパワーの残りが2割以下（その月に1回）

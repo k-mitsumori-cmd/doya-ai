@@ -63,6 +63,11 @@ export interface Notice extends NoticePage {
    * 2026-10-27 統括の本番の確認（画面を移るたびに、そのツールの知らせが出ていた）
    */
   paced?: boolean
+  /**
+   * 「これ1つで全部進む」帯がある画面では出さない知らせ（ツールの「できること」）。帯の下に1行で同じ中身を出すため。
+   * 見たことにはしない（帯の無い画面では、今までどおりカードで出る）
+   */
+  hideWithBand?: boolean
   /** 何枚かを順に見せる（ようこそなど）。あれば title などより先に使う */
   pages?: NoticePage[]
   primary?: NoticeAction
@@ -114,6 +119,12 @@ export function showNextNotice(s: NoticeQueueState, busy: boolean, pacedUsedToda
   const [head, ...rest] = queue
   if (busy && head.kind !== 'error') return queue === s.queue ? s : { current: null, queue, held }
   return { current: head, queue: rest, held }
+}
+
+/** 帯がある画面では、列から hideWithBand の知らせを外す（表示中のものは触らない） */
+export function dropBandNotices(s: NoticeQueueState, bandOn: boolean): NoticeQueueState {
+  if (!bandOn || !s.queue.some((q) => q.hideWithBand)) return s
+  return { ...s, queue: s.queue.filter((q) => !q.hideWithBand) }
 }
 
 /** 「お知らせ」から1つ開く（本人が選んだので、1日1つの決まりは当てない）。表示中があれば、それは列に戻す */
