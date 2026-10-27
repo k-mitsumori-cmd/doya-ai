@@ -156,8 +156,8 @@ export default function ShodanNewPage() {
           label={retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
           scope="企業サイトなどを調べ、課題の仮説と提案資料までまとめてつくります。30秒から2分ほどかかります。"
           onRun={run}
-          disabled={unknown || Boolean(limitMessage)}
-          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : '今月の上限に達しています。'}
+          disabled={unknown || Boolean(limitMessage) || !url.trim()}
+          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : limitMessage ? '今月の上限に達しています。' : '商談先のURLを入れると押せます。'}
           running={phase === 'researching'}
         />
       )}

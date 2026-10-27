@@ -162,7 +162,8 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
       <ToolHero
         title="今日の営業状況を、ひと目で。"
         lead={doya.message}
-        action={<Button href={`${base}/deals`} icon="Kanban">商談パイプラインを開く</Button>}
+        // 帯（これ1つで全部進む）が同じボタンを出すときは、ここには出さない（同じボタンが2つ並ばないように）
+        action={oneButton ? undefined : <Button href={`${base}/deals`} icon="Kanban">商談パイプラインを開く</Button>}
         tool="sfa"
         artAlt=""
       />
