@@ -28,6 +28,8 @@ import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
 import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import { ShellCostBadge } from '@/components/shell/power'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -862,6 +864,7 @@ function BannerDashboardWorkspace() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   // const [showCoach, setShowCoach] = useState(false) // removed
   
+  const oneButton = useOneButton()
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
   const [generatedSpec, setGeneratedSpec] = useState<{ category: string; size: string } | null>(null)
@@ -1660,6 +1663,19 @@ function BannerDashboardWorkspace() {
             Main Content
             ======================================== */}
         {/* UI崩れ対策：左カラム固定幅だと日本語が1文字改行しやすいので、元の比率（右=固定）に戻す */}
+        {oneButton && (
+          <OneButtonBar
+            eyebrow="バナー作成"
+            cta={isGenerating ? 'バナーをつくっています。このまま待ってね' : '用途とキーワードを入れたら、押してね'}
+            label="プロ品質バナーを生成する"
+            scope="入力した内容から、バナーを3案つくります。つくったあとの手直しは、下の結果から行えます。"
+            onRun={handleGenerate}
+            disabled={isGenerating || quota.checking || !canGenerate}
+            disabledReason="用途とキーワードを入れると押せます。"
+            running={isGenerating}
+            progress={{ done: Math.round(progress), total: 100 }}
+          />
+        )}
         <div className={nextStyles.createHero}>
             <ToolHero
               title="入力するだけで、プロ品質のバナーを3案。"
