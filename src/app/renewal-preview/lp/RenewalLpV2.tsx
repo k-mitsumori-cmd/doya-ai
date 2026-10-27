@@ -799,21 +799,27 @@ function Footer() {
 function MobileCta() {
   const [show, setShow] = useState(false);
   useEffect(() => {
-    const s = document.getElementById("v-hero-end");
-    const f = document.querySelector(".v-final");
-    if (!s) return;
-    let pastHero = false;
-    let atFinal = false;
-    const io = new IntersectionObserver((es) => {
-      for (const e of es) {
-        if (e.target === s) pastHero = !e.isIntersecting && e.boundingClientRect.top < 0;
-        else atFinal = e.isIntersecting;
-      }
-      setShow(pastHero && !atFinal);
-    });
-    io.observe(s);
-    if (f) io.observe(f);
-    return () => io.disconnect();
+    // 位置はスクロールのたびに測る（交差の通知だけだと、上に戻ったときに古い値が残るため）
+    let raf = 0;
+    const on = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const end = document.getElementById("v-hero-end");
+        const fin = document.querySelector(".v-final");
+        if (!end) return;
+        const pastHero = end.getBoundingClientRect().top < 0;
+        const atFinal = fin ? fin.getBoundingClientRect().top < window.innerHeight : false;
+        setShow(pastHero && !atFinal);
+      });
+    };
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    window.addEventListener("resize", on);
+    return () => {
+      window.removeEventListener("scroll", on);
+      window.removeEventListener("resize", on);
+      cancelAnimationFrame(raf);
+    };
   }, []);
   return (
     <div className={`v-mcta ${show ? "is-shown" : ""}`} aria-hidden={!show}>

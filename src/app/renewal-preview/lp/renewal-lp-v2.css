@@ -1420,7 +1420,7 @@
     object-position: 50% 0%;
   }
   .v-hero-shade {
-    background: linear-gradient(0deg, var(--bg) 0%, rgba(5, 11, 36, 0.85) 35%, rgba(5, 11, 36, 0.2) 65%, rgba(5, 11, 36, 0.35) 100%);
+    background: linear-gradient(0deg, var(--bg) 0%, rgba(5, 11, 36, 0.92) 46%, rgba(5, 11, 36, 0.4) 68%, rgba(5, 11, 36, 0.3) 100%);
   }
   .v-eyebrow {
     font-size: 12px;
