@@ -1305,7 +1305,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 120px 24px;
+  padding: 64px 24px;
   text-align: center;
 }
 .v-final-bg {
@@ -1328,14 +1328,14 @@
   max-width: 820px;
 }
 .v-final h2 {
-  font-size: 64px;
+  font-size: 52px;
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: -0.015em;
   text-shadow: 0 6px 40px rgba(5, 11, 36, 0.7);
 }
 .v-final p {
-  margin: 16px 0 36px;
+  margin: 10px 0 22px;
   font-size: 18px;
   text-shadow: 0 2px 16px rgba(5, 11, 36, 0.7);
 }
@@ -1584,13 +1584,13 @@
   }
   .v-final {
     min-height: 860px;
-    padding: 72px 16px;
+    padding: 48px 16px;
   }
   .v-final-bg img {
     object-position: 50% 70%;
   }
   .v-final h2 {
-    font-size: 32px;
+    font-size: 28px;
   }
   .v-final p {
     font-size: 16px;
