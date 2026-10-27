@@ -103,6 +103,19 @@ function CountUp({ to, run }: { to: number; run: boolean }) {
   return <>{n.toLocaleString("ja-JP")}</>;
 }
 
+/** 絵の上に重ねる背景の動画。読み込めたら出す。動きを減らす設定では出さない。幅で縦横の動画を選ぶ。 */
+function BgVideo({ desktop, mobile, className = "" }: { desktop: string; mobile?: string; className?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const narrow = matchMedia("(max-width: 767px)").matches;
+    setSrc(narrow && mobile ? mobile : desktop);
+  }, [desktop, mobile]);
+  if (!src) return null;
+  return <video className={`v-bgvideo ${ready ? "is-ready" : ""} ${className}`} src={src} autoPlay muted loop playsInline preload="auto" aria-hidden="true" onCanPlay={() => setReady(true)} />;
+}
+
 /* ---------- データ ---------- */
 
 type DeptId = "marketing" | "sales" | "hr" | "admin";
@@ -256,6 +269,7 @@ function Hero({ toolCount, proPrice }: { toolCount: number; proPrice: string }) 
       <div className="v-hero-bg" aria-hidden="true">
         <Image className="v-hero-img-d" src="/renewal-lp/scene-hero.webp" alt="" fill priority sizes="100vw" />
         <Image className="v-hero-img-m" src="/renewal-lp/scene-hero-portrait.webp" alt="" fill priority sizes="100vw" />
+        <BgVideo desktop="/renewal-lp/video/lp-hero-desktop.mp4" mobile="/renewal-lp/video/lp-hero-mobile.mp4" />
       </div>
       <div className="v-hero-shade" aria-hidden="true" />
       <div className="v-hero-inner">
@@ -742,6 +756,7 @@ function FinalCta() {
     <section className="v-final" aria-labelledby="v-final-h">
       <div className="v-final-bg" aria-hidden="true">
         <Image src="/renewal-lp/scene-finale.webp" alt="" fill sizes="100vw" />
+        <BgVideo desktop="/renewal-lp/video/lp-finale.mp4" />
       </div>
       <div className="v-final-shade" aria-hidden="true" />
       <div className="v-final-inner">

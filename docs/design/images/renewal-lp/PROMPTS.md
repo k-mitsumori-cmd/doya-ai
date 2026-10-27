@@ -71,3 +71,34 @@ Scene style for both: high-end anime film background art (painterly, luminous, v
 
 Save both files and then list the raw2/ folder.
 ```
+
+## スマホのファーストビューの縦の絵（2026-10-27 11:00）
+
+- `public/renewal-lp/scene-hero-portrait.webp`（1024×1536）。横の `scene-hero` を、スマホ用に縦に描き直した。作り方は上と同じ（Codex の内蔵の画像生成、定額）。採用した版: 1回目。
+
+```
+Use your built-in image generation tool (not any API key, not a script, no network calls) to generate 1 image and save it as a PNG file named raw2/scene-hero-portrait.png. PORTRAIT 2:3, 1024x1536.
+
+Recreate the attached landscape key visual ref-scene-hero.png as a vertical smartphone version, in exactly the same art style, colors, lighting and character design (Doya-kun the polar bear with blue visor goggles and the white </> hoodie, bold navy comic outlines, standing on a glass skyscraper rooftop, pointing up, holding a checklist tablet, four glowing floating panels in cyan, hot pink, yellow and violet with simple white line icons: megaphone, briefcase, group of people, calculator; anime-film sunset sky with towering clouds; city skyline in haze).
+Composition for portrait: Doya-kun and the four panels in the UPPER 55 percent of the frame (bear centered slightly right, about 38 percent of the frame height). The LOWER 45 percent is the city skyline fading into deep blue haze and darker sky tones, calm and uncluttered, because headline text will be placed over it.
+ABSOLUTELY NO text, letters, numerals, words, logos or watermarks anywhere (the </> symbol on the hoodie is allowed).
+Save the file and then list the raw2/ folder.
+```
+
+## 背景の動画（MiniMax H3、2026-10-27 11:20）
+
+| ファイル | 元 | 中身 |
+|---|---|---|
+| `public/renewal-lp/video/lp-hero-desktop.mp4` | `scene-hero` を最初の1コマに | ファーストビュー（横） |
+| `public/renewal-lp/video/lp-hero-mobile.mp4` | `scene-hero-portrait` を最初の1コマに | ファーストビュー（縦、スマホ） |
+| `public/renewal-lp/video/lp-finale.mp4` | `scene-finale` を最初の1コマに | 最後の CTA |
+
+- モデル: MiniMax 公式 API の `MiniMax-H3`、768P、10秒、音なし。本人の承認（2026-10-27、このセッションで直接。最大6回・合計 $6.80 まで）のあとに作った。
+- 呼んだ回数: 3回（作り直しなし）。task_id は hero-desktop 456755481543220、hero-mobile 456760234779136、finale 456758339736052。
+- 見込みの額: 1回 $0.84（$0.08×10秒＋入力の画像 $0.04 を念のため足した値）×3回＝$2.52。実際の請求額は MiniMax の管理画面で確かめる。
+- 呼び出しの台本: `~/Code/sandbox/doya-lp-video/minimax-video.mjs`（既定は dry-run。`jobs/<id>/job.json` があれば作成を二度と呼ばない）。鍵は `~/.config/carryme/minimax.env` から読み、値は書き出していない。
+- LP 用の加工: 10秒の動画を前に再生してから逆に戻す往復にして（20秒）、つなぎ目を無くした。H.264、CRF 27、faststart。
+- プロンプト（英語、最初の1コマの絵と一緒に送った）:
+  - hero-desktop: Slow cinematic camera push-in. The clouds drift gently, sunset light rays shimmer, the four glowing floating panels bob softly and their light ribbons flow across the sky. The polar bear mascot keeps his pose with a subtle breathing motion and a small confident nod. City lights twinkle in the haze. Smooth, calm, loopable motion. No text.
+  - hero-mobile: Slow cinematic camera push-in on a vertical frame. The clouds drift gently, light rays shimmer, the four glowing floating panels bob softly and trail light ribbons. The polar bear mascot keeps his pose with a subtle breathing motion. City lights twinkle below. Smooth, calm, loopable motion. No text.
+  - finale: Colorful fireworks keep bursting and fading in the sky at the edges of the frame, sparkles fall slowly, the light ribbons swirl around the jumping polar bear mascot who floats gently up and down in mid-air with joy. City lights glow below. Smooth, festive, loopable motion. No text.

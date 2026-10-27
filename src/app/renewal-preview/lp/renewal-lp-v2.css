@@ -332,6 +332,22 @@
 .v-hero-bg .v-hero-img-m {
   display: none;
 }
+.v-bgvideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 65% 50%;
+  opacity: 0;
+  transition: opacity 1.2s var(--e2);
+}
+.v-bgvideo.is-ready {
+  opacity: 1;
+}
+.v-final-bg .v-bgvideo {
+  object-position: 50% 60%;
+}
 @keyframes v-kenburns {
   from {
     transform: scale(1.02) translate3d(0, 0, 0);
@@ -1398,6 +1414,9 @@
   }
   .v-hero-bg .v-hero-img-m {
     display: block;
+    object-position: 50% 0%;
+  }
+  .v-hero-bg .v-bgvideo {
     object-position: 50% 0%;
   }
   .v-hero-shade {
