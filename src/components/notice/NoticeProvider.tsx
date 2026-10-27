@@ -305,7 +305,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
         {current && p ? (
           <>
             <div className={styles.scrim} data-variant="notice" data-open={open ? 'true' : undefined} onClick={() => close(false)} aria-hidden="true" />
-            <div ref={sheetRef} className={styles.sheet} data-variant="notice" data-open={open ? 'true' : undefined} data-tone={current.tone} role="dialog" aria-modal="false" aria-labelledby="doya-notice-title" onPointerDown={onPointerDown}>
+            <div ref={sheetRef} className={styles.sheet} data-variant="notice" data-open={open ? 'true' : undefined} data-tone={current.tone} data-kind={current.kind} role="dialog" aria-modal="false" aria-labelledby="doya-notice-title" onPointerDown={onPointerDown}>
               <span className={styles.handle} aria-hidden="true" />
               <div className={styles.head} data-mascot={fx.mascot && p.pose ? 'on' : 'off'}>
                 {fx.mascot && p.pose ? <img src={`/character/${p.pose}-256.webp`} alt="" width={72} height={72} className={styles.kun} /> : null}
