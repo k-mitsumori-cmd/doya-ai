@@ -713,7 +713,7 @@ function EditorInner() {
               : allDone ? '全スライドを1つの PDF にします。ZIP は、上のボタンから書き出せます。'
               : 'まだ絵の無いスライドを、まとめて作ります。できたものから下に並びます。'}
             onRun={total === 0 ? () => void retryStructure() : allDone ? () => void exportAs('pdf') : () => void runGenerate()}
-            disabled={total === 0 ? structuring : allDone ? exporting !== null : (busySlide !== null || operation.blocked)}
+            disabled={total === 0 ? structuring : allDone ? exporting !== null : (generating || busySlide !== null || operation.blocked)}
             running={total === 0 ? structuring : generating}
             progress={generating && total > 0 ? { done: doneCount, total } : undefined}
             pose={allDone ? 'success' : undefined}
