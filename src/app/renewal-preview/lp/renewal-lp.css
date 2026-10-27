@@ -484,7 +484,7 @@
 }
 .rlp-hero-bear {
   position: absolute;
-  right: -24px;
+  right: -64px;
   bottom: -16px;
   width: 210px;
   height: auto;
@@ -531,7 +531,7 @@
 .rlp-console {
   position: relative;
   z-index: 2;
-  width: min(400px, 100%);
+  width: min(400px, calc(100% - 150px));
   padding: 24px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.82);
@@ -640,9 +640,8 @@
   padding: 10px 12px;
   border-radius: 14px;
   background: #f7f9fe;
-  opacity: 0;
-  transform: translateY(10px);
-  filter: blur(4px);
+  opacity: 0.32;
+  filter: grayscale(1) blur(2px);
   transition: opacity 0.6s var(--e2), transform 0.8s var(--e), filter 0.6s var(--e2), background 0.3s var(--e2);
   transition-delay: calc(var(--i) * 80ms);
   overflow: hidden;
@@ -980,21 +979,7 @@
   overflow: hidden;
   transition: transform 0.5s var(--e), box-shadow 0.5s var(--e);
 }
-.rlp-dept article::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 168px;
-  background: var(--dg);
-  opacity: 0.95;
-}
-.rlp-dept article::after {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 168px;
-  background: radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.45), transparent 50%), radial-gradient(circle at 10% 120%, rgba(255, 255, 255, 0.25), transparent 45%);
-}
+
 .rlp-dept article:hover {
   transform: translateY(-4px);
   box-shadow: 0 0 0 1px var(--line), 0 32px 56px -28px var(--dc);
@@ -1005,8 +990,11 @@
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
-  min-height: 144px;
+  margin: -24px -24px 0;
+  padding: 24px;
+  min-height: 168px;
   color: #fff;
+  background: radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.45), transparent 50%), radial-gradient(circle at 10% 120%, rgba(255, 255, 255, 0.25), transparent 45%), var(--dg);
 }
 .rlp-dept article[data-dept="hr"] .rlp-dept-top {
   color: var(--ink);
@@ -1820,9 +1808,10 @@
   .rlp-dept article {
     padding: 20px 16px;
   }
-  .rlp-dept article::before,
-  .rlp-dept article::after {
-    height: 156px;
+  .rlp-dept-top {
+    margin: -20px -16px 0;
+    padding: 20px 16px;
+    min-height: 0;
   }
   .rlp-dept h3 {
     font-size: 22px;
