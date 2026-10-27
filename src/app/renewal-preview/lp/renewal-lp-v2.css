@@ -329,6 +329,9 @@
   object-fit: cover;
   object-position: 65% 50%;
 }
+.v-hero-bg .v-hero-img-m {
+  display: none;
+}
 @keyframes v-kenburns {
   from {
     transform: scale(1.02) translate3d(0, 0, 0);
@@ -1390,8 +1393,12 @@
     justify-content: flex-end;
     padding: 96px 16px 32px;
   }
-  .v-hero-bg img {
-    object-position: 74% 40%;
+  .v-hero-bg .v-hero-img-d {
+    display: none;
+  }
+  .v-hero-bg .v-hero-img-m {
+    display: block;
+    object-position: 50% 0%;
   }
   .v-hero-shade {
     background: linear-gradient(0deg, var(--bg) 0%, rgba(5, 11, 36, 0.85) 35%, rgba(5, 11, 36, 0.2) 65%, rgba(5, 11, 36, 0.35) 100%);

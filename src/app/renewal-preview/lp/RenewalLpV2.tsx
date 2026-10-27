@@ -254,7 +254,8 @@ function Hero({ toolCount, proPrice }: { toolCount: number; proPrice: string }) 
   return (
     <header className="v-hero">
       <div className="v-hero-bg" aria-hidden="true">
-        <Image src="/renewal-lp/scene-hero.webp" alt="" fill priority sizes="100vw" />
+        <Image className="v-hero-img-d" src="/renewal-lp/scene-hero.webp" alt="" fill priority sizes="100vw" />
+        <Image className="v-hero-img-m" src="/renewal-lp/scene-hero-portrait.webp" alt="" fill priority sizes="100vw" />
       </div>
       <div className="v-hero-shade" aria-hidden="true" />
       <div className="v-hero-inner">
