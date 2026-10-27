@@ -126,7 +126,7 @@ const DEPTS: Dept[] = [
     short: "マーケ",
     lead: "記事・バナー・広告画像から、AI検索の対策まで。",
     ask: "今月の記事を3本と、告知のバナーを進めたい",
-    mascot: "/ui-renewal/mascots/seo.webp",
+    mascot: "/renewal-lp/dept-marketing.webp",
     icon: <Megaphone size={20} />,
     tools: [
       { id: "seo", name: "記事作成" },
@@ -146,7 +146,7 @@ const DEPTS: Dept[] = [
     short: "セールス",
     lead: "リスト作りから商談の準備、見積もりまで。",
     ask: "来週の商談5件の準備をまとめて進めたい",
-    mascot: "/ui-renewal/mascots/sfa.webp",
+    mascot: "/renewal-lp/dept-sales.webp",
     icon: <Briefcase size={20} />,
     tools: [
       { id: "sfa", name: "営業管理" },
@@ -163,7 +163,7 @@ const DEPTS: Dept[] = [
     short: "人事",
     lead: "採用の面接から、社内の声と勤怠まで。",
     ask: "今月の面接の質問と評価の表をそろえたい",
-    mascot: "/ui-renewal/mascots/hr.webp",
+    mascot: "/renewal-lp/dept-hr.webp",
     icon: <Users size={20} />,
     tools: [
       { id: "hr", name: "採用・人事" },
@@ -178,7 +178,7 @@ const DEPTS: Dept[] = [
     short: "管理",
     lead: "請求と支払い、プロジェクトの進み具合を1か所に。",
     ask: "今月の請求書をまとめて出したい",
-    mascot: "/ui-renewal/mascots/income.webp",
+    mascot: "/renewal-lp/dept-admin.webp",
     icon: <Calculator size={20} />,
     tools: [
       { id: "income", name: "収入管理", soon: true },
@@ -383,7 +383,7 @@ function Hero({ toolCount }: { toolCount: number }) {
               </span>
             ))}
           </div>
-          <Image className="rlp-hero-bear" src="/renewal/bear-hero.webp" alt="ノートパソコンを持って手を振るドヤくん" width={400} height={400} priority />
+          <Image className="rlp-hero-bear" src="/renewal-lp/hero.webp" alt="やることの一覧を映したタブレットを持ち、前を指さすドヤくん" width={480} height={480} priority />
           <AgentConsole />
         </div>
       </div>
@@ -439,7 +439,7 @@ function Problems() {
           <div className="rlp-problem">
             <div className="rlp-viz rlp-viz-scatter" aria-hidden="true">
               {["seo", "banner", "sfa", "hr", "quote", "doyaslide"].map((id, i) => (
-                <Image key={id} src={`/renewal/icons/${id}.webp`} alt="" width={44} height={44} style={{ "--i": i } as CSSProperties} />
+                <Image key={id} src={`/renewal-lp/tools/${id}.webp`} alt="" width={48} height={48} style={{ "--i": i } as CSSProperties} />
               ))}
             </div>
             <h3>ツールと契約がばらばら</h3>
@@ -500,7 +500,7 @@ function Departments() {
                     <h3>{d.name}</h3>
                     <p>{d.lead}</p>
                   </div>
-                  <Image src={d.mascot} alt="" width={150} height={125} className="rlp-dept-bear" />
+                  <Image src={d.mascot} alt="" width={150} height={150} className="rlp-dept-bear" />
                 </div>
                 <div className="rlp-ask">
                   <span>頼み方の例</span>「{d.ask}」
@@ -674,9 +674,9 @@ function Tagline() {
 function UseCases() {
   const { ref, inView } = useInView<HTMLDivElement>(0.3);
   const cases = [
-    { dept: "marketing" as const, title: "記事を月に4本出す", before: 16, after: 4, unit: "時間/月", note: "構成と下書きは記事作成、図はバナーで作る" },
-    { dept: "sales" as const, title: "商談の準備を5件そろえる", before: 7.5, after: 1.5, unit: "時間/週", note: "相手の調べと資料を商談準備とスライドで作る" },
-    { dept: "hr" as const, title: "面接の質問と評価表を作る", before: 3, after: 0.5, unit: "時間/人", note: "求人の内容から質問と表を面接官で作る" },
+    { dept: "marketing" as const, title: "記事を月に4本出す", ai: ["キーワードから構成を作る", "下書きを書く", "見出しの図をバナーで作る"], human: ["内容を確かめて公開する"] },
+    { dept: "sales" as const, title: "来週の商談5件を準備する", ai: ["相手の会社を調べる", "提案の資料をスライドで作る", "聞くことの一覧を作る"], human: ["資料を直して商談に出る"] },
+    { dept: "hr" as const, title: "面接の質問と評価表を作る", ai: ["求人の内容を読む", "質問を作る", "評価の表を作る"], human: ["面接をして評価をつける"] },
   ];
   return (
     <section className="rlp-section" aria-labelledby="rlp-case-h">
@@ -684,40 +684,35 @@ function UseCases() {
         <Reveal>
           <p className="rlp-kicker">使い方の例</p>
           <h2 id="rlp-case-h" className="rlp-h2">
-            手を動かす時間が、
+            手を動かす作業は、
             <br />
-            ここまで短くなります。
+            ドヤくんが引き受けます。
           </h2>
-          <p className="rlp-note-draft">見本の数字は仮の値です。お客様の実例と社内の計測がそろったら差し替えます。</p>
+          <p className="rlp-lead">人がするのは、決めることと確かめることです。</p>
         </Reveal>
         <div ref={ref} className={`rlp-cases ${inView ? "is-in" : ""}`}>
           {cases.map((c, i) => (
             <div key={c.title} className="rlp-case" data-dept={c.dept} style={{ "--i": i } as CSSProperties}>
               <span className="rlp-case-dept">{DEPTS.find((d) => d.id === c.dept)!.name}</span>
               <h3>{c.title}</h3>
-              <div className="rlp-case-bars">
-                <div>
-                  <em>いま</em>
-                  <span className="rlp-cbar is-before" style={{ "--w": 1 } as CSSProperties}>
-                    <i />
-                  </span>
-                  <b>
-                    {c.before}
-                    {c.unit}
-                  </b>
-                </div>
-                <div>
-                  <em>ドヤAI</em>
-                  <span className="rlp-cbar is-after" style={{ "--w": c.after / c.before } as CSSProperties}>
-                    <i />
-                  </span>
-                  <b>
-                    {c.after}
-                    {c.unit}
-                  </b>
-                </div>
-              </div>
-              <p>{c.note}</p>
+              <p className="rlp-case-label is-ai">ドヤくんがすること</p>
+              <ul className="rlp-case-list is-ai">
+                {c.ai.map((t, j) => (
+                  <li key={t} style={{ "--j": j } as CSSProperties}>
+                    <Check size={14} strokeWidth={3} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+              <p className="rlp-case-label">あなたがすること</p>
+              <ul className="rlp-case-list is-human">
+                {c.human.map((t, j) => (
+                  <li key={t} style={{ "--j": j + c.ai.length } as CSSProperties}>
+                    <Users size={14} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
@@ -839,7 +834,7 @@ function FinalCta() {
         <i className="a3" />
       </div>
       <div className="rlp-final-inner">
-        <Image src="/renewal/bear-success.webp" alt="" width={200} height={200} className="rlp-final-bear" />
+        <Image src="/renewal-lp/cta.webp" alt="" width={200} height={200} className="rlp-final-bear" />
         <h2 id="rlp-final-h">
           まずは1つ、
           <br />
