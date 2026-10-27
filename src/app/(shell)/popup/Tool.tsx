@@ -11,8 +11,6 @@ import type { SiteDto } from '@/lib/popup/dto'
 import { EmptyState, PageHeader, ProcessingSteps, fmt, pct } from '@/components/popup/ui'
 import { useInPopupShell } from '@/components/popup/shell-context'
 import { ToolHero } from '@/components/ds'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { FirstSteps } from '@/components/ds/feedback'
 
 const LOADING_STEPS = ['サイトを読み取っています', '「AIに聞く」の質問文を作っています', 'ポップアップの案をまとめています']
@@ -71,7 +69,6 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)
-  const oneButton = useOneButton()
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
@@ -139,20 +136,6 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
         />
       )}
 
-      {oneButton ? (
-        <div className="mb-6">
-          <OneButtonBar
-            eyebrow="ドヤポップアップ"
-            cta={loading ? 'ポップアップの案を作っています。このまま待ってね' : 'サイトの URL を入れたら、押してね'}
-            label="提案を作る"
-            scope="入れた URL のサイトを読み、ポップアップの下書きを3案作ります。公開するまで、サイトには何も出ません。"
-            onRun={() => void create()}
-            disabled={loading || !urlLooksValid}
-            disabledReason="サイトの URL を入れると押せます。"
-            running={loading}
-          />
-        </div>
-      ) : null}
       <div className="mb-6 space-y-4">
           {/* キービジュアルを 375px でも出す（今までは md 以上だけ）。主ボタンは下の「提案を作る」1つ（UI 品質 H-3・S-22） */}
           <ToolHero

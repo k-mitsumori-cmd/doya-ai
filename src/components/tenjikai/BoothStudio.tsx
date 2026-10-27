@@ -11,8 +11,6 @@ import ImageGenModal from './ImageGenModal'
 import EmptyState from './EmptyState'
 import BoothSizeInput from './BoothSizeInput'
 import { CountUp, Modal, PageHeader } from './ui'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestImages, useImageQuota, type ImageGenFailure } from './useImageGen'
 import { nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
@@ -166,35 +164,15 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const disabled = isImageGenDisabled(quota)
   const failedPanels = panels.filter((p) => !panelImages[p.id] && faces.some((f) => f.id === p.id && (f.status === 'failed' || f.status === 'skipped')))
   const sizeChanged = sizeDraft.w !== plan.widthM || sizeDraft.d !== plan.depthM
-  // 旗 ONE_BUTTON_ROLLOUT が on の人には、上の帯を「これ1つで全部進む」形にする（ドヤくん＋大きなボタン1つ）
-  const oneButton = useOneButton()
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
-      {oneButton ? (
-        <OneButtonBar
-          eyebrow="ブース設計"
-          cta={allMade ? 'すべての面ができました。書き出して、印刷会社に渡せます' : running ? '面の画像を作っています。このまま待ってね' : 'ブースの形と大きさが決まったら、押してね'}
-          label={allMade ? '書き出す' : running ? `進み具合を見る（${summary.finished}/${summary.total}面）` : `面の画像をまとめて作る（${missing.length}面）`}
-          scope={allMade
-            ? '3Dの完成図・割付表・面の画像を、まとめて書き出します。'
-            : `まだ画像の無い${missing.length}面を、1面ずつ作ります。できた面から3Dの壁に貼られます。${left ? `（${left}）` : ''}`}
-          onRun={allMade ? () => void exportPack(plan, panels, panelImages) : running ? () => setBatchOpen(true) : () => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }}
-          disabled={!allMade && !running && disabled}
-          disabledReason={IMAGEGEN_DISABLED_MESSAGE}
-          running={running}
-          progress={running ? { done: summary.finished, total: summary.total } : undefined}
-          pose={allMade ? 'success' : undefined}
-          extra={!allMade && !running ? <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} /> : undefined}
-        />
-      ) : (
-        <PageHeader title="ブース設計" desc="出展の目的と小間の位置から、3つの設営案を作りました。3Dはドラッグで回せます。面の画像を作ると、3Dの壁面に貼られます。" />
-      )}
+      <PageHeader title="ブース設計" desc="出展の目的と小間の位置から、3つの設営案を作りました。3Dはドラッグで回せます。面の画像を作ると、3Dの壁面に貼られます。" />
 
       <FlowSteps steps={FLOW} current={step} label="ブース設計の進め方" />
 
-      {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品）。上の帯（ONE_BUTTON）が出ているときは、同じボタンが二重になるので出さない */}
-      {oneButton ? null : <NextStepBar
+      {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品） */}
+      <NextStepBar
         state={allMade ? 'done' : running ? 'working' : disabled || summary.failed > 0 ? 'error' : 'empty'}
         text={
           allMade
@@ -221,7 +199,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
           </NextStepAction>
         )}
-      />}
+      />
 
       {/* 確認の画面を閉じたあとも、作れなかった面があれば知らせる */}
       {!running && !batchOpen && summary.failed > 0 && (

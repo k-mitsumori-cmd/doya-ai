@@ -13,8 +13,6 @@ import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { EmptyState, FirstSteps, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -264,7 +262,6 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [additionalInfo, setAdditionalInfo] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
-  const oneButton = useOneButton()
   const [error, setError] = useState('')
   const [errorAction, setErrorAction] = useState<'generate' | 'modify' | null>(null)
   const [quotaNotice, setQuotaNotice] = useState<'text' | 'image' | null>(null)
@@ -919,20 +916,6 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   return (
     <div className="">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        {oneButton ? (
-          <div className="mb-6">
-            <OneButtonBar
-              eyebrow="ドヤペルソナAI"
-              cta={loading ? 'ペルソナを作っています。このまま待ってね' : 'サイトの URL を入れたら、押してね'}
-              label="ペルソナを生成"
-              scope="入れた URL のサイトを読み、人物像と似顔絵を1分ほどで作ります。"
-              onRun={handleGenerate}
-              disabled={loading || !url.trim()}
-              disabledReason="サイトの URL を入れると押せます。"
-              running={loading}
-            />
-          </div>
-        ) : null}
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">

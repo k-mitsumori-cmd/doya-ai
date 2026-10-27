@@ -2,7 +2,7 @@
 
 // ドヤAI質問リンク 作成画面（ログイン後）
 // 流れ: URL → 抽出＋質問リンク2本（数秒〜十数秒）→ バナー3枚を1枚ずつ（1枚1〜2分）
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Link2, Loader2 } from 'lucide-react'
@@ -10,8 +10,6 @@ import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
 import { ToolHero } from '@/components/ds'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
@@ -57,8 +55,6 @@ export default function AskLinkTool() {
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)
-  const oneButton = useOneButton()
-  const formRef = useRef<HTMLFormElement>(null)
   const [error, setError] = useState<string | null>(null)
   // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（0 は通信の失敗）
   const [errStatus, setErrStatus] = useState<number | null>(null)
@@ -116,20 +112,6 @@ export default function AskLinkTool() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-      {oneButton ? (
-        <div className="mb-6">
-          <OneButtonBar
-            eyebrow="ドヤAI質問リンク"
-            cta={loading ? 'リンクとバナーを作っています。このまま待ってね' : '自社サイトの URL を入れたら、押してね'}
-            label="作成する"
-            scope="入れた URL から、ChatGPT に質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
-            onRun={() => formRef.current?.requestSubmit()}
-            disabled={loading || !url.trim() || (needManual && manualText.trim().length < 20)}
-            disabledReason={needManual && url.trim() ? 'サイトの文章を20文字以上入れると押せます。' : '自社サイトの URL を入れると押せます。'}
-            running={loading}
-          />
-        </div>
-      ) : null}
       <div className="mb-6">
           <ToolHero
             title={<>サイトのURLから、<wbr />「AIに聞く」リンクを</>}
@@ -140,7 +122,6 @@ export default function AskLinkTool() {
         </div>
 
       <form
-        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           void create()

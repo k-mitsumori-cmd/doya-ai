@@ -32,8 +32,6 @@ import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
 import { ShellCostBadge } from '@/components/shell/power'
 import { seoUserMessage } from '@/components/seo/user-message'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -393,14 +391,6 @@ export default function SeoCreateWizardPage() {
     return true
   }, [step, mainKeyword, audiencePreset, customAudience])
 
-  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す（段階で中身が変わる）
-  const oneButton = useOneButton()
-  const oneButtonCopy = step === 1
-    ? { cta: 'キーワードを入れたら、押してね', label: '次へ', scope: '次の「読者と文体を決める」段階へ進みます。記事はまだ作りません。', off: 'キーワードを2文字以上入れると押せます。' }
-    : step === 2
-      ? { cta: '読者を決めたら、押してね', label: '次へ', scope: '次の「記事の内容を確かめる」段階へ進みます。記事はまだ作りません。', off: '読者を「その他」にしたときは、2文字以上で書くと押せます。' }
-      : { cta: '内容を確かめたら、押してね', label: '記事を生成する', scope: 'ここまでの設定で、SEO記事を1本作ります。作った記事は編集画面で直せます。', off: '' }
-
   async function generateTitleCandidates() {
     if (titleLoading) return
     const kw = mainKeyword.trim()
@@ -570,25 +560,6 @@ export default function SeoCreateWizardPage() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-2xl"
       >
-        {oneButton ? (
-          <div className="mb-4">
-            <OneButtonBar
-              eyebrow="ドヤSEO"
-              cta={loading ? '記事を作っています。このまま待ってね' : oneButtonCopy.cta}
-              label={loading ? '生成中...' : oneButtonCopy.label}
-              scope={oneButtonCopy.scope}
-              onRun={() => {
-                if (step < 3) setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3)
-                else void handleGenerate()
-              }}
-              disabled={!canProceed || loading}
-              disabledReason={oneButtonCopy.off || undefined}
-              running={loading}
-              progress={undefined}
-              extra={step === 3 && !loading ? <ShellCostBadge action="seo.article" /> : undefined}
-            />
-          </div>
-        ) : null}
         <div className="bg-white rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-2xl shadow-blue-500/5 overflow-hidden">
           {/* ヘッダー */}
           <div className="px-6 sm:px-10 pt-8 sm:pt-10 pb-6 text-center border-b border-gray-50 relative">

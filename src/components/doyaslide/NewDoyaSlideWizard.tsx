@@ -29,8 +29,6 @@ import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { ShellCostBadge } from '@/components/shell/power'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { Briefcase, Building2, FileText, Mic, Rocket, Smartphone, Sparkles, Users, type LucideIcon } from 'lucide-react'
 
 // 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
@@ -510,10 +508,6 @@ export default function NewDoyaSlideWizard() {
       ? '本文サンプル'
       : '生成例'
 
-  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す。押せる条件は下の主ボタンと同じ
-  const oneButton = useOneButton()
-  const submitDisabled = busy || creationResultUnknown || (!recoveryProjectId && (Boolean(projectLimitMessage) || usageVerifiedRef.current !== usageContextKey || usageStatus !== 'ready')) || !allowed || loginRequired
-
   return (
     <div className="p-5 lg:p-10 max-w-3xl mx-auto pb-40">
       <Link
@@ -524,19 +518,6 @@ export default function NewDoyaSlideWizard() {
         プロジェクト一覧
       </Link>
       <Heading className="text-2xl font-black text-slate-900 mb-3">スライドを作る</Heading>
-      {oneButton ? (
-        <OneButtonBar
-          eyebrow="ドヤスライド"
-          cta={busy ? '構成を作っています。このまま待ってね' : '資料のタイプとテーマが決まったら、押してね'}
-          label={busy ? '作成しています…' : recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
-          scope="入力した内容から、スライドの構成を作ります。作り終えると、画像を作る画面へ移ります。"
-          onRun={() => void submit()}
-          disabled={submitDisabled}
-          disabledReason={loginRequired || authStatus === 'unauthenticated' ? 'ログインすると押せます。' : '入力内容や利用状況を確認中です。少し待つか、下の案内を確認してください。'}
-          running={busy}
-          extra={<ShellCostBadge action="slide.generate" />}
-        />
-      ) : null}
       {(authStatus === 'unauthenticated' || loginRequired) && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
           <span>スライドを作成するにはログインが必要です。</span>
@@ -920,7 +901,7 @@ export default function NewDoyaSlideWizard() {
           </p>
           <button
             onClick={submit}
-            disabled={submitDisabled}
+            disabled={busy || creationResultUnknown || (!recoveryProjectId && (Boolean(projectLimitMessage) || usageVerifiedRef.current !== usageContextKey || usageStatus !== 'ready')) || !allowed || loginRequired}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>

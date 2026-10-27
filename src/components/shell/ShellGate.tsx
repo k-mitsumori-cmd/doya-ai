@@ -21,7 +21,6 @@ import { DoyaPowerFetchWatcher, ShellLowPowerNotice } from './low-power'
 import { DoyaPowerFxProvider } from '@/components/doya-power/fx-context'
 import type { DoyaPowerFx } from '@/lib/doya-power/fx'
 import NoticeProvider from '@/components/notice/NoticeProvider'
-import { OneButtonContext } from '@/components/one-button/context'
 import ShellNotices from '@/components/notice/ShellNotices'
 import HandoffSuggest from '@/components/notice/HandoffSuggest'
 import SupportChat from '@/components/support-chat/SupportChat'
@@ -29,7 +28,7 @@ import PowerOutNotices from '@/components/notice/PowerOutNotices'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
@@ -37,8 +36,6 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   guide?: boolean
   /** 右下のサポートチャットを出すか（サーバーの isSupportChatEnabled() で決めて渡す。旗 SUPPORT_CHAT_ROLLOUT） */
   supportChat?: boolean
-  /** 「これ1つで全部進む」帯を出すか（旗 ONE_BUTTON_ROLLOUT。サーバーが決める。src/lib/one-button/flag.ts） */
-  oneButton?: boolean
   /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。ログインしている人のときだけ真になる） */
   doyaPower?: boolean
   /** ドヤパワーの残りと減る量の表（旗が出すと決めた人だけ。台帳の表が入るまでは null。src/components/shell/power.tsx） */
@@ -69,7 +66,6 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   const tree = (
       <AccountCompanyContext.Provider value={company}>
       <ShellToolHrefsContext.Provider value={toolHrefs ?? EMPTY}>
-      <OneButtonContext.Provider value={oneButton}>
       <DoyaPowerContext.Provider value={doyaPower}>
       <ShellPowerProvider value={doyaPower ? doyaPowerState : null}>
       <DoyaPowerFxProvider fx={doyaPower ? doyaPowerFx : undefined}>
@@ -84,7 +80,6 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
       {signedIn ? <ShellVitals /> : null}
       </ShellPowerProvider>
       </DoyaPowerContext.Provider>
-      </OneButtonContext.Provider>
       </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
   )

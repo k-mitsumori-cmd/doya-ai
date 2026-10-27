@@ -10,8 +10,6 @@ import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { readOrgProfile } from '@/lib/org-profile-view'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 type Phase = 'input' | 'researching' | 'reveal'
 
@@ -49,7 +47,6 @@ export default function ShodanNewPage() {
   const orgSlug = String(params.orgSlug)
   const router = useRouter()
   const guard = useOrgSettingsGuard(orgSlug)
-  const oneButton = useOneButton()
   const [owner, setOwner] = useState(guard.identity)
   const [unknown, setUnknown] = useState(false)
   const [operationError, setOperationError] = useState('')
@@ -149,18 +146,6 @@ export default function ShodanNewPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
-      {oneButton && phase !== 'reveal' && (
-        <OneButtonBar
-          eyebrow="商談準備"
-          cta={phase === 'researching' ? '企業を調べています。このまま待ってね' : '商談先のURLを入れたら、押してね'}
-          label={retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
-          scope="企業サイトなどを調べ、課題の仮説と提案資料までまとめてつくります。30秒から2分ほどかかります。"
-          onRun={run}
-          disabled={unknown || Boolean(limitMessage)}
-          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : '今月の上限に達しています。'}
-          running={phase === 'researching'}
-        />
-      )}
       <PageHeader icon="rocket_launch" mood="point" title="新規 商談準備" subtitle="商談先企業のURLを入れるだけ。調査→課題仮説→提案資料まで自動で作成します。" />
 
       {operationError && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><p>{operationError}</p>{unknown && <Link className="mt-2 inline-block font-bold underline" href={`/shodan/${encodeURIComponent(orgSlug)}`}>商談準備一覧で作成結果を確認する</Link>}</div>}
