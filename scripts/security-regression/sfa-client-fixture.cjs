@@ -131,6 +131,9 @@ async function fixture(page, options = {}) {
   const globals = { fetch, window, document, sessionStorage: storage, crypto: crypto.webcrypto, AbortController, URL, URLSearchParams, Request, Response, Headers, TextDecoder, Uint8Array, Error, Date, Set, Map, console,
     setTimeout: (fn, ms) => setTimeout(fn, timeout && [30000, 310000].includes(ms) ? 5 : ms), clearTimeout };
   const externals = {
+    // 「これ1つで全部進む」帯は、旗が off と同じ（出さない）として通す（帯そのものは verify-one-button.cjs が確かめる）
+    '@/components/one-button/context': { useOneButton: () => false },
+    '@/components/one-button/OneButtonBar': { OneButtonBar: () => null },
     'framer-motion': { motion: { div: ({ children }) => React.createElement('div', null, children) }, AnimatePresence: ({ children }) => children },
     // アイコンは空の部品。ds の部品は、押せるもの・読めるもの（ボタン・失敗の箱・空の状態・カード）だけを素の要素で描く
     'lucide-react': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
