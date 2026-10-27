@@ -2,7 +2,7 @@
 // ドヤくんの知らせの決まり（順番・作業中・once・旗）の回帰テスト。DB・ネットワーク・画面には触れない。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { EMPTY_QUEUE, allowedAtLevel, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
+import { EMPTY_QUEUE, allowedAtLevel, closeNotice, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
 import { addSeen, parseSeen, seenKey, SEEN_MAX } from './seen'
 import { decideGuidePopups, guidePopupsRollout } from './flag'
 import { activeAnnouncements, newToolIds, type Announcement } from './announcements'
@@ -147,4 +147,50 @@ test('成果物の記録: 3件まで・同じものは先頭へ・表示名は�
   assert.equal(slideProjectPath(id(1), false), `/doyaslide/${id(1)}`)
   assert.equal(slideProjectPath('//evil.example', false), null)
   for (const bad of ['//evil.example', 'https://evil.example', '/\\evil', 'javascript:alert(1)', 123, null]) assert.equal(slideProjectPath(bad), null)
+})
+
+// ---- 1日1つまでに間引く知らせ（2026-10-27 統括の本番の確認） ----
+const paced = (id: string, kind: NoticeKind = 'hint'): Notice => ({ ...n(id, kind, true), paced: true })
+
+test('間引く知らせ: その日にまだ出していなければ、ふつうに出す', () => {
+  const s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, false)
+  assert.equal(s.current?.id, 'tool-intro:a')
+})
+
+test('間引く知らせ: その日に出していたら、出さずに「お知らせ」の列へ移す。ほかの知らせは出す', () => {
+  let s = EMPTY_QUEUE
+  for (const x of [paced('tool-intro:a'), paced('feat:b', 'feature'), n('e', 'error')]) s = enqueueNotice(s, x, none)
+  s = showNextNotice(s, false, true)
+  assert.equal(s.current?.id, 'e')
+  assert.deepEqual((s.held ?? []).map((q) => q.id).sort(), ['feat:b', 'tool-intro:a'])
+  s = showNextNotice(closeNotice(s).state, false, true)
+  assert.equal(s.current, null)
+  assert.equal(s.held?.length, 2)
+})
+
+test('間引く知らせ: 「お知らせ」の列にあるものは、同じ id をもう一度足さない', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, true)
+  s = enqueueNotice(s, paced('tool-intro:a'), none)
+  assert.equal(s.queue.length, 0)
+  assert.equal(s.held?.length, 1)
+})
+
+test('間引く知らせ: 「お知らせ」から開くと、その日に出していても出る', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, true)
+  s = openHeldNotice(s, 'tool-intro:a')
+  assert.equal(s.current?.id, 'tool-intro:a')
+  assert.equal(s.current?.paced, false)
+  assert.equal(s.held?.length, 0)
+  assert.equal(openHeldNotice(s, '').current?.id, 'tool-intro:a')
+})
+
+test('間引く知らせ: 作業中は列に残し、終わってから決まりを当てる', () => {
+  const s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), true, false)
+  assert.equal(s.current, null)
+  assert.equal(s.queue.length, 1)
+})
+
+test('間引く知らせの「日」は日本時間で数える', () => {
+  assert.equal(noticeDay(new Date('2026-10-27T14:59:00Z')), '2026-10-27')
+  assert.equal(noticeDay(new Date('2026-10-27T15:00:00Z')), '2026-10-28')
 })

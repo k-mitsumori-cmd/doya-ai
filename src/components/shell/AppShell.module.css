@@ -105,6 +105,8 @@
 
 /* ログアウトは button なので、リンクと見た目をそろえる */
 .logout { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+/* 「お知らせ」の件数（1日1つの決まりで止めた知らせの数） */
+.noticeCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 8px; padding: 0 6px; border-radius: 99px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; }
 
 .main { min-width: 0; }
 

@@ -54,3 +54,12 @@ export function loadLevelRaw(userKey: string): string | null {
 export function saveLevelRaw(userKey: string, level: string): void {
   try { window.localStorage.setItem(LEVEL_PREFIX + (userKey || 'anon'), level) } catch { /* 保存できなくても、この画面の中では効く */ }
 }
+
+// ---- 1日1つまでに間引く知らせ（paced）を、最後に出した日（日本時間の年月日）。ユーザーごとに端末へ残す ----
+const PACED_PREFIX = 'doya-notice-paced:v1:'
+export function loadPacedDay(userKey: string): string {
+  try { return window.localStorage.getItem(PACED_PREFIX + (userKey || 'anon')) ?? '' } catch { return '' }
+}
+export function savePacedDay(userKey: string, day: string): void {
+  try { window.localStorage.setItem(PACED_PREFIX + (userKey || 'anon'), day) } catch { /* 保存できなくても、この画面の中では効く */ }
+}

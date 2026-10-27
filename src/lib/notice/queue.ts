@@ -58,6 +58,11 @@ export interface Notice extends NoticePage {
   tone?: NoticeTone
   /** 閉じたら二度と出さない */
   once?: boolean
+  /**
+   * 1日1つまでに間引く知らせ（新機能・「〜でできること」）。その日にもう1つ出していたら、出さずに「お知らせ」の列（held）に移す。
+   * 2026-10-27 統括の本番の確認（画面を移るたびに、そのツールの知らせが出ていた）
+   */
+  paced?: boolean
   /** 何枚かを順に見せる（ようこそなど）。あれば title などより先に使う */
   pages?: NoticePage[]
   primary?: NoticeAction
@@ -74,9 +79,11 @@ export interface Notice extends NoticePage {
 export interface NoticeQueueState {
   current: Notice | null
   queue: Notice[]
+  /** 1日1つの決まりで止めた知らせ。メニューの「お知らせ」から開ける */
+  held?: Notice[]
 }
 
-export const EMPTY_QUEUE: NoticeQueueState = { current: null, queue: [] }
+export const EMPTY_QUEUE: NoticeQueueState = { current: null, queue: [], held: [] }
 
 const byRank = (a: Notice, b: Notice) => NOTICE_RANK[a.kind] - NOTICE_RANK[b.kind]
 
@@ -84,19 +91,43 @@ const byRank = (a: Notice, b: Notice) => NOTICE_RANK[a.kind] - NOTICE_RANK[b.kin
 export function enqueueNotice(s: NoticeQueueState, n: Notice, seen: ReadonlySet<string>, level: NoticeLevel = 'normal'): NoticeQueueState {
   if (!allowedAtLevel(n.kind, level)) return s
   if (n.once && seen.has(n.id)) return s
-  if (s.current?.id === n.id || s.queue.some((q) => q.id === n.id)) return s
+  if (s.current?.id === n.id || s.queue.some((q) => q.id === n.id) || s.held?.some((q) => q.id === n.id)) return s
   if (s.current && n.kind === 'error' && s.current.kind !== 'error') {
-    return { current: null, queue: [n, s.current, ...s.queue].sort(byRank) }
+    return { current: null, queue: [n, s.current, ...s.queue].sort(byRank), held: s.held }
   }
-  return { current: s.current, queue: [...s.queue, n].sort(byRank) }
+  return { current: s.current, queue: [...s.queue, n].sort(byRank), held: s.held }
 }
 
-/** 次を出す。表示中があれば何もしない。作業中はエラーだけを出す */
-export function showNextNotice(s: NoticeQueueState, busy: boolean): NoticeQueueState {
+/**
+ * 次を出す。表示中があれば何もしない。作業中はエラーだけを出す。
+ * pacedUsedToday が true なら、paced の知らせは出さずに held へ移す（1日1つまで）
+ */
+export function showNextNotice(s: NoticeQueueState, busy: boolean, pacedUsedToday = false): NoticeQueueState {
   if (s.current || !s.queue.length) return s
-  const [head, ...rest] = s.queue
-  if (busy && head.kind !== 'error') return s
-  return { current: head, queue: rest }
+  let queue = s.queue
+  let held = s.held ?? []
+  if (pacedUsedToday && queue.some((q) => q.paced)) {
+    held = [...held, ...queue.filter((q) => q.paced)]
+    queue = queue.filter((q) => !q.paced)
+    if (!queue.length) return { current: null, queue, held }
+  }
+  const [head, ...rest] = queue
+  if (busy && head.kind !== 'error') return queue === s.queue ? s : { current: null, queue, held }
+  return { current: head, queue: rest, held }
+}
+
+/** 「お知らせ」から1つ開く（本人が選んだので、1日1つの決まりは当てない）。表示中があれば、それは列に戻す */
+export function openHeldNotice(s: NoticeQueueState, id: string): NoticeQueueState {
+  const n = s.held?.find((q) => q.id === id)
+  if (!n) return s
+  const held = (s.held ?? []).filter((q) => q.id !== id)
+  const queue = s.current ? [s.current, ...s.queue].sort(byRank) : s.queue
+  return { current: { ...n, paced: false }, queue, held }
+}
+
+/** 日本時間の年月日（1日1つの決まりの「日」） */
+export function noticeDay(d: Date): string {
+  return new Date(d.getTime() + 9 * 3_600_000).toISOString().slice(0, 10)
 }
 
 /**
@@ -105,11 +136,11 @@ export function showNextNotice(s: NoticeQueueState, busy: boolean): NoticeQueueS
  * - later（「あとで」・下へ引く・外を押す）: 列の後ろへ戻さず、この画面では出さない（次に開いたときにまた出る）
  */
 export function closeNotice(s: NoticeQueueState): { state: NoticeQueueState; closed: Notice | null } {
-  return { state: { current: null, queue: s.queue }, closed: s.current }
+  return { state: { current: null, queue: s.queue, held: s.held }, closed: s.current }
 }
 
 /** 作業中になったら、表示中のエラー以外を列に戻す */
 export function pauseNotice(s: NoticeQueueState): NoticeQueueState {
   if (!s.current || s.current.kind === 'error') return s
-  return { current: null, queue: [s.current, ...s.queue].sort(byRank) }
+  return { current: null, queue: [s.current, ...s.queue].sort(byRank), held: s.held }
 }
