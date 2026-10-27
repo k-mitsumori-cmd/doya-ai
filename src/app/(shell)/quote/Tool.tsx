@@ -829,7 +829,8 @@ export default function QuoteTool() {
             <ToolHero
               title="URLを入れるだけで、相場つきの見積書"
               lead={<>サービスのページを読み取り、品目と金額の出所（自社価格・相場・AI推定）をそろえます。<span className="mt-1 block text-sm text-slate-500">発行する組織: {org.name}</span></>}
-              action={<DsButton href="#quote-step-1" icon="Receipt">見積書をつくる</DsButton>}
+              // 帯（これ1つで全部進む）があるときは、ここに2つ目の主なボタンを出さない
+              action={oneButton ? undefined : <DsButton href="#quote-step-1" icon="Receipt">見積書をつくる</DsButton>}
               art={QUOTE_UI_NEXT_ART.hero}
             />
             {docs.length === 0 && (
