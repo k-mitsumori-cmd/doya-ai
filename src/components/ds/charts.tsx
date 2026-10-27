@@ -340,9 +340,12 @@ export function Ring({ value, size = 96, label, children, tone, thresholds, tone
           </defs>
         )}
         <circle cx="50" cy="50" r={r} className={styles.ringTrack} />
-        <DrawIn mode="stroke">
-          <circle cx="50" cy="50" r={r} pathLength={1} className={styles.ringValue} style={{ strokeDasharray: `${v} 1`, stroke: stroke ?? `url(#${gid})` } as CSSProperties} transform="rotate(-90 50 50)" />
-        </DrawIn>
+        {/* 0 のときは弧を描かない（端の丸みだけが点になって残るため） */}
+        {v > 0 ? (
+          <DrawIn mode="stroke">
+            <circle cx="50" cy="50" r={r} pathLength={1} className={styles.ringValue} style={{ strokeDasharray: `${v} 1`, stroke: stroke ?? `url(#${gid})` } as CSSProperties} transform="rotate(-90 50 50)" />
+          </DrawIn>
+        ) : null}
       </svg>
       {children ? <div className={styles.ringCenter} aria-hidden>{children}</div> : null}
       <span className={styles.srOnly}>{`${label}：${pct}%${meaning ? `（${meaning}）` : ''}`}</span>
@@ -452,7 +455,7 @@ type Seg = { from: number; to: number; color: string; title: string }
 type Slot = { segs: Seg[]; valueLabel?: string; top: number; bottom: number }
 
 /** 縦棒の共通の描き方。HTML で描くので、375px でも文字の大きさが変わらない */
-function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, legend, table, showValues }: {
+function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, legend, table, showValues, labelStep }: {
   groups: Slot[][]
   labels: string[]
   lo: number
@@ -464,6 +467,8 @@ function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, 
   legend?: { name: string; color: string }[]
   table: { head: string[]; rows: string[][] }
   showValues: boolean
+  /** 狭い画面（560px 以下）で、下の文字を何本おきに出すか（最初と最後は必ず出す） */
+  labelStep?: number
 }) {
   const n = groups.length
   const { ref, attrs } = useReveal<HTMLDivElement>(700 + n * 50 + 400)
@@ -507,8 +512,8 @@ function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, 
           </div>
         </div>
       </div>
-      <div className={styles.colLabels} style={{ marginLeft: yw, gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden data-dense={n > 8 ? 'true' : undefined}>
-        {labels.map((l, i) => <span key={i} title={l}>{l}</span>)}
+      <div className={styles.colLabels} style={{ marginLeft: yw, gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden data-dense={n > 8 ? 'true' : undefined} data-step={labelStep && labelStep > 1 ? 'true' : undefined}>
+        {labels.map((l, i) => <span key={i} title={l} data-keep={!labelStep || i % labelStep === 0 || i === labels.length - 1 ? 'true' : undefined}>{l}</span>)}
       </div>
       {legend && legend.length > 1 ? (
         <figcaption className={styles.legend}>
@@ -580,7 +585,7 @@ export function GroupedColumnChart({ labels, series, label, height = 220, format
 }
 
 /** 縦の積み上げ棒。棒の上に合計を出す。負の値は 0 の線から下へ積む */
-export function StackedColumnChart({ labels, series, label, height = 220, format, yTicks = true, domain, tickFormat, showTotals = true }: {
+export function StackedColumnChart({ labels, series, label, height = 220, format, yTicks = true, domain, tickFormat, showTotals = true, labelStep }: {
   labels: string[]
   series: { name: string; values: number[]; tone?: ChartTone | string }[]
   label: string
@@ -591,6 +596,8 @@ export function StackedColumnChart({ labels, series, label, height = 220, format
   tickFormat?: (n: number) => string
   /** 棒の上に合計を出す */
   showTotals?: boolean
+  /** 狭い画面で、下の文字を何本おきに出すか（日ごとの31本など） */
+  labelStep?: number
 }) {
   const vals = series.map((s) => labels.map((_, i) => (Number.isFinite(s.values[i]) ? s.values[i] : 0)))
   const st = stackValues(vals)
@@ -609,7 +616,7 @@ export function StackedColumnChart({ labels, series, label, height = 220, format
   })
   return (
     <ColumnPlot groups={groups} labels={labels} lo={nt.min} hi={nt.max} ticks={yTicks ? nt.ticks : null} height={height}
-      tickFormat={tickFormat ?? formatCompactJa} label={label} showValues={showTotals}
+      tickFormat={tickFormat ?? formatCompactJa} label={label} showValues={showTotals} labelStep={labelStep}
       legend={series.map((s, si) => ({ name: s.name, color: colors[si] }))}
       table={{ head: ['', ...series.map((s) => s.name), '合計'], rows: labels.map((l, i) => [l, ...vals.map((s) => fmt(s[i])), fmt(vals.reduce((a, s) => a + s[i], 0))]) }} />
   )

@@ -45,6 +45,9 @@ export function MonthWorkInfo({ summary, now }: {
           </Ring>
           <BigFigure value={h1(summary.totalWorkMinutes)} unit="時間" label="今月の総勤務" format={(n) => (Math.round(n * 10) / 10).toFixed(1)} />
         </div>
+        {(summary.totalWorkMinutes || 0) <= 0 ? (
+          <InfoEmpty>出勤を打刻すると、今月の勤務の内訳と残業がここにまとまります。</InfoEmpty>
+        ) : (
         <div className="grid gap-5">
           <StackedBar100
             label="今月の勤務のうち、通常と残業の割合"
@@ -66,6 +69,7 @@ export function MonthWorkInfo({ summary, now }: {
             }]}
           />
         </div>
+        )}
       </div>
     </InfoPanel>
   )
@@ -136,6 +140,7 @@ export function DailyWorkChart({ data, year, month }: {
         format={(n) => `${(Math.round(n * 10) / 10).toFixed(1)}`}
         tickFormat={(n) => `${n}h`}
         showTotals={false}
+        labelStep={5}
         height={200}
       />
     </InfoPanel>
