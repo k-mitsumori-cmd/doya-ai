@@ -14,8 +14,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
-import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
-import { addSeen, loadLevelRaw, loadSeen, saveLevelRaw, saveSeen } from '@/lib/notice/seen'
+import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
+import { addSeen, loadLevelRaw, loadPacedDay, loadSeen, saveLevelRaw, savePacedDay, saveSeen } from '@/lib/notice/seen'
 import { countsAsDraft, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
 import { addArtifact, loadArtifacts, saveArtifacts, type RecentArtifact } from '@/lib/notice/artifacts'
 import toastStore from 'react-hot-toast'
@@ -57,10 +57,14 @@ interface NoticeApi {
   rememberArtifact: (a: Omit<RecentArtifact, 'at'>) => void
   /** 最近作った物（新しい順・3件まで） */
   recentArtifacts: () => RecentArtifact[]
+  /** 1日1つの決まりで止めた知らせ（メニューの「お知らせ」に並べる） */
+  held: Pick<Notice, 'id' | 'eyebrow' | 'title'>[]
+  /** 止めた知らせを1つ開く */
+  openHeld: (id: string) => void
 }
 
 const noop = () => {}
-const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop, level: 'normal', setLevel: noop, rememberArtifact: noop, recentArtifacts: () => [] })
+const NoticeContext = createContext<NoticeApi>({ enabled: false, ready: false, push: noop, notify: noop, tip: noop, hasSeen: () => false, holdBusy: () => noop, level: 'normal', setLevel: noop, rememberArtifact: noop, recentArtifacts: () => [], held: [], openHeld: noop })
 
 /** 知らせの部品。旗が off のとき（Provider の外）は、どれも何もしない */
 export function useNotice(): NoticeApi {
@@ -110,9 +114,12 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   const seenRef = useRef<Set<string>>(new Set())
   const [level, setLevelState] = useState<NoticeLevel>('normal')
   const levelRef = useRef<NoticeLevel>('normal')
+  // 1日1つまでに間引く知らせ（新機能・「〜でできること」）を、最後に出した日
+  const pacedDayRef = useRef('')
   useEffect(() => {
     const s = loadSeen(userKey); setSeen(s); seenRef.current = new Set(s)
     const l = parseNoticeLevel(loadLevelRaw(userKey)); setLevelState(l); levelRef.current = l
+    pacedDayRef.current = loadPacedDay(userKey)
     setReady(true)
   }, [userKey])
   const setLevel = useCallback((l: NoticeLevel) => { setLevelState(l); levelRef.current = l; saveLevelRaw(userKey, l) }, [userKey])
@@ -146,10 +153,18 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   // 同時に来たものをまとめてから、順番どおりに出す。作業中になったら、表示中のエラー以外を列に戻す
   useEffect(() => {
     if (busy) { setQ((s) => pauseNotice(s)); }
-    const t = setTimeout(() => setQ((s) => showNextNotice(s, busy)), busy ? 0 : 400)
+    const t = setTimeout(() => setQ((s) => showNextNotice(s, busy, pacedDayRef.current === noticeDay(new Date()))), busy ? 0 : 400)
     return () => clearTimeout(t)
   }, [busy, q.queue.length, q.current])
   const current = q.current
+  // 間引く知らせを出したら、その日はもう出さない（閉じ方に依らない。「あとで」で閉じても、その日の1つに数える）
+  useEffect(() => {
+    if (!current?.paced) return
+    const day = noticeDay(new Date())
+    pacedDayRef.current = day; savePacedDay(userKey, day)
+  }, [current, userKey])
+  const openHeld = useCallback((id: string) => setQ((s) => openHeldNotice(s, id)), [])
+  const held = useMemo(() => (q.held ?? []).map((n) => ({ id: n.id, eyebrow: n.eyebrow, title: n.title })), [q.held])
   useEffect(() => {
     setPage(0); setLevelOpen(false)
     if (!current) { setOpen(false); return }
@@ -277,7 +292,7 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   const rememberArtifact = useCallback((a: Omit<RecentArtifact, 'at'>) => { saveArtifacts(userKey, addArtifact(loadArtifacts(userKey), { ...a, at: Date.now() })) }, [userKey])
   const recentArtifacts = useCallback(() => loadArtifacts(userKey), [userKey])
   const seenSet = useMemo(() => new Set(seen), [seen])
-  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy, level, setLevel, rememberArtifact, recentArtifacts }), [ready, push, notify, tip, seenSet, holdBusy, level, setLevel, rememberArtifact, recentArtifacts])
+  const api = useMemo<NoticeApi>(() => ({ enabled: true, ready, push, notify, tip, hasSeen: (id) => seenSet.has(id), holdBusy, level, setLevel, rememberArtifact, recentArtifacts, held, openHeld }), [ready, push, notify, tip, seenSet, holdBusy, level, setLevel, rememberArtifact, recentArtifacts, held, openHeld])
 
   const p = current ? (current.pages ? current.pages[Math.min(page, current.pages.length - 1)] : current) : null
   const last = !current?.pages || page >= current.pages.length - 1

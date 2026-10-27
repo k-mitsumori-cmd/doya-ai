@@ -70,7 +70,7 @@ export default function ShellNotices() {
       pages: [
         { pose: 'hello', eyebrow: 'ようこそ', title: 'ドヤAI へようこそ。ドヤくんが案内します', body: '1つの契約で、すべてのツールを使えます。作った物は、ほかのツールでも使えます。' },
         { pose: 'point', eyebrow: 'ようこそ 2/3', title: 'まずは経営ホームから', body: '会社の数字と、今日やることが並びます。左のメニュー（スマホは下のタブ）から、ほかのツールへ移れます。' },
-        { pose: 'jump', eyebrow: 'ようこそ 3/3', title: 'わからない所は、ドヤくんが知らせます', body: '初めて開いたツールでは、できることを3つ出します。閉じた知らせは、次から出ません。' },
+        { pose: 'jump', eyebrow: 'ようこそ 3/3', title: 'わからない所は、ドヤくんが知らせます', body: '初めて開いたツールでは、できることを3つ出します。出すのは1日1つまでで、残りはメニューの「お知らせ」から開けます。' },
       ],
       primary: { label: 'はじめる' },
     })
@@ -81,7 +81,7 @@ export default function ShellNotices() {
         checklist: steps, primary: { label: 'わかった' } })
     }
     for (const a of welcomed ? activeAnnouncements(new Date()) : []) {
-      push({ id: a.id, kind: 'feature', once: true, pose: a.pose ?? 'jump', eyebrow: '新機能', title: a.title, body: a.body,
+      push({ id: a.id, kind: 'feature', once: true, paced: true, pose: a.pose ?? 'jump', eyebrow: '新機能', title: a.title, body: a.body,
         primary: a.href ? { label: '試してみる', href: a.href } : { label: 'わかった' }, secondary: { label: 'あとで', done: false } })
     }
   }, [enabled, push, hasSeen, company])
@@ -129,7 +129,7 @@ export default function ShellNotices() {
     }
     const features = service?.features?.slice(0, 3) ?? []
     if (!features.length) return
-    push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
+    push({ id: `tool-intro:${tool.id}`, kind: 'hint', once: true, paced: true, pose: 'point', eyebrow: `${tool.name} でできること`, title: tool.lead || tool.hint, points: features, primary: { label: '使ってみる' } })
   }, [enabled, pathname, push])
 
   // (18) ドヤパワーの残りが2割以下（その月に1回）

@@ -12,7 +12,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ChevronRight, CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { Bell, ChevronRight, CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
@@ -243,6 +243,8 @@ export default function AppShell({ children, userName, initialRecent, department
   const deptGroups = useMemo(() => (deptOn ? buildDepartmentGroups(departments?.primary ?? []) : []), [deptOn, departments?.primary])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
+  // 1日1つの決まりで止めた知らせ（新機能・「〜でできること」）。あるときだけ、左下に「お知らせ」を出す
+  const { enabled: noticeOn, held, openHeld } = useNotice()
   const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
   // サーバーから並びを受け取ったときは、最初の1回は表示を変えない（読み込みの直後に並びが動くと CLS になる）
   const keepFirst = useRef(Boolean(initialRecent))
@@ -272,6 +274,15 @@ export default function AppShell({ children, userName, initialRecent, department
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onKey])
+
+  // スマホでメニューを開いている間は、知らせのカードを隠す（メニューの「料金プラン」などに重なるため。2026-10-27 統括の本番の確認）。
+  // 隠すのは notice.module.css の側。ここでは html に印を付けるだけ。閉じたらまた出る（知らせは閉じたことにしない）
+  useEffect(() => {
+    const root = document.documentElement
+    if (open) root.setAttribute('data-shell-menu', 'open')
+    else root.removeAttribute('data-shell-menu')
+    return () => root.removeAttribute('data-shell-menu')
+  }, [open])
 
   const close = () => setOpen(false)
   // 押した瞬間に選択の表示を変える（読み込みを待たない。UI 品質 C-5）。移り終わったら実際のパスに戻す
@@ -373,6 +384,16 @@ export default function AppShell({ children, userName, initialRecent, department
           <ShellCompanyCard />
           <ShellPowerMeter variant="sidebar" />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
+          {/* 行は知らせの部品があればいつも置く（読み込みのあとに足すと、下の料金プランとログアウトがずれるため）。無いときは押せない */}
+          {noticeOn ? (
+            <button type="button" className={`${styles.navItem} ${styles.logout} ${styles.noticeRow}`} disabled={!held.length} onClick={() => { if (!held.length) return; close(); openHeld(held[0].id) }} title={held.length ? `お知らせ（${held.length}件）` : '新しいお知らせはありません'}>
+              <span className={styles.noticeIcon}>
+                <Bell size={18} strokeWidth={2} aria-hidden />
+                {held.length ? <span className={styles.noticeDot} aria-hidden /> : null}
+              </span>
+              <span className={styles.navLabel}>お知らせ{held.length ? <span className={styles.noticeCount}>{held.length}</span> : null}</span>
+            </button>
+          ) : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>料金プラン</span>

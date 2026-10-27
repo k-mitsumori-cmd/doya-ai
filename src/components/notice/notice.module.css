@@ -145,6 +145,8 @@
   .sheet[data-variant='notice'] .title { font-size: 15px; }
   .sheet[data-variant='notice'] .body, .sheet[data-variant='notice'] .points li { font-size: 13px; }
   .sheet[data-variant='notice'] .actions .btn { min-height: 40px; }
+  /* メニュー（左から出る一覧）を開いている間は、知らせを隠す。印は AppShell が html に付ける */
+  :global(html[data-shell-menu='open']) .sheet[data-variant='notice'] { visibility: hidden; pointer-events: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

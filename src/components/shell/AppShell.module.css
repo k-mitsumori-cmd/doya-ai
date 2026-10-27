@@ -118,6 +118,13 @@
 
 /* ログアウトは button なので、リンクと見た目をそろえる */
 .logout { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+/* 「お知らせ」の件数（1日1つの決まりで止めた知らせの数） */
+.noticeRow:disabled { cursor: default; opacity: .55; }
+.noticeRow:disabled:hover { background: transparent; color: inherit; }
+.noticeIcon { position: relative; display: inline-flex; flex: none; }
+/* 細いメニュー（768〜1279px）では件数の文字が隠れるので、鈴の右上に点を出す */
+.noticeDot { display: none; position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; border-radius: 99px; background: var(--blue); box-shadow: 0 0 0 2px var(--paper); }
+.noticeCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 8px; padding: 0 6px; border-radius: 99px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; }
 
 .main { min-width: 0; }
 
@@ -180,6 +187,7 @@
   /* アイコンだけの幅では畳まない（部署の名前のボタンは出さず、全部のアイコンを出す） */
   .deptToggle { display: none; }
   .deptBody[data-open='false'] { display: block; }
+  .noticeDot { display: block; }
   .search { justify-content: center; padding: 0; }
   .navItem { justify-content: center; padding: 0; }
   .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
