@@ -141,6 +141,9 @@ async function fixture(page, options = {}) {
       Card: ({ title, children }) => React.createElement('section', null, title ? React.createElement('h2', null, title) : null, children),
     }, { get: (o, name) => name === '__esModule' ? false : name in o ? o[name] : () => null }),
     // ドヤパワーの減る量の札（旗の内側だけ）。この試験では旗が off と同じく何も描かない
+    // 「これ1つで全部進む」帯は、旗が off と同じ形にする（帯の確かめは verify-one-button.cjs）
+    '@/components/one-button/context': { useOneButton: () => false },
+    '@/components/one-button/OneButtonBar': { OneButtonBar: () => null },
     '@/components/shell/power': { ShellCostBadge:()=>null,useDoyaPowerRetry:()=>({halved:false,retryOf:()=>null,headers:()=>({}),remember:()=>{}}), ShellPowerMeter: () => null },
     '@/components/ds/motion': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : ({ children }) => children ?? null }),
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'), 'next-auth/react': { useSession: session },
