@@ -443,7 +443,7 @@
   line-height: 1.8;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 16px rgba(5, 11, 36, 0.6);
-  animation: v-up 1s var(--e) 0.3s both;
+  /* 登場の動きを付けると、Chrome でこの段落だけ描かれないことがあったため付けない（2026-10-27） */
 }
 .v-hero-cta {
   margin-top: 36px;
@@ -1301,7 +1301,7 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 720px;
+  min-height: 940px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1583,8 +1583,8 @@
     padding: 0 16px 16px;
   }
   .v-final {
-    min-height: 640px;
-    padding: 88px 16px;
+    min-height: 860px;
+    padding: 72px 16px;
   }
   .v-final-bg img {
     object-position: 50% 70%;
