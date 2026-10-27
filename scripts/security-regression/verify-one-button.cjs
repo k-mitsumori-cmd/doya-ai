@@ -45,14 +45,31 @@ check('One button: every tool page shows the bar only behind the flag', () => {
     'src/app/(shell)/adimage/Tool.tsx', 'src/app/(shell)/seo/create/page.tsx', 'src/app/(shell)/quote/Tool.tsx',
     'src/app/(shell)/doyalist/Tool.tsx', 'src/components/doyaslide/NewDoyaSlideWizard.tsx',
     'src/app/(shell)/banner/dashboard/create/page.tsx', 'src/app/(shell)/shodan/[orgSlug]/new/page.tsx', 'src/app/(shell)/interview/Tool.tsx',
-    'src/app/(shell)/sfa/[orgSlug]/page.tsx', 'src/components/promane/ui-next/DashboardNext.tsx',
+    'src/app/(shell)/sfa/[orgSlug]/page.tsx', 'src/components/promane/ui-next/PromaneOneButton.tsx',
   ]
   for (const f of files) {
     const src = read(f)
-    assert.match(src, /const oneButton = useOneButton\(\)/, f)
+    assert.match(src, /const oneButton = useOneButton\(\)|if \(!useOneButton\(\)\) return null/, f)
     assert.match(src, /<OneButtonBar/, f)
-    assert.match(src, /\{oneButton[^}\n]*(?:\?|&&) \(?\s*(?:<div[^>]*>\s*)?<OneButtonBar/, f)
+    if (!/if \(!useOneButton\(\)\) return null/.test(src)) assert.match(src, /\{oneButton[^}\n]*(?:\?|&&) \(?\s*(?:<div[^>]*>\s*)?<OneButtonBar/, f)
   }
+})
+
+check('One button: server components stay on the server (flag off must not send their data to the browser)', () => {
+  // プロマネのダッシュボードを 'use client' にすると、旗が off でも案件・取引先・タスク・経費が画面に送られる（2026-10-27 統括の点検 重大）
+  const dash = read('src/components/promane/ui-next/DashboardNext.tsx')
+  assert.doesNotMatch(dash, /^['"]use client['"]/m)
+  assert.doesNotMatch(dash, /useOneButton/)
+  assert.match(dash, /<PromaneOneButton newHref=\{newHref\} \/>/)
+  assert.match(read('src/components/promane/ui-next/PromaneOneButton.tsx'), /^'use client'/)
+})
+
+check('One button bar: the button cannot be pressed again while running, unless the page opts in', () => {
+  const bar = read('src/components/one-button/OneButtonBar.tsx')
+  assert.match(bar, /disabled=\{disabled \|\| \(running && !clickableWhileRunning\)\}/)
+  assert.match(read('src/app/(shell)/doyaslide/[id]/page.tsx'), /\(generating \|\| busySlide !== null \|\| operation\.blocked\)/)
+  // 開発の道（ログインしていない next dev）では、旗が all のときだけ出す
+  assert.match(read('src/app/(shell)/tenjikai/layout.tsx'), /<OneButtonProvider value=\{oneButtonRollout\(\) === 'all'\}>/)
 })
 
 check('One button bar: no emoji in the part', () => {

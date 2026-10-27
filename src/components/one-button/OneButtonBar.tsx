@@ -11,7 +11,7 @@ import styles from './one-button.module.css'
 
 export type OneButtonPose = 'point' | 'working' | 'success' | 'thinking' | 'hello' | 'error'
 
-export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled = false, disabledReason, running = false, progress, pose, extra }: {
+export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled = false, disabledReason, running = false, clickableWhileRunning = false, progress, pose, extra }: {
   /** 画面の名前（例「ブース設計」）。小さく上に出す */
   eyebrow?: string
   /** ドヤくんの一言（例「ブースの形が決まったら、押してね」） */
@@ -27,6 +27,8 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
   /** 押せない理由（disabled のときだけ出す） */
   disabledReason?: string
   running?: boolean
+  /** 動いている間も押せるようにする（押すと進み具合を開く、などのときだけ。既定は押せない＝二重に動かさない） */
+  clickableWhileRunning?: boolean
   /** 動いている間の進み具合 */
   progress?: { done: number; total: number }
   /** ドヤくんのポーズ。既定は、動いている間は working、それ以外は point */
@@ -51,7 +53,7 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
         {href && !disabled && !running ? (
           <a href={href} className={styles.button}>{buttonInner}</a>
         ) : (
-          <button type="button" className={styles.button} onClick={onRun} disabled={disabled} aria-busy={running || undefined}>
+          <button type="button" className={styles.button} onClick={onRun} disabled={disabled || (running && !clickableWhileRunning)} aria-busy={running || undefined}>
             {buttonInner}
           </button>
         )}

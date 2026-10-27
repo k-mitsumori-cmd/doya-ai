@@ -1,4 +1,3 @@
-'use client'
 // ============================================
 // プロマネのダッシュボード（新しい見た目）
 // ============================================
@@ -7,8 +6,7 @@
 // ⚠️ 見出し（h1）は枠（ToolFrame）が持つ。ここでは h2 から始める（UI 品質 S-57）。
 // ⚠️ 絵文字をアイコンにしない（lucide）。375px で横にはみ出さない（固定幅の列を置かない）。
 import Link from 'next/link'
-import { useOneButton } from '@/components/one-button/context'
-import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import PromaneOneButton from './PromaneOneButton'
 import { ArrowRight, CheckCircle2, CircleDashed, FolderOpen, ListChecks, Loader } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, FirstSteps, StatTile, ToolHero } from '@/components/ds'
 import { formatCurrency, formatPercent, profitLabel, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
@@ -44,7 +42,6 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
   chartData: { taskSummary: any[]; revenueData: any[]; activities: any[] }
   myMember?: { role: string; displayName: string } | null
 }) {
-  const oneButton = useOneButton()
   const base = `/promane/${workspaceSlug}`
   const newHref = `${base}/projects/new`
   const empty = data.projectStats.length === 0
@@ -52,15 +49,8 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 sm:px-8">
-      {oneButton && (
-        <OneButtonBar
-          eyebrow="プロジェクト管理"
-          cta="新しい案件を始めるなら、押してね"
-          label="新規プロジェクト"
-          scope="新しいプロジェクトの作成画面を開きます。作ったあとは、タスクと工数をここで追えます。"
-          href={newHref}
-        />
-      )}
+      {/* 「これ1つで全部進む」帯。旗の判定は画面側の小さな部品だけで行う（このファイルはサーバーの部品のまま） */}
+      <PromaneOneButton newHref={newHref} />
       <ToolHero
         title="案件の進み具合と収支を、ひと目で"
         lead="タスク・工数・売上をワークスペースにまとめ、赤字になりそうな案件を早めに見つけます。"

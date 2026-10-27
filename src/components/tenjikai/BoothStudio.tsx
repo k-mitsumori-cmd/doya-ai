@@ -183,6 +183,8 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           disabled={!allMade && !running && disabled}
           disabledReason={IMAGEGEN_DISABLED_MESSAGE}
           running={running}
+          // 作っている間に押すと、進み具合の画面を開く（新しく作り始めはしない）
+          clickableWhileRunning
           progress={running ? { done: summary.finished, total: summary.total } : undefined}
           pose={allMade ? 'success' : undefined}
           extra={!allMade && !running ? <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} /> : undefined}
