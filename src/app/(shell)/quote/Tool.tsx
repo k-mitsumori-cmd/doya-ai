@@ -30,6 +30,7 @@ import { ShellCostBadge } from '@/components/shell/power'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { quoteOneButtonStage } from '@/lib/one-button/quote-stage'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -750,8 +751,39 @@ export default function QuoteTool() {
     )
   }
 
-  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す（品目ができたら見積書の作成に切り替わる）
-  const oneButtonCreate = items.length > 0
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す。
+  // 段階は 解析 → 品目の候補 → 見積書の作成 → 作った見積書を開く（決め方は quote-stage.ts）
+  const oneButtonStage = quoteOneButtonStage({ createdId: createdDocument?.id ?? '', itemCount: items.length, selectedProduct })
+  const oneButtonBar = {
+    analyze: {
+      cta: analyzing ? 'サービスを解析しています。このまま待ってね' : '自社サービスのURLを入れたら、押してね',
+      label: analyzing ? '解析中...' : '解析する',
+      scope: 'URLのページを読み取り、提供形態・課金の軸・公開している価格を取り込みます。見積書はまだ作りません。',
+      onRun: () => void analyze(), href: undefined,
+      disabled: analyzing || !url.trim(), disabledReason: 'サービスのURLを入れると押せます。', running: analyzing,
+    },
+    suggest: {
+      cta: suggesting ? '品目の候補を作っています。このまま待ってね' : '商材を選んだら、押してね',
+      label: suggesting ? '候補を作っています…' : '品目の候補を出す',
+      scope: '選んだ商材と相場から、見積書に載せる品目を出します。見積書はまだ作りません。',
+      onRun: () => void suggest(), href: undefined,
+      disabled: suggesting, disabledReason: undefined, running: suggesting,
+    },
+    create: {
+      cta: creating ? '見積書を作成しています。このまま待ってね' : '品目と金額を確認できたら、押してね',
+      label: creating ? '作成しています…' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : items.length > MAX_QUOTE_ITEMS ? `品目は${MAX_QUOTE_ITEMS}行までです` : '見積書を作成する',
+      scope: '下の品目と税区分から、見積書を1通作ります。PDFの出力は作成後にできます。',
+      onRun: () => void createDocument(), href: undefined,
+      disabled: creating || documentUncertain || documentLimited || items.length > MAX_QUOTE_ITEMS, disabledReason: undefined, running: creating,
+    },
+    open: {
+      cta: '見積書ができました。中身を確かめてね',
+      label: `作った見積書を開く（${createdDocument?.quoteNo ?? ''}）`,
+      scope: '作った見積書の画面を開きます。PDFの出力と送付は、そこからできます。',
+      onRun: undefined, href: createdDocument ? `/quote/documents/${encodeURIComponent(createdDocument.id)}` : undefined,
+      disabled: false, disabledReason: undefined, running: false,
+    },
+  }[oneButtonStage]
 
   return (
     <div className="pb-24">
@@ -783,21 +815,14 @@ export default function QuoteTool() {
         {oneButton ? (
           <OneButtonBar
             eyebrow="ドヤ見積"
-            cta={oneButtonCreate
-              ? (creating ? '見積書を作成しています。このまま待ってね' : '品目と金額を確認できたら、押してね')
-              : (analyzing ? 'サービスを解析しています。このまま待ってね' : '自社サービスのURLを入れたら、押してね')}
-            label={oneButtonCreate
-              ? (creating ? '作成しています…' : createdDocument ? '送信した内容の見積書を作成しました' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : '見積書を作成する')
-              : (analyzing ? '解析中...' : '解析する')}
-            scope={oneButtonCreate
-              ? '下の品目と税区分から、見積書を1通作ります。PDFの出力は作成後にできます。'
-              : 'URLのページを読み取り、提供形態・課金の軸・公開している価格を取り込みます。見積書はまだ作りません。'}
-            onRun={oneButtonCreate ? () => void createDocument() : () => void analyze()}
-            disabled={oneButtonCreate
-              ? creating || documentUncertain || documentLimited || !!createdDocument
-              : analyzing || !url.trim()}
-            disabledReason={oneButtonCreate ? undefined : 'サービスのURLを入れると押せます。'}
-            running={analyzing || creating}
+            cta={oneButtonBar.cta}
+            label={oneButtonBar.label}
+            scope={oneButtonBar.scope}
+            onRun={oneButtonBar.onRun}
+            href={oneButtonBar.href}
+            disabled={oneButtonBar.disabled}
+            disabledReason={oneButtonBar.disabledReason}
+            running={oneButtonBar.running}
           />
         ) : null}
         <>
