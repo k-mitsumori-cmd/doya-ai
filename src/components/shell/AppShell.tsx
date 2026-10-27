@@ -313,10 +313,14 @@ export default function AppShell({ children, userName, initialRecent }: {
           <ShellCompanyCard />
           <ShellPowerMeter variant="sidebar" />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
-          {noticeOn && held.length ? (
-            <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => { close(); openHeld(held[0].id) }} title={`お知らせ（${held.length}件）`}>
-              <Bell size={18} strokeWidth={2} aria-hidden />
-              <span className={styles.navLabel}>お知らせ<span className={styles.noticeCount}>{held.length}</span></span>
+          {/* 行は知らせの部品があればいつも置く（読み込みのあとに足すと、下の料金プランとログアウトがずれるため）。無いときは押せない */}
+          {noticeOn ? (
+            <button type="button" className={`${styles.navItem} ${styles.logout} ${styles.noticeRow}`} disabled={!held.length} onClick={() => { if (!held.length) return; close(); openHeld(held[0].id) }} title={held.length ? `お知らせ（${held.length}件）` : '新しいお知らせはありません'}>
+              <span className={styles.noticeIcon}>
+                <Bell size={18} strokeWidth={2} aria-hidden />
+                {held.length ? <span className={styles.noticeDot} aria-hidden /> : null}
+              </span>
+              <span className={styles.navLabel}>お知らせ{held.length ? <span className={styles.noticeCount}>{held.length}</span> : null}</span>
             </button>
           ) : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
