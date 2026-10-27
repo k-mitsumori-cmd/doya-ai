@@ -12,6 +12,7 @@ import type { Session } from 'next-auth'
 import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
 import AppShell from './AppShell'
+import type { DepartmentId } from '@/lib/departments'
 import { shouldShowShell } from './registry'
 import { ShellToolHrefsContext } from './ui-next-context'
 import ShellVitals from './ShellVitals'
@@ -29,7 +30,7 @@ import PowerOutNotices from '@/components/notice/PowerOutNotices'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
@@ -49,6 +50,8 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   toolHrefs?: Record<string, string>
   /** 最近使ったツール（cookie から読んで渡す） */
   initialRecent?: string[]
+  /** 部署ごとの入口（サーバーの isDepartmentsEnabled() が真のときだけ layout が渡す。渡されなければ今のメニューのまま） */
+  departments?: { enabled: boolean; primary: DepartmentId[] }
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
   always?: boolean
   /** アカウントの会社（null は見つからない。UI 品質 B-1） */
@@ -59,7 +62,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   const pathname = usePathname()
   const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
   const framed = shown
-    ? <AppShell userName={userName} initialRecent={initialRecent}>{children}</AppShell>
+    ? <AppShell userName={userName} initialRecent={initialRecent} departments={departments}>{children}</AppShell>
     : <>{children}</>
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''

@@ -12,7 +12,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { ChevronRight, CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
@@ -20,7 +20,8 @@ import { ShellIcon } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, type ShellTool } from './tools'
+import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, buildDepartmentGroups, type DepartmentShellGroup, type ShellTool } from './tools'
+import { departmentOfTool, getDepartment, type DepartmentId } from '@/lib/departments'
 import { useToolHref } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
@@ -85,7 +86,7 @@ const INTENT_ITEMS: (PaletteItem & { words: string })[] = HOME_INTENT_GROUPS.fla
   key: `intent:${i.label}`, name: i.label, hint: g.label, href: i.href, intent: true, words: `${i.label} ${i.keywords.join(' ')}`.toLowerCase(),
 })))
 
-function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose: () => void; withIntents: boolean }) {
+function CommandPalette({ open, onClose, withIntents, withDepartments = false }: { open: boolean; onClose: () => void; withIntents: boolean; withDepartments?: boolean }) {
   const router = useRouter()
   const toHref = useToolHref()
   const [q, setQ] = useState('')
@@ -95,12 +96,20 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
   const results = useMemo<PaletteItem[]>(() => {
     const k = q.trim().toLowerCase()
     if (!k) return TOOL_ITEMS
-    const tools = TOOL_ITEMS.filter((t) => `${t.name} ${t.hint} ${t.key}`.toLowerCase().includes(k))
+    // 部署の旗が on のときは、部署の名前（「セールス」「ドヤ人事AI」など）でもツールを探せる
+    const deptWords = (key: string) => {
+      if (!withDepartments) return ''
+      const id = departmentOfTool(key)
+      if (!id) return ''
+      const d = getDepartment(id)
+      return ` ${d.name} ${d.short}`
+    }
+    const tools = TOOL_ITEMS.filter((t) => `${t.name} ${t.hint} ${t.key}${deptWords(t.key)}`.toLowerCase().includes(k))
     if (!withIntents) return tools
     const compact = k.replace(/\s+/g, '')
     const intents = INTENT_ITEMS.filter((i) => i.words.includes(k) || i.words.replace(/\s+/g, '').includes(compact) || i.words.split(' ').some((w) => w && compact.includes(w)))
     return [...intents, ...tools]
-  }, [q, withIntents])
+  }, [q, withIntents, withDepartments])
 
   useEffect(() => {
     if (!open) return
@@ -159,19 +168,79 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
   )
 }
 
+/**
+ * 部署ごとの入口のメニュー（旗 DEPARTMENTS_ROLLOUT が on のときだけ使う）。
+ * - 主の部署は、そのまま開いて並べる。ほかの部署は「ほかの部署」の下に畳み、部署の名前のボタンで開く（aria-expanded）。
+ * - 主の部署がまだ決まっていないときは、畳まずに4つを今の順で並べる（buildDepartmentGroups が全部 primary にする）。
+ * - 今開いているページが畳んだ部署の中にあるときは、その部署を開いておく（選択中の項目を隠さない）。
+ * - 768〜1279px のアイコンだけのサイドバーでは、畳まずに全部のアイコンを出す（CSS）。
+ */
+function DepartmentNav({ groups, pathname, onNavigate, prefetch }: {
+  groups: DepartmentShellGroup[]
+  pathname: string
+  onNavigate: (href: string) => void
+  prefetch?: boolean
+}) {
+  const [opened, setOpened] = useState<Set<string>>(() => new Set())
+  const main = groups.filter((g) => g.primary)
+  const others = groups.filter((g) => !g.primary)
+  const toggle = (id: string) => setOpened((prev) => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+  return (
+    <>
+      {main.map((g) => (
+        <div key={g.department ?? 'other'} className={styles.group}>
+          <p className={styles.groupLabel}>{g.label}</p>
+          {g.tools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={onNavigate} prefetch={prefetch} />)}
+        </div>
+      ))}
+      {others.length ? (
+        <div className={styles.group}>
+          <p className={styles.groupLabel}>ほかの部署</p>
+          {others.map((g) => {
+            const id = g.department ?? 'other'
+            const hasActive = g.tools.some((t) => isActive(pathname, t))
+            const open = opened.has(id) || hasActive
+            const bodyId = `shell-dept-${id}`
+            return (
+              <div key={id} className={styles.deptBlock}>
+                <button type="button" className={styles.deptToggle} aria-expanded={open} aria-controls={bodyId} onClick={() => toggle(id)}>
+                  <ChevronRight size={16} aria-hidden className={styles.deptChevron} data-open={open} />
+                  <span className={styles.navLabel}>{g.label}</span>
+                </button>
+                <div id={bodyId} className={styles.deptBody} data-open={open}>
+                  {g.tools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={onNavigate} prefetch={prefetch} />)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+    </>
+  )
+}
+
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent }: {
+export default function AppShell({ children, userName, initialRecent, departments }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
   initialRecent?: string[]
+  /** 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されなければ今のメニューのまま */
+  departments?: { enabled: boolean; primary: DepartmentId[] }
 }) {
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
   const toHref = useToolHref()
   const groups = SHELL_GROUPS
+  const deptOn = Boolean(departments?.enabled)
+  const deptGroups = useMemo(() => (deptOn ? buildDepartmentGroups(departments?.primary ?? []) : []), [deptOn, departments?.primary])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
   const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
@@ -286,7 +355,9 @@ export default function AppShell({ children, userName, initialRecent }: {
               ))}
             </div>
           ) : null}
-          {groups.map((group) => (
+          {deptOn ? (
+            <DepartmentNav groups={deptGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          ) : groups.map((group) => (
             <div key={group.stage} className={styles.group}>
               <p className={styles.groupLabel}>{group.label}</p>
               {group.tools.map((tool) => (
@@ -339,7 +410,7 @@ export default function AppShell({ children, userName, initialRecent }: {
           </button>
       </nav>
 
-      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn} />
     </div>
     </ShellUsageProvider>
     </InShellContext.Provider>

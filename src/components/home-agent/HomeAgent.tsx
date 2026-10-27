@@ -24,9 +24,11 @@ import type {
   AgentRunCreateRequest, AgentRunView,
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
-import { AGENT_EXAMPLES } from './examples'
+import { AGENT_EXAMPLES, agentPlansForDepartment, intentsOfDepartment } from './examples'
 import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
+import { useToolHref } from '@/components/shell/ui-next-context'
+import type { DepartmentId } from '@/lib/departments'
 import styles from './home-agent.module.css'
 
 type Scene = 'input' | 'questions' | 'analyze' | 'plan' | 'confirm' | 'run' | 'done' | 'none'
@@ -222,14 +224,18 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
 
 /* ---------- 本体 ---------- */
 
-export default function HomeAgent({ executor = 'api', greeting, company }: {
+export default function HomeAgent({ executor = 'api', greeting, company, dept = null }: {
   /** sample は見本の結果で最後まで動かす（開発の確認ページ用。API も各ツールも呼ばない） */
   executor?: Executor
   /** 見出しの上のあいさつ（例「おつかれさまです、〇〇さん」）。経営ホームが渡す */
   greeting?: string
   /** 見出しの上の会社の札。経営ホームが渡す */
   company?: ReactNode
+  /** 経営ホームで選んでいる部署（旗 DEPARTMENTS_ROLLOUT が on のときだけ渡される。null は「すべて」）。セールス以外の部署では依頼の欄の代わりに道具へのリンクを出す（examples.ts） */
+  dept?: DepartmentId | null
 }) {
+  const toHref = useToolHref()
+  const toolsOnly = !agentPlansForDepartment(dept)
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
   // 欄は空で始める（例の文を最初から入れると、書き足したときに後ろへつながってしまう）
@@ -462,6 +468,16 @@ export default function HomeAgent({ executor = 'api', greeting, company }: {
 
         {scene === 'input' ? (
           <div className={styles.sceneIn}>
+            {toolsOnly && dept ? (
+              <div className={styles.card}>
+                <p className={styles.eyebrow}>この部署でよく使う操作</p>
+                <p className={styles.title}>どれから始めますか？</p>
+                <p className={styles.lead}>ドヤくんの作戦づくりは、いまは営業の依頼に使えます。この部署では、道具の画面へ直接移れます。</p>
+                <div className={styles.chips}>
+                  {intentsOfDepartment(dept).map((it) => <Link key={it.label} href={toHref(it.href)} className={styles.chipLink} prefetch={false}>{it.label}</Link>)}
+                </div>
+              </div>
+            ) : (
             <div className={styles.card}>
               <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
                 placeholder="例: 来週の商談の準備をまとめて進めたい" />
@@ -476,6 +492,7 @@ export default function HomeAgent({ executor = 'api', greeting, company }: {
                 <button type="button" className={styles.btn} onClick={send} disabled={!text.trim()}>分析して作戦を立てる</button>
               </div>
             </div>
+            )}
             {/* 新しい依頼を先に置き、前回の続きはその下にする（主な操作はゴールを書くこと。2026-10-26 統括の点検で、続きが上だと欄が 375px で y=507 まで下がっていた） */}
             {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
             <ToolShortcuts />

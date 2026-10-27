@@ -18,6 +18,8 @@ import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
 import HomeDashboard from './HomeDashboard'
 import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
 import HomeAgent from '@/components/home-agent/HomeAgent'
+import { isDepartmentsEnabled } from '@/lib/departments/flag'
+import { DEPARTMENTS_COOKIE, parseDepartmentsCookie, parseDeptQuery } from '@/lib/departments'
 
 export const metadata: Metadata = {
   title: '経営ホーム',
@@ -26,7 +28,7 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams?: Promise<{ dept?: string | string[] }> | { dept?: string | string[] } } = {}) {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home')
@@ -40,5 +42,14 @@ export default async function HomePage() {
   const power = doyaPower ? await loadDoyaPowerHome() : null
   // 「ドヤくんに頼む」（分析 → ゴール・柱・ToDo → まとめて進める）。旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ（off ならセッションも読まない）
   const agent = await isAgentOrchestrationEnabled()
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} agentStage={agent ? <HomeAgent /> : null} />
+  // 部署ごとの入口（DEPARTMENTS_ROLLOUT）。off ならセッションも cookie も URL も読まず、今のホームのまま
+  const departmentsOn = await isDepartmentsEnabled()
+  const departments = departmentsOn
+    ? {
+        primary: parseDepartmentsCookie((await cookies()).get(DEPARTMENTS_COOKIE)?.value),
+        dept: parseDeptQuery((await searchParams)?.dept),
+      }
+    : undefined
+  // key: 部署を切り替えたとき、ドヤくんの欄を作り直す（依頼の欄の初期値が部署で変わるため）
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} agentStage={agent ? <HomeAgent key={departments?.dept ?? 'all'} dept={departments?.dept ?? null} /> : null} departments={departments} />
 }
