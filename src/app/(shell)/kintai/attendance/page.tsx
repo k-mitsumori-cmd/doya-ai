@@ -384,18 +384,23 @@ function SummaryPillBear({ bearSrc, bearAlt, label, value, unit, progress, barCo
 }) {
   return (
     <div className={`${bgColor} rounded-2xl border ${borderColor} p-4 space-y-2 summary-pill-card`}>
-      <div className="flex items-center gap-2">
+      {/* 375px では3枚が狭いので、クマを見出しの上に置く（見出しとクマを重ねない。2026-10-27 統括の確認） */}
+      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
         <img
           src={bearSrc}
           alt={bearAlt}
-          className="w-10 h-10 object-contain summary-pill-bear"
+          width={40}
+          height={40}
+          className="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-none summary-pill-bear"
         />
-        <p className="text-[11px] font-bold text-slate-500">{label}</p>
-        {warning && (
-          <span className="ml-auto text-[10px] font-black text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full">注意</span>
-        )}
+        <p className="min-w-0 text-[12px] font-bold leading-snug text-slate-600">
+          {label}
+          {warning && (
+            <span className="ml-1 inline-block text-[10px] font-black text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full">注意</span>
+          )}
+        </p>
       </div>
-      <p className="text-xl font-black text-slate-800">
+      <p className="text-lg sm:text-xl leading-tight font-black text-slate-800">
         {value}
         {unit && <span className="text-xs font-bold text-slate-400 ml-1">{unit}</span>}
       </p>
