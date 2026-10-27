@@ -7,6 +7,8 @@
 // 2026-10-27 ユーザーの指示（統括経由）。旗 ONE_BUTTON_ROLLOUT の内側だけで使う（useOneButton）。
 // ⚠️ 絵文字は使わない。ドヤくんの絵は public/character/<pose>-256.webp
 import { useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
+import { toolIntroLine } from './intro'
 import styles from './one-button.module.css'
 
 export type OneButtonPose = 'point' | 'working' | 'success' | 'thinking' | 'hello' | 'error'
@@ -43,6 +45,7 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
     return () => root.removeAttribute('data-one-button')
   }, [])
   const face = pose ?? (running ? 'working' : disabled ? 'thinking' : 'point')
+  const intro = toolIntroLine(usePathname() || '')
   const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
   const buttonInner = (
     <>
@@ -70,6 +73,7 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
           </div>
         ) : null}
         <p className={styles.scope}>{disabled && disabledReason ? disabledReason : scope}</p>
+        {intro ? <p className={styles.intro}><span className={styles.introLabel}>できること</span>{intro}</p> : null}
       </div>
     </section>
   )

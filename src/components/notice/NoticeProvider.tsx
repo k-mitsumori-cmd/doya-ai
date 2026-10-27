@@ -14,7 +14,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
-import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
+import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, dropBandNotices, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
 import { addSeen, loadLevelRaw, loadPacedDay, loadSeen, saveLevelRaw, savePacedDay, saveSeen } from '@/lib/notice/seen'
 import { countsAsDraft, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
 import { addArtifact, loadArtifacts, saveArtifacts, type RecentArtifact } from '@/lib/notice/artifacts'
@@ -153,7 +153,8 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
   // 同時に来たものをまとめてから、順番どおりに出す。作業中になったら、表示中のエラー以外を列に戻す
   useEffect(() => {
     if (busy) { setQ((s) => pauseNotice(s)); }
-    const t = setTimeout(() => setQ((s) => showNextNotice(s, busy, pacedDayRef.current === noticeDay(new Date()))), busy ? 0 : 400)
+    // 帯（data-one-button）がある画面では、ツールの「できること」のカードを出さない（帯の下に1行で出る）
+    const t = setTimeout(() => setQ((s) => showNextNotice(dropBandNotices(s, document.documentElement.hasAttribute('data-one-button')), busy, pacedDayRef.current === noticeDay(new Date()))), busy ? 0 : 400)
     return () => clearTimeout(t)
   }, [busy, q.queue.length, q.current])
   const current = q.current

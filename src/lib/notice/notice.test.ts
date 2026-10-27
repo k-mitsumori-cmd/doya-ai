@@ -2,7 +2,7 @@
 // ドヤくんの知らせの決まり（順番・作業中・once・旗）の回帰テスト。DB・ネットワーク・画面には触れない。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { EMPTY_QUEUE, allowedAtLevel, closeNotice, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
+import { EMPTY_QUEUE, allowedAtLevel, closeNotice, dropBandNotices, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
 import { addSeen, parseSeen, seenKey, SEEN_MAX } from './seen'
 import { decideGuidePopups, guidePopupsRollout } from './flag'
 import { activeAnnouncements, newToolIds, type Announcement } from './announcements'
@@ -193,4 +193,14 @@ test('間引く知らせ: 作業中は列に残し、終わってから決まり
 test('間引く知らせの「日」は日本時間で数える', () => {
   assert.equal(noticeDay(new Date('2026-10-27T14:59:00Z')), '2026-10-27')
   assert.equal(noticeDay(new Date('2026-10-27T15:00:00Z')), '2026-10-28')
+})
+
+// ---- 帯がある画面では、ツールの「できること」のカードを出さない（2026-10-27 統括の決定・案 a） ----
+test('帯がある画面では、hideWithBand の知らせを列から外す。ほかの知らせと表示中のものは残す', () => {
+  const intro: Notice = { ...n('tool-intro:quote', 'hint', true), hideWithBand: true }
+  let s = enqueueNotice(enqueueNotice(EMPTY_QUEUE, intro, none), n('f', 'feature'), none)
+  assert.deepEqual(dropBandNotices(s, true).queue.map((q) => q.id), ['f'])
+  assert.equal(dropBandNotices(s, false), s)
+  s = showNextNotice(enqueueNotice(EMPTY_QUEUE, intro, none), false)
+  assert.equal(dropBandNotices(s, true).current?.id, 'tool-intro:quote')
 })
