@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && npm run test:pricing && npm run test:support-chat && npm run test:health-check && npm run test:roles && tsc --noEmit && NODE_OPTIONS=--max-old-space-size=6144 next build",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && npm run test:pricing && npm run test:support-chat && npm run test:health-check && npm run test:roles && tsc --noEmit && NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
