@@ -36,7 +36,19 @@ function zoneColor(z: GraphicZone, a: SiteAnalysis) {
 
 // 割付どおりの簡易グラフィック（画像生成前の見た目）
 export function PanelArt({ p, a, image, compact }: { p: GraphicPanel; a: SiteAnalysis; image?: string; compact?: boolean }) {
-  if (image) return <img src={image} alt={`${p.name}のグラフィック`} className="h-full w-full object-cover" draggable={false} />
+  // 生成した画像は文字の無い背景。見出しは、ここで正しい字体で重ねる（全部の面で同じ字体・位置にそろえる）
+  if (image) {
+    return (
+      <div className="relative h-full w-full overflow-hidden" style={{ containerType: 'size' }}>
+        <img src={image} alt={`${p.name}のグラフィック`} className="h-full w-full object-cover" draggable={false} />
+        {!compact && (p.headline || a.brand) ? (
+          <div className="absolute inset-x-0 top-0 flex h-[30%] items-center justify-center px-[6%] text-center" style={{ color: '#fff' }}>
+            <span className="line-clamp-2 font-black leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]" style={{ fontSize: 'min(12cqw, 16cqh)' }}>{p.headline || a.brand}</span>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
   const H = p.heightMm
   return (
     <div className="relative h-full w-full overflow-hidden" style={{ containerType: 'size' }}>
@@ -243,6 +255,9 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
     list.map((p) => {
       const left = (p.offsetMm / 1000) * S
       const width = (p.widthMm / 1000) * S
+      // 面の高さと床からの位置を、部材の高さの中に置く（前は部材の高さいっぱいに引き伸ばし、面どうしが重なって見えていた）
+      const panelH = Math.min(h, (p.heightMm / 1000) * S)
+      const panelTop = Math.max(0, h - ((p.baseMm + p.heightMm) / 1000) * S)
       const active = selectedPanelId === p.id
       return (
         <button
@@ -252,8 +267,8 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
             ev.stopPropagation()
             onSelectPanel?.(p.id)
           }}
-          className="absolute top-0 h-full overflow-hidden"
-          style={{ left: Math.min(left, lengthPx), width, outline: active ? `3px solid ${ds.yellow}` : '1px solid rgba(16,22,51,.15)', outlineOffset: -2 }}
+          className="absolute overflow-hidden"
+          style={{ left: Math.min(left, lengthPx), width: Math.max(0, Math.min(width, lengthPx - Math.min(left, lengthPx))), top: panelTop, height: panelH, outline: active ? `3px solid ${ds.yellow}` : '1px solid rgba(16,22,51,.15)', outlineOffset: -2 }}
           title={p.name}
         >
           <PanelArt p={p} a={a} image={images[p.id]} />
