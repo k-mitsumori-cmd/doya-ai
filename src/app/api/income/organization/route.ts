@@ -1,7 +1,8 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { IncomeError, audit } from '@/lib/income/access'
 import { EXPENSE_ADAPTERS, canReadPromaneWorkspace, listLinkablePromaneWorkspaces, type ExpenseSourceId } from '@/lib/income/expense-source'
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
         return a ? { id, label: a.label, note: a.note, available: true, options: await a.listLinkable(ctx.userId) } : { id, label: 'ドヤ支出管理', note: '準備中です', available: false, options: [] }
       }),
     )
-    return NextResponse.json({ organization: org, role: ctx.role, issuerReady: !!issuer?.companyName, promaneWorkspaces: workspaces, expenseSources })
+    return privateApiJson({ organization: org, role: ctx.role, issuerReady: !!issuer?.companyName, promaneWorkspaces: workspaces, expenseSources })
   })
 }
 
@@ -56,6 +57,6 @@ export async function PATCH(req: NextRequest) {
     }
     const org = await prisma.incomeOrganization.update({ where: { id: ctx.organizationId }, data, select: ORG_SELECT })
     await audit(prisma, ctx, 'organization.update', 'organization', ctx.organizationId, data)
-    return NextResponse.json({ organization: org })
+    return privateApiJson({ organization: org })
   })
 }
