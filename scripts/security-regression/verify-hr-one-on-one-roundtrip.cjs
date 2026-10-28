@@ -1,4 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
+const privateResponse=require('./load-typescript.cjs').load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}});
 const read=f=>fs.readFileSync(f,'utf8');
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function load(f,deps){const exports={};vm.runInNewContext(compile(read(f)),{exports,Date,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exports;}
@@ -7,6 +8,7 @@ function callback(f,name){const s=read(f),a=ts.createSourceFile('x.tsx',s,ts.Scr
 let row={id:'one',organizationId:'o',employeeId:'employee',scheduledAt:new Date('2026-09-21T01:00:00Z'),conductedAt:null,duration:30,agenda:[],managerNotes:null,employeeNotes:null,privateNotes:null,aiActionItems:[],aiInsights:[],employee:{firstName:'太郎',lastName:'架空'},manager:{firstName:'花子',lastName:'合成'}},patchData,display={id:'one'},aiResult,modelCalls=0,usage=0;
 const errors=[],statuses=[];
 const deps={'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'u'}})},'@/lib/auth':{authOptions:{}},'@/lib/hr/one-on-one-access':{canAccessOneOnOne:async()=>true,getOneOnOneViewer:async()=>({employeeId:null}),canViewManagerNotes:()=>true,filterOneOnOneFields:r=>({...r,canViewManagerNotes:true})},'@/lib/hr/access':{getHrContext:async()=>({organizationId:'o'})},'@/lib/prisma':{prisma:{hrOneOnOne:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?row:null,update:async({where,data})=>{if(where.id!==row.id)throw Error('wrong id');patchData=data;row={...row,...data};return row}}}},'@seo/lib/gemini':{GEMINI_TEXT_MODEL_DEFAULT:'synthetic',geminiGenerateText:async()=>{modelCalls++;return '合成要約'}},'@/lib/hr/prompts':load('src/lib/hr/prompts.ts',{}),'@/lib/hr/billing':{reserveAiUsage:async()=>{usage++;return{granted:true,reservation:{organizationId:'o',resetAt:new Date()}}},releaseAiUsage:async()=>{usage--}}};
+deps['@/lib/private-api-response']=privateResponse;
 const api=load('src/app/api/hr/one-on-one/[id]/route.ts',deps),ai=load('src/app/api/hr/one-on-one/[id]/ai-summary/route.ts',deps),ctx={params:Promise.resolve({id:'one'})};
 const fetch=async(url,o)=>{const req={json:async()=>JSON.parse(o.body)};const res=await(url.endsWith('/ai-summary')?ai.POST(req,ctx):api.PATCH(req,ctx));statuses.push({url,status:res.status});return res;};
 const pageSave=vm.runInNewContext(callback('src/app/(shell)/hr/one-on-one/[id]/page.tsx','handleSave'),{id:'one',fetch,setRecord:x=>display=typeof x==='function'?x(display):x});
