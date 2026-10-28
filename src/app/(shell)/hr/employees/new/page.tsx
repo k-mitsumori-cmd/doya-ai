@@ -3,6 +3,7 @@
 import { PageTitle } from '@/components/hr/ui-next'
 import { Button, ErrorNotice } from '@/components/ds'
 import { hrErrorKind } from '@/components/hr/HrLoadError'
+import { HR_EMPLOYEE_NUMBER_CONFLICT } from '@/lib/hr/employee-number'
 import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import DepartmentListState from '@/components/hr/DepartmentListState'
 import { useHrDepartmentList } from '@/lib/hr/use-department-list'
@@ -83,7 +84,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
   }
 
   // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。新しい見た目の処理は引数（onRejected）と handleSubmitNext に置き、ここで新しい名前を参照しない
-  const handleSubmit = async (e: React.FormEvent, onRejected?: (status: number) => void) => {
+  const handleSubmit = async (e: React.FormEvent, onRejected?: (status: number, code?: string) => void) => {
     e.preventDefault()
     if (departmentList.status !== 'ready' || saving || submitted) return
     setLimitNotice(null)
@@ -105,7 +106,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         if (onRejected && errData.code !== 'HR_ORG_EMPLOYEE_LIMIT') {
-          onRejected(res.status)
+          onRejected(res.status, typeof errData.code === 'string' ? errData.code : undefined)
           return
         }
         if (errData.code === 'HR_ORG_EMPLOYEE_LIMIT') {
@@ -176,9 +177,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
       document.getElementById(fid(errors.lastName ? 'lastName' : 'firstName'))?.focus()
       return
     }
-    await handleSubmit(e, (status) => {
+    await handleSubmit(e, (status, code) => {
       const kind = hrErrorKind(status)
-      setFormError(kind === 'login' ? 'ログインの有効期限が切れた可能性があります。入力内容はそのままです。ログインし直してから、もう一度保存してください。'
+      setFormError(status === 409 && code === HR_EMPLOYEE_NUMBER_CONFLICT.code ? HR_EMPLOYEE_NUMBER_CONFLICT.error
+        : kind === 'login' ? 'ログインの有効期限が切れた可能性があります。入力内容はそのままです。ログインし直してから、もう一度保存してください。'
         : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
         : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
         : status === 400 ? '入力内容を確認できませんでした。メールアドレスや日付の形式を確認して、もう一度保存してください。'
@@ -508,7 +510,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           </div>
 
           {/* Sticky bottom save bar (mobile) */}
-          <div className="sm:hidden sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
+          <div className="sm:hidden sticky bottom-[var(--shell-mobile-bottom-inset,0px)] bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
             <button
               type="button"
               onClick={() => router.back()}

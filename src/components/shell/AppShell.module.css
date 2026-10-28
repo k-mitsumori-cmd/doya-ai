@@ -1,5 +1,6 @@
 /* 共通シェル — クリア（トークンは src/components/ds/tokens.module.css） */
 .shell {
+  --shell-mobile-bottom-inset: 0px;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
@@ -223,7 +224,8 @@
   }
   .scrim[data-open='true'] { opacity: 1; pointer-events: auto; }
 
-  .main { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .shell { --shell-mobile-bottom-inset: calc(68px + env(safe-area-inset-bottom)); }
+  .main { padding-bottom: var(--shell-mobile-bottom-inset); }
 
   .tabbar {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
