@@ -1645,3 +1645,14 @@
     padding-bottom: 120px;
   }
 }
+
+.v-price-note {
+  margin: 24px auto 0 !important;
+  max-width: 900px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink2);
+}
+.v-price-num small {
+  display: inline-block;
+}

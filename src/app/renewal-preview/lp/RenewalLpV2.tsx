@@ -116,6 +116,23 @@ function BgVideo({ desktop, mobile, className = "" }: { desktop: string; mobile?
   return <video className={`v-bgvideo ${ready ? "is-ready" : ""} ${className}`} src={src} autoPlay muted loop playsInline preload="auto" aria-hidden="true" onCanPlay={() => setReady(true)} />;
 }
 
+export type Pricing = {
+  freeMembers: number;
+  freeStart: number;
+  freeDaily: number;
+  teamBase: number;
+  seat: number;
+  seatFrom: number;
+  seatLater: number;
+  enterpriseFrom: number;
+  yearlyFreeMonths: number;
+  pointsBase: number;
+  pointsPerSeat: number;
+  packPoints: number;
+  packPrice: number;
+};
+const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
+
 /* ---------- データ ---------- */
 
 type DeptId = "marketing" | "sales" | "hr" | "admin";
@@ -124,7 +141,7 @@ type Dept = { id: DeptId; name: string; short: string; lead: string; ask: string
 const DEPTS: Dept[] = [
   {
     id: "marketing",
-    name: "ドヤマーケAI",
+    name: "マーケティング",
     short: "マーケ",
     lead: "記事・バナー・広告画像から、AI検索の対策まで。",
     ask: "今月の記事を3本と、告知のバナーを進めたい",
@@ -144,7 +161,7 @@ const DEPTS: Dept[] = [
   },
   {
     id: "sales",
-    name: "ドヤセールスAI",
+    name: "営業",
     short: "セールス",
     lead: "リスト作りから商談の準備、見積もりまで。",
     ask: "来週の商談5件の準備をまとめて進めたい",
@@ -161,7 +178,7 @@ const DEPTS: Dept[] = [
   },
   {
     id: "hr",
-    name: "ドヤ人事AI",
+    name: "人事・採用",
     short: "人事",
     lead: "採用の面接から、社内の声と勤怠まで。",
     ask: "今月の面接の質問と評価の表をそろえたい",
@@ -176,9 +193,9 @@ const DEPTS: Dept[] = [
   },
   {
     id: "admin",
-    name: "ドヤ管理AI",
+    name: "売上・経理の管理",
     short: "管理",
-    lead: "請求と支払い、プロジェクトの進み具合を1か所に。",
+    lead: "売上と請求、支払い、プロジェクトの進み具合まで。",
     ask: "今月の請求書をまとめて出したい",
     mascot: "/renewal-lp/dept-admin.webp",
     icon: <Calculator size={20} />,
@@ -214,7 +231,7 @@ function Nav() {
   }, []);
   const links = [
     { href: "#story", label: "ドヤくんの進め方" },
-    { href: "#depts", label: "4つの入口" },
+    { href: "#depts", label: "できること" },
     { href: "#pricing", label: "料金" },
     { href: "#faq", label: "よくある質問" },
   ];
@@ -261,28 +278,27 @@ function Nav() {
 
 /* ---------- ファーストビュー（画面いっぱいの絵） ---------- */
 
-function Hero({ toolCount, proPrice }: { toolCount: number; proPrice: string }) {
+function Hero({ toolCount, pricing }: { toolCount: number; pricing: Pricing }) {
   const { ref, inView } = useInView<HTMLDivElement>(0.1);
-  const price = Number(proPrice.replace(/[^\d]/g, ""));
   return (
     <header className="v-hero">
       <div className="v-hero-bg" aria-hidden="true">
-        <Image className="v-hero-img-d" src="/renewal-lp/scene-hero.webp" alt="" fill priority sizes="100vw" />
-        <Image className="v-hero-img-m" src="/renewal-lp/scene-hero-portrait.webp" alt="" fill priority sizes="100vw" />
-        <BgVideo desktop="/renewal-lp/video/lp-hero-desktop.mp4" mobile="/renewal-lp/video/lp-hero-mobile.mp4" />
+        <Image className="v-hero-img-d" src="/renewal-lp/sys-hero.webp" alt="" fill priority sizes="100vw" />
+        <Image className="v-hero-img-m" src="/renewal-lp/sys-hero-portrait.webp" alt="" fill priority sizes="100vw" />
+        <BgVideo desktop="/renewal-lp/video/lp-sys-hero-desktop.mp4" mobile="/renewal-lp/video/lp-sys-hero-mobile.mp4" />
       </div>
       <div className="v-hero-shade" aria-hidden="true" />
       <div className="v-hero-inner">
         <p className="v-eyebrow">
           <Sparkles size={16} />
-          マーケ・営業・人事・管理の{toolCount}のAIツール
+          マーケも営業も売上の管理も。{toolCount}のAIツールが全部入り
         </p>
         <h1 className="v-hero-title">
-          <span>目的を書けば、</span>
-          <span className="v-grad">ドヤくんが段取りして</span>
-          <span className="v-grad">進めます。</span>
+          <span>ドヤくんに書くだけ。</span>
+          <span className="v-grad">経営の仕事が、</span>
+          <span className="v-grad">ぜんぶ動きだす。</span>
         </h1>
-        <p className="v-hero-sub">部署ごとのAIツールを、1つの契約で。ドヤくんが作戦を立て、必要なツールを順に動かします。</p>
+        <p className="v-hero-sub">ツールを選ぶ必要はありません。やりたいことを書けば、ドヤくんがマーケ・営業・売上の管理まで、必要なツールを順に動かします。無料で始められます。</p>
         <div className="v-hero-cta">
           <Link href="/auth/signin" className="v-btn v-btn-lg v-btn-glow">
             無料で始める <ArrowRight size={20} />
@@ -295,9 +311,9 @@ function Hero({ toolCount, proPrice }: { toolCount: number; proPrice: string }) 
       <div ref={ref} className="v-hero-stats">
         <div>
           <b>
-            <CountUp to={4} run={inView} />
+            <CountUp to={1} run={inView} />
           </b>
-          <span>部署の入口</span>
+          <span>つの入力欄で全部</span>
         </div>
         <div>
           <b>
@@ -307,15 +323,15 @@ function Hero({ toolCount, proPrice }: { toolCount: number; proPrice: string }) 
         </div>
         <div>
           <b>
-            <CountUp to={1} run={inView} />
+            ¥<CountUp to={0} run={inView} />
           </b>
-          <span>つの契約</span>
+          <span>で始められる</span>
         </div>
         <div>
           <b>
-            ¥<CountUp to={price} run={inView} />
+            <CountUp to={pricing.freeStart} run={inView} />
           </b>
-          <span>月額で全ツール</span>
+          <span>最初にもらえるドヤパワー</span>
         </div>
       </div>
     </header>
@@ -352,7 +368,7 @@ function Marquee() {
 
 function Problems() {
   const items = [
-    { no: "01", title: "ツールと契約がばらばら", desc: "部署ごとに別のサービスを契約し、ログインも請求もばらばらになっています。" },
+    { no: "01", title: "ツールが多すぎる", desc: "マーケ、営業、売上の管理。仕事ごとに別のツールを契約し、どれを使うか選ぶだけで疲れてしまいます。" },
     { no: "02", title: "頼める人が足りない", desc: "やりたい施策はあるのに、手を動かせる人が足りず、後回しになっています。" },
     { no: "03", title: "何をどう頼むか分からない", desc: "AIに何を入れればよいか分からず、試しただけで終わってしまいます。" },
   ];
@@ -525,13 +541,13 @@ function Departments() {
       <div className="v-depts-glow" aria-hidden="true" />
       <div className="v-wrap">
         <Reveal>
-          <p className="v-kicker">4つの入口</p>
+          <p className="v-kicker">できること</p>
           <h2 id="v-depts-h" className="v-h2">
-            部署を選ぶと、
+            マーケも営業も管理も、
             <br />
-            その仕事のAIがそろいます。
+            ぜんぶドヤくんに。
           </h2>
-          <p className="v-lead">契約は1つです。ほかの部署のツールも、同じアカウントで使えます。</p>
+          <p className="v-lead">部署やツールを選ぶ必要はありません。どの仕事も、同じ入力欄に書くだけで進みます。</p>
         </Reveal>
         <div className="v-dept-grid">
           {DEPTS.map((d, i) => (
@@ -546,7 +562,7 @@ function Departments() {
 /* ---------- ひとことの見出し ---------- */
 
 function Tagline() {
-  const words = ["ツールを", "探す", "時間を、", "仕事を", "進める", "時間に。"];
+  const words = ["ドヤくんに", "書く", "だけで、", "仕事が", "ぜんぶ", "動きだす。"];
   const ref = useRef<HTMLDivElement>(null);
   const [lit, setLit] = useState(0);
   const reduced = useReducedMotion();
@@ -649,33 +665,39 @@ function UseCases() {
 
 /* ---------- 料金 ---------- */
 
-function Pricing({ proPrice, toolCount }: { proPrice: string; toolCount: number }) {
+function Pricing({ pricing: p, toolCount }: { pricing: Pricing; toolCount: number }) {
+  const solo = p.teamBase + p.seat;
   return (
     <section id="pricing" className="v-section" aria-labelledby="v-price-h">
       <div className="v-wrap">
         <Reveal>
           <p className="v-kicker">料金</p>
           <h2 id="v-price-h" className="v-h2">
-            全部の部署のツールが、
+            無料で始めて、
             <br />
-            1つの料金で使えます。
+            使うぶんだけ広げる。
           </h2>
+          <p className="v-lead">ツールごとの契約はいりません。ドヤくんが動いた量は「ドヤパワー」で数えます。文章なら少し、画像や長い作業なら多めに使います。</p>
         </Reveal>
         <div className="v-prices">
           <Reveal className="v-price">
-            <h3>無料</h3>
+            <h3>フリー</h3>
             <p className="v-price-num">
               ¥0<small>/月</small>
             </p>
-            <p className="v-price-desc">まず試したい方に。各ツールを決まった回数まで使えます。</p>
+            <p className="v-price-desc">まず試したい方に。登録するだけで、すぐに使えます。</p>
             <ul>
               <li>
                 <Check size={16} />
-                {toolCount}のツールを試せる
+                最初にドヤパワー {p.freeStart}
               </li>
               <li>
                 <Check size={16} />
-                Google アカウントで登録
+                毎日 {p.freeDaily} ずつ回復（上限 {p.freeStart}）
+              </li>
+              <li>
+                <Check size={16} />
+                {toolCount}のツールを {p.freeMembers}人まで
               </li>
             </ul>
             <Link href="/auth/signin" className="v-btn v-btn-ghost">
@@ -684,24 +706,26 @@ function Pricing({ proPrice, toolCount }: { proPrice: string; toolCount: number 
           </Reveal>
           <Reveal className="v-price is-pro" delay={120}>
             <span className="v-price-tag">おすすめ</span>
-            <h3>プロ</h3>
+            <h3>チーム</h3>
             <p className="v-price-num">
-              {proPrice}
-              <small>/月（税込）</small>
+              {yen(p.teamBase)}
+              <small>/月 ＋ 1人 {yen(p.seat)}（税抜）</small>
             </p>
-            <p className="v-price-desc">仕事で毎日使う方に。全部の部署のツールを、多い回数まで使えます。</p>
+            <p className="v-price-desc">
+              1人で使うなら月 {yen(solo)}（税抜）。{p.seatFrom}人目からは1人 {yen(p.seatLater)}、{p.enterpriseFrom}人以上はお見積りです。
+            </p>
             <ul>
               <li>
                 <Check size={16} />
-                全ツールのプロ版
+                毎月ドヤパワー {p.pointsBase.toLocaleString("ja-JP")} ＋ 1人 {p.pointsPerSeat}
               </li>
               <li>
                 <Check size={16} />
-                1つの契約で全部の部署
+                マーケ・営業・人事・管理の全ツール
               </li>
               <li>
                 <Check size={16} />
-                いつでも解約できる
+                年払いなら {p.yearlyFreeMonths}か月分おトク
               </li>
             </ul>
             <Link href="/pricing" className="v-btn v-btn-white">
@@ -709,6 +733,11 @@ function Pricing({ proPrice, toolCount }: { proPrice: string; toolCount: number 
             </Link>
           </Reveal>
         </div>
+        <Reveal>
+          <p className="v-price-note">
+            ドヤパワーが足りないときは、{p.packPoints.toLocaleString("ja-JP")} を {yen(p.packPrice)}（税抜）で追加できます。
+          </p>
+        </Reveal>
       </div>
     </section>
   );
@@ -717,12 +746,13 @@ function Pricing({ proPrice, toolCount }: { proPrice: string; toolCount: number 
 /* ---------- よくある質問 ---------- */
 
 const FAQ = [
-  { q: "4つの入口は、別々に契約するのですか。", a: "いいえ。ドヤAIの契約は1つです。どの入口から入っても、ほかの部署のツールを同じアカウントで使えます。" },
-  { q: "無料プランでは何ができますか。", a: "各ツールを決まった回数まで試せます。Google アカウントで登録でき、そのまま使い始められます。" },
+  { q: "仕事やツールごとに、別の契約が要りますか。", a: "要りません。ドヤAIの契約は1つで、マーケ・営業・人事・管理のツールを全部使えます。" },
+  { q: "無料プランでは何ができますか。", a: "最初にドヤパワーを100受け取れて、全部のツールを試せます。ドヤパワーは毎日10ずつ回復します（上限100）。Google アカウントで登録でき、そのまま使い始められます。" },
   { q: "ドヤくんは、勝手に外へ送ったり公開したりしますか。", a: "しません。メールの送信や公開など外に出る操作は、人が確かめてから進めます。" },
   { q: "AIが作った物は、そのまま使えますか。", a: "下書きとして使い、内容は人が確かめてください。画面で直してから使えます。" },
-  { q: "社員を招待して、部署ごとに分けられますか。", a: "会社のアカウントにメンバーを招待できます。部署ごとに先に出すツールを変える機能は、順に使えるようにしています。" },
-  { q: "解約はいつでもできますか。", a: "できます。解約したあとも、いまの契約の期間が終わるまでプロ版を使えます。" },
+  { q: "社員を招待できますか。", a: "できます。会社のアカウントにメンバーを招待して、同じツールを使えます。" },
+  { q: "ドヤパワーとは何ですか。", a: "ドヤくんやツールが動いた量を数えるポイントです。文章を作るときは少し、画像や長い作業では多めに使います。" },
+  { q: "解約はいつでもできますか。", a: "できます。解約したあとも、いまの契約の期間が終わるまで使えます。" },
 ];
 
 function Faq() {
@@ -755,17 +785,16 @@ function FinalCta() {
   return (
     <section className="v-final" aria-labelledby="v-final-h">
       <div className="v-final-bg" aria-hidden="true">
-        <Image src="/renewal-lp/scene-finale.webp" alt="" fill sizes="100vw" />
-        <BgVideo desktop="/renewal-lp/video/lp-finale.mp4" />
+        <Image src="/renewal-lp/sys-finale.webp" alt="" fill sizes="100vw" />
       </div>
       <div className="v-final-shade" aria-hidden="true" />
       <div className="v-final-inner">
         <h2 id="v-final-h">
-          まずは1つ、
+          まずは無料で、
           <br />
-          目的を書いてみてください。
+          ドヤくんに書いてみてください。
         </h2>
-        <p>無料プランから始められます。</p>
+        <p>Google アカウントで、すぐに始められます。</p>
         <Link href="/auth/signin" className="v-btn v-btn-lg v-btn-glow">
           無料で始める <ArrowRight size={20} />
         </Link>
@@ -830,7 +859,7 @@ function MobileCta() {
   );
 }
 
-export function RenewalLpV2({ toolCount, proPrice }: { toolCount: number; proPrice: string }) {
+export function RenewalLpV2({ toolCount, pricing }: { toolCount: number; pricing: Pricing }) {
   return (
     <div className="v">
       <a href="#v-main" className="v-skip">
@@ -838,7 +867,7 @@ export function RenewalLpV2({ toolCount, proPrice }: { toolCount: number; proPri
       </a>
       <div id="v-top-sentinel" aria-hidden="true" />
       <Nav />
-      <Hero toolCount={toolCount} proPrice={proPrice} />
+      <Hero toolCount={toolCount} pricing={pricing} />
       <div id="v-hero-end" aria-hidden="true" />
       <main id="v-main">
         <Marquee />
@@ -847,7 +876,7 @@ export function RenewalLpV2({ toolCount, proPrice }: { toolCount: number; proPri
         <Departments />
         <Tagline />
         <UseCases />
-        <Pricing proPrice={proPrice} toolCount={toolCount} />
+        <Pricing pricing={pricing} toolCount={toolCount} />
         <Faq />
         <FinalCta />
       </main>
