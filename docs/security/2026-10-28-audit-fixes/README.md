@@ -34,3 +34,7 @@ verify-audit-input-cache.cjsは実装を読み込み、private JSON、A/Bの履�
 制作記録: Codexで修正・検証。Lunaは未使用。
 
 ビルド後のNext生成型の検査で、5ファイルに7件の引数型エラーが出たため、params/searchParamsをPromise型へ統一した。通常buildの末尾でもtscを実行し、生成後の型も検査する。
+
+追加のCI fixtureは実装のimage-entitlements/creation-receipt/user-errorなどを読み込めるように修正した。Persona画像7ケース、SFA権限のprivate PG検査、追加8つのmounted検査が合格した。入力・画像APIは実HTTP16/16、人事・勤怠は65/65、セキュリティrunnerと16種類のサービステストもローカルで合格した。
+
+Next.js/eslint-config-nextを15.5.28、DOMPurifyを3.4.17へ更新するlockfileを作成した。lockfileのnpm auditでCriticalは2から0へ減少したが、High10/Moderate3は残る。ローカルの共有依存は変更せず、更新された依存のインストールとビルドはCIで検証する。本番反映済みとはこの時点では記載しない。
