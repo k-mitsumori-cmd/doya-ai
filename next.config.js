@@ -54,7 +54,8 @@ const nextConfig = {
     //    実行時にはそのパスは存在しないため、下の
     //    outputFileTracingIncludes でファイルを同梱しても解決しない。
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js'],
+  // Satori の HarfBuzz は実行時に隣接する WASM を読むため、Node の配置を保つ。
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js', 'satori'],
 
   // ⚠️ 画面が増えて、Vercel のビルドがコンパイルの途中でメモリ不足（SIGKILL）で止まった（2026-10-24）。
   // webpack のメモリの使い方を抑える（ビルドが少し遅くなる代わりに、ピークのメモリが下がる）。
@@ -92,6 +93,9 @@ const nextConfig = {
       '/api/shanai/interviews/[id]/transcribe': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
       '/api/shanai/interviews/[id]/thumbnail': ['./assets/fonts/*.ttf'],
       '/api/shanai/interviews/[id]/export': ['./assets/fonts/*.ttf'],
+      '/api/shanai/interviews/*/thumbnail': ['./assets/fonts/*.ttf', './node_modules/harfbuzzjs/*.wasm'],
+      '/api/shanai/interviews/*/export': ['./assets/fonts/*.ttf', './node_modules/harfbuzzjs/*.wasm'],
+      '/api/annual-report/image': ['./assets/fonts/*.ttf', './public/annual-report/frame*.webp', './node_modules/harfbuzzjs/*.wasm'],
       // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
       //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
       //    banner/from-url はページから色を取るだけで文字を描画しないため不要。
