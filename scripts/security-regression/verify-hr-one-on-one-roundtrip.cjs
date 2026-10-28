@@ -26,6 +26,12 @@ result('summary after saving nonempty notes',statuses.at(-1).status===200,{statu
 await api.PATCH({json:async()=>({managerNotes:'APIで保存した議事録'})},ctx);
 await vm.runInNewContext(callback('src/components/hr/OneOnOneForm.tsx','handleAiSummary'),state)();
 result('supported API note control permits summary',statuses.at(-1).status===200&&modelCalls===2,{status:statuses.at(-1).status,modelCalls,usage,aiResult});
+row.duration=null;state.duration=null;
+await state.handleSave();
+result('unset duration saves unrelated fields without sending null or inventing minutes',statuses.at(-1).status===200&&row.duration===null&&!Object.hasOwn(patchData,'duration'),{status:statuses.at(-1).status,storedDuration:row.duration});
+state.duration=120;
+await state.handleSave();
+result('valid custom duration survives actual form and PATCH roundtrip',statuses.at(-1).status===200&&row.duration===120,{status:statuses.at(-1).status,storedDuration:row.duration});
 const output={scope:'Actual form/page callbacks, PATCH, GET, AI route and prompt builder; synthetic auth/DB/model/billing. No browser or production changes.',savedFields,saveStatus:statuses[0].status,uiErrors:errors,results};
 if(results.some(r=>r.outcome!=='PASS'))process.exitCode=1;console.log(JSON.stringify(output,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

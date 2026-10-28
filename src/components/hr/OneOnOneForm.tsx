@@ -34,7 +34,7 @@ interface OneOnOneFormProps {
   employeeId?: string
   employeeName?: string
   initialDate?: string
-  initialDuration?: number
+  initialDuration?: number | null
   initialAgenda?: AgendaItem[]
   initialManagerNote?: string
   initialSharedNote?: string
@@ -154,7 +154,7 @@ export default function OneOnOneForm({
         recordId,
         employeeId,
         date: date ? new Date(date).toISOString() : null,
-        duration,
+        ...(duration !== null ? { duration } : {}),
         agenda,
         ...(canViewManagerNotes ? { managerNote } : {}),
         sharedNote,
@@ -216,11 +216,15 @@ export default function OneOnOneForm({
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">所要時間（分）</label>
             <select
-              value={duration}
+              value={duration ?? ''}
               onChange={(e) => setDuration(parseInt(e.target.value))}
               disabled={editingDisabled}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             >
+              <option value="" disabled>未設定</option>
+              {duration !== null && ![15, 30, 45, 60, 90].includes(duration) && (
+                <option value={duration}>{duration}分</option>
+              )}
               <option value={15}>15分</option>
               <option value={30}>30分</option>
               <option value={45}>45分</option>
