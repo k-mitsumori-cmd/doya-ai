@@ -154,7 +154,8 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   .notes { margin-top: 8mm; border-top: 1px solid #dbe3f2; padding-top: 4mm; font-size: 9.5pt; line-height: 1.8; }
   .notes h2 { font-size: 10pt; margin: 0 0 1.5mm; color: #5a678a; font-weight: 600; }
   .notes .block { margin-bottom: 4mm; }
-  .foot { margin-top: 10mm; text-align: center; font-size: 8pt; color: #9aa7c2; }
+  /* タイトルだけの末尾ページを作らず、直前の内容と一緒に配置する。 */
+  .foot { margin-top: 4mm; break-before: avoid; text-align: center; font-size: 8pt; color: #9aa7c2; }
 </style></head><body>
 <div class="page">
   ${isDraft ? '<div class="watermark">社内確認用</div>' : ''}
