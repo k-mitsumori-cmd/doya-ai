@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -141,7 +142,7 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -149,10 +150,10 @@ export async function GET(req: NextRequest) {
     const format = (searchParams.get('format') || 'csv').toLowerCase()
 
     if (!projectId) {
-      return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
+      return privateApiJson({ error: 'projectIdは必須です' }, { status: 400 })
     }
     if (format !== 'csv' && format !== 'excel') {
-      return NextResponse.json(
+      return privateApiJson(
         { error: 'formatはcsvまたはexcelを指定してください' },
         { status: 400 }
       )
@@ -162,10 +163,10 @@ export async function GET(req: NextRequest) {
       where: { id: projectId },
     })
     if (!project) {
-      return NextResponse.json({ error: 'プロジェクトが見つかりません' }, { status: 404 })
+      return privateApiJson({ error: 'プロジェクトが見つかりません' }, { status: 404 })
     }
     if (project.userId !== userId) {
-      return NextResponse.json({ error: 'アクセス権がありません' }, { status: 403 })
+      return privateApiJson({ error: 'アクセス権がありません' }, { status: 403 })
     }
 
     // Fail with a normal 500 response if the database is already unavailable.
@@ -179,6 +180,7 @@ export async function GET(req: NextRequest) {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Cache-Control': 'private, no-store',
+          Vary: 'Cookie',
           'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(
             safeName
           )}.csv`,
@@ -193,6 +195,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/vnd.ms-excel; charset=utf-8',
         'Cache-Control': 'private, no-store',
+          Vary: 'Cookie',
         'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(
           safeName
         )}.xls`,
@@ -200,7 +203,7 @@ export async function GET(req: NextRequest) {
     })
   } catch {
     console.error('[doyalist/export][GET] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'エクスポートに失敗しました' },
       { status: 500 }
     )
