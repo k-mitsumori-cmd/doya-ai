@@ -1421,3 +1421,6 @@ if (hrExport.error || hrExport.status !== 0) { console.error('HR employee export
 
 const hrPrivateJson = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-api-private-json.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrPrivateJson.error || hrPrivateJson.status !== 0) { console.error('HR private JSON regression failed'); process.exit(hrPrivateJson.status || 1); }
+
+const hrDuration = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-duration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrDuration.error || hrDuration.status !== 0) { console.error('HR one-on-one duration regression failed'); process.exit(hrDuration.status || 1); }

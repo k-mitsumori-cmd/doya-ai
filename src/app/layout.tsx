@@ -118,7 +118,7 @@ export default function RootLayout({
   const webSiteSchema = generateWebSiteSchema()
 
   return (
-    <html lang="ja">
+    <html lang="ja" data-scroll-behavior="smooth">
       <head>
         {/* Google Tag Manager */}
         <GoogleTagManager />

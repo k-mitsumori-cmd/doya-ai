@@ -13,7 +13,7 @@ interface OneOnOneData {
   employeeId: string
   employeeName: string
   date: string
-  duration: number
+  duration: number | null
   agenda: any[]
   managerNote: string
   sharedNote: string
