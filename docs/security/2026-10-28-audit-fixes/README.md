@@ -32,3 +32,5 @@ verify-audit-input-cache.cjsは実装を読み込み、private JSON、A/Bの履�
 検証結果、公開コミットとデプロイ結果は、実行完了後の作業記録へ追記する。準備済みと公開済みを混同しない。
 
 制作記録: Codexで修正・検証。Lunaは未使用。
+
+ビルド後のNext生成型の検査で、5ファイルに7件の引数型エラーが出たため、params/searchParamsをPromise型へ統一した。通常buildの末尾でもtscを実行し、生成後の型も検査する。
