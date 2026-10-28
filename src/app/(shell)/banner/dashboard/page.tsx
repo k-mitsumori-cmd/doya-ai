@@ -1430,7 +1430,7 @@ function BannerTestPageInner() {
             {selectedBanner ? (
               <img
                 src={heroImgSrc || heroUrl(selectedBanner.imageUrl, 'lo')}
-                alt="Selected banner"
+                alt="選択したバナー"
                 loading="eager"
                 decoding="async"
                 // @ts-ignore fetchpriority is valid HTML but not in React types
@@ -1441,7 +1441,7 @@ function BannerTestPageInner() {
             ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
               <img
                 src={heroImgSrc || heroUrl(selectedTemplate.imageUrl, 'lo')}
-                alt={selectedTemplate.prompt}
+                alt={selectedTemplate.displayTitle || selectedTemplate.industry || '選択したバナーの見本'}
                 loading="eager"
                 decoding="async"
                 // @ts-ignore fetchpriority is valid HTML but not in React types
@@ -1900,7 +1900,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden border border-gray-600 shrink-0">
                             {logoPreview ? (
-                              <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
+                              <img src={logoPreview} alt="アップロードしたロゴ" className="w-full h-full object-contain" />
                             ) : (
                               <span className="text-[10px] sm:text-xs text-gray-500 font-bold">ロゴ</span>
                             )}
@@ -1924,7 +1924,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden border border-gray-600 shrink-0">
                             {personPreview ? (
-                              <img src={personPreview} alt="Person" className="w-full h-full object-cover" />
+                              <img src={personPreview} alt="アップロードした人物写真" className="w-full h-full object-cover" />
                             ) : (
                               <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
                             )}
@@ -2237,7 +2237,7 @@ function BannerTestPageInner() {
                     >
                       <img
                         src={banner.imageUrl}
-                        alt={`Generated banner ${idx + 1}`}
+                        alt={`生成したバナー ${idx + 1}`}
                         className="w-full h-full object-contain bg-gray-900"
                       />
                       {/* オーバーレイ（ホバー時） */}

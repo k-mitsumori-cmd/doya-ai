@@ -13,6 +13,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import { flowStepState, type NextStepState } from './next-step-model'
 import { nextStepCopy, type NextStepTool } from './next-step-copy'
+import tokens from './tokens.module.css'
 import styles from './next-step.module.css'
 
 export type { NextStepState } from './next-step-model'
@@ -31,7 +32,7 @@ export function NextStepBar({ text, sub, action, state = 'empty', label = '次�
   className?: string
 }) {
   return (
-    <section className={`${styles.bar} ${className ?? ''}`} aria-label={label} data-state={state} aria-busy={state === 'working' || text === null || undefined}>
+    <section className={`${tokens.ds} ${styles.bar} ${className ?? ''}`} aria-label={label} data-state={state} aria-busy={state === 'working' || text === null || undefined}>
       <div className={styles.text}>
         {/* 領域は残し、中の文だけを入れ替える（状態が変わると読み上げられる） */}
         <div className={styles.live} aria-live="polite" aria-atomic="true">
@@ -90,7 +91,7 @@ export function FlowSteps({ steps, current, label, className }: {
   const n = steps.length
   const style = { '--cols': n, '--cols-sm': n >= 4 ? 2 : n } as CSSProperties
   return (
-    <ol className={`${styles.steps} ${className ?? ''}`} aria-label={label} style={style}>
+    <ol className={`${tokens.ds} ${styles.steps} ${className ?? ''}`} aria-label={label} style={style}>
       {steps.map((s, i) => {
         const st = flowStepState(i, current)
         return (
