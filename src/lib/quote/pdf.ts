@@ -114,12 +114,9 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; font-family: ${PDF_FONT_STACK}; color: #16233d; font-size: 10.5pt; }
   .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
-  /* ⚠️ position:fixed はビューポート（1240px）基準になり、A4紙面（210mm≒794px）の
-     中央からずれて右へはみ出す。紙面（.page は position:relative）の中に
-     absolute で置き、紙の幅を基準に中央へ寄せる。
-     絶対配置なので1ページ目にのみ出るが、合計金額が載るのは1ページ目であり、
-     画面側にも下書きの警告を出しているため実用上はこれで足りる。 */
-  .watermark { position: absolute; top: 42%; left: 0; width: 100%; text-align: center;
+  /* 紙面の寸法をmmで指定する。ビューポート幅や複数ページ分の文書の高さに
+     依存せず、固定配置によって下書きの全ページに同じ透かしを繰り返す。 */
+  .watermark { position: fixed; top: 125mm; left: 0; width: 210mm; text-align: center;
     font-size: 64pt; font-weight: 800; color: rgba(255,30,114,0.10);
     transform: rotate(-24deg); letter-spacing: 0.1em; pointer-events: none; z-index: 0; }
   .inner { position: relative; z-index: 1; }

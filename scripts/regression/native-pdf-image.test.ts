@@ -67,7 +67,15 @@ test('quote pagination keeps the footer with content and preserves long estimate
     assert.ok(last.includes(input.title), 'Document title must remain in the footer')
     assert.ok(last.replace(input.title, '').length > 50, 'Last page must contain actual estimate content, not a lonely footer')
     assert.ok(raw.includes('社内確認用'), 'Draft watermark must remain')
+    for (let page = 1; page <= pageCount; page++) {
+      const pageText = execFileSync('pdftotext', ['-raw', '-f', String(page), '-l', String(page), '-', '-'], { input: pdf }).toString().replace(/\s/g, '')
+      assert.ok(pageText.includes('社内確認用'), `Draft watermark must be present on page ${page}/${pageCount}`)
+    }
     assert.ok(text.includes(long ? '49,500' : '330,000'), 'Totals must remain correct')
     for (const item of fixture.lineItems) assert.ok(text.includes(item.itemName), `Missing item ${item.itemName}`)
   }
+  const approvedPdf = Buffer.from(await generateQuotePdf({ ...input, status: 'approved' }))
+  const approvedText = execFileSync('pdftotext', ['-raw', '-', '-'], { input: approvedPdf }).toString().replace(/\s/g, '')
+  assert.equal(approvedText.includes('社内確認用'), false, 'Approved documents must not gain a draft watermark')
+  writeFileSync('/tmp/doya-native-pdf-audit/pagination-approved.pdf', approvedPdf)
 })
