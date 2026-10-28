@@ -1846,7 +1846,7 @@ function SeoArticleInner() {
                       </article>
                     </>
                   ) : (
-                    <div className="py-20 sm:py-32 text-center text-gray-300 font-black text-sm sm:text-base">
+                    <div className="py-20 sm:py-32 text-center text-gray-500 font-black text-sm sm:text-base">
                       {isGenerating ? '本文を作成しています。' : '本文はまだありません。'}
                     </div>
                   )}
