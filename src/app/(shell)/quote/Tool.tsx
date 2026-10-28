@@ -31,6 +31,7 @@ import { useNotice } from '@/components/notice/NoticeProvider'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { quoteOneButtonStage } from '@/lib/one-button/quote-stage'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -154,6 +155,8 @@ export default function QuoteTool() {
 
   // 商材の取り込み
   const [url, setUrl, urlRef] = useQuoteDraftState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [analyzing, setAnalyzing] = useState(false)
   const [draftProfile, setDraftProfile, draftProfileRef] = useQuoteDraftState<ProductProfile | null>(null)
   const [draftUrl, setDraftUrl, draftUrlRef] = useQuoteDraftState('')

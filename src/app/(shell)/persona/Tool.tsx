@@ -53,6 +53,7 @@ import {
 } from 'lucide-react'
 import { ShellCostBadge } from '@/components/shell/power'
 import { personaUserMessage } from '@/components/persona/user-message'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 
 // ムード → 色
@@ -262,6 +263,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
   const [additionalInfo, setAdditionalInfo] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), s = read('service'); if (u) setUrl(u); if (s) setServiceName(s) })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const oneButton = useOneButton()

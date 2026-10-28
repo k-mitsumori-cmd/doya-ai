@@ -34,6 +34,7 @@ import { ShellCostBadge } from '@/components/shell/power'
 import { seoUserMessage } from '@/components/seo/user-message'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -321,6 +322,8 @@ export default function SeoCreateWizardPage() {
   // Step1: 記事の軸
   const [mainKeyword, setMainKeyword] = useState('')
   const [articleTitle, setArticleTitle] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const k = read('keyword'), t = read('title'); if (k) setMainKeyword(k); if (t) setArticleTitle(t) })
   const [titleCandidates, setTitleCandidates] = useState<string[]>([])
   const [titleSelected, setTitleSelected] = useState<number | null>(null)
   const [titleLoading, setTitleLoading] = useState(false)

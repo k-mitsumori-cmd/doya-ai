@@ -6,20 +6,17 @@ import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib
 import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
-import { readAmountParam } from '@/app/(shell)/home/quick-request'
+import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
+
+/** ドヤAIの「頼む」から来たときに、組織の中で開いてよい画面（?to=） */
+const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new' } as const
 
 type ExpensePageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }
 
-/** 経営ホームの「すぐ登録する依頼」から来たとき、組織の中の登録の画面へ運ぶ（?to=new-contract&amount=） */
-function nextPathFor(sp: Record<string, string | string[] | undefined>): string {
-  if (sp.to !== 'new-contract') return ''
-  const amount = readAmountParam(typeof sp.amount === 'string' ? sp.amount : '')
-  return `/contracts/new${amount ? `?amount=${amount}` : ''}`
-}
-
 export default async function ExpensePage({ searchParams }: ExpensePageProps = {}) {
   const sp = (searchParams ? await searchParams : {}) ?? {}
-  const next = nextPathFor(sp)
+  // ドヤAIの「頼む」から来たときは、行き先（?to=）と値（doya_*）を組織の中の画面へ運ぶ
+  const next = forwardPath(toSearchParams(sp), EXPENSE_ENTRY_TO)
   const session = await getServerSession(authOptions)
   if (!session?.user) return <ExpenseLp />
   // ⚠️ 新しい見た目（チェックリスト §5.1）のときだけ、組織があればサーバーで直接その組織へ移す

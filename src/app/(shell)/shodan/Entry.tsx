@@ -11,6 +11,12 @@ import {
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { ShodanResearchMock, ShodanHypothesisMock, ShodanProposalMock } from './mocks'
 import { Skeleton } from '@/components/ds'
+import { forwardPath } from '@/lib/agent-router/entry'
+
+/** ドヤAIの「頼む」から来たときの行き先（?to=new）と値（doya_*）を、組織の中の画面へ運ぶ */
+function orgPath(slug: string): string {
+  return `/shodan/${encodeURIComponent(slug)}${typeof window === 'undefined' ? '' : forwardPath(new URLSearchParams(window.location.search), { new: '/new' })}`
+}
 
 const ROWS: ShowcaseRow[] = [
   {
@@ -49,7 +55,7 @@ export default function ShodanEntryPage() {
       .then((d) => {
         if (!d?.authenticated) { setPhase('guest'); return }
         if (d?.onboarded && d?.memberships?.[0]?.slug) {
-          router.replace(`/shodan/${encodeURIComponent(d.memberships[0].slug)}`)
+          router.replace(orgPath(d.memberships[0].slug))
         } else {
           setPhase('onboard')
         }
@@ -70,7 +76,7 @@ export default function ShodanEntryPage() {
       const d = await res.json()
       if (!isCurrent()) return
       if (!res.ok) throw new NavigationSubmissionError(d.error || '作成に失敗しました')
-      router.replace(`/shodan/${encodeURIComponent(d.organization.slug)}`)
+      router.replace(orgPath(d.organization.slug))
     })
   }
 

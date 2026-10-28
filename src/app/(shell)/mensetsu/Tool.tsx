@@ -20,6 +20,7 @@ import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mense
 import LoadingProgress from '@/components/LoadingProgress'
 import { ShellCostBadge } from '@/components/shell/power'
 import { confirmDialog } from '@/components/ds/dialog'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 interface Org {
   id: string
@@ -134,6 +135,8 @@ export default function MensetsuTool() {
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
   const [candidateName, setCandidateName] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), j = read('job'), c = read('candidate'); if (u) setCompanyUrl(u); if (j) setJobTitle(j); if (c) setCandidateName(c) })
   /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')

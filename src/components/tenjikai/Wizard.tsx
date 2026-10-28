@@ -10,6 +10,7 @@ import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } }
 const item = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } } }
@@ -39,6 +40,8 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
     return withBoothSize(initial, r(w), r(d))
   })
   const [sizeOk, setSizeOk] = useState(true)
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), n = read('name'), d = read('date', 'date'); if (u || n || d) setF((p) => ({ ...p, serviceUrl: u || p.serviceUrl, eventName: n || p.eventName, eventStart: d || p.eventStart })) })
   const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   // 読み込みが終わる前に押されると、ブラウザーがフォームをそのまま送ってページが読み直される。終わるまで押せないようにする
   const [hydrated, setHydrated] = useState(false)

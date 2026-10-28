@@ -12,6 +12,7 @@ import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { readOrgProfile } from '@/lib/org-profile-view'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 type Phase = 'input' | 'researching' | 'reveal'
 
@@ -58,6 +59,8 @@ export default function ShodanNewPage() {
   const attempt = useRef<'idle' | 'pending' | 'unknown' | 'confirmed' | 'limited'>('idle')
   const draft = useRef('')
   const [url, setUrl] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) { draft.current = u; setUrl(u) } })
   const [phase, setPhase] = useState<Phase>('input')
   const [tick, setTick] = useState(0)
   const [research, setResearch] = useState<CompanyResearch | null>(null)

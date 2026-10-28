@@ -15,6 +15,7 @@ import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
 const HERO_ART = '/ui-renewal/keyart/asklink.webp'
@@ -54,6 +55,8 @@ function Guide() {
 
 export default function AskLinkTool() {
   const [url, setUrl] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)
