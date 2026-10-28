@@ -523,10 +523,17 @@ if (hrEmployeeAccess.error || hrEmployeeAccess.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-access.cjs');
   process.exit(1);
 }
-const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-admission.cjs', 'verify-hr-employee-number.cjs', 'verify-hr-employee-number-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
+const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeAdmission.error || hrEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-admission.cjs');
   process.exit(1);
+}
+for (const script of ['verify-hr-employee-number.cjs', 'verify-hr-employee-number-ui.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) {
+    console.error('Security regression failed: ' + script);
+    process.exit(1);
+  }
 }
 const promaneWorkspaceAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-workspace-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (promaneWorkspaceAdmission.error || promaneWorkspaceAdmission.status !== 0) {
