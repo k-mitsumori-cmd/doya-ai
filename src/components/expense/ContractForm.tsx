@@ -66,7 +66,7 @@ const CONTRACTOR_FORMS = [
 
 const contractorKey = (billingModel: string, freq: number) => (billingModel === 'fixed' && freq === 6 ? 'half' : CONTRACTOR_FORMS.find((x) => x.billingModel === billingModel && x.freq === freq)?.key ?? 'fixed')
 
-export default function ContractForm({ mode, initial, preset, onSaved }: { mode: 'create' | 'edit'; initial?: Contract; preset?: 'contractor'; onSaved: (id: string) => void }) {
+export default function ContractForm({ mode, initial, preset, draftUnitPrice = '', onSaved }: { mode: 'create' | 'edit'; initial?: Contract; preset?: 'contractor'; /** 新しく作るときに、最初から入れておく金額（円）。経営ホームの「すぐ登録する依頼」から */ draftUnitPrice?: string; onSaved: (id: string) => void }) {
   const { orgSlug, canManage } = useExpenseOrg()
   const vendors = useExpenseQuery<{ vendors: Vendor[] }>(mode === 'create' ? '/api/expense/vendors' : null, orgSlug)
   const methods = useExpenseQuery<{ paymentMethods: PaymentMethod[] }>('/api/expense/payment-methods', orgSlug)
@@ -100,7 +100,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
     }
   }, [mode, autoOpened, vendors.data])
   const [vendor, setVendor] = useState<VendorDraft>(emptyVendor(contractor0 ? { kind: 'individual', withholdingDefault: true } : {}))
-  const [price, setPrice] = useState<PriceDraft>(emptyPrice())
+  const [price, setPrice] = useState<PriceDraft>(() => (mode === 'create' && draftUnitPrice ? { ...emptyPrice(), unitPrice: draftUnitPrice } : emptyPrice()))
   const [busy, setBusy] = useState(false)
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 

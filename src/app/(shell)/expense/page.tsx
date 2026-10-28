@@ -6,8 +6,20 @@ import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib
 import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
+import { readAmountParam } from '@/app/(shell)/home/quick-request'
 
-export default async function ExpensePage() {
+type ExpensePageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }
+
+/** 経営ホームの「すぐ登録する依頼」から来たとき、組織の中の登録の画面へ運ぶ（?to=new-contract&amount=） */
+function nextPathFor(sp: Record<string, string | string[] | undefined>): string {
+  if (sp.to !== 'new-contract') return ''
+  const amount = readAmountParam(typeof sp.amount === 'string' ? sp.amount : '')
+  return `/contracts/new${amount ? `?amount=${amount}` : ''}`
+}
+
+export default async function ExpensePage({ searchParams }: ExpensePageProps = {}) {
+  const sp = (searchParams ? await searchParams : {}) ?? {}
+  const next = nextPathFor(sp)
   const session = await getServerSession(authOptions)
   if (!session?.user) return <ExpenseLp />
   // ⚠️ 新しい見た目（チェックリスト §5.1）のときだけ、組織があればサーバーで直接その組織へ移す
@@ -30,7 +42,7 @@ export default async function ExpensePage() {
     // 判定に失敗したら、今までどおりクライアント（Entry）に任せる
     return <ExpenseEntry />
   }
-  if (slug) redirect(`/expense/${encodeURIComponent(slug)}`)
+  if (slug) redirect(`/expense/${encodeURIComponent(slug)}${next}`)
   // 会社があれば「その会社の名前で始める」を、無ければ会社の登録を案内する（どちらも組織名・氏名の入力は出さない）
   return companyName ? <ExpenseEntry known companyName={companyName} /> : <ExpenseEntry known needsCompany />
 }
