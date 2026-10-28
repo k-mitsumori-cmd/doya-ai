@@ -10,6 +10,7 @@ const DEFAULT_MOCKS={'@/lib/system-watch/watch-gate':{isSystemWatchFor:()=>false
 const lazyReal=(name,make)=>{let v;Object.defineProperty(DEFAULT_MOCKS,name,{enumerable:true,get(){return v??=make()}})};
 // 採点の満点（src/lib/adimage/score-max.ts）は他に依存しないので、本物をそのまま使う。Tool.tsx は '@/lib/adimage/score-max'、feedback.ts は './score-max' で読む
 lazyReal('@/lib/private-api-response',()=>load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}}));
+lazyReal('@/lib/hr/employee-number',()=>load('src/lib/hr/employee-number.ts'));
 lazyReal('@/lib/adimage/score-max',()=>load('src/lib/adimage/score-max.ts'));
 lazyReal('./score-max',()=>DEFAULT_MOCKS['@/lib/adimage/score-max']);
 lazyReal('@/lib/pricing-v2/plans',()=>load('src/lib/pricing-v2/plans.ts'));

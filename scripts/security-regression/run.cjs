@@ -523,7 +523,7 @@ if (hrEmployeeAccess.error || hrEmployeeAccess.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-access.cjs');
   process.exit(1);
 }
-const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-admission.cjs', 'verify-hr-employee-number.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeAdmission.error || hrEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-admission.cjs');
   process.exit(1);
