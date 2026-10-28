@@ -965,20 +965,28 @@ function SeoArticleInner() {
     const hasAny = (article.images || []).length > 0
     if (hasAny) return
     autoImagesRequestedRef.current = true
+    const controller = new AbortController()
+    let started = false
     // 自動生成は「ログイン + 有料」の場合のみ（それ以外は401/403になるため叩かない）
     ;(async () => {
       try {
-        const res = await fetch('/api/seo/entitlements', { cache: 'no-store' })
+        const res = await fetch('/api/seo/entitlements', { cache: 'no-store', signal: controller.signal })
         const json = await res.json().catch(() => ({}))
         if (!res.ok || json?.success !== true) return
         if (!json?.isLoggedIn) return
-        if (!json?.canUseSeoImages) return
+        if (!json?.canUseSeoImages || controller.signal.aborted) return
+        started = true
         // 失敗してもUIは壊さない（ネットワーク/生成失敗など）。自動はサーバー側で1記事1回だけ。
         await ensureImages('auto')
       } catch {
         // ignore
       }
     })()
+    return () => {
+      controller.abort()
+      // 認証の確認中に画面を離れた場合、次の表示では確認し直せるようにする。
+      if (!started) autoImagesRequestedRef.current = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [automaticActionsAllowed, article?.id, article?.status, article?.autoBundle])
 

@@ -22,7 +22,7 @@ function effect(kind, marker, values = {}, auto = '0') {
   const matches = effects.filter(source => source.includes(marker));
   assert.equal(matches.length, 1, marker);
   const timers = new Map(); const calls = { advance: 0, fetch: 0, images: 0 };
-  const context = { searchParams: new URLSearchParams({ auto }), job: null, article: null, autoRun: true, latestJob: null,
+  const context = { AbortController, searchParams: new URLSearchParams({ auto }), job: null, article: null, autoRun: true, latestJob: null,
     autoImagesRequestedRef: { current: false }, advanceOnce: async () => { calls.advance++; },
     ensureImages: async mode => { assert.equal(mode, 'auto'); calls.images++; },
     fetch: async () => { calls.fetch++; return Response.json({ success: true, isLoggedIn: true, canUseSeoImages: true }); },
@@ -75,6 +75,25 @@ function effect(kind, marker, values = {}, auto = '0') {
     assert.equal(f.calls.fetch, 1); assert.equal(f.calls.images, 1);
     const repeated = effect('articles', "ensureImages('auto')", { article: f.context.article, autoImagesRequestedRef: f.context.autoImagesRequestedRef }, '1');
     assert.equal(repeated.calls.fetch, 0);
+  });
+  await check('leaving an article during entitlement lookup prevents late image generation', async () => {
+    let resolve, signal;
+    const pending = new Promise(done => { resolve = done; });
+    const f = effect('articles', "ensureImages('auto')", { article: { autoBundle: true, status: 'DONE', images: [] },
+      fetch: async (_url, init) => { signal = init.signal; return pending; } }, '1');
+    f.cleanup(); assert.equal(signal.aborted, true);
+    resolve(Response.json({ success: true, isLoggedIn: true, canUseSeoImages: true }));
+    await new Promise(done => setImmediate(done));
+    assert.equal(f.calls.images, 0); assert.equal(f.context.autoImagesRequestedRef.current, false);
+    const retry = effect('articles', "ensureImages('auto')", { article: f.context.article, autoImagesRequestedRef: f.context.autoImagesRequestedRef }, '1');
+    await new Promise(done => setImmediate(done)); assert.equal(retry.calls.images, 1);
+  });
+  await check('leaving a job during advance never schedules another tick', async () => {
+    let resolve;
+    const pending = new Promise(done => { resolve = done; });
+    const f = effect('jobs', 'setTimeout(tick, 1800)', { job: { id: 'j', status: 'running' }, advanceOnce: () => pending }, '1');
+    const tick = [...f.timers.values()][0]; f.timers.clear(); const running = tick();
+    f.cleanup(); resolve(); await running; assert.equal(f.timers.size, 0);
   });
   for (const kind of ['articles', 'jobs']) for (const mode of ['active', 'stale', 'anonymous', 'missing', 'error']) await check(`${kind} GET ${mode}: private metadata response`, async () => {
     const job = { id: 'j', articleId: 'a', status: 'running', updatedAt: new Date('2000-01-01'), executionToken: 'PRIVATE_TOKEN', executionExpiresAt: new Date(mode === 'active' ? '2100-01-01' : '2000-01-01') };
