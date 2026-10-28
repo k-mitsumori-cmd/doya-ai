@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     catch { return NextResponse.json({ success: false, error: '検索条件または取得位置が不正です。一覧を読み直してください。' }, { status: 400 }) }
     const owner = userId ? { userId } : guestId ? { userId: null, guestId } : null
     const result = owner ? await prisma.$transaction(tx => readSeoArticleList(tx, owner, query), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
-      : { articles: [], nextCursor: null, counts: { total: 0, running: 0, done: 0, draft: 0 }, matched: 0 }
+      : { articles: [], nextCursor: null, counts: { total: 0, running: 0, done: 0, draft: 0, executing: 0, needsReview: 0, polling: 0 }, matched: 0 }
     const res = NextResponse.json({ success: true, ...result }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (!userId && !guestId) {
       const newGuest = ensureGuestId()
