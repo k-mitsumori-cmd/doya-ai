@@ -650,7 +650,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                           {banner ? (
                             <img
                               src={banner}
-                              alt={`Banner ${i + 1}`}
+                              alt={`保存済みバナー ${i + 1}`}
                                 loading="lazy"
                                 decoding="async"
                               className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
@@ -694,6 +694,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                             {banner ? (
                               <>
                                 <button
+                                  aria-label={`保存済みバナー ${i + 1} をダウンロード`}
                                   onClick={() => {
                                     const id = item.bannerIds?.[i]
                                     if (!id) {
