@@ -38,6 +38,15 @@ jobs:
       - name: Native PDF and image dependencies (synthetic input, no providers)
         run: npx tsx --test scripts/regression/native-pdf-image.test.ts
 
+      - name: Save synthetic native PDF evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-pdf-${{ github.sha }}
+          path: /tmp/doya-native-pdf-audit/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: New service existing paid user backfill (private Unix socket, no external providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/new-service-backfill-private-postgres-supervise.py
 

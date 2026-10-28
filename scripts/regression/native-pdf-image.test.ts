@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { test } from 'node:test'
 import sharp from 'sharp'
 import { generateQuotePdf, type QuotePdfInput } from '../../src/lib/quote/pdf'
@@ -26,8 +27,13 @@ test('updated PDF dependency works with the bundled Chromium and Japanese fonts'
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
   assert.ok(pdf.byteLength > 5000)
   const text = execFileSync('pdftotext', ['-', '-'], { input: pdf, maxBuffer: 1024 * 1024 }).toString().replace(/\s/g, '')
+  // Spatial sorting can interleave a rotated watermark with table text. Check its content-stream order too.
+  const rawText = execFileSync('pdftotext', ['-raw', '-', '-'], { input: pdf, maxBuffer: 1024 * 1024 }).toString().replace(/\s/g, '')
+  mkdirSync('/tmp/doya-native-pdf-audit', { recursive: true })
+  writeFileSync('/tmp/doya-native-pdf-audit/synthetic-quote.pdf', pdf)
+  writeFileSync('/tmp/doya-native-pdf-audit/text.json', JSON.stringify({ text, rawText }, null, 2))
   assert.ok(text.includes('テスト会社'), 'Japanese client text must survive PDF generation')
   assert.ok(text.includes('検証用項目'), 'Japanese line item must survive PDF generation')
-  assert.ok(text.includes('社内確認用'), 'Draft watermark must remain')
+  assert.ok(rawText.includes('社内確認用'), 'Draft watermark must remain in content-stream order')
   assert.ok(text.includes('1,100'), 'Synthetic 1000 yen + 10% tax total must remain')
 })
