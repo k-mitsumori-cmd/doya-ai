@@ -3,6 +3,8 @@ const { load, check, results } = require('./load-typescript.cjs')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
+const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder })
+const csvRequest = csvText => new Request('http://localhost/api/hr/employees/import', { method: 'POST', body: JSON.stringify({ csvText }) })
 
 ;(async () => {
   await check('employee admission locks organization and blocks at its active quota', async () => {
@@ -53,6 +55,7 @@ const ts = require('typescript')
   await check('CSV import reports partial success and a persistent PRO contact route', async () => {
     let calls = 0
     const api = load('src/app/api/hr/employees/import/route.ts', {
+      '@/lib/operational-json': operationalJson,
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
       '@/lib/auth': {},
@@ -72,7 +75,7 @@ const ts = require('typescript')
         employeeLimitMessage: () => '上限です。お問い合わせください。',
       },
     })
-    const response = await api.POST({ json: async () => ({ csvText: 'lastName,firstName\n山田,太郎\n佐藤,花子' }) })
+    const response = await api.POST(csvRequest('lastName,firstName\n山田,太郎\n佐藤,花子'))
     const data = await response.json()
     assert.equal(response.status, 200)
     assert.equal(data.imported, 1)
@@ -85,6 +88,7 @@ const ts = require('typescript')
   await check('CSV import preserves quoted newlines and rejects malformed or oversized input before writes', async () => {
     const saved = []
     const api = load('src/app/api/hr/employees/import/route.ts', {
+      '@/lib/operational-json': operationalJson,
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
       '@/lib/auth': {},
@@ -99,7 +103,7 @@ const ts = require('typescript')
         employeeLimitMessage: () => '',
       },
     })
-    const post = csvText => api.POST({ json: async () => ({ csvText }) })
+    const post = csvText => api.POST(csvRequest(csvText))
     const good = await post('\uFEFFlastName,firstName,position\r\n"山\r\n田",太郎,"営業""部"\r\n佐藤,花子,開発')
     assert.equal(good.status, 200)
     assert.deepEqual(saved.map(x => [x.lastName, x.position]), [['山\n田', '営業"部'], ['佐藤', '開発']])
