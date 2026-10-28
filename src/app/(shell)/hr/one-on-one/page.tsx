@@ -17,7 +17,7 @@ interface OneOnOneRecord {
   employeeName: string
   employeePhotoUrl?: string | null
   date: string
-  duration: number
+  duration: number | null
   status: string
   agendaCount: number
   actionItemCount: number
@@ -98,7 +98,7 @@ export default function OneOnOnePage() {
         employeeName: o.employee ? `${o.employee.lastName} ${o.employee.firstName}` : '',
         employeePhotoUrl: o.employee?.photoUrl || null,
         date: o.conductedAt || o.scheduledAt || '',
-        duration: o.duration || 0,
+        duration: o.duration ?? null,
         status: o.status,
         agendaCount: Array.isArray(o.agenda) ? o.agenda.length : 0,
         actionItemCount: Array.isArray(o.aiActionItems) ? o.aiActionItems.length : 0,
@@ -266,7 +266,7 @@ export default function OneOnOnePage() {
                               minute: '2-digit',
                             })
                           : '日時未設定'}
-                        {' '}/ {record.duration || 0}分
+                        {' '}/ {record.duration == null ? '所要時間未設定' : `${record.duration}分`}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
