@@ -170,12 +170,12 @@ export default function EmployeesPage() {
         </div>}
       </div>
 
-      {canManageEmployees && <p className="text-sm text-slate-600 mb-4">CSVは現在の組織の全従業員が対象です（最大1万名）。</p>}
+      {canManageEmployees && <p className="text-sm text-slate-600 mb-4">CSVは現在の組織の全従業員が対象です（最大1万名・4MB）。</p>}
 
       {exportError !== null && (
         <div className="mb-6" role="alert">
           {exportError === 413
-            ? <p className="text-sm text-slate-700">一度に書き出せる従業員は1万名までです。</p>
+            ? <p className="text-sm text-slate-700">一度に書き出せるCSVは1万名・4MBまでです。上限を超える場合は、サポートへご相談ください。</p>
             : <HrLoadError subject="従業員のCSV" status={exportError} onRetry={() => void handleExport()} />}
         </div>
       )}

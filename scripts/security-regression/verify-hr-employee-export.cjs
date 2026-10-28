@@ -27,6 +27,7 @@ function privateHeaders(response){assert.equal(response.headers.get('cache-contr
   records=Array(10001).fill(employee);r=await api.GET();assert.equal(r.status,413);privateHeaders(r);assert.equal((await r.json()).code,'HR_EXPORT_ROW_LIMIT')
  })
  await check('database failures are private JSON and hide internal details',async()=>{outage=true;const r=await api.GET();outage=false;assert.equal(r.status,500);privateHeaders(r);assert(!JSON.stringify(await r.json()).includes('private DB'))})
+ await check('UTF8 byte size is bounded before sending a partial attachment',async()=>{records=[{...employee,lastName:'山'.repeat(1400000)}];const r=await api.GET();assert.equal(r.status,413);privateHeaders(r);assert.equal((await r.json()).code,'HR_EXPORT_SIZE_LIMIT');assert(!r.headers.has('content-disposition'))})
  await check('formula prefixes including leading whitespace/control characters are neutralized',async()=>{
   for(const value of ['=1+1','+SUM(A1)','-1','@SUM(A1)',' \t=1','\ufeff+1','\r=1','\tplain'])assert(csv.employeeCsv([{...employee,lastName:value}]).includes('"\''+value.replace(/"/g,'""')+'"'))
  })

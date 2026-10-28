@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { prisma } from '@/lib/prisma'
 import { privateApiJson } from '@/lib/private-api-response'
-import { employeeCsv, employeeExportSelect, MAX_EMPLOYEE_EXPORT_ROWS } from '@/lib/hr/employee-export'
+import { employeeCsv, employeeExportSelect, EmployeeExportSizeError, MAX_EMPLOYEE_EXPORT_ROWS } from '@/lib/hr/employee-export'
 
 export async function GET() {
   try {
@@ -27,7 +27,8 @@ export async function GET() {
       'Content-Disposition': 'attachment; filename="doya-hr-employees.csv"',
       'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff',
     } })
-  } catch {
+  } catch (error) {
+    if (error instanceof EmployeeExportSizeError) return privateApiJson({ error: 'CSVは4MB以内で書き出してください。', code: 'HR_EXPORT_SIZE_LIMIT' }, { status: 413 })
     console.error('[hr/employees/export]')
     return privateApiJson({ error: '従業員のCSVを書き出せませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 })
   }
