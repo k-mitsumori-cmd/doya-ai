@@ -28,6 +28,7 @@ import { Button as DsButton, EmptyState, Skeleton, ToolHero, ToolNextStep, type 
 import { ErrorNotice } from '@/components/ds/feedback'
 import { confirmDialog } from '@/components/ds/dialog'
 import { seoUserMessage } from '@/components/seo/user-message'
+import type { SeoListActivity } from '@/lib/seo-article-list'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
 const HERO_ART = '/ui-renewal/keyart/seo.webp'
@@ -40,6 +41,7 @@ type SeoArticleRow = {
   targetChars: number
   createdAt: string
   updatedAt: string
+  activityState?: SeoListActivity
   jobs?: { id: string; status: string; progress: number; step: string }[]
   images?: { id: string; kind: string; createdAt: string }[]
 }
@@ -68,7 +70,7 @@ function getStepIndex(status: string): number {
 
 const STATUS_CONFIG = {
   DRAFT: { label: '構成済み', color: 'text-blue-600', bg: 'bg-blue-100', tone: 'blue' as const },
-  RUNNING: { label: '生成中', color: 'text-orange-600', bg: 'bg-orange-100', tone: 'amber' as const },
+  RUNNING: { label: '作成途中', color: 'text-orange-600', bg: 'bg-orange-100', tone: 'amber' as const },
   EDITING: { label: '編集中', color: 'text-brand-500', bg: 'bg-brand-50', tone: 'purple' as const },
   DONE: { label: '完成', color: 'text-emerald-600', bg: 'bg-emerald-100', tone: 'green' as const },
   EXPORTED: { label: '出力済', color: 'text-teal-600', bg: 'bg-teal-100', tone: 'green' as const },
@@ -121,7 +123,7 @@ export default function SeoTool() {
   const [moreLoading, setMoreLoading] = useState(false)
   const [moreError, setMoreError] = useState<string | null>(null)
   const [matched, setMatched] = useState(0)
-  const [counts, setCounts] = useState({ total: 0, running: 0, done: 0, draft: 0 })
+  const [counts, setCounts] = useState<{ total: number; running: number; done: number; draft: number; executing?: number; needsReview?: number; polling?: number }>({ total: 0, running: 0, done: 0, draft: 0 })
 
   async function load(opts?: { showLoading?: boolean; more?: boolean }) {
     if (isLoadingRef.current || (opts?.more && !nextCursor)) return
@@ -170,7 +172,11 @@ export default function SeoTool() {
     }
   }
 
-  const hasRunning = counts.running > 0
+  // Older API responses may not yet contain activity metadata during deployment.
+  const executingCount = counts.executing ?? counts.running
+  const needsReviewCount = counts.needsReview ?? 0
+  const waitingCount = Math.max(0, counts.running - executingCount - needsReviewCount)
+  const hasRunning = (counts.polling ?? counts.running) > 0
   useEffect(() => {
     listEpoch.current++
     listAbort.current?.abort()
@@ -219,11 +225,19 @@ export default function SeoTool() {
   // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 読み込みの失敗 → 最新の記事の状態 の順に決める
   const nextStep: NextStepView = (() => {
     if (loading && articles.length === 0 && !error) return null
-    if (counts.running > 0) {
-      const r = articles.find((a) => a.status === 'RUNNING')
-      return { key: 'working', state: 'working', n: counts.running, href: r ? getResumeLink(r) : undefined }
+    if (executingCount > 0) {
+      const r = articles.find((a) => a.activityState === 'executing' || (a.status === 'RUNNING' && a.activityState === undefined))
+      return { key: 'working', state: 'working', n: executingCount, href: r ? getResumeLink(r) : undefined }
     }
     if (error) return { key: 'loadError', state: 'error', onClick: () => void load({ showLoading: true }) }
+    if (needsReviewCount > 0 || waitingCount > 0) {
+      const needsReview = needsReviewCount > 0
+      const row = articles.find(a => a.activityState === (needsReview ? 'needs-review' : 'waiting'))
+      return { key: needsReview ? 'needsReview' : 'waiting', state: 'empty',
+        href: row ? getResumeLink(row) : undefined,
+        onClick: row ? undefined : () => { setQuery(''); setActiveStatus('RUNNING') },
+        actionLabel: row ? undefined : '作成途中を表示', icon: 'FileText' }
+    }
     if (counts.total === 0) return { key: 'empty', state: 'empty', href: '/seo/create', icon: 'Plus' }
     const latest = articles[0]
     if (latest?.status === 'ERROR') return { key: 'error', state: 'error', href: getResumeLink(latest) }
@@ -402,11 +416,12 @@ export default function SeoTool() {
         </div>
         <div className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6">
           <div className="h-9 w-9 rounded-xl sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-orange-50">
-            <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 animate-pulse" />
+            <Clock className={`w-6 h-6 sm:w-7 sm:h-7 text-orange-600 ${executingCount > 0 ? 'animate-pulse' : ''}`} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">生成中</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">作成途中</p>
             <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running}</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-gray-500">生成中 {executingCount}・要確認 {needsReviewCount}</p>
           </div>
         </div>
         <div className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6">
@@ -448,7 +463,7 @@ export default function SeoTool() {
           <div>
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h2>
             <p className="text-sm text-gray-400 font-bold mt-1">
-              {counts.total}件の記事 · {counts.running}件が生成中 · {counts.done}件が完成
+              {counts.total}件の記事 · {executingCount}件が生成中 · {needsReviewCount}件が要確認 · {counts.done}件が完成
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-bold text-gray-600">
@@ -460,7 +475,7 @@ export default function SeoTool() {
                 description="生成した記事を一覧で管理し、クリックひとつで本文・画像・SEO改善まで確認できます。"
                 steps={[
                   'カードをクリックすると、記事詳細（本文＋画像）をすぐ開けます',
-                  '生成中の記事も「途中の本文」や進捗を確認できます',
+                  '作成途中の記事も「途中の本文」や進捗を確認できます',
                   '完成後はSEOスコアの改善提案→手動/AI修正で仕上げます',
                   '必要に応じてダウンロードや画像の再生成も可能です',
                 ]}
@@ -557,7 +572,10 @@ export default function SeoTool() {
         ) : (
           <AnimatePresence mode="popLayout">
             {filtered.map((a, idx) => {
-              const config = STATUS_CONFIG[a.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+              const baseConfig = STATUS_CONFIG[a.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+              const config = a.status === 'RUNNING'
+                ? { ...baseConfig, label: a.activityState === 'executing' ? '生成中' : a.activityState === 'needs-review' ? '要確認' : a.activityState === 'waiting' ? '待機中' : baseConfig.label }
+                : baseConfig
               const stepIndex = getStepIndex(a.status)
               const job = a.jobs?.[0]
               const mainKw = (a.keywords || [])[0] || ''
@@ -634,7 +652,7 @@ export default function SeoTool() {
 
                         {/* 進捗 or CTA（新しい見た目では、375px で題名の下に回して右に寄せる） */}
                         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-                          {a.status === 'RUNNING' && job && (
+                          {a.status === 'RUNNING' && a.activityState !== 'needs-review' && job && (
                             <div className="hidden sm:block w-28">
                               <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
                                 <span className="truncate">{STEP_LABELS[job.step] || job.step}</span>
@@ -667,7 +685,7 @@ export default function SeoTool() {
                             className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
                             title="記事詳細（本文＋画像）を開く"
                           >
-                            {a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
+                            {a.activityState === 'needs-review' ? '内容を確認' : a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </button>
                           <button
