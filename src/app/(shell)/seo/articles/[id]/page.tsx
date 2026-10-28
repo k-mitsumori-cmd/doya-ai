@@ -1532,7 +1532,7 @@ function SeoArticleInner() {
                   {article.status === 'DONE' || article.status === 'EXPORTED' ? '完成' : article.status === 'ERROR' ? 'エラー' : article.activityState === 'needs-review' ? '要確認' : isGenerating ? '生成中' : article.status === 'RUNNING' ? '待機中' : '作成途中'}
                 </Badge>
               </div>
-              <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{article.title}</h1>
+              <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{article.title}</h2>
             </div>
             <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 font-bold">
               <p>目標 {article.targetChars.toLocaleString()}字</p>
@@ -1847,7 +1847,7 @@ function SeoArticleInner() {
                     </>
                   ) : (
                     <div className="py-20 sm:py-32 text-center text-gray-300 font-black text-sm sm:text-base">
-                      本文が生成されるまでお待ちください...
+                      {isGenerating ? '本文を作成しています。' : '本文はまだありません。'}
                     </div>
                   )}
                 </div>
