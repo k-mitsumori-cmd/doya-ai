@@ -981,6 +981,7 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 .v-dept h3 {
+  text-wrap: nowrap;
   margin-top: 14px;
   font-size: 32px;
   font-weight: 800;
@@ -1227,6 +1228,7 @@
   font-variant-numeric: tabular-nums;
 }
 .v-price-num small {
+  display: inline-block;
   font-size: 14px;
   font-weight: 700;
   margin-left: 4px;
@@ -1307,11 +1309,11 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 940px;
+  min-height: 980px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 64px 24px;
+  padding: 56px 24px;
   text-align: center;
 }
 .v-final-bg {
@@ -1653,6 +1655,14 @@
   font-size: 15px;
   color: var(--ink2);
 }
+
+.v-price-num {
+  white-space: normal;
+}
 .v-price-num small {
-  display: inline-block;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.v-price:not(.is-pro) .v-price-num small {
+  white-space: nowrap;
 }
