@@ -102,3 +102,36 @@ Save the file and then list the raw2/ folder.
   - hero-desktop: Slow cinematic camera push-in. The clouds drift gently, sunset light rays shimmer, the four glowing floating panels bob softly and their light ribbons flow across the sky. The polar bear mascot keeps his pose with a subtle breathing motion and a small confident nod. City lights twinkle in the haze. Smooth, calm, loopable motion. No text.
   - hero-mobile: Slow cinematic camera push-in on a vertical frame. The clouds drift gently, light rays shimmer, the four glowing floating panels bob softly and trail light ribbons. The polar bear mascot keeps his pose with a subtle breathing motion. City lights twinkle below. Smooth, calm, loopable motion. No text.
   - finale: Colorful fireworks keep bursting and fading in the sky at the edges of the frame, sparkles fall slowly, the light ribbons swirl around the jumping polar bear mascot who floats gently up and down in mid-air with joy. City lights glow below. Smooth, festive, loopable motion. No text.
+
+## システムの空間の絵と 2K の動画（2026-10-28）
+
+本人の指示: 「2Kで動画を作成してクオリティをアップしてください」「背景がビルみたいな感じになってるんですが、もっとシステムっぽい感じでオシャレにしてください」。ビルの街の絵（scene-*）と 768P の動画は、ブランチから外した（元は `~/Code/sandbox/doya-lp-video/` に残す）。
+
+| ファイル | 大きさ | 使う所 |
+|---|---|---|
+| `public/renewal-lp/sys-hero.webp` | 1536×1024 | ファーストビュー（横）。暗いデジタル空間、光の格子、操作盤の前のドヤくん、光の線でつながる4つの板 |
+| `public/renewal-lp/sys-hero-portrait.webp` | 1024×1536 | ファーストビュー（縦、スマホ） |
+| `public/renewal-lp/sys-finale.webp` | 1536×1024 | 最後の CTA（光の線とチェックの板の中で跳ぶドヤくん）。動画は作っていない |
+| `public/renewal-lp/video/lp-sys-hero-desktop.mp4` | 1920×1270、20秒 | ファーストビュー（横）の背景動画 |
+| `public/renewal-lp/video/lp-sys-hero-mobile.mp4` | 1080×1632、20秒 | ファーストビュー（縦）の背景動画 |
+
+- 絵: Codex の内蔵の画像生成（定額）。参照は `hero`（ステッカー型のドヤくん）と `hello`・`point`。採用した版: 1回目。
+- 動画: MiniMax 公式 API の `MiniMax-H3`、2K、10秒、最初の1コマに上の絵。task_id は sys-hero-2k 457092608184838、sys-hero-mobile-2k 457089813852536。往復の再生で20秒のループにし、横は幅1920、縦は幅1080に縮めた（CRF 26）。
+- MiniMax を呼んだ回数の合計（10-27〜28）: 6回、見込み $6.54（上限 $6.80 の中）。768P×3 $2.52、2K のビルの絵×1 $1.34（指示の変更の前に受け付け済み。使っていない）、2K の新しい絵×2 $2.68。実際の請求額は MiniMax の管理画面で確かめる。
+- 動きのプロンプト（2本共通）: Very slow cinematic camera push-in. Light pulses travel along the thin glowing network lines into the bright central node, the four floating glass panels gently bob and pulse with light, the glowing perspective grid floor lines glide slowly toward the viewer, fine particles drift, the holographic console flickers softly. The polar bear mascot keeps his pose with a subtle breathing motion and a small confident nod. Smooth, calm, premium, loopable motion. No text.
+
+```
+Use your built-in image generation tool (not any API key, not a script, no network calls) to generate 3 separate images and save them as PNG files with exactly these names: raw3/sys-hero.png (LANDSCAPE 3:2, 1536x1024), raw3/sys-hero-portrait.png (PORTRAIT 2:3, 1024x1536), raw3/sys-finale.png (LANDSCAPE 3:2, 1536x1024).
+
+These are full-bleed key visuals for the landing page of "ドヤAI", a Japanese AI agent that runs work tools for marketing, sales, HR and back office. The mascot is the polar bear "Doya-kun". Draw Doya-kun exactly like the attached references (ref-hero-sticker.png for the line style and pose, ref-hello.png and ref-point.png for the face and outfit): white fluffy polar bear, round ears, wide blue visor goggles (blue frame, cyan rim, dark navy lens; the eyes are only glowing cyan shapes inside the lens), small black nose, open happy mouth, white hoodie with a blue </> symbol on the chest. Keep his bold thick navy comic outlines and flat colors so he looks like the same sticker character.
+
+Art direction for ALL three (very important): NO city, NO buildings, NO skyline, NO sky, NO clouds, NO sunset. Instead a sleek, stylish, high-tech "AI system" space: a deep dark navy-to-black void (#050b24) with a subtle perspective grid floor of thin glowing cyan lines fading into the distance, floating translucent glassmorphism UI panels with soft blur showing only abstract shapes (bars, toggles, progress rings, node graphs, checkmarks), a glowing network of thin light lines and nodes connecting things, fine light particles, soft volumetric glow. Colors: electric blue #0066ff, cyan #00e0ff, violet #6a4cff and hot pink #ff1e72 as neon light and gradients, with a tiny touch of yellow #ffd400. Premium, minimal, cinematic, like a high-end SaaS product launch key visual (Apple / Linear / Vercel style), lots of dark negative space. Fine film grain. ABSOLUTELY NO text, letters, numerals, words, logos or watermarks anywhere (the </> symbol on the hoodie is allowed).
+
+1. raw3/sys-hero.png — Composition: the LEFT 55 percent of the frame is calm dark space with only the faint grid and a few soft particles (a big headline will be placed there). On the RIGHT side, Doya-kun stands confidently in front of a large curved holographic command console, full body, about 50 percent of the frame height, one paw pointing up and forward like a leader directing, the other paw holding a glowing tablet with four checkmark rows. Around him, four floating glass panels arranged in an arc, each glowing in one color (cyan, hot pink, yellow, violet) with one simple white line icon: a megaphone, a briefcase, a group of three people, a calculator. Thin glowing light lines connect the four panels to a bright central node near his tablet, like an AI orchestrating the departments. Rim light on Doya-kun in cyan and pink.
+
+2. raw3/sys-hero-portrait.png — the same scene as image 1 recomposed vertically for a smartphone: Doya-kun, the console glow and the four connected panels in the UPPER 55 percent of the frame (bear centered slightly right, about 38 percent of the frame height); the LOWER 45 percent is calm dark space with the glowing perspective grid floor fading out, uncluttered, because headline text will be placed over it.
+
+3. raw3/sys-finale.png — Composition: the TOP 50 percent of the frame is calm dark space with soft violet-to-blue glow, uncluttered in the upper center for a headline. In the lower center, Doya-kun jumps joyfully in the air, both arms raised, one paw making a thumbs up, about 35 percent of the frame height, above the glowing grid floor. Around him, a burst of light: many thin neon light lines and glowing nodes radiate outward like a network celebrating completion, with small floating glass panels showing checkmarks, in cyan, pink, violet and a little yellow.
+
+Save all three files and then list the raw3/ folder.
+```
