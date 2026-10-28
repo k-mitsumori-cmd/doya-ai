@@ -15,7 +15,7 @@ const ROWS: ShowcaseRow[] = [
   {
     icon: 'groups', title: '顔写真中心の従業員データベース',
     desc: '氏名・部署・役職・等級を、顔写真つきで一元管理。検索や絞り込みもすぐ。バラバラのExcelから卒業できます。',
-    bullets: ['CSVで一括インポート', '名前・部署・役職で瞬時に検索', '顔写真で直感的に把握できる'],
+    bullets: ['CSVで一括インポート／エクスポート', '名前・部署・役職で瞬時に検索', '顔写真で直感的に把握できる'],
     visual: <MockWindow title="doya-ai.surisuta.jp/hr"><HrEmployeesMock /></MockWindow>, image: { src: '/hr/shots/1-input.webp', alt: '顔写真中心の従業員データベースの画面' },
   },
   {
