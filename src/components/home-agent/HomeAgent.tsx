@@ -12,6 +12,7 @@
 //    本番（executor="api"）は /api/agent/plan と /api/agent/tasks だけを呼ぶ
 // ⚠️ 旗（AGENT_ORCHESTRATION_ROLLOUT）と新しい見た目の判定はサーバー（page.tsx）。ここでは判定しない
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AGENT_RECIPES, findRecipe, parseSalesPrepAnswers, sampleAnswers } from '@/lib/agent-orchestration/recipes'
 import { planFromRecipe, planTasks, delegatedPower } from '@/lib/agent-orchestration/plan'
@@ -27,6 +28,7 @@ import { readPlanStream } from './stream'
 import { AGENT_EXAMPLES, agentPlansForDepartment, intentsOfDepartment } from './examples'
 import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
+import { parseQuickRequest } from '@/app/(shell)/home/quick-request'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
 import styles from './home-agent.module.css'
@@ -38,8 +40,8 @@ const POSE: Record<Scene, string> = {
   input: 'hello', questions: 'point', analyze: 'ponder', plan: 'point', confirm: 'point', run: 'working', done: 'success', none: 'hello',
 }
 const SAY: Record<Scene, string> = {
-  input: '何を進めますか？', questions: '少しだけ教えてください', analyze: '材料を並べて読んでいます', plan: 'ゴールまでの差を分けました',
-  confirm: '内容を確かめてください', run: '並べて進めています', done: 'できました。送るのはお願いします', none: 'その依頼は、まだ作戦にできません',
+  input: '何を頼みますか？', questions: '少しだけ教えてください', analyze: '材料を並べて読んでいます', plan: 'ゴールまでの差を分けました',
+  confirm: '内容を確かめてください', run: '並べて進めています', done: 'できました。送るのはお願いします', none: 'その依頼は、ツールの画面で進めます',
 }
 const STORE_KEY = 'doya-home-agent:v1'
 
@@ -235,6 +237,9 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   dept?: DepartmentId | null
 }) {
   const toHref = useToolHref()
+  const router = useRouter()
+  // 「20万円支出を登録したい」のような登録だけの依頼は、登録の画面を入力した状態で開く（開いている間の表示）
+  const [opening, setOpening] = useState<string | null>(null)
   const toolsOnly = !agentPlansForDepartment(dept)
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
@@ -337,7 +342,13 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     setScene('plan')
   }, [executor, reduce])
 
-  const send = () => { reset(); void ask({ text: text.trim() }) }
+  const send = () => {
+    // 登録だけの依頼は、作戦に分けずに、そのツールの登録の画面を金額を入れた状態で開く。保存は本人が押す
+    // （2026-10-28 本人の指摘「登録の直前まで進めた方がいいのに、作戦にできませんと出る」）
+    const quick = parseQuickRequest(text)
+    if (quick) { setOpening(quick.label); router.push(toHref(quick.href)); return }
+    reset(); void ask({ text: text.trim() })
+  }
   const submitAnswers = () => { void ask({ recipeId, answers }) }
 
   /** ToDo をまとめて進める（prev があれば、済んだ分を残して残りだけ） */
@@ -449,7 +460,11 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       <header className={scene === 'input' ? styles.head : styles.srOnly}>
         {greeting ? <p className={styles.headGreeting}>{greeting}</p> : null}
         {company ? <div className={styles.headCompany}>{company}</div> : null}
-        <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
+        <div className={styles.headRow}>
+          <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
+          {/* 入力の画面では、ドヤくんを見出しの右に小さく置く（2026-10-28 本人の指示。左の大きなクマは、作業中の画面だけに出す） */}
+          {scene === 'input' ? <img src="/ui-renewal/mascots/growth-pro.webp" alt="" width={720} height={600} className={styles.headKun} /> : null}
+        </div>
       </header>
 
       <div className={styles.hero}>
@@ -481,15 +496,15 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
             <div className={styles.card}>
               <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
                 placeholder="例: 来週の商談の準備をまとめて進めたい" />
-              <p id="home-agent-lead" className={styles.lead}>やりたいことやゴールを書くと、ドヤくんが材料を読み、ゴールまでの差を ToDo に分けます。動かす前に、内容と減る量を確かめます。</p>
+              <p id="home-agent-lead" className={styles.lead}>やりたいことを書いて、ドヤAIに頼んでください。材料を読んで、必要な作業に分けて進めます。登録の依頼は、その画面を入力した状態で開きます。</p>
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={`${styles.chips} ${styles.exampleChips}`}>
                 {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
               </div>
               {error ? <p className={styles.error} role="alert">{error}</p> : null}
               <div className={styles.row}>
-                <span className={styles.muted}>作戦づくりでは、ドヤパワーは減りません</span>
-                <button type="button" className={styles.btn} onClick={send} disabled={!text.trim()}>分析して作戦を立てる</button>
+                <span className={styles.muted}>{opening ?? '頼むだけでは、ドヤパワーは減りません'}</span>
+                <button type="button" className={styles.btn} onClick={send} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '画面を開いています…' : 'ドヤAIに頼む'}</button>
               </div>
             </div>
             )}
@@ -501,8 +516,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
 
         {scene === 'none' ? (
           <div className={`${styles.card} ${styles.sceneIn}`}>
-            <p className={styles.title}>その依頼は、まだ作戦にできません</p>
-            <p className={styles.lead}>今は「{AGENT_RECIPES.map((r) => r.chip).join('」「')}」のような依頼を、作戦に分けられます。{matchHomeIntent(text) ? 'この依頼は、次のツールで進められます。' : 'ほかの依頼は、各ツールで進められます。'}</p>
+            <p className={styles.title}>{matchHomeIntent(text) ? 'この依頼は、ツールの画面で進めます' : 'この依頼は、まだドヤAIに任せられません'}</p>
+            <p className={styles.lead}>{matchHomeIntent(text) ? '下のボタンで、その画面を開きます。' : `今は「${AGENT_RECIPES.map((r) => r.chip).join('」「')}」のような依頼を、まとめて進められます。ほかの依頼は、各ツールで進められます。`}</p>
             <div className={styles.row}>
               {matchHomeIntent(text) ? <Link href={matchHomeIntent(text)!.href} className={styles.btn}>{matchHomeIntent(text)!.label.replace(/たい$/, 'る')}</Link> : <span />}
               <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => setScene('input')}>依頼を書き直す</button>
@@ -538,7 +553,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
             {error ? <p className={styles.error} role="alert">{error}</p> : null}
             <div className={styles.row}>
               <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => setScene('input')}>戻る</button>
-              <button type="button" className={styles.btn} onClick={submitAnswers}>分析して作戦を立てる</button>
+              <button type="button" className={styles.btn} onClick={submitAnswers}>ドヤAIに頼む</button>
             </div>
           </div>
         ) : null}

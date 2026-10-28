@@ -27,7 +27,12 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const slug = d?.organization?.slug || d?.memberships?.[0]?.slug
-        if (slug) router.replace(`/expense/${slug}`)
+        if (slug) {
+          // 経営ホームの「すぐ登録する依頼」から来たとき（?to=new-contract&amount=）は、登録の画面へ運ぶ
+          const q = new URLSearchParams(window.location.search)
+          const amount = (q.get('amount') ?? '').match(/^\d{1,11}$/) ? q.get('amount') : ''
+          router.replace(q.get('to') === 'new-contract' ? `/expense/${slug}/contracts/new${amount ? `?amount=${amount}` : ''}` : `/expense/${slug}`)
+        }
         else setChecking(false)
       })
       .catch(() => setChecking(false))

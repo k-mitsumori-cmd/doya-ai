@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { todayJst } from '@/lib/income/dates'
+import { readAmountParam } from '@/app/(shell)/home/quick-request'
 import {
   Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, toast, useResource,
   useUnsavedGuard, type LineRow,
@@ -28,6 +29,11 @@ export default function NewInvoicePage() {
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
+  // 経営ホームの「すぐ登録する依頼」から来たときは、1行目の単価に金額を入れた状態で開く（?amount=。保存は本人が押す）
+  useEffect(() => {
+    const amount = readAmountParam(new URLSearchParams(window.location.search).get('amount'))
+    if (amount) setRows((r) => (r.length === 1 && !r[0].unitPrice ? [{ ...r[0], unitPrice: amount }] : r))
+  }, [])
   // 取引先が 0 件のときは、最初から「新しい取引先」の入力にする
   useEffect(() => {
     if (clientsRes.data && clientsRes.data.length === 0) setClientId((c) => c || NEW_CLIENT)
