@@ -69,3 +69,6 @@ jobs:
 
       - name: Next build
         run: npx next build
+
+      - name: Satori deployment assets
+        run: node scripts/regression/check-satori-traces.cjs

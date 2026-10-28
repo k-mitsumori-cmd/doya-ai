@@ -38,6 +38,18 @@ jobs:
       - name: Native PDF and image dependencies (synthetic input, no providers)
         run: npx tsx --test scripts/regression/native-pdf-image.test.ts
 
+      - name: Satori SVG escaping and production image renderers (synthetic input)
+        run: npx tsx --test scripts/regression/native-satori.test.ts
+
+      - name: Save synthetic Satori image evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-satori-${{ github.sha }}
+          path: /tmp/doya-native-satori-audit/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: SEO list activity and pagination (private Unix socket, no providers)
         run: python3 scripts/regression/seo-list-postgres.py
 
