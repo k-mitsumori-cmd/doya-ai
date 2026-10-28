@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -74,26 +74,26 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(ctx.role, 'ADMIN')) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const operation = readDepartmentOperation(req)
     if (operation === false) return privateApiJson({ error: '部署作成の操作情報をご確認ください' }, { status: 400 })
     if (operation && operation.organizationId !== ctx.organizationId) return privateApiJson({ error: '組織が変更されています。元の組織で作成結果を確認してください。' }, { status: 403 })
     const body = await readDepartmentInput(req, true)
-    if (!body) return NextResponse.json({ error: '部署の入力内容をご確認ください。部署名は空欄にできません。' }, { status: 400 })
+    if (!body) return privateApiJson({ error: '部署の入力内容をご確認ください。部署名は空欄にできません。' }, { status: 400 })
     const { name, code, parentId, managerId, sortOrder } = body
 
     if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: '部署名が空です。部署名を入力して、もう一度お試しください。' }, { status: 400 })
+      return privateApiJson({ error: '部署名が空です。部署名を入力して、もう一度お試しください。' }, { status: 400 })
     }
 
     const result = await runHrDepartmentMutation(ctx, async tx => {
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
           where: { id: parentId, organizationId: ctx.organizationId },
         })
         if (!parent) {
-          return NextResponse.json({ error: '親の部署が見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
+          return privateApiJson({ error: '親の部署が見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
         }
       }
 
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
           where: { organizationId: ctx.organizationId, code },
         })
         if (existing) {
-          return NextResponse.json({ error: 'この部署コードはすでに使われています。別のコードを入力してください。' }, { status: 400 })
+          return privateApiJson({ error: 'この部署コードはすでに使われています。別のコードを入力してください。' }, { status: 400 })
         }
       }
 
@@ -126,12 +126,12 @@ export async function POST(req: NextRequest) {
         tx.hrDepartment.findFirst({
           where: { id: parent, organizationId: ctx.organizationId }, select: { id: true, parentId: true },
         })
-      ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
+      ))) return privateApiJson({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
       if (managerId) {
         const manager = await tx.hrEmployee.findFirst({
           where: { id: managerId, organizationId: ctx.organizationId }, select: { id: true },
         })
-        if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
+        if (!manager) return privateApiJson({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
       }
 
       const department = await tx.hrDepartment.create({
@@ -150,15 +150,15 @@ export async function POST(req: NextRequest) {
         await saveDepartmentCreationReceipt(tx, ctx, operation.operationId, departmentCreationFingerprint(body), department)
         return privateApiJson({ success: true, operationId: operation.operationId, organizationId: ctx.organizationId, state: 'created', department })
       }
-      return NextResponse.json({ success: true, department })
+      return privateApiJson({ success: true, department })
     })
-    if (!result.allowed) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    if (!result.allowed) return privateApiJson({ error: '権限がありません' }, { status: 403 })
     return result.value
   } catch (e: any) {
     if (e instanceof DepartmentOperationConflict) return privateApiJson({ error: '同じ操作の入力内容が変わっています。前回の作成結果を確認してください。' }, { status: 409 })
-    if (e?.code === 'P2002') return NextResponse.json({ error: '部署コードはすでに使用されています。別のコードを指定してください。' }, { status: 400 })
+    if (e?.code === 'P2002') return privateApiJson({ error: '部署コードはすでに使用されています。別のコードを指定してください。' }, { status: 400 })
     console.error('[hr/departments] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '部署を作成できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
