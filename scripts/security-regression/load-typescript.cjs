@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..');const ts=require(path.join(root,'node_modules/typescript'));let results=[];
-function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,file)) ? path.join(process.env.DOYA_TEST_BASELINE,file) : path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];if(n in DEFAULT_MOCKS)return DEFAULT_MOCKS[n];throw Error('Unmocked '+n)},URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,process:{env:{}},console:{log(){},warn(){},error(){}},...globals},{filename:file});return exports}
+function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,file)) ? path.join(process.env.DOYA_TEST_BASELINE,file) : path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];if(n==='@/lib/private-api-response')return load('src/lib/private-api-response.ts',{'next/server':mocks['next/server']||{NextResponse:Response}});if(n in DEFAULT_MOCKS)return DEFAULT_MOCKS[n];throw Error('Unmocked '+n)},URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,process:{env:{}},console:{log(){},warn(){},error(){}},...globals},{filename:file});return exports}
 // ドヤパワーの減らす包み（src/lib/doya-power/charge.ts）と音声の部品（voice.ts）は、各サービスのテストでは「減らさない」（旗が off と同じ）として通す。
 // 減らす動きそのものは src/lib/doya-power/charge.test.ts が台帳（memory-db）で確かめる（2026-10-23）
 // 自動点検（system-watch）の合図と、作った記録の ID の部品は、各サービスのテストでは「自動点検ではない」として通す。
@@ -9,6 +9,7 @@ const DEFAULT_MOCKS={'@/lib/system-watch/watch-gate':{isSystemWatchFor:()=>false
 // 新しい料金（src/lib/pricing-v2）は、本物の計算をそのまま使う。環境変数は空なので、価格は「未設定」、旗は off（今の料金のまま）として動く（2026-10-25）
 const lazyReal=(name,make)=>{let v;Object.defineProperty(DEFAULT_MOCKS,name,{enumerable:true,get(){return v??=make()}})};
 // 採点の満点（src/lib/adimage/score-max.ts）は他に依存しないので、本物をそのまま使う。Tool.tsx は '@/lib/adimage/score-max'、feedback.ts は './score-max' で読む
+lazyReal('@/lib/private-api-response',()=>load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}}));
 lazyReal('@/lib/adimage/score-max',()=>load('src/lib/adimage/score-max.ts'));
 lazyReal('./score-max',()=>DEFAULT_MOCKS['@/lib/adimage/score-max']);
 lazyReal('@/lib/pricing-v2/plans',()=>load('src/lib/pricing-v2/plans.ts'));

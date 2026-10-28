@@ -102,7 +102,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     await ensureSeoSchema()
     const p = await ctx.params
     const id = p.id
-    const body = BodySchema.parse(await req.json().catch(() => ({})))
+    const parsed = BodySchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) return NextResponse.json({ success: false, error: '修正内容の指定が正しくありません。' }, { status: 400 })
+    const body = parsed.data
 
     const article = await (prisma as any).seoArticle.findFirst({ where: { id, ...owner } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })

@@ -109,7 +109,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    for (const field of ['lastName', 'firstName']) {
+      if (typeof body[field] !== 'string' || !body[field].trim()) {
+        return NextResponse.json({ error: '姓と名は空でない文字列で入力してください。' }, { status: 400 })
+      }
+    }
     const {
       employeeNumber,
       lastName,

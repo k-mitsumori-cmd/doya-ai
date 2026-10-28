@@ -15,7 +15,7 @@ import { isTicketStatus, statusAfterStaffReply } from '@/lib/support-chat/store'
 import { buildReplyEmail } from '@/lib/support-chat/mail'
 import { SUPPORT_CATEGORY_LABEL, type SupportCategory } from '@/lib/support-chat/rules'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 async function admin() {
   const r = await verifyAdminSession((await cookies()).get(COOKIE_NAME)?.value || null)

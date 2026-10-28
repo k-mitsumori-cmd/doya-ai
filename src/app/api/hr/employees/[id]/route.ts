@@ -122,6 +122,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       }
       if (expected.getTime() !== existing.updatedAt.getTime()) return writeConflictResponse()
     }
+    for (const field of ['lastName', 'firstName']) {
+      if (Object.prototype.hasOwnProperty.call(body, field) && (typeof body[field] !== 'string' || !body[field].trim())) {
+        return NextResponse.json({ error: '姓と名は空でない文字列で入力してください。' }, { status: 400 })
+      }
+    }
     const {
       employeeNumber,
       lastName,

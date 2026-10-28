@@ -36,7 +36,7 @@ async function companyNameFrom(req: NextRequest): Promise<Record<string, string>
   }
 }
 
-type Ctx = { params: Promise<{ id: string; taskId: string }> | { id: string; taskId: string } }
+type Ctx = { params: Promise<{ id: string; taskId: string }> }
 const ID = /^[A-Za-z0-9_-]{1,64}$/
 const TASK_IDS: SalesPrepTaskId[] = ['research', 'quote', 'slides']
 

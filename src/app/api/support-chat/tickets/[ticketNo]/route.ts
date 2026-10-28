@@ -14,7 +14,7 @@ import { buildFollowUpSlack } from '@/lib/support-chat/ticket'
 import { TICKET_MAX_CHARS, TICKET_DAILY_LIMIT } from '@/lib/support-chat/request'
 import { consumeDailyQuota, quotaSubject } from '@/lib/server-daily-quota'
 
-type Ctx = { params: Promise<{ ticketNo: string }> | { ticketNo: string } }
+type Ctx = { params: Promise<{ ticketNo: string }> }
 
 async function ticketNoOf(ctx: Ctx): Promise<string | null> {
   const p = 'then' in ctx.params ? await ctx.params : ctx.params

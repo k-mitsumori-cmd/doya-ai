@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 // ============================================
 // GET / POST /api/interview/projects
 // ============================================
@@ -5,7 +6,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createInterviewProject, interviewProjectCreationScope, InterviewProjectCreateError } from '@/lib/interview/project-create'
 import type { Prisma } from '@prisma/client'
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     const guestId = !userId ? getGuestIdFromRequest(req) : null
     if (req.nextUrl.searchParams.get('prepareCreate') === '1') {
       const preparedGuestId = userId ? null : guestId || ensureGuestId()
-      const response = NextResponse.json({ success: true, creationScope: interviewProjectCreationScope(userId, preparedGuestId) })
+      const response = privateApiJson({ success: true, creationScope: interviewProjectCreationScope(userId, preparedGuestId) })
       response.headers.set('Cache-Control', 'no-store')
       if (preparedGuestId) setGuestCookie(response, preparedGuestId)
       return response
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     const statsOnly = req.nextUrl.searchParams.get('statsOnly') === '1'
     if (!userId && !guestId) {
-      return NextResponse.json(statsOnly
+      return privateApiJson(statsOnly
         ? { success: true, stats: { totalProjects: 0, totalDrafts: 0, totalMaterials: 0 } }
         : { success: true, projects: [] })
     }
@@ -53,14 +54,14 @@ export async function GET(req: NextRequest) {
         prisma.interviewDraft.count({ where: { project: { is: where } } }),
         prisma.interviewMaterial.count({ where: { project: { is: where } } }),
       ])
-      return NextResponse.json({ success: true, stats: { totalProjects, totalDrafts, totalMaterials } })
+      return privateApiJson({ success: true, stats: { totalProjects, totalDrafts, totalMaterials } })
     }
 
     const params = req.nextUrl.searchParams
     const query = (params.get('q') || '').trim()
     const status = params.get('status') || ''
     if (query.length > 100 || (status && !['DRAFT', 'EDITING', 'COMPLETED'].includes(status))) {
-      return NextResponse.json({ success: false, error: '検索条件が正しくありません' }, { status: 400 })
+      return privateApiJson({ success: false, error: '検索条件が正しくありません' }, { status: 400 })
     }
 
     let cursor: { createdAt: Date; id: string } | null = null
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
         if (Number.isNaN(createdAt.getTime()) || createdAt.toISOString() !== decoded.createdAt) throw new Error('Invalid date')
         cursor = { createdAt, id: decoded.id }
       } catch {
-        return NextResponse.json({ success: false, error: 'ページ指定が正しくありません' }, { status: 400 })
+        return privateApiJson({ success: false, error: 'ページ指定が正しくありません' }, { status: 400 })
       }
     }
 
@@ -130,7 +131,7 @@ export async function GET(req: NextRequest) {
     const counts = Object.fromEntries(statusGroups.map((group) => [group.status, group._count._all]))
     const last = projects[projects.length - 1]
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       totalCount: statusGroups.reduce((total, group) => total + group._count._all, 0),
       filteredCount,
@@ -168,7 +169,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('[interview/projects] List failed:')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: 'プロジェクト一覧の取得に失敗しました', projects: [] },
       { status: 500 }
     )
@@ -191,11 +192,11 @@ export async function POST(req: NextRequest) {
     if (guestCookieMissing) guestId = ensureGuestId()
 
     const body = await req.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ success: false, error: '入力内容を確認してください' }, { status: 400 })
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return privateApiJson({ success: false, error: '入力内容を確認してください' }, { status: 400 })
     const requestKey = body.requestKey
-    if (requestKey !== undefined && (typeof requestKey !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestKey))) return NextResponse.json({ success: false, error: '作成操作を確認できませんでした' }, { status: 400 })
-    if (requestKey && guestCookieMissing) return NextResponse.json({ success: false, code: 'GUEST_SESSION_REQUIRED', error: 'Cookieを有効にして、画面を開き直してください。' }, { status: 409 })
-    if (requestKey && (typeof body.creationScope !== 'string' || body.creationScope !== interviewProjectCreationScope(userId, guestId))) return NextResponse.json({ success: false, code: 'CREATION_SCOPE_CHANGED', error: '利用情報が変わりました。プロジェクト一覧を確認してから再度お試しください。' }, { status: 409 })
+    if (requestKey !== undefined && (typeof requestKey !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestKey))) return privateApiJson({ success: false, error: '作成操作を確認できませんでした' }, { status: 400 })
+    if (requestKey && guestCookieMissing) return privateApiJson({ success: false, code: 'GUEST_SESSION_REQUIRED', error: 'Cookieを有効にして、画面を開き直してください。' }, { status: 409 })
+    if (requestKey && (typeof body.creationScope !== 'string' || body.creationScope !== interviewProjectCreationScope(userId, guestId))) return privateApiJson({ success: false, code: 'CREATION_SCOPE_CHANGED', error: '利用情報が変わりました。プロジェクト一覧を確認してから再度お試しください。' }, { status: 409 })
     const {
       title,
       intervieweeName,
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
     } = body
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return NextResponse.json(
+      return privateApiJson(
         { success: false, error: 'タイトルは必須です' },
         { status: 400 }
       )
@@ -233,9 +234,9 @@ export async function POST(req: NextRequest) {
     }
     for (const [key, [label, max]] of Object.entries(STR_LIMITS)) {
       const v = body[key]
-      if (v != null && typeof v !== 'string') return NextResponse.json({ success: false, error: `${label}は文字列で入力してください` }, { status: 400 })
+      if (v != null && typeof v !== 'string') return privateApiJson({ success: false, error: `${label}は文字列で入力してください` }, { status: 400 })
       if (typeof v === 'string' && v.length > max) {
-        return NextResponse.json(
+        return privateApiJson(
           { success: false, error: `${label}は${max}文字以内で入力してください` },
           { status: 400 }
         )
@@ -245,14 +246,14 @@ export async function POST(req: NextRequest) {
     // 許可値バリデーション
     const VALID_GENRES = ['CASE_STUDY', 'PRODUCT_INTERVIEW', 'PERSONA_INTERVIEW', 'PANEL_DISCUSSION', 'EVENT_REPORT', 'OTHER']
     if (genre && !VALID_GENRES.includes(genre)) {
-      return NextResponse.json(
+      return privateApiJson(
         { success: false, error: '不正なジャンルです' },
         { status: 400 }
       )
     }
     const VALID_TONES = ['friendly', 'formal', 'casual', 'professional', 'academic']
     if (tone && !VALID_TONES.includes(tone)) {
-      return NextResponse.json(
+      return privateApiJson(
         { success: false, error: '不正なトーンです' },
         { status: 400 }
       )
@@ -279,7 +280,7 @@ export async function POST(req: NextRequest) {
     const project = await createInterviewProject(projectData, requestKey)
 
     if (!project) {
-      return NextResponse.json(
+      return privateApiJson(
         {
           success: false,
           error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。',
@@ -291,7 +292,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const res = NextResponse.json({
+    const res = privateApiJson({
       success: true,
       project: {
         id: project.id,
@@ -313,10 +314,10 @@ export async function POST(req: NextRequest) {
       PROJECT_UNAVAILABLE: 'この作成操作のプロジェクトは現在開けません。一覧を確認してから新しく作成してください。',
     }
     if (e instanceof InterviewProjectCreateError && e.status === 409 && Object.hasOwn(publicCreationErrors, e.code)) {
-      return NextResponse.json({ success: false, code: e.code, error: publicCreationErrors[e.code] }, { status: 409 })
+      return privateApiJson({ success: false, code: e.code, error: publicCreationErrors[e.code] }, { status: 409 })
     }
     console.error('[interview/projects] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: 'プロジェクト作成に失敗しました' },
       { status: 500 }
     )

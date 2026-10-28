@@ -21,13 +21,13 @@ const mocks = {
   '@/components/promane/ui/button': { Button: element('button') },
   '@/components/promane/ui/input': { Input: element('input') },
   '@/components/promane/ui/select': Object.fromEntries(['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'].map(name => [name, Noop])),
-  'lucide-react': { Plus: Noop }, 'next/image': { __esModule: true, default: Noop },
+  'lucide-react': { Plus: Noop, CalendarDays: Noop, Flag: Noop }, 'next/image': { __esModule: true, default: Noop },
   sonner: { toast: { success: message => successes.push(message), error: () => {} } },
 };
 const file = 'src/components/promane/task-create-form.tsx', exportsForView = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
-}}).outputText, { exports: exportsForView, require: name => { if (name in mocks) return mocks[name]; throw Error(name); }, setTimeout: () => 0, console }, { filename: file });
+}}).outputText, { exports: exportsForView, require: name => { if (name in mocks) return mocks[name]; if(name==='@/lib/promane/user-error')return load('src/lib/promane/user-error.ts'); throw Error(name); }, setTimeout: () => 0, console }, { filename: file });
 const props = element => element[Object.keys(element).find(key => key.startsWith('__reactProps$'))];
 const act = fn => React.act(async () => { await fn(); for (let i = 0; i < 5; i++) await new Promise(setImmediate); });
 async function mount() {

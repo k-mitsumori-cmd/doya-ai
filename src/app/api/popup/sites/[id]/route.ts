@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getPopupUserId, ownSite } from '@/lib/popup/access'
 import { isId, parseDomain, sanitizeName } from '@/lib/popup/schema'
@@ -16,33 +17,33 @@ const NOT_FOUND = { error: '見つかりません。' }
 /** サイト詳細（案と集計）。自分の分だけ。他人のIDは404。正本は popup-read.ts */
 export async function GET(req: NextRequest, ctx: Ctx) {
   const userId = await getPopupUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です。' }, { status: 401 })
   const { id } = await ctx.params
-  if (!isId(id)) return NextResponse.json(NOT_FOUND, { status: 404 })
+  if (!isId(id)) return privateApiJson(NOT_FOUND, { status: 404 })
   const detail = await getSiteDetail(prisma, userId, id, parseDays(req.nextUrl.searchParams.get('days')))
-  if (!detail) return NextResponse.json(NOT_FOUND, { status: 404 })
-  return NextResponse.json(detail)
+  if (!detail) return privateApiJson(NOT_FOUND, { status: 404 })
+  return privateApiJson(detail)
 }
 
 /** サイト名・表示を許すドメインの変更 */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const userId = await getPopupUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です。' }, { status: 401 })
   const { id } = await ctx.params
-  if (!isId(id)) return NextResponse.json(NOT_FOUND, { status: 404 })
+  if (!isId(id)) return privateApiJson(NOT_FOUND, { status: 404 })
   const site = await prisma.popupSite.findFirst({ where: ownSite(userId, id), select: { id: true, name: true } })
-  if (!site) return NextResponse.json(NOT_FOUND, { status: 404 })
+  if (!site) return privateApiJson(NOT_FOUND, { status: 404 })
 
   const body = await req.json().catch(() => ({}))
   const data: { name?: string; domain?: string } = {}
   if ('name' in (body || {})) data.name = sanitizeName(body.name, site.name)
   if ('domain' in (body || {})) {
     const domain = parseDomain(body.domain)
-    if (!domain) return NextResponse.json({ error: 'ドメインを正しく入力してください（例: example.com）。' }, { status: 400 })
+    if (!domain) return privateApiJson({ error: 'ドメインを正しく入力してください（例: example.com）。' }, { status: 400 })
     data.domain = domain
   }
   await prisma.popupSite.updateMany({ where: ownSite(userId, site.id), data })
-  return NextResponse.json({ ok: true })
+  return privateApiJson({ ok: true })
 }
 
 /**
@@ -51,14 +52,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
  */
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const userId = await getPopupUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です。' }, { status: 401 })
   const { id } = await ctx.params
-  if (!isId(id)) return NextResponse.json(NOT_FOUND, { status: 404 })
+  if (!isId(id)) return privateApiJson(NOT_FOUND, { status: 404 })
   const site = await prisma.popupSite.findFirst({ where: ownSite(userId, id), select: { id: true } })
-  if (!site) return NextResponse.json(NOT_FOUND, { status: 404 })
+  if (!site) return privateApiJson(NOT_FOUND, { status: 404 })
   await prisma.$transaction([
     prisma.popup.updateMany({ where: { siteId: site.id, userId }, data: { status: 'paused' } }),
     prisma.popupSite.updateMany({ where: ownSite(userId, site.id), data: { deletedAt: new Date() } }),
   ])
-  return NextResponse.json({ ok: true })
+  return privateApiJson({ ok: true })
 }
