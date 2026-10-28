@@ -1522,7 +1522,7 @@ function SeoArticleInner() {
 
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="w-full md:w-auto">
+          <div className="min-w-0 w-full md:flex-1">
             <button onClick={() => router.push('/seo')} className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 font-bold transition-colors group">
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 一覧へ戻る
             </button>
@@ -1572,7 +1572,7 @@ function SeoArticleInner() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex min-w-0 flex-wrap gap-2 w-full sm:w-auto md:justify-end">
             <Button
               variant="secondary"
               onClick={openRegenerateArticle}
@@ -1599,14 +1599,14 @@ function SeoArticleInner() {
                 {resumeBusy ? '開始中...' : latestJob?.status === 'error' ? '失敗箇所から再開' : '続きから再生成'}
               </Button>
             )}
-            <Button variant="ghost" onClick={() => load({ showLoading: true })} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+            <Button variant="ghost" aria-label="最新の状態に更新" onClick={() => load({ showLoading: true })} className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
               <RefreshCcw className="w-5 h-5 text-gray-400" />
             </Button>
             <button
               type="button"
               onClick={deleteArticle}
               disabled={deleteBusy}
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               title="この記事を削除"
             >
               <Trash2 className={`w-5 h-5 ${deleteBusy ? 'animate-pulse' : ''}`} />
