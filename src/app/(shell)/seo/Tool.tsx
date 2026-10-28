@@ -219,7 +219,7 @@ export default function SeoTool() {
   // 記事の続きへのリンクを決定
   function getResumeLink(a: SeoArticleRow): string {
     // 一覧からは常に「本文＋画像が見られる記事詳細」へ統一（迷いをなくす）
-    return `/seo/articles/${a.id}`
+    return `/seo/articles/${a.id}${a.activityState === 'needs-review' ? '?auto=0' : ''}`
   }
 
   // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 読み込みの失敗 → 最新の記事の状態 の順に決める
@@ -579,7 +579,7 @@ export default function SeoTool() {
               const stepIndex = getStepIndex(a.status)
               const job = a.jobs?.[0]
               const mainKw = (a.keywords || [])[0] || ''
-              const detailHref = `/seo/articles/${a.id}`
+              const detailHref = getResumeLink(a)
               const resumeHref = getResumeLink(a)
               const bannerId = a.images?.[0]?.id || ''
 

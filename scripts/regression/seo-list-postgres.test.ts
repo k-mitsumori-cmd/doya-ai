@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { seoArticleActivity } from '../../seo/lib/job-response'
 import { test } from 'node:test'
 import { Prisma, PrismaClient } from '@prisma/client'
 import { parseSeoListQuery, readSeoArticleList, type SeoListActivity } from '../../src/lib/seo-article-list'
@@ -102,7 +103,14 @@ test('SEO list preserves ownership, read-only state and pagination while reporti
     assert.equal(first.counts.needsReview, fixtures.filter(fixture => fixture.activity === 'needs-review').length)
     assert.equal(first.counts.polling, 5)
     assert.equal(first.counts.done, 2)
-    for (const fixture of fixtures) assert.equal(articles.find(article => article.id === fixture.id)?.activityState, fixture.activity, fixture.id)
+    for (const fixture of fixtures) {
+      assert.equal(articles.find(article => article.id === fixture.id)?.activityState, fixture.activity, fixture.id)
+      const stored = await db.seoArticle.findUniqueOrThrow({ where: { id: fixture.id }, select: {
+        status: true, updatedAt: true, jobs: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 1,
+          select: { status: true, updatedAt: true, executionToken: true, executionExpiresAt: true, supersededAt: true } },
+      } })
+      assert.equal(seoArticleActivity(stored.status, stored.updatedAt, stored.jobs[0], now), fixture.activity, `detail/list parity: ${fixture.id}`)
+    }
     assert.equal(articles.find(article => article.id === 'tie-latest')?.jobs[0]?.id, 'tie-z')
     assert.equal(articles.find(article => article.id === 'special')?.images[0]?.id, 'image-b')
     assert.deepEqual(articles.find(article => article.id === 'malformed-keywords')?.keywords, [])

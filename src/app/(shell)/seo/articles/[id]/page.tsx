@@ -108,11 +108,12 @@ type Article = {
   id: string
   title: string
   status: string
+  activityState?: 'executing' | 'waiting' | 'needs-review' | null
   targetChars: number
   keywords?: string[]
   outline?: string | null
   finalMarkdown?: string | null
-  jobs?: { id: string; status: string; progress: number; step: string; error?: string | null; createdAt: string }[]
+  jobs?: { id: string; status: string; progress: number; step: string; error?: string | null; createdAt: string; supersededAt?: string | null }[]
   memo?: { content: string } | null
   audits: SeoAudit[]
   images: SeoImage[]
@@ -554,6 +555,7 @@ function SeoArticleInner() {
   const params = useParams<{ id: string }>()
   const id = params.id
   const searchParams = useSearchParams()
+  const automaticActionsAllowed = searchParams.get('auto') !== '0'
   const router = useRouter()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
@@ -822,14 +824,14 @@ function SeoArticleInner() {
 
   // 記事が完成済み（DONE/ERROR/EXPORTED）になったらポーリングを停止
   useEffect(() => {
-    const status = String((article as any)?.status || '').toUpperCase()
-    if (status === 'DONE' || status === 'ERROR' || status === 'EXPORTED') {
+    const status = String(article?.status || '').toUpperCase()
+    if (status === 'DONE' || status === 'ERROR' || status === 'EXPORTED' || article?.activityState === 'needs-review') {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
         pollingIntervalRef.current = null
       }
     }
-  }, [(article as any)?.status])
+  }, [article?.status, article?.activityState])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
@@ -955,7 +957,7 @@ function SeoArticleInner() {
 
   // 記事が完成したら（autoBundleがONなら）自動で画像生成を試行する
   useEffect(() => {
-    if (!article) return
+    if (!automaticActionsAllowed || !article) return
     if (!article.autoBundle) return
     if (article.status !== 'DONE') return
     if (autoImagesRequestedRef.current) return
@@ -978,7 +980,7 @@ function SeoArticleInner() {
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [article?.id, article?.status, article?.autoBundle])
+  }, [automaticActionsAllowed, article?.id, article?.status, article?.autoBundle])
 
   async function regenerateImage() {
     if (!regenImage) return
@@ -1119,6 +1121,7 @@ function SeoArticleInner() {
 
   useEffect(() => {
     if (searchParams.get('auto') === '1') setAutoRun(true)
+    if (searchParams.get('auto') === '0') setAutoRun(false)
   }, [searchParams])
 
   const latestJob = article?.jobs?.[0]
@@ -1175,11 +1178,11 @@ function SeoArticleInner() {
   }, [article?.id, latestJob?.status, latestJobId, load, resumeBusy, router])
 
   useEffect(() => {
-    if (!autoRun || !latestJob) return
-    if (latestJob.status === 'done' || latestJob.status === 'error') return
+    if (!automaticActionsAllowed || !autoRun || !latestJob || article?.activityState === 'needs-review') return
+    if (latestJob.supersededAt || ['done', 'error', 'paused', 'cancelled'].includes(latestJob.status)) return
     const t = setTimeout(advanceOnce, 800)
     return () => clearTimeout(t)
-  }, [autoRun, latestJob, advanceOnce])
+  }, [automaticActionsAllowed, autoRun, latestJob, article?.activityState, advanceOnce])
 
   async function copyToClipboard(text: string) {
     try {
@@ -1264,7 +1267,9 @@ function SeoArticleInner() {
   }
 
   const charProgress = Math.min(100, Math.round((score.charCount / article.targetChars) * 100))
-  const isGenerating = latestJob && latestJob.status !== 'done' && latestJob.status !== 'error'
+  const isGenerating = !!latestJob && (article.activityState === undefined
+    ? !latestJob.supersededAt && ['queued', 'running'].includes(latestJob.status)
+    : article.activityState === 'executing')
 
   return (
     <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
@@ -1516,7 +1521,7 @@ function SeoArticleInner() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3 sm:mb-2">
               <div className="flex items-center gap-2">
                 <Badge tone={article.status === 'DONE' ? 'green' : article.status === 'ERROR' ? 'red' : 'amber'}>
-                  {article.status === 'DONE' ? '完成' : article.status === 'ERROR' ? 'エラー' : '生成中'}
+                  {article.status === 'DONE' || article.status === 'EXPORTED' ? '完成' : article.status === 'ERROR' ? 'エラー' : article.activityState === 'needs-review' ? '要確認' : isGenerating ? '生成中' : article.status === 'RUNNING' ? '待機中' : '作成途中'}
                 </Badge>
               </div>
               <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{article.title}</h1>
@@ -1568,7 +1573,7 @@ function SeoArticleInner() {
               <Wand2 className="w-4 h-4 mr-2" />
               同テーマで再生成
             </Button>
-            {isGenerating && (
+            {automaticActionsAllowed && isGenerating && (
               <Button variant={autoRun ? 'secondary' : 'primary'} onClick={() => setAutoRun(!autoRun)} className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black shadow-lg shadow-blue-500/20 text-xs sm:text-sm">
                 {autoRun ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                 {autoRun ? '一時停止' : '生成を再開'}
@@ -1610,6 +1615,12 @@ function SeoArticleInner() {
           <div role="alert" className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm font-bold text-amber-900">
             {articleLimitMessage} {articleLimitAction && <Link href={articleLimitAction.href} className="ml-2 underline underline-offset-2">{articleLimitAction.label}</Link>}
           </div>
+        )}
+
+        {article.activityState === 'needs-review' && (
+          <p role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            生成は実行されていません。途中の内容を確認し、必要に応じて再開してください。
+          </p>
         )}
 
         {/* Progress Display */}

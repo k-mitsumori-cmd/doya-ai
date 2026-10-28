@@ -1,8 +1,9 @@
 import { Prisma } from '@prisma/client'
+import { SEO_JOB_STALE_AFTER_MS, type SeoActivityState } from '@seo/lib/job-response'
 
 export type SeoListOwner = { userId: string } | { userId: null; guestId: string }
-export type SeoListActivity = 'executing' | 'waiting' | 'needs-review' | null
-export const SEO_LIST_STALE_AFTER_MS = 24 * 60 * 60 * 1000
+export type SeoListActivity = SeoActivityState
+export const SEO_LIST_STALE_AFTER_MS = SEO_JOB_STALE_AFTER_MS
 
 function activityQuery(now: Date) {
   const staleBefore = new Date(now.getTime() - SEO_LIST_STALE_AFTER_MS)
