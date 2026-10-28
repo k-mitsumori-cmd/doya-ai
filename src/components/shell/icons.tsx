@@ -9,13 +9,13 @@
 import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
-  CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
+  CircleUser, Clock, CreditCard, Download, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick, Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store, Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target, ScanSearch, ClipboardList, DoorOpen, MessagesSquare, CheckSquare, Kanban, UserPlus, Lightbulb, Timer, Network, CalendarDays,
 } from 'lucide-react'
 
 export const SHELL_ICONS = {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
-  CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
+  CircleUser, Clock, CreditCard, Download, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick, Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store, Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target, ScanSearch, ClipboardList, DoorOpen, MessagesSquare, CheckSquare, Kanban, UserPlus, Lightbulb, Timer, Network, CalendarDays,
 } satisfies Record<string, LucideIcon>
 

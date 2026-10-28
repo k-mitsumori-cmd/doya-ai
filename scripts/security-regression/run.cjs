@@ -1415,3 +1415,6 @@ for (const file of ['verify-runtime-alert-warning-kind.cjs']) { const r = requir
 for (const file of ['verify-departments-flag.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:90000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 
 for (const file of ['verify-audit-input-cache.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Audit input/cache regression failed:', file); process.exit(r.status || 1); } }
+
+const hrExport = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-employee-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrExport.error || hrExport.status !== 0) { console.error('HR employee export regression failed'); process.exit(hrExport.status || 1); }

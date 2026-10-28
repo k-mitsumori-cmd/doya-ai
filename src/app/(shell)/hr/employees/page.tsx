@@ -20,7 +20,7 @@ type SortKey = 'name' | 'hireDate' | 'department'
 const PAGE_SIZE = 20
 
 export default function EmployeesPage() {
-  const { request: fetch } = useHrOrganizationRequest()
+  const { request: fetch, isCurrent } = useHrOrganizationRequest()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +36,51 @@ export default function EmployeesPage() {
   const [canManageEmployees, setCanManageEmployees] = useState(false)
   const [hasLinkedEmployee, setHasLinkedEmployee] = useState<boolean | null>(null)
   const requestVersion = useRef(0)
+  const exportingRef = useRef(false)
+  const exportMounted = useRef(true)
+  const exportAbort = useRef<AbortController | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<number | null>(null)
+  useEffect(() => {
+    exportMounted.current = true
+    exportingRef.current = false
+    setExporting(false)
+    setExportError(null)
+    return () => { exportMounted.current = false; exportAbort.current?.abort() }
+  }, [isCurrent])
+
+  const handleExport = async () => {
+    if (exportingRef.current || !canManageEmployees || !isCurrent()) return
+    exportingRef.current = true
+    setExporting(true)
+    setExportError(null)
+    const controller = new AbortController()
+    exportAbort.current = controller
+    const current = () => exportMounted.current && !controller.signal.aborted && isCurrent()
+    try {
+      const response = await fetch('/api/hr/employees/export', { cache: 'no-store', signal: controller.signal })
+      if (!response.ok) throw new HrStatusError(response.status)
+      if (!response.headers.get('content-type')?.startsWith('text/csv')) throw new Error('Invalid CSV response')
+      const blob = await response.blob()
+      if (!current()) return
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      try {
+        anchor.href = url
+        anchor.download = 'doya-hr-employees.csv'
+        document.body.appendChild(anchor)
+        anchor.click()
+      } finally { anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
+    } catch (error) {
+      if (current()) setExportError(hrErrorStatus(error) || 500)
+    } finally {
+      if (exportAbort.current === controller) {
+        exportingRef.current = false
+        if (current()) setExporting(false)
+        exportAbort.current = null
+      }
+    }
+  }
 
   const fetchData = useCallback(async () => {
     const version = ++requestVersion.current
@@ -80,7 +125,7 @@ export default function EmployeesPage() {
     } finally {
       if (version === requestVersion.current) setLoading(false)
     }
-  }, [page, sortKey])
+  }, [fetch, page, sortKey])
 
   useEffect(() => {
     void fetchData()
@@ -103,6 +148,7 @@ export default function EmployeesPage() {
         {canManageEmployees ? (
           // 新しい見た目: 主ボタンは「従業員を追加」1つ。CSV は脇役の見た目にする（375px では折り返す）
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" icon="Download" onClick={() => void handleExport()} disabled={exporting || loading || loadError}>{exporting ? 'CSVを書き出し中…' : 'CSVを書き出す'}</Button>
             <Button variant="secondary" icon="FileText" onClick={() => setShowImport(true)}>CSV一括登録</Button>
             <Button href="/hr/employees/new" icon="UserPlus">従業員を追加</Button>
           </div>
@@ -123,6 +169,16 @@ export default function EmployeesPage() {
           </Link>
         </div>}
       </div>
+
+      {canManageEmployees && <p className="text-sm text-slate-600 mb-4">CSVは現在の組織の全従業員が対象です（最大1万名・4MB）。</p>}
+
+      {exportError !== null && (
+        <div className="mb-6" role="alert">
+          {exportError === 413
+            ? <p className="text-sm text-slate-700">一度に書き出せるCSVは1万名・4MBまでです。上限を超える場合は、サポートへご相談ください。</p>
+            : <HrLoadError subject="従業員のCSV" status={exportError} onRetry={() => void handleExport()} />}
+        </div>
+      )}
 
       {loadError && (
         <HrLoadError className="mb-6" subject="従業員の一覧" status={errorStatus} onRetry={() => setReloadKey(key => key + 1)} />
