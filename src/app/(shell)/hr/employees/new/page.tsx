@@ -510,7 +510,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           </div>
 
           {/* Sticky bottom save bar (mobile) */}
-          <div className="sm:hidden sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
+          <div className="sm:hidden sticky bottom-[var(--shell-mobile-bottom-inset,0px)] bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
             <button
               type="button"
               onClick={() => router.back()}
