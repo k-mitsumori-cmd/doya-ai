@@ -30,7 +30,7 @@ function limitOf(raw: string | undefined, fallback: number): number {
 }
 /** 1人あたり1日の回数（既定 30） */
 const userDailyLimit = () => limitOf(process.env.AGENT_ROUTER_USER_DAILY, 30)
-/** 全体で1日に AI を使う回数（既定 1,000。1回 約1.4〜3.2円なので、最大で1日 約3,200円） */
+/** 全体で1日に AI を使う回数（既定 1,000。1回 約3〜4円なので、最大で1日 約4,000円） */
 const aiDailyLimit = () => limitOf(process.env.AGENT_ROUTER_AI_DAILY, 1000)
 
 export async function POST(req: NextRequest) {

@@ -36,3 +36,12 @@ export function forwardPath(params: ParamsLike | null | undefined, allow: Record
   if (!sub && !qs) return ''
   return `${sub}${qs ? `?${qs}` : ''}`
 }
+
+/** 画面で今の URL の検索の部分を読む。読めないとき（サーバー・試験の環境）は空にする（移動そのものは止めない） */
+export function currentSearchParams(): URLSearchParams {
+  try {
+    return new URLSearchParams(typeof window === 'undefined' ? '' : window.location?.search ?? '')
+  } catch {
+    return new URLSearchParams()
+  }
+}
