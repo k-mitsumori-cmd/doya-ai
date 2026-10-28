@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
@@ -59,25 +59,25 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     if (!hasMinRole(ctx.role, 'ADMIN')) {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
+      return privateApiJson({ error: '管理者権限が必要です' }, { status: 403 })
     }
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const { name, industry, employeeScale, fiscalYearStart } = body
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
-      return NextResponse.json({ error: '組織名を入力してください' }, { status: 400 })
+      return privateApiJson({ error: '組織名を入力してください' }, { status: 400 })
     }
     if ((industry != null && typeof industry !== 'string') || (employeeScale != null && typeof employeeScale !== 'string')) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     if (fiscalYearStart !== undefined &&
       (typeof fiscalYearStart !== 'string' || !/^(0?[1-9]|1[0-2])$/.test(fiscalYearStart))) {
-      return NextResponse.json({ error: '期首月は1〜12月で指定してください' }, { status: 400 })
+      return privateApiJson({ error: '期首月は1〜12月で指定してください' }, { status: 400 })
     }
     const data: Record<string, string | number | null> = {}
     if (name !== undefined) data.name = name.trim().slice(0, 120)
@@ -85,7 +85,7 @@ export async function PUT(req: NextRequest) {
     if (employeeScale !== undefined) data.size = employeeScale?.trim().slice(0, 50) || null
     if (fiscalYearStart !== undefined) data.fiscalMonth = Number(fiscalYearStart)
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: '変更内容を指定してください' }, { status: 400 })
+      return privateApiJson({ error: '変更内容を指定してください' }, { status: 400 })
     }
 
     await prisma.hrOrganization.update({
@@ -93,9 +93,9 @@ export async function PUT(req: NextRequest) {
       data,
     })
 
-    return NextResponse.json({ success: true })
+    return privateApiJson({ success: true })
   } catch (e) {
     console.error('[hr/settings PUT]')
-    return NextResponse.json({ error: '設定の保存に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '設定の保存に失敗しました' }, { status: 500 })
   }
 }

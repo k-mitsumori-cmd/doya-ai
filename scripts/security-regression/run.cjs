@@ -1418,3 +1418,6 @@ for (const file of ['verify-audit-input-cache.cjs']) { const r = require('node:c
 
 const hrExport = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-employee-export.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrExport.error || hrExport.status !== 0) { console.error('HR employee export regression failed'); process.exit(hrExport.status || 1); }
+
+const hrPrivateJson = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-api-private-json.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrPrivateJson.error || hrPrivateJson.status !== 0) { console.error('HR private JSON regression failed'); process.exit(hrPrivateJson.status || 1); }

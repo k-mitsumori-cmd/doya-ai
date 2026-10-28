@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import type Stripe from 'stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -30,17 +31,17 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
     if (!user?.id) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // 組織の上限は OWNER の User.plan で決まる。別メンバーが購入しても反映されない。
     if (ctx.role !== HrMemberRole.OWNER || ctx.userId !== user.id) {
-      return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
+      return privateApiJson({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
     }
 
     const body = await req.json()
@@ -48,19 +49,19 @@ export async function POST(req: NextRequest) {
     const interval = String(body?.interval ?? 'monthly') // 'monthly' | 'yearly'
 
     if (!plan || !HR_PLAN_PRICES[plan]) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: `無効なプランです: ${plan}` },
         { status: 400 }
       )
     }
 
     if (interval !== 'monthly' && interval !== 'yearly') {
-      return NextResponse.json({ error: `無効な課金間隔です: ${interval}` }, { status: 400 })
+      return privateApiJson({ error: `無効な課金間隔です: ${interval}` }, { status: 400 })
     }
 
     const priceId = HR_PLAN_PRICES[plan][interval]
     if (!priceId) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: `無効な課金間隔です: ${interval}` },
         { status: 400 }
       )
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       select: { stripeCustomerId: true, email: true, name: true, plan: true, stripePriceId: true },
     })
     if (!dbUser) {
-      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+      return privateApiJson({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
     // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプランを新しく売らない（据え置きの人のプラン変更は通す）
     const legacyDecision = decideLegacyPlanCheckout({
@@ -80,11 +81,11 @@ export async function POST(req: NextRequest) {
       kind: subscriberKind({ plan: dbUser.plan, stripePriceId: dbUser.stripePriceId, newPriceIds: newPricingPriceIds() }),
     })
     if (!legacyDecision.ok) {
-      return NextResponse.json({ code: legacyDecision.code, error: 'このプランの新しいお申し込みは終了しました。料金ページのチームプランをご覧ください。' }, { status: legacyDecision.status })
+      return privateApiJson({ code: legacyDecision.code, error: 'このプランの新しいお申し込みは終了しました。料金ページのチームプランをご覧ください。' }, { status: legacyDecision.status })
     }
     const expectedEmail = String(dbUser.email || user.email || '').trim().toLowerCase()
     if (!expectedEmail) {
-      return NextResponse.json({ error: '契約者のメールアドレスを確認できませんでした。' }, { status: 409 })
+      return privateApiJson({ error: '契約者のメールアドレスを確認できませんでした。' }, { status: 409 })
     }
 
     // 旧HR専用入口も共通Checkoutと同じ二重契約ガードを通す。
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
       })
       if (existing.length > 0) {
         const planChange = existing.length === 1 && !!existing[0]?.priceId && existing[0].priceId !== priceId
-        return NextResponse.json({
+        return privateApiJson({
           code: planChange ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED',
           error: planChange
             ? '現在のご契約のプラン変更は契約管理画面で行ってください。'
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
         }, { status: 409 })
       }
     } catch {
-      return NextResponse.json({
+      return privateApiJson({
         code: 'SUBSCRIPTION_CHECK_UNAVAILABLE',
         error: '契約状況を確認できなかったため決済を開始していません。時間をおいて再度お試しください。',
       }, { status: 503 })
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
           existing.email?.trim().toLowerCase() !== expectedEmail ||
           (existing.metadata?.userId && existing.metadata.userId !== user.id)
         ) {
-          return NextResponse.json({
+          return privateApiJson({
             error: '保存済みのStripe顧客が契約者と一致しません。決済を開始していません。',
             code: 'CUSTOMER_OWNERSHIP_MISMATCH',
           }, { status: 409 })
@@ -198,7 +199,7 @@ export async function POST(req: NextRequest) {
       details: { plan, interval, priceId, checkoutSessionId: checkoutSession.id },
     }).catch(() => {})
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       url: checkoutSession.url,
     })
@@ -208,9 +209,9 @@ export async function POST(req: NextRequest) {
       const userMessage = e.code === 'CHECKOUT_ALREADY_COMPLETED'
         ? '直前のお申し込みを確認中です。画面を再読み込みしてください。'
         : '決済画面がすでに開かれています。二重のお申し込みを防ぐため、先ほどの決済画面をご利用いただくか、有効期限が切れてから再度お試しください。'
-      return NextResponse.json({ code: e.code, error: userMessage }, { status: e.status })
+      return privateApiJson({ code: e.code, error: userMessage }, { status: e.status })
     }
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'お支払いの画面を開けませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
