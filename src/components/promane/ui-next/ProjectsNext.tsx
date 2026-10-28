@@ -7,7 +7,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button, Card, EmptyState, StatTile } from '@/components/ds'
-import { DivergingBars } from '@/components/ds/charts'
+import ProjectProfitBars from './ProjectProfitBars'
 import { formatCurrency, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
 import { manYen, PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
 
@@ -68,15 +68,7 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
 
           {rateBars.length > 0 ? (
             <Card title="案件ごとの利益率" meta={rated.length > rateBars.length ? `上位${rateBars.length}件／${rated.length}件` : `${rated.length}件`}>
-              <DivergingBars
-                label="案件ごとの利益率"
-                negativeLabel="赤字"
-                positiveLabel="黒字"
-                positiveTone="good"
-                negativeTone="negative"
-                format={(n) => `${n}%`}
-                data={rateBars}
-              />
+              <ProjectProfitBars data={rateBars} />
             </Card>
           ) : null}
 
