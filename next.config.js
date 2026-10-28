@@ -55,7 +55,9 @@ const nextConfig = {
     //    outputFileTracingIncludes でファイルを同梱しても解決しない。
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
   // Satori の HarfBuzz は実行時に隣接する WASM を読むため、Node の配置を保つ。
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js', 'satori'],
+  // OpenAI は Node の API ルートだけで使用する。SDK 全体を webpack の解析対象にせず、
+  // 実行時の native require と配布 trace で扱い、コンパイル時のメモリを抑える。
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js', 'satori', 'openai'],
 
   // ⚠️ 画面が増えて、Vercel のビルドがコンパイルの途中でメモリ不足（SIGKILL）で止まった（2026-10-24）。
   // webpack のメモリの使い方を抑える（ビルドが少し遅くなる代わりに、ピークのメモリが下がる）。

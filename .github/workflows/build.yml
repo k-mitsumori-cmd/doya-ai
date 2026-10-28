@@ -72,3 +72,6 @@ jobs:
 
       - name: Satori deployment assets
         run: node scripts/regression/check-satori-traces.cjs
+
+      - name: OpenAI deployment modules
+        run: node scripts/regression/check-openai-traces.cjs

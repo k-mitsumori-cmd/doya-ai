@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && npm run test:pricing && npm run test:support-chat && npm run test:health-check && npm run test:roles && tsc --noEmit && NODE_OPTIONS=--max-old-space-size=6144 next build && tsc --noEmit",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && npm run test:income && npm run test:expense && npm run test:doyapower && npm run test:shell && npm run test:agent && npm run test:slack && npm run test:pricing && npm run test:support-chat && npm run test:health-check && npm run test:roles && tsc --noEmit && NODE_OPTIONS=--max-old-space-size=6144 next build && tsc --noEmit && node scripts/regression/check-openai-traces.cjs",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -70,7 +70,7 @@
     "mediainfo.js": "^0.3.8",
     "next": "15.5.28",
     "next-auth": "4.24.15",
-    "openai": "^4.24.1",
+    "openai": "6.0.0",
     "otpauth": "^9.5.1",
     "pptxgenjs": "^3.12.0",
     "puppeteer-core": "25.16.0",
@@ -88,7 +88,7 @@
     "tldts": "7.0.23",
     "undici": "^7.29.0",
     "uuid": "^13.0.0",
-    "zod": "^3.22.4",
+    "zod": "4.6.7",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
