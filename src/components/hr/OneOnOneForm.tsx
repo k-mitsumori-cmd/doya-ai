@@ -150,15 +150,24 @@ export default function OneOnOneForm({
     savingRef.current = true
     setSaving(true)
     try {
+      // 初期表示用の空行だけを除き、入力済み・一部入力・未知の保存項目は保つ。
+      const isEmptyInitialRow = (item: unknown, emptyFields: Record<string, unknown>) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const row = item as Record<string, unknown>
+        if (Object.keys(row).some(key => key !== 'id' && !Object.hasOwn(emptyFields, key))) return false
+        return Object.entries(emptyFields).every(([key, value]) =>
+          value === '' ? typeof row[key] === 'string' && row[key].trim() === '' : row[key] === value
+        )
+      }
       const payload = {
         recordId,
         employeeId,
         date: date ? new Date(date).toISOString() : null,
         ...(duration !== null ? { duration } : {}),
-        agenda,
+        agenda: agenda.filter(item => !isEmptyInitialRow(item, { topic: '', category: 'BUSINESS' })),
         ...(canViewManagerNotes ? { managerNote } : {}),
         sharedNote,
-        actionItems,
+        actionItems: actionItems.filter(item => !isEmptyInitialRow(item, { content: '', assignee: '', dueDate: '', done: false })),
       }
       if (onSave) {
         await onSave(payload)
