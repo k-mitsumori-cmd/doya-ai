@@ -63,7 +63,7 @@ export default function OneOnOneDetailPage() {
     }
     fetchRecord()
     return () => { active = false }
-  }, [id])
+  }, [id, fetch])
 
   const handleSave = async (payload: any) => {
     if (payload.recordId && payload.recordId !== id) throw new Error('表示中の記録が切り替わりました。再読み込みしてください。')
