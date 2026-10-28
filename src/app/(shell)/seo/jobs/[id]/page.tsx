@@ -829,15 +829,6 @@ export default function SeoJobPage() {
 
   // 旧: stepHistory（ステップ変化のみ）は廃止し、activityLogへ統合
 
-  // 自動で工程を進め続ける（UIで停止/再開は提供しない）
-  useEffect(() => {
-    if (!job || job.supersededAt || job.status === 'paused') return
-    if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') return
-    const t = setTimeout(() => {
-      advanceOnce()
-    }, 700)
-    return () => clearTimeout(t)
-  }, [job?.status, job?.step, job?.progress, advanceOnce, job])
 
   if (loading) {
     // 新しい見た目では枠を残し、本文の場所だけを骨組みにする（UX 点検 FIX-PLAN 13）
@@ -871,9 +862,9 @@ export default function SeoJobPage() {
     return (
       <main className="flex justify-center py-10">
         <section className="w-full max-w-xl rounded-2xl bg-white p-8 shadow-sm" aria-labelledby="job-stopped-title">
-          <h1 id="job-stopped-title" className="text-xl font-bold text-slate-900">
+          <h2 id="job-stopped-title" className="text-xl font-bold text-slate-900">
             {replaced ? '新しい生成に置き換えられました' : cancelled ? '生成をキャンセルしました' : failed ? '生成を停止しました' : job.status === 'paused' ? '生成を一時停止しています' : '生成は実行されていません'}
-          </h1>
+          </h2>
           <p className="mt-3 text-slate-600">
             {replaced ? 'この生成は終わっています。記事の画面で、新しい生成の様子を確かめてください。' : cancelled ? '途中の成果物は記事画面で確認できます。' : '再開すると、途中の状態から生成を続けます。'}
           </p>
@@ -973,9 +964,9 @@ export default function SeoJobPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
             {job.article.title}
-          </h1>
+          </h2>
           <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
