@@ -7,7 +7,7 @@ async function fixture(reply){let now=1000,seq=0,identity='alpha',view,closed=fa
  const clock={Date:class extends Date{static now(){return now}},setTimeout:(fn,ms)=>{timers.set(++seq,{fn,ms});return seq},clearTimeout:id=>timers.delete(id)};
  const fetch=(url,init)=>{calls.push({url,init});return reply(url,init)};
  const reader=load('src/lib/doyaslide/style-preview-client.ts',{}, {fetch,AbortController,TextDecoder,Uint8Array,URL,...clock});
- const hook=load('src/lib/doyaslide/use-style-previews.ts',{react:React,'./style-preview-client':reader},{AbortController,...clock});
+ const hook=load('src/lib/doyaslide/use-style-previews.ts',{react:React,'./style-preview-client':reader,'./style-placeholder':load('src/lib/doyaslide/style-placeholder.ts',{'./constants':load('src/lib/doyaslide/constants.ts')})},{AbortController,...clock});
  function Probe(){view=hook.useStylePreviews(identity,styles);return null}
  const c=document.createElement('div');document.body.append(c);const root=createRoot(c);
  const act=fn=>React.act(async()=>{await fn();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r))});

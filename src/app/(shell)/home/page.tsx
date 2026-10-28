@@ -28,7 +28,8 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage({ searchParams }: { searchParams?: Promise<{ dept?: string | string[] }> | { dept?: string | string[] } } = {}) {
+export default async function HomePage(props: { searchParams?: Promise<{ dept?: string | string[] }> }) {
+  const { searchParams } = props || {}
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home')
