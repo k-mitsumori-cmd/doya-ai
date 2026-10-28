@@ -34,6 +34,16 @@ function effect(kind, marker, values = {}, auto = '0') {
 }
 
 (async () => {
+  for (const kind of ['jobs', 'articles']) for (const mode of ['read-only', 'needs-review', 'cancelled']) await check(`${kind}: every generation effect respects ${mode}`, () => {
+    const effects = page(kind).effects.filter(source => /\badvanceOnce\b/.test(source));
+    assert.ok(effects.length > 0);
+    const job = { id: 'j', status: mode === 'cancelled' ? 'cancelled' : 'running', activityState: mode === 'needs-review' ? 'needs-review' : 'executing' };
+    for (const source of effects) {
+      const f = effect(kind, source, { job, latestJob: job, article: job }, mode === 'read-only' ? '0' : '1');
+      assert.equal(f.timers.size, 0, 'Unexpected automatic generation effect: ' + source);
+      assert.equal(f.calls.advance, 0);
+    }
+  });
   for (const kind of ['jobs', 'articles']) await check(`${kind}: auto=0 never schedules generation`, () => {
     const f = effect(kind, kind === 'jobs' ? 'setTimeout(tick, 1800)' : 'setTimeout(advanceOnce, 800)', {
       job: { id: 'j', status: 'running', activityState: 'executing' }, latestJob: { status: 'running' }, article: { activityState: 'executing' },
