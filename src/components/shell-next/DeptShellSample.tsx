@@ -179,6 +179,14 @@ function TodayList() {
 /* ---- 経営ホーム: 上から ①頼む ②数字 ③判断 ④部署の報告 ⑤今日やること ---- */
 function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: string) => void; onAsk: (text: string) => void }) {
   const [text, setText] = useState('')
+  // 書くと入力欄が自動で伸びる（最低4行は CSS の min-height）
+  const askRef = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = askRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
   // 数字は、本物では API から読む。読み込み中は同じ大きさの形の見本を出す（見本では少しだけ待つ）
   const [loaded, setLoaded] = useState(false)
   useEffect(() => { const t = window.setTimeout(() => setLoaded(true), 350); return () => window.clearTimeout(t) }, [])
@@ -192,10 +200,12 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
             <DoyaKun pose="point" size={64} className={styles.askKun} />
           </div>
           <div className={styles.askBox}>
-            <textarea id="ask-input" className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} placeholder="例: 来週の商談の準備をまとめて進めたい" rows={2} />
+            <div className={styles.aura}>
+              <textarea id="ask-input" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} placeholder="例: 来週の商談の準備をまとめて進めたい" rows={4} />
+            </div>
             <div className={styles.btnRow}>
               <div className={styles.chips}>{EXAMPLES.map((e) => <button key={e} type="button" className={styles.chip} onClick={() => setText(e)}>{e}</button>)}</div>
-              <button type="button" className={styles.btn} disabled={!text.trim()} onClick={() => onAsk(text.trim())}>ドヤAIに頼む</button>
+              <button type="button" className={`${styles.btn} ${styles.btnAi}`} disabled={!text.trim()} onClick={() => onAsk(text.trim())}>ドヤAIに頼む</button>
             </div>
           </div>
         </section>

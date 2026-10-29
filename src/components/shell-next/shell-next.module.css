@@ -39,7 +39,20 @@
 .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--note-bg); color: var(--note-ink); font-size: 11px; font-weight: 800; white-space: nowrap; }
 
 /* ① 頼む欄 */
-.ask { display: grid; gap: 12px; }
+/* 入力段は、この画面の主役。上下の余白を大きく取り、ゆったり縦に並べる */
+.ask { display: grid; gap: 20px; padding: 36px clamp(20px, 3vw, 40px) 40px; }
+.askHead { margin-bottom: 4px; }
+/* 入力欄の枠だけ虹色（青を主役に、紫・ピンク・オレンジ・水色）がゆっくり回る（1周10秒）。本人の指定（2026-10-29）。ほかの背景は平らのまま。
+   中の背景は白。入力欄に入ると、枠の外にやわらかい光が出る。動きを減らす設定では回さない */
+@property --sn-spin { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+@keyframes snSpin { to { --sn-spin: 360deg; } }
+.aura { --sn-rainbow: conic-gradient(from var(--sn-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 3px); padding: 3px; background: var(--sn-rainbow); animation: snSpin 10s linear infinite; }
+.aura::after { content: ''; position: absolute; inset: -4px; z-index: -1; border-radius: calc(var(--inner-r) + 8px); background: var(--sn-rainbow); filter: blur(16px); opacity: 0; transition: opacity .45s var(--ease); pointer-events: none; }
+.aura:focus-within::after { opacity: .5; }
+.aura .textarea { display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); resize: none; overflow: hidden; min-height: calc(1.6em * 4 + 28px); line-height: 1.6; font-size: 16px; padding: 14px 16px; }
+.aura .textarea:focus-visible { outline: none; }
+.btnAi { position: relative; isolation: isolate; }
+.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: var(--sn-rainbow, conic-gradient(from var(--sn-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff)); filter: blur(9px); opacity: .55; animation: snSpin 10s linear infinite; }
 .askTitle, .deptTitle { animation: headIn calc(.7s * var(--mx, 1)) var(--ease) both; }
 @keyframes headIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .askHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -175,6 +188,7 @@
   .item, .btn, .member, .chip { transition: none; }
   .member:hover, .item:active, .chip:active, .member:active { transform: none; }
   .skel { animation: none; }
+  .aura, .btnAi:not(:disabled)::before { animation: none; }
 }
 
 /* ---- パネル: パソコンは右から（ドロワー）、スマホは下から（ボトムシート）。位置と透明度だけ動かす ---- */
