@@ -27,7 +27,7 @@ type ExpenseItem = {
 type MemberStat = {
   id: string;
   displayName: string;
-  hourlyRate: number;
+  laborCost: number;
   minutes: number;
 };
 
@@ -199,11 +199,11 @@ function FinanceTabContent({ laborCost, totalMinutes, expenses, members, toolbar
                       <div>
                         <span className="font-medium">{member.displayName}</span>
                         <span className="ml-2 text-gray-500">
-                          {formatDuration(member.minutes)} × {formatCurrency(member.hourlyRate)}/h
+                          {formatDuration(member.minutes)} ・ 作業記録ごとに集計
                         </span>
                       </div>
                       <span className="font-medium">
-                        {formatCurrency(Math.round((member.minutes / 60) * member.hourlyRate))}
+                        {formatCurrency(member.laborCost)}
                       </span>
                     </div>
                   ))}
