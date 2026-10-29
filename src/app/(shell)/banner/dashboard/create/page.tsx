@@ -1669,7 +1669,7 @@ function BannerDashboardWorkspace() {
         {oneButton && (
           <OneButtonBar
             eyebrow="バナー作成"
-            cta={isGenerating ? 'バナーをつくっています。このまま待ってね' : '用途とキーワードを入れたら、押してね'}
+            cta={isGenerating ? 'バナーをつくっています。このままお待ちください' : '用途とキーワードを入れたら、押してください'}
             label="プロ品質バナーを生成する"
             scope="入力した内容から、バナーを3案つくります。つくったあとの手直しは、下の結果から行えます。"
             onRun={handleGenerate}

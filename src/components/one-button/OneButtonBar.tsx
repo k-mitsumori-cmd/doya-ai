@@ -2,7 +2,7 @@
 // ============================================
 // 「これ1つで全部進む」帯（各ツールの画面のいちばん上）
 // ============================================
-// ドヤくん ＋ 一言の呼びかけ（「ここまで入れたら押してね」など）＋ 横に長い大きなボタン1つ ＋ 押すとどこまで進むかの小さな説明。
+// ドヤくん ＋ 一言の呼びかけ（「ここまで入れたら押してください」など）＋ 横に長い大きなボタン1つ ＋ 押すとどこまで進むかの小さな説明。
 // 動いている間は、進み具合のバーと「n/N」を出す。ほかの操作は、この帯の下に小さく置く（各ツールの画面の側で）。
 // 2026-10-27 ユーザーの指示（統括経由）。旗 ONE_BUTTON_ROLLOUT の内側だけで使う（useOneButton）。
 // ⚠️ 絵文字は使わない。ドヤくんの絵は public/character/<pose>-256.webp
@@ -16,7 +16,7 @@ export type OneButtonPose = 'point' | 'working' | 'success' | 'thinking' | 'hell
 export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled = false, disabledReason, running = false, clickableWhileRunning = false, progress, pose, extra }: {
   /** 画面の名前（例「ブース設計」）。小さく上に出す */
   eyebrow?: string
-  /** ドヤくんの一言（例「ブースの形が決まったら、押してね」） */
+  /** ドヤくんの一言（例「ブースの形が決まったら、押してください」） */
   cta: string
   /** ボタンの文字（例「面の画像をまとめて作る（9面）」） */
   label: ReactNode

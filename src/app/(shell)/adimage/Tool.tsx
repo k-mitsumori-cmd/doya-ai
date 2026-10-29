@@ -560,8 +560,8 @@ export default function AdImageTool() {
           <OneButtonBar
             eyebrow="ドヤ広告画像"
             cta={oneButtonAnalyze
-              ? (analyzing ? '広告のコピーを作っています。このまま待ってね' : 'サービスのURLを入れたら、押してね')
-              : (generating ? '広告画像を作っています。このまま待ってね' : '使うコピーと配置を選んだら、押してね')}
+              ? (analyzing ? '広告のコピーを作っています。このままお待ちください' : 'サービスのURLを入れたら、押してください')
+              : (generating ? '広告画像を作っています。このままお待ちください' : '使うコピーと配置を選んだら、押してください')}
             label={oneButtonAnalyze
               ? (analyzing ? '読み取り中...' : '広告コピーを作る')
               : (generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置${variations > 1 ? ` × ${variations}パターン = ${chosen.length * variations}枚` : ''}）`)}

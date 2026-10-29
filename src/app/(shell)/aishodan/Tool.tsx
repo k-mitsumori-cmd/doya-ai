@@ -459,7 +459,7 @@ export default function AishodanTool() {
           {oneButton ? (
             <OneButtonBar
               eyebrow="ドヤAI商談"
-              cta={importing ? '商材を読み取っています。このまま待ってね' : '自社サービスの URL を入れたら、押してね'}
+              cta={importing ? '商材を読み取っています。このままお待ちください' : '自社サービスの URL を入れたら、押してください'}
               label="取り込む"
               scope="入れた URL のサイトを読み、商材のナレッジと既定の商談シナリオを作ります。"
               onRun={() => void importProduct()}

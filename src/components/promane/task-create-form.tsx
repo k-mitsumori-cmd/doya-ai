@@ -50,7 +50,7 @@ export function TaskCreateForm({
       const input = parsePromaneTaskCreate({ projectId, title, assigneeId, priority, startDate, dueDate });
       if (!await creation.save(input)) return;
 
-      toast.success(`「${title.trim()}」を追加したよ！`, {
+      toast.success(`「${title.trim()}」を追加しました`, {
         icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
       });
 
@@ -76,7 +76,7 @@ export function TaskCreateForm({
     <div className={`rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-6 transition-all ${justAdded ? "animate-jelly" : ""}`}>
       <div className="flex items-center gap-2.5 mb-4">
         <Image src="/character/point.png" alt="" width={32} height={32} className="drop-shadow-sm" unoptimized />
-        <span className="text-[16px] font-black text-gray-800">タスクを追加しよう！</span>
+        <span className="text-[16px] font-black text-gray-800">タスクを追加しましょう</span>
       </div>
       {creation.message && <div role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
         <p>{creation.message}</p>

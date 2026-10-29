@@ -10,7 +10,7 @@ export default function PromaneOneButton({ newHref }: { newHref: string }) {
   return (
     <OneButtonBar
       eyebrow="プロジェクト管理"
-      cta="新しい案件を始めるなら、押してね"
+      cta="新しい案件を始めるなら、押してください"
       label="新規プロジェクト"
       scope="新しいプロジェクトの作成画面を開きます。作ったあとは、タスクと工数をここで追えます。"
       href={newHref}

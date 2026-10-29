@@ -534,7 +534,7 @@ export default function MensetsuTool() {
           <div className="mb-5">
             <OneButtonBar
               eyebrow="ドヤ面接官"
-              cta={busy === 'generate' ? '質問セットを作っています。このまま待ってね' : '下の欄に職種を入れたら、押してね'}
+              cta={busy === 'generate' ? '質問セットを作っています。このままお待ちください' : '下の欄に職種を入れたら、押してください'}
               label="質問セットを生成"
               scope="職種に合わせて、質問と評価軸を作ります。30秒ほどかかります。面接URLの発行は、そのあとの操作です。"
               onRun={() => void generate()}

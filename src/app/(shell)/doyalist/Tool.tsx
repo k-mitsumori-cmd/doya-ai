@@ -525,7 +525,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
             {oneButton ? (
               <OneButtonBar
                 eyebrow="ドヤリスト"
-                cta={generating ? '企業を抽出しています。このまま待ってね' : '業界・エリア・件数を選んだら、押してね'}
+                cta={generating ? '企業を抽出しています。このままお待ちください' : '業界・エリア・件数を選んだら、押してください'}
                 label={generating ? '抽出中...' : 'リストを抽出する'}
                 scope="選んだ条件に合う企業を、国の法人データから抽出します。CSV・Excelの書き出しは、抽出のあとにできます。"
                 onRun={handleGenerate}

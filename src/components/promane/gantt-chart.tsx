@@ -111,7 +111,7 @@ export function GanttChart({
       toast.error(userErrorMessage(error instanceof Error ? error.message : null, "日程を保存できませんでした。日付を確かめて、もう一度お試しください。"));
       return;
     }
-    toast.success(`「${taskName}」の日程を保存したよ！`, {
+    toast.success(`「${taskName}」の日程を保存しました`, {
       icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
     });
     setEditingTask(null);
