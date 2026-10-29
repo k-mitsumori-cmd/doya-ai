@@ -7,6 +7,8 @@ import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { BoothElement, BoothPlan, SiteAnalysis } from '@/lib/tenjikai/engine'
 import type { GraphicPanel, GraphicZone } from '@/lib/tenjikai/graphics'
 import { ds } from '@/lib/tenjikai/tokens'
+import { contrast } from '@/lib/tenjikai/design-kit'
+import { isLegacyImage } from '@/lib/tenjikai/local-store'
 
 // CSS 3D でブースを組み立てる。1m = S px。床は XY 平面、高さは translateZ。
 const S = 64
@@ -34,33 +36,48 @@ function zoneColor(z: GraphicZone, a: SiteAnalysis) {
   return z.tone === 'primary' ? a.colors.primary : z.tone === 'secondary' ? a.colors.secondary : z.tone === 'light' ? ds.paper : `${a.colors.primary}22`
 }
 
-// 割付どおりの簡易グラフィック（画像生成前の見た目）
-export function PanelArt({ p, a, image, compact }: { p: GraphicPanel; a: SiteAnalysis; image?: string; compact?: boolean }) {
-  // 生成した画像は文字の無い背景。見出しは、ここで正しい字体で重ねる（全部の面で同じ字体・位置にそろえる）
+/** 背景の上に置く文字の色。白と暗色のうち、対比が高いほう（読めない色の組を作らない） */
+function readableOn(bg: string, dark: string): string {
+  const base = /^#[0-9a-fA-F]{6}/.test(bg) ? bg.slice(0, 7) : '#ffffff'
+  return contrast(base, '#ffffff') >= contrast(base, dark) ? '#ffffff' : dark
+}
+
+/** 文字数に合わせて字を小さくする（切らずに、枠に収める） */
+const fitSize = (len: number, wCqw: number, hCqh: number) => `calc(min(${wCqw}cqw, ${hCqh}cqh) * ${Math.max(0.45, Math.min(1, 8 / Math.max(1, len))).toFixed(2)})`
+
+// 面の表示。画像があるときは、画像だけを貼る（文字も含めた完成品の1枚。2026-10-29 ユーザー「文字も含めて画像で」）。
+// 画像は、面の実寸の縦横比に切り出して保存してあるので、object-cover のままで切れない。画像の上に見出しは重ねない（読めない・切れる原因だった）。
+// 画像がないとき（作る前）は、割付どおりの簡易の絵を出す。文字の色は背景から決め、切らずに収める。
+export function PanelArt({ p, a, image, compact, legacy }: { p: GraphicPanel; a: SiteAnalysis; image?: string; compact?: boolean; legacy?: boolean }) {
   if (image) {
+    // 文字を含まない昔の画像（2026-10-29 より前に作ったもの）だけは、見出しを重ねて出す。暗い帯の上に白い字を置くので、背景が明るくても読める。切らずに、枠に合わせて縮める
+    const headline = legacy && !compact ? p.headline || a.brand : ''
     return (
-      <div className="relative h-full w-full overflow-hidden" style={{ containerType: 'size' }}>
+      <div className="relative h-full w-full overflow-hidden" style={headline ? { containerType: 'size' } : undefined}>
         <img src={image} alt={`${p.name}のグラフィック`} className="h-full w-full object-cover" draggable={false} />
-        {!compact && (p.headline || a.brand) ? (
-          <div className="absolute inset-x-0 top-0 flex h-[30%] items-center justify-center px-[6%] text-center" style={{ color: '#fff' }}>
-            <span className="line-clamp-2 font-black leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]" style={{ fontSize: 'min(12cqw, 16cqh)' }}>{p.headline || a.brand}</span>
+        {headline ? (
+          <div className="absolute inset-x-0 top-0 flex h-[30%] items-center justify-center px-[6%] text-center text-white" style={{ background: 'linear-gradient(rgba(10,15,60,.62), rgba(10,15,60,0))' }}>
+            <span className="font-black leading-tight [overflow-wrap:anywhere] [text-wrap:balance]" style={{ fontSize: fitSize([...headline].length, 12, 16) }}>{headline}</span>
           </div>
         ) : null}
       </div>
     )
   }
   const H = p.heightMm
+  const dark = a.colors.secondary
   return (
     <div className="relative h-full w-full overflow-hidden" style={{ containerType: 'size' }}>
       {[...p.zones].sort((x, y) => y.toMm - x.toMm).map((z) => {
         const top = ((H - Math.min(H, z.toMm)) / H) * 100
         const height = ((Math.min(H, z.toMm) - z.fromMm) / H) * 100
-        const dark = z.tone === 'primary' || z.tone === 'secondary'
+        const bg = zoneColor(z, a)
+        const isHead = z.label === '上段' || z.label === '全面'
+        const text = isHead ? p.headline || a.brand : z.content
         return (
-          <div key={z.label} className="absolute inset-x-0 flex items-center justify-center px-[6%] text-center" style={{ top: `${top}%`, height: `${height}%`, background: zoneColor(z, a), color: dark ? '#fff' : a.colors.secondary }}>
+          <div key={z.label} className="absolute inset-x-0 flex items-center justify-center px-[6%] text-center" style={{ top: `${top}%`, height: `${height}%`, background: bg, color: readableOn(bg, dark) }}>
             {!compact && z.tone !== 'muted' && (
-              <span className="line-clamp-3 font-black leading-tight" style={{ fontSize: z.label === '上段' || z.label === '全面' ? 'min(16cqw, 22cqh)' : 'min(8cqw, 10cqh)' }}>
-                {z.label === '上段' || z.label === '全面' ? p.headline || a.brand : z.content}
+              <span className="font-black leading-tight [overflow-wrap:anywhere] [text-wrap:balance]" style={{ fontSize: isHead ? fitSize([...text].length, 16, 22) : fitSize([...text].length, 8, 10) }}>
+                {text}
               </span>
             )}
           </div>
@@ -79,9 +96,11 @@ interface Props {
   onSelect?: (id: string) => void
   selectedPanelId?: string
   onSelectPanel?: (id: string) => void
+  /** 文字を含まない昔の画像の目印（local-store.ts）。その面には、見出しを重ねて出す */
+  legacySig?: Record<string, string>
 }
 
-export default function Booth3D({ plan, analysis, panels, images, selectedId, onSelect, selectedPanelId, onSelectPanel }: Props) {
+export default function Booth3D({ plan, analysis, panels, images, selectedId, onSelect, selectedPanelId, onSelectPanel, legacySig }: Props) {
   const W = plan.widthM * S
   const D = plan.depthM * S
   // 最初から斜めの視点で出す（回り込む演出は、アニメーションが止まる環境で変な角度のまま残るのでやめた）
@@ -195,6 +214,7 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
             a={analysis}
             panels={panelsOf(e.id)}
             images={images}
+            legacySig={legacySig}
             selected={selectedId === e.id}
             selectedPanelId={selectedPanelId}
             onSelect={onSelect}
@@ -239,7 +259,7 @@ function Person({ x, y, tone = ds.sub }: { x: number; y: number; tone?: string }
   )
 }
 
-function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onSelectPanel }: { e: BoothElement; i: number; a: SiteAnalysis; panels: GraphicPanel[]; images: Record<string, string>; selected: boolean; selectedPanelId?: string; onSelect?: (id: string) => void; onSelectPanel?: (id: string) => void }) {
+function Box({ e, i, a, panels, images, legacySig, selected, selectedPanelId, onSelect, onSelectPanel }: { e: BoothElement; i: number; a: SiteAnalysis; panels: GraphicPanel[]; images: Record<string, string>; legacySig?: Record<string, string>; selected: boolean; selectedPanelId?: string; onSelect?: (id: string) => void; onSelectPanel?: (id: string) => void }) {
   const w = e.w * S
   const d = e.d * S
   const h = e.h * S
@@ -271,7 +291,7 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
           style={{ left: Math.min(left, lengthPx), width: Math.max(0, Math.min(width, lengthPx - Math.min(left, lengthPx))), top: panelTop, height: panelH, outline: active ? `3px solid ${ds.yellow}` : '1px solid rgba(16,22,51,.15)', outlineOffset: -2 }}
           title={p.name}
         >
-          <PanelArt p={p} a={a} image={images[p.id]} />
+          <PanelArt p={p} a={a} image={images[p.id]} legacy={isLegacyImage(legacySig, p.id, images[p.id])} />
           {active && <motion.div className="absolute inset-0 bg-amber-300/30" animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 1.4, repeat: Infinity }} />}
         </button>
       )
@@ -306,11 +326,8 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
         {frontPanels.length > 0 && panelLayer(frontPanels, w)}
         {e.kind === 'monitor' && w > d && (
           <div className="absolute inset-[4%] overflow-hidden rounded-sm" style={{ background: a.colors.secondary }}>
-            {a.valueProps.map((v, k) => (
-              <motion.div key={v.title} className="absolute inset-0 flex items-center justify-center px-1 text-center text-[9px] font-black text-white" animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 3, times: [0, 0.1, 0.85, 1], repeat: Infinity, repeatDelay: 6, delay: k * 3 }}>
-                {v.title}
-              </motion.div>
-            ))}
+            {/* 最初のカットの見出しを、いつも見える状態で出す（opacity で出し入れすると、動きの途中や止まる環境で、薄い字が残る） */}
+            <div className="absolute inset-0 flex items-center justify-center px-1 text-center text-[9px] font-black leading-tight text-white">{a.valueProps[0]?.title}</div>
           </div>
         )}
       </div>

@@ -58,7 +58,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
         <div className="lg:col-span-2">
           <OneButtonBar
             eyebrow="新しい出展プロジェクト"
-            cta="下の条件を入れたら、押してね"
+            cta="下の条件を入れたら、押してください"
             label="展示会の準備を一括作成"
             scope={`ブースの3D完成図・面ごとの割付・制作物とノベルティの数量・予算・業者の候補・締切を、${f.days}日間の会期と小間の大きさから一度に作ります。`}
             onRun={() => formRef.current?.requestSubmit()}
