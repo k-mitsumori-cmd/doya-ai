@@ -71,6 +71,8 @@ interface StudioProps {
   /** ブースのデザインの決まり（仕様 4 章）と、確定したか。確定するまで、画像は作れない */
   kit: BoothDesignKit
   kitConfirmed: boolean
+  /** 文字を含まない昔の画像の目印。その画像の上には、見出しを重ねて出す */
+  legacySig?: Record<string, string>
   onKitChange: (kit: BoothDesignKit) => void
   onKitConfirm: () => void
   onKitReopen: () => void
@@ -116,7 +118,7 @@ async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Image
   }
 }
 
-export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize, kit, kitConfirmed, onKitChange, onKitConfirm, onKitReopen }: StudioProps) {
+export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize, kit, kitConfirmed, legacySig, onKitChange, onKitConfirm, onKitReopen }: StudioProps) {
   const [view, setView] = useState<'3d' | 'iso' | 'plan'>('3d')
   const [selectedId, setSelectedId] = useState<string>()
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
@@ -208,7 +210,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       {oneButton ? (
         <OneButtonBar
           eyebrow="ブース設計"
-          cta={allMade ? 'すべての面ができました。書き出して、印刷会社に渡せます' : running ? '面の画像を作っています。このまま待ってね' : 'ブースの形と大きさが決まったら、押してね'}
+          cta={allMade ? 'すべての面ができました。書き出して、印刷会社に渡せます' : running ? '面の画像を作っています。このままお待ちください' : 'ブースの形と大きさが決まったら、押してください'}
           label={allMade ? '書き出す' : running ? `進み具合を見る（${summary.finished}/${summary.total}面）` : `面の画像をまとめて作る（${missing.length}面）`}
           scope={allMade
             ? '3Dの完成図・割付表・面の画像を、まとめて書き出します。'
@@ -326,7 +328,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <div className={clsx('aspect-[4/3] min-h-[280px] w-full', view !== '3d' && 'p-3')}>
             {view === '3d' ? (
               // 3D は入りのアニメーションで傾けない（傾いたまま倍率を測ると崩れるため）
-              <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
+              <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} legacySig={legacySig} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={`${variant}-${view}`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full w-full">

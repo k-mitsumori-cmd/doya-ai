@@ -8,6 +8,7 @@ import type { BoothElement, BoothPlan, SiteAnalysis } from '@/lib/tenjikai/engin
 import type { GraphicPanel, GraphicZone } from '@/lib/tenjikai/graphics'
 import { ds } from '@/lib/tenjikai/tokens'
 import { contrast } from '@/lib/tenjikai/design-kit'
+import { isLegacyImage } from '@/lib/tenjikai/local-store'
 
 // CSS 3D でブースを組み立てる。1m = S px。床は XY 平面、高さは translateZ。
 const S = 64
@@ -47,11 +48,18 @@ const fitSize = (len: number, wCqw: number, hCqh: number) => `calc(min(${wCqw}cq
 // 面の表示。画像があるときは、画像だけを貼る（文字も含めた完成品の1枚。2026-10-29 ユーザー「文字も含めて画像で」）。
 // 画像は、面の実寸の縦横比に切り出して保存してあるので、object-cover のままで切れない。画像の上に見出しは重ねない（読めない・切れる原因だった）。
 // 画像がないとき（作る前）は、割付どおりの簡易の絵を出す。文字の色は背景から決め、切らずに収める。
-export function PanelArt({ p, a, image, compact }: { p: GraphicPanel; a: SiteAnalysis; image?: string; compact?: boolean }) {
+export function PanelArt({ p, a, image, compact, legacy }: { p: GraphicPanel; a: SiteAnalysis; image?: string; compact?: boolean; legacy?: boolean }) {
   if (image) {
+    // 文字を含まない昔の画像（2026-10-29 より前に作ったもの）だけは、見出しを重ねて出す。暗い帯の上に白い字を置くので、背景が明るくても読める。切らずに、枠に合わせて縮める
+    const headline = legacy && !compact ? p.headline || a.brand : ''
     return (
-      <div className="relative h-full w-full overflow-hidden">
+      <div className="relative h-full w-full overflow-hidden" style={headline ? { containerType: 'size' } : undefined}>
         <img src={image} alt={`${p.name}のグラフィック`} className="h-full w-full object-cover" draggable={false} />
+        {headline ? (
+          <div className="absolute inset-x-0 top-0 flex h-[30%] items-center justify-center px-[6%] text-center text-white" style={{ background: 'linear-gradient(rgba(10,15,60,.62), rgba(10,15,60,0))' }}>
+            <span className="font-black leading-tight [overflow-wrap:anywhere] [text-wrap:balance]" style={{ fontSize: fitSize([...headline].length, 12, 16) }}>{headline}</span>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -88,9 +96,11 @@ interface Props {
   onSelect?: (id: string) => void
   selectedPanelId?: string
   onSelectPanel?: (id: string) => void
+  /** 文字を含まない昔の画像の目印（local-store.ts）。その面には、見出しを重ねて出す */
+  legacySig?: Record<string, string>
 }
 
-export default function Booth3D({ plan, analysis, panels, images, selectedId, onSelect, selectedPanelId, onSelectPanel }: Props) {
+export default function Booth3D({ plan, analysis, panels, images, selectedId, onSelect, selectedPanelId, onSelectPanel, legacySig }: Props) {
   const W = plan.widthM * S
   const D = plan.depthM * S
   // 最初から斜めの視点で出す（回り込む演出は、アニメーションが止まる環境で変な角度のまま残るのでやめた）
@@ -204,6 +214,7 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
             a={analysis}
             panels={panelsOf(e.id)}
             images={images}
+            legacySig={legacySig}
             selected={selectedId === e.id}
             selectedPanelId={selectedPanelId}
             onSelect={onSelect}
@@ -248,7 +259,7 @@ function Person({ x, y, tone = ds.sub }: { x: number; y: number; tone?: string }
   )
 }
 
-function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onSelectPanel }: { e: BoothElement; i: number; a: SiteAnalysis; panels: GraphicPanel[]; images: Record<string, string>; selected: boolean; selectedPanelId?: string; onSelect?: (id: string) => void; onSelectPanel?: (id: string) => void }) {
+function Box({ e, i, a, panels, images, legacySig, selected, selectedPanelId, onSelect, onSelectPanel }: { e: BoothElement; i: number; a: SiteAnalysis; panels: GraphicPanel[]; images: Record<string, string>; legacySig?: Record<string, string>; selected: boolean; selectedPanelId?: string; onSelect?: (id: string) => void; onSelectPanel?: (id: string) => void }) {
   const w = e.w * S
   const d = e.d * S
   const h = e.h * S
@@ -280,7 +291,7 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
           style={{ left: Math.min(left, lengthPx), width: Math.max(0, Math.min(width, lengthPx - Math.min(left, lengthPx))), top: panelTop, height: panelH, outline: active ? `3px solid ${ds.yellow}` : '1px solid rgba(16,22,51,.15)', outlineOffset: -2 }}
           title={p.name}
         >
-          <PanelArt p={p} a={a} image={images[p.id]} />
+          <PanelArt p={p} a={a} image={images[p.id]} legacy={isLegacyImage(legacySig, p.id, images[p.id])} />
           {active && <motion.div className="absolute inset-0 bg-amber-300/30" animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 1.4, repeat: Infinity }} />}
         </button>
       )

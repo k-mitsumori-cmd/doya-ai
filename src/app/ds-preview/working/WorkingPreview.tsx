@@ -17,7 +17,7 @@ export default function WorkingPreview() {
       <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>繰り返す動き（進み具合が分からないとき）</h2>
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {BRANDS.map((b) => (
-          <DoyaWorking key={b.name} title="ドヤくんが画像を作っています" caption="1枚作るのに、30秒ほどかかります。このまま待ってね。" steps={STEPS} colors={b.colors} />
+          <DoyaWorking key={b.name} title="ドヤくんが画像を作っています" caption="1枚作るのに、30秒ほどかかります。このままお待ちください。" steps={STEPS} colors={b.colors} />
         ))}
       </div>
       <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>進み具合つき（まとめて作るとき）</h2>

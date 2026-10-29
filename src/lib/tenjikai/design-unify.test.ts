@@ -63,3 +63,11 @@ test('制作物スタジオは、作る前に仮の絵を出さず、名前と�
   assert.match(studio, /data-wireframe="creative"/)
   assert.doesNotMatch(studio, /: <CreativePreview c=\{c\} a=\{analysis\} \/>\}/)
 })
+
+test('文字を含まない昔の画像だけ、見出しを重ねる（暗い帯の上の白い字。切らずに縮める）。新しい画像には重ねない', () => {
+  const art = read('src/components/tenjikai/Booth3D.tsx')
+  assert.match(art, /const headline = legacy && !compact \? p\.headline \|\| a\.brand : ''/)
+  assert.match(art, /linear-gradient\(rgba\(10,15,60,\.62\), rgba\(10,15,60,0\)\)/)
+  assert.match(art, /legacy=\{isLegacyImage\(legacySig, p\.id, images\[p\.id\]\)\}/)
+  assert.doesNotMatch(art, /line-clamp-/)
+})

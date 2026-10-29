@@ -66,7 +66,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
     <Modal open={open} onClose={onClose} title={title}>
       <div className="flex flex-col gap-5">
         {busy ? (
-          <DoyaWorking compact title="ドヤくんが画像を作っています" caption="1枚作るのに、30秒ほどかかります。このまま待ってね。" steps={WORKING_STEPS} colors={colors} />
+          <DoyaWorking compact title="ドヤくんが画像を作っています" caption="1枚作るのに、30秒ほどかかります。このままお待ちください。" steps={WORKING_STEPS} colors={colors} />
         ) : (
           <p className="text-[15px] leading-relaxed text-[var(--sub)]">ブースの案とサイトの内容から、画像を1枚作ります。できた画像は、この画面に表示されます。</p>
         )}
