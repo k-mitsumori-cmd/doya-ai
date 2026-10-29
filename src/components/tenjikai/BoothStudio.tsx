@@ -17,6 +17,7 @@ import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestI
 import { nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
 import { batchSummary, runPanelBatch, type BatchFace } from '@/lib/tenjikai/batch'
+import DoyaWorking from '@/components/shell/DoyaWorking'
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
@@ -392,6 +393,16 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
               </p>
               {running && <p className="mt-1 text-[13px] text-[var(--sub)]">1面ずつ作ります。この画面を閉じても、作り続けます。</p>}
             </div>
+            {/* ドヤくんが壁を塗る待ち画面。塗る高さは、終わった面の割合（2026-10-29 ユーザー「待ち時間にも遊び心を」） */}
+            <DoyaWorking
+              compact
+              title={running ? 'ドヤくんが面の画像を作っています' : summary.failed === 0 ? 'すべての面ができました' : '作れた面だけ、できました'}
+              caption={running ? 'できた面から、3Dの壁面に貼られます。' : undefined}
+              steps={running ? ['ブースの決まりの色で、1面ずつ塗っています', '面どうしの色と形をそろえています', '見出しの場所を空けています'] : undefined}
+              colors={analysis.colors}
+              progress={summary.total ? summary.finished / summary.total : 0}
+              done={!running && summary.failed === 0}
+            />
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="面の画像の進み具合" aria-valuemin={0} aria-valuemax={summary.total} aria-valuenow={summary.finished}>
               <div className="h-full rounded-full bg-doya-500 transition-[width] duration-300" style={{ width: `${summary.total ? (summary.finished / summary.total) * 100 : 0}%` }} />
             </div>
@@ -436,6 +447,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           onClose={() => setPanelTarget(null)}
           kind="graphic_panel"
           title={`${panelTarget.name}の画像を作る`}
+          colors={analysis.colors}
           prompt={buildPanelPrompt(panelTarget, analysis)}
           aspectRatio={nearestRatio(panelTarget.widthMm, panelTarget.heightMm)}
           onResult={(imgs) => imgs[0] && setPanelImages((m) => ({ ...m, [panelTarget.id]: imgs[0] }))}

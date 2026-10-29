@@ -229,6 +229,7 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
           open={!!target}
           onClose={() => setTarget(null)}
           title={`${target.name}のデザイン画像を生成`}
+          colors={analysis.colors}
           prompt={buildCreativePrompt(target, analysis)}
           aspectRatio={nearestRatio(target.widthMm, target.heightMm)}
           onResult={(imgs) => {

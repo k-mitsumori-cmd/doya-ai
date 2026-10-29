@@ -10,6 +10,10 @@ import EmptyState from './EmptyState'
 import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestImages, useImageQuota, type ImageGenFailure, type ImageGenKind } from './useImageGen'
 import { ds } from '@/lib/tenjikai/tokens'
 import { ShellCostBadge } from '@/components/shell/power'
+import DoyaWorking, { type WorkingColors } from '@/components/shell/DoyaWorking'
+
+/** 1枚作る間の、一言の目安（いま何をしている途中か。順に入れ替えて出す） */
+const WORKING_STEPS = ['ブースの決まりの色を、壁に乗せています', '見出しを置く場所を空けています', '帯と円の形を整えています', 'もうすぐ、できあがります']
 
 interface Props {
   open: boolean
@@ -21,9 +25,11 @@ interface Props {
   onResult: (images: string[]) => void
   /** サーバーの実行記録に残す種類 */
   kind?: ImageGenKind
+  /** 待っている間に塗る色（ブランドの色） */
+  colors?: Partial<WorkingColors>
 }
 
-export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult, kind = 'creative_image' }: Props) {
+export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult, kind = 'creative_image', colors }: Props) {
   const [prompt, setPrompt] = useState(initialPrompt)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<ImageGenFailure>()
@@ -57,7 +63,11 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <div className="flex flex-col gap-5">
-        <p className="text-[15px] leading-relaxed text-[var(--sub)]">ブースの案とサイトの内容から、画像を1枚作ります。できた画像は、この画面に表示されます。</p>
+        {busy ? (
+          <DoyaWorking compact title="ドヤくんが画像を作っています" caption="1枚作るのに、30秒ほどかかります。このまま待ってね。" steps={WORKING_STEPS} colors={colors} />
+        ) : (
+          <p className="text-[15px] leading-relaxed text-[var(--sub)]">ブースの案とサイトの内容から、画像を1枚作ります。できた画像は、この画面に表示されます。</p>
+        )}
         {left && <p className="text-[13px] font-medium text-[var(--sub)]">{left}</p>}
         {disabled && !error && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>}
 
