@@ -1465,3 +1465,6 @@ if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(te
 
 const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
 if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exit(tenjikaiLocalRestore.status || 1);
+
+const interviewWordpressExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-wordpress-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewWordpressExport.error || interviewWordpressExport.status !== 0) process.exit(interviewWordpressExport.status || 1);
