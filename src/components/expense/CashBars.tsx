@@ -50,7 +50,7 @@ function CashColumns({ cash }: { cash: ForecastMatrix }) {
   })
   return (
     <StackedColumnChart
-      label="12か月の出金（費目別・見込みは薄い色）"
+      label={`${cash.months.length}か月の出金（費目別・見込みは薄い色）`}
       labels={cash.months.map((m) => `${Number(m.slice(5))}月`)}
       // 棒の上の合計は短い形（12本並ぶため）。正確な金額は上の表にある
       format={(n) => `${formatCompactJa(n)}円`}
