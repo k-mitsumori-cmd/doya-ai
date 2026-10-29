@@ -30,6 +30,7 @@ import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
 import styles from './home-agent.module.css'
+import { RevealWords } from '@/components/ds/motion'
 
 type Scene = 'input' | 'questions' | 'analyze' | 'plan' | 'confirm' | 'run' | 'done' | 'none'
 type Executor = 'api' | 'sample'
@@ -546,7 +547,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
         {scene === 'analyze' ? (
           <div className={`${styles.card} ${styles.sceneIn}`}>
             <div className={styles.row}>
-              <div><p className={styles.eyebrow}>分析しています</p><p className={styles.title}>{title || '作戦の材料を読んでいます'}</p></div>
+              <div><p className={styles.eyebrow}>分析しています</p><RevealWords as="p" className={styles.title} text={title || '作戦の材料を読んでいます'} /></div>
               <span className={styles.muted}>{readCount} / {Math.max(sources.length, 1)} 件</span>
             </div>
             <ul className={styles.sources}>

@@ -189,7 +189,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const segs = data.audio.segments
   return (
     <Card>
-      <SectionTitle step="ステップ1" title="録音" desc="mp3・m4a・wav・mp4 などの録音ファイルをアップロードしてください（90分・1GBまで）。" />
+      <SectionTitle step="ステップ1" title="録音" kun={{ pose: 'focus', act: 'idle' }} desc="mp3・m4a・wav・mp4 などの録音ファイルをアップロードしてください（90分・1GBまで）。" />
       <input ref={inputRef} type="file" accept="audio/*,video/mp4,video/quicktime" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
       <div className="flex flex-wrap items-center gap-2">
         <Button variant={data.audio.uploaded ? 'secondary' : 'primary'} onClick={() => inputRef.current?.click()} disabled={progress !== null || busy}>
@@ -332,7 +332,7 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
   const check = data.survey.check
   return (
     <Card>
-      <SectionTitle step="ステップ1" title="アンケート" desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
+      <SectionTitle step="ステップ1" title="アンケート" kun={{ pose: 'present', act: 'idle' }} desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
       <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--bg)] p-2">
         <code className="min-w-0 flex-1 truncate px-2 text-xs font-bold text-[var(--sub)]">{shareUrl}</code>
         <button type="button" onClick={copy} className={`min-h-11 whitespace-nowrap ${FOCUS} focus-visible:ring-offset-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-[var(--ok-bg)]' : 'bg-[var(--blue)] hover:bg-[var(--blue-deep)]'}`}>
@@ -462,7 +462,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
 
   return (
     <Card>
-      <SectionTitle step="ステップ2" title="写真" desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
+      <SectionTitle step="ステップ2" title="写真" kun={{ pose: 'thumbsup', act: 'idle' }} desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => e.target.files && upload(e.target.files)} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {data.photos.map((p) => (
@@ -589,6 +589,7 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
   return (
     <Card>
       <SectionTitle
+        kun={{ pose: 'ponder', act: 'think' }}
         step="ステップ3"
         title="記事に使う事実"
         desc="録音・回答・会社プロフィールから、記事の材料になる事実を原文つきで抜き出します。記事にしてよいものにチェックを入れてください。文の言い回しは直せますが、原文は変えられません。"
@@ -719,7 +720,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
 
   return (
     <Card>
-      <SectionTitle step="ステップ4" title="記事" desc="チェックを入れた事実だけを使って記事を書きます。会社の事実は、ご本人の仕事とつなげて紹介します。" />
+      <SectionTitle step="ステップ4" title="記事" kun={{ pose: article ? 'success' : 'working', act: article ? 'cheer' : 'work' }} desc="チェックを入れた事実だけを使って記事を書きます。会社の事実は、ご本人の仕事とつなげて紹介します。" />
       <div className="flex flex-wrap items-center gap-2">
         <ConfirmDialog
           open={confirmRegen}

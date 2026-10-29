@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardList, Mic } from 'lucide-react'
 import { ActionError, api, Button, Card, describeError, Field, inputCls, SectionTitle, PageTitle } from '@/components/shanai/ui'
 import { PURPOSE_LABELS, TONE_LABELS, type ShanaiPurpose, type ShanaiTone } from '@/lib/shanai/types'
+import { DoyaKun } from '@/components/ds/kun'
 
 interface Source {
   id: string
@@ -68,8 +69,8 @@ export default function ShanaiNewPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {(
             [
-              { key: 'voice', icon: Mic, title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
-              { key: 'survey', icon: ClipboardList, title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
+              { key: 'voice', icon: Mic, pose: 'focus', title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
+              { key: 'survey', icon: ClipboardList, pose: 'present', title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
             ] as const
           ).map((m) => (
             <button
@@ -79,9 +80,15 @@ export default function ShanaiNewPage() {
               aria-pressed={mode === m.key}
               className={`min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 rounded-[var(--r)] border p-4 text-left transition-colors ${mode === m.key ? 'border-[var(--blue)] bg-[var(--blue-soft)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)] bg-[var(--paper)] hover:border-[var(--blue-line)]'}`}
             >
-              <m.icon aria-hidden="true" className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
-              <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
+              <span className="flex items-start gap-3">
+                <span className="min-w-0 flex-1">
+                  <m.icon aria-hidden="true" className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
+                  <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
+                  <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
+                </span>
+                {/* 選び方ごとのドヤくん。選んだほうは小さく跳ねる（key で選び直すたびに1回） */}
+                <DoyaKun key={`${m.key}-${mode === m.key}`} pose={m.pose} act={mode === m.key ? 'cheer' : 'idle'} size={64} />
+              </span>
             </button>
           ))}
         </div>

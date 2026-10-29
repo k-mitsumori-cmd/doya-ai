@@ -229,3 +229,39 @@ export function DrawIn({ children, duration = 900, className, mode = 'wipe', ext
     </g>
   )
 }
+
+/**
+ * 言葉を1語ずつ、薄い色から濃い色へ順に変える（参考: ai-design-skills の B11 Tagline reveal）。
+ * 待ちの文や、結果が出た瞬間のひと言に使う。日本語は読点・句点・「、」で区切る（文字ごとには分けない）。
+ * - 動きを減らす設定では、最初から濃い色で出す
+ * - 文が変わったら、最初からやり直す
+ */
+export function RevealWords({ text, step = 90, className, as: Tag = 'span' }: {
+  text: string
+  /** 1語ごとの遅れ（ms） */
+  step?: number
+  className?: string
+  as?: 'span' | 'p' | 'h2'
+}) {
+  const reduced = usePrefersReducedMotion()
+  const words = splitWords(text)
+  return (
+    <Tag key={text} className={`${styles.reveal} ${className ?? ''}`} data-reduced={reduced ? 'true' : undefined} aria-label={text}>
+      {words.map((w, i) => (
+        <span key={i} aria-hidden="true" className={styles.word} style={{ '--w': i, '--reveal-step': `${step}ms` } as CSSProperties}>{w}</span>
+      ))}
+    </Tag>
+  )
+}
+
+/** 日本語の文を、読点・句点・助詞の切れ目で短い塊に分ける（英数字は空白で） */
+export function splitWords(text: string): string[] {
+  const out: string[] = []
+  for (const part of text.split(/(?<=[、。,.！？!?・…])|(?<=\s)/)) {
+    if (!part) continue
+    // 長い塊は、6文字ほどで分ける（一度に濃くならないように）
+    if (part.length > 8) for (let i = 0; i < part.length; i += 6) out.push(part.slice(i, i + 6))
+    else out.push(part)
+  }
+  return out
+}
