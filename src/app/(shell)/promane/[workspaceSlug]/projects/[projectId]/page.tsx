@@ -238,7 +238,7 @@ export default async function ProjectDetailPage({
             members={members.map((m) => ({
               id: m.id,
               displayName: m.displayName,
-              hourlyRate: m.hourlyRate,
+              laborCost: m.timeEntries.reduce((sum, te) => sum + laborCostForEntry(te, m.hourlyRate), 0),
               minutes: m.timeEntries.reduce((sum, te) => sum + te.duration, 0),
             }))}
           />

@@ -63,7 +63,7 @@ const shared = { workspaceSlug: 'synthetic', workspaceId: 'ws-synthetic', projec
   for (const role of ['owner', 'admin', 'member']) assert.equal(canWrite(role), true);
   for (const role of ['guest', 'unknown', undefined, null, {}, 'OWNER']) assert.equal(canWrite(role), false);
   const cases = [
-    ['finance-tab', 'FinanceTab', { ...shared, laborCost: 4500, totalMinutes: 90, expenses: [{ id: 'e', category: 'outsource', amount: 5500, description: 'Synthetic expense', date: '2026-10-29' }], members: [{ id: 'm', displayName: 'Synthetic member', hourlyRate: 3000, minutes: 90 }] }, 'Synthetic expense', '追加'],
+    ['finance-tab', 'FinanceTab', { ...shared, laborCost: 4500, totalMinutes: 90, expenses: [{ id: 'e', category: 'outsource', amount: 5500, description: 'Synthetic expense', date: '2026-10-29' }], members: [{ id: 'm', displayName: 'Synthetic member', laborCost: 4500, minutes: 90 }] }, 'Synthetic expense', '追加'],
     ['client-actions', 'ClientActions', { ...shared, clients: [{ id: 'c', name: 'Synthetic client', contactName: null, email: null, totalRevenue: 120000, projectCount: 1, activeCount: 1 }] }, 'Synthetic client', '顧客を追加'],
     ['timesheet-view', 'TimesheetView', { ...shared, totalCount: 1, totalMinutes: 90, periodLabel: '全期間', projects: [], entries: [{ id: 't', taskId: null, duration: 90, date: '2026-10-29', note: 'Synthetic note', projectName: 'Synthetic project', taskTitle: null }] }, 'Synthetic project', '時間を記録'],
   ];

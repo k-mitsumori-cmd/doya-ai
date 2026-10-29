@@ -1454,3 +1454,6 @@ for (const name of ["verify-promane-timesheet-creation-mounted.cjs", "verify-pro
   const writableView = spawnSync(process.execPath, [path.join(__dirname, name)], { stdio: "inherit", timeout: 60000 });
   if (writableView.error || writableView.status !== 0) { console.error("Promane writable view regression failed: " + name); process.exit(writableView.status || 1); }
 }
+
+const promaneHistoricalLabor = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-historical-labor.cjs")], { stdio: "inherit", timeout: 60000 });
+if (promaneHistoricalLabor.error || promaneHistoricalLabor.status !== 0) { console.error("Promane historical labor regression failed"); process.exit(promaneHistoricalLabor.status || 1); }
