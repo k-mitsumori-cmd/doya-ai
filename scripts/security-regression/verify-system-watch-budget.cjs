@@ -25,5 +25,7 @@ function setup(value){rows.clear();locks.clear();callbacks=0;failWrite=false;if(
   setup(raw);const result=await wrap('invalid-state').run();assert.equal(result.skipped,true);assert.equal(callbacks,0);assert.equal(rows.get(key),raw);passed++;
  }
  setup({yen:0,runs:[]});for(const fee of [0,-1,NaN,Infinity])await assert.rejects(budget.reserveSpend('invalid-cost',fee,day));assert.equal((await budget.readSpend(day)).yen,0);passed++;
+ setup();assert.equal((await paid.budgetedPaidChecks()).checks.length,0);passed++;
+ rows.set('unused','false');assert.equal((await paid.budgetedPaidChecks()).checks.length,0);passed++;
  console.log(JSON.stringify({passed,scope:'Actual budget/paid-run modules with synthetic transactional DB and lock scheduling. Independent request wrappers, failed writes, refunds and malformed state. Native PostgreSQL proof is separate. No external calls.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
