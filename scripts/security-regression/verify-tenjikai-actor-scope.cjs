@@ -29,8 +29,9 @@ function load(file, mocks = {}) {
   return exports;
 }
 const engine = load('src/lib/tenjikai/engine.ts');
-const store = load('src/lib/tenjikai/local-store.ts');
+const store = load('src/lib/tenjikai/local-store.ts', { './engine': engine });
 const nav = load('src/lib/tenjikai/nav.ts');
+let readStore = dom.window.localStorage;
 const Null = () => null;
 function marker(kind) {
   return function Marker(props) {
@@ -49,12 +50,17 @@ const mocks = {
   'next/navigation': { usePathname: () => '/tenjikai/' + section, useRouter: () => ({ push: href => routes.push(href) }) },
   '@/lib/tenjikai/nav': nav,
   '@/lib/tenjikai/engine': { ...engine, requestGeneratedPlan: input => new Promise(resolve => requests.push({ input, resolve })) },
-  '@/lib/tenjikai/local-store': { ...store, saveProject: (id, project) => { saves.push({ actor: id, project: structuredClone(project) }); return store.saveProject(id, project); } },
+  '@/lib/tenjikai/local-store': { ...store, loadProjectResult: id => store.loadProjectResult(id, readStore), saveProject: (id, project) => { saves.push({ actor: id, project: structuredClone(project) }); return store.saveProject(id, project); } },
 };
 for (const name of ['TenjikaiSidebar', 'BoothStudio', 'CreativeStudio', 'NoveltyPicker', 'BudgetPlanner', 'VendorBoard', 'DocsVault']) mocks['./' + name] = { __esModule: true, default: marker(name) };
 mocks['./Wizard'] = { __esModule: true, default: marker('wizard') };
 mocks['./Generating'] = { __esModule: true, default: marker('generating') };
 mocks['./Overview'] = { __esModule: true, default: marker('overview') };
+mocks['./EmptyState'] = load('src/components/tenjikai/EmptyState.tsx', {
+  'react/jsx-runtime': require('react/jsx-runtime'),
+  'next/image': { __esModule: true, default: props => React.createElement('img', props) },
+  'next/link': { __esModule: true, default: props => React.createElement('a', props) },
+});
 const App = load('src/components/tenjikai/TenjikaiApp.tsx', mocks).default;
 const A = 'synthetic-a', B = 'synthetic-b';
 function project(label) {
@@ -71,6 +77,7 @@ async function test(name, run) {
   if (mountedRoot) await act(() => mountedRoot.unmount());
   host?.remove(); dom.window.localStorage.clear(); timers.clear(); saves.length = commits.length = requests.length = routes.length = 0;
   wizardProps = generatingProps = overviewProps = undefined; section = 'overview';
+  readStore = dom.window.localStorage;
   host = document.createElement('div'); document.body.append(host); mountedRoot = createRoot(host);
   await run(); checks.push(name); console.log('PASS', name);
 }
@@ -129,7 +136,61 @@ async function test(name, run) {
       section = 'booth'; await render(A); assert(host.textContent.includes('https://synthetic.invalid/A_PRIVATE'));
       section = 'overview'; await render(A); await flush(); assert.equal(store.loadProject(A).panelImages.front, 'https://synthetic.invalid/A_PRIVATE');
     });
-    console.log(JSON.stringify({ passed: checks.length, checks, scope: 'Actual TenjikaiApp, local-store and pure engine in React18 StrictMode; marker children, synthetic actor props/JSDOM storage, controlled timers/deferred generation only. No real accounts/provider/network/DB/production calls.' }));
+    const broken = JSON.stringify({ v: 1, savedAt: 123, input: {}, generated: { analysis: {} }, variant: 'A', selectedNovelty: [] });
+    const retry = () => act(() => {
+      const button = host.querySelector('[role=alert] button'); assert(button); button.click();
+    });
+    await test('Malformed project renders the real recovery alert and keeps stored bytes without autosave', async () => {
+      dom.window.localStorage.setItem(store.storeKey(A), broken); seed(B, 'B_PRIVATE');
+      const originalB = dom.window.localStorage.getItem(store.storeKey(B));
+      await render(A); await flush(); assert(host.querySelector('[role=alert]'));
+      assert(host.textContent.includes('保存した内容を読み込めませんでした'));
+      assert(host.textContent.includes('元の保存内容は変更していません'));
+      assert(!host.textContent.includes('保存した出展プロジェクトがありません'));
+      assert.equal(host.querySelector('[role=alert] img').getAttribute('src'), '/empty/error.svg');
+      assert(host.querySelector('[data-view=wizard]')); assert.equal(saves.length, 0);
+      assert.equal(dom.window.localStorage.getItem(store.storeKey(A)), broken);
+      assert.equal(dom.window.localStorage.getItem(store.storeKey(B)), originalB);
+    });
+    await test('Retrying malformed data remains safe and does not delete it', async () => {
+      dom.window.localStorage.setItem(store.storeKey(A), broken); await render(A); await retry(); await flush();
+      assert(host.querySelector('[role=alert]')); assert.equal(saves.length, 0);
+      assert.equal(dom.window.localStorage.getItem(store.storeKey(A)), broken);
+    });
+    await test('Retry restores repaired data and removes the recovery alert', async () => {
+      dom.window.localStorage.setItem(store.storeKey(A), broken); await render(A); seed(A, 'REPAIRED_VALID');
+      await retry(); await flush(); assert(!host.querySelector('[role=alert]')); assert(host.textContent.includes('REPAIRED_VALID'));
+      assert.equal(store.loadProject(A).input.eventName, 'REPAIRED_VALID');
+    });
+    await test('Unavailable storage is distinct from missing and can recover on retry', async () => {
+      readStore = { getItem() { throw Error('blocked storage'); } }; await render(A); await flush();
+      assert(host.textContent.includes('この端末の保存領域を利用できません')); assert.equal(saves.length, 0);
+      assert(!host.textContent.includes('保存した出展プロジェクトがありません'));
+      readStore = dom.window.localStorage; await retry();
+      assert(!host.querySelector('[role=alert]')); assert(host.textContent.includes('保存した出展プロジェクトがありません'));
+    });
+    await test('Actor switch clears the previous actor restore error and restores own saved project', async () => {
+      dom.window.localStorage.setItem(store.storeKey(A), broken); seed(B, 'B_PRIVATE'); await render(A); assert(host.querySelector('[role=alert]'));
+      await render(B); await flush(); assert(!host.querySelector('[role=alert]')); assert(host.textContent.includes('B_PRIVATE'));
+      assert.equal(dom.window.localStorage.getItem(store.storeKey(A)), broken);
+    });
+    await test('Explicit new generation replaces malformed data only after completion', async () => {
+      dom.window.localStorage.setItem(store.storeKey(A), broken); await render(A); const fresh = project('NEW_EXPLICIT').input;
+      await act(() => wizardProps.onSubmit(fresh)); await flush(); assert(!host.querySelector('[role=alert]'));
+      assert.equal(dom.window.localStorage.getItem(store.storeKey(A)), broken);
+      await act(() => requests[0].resolve(engine.mockGeneratedPlan(fresh))); await act(() => generatingProps.onDone());
+      await flush(); assert.equal(store.loadProject(A).input.eventName, 'NEW_EXPLICIT');
+    });
+    await test('Restoration and autosave retain unknown metadata and legacy dimensions without freezing savedAt', async () => {
+      const saved = { v: 1, savedAt: 123, ...project('LEGACY_VALID'), extraMetadata: { future: 'keep' } };
+      delete saved.input.widthM; delete saved.input.depthM; saved.input.futureInput = 'keep'; saved.generated.futureGenerated = 'keep';
+      dom.window.localStorage.setItem(store.storeKey(A), JSON.stringify(saved)); await render(A); await flush();
+      const restored = JSON.parse(dom.window.localStorage.getItem(store.storeKey(A)));
+      assert.equal(restored.extraMetadata.future, 'keep'); assert.equal(restored.input.futureInput, 'keep');
+      assert.equal(restored.generated.futureGenerated, 'keep'); assert.equal(restored.input.widthM, undefined);
+      assert(restored.savedAt > 123); assert.equal(restored.v, 1); assert(!host.querySelector('[role=alert]'));
+    });
+    console.log(JSON.stringify({ passed: checks.length, checks, scope: 'Actual TenjikaiApp, local-store, pure engine and EmptyState in React18 StrictMode; other content views are markers. Synthetic actor props/JSDOM storage, controlled timers/deferred generation only. No real accounts/provider/network/DB/production calls.' }));
   } finally {
     if (mountedRoot) await act(() => mountedRoot.unmount());
     host?.remove(); dom.window.close();
