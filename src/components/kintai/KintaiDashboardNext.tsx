@@ -70,7 +70,7 @@ export default function KintaiDashboardNext({ name, status, now, summary, isActi
     <div className={styles.page}>
       <ToolHero
         art={sc.art}
-        title={<span className={styles.heroTitle}>{greeting}、<span className={styles.name}>{name}さん</span></span>}
+        title={<span className={styles.heroTitle}><span style={{ whiteSpace: 'nowrap' }}>{greeting}、</span><wbr /><span className={styles.name}>{name}さん</span></span>}
         lead={
           <span className={styles.heroMeta}>
             <span className={styles.date}>{dateStr}</span>

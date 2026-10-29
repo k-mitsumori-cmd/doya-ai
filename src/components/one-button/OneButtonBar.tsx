@@ -6,7 +6,9 @@
 // 動いている間は、進み具合のバーと「n/N」を出す。ほかの操作は、この帯の下に小さく置く（各ツールの画面の側で）。
 // 2026-10-27 ユーザーの指示（統括経由）。旗 ONE_BUTTON_ROLLOUT の内側だけで使う（useOneButton）。
 // ⚠️ 絵文字は使わない。ドヤくんの絵は public/character/<pose>-256.webp
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
+import { toolIntroLine } from './intro'
 import styles from './one-button.module.css'
 
 export type OneButtonPose = 'point' | 'working' | 'success' | 'thinking' | 'hello' | 'error'
@@ -36,7 +38,14 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
   /** ボタンの横に添える小さなもの（ドヤパワーの減る量の札など） */
   extra?: ReactNode
 }) {
+  // 帯が画面にある間は、html に印を付ける。スマホの知らせ（ヒント・新機能）を小さくして、帯のボタンに重ねないため（notice.module.css）
+  useEffect(() => {
+    const root = document.documentElement
+    root.setAttribute('data-one-button', 'on')
+    return () => root.removeAttribute('data-one-button')
+  }, [])
   const face = pose ?? (running ? 'working' : disabled ? 'thinking' : 'point')
+  const intro = toolIntroLine(usePathname() || '')
   const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
   const buttonInner = (
     <>
@@ -64,6 +73,7 @@ export function OneButtonBar({ eyebrow, cta, label, scope, onRun, href, disabled
           </div>
         ) : null}
         <p className={styles.scope}>{disabled && disabledReason ? disabledReason : scope}</p>
+        {intro ? <p className={styles.intro}><span className={styles.introLabel}>できること</span>{intro}</p> : null}
       </div>
     </section>
   )

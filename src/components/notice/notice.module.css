@@ -147,6 +147,10 @@
   .sheet[data-variant='notice'] .actions .btn { min-height: 40px; }
   /* メニュー（左から出る一覧）を開いている間は、知らせを隠す。印は AppShell が html に付ける */
   :global(html[data-shell-menu='open']) .sheet[data-variant='notice'] { visibility: hidden; pointer-events: none; }
+  /* 「これ1つで全部進む」帯がある画面では、ヒントと新機能の知らせを、題とボタンだけの小さな形にする。
+     本文まで出すと、帯の大きなボタンに重なるため（2026-10-27 round15 の本番の確認）。印は OneButtonBar が html に付ける。
+     エラーと承認待ちは、読まないと困るので、今までどおり全部を出す */
+  :global(html[data-one-button='on']) .sheet[data-variant='notice']:is([data-kind='hint'], [data-kind='feature']) :is(.body, .points, .check, .never) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

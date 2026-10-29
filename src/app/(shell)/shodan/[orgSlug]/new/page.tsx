@@ -156,8 +156,8 @@ export default function ShodanNewPage() {
           label={retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
           scope="企業サイトなどを調べ、課題の仮説と提案資料までまとめてつくります。30秒から2分ほどかかります。"
           onRun={run}
-          disabled={unknown || Boolean(limitMessage)}
-          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : '今月の上限に達しています。'}
+          disabled={unknown || Boolean(limitMessage) || !url.trim()}
+          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : limitMessage ? '今月の上限に達しています。' : '商談先のURLを入れると押せます。'}
           running={phase === 'researching'}
         />
       )}
@@ -191,7 +191,10 @@ export default function ShodanNewPage() {
               </div>
             )}
             <motion.button data-testid="shodan-create" type="button" disabled={unknown || Boolean(limitMessage)} onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+              // 帯（これ1つで全部進む）があるときは、同じ働きのこのボタンを控えめな見た目にする（大きな主なボタンを2つ並べない）
+              className={oneButton
+                ? 'mt-4 w-full py-2.5 rounded-xl border border-brand-300 bg-white text-brand-700 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                : 'mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none'}>
               {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
             </motion.button>
             <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">{unknown ? '作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。' : limitMessage ? '利用枠について、上の案内をご確認ください。' : '企業調査の完了まで30秒〜2分ほど。結果を待つ間はタブを開いたままお待ちください。'}</p>
