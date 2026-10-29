@@ -11,10 +11,11 @@ import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
 /** ドヤAIの「頼む」から来たときに、組織の中で開いてよい画面（?to=） */
 const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new' } as const
 
-type ExpensePageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }
+// Next.js 15 の決まり: searchParams は Promise で受ける（ほかの形を混ぜると、ビルドのあとの型検査で落ちる）
+type ExpensePageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> }
 
 export default async function ExpensePage({ searchParams }: ExpensePageProps) {
-  const sp = (searchParams ? await searchParams : {}) ?? {}
+  const sp = (await searchParams) ?? {}
   // ドヤAIの「頼む」から来たときは、行き先（?to=）と値（doya_*）を組織の中の画面へ運ぶ
   const next = forwardPath(toSearchParams(sp), EXPENSE_ENTRY_TO)
   const session = await getServerSession(authOptions)
