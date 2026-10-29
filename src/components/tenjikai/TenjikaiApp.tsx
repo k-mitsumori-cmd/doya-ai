@@ -125,6 +125,9 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
     setGenerated(mockGeneratedPlan(next))
+    // 新しい案件では、前の案件で確定したデザインの決まりを持ち越さない（下書きから作り直す）
+    setKit(null)
+    setKitConfirmed(false)
     setAnimDone(false)
     setPending(true)
     setPhase('generating')

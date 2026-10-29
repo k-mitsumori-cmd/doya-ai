@@ -50,10 +50,17 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
     setError(undefined)
     const referencePng = getReference ? await getReference().catch(() => undefined) : undefined
     const r = await requestImages({ prompt, aspectRatio, kind, referencePng })
-    setBusy(false)
     void refresh()
-    if (!r.ok) return setError(r)
-    await onResult(r.images)
+    if (!r.ok) {
+      setBusy(false)
+      return setError(r)
+    }
+    // 画像の切り出しが終わるまで「作る」を押せないままにする（2回押して2枚分かからないように）
+    try {
+      await onResult(r.images)
+    } finally {
+      setBusy(false)
+    }
     onClose()
   }
 
