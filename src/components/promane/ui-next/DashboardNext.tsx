@@ -35,7 +35,8 @@ type ProjectStat = {
   progress: number
 }
 
-export default function DashboardNext({ workspaceSlug, data, myData, chartData, myMember }: {
+export default function DashboardNext({ canWrite, workspaceSlug, data, myData, chartData, myMember }: {
+  canWrite: boolean
   workspaceSlug: string
   data: { projectStats: ProjectStat[]; activeProjects: number; totalRevenue: number; totalCost: number; totalProfit: number; totalProfitRate: number }
   myData: { tasks: any[]; myProjects: { id: string; name: string; taskCount: number }[] }
@@ -50,30 +51,30 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 sm:px-8">
       {/* 「これ1つで全部進む」帯。旗の判定は画面側の小さな部品だけで行う（このファイルはサーバーの部品のまま） */}
-      <PromaneOneButton newHref={newHref} />
+      {canWrite && <PromaneOneButton newHref={newHref} />}
       <ToolHero
         title="案件の進み具合と収支を、ひと目で"
         lead="タスク・工数・売上をワークスペースにまとめ、赤字になりそうな案件を早めに見つけます。"
-        action={<Button href={newHref} icon="Plus">新規プロジェクト</Button>}
+        action={canWrite ? <Button href={newHref} icon="Plus">新規プロジェクト</Button> : undefined}
         art={PROMANE_UI_NEXT_ART.hero}
       />
 
       {empty ? (
         <>
-          <FirstSteps
+          {canWrite && <FirstSteps
             id="promane"
             steps={[
               { title: 'プロジェクトをつくる', body: '顧客・予算・期間を入れます。顧客はあとから足せます。' },
               { title: 'タスクを分けて担当を決める', body: 'かんばんで進み具合を動かします。' },
               { title: '工数を記録して収支を見る', body: 'タイムシートの時間から、人件費と利益率を出します。' },
             ]}
-          />
+          />}
           <Card>
             <EmptyState
               title="まだプロジェクトはありません"
-              description="最初のプロジェクトをつくると、ここに進み具合と収支が並びます。"
+              description={canWrite ? "最初のプロジェクトをつくると、ここに進み具合と収支が並びます。" : "登録されたプロジェクトの進み具合と収支がここに並びます。"}
               art={PROMANE_UI_NEXT_ART.empty}
-              action={<Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button>}
+              action={canWrite ? <Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button> : undefined}
             />
           </Card>
         </>
@@ -94,7 +95,7 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
           <p className="-mt-2 mb-3 text-sm text-slate-600">未完了のタスク <strong className="tabular-nums text-slate-900">{myData.tasks.length}</strong> 件</p>
           {myData.tasks.length === 0 ? (
             <p className="text-sm text-slate-600">
-              タスクはまだ割り振られていません。プロジェクトの画面でタスクをつくり、担当を決めましょう。
+              {canWrite ? "タスクはまだ割り振られていません。プロジェクトの画面でタスクをつくり、担当を決めましょう。" : "タスクはまだ割り振られていません。プロジェクトの画面でチームのタスクを確認できます。"}
             </p>
           ) : (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

@@ -17,6 +17,7 @@ import { Button } from "@/components/promane/ui/button";
 import { Progress } from "@/components/promane/ui/progress";
 import { CharacterOnly } from "@/components/promane/character";
 import { ProjectDeleteButton } from "@/components/promane/project-delete-button";
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 
 export default async function ProjectDetailPage({
   params,
@@ -27,6 +28,7 @@ export default async function ProjectDetailPage({
   const { workspaceSlug, projectId } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
   if (!workspace) redirect("/promane");
+  const canWrite = canWritePromaneWorkspace(workspace.members[0]?.role);
 
   // IDOR防止: workspaceId も where条件に追加 (他WSの project は見せない)
   const project = await prisma.promaneProject.findFirst({
@@ -116,7 +118,7 @@ export default async function ProjectDetailPage({
                 {project.endDate && <span className="inline-flex items-center gap-1.5 tabular-nums"><CalendarDays className="h-4 w-4" aria-hidden />納期 {new Date(project.endDate).toLocaleDateString("ja-JP")}</span>}
               </div>
             </div>
-            <div className="flex shrink-0 gap-2">
+            {canWrite && <div className="flex shrink-0 gap-2">
               <Link href={`/promane/${workspaceSlug}/projects/${projectId}/edit`}>
                 <Button variant="outline" className="rounded-xl font-bold text-[14px] h-10 px-4">
                   <Pencil className="mr-1.5 h-4 w-4" />
@@ -124,7 +126,7 @@ export default async function ProjectDetailPage({
                 </Button>
               </Link>
               <ProjectDeleteButton workspaceSlug={workspaceSlug} projectId={projectId} projectName={project.name} />
-            </div>
+            </div>}
           </div>
       </div>
 
@@ -165,13 +167,14 @@ export default async function ProjectDetailPage({
         </TabsList>
 
         <TabsContent value="gantt" className="mt-5 space-y-4">
-          <TaskCreateForm
+          {canWrite && <TaskCreateForm
             workspaceSlug={workspaceSlug}
             workspaceId={workspace.id}
             projectId={projectId}
             members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
-          />
+          />}
           <GanttChart
+            canWrite={canWrite}
             tasks={project.tasks.map((t) => ({
               id: t.id,
               title: t.title,
@@ -191,13 +194,14 @@ export default async function ProjectDetailPage({
         </TabsContent>
 
         <TabsContent value="kanban" className="mt-5 space-y-4">
-          <TaskCreateForm
+          {canWrite && <TaskCreateForm
             workspaceSlug={workspaceSlug}
             workspaceId={workspace.id}
             projectId={projectId}
             members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
-          />
+          />}
           <KanbanBoard
+            canWrite={canWrite}
             tasks={project.tasks.map((t) => ({
               id: t.id,
               title: t.title,
@@ -218,6 +222,7 @@ export default async function ProjectDetailPage({
 
         <TabsContent value="finance" className="mt-5">
           <FinanceTab
+            canWrite={canWrite}
             workspaceSlug={workspaceSlug}
             workspaceId={workspace.id}
             projectId={projectId}

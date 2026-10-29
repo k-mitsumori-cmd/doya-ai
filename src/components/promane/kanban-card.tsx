@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/promane/utils";
 import { Badge } from "@/components/promane/ui/badge";
 import { PRIORITY_LABELS, PRIORITY_COLORS, formatDuration } from "@/lib/promane/format";
-import { AlertTriangle, CalendarDays, Clock, User, Pencil } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock, User, Pencil, Eye } from "lucide-react";
 
 type TaskItem = {
   id: string;
@@ -22,8 +22,10 @@ export function KanbanCard({
   task,
   isDragging = false,
   onEdit,
+  canWrite,
 }: {
   task: TaskItem;
+  canWrite: boolean;
   isDragging?: boolean;
   onEdit?: () => void;
 }) {
@@ -34,7 +36,7 @@ export function KanbanCard({
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: !canWrite });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -48,10 +50,11 @@ export function KanbanCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(canWrite ? attributes : {})}
+      {...(canWrite ? listeners : {})}
       className={cn(
-        "cursor-grab rounded-2xl border-2 bg-white p-4 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5",
+        canWrite && "cursor-grab",
+        "rounded-2xl border-2 bg-white p-4 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5",
         (isDragging || isSortableDragging) && "opacity-60 shadow-xl rotate-2 scale-105",
         isOverdue && "border-l-4 border-l-red-400",
         isUrgent && "ring-2 ring-red-300 border-red-200",
@@ -70,9 +73,10 @@ export function KanbanCard({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className="flex-shrink-0 p-1 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            title="編集"
+            title={canWrite ? "編集" : "詳細を表示"}
+            aria-label={canWrite ? `${task.title}を編集` : `${task.title}の詳細を表示`}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            {canWrite ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </button>
         )}
       </div>

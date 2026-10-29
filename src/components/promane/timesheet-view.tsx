@@ -19,9 +19,15 @@ import { userErrorMessage } from '@/lib/promane/user-error'
 type EntryItem = { id: string; taskId: string | null; duration: number; date: string; note: string | null; taskTitle: string | null; projectName: string | null };
 type ProjectWithTasks = { id: string; name: string; tasks: { id: string; title: string }[] };
 
-export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, projects, totalCount, totalMinutes, periodLabel }: {
+type TimesheetViewProps = {
   workspaceSlug: string; workspaceId: string; memberId: string; entries: EntryItem[]; projects: ProjectWithTasks[]; totalCount: number; totalMinutes: number; periodLabel: string;
-}) {
+};
+
+export function TimesheetView({ canWrite, ...props }: TimesheetViewProps & { canWrite: boolean }) {
+  return canWrite ? <EditableTimesheetView {...props} /> : <TimesheetViewContent {...props} />;
+}
+
+function EditableTimesheetView({ workspaceSlug, workspaceId, memberId, entries, projects, totalCount, totalMinutes, periodLabel }: TimesheetViewProps) {
   const router = useRouter();
   const inputId = useId();
   const [showForm, setShowForm] = useState(false);
@@ -92,21 +98,12 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
     }
   }
 
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 animate-slide-up stagger-1">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-2xl bg-cyan-100 px-4 py-2">
-            <span className="text-[16px] font-black text-cyan-700">{periodLabel}の合計 {formatDuration(totalMinutes)}</span>
-          </div>
-          <span className="text-[14px] font-bold text-gray-400">全{totalCount}件 · このページ{entries.length}件</span>
-        </div>
+  return <TimesheetViewContent entries={entries} totalCount={totalCount} totalMinutes={totalMinutes} periodLabel={periodLabel} toolbar={<>
         <Button onClick={() => setShowForm(!showForm)} className="shrink-0 rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:scale-105 active:scale-95 transition-all">
           <Plus className="mr-2 h-5 w-5" />
           時間を記録
         </Button>
-      </div>
-
+</>} form={<>
       {creation.message && (
         <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4 text-sm text-gray-800">
           <p>{creation.message}</p>
@@ -177,12 +174,29 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
         </div>
       )}
 
+</>} onDelete={handleDelete} confirmation={<ConfirmDialog />} />;
+}
+
+function TimesheetViewContent({ entries, totalCount, totalMinutes, periodLabel, toolbar, form, onDelete, confirmation }: Pick<TimesheetViewProps, "entries" | "totalCount" | "totalMinutes" | "periodLabel"> & { toolbar?: React.ReactNode; form?: React.ReactNode; onDelete?: (id: string) => void; confirmation?: React.ReactNode }) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 animate-slide-up stagger-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-2xl bg-cyan-100 px-4 py-2">
+            <span className="text-[16px] font-black text-cyan-700">{periodLabel}の合計 {formatDuration(totalMinutes)}</span>
+          </div>
+          <span className="text-[14px] font-bold text-gray-400">全{totalCount}件 · このページ{entries.length}件</span>
+        </div>
+        {toolbar}
+      </div>
+
+      {form}
       <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm overflow-hidden animate-slide-up stagger-2">
         {entries.length === 0 ? (
           <div className="py-24 text-center">
             <Image src="/character/sleep.png" alt="" width={120} height={120} className="mx-auto animate-float" unoptimized />
             <p className="mt-4 text-[20px] font-black text-gray-400">この表示条件の記録はありません</p>
-            <p className="text-[15px] text-gray-500 font-bold mt-1">期間を変更するか、新しい作業時間を記録してください。</p>
+            <p className="text-[15px] text-gray-500 font-bold mt-1">{onDelete ? "期間を変更するか、新しい作業時間を記録してください。" : "期間を変更して記録を確認してください。"}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -204,15 +218,15 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
                 <span className="inline-flex items-center gap-1 text-[14px] font-bold text-gray-400">
                   <CalendarDays className="h-4 w-4" aria-hidden />{formatPromaneWorkDate(entry.date)}
                 </span>
-                <button type="button" aria-label="この記録を削除する" onClick={() => handleDelete(entry.id)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                {onDelete && <button type="button" aria-label="この記録を削除する" onClick={() => onDelete?.(entry.id)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
                   <Trash2 className="h-4 w-4" aria-hidden />
-                </button>
+                </button>}
               </div>
             ))}
           </div>
         )}
       </div>
-      <ConfirmDialog />
+      {confirmation}
     </>
   );
 }
