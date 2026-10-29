@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 import type { Prisma } from '@prisma/client'
 import { createPromaneExpenseOnce, recoverPromaneExpense, promaneExpenseOperationId, isPromaneExpenseReceiptConflict, PromaneExpenseCreationError } from '@/lib/promane/expense-creation'
 import { parsePromaneExpense, PromaneExpenseInputError } from '@/lib/promane/time-input'
@@ -5,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -52,53 +53,53 @@ async function scopedOperation<T>(workspaceSlug: string, projectId: string, user
 function validSelector(value: unknown): value is string { return typeof value === 'string' && !!value.trim() && value.length <= 200; }
 function operationFailure(error: unknown) {
   if (error instanceof ExpenseAccessError) {
-    return NextResponse.json(
+    return privateApiJson(
       { error: error.message },
       { status: error.status },
     );
   }
   if (error instanceof PromaneExpenseInputError) {
-    return NextResponse.json(
+    return privateApiJson(
       { error: error.message },
       { status: 400 },
     );
   }
   if (error instanceof PromaneExpenseCreationError) {
-    return NextResponse.json(
+    return privateApiJson(
       { error: error.message },
       { status: 409 },
     );
   }
   console.error('[promane/expenses] operation failed');
-  return NextResponse.json({ error: '保存状態を確認できません。再登録せず、保存状態を確認してください。' }, { status: 500 });
+  return privateApiJson({ error: '保存状態を確認できません。再登録せず、保存状態を確認してください。' }, { status: 500 });
 }
 
 /** POST creates one operation, or fences an explicitly cancelled missing operation. */
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions), userId = (session?.user as any)?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 });
+    if (!userId) return privateApiJson({ error: 'ログインセッションが切れています' }, { status: 401 });
     const body = await req.json().catch(() => null);
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '経費の入力を確認してください' }, { status: 400 });
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return privateApiJson({ error: '経費の入力を確認してください' }, { status: 400 });
     const { workspaceSlug, projectId, action, workspaceId, expectedUserId } = body;
-    if (!validSelector(workspaceSlug) || !validSelector(projectId) || (action !== undefined && action !== 'cancel')) return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 });
-    if (workspaceId !== undefined && !validSelector(workspaceId)) return NextResponse.json({ error: 'ワークスペースを確認してください' }, { status: 400 });
-    if (expectedUserId !== undefined && expectedUserId !== userId) return NextResponse.json({ error: 'ログインする利用者が変わりました', code: 'AUTH_CONTEXT_CHANGED' }, { status: 409 });
+    if (!validSelector(workspaceSlug) || !validSelector(projectId) || (action !== undefined && action !== 'cancel')) return privateApiJson({ error: '送信情報を確認してください' }, { status: 400 });
+    if (workspaceId !== undefined && !validSelector(workspaceId)) return privateApiJson({ error: 'ワークスペースを確認してください' }, { status: 400 });
+    if (expectedUserId !== undefined && expectedUserId !== userId) return privateApiJson({ error: 'ログインする利用者が変わりました', code: 'AUTH_CONTEXT_CHANGED' }, { status: 409 });
     let operationId: string;
     try { operationId = promaneExpenseOperationId(body.operationId); }
-    catch { return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 }); }
+    catch { return privateApiJson({ error: '送信情報を確認してください' }, { status: 400 }); }
     if (action === 'cancel') {
       const result = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
         recoverPromaneExpense(tx, { workspaceId, userId }, operationId,
           id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } }), true), workspaceId);
-      return NextResponse.json(result);
+      return privateApiJson(result);
     }
     const validated = parsePromaneExpense(body);
     const expense = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
       createPromaneExpenseOnce(tx, { workspaceId, userId }, operationId, validated,
         id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } }),
         () => tx.promaneExpense.create({ data: validated })), workspaceId);
-    return NextResponse.json({ success: true, expense });
+    return privateApiJson({ success: true, expense });
   } catch (error) { return operationFailure(error); }
 }
 
@@ -106,21 +107,21 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions), userId = (session?.user as any)?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 });
+    if (!userId) return privateApiJson({ error: 'ログインセッションが切れています' }, { status: 401 });
     const query = req.nextUrl.searchParams;
-    if (['workspaceSlug','projectId','operationId'].some(key => query.getAll(key).length !== 1)) return NextResponse.json({ error: '確認対象を指定してください' }, { status: 400 });
+    if (['workspaceSlug','projectId','operationId'].some(key => query.getAll(key).length !== 1)) return privateApiJson({ error: '確認対象を指定してください' }, { status: 400 });
     const workspaceSlug = query.get('workspaceSlug'), projectId = query.get('projectId');
-    if (!validSelector(workspaceSlug) || !validSelector(projectId)) return NextResponse.json({ error: '確認対象を指定してください' }, { status: 400 });
+    if (!validSelector(workspaceSlug) || !validSelector(projectId)) return privateApiJson({ error: '確認対象を指定してください' }, { status: 400 });
     const workspaceId = query.get('workspaceId') ?? undefined, expectedUserId = query.get('expectedUserId') ?? undefined;
-    if (query.getAll('workspaceId').length > 1 || query.getAll('expectedUserId').length > 1 || (workspaceId !== undefined && !validSelector(workspaceId))) return NextResponse.json({ error: '確認対象を指定してください' }, { status: 400 });
-    if (expectedUserId !== undefined && expectedUserId !== userId) return NextResponse.json({ error: 'ログインする利用者が変わりました', code: 'AUTH_CONTEXT_CHANGED' }, { status: 409 });
+    if (query.getAll('workspaceId').length > 1 || query.getAll('expectedUserId').length > 1 || (workspaceId !== undefined && !validSelector(workspaceId))) return privateApiJson({ error: '確認対象を指定してください' }, { status: 400 });
+    if (expectedUserId !== undefined && expectedUserId !== userId) return privateApiJson({ error: 'ログインする利用者が変わりました', code: 'AUTH_CONTEXT_CHANGED' }, { status: 409 });
     let operationId: string;
     try { operationId = promaneExpenseOperationId(query.get('operationId')); }
-    catch { return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 }); }
+    catch { return privateApiJson({ error: '送信情報を確認してください' }, { status: 400 }); }
     const result = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
       recoverPromaneExpense(tx, { workspaceId, userId }, operationId,
         id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } })), workspaceId);
-    return NextResponse.json(result);
+    return privateApiJson(result);
   } catch (error) { return operationFailure(error); }
 }
 
@@ -131,11 +132,11 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
-    if (!userId) return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 })
+    if (!userId) return privateApiJson({ error: 'ログインセッションが切れています' }, { status: 401 })
 
     const workspaceSlug = req.nextUrl.searchParams.get('workspaceSlug')
     const id = req.nextUrl.searchParams.get('id')
-    if (!workspaceSlug || !id) return NextResponse.json({ error: 'workspaceSlug と id は必須' }, { status: 400 })
+    if (!workspaceSlug || !id) return privateApiJson({ error: 'workspaceSlug と id は必須' }, { status: 400 })
 
     const result = await retryExpenseTransaction(() => prisma.$transaction(async tx => {
       const workspace = await tx.promaneWorkspace.findFirst({
@@ -152,10 +153,10 @@ export async function DELETE(req: NextRequest) {
       if (deleted.count !== 1) return { status: 404 as const, error: '経費が見つかりません' }
       return { status: 200 as const }
     }, { isolationLevel: 'Serializable' }))
-    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
-    return NextResponse.json({ success: true })
+    if (result.status !== 200) return privateApiJson({ error: result.error }, { status: result.status })
+    return privateApiJson({ success: true })
   } catch (e: any) {
     console.error('[promane/expenses][DELETE] failed')
-    return NextResponse.json({ error: '削除に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
+    return privateApiJson({ error: '削除に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
