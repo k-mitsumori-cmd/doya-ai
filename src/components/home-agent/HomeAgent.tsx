@@ -39,7 +39,8 @@ type Scene = 'input' | 'fill' | 'questions' | 'analyze' | 'plan' | 'confirm' | '
 type Executor = 'api' | 'sample'
 
 const POSE: Record<Scene, string> = {
-  input: 'hello', fill: 'point', questions: 'point', analyze: 'ponder', plan: 'point', confirm: 'point', run: 'working', done: 'success', none: 'hello',
+  // 小さく（72px 以下）表示するので、飾りを減らした mini-* の絵を使う（2026-10-29 Codex の画像生成）
+  input: 'hello', fill: 'mini-point', questions: 'mini-point', analyze: 'ponder', plan: 'mini-point', confirm: 'mini-point', run: 'mini-working', done: 'success', none: 'mini-hello',
 }
 const SAY: Record<Scene, string> = {
   input: '何を頼みますか？', fill: 'あと少しだけ教えてください', questions: '少しだけ教えてください', analyze: '材料を並べて読んでいます', plan: 'ゴールまでの差を分けました',

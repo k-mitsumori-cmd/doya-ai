@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { kunSrc, kunSrcSet } from './kun-src'
+import { kunSrc, kunSrcSet, TOOL_KUN, toolOfPath } from './kun-src'
 import { splitWords } from './split-words'
 
 const CHAR = join(process.cwd(), 'public/character')
@@ -48,4 +48,17 @@ test('言葉の分け方: 句読点で区切り、長い塊は6文字ずつ。�
   assert.equal(words.join(''), text)
   assert.ok(words.every((w) => w.length <= 8))
   assert.deepEqual(splitWords(''), [])
+})
+
+test('ツール固有の空の絵: 表の絵がすべて実在し、URL の最初の段からツールを引ける', () => {
+  for (const [tool, pose] of Object.entries(TOOL_KUN)) {
+    assert.ok(existsSync(join(CHAR, `${pose}-512.webp`)), `${tool} → ${pose} の 512px の絵`)
+    assert.ok(existsSync(join(CHAR, `${pose}-256.webp`)), `${tool} → ${pose} の 256px の絵`)
+  }
+  assert.equal(toolOfPath('/banner/dashboard'), 'banner')
+  assert.equal(toolOfPath('/income/invoices?x=1'), 'income')
+  assert.equal(toolOfPath('/home'), '')
+  assert.equal(toolOfPath('/'), '')
+  assert.equal(toolOfPath(null), '')
+  assert.equal(toolOfPath('/constructor'), '', 'Object の持ち物の名前では引かない')
 })

@@ -22,10 +22,10 @@ export interface NavItem {
 
 /** 部署長のドヤくん（部署ごとに場面に合うポーズ） */
 export const DEPT_KUN: Record<DepartmentId, KunPose> = {
-  marketing: 'present',
-  sales: 'handshake',
-  hr: 'survey',
-  admin: 'money',
+  marketing: 'lead-marketing',
+  sales: 'lead-sales',
+  hr: 'lead-hr',
+  admin: 'lead-admin',
 }
 
 export const DEPT_LABEL: Record<DepartmentId, string> = {
@@ -64,14 +64,16 @@ export interface Metric {
   note?: string
   /** 直近7週の動き（小さな棒グラフ用・見本の仮の値。0〜100 の相対の高さ） */
   trend?: number[]
+  /** 数字のカードの小さな絵（ds/kun の KunPose） */
+  kun?: KunPose
 }
 
 export const COMPANY_METRICS: Metric[] = [
-  { label: '今月の売上', value: '1,284', unit: '万円', delta: { text: '前の週より 8% 増', tone: 'up', good: true }, trend: [46, 52, 49, 61, 58, 70, 82] },
-  { label: '入金予定（今週）', value: '312', unit: '万円', delta: { text: '前の週と同じ', tone: 'flat', good: true }, trend: [60, 55, 64, 58, 62, 59, 61] },
-  { label: '今月の支出', value: '846', unit: '万円', delta: { text: '前の週より 3% 増', tone: 'up', good: false }, trend: [52, 50, 55, 57, 56, 60, 63] },
-  { label: '進行中の商談', value: '23', unit: '件', delta: { text: '前の週より 2件 増', tone: 'up', good: true }, trend: [30, 38, 36, 44, 47, 52, 60] },
-  { label: '採用の進み', value: '4', unit: '人 面接中', delta: { text: '前の週より 1人 減', tone: 'down', good: false }, trend: [70, 66, 72, 64, 60, 58, 46] },
+  { label: '今月の売上', kun: 'kpi-sales', value: '1,284', unit: '万円', delta: { text: '前の週より 8% 増', tone: 'up', good: true }, trend: [46, 52, 49, 61, 58, 70, 82] },
+  { label: '入金予定（今週）', kun: 'kpi-incoming', value: '312', unit: '万円', delta: { text: '前の週と同じ', tone: 'flat', good: true }, trend: [60, 55, 64, 58, 62, 59, 61] },
+  { label: '今月の支出', kun: 'kpi-spend', value: '846', unit: '万円', delta: { text: '前の週より 3% 増', tone: 'up', good: false }, trend: [52, 50, 55, 57, 56, 60, 63] },
+  { label: '進行中の商談', kun: 'kpi-deals', value: '23', unit: '件', delta: { text: '前の週より 2件 増', tone: 'up', good: true }, trend: [30, 38, 36, 44, 47, 52, 60] },
+  { label: '採用の進み', kun: 'kpi-hiring', value: '4', unit: '人 面接中', delta: { text: '前の週より 1人 減', tone: 'down', good: false }, trend: [70, 66, 72, 64, 60, 58, 46] },
 ]
 
 export interface Decision {

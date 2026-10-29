@@ -132,7 +132,7 @@ function MetricTile({ m, index = 0, onOpen }: { m: Metric; index?: number; onOpe
   const max = m.trend ? Math.max(...m.trend) : 1
   return (
     <Tag className={`${styles.metric} ${onOpen ? styles.clickable : ''}`} data-phase={phase} {...(onOpen ? { type: 'button' as const, onClick: onOpen, 'aria-label': `${m.label}の詳しい内容を開く` } : {})}>
-      <p className={styles.mLabel}>{m.label}</p>
+      <p className={styles.mLabel}>{m.kun ? <DoyaKun pose={m.kun} size={28} className={styles.mKun} /> : null}{m.label}</p>
       <p className={styles.mValue} data-dun={dun ? 'true' : undefined}><CountUp text={m.value} index={index} onPhase={onPhase} />{m.unit ? <span className={styles.mUnit}>{m.unit}</span> : null}</p>
       <div className={styles.mFoot}>
         {m.delta ? <span className={styles.delta} data-good={m.delta.good} data-tone={m.delta.tone}><span aria-hidden="true">{arrow}</span>{m.delta.text}{m.delta.good ? '' : '（要確認）'}</span> : null}
@@ -158,7 +158,7 @@ function TodayList() {
   const rest = TODAY_TASKS.filter((t) => state[t.id] !== 'removed')
   return (
     <section className={styles.card} aria-label="今日やること">
-      <div className={styles.cardHead}><h2 className={styles.h2}>今日やること</h2><span className={styles.sub}>{rest.length}件</span></div>
+      <div className={styles.cardHead}><h2 className={styles.h2}><DoyaKun pose="todo" size={36} className={styles.hKun} />今日やること</h2><span className={styles.sub}>{rest.length}件</span></div>
       {rest.length ? (
         <ul className={styles.list}>
           {TODAY_TASKS.map((t, k) => state[t.id] === 'removed' ? null : (
@@ -197,7 +197,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
           {/* 見出しの右に、小さなドヤくん（左の大きな列はやめた。2026-10-29 本人の指示）。入力欄は横いっぱい */}
           <div className={styles.askHead}>
             <h1 className={styles.askTitle}>今日は、何をしますか？</h1>
-            <DoyaKun pose="point" size={64} className={styles.askKun} />
+            <DoyaKun pose="mini-point" size={64} className={styles.askKun} />
           </div>
           <div className={styles.askBox}>
             <div className={styles.aura}>
@@ -231,7 +231,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
 
       <Stagger i={2}>
         <section className={styles.card} aria-label="あなたの判断が必要なこと">
-          <div className={styles.cardHead}><h2 className={styles.h2}>あなたの判断が必要なこと</h2><span className={styles.sub}>{DECISIONS.length}件</span></div>
+          <div className={styles.cardHead}><h2 className={styles.h2}><DoyaKun pose="waiting" size={36} className={styles.hKun} />あなたの判断が必要なこと</h2><span className={styles.sub}>{DECISIONS.length}件</span></div>
           <ul className={styles.list}>
             {DECISIONS.map((d, k) => (
               <li key={d.id} className={`${styles.row} ${styles.slideRow}`} style={{ ['--k' as string]: k }}>
@@ -247,7 +247,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
       <div className={styles.cols}>
         <Stagger i={3}>
           <section className={styles.card} aria-label="各部署からの報告">
-            <div className={styles.cardHead}><h2 className={styles.h2}>各部署からの報告</h2></div>
+            <div className={styles.cardHead}><h2 className={styles.h2}><DoyaKun pose="report" size={36} className={styles.hKun} />各部署からの報告</h2></div>
             <ul className={styles.list}>
               {DEPT_REPORTS.map((r, k) => (
                 <li key={r.dept} className={styles.slideRow} style={{ ['--k' as string]: k }}>
