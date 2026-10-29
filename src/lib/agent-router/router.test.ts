@@ -2,9 +2,9 @@
 // 依頼を読んでツールと操作を選ぶ仕組みの回帰テスト。本物の AI は呼ばない（偽物の client を渡す）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cleanValues, missingFields, normalizeValue, prefillHref, readPrefill } from './prefill'
+import { cleanValues, isPrefillKey, missingFields, normalizeValue, stashPrefill, takePrefill, withPrefillKey, PREFILL_TTL_MS } from './prefill'
 import { catalogText, validateReply, jstToday } from './router'
-import { askRouter, buildRouterRequest } from './claude.server'
+import { agentRouterModel, askRouter, buildRouterRequest } from './claude.server'
 import type { AgentAction } from './types'
 
 const expense: AgentAction = {
@@ -46,14 +46,51 @@ test('欄に無い名前の値は捨て、足りない必須の欄を返す', ()
   assert.deepEqual(missingFields(expense, v), [])
 })
 
-test('開く画面の URL に doya_ を付けて値を足し、画面の側で読める', () => {
-  const href = prefillHref(expense, { amount: '200000', title: '外注費' })
-  assert.equal(href, '/expense?to=new-contract&doya_title=%E5%A4%96%E6%B3%A8%E8%B2%BB&doya_amount=200000')
-  const q = new URLSearchParams(href.split('?')[1])
-  assert.equal(readPrefill(q, 'amount', 'yen'), '200000')
-  assert.equal(readPrefill(q, 'title'), '外注費')
-  assert.equal(readPrefill(q, 'start', 'date'), '')
-  assert.equal(readPrefill(null, 'amount', 'yen'), '')
+/** 試験用の sessionStorage（触った回数も数える） */
+function memoryStorage() {
+  const m = new Map<string, string>()
+  const touched: string[] = []
+  return {
+    touched,
+    size: () => m.size,
+    getItem: (k: string) => { touched.push('get'); return m.has(k) ? m.get(k)! : null },
+    setItem: (k: string, v: string) => { touched.push('set'); m.set(k, v) },
+    removeItem: (k: string) => { touched.push('remove'); m.delete(k) },
+  }
+}
+const KEY = 'abcdefghijklmnop1234'
+
+test('値は URL に載せず、一度きりの鍵だけを付ける。鍵で1回だけ取り出し、取り出したら消える', () => {
+  const st = memoryStorage()
+  const key = stashPrefill({ amount: '200000', client: '株式会社サンプル' }, st, 1000, () => KEY)
+  assert.equal(key, KEY)
+  const href = withPrefillKey('/expense?to=new-contract', key)
+  assert.equal(href, `/expense?to=new-contract&doya_k=${KEY}`)
+  assert.ok(!href.includes('200000') && !href.includes('%E6%A0%AA'), 'URL に値が載らない')
+  assert.deepEqual(takePrefill(KEY, st, 2000), { amount: '200000', client: '株式会社サンプル' })
+  assert.deepEqual(takePrefill(KEY, st, 2000), {}, '2回目は空')
+  assert.equal(st.size(), 0)
+})
+
+test('鍵: 期限切れ・形の違う鍵・壊れた中身は空。値が無ければ鍵を作らない', () => {
+  const st = memoryStorage()
+  stashPrefill({ amount: '1' }, st, 0, () => KEY)
+  assert.deepEqual(takePrefill(KEY, st, PREFILL_TTL_MS + 1), {})
+  assert.equal(stashPrefill({}, st, 0, () => KEY), '')
+  assert.equal(stashPrefill({ amount: '1' }, null, 0, () => KEY), '')
+  assert.equal(stashPrefill({ amount: '1' }, st, 0, () => 'short'), '')
+  assert.equal(isPrefillKey('../../x'), false)
+  assert.equal(withPrefillKey('/quote', ''), '/quote')
+  st.setItem('doya-prefill:' + KEY, '{broken')
+  assert.deepEqual(takePrefill(KEY, st, 0), {})
+})
+
+test('URL に doya_k が無いときは、何もしない（保存場所に触れない）', () => {
+  const st = memoryStorage()
+  assert.deepEqual(takePrefill(null, st), {})
+  assert.deepEqual(takePrefill('', st), {})
+  assert.deepEqual(takePrefill(undefined, st), {})
+  assert.deepEqual(st.touched, [])
 })
 
 test('AI の答え: 一覧にある操作だけを受け、値を確かめて、足りない欄を出す', () => {
@@ -76,7 +113,7 @@ test('AI の答え: 知らない操作・形の違う答えは「どれにも合
 })
 
 test('AI に送る中身: Opus 5.5・effort low・構造化出力・一覧をキャッシュ。temperature と前置きを送らない', () => {
-  const req = buildRouterRequest('20万円支出を登録したい', '2026-10-28', actions, plans)
+  const req = buildRouterRequest('20万円支出を登録したい', '2026-10-28', actions, plans, agentRouterModel(''))
   assert.equal(req.model, 'claude-opus-5-5')
   assert.equal(req.output_config.effort, 'low')
   assert.ok(req.output_config.format)

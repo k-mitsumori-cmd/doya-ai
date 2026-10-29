@@ -32,7 +32,8 @@ test('答えの形: 操作なら値を入れた URL と足りない欄、案だ�
   const r = routeResponse({ kind: 'action', actionId: 'expense.contract.create', values: { amount: '200000' }, missing: [], reason: '支出の登録' }, '')
   assert.equal(r.kind, 'action')
   if (r.kind === 'action') {
-    assert.equal(r.href, '/expense?to=new-contract&doya_amount=200000')
+    assert.equal(r.href, '/expense?to=new-contract')
+    assert.deepEqual(r.values, { amount: '200000' })
     assert.deepEqual(r.missing, [])
   }
   const m = routeResponse({ kind: 'action', actionId: 'shodan.prep.create', values: {}, missing: ['url'], reason: '' }, '')
@@ -49,13 +50,18 @@ test('AI を使えないとき: 言葉の一致で近いツールを案内し、
   assert.deepEqual(n.kind === 'unknown' && n.suggestions, [])
 })
 
-test('入口: 決めた行き先だけを組織の中へ運び、doya_ の値だけを付ける', () => {
+test('入口: 決めた行き先と一度きりの鍵（doya_k）だけを組織の中へ運ぶ。値そのものは運ばない', () => {
   const allow = { 'new-contract': '/contracts/new' }
-  assert.equal(forwardPath(new URLSearchParams('to=new-contract&doya_amount=200000&evil=1'), allow), '/contracts/new?doya_amount=200000')
-  assert.equal(forwardPath(new URLSearchParams('to=../../admin&doya_amount=1'), allow), '?doya_amount=1')
+  const k = 'abcdefghijklmnop1234'
+  assert.equal(forwardPath(new URLSearchParams(`to=new-contract&doya_k=${k}&doya_amount=200000&evil=1`), allow), `/contracts/new?doya_k=${k}`)
+  assert.equal(forwardPath(new URLSearchParams(`to=../../admin&doya_k=${k}`), allow), `?doya_k=${k}`)
   assert.equal(forwardPath(new URLSearchParams('to=__proto__'), allow), '')
-  assert.equal(forwardPath(new URLSearchParams(''), allow), '')
-  assert.equal(forwardPath(new URLSearchParams('doya_BAD=1&doya_ok=2'), allow), '?doya_ok=2')
+  assert.equal(forwardPath(new URLSearchParams('doya_k=../x'), allow), '')
   assert.equal(forwardPath(null, allow), '')
-  assert.equal(toSearchParams({ to: 'new-contract', doya_amount: ['5', '6'], x: undefined }).toString(), 'to=new-contract&doya_amount=5')
+  assert.equal(toSearchParams({ to: 'new-contract', doya_k: [k, 'x'], x: undefined }).toString(), `to=new-contract&doya_k=${k}`)
+})
+
+test('入口: URL に doya_ が無いときは、何も運ばない（今までどおり組織の最初の画面へ）', () => {
+  assert.equal(forwardPath(new URLSearchParams(''), { 'new-contract': '/contracts/new' }), '')
+  assert.equal(forwardPath(new URLSearchParams('utm_source=x'), { 'new-contract': '/contracts/new' }), '')
 })

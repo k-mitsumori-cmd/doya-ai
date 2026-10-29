@@ -49,6 +49,7 @@ export type AgentRoute =
 
 /** API が返す形（画面はこれだけを見る） */
 export type AgentRouteResponse =
+  /** href は開く画面のパスだけ（値は載せない。画面が sessionStorage に値を入れ、一度きりの鍵だけを付けて開く） */
   | { kind: 'action'; action: { id: string; toolId: string; label: string; finalStep: string; fields: AgentField[] }; values: Record<string, string>; missing: AgentField[]; href: string; reason: string }
   | { kind: 'plan'; planId: string; reason: string }
   | { kind: 'unknown'; reason: string; suggestions: { label: string; href: string }[] }
