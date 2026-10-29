@@ -473,7 +473,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   }
 
   // 材料からドヤくんへ光が流れる線（Animated Beam）。1280px かつ動きを減らす設定でないときだけ
-  const [beams, setBeams] = useState<{ id: string; d: string; reading: boolean }[]>([])
+  const [beams, setBeams] = useState<{ id: string; d: string; reading: boolean; end: { x: number; y: number } }[]>([])
   useEffect(() => {
     if (scene !== 'analyze' || reduce) { setBeams([]); return }
     const measure = () => {
@@ -481,14 +481,15 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       if (!st || !k || window.innerWidth <= 860) { setBeams([]); return }
       const s = st.getBoundingClientRect(), kr = k.getBoundingClientRect()
       // 小さなクマは見出しの右にある。材料の行から、クマの下の真ん中へ、光の線を引く
-      const x2 = kr.left - s.left + kr.width / 2, y2 = kr.bottom - s.top - 4
+      const x2 = kr.left - s.left + kr.width / 2, y2 = kr.bottom - s.top - 6
       setBeams(sources.map((src) => {
         const el = st.querySelector<HTMLElement>(`[data-src="${src.id}"]`)
         if (!el) return null
         const c = el.getBoundingClientRect()
-        const x1 = c.left - s.left, y1 = c.top - s.top + c.height / 2, mx = (x1 + x2) / 2
-        return { id: src.id, d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, reading: src.status === 'reading' }
-      }).filter((b): b is { id: string; d: string; reading: boolean } => Boolean(b)))
+        // 行の右の端から出て、上へ曲がってクマの足もとに着く（行は横いっぱいなので、クマに近い右の端から引くと線が長く見える）
+        const x1 = c.right - s.left - 14, y1 = c.top - s.top + c.height / 2
+        return { id: src.id, d: `M${x1},${y1} C${x1},${y1 - 56} ${x2},${y2 + 56} ${x2},${y2}`, reading: src.status === 'reading', end: { x: x2, y: y2 } }
+      }).filter((b): b is { id: string; d: string; reading: boolean; end: { x: number; y: number } } => Boolean(b)))
     }
     const raf = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
@@ -508,6 +509,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
           {beams.map((b, i) => (
             <g key={b.id}>
               <path d={b.d} className={styles.beamTrack} />
+              <circle cx={b.end.x} cy={b.end.y} r="3.5" className={styles.beamEnd} />
               {b.reading ? <path d={b.d} className={styles.beamFlow} style={{ animationDelay: `${i * 120}ms` }} /> : null}
             </g>
           ))}
