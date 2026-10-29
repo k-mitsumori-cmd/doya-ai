@@ -87,29 +87,31 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
 
   // Source 1: 法人番号API（国税庁）
   if (sources.includes('corporate_number')) {
-    for (const keyword of (criteria.keywords || []).slice(0, 3)) {
+    corporateSearch: for (const keyword of (criteria.keywords || []).slice(0, 3)) {
       if (!keyword) continue
-      if (remainingMs() === 0) { budgetExhausted = true; break }
-      try {
-        const results = await searchCorporateNumber({
-          keyword,
-          prefecture: targetPrefectures[0] && targetPrefectures.length === 1 ? targetPrefectures[0] : undefined,
-          count: Math.min(50, maxResults),
-          timeoutMs: remainingMs(),
-        })
-        anyApiSuccess = true
-        for (const r of results) {
-          allCompanies.push({
-            companyName: r.name,
-            corporateNumber: r.corporateNumber,
-            address: r.address,
-            prefecture: r.prefectureName,
-            source: 'corporate_number',
-            rawData: r as any,
+      for (const prefecture of targetPrefectures) {
+        if (remainingMs() === 0) { budgetExhausted = true; break corporateSearch }
+        try {
+          const results = await searchCorporateNumber({
+            keyword,
+            prefecture,
+            count: Math.min(50, maxResults),
+            timeoutMs: remainingMs(),
           })
+          anyApiSuccess = true
+          for (const r of results) {
+            allCompanies.push({
+              companyName: r.name,
+              corporateNumber: r.corporateNumber,
+              address: r.address,
+              prefecture: r.prefectureName,
+              source: 'corporate_number',
+              rawData: r as any,
+            })
+          }
+        } catch {
+          console.error('[collect] Corporate number API error')
         }
-      } catch {
-        console.error('[collect] Corporate number API error')
       }
     }
   }
