@@ -16,13 +16,19 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
   const md = article.finalMarkdown || ''
   const body = markdownToHtmlBasic(md)
+  const title = String(article.title ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 
   const html = `<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${article.title}</title>
+  <title>${title}</title>
   <style>
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.7;margin:32px;max-width:920px}
     table{border-collapse:collapse;width:100%;margin:16px 0}
