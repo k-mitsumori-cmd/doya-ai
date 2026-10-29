@@ -86,10 +86,10 @@ const request = (path) => new Request(`https://local.test${path}`)
       [2026, 12, '2026-11-30', '2026-12-01', '2026-12-31', '2027-01-01'],
       [2027, 1, '2026-12-31', '2027-01-01', '2027-01-31', '2027-02-01'],
     ]) {
-      const fixtures = [previous, first, last, next].map(date => ({
+      const fixtures = [previous, first, last, next].map((date, index) => ({
         name: date, isActive: false, department: null,
         attendances: [{ date: new Date(date + 'T00:00:00Z'), clockIn: null, clockOut: null,
-          workMinutes: 1, overtimeMinutes: 0, lateMinutes: 0, earlyLeaveMinutes: 0, status: 'approved' }],
+          workMinutes: [9, 1, 2, 99][index], overtimeMinutes: 0, lateMinutes: 0, earlyLeaveMinutes: 0, status: 'approved' }],
       }))
       const route = load('src/app/api/kintai/attendance/export/route.ts', {
         ...mocks,
@@ -116,6 +116,50 @@ const request = (path) => new Request(`https://local.test${path}`)
         assert(!body.includes(previous), `${format} must exclude previous month`)
         assert(!body.includes(next), `${format} must exclude next month`)
       }
+      const now = Date.parse(last + 'T00:15:00+09:00')
+      class FixedDate extends Date {
+        constructor(...args) { super(...(args.length ? args : [now])) }
+        static now() { return now }
+      }
+      const readMocks = {
+        ...mocks,
+        '@/lib/prisma': { prisma: {
+          kintaiAttendance: { findMany: async ({ where }) => {
+            assert.equal(where.employeeId, 'employee')
+            const start = where.date.gte.toISOString().slice(0, 10)
+            const end = where.date.lt.toISOString().slice(0, 10)
+            return fixtures.flatMap(e => e.attendances).filter(a => {
+              const date = a.date.toISOString().slice(0, 10)
+              return date >= start && date < end
+            })
+          } },
+          kintaiClockRecord: { findMany: async ({ where }) => {
+            assert.equal(where.timestamp.gte.toISOString(), new Date(Date.parse(last + 'T00:00:00+09:00') - 86400000).toISOString(),
+              'clock timestamp range must retain JST midnight and overnight carryover')
+            return []
+          } },
+          kintaiRequest: { findMany: async () => [] },
+          kintaiEmployee: { findUnique: async () => ({ name: 'synthetic' }) },
+        } },
+        '@/lib/kintai/format': { getClockStatusFromRecords: () => 'not_clocked_in' },
+        '@/lib/kintai/shift-records': { recordsWithCarryover: records => records },
+      }
+      for (const implicit of [false, true]) {
+        const attendance = load('src/app/api/kintai/attendance/route.ts', readMocks, { Date: FixedDate })
+        const response = await attendance.GET(request('/api/kintai/attendance' +
+          (implicit ? '' : `?month=${year}-${String(month).padStart(2, '0')}`)))
+        assert.equal(response.status, 200)
+        const body = await response.json()
+        assert.deepEqual(body.attendances.map(a => a.date.slice(0, 10)), [first, last])
+        assert.equal(body.summary.totalWorkMinutes, 3)
+      }
+      const dashboard = load('src/app/api/kintai/dashboard/route.ts', readMocks, { Date: FixedDate })
+      const response = await dashboard.GET()
+      assert.equal(response.status, 200)
+      const body = await response.json()
+      assert.equal(body.monthlySummary.totalWorkMinutes, 3)
+      assert.equal(body.todayAttendance.date.slice(0, 10), last,
+        'today attendance must remain visible on the last JST day, including just after midnight')
     }
   })
   await check('invalid months, years and formats fail before querying employee data', async () => {
