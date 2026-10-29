@@ -129,7 +129,7 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* KPI + 進捗バー */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5 animate-slide-up stagger-2">
+      <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2 xl:grid-cols-5 animate-slide-up stagger-2">
         {kpis.map((kpi, i) => (
           <div key={kpi.label} className={`rounded-3xl ${kpi.bg} ring-1 p-4 transition-all hover:scale-105 hover:shadow-lg cursor-default`}>
             <div className="flex items-center justify-between mb-2">
@@ -152,7 +152,7 @@ export default async function ProjectDetailPage({
 
       {/* タブ */}
       <Tabs defaultValue="gantt">
-        <TabsList className="rounded-2xl bg-gray-100 p-1.5 h-auto">
+        <TabsList className="max-w-full flex-wrap rounded-2xl bg-gray-100 p-1.5 h-auto">
           <TabsTrigger value="gantt" className="rounded-xl font-bold text-[14px] px-5 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <GanttChartSquare className="mr-1.5 h-4 w-4" aria-hidden />ガントチャート
           </TabsTrigger>

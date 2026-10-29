@@ -121,7 +121,7 @@ export function GanttChart({
   return (
     <div className="rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm overflow-hidden">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <div className="flex flex-col gap-3 px-5 py-3 border-b border-gray-100 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {Object.entries(STATUS_COLORS).map(([key, c]) => (
             <span key={key} className="flex items-center gap-1 text-[12px] font-semibold text-gray-500">
@@ -130,14 +130,14 @@ export function GanttChart({
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToday} className="rounded-xl font-semibold text-[13px] h-8 px-3">
+          <Button variant="outline" size="sm" onClick={goToday} className="shrink-0 rounded-xl font-semibold text-[13px] h-8 px-3">
             <Calendar className="mr-1 h-3.5 w-3.5" />今日
           </Button>
-          <Button variant="ghost" size="sm" onClick={prevPeriod} className="h-8 w-8 p-0 rounded-xl">
+          <Button variant="ghost" size="sm" onClick={prevPeriod} aria-label="1週間前を表示" className="h-8 w-8 shrink-0 p-0 rounded-xl">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[130px] text-center text-[14px] font-bold text-gray-700">{headerLabel}</span>
-          <Button variant="ghost" size="sm" onClick={nextPeriod} className="h-8 w-8 p-0 rounded-xl">
+          <span className="min-w-0 flex-1 text-center text-[12px] font-bold text-gray-700 sm:min-w-[130px] sm:text-[14px]">{headerLabel}</span>
+          <Button variant="ghost" size="sm" onClick={nextPeriod} aria-label="1週間後を表示" className="h-8 w-8 shrink-0 p-0 rounded-xl">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -250,7 +250,9 @@ export function GanttChart({
                   </div>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <span className="text-[12px] font-semibold text-gray-300">クリックして日程設定</span>
+                    <span className="text-[12px] font-semibold text-gray-500">
+                      {task.startDate || task.dueDate ? "表示期間外の日程です" : "クリックして日程設定"}
+                    </span>
                   </div>
                 )}
               </div>
