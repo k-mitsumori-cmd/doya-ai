@@ -9,6 +9,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import styles from './motion.module.css'
 import { countFrame, formatCount } from './chart-math'
+import { splitWords } from './split-words'
+export { splitWords } from './split-words'
 
 /** 動きを減らす設定か */
 export function usePrefersReducedMotion(): boolean {
@@ -246,22 +248,12 @@ export function RevealWords({ text, step = 90, className, as: Tag = 'span' }: {
   const reduced = usePrefersReducedMotion()
   const words = splitWords(text)
   return (
-    <Tag key={text} className={`${styles.reveal} ${className ?? ''}`} data-reduced={reduced ? 'true' : undefined} aria-label={text}>
+    <Tag key={text} className={`${styles.reveal} ${className ?? ''}`} data-reduced={reduced ? 'true' : undefined}>
+      {/* 読み上げ用に、文を1回だけ置く（語ごとの span は aria-hidden。見出しが空にならないように） */}
+      <span className={styles.srOnly}>{text}</span>
       {words.map((w, i) => (
         <span key={i} aria-hidden="true" className={styles.word} style={{ '--w': i, '--reveal-step': `${step}ms` } as CSSProperties}>{w}</span>
       ))}
     </Tag>
   )
-}
-
-/** 日本語の文を、読点・句点・助詞の切れ目で短い塊に分ける（英数字は空白で） */
-export function splitWords(text: string): string[] {
-  const out: string[] = []
-  for (const part of text.split(/(?<=[、。,.！？!?・…])|(?<=\s)/)) {
-    if (!part) continue
-    // 長い塊は、6文字ほどで分ける（一度に濃くならないように）
-    if (part.length > 8) for (let i = 0; i < part.length; i += 6) out.push(part.slice(i, i + 6))
-    else out.push(part)
-  }
-  return out
 }

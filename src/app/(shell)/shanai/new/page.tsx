@@ -86,8 +86,8 @@ export default function ShanaiNewPage() {
                   <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
                   <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
                 </span>
-                {/* 選び方ごとのドヤくん。選んだほうは小さく跳ねる（key で選び直すたびに1回） */}
-                <DoyaKun key={`${m.key}-${mode === m.key}`} pose={m.pose} act={mode === m.key ? 'cheer' : 'idle'} size={64} />
+                {/* 選び方ごとのドヤくん。選んだほうは小さく跳ねる（act を変えるだけ。key は変えず、登場の動きを繰り返さない） */}
+                <DoyaKun key={m.key} pose={m.pose} act={mode === m.key ? 'cheer' : 'idle'} size={64} />
               </span>
             </button>
           ))}

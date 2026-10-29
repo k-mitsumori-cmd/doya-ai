@@ -10,6 +10,8 @@
 // - 展示会の待ち画面など、ほかの画面でも同じ部品を使う（ポーズの絵が足りないときは、作る絵の一覧に足す）。
 // ⚠️ 絵文字は使わない。絵は今ある絵だけ。新しい絵は Codex の内蔵の画像生成で作る（有料の API は使わない）。
 import styles from './kun.module.css'
+import { kunSrc, kunSrcSet } from './kun-src'
+export { kunSrc, kunSrcSet } from './kun-src'
 
 /** public/character にあるポーズ。新しいポーズは、絵を置いてから（scripts/kun-import-pose.py）ここに名前を足す */
 export type KunPose =
@@ -20,11 +22,6 @@ export type KunPose =
 
 /** 小さな動き。idle: 入るだけ / work: 作業中（上下） / think: 考え中（傾く） / cheer: できた（跳ねる） */
 export type KunAct = 'idle' | 'work' | 'think' | 'cheer'
-
-export function kunSrc(pose: KunPose | `mascot:${string}`): string {
-  if (pose.startsWith('mascot:')) return `/ui-renewal/mascots/${pose.slice('mascot:'.length).replace(/[^a-z-]/g, '')}.webp`
-  return `/character/${pose}-512.webp`
-}
 
 export function DoyaKun({ pose, act = 'idle', size = 96, label, say, className }: {
   pose: KunPose | `mascot:${string}`
@@ -40,7 +37,7 @@ export function DoyaKun({ pose, act = 'idle', size = 96, label, say, className }
   return (
     <span className={`${styles.kun} ${className ?? ''}`} data-act={act} style={{ ['--kun-size' as string]: `${size}px` }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={kunSrc(pose)} alt={label ?? ''} aria-hidden={label ? undefined : true} width={size} height={size} className={styles.img} draggable={false} />
+      <img src={kunSrc(pose)} srcSet={kunSrcSet(pose)} sizes={`${size}px`} alt={label ?? ''} aria-hidden={label ? undefined : true} width={size} height={size} className={styles.img} draggable={false} loading="lazy" decoding="async" />
       {say ? <span className={styles.say}>{say}</span> : null}
     </span>
   )
