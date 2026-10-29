@@ -1468,3 +1468,6 @@ if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exi
 
 const interviewWordpressExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-wordpress-export.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewWordpressExport.error || interviewWordpressExport.status !== 0) process.exit(interviewWordpressExport.status || 1);
+
+const interviewTextExports = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-text-exports.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTextExports.error || interviewTextExports.status !== 0) process.exit(interviewTextExports.status || 1);

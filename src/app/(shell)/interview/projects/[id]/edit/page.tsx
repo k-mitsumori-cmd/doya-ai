@@ -174,6 +174,49 @@ function xmlCdata(s: string): string {
     .replace(/\]\]>/g, ']]]]><![CDATA[>')
 }
 
+function markdownToPlainText(markdown: string): string {
+  const stripInline = (text: string) => text
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+  const inlineText = (text: string) => {
+    let result = ''
+    let start = 0
+    for (const match of text.matchAll(/(^|[^`])(`+)(?!`)(.*?)\2(?!`)/g)) {
+      result += stripInline(text.slice(start, match.index) + match[1]) + match[3]
+      start = match.index! + match[0].length
+    }
+    return result + stripInline(text.slice(start))
+  }
+  const lines: string[] = []
+  let fenceEnd: RegExp | null = null
+  for (const line of markdown.split(/\r\n?|\n/)) {
+    if (fenceEnd) {
+      if (fenceEnd.test(line)) fenceEnd = null
+      else lines.push(line)
+      continue
+    }
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,}).*$/)
+    if (fence) {
+      fenceEnd = new RegExp('^ {0,3}' + fence[1][0] + '{' + fence[1].length + ',}[ \\t]*$')
+      continue
+    }
+    // Code is content: preserve its punctuation, indentation and blank lines.
+    if (/^(?: {4}|\t)/.test(line)) { lines.push(line); continue }
+    if (/^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/.test(line)) {
+      lines.push('')
+      continue
+    }
+    lines.push(inlineText(line
+      .replace(/^#{1,6}[ \t]+/, '')
+      .replace(/^>[ \t]?/, '')
+      .replace(/^[-*][ \t]+/, '')
+      .replace(/^\d+\.[ \t]+/, '')))
+  }
+  return lines.join('\n')
+}
+
 function inlineToHtml(s: string): string {
   return escapeHtml(s)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -588,19 +631,7 @@ export default function EditPage() {
   }
 
   const handleExportTxt = () => {
-    const plainText = content
-      .replace(/^#{1,6}\s+/gm, '')
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .replace(/^>\s+/gm, '')
-      .replace(/^[-*]\s+/gm, '')
-      .replace(/^\d+\.\s+/gm, '')
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/`([^`]+)`/g, '$1')
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
-      .replace(/---/g, '')
-      .replace(/\n{3,}/g, '\n\n')
+    const plainText = markdownToPlainText(content)
     const blob = new Blob([plainText], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -617,14 +648,14 @@ export default function EditPage() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${(title || 'article').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<title>${escapeHtml(title || 'article')}</title>
 <style>
 body { max-width: 800px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 ${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
 </style>
 </head>
 <body>
-<h1>${(title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+<h1>${escapeHtml(title || '')}</h1>
 ${htmlBody}
 </body>
 </html>`
@@ -682,7 +713,7 @@ ${htmlBody}
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>${(title || 'article').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<title>${escapeHtml(title || 'article')}</title>
 <style>
 body { max-width: 800px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 ${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
@@ -693,7 +724,7 @@ ${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
 </style>
 </head>
 <body>
-<h1>${(title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+<h1>${escapeHtml(title || '')}</h1>
 ${htmlBody}
 <script>window.onload = function() { window.print(); }<\/script>
 </body>
