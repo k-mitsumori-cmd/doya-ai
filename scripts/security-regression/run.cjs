@@ -1448,3 +1448,9 @@ if (promaneRouteCache.error || promaneRouteCache.status !== 0) { console.error('
 
 const promaneReadonlyUi = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-readonly-ui.cjs")], { stdio: "inherit", timeout: 60000 });
 if (promaneReadonlyUi.error || promaneReadonlyUi.status !== 0) { console.error("Promane readonly UI regression failed"); process.exit(promaneReadonlyUi.status || 1); }
+
+// Keep writable creation/recovery coverage alongside the readonly UI regression.
+for (const name of ["verify-promane-timesheet-creation-mounted.cjs", "verify-promane-time-note-boundary-mounted.cjs", "verify-promane-client-creation-view-mounted.cjs", "verify-promane-expense-creation-view-mounted.cjs", "verify-promane-timesheet-member-draft.cjs"]) {
+  const writableView = spawnSync(process.execPath, [path.join(__dirname, "../../docs/audits/2026-10-06-all-services-recheck", name)], { stdio: "inherit", timeout: 60000 });
+  if (writableView.error || writableView.status !== 0) { console.error("Promane writable view regression failed: " + name); process.exit(writableView.status || 1); }
+}
