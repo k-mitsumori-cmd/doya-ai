@@ -38,7 +38,15 @@ type Phase = 'input' | 'generating' | 'ready'
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
 // 出展プロジェクトは、この端末のブラウザ（localStorage）に利用者ごとに残す暫定の保存（src/lib/tenjikai/local-store.ts）。
 // サーバー保存の設計は docs/architecture/TENJIKAI-PERSISTENCE.md。
-export default function TenjikaiApp({ shell = false, userId = null }: { shell?: boolean; userId?: string | null }) {
+type TenjikaiAppProps = { shell?: boolean; userId?: string | null }
+
+export default function TenjikaiApp(props: TenjikaiAppProps) {
+  // Scope every draft, image, timer and pending result to the current actor.
+  // A new actor must never render or autosave the previous actor's project.
+  return <ActorProject key={props.userId ? `user:${props.userId}` : 'anonymous'} {...props} />
+}
+
+function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
   const router = useRouter()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')

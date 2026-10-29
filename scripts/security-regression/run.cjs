@@ -1457,3 +1457,5 @@ for (const name of ["verify-promane-timesheet-creation-mounted.cjs", "verify-pro
 
 const promaneHistoricalLabor = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-historical-labor.cjs")], { stdio: "inherit", timeout: 60000 });
 if (promaneHistoricalLabor.error || promaneHistoricalLabor.status !== 0) { console.error("Promane historical labor regression failed"); process.exit(promaneHistoricalLabor.status || 1); }
+const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(tenjikaiActorScope.status || 1);
