@@ -12,12 +12,12 @@ interface OneOnOneData {
   id: string
   employeeId: string
   employeeName: string
-  date: string
+  date: string | null
   duration: number | null
-  agenda: any[]
-  managerNote: string
-  sharedNote: string
-  actionItems: any[]
+  agenda: unknown
+  managerNote?: string | null
+  sharedNote: string | null
+  actionItems: unknown
   canViewManagerNotes: boolean
   status: string
 }

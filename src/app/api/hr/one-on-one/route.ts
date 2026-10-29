@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { getOneOnOneReadWhere, getOneOnOneViewer, filterOneOnOneFields } from '@/lib/hr/one-on-one-access'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
+import { validOneOnOneItems } from '@/lib/hr/one-on-one-items'
 
 export async function GET(req: NextRequest) {
   try {
@@ -114,6 +115,9 @@ export async function POST(req: NextRequest) {
     }
     if (duration !== undefined && (!Number.isInteger(duration) || duration < 1 || duration > 1440)) {
       return privateApiJson({ error: '時間は1〜1440分で入力してください' }, { status: 400 })
+    }
+    if (!validOneOnOneItems(agenda, 'agenda')) {
+      return privateApiJson({ error: 'アジェンダの項目を確認してください。' }, { status: 400 })
     }
 
     if (scheduledAt !== undefined && scheduledAt !== null && (typeof scheduledAt !== 'string' || !/(Z|[+-]\d{2}:\d{2})$/.test(scheduledAt) || !Number.isFinite(new Date(scheduledAt).getTime()))) {

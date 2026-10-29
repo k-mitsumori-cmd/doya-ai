@@ -1424,3 +1424,6 @@ if (hrPrivateJson.error || hrPrivateJson.status !== 0) { console.error('HR priva
 
 const hrDuration = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-duration.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrDuration.error || hrDuration.status !== 0) { console.error('HR one-on-one duration regression failed'); process.exit(hrDuration.status || 1); }
+
+const hrItems = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-items.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrItems.error || hrItems.status !== 0) { console.error('HR one-on-one items regression failed'); process.exit(hrItems.status || 1); }

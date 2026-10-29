@@ -6,6 +6,7 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AiInsightPanel from './AiInsightPanel'
+import { oneOnOneFormItems } from '@/lib/hr/one-on-one-items'
 
 interface AgendaItem {
   id: string
@@ -35,10 +36,10 @@ interface OneOnOneFormProps {
   employeeName?: string
   initialDate?: string
   initialDuration?: number | null
-  initialAgenda?: AgendaItem[]
-  initialManagerNote?: string
-  initialSharedNote?: string
-  initialActionItems?: ActionItem[]
+  initialAgenda?: unknown
+  initialManagerNote?: string | null
+  initialSharedNote?: string | null
+  initialActionItems?: unknown
   readOnly?: boolean
   canViewManagerNotes?: boolean
   onSave?: (data: any) => void
@@ -62,16 +63,17 @@ export default function OneOnOneForm({
   const { toast, router, live } = useHrPageLifetime()
   const [date, setDate] = useState(initialDate)
   const [duration, setDuration] = useState(initialDuration)
+  const [initialItems] = useState(() => oneOnOneFormItems(initialAgenda, initialActionItems, recordId || 'draft'))
   const [agenda, setAgenda] = useState<AgendaItem[]>(
-    (initialAgenda?.length ?? 0) > 0
-      ? initialAgenda
+    initialItems && initialItems.agenda.length > 0
+      ? initialItems.agenda
       : [{ id: crypto.randomUUID(), topic: '', category: 'BUSINESS' }]
   )
   const [managerNote, setManagerNote] = useState(initialManagerNote)
   const [sharedNote, setSharedNote] = useState(initialSharedNote)
   const [actionItems, setActionItems] = useState<ActionItem[]>(
-    (initialActionItems?.length ?? 0) > 0
-      ? initialActionItems
+    initialItems && initialItems.actionItems.length > 0
+      ? initialItems.actionItems
       : [{ id: crypto.randomUUID(), content: '', assignee: '', dueDate: '', done: false }]
   )
   const [aiResult, setAiResult] = useState<string | null>(null)
@@ -197,6 +199,8 @@ export default function OneOnOneForm({
     return handleSave()
   }
 
+  if (!initialItems) return <p role="alert">1on1の項目を読み込めませんでした。組織の管理者にご相談ください。</p>
+
   return (
     <div className="space-y-6">
       {/* Date & Duration */}
@@ -274,7 +278,7 @@ export default function OneOnOneForm({
             >
               <div className="flex gap-3 items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-bold text-slate-400 mt-2">{index + 1}</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <input
                     type="text"
                     value={item.topic}
@@ -287,8 +291,11 @@ export default function OneOnOneForm({
                     value={item.category}
                     onChange={(e) => updateAgenda(item.id, 'category', e.target.value)}
                     disabled={editingDisabled}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+                    className="max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                   >
+                    {!AGENDA_CATEGORIES.some(c => c.value === item.category) && (
+                      <option value={item.category}>{item.category || '未設定'}</option>
+                    )}
                     {AGENDA_CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
@@ -324,7 +331,7 @@ export default function OneOnOneForm({
             共有メモ（上司・部下で共有）
           </label>
           <textarea
-            value={sharedNote}
+            value={sharedNote ?? ''}
             onChange={(e) => setSharedNote(e.target.value)}
             disabled={editingDisabled}
             rows={4}
@@ -337,7 +344,7 @@ export default function OneOnOneForm({
             上司メモ（担当上司・管理者のみ閲覧可）
           </label>
           <textarea
-            value={managerNote}
+            value={managerNote ?? ''}
             onChange={(e) => setManagerNote(e.target.value)}
             disabled={editingDisabled}
             rows={3}
