@@ -69,8 +69,8 @@ export default function ShanaiNewPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {(
             [
-              { key: 'voice', icon: Mic, pose: 'focus', title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
-              { key: 'survey', icon: ClipboardList, pose: 'present', title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
+              { key: 'voice', icon: Mic, pose: 'mic', title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
+              { key: 'survey', icon: ClipboardList, pose: 'survey', title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
             ] as const
           ).map((m) => (
             <button

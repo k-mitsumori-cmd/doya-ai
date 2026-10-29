@@ -11,10 +11,12 @@
 // ⚠️ 絵文字は使わない。絵は今ある絵だけ。新しい絵は Codex の内蔵の画像生成で作る（有料の API は使わない）。
 import styles from './kun.module.css'
 
-/** public/character にあるポーズ（2026-10-29 時点の全部） */
+/** public/character にあるポーズ。新しいポーズは、絵を置いてから（scripts/kun-import-pose.py）ここに名前を足す */
 export type KunPose =
   | 'hello' | 'point' | 'working' | 'thinking' | 'ponder' | 'focus' | 'present' | 'success' | 'thumbsup' | 'love'
   | 'jump' | 'launch' | 'finish' | 'run' | 'surprise' | 'sleep' | 'ramen' | 'throw' | 'bug' | 'error'
+  // 2026-10-29 に Codex の画像生成で足した新しいポーズ（場面に合う道具を持つ）
+  | 'mic' | 'calendar' | 'write' | 'survey' | 'camera' | 'search' | 'chart' | 'money' | 'clock' | 'handshake' | 'empty'
 
 /** 小さな動き。idle: 入るだけ / work: 作業中（上下） / think: 考え中（傾く） / cheer: できた（跳ねる） */
 export type KunAct = 'idle' | 'work' | 'think' | 'cheer'
@@ -47,8 +49,8 @@ export function DoyaKun({ pose, act = 'idle', size = 96, label, say, className }
 /** 空・エラー・権限なし・準備中の種類ごとの、ドヤくんのポーズ（線のさし絵の代わり。2026-10-29 本人の承認「本物のドヤくんに替える」） */
 export const EMPTY_KUN: Record<'not-generated' | 'zero' | 'no-results' | 'error' | 'forbidden' | 'preparing', { pose: KunPose; act: KunAct }> = {
   'not-generated': { pose: 'point', act: 'idle' },
-  zero: { pose: 'hello', act: 'idle' },
-  'no-results': { pose: 'ponder', act: 'think' },
+  zero: { pose: 'empty', act: 'idle' },
+  'no-results': { pose: 'search', act: 'think' },
   error: { pose: 'error', act: 'idle' },
   forbidden: { pose: 'surprise', act: 'idle' },
   preparing: { pose: 'working', act: 'work' },

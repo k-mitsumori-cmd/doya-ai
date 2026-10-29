@@ -12,6 +12,14 @@ const ROWS: { pose: KunPose; act: KunAct; label: string }[] = [
   { pose: 'success', act: 'cheer', label: 'できた（cheer）' },
 ]
 
+/** 2026-10-29 に Codex の画像生成で足した新しいポーズ（場面と使い道） */
+const NEW_POSES: { pose: KunPose; label: string }[] = [
+  { pose: 'mic', label: 'mic（録音）' }, { pose: 'calendar', label: 'calendar（予約）' }, { pose: 'write', label: 'write（作成中）' },
+  { pose: 'survey', label: 'survey（アンケート）' }, { pose: 'camera', label: 'camera（写真）' }, { pose: 'search', label: 'search（調査中）' },
+  { pose: 'chart', label: 'chart（ダッシュボード）' }, { pose: 'money', label: 'money（金額）' }, { pose: 'clock', label: 'clock（打刻）' },
+  { pose: 'handshake', label: 'handshake（商談成立）' }, { pose: 'empty', label: 'empty（空の状態）' },
+]
+
 export default function KunPreviewBody() {
   const [round, setRound] = useState(0)
   return (
@@ -23,6 +31,14 @@ export default function KunPreviewBody() {
           <div key={r.act} style={{ display: 'grid', justifyItems: 'center', gap: 8, padding: 16, borderRadius: 16, border: '1px solid #e3eaf5', background: '#fff' }}>
             <DoyaKun pose={r.pose} act={r.act} size={112} say={r.act === 'work' ? '作っています' : undefined} />
             <span style={{ fontSize: 13, fontWeight: 700 }}>{r.label}</span>
+          </div>
+        ))}
+      </div>
+      <div key={`n${round}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+        {NEW_POSES.map((r) => (
+          <div key={r.pose} style={{ display: 'grid', justifyItems: 'center', gap: 6, padding: 12, borderRadius: 16, border: '1px solid #e3eaf5', background: '#fff' }}>
+            <DoyaKun pose={r.pose} act="idle" size={100} />
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{r.label}</span>
           </div>
         ))}
       </div>
