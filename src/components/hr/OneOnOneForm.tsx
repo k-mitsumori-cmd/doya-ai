@@ -278,7 +278,7 @@ export default function OneOnOneForm({
             >
               <div className="flex gap-3 items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-bold text-slate-400 mt-2">{index + 1}</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <input
                     type="text"
                     value={item.topic}
@@ -291,7 +291,7 @@ export default function OneOnOneForm({
                     value={item.category}
                     onChange={(e) => updateAgenda(item.id, 'category', e.target.value)}
                     disabled={editingDisabled}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+                    className="max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                   >
                     {!AGENDA_CATEGORIES.some(c => c.value === item.category) && (
                       <option value={item.category}>{item.category || '未設定'}</option>
