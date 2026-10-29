@@ -70,3 +70,9 @@ export function useEmptyKun(kind: keyof typeof EMPTY_KUN): { pose: KunPose; act:
   }
   return EMPTY_KUN[kind]
 }
+
+/** 空の状態のドヤくん（フックを使う部分だけを、この小さなクライアント部品に分けた。EmptyState 本体はサーバーの部品のまま使える。props は文字・数だけ） */
+export function EmptyKun({ kind, size = 150, className }: { kind: keyof typeof EMPTY_KUN; size?: number; className?: string }) {
+  const kun = useEmptyKun(kind)
+  return <DoyaKun pose={kun.pose} act={kun.act} size={size} className={className} />
+}

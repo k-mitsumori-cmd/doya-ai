@@ -1,5 +1,4 @@
-'use client'
-import { DoyaKun, useEmptyKun } from '@/components/ds/kun'
+import { EmptyKun } from '@/components/ds/kun'
 import type { ReactNode } from 'react'
 
 export type EmptyStateKind = 'not-generated' | 'zero' | 'no-results' | 'error' | 'forbidden' | 'preparing'
@@ -20,10 +19,9 @@ export function EmptyState({
   tone?: 'light' | 'dark'
 }) {
   const dark = tone === 'dark'
-  const kun = useEmptyKun(kind)
   return <section className="mx-auto flex max-w-xl flex-col items-center px-5 py-10 text-center">
     {/* 線のさし絵の代わりに、種類に合った本物のドヤくんを置く（2026-10-29 本人の承認） */}
-    <DoyaKun pose={kun.pose} act={kun.act} size={160} className={dark ? 'opacity-90' : ''} />
+    <EmptyKun kind={kind} size={160} className={dark ? 'opacity-90' : ''} />
     <h2 className={`mt-5 text-xl font-black ${dark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
     {description && (
       <p className={`mt-2 max-w-md text-sm font-medium leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
