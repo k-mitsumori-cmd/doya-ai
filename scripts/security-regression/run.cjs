@@ -1471,3 +1471,6 @@ if (interviewWordpressExport.error || interviewWordpressExport.status !== 0) pro
 
 const interviewTextExports = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-text-exports.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewTextExports.error || interviewTextExports.status !== 0) process.exit(interviewTextExports.status || 1);
+
+const spreadsheetXmlCharacters = spawnSync(process.execPath, [path.join(__dirname, 'verify-spreadsheet-xml-characters.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (spreadsheetXmlCharacters.error || spreadsheetXmlCharacters.status !== 0) process.exit(spreadsheetXmlCharacters.status || 1);
