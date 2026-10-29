@@ -22,3 +22,18 @@ export function kunSrcSet(pose: KunPose | `mascot:${string}`): string | undefine
   return `/character/${pose}-256.webp 256w, /character/${pose}-512.webp 512w`
 }
 
+
+/** ツールごとの空の状態の絵（ツール固有。無いツールは種類ごとの絵 EMPTY_KUN を使う） */
+export const TOOL_KUN: Record<string, KunPose> = {
+  banner: 'tool-banner', adimage: 'tool-adimage', persona: 'tool-persona', asklink: 'tool-asklink', popup: 'tool-popup', tenjikai: 'tool-tenjikai',
+  aishodan: 'tool-aishodan', doyalist: 'tool-doyalist', promane: 'tool-promane', shanai: 'tool-shanai', income: 'tool-income',
+  // すでにある絵を、ツールの中身に合わせて使う
+  kintai: 'clock', aio: 'search', shodan: 'search', seo: 'write', quote: 'write', interview: 'mic', mensetsu: 'mic', expense: 'money',
+  sfa: 'handshake', doyaslide: 'present', hr: 'survey',
+}
+
+/** URL の道（/banner/dashboard など）から、ツールの名前（最初の段）を取り出す。ツールでなければ '' */
+export function toolOfPath(pathname: string | null | undefined): string {
+  const seg = (pathname ?? '').split('?')[0].split('/').filter(Boolean)[0] ?? ''
+  return Object.prototype.hasOwnProperty.call(TOOL_KUN, seg) ? seg : ''
+}

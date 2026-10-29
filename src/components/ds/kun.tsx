@@ -10,8 +10,9 @@
 // - 展示会の待ち画面など、ほかの画面でも同じ部品を使う（ポーズの絵が足りないときは、作る絵の一覧に足す）。
 // ⚠️ 絵文字は使わない。絵は今ある絵だけ。新しい絵は Codex の内蔵の画像生成で作る（有料の API は使わない）。
 import styles from './kun.module.css'
-import { kunSrc, kunSrcSet } from './kun-src'
-export { kunSrc, kunSrcSet } from './kun-src'
+import { kunSrc, kunSrcSet, TOOL_KUN, toolOfPath } from './kun-src'
+import { usePathname } from 'next/navigation'
+export { kunSrc, kunSrcSet, TOOL_KUN, toolOfPath } from './kun-src'
 
 /** public/character にあるポーズ。新しいポーズは、絵を置いてから（scripts/kun-import-pose.py）ここに名前を足す */
 export type KunPose =
@@ -59,11 +60,13 @@ export const EMPTY_KUN: Record<'not-generated' | 'zero' | 'no-results' | 'error'
   preparing: { pose: 'working', act: 'work' },
 }
 
-/** ツールごとの空の状態の絵（ツール固有。無いツールは undefined → 種類ごとの絵 EMPTY_KUN を使う） */
-export const TOOL_KUN: Record<string, KunPose> = {
-  banner: 'tool-banner', adimage: 'tool-adimage', persona: 'tool-persona', asklink: 'tool-asklink', popup: 'tool-popup', tenjikai: 'tool-tenjikai',
-  aishodan: 'tool-aishodan', doyalist: 'tool-doyalist', promane: 'tool-promane', shanai: 'tool-shanai', income: 'tool-income',
-  // すでにある絵を、ツールの中身に合わせて使う
-  kintai: 'clock', aio: 'search', shodan: 'search', seo: 'write', quote: 'write', interview: 'mic', mensetsu: 'mic', expense: 'money',
-  sfa: 'handshake', doyaslide: 'present', hr: 'survey',
+/** 空の状態の絵。ツールの画面（URL の最初の段がツール）で、中身が空・まだ作っていないときは、そのツール固有の絵を出す。
+ *  エラー・権限なし・検索の結果なし・準備中は、はっきり伝わる共通の絵のまま */
+export function useEmptyKun(kind: keyof typeof EMPTY_KUN): { pose: KunPose; act: KunAct } {
+  const path = usePathname()
+  if (kind === 'zero' || kind === 'not-generated') {
+    const pose = TOOL_KUN[toolOfPath(path)]
+    if (pose) return { pose, act: 'idle' }
+  }
+  return EMPTY_KUN[kind]
 }
