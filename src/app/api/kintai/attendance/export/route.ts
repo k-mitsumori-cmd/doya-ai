@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '出力形式が正しくありません' }, { status: 400 })
     }
 
-    const jstOffset = 9 * 60 * 60 * 1000
-    const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffset)
-    const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffset)
+    // attendance.date is SQL DATE: use calendar-date boundaries, not JST instants.
+    const monthStart = new Date(Date.UTC(year, month - 1, 1))
+    const monthEnd = new Date(Date.UTC(year, month, 1))
 
     const employees = await prisma.kintaiEmployee.findMany({
       // 退職・無効化後でも、対象月に勤怠がある従業員は過去月の出力に含める。
