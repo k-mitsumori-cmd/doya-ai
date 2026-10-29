@@ -2,6 +2,7 @@
 
 // 契約の登録・編集フォーム、単価の入力欄
 import { useEffect, useState } from 'react'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -101,6 +102,20 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
   }, [mode, autoOpened, vendors.data])
   const [vendor, setVendor] = useState<VendorDraft>(emptyVendor(contractor0 ? { kind: 'individual', withholdingDefault: true } : {}))
   const [price, setPrice] = useState<PriceDraft>(emptyPrice())
+  // ドヤAIの「頼む」から来たときは、読み取った名称・金額（円）・開始日を入れた状態にする（保存は本人が押す）
+  const [draftYen, setDraftYen] = useState('')
+  useDoyaPrefill((read) => {
+    if (mode !== 'create') return
+    const title = read('title'), amount = read('amount', 'yen'), start = read('start', 'date')
+    if (title || start) setF((p) => ({ ...p, title: title || p.title, startDate: start || p.startDate }))
+    if (amount) { setPrice((p) => ({ ...p, unitPrice: amount, effectiveFrom: start || p.effectiveFrom })); setDraftYen(amount) }
+  })
+  // ドヤAIが入れた金額は円。通貨をドルなどに変えたら、円の金額を残さない（そのままドルとして登録されないように）
+  useEffect(() => {
+    if (!draftYen || f.currency === 'JPY') return
+    setPrice((p) => (p.unitPrice === draftYen ? { ...p, unitPrice: '' } : p))
+    setDraftYen('')
+  }, [f.currency, draftYen])
   const [busy, setBusy] = useState(false)
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 

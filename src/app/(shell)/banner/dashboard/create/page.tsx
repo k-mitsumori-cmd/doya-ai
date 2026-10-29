@@ -30,6 +30,7 @@ import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import { ShellCostBadge } from '@/components/shell/power'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -856,6 +857,8 @@ function BannerDashboardWorkspace() {
   const [purpose, setPurpose] = useState('sns_ad')
   const [category, setCategory] = useState('')
   const [keyword, setKeyword] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const k = read('keyword'); if (k) setKeyword(k) })
   const [imageDescription, setImageDescription] = useState('') // 詳細テキスト（イメージ説明）
   const [size, setSize] = useState('1080x1080')
   const [useCustomSize, setUseCustomSize] = useState(false)

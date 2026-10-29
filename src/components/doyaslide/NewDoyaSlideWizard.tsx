@@ -32,6 +32,7 @@ import { ShellCostBadge } from '@/components/shell/power'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { Briefcase, Building2, FileText, Mic, Rocket, Smartphone, Sparkles, Users, type LucideIcon } from 'lucide-react'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 // 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
 const DOC_TYPE_ICON: Record<string, LucideIcon> = {
@@ -134,6 +135,8 @@ export default function NewDoyaSlideWizard() {
   const [importedUrl, setImportedUrl] = useState('')
   const [urlNotice, setUrlNotice] = useState('')
   const [urlPending, setUrlPending] = useState(false)
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const t = read('theme'); if (t) { setTitle(t); setTitleEdited(true) } })
   const [urlSavedResult, setUrlSavedResult] = useState<UrlAnalysisSavedResult | null>(null)
   const urlRequestRef = useRef<AbortController | null>(null)
   const urlCancelRef = useRef<AbortController | null>(null)

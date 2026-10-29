@@ -37,6 +37,7 @@ lazyReal('@/lib/company-roles/access.server',()=>({ceilToolRole:async(i)=>i.tool
 DEFAULT_MOCKS['@/lib/doyaslide/generation-operation']={DOYASLIDE_OPERATION_LEASE_MS:15*60*1000,DOYASLIDE_STRUCTURE_STALE_MS:6*60*1000,isDoyaSlideStaleCandidate:()=>false,settleStaleDoyaSlideProject:async()=>'none'};
 // 「これ1つで全部進む」帯（旗 ONE_BUTTON_ROLLOUT）は、各画面のテストでは旗が off と同じ（帯を出さない）として通す。
 // 帯そのものは verify-one-button.cjs と src/lib/one-button/flag.test.ts が確かめる（2026-10-27）
+DEFAULT_MOCKS['@/components/agent-router/useDoyaPrefill']={useDoyaPrefill:()=>{}};
 DEFAULT_MOCKS['@/components/one-button/context']={useOneButton:()=>false,OneButtonContext:{Provider:({children})=>children}};
 DEFAULT_MOCKS['@/components/one-button/OneButtonBar']={OneButtonBar:()=>null};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};

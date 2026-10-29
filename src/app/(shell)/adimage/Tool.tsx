@@ -31,6 +31,7 @@ import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
 import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 interface PlacementRow {
   key: string
@@ -93,6 +94,8 @@ export default function AdImageTool() {
    */
   const [url, setUrl] = useState('')
   const [appeal, setAppeal] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), a = read('appeal'); if (u) setUrl(u); if (a) setAppeal(a) })
   const [analyzing, setAnalyzing] = useState(false)
   const [useManualText, setUseManualText] = useState(false)
   const [manualText, setManualText] = useState('')

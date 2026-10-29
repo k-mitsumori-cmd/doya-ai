@@ -20,6 +20,7 @@ import { FirstSteps } from '@/components/ds/feedback'
 import { Check, Circle, X } from 'lucide-react'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 export interface Company {
   id?: string
@@ -120,6 +121,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
   const [prefecture, setPrefecture] = useState('')
   const [size, setSize] = useState('指定なし')
   const [keywords, setKeywords] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const k = read('keywords'), p = read('prefecture'); if (k) setKeywords(k); if (p) setPrefecture(p) })
   const [countInput, setCountInput] = useState('100')
   useEffect(() => {
     const defaults = readDoyalistPreferences()

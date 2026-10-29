@@ -14,6 +14,7 @@ import { ToolHero } from '@/components/ds'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { FirstSteps } from '@/components/ds/feedback'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 const LOADING_STEPS = ['サイトを読み取っています', '「AIに聞く」の質問文を作っています', 'ポップアップの案をまとめています']
 
@@ -68,6 +69,8 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
   const inShell = useInPopupShell()
   // 新しい見た目（UI 品質の直し。チェックリスト §5.1）
   const [url, setUrl] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)

@@ -18,6 +18,14 @@
 .head { grid-column: 1 / -1; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 4px 0 4px; }
 .headGreeting { margin: 0; font-size: 13px; font-weight: 700; color: var(--sub); letter-spacing: .04em; }
 .headCompany { display: flex; justify-content: center; }
+/* 見出しと、その右のドヤくん（入力の画面だけ） */
+.headRow { display: flex; align-items: center; justify-content: center; gap: 12px; }
+/* 絵の左右に約2割の余白があるので、横の余白を詰める（720×600 のうち、クマは 136〜583px） */
+.headKun { width: 138px; height: auto; margin: -14px -26px -10px; flex: none; filter: drop-shadow(0 6px 12px rgba(0, 102, 255, 0.18)); animation: headKunIn .5s var(--ease, ease) both; }
+@keyframes headKunIn { from { opacity: 0; transform: translateY(6px) scale(.96); } }
+/* 入力の画面では、左の大きなクマを出さず、入力欄を横いっぱいに広げる（2026-10-28 本人の指示） */
+.stage[data-scene='input'] { grid-template-columns: minmax(0, 1fr); }
+.stage[data-scene='input'] .hero { display: none; }
 .headTitle { margin: 0; font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; color: var(--ink); text-wrap: balance; }
 .hero { position: sticky; top: 16px; z-index: 2; display: grid; justify-items: center; gap: 10px; }
 .kun { position: relative; width: 220px; aspect-ratio: 1; }
@@ -149,6 +157,8 @@
 .memory b { font-size: 14px; }
 
 @media (max-width: 860px) {
+  .headKun { width: 90px; margin: -8px -17px -6px; }
+  .headRow { gap: 8px; }
   .stage { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 12px; min-height: 0; }
   .hero { position: static; grid-template-columns: 88px minmax(0, 1fr); justify-items: start; align-items: center; order: 2; }
   /* スマホでは、見出し → 入力 → 前回の続き の順に先に出し、ドヤくんはその下にする */
@@ -173,6 +183,7 @@
   .gap dd { font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .headKun { animation: none; }
   .stage *, .stage *::before, .stage *::after { animation: none !important; transition: none !important; }
 }
 
