@@ -160,3 +160,30 @@ export function pickFavorites(recentIds: readonly string[], known: readonly stri
   }
   return out
 }
+
+// ---- パネルの中身（見本の仮のもの）----
+/** 数字を押したときに出す、内訳（見本の仮の数字） */
+export function metricBreakdown(label: string): { name: string; value: number; text: string }[] {
+  const table: Record<string, { name: string; value: number; text: string }[]> = {
+    今月の売上: [{ name: 'Web制作', value: 62, text: '796万円' }, { name: '運用・保守', value: 28, text: '360万円' }, { name: 'ほか', value: 10, text: '128万円' }],
+    '入金予定（今週）': [{ name: '3日（水）', value: 40, text: '125万円' }, { name: '5日（金）', value: 60, text: '187万円' }],
+    今月の支出: [{ name: '外注費', value: 55, text: '465万円' }, { name: 'ツール費', value: 25, text: '212万円' }, { name: '家賃・光熱', value: 20, text: '169万円' }],
+    進行中の商談: [{ name: '提案前', value: 35, text: '8件' }, { name: '見積提出', value: 48, text: '11件' }, { name: '契約待ち', value: 17, text: '4件' }],
+    採用の進み: [{ name: '書類選考', value: 50, text: '6人' }, { name: '面接中', value: 33, text: '4人' }, { name: '内定', value: 17, text: '2人' }],
+  }
+  return table[label] ?? [{ name: label, value: 100, text: '—' }]
+}
+
+export const DECISION_DETAIL: Record<string, { lines: string[]; primary: string; secondary: string }> = {
+  d1: { lines: ['サンプル商事 330,000円（Webサイト保守・11月分）', 'テスト工業 165,000円（バナー制作）', '承認すると、請求書が確定し、送付の準備ができます。'], primary: '2通を承認する', secondary: '1通ずつ見る' },
+  d2: { lines: ['応募者: 山田 花子さん（営業職・一次面接を実施）', '結果の返事は、昨日までにお返しする約束です。', 'ドヤくんが、結果のお知らせの下書きを用意できます。'], primary: '下書きを作る', secondary: 'あとで' },
+  d3: { lines: ['ABC株式会社 Webサイト制作の見積（税抜 930,000円）', '見積の期限は明日です。まだ送られていません。', '内容を確かめて、そのまま送る準備に進めます。'], primary: '見積を確かめる', secondary: 'あとで' },
+}
+
+/** 部署の報告を押したときの詳しい中身 */
+export const REPORT_DETAIL: Record<DepartmentId, { points: string[]; next: string }> = {
+  marketing: { points: ['バナーのクリック率が先週より 0.4 ポイント下がっています', 'いちばん反応が良かったのは「春のキャンペーン」の青い案です', 'AI検索での言及率は 2 ポイント上がりました'], next: '新しいバナー案を3つ作る' },
+  sales: { points: ['今週の商談は5件です', '見積の期限が明日のものが1件あります（ABC株式会社）', '先週の成約は2件でした'], next: '期限が近い見積を確かめる' },
+  hr: { points: ['今週の面接は3件です', '応募者1人に、結果の返事が要ります', '勤怠の申請が2件、承認待ちです'], next: '返事の下書きを作る' },
+  admin: { points: ['今月の支出は、予算の 81% です', '承認待ちの請求書が2通あります', '入金予定は、今週 312万円です'], next: '請求書を承認する' },
+}
