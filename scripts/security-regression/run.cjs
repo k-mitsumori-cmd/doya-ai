@@ -1477,3 +1477,6 @@ if (spreadsheetXmlCharacters.error || spreadsheetXmlCharacters.status !== 0) pro
 
 const asklinkCopyRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-asklink-copy-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (asklinkCopyRecovery.error || asklinkCopyRecovery.status !== 0) process.exit(asklinkCopyRecovery.status || 1);
+
+const personaOutputRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-persona-output-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personaOutputRecovery.error || personaOutputRecovery.status !== 0) process.exit(personaOutputRecovery.status || 1);
