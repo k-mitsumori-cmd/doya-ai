@@ -1436,3 +1436,6 @@ if (watchBudget.error || watchBudget.status !== 0) { console.error('System watch
 
 const devStateShell = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-dev-state-shell.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (devStateShell.error || devStateShell.status !== 0) { console.error('Dev state shell regression failed'); process.exit(devStateShell.status || 1); }
+
+const incomeRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (incomeRouteCache.error || incomeRouteCache.status !== 0) { console.error('Income route cache regression failed'); process.exit(incomeRouteCache.status || 1); }

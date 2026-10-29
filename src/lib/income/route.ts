@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth'
 import { errorResponse, forbidden, getIncomeContext, hasMinRole, unauthorized, type IncomeContext, type IncomeRole } from './access'
 import { authorizeCompanyActionForSession } from '@/lib/company-roles/access.server'
 import type { CompanyPermission } from '@/lib/company-roles/permissions'
+import { privateApiResponse } from '@/lib/private-api-response'
 
 /**
  * ログイン・組織・ロールを確かめてから fn を実行する。業務エラーは 400 系、それ以外は 500。
@@ -18,16 +19,16 @@ export async function withIncome(req: NextRequest, minRole: IncomeRole, fn: (ctx
     if (!ctx) {
       // ログイン済みで組織を引けない＝指定した組織の所属が無い・無効化された。ログイン切れとは分ける
       const session = await getServerSession(authOptions)
-      return session?.user ? forbidden('この組織を見る権限がありません') : unauthorized()
+      return privateApiResponse(session?.user ? forbidden('この組織を見る権限がありません') : unauthorized())
     }
-    if (!hasMinRole(ctx.role, minRole)) return forbidden()
+    if (!hasMinRole(ctx.role, minRole)) return privateApiResponse(forbidden())
     if (opts.permission) {
       const company = await authorizeCompanyActionForSession({ userId: ctx.userId, permission: opts.permission, scope: { tool: 'income', organizationId: ctx.organizationId } })
-      if (!company.allowed) return forbidden('この操作は、会社の決まりで許されていません。会社の管理者に依頼してください。')
+      if (!company.allowed) return privateApiResponse(forbidden('この操作は、会社の決まりで許されていません。会社の管理者に依頼してください。'))
     }
-    return await fn(ctx)
+    return privateApiResponse(await fn(ctx))
   } catch (error) {
-    return errorResponse(error)
+    return privateApiResponse(errorResponse(error))
   }
 }
 
