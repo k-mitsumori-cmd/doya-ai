@@ -19,6 +19,12 @@ export type KunPose =
   | 'jump' | 'launch' | 'finish' | 'run' | 'surprise' | 'sleep' | 'ramen' | 'throw' | 'bug' | 'error'
   // 2026-10-29 に Codex の画像生成で足した新しいポーズ（場面に合う道具を持つ）
   | 'mic' | 'calendar' | 'write' | 'survey' | 'camera' | 'search' | 'chart' | 'money' | 'clock' | 'handshake' | 'empty'
+  // 2026-10-29 に Codex の画像生成で足した絵: 小さく表示する用・部署長・状態・数字のカード・ツール固有
+  | 'mini-hello' | 'mini-point' | 'mini-working'
+  | 'lead-marketing' | 'lead-sales' | 'lead-hr' | 'lead-admin'
+  | 'waiting' | 'report' | 'todo' | 'locked'
+  | 'kpi-sales' | 'kpi-incoming' | 'kpi-spend' | 'kpi-deals' | 'kpi-hiring'
+  | 'tool-banner' | 'tool-adimage' | 'tool-persona' | 'tool-asklink' | 'tool-popup' | 'tool-tenjikai' | 'tool-aishodan' | 'tool-doyalist' | 'tool-promane' | 'tool-shanai' | 'tool-income'
 
 /** 小さな動き。idle: 入るだけ / work: 作業中（上下） / think: 考え中（傾く） / cheer: できた（跳ねる） */
 export type KunAct = 'idle' | 'work' | 'think' | 'cheer'
@@ -49,6 +55,15 @@ export const EMPTY_KUN: Record<'not-generated' | 'zero' | 'no-results' | 'error'
   zero: { pose: 'empty', act: 'idle' },
   'no-results': { pose: 'search', act: 'think' },
   error: { pose: 'error', act: 'idle' },
-  forbidden: { pose: 'surprise', act: 'idle' },
+  forbidden: { pose: 'locked', act: 'idle' },
   preparing: { pose: 'working', act: 'work' },
+}
+
+/** ツールごとの空の状態の絵（ツール固有。無いツールは undefined → 種類ごとの絵 EMPTY_KUN を使う） */
+export const TOOL_KUN: Record<string, KunPose> = {
+  banner: 'tool-banner', adimage: 'tool-adimage', persona: 'tool-persona', asklink: 'tool-asklink', popup: 'tool-popup', tenjikai: 'tool-tenjikai',
+  aishodan: 'tool-aishodan', doyalist: 'tool-doyalist', promane: 'tool-promane', shanai: 'tool-shanai', income: 'tool-income',
+  // すでにある絵を、ツールの中身に合わせて使う
+  kintai: 'clock', aio: 'search', shodan: 'search', seo: 'write', quote: 'write', interview: 'mic', mensetsu: 'mic', expense: 'money',
+  sfa: 'handshake', doyaslide: 'present', hr: 'survey',
 }
