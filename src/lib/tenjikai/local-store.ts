@@ -2,7 +2,7 @@
 // サーバーには保存しない暫定の手当て（本命の設計: docs/architecture/TENJIKAI-PERSISTENCE.md）。
 // ⚠️ 利用者ごとにキーを分ける（同じ端末で別のアカウントに切り替えても、前の人の内容を出さない）。
 // ⚠️ localStorage は読めない・書けないことがある（プライベート窓・容量超過）。すべて try/catch し、失敗しても画面は動かす。
-import type { GeneratedPlan, ProjectInput } from './engine'
+import { BOOTH_SIZE_LIMIT, boothSize, isValidBoothMeter, type GeneratedPlan, type ProjectInput } from './engine'
 
 export const STORE_VERSION = 1
 
@@ -34,23 +34,68 @@ const isDataUrl = (s: string) => s.startsWith('data:')
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** 保存した内容を読む。無い・壊れている・版が違うときは null */
-export function loadProject(userId: string | null | undefined, store: KeyValueStore | null = browserStore()): SavedProject | null {
-  if (!store) return null
+const strings = (value: Record<string, unknown>, keys: string[]) => keys.every(key => typeof value[key] === 'string')
+const positiveInteger = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+const finiteNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+const oneOf = (value: unknown, values: string[]) => typeof value === 'string' && values.includes(value)
+
+function validInput(value: unknown): value is ProjectInput {
+  if (!isRecord(value) || !strings(value, ['serviceUrl', 'eventName', 'venueId', 'eventStart'])) return false
+  if (!oneOf(value.position, ['inline', 'corner', 'peninsula', 'island']) || !oneOf(value.goal, ['lead', 'brand', 'demo'])) return false
+  if (!['days', 'komaCols', 'komaRows', 'staff'].every(key => positiveInteger(value[key]))) return false
+  if (!finiteNumber(value.budgetYen) || (value.budgetYen as number) < 0) return false
+  if (!['widthM', 'depthM'].every(key => value[key] === undefined || isValidBoothMeter(value[key]))) return false
+  const size = boothSize(value as unknown as ProjectInput)
+  if (![size.w, size.d].every(meters => Number.isFinite(meters) && meters >= BOOTH_SIZE_LIMIT.minM && meters <= BOOTH_SIZE_LIMIT.maxM)) return false
+  const start = value.eventStart as string
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return false
+  const date = new Date(`${start}T00:00:00Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === start
+    && Number.isFinite(new Date(date.getTime() + (value.days as number) * 86_400_000).getTime())
+}
+
+function validCopy(value: unknown, keys: string[], fields: string[]): boolean {
+  return isRecord(value) && keys.every(key => value[key] === undefined || (isRecord(value[key]) && strings(value[key], fields)))
+}
+
+function validGenerated(value: unknown): value is GeneratedPlan {
+  if (!isRecord(value) || !oneOf(value.source, ['ai', 'mock']) || (value.notice !== undefined && typeof value.notice !== 'string')) return false
+  const analysis = value.analysis
+  if (!isRecord(analysis) || !strings(analysis, ['brand', 'domain', 'category', 'headline', 'subline', 'tone'])) return false
+  if (!Array.isArray(analysis.valueProps) || analysis.valueProps.length < 3 || !analysis.valueProps.every(item => isRecord(item) && strings(item, ['title', 'body']))) return false
+  if (!Array.isArray(analysis.targets) || !analysis.targets.every(item => typeof item === 'string')) return false
+  if (!isRecord(analysis.colors) || !strings(analysis.colors, ['primary', 'secondary', 'accent'])) return false
+  return validCopy(value.boothCopy, ['A', 'B', 'C'], ['name', 'concept', 'flow'])
+    && validCopy(value.creativeCopy, ['backwall', 'rollup', 'flyer', 'clearfile', 'card', 'loop'], ['copy', 'purpose'])
+}
+
+export type ProjectLoadResult =
+  | { status: 'ready'; project: SavedProject }
+  | { status: 'missing' | 'invalid' | 'unavailable'; project: null }
+
+/** Read without deleting or rewriting malformed content, so recovery can be retried. */
+export function loadProjectResult(userId: string | null | undefined, store: KeyValueStore | null = browserStore()): ProjectLoadResult {
+  if (!store) return { status: 'unavailable', project: null }
+  let raw: string | null
+  try { raw = store.getItem(storeKey(userId)) } catch { return { status: 'unavailable', project: null } }
+  if (raw === null) return { status: 'missing', project: null }
   try {
-    const raw = store.getItem(storeKey(userId))
-    if (!raw) return null
     const p: unknown = JSON.parse(raw)
-    if (!isRecord(p) || p.v !== STORE_VERSION) return null
-    if (!isRecord(p.input) || !isRecord(p.generated) || !isRecord((p.generated as Record<string, unknown>).analysis)) return null
-    if (p.variant !== 'A' && p.variant !== 'B' && p.variant !== 'C') return null
-    if (!Array.isArray(p.selectedNovelty) || !p.selectedNovelty.every((x) => typeof x === 'string')) return null
+    if (!isRecord(p) || p.v !== STORE_VERSION || !finiteNumber(p.savedAt) || !validInput(p.input) || !validGenerated(p.generated)
+      || !oneOf(p.variant, ['A', 'B', 'C']) || !Array.isArray(p.selectedNovelty) || !p.selectedNovelty.every(x => typeof x === 'string')) {
+      return { status: 'invalid', project: null }
+    }
     const images: Record<string, string> = {}
     if (isRecord(p.panelImages)) for (const [k, v] of Object.entries(p.panelImages)) if (typeof v === 'string') images[k] = v
-    return { ...(p as unknown as SavedProject), panelImages: images }
+    return { status: 'ready', project: { ...(p as unknown as SavedProject), panelImages: images } }
   } catch {
-    return null
+    return { status: 'invalid', project: null }
   }
+}
+
+/** Compatibility reader for callers that only need a valid saved project. */
+export function loadProject(userId: string | null | undefined, store: KeyValueStore | null = browserStore()): SavedProject | null {
+  return loadProjectResult(userId, store).project
 }
 
 export type SaveResult = 'saved' | 'saved-without-images' | 'failed'

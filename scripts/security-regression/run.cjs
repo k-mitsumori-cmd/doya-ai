@@ -1462,3 +1462,6 @@ if (doyalistCorporateXml.error || doyalistCorporateXml.status !== 0) { console.e
 
 const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(tenjikaiActorScope.status || 1);
+
+const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exit(tenjikaiLocalRestore.status || 1);
