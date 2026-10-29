@@ -29,7 +29,13 @@ type ClientItem = {
   activeCount: number;
 };
 
-export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspaceSlug: string; workspaceId: string; clients: ClientItem[] }) {
+type ClientActionsProps = { workspaceSlug: string; workspaceId: string; clients: ClientItem[] };
+
+export function ClientActions({ canWrite, ...props }: ClientActionsProps & { canWrite: boolean }) {
+  return canWrite ? <EditableClientActions {...props} /> : <ClientActionsContent {...props} />;
+}
+
+function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientActionsProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyClientDraft);
@@ -112,8 +118,7 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
         </div>
   ) : null;
 
-  return (
-    <>
+  return <ClientActionsContent clients={clients} form={<>
       {!open && recoveryPanel}
       <div className="mb-6 animate-slide-up stagger-1">
         <Dialog open={open} onOpenChange={setOpen}>
@@ -164,11 +169,18 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
         </Dialog>
       </div>
 
+</>} onDelete={handleDelete} confirmation={<ConfirmDialog />} />;
+}
+
+function ClientActionsContent({ clients, form, onDelete, confirmation }: Pick<ClientActionsProps, "clients"> & { form?: React.ReactNode; onDelete?: (id: string, name: string) => void; confirmation?: React.ReactNode }) {
+  return (
+    <>
+      {form}
       {clients.length === 0 ? (
         <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm py-24 text-center animate-bounce-in">
           <Image src="/character/surprise.png" alt="" width={120} height={120} className="mx-auto animate-float" unoptimized />
           <p className="mt-4 text-[20px] font-black text-gray-400">まだ顧客がいないよ</p>
-          <p className="text-[15px] text-gray-300 font-bold mt-1">顧客を追加して案件を紐づけよう！</p>
+          <p className="text-[15px] text-gray-300 font-bold mt-1">{onDelete ? "顧客を追加して案件を紐づけよう！" : "まだ顧客が登録されていません。"}</p>
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -184,9 +196,9 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
                     {client.contactName && <p className="flex items-center gap-1 text-[13px] font-bold text-gray-400"><User className="h-3.5 w-3.5" aria-hidden />{client.contactName}</p>}
                   </div>
                 </div>
-                <button type="button" aria-label={`${client.name}を削除する`} onClick={() => handleDelete(client.id, client.name)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                {onDelete && <button type="button" aria-label={`${client.name}を削除する`} onClick={() => onDelete?.(client.id, client.name)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </button>}
               </div>
               {client.email && <p className="flex items-center gap-1 text-[13px] font-bold text-gray-400 mb-1 break-all"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />{client.email}</p>}
               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
@@ -199,7 +211,7 @@ export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspa
           ))}
         </div>
       )}
-      <ConfirmDialog />
+      {confirmation}
     </>
   );
 }

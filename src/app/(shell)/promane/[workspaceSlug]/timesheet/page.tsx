@@ -1,8 +1,9 @@
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { Prisma } from '@prisma/client';
 import Link from 'next/link';
 import { parseTimesheetQuery, readTimesheet } from '@/lib/promane/timesheet-read';
-import { requirePromaneAuth } from "@/lib/promane/auth";
+import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { TimesheetView } from "@/components/promane/timesheet-view";
@@ -12,6 +13,8 @@ export default async function TimesheetPage({ params, searchParams }: { params: 
   const userId = session.user?.id;
   if (!userId) redirect('/promane');
   const { workspaceSlug } = await params;
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) redirect('/promane');
   let query: ReturnType<typeof parseTimesheetQuery>;
   try { query = parseTimesheetQuery(await searchParams) }
   catch { return <div role="alert" className="p-8">表示条件を確認できませんでした。<Link className="underline" href={`/promane/${workspaceSlug}/timesheet`}>タイムシートを読み直す</Link></div> }
@@ -42,6 +45,7 @@ export default async function TimesheetPage({ params, searchParams }: { params: 
         <Link className="underline" href={`/promane/${workspaceSlug}/timesheet`}>全期間を表示</Link>
       </form>
       <TimesheetView
+        canWrite={canWritePromaneWorkspace(workspace.members[0]?.role)}
         workspaceSlug={workspaceSlug}
         workspaceId={result.workspaceId}
         memberId={result.memberId}

@@ -25,7 +25,8 @@ type Row = {
   assignees: string[]
 }
 
-export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRevenue, avgProfitRate }: {
+export default function ProjectsNext({ canWrite, workspaceSlug, rows, activeCount, totalRevenue, avgProfitRate }: {
+  canWrite: boolean
   workspaceSlug: string
   rows: Row[]
   activeCount: number
@@ -45,16 +46,16 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
           <h2 className="text-xl font-bold text-slate-900">プロジェクト一覧</h2>
           <p className="mt-1 text-sm text-slate-600">案件ごとの予算・進み具合・利益率を並べます。</p>
         </div>
-        <Button href={newHref} icon="Plus">新規プロジェクト</Button>
+        {canWrite && <Button href={newHref} icon="Plus">新規プロジェクト</Button>}
       </div>
 
       {rows.length === 0 ? (
         <Card>
           <EmptyState
             title="まだプロジェクトはありません"
-            description="顧客・予算・期間を入れてプロジェクトをつくると、ここで収支と進み具合を比べられます。"
+            description={canWrite ? "顧客・予算・期間を入れてプロジェクトをつくると、ここで収支と進み具合を比べられます。" : "登録されたプロジェクトの収支と進み具合をここで確認できます。"}
             art={PROMANE_UI_NEXT_ART.empty}
-            action={<Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button>}
+            action={canWrite ? <Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button> : undefined}
           />
         </Card>
       ) : (

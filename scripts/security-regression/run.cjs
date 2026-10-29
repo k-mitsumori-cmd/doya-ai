@@ -1445,3 +1445,6 @@ if (expenseRouteCache.error || expenseRouteCache.status !== 0) { console.error('
 
 const promaneRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-promane-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (promaneRouteCache.error || promaneRouteCache.status !== 0) { console.error('Promane route cache regression failed'); process.exit(promaneRouteCache.status || 1); }
+
+const promaneReadonlyUi = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-readonly-ui.cjs")], { stdio: "inherit", timeout: 60000 });
+if (promaneReadonlyUi.error || promaneReadonlyUi.status !== 0) { console.error("Promane readonly UI regression failed"); process.exit(promaneReadonlyUi.status || 1); }

@@ -15,13 +15,15 @@ export function KanbanColumn({
   title,
   count,
   children,
+  disabled = false,
 }: {
   id: string;
   title: string;
   count: number;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id, disabled });
 
   return (
     <div

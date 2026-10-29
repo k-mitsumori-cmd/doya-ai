@@ -1,3 +1,4 @@
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +29,7 @@ export default async function ClientsPage({ params }: { params: Promise<{ worksp
         legacyLeadClassName="text-[15px] text-gray-400 font-bold"
         lead="顧客ごとの案件数と売上をまとめます。"
       />
-      <ClientActions workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients.map((c) => ({
+      <ClientActions canWrite={canWritePromaneWorkspace(workspace.members[0]?.role)} workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients.map((c) => ({
         ...c,
         totalRevenue: c.projects.reduce((sum, p) => sum + p.contractAmount, 0),
         projectCount: c.projects.length,

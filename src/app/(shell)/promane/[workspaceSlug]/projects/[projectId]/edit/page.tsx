@@ -1,3 +1,4 @@
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 import PromanePageHeading from '@/components/promane/PromanePageHeading';
 import { requirePromaneAuth, getWorkspaceBySlug } from '@/lib/promane/auth'
 import { prisma } from '@/lib/prisma'
@@ -15,6 +16,10 @@ export default async function EditProjectPage({
   const { workspaceSlug, projectId } = await params
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!)
   if (!workspace) redirect('/promane') // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
+
+  if (!canWritePromaneWorkspace(workspace.members[0]?.role)) {
+    return <div className="p-8"><p>このワークスペースは閲覧のみです。プロジェクトの追加・編集はできません。</p><Link className="underline" href={`/promane/${workspaceSlug}/projects`}>プロジェクト一覧を表示</Link></div>;
+  }
 
   const [project, clients] = await Promise.all([
     prisma.promaneProject.findFirst({

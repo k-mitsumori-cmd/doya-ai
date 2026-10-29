@@ -57,9 +57,11 @@ export function GanttChart({
   tasks,
   workspaceSlug,
   members = [],
+  canWrite,
 }: {
   tasks: GanttTask[];
   workspaceSlug: string;
+  canWrite: boolean;
   projectStartDate: string | null;
   projectEndDate: string | null;
   members?: { id: string; displayName: string }[];
@@ -101,6 +103,7 @@ export function GanttChart({
   }
 
   async function handleSaveDates(taskId: string) {
+    if (!canWrite) return;
     const taskName = tasks.find((t) => t.id === taskId)?.title || "タスク";
     try {
       await updateTask(workspaceSlug, taskId, {
@@ -160,7 +163,7 @@ export function GanttChart({
                   "flex h-[52px] w-full items-center border-b border-gray-50 px-4 gap-2.5 text-left hover:bg-blue-50/40 transition-colors group cursor-pointer",
                   sc.bg
                 )}
-                title="クリックで編集"
+                title={canWrite ? "クリックで編集" : "タスク詳細を表示"}
               >
                 <span className={cn("h-2.5 w-2.5 rounded-full flex-shrink-0", sc.dot)} aria-hidden />
                 <div className="min-w-0 flex-1">
@@ -216,6 +219,7 @@ export function GanttChart({
                 key={task.id}
                 className="relative flex h-[52px] items-center border-b border-gray-50 cursor-pointer hover:bg-blue-50/30 transition-colors"
                 onClick={() => {
+                  if (!canWrite) { setDetailTask(task); return; }
                   setEditingTask(editingTask === task.id ? null : task.id);
                   setEditStart(task.startDate ? task.startDate.split("T")[0] : "");
                   setEditEnd(task.dueDate ? task.dueDate.split("T")[0] : "");
@@ -251,7 +255,7 @@ export function GanttChart({
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
                     <span className="text-[12px] font-semibold text-gray-500">
-                      {task.startDate || task.dueDate ? "表示期間外の日程です" : "クリックして日程設定"}
+                      {task.startDate || task.dueDate ? "表示期間外の日程です" : canWrite ? "クリックして日程設定" : "日程未設定"}
                     </span>
                   </div>
                 )}
@@ -261,7 +265,7 @@ export function GanttChart({
         </div>
       </div>
 
-      {editingTask && (
+      {canWrite && editingTask && (
         <div className="border-t border-gray-100 bg-gradient-to-r from-blue-50 to-brand-50 px-6 py-4 animate-slide-up">
           <div className="flex items-center gap-5 flex-wrap">
             <Image src="/character/focus.png" alt="" width={40} height={40} className="animate-bounce-in drop-shadow-md" unoptimized />
@@ -302,6 +306,7 @@ export function GanttChart({
             dueDate: detailTask.dueDate,
           }}
           members={members}
+          canWrite={canWrite}
         />
       )}
     </div>
