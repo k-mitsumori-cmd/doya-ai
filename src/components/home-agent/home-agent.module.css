@@ -31,9 +31,19 @@
 @keyframes kunIn { from { opacity: 0; transform: translateY(6px); } }
 /* できたとき、小さく2回はずむ（1回だけ）。位置だけ動かす */
 /* 入力の画面は、この段を画面の主役にする。上下の余白を大きく取り、ゆったり縦に並べる */
-.stage[data-scene='input'] { padding: 40px clamp(20px, 4vw, 48px) 44px; gap: 24px; }
-.stage[data-scene='input'] .headTitle { font-size: clamp(28px, 3.6vw, 40px); }
-.stage[data-scene='input'] .card { gap: 16px; padding: 24px; }
+.stage[data-scene='input'] { padding: clamp(36px, 7vh, 72px) clamp(20px, 4vw, 48px) 48px; gap: 28px; }
+/* 2026-10-29 本人の指示: 入力欄を画面の真ん中に大きく置き、画面の主役にする（ChatGPT や Gemini の最初の画面のように）。
+   見出しは大きく、その下に一言、入力欄は幅 760〜880px・最低5行・文字は大きめ。部署・よく使う操作・前回の作戦は、その下 */
+.stage[data-scene='input'] .headRow { flex-direction: column; justify-content: center; gap: 4px; text-align: center; }
+.stage[data-scene='input'] .headText { justify-items: center; gap: 10px; }
+.stage[data-scene='input'] .kun { order: -1; width: 88px; margin: 0; }
+.stage[data-scene='input'] .head:not([data-compact='true']) .kun { width: 88px; margin: 0; }
+.stage[data-scene='input'] .headGreeting, .stage[data-scene='input'] .headCompany { justify-content: center; text-align: center; }
+.heroNote { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+.heroSub { margin: 0; max-width: 40em; font-size: clamp(15px, 1.5vw, 18px); font-weight: 600; line-height: 1.7; color: var(--sub); text-wrap: balance; word-break: auto-phrase; line-break: strict; }
+.stage[data-scene='input'] .panel > .sceneIn > .card:first-child { width: 100%; max-width: 880px; margin-inline: auto; background: transparent; border: 0; box-shadow: none; padding: 0; }
+.stage[data-scene='input'] .panel > .sceneIn > .card:first-child .chips, .stage[data-scene='input'] .panel > .sceneIn > .card:first-child .chipsLabel { justify-content: center; text-align: center; }
+.stage[data-scene='input'] .headTitle { font-size: clamp(30px, 4.4vw, 48px); line-height: 1.25; }
 .stage[data-scene='input'] .chipsLabel { margin-top: 8px; }
 .stage[data-scene='done'] .kun { animation: kunCheer .8s var(--ease) both; }
 @keyframes kunCheer { 0% { transform: translateY(0); } 25% { transform: translateY(-10px); } 50% { transform: translateY(0); } 70% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
@@ -66,15 +76,18 @@
 .textarea, .input { width: 100%; padding: 12px 14px; border-radius: var(--inner-r); border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.6; transition: border-color .2s, box-shadow .2s; }
 /* 入力欄: 最低4行の高さで、書くと自動で伸びる。枠は虹色（青を主役に、紫・ピンク・オレンジ・水色）のグラデーションがゆっくり回る（1周10秒）。
    本人の指定（2026-10-29）で、入力欄の枠だけに使う。ほかの背景は平らのまま。中の背景は白。入力欄に入ると、枠の外にやわらかい光が出る。動きを減らす設定では回さない */
-@property --ha-spin { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
-@keyframes haSpin { to { --ha-spin: 360deg; } }
-.aura { --ha-rainbow: conic-gradient(from var(--ha-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 3px); padding: 3px; background: var(--ha-rainbow); animation: haSpin 10s linear infinite; }
-.aura::after { content: ''; position: absolute; inset: -4px; z-index: -1; border-radius: calc(var(--inner-r) + 8px); background: var(--ha-rainbow); filter: blur(16px); opacity: 0; transition: opacity .45s var(--ease); pointer-events: none; }
+.aura { position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 3px); padding: 3px; }
+/* 枠の虹色は、transform の回転だけで回す（描き直しが要らず、GPU で動く）。大きな正方形のグラデーションを回し、枠の形でくり抜く */
+.auraRing { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; }
+.auraRing::before { content: ''; position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(#0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); animation: haTurn 10s linear infinite; will-change: transform; }
+@keyframes haTurn { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* 入力欄に入ると、枠の外にやわらかい光が出る（光は止めた色のにじみ。回さないので軽い） */
+.aura::after { content: ''; position: absolute; inset: -4px; z-index: -2; border-radius: calc(var(--inner-r) + 8px); background: conic-gradient(from 200deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(16px); opacity: 0; transition: opacity .45s var(--ease); pointer-events: none; }
 .aura:focus-within::after { opacity: .5; }
-.aura .textarea { display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); box-shadow: none; resize: none; overflow: hidden; }
+.aura .textarea { position: relative; display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); box-shadow: none; resize: none; overflow: hidden; }
 .aura .textarea:focus-visible { box-shadow: none; }
 .textarea { resize: vertical; min-height: 84px; }
-.aura .textarea { min-height: calc(1.6em * 4 + 28px); padding: 14px 16px; }
+.aura .textarea { min-height: calc(1.6em * 5 + 36px); padding: 18px 20px; font-size: 18px; }
 .textarea:focus-visible, .input:focus-visible { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -87,7 +100,7 @@
 .btn:hover { transform: translateY(-1px); }
 /* 「ドヤAIに頼む」は、押せるとき、入力欄の枠と同じ虹色の小さなにじみが付く */
 .btnAi { position: relative; isolation: isolate; }
-.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: var(--ha-rainbow, conic-gradient(from var(--ha-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff)); filter: blur(9px); opacity: .55; animation: haSpin 10s linear infinite; }
+.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: conic-gradient(from 210deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(9px); opacity: .5; }
 .btnAi:not(:disabled) { box-shadow: none; }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: none; }
 .ghost { background: transparent; color: var(--blue); border: 1px solid var(--line); box-shadow: none; }
@@ -229,6 +242,8 @@
   .exampleChips::-webkit-scrollbar { display: none; }
   .exampleChips .chip { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
     /* 入力欄は最低4行（本人の指定）。続きのカードは4行ぶん下がる */
-  .aura .textarea { min-height: calc(1.6em * 4 + 28px); }
+  .aura .textarea { min-height: calc(1.6em * 5 + 32px); padding: 14px 16px; }
+  .stage[data-scene='input'] { padding: 28px 16px 32px; }
+  .stage[data-scene='input'] .kun, .stage[data-scene='input'] .head:not([data-compact='true']) .kun { width: 72px; }
 }
 @media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }

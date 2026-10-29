@@ -550,7 +550,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
         <div className={styles.headRow}>
           <div className={styles.headText}>
             <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
-            {scene !== 'input' ? <p className={styles.say}>{SAY[scene]}</p> : null}
+            {scene !== 'input' ? <p className={styles.say}>{SAY[scene]}</p> : <p className={styles.heroSub}>やりたいことを書くだけ。ドヤAIが、全部のツールから合うものを選んで、準備まで進めます。</p>}
           </div>
           <div className={styles.kun} ref={kunRef}>
             <span className={styles.halo} aria-hidden="true" />
@@ -583,8 +583,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
             ) : (
             <div className={styles.card}>
               {/* 見出し → 説明 → 入力欄（虹色の枠）→ 例 → ボタン の順に、ゆったり縦に並べる */}
-              <p id="home-agent-lead" className={styles.lead}>やりたいことを書いて、ドヤAIに頼んでください。材料を読んで、必要な作業に分けて進めます。登録の依頼は、その画面を入力した状態で開きます。</p>
               <div className={styles.aura}>
+                <span className={styles.auraRing} aria-hidden="true" />
                 <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={4}
                   placeholder="例: 来週の商談の準備をまとめて進めたい" />
               </div>
@@ -597,6 +597,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
                 <span className={styles.muted}>{opening ?? '頼むだけでは、ドヤパワーは減りません'}</span>
                 <button type="button" className={`${styles.btn} ${styles.btnAi}`} onClick={() => void send()} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '進めています…' : 'ドヤAIに頼む'}</button>
               </div>
+              <p id="home-agent-lead" className={`${styles.lead} ${styles.heroNote}`}>やりたいことを書いて、ドヤAIに頼んでください。材料を読んで、必要な作業に分けて進めます。登録の依頼は、その画面を入力した状態で開きます。</p>
             </div>
             )}
             {/* 新しい依頼を先に置き、前回の続きはその下にする（主な操作はゴールを書くこと。2026-10-26 統括の点検で、続きが上だと欄が 375px で y=507 まで下がっていた） */}
