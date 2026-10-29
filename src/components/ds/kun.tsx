@@ -43,3 +43,13 @@ export function DoyaKun({ pose, act = 'idle', size = 96, label, say, className }
     </span>
   )
 }
+
+/** 空・エラー・権限なし・準備中の種類ごとの、ドヤくんのポーズ（線のさし絵の代わり。2026-10-29 本人の承認「本物のドヤくんに替える」） */
+export const EMPTY_KUN: Record<'not-generated' | 'zero' | 'no-results' | 'error' | 'forbidden' | 'preparing', { pose: KunPose; act: KunAct }> = {
+  'not-generated': { pose: 'point', act: 'idle' },
+  zero: { pose: 'hello', act: 'idle' },
+  'no-results': { pose: 'ponder', act: 'think' },
+  error: { pose: 'error', act: 'idle' },
+  forbidden: { pose: 'surprise', act: 'idle' },
+  preparing: { pose: 'working', act: 'work' },
+}
