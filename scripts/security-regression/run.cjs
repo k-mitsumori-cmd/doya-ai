@@ -1474,3 +1474,6 @@ if (interviewTextExports.error || interviewTextExports.status !== 0) process.exi
 
 const spreadsheetXmlCharacters = spawnSync(process.execPath, [path.join(__dirname, 'verify-spreadsheet-xml-characters.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (spreadsheetXmlCharacters.error || spreadsheetXmlCharacters.status !== 0) process.exit(spreadsheetXmlCharacters.status || 1);
+
+const asklinkCopyRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-asklink-copy-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (asklinkCopyRecovery.error || asklinkCopyRecovery.status !== 0) process.exit(asklinkCopyRecovery.status || 1);
