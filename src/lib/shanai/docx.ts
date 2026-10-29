@@ -5,6 +5,7 @@
 //    （Google API 連携は持たない）。
 import { AlignmentType, BorderStyle, Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from 'docx'
 import sharp from 'sharp'
+import JSZip from 'jszip'
 import type { ArticleBlock } from './types'
 
 const FONT = 'Noto Sans JP'
@@ -39,6 +40,36 @@ function paragraphs(body: string, opts: { indent?: boolean } = {}) {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => new Paragraph({ children: [text(line, { size: 22 })], spacing: { after: 160, line: 360 }, ...(opts.indent ? { indent: { left: 240 } } : {}) }))
+}
+
+async function uniqueDrawingIds(buffer: Buffer, expectedDrawings: number): Promise<Buffer> {
+  // docx 9.5.1 assigns wp:docPr id=1 to each image. Keep IDs unique in this document.
+  const zip = await JSZip.loadAsync(buffer)
+  const part = zip.file('word/document.xml')
+  if (!part) throw new Error('Word本文が見つかりません。')
+  const xml = await part.async('string')
+  const drawing = /(<wp:docPr\b[^>]*\bid=")([0-9]+)(")/g
+  const originalIds = new Set(Array.from(xml.matchAll(drawing), (match) => match[2]))
+  const seen = new Set<string>()
+  let count = 0
+  let next = 1
+  let changed = false
+  const normalized = xml.replace(drawing, (tag, before: string, id: string, after: string) => {
+    count++
+    if (!seen.has(id)) {
+      seen.add(id)
+      return tag
+    }
+    while (originalIds.has(String(next)) || seen.has(String(next))) next++
+    const replacement = String(next++)
+    seen.add(replacement)
+    changed = true
+    return before + replacement + after
+  })
+  if (count !== expectedDrawings) throw new Error('Wordの画像構造を確認できませんでした。')
+  if (!changed) return buffer
+  zip.file('word/document.xml', normalized)
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
 }
 
 export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
@@ -111,5 +142,5 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
     styles: { default: { document: { run: { font: FONT } } } },
     sections: [{ properties: { page: { margin: { top: 1200, bottom: 1200, left: 1300, right: 1300 } } }, children }],
   })
-  return Buffer.from(await Packer.toBuffer(doc))
+  return uniqueDrawingIds(Buffer.from(await Packer.toBuffer(doc)), (input.thumbnail ? 1 : 0) + input.photos.length)
 }
