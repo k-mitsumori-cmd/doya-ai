@@ -25,7 +25,7 @@ export default async function PopupDevStates({ searchParams }: Props) {
   const { s = 'home', shell } = await searchParams
   const wrap = (node: React.ReactNode) => <div className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">{node}</div>
   const body = renderState(s, wrap)
-  return shell === '1' ? <AppShell userName="見本 太郎"><PopupShellFrame nav={POPUP_NAV}>{body}</PopupShellFrame></AppShell> : body
+  return shell === '1' ? <AppShell userName="見本 太郎"><PopupShellFrame nav={POPUP_NAV} preview>{body}</PopupShellFrame></AppShell> : body
 }
 
 function renderState(s: string, wrap: (node: React.ReactNode) => React.ReactNode) {

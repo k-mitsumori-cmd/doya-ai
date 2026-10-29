@@ -12,12 +12,13 @@ interface OneOnOneData {
   id: string
   employeeId: string
   employeeName: string
-  date: string
+  date: string | null
   duration: number | null
-  agenda: any[]
-  managerNote: string
-  sharedNote: string
-  actionItems: any[]
+  agenda: unknown
+  managerNote?: string | null
+  sharedNote: string | null
+  actionItems: unknown
+  aiSummary?: string | null
   canViewManagerNotes: boolean
   status: string
 }
@@ -131,6 +132,7 @@ export default function OneOnOneDetailPage() {
           initialManagerNote={record.managerNote}
           initialSharedNote={record.sharedNote}
           initialActionItems={record.actionItems}
+          initialAiSummary={record.canViewManagerNotes === true ? record.aiSummary : null}
           readOnly={record.status === 'COMPLETED'}
           onSave={handleSave}
         />

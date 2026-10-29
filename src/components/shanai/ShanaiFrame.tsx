@@ -14,9 +14,10 @@ import { SHANAI_NAV } from '@/lib/shanai/nav'
 import { ShanaiShellContext } from './shell-context'
 
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
-export default function ShanaiFrame({ children }: { children: ReactNode }) {
+export default function ShanaiFrame({ children, preview = false }: { children: ReactNode; preview?: boolean }) {
   const pathname = usePathname()
   if (isGuestPath(pathname)) return <>{children}</>
+  if (!preview && pathname?.startsWith('/shanai/dev/')) return <>{children}</>
   return (
     <ToolFrame serviceId="shanai" nav={SHANAI_NAV}>
       <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>

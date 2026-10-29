@@ -44,7 +44,7 @@ export default async function ShanaiDevStates({ searchParams }: Props) {
         body
       ) : (
         <AppShell userName="見本 太郎">
-          <ShanaiFrame>{body}</ShanaiFrame>
+          <ShanaiFrame preview>{body}</ShanaiFrame>
         </AppShell>
       )}
     </DevRoot>

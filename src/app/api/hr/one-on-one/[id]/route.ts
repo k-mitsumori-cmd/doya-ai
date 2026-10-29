@@ -9,6 +9,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { canAccessOneOnOne, getOneOnOneViewer, canViewManagerNotes, filterOneOnOneFields } from '@/lib/hr/one-on-one-access'
+import { validOneOnOneItems } from '@/lib/hr/one-on-one-items'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     }
 
     const viewer = await getOneOnOneViewer(hrCtx)
+    if (!validOneOnOneItems(oneOnOne.agenda, 'agenda') || !validOneOnOneItems(oneOnOne.aiActionItems, 'actions')) return privateApiJson({ error: '保存されている1on1の項目を読み込めませんでした。組織の管理者にご相談ください。', code: 'ONE_ON_ONE_ITEMS_INVALID' }, { status: 409 })
     return privateApiJson({
       success: true,
       oneOnOne: filterOneOnOneFields({
@@ -129,6 +131,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
     if (body.aiActionItems !== undefined && !Array.isArray(body.aiActionItems)) {
       return privateApiJson({ error: 'アクション項目が不正です' }, { status: 400 })
+    }
+    if ((body.agenda !== undefined && !validOneOnOneItems(body.agenda, 'agenda')) ||
+      (body.aiActionItems !== undefined && !validOneOnOneItems(body.aiActionItems, 'actions'))) {
+      return privateApiJson({ error: 'アジェンダとアクションの項目を確認してください。' }, { status: 400 })
+    }
+    if (!validOneOnOneItems(body.agenda === undefined ? existing.agenda : body.agenda, 'agenda') ||
+      !validOneOnOneItems(body.aiActionItems === undefined ? existing.aiActionItems : body.aiActionItems, 'actions')) {
+      return privateApiJson({ error: '保存されている1on1の項目を読み込めませんでした。組織の管理者にご相談ください。', code: 'ONE_ON_ONE_ITEMS_INVALID' }, { status: 409 })
     }
     const {
       scheduledAt,

@@ -1424,3 +1424,18 @@ if (hrPrivateJson.error || hrPrivateJson.status !== 0) { console.error('HR priva
 
 const hrDuration = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-duration.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrDuration.error || hrDuration.status !== 0) { console.error('HR one-on-one duration regression failed'); process.exit(hrDuration.status || 1); }
+
+const hrItems = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-items.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrItems.error || hrItems.status !== 0) { console.error('HR one-on-one items regression failed'); process.exit(hrItems.status || 1); }
+
+const hrSummary = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-persisted-summary-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrSummary.error || hrSummary.status !== 0) { console.error('HR persisted summary regression failed'); process.exit(hrSummary.status || 1); }
+
+const watchBudget = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-system-watch-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (watchBudget.error || watchBudget.status !== 0) { console.error('System watch budget regression failed'); process.exit(watchBudget.status || 1); }
+
+const devStateShell = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-dev-state-shell.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (devStateShell.error || devStateShell.status !== 0) { console.error('Dev state shell regression failed'); process.exit(devStateShell.status || 1); }
+
+const incomeRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (incomeRouteCache.error || incomeRouteCache.status !== 0) { console.error('Income route cache regression failed'); process.exit(incomeRouteCache.status || 1); }
