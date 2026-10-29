@@ -1442,3 +1442,6 @@ if (incomeRouteCache.error || incomeRouteCache.status !== 0) { console.error('In
 
 const expenseRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-expense-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (expenseRouteCache.error || expenseRouteCache.status !== 0) { console.error('Expense route cache regression failed'); process.exit(expenseRouteCache.status || 1); }
+
+const promaneRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-promane-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneRouteCache.error || promaneRouteCache.status !== 0) { console.error('Promane route cache regression failed'); process.exit(promaneRouteCache.status || 1); }
