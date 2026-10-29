@@ -45,3 +45,10 @@
   .draw[data-armed='true'] > :global(*),
   .draw[data-seen='true'] > :global(*) { stroke-dashoffset: 0; animation: none; }
 }
+
+/* RevealWords: 1語ずつ、薄い色から濃い色へ（B11）。位置と透明度だけを動かす */
+.reveal { display: inline; }
+.word { display: inline; opacity: 0.3; animation: ds-word 500ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--w) * var(--reveal-step, 90ms)); }
+@keyframes ds-word { from { opacity: 0.3; } to { opacity: 1; } }
+.reveal[data-reduced='true'] .word { opacity: 1; animation: none; }
+@media (prefers-reduced-motion: reduce) { .word { opacity: 1; animation: none; } }

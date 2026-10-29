@@ -9,6 +9,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import styles from './motion.module.css'
 import { countFrame, formatCount } from './chart-math'
+import { splitWords } from './split-words'
+export { splitWords } from './split-words'
 
 /** 動きを減らす設定か */
 export function usePrefersReducedMotion(): boolean {
@@ -227,5 +229,31 @@ export function DrawIn({ children, duration = 900, className, mode = 'wipe', ext
       ) : null}
       <g clipPath={wiping ? `url(#${clipId})` : undefined}>{children}</g>
     </g>
+  )
+}
+
+/**
+ * 言葉を1語ずつ、薄い色から濃い色へ順に変える（参考: ai-design-skills の B11 Tagline reveal）。
+ * 待ちの文や、結果が出た瞬間のひと言に使う。日本語は読点・句点・「、」で区切る（文字ごとには分けない）。
+ * - 動きを減らす設定では、最初から濃い色で出す
+ * - 文が変わったら、最初からやり直す
+ */
+export function RevealWords({ text, step = 90, className, as: Tag = 'span' }: {
+  text: string
+  /** 1語ごとの遅れ（ms） */
+  step?: number
+  className?: string
+  as?: 'span' | 'p' | 'h2'
+}) {
+  const reduced = usePrefersReducedMotion()
+  const words = splitWords(text)
+  return (
+    <Tag key={text} className={`${styles.reveal} ${className ?? ''}`} data-reduced={reduced ? 'true' : undefined}>
+      {/* 読み上げ用に、文を1回だけ置く（語ごとの span は aria-hidden。見出しが空にならないように） */}
+      <span className={styles.srOnly}>{text}</span>
+      {words.map((w, i) => (
+        <span key={i} aria-hidden="true" className={styles.word} style={{ '--w': i, '--reveal-step': `${step}ms` } as CSSProperties}>{w}</span>
+      ))}
+    </Tag>
   )
 }

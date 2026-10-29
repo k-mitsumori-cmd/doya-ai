@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Zap, Brain, Lightbulb, Rocket, Coffee } from 'lucide-react';
 import { GenerationProgress } from '@/components/ds/feedback';
+import { DoyaKun } from '@/components/ds/kun'
+import { RevealWords } from '@/components/ds/motion'
 
 interface LoadingProgressProps {
   isLoading: boolean;
@@ -95,12 +97,16 @@ function LoadingProgressNext({ title, subtitle, estimateSec }: { title?: string;
   const current = Math.min(NEXT_STAGES.length - 1, Math.floor(ratio * NEXT_STAGES.length));
   return (
     <div className="sticky top-[76px] z-30 my-3 md:top-4" aria-label={title || '作成中'}>
-      {title ? (
-        <div className="mb-2 px-1">
-          <p className="text-sm font-bold text-slate-900">{title}</p>
-          {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
-        </div>
-      ) : null}
+      {/* 作っている間は、作業中のドヤくんを横に置く（全ツール共通。2026-10-29 本人の指示「キャラクターがいなくて面白くない」）。題は1語ずつ濃くする */}
+      <div className="mb-2 flex items-center gap-3 px-1">
+        <DoyaKun pose="working" act="work" size={56} />
+        {title ? (
+          <div className="min-w-0">
+            <RevealWords as="p" className="text-sm font-bold text-slate-900" text={title} />
+            {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
+          </div>
+        ) : null}
+      </div>
       <GenerationProgress stages={NEXT_STAGES} current={current} startedAt={startedAt} estimateSec={estimateSec} />
     </div>
   );
