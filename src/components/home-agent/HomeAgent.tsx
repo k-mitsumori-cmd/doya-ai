@@ -480,7 +480,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       const st = stageRef.current, k = kunRef.current
       if (!st || !k || window.innerWidth <= 860) { setBeams([]); return }
       const s = st.getBoundingClientRect(), kr = k.getBoundingClientRect()
-      const x2 = kr.right - s.left - 24, y2 = kr.top - s.top + kr.height / 2
+      // 小さなクマは見出しの右にある。材料の行から、クマの下の真ん中へ、光の線を引く
+      const x2 = kr.left - s.left + kr.width / 2, y2 = kr.bottom - s.top - 4
       setBeams(sources.map((src) => {
         const el = st.querySelector<HTMLElement>(`[data-src="${src.id}"]`)
         if (!el) return null
@@ -514,28 +515,30 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       ) : null}
 
       {/* 見出しは「今日は、何をしますか？」の1つだけ（旧の欄と新しい欄をまとめた。2026-10-26 ユーザーの指示）。
-          入力の画面では大きく出し、ほかの画面では読み上げ用だけにする */}
-      <header className={scene === 'input' ? styles.head : styles.srOnly}>
-        {greeting ? <p className={styles.headGreeting}>{greeting}</p> : null}
-        {company ? <div className={styles.headCompany}>{company}</div> : null}
+          2026-10-29 本人の指示: 左の大きなクマの列をやめ、どの状態でも、クマは見出しの右の小さな絵にし、中身は横いっぱい1列にする。
+          入力の画面では見出しを大きく、ほかの状態では小さく出し、クマは状態ごとのポーズにする（分析中は小さく息づく）。 */}
+      <header className={styles.head} data-compact={scene === 'input' ? undefined : 'true'}>
+        {greeting && scene === 'input' ? <p className={styles.headGreeting}>{greeting}</p> : null}
+        {company && scene === 'input' ? <div className={styles.headCompany}>{company}</div> : null}
         <div className={styles.headRow}>
-          <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
-          {/* 入力の画面では、ドヤくんを見出しの右に小さく置く（2026-10-28 本人の指示。左の大きなクマは、作業中の画面だけに出す） */}
-          {scene === 'input' ? <img src="/ui-renewal/mascots/growth-pro.webp" alt="" width={720} height={600} className={styles.headKun} /> : null}
+          <div className={styles.headText}>
+            <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
+            {scene !== 'input' ? <p className={styles.say}>{SAY[scene]}</p> : null}
+          </div>
+          <div className={styles.kun} ref={kunRef}>
+            <span className={styles.halo} aria-hidden="true" />
+            {/* 状態ごとのポーズを重ねて、ふわっと入れ替える（Object.values の並びで固定）。入力の画面は 3D のドヤくん */}
+            {scene === 'input' ? (
+              <img src="/ui-renewal/mascots/growth-pro.webp" alt="ドヤくん" width={720} height={600} className={styles.pose} data-on="true" />
+            ) : (
+              Array.from(new Set(Object.values(POSE))).map((p) => (
+                <img key={p} src={`/character/${p}-512.webp`} alt={p === pose ? 'ドヤくん' : ''} aria-hidden={p === pose ? undefined : true}
+                  width={512} height={512} className={styles.pose} data-on={p === pose ? 'true' : undefined} />
+              ))
+            )}
+          </div>
         </div>
       </header>
-
-      <div className={styles.hero}>
-        <div className={styles.kun} ref={kunRef}>
-          <span className={styles.halo} aria-hidden="true" />
-          {/* 2枚を重ねて、ふわっと入れ替える（Object.values の並びで固定） */}
-          {Array.from(new Set(Object.values(POSE))).map((p) => (
-            <img key={p} src={`/character/${p}-512.webp`} alt={p === pose ? 'ドヤくん' : ''} aria-hidden={p === pose ? undefined : true}
-              width={512} height={512} className={styles.pose} data-on={p === pose ? 'true' : undefined} />
-          ))}
-        </div>
-        <p className={styles.say}>{SAY[scene]}</p>
-      </div>
 
       <div className={styles.panel}>
 
