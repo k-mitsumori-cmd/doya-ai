@@ -5,7 +5,7 @@
 // 2026-10-29 本人の指示（メイン経由）。見本のページ（/shell-sample）だけで使う。本番には出さない。
 // ⚠️ 数字・文は見本の仮のもの。画面に「見本の仮の数字」と出す。API・DB・AI・ドヤパワーは使わない。
 // ⚠️ 色・書体・ドヤくんの部品は今のドヤAI（ds のトークンと DoyaKun）。動きは位置と透明度だけ。
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DEPARTMENTS, type DepartmentId } from '@/lib/departments'
 import { DoyaKun } from '@/components/ds/kun'
 import { ToolBearIcon } from '@/components/shell/ToolBearIcon'
@@ -102,8 +102,18 @@ export default function DeptShellSample() {
   )
 }
 
+/** 画面に見えてきたとき、下から少し上がって現れる（1回だけ）。IntersectionObserver が使えないときは最初から見せる */
 function Stagger({ i, children }: { i: number; children: React.ReactNode }) {
-  return <div className={styles.in} style={{ ['--i' as string]: i }}>{children}</div>
+  const ref = useRef<HTMLDivElement>(null)
+  const [seen, setSeen] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setSeen(true); return }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect() } }, { threshold: 0.08 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return <div ref={ref} className={styles.in} data-reveal={seen ? 'done' : 'wait'} style={{ ['--i' as string]: i }}>{children}</div>
 }
 
 function MetricTile({ m, onOpen }: { m: Metric; onOpen?: () => void }) {
@@ -121,6 +131,9 @@ function MetricTile({ m, onOpen }: { m: Metric; onOpen?: () => void }) {
 /* ---- 経営ホーム: 上から ①頼む ②数字 ③判断 ④部署の報告 ⑤今日やること ---- */
 function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: string) => void; onAsk: (text: string) => void }) {
   const [text, setText] = useState('')
+  // 数字は、本物では API から読む。読み込み中は同じ大きさの形の見本を出す（見本では少しだけ待つ）
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => { const t = window.setTimeout(() => setLoaded(true), 450); return () => window.clearTimeout(t) }, [])
   return (
     <div className={styles.stack}>
       <Stagger i={0}>
@@ -143,7 +156,17 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
       <Stagger i={1}>
         <section className={styles.card} aria-label="今日の経営の数字">
           <div className={styles.cardHead}><h2 className={styles.h2}>今日の経営の数字</h2><span className={styles.pill}>見本の仮の数字</span></div>
-          <div className={styles.metrics}>{COMPANY_METRICS.map((m, i) => <MetricTile key={m.label} m={m} onOpen={() => open(`metric:${i}`)} />)}</div>
+          <div className={styles.metrics} aria-busy={!loaded}>
+            {loaded
+              ? COMPANY_METRICS.map((m, i) => <MetricTile key={m.label} m={m} onOpen={() => open(`metric:${i}`)} />)
+              : COMPANY_METRICS.map((m) => (
+                  <div key={m.label} className={`${styles.metric} ${styles.metricSkel}`} aria-hidden="true">
+                    <span className={styles.skel} style={{ width: '55%', height: 12 }} />
+                    <span className={styles.skel} style={{ width: '75%', height: 26 }} />
+                    <span className={styles.skel} style={{ width: '60%', height: 16, borderRadius: 999 }} />
+                  </div>
+                ))}
+          </div>
         </section>
       </Stagger>
 
