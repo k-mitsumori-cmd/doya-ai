@@ -10,7 +10,7 @@ export const maxDuration = 30
 // - 返すのは「開く画面（値を入れた URL）」と「足りない値」だけ。データは作らない。保存・送信は、開いた画面で本人が押す。
 // - 複数の手順が要る依頼は plan（今までの作戦づくりへ）。どれにも合わなければ、近い操作の案を返す（行き止まりにしない）。
 // - 旗（AGENT_ORCHESTRATION_ROLLOUT）が出すと決めた人でなければ 404。ログインした人だけ。ドヤパワーは減らさない。
-// - 1人あたり1日 AGENT_ROUTER_USER_DAILY 回、全体で1日 AGENT_ROUTER_AI_DAILY 回まで AI を使う。超えたら・数えられないときは、
+// - 1人あたり1日 AGENT_ROUTER_USER_DAILY 回（既定 30）、全体で1日 AGENT_ROUTER_AI_DAILY 回（既定 300）まで AI を使う。超えたら・数えられないときは、
 //   AI を使わずに言葉の一致で近いツールを案内する（有料の AI を使いすぎない）。
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -30,8 +30,11 @@ function limitOf(raw: string | undefined, fallback: number): number {
 }
 /** 1人あたり1日の回数（既定 30） */
 const userDailyLimit = () => limitOf(process.env.AGENT_ROUTER_USER_DAILY, 30)
-/** 全体で1日に AI を使う回数（既定 1,000。1回 約3〜4円なので、最大で1日 約4,000円） */
-const aiDailyLimit = () => limitOf(process.env.AGENT_ROUTER_AI_DAILY, 1000)
+/**
+ * 全体で1日に AI を使う回数（既定 300）。1回は最大 約 $0.058（約8.7円）なので、最大で1日 約 $17（約2,600円）。
+ * ふだんは1回 約3〜4円で、1日 約900〜1,200円。増やすときは AGENT_ROUTER_AI_DAILY で（1,000 なら最大 約8,700円/日）。
+ */
+const aiDailyLimit = () => limitOf(process.env.AGENT_ROUTER_AI_DAILY, 300)
 
 export async function POST(req: NextRequest) {
   if (!(await isAgentOrchestrationEnabled())) return NextResponse.json({ error: '見つかりません' }, { status: 404, headers: NO_STORE })

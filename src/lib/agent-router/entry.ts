@@ -1,10 +1,10 @@
 // ============================================
 // 組織ごとのツールの入口から、組織の中の画面へ「行き先」と「値」を運ぶ（画面に依らない純粋な部品）
 // ============================================
-// 例: /expense?to=new-contract&doya_amount=200000 → /expense/{slug}/contracts/new?doya_amount=200000
+// 例: /expense?to=new-contract&doya_k=<鍵> → /expense/{slug}/contracts/new?doya_k=<鍵>
 // ⚠️ 行き先は、ツールごとに決めた名前（allow）だけを受け付ける（好きなパスへは運ばない＝ open redirect にしない）。
-// ⚠️ 運ぶ値は doya_ で始まる名前だけ。長さも切る（値の形は、受け取る画面が readPrefill で確かめる）。
-import { PREFILL_PREFIX } from './prefill'
+// ⚠️ 運ぶのは一度きりの鍵（doya_k）だけ。値そのものは URL に載らない（prefill.ts の stashPrefill）。
+import { PREFILL_KEY_PARAM, isPrefillKey } from './prefill'
 
 type ParamsLike = { get(name: string): string | null; forEach(cb: (value: string, key: string) => void): void }
 
@@ -19,20 +19,15 @@ export function toSearchParams(sp: Record<string, string | string[] | undefined>
 }
 
 /**
- * 入口に来た ?to= と doya_* から、組織の中で開く「残りのパス」を作る（先頭は / か ''）。
+ * 入口に来た ?to= と doya_k から、組織の中で開く「残りのパス」を作る（先頭は / か ''）。
  * allow: 行き先の名前 → 組織の中のパス（例: { 'new-contract': '/contracts/new' }）
  */
 export function forwardPath(params: ParamsLike | null | undefined, allow: Record<string, string>): string {
   if (!params) return ''
   const to = params.get('to') ?? ''
   const sub = Object.prototype.hasOwnProperty.call(allow, to) ? allow[to] : ''
-  const q = new URLSearchParams()
-  let n = 0
-  params.forEach((value, key) => {
-    if (n >= 12 || !key.startsWith(PREFILL_PREFIX) || !/^doya_[a-z]{1,20}$/.test(key)) return
-    q.set(key, value.slice(0, 2048)); n++
-  })
-  const qs = q.toString()
+  const key = params.get(PREFILL_KEY_PARAM)
+  const qs = isPrefillKey(key) ? `${PREFILL_KEY_PARAM}=${key}` : ''
   if (!sub && !qs) return ''
   return `${sub}${qs ? `?${qs}` : ''}`
 }

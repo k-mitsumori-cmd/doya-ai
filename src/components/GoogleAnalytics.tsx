@@ -55,9 +55,13 @@ function GaEventsTrackerInner() {
     try {
       if (!document.cookie.includes('doya_attr=')) {
         const p = new URLSearchParams(location.search)
+        // ドヤAIの「頼む」の鍵（doya_ で始まるもの）は、流入元の記録に入れない（2026-10-29 統括の監査 中1）
+        const kept = new URLSearchParams()
+        p.forEach((v, k) => { if (!k.startsWith('doya_')) kept.append(k, v) })
+        const ks = kept.toString()
         const attr = {
           r: (document.referrer || '').slice(0, 200),
-          l: (location.pathname + location.search).slice(0, 120),
+          l: (location.pathname + (ks ? `?${ks}` : '')).slice(0, 120),
           s: (p.get('utm_source') || '').slice(0, 50),
           m: (p.get('utm_medium') || '').slice(0, 50),
         }

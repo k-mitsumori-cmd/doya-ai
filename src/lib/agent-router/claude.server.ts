@@ -7,9 +7,10 @@
 //    - thinking は止められない（disabled や budget_tokens は 400）。深さは effort で決める。分類と読み取りなので low。
 //    - temperature などを送ると 400。前置き（prefill）も 400。JSON は構造化出力（output_config.format）で受け取る。
 //    - 安全の判定で断られたら（stop_reason: refusal）、「どれにも合わない」にする（画面は行き止まりにしない）。
-// ⚠️ 1回の見込み（2026-10-28 に一覧の文の長さから計算）: 一覧と決まりの文 約2,950字＝約3,000〜3,600トークン（$4/100万）＋依頼 約100
-//    ＋出力と思考 約300〜600トークン（$20/100万）→ 約 $0.02〜0.027（約3〜4円）。一覧が 4,096 トークンに届かないと、キャッシュは効かない見込み。
-//    軽いモデル（Haiku 5.5）にすると約 $0.0006（約0.1円）。判定の正しさを見て、本人に選んでもらう。
+// ⚠️ 1回の費用（2026-10-29 統括の監査 中3 で直した）:
+//    ふだん: 一覧と決まりの文 約3,000〜3,600トークン（$4/100万）＋出力と思考 約300〜600トークン（$20/100万）→ 約 $0.02〜0.027（約3〜4円）。
+//    最大: 入力 約4,500トークン＋出力の上限 2,000トークン（max_tokens）→ 約 $0.058（約8.7円）。全体の上限はこの最大で決める（route.ts）。
+//    一覧が 4,096 トークンに届かないと、キャッシュは効かない見込み。軽いモデル（Haiku 5.5）にすると約 $0.0006（約0.1円）。
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { RouterReply, ROUTER_SYSTEM_PROMPT, catalogText, requestText, type AgentPlanOption } from './router'
@@ -47,7 +48,8 @@ export async function askRouter(text: string, today: string, actions: AgentActio
   if (!client) {
     const key = (opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '').trim()
     if (!key) return null
-    client = new Anthropic({ apiKey: key, timeout: TIMEOUT_MS, maxRetries: 1 }) as unknown as RouterClaudeLike
+    // 再試行はしない（失敗したら言葉の一致の案内に切り替える。再試行で費用が倍にならないように。2026-10-29 統括の監査 中3）
+    client = new Anthropic({ apiKey: key, timeout: TIMEOUT_MS, maxRetries: 0 }) as unknown as RouterClaudeLike
   }
   const res = await client.messages.parse(buildRouterRequest(text, today, actions, plans))
   if (res.stop_reason === 'refusal' || res.parsed_output == null) return null

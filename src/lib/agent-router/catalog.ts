@@ -3,13 +3,13 @@
 // ============================================
 // ⚠️ これは言葉の一致の表ではない。AI はこの一覧の説明を読んで、依頼に合う操作を1つ選ぶ（router.ts）。
 // ⚠️ path は実在する画面。組織ごとのツールは入口（例: /expense）に ?to= を付け、入口が組織の中の画面へ運ぶ（entry.ts）。
-// ⚠️ 値を受け取って入れる画面（readPrefill を使う画面）は、fields の key と画面の側の key を合わせる。
+// ⚠️ 値を受け取って入れる画面（useDoyaPrefill を使う画面）は、fields の key と画面の側の key を合わせる。
 //    受け取りをまだ作っていない画面は fields を空にし、画面を開くだけにする（本人がその画面で入れる）。
 // ⚠️ 開発中で隠しているツール（services.ts の hidden: 'beta'）は入れない（isBetaHiddenPath で外す）。
 import { isBetaHiddenPath } from '@/lib/services'
 import { AGENT_RECIPES } from '@/lib/agent-orchestration/recipes'
 import { matchHomeIntent } from '@/app/(shell)/home/intents'
-import { prefillHref, missingFields } from './prefill'
+import { actionPath, missingFields } from './prefill'
 import type { AgentPlanOption } from './router'
 import type { AgentAction, AgentRoute, AgentRouteResponse } from './types'
 
@@ -91,14 +91,15 @@ export function routeResponse(route: AgentRoute & { planId?: string }, text: str
         action: { id: action.id, toolId: action.toolId, label: action.label, finalStep: action.finalStep, fields: action.fields },
         values: route.values,
         missing: missingFields(action, route.values),
-        href: prefillHref(action, route.values),
+        // 値は URL に載せない（画面が sessionStorage に入れ、鍵だけを付けて開く）
+        href: actionPath(action),
         reason: route.reason,
       }
     }
   }
   if (route.kind === 'plan' && route.planId) return { kind: 'plan', planId: route.planId, reason: route.reason }
   const ids = route.kind === 'unknown' ? route.suggestions : []
-  const links = ids.map((id) => actionById(id)).filter((a): a is AgentAction => Boolean(a)).map((a) => ({ label: a.label, href: prefillHref(a, {}) }))
+  const links = ids.map((id) => actionById(id)).filter((a): a is AgentAction => Boolean(a)).map((a) => ({ label: a.label, href: actionPath(a) }))
   return links.length ? { kind: 'unknown', reason: route.reason, suggestions: links } : fallbackRoute(text, route.reason)
 }
 

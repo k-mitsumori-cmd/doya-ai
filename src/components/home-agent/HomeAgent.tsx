@@ -28,7 +28,7 @@ import { readPlanStream } from './stream'
 import { AGENT_EXAMPLES, agentPlansForDepartment, intentsOfDepartment } from './examples'
 import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
-import { normalizeValue, prefillHref } from '@/lib/agent-router/prefill'
+import { normalizeValue, stashPrefill, withPrefillKey } from '@/lib/agent-router/prefill'
 import type { AgentField, AgentRouteResponse } from '@/lib/agent-router/types'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
@@ -351,9 +351,12 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   }, [executor, reduce])
 
   /** 選んだ操作の画面を、値を入れた状態で開く（保存・送信は、開いた画面で本人が押す） */
-  const openAction = (href: string, label: string) => {
+  const openAction = (path: string, values: Record<string, string>, label: string) => {
     setOpening(`「${label}」の画面を開いています…`)
-    router.push(toHref(href))
+    // 値は URL に載せない。同じタブの sessionStorage に入れ、URL には一度きりの鍵だけを付ける（2026-10-29 統括の監査 中1）
+    let storage: Storage | null = null
+    try { storage = window.sessionStorage } catch { storage = null }
+    router.push(toHref(withPrefillKey(path, stashPrefill(values, storage))))
     // 移れなかったとき（通信の切れなど）に「開いています」のまま止まらないよう、少し待って元に戻す
     window.setTimeout(() => setOpening(null), 8000)
   }
@@ -382,7 +385,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     if (!data) { setError('依頼を読めませんでした。時間をおいて、もう一度お試しください。'); return }
     if (data.kind === 'action') {
       if (data.missing.length) { setRoute(data); setFillIndex(0); setFillValue(''); setFillError(null); setScene('fill'); return }
-      openAction(data.href, data.action.label)
+      openAction(data.href, data.values, data.action.label)
       return
     }
     if (data.kind === 'plan') { reset(); void ask({ recipeId: data.planId }); return }
@@ -402,7 +405,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       setRoute({ ...route, values }); setFillIndex(fillIndex + 1); setFillValue(''); setFillError(null)
       return
     }
-    openAction(prefillHref({ path: route.href, fields: route.action.fields }, values), route.action.label)
+    openAction(route.href, values, route.action.label)
   }
   const submitAnswers = () => { void ask({ recipeId, answers }) }
 
