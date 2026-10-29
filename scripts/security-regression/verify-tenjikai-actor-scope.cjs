@@ -1,3 +1,5 @@
+// React's mounted regression harness needs the test runtime even in a production build job.
+process.env.NODE_ENV = 'test';
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
