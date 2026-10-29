@@ -19,6 +19,8 @@ import {
 import { Panel, usePanelKey } from './Panel'
 import { parsePanelKey } from './panel-hash'
 import { actionOfTool, demoRoute, type DemoRoute } from './demo-route'
+import { CountUp, MotionProvider, useMotion, type CountPhase } from './motion'
+import type { MotionMode } from './motion-count'
 import styles from './shell-next.module.css'
 
 const EXAMPLES = ['来週の商談の準備をまとめて進めたい', '20万円の支出を登録したい', 'バナーの新しい案を作りたい']
@@ -47,10 +49,13 @@ export default function DeptShellSample() {
     else if (k === 'ask') { go('home'); requestAnimationFrame(() => document.getElementById('ask-input')?.focus()) }
     else go(k)
   }
+  /** 動きの強さ（その日の最初はフル、2回目以降は短く、動きを減らす設定では動かさない） */
+  const [mo, setMo] = useState<{ mode: MotionMode; slow: number } | null>(null)
   const mobileCurrent: MobileKey = view === 'home' ? 'home' : view === 'tools' ? 'tools' : view === 'settings' ? 'settings' : 'dept'
 
   return (
-    <div className={`${tokens.ds} ${styles.root}`}>
+    <MotionProvider onReady={setMo}>
+    <div className={`${tokens.ds} ${styles.root}`} data-motion={mo?.mode} style={{ ['--mx' as string]: mo?.slow ?? 1 }}>
       <aside className={styles.side} aria-label="メニュー">
         <div className={styles.brand}>ドヤAI</div>
         <nav className={styles.nav} aria-label="7つの項目">
@@ -99,6 +104,7 @@ export default function DeptShellSample() {
         ))}
       </nav>
     </div>
+    </MotionProvider>
   )
 }
 
@@ -116,15 +122,57 @@ function Stagger({ i, children }: { i: number; children: React.ReactNode }) {
   return <div ref={ref} className={styles.in} data-reveal={seen ? 'done' : 'wait'} style={{ ['--i' as string]: i }}>{children}</div>
 }
 
-function MetricTile({ m, onOpen }: { m: Metric; onOpen?: () => void }) {
+function MetricTile({ m, index = 0, onOpen }: { m: Metric; index?: number; onOpen?: () => void }) {
   const arrow = m.delta?.tone === 'up' ? '▲' : m.delta?.tone === 'down' ? '▼' : '―'
   const Tag = onOpen ? 'button' : 'div'
+  // 数え上がりの間は札と棒を待たせ、数え終わってから札がふわっと出る。数字は最後に小さく止まる
+  const [phase, setPhase] = useState<CountPhase>('done')
+  const [dun, setDun] = useState(false)
+  const onPhase = (p: CountPhase) => { setPhase(p); if (p === 'done') { setDun(true); window.setTimeout(() => setDun(false), 400) } else setDun(false) }
+  const max = m.trend ? Math.max(...m.trend) : 1
   return (
-    <Tag className={`${styles.metric} ${onOpen ? styles.clickable : ''}`} {...(onOpen ? { type: 'button' as const, onClick: onOpen, 'aria-label': `${m.label}の詳しい内容を開く` } : {})}>
+    <Tag className={`${styles.metric} ${onOpen ? styles.clickable : ''}`} data-phase={phase} {...(onOpen ? { type: 'button' as const, onClick: onOpen, 'aria-label': `${m.label}の詳しい内容を開く` } : {})}>
       <p className={styles.mLabel}>{m.label}</p>
-      <p className={styles.mValue}>{m.value}{m.unit ? <span className={styles.mUnit}>{m.unit}</span> : null}</p>
-      {m.delta ? <span className={styles.delta} data-good={m.delta.good} data-tone={m.delta.tone}><span aria-hidden="true">{arrow}</span>{m.delta.text}{m.delta.good ? '' : '（要確認）'}</span> : null}
+      <p className={styles.mValue} data-dun={dun ? 'true' : undefined}><CountUp text={m.value} index={index} onPhase={onPhase} />{m.unit ? <span className={styles.mUnit}>{m.unit}</span> : null}</p>
+      <div className={styles.mFoot}>
+        {m.delta ? <span className={styles.delta} data-good={m.delta.good} data-tone={m.delta.tone}><span aria-hidden="true">{arrow}</span>{m.delta.text}{m.delta.good ? '' : '（要確認）'}</span> : null}
+        {m.trend ? (
+          <span className={styles.spark} aria-hidden="true">
+            {m.trend.map((v, k) => <i key={k} data-last={k === m.trend!.length - 1 ? 'true' : undefined} style={{ height: `${Math.round((v / max) * 100)}%`, ['--k' as string]: k }} />)}
+          </span>
+        ) : null}
+      </div>
     </Tag>
+  )
+}
+
+/** 今日やること。チェックすると、線が引かれ、少し右へ流れて消える（位置と透明度だけ）。順に左から右へスライドして出る */
+function TodayList() {
+  const [state, setState] = useState<Record<string, 'checked' | 'gone' | 'removed'>>({})
+  const check = (id: string) => {
+    if (state[id]) return
+    setState((x) => ({ ...x, [id]: 'checked' }))
+    window.setTimeout(() => setState((x) => ({ ...x, [id]: 'gone' })), 420)
+    window.setTimeout(() => setState((x) => ({ ...x, [id]: 'removed' })), 1000)
+  }
+  const rest = TODAY_TASKS.filter((t) => state[t.id] !== 'removed')
+  return (
+    <section className={styles.card} aria-label="今日やること">
+      <div className={styles.cardHead}><h2 className={styles.h2}>今日やること</h2><span className={styles.sub}>{rest.length}件</span></div>
+      {rest.length ? (
+        <ul className={styles.list}>
+          {TODAY_TASKS.map((t, k) => state[t.id] === 'removed' ? null : (
+            <li key={t.id} className={`${styles.row} ${styles.slideRow}`} data-state={state[t.id]} style={{ gridTemplateColumns: 'auto minmax(0, 1fr) auto', ['--k' as string]: k }}>
+              <button type="button" className={styles.dot} aria-label={`「${t.text}」を終えた`} onClick={() => check(t.id)} />
+              <p className={styles.rowTitle}><span className={styles.strike}>{t.text}</span></p>
+              <span className={styles.tag}>{DEPT_LABEL[t.dept]}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.note}>今日の分は、すべて終わりました。</p>
+      )}
+    </section>
   )
 }
 
@@ -133,7 +181,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
   const [text, setText] = useState('')
   // 数字は、本物では API から読む。読み込み中は同じ大きさの形の見本を出す（見本では少しだけ待つ）
   const [loaded, setLoaded] = useState(false)
-  useEffect(() => { const t = window.setTimeout(() => setLoaded(true), 450); return () => window.clearTimeout(t) }, [])
+  useEffect(() => { const t = window.setTimeout(() => setLoaded(true), 350); return () => window.clearTimeout(t) }, [])
   return (
     <div className={styles.stack}>
       <Stagger i={0}>
@@ -158,7 +206,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
           <div className={styles.cardHead}><h2 className={styles.h2}>今日の経営の数字</h2><span className={styles.pill}>見本の仮の数字</span></div>
           <div className={styles.metrics} aria-busy={!loaded}>
             {loaded
-              ? COMPANY_METRICS.map((m, i) => <MetricTile key={m.label} m={m} onOpen={() => open(`metric:${i}`)} />)
+              ? COMPANY_METRICS.map((m, i) => <MetricTile key={m.label} m={m} index={i} onOpen={() => open(`metric:${i}`)} />)
               : COMPANY_METRICS.map((m) => (
                   <div key={m.label} className={`${styles.metric} ${styles.metricSkel}`} aria-hidden="true">
                     <span className={styles.skel} style={{ width: '55%', height: 12 }} />
@@ -174,8 +222,8 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
         <section className={styles.card} aria-label="あなたの判断が必要なこと">
           <div className={styles.cardHead}><h2 className={styles.h2}>あなたの判断が必要なこと</h2><span className={styles.sub}>{DECISIONS.length}件</span></div>
           <ul className={styles.list}>
-            {DECISIONS.map((d) => (
-              <li key={d.id} className={styles.row}>
+            {DECISIONS.map((d, k) => (
+              <li key={d.id} className={`${styles.row} ${styles.slideRow}`} style={{ ['--k' as string]: k }}>
                 <DoyaKun pose={DEPT_KUN[d.dept]} size={40} />
                 <div><p className={styles.rowTitle}>{d.title}</p><p className={styles.rowText}>{d.detail}</p></div>
                 <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => open(`decision:${d.id}`)}>{d.action}</button>
@@ -190,8 +238,8 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
           <section className={styles.card} aria-label="各部署からの報告">
             <div className={styles.cardHead}><h2 className={styles.h2}>各部署からの報告</h2></div>
             <ul className={styles.list}>
-              {DEPT_REPORTS.map((r) => (
-                <li key={r.dept}>
+              {DEPT_REPORTS.map((r, k) => (
+                <li key={r.dept} className={styles.slideRow} style={{ ['--k' as string]: k }}>
                   <button type="button" className={`${styles.report} ${styles.item}`} onClick={() => open(`report:${r.dept}`)} style={{ width: '100%' }}>
                     <span className={styles.reportKun}><DoyaKun pose={DEPT_KUN[r.dept]} size={48} /></span>
                     <span><span className={styles.rowTitle} style={{ display: 'block' }}>{DEPT_LABEL[r.dept]}</span><span className={styles.rowText} style={{ display: 'block' }}>{r.line}</span></span>
@@ -201,20 +249,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
             </ul>
           </section>
         </Stagger>
-        <Stagger i={4}>
-          <section className={styles.card} aria-label="今日やること">
-            <div className={styles.cardHead}><h2 className={styles.h2}>今日やること</h2><span className={styles.sub}>{TODAY_TASKS.length}件</span></div>
-            <ul className={styles.list}>
-              {TODAY_TASKS.map((t) => (
-                <li key={t.id} className={styles.row} style={{ gridTemplateColumns: 'auto minmax(0, 1fr) auto' }}>
-                  <span className={styles.dot} aria-hidden="true" />
-                  <p className={styles.rowTitle}>{t.text}</p>
-                  <span className={styles.tag}>{DEPT_LABEL[t.dept]}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </Stagger>
+        <Stagger i={4}><TodayList /></Stagger>
       </div>
     </div>
   )
@@ -238,7 +273,7 @@ function DeptView({ dept, open }: { dept: 'marketing'; open: (key: string) => vo
       <Stagger i={1}>
         <section className={styles.card} aria-label="部署の数字">
           <div className={styles.cardHead}><h2 className={styles.h2}>部署の数字</h2><span className={styles.pill}>見本の仮の数字</span></div>
-          <div className={styles.metrics}>{v.metrics.map((m) => <MetricTile key={m.label} m={m} />)}</div>
+          <div className={styles.metrics}>{v.metrics.map((m, i) => <MetricTile key={m.label} m={m} index={i} />)}</div>
         </section>
       </Stagger>
       <Stagger i={2}>
@@ -280,8 +315,8 @@ function DeptView({ dept, open }: { dept: 'marketing'; open: (key: string) => vo
         <section className={styles.card} aria-label="最近つくったもの">
           <div className={styles.cardHead}><h2 className={styles.h2}>最近つくったもの</h2></div>
           <ul className={styles.list}>
-            {v.recent.map((r) => (
-              <li key={r.id} className={styles.row} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+            {v.recent.map((r, k) => (
+              <li key={r.id} className={`${styles.row} ${styles.slideRow}`} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', ['--k' as string]: k }}>
                 <p className={styles.rowTitle}>{r.what}</p>
                 <span className={styles.sub}>{r.when}</span>
               </li>
@@ -475,10 +510,24 @@ function ToolPanel({ toolId, onClose }: { toolId: string; onClose: () => void })
 }
 
 /** 「ドヤAIに頼む」の結果: AI が選んだ操作と、読み取った値を入れた入力を、パネルの中で確かめ、保存の直前まで進める */
+/** 空の枠（形の見本）から、順に埋まる1項目。枠は消え、中身が左から右へ少しスライドして出る */
+function Fill({ k, ready, children }: { k: number; ready: boolean; children: React.ReactNode }) {
+  return <div className={styles.fill} data-ready={ready} style={{ ['--k' as string]: k }}>{children}</div>
+}
+
 function AskPanel({ ask, onClose }: { ask: { text: string; route: DemoRoute | null }; onClose: () => void }) {
   const route = ask.route
   const [vals, setVals] = useState<Record<string, string>>(route?.values ?? {})
   const [done, setDone] = useState(false)
+  // 空の枠が先に出て、項目が上から順に埋まっていく（枠は項目の形のスケルトン）
+  const { mode, slow } = useMotion()
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (mode === null) return
+    if (mode === 'none') { setReady(true); return }
+    const t = window.setTimeout(() => setReady(true), (mode === 'short' ? 80 : 260) * slow)
+    return () => window.clearTimeout(t)
+  }, [mode, slow])
   if (!route) {
     return (
       <>
@@ -493,20 +542,26 @@ function AskPanel({ ask, onClose }: { ask: { text: string; route: DemoRoute | nu
   const got = a.fields.filter((f) => route.values[f.key])
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <ToolBearIcon id={a.toolId} icon={tool?.icon} size={48} iconSize={24} />
-        <p className={styles.proposalText} style={{ margin: 0 }}>{tool?.name} の「{a.label}」で進めます。</p>
-      </div>
+      <Fill k={0} ready={ready}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ToolBearIcon id={a.toolId} icon={tool?.icon} size={48} iconSize={24} />
+          <p className={styles.proposalText} style={{ margin: 0 }}>{tool?.name} の「{a.label}」で進めます。</p>
+        </div>
+      </Fill>
+      <Fill k={1} ready={ready}>
       <p className={styles.read}>
         <span>あなたの依頼: 「{ask.text}」</span>
         {got.length ? <span>読み取った内容: {got.map((f) => `${f.label} ${f.type === 'yen' ? `${Number(route.values[f.key]).toLocaleString('ja-JP')}円` : route.values[f.key]}`).join('、')}</span> : <span>読み取れた値は、まだありません。</span>}
       </p>
+      </Fill>
       {a.fields.map((f, i) => (
-        <label key={f.key} className={styles.field}>
+        <Fill key={f.key} k={i + 2} ready={ready}>
+        <label className={styles.field}>
           <span className={styles.fieldLabel}>{f.label}{f.required ? '（必須）' : ''}</span>
           <input className={styles.input} value={vals[f.key] ?? ''} onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))} data-missing={f.required && !vals[f.key]?.trim() ? 'true' : undefined} placeholder={f.ask} {...(i === 0 ? { 'data-autofocus': true } : {})} />
           {f.required && !vals[f.key]?.trim() ? <span className={styles.fieldHint}>{f.ask ?? `${f.label}を教えてください`}</span> : null}
         </label>
+        </Fill>
       ))}
       {done ? <p className={styles.ok}>「{a.finalStep}」の直前まで進みました。見本のため、保存はしません。本物では、内容を確かめて、押すのはあなたです。</p> : null}
       <div className={styles.panelFoot}>

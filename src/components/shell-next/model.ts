@@ -62,14 +62,16 @@ export interface Metric {
   /** 前の週との増減（%）。tone で色と矢印を決める。良し悪しは、色だけでなく文字でも出す */
   delta?: { text: string; tone: Tone; good: boolean }
   note?: string
+  /** 直近7週の動き（小さな棒グラフ用・見本の仮の値。0〜100 の相対の高さ） */
+  trend?: number[]
 }
 
 export const COMPANY_METRICS: Metric[] = [
-  { label: '今月の売上', value: '1,284', unit: '万円', delta: { text: '前の週より 8% 増', tone: 'up', good: true } },
-  { label: '入金予定（今週）', value: '312', unit: '万円', delta: { text: '前の週と同じ', tone: 'flat', good: true } },
-  { label: '今月の支出', value: '846', unit: '万円', delta: { text: '前の週より 3% 増', tone: 'up', good: false } },
-  { label: '進行中の商談', value: '23', unit: '件', delta: { text: '前の週より 2件 増', tone: 'up', good: true } },
-  { label: '採用の進み', value: '4', unit: '人 面接中', delta: { text: '前の週より 1人 減', tone: 'down', good: false } },
+  { label: '今月の売上', value: '1,284', unit: '万円', delta: { text: '前の週より 8% 増', tone: 'up', good: true }, trend: [46, 52, 49, 61, 58, 70, 82] },
+  { label: '入金予定（今週）', value: '312', unit: '万円', delta: { text: '前の週と同じ', tone: 'flat', good: true }, trend: [60, 55, 64, 58, 62, 59, 61] },
+  { label: '今月の支出', value: '846', unit: '万円', delta: { text: '前の週より 3% 増', tone: 'up', good: false }, trend: [52, 50, 55, 57, 56, 60, 63] },
+  { label: '進行中の商談', value: '23', unit: '件', delta: { text: '前の週より 2件 増', tone: 'up', good: true }, trend: [30, 38, 36, 44, 47, 52, 60] },
+  { label: '採用の進み', value: '4', unit: '人 面接中', delta: { text: '前の週より 1人 減', tone: 'down', good: false }, trend: [70, 66, 72, 64, 60, 58, 46] },
 ]
 
 export interface Decision {
@@ -116,10 +118,10 @@ export interface DeptView {
 
 export const MARKETING_VIEW: DeptView = {
   metrics: [
-    { label: '今月のバナー', value: '38', unit: '枚', delta: { text: '前の週より 6枚 増', tone: 'up', good: true } },
-    { label: '平均のクリック率', value: '1.8', unit: '%', delta: { text: '前の週より 0.4 ポイント 減', tone: 'down', good: false } },
-    { label: 'AI検索での言及率', value: '24', unit: '%', delta: { text: '前の週より 2 ポイント 増', tone: 'up', good: true } },
-    { label: '公開した記事', value: '7', unit: '本', delta: { text: '前の週と同じ', tone: 'flat', good: true } },
+    { label: '今月のバナー', value: '38', unit: '枚', delta: { text: '前の週より 6枚 増', tone: 'up', good: true }, trend: [34, 40, 44, 41, 55, 62, 74] },
+    { label: '平均のクリック率', value: '1.8', unit: '%', delta: { text: '前の週より 0.4 ポイント 減', tone: 'down', good: false }, trend: [72, 70, 74, 68, 66, 60, 52] },
+    { label: 'AI検索での言及率', value: '24', unit: '%', delta: { text: '前の週より 2 ポイント 増', tone: 'up', good: true }, trend: [40, 42, 47, 45, 50, 56, 63] },
+    { label: '公開した記事', value: '7', unit: '本', delta: { text: '前の週と同じ', tone: 'flat', good: true }, trend: [55, 58, 54, 57, 56, 58, 57] },
   ],
   proposal: {
     text: 'バナーの反応が落ちています。先週のいちばん反応が良かった案をもとに、新しい案を3つ作りますか？',
