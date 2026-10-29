@@ -146,7 +146,7 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
         <div className="mb-6">
           <OneButtonBar
             eyebrow="ドヤポップアップ"
-            cta={loading ? 'ポップアップの案を作っています。このまま待ってね' : 'サイトの URL を入れたら、押してね'}
+            cta={loading ? 'ポップアップの案を作っています。このままお待ちください' : 'サイトの URL を入れたら、押してください'}
             label="提案を作る"
             scope="入れた URL のサイトを読み、ポップアップの下書きを3案作ります。公開するまで、サイトには何も出ません。"
             onRun={() => void create()}

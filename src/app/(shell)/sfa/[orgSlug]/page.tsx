@@ -153,7 +153,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
       {oneButton && (
         <OneButtonBar
           eyebrow="営業管理"
-          cta="今日の商談を進めるなら、押してね"
+          cta="今日の商談を進めるなら、押してください"
           label="商談パイプラインを開く"
           scope="商談の一覧を、段階ごとのカンバンで開きます。カードを動かして、案件の進み具合を更新できます。"
           href={`${base}/deals`}

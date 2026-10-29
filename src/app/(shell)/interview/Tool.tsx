@@ -578,7 +578,7 @@ export default function InterviewTool() {
       {oneButton && (
         <OneButtonBar
           eyebrow="インタビュー"
-          cta={oneButtonRunning ? '録音を文字にしています。このまま待ってね' : '録音のファイルを選んだら、あとは待つだけ。押してね'}
+          cta={oneButtonRunning ? '録音を文字にしています。このままお待ちください' : '録音のファイルを選んだら、あとは待つだけです。押してください'}
           label="録音・録画のファイルを選ぶ"
           scope="選んだファイルをアップロードし、話者を分けて文字に起こします。記事の下書きは、文字起こしのあとにプロジェクトの中で作れます。"
           onRun={pickFile}

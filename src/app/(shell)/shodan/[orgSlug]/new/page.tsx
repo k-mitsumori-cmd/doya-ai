@@ -155,7 +155,7 @@ export default function ShodanNewPage() {
       {oneButton && phase !== 'reveal' && (
         <OneButtonBar
           eyebrow="商談準備"
-          cta={phase === 'researching' ? '企業を調べています。このまま待ってね' : '商談先のURLを入れたら、押してね'}
+          cta={phase === 'researching' ? '企業を調べています。このままお待ちください' : '商談先のURLを入れたら、押してください'}
           label={retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
           scope="企業サイトなどを調べ、課題の仮説と提案資料までまとめてつくります。30秒から2分ほどかかります。"
           onRun={run}

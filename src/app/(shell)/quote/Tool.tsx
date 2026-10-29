@@ -759,28 +759,28 @@ export default function QuoteTool() {
   const oneButtonStage = quoteOneButtonStage({ createdId: createdDocument?.id ?? '', itemCount: items.length, selectedProduct })
   const oneButtonBar = {
     analyze: {
-      cta: analyzing ? 'サービスを解析しています。このまま待ってね' : '自社サービスのURLを入れたら、押してね',
+      cta: analyzing ? 'サービスを解析しています。このままお待ちください' : '自社サービスのURLを入れたら、押してください',
       label: analyzing ? '解析中...' : '解析する',
       scope: 'URLのページを読み取り、提供形態・課金の軸・公開している価格を取り込みます。見積書はまだ作りません。',
       onRun: () => void analyze(), href: undefined,
       disabled: analyzing || !url.trim(), disabledReason: 'サービスのURLを入れると押せます。', running: analyzing,
     },
     suggest: {
-      cta: suggesting ? '品目の候補を作っています。このまま待ってね' : '商材を選んだら、押してね',
+      cta: suggesting ? '品目の候補を作っています。このままお待ちください' : '商材を選んだら、押してください',
       label: suggesting ? '候補を作っています…' : '品目の候補を出す',
       scope: '選んだ商材と相場から、見積書に載せる品目を出します。見積書はまだ作りません。',
       onRun: () => void suggest(), href: undefined,
       disabled: suggesting, disabledReason: undefined, running: suggesting,
     },
     create: {
-      cta: creating ? '見積書を作成しています。このまま待ってね' : '品目と金額を確認できたら、押してね',
+      cta: creating ? '見積書を作成しています。このままお待ちください' : '品目と金額を確認できたら、押してください',
       label: creating ? '作成しています…' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : items.length > MAX_QUOTE_ITEMS ? `品目は${MAX_QUOTE_ITEMS}行までです` : '見積書を作成する',
       scope: '下の品目と税区分から、見積書を1通作ります。PDFの出力は作成後にできます。',
       onRun: () => void createDocument(), href: undefined,
       disabled: creating || documentUncertain || documentLimited || items.length > MAX_QUOTE_ITEMS, disabledReason: undefined, running: creating,
     },
     open: {
-      cta: '見積書ができました。中身を確かめてね',
+      cta: '見積書ができました。中身をご確認ください',
       label: `作った見積書を開く（${createdDocument?.quoteNo ?? ''}）`,
       scope: '作った見積書の画面を開きます。PDFの出力と送付は、そこからできます。',
       onRun: undefined, href: createdDocument ? `/quote/documents/${encodeURIComponent(createdDocument.id)}` : undefined,

@@ -63,7 +63,7 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
         note: note || undefined,
       });
       if (!saved) return;
-      toast.success("作業時間を記録したよ！");
+      toast.success("作業時間を記録しました");
       setShowForm(false);
       refreshCreated();
     } catch (e: any) {
@@ -85,7 +85,7 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
     if (!ok) return;
     try {
       await deleteTimeEntry(workspaceSlug, entryId);
-      toast.success("記録を削除したよ");
+      toast.success("記録を削除しました");
       router.refresh();
     } catch (e: any) {
       toast.error(userErrorMessage(e?.message, "削除できませんでした。少し待って、もう一度お試しください。"));
@@ -128,7 +128,7 @@ export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, p
         <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-6 mb-6 animate-slide-up">
           <div className="flex items-center gap-2.5 mb-4">
             <Image src="/character/focus.png" alt="" width={32} height={32} unoptimized />
-            <span className="text-[16px] font-black text-gray-800">作業時間を記録しよう！</span>
+            <span className="text-[16px] font-black text-gray-800">作業時間を記録しましょう</span>
           </div>
           <form onSubmit={handleAdd} className="space-y-4">
             <fieldset disabled={creation.status !== "ready"} className="space-y-4">

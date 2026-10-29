@@ -926,7 +926,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           <div className="mb-6">
             <OneButtonBar
               eyebrow="ドヤペルソナAI"
-              cta={loading ? 'ペルソナを作っています。このまま待ってね' : 'サイトの URL を入れたら、押してね'}
+              cta={loading ? 'ペルソナを作っています。このままお待ちください' : 'サイトの URL を入れたら、押してください'}
               label="ペルソナを生成"
               scope="入れた URL のサイトを読み、人物像と似顔絵を1分ほどで作ります。"
               onRun={handleGenerate}

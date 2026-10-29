@@ -38,7 +38,7 @@ export default function AioScanPage() {
         <div className="mb-5">
           <OneButtonBar
             eyebrow="ドヤAIO"
-            cta={busy ? '調査の準備をしています。このまま待ってね' : '調べたいサービスの URL を入れたら、押してね'}
+            cta={busy ? '調査の準備をしています。このままお待ちください' : '調べたいサービスの URL を入れたら、押してください'}
             label="調査を開始"
             scope="入れた URL からサービス名と監視する質問を判定し、ChatGPT や Gemini での今の見え方を診断します。"
             onRun={() => void start()}
