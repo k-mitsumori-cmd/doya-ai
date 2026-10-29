@@ -13,7 +13,7 @@ const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new' } as const
 
 type ExpensePageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }
 
-export default async function ExpensePage({ searchParams }: ExpensePageProps = {}) {
+export default async function ExpensePage({ searchParams }: ExpensePageProps) {
   const sp = (searchParams ? await searchParams : {}) ?? {}
   // ドヤAIの「頼む」から来たときは、行き先（?to=）と値（doya_*）を組織の中の画面へ運ぶ
   const next = forwardPath(toSearchParams(sp), EXPENSE_ENTRY_TO)

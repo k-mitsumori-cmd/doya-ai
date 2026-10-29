@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { cleanValues, missingFields, normalizeValue, prefillHref, readPrefill } from './prefill'
 import { catalogText, validateReply, jstToday } from './router'
-import { askRouter, buildRouterRequest } from './claude.server'
+import { agentRouterModel, askRouter, buildRouterRequest } from './claude.server'
 import type { AgentAction } from './types'
 
 const expense: AgentAction = {
@@ -76,7 +76,8 @@ test('AI の答え: 知らない操作・形の違う答えは「どれにも合
 })
 
 test('AI に送る中身: Opus 5.5・effort low・構造化出力・一覧をキャッシュ。temperature と前置きを送らない', () => {
-  const req = buildRouterRequest('20万円支出を登録したい', '2026-10-28', actions, plans)
+  // model は明示して渡す（引数の既定値は AGENT_ROUTER_AI_MODEL を読むので、本番に入れるとビルドのテストが落ちる）
+  const req = buildRouterRequest('20万円支出を登録したい', '2026-10-28', actions, plans, agentRouterModel(''))
   assert.equal(req.model, 'claude-opus-5-5')
   assert.equal(req.output_config.effort, 'low')
   assert.ok(req.output_config.format)
