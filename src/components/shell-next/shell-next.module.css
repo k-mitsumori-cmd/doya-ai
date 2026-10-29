@@ -44,15 +44,17 @@
 .askHead { margin-bottom: 4px; }
 /* 入力欄の枠だけ虹色（青を主役に、紫・ピンク・オレンジ・水色）がゆっくり回る（1周10秒）。本人の指定（2026-10-29）。ほかの背景は平らのまま。
    中の背景は白。入力欄に入ると、枠の外にやわらかい光が出る。動きを減らす設定では回さない */
-@property --sn-spin { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
-@keyframes snSpin { to { --sn-spin: 360deg; } }
-.aura { --sn-rainbow: conic-gradient(from var(--sn-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 3px); padding: 3px; background: var(--sn-rainbow); animation: snSpin 10s linear infinite; }
-.aura::after { content: ''; position: absolute; inset: -4px; z-index: -1; border-radius: calc(var(--inner-r) + 8px); background: var(--sn-rainbow); filter: blur(16px); opacity: 0; transition: opacity .45s var(--ease); pointer-events: none; }
+.aura { position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 3px); padding: 3px; }
+/* 枠の虹色は、transform の回転だけで回す（描き直しが要らず、GPU で動く）。大きな正方形のグラデーションを回し、枠の形でくり抜く */
+.auraRing { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; }
+.auraRing::before { content: ''; position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(#0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); animation: snTurn 10s linear infinite; will-change: transform; }
+@keyframes snTurn { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.aura::after { content: ''; position: absolute; inset: -4px; z-index: -2; border-radius: calc(var(--inner-r) + 8px); background: conic-gradient(from 200deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(16px); opacity: 0; transition: opacity .45s var(--ease); pointer-events: none; }
 .aura:focus-within::after { opacity: .5; }
-.aura .textarea { display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); resize: none; overflow: hidden; min-height: calc(1.6em * 4 + 28px); line-height: 1.6; font-size: 16px; padding: 14px 16px; }
+.aura .textarea { position: relative; display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); resize: none; overflow: hidden; min-height: calc(1.6em * 4 + 28px); line-height: 1.6; font-size: 16px; padding: 14px 16px; }
 .aura .textarea:focus-visible { outline: none; }
 .btnAi { position: relative; isolation: isolate; }
-.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: var(--sn-rainbow, conic-gradient(from var(--sn-spin), #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff)); filter: blur(9px); opacity: .55; animation: snSpin 10s linear infinite; }
+.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: conic-gradient(from 210deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(9px); opacity: .5; }
 .askTitle, .deptTitle { animation: headIn calc(.7s * var(--mx, 1)) var(--ease) both; }
 @keyframes headIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .askHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -188,7 +190,7 @@
   .item, .btn, .member, .chip { transition: none; }
   .member:hover, .item:active, .chip:active, .member:active { transform: none; }
   .skel { animation: none; }
-  .aura, .btnAi:not(:disabled)::before { animation: none; }
+  .aura, .btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: conic-gradient(from 210deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(9px); opacity: .5; }
 }
 
 /* ---- パネル: パソコンは右から（ドロワー）、スマホは下から（ボトムシート）。位置と透明度だけ動かす ---- */

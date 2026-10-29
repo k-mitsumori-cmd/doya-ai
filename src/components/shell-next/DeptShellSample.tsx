@@ -201,6 +201,7 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
           </div>
           <div className={styles.askBox}>
             <div className={styles.aura}>
+              <span className={styles.auraRing} aria-hidden="true" />
               <textarea id="ask-input" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} placeholder="例: 来週の商談の準備をまとめて進めたい" rows={4} />
             </div>
             <div className={styles.btnRow}>
