@@ -69,7 +69,7 @@ test('1日10円の上限に届いていれば、手で1回のときも中身を�
   let inner = 0
   const added: string[] = []
   const check = { id: 'paid:agent-sales-prep', area: '外部サービス' as const, label: 'B1', severity: 'urgent' as const, threshold: 1, hints: ['x'], costYen: 1.8, run: async () => { inner++; return { ok: true } } }
-  const capped = wrapWithDailyCap([check], { readSpend: async () => ({ yen: 10 }), addSpend: async (id) => { added.push(id) } })
+  const capped = wrapWithDailyCap([check], { reserveSpend: async () => ({ ok: false, spent: 10, reason: 'cap' }), addSpend: async (id) => { added.push(id) } })
   const { deps } = makeDeps({ budgetedAgentChecksOnce: () => capped })
   const r = await handlePaidRequest(req(URL_ONCE), 'POST', deps)
   assert.equal(r.status, 200)
@@ -82,7 +82,7 @@ test('上限の手前なら回し、回した分の費用を足す', async () =>
   let inner = 0
   const added: string[] = []
   const check = { id: 'paid:agent-sales-prep', area: '外部サービス' as const, label: 'B1', severity: 'urgent' as const, threshold: 1, hints: ['x'], costYen: 1.8, run: async () => { inner++; return { ok: true } } }
-  const { checks } = wrapWithDailyCap([check], { readSpend: async () => ({ yen: 5 }), addSpend: async (id) => { added.push(id) } })
+  const { checks } = wrapWithDailyCap([check], { reserveSpend: async id => { added.push(id); return { ok: true, spent: 5, day: '2026-10-26' } }, addSpend: async () => {} })
   await checks[0].run()
   assert.equal(inner, 1)
   assert.deepEqual(added, ['paid:agent-sales-prep'])
@@ -98,7 +98,13 @@ test('前後の差: 台帳の値が変わったら ledgerChanges に出す', () 
 function spendStore(start: number) {
   let yen = start
   const log: [string, number][] = []
-  return { log, get yen() { return yen }, deps: { readSpend: async () => ({ yen }), addSpend: async (id: string, v: number) => { await new Promise(r => setTimeout(r, 5)); yen += v; log.push([id, v]) } } }
+  return { log, get yen() { return yen }, deps: {
+    reserveSpend: async (id: string, v: number) => {
+      if (yen + v > 10) return { ok: false as const, spent: yen, reason: 'cap' as const }
+      const spent = yen; yen += v; log.push([id, v]); return { ok: true as const, spent, day: '2026-10-26' }
+    },
+    addSpend: async (id: string, v: number) => { await new Promise(r => setTimeout(r, 5)); yen += v; log.push([id, v]) },
+  } }
 }
 const paid = (id: string, costYen: number, run: () => Promise<{ ok: boolean; skipped?: boolean }>) => ({ id, area: '外部サービス' as const, label: id, severity: 'urgent' as const, threshold: 1, hints: ['x'], costYen, run })
 
@@ -144,9 +150,19 @@ test('失敗した確認は、費用は出たとみなして予約を残す', as
 
 test('予約を書けなければ回さない', async () => {
   let ran = false
-  const { checks, skipped } = wrapWithDailyCap([paid('b1', 1.8, async () => { ran = true; return { ok: true } })], { readSpend: async () => ({ yen: 0 }), addSpend: async () => { throw new Error('db down') } })
+  const { checks, skipped } = wrapWithDailyCap([paid('b1', 1.8, async () => { ran = true; return { ok: true } })], { reserveSpend: async () => { throw new Error('db down') }, addSpend: async () => {} })
   const out = await checks[0].run()
   assert.equal(ran, false)
   assert.equal(out.skipped, true)
   assert.deepEqual(skipped, ['b1'])
+})
+
+test('返却は予約日の台帳へ戻す（日付をまたいでも今日の枠を増やさない）', async () => {
+  let returnedDay = ''
+  const { checks } = wrapWithDailyCap([paid('b1', 1.8, async () => ({ ok: true, skipped: true }))], {
+    reserveSpend: async () => ({ ok: true, spent: 7, day: '2026-10-28' }),
+    addSpend: async (_id, _yen, day) => { returnedDay = day },
+  })
+  await checks[0].run()
+  assert.equal(returnedDay, '2026-10-28')
 })

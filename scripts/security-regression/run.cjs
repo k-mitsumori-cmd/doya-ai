@@ -1430,3 +1430,6 @@ if (hrItems.error || hrItems.status !== 0) { console.error('HR one-on-one items 
 
 const hrSummary = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-persisted-summary-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrSummary.error || hrSummary.status !== 0) { console.error('HR persisted summary regression failed'); process.exit(hrSummary.status || 1); }
+
+const watchBudget = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-system-watch-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (watchBudget.error || watchBudget.status !== 0) { console.error('System watch budget regression failed'); process.exit(watchBudget.status || 1); }

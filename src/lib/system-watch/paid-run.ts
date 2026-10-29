@@ -2,7 +2,7 @@
 import { prisma } from '@/lib/prisma'
 import { paidChecks, PAID_ENABLED_KEY } from './paid-checks'
 import { paidAgentChecks, PAID_AGENT_ENABLED_KEY } from './agent-checks'
-import { addSpend, DAILY_CAP_YEN, fitsDailyCap, readSpend } from './budget'
+import { addSpend, DAILY_CAP_YEN, reserveSpend, type SpendReservation } from './budget'
 import type { CheckDef } from './types'
 
 type Paid = CheckDef & { costYen: number }
@@ -12,8 +12,8 @@ async function enabled(key: string): Promise<boolean> {
   return row?.value === 'true'
 }
 
-type SpendDeps = { readSpend: () => Promise<{ yen: number }>; addSpend: (id: string, yen: number) => Promise<unknown> }
-const realSpend: SpendDeps = { readSpend: () => readSpend(), addSpend: (id, yen) => addSpend(id, yen) }
+type SpendDeps = { reserveSpend: (id: string, yen: number) => Promise<SpendReservation>; addSpend: (id: string, yen: number, day: string) => Promise<unknown> }
+const realSpend: SpendDeps = { reserveSpend, addSpend }
 
 /**
  * 確認を、1日の上限の確認で包む（2026-10-26 統括の依頼で、同時に回しても上限を超えない形にした）。
@@ -26,7 +26,7 @@ const realSpend: SpendDeps = { readSpend: () => readSpend(), addSpend: (id, yen)
 export function wrapWithDailyCap(list: Paid[], deps: SpendDeps = realSpend): { checks: CheckDef[]; skipped: string[] } {
   const sorted = [...list].sort((a, b) => a.costYen - b.costYen)
   const skipped: string[] = []
-  // 予約を1つずつ順に行うための鎖（毎朝の cron は1回の呼び出しの中で回るので、この中で順にすれば足りる）
+  // この回の費用が安い順を保つ。別リクエストとの排他はreserveSpendのDBロックで行う。
   let chain: Promise<unknown> = Promise.resolve()
   const serial = <T>(fn: () => Promise<T>): Promise<T> => {
     const next = chain.then(fn, fn)
@@ -37,10 +37,7 @@ export function wrapWithDailyCap(list: Paid[], deps: SpendDeps = realSpend): { c
     ...c,
     run: async () => {
       const reserved = await serial(async () => {
-        const spent = (await deps.readSpend()).yen
-        if (!fitsDailyCap(spent, c.costYen)) return { ok: false as const, spent, reason: 'cap' as const }
-        try { await deps.addSpend(c.id, c.costYen) } catch { return { ok: false as const, spent, reason: 'write' as const } }
-        return { ok: true as const, spent }
+        try { return await deps.reserveSpend(c.id, c.costYen) } catch { return { ok: false as const, spent: 0, reason: 'write' as const } }
       })
       if (!reserved.ok) {
         skipped.push(c.id)
@@ -53,7 +50,7 @@ export function wrapWithDailyCap(list: Paid[], deps: SpendDeps = realSpend): { c
       }
       const out = await c.run()
       // 前提がそろわず回さなかったなら、予約を戻す
-      if (out?.skipped) await serial(() => deps.addSpend(c.id, -c.costYen)).catch(() => {})
+      if (out?.skipped) await serial(() => deps.addSpend(c.id, -c.costYen, reserved.day)).catch(() => {})
       return out
     },
   }))
