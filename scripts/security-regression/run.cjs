@@ -1480,3 +1480,6 @@ if (asklinkCopyRecovery.error || asklinkCopyRecovery.status !== 0) process.exit(
 
 const personaOutputRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-persona-output-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (personaOutputRecovery.error || personaOutputRecovery.status !== 0) process.exit(personaOutputRecovery.status || 1);
+
+const seoHtmlTitle = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-html-title.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.status || 1);
