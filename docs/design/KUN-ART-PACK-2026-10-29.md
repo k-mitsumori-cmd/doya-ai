@@ -48,7 +48,7 @@ mic・calendar・write・survey・camera・search・chart・money・clock・hand
 | 〃 | tool-income | 請求書に判を押す | ドヤ収入管理（請求書） |
 
 すでに絵があり、新しく作らないもの: 勤怠（clock）・商談準備と AIO（search）・記事作成（write）・インタビュー（mic）・見積（write）・支出（money）・営業管理（handshake）・スライド（present）・人事（survey）。
-展示会の待ち画面のローラーのクマ（paint-a・paint-b・paint-done）は、今回は作り直さない（画風が今の20ポーズと違うと分かったら別に起こす）。
+展示会の待ち画面のローラーのクマ（paint-a・paint-b・paint-done）は、10/29 の時点では作り直さない予定だったが、10/30 に画風のずれが分かり、作り直した（下の「2026-10-30 の直し」）。
 
 ## 2026-10-30 の直し（本人の「進めてください」）
 
