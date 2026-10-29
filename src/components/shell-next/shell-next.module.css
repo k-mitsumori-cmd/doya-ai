@@ -34,8 +34,9 @@
 .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--note-bg); color: var(--note-ink); font-size: 11px; font-weight: 800; white-space: nowrap; }
 
 /* ① 頼む欄 */
-.ask { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
-.askTitle { margin: 0 0 10px; font-size: clamp(22px, 3vw, 30px); font-weight: 800; color: var(--ink); text-wrap: balance; }
+.ask { display: grid; gap: 12px; }
+.askHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.askTitle { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; color: var(--ink); text-wrap: balance; word-break: auto-phrase; line-break: strict; }
 .askBox { display: grid; gap: 10px; }
 .textarea { width: 100%; min-height: 84px; resize: vertical; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: inherit; font-size: 15px; color: var(--ink); background: var(--bg); }
 .textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; background: var(--paper); }
@@ -94,8 +95,6 @@
   .side { display: none; }
   .sampleTop { display: block; }
   .main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)); }
-  .ask { grid-template-columns: minmax(0, 1fr); }
-  .askKun { display: none; }
   .cols { grid-template-columns: minmax(0, 1fr); }
   /* 数字は2列にして、5つを1画面で見渡せるようにする */
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

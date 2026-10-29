@@ -125,15 +125,18 @@ function HomeView({ go, open, onAsk }: { go: (k: NavKey) => void; open: (key: st
     <div className={styles.stack}>
       <Stagger i={0}>
         <section className={`${styles.card} ${styles.ask}`} aria-label="ドヤAIに頼む">
-          <div className={styles.askBox}>
+          {/* 見出しの右に、小さなドヤくん（左の大きな列はやめた。2026-10-29 本人の指示）。入力欄は横いっぱい */}
+          <div className={styles.askHead}>
             <h1 className={styles.askTitle}>今日は、何をしますか？</h1>
+            <DoyaKun pose="point" size={64} className={styles.askKun} />
+          </div>
+          <div className={styles.askBox}>
             <textarea id="ask-input" className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} placeholder="例: 来週の商談の準備をまとめて進めたい" rows={2} />
             <div className={styles.btnRow}>
               <div className={styles.chips}>{EXAMPLES.map((e) => <button key={e} type="button" className={styles.chip} onClick={() => setText(e)}>{e}</button>)}</div>
               <button type="button" className={styles.btn} disabled={!text.trim()} onClick={() => onAsk(text.trim())}>ドヤAIに頼む</button>
             </div>
           </div>
-          <div className={styles.askKun}><DoyaKun pose="point" size={120} /></div>
         </section>
       </Stagger>
 
