@@ -811,8 +811,21 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!alive.current || currentPersona.current !== target) return
 
       if (format === 'png') {
-        const dataUrl = canvas.toDataURL('image/png')
-        downloadImage(dataUrl, `persona-${persona?.name || 'export'}.png`)
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNG encoding failed')), 'image/png')
+        })
+        if (!alive.current || currentPersona.current !== target) return
+        const link = document.createElement('a')
+        const downloadUrl = URL.createObjectURL(blob)
+        try {
+          link.href = downloadUrl
+          link.download = `persona-${persona?.name || 'export'}.png`
+          document.body.appendChild(link)
+          link.click()
+        } finally {
+          link.remove()
+          setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+        }
       } else {
         const { jsPDF } = await import('jspdf')
         if (!alive.current || currentPersona.current !== target) return
