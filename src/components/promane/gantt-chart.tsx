@@ -250,7 +250,7 @@ export function GanttChart({
                   </div>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <span className="text-[12px] font-semibold text-gray-300">
+                    <span className="text-[12px] font-semibold text-gray-500">
                       {task.startDate || task.dueDate ? "表示期間外の日程です" : "クリックして日程設定"}
                     </span>
                   </div>
