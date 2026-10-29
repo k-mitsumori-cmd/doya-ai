@@ -1427,3 +1427,6 @@ if (hrDuration.error || hrDuration.status !== 0) { console.error('HR one-on-one 
 
 const hrItems = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-items.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrItems.error || hrItems.status !== 0) { console.error('HR one-on-one items regression failed'); process.exit(hrItems.status || 1); }
+
+const hrSummary = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-persisted-summary-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrSummary.error || hrSummary.status !== 0) { console.error('HR persisted summary regression failed'); process.exit(hrSummary.status || 1); }

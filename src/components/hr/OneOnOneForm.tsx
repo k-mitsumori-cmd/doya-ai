@@ -40,6 +40,7 @@ interface OneOnOneFormProps {
   initialManagerNote?: string | null
   initialSharedNote?: string | null
   initialActionItems?: unknown
+  initialAiSummary?: string | null
   readOnly?: boolean
   canViewManagerNotes?: boolean
   onSave?: (data: any) => void
@@ -55,6 +56,7 @@ export default function OneOnOneForm({
   initialManagerNote = '',
   initialSharedNote = '',
   initialActionItems = [],
+  initialAiSummary = null,
   readOnly = false,
   canViewManagerNotes = false,
   onSave,
@@ -76,7 +78,7 @@ export default function OneOnOneForm({
       ? initialItems.actionItems
       : [{ id: crypto.randomUUID(), content: '', assignee: '', dueDate: '', done: false }]
   )
-  const [aiResult, setAiResult] = useState<string | null>(null)
+  const [aiResult, setAiResult] = useState<string | null>(canViewManagerNotes ? initialAiSummary : null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
@@ -434,14 +436,14 @@ export default function OneOnOneForm({
       </div>
 
       {/* AI Summary */}
-      {!readOnly && canViewManagerNotes && (
+      {canViewManagerNotes && (!readOnly || aiResult) && (
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-brand-400">auto_awesome</span>
-              AI要約生成
+              AI要約
             </h3>
-            <button
+            {!readOnly && <button
               type="button"
               onClick={handleAiSummary}
               disabled={editingDisabled}
@@ -453,7 +455,7 @@ export default function OneOnOneForm({
                 <span className="material-symbols-outlined text-lg">auto_awesome</span>
               )}
               {aiLoading ? '生成中...' : 'AI要約生成'}
-            </button>
+            </button>}
           </div>
           {(aiLoading || aiResult) && (
             aiResult?.startsWith('エラー:')
