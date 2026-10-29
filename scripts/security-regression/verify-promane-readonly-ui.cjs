@@ -6,7 +6,8 @@ const dom = new JSDOM('<body></body>', { url: 'https://example.invalid/promane/s
 global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = req('react-dom/client');
 const modules = new Map(), hooks = [], mutations = [], sortable = [], reads = []; let dnd, pageRole = 'guest';
-const Null = () => null, ui = tag => ({ children, ...p }) => React.createElement(tag, p, children);
+const Null = () => null;
+function ui(tag) { return function SyntheticElement({ children, ...p }) { return React.createElement(tag, p, children); }; }
 const hook = kind => (...args) => { hooks.push({ kind, args }); return { status: 'ready', scopeKey: 'synthetic', save: async () => { mutations.push(kind); return true; } }; };
 function load(file) {
   if (modules.has(file)) return modules.get(file);
