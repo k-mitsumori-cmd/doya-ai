@@ -40,4 +40,5 @@ DEFAULT_MOCKS['@/lib/doyaslide/generation-operation']={DOYASLIDE_OPERATION_LEASE
 DEFAULT_MOCKS['@/components/one-button/context']={useOneButton:()=>false,OneButtonContext:{Provider:({children})=>children}};
 DEFAULT_MOCKS['@/components/one-button/OneButtonBar']={OneButtonBar:()=>null};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
+lazyReal('@/lib/hr/one-on-one-items',()=>load('src/lib/hr/one-on-one-items.ts'));
 module.exports={load,check,results,DEFAULT_MOCKS};

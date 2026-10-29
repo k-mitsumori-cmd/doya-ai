@@ -1,4 +1,5 @@
 import { privateApiJson } from '@/lib/private-api-response'
+import { validOneOnOneItems } from '@/lib/hr/one-on-one-items'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -55,6 +56,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return privateApiJson({ error: '完了済みの1on1は要約を更新できません' }, { status: 409 })
     }
 
+    if (!validOneOnOneItems(oneOnOne.agenda, 'agenda') || !validOneOnOneItems(oneOnOne.aiActionItems, 'actions')) {
+      return privateApiJson({ error: '保存されている1on1の項目を読み込めませんでした。組織の管理者にご相談ください。', code: 'ONE_ON_ONE_ITEMS_INVALID' }, { status: 409 })
+    }
     if (!oneOnOne.managerNotes && !oneOnOne.employeeNotes) {
       return privateApiJson(
         { error: '要約するメモがありません。上司か本人のメモを書いてから、お試しください。' },

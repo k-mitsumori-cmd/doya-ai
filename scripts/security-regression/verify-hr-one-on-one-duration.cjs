@@ -20,6 +20,7 @@ const mocks = {
   '@/components/hr/HrOrganizationScope': { useHrOrganizationRequest: () => ({ request: forbidden }) },
   '@/lib/hr/use-page-lifetime': { useHrPageLifetime: () => ({ toast: { error: forbidden }, router: {}, live: () => true }) },
   './AiInsightPanel': { default: () => null, __esModule: true },
+  '@/lib/hr/one-on-one-items': require('./load-typescript.cjs').load('src/lib/hr/one-on-one-items.ts'),
 };
 const exportsObject = {};
 vm.runInNewContext(code, { exports: exportsObject, require: name => {
@@ -46,3 +47,19 @@ for (const [duration, expected] of [[undefined, 30], [null, ''], [15, 15], [45, 
   passed++;
 }
 console.log(`PASS actual OneOnOneForm React rendering: ${passed} duration cases, no null-value warnings or requests`);
+for (const props of [
+  { initialManagerNote: null, initialSharedNote: null, canViewManagerNotes: true },
+  { recordId: 'legacy', initialAgenda: [{ topic: 'Legacy', category: 'CUSTOM' }, { id: 12, topic: 'Other' }, { id: 12, topic: 'Duplicate' }], initialActionItems: [{ content: 'Legacy' }] },
+  { initialAgenda: [null] }, { initialActionItems: [null] }, { initialAgenda: 'bad' },
+]) {
+  const before = JSON.stringify(props), warnings = [], original = console.error;
+  let html;
+  try { console.error = (...args) => warnings.push(args.join(' ')); html = renderToStaticMarkup(React.createElement(exportsObject.default, props)); }
+  finally { console.error = original; }
+  assert.equal(warnings.length, 0, warnings.join('\n'));
+  assert.equal(JSON.stringify(props), before, 'Rendering cannot rewrite supplied data');
+  if (props.initialAgenda === 'bad' || props.initialAgenda?.[0] === null || props.initialActionItems?.[0] === null) {
+    assert.match(html, /role="alert"/);assert(!html.includes('保存する'));
+  } else if (props.recordId === 'legacy') assert.match(html, /value="CUSTOM" selected=""/);
+}
+console.log('PASS actual Form rendering: nullable notes, legacy fields/custom category and malformed-data controlled alert; props preserved');
