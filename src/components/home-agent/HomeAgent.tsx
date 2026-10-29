@@ -159,6 +159,21 @@ function Ticker({ value, reduce }: { value: number; reduce: boolean }) {
 }
 
 /** ぼかしから文字が出る1行（Blur Text / Text Effect の動き） */
+/** その日の最初の表示だけフルに動かし、2回目以降は短くする（端末の日付で決める。開くたびに1回だけ読む） */
+let dayMotionCache: 'full' | 'short' | null = null
+function readDayMotion(): 'full' | 'short' {
+  if (dayMotionCache) return dayMotionCache
+  let mode: 'full' | 'short' = 'full'
+  try {
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    mode = window.localStorage.getItem('doya-home-agent-motion-day') === today ? 'short' : 'full'
+    window.localStorage.setItem('doya-home-agent-motion-day', today)
+  } catch { /* 読めなければフル */ }
+  dayMotionCache = mode
+  return mode
+}
+
 function BlurLine({ text }: { text: string }) {
   const parts = text.match(/[^、。]+[、。]?/g) ?? [text]
   return <span className={styles.blurline}>{parts.map((w, i) => <span key={i} style={{ animationDelay: `${i * 90}ms` }}>{w}</span>)}</span>
@@ -272,6 +287,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const ctrl = useRef<AbortController | null>(null)
   const stageRef = useRef<HTMLElement | null>(null)
   const kunRef = useRef<HTMLDivElement | null>(null)
+  const [dayMotion, setDayMotion] = useState<'full' | 'short'>('full')
+  useEffect(() => { setDayMotion(readDayMotion()) }, [])
   const sampleDeps = useMemo(() => (executor === 'sample' ? fakeToolDeps({ failSlidesOnce: { done: false } }) : null), [executor])
 
   // 続き: 本物の API のときは、まずサーバーの実行の記録を読む（記録を使わない設定なら、端末に残したもの）
@@ -500,7 +517,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const pose = POSE[scene]
 
   return (
-    <section ref={stageRef} className={styles.stage} data-scene={scene} data-reduce={reduce ? 'true' : undefined} aria-labelledby="home-agent-title" aria-live="polite">
+    <section ref={stageRef} className={styles.stage} data-scene={scene} data-motion={dayMotion} data-reduce={reduce ? 'true' : undefined} aria-labelledby="home-agent-title" aria-live="polite">
       {beams.length ? (
         <svg className={styles.beams} aria-hidden="true">
           <defs>
@@ -661,8 +678,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               <span className={styles.muted}>{readCount} / {Math.max(sources.length, 1)} 件</span>
             </div>
             <ul className={styles.sources}>
-              {sources.map((s) => (
-                <li key={s.id} data-src={s.id} className={styles.src} data-status={s.status}>
+              {sources.map((s, k) => (
+                <li key={s.id} data-src={s.id} className={styles.src} data-status={s.status} style={{ ['--k' as string]: k }}>
                   <span className={styles.sicon} aria-hidden="true">{SOURCE_ICON[s.kind]}</span>
                   <span className={styles.srcBody}>
                     <b>{s.label}</b>
@@ -795,12 +812,12 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
             <header className={styles.pillarHead}><h3>{p.name}</h3><span className={styles.muted}>{p.teamGoal}</span></header>
             <p className={styles.muted}>{p.why}</p>
             <ul className={styles.todos}>
-              {p.tasks.map((raw) => {
+              {p.tasks.map((raw, ti) => {
                 const t = byId.get(raw.id) ?? { ...raw, dependsOn: raw.after }
                 const done = states[t.id]?.status === 'done'
                 const can = t.delegable && t.ready.ok && !done
                 return (
-                  <li key={t.id} className={styles.todo} data-off={!t.delegate || !can ? 'true' : undefined}>
+                  <li key={t.id} className={styles.todo} data-off={!t.delegate || !can ? 'true' : undefined} style={{ ['--k' as string]: pi * 3 + ti }}>
                     <span className={styles.ticon} aria-hidden="true">{TOOL_ICON[t.tool] ?? TOOL_ICON.default}</span>
                     <span className={styles.srcBody}>
                       <b>{t.title}</b>
