@@ -160,6 +160,21 @@ function Ticker({ value, reduce }: { value: number; reduce: boolean }) {
 }
 
 /** ぼかしから文字が出る1行（Blur Text / Text Effect の動き） */
+/** その日の最初の表示だけフルに動かし、2回目以降は短くする（端末の日付で決める。開くたびに1回だけ読む） */
+let dayMotionCache: 'full' | 'short' | null = null
+function readDayMotion(): 'full' | 'short' {
+  if (dayMotionCache) return dayMotionCache
+  let mode: 'full' | 'short' = 'full'
+  try {
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    mode = window.localStorage.getItem('doya-home-agent-motion-day') === today ? 'short' : 'full'
+    window.localStorage.setItem('doya-home-agent-motion-day', today)
+  } catch { /* 読めなければフル */ }
+  dayMotionCache = mode
+  return mode
+}
+
 function BlurLine({ text }: { text: string }) {
   const parts = text.match(/[^、。]+[、。]?/g) ?? [text]
   return <span className={styles.blurline}>{parts.map((w, i) => <span key={i} style={{ animationDelay: `${i * 90}ms` }}>{w}</span>)}</span>
@@ -255,6 +270,13 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   // 欄は空で始める（例の文を最初から入れると、書き足したときに後ろへつながってしまう）
   const [text, setText] = useState('')
   const askRef = useRef<HTMLTextAreaElement | null>(null)
+  // 書くと入力欄が自動で伸びる（最低4行は CSS の min-height）
+  useEffect(() => {
+    const el = askRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
   const putExample = (t: string) => { setText(t); requestAnimationFrame(() => askRef.current?.focus()) }
   const [saved, setSaved] = useState<SavedRun | null>(null)
   const [recipeId, setRecipeId] = useState<string>(AGENT_RECIPES[0].id)
@@ -273,6 +295,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const ctrl = useRef<AbortController | null>(null)
   const stageRef = useRef<HTMLElement | null>(null)
   const kunRef = useRef<HTMLDivElement | null>(null)
+  const [dayMotion, setDayMotion] = useState<'full' | 'short'>('full')
+  useEffect(() => { setDayMotion(readDayMotion()) }, [])
   const sampleDeps = useMemo(() => (executor === 'sample' ? fakeToolDeps({ failSlidesOnce: { done: false } }) : null), [executor])
 
   // 続き: 本物の API のときは、まずサーバーの実行の記録を読む（記録を使わない設定なら、端末に残したもの）
@@ -474,7 +498,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   }
 
   // 材料からドヤくんへ光が流れる線（Animated Beam）。1280px かつ動きを減らす設定でないときだけ
-  const [beams, setBeams] = useState<{ id: string; d: string; reading: boolean }[]>([])
+  const [beams, setBeams] = useState<{ id: string; d: string; reading: boolean; end: { x: number; y: number } }[]>([])
   useEffect(() => {
     if (scene !== 'analyze' || reduce) { setBeams([]); return }
     const measure = () => {
@@ -482,14 +506,15 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       if (!st || !k || window.innerWidth <= 860) { setBeams([]); return }
       const s = st.getBoundingClientRect(), kr = k.getBoundingClientRect()
       // 小さなクマは見出しの右にある。材料の行から、クマの下の真ん中へ、光の線を引く
-      const x2 = kr.left - s.left + kr.width / 2, y2 = kr.bottom - s.top - 4
+      const x2 = kr.left - s.left + kr.width / 2, y2 = kr.bottom - s.top - 6
       setBeams(sources.map((src) => {
         const el = st.querySelector<HTMLElement>(`[data-src="${src.id}"]`)
         if (!el) return null
         const c = el.getBoundingClientRect()
-        const x1 = c.left - s.left, y1 = c.top - s.top + c.height / 2, mx = (x1 + x2) / 2
-        return { id: src.id, d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, reading: src.status === 'reading' }
-      }).filter((b): b is { id: string; d: string; reading: boolean } => Boolean(b)))
+        // 行の右の端から出て、上へ曲がってクマの足もとに着く（行は横いっぱいなので、クマに近い右の端から引くと線が長く見える）
+        const x1 = c.right - s.left - 14, y1 = c.top - s.top + c.height / 2
+        return { id: src.id, d: `M${x1},${y1} C${x1},${y1 - 56} ${x2},${y2 + 56} ${x2},${y2}`, reading: src.status === 'reading', end: { x: x2, y: y2 } }
+      }).filter((b): b is { id: string; d: string; reading: boolean; end: { x: number; y: number } } => Boolean(b)))
     }
     const raf = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
@@ -500,7 +525,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const pose = POSE[scene]
 
   return (
-    <section ref={stageRef} className={styles.stage} data-scene={scene} data-reduce={reduce ? 'true' : undefined} aria-labelledby="home-agent-title" aria-live="polite">
+    <section ref={stageRef} className={styles.stage} data-scene={scene} data-motion={dayMotion} data-reduce={reduce ? 'true' : undefined} aria-labelledby="home-agent-title" aria-live="polite">
       {beams.length ? (
         <svg className={styles.beams} aria-hidden="true">
           <defs>
@@ -509,6 +534,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
           {beams.map((b, i) => (
             <g key={b.id}>
               <path d={b.d} className={styles.beamTrack} />
+              <circle cx={b.end.x} cy={b.end.y} r="3.5" className={styles.beamEnd} />
               {b.reading ? <path d={b.d} className={styles.beamFlow} style={{ animationDelay: `${i * 120}ms` }} /> : null}
             </g>
           ))}
@@ -556,9 +582,12 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               </div>
             ) : (
             <div className={styles.card}>
-              <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
-                placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              {/* 見出し → 説明 → 入力欄（虹色の枠）→ 例 → ボタン の順に、ゆったり縦に並べる */}
               <p id="home-agent-lead" className={styles.lead}>やりたいことを書いて、ドヤAIに頼んでください。材料を読んで、必要な作業に分けて進めます。登録の依頼は、その画面を入力した状態で開きます。</p>
+              <div className={styles.aura}>
+                <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={4}
+                  placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              </div>
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={`${styles.chips} ${styles.exampleChips}`}>
                 {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
@@ -566,7 +595,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               {error ? <p className={styles.error} role="alert">{error}</p> : null}
               <div className={styles.row}>
                 <span className={styles.muted}>{opening ?? '頼むだけでは、ドヤパワーは減りません'}</span>
-                <button type="button" className={styles.btn} onClick={() => void send()} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '進めています…' : 'ドヤAIに頼む'}</button>
+                <button type="button" className={`${styles.btn} ${styles.btnAi}`} onClick={() => void send()} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '進めています…' : 'ドヤAIに頼む'}</button>
               </div>
             </div>
             )}
@@ -660,8 +689,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               <span className={styles.muted}>{readCount} / {Math.max(sources.length, 1)} 件</span>
             </div>
             <ul className={styles.sources}>
-              {sources.map((s) => (
-                <li key={s.id} data-src={s.id} className={styles.src} data-status={s.status}>
+              {sources.map((s, k) => (
+                <li key={s.id} data-src={s.id} className={styles.src} data-status={s.status} style={{ ['--k' as string]: k }}>
                   <span className={styles.sicon} aria-hidden="true">{SOURCE_ICON[s.kind]}</span>
                   <span className={styles.srcBody}>
                     <b>{s.label}</b>
@@ -794,12 +823,12 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
             <header className={styles.pillarHead}><h3>{p.name}</h3><span className={styles.muted}>{p.teamGoal}</span></header>
             <p className={styles.muted}>{p.why}</p>
             <ul className={styles.todos}>
-              {p.tasks.map((raw) => {
+              {p.tasks.map((raw, ti) => {
                 const t = byId.get(raw.id) ?? { ...raw, dependsOn: raw.after }
                 const done = states[t.id]?.status === 'done'
                 const can = t.delegable && t.ready.ok && !done
                 return (
-                  <li key={t.id} className={styles.todo} data-off={!t.delegate || !can ? 'true' : undefined}>
+                  <li key={t.id} className={styles.todo} data-off={!t.delegate || !can ? 'true' : undefined} style={{ ['--k' as string]: pi * 3 + ti }}>
                     <span className={styles.ticon} aria-hidden="true">{TOOL_ICON[t.tool] ?? TOOL_ICON.default}</span>
                     <span className={styles.srcBody}>
                       <b>{t.title}</b>
