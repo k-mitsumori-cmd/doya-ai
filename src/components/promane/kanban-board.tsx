@@ -41,9 +41,11 @@ export function KanbanBoard({
   tasks: initialTasks,
   workspaceSlug,
   members = [],
+  canWrite,
 }: {
   tasks: TaskItem[];
   workspaceSlug: string;
+  canWrite: boolean;
   members?: { id: string; displayName: string }[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
@@ -59,12 +61,14 @@ export function KanbanBoard({
   );
 
   function handleDragStart(event: DragStartEvent) {
+    if (!canWrite) return;
     const task = tasks.find((t) => t.id === event.active.id);
     if (task) setActiveTask(task);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     setActiveTask(null);
+    if (!canWrite) return;
     const { active, over } = event;
     if (!over) return;
 
@@ -128,6 +132,7 @@ export function KanbanBoard({
             <KanbanColumn
               key={status}
               id={status}
+              disabled={!canWrite}
               title={TASK_STATUS_LABELS[status]}
               count={columnTasks.length}
             >
@@ -136,7 +141,7 @@ export function KanbanBoard({
                 strategy={verticalListSortingStrategy}
               >
                 {columnTasks.map((task) => (
-                  <KanbanCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />
+                  <KanbanCard key={task.id} task={task} canWrite={canWrite} onEdit={() => setEditingTask(task)} />
                 ))}
               </SortableContext>
             </KanbanColumn>
@@ -145,7 +150,7 @@ export function KanbanBoard({
       </div>
 
       <DragOverlay>
-        {activeTask && <KanbanCard task={activeTask} isDragging />}
+        {activeTask && <KanbanCard task={activeTask} canWrite={canWrite} isDragging />}
       </DragOverlay>
 
       {editingTask && (
@@ -164,6 +169,7 @@ export function KanbanBoard({
             dueDate: editingTask.dueDate ?? null,
           }}
           members={members}
+          canWrite={canWrite}
         />
       )}
     </DndContext>

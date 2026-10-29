@@ -12,6 +12,7 @@ import { useConfirm } from '@/components/promane/confirm-dialog'
 import { userErrorMessage } from '@/lib/promane/user-error'
 
 interface TaskEditModalProps {
+  canWrite: boolean
   workspaceSlug: string
   open: boolean
   onClose: () => void
@@ -49,7 +50,7 @@ function toDateInput(d: Date | string | null): string {
   return dt.toISOString().split('T')[0]
 }
 
-export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: TaskEditModalProps) {
+export function TaskEditModal({ workspaceSlug, open, onClose, task, members, canWrite }: TaskEditModalProps) {
   const router = useRouter()
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description || '')
@@ -89,6 +90,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
   if (!open) return null
 
   const handleSave = async () => {
+    if (!canWrite) return
     if (!title.trim()) {
       toast.error('タスク名を入力してください')
       return
@@ -126,6 +128,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
   }
 
   const handleDelete = async () => {
+    if (!canWrite) return
     const ok = await confirm({
       title: 'このタスクを削除しますか？',
       message: `「${task.title}」を削除します。元に戻せません。`,
@@ -161,8 +164,8 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           <div className="flex items-center gap-3">
             <Image src="/character/working.png" alt="" width={40} height={40} unoptimized />
             <div>
-              <h2 id={titleId} className="text-[18px] font-black text-gray-900">タスク編集</h2>
-              <p className="text-[11px] text-gray-400 font-bold">変更を加えて保存</p>
+              <h2 id={titleId} className="text-[18px] font-black text-gray-900">{canWrite ? "タスク編集" : "タスク詳細"}</h2>
+              <p className="text-[11px] text-gray-400 font-bold">{canWrite ? "変更を加えて保存" : "閲覧専用"}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="閉じる" className="text-gray-400 hover:text-gray-700 transition-colors">
@@ -174,13 +177,14 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           {/* タイトル */}
           <div>
             <label className="block text-[12px] font-black text-gray-700 mb-1.5">タスク名 <span className="text-rose-500">*</span></label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} className="h-11 rounded-xl text-[14px] font-bold" />
+            <Input readOnly={!canWrite} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} className="h-11 rounded-xl text-[14px] font-bold" />
           </div>
 
           {/* 説明 */}
           <div>
             <label className="block text-[12px] font-black text-gray-700 mb-1.5">詳細・メモ</label>
             <textarea
+              readOnly={!canWrite}
               value={description}
               maxLength={5000}
               onChange={(e) => setDescription(e.target.value)}
@@ -198,6 +202,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
                 <button
                   key={s.value}
                   type="button"
+                  disabled={!canWrite}
                   onClick={() => setStatus(s.value)}
                   className={`py-2.5 rounded-xl text-[12px] font-black transition-all ${
                     status === s.value
@@ -219,6 +224,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
                 <button
                   key={p.value}
                   type="button"
+                  disabled={!canWrite}
                   onClick={() => setPriority(p.value)}
                   className={`py-2.5 rounded-xl text-[12px] font-black transition-all ${
                     priority === p.value
@@ -236,6 +242,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           <div>
             <label className="block text-[12px] font-black text-gray-700 mb-1.5">担当者</label>
             <select
+              disabled={!canWrite}
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
               className="w-full h-11 px-3 rounded-xl border border-gray-200 text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -251,11 +258,11 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[12px] font-black text-gray-700 mb-1.5">開始日</label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
+              <Input readOnly={!canWrite} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
             </div>
             <div>
               <label className="block text-[12px] font-black text-gray-700 mb-1.5">終了日</label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
+              <Input readOnly={!canWrite} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-11 rounded-xl text-[13px] font-bold" />
             </div>
           </div>
 
@@ -271,7 +278,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-100 sticky bottom-0 bg-white">
-          <Button
+          {canWrite && <Button
             onClick={handleDelete}
             disabled={deleting || saving}
             variant="ghost"
@@ -279,19 +286,19 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           >
             <Trash2 className="h-4 w-4 mr-1.5" />
             削除
-          </Button>
+          </Button>}
           <div className="flex gap-2">
             <Button onClick={onClose} variant="outline" className="rounded-full font-black">
-              キャンセル
+              {canWrite ? "キャンセル" : "閉じる"}
             </Button>
-            <Button
+            {canWrite && <Button
               onClick={handleSave}
               disabled={saving || deleting || !title.trim()}
               className="rounded-full font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 shadow-md"
             >
               <Save className="h-4 w-4 mr-1.5" />
               {saving ? '保存中...' : '保存'}
-            </Button>
+            </Button>}
           </div>
         </div>
       </div>

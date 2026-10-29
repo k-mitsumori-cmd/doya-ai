@@ -31,7 +31,20 @@ type MemberStat = {
   minutes: number;
 };
 
-export function FinanceTab({
+type FinanceTabProps = {
+  workspaceSlug: string; workspaceId: string;
+  projectId: string;
+  laborCost: number;
+  totalMinutes: number;
+  expenses: ExpenseItem[];
+  members: MemberStat[];
+};
+
+export function FinanceTab({ canWrite, ...props }: FinanceTabProps & { canWrite: boolean }) {
+  return canWrite ? <EditableFinanceTab {...props} /> : <FinanceTabContent {...props} />;
+}
+
+function EditableFinanceTab({
   workspaceSlug,
   workspaceId,
   projectId,
@@ -39,14 +52,7 @@ export function FinanceTab({
   totalMinutes,
   expenses,
   members,
-}: {
-  workspaceSlug: string; workspaceId: string;
-  projectId: string;
-  laborCost: number;
-  totalMinutes: number;
-  expenses: ExpenseItem[];
-  members: MemberStat[];
-}) {
+}: FinanceTabProps) {
   const router = useRouter();
   const inputId = useId();
   const [showForm, setShowForm] = useState(false);
@@ -110,56 +116,12 @@ export function FinanceTab({
     }
   }
 
-  const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* 人件費内訳 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">人件費内訳</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {members.filter((m) => m.minutes > 0).length === 0 ? (
-              <p className="text-sm text-gray-500">まだ作業時間の記録がありません</p>
-            ) : (
-              <>
-                {members
-                  .filter((m) => m.minutes > 0)
-                  .map((member) => (
-                    <div key={member.id} className="flex items-center justify-between text-sm">
-                      <div>
-                        <span className="font-medium">{member.displayName}</span>
-                        <span className="ml-2 text-gray-500">
-                          {formatDuration(member.minutes)} × {formatCurrency(member.hourlyRate)}/h
-                        </span>
-                      </div>
-                      <span className="font-medium">
-                        {formatCurrency(Math.round((member.minutes / 60) * member.hourlyRate))}
-                      </span>
-                    </div>
-                  ))}
-                <div className="border-t pt-2 flex justify-between font-medium">
-                  <span>合計 ({formatDuration(totalMinutes)})</span>
-                  <span>{formatCurrency(laborCost)}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 経費 */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">経費・外注費</CardTitle>
+  return <FinanceTabContent laborCost={laborCost} totalMinutes={totalMinutes} expenses={expenses} members={members} toolbar={<>
           <Button variant="outline" size="sm" onClick={() => setShowForm(!showForm)}>
             <Plus className="mr-1 h-3 w-3" />
             追加
           </Button>
-        </CardHeader>
-        <CardContent>
+</>} form={<>
           {creation.message && (
             <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 mb-3 text-sm text-gray-800">
               <p>{creation.message}</p>
@@ -212,6 +174,57 @@ export function FinanceTab({
             </form>
           )}
 
+</>} onDelete={handleDeleteExpense} confirmation={<ConfirmDialog />} />;
+}
+
+function FinanceTabContent({ laborCost, totalMinutes, expenses, members, toolbar, form, onDelete, confirmation }: Pick<FinanceTabProps, "laborCost" | "totalMinutes" | "expenses" | "members"> & { toolbar?: React.ReactNode; form?: React.ReactNode; onDelete?: (id: string) => void; confirmation?: React.ReactNode }) {
+  const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* 人件費内訳 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">人件費内訳</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {members.filter((m) => m.minutes > 0).length === 0 ? (
+              <p className="text-sm text-gray-500">まだ作業時間の記録がありません</p>
+            ) : (
+              <>
+                {members
+                  .filter((m) => m.minutes > 0)
+                  .map((member) => (
+                    <div key={member.id} className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-medium">{member.displayName}</span>
+                        <span className="ml-2 text-gray-500">
+                          {formatDuration(member.minutes)} × {formatCurrency(member.hourlyRate)}/h
+                        </span>
+                      </div>
+                      <span className="font-medium">
+                        {formatCurrency(Math.round((member.minutes / 60) * member.hourlyRate))}
+                      </span>
+                    </div>
+                  ))}
+                <div className="border-t pt-2 flex justify-between font-medium">
+                  <span>合計 ({formatDuration(totalMinutes)})</span>
+                  <span>{formatCurrency(laborCost)}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 経費 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">経費・外注費</CardTitle>
+          {toolbar}
+        </CardHeader>
+        <CardContent>
+          {form}
           <div className="space-y-2">
             {expenses.length === 0 ? (
               <p className="text-sm text-gray-500">まだ経費が登録されていません</p>
@@ -228,12 +241,12 @@ export function FinanceTab({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{formatCurrency(expense.amount)}</span>
-                      <button
-                        onClick={() => handleDeleteExpense(expense.id)}
+                      {onDelete && <button
+                        onClick={() => onDelete?.(expense.id)}
                         className="text-gray-400 hover:text-red-500"
                       >
                         <Trash2 className="h-3 w-3" />
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 ))}
@@ -246,7 +259,7 @@ export function FinanceTab({
           </div>
         </CardContent>
       </Card>
-      <ConfirmDialog />
+      {confirmation}
     </div>
   );
 }

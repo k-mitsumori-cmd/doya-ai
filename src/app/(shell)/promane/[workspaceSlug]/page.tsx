@@ -1,3 +1,4 @@
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
@@ -245,5 +246,5 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     safeChartData(workspace.id),
   ]);
 
-  return <DashboardNext workspaceSlug={workspaceSlug} data={data as any} myData={myData} chartData={chartData} myMember={myMember} />;
+  return <DashboardNext canWrite={canWritePromaneWorkspace(workspace.members[0]?.role)} workspaceSlug={workspaceSlug} data={data as any} myData={myData} chartData={chartData} myMember={myMember} />;
 }
