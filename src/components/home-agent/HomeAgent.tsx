@@ -269,6 +269,13 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   // 欄は空で始める（例の文を最初から入れると、書き足したときに後ろへつながってしまう）
   const [text, setText] = useState('')
   const askRef = useRef<HTMLTextAreaElement | null>(null)
+  // 書くと入力欄が自動で伸びる（最低4行は CSS の min-height）
+  useEffect(() => {
+    const el = askRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
   const putExample = (t: string) => { setText(t); requestAnimationFrame(() => askRef.current?.focus()) }
   const [saved, setSaved] = useState<SavedRun | null>(null)
   const [recipeId, setRecipeId] = useState<string>(AGENT_RECIPES[0].id)
@@ -574,9 +581,12 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               </div>
             ) : (
             <div className={styles.card}>
-              <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={3}
-                placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              {/* 見出し → 説明 → 入力欄（虹色の枠）→ 例 → ボタン の順に、ゆったり縦に並べる */}
               <p id="home-agent-lead" className={styles.lead}>やりたいことを書いて、ドヤAIに頼んでください。材料を読んで、必要な作業に分けて進めます。登録の依頼は、その画面を入力した状態で開きます。</p>
+              <div className={styles.aura}>
+                <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={4}
+                  placeholder="例: 来週の商談の準備をまとめて進めたい" />
+              </div>
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={`${styles.chips} ${styles.exampleChips}`}>
                 {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
@@ -584,7 +594,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               {error ? <p className={styles.error} role="alert">{error}</p> : null}
               <div className={styles.row}>
                 <span className={styles.muted}>{opening ?? '頼むだけでは、ドヤパワーは減りません'}</span>
-                <button type="button" className={styles.btn} onClick={() => void send()} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '進めています…' : 'ドヤAIに頼む'}</button>
+                <button type="button" className={`${styles.btn} ${styles.btnAi}`} onClick={() => void send()} disabled={!text.trim() || Boolean(opening)} aria-busy={opening ? true : undefined}>{opening ? '進めています…' : 'ドヤAIに頼む'}</button>
               </div>
             </div>
             )}
