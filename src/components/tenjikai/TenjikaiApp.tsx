@@ -31,6 +31,8 @@ import {
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
 import { loadProject, saveProject } from '@/lib/tenjikai/local-store'
+import { deriveKit, type BoothDesignKit } from '@/lib/tenjikai/design-kit'
+import { generateGraphicPlan } from '@/lib/tenjikai/graphics'
 
 type Phase = 'input' | 'generating' | 'ready'
 
@@ -49,6 +51,9 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
   const [collapsed, setCollapsed] = useState(false)
   // 3D図面の面ごとの画像と完成予想図。セクションを移っても消えないよう、ここで持つ
   const [panelImages, setPanelImages] = useState<Record<string, string>>({})
+  // ブースのデザインの決まり（2026-10-29）。確定するまで、画像は作れない。確定したあとで作る面・制作物は、すべてこの決まりで作る
+  const [kit, setKit] = useState<BoothDesignKit | null>(null)
+  const [kitConfirmed, setKitConfirmed] = useState(false)
 
   // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
   const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
@@ -68,6 +73,10 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
       setVariant(saved.variant)
       setSelectedNovelty(saved.selectedNovelty)
       setPanelImages(saved.panelImages)
+      if (saved.designKit) {
+        setKit(saved.designKit)
+        setKitConfirmed(saved.designKitConfirmed === true)
+      }
       setPhase('ready')
     }
     setRestored(true)
@@ -77,7 +86,7 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
   useEffect(() => {
     if (!restored || phase !== 'ready') return
     const t = window.setTimeout(() => {
-      const r = saveProject(userId, { input, generated, variant, selectedNovelty, panelImages })
+      const r = saveProject(userId, { input, generated, variant, selectedNovelty, panelImages, designKit: kit ?? undefined, designKitConfirmed: kitConfirmed })
       setSaveNote(
         r === 'saved-without-images'
           ? 'この端末には、作った画像を保存しきれませんでした。再読み込みすると画像は消えます。ブース設計の画面から画像を書き出しておいてください。'
@@ -87,12 +96,20 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
       )
     }, 500)
     return () => window.clearTimeout(t)
-  }, [restored, phase, userId, input, generated, variant, selectedNovelty, panelImages])
+  }, [restored, phase, userId, input, generated, variant, selectedNovelty, panelImages, kit, kitConfirmed])
 
   const analysis = generated.analysis
+  // 決まりは、サイトの解析から作った下書きで始める。確定する前は、解析が変わるたびに下書きを作り直す（確定後・利用者が直したあとは、その決まりを守る）
+  const draftKit = useMemo(() => deriveKit(analysis), [analysis])
+  const activeKit = kit ?? draftKit
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
   const creatives = useMemo(() => applyCreativeCopy(generateCreatives(analysis, input), generated.creativeCopy), [analysis, input, generated.creativeCopy])
+  // 見本（マスター）: 背面壁の中央の画像。残りの面・制作物は、これを参照して作る（仕様 5 章）
+  const masterImage = useMemo(() => {
+    const hero = generateGraphicPlan(plan, analysis).find((p) => p.layout === 'hero')
+    return hero ? panelImages[hero.id] : undefined
+  }, [plan, analysis, panelImages])
   const novelties = useMemo(() => generateNovelties(input), [input])
   const deadlines = useMemo(() => generateDeadlines(input), [input])
   const budget = useMemo(
@@ -167,9 +184,9 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} onResize={resizeBooth} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} onResize={resizeBooth} kit={activeKit} kitConfirmed={kitConfirmed} onKitChange={setKit} onKitConfirm={() => { setKit(activeKit); setKitConfirmed(true) }} onKitReopen={() => { setKit(activeKit); setKitConfirmed(false) }} />
       case 'creatives':
-        return <CreativeStudio creatives={creatives} analysis={analysis} />
+        return <CreativeStudio creatives={creatives} analysis={analysis} kit={activeKit} kitConfirmed={kitConfirmed} masterImage={masterImage} goBooth={() => go('booth')} />
       case 'novelty':
         return <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={setSelectedNovelty} />
       case 'budget':

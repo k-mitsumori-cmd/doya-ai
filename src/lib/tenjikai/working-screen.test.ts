@@ -11,8 +11,9 @@ test('画像を作っている間の画面は、ドヤくんの待ち画面を�
   const modal = read('src/components/tenjikai/ImageGenModal.tsx')
   assert.match(modal, /busy \? \(\s*<DoyaWorking[^>]*colors=\{colors\}/)
   const batch = read('src/components/tenjikai/BoothStudio.tsx')
-  assert.match(batch, /<DoyaWorking[\s\S]*colors=\{analysis\.colors\}[\s\S]*progress=\{/)
-  assert.match(read('src/components/tenjikai/CreativeStudio.tsx'), /colors=\{analysis\.colors\}/)
+  // 塗る色は、確定したブースのデザインの決まり（kit）の色（2026-10-29 から。サイトの解析の色そのものではない）
+  assert.match(batch, /<DoyaWorking[\s\S]*colors=\{\{ primary: kit\.palette\.primary, secondary: kit\.palette\.dark, accent: kit\.palette\.accent \}\}[\s\S]*progress=\{/)
+  assert.match(read('src/components/tenjikai/CreativeStudio.tsx'), /colors=\{\{ primary: kit\.palette\.primary, secondary: kit\.palette\.dark, accent: kit\.palette\.accent \}\}/)
 })
 
 test('待ち画面は、動きを減らす設定で止まり、絵の入れ替えは位置・濃さだけで動かす', () => {

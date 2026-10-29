@@ -3,6 +3,8 @@
 // 単価は、サーバー側の1日の上限額（image-quota.ts）を数えるためだけに使う。目安なので、Google の料金表で確かめること。
 
 import type { Creative, CreativeKind, SiteAnalysis, BoothPlan } from './engine'
+import { buildDesignPrompt, deriveKit, kitBlock, type BoothDesignKit, type LayoutType } from './design-kit'
+import { safeZone } from './image-fit'
 
 export type ImageSize = '1K' | '2K' | '4K'
 
@@ -58,34 +60,46 @@ export function nearestRatio(w: number, h: number) {
   }, RATIOS[0] as string)
 }
 
-const KIND_BRIEF: Record<CreativeKind, string> = {
-  backwall: '展示会ブースの背面壁に貼る横長の大判グラフィック。通路の15m先から読める巨大なキャッチコピーを上部に、下部はロゴと3つの訴求点。余白を広く',
-  rollup: '展示会用ロールアップバナー（縦長）。上1/3に大きなキャッチ、中央にイメージ、下部にロゴとQRコード用の空白',
-  flyer: '展示会で配るA4縦チラシの表面。見出し、3つの特長、導入効果の数字、料金の目安、QRコード用の空白',
-  clearfile: 'A4クリアファイルの表面デザイン。ロゴとブランドカラーを大胆に使い、書類を入れても見えるよう中央は淡く',
-  card: '名刺サイズのQRカード。資料ダウンロードへの誘導文と、QRコード用の正方形の空白',
-  loop: '展示会モニター用動画のキービジュアル（16:9）。音なしで伝わる大きな文字',
+/** 制作物の種類ごとの、面の型と、画像に描く見出し（文字は短いものだけ。長い文・QR・ロゴ・数字は画面の側で重ねる） */
+const KIND_DESIGN: Record<CreativeKind, { layout: LayoutType; role: string; headline: (a: SiteAnalysis, c: Creative) => string }> = {
+  backwall: { layout: 'hero', role: '展示会ブースの背面壁の大判グラフィック。通路の15m先から何の会社かが伝わる', headline: (a) => a.headline },
+  rollup: { layout: 'appeal', role: '展示会用ロールアップバナー（縦長）。通路を歩く人の足を止める。下の無地に、QR コードとロゴを実物で重ねる', headline: (a) => a.valueProps[0].title },
+  flyer: { layout: 'appeal', role: '展示会で配る A4 縦チラシの表面の背景。長い文・特長・料金・QR コードは、あとから実物で重ねる', headline: (a) => a.valueProps[0].title },
+  clearfile: { layout: 'hero', role: 'A4 クリアファイルの表面。書類を入れても見えるよう、中央は薄く', headline: (a) => a.brand },
+  card: { layout: 'guide', role: '名刺サイズの QR カードの背景。案内文と QR コードは、あとから実物で重ねる', headline: () => '' },
+  loop: { layout: 'hero', role: '展示会モニター用の動画のキービジュアル（16:9）。音なしで伝わる', headline: (a) => a.valueProps[0].title },
 }
 
-export function buildCreativePrompt(c: Creative, a: SiteAnalysis) {
-  return [
-    `${a.brand}（${a.category}）の${KIND_BRIEF[c.kind]}。`,
-    `仕上がりサイズ ${c.size}。`,
-    `メインコピー：「${c.copy}」`,
-    `訴求点：${a.valueProps.map((v) => v.title).join('、')}`,
-    `ブランドカラー：メイン ${a.colors.primary}、サブ ${a.colors.secondary}、アクセント ${a.colors.accent}。トーンは「${a.tone}」。`,
-    '日本語の文字は正確に、読みやすい太めのゴシック体で。絵文字は使わない。実在しないロゴや認証マークは描かない。',
-  ].join('\n')
+/**
+ * 制作物の画像の指示文。面の画像と同じ関数（design-kit.ts の buildDesignPrompt）を通す。
+ * 2026-10-29: 以前は、制作物だけ別の書き方で、日本語の文字を「正確に」と頼んでいたため、面とそろわなかった。
+ */
+export function buildCreativePrompt(c: Creative, a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a), opts: { hasReference?: boolean } = {}) {
+  const d = KIND_DESIGN[c.kind]
+  const ratio = nearestRatio(c.widthMm, c.heightMm)
+  const safe = safeZone(ratio, c.widthMm / c.heightMm)
+  return buildDesignPrompt(kit, {
+    name: c.name,
+    widthMm: c.widthMm,
+    heightMm: c.heightMm,
+    role: d.role,
+    layout: d.layout,
+    headline: d.headline(a, c),
+    hasReference: opts.hasReference,
+    safeWidthPct: safe.safeWidthPct,
+    safeHeightPct: safe.safeHeightPct,
+  })
 }
 
-export function buildBoothRenderPrompt(plan: BoothPlan, a: SiteAnalysis) {
+export function buildBoothRenderPrompt(plan: BoothPlan, a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a)) {
   const parts = plan.elements.map((e) => e.label).join('、')
   return [
     `添付の等角図は展示会ブース（${plan.widthM}m × ${plan.depthM}m、${plan.name}）のレイアウトです。`,
     'この配置と寸法を変えずに、東京ビッグサイトの展示ホールに設営された完成予想図を、来場者目線の斜め前方からフォトリアルに描いてください。',
     `部材：${parts}。`,
-    `背面壁の大判グラフィックには「${a.headline.replace('\n', '')}」と${a.brand}のロゴ。ブランドカラー ${a.colors.primary} を基調に。`,
-    '天井の照明、カーペット、通路を歩く来場者を数名。文字は正確な日本語で。',
+    '面のグラフィック（背面壁・ロールアップ・吊り看板など）は、次のブースのデザインの決まりのとおりに、色と形をそろえて描く。面の文字は、添付の絵に描かれているものだけを、そのまま写し、新しい文字は足さない。',
+    kitBlock(kit),
+    '天井の照明、カーペット、通路を歩く来場者を数名。',
   ].join('\n')
 }
 

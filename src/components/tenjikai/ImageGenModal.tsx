@@ -22,14 +22,16 @@ interface Props {
   prompt: string
   aspectRatio: string
   getReference?: () => Promise<string | undefined>
-  onResult: (images: string[]) => void
+  onResult: (images: string[]) => void | Promise<void>
   /** サーバーの実行記録に残す種類 */
   kind?: ImageGenKind
   /** 待っている間に塗る色（ブランドの色） */
   colors?: Partial<WorkingColors>
+  /** 作れない理由（デザインの決まりを確定していないときなど）。あれば、ボタンを押せなくして出す */
+  blockedReason?: string
 }
 
-export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult, kind = 'creative_image', colors }: Props) {
+export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult, kind = 'creative_image', colors, blockedReason }: Props) {
   const [prompt, setPrompt] = useState(initialPrompt)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<ImageGenFailure>()
@@ -51,14 +53,14 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
     setBusy(false)
     void refresh()
     if (!r.ok) return setError(r)
-    onResult(r.images)
+    await onResult(r.images)
     onClose()
   }
 
   const left = remainingLabel(quota)
   const noneLeft = quota?.enabled && quota.remaining === 0
   // サーバーが画像の生成を止めている（準備中）。押す前に分かるように出す
-  const disabled = isImageGenDisabled(quota)
+  const disabled = isImageGenDisabled(quota) || !!blockedReason
 
   return (
     <Modal open={open} onClose={onClose} title={title}>
@@ -69,7 +71,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
           <p className="text-[15px] leading-relaxed text-[var(--sub)]">ブースの案とサイトの内容から、画像を1枚作ります。できた画像は、この画面に表示されます。</p>
         )}
         {left && <p className="text-[13px] font-medium text-[var(--sub)]">{left}</p>}
-        {disabled && !error && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>}
+        {disabled && !error && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{blockedReason ?? IMAGEGEN_DISABLED_MESSAGE}</p>}
 
         <details className="rounded-[var(--r-sm)] border border-gray-200 p-3">
           <summary className="cursor-pointer text-[13px] font-bold text-ink">画像への指示を見る・直す</summary>

@@ -7,6 +7,8 @@ import { PageHeader, cardIn } from './ui'
 import ImageGenModal from './ImageGenModal'
 import { recommendPrinters, yen, type Creative, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { buildCreativePrompt, nearestRatio } from '@/lib/tenjikai/imagegen'
+import { cropImageToAspect, toReferencePng } from '@/lib/tenjikai/image-fit'
+import type { BoothDesignKit } from '@/lib/tenjikai/design-kit'
 import { ds } from '@/lib/tenjikai/tokens'
 
 function QR({ size = 40, seed = 7 }: { size?: number; seed?: number }) {
@@ -127,7 +129,17 @@ function LoopPreview({ a }: { a: SiteAnalysis }) {
   )
 }
 
-export default function CreativeStudio({ creatives, analysis }: { creatives: Creative[]; analysis: SiteAnalysis }) {
+export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed, masterImage, goBooth }: {
+  creatives: Creative[]
+  analysis: SiteAnalysis
+  /** ブースのデザインの決まり。面の画像と同じ決まりで作る（2026-10-29） */
+  kit: BoothDesignKit
+  kitConfirmed: boolean
+  /** 見本（背面壁の中央の画像）。あれば、参照として渡す */
+  masterImage?: string
+  /** ブース設計の画面へ移る（決まりを確定する場所） */
+  goBooth: () => void
+}) {
   const [target, setTarget] = useState<Creative | null>(null)
   const [images, setImages] = useState<Record<string, string[]>>({})
   const [shown, setShown] = useState<Record<string, number>>({})
@@ -145,6 +157,13 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
           </div>
         }
       />
+
+      {!kitConfirmed && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r)] border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-[14px] font-bold text-amber-900">先に、ブース設計の画面で「ブースのデザインの決まり」を確定してください。面の画像と同じ決まりで、制作物を作ります。</p>
+          <button type="button" onClick={goBooth} className="inline-flex min-h-[44px] items-center rounded-xl border-2 border-amber-700 px-4 text-sm font-black text-amber-900">決まりを確定しに行く</button>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {creatives.map((c, i) => {
@@ -229,11 +248,15 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
           open={!!target}
           onClose={() => setTarget(null)}
           title={`${target.name}のデザイン画像を生成`}
-          colors={analysis.colors}
-          prompt={buildCreativePrompt(target, analysis)}
+          colors={{ primary: kit.palette.primary, secondary: kit.palette.dark, accent: kit.palette.accent }}
+          blockedReason={kitConfirmed ? undefined : '先に、ブース設計の画面で「ブースのデザインの決まり」を確定してください。'}
+          prompt={buildCreativePrompt(target, analysis, kit, { hasReference: !!masterImage })}
           aspectRatio={nearestRatio(target.widthMm, target.heightMm)}
-          onResult={(imgs) => {
-            setImages((m) => ({ ...m, [target.kind]: imgs }))
+          getReference={masterImage ? () => toReferencePng(masterImage) : undefined}
+          onResult={async (imgs) => {
+            // 制作物の実寸の縦横比に切り出して保存する（仕様 6 章）
+            const fitted = await Promise.all(imgs.map((i) => cropImageToAspect(i, target.widthMm / target.heightMm)))
+            setImages((m) => ({ ...m, [target.kind]: fitted }))
             setShown((s) => ({ ...s, [target.kind]: 0 }))
           }}
         />

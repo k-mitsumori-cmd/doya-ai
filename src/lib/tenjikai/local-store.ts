@@ -3,6 +3,7 @@
 // ⚠️ 利用者ごとにキーを分ける（同じ端末で別のアカウントに切り替えても、前の人の内容を出さない）。
 // ⚠️ localStorage は読めない・書けないことがある（プライベート窓・容量超過）。すべて try/catch し、失敗しても画面は動かす。
 import type { GeneratedPlan, ProjectInput } from './engine'
+import { isKit, type BoothDesignKit } from './design-kit'
 
 export const STORE_VERSION = 1
 
@@ -15,6 +16,9 @@ export type SavedProject = {
   selectedNovelty: string[]
   /** 面ごとの画像。URL（http / 相対）はそのまま、生成直後の data URL は容量が足りるときだけ残す */
   panelImages: Record<string, string>
+  /** ブースのデザインの決まり（2026-10-29。無いときは、サイトの解析から作り直す）と、確定したか */
+  designKit?: BoothDesignKit
+  designKitConfirmed?: boolean
 }
 
 /** localStorage と同じ形の最小の入れ物（テストで差し替える） */
@@ -47,7 +51,8 @@ export function loadProject(userId: string | null | undefined, store: KeyValueSt
     if (!Array.isArray(p.selectedNovelty) || !p.selectedNovelty.every((x) => typeof x === 'string')) return null
     const images: Record<string, string> = {}
     if (isRecord(p.panelImages)) for (const [k, v] of Object.entries(p.panelImages)) if (typeof v === 'string') images[k] = v
-    return { ...(p as unknown as SavedProject), panelImages: images }
+    const kit = isKit(p.designKit) ? p.designKit : undefined
+    return { ...(p as unknown as SavedProject), panelImages: images, designKit: kit, designKitConfirmed: kit ? p.designKitConfirmed === true : false }
   } catch {
     return null
   }
