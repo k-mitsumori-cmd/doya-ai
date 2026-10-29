@@ -39,6 +39,8 @@ async function run(name, fixture = {}) {
   const plainCases = [
     ['headings and inline formatting', '# 見出し\n\n**太字**と*強調*、[リンク](https://example.invalid)\n> 引用\n- 項目\n1. 番号', '見出し\n\n太字と強調、リンク\n引用\n項目\n番号'],
     ['fenced code body and blank lines', 'Before\n\n```js\nconst x = "**keep**---";\n\n\nnext();\n```\n\nAfter', 'Before\n\nconst x = "**keep**---";\n\n\nnext();\n\nAfter'],
+    ['Windows CRLF fences', 'Before\r\n\r\n```js\r\nconst x = 1;\r\n```\r\n\r\n**After**', 'Before\n\nconst x = 1;\n\nAfter'],
+    ['CR-only fences', '~~~text\r**literal**\r~~~\rAfter', '**literal**\nAfter'],
     ['long fence containing short fence', '````js\n```\ncode\n````', '```\ncode'],
     ['unclosed fence retains body', '```js\nconst x = 1;', 'const x = 1;'],
     ['tilde fence', '~~~text\n**literal**\n~~~', '**literal**'],

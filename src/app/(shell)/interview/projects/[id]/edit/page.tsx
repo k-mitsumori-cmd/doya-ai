@@ -191,7 +191,7 @@ function markdownToPlainText(markdown: string): string {
   }
   const lines: string[] = []
   let fenceEnd: RegExp | null = null
-  for (const line of markdown.split('\n')) {
+  for (const line of markdown.split(/\r\n?|\n/)) {
     if (fenceEnd) {
       if (fenceEnd.test(line)) fenceEnd = null
       else lines.push(line)
