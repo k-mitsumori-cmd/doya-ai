@@ -168,6 +168,12 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+function xmlCdata(s: string): string {
+  // XML 1.0 cannot represent these characters. Keep valid Unicode, including emoji.
+  return s.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, '')
+    .replace(/\]\]>/g, ']]]]><![CDATA[>')
+}
+
 function inlineToHtml(s: string): string {
   return escapeHtml(s)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -646,9 +652,9 @@ ${htmlBody}
 <channel>
   <wp:wxr_version>1.2</wp:wxr_version>
   <item>
-    <title><![CDATA[${title || 'article'}]]></title>
+    <title><![CDATA[${xmlCdata(title || 'article')}]]></title>
     <dc:creator><![CDATA[admin]]></dc:creator>
-    <content:encoded><![CDATA[${htmlContent}]]></content:encoded>
+    <content:encoded><![CDATA[${xmlCdata(htmlContent)}]]></content:encoded>
     <excerpt:encoded><![CDATA[]]></excerpt:encoded>
     <wp:post_date><![CDATA[${dateStr}]]></wp:post_date>
     <wp:post_type><![CDATA[post]]></wp:post_type>
