@@ -1,15 +1,18 @@
 export type CollectionJsonResult = { ok: boolean; status: number; data: any }
+export type CollectionTextResult =
+  | { ok: true; status: number; text: string }
+  | { ok: false; status: number; text: null }
 
 /** Bound trusted provider responses as well as the connection and body deadline. */
-export async function fetchCollectionJson(
+export async function fetchCollectionText(
   url: string,
   init: RequestInit,
   limits: { timeoutMs: number; maxBytes: number },
-): Promise<CollectionJsonResult> {
+): Promise<CollectionTextResult> {
   const response = await fetch(url, { ...init, signal: AbortSignal.timeout(limits.timeoutMs) })
   if (!response.ok) {
     void response.body?.cancel().catch(() => {})
-    return { ok: false, status: response.status, data: null }
+    return { ok: false, status: response.status, text: null }
   }
   if (Number(response.headers.get('content-length')) > limits.maxBytes) {
     void response.body?.cancel().catch(() => {})
@@ -27,9 +30,18 @@ export async function fetchCollectionJson(
       if (length > limits.maxBytes) throw new Error('Collection provider response is too large')
       chunks.push(Buffer.from(value))
     }
-    return { ok: true, status: response.status, data: JSON.parse(Buffer.concat(chunks, length).toString('utf8')) }
+    return { ok: true, status: response.status, text: Buffer.concat(chunks, length).toString('utf8') }
   } finally {
     void reader.cancel().catch(() => {})
     reader.releaseLock()
   }
+}
+
+export async function fetchCollectionJson(
+  url: string,
+  init: RequestInit,
+  limits: { timeoutMs: number; maxBytes: number },
+): Promise<CollectionJsonResult> {
+  const result = await fetchCollectionText(url, init, limits)
+  return { ok: result.ok, status: result.status, data: result.ok ? JSON.parse(result.text) : null }
 }
