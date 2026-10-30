@@ -30,7 +30,7 @@ test('日付: 決まった形だけ受け取り、「2026年11月1日」の形�
 })
 
 test('文面: 旧名と新名が入り、URL・料金・アカウントが変わらないと書き、絵文字・感嘆符を使わない', () => {
-  assert.ok(RENAME_NEWS.title.includes('ドヤAI') && RENAME_NEWS.title.includes('ドヤバディ'))
+  assert.ok(RENAME_NEWS.title.includes('ドヤAI') && RENAME_NEWS.title.includes('ドヤ部下'))
   assert.ok(RENAME_ANNOUNCEMENT.body.includes('URL・料金・アカウント'))
   const all = [RENAME_NEWS.title, RENAME_NEWS.description, RENAME_NEWS.lead('2026年11月1日'), RENAME_ANNOUNCEMENT.body, ...RENAME_NEWS.changes, ...RENAME_NEWS.unchanged, ...RENAME_NEWS.faq.flatMap((f) => [f.q, f.a])].join('\n')
   assert.ok(!/！|!|\p{Extended_Pictographic}/u.test(all))
@@ -38,7 +38,7 @@ test('文面: 旧名と新名が入り、URL・料金・アカウントが変わ
 })
 
 test('お知らせのページ: 旗が off のときは、メタデータに新しい名前を出さない（404 の画面にも出ない）', () => {
-  const src = readFileSync(join(process.cwd(), 'src/app/news/rename-doya-buddy/page.tsx'), 'utf8')
+  const src = readFileSync(join(process.cwd(), 'src/app/news/rename-doya-buka/page.tsx'), 'utf8')
   assert.match(src, /export const metadata: Metadata = isBrandRenamed\(\)/)
   assert.match(src, /if \(!isBrandRenamed\(\)\) notFound\(\)/)
 })

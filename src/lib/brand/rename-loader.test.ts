@@ -1,5 +1,5 @@
 // 実行: npx tsx --test src/lib/brand/rename-loader.test.ts
-// 名前の切り替え（ドヤAI → ドヤバディ）のビルド時の置き換えが、コードを壊さないことの回帰テスト。画面は描かない。
+// 名前の切り替え（ドヤAI → ドヤ部下）のビルド時の置き換えが、コードを壊さないことの回帰テスト。画面は描かない。
 // - 旗が on のビルドで掛かる置き換え（scripts/brand/rename-loader.cjs）を、src と seo の全ファイルに掛けて確かめる。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -35,7 +35,7 @@ test('置き換え: サービス名だけを変え、ツール名・brand-keep �
   const s = 'ドヤAIに頼む\nドヤAIO ドヤAI質問リンク ドヤAI商談\nconst k = ["ドヤAI"] // brand-keep\nhttps://doya-ai.surisuta.jp doya_ai'
   assert.equal(
     loader.renameSource(s),
-    'ドヤバディに頼む\nドヤAIO ドヤAI質問リンク ドヤAI商談\nconst k = ["ドヤAI"] // brand-keep\nhttps://doya-ai.surisuta.jp doya_ai',
+    'ドヤ部下に頼む\nドヤAIO ドヤAI質問リンク ドヤAI商談\nconst k = ["ドヤAI"] // brand-keep\nhttps://doya-ai.surisuta.jp doya_ai',
   )
   assert.equal(loader.isTarget('/x/src/lib/brand/index.ts'), false, 'brand の部品は置き換えない（旧名の定数が入っている）')
   assert.equal(loader.isTarget('/x/src/lib/a.test.ts'), false)
@@ -80,7 +80,7 @@ test('危ない書き方がない: 「ドヤAI」を比較・検索・正規表�
   for (const f of targets) {
     readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
       if (line.includes('brand-keep')) return
-      // 比べる側も、比べられる側（各 LP の eyebrow="ドヤAI"）も、同じ置き換えを受けるので、結果は変わらない（両方「ドヤバディ」になる）
+      // 比べる側も、比べられる側（各 LP の eyebrow="ドヤAI"）も、同じ置き換えを受けるので、結果は変わらない（両方「ドヤ部下」になる）
       if (f.endsWith('/components/lp/renewal/Renewal.tsx') && line.includes('props.eyebrow !==')) return
       if (re.test(line.replace(/ドヤAI(O|質問リンク|商談)/g, ''))) risky.push(`${f.replace(ROOT, '')}:${i + 1}: ${line.trim().slice(0, 100)}`)
     })

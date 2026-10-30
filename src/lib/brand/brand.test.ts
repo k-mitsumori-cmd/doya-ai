@@ -1,9 +1,11 @@
 // 実行: npx tsx --test src/lib/brand/brand.test.ts
-// サービス名の切り替え（ドヤAI → ドヤバディ）の旗と、名前の関数の回帰テスト。
+// サービス名の切り替え（ドヤAI → ドヤ部下）の旗と、名前の関数の回帰テスト。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { brandRenameRollout, isBrandRenamed } from './flag'
-import { brandAlternateNames, brandName, brandNameEn, brandNameWithFormer, brandText } from './index'
+import { BRAND_NAME_NEW, BRAND_NAME_OLD, brandAlternateNames, brandName, brandNameEn, brandNameWithFormer, brandText } from './index'
 
 test('旗: all だけが切り替え。値が無い・空・知らない値は off（旗のテストは undefined ではなく空を渡す）', () => {
   assert.equal(brandRenameRollout('all'), 'all')
@@ -13,13 +15,13 @@ test('旗: all だけが切り替え。値が無い・空・知らない値は o
   assert.equal(isBrandRenamed(''), false)
 })
 
-test('名前: 旗が off なら今のまま、all ならドヤバディ（旧ドヤAI を併記できる）', () => {
+test('名前: 旗が off なら今のまま、all ならドヤ部下（旧ドヤAI を併記できる）', () => {
   assert.equal(brandName(false), 'ドヤAI')
-  assert.equal(brandName(true), 'ドヤバディ')
+  assert.equal(brandName(true), 'ドヤ部下')
   assert.equal(brandNameEn(false), 'DOYA AI')
-  assert.equal(brandNameEn(true), 'DOYA BUDDY')
+  assert.equal(brandNameEn(true), 'DOYA BUKA')
   assert.equal(brandNameWithFormer(false), 'ドヤAI')
-  assert.equal(brandNameWithFormer(true), 'ドヤバディ（旧ドヤAI）')
+  assert.equal(brandNameWithFormer(true), 'ドヤ部下（旧ドヤAI）')
   assert.deepEqual(brandAlternateNames(false), [])
   assert.ok(brandAlternateNames(true).includes('ドヤAI'))
   assert.ok(brandAlternateNames(true).includes('DOYA AI'))
@@ -30,10 +32,10 @@ test('文の置き換え: サービス名だけを変え、ツールの名前・
   assert.equal(brandText(s, false), s)
   assert.equal(
     brandText(s, true),
-    'ドヤバディに頼む。ドヤバディは、ドヤAIOとドヤAI質問リンクとドヤAI商談とドヤバナーを束ねます。https://doya-ai.surisuta.jp',
+    'ドヤ部下に頼む。ドヤ部下は、ドヤAIOとドヤAI質問リンクとドヤAI商談とドヤバナーを束ねます。https://doya-ai.surisuta.jp',
   )
   assert.equal(brandText('', true), '')
-  assert.equal(brandText('ドヤAI', true), 'ドヤバディ')
+  assert.equal(brandText('ドヤAI', true), 'ドヤ部下')
 })
 
 test('旗が off（既定）の間は、サイト名・トップのタイトル・別名が、いまの表示のまま', async () => {
@@ -44,4 +46,11 @@ test('旗が off（既定）の間は、サイト名・トップのタイトル�
   assert.ok(SERVICE_SEO.portal.description.startsWith('ドヤAIは、'))
   assert.equal(SERVICE_SEO.portal.keywords[0], 'ドヤAI')
   assert.equal(SITE_ALTERNATE_NAMES[0], 'ドヤマーケAI')
+})
+
+test('メール送信（email.ts）が持つ名前の文字は、名前の正本とずれていない', () => {
+  const src = readFileSync(join(process.cwd(), 'src/lib/email.ts'), 'utf8')
+  assert.ok(src.includes(`'${BRAND_NAME_NEW}')`), 'email.ts の置き換え先が BRAND_NAME_NEW と同じ')
+  assert.ok(src.includes(BRAND_NAME_OLD), 'email.ts の探す名前が BRAND_NAME_OLD と同じ')
+  assert.ok(!/from '@\/lib\/brand'/.test(src), 'email.ts は brand を import しない（vm の検証スクリプトが require 無しで動かすため）')
 })

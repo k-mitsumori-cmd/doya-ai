@@ -1,5 +1,5 @@
 // ============================================
-// 名前の変更のお知らせ（ドヤAI → ドヤバディ）の文面。アプリ内の知らせと、お知らせのページが使う
+// 名前の変更のお知らせ（ドヤAI → ドヤ部下）の文面。アプリ内の知らせと、お知らせのページが使う
 // ============================================
 // ⚠️ このファイルには旧名「ドヤAI」を、わざと書いている。src/lib/brand/ は、ビルド時の置き換え（scripts/brand/rename-loader.cjs）の対象外。
 // ⚠️ 文面は、本人と法務の確認前の案。yomiyasu の原則（短い文・主語と述語・比喩なし・絵文字なし）で書く。
@@ -7,8 +7,8 @@
 import { BRAND_EN_NEW, BRAND_NAME_NEW, BRAND_NAME_OLD } from './index'
 import { isBrandRenamed } from './flag'
 
-export const RENAME_NEWS_PATH = '/news/rename-doya-buddy'
-export const RENAME_ANNOUNCEMENT_ID = 'announce:brand-rename-doya-buddy'
+export const RENAME_NEWS_PATH = '/news/rename-doya-buka'
+export const RENAME_ANNOUNCEMENT_ID = 'announce:brand-rename-doya-buka'
 
 /** 切り替える日（YYYY-MM-DD、日本時間）。環境変数が無いときは、旗を on にしたビルドの既定日 */
 export function renameDate(raw: string | undefined = process.env.NEXT_PUBLIC_BRAND_RENAME_DATE): string {
@@ -27,8 +27,8 @@ export const RENAME_NEWS = {
   lead: (dateLabel: string) =>
     `${dateLabel}に、サービス名を「${BRAND_NAME_OLD}」から「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。サービスの中身は、これまでと同じです。`,
   changes: [
-    'サービス名とロゴが「ドヤバディ」になります。',
-    '画面・メール・お知らせの表記が「ドヤバディ」になります。',
+    'サービス名とロゴが「ドヤ部下」になります。',
+    '画面・メール・お知らせの表記が「ドヤ部下」になります。',
     '検索で「ドヤAI」と入れても、このサービスが見つかるようにしています。',
   ],
   unchanged: [

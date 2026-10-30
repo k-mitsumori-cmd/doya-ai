@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ドヤバディのロゴ案（文字入り）を作る。文字は書体の字形を SVG のパス（ベクター）にして置くので、書体が無くても同じ形で開ける。
+"""ドヤ部下のロゴ案（文字入り）を作る。文字は書体の字形を SVG のパス（ベクター）にして置くので、書体が無くても同じ形で開ける。
 
 使い方: FONT_DIR=<書体のフォルダ> python3 scripts/brand/build-logos.py [出力フォルダ]
   書体（すべて SIL Open Font License 1.1 = 商用で使える。github.com/google/fonts の ofl/ から取得）:
@@ -22,9 +22,20 @@ from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FONT_DIR = Path(os.environ.get('FONT_DIR', '.'))
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/buddy-logo-proposals'
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buka-logo-proposals'
 MARK = base64.b64encode((ROOT / 'public/brand/doya-logo-mark-256.png').read_bytes()).decode()
 
+def brand_names():
+    """サービス名の正本（src/lib/brand/index.ts の BRAND_NAME_NEW・BRAND_EN_NEW）から、ロゴの文字を読む。名前が変わっても、この読み方は変えなくてよい"""
+    import re as _re
+    src = (ROOT / 'src/lib/brand/index.ts').read_text(encoding='utf-8')
+    jp = _re.search(r"BRAND_NAME_NEW = '([^']+)'", src).group(1)
+    en = _re.search(r"BRAND_EN_NEW = '([^']+)'", src).group(1)
+    en1, en2 = en.split(' ', 1)
+    return jp, (jp[:2], jp[2:]), en, (en1, en2)
+
+
+JP_FULL, (JP1, JP2), EN_FULL, (EN1, EN2) = brand_names()
 NAVY, BLUE, SKY = '#101633', '#0066ff', '#00d4ff'
 WHITE, LIGHT = '#ffffff', '#8fb8ff'
 
@@ -92,14 +103,14 @@ def build(key: str, p: dict, lang: str, layout: str, white: bool) -> str:
     PAD = 24
     parts = []
     if lang == 'jp':
-        big1, big2 = ('ドヤ', 'バディ')
+        big1, big2 = (JP1, JP2)
         S = 104
         d1, w1 = text_path(p['jp'], big1, S, 0, 0, p['jp_track'])
         d2, w2 = text_path(p['jp'], big2, S, 0, 0, p['jp_track'])
         gap = S * 0.04
         main_w = w1 + gap + w2
         en_size = 30
-        d3, w3 = text_path(p['en'], 'DOYA BUDDY', en_size, 0, 0, p['en_track'])
+        d3, w3 = text_path(p['en'], EN_FULL, en_size, 0, 0, p['en_track'])
         block_w = max(main_w, w3)
         asc = S * 0.86
         if layout == 'horizontal':
@@ -139,8 +150,8 @@ def build(key: str, p: dict, lang: str, layout: str, white: bool) -> str:
             H = ey + PAD + 8
     else:
         S = 76
-        d1, w1 = text_path(p['en'], 'DOYA', S, 0, 0, p['en_track'])
-        d2, w2 = text_path(p['en'], 'BUDDY', S, 0, 0, p['en_track'])
+        d1, w1 = text_path(p['en'], EN1, S, 0, 0, p['en_track'])
+        d2, w2 = text_path(p['en'], EN2, S, 0, 0, p['en_track'])
         gap = S * 0.30
         main_w = w1 + gap + w2
         asc = S * 0.76
@@ -169,7 +180,7 @@ def build(key: str, p: dict, lang: str, layout: str, white: bool) -> str:
             if p['deco'] == 'spark':
                 parts.append(spark(tx + main_w + 18, ty - asc + 4, 16, deco_c))
             H = ty + 26 + PAD
-    title = 'ドヤバディ' if lang == 'jp' else 'DOYA BUDDY'
+    title = JP_FULL if lang == 'jp' else EN_FULL
     return svg(W, H, ''.join(parts), title)
 
 

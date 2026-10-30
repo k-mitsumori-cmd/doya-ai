@@ -1,6 +1,6 @@
 # 「ドヤAI」の表示の洗い出し（2026-10-30）
 
-ドヤAI → **ドヤバディ**（英語 DOYA BUDDY）の名前の変更の準備です。本人の決定（2026-10-30）、一覧は Obsidian「ドヤAI_09_ドヤバディへの名前の変更_やることの一覧」。
+ドヤAI → **ドヤ部下**（英語 DOYA BUKA）の名前の変更の準備です。本人の決定（2026-10-30）、一覧は Obsidian「ドヤAI_09_ドヤバディへの名前の変更_やることの一覧」。
 
 - 調べた範囲: `src` `seo` `public` `prisma` `scripts` `next.config.js` `vercel.json`（検索語は「ドヤAI」。「Doya AI」「DoyaAI」「ドヤマーケAI」は別に表の下で数えた）。ドキュメント（docs・reference）は含めていない。
 - コードの中の識別名（doya-ai、doya_ai など）は変えない。
@@ -11,13 +11,13 @@
 
 ## 切り替えの仕組み（旗の裏）
 
-- 旗: `NEXT_PUBLIC_BRAND_RENAME_ROLLOUT`（`off` が既定。`all` で「ドヤバディ」に切り替わる）。画面（クライアント）でも読むので `NEXT_PUBLIC_` を付けた。値を変えたら再デプロイが要る。
+- 旗: `NEXT_PUBLIC_BRAND_RENAME_ROLLOUT`（`off` が既定。`all` で「ドヤ部下」に切り替わる）。画面（クライアント）でも読むので `NEXT_PUBLIC_` を付けた。値を変えたら再デプロイが要る。
 - 正本: `src/lib/brand/`（`brandName()`・`brandNameEn()`・`brandNameWithFormer()`・`brandAlternateNames()`・`brandText()`）。旗が off の間は、どの関数も今の「ドヤAI」のままの結果を返す。
 - `brandText()` は、サービス名の「ドヤAI」だけを置き換える。ツールの名前（ドヤAIO・ドヤAI質問リンク・ドヤAI商談）と、URL・識別名（doya-ai）は変えない。
 - すでに旗の裏でつないだ所（旗が off の間は、いまの表示のまま。試験で確かめた）:
   1. サイト名・タグライン・説明文・別名の一覧（`src/lib/seo.ts` の `SITE_CONFIG`・`SITE_ALTERNATE_NAMES`）。切り替え後は alternateName に「ドヤAI」「DOYA AI」「Doya AI」「DoyaAI」を入れる。
-  2. トップの `<title>`（`SERVICE_SEO.portal.title`）。切り替え後は「ドヤバディ（旧ドヤAI） | AI SaaSサービス群」。説明文・キーワードも切り替わる。
-  3. メール送信（`src/lib/email.ts` の `sendEmail`）。切り替え後は、送り主の名前・件名・本文の「ドヤAI」が「ドヤバディ」になる。ただし送り主の名前は環境変数 `RESEND_FROM_EMAIL` の中にあるので、旗とは別に、切り替える日に値も確かめる。
+  2. トップの `<title>`（`SERVICE_SEO.portal.title`）。切り替え後は「ドヤ部下（旧ドヤAI） | AI SaaSサービス群」。説明文・キーワードも切り替わる。
+  3. メール送信（`src/lib/email.ts` の `sendEmail`）。切り替え後は、送り主の名前・件名・本文の「ドヤAI」が「ドヤ部下」になる。ただし送り主の名前は環境変数 `RESEND_FROM_EMAIL` の中にあるので、旗とは別に、切り替える日に値も確かめる。
 - まだつないでいない所: 上の表の、画面の文言（G）・lib の定数（E）・AI の指示文（C）・public（D）。切り替える日までに、表の順に `brandText()` を通す形へ直す（直す所と順番は、統括の監査のあとに決める）。
 
 ## A. title・meta・OGP・構造化データ・サイトマップ・llms.txt・manifest（14ファイル・39件）

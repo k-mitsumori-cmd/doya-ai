@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ドヤバディの OGP 画像・メールの見出し画像を作る（ひな形。ロゴが決まったら、設定の PROPOSAL を差し替えて作り直す）。
+"""ドヤ部下の OGP 画像・メールの見出し画像を作る（ひな形。ロゴが決まったら、設定の PROPOSAL を差し替えて作り直す）。
 
 使い方: FONT_DIR=<書体のフォルダ> python3 scripts/brand/build-assets.py [出力フォルダ]
         node scripts/brand/render-logos.cjs <出力フォルダ> native     … SVG を PNG に書き出す
@@ -19,7 +19,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/buddy-assets'
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buka-assets'
 PROPOSAL = os.environ.get('BRAND_PROPOSAL', 'a')
 
 spec = importlib.util.spec_from_file_location('build_logos', ROOT / 'scripts/brand/build-logos.py')
@@ -65,12 +65,12 @@ def wrap_svg(w: int, h: int, body: str, bg: str, title: str) -> str:
 
 
 def logo_row(x, y, mark_size, jp_size):
-    """クマのマーク + 「ドヤバディ」（2色）。戻り値 = (SVG の部品, 全体の幅)"""
+    """クマのマーク + 「ドヤ部下」（2色）。戻り値 = (SVG の部品, 全体の幅)"""
     parts = [image(x, y, mark_size, mark_size, bl.MARK)]
     tx = x + mark_size + jp_size * 0.28
     base = y + mark_size / 2 + jp_size * 0.34
-    d1, w1 = bl.text_path(P['jp'], 'ドヤ', jp_size, 0, 0, P['jp_track'])
-    d2, w2 = bl.text_path(P['jp'], 'バディ', jp_size, 0, 0, P['jp_track'])
+    d1, w1 = bl.text_path(P['jp'], bl.JP1, jp_size, 0, 0, P['jp_track'])
+    d2, w2 = bl.text_path(P['jp'], bl.JP2, jp_size, 0, 0, P['jp_track'])
     gap = jp_size * 0.04
     parts.append(f'<path transform="translate({tx},{base})" d="{d1}" fill="{P["c1"]}"/>')
     parts.append(f'<path transform="translate({tx + w1 + gap},{base})" d="{d2}" fill="{P["c2"]}"/>')
@@ -79,7 +79,7 @@ def logo_row(x, y, mark_size, jp_size):
 
 def portal() -> str:
     body, _ = logo_row(64, 70, 120, 112)
-    en, _ = label('DOYA BUDDY', 70, 250, 30, BLUE, P['en'], 0.2)
+    en, _ = label(bl.EN_FULL, 70, 250, 30, BLUE, P['en'], 0.2)
     tag1, _ = label('AIで、ビジネスの', 64, 360, 50, NAVY, P['en'] if False else 'zen-maru-bold.ttf')
     tag2, _ = label('「ドヤれる」をつくる。', 64, 430, 50, BLUE, 'zen-maru-bold.ttf')
     chips = ''
@@ -88,7 +88,7 @@ def portal() -> str:
         d, w = bl.text_path('zen-maru-bold.ttf', t, 24, 0, 0, 0)
         chips += f'<rect x="{x}" y="490" width="{w + 40}" height="48" rx="24" fill="{c}"/><path transform="translate({x + 20},{490 + 33})" d="{d}" fill="{NAVY}"/>'
         x += w + 40 + 14
-    return wrap_svg(1200, 630, body + en + tag1 + tag2 + chips + image(700, 30, 480, 570, mascot('growth-pro')), '#f3f8ff', 'ドヤバディ')
+    return wrap_svg(1200, 630, body + en + tag1 + tag2 + chips + image(700, 30, 480, 570, mascot('growth-pro')), '#f3f8ff', bl.JP_FULL)
 
 
 def tool(tid: str, name: str) -> str:
@@ -96,15 +96,15 @@ def tool(tid: str, name: str) -> str:
     d, w = bl.text_path(P['jp'], name, 96 if len(name) <= 8 else 76, 0, 0, 0.0)
     size = 96 if len(name) <= 8 else 76
     title = f'<path transform="translate(64,330)" d="{d}" fill="{NAVY}"/>'
-    sub, _ = label('ドヤバディのツール', 68, 400, 32, BLUE, 'zen-maru-bold.ttf', 0.04)
+    sub, _ = label(bl.JP_FULL + 'のツール', 68, 400, 32, BLUE, 'zen-maru-bold.ttf', 0.04)
     m = ROOT / f'public/ui-renewal/mascots/{tid}.webp'
     art = image(700, 90, 460, 460, mascot(tid)) if m.exists() else ''
-    return wrap_svg(1200, 630, body + title + sub + art, '#f3f8ff', f'{name}｜ドヤバディ')
+    return wrap_svg(1200, 630, body + title + sub + art, '#f3f8ff', f'{name}｜ドヤ部下')
 
 
 def email_header() -> str:
     body, w = logo_row(60, 40, 160, 120)
-    return wrap_svg(1200, 240, body, '#ffffff', 'ドヤバディ')
+    return wrap_svg(1200, 240, body, '#ffffff', bl.JP_FULL)
 
 
 def main() -> None:

@@ -26,7 +26,7 @@ export const ANNOUNCEMENT_DAYS = 30
 export const NEW_TAG_DAYS = 7
 
 export const ANNOUNCEMENTS: Announcement[] = [
-  // 名前の変更（ドヤAI → ドヤバディ）のお知らせ。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ入る（src/lib/brand/rename-news.ts）
+  // 名前の変更（ドヤAI → ドヤ部下）のお知らせ。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ入る（src/lib/brand/rename-news.ts）
   ...renameAnnouncements(),
   {
     id: 'announce:2026-10-25-shell',
