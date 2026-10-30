@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-function fixture(type, count, failure = null) {
+function fixture(type, count, failure = null, initialRole = 'admin', databaseRole = initialRole) {
   const createdAt = new Date('2026-09-01T00:00:00.000Z');
   const rows = Array.from({ length: count }, (_, index) => ({
     id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true, createdAt,
@@ -13,6 +13,7 @@ function fixture(type, count, failure = null) {
     expectedCloseDate: null, updatedAt: createdAt,
   }));
   rows.push({ ...rows[0], id: 'foreign', organizationId: 'org-2', name: 'foreign-secret' });
+  let currentRole = databaseRole, ceiling = null, memberChecks = 0, ceilingChecks = 0;
   let pageCalls = 0, actorActive = failure !== 'revoked-first', lockChecks = 0;
   const controller = new AbortController();
   const model = {
@@ -30,6 +31,8 @@ function fixture(type, count, failure = null) {
       assert.equal(orderBy.id, 'asc');
       assert.equal(take, 500);
       if (failure === 'revoke' && pageCalls === 1) actorActive = false;
+      if (failure === 'demote' && pageCalls === 1) currentRole = 'manager';
+      if (failure === 'ceiling-demote' && pageCalls === 1) ceiling = 'member';
       if (failure === 'abort' && pageCalls === 1) controller.abort();
       return rows.filter((row) => row.organizationId === 'org-1'
         && row.id <= where.id.lte && (!where.id.gt || row.id > where.id.gt)).slice(0, take);
@@ -50,15 +53,27 @@ function fixture(type, count, failure = null) {
   };
   prisma.$transaction = async (run, options) => { assert.equal(options.isolationLevel, 'ReadCommitted'); return run(prisma); };
   prisma.$queryRaw = async () => { lockChecks++; return [{id:'member-1'}]; };
-  prisma.sfaMember = {findFirst:async () => actorActive ? {id:'member-1'} : null};
+  prisma.sfaMember = {findFirst:async ({where, select}) => {
+    memberChecks++;
+    assert.equal(where.id, 'member-1'); assert.equal(where.userId, 'actor-1'); assert.equal(where.organizationId, 'org-1'); assert.equal(where.status, 'ACTIVE');
+    if (!actorActive || !where.role.in.includes(currentRole)) return null;
+    return select.role ? {role: currentRole} : {id:'member-1'};
+  }};
   const authority = load('src/lib/sfa/mutation-authority.ts', {});
   const { GET } = load('src/app/api/sfa/export/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
+    '@/lib/sfa/export-policy': load('src/lib/sfa/export-policy.ts'),
+    '@/lib/company-roles/access.server': {ceilToolRole: async input => {
+      ceilingChecks++; assert.equal(input.tool,'sfa'); assert.equal(input.userId,'actor-1'); assert.equal(input.organizationId,'org-1'); assert.equal(input.toolRole,currentRole);
+      if (failure === 'ceiling-denied') return null;
+      if (failure === 'ceiling-error') throw new Error('private-secret');
+      return ceiling || input.toolRole;
+    }},
     '@/lib/sfa/mutation-authority': authority,
-    '@/lib/sfa/access': { getSfaContext: async () => { if (failure === 'context') throw new Error('private-secret'); return failure === 'guest' ? null : { organizationId: 'org-1', userId:'actor-1', memberId:'member-1' }; }, orgSlugFrom: () => null },
+    '@/lib/sfa/access': { getSfaContext: async () => { if (failure === 'context') throw new Error('private-secret'); return failure === 'guest' ? null : { organizationId: 'org-1', userId:'actor-1', memberId:'member-1', role:initialRole }; }, orgSlugFrom: () => null },
   }, { TextEncoder, ReadableStream });
-  return { GET: () => GET({ url: `http://local/api/sfa/export?type=${type}`, signal: controller.signal }), getPageCalls: () => pageCalls, getLockChecks: () => lockChecks };
+  return { GET: () => GET({ url: `http://local/api/sfa/export?type=${type}`, signal: controller.signal }), getPageCalls: () => pageCalls, getLockChecks: () => lockChecks, getMemberChecks: () => memberChecks, getCeilingChecks: () => ceilingChecks };
 }
 
 (async () => {
@@ -119,6 +134,32 @@ function fixture(type, count, failure = null) {
     assert.match(response.headers.get('cache-control'), /private.*no-store/);
     assert.match(response.headers.get('vary'), /Cookie/);
     assert(!(await response.text()).includes('private-secret'));
+  }
+  for (const type of ['accounts','deals']) {
+    for (const role of ['owner','admin']) {
+      const allowed = fixture(type, 1, null, role);
+      const response = await allowed.GET(); assert.equal(response.status,200); await response.text();
+      assert.equal(allowed.getCeilingChecks(),2); console.log('PASS SFA CSV role: '+type+' '+role+' allowed');
+    }
+    for (const role of ['manager','member','ADMIN','unknown',null,undefined,{},'toString']) {
+      const f = fixture(type,1,null,role === undefined ? '' : role);
+      const r=await f.GET(); assert.equal(r.status,403); assert.match(r.headers.get('cache-control'),/private.*no-store/); assert.equal(r.headers.get('vary'),'Cookie');
+      assert.equal(f.getPageCalls(),0); assert.equal(f.getLockChecks(),0); assert.equal(f.getMemberChecks(),0);
+    }
+    console.log('PASS SFA CSV role: '+type+' lower and malformed roles denied before database access');
+    for (const role of ['member','manager','unknown']) {
+      const f=fixture(type,1,null,'admin',role); assert.equal((await f.GET()).status,403); assert.equal(f.getPageCalls(),0);
+    }
+    console.log('PASS SFA CSV role: '+type+' stale context cannot grant elevated access');
+    for (const failure of ['demote','ceiling-demote']) {
+      const f=fixture(type,501,failure); const r=await f.GET(); assert.equal(r.status,200);
+      await assert.rejects(r.text(),/CSV出力を完了できませんでした/); assert.equal(f.getPageCalls(),1);
+      console.log('PASS SFA CSV role: '+type+' '+failure+' aborts before next page');
+    }
+    for (const [failure,status] of [['ceiling-denied',403],['ceiling-error',503]]) {
+      const f=fixture(type,1,failure); const r=await f.GET(); assert.equal(r.status,status); assert.equal(f.getPageCalls(),0); assert(!(await r.text()).includes('private-secret'));
+      console.log('PASS SFA CSV role: '+type+' '+failure+' fails closed');
+    }
   }
   const empty = await fixture('accounts', 0).GET();
   assert.equal((await empty.text()).trimEnd().split('\r\n').length, 1);
