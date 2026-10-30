@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import GmailConnectCard from '@/components/gmail/GmailConnectCard'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS } from '@/lib/doyalist/constants'
 import { DEFAULT_DOYALIST_PREFERENCES, readDoyalistPreferences, saveDoyalistPreferences, type DoyalistPreferences } from '@/lib/doyalist/preferences'
@@ -246,6 +247,8 @@ export default function SettingsPage() {
             </>
             )}
           </Card>
+
+          <div className="lg:col-span-3"><GmailConnectCard /></div>
 
           {/* ===== Col 3: Preferences ===== */}
           <Card icon="tune" title="設定" subtitle="抽出の初期条件・データ">

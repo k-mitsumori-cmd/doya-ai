@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
+import GmailSendDialog from '@/components/gmail/GmailSendDialog'
 
 const CHARS = {
   point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
@@ -47,6 +48,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
   const [tone, setTone] = useState('formal')
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState('')
+  const [gmailOpen, setGmailOpen] = useState(false)
   const [limitMessage, setLimitMessage] = useState<string | null>(null)
   const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
 
@@ -103,6 +105,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <Toaster position="top-center" />
+      <GmailSendDialog open={gmailOpen} onClose={() => setGmailOpen(false)} initialText={result} source="doyalist-email" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* Page Header */}
@@ -246,6 +249,14 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
                   <div className="bg-slate-50 rounded-xl p-3 max-h-[400px] overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-xs text-slate-700 leading-relaxed font-sans">{result}</pre>
                   </div>
+                  {type === 'email' && (
+                    <button
+                      onClick={() => setGmailOpen(true)}
+                      className="w-full rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                    >
+                      Gmail で送る
+                    </button>
+                  )}
                   <p className="text-[10px] text-slate-400">企業名・担当者名は仮置きです（適宜カスタマイズしてご利用ください）</p>
                 </div>
               )}
