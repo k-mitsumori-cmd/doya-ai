@@ -9,8 +9,17 @@ import { PermanentError } from './storage.js'
 const ALLOWED_FORMATS = new Set(['mov', 'mp4', 'm4a', '3gp', '3g2', 'mj2', 'matroska', 'webm', 'avi', 'flv', 'mpeg', 'mpegts', 'mp3', 'ogg', 'wav', 'flac', 'aac', 'asf', 'ac3', 'amr', 'caf', 'aiff', 'wtv', 'rm', 'm4v', 'mxf', 'gxf', 'nut', 'opus'])
 const DENIED_FORMATS = new Set(['hls', 'applehttp', 'concat', 'dash', 'lavfi', 'sdp', 'rtp', 'rtsp', 'image2', 'tee', 'ffmetadata', 'data', 'libgme', 'virtual', 'avs'])
 
+/**
+ * 利用者の入力に付ける制限。
+ *  -protocol_whitelist: 読みに行ける通信を https/tls/tcp だけにする
+ *  -format_whitelist:   ファイルの中身から形式を推測するとき、許可した形式のデマクサーだけを使う。
+ *                       これで HLS・concat・dash などが「作られる前に」断られる(確認の ffprobe も含めて)
+ */
 export function remoteProtocolArgs(): string[] {
-  return ['-protocol_whitelist', process.env.MEDIA_ALLOW_HTTP === '1' ? 'http,https,tls,tcp' : 'https,tls,tcp']
+  return [
+    '-protocol_whitelist', process.env.MEDIA_ALLOW_HTTP === '1' ? 'http,https,tls,tcp' : 'https,tls,tcp',
+    '-format_whitelist', Array.from(ALLOWED_FORMATS).join(','),
+  ]
 }
 /** 署名つきURLの入力 */
 export function remoteInput(url: string): string[] {
@@ -46,7 +55,7 @@ function run(cmd: string, args: string[], onLine?: (line: string) => void): Prom
     p.on('error', reject)
     p.on('close', (code) => {
       if (code === 0) resolve(out)
-      else if (/Invalid data found when processing input|Unsafe file name|Protocol not on whitelist/.test(err)) reject(new PermanentError('動画・音声として読み取れないファイルです'))
+      else if (/Invalid data found when processing input|Unsafe file name|Protocol not on whitelist|Format not on whitelist/.test(err)) reject(new PermanentError('動画・音声として読み取れないファイルです'))
       else reject(new Error(`${cmd} が異常終了しました (code ${code}): ${redact(err).slice(-600)}`))
     })
   })

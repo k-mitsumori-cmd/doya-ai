@@ -64,8 +64,9 @@ const job = await enqueueMediaJob({
 
 ## 安全
 
-- 利用者のファイルは信用しない。ffmpeg の入力に使えるプロトコルを https/tls/tcp だけにし、ffprobe の形式名が許可リスト(mp4・mov・mkv・webm・mp3 など)に無いもの、および HLS・concat・dash などの「別の場所を読みに行く形式」を断る(SSRF対策。ローカル試験だけ `MEDIA_ALLOW_HTTP=1`)。
+- 利用者のファイルは信用しない。ffmpeg の入力に使えるプロトコルを https/tls/tcp だけにし、ffmpeg と ffprobe の両方に `-format_whitelist` を付けて許可した形式のデマクサーだけを使い(確認の ffprobe も含む)、さらに形式名が許可リスト(mp4・mov・mkv・webm・mp3 など)に無いもの、および HLS・concat・dash などの「別の場所を読みに行く形式」を断る(SSRF対策。ローカル試験だけ `MEDIA_ALLOW_HTTP=1`)。
 
+- 追加の守り(Cloud Run 側): ワーカーの通信先を Supabase と AssemblyAI だけに絞る(VPC の下り制限)ことを推奨する。デプロイ時に、VPC コネクタまたは Direct VPC egress と Cloud NAT、ファイアウォールで設定する。
 - ワーカーの起動は Google の IAM で守る。Vercel 側は専用サービスアカウントの鍵で、対象ジョブを起動する権限（run.jobs.runWithOverrides）だけを持つ。公開された入口（HTTP）は作らない。
 - 鍵は環境変数だけで渡す。コード・ログ・Git・Obsidian に値を書かない。署名URLのトークンはエラー文から伏せる。
 - ワーカーは `MEDIA_JOB_INPUT_BUCKETS` 以外のバケットと、`..` を含むパスを読まない。出力は `{userId}/{jobId}/` の下にだけ書く（userId は DB の行から取る）。
