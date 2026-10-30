@@ -4,6 +4,7 @@
 // 答えの範囲は「ドヤAIの説明・料金・使い方」に限る（設計書 4.1）。材料はここに集める。
 // ⚠️ 金額やツールの一覧は直書きしない。unified-plan.ts と services.ts から読む（料金は新プランの準備中のため）。
 // ⚠️ 答えには必ずリンクを添える。リンクの無い材料は作らない。
+import { isBrandRenamed } from '@/lib/brand'
 import { getListedServices, type Service } from '@/lib/services'
 import { UNIFIED_PLAN_COPY, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 
@@ -30,7 +31,7 @@ function staticEntries(): KnowledgeEntry[] {
       id: 'about',
       title: 'ドヤAIとは',
       body: `ドヤAIは、中小企業の仕事を手伝うAIツールの集まりです。1つのアカウントで、${count}のツールを使えます。記事やバナーを作る、営業や人事の管理をする、といった仕事をAIが手伝います。`,
-      keywords: ['ドヤAI', 'ドヤaiとは', '何ができ', 'なにができ', 'どんなサービス', 'とは'],
+      keywords: ['ドヤAI', ...(isBrandRenamed() ? ['ドヤバディ', 'ドヤバディとは'] : []), 'ドヤaiとは', '何ができ', 'なにができ', 'どんなサービス', 'とは'], // brand-keep: 旧名・新名のどちらで聞かれても答える
       source: { label: 'ツールの一覧を見る', href: '/' },
     },
     {

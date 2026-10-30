@@ -144,6 +144,17 @@ const nextConfig = {
   webpack(config) {
     // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
     if (process.env.DOYA_BUILD_NO_WEBPACK_CACHE === '1') config.cache = false
+    // サービス名の切り替え（ドヤAI → ドヤバディ）。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のビルドのときだけ、
+    // 画面の文言・AI の指示文・メール・title などの「ドヤAI」を、ビルドのときに置き換える（scripts/brand/rename-loader.cjs）。
+    // 旗が off のビルドでは何も足さない（今のとおり）。
+    if ((process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT || '').trim().toLowerCase() === 'all') {
+      config.module.rules.unshift({
+        test: /\.(ts|tsx|js|jsx|mjs|cjs)$/,
+        enforce: 'pre',
+        include: [require('path').join(__dirname, 'src'), require('path').join(__dirname, 'seo')],
+        use: [{ loader: require('path').join(__dirname, 'scripts/brand/rename-loader.cjs') }],
+      })
+    }
     return config
   },
   
