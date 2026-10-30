@@ -1483,3 +1483,6 @@ if (personaOutputRecovery.error || personaOutputRecovery.status !== 0) process.e
 
 const seoHtmlTitle = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-html-title.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.status || 1);
+
+const shanaiDrawingIds = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-docx-drawing-ids.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanaiDrawingIds.status || 1);
