@@ -7,10 +7,10 @@ import { join } from 'node:path'
 import { brandRenameRollout, isBrandRenamed } from './flag'
 import { BRAND_NAME_NEW, BRAND_NAME_OLD, brandAlternateNames, brandName, brandNameEn, brandNameWithFormer, brandText } from './index'
 
-test('旗: all だけが切り替え。値が無い・空・知らない値は off（旗のテストは undefined ではなく空を渡す）', () => {
+test('旗: all だけが切り替え。値が無い・空・知らない値は off（引数を省くと環境変数を読むので、テストは必ず値を渡す）', () => {
   assert.equal(brandRenameRollout('all'), 'all')
   assert.equal(brandRenameRollout(' ALL '), 'all')
-  for (const v of ['', 'off', 'preview', 'true', '1', undefined]) assert.equal(brandRenameRollout(v as string), 'off')
+  for (const v of ['', 'off', 'preview', 'true', '1']) assert.equal(brandRenameRollout(v), 'off')
   assert.equal(isBrandRenamed('all'), true)
   assert.equal(isBrandRenamed(''), false)
 })
@@ -39,7 +39,12 @@ test('文の置き換え: サービス名だけを変え、ツールの名前・
 })
 
 test('旗が off（既定）の間は、サイト名・トップのタイトル・別名が、いまの表示のまま', async () => {
+  // 本物の環境変数（切り替えの日は all）に左右されないよう、読み込む前に旗を空にする
+  const saved = process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT
+  process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT = ''
   const { SITE_CONFIG, SERVICE_SEO, SITE_ALTERNATE_NAMES } = await import('../seo')
+  if (saved === undefined) delete process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT
+  else process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT = saved
   assert.equal(SITE_CONFIG.name, 'ドヤAI')
   assert.equal(SITE_CONFIG.tagline, 'ドヤAIのサービス群')
   assert.equal(SERVICE_SEO.portal.title, 'ドヤAI | AI SaaSサービス群')
