@@ -8,6 +8,15 @@ import { GmailSendError, sendGmail } from '@/lib/gmail/send'
 
 // 利用者が確認画面で「送信する」を押したときだけ呼ばれる。AI・cron からは呼ばない。
 export async function POST(req: NextRequest) {
+  // CSRF 対策: JSON のみ受け付け、同一サイトからの要求だけ通す
+  if (!(req.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
+    return NextResponse.json({ error: '不正な要求です' }, { status: 415 })
+  }
+  const site = req.headers.get('sec-fetch-site')
+  const origin = req.headers.get('origin')
+  if ((site && site !== 'same-origin') || (origin && origin !== req.nextUrl.origin)) {
+    return NextResponse.json({ error: '不正な要求です' }, { status: 403 })
+  }
   const session = await getServerSession(authOptions)
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

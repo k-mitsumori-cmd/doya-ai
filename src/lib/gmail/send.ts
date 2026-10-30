@@ -3,7 +3,8 @@ import { decryptToken } from './crypto'
 import { buildMime, toBase64Url } from './mime'
 import { refreshAccessToken } from './oauth'
 
-export const GMAIL_DAILY_LIMIT = Number(process.env.GMAIL_DAILY_LIMIT || 30)
+const parsedLimit = Number(process.env.GMAIL_DAILY_LIMIT)
+export const GMAIL_DAILY_LIMIT = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.floor(parsedLimit) : 30
 
 export class GmailSendError extends Error {
   constructor(
@@ -37,6 +38,17 @@ export async function getTodaySendCount(userId: string): Promise<number> {
   return prisma.gmailSendLog.count({ where: { userId, status: 'SUCCESS', sentAt: { gte: startOfTodayJst() } } })
 }
 
+// 送信中（PENDING）も数える。10 分以上前の PENDING は異常終了とみなして数えない
+async function countReserved(userId: string): Promise<number> {
+  return prisma.gmailSendLog.count({
+    where: {
+      userId,
+      sentAt: { gte: startOfTodayJst() },
+      OR: [{ status: 'SUCCESS' }, { status: 'PENDING', sentAt: { gte: new Date(Date.now() - 10 * 60 * 1000) } }],
+    },
+  })
+}
+
 // 利用者がボタンを押した API ルートからだけ呼ぶこと（AI や cron からは呼ばない）
 export async function sendGmail(input: SendGmailInput): Promise<{ messageId: string; from: string }> {
   const to = input.to.trim()
@@ -54,12 +66,20 @@ export async function sendGmail(input: SendGmailInput): Promise<{ messageId: str
   if (conn.status !== 'ACTIVE')
     throw new GmailSendError('Gmail の連携が取り消されています。連携し直してください', 'REAUTH_REQUIRED', 401)
 
-  if ((await getTodaySendCount(input.userId)) >= GMAIL_DAILY_LIMIT)
+  // 上限の枠を先に確保する（PENDING の行を作ってから数える）。同時に押されても上限を超えない
+  const log = await prisma.gmailSendLog.create({
+    data: { userId: input.userId, toEmail: to, subject, source: input.source, status: 'PENDING' },
+  })
+  if ((await countReserved(input.userId)) > GMAIL_DAILY_LIMIT) {
+    await prisma.gmailSendLog
+      .update({ where: { id: log.id }, data: { status: 'FAILED', error: '上限超過' } })
+      .catch(() => {})
     throw new GmailSendError(`本日の送信上限（${GMAIL_DAILY_LIMIT}通）に達しました。明日以降にお試しください`, 'LIMIT_REACHED', 429)
+  }
 
   const fail = async (message: string, code: GmailSendError['code'], status: number) => {
     await prisma.gmailSendLog
-      .create({ data: { userId: input.userId, toEmail: to, subject, source: input.source, status: 'FAILED', error: message.slice(0, 300) } })
+      .update({ where: { id: log.id }, data: { status: 'FAILED', error: message.slice(0, 300) } })
       .catch(() => {})
     return new GmailSendError(message, code, status)
   }
@@ -90,8 +110,9 @@ export async function sendGmail(input: SendGmailInput): Promise<{ messageId: str
     }
     throw await fail(`送信に失敗しました（${body.error?.message || res.status}）`, 'SEND_FAILED', 502)
   }
-  await prisma.gmailSendLog.create({
-    data: { userId: input.userId, toEmail: to, subject, source: input.source, status: 'SUCCESS', messageId: body.id },
+  await prisma.gmailSendLog.update({
+    where: { id: log.id },
+    data: { status: 'SUCCESS', messageId: body.id, sentAt: new Date() },
   })
   return { messageId: body.id, from: conn.email }
 }

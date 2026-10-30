@@ -4650,7 +4650,7 @@ model GmailSendLog {
   toEmail   String
   subject   String
   source    String?
-  status    String // SUCCESS | FAILED
+  status    String // PENDING | SUCCESS | FAILED
   error     String?
   messageId String?
   sentAt    DateTime @default(now())
