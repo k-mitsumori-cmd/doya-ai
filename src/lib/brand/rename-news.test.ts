@@ -18,13 +18,21 @@ test('旗が off の間は、お知らせの一覧に入らない（今のお知
 })
 
 test('旗が on のときは、切り替える日から30日、お知らせに出る。1回だけ見せる id は固定', () => {
-  const list = renameAnnouncements(true)
-  assert.equal(list.length, 1)
-  assert.equal(list[0].date, renameDate('2026-11-01'))
-  const a = activeAnnouncements(new Date('2026-11-05T09:00:00+09:00'), [{ ...list[0] }])
-  assert.equal(a.length, 1)
-  assert.equal(a[0].href, RENAME_NEWS_PATH)
-  assert.equal(activeAnnouncements(new Date('2026-12-05T09:00:00+09:00'), [{ ...list[0] }]).length, 0, '30日をすぎたら出ない')
+  // 実際の切替日が設定された本番ビルドでも、30日間の検査には固定の試験日を使う。
+  const savedDate = process.env.NEXT_PUBLIC_BRAND_RENAME_DATE
+  process.env.NEXT_PUBLIC_BRAND_RENAME_DATE = '2026-11-01'
+  try {
+    const list = renameAnnouncements(true)
+    assert.equal(list.length, 1)
+    assert.equal(list[0].date, renameDate('2026-11-01'))
+    const a = activeAnnouncements(new Date('2026-11-05T09:00:00+09:00'), [{ ...list[0] }])
+    assert.equal(a.length, 1)
+    assert.equal(a[0].href, RENAME_NEWS_PATH)
+    assert.equal(activeAnnouncements(new Date('2026-12-05T09:00:00+09:00'), [{ ...list[0] }]).length, 0, '30日をすぎたら出ない')
+  } finally {
+    if (savedDate === undefined) delete process.env.NEXT_PUBLIC_BRAND_RENAME_DATE
+    else process.env.NEXT_PUBLIC_BRAND_RENAME_DATE = savedDate
+  }
 })
 
 test('日付: 決まった形だけ受け取り、「2026年11月1日」の形にする', () => {
