@@ -1479,6 +1479,9 @@ if (tenjikaiCsvExport.error || tenjikaiCsvExport.status !== 0) process.exit(tenj
 const tenjikaiExportScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-tenjikai-export-scope-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (tenjikaiExportScope.error || tenjikaiExportScope.status !== 0) process.exit(tenjikaiExportScope.status || 1);
 
+const tenjikaiBatchScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-tenjikai-batch-scope-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiBatchScope.error || tenjikaiBatchScope.status !== 0) process.exit(tenjikaiBatchScope.status || 1);
+
 const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
 if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exit(tenjikaiLocalRestore.status || 1);
 
