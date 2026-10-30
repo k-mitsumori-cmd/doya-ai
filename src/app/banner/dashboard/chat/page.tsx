@@ -1,5 +1,6 @@
 'use client'
 
+import { shrinkDataUrl } from '@/lib/image-downscale'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -428,7 +429,7 @@ export default function BannerChatPage() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          originalImage,
+          originalImage: await shrinkDataUrl(originalImage),
           instruction,
           category: proposedSpec?.category,
           size: proposedSpec?.size,

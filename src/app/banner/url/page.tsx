@@ -1,5 +1,6 @@
 'use client'
 
+import { shrinkDataUrl } from '@/lib/image-downscale'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -237,7 +238,7 @@ function BannerUrlAutoPageInner() {
           targetUrl: url,
           count,
           size,
-          baseImage: imageBanners[baseBannerIdx],
+          baseImage: await shrinkDataUrl(imageBanners[baseBannerIdx]),
         }),
       })
 

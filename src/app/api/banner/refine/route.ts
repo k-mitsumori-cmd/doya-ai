@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { shrinkDataUrl } from '@/lib/image-downscale'
 import { waitUntil } from '@vercel/functions'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -141,6 +142,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         success: false,
         error: '元画像が見つかりません。生成結果から選択してください。',
       }, { status: 400 })
+    }
+
+    // 本文の上限（約4.5MB）に近い画像は、Vercel が先に弾く。ここは縮小済みの画像だけを受ける
+    if (originalImage.length > 4 * 1024 * 1024) {
+      return NextResponse.json({ success: false, error: '画像が大きすぎます。もう一度生成してからお試しください。' }, { status: 413 })
     }
 
     const apiKey = getApiKey()

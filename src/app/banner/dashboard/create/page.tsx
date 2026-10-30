@@ -1,5 +1,6 @@
 'use client'
 
+import { shrinkDataUrl } from '@/lib/image-downscale'
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -1474,7 +1475,7 @@ export default function BannerDashboard() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          originalImage,
+          originalImage: await shrinkDataUrl(originalImage),
           instruction,
           category,
           size: effectiveSize,
