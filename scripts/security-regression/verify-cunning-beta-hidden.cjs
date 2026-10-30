@@ -131,7 +131,7 @@ function routeFiles(dir) {
       assert.ok(body.length > 100, file)
       assert.ok(!body.includes('/cunning') && !body.includes('ドヤカンニング'), file)
     }
-    const sitemap = load('src/app/sitemap.ts', { '@/lib/services': services, '@/lib/seo': seo, next: {} })
+    const sitemap = load('src/app/sitemap.ts', { '@/lib/services': services, '@/lib/seo': seo, '@/lib/brand': { isBrandRenamed: () => false }, '@/lib/brand/rename-news': { RENAME_NEWS_PATH: '/news/rename-doya-buka' }, next: {} })
     const urls = sitemap.default().map((e) => e.url)
     assert.ok(urls.length > 10)
     assert.ok(!urls.some((u) => u.includes('/cunning')))
