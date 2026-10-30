@@ -31,6 +31,9 @@ export const MULTIPART_MAX_FILE_SIZE = Number(process.env.DIRECT_UPLOAD_MULTIPAR
 export const MULTIPART_MIN_PART = 16 * 1024 * 1024 // 8〜16MB の範囲。S3 の最小 5MB より大きく
 const MAX_PARTS = 10000
 const PRESIGN_EXPIRES = 3600
+/** 1人が同時に進められる送信の数と、その申告サイズの合計（途中のデータを溜め込ませない） */
+const MAX_ACTIVE_SESSIONS = 6
+const MAX_ACTIVE_BYTES = 20 * 1024 * 1024 * 1024
 
 const ALLOWED_PREFIX = ['video/', 'audio/']
 
@@ -82,6 +85,14 @@ export async function startMultipart(userId: string, input: { fileName: unknown;
     throw new MultipartError(`ファイルサイズが大きすぎます（上限${Math.round(MULTIPART_MAX_FILE_SIZE / 1024 / 1024 / 1024 * 10) / 10}GB）`)
   }
   const size = fileSize as number
+  const active = await prisma.directUploadSession.findMany({
+    where: { userId, status: 'UPLOADING', createdAt: { gt: new Date(Date.now() - 24 * 3600 * 1000) } },
+    select: { fileSize: true },
+  })
+  const activeBytes = active.reduce((a, r) => a + Number(r.fileSize), 0)
+  if (active.length >= MAX_ACTIVE_SESSIONS || activeBytes + size > MAX_ACTIVE_BYTES) {
+    throw new MultipartError('送信中のファイルが多すぎます。完了または取り消してからお試しください', 429)
+  }
   const objectKey = `${userId}/${safeName(fileName)}`
   const out = await s3().send(new CreateMultipartUploadCommand({ Bucket: MULTIPART_BUCKET, Key: objectKey, ContentType: mime }))
   if (!out.UploadId) throw new MultipartError('送信を始められませんでした', 503)
@@ -120,8 +131,12 @@ export async function presignParts(row: Session, partNumbers: unknown) {
     // 最後のパートだけ小さい。大きさはブラウザが切り出すので、ここでは署名だけ
     url: await getSignedUrl(
       s3(),
-      new UploadPartCommand({ Bucket: row.bucket, Key: row.objectKey, UploadId: row.uploadId, PartNumber: partNumber }),
-      { expiresIn: PRESIGN_EXPIRES }
+      // ContentLength も署名に含め、決めた大きさ以外のパートを S3 が拒否するようにする
+      new UploadPartCommand({
+        Bucket: row.bucket, Key: row.objectKey, UploadId: row.uploadId, PartNumber: partNumber,
+        ContentLength: partNumber === total ? Number(row.fileSize) - row.partSize * (total - 1) : row.partSize,
+      }),
+      { expiresIn: PRESIGN_EXPIRES, signableHeaders: new Set(['content-length']) }
     ),
   })))
 }
@@ -182,7 +197,8 @@ async function listPartsWithEtag(row: Session) {
 
 export async function abortMultipart(row: Session) {
   if (row.status === 'UPLOADING') {
-    await s3().send(new AbortMultipartUploadCommand({ Bucket: row.bucket, Key: row.objectKey, UploadId: row.uploadId })).catch(() => {})
+    // S3 側の中止に失敗したら ABORTED にしない（途中のデータが残るため、再度の取り消しを許す）
+    await s3().send(new AbortMultipartUploadCommand({ Bucket: row.bucket, Key: row.objectKey, UploadId: row.uploadId }))
     await prisma.directUploadSession.update({ where: { id: row.id }, data: { status: 'ABORTED' } })
   }
 }
