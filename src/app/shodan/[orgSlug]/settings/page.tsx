@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
+import { directUpload } from '@/lib/direct-upload/client'
 
 type Profile = {
   companyName: string; url: string; description: string; valueProp: string
@@ -100,9 +101,9 @@ export default function ShodanSettingsPage() {
     if (!file) return
     setUploadingLogo(true)
     try {
-      const fd = new FormData(); fd.append('file', file)
-      const r = await fetch(`/api/shodan/company-profile/logo?org=${encodeURIComponent(orgSlug)}`, { method: 'POST', body: fd })
-      const d = await r.json()
+      const logoApi = `/api/shodan/company-profile/logo`
+      const org = `?org=${encodeURIComponent(orgSlug)}`
+      const d = await directUpload({ file, fileName: file.name, issueUrl: `${logoApi}/upload-url${org}`, confirmUrl: `${logoApi}${org}` })
       if (!d.ok) throw new Error(d.error || 'アップロードに失敗しました')
       setLogoPath(d.path); setLogoUrl(d.url)
       toast.success('ロゴをアップロードしました')
@@ -277,7 +278,7 @@ export default function ShodanSettingsPage() {
                 </>
               )}
             </div>
-            <p className="text-[11px] font-bold text-slate-400 mt-1.5">PNG / JPG / WebP（5MBまで）</p>
+            <p className="text-[11px] font-bold text-slate-400 mt-1.5">PNG / JPG / WebP（10MBまで）</p>
           </div>
           <div>
             <label className="block text-xs font-black text-slate-600 mb-1.5">ブランドカラー</label>
