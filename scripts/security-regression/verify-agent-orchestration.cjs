@@ -294,7 +294,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         'next-auth':{getServerSession:async()=>({user:{id:'u_1',email,name:'テスト'}})},
         '@/lib/auth':{authOptions:{}},
         '@/lib/home/summary':{getHomeSummary:async()=>({})},
-        '@/components/home-agent/headlines':{japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？'},
+        '@/components/home-agent/headlines':{japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？',brandRenamedFlag:()=>false},
         'next/headers':{cookies:async()=>({get:()=>undefined})},
         './cookies':{SETUP_HIDE_COOKIE:'x'},
         '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>false},
@@ -341,7 +341,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         '@/components/shell/AppShell':{__esModule:true,default:()=>null},
         '@/components/agent-orchestration/AgentOrchestrator':{__esModule:true,default:()=>null},
         '@/components/home-agent/HomeAgent':{__esModule:true,default:()=>null},
-        '@/components/home-agent/headlines':{headlineCandidates:()=>[],japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？'},
+        '@/components/home-agent/headlines':{headlineCandidates:()=>[],japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？',brandRenamedFlag:()=>false},
         '@/lib/agent-orchestration/flag':loadFlag(envOf('all'),ALLOWED),
         '@/lib/agent-orchestration/recipes':loadCore().recipes,
       },{NODE_ENV:'production',AGENT_ORCHESTRATION_ROLLOUT:'all'});
