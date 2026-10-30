@@ -17,7 +17,7 @@ import {
   multipartEnabled, presignParts, startMultipart, totalPartsOf,
 } from '@/lib/direct-upload/multipart'
 
-type Ctx = { params: Promise<{ action: string }> | { action: string } }
+type Ctx = { params: Promise<{ action: string }> }
 
 async function handle(req: NextRequest, ctx: Ctx) {
   if (!multipartEnabled()) {
@@ -27,7 +27,7 @@ async function handle(req: NextRequest, ctx: Ctx) {
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
 
-  const { action } = 'then' in ctx.params ? await ctx.params : ctx.params
+  const { action } = await ctx.params
   try {
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
     if (action === 'start') {
