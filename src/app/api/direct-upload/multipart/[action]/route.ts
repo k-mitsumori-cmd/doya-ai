@@ -11,6 +11,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { allowIssue } from '@/lib/direct-upload/rate-limit'
 import {
   MultipartError, abortMultipart, completeMultipart, getOwnSession, listUploadedParts,
   multipartEnabled, presignParts, startMultipart, totalPartsOf,
@@ -30,6 +31,9 @@ async function handle(req: NextRequest, ctx: Ctx) {
   try {
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
     if (action === 'start') {
+      if (!allowIssue(`multipart:${userId}`, 20)) {
+        return NextResponse.json({ success: false, error: '短時間に多くの送信が始められました。しばらくしてからお試しください' }, { status: 429 })
+      }
       const r = await startMultipart(userId, body)
       return NextResponse.json({ success: true, ...r })
     }

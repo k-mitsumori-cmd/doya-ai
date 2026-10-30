@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'crypto'
 import { getStorageAdmin, issueSignedUpload, type SignedUpload } from './server'
+import { allowIssue } from './rate-limit'
 
 export const STAGING_BUCKET = process.env.DIRECT_UPLOAD_STAGING_BUCKET || 'direct-upload-staging'
 
@@ -50,6 +51,7 @@ export async function issueStagedImageUpload(req: StageRequest): Promise<StageRe
     return { ok: false, error: `画像サイズは${Math.round(maxBytes / 1024 / 1024)}MB以下にしてください`, status: 400 }
   }
   const safeOwner = req.ownerKey.replace(/[^a-zA-Z0-9_-]/g, '')
+  if (!allowIssue(`stage:${safeOwner}`)) return { ok: false, error: '短時間に多くのアップロードが行われました。しばらくしてからお試しください', status: 429 }
   const upload = await issueSignedUpload(STAGING_BUCKET, `${safeOwner}/${randomUUID()}.${ext}`, {
     // 申告サイズは PUT 時に強制されないので、一時置き場のバケット自体に上限と形式を持たせる
     fileSizeLimit: IMAGE_UPLOAD_MAX,
@@ -81,6 +83,27 @@ export async function readStagedImage(ownerKey: string, path: unknown, maxBytes 
   const { data: blob, error } = await supabase.storage.from(STAGING_BUCKET).download(path)
   if (error || !blob) return { ok: false, error: 'アップロードされたファイルを読み出せませんでした', status: 500 }
   return { ok: true, buffer: Buffer.from(await blob.arrayBuffer()), ext, path }
+}
+
+/** 一時置き場の古いファイル（既定1時間より前）を消す。Cron 用。1回あたり最大 maxFolders 個の持ち主フォルダを見る */
+export async function purgeStaleStaged(maxAgeMs = 60 * 60 * 1000, maxFolders = 200): Promise<{ removed: number }> {
+  const bucket = getStorageAdmin().storage.from(STAGING_BUCKET)
+  const { data: folders, error } = await bucket.list('', { limit: maxFolders })
+  if (error || !folders) return { removed: 0 }
+  const cutoff = Date.now() - maxAgeMs
+  let removed = 0
+  for (const f of folders) {
+    if (f.id) continue // ルート直下のファイルは対象外（フォルダだけを見る）
+    const { data: files } = await bucket.list(f.name, { limit: 1000 })
+    const old = (files || [])
+      .filter(x => x.id && x.created_at && new Date(x.created_at).getTime() < cutoff)
+      .map(x => `${f.name}/${x.name}`)
+    if (old.length) {
+      const { error: rmErr } = await bucket.remove(old)
+      if (!rmErr) removed += old.length
+    }
+  }
+  return { removed }
 }
 
 /** 最終の保存先に置いたあとに、一時ファイルを消す（失敗しても処理は止めない） */

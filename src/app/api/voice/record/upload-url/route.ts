@@ -14,6 +14,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { isVoicePro, getVoicePlan } from '@/lib/voice/plans'
+import { allowIssue } from '@/lib/direct-upload/rate-limit'
 import { issueSignedUpload } from '@/lib/direct-upload/server'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 import {
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest) {
     }
     if (!isVoicePro(getVoicePlan(user))) {
       return NextResponse.json({ success: false, error: 'クラウド録音は上位プランが必要です' }, { status: 403 })
+    }
+
+    if (!allowIssue(`voice:${user.id}`)) {
+      return NextResponse.json({ success: false, error: '短時間に多くのアップロードが行われました。しばらくしてからお試しください' }, { status: 429 })
     }
 
     const body = await req.json().catch(() => null)

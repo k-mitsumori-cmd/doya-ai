@@ -4,6 +4,8 @@ import { isOwnStoragePath } from '../src/lib/direct-upload/server'
 import { normalizeVoiceMime } from '../src/lib/voice/record-upload'
 import { IMAGE_TYPES } from '../src/lib/direct-upload/stage'
 
+import { allowIssue } from '../src/lib/direct-upload/rate-limit'
+
 let failed = 0
 function check(name: string, ok: boolean) {
   console.log(`${ok ? 'OK ' : 'NG '} ${name}`)
@@ -34,6 +36,15 @@ check('文字列以外は拒否', !isOwnStoragePath('user_1', 123))
 check('audio/webm;codecs=opus は webm', normalizeVoiceMime('audio/webm;codecs=opus') === 'audio/webm')
 check('video は音声録音で拒否', normalizeVoiceMime('video/mp4') === null)
 check('画像は jpg/png/webp のみ', !('image/svg+xml' in IMAGE_TYPES) && IMAGE_TYPES['image/png'] === 'png')
+
+// 発行回数の制限
+{
+  const k = `t:${Date.now()}`
+  let okCount = 0
+  for (let i = 0; i < 5; i++) if (allowIssue(k, 3)) okCount++
+  check('窓の中で3回まで通る', okCount === 3)
+  check('別の持ち主は影響されない', allowIssue(`${k}:other`, 3))
+}
 
 if (failed) { console.error(`${failed}件失敗`); process.exit(1) }
 console.log('すべて成功')
