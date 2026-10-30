@@ -3,10 +3,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { redactSfaRelation } from '@/lib/sfa/record-relations'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
-import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
   NextResponse.json(body, { ...options, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
@@ -32,11 +34,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) return json({ error: 'タスクの指定が正しくありません' }, { status: 400 })
   try {
-    const task = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, c)
+    const task = await withSfaRecordRead(c, async (tx, scope) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_tasks WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR SHARE`
       if (!locked.some(row => row.id === id)) return null
-      return tx.sfaTask.findFirst({ where: { id, organizationId: c.organizationId }, select: taskSelect })
+      return redactSfaRelation(tx, scope, await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', false, { id }), select: taskSelect }))
     })
     return json({ state: task ? 'found' : 'missing', task })
   } catch (error) {
@@ -93,11 +94,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   try {
-    const updated = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, c)
+    const updated = await withSfaRecordRead(c, async (tx, scope) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_tasks WHERE id = ${p.id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
       if (!locked.some(row => row.id === p.id)) throw new SfaMutationError(404, 'タスクが見つかりません')
-      const task = await tx.sfaTask.findUnique({ where: { id: p.id } })
+      const task = await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', true, { id: p.id }) })
       if (!task || task.organizationId !== c.organizationId) throw new SfaMutationError(404, 'タスクが見つかりません')
       assertVersion(expected, task.updatedAt)
       // 旧画面の空JSONだけはトグル互換を維持。不正入力をトグルへ読み替えない。
@@ -116,7 +116,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         data,
         select: taskSelect,
       })
-      return updated
+      return redactSfaRelation(tx, scope, updated)
     })
     return json({ task: updated })
   } catch (error) {
@@ -132,14 +132,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(p.id)) return json({ error: 'タスクの指定が正しくありません' }, { status: 400 })
 
   try {
-    const versions = req.nextUrl.searchParams.getAll('expectedUpdatedAt')
+    const versions = (req.nextUrl || new URL(req.url)).searchParams.getAll('expectedUpdatedAt')
     if (versions.length > 1) throw new SfaMutationError(400, '更新日時が重複しています。一覧を再読み込みしてください。')
     const expected = expectedVersion(versions[0])
-    await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, c)
+    await withSfaRecordRead(c, async (tx, scope) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_tasks WHERE id = ${p.id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
       if (!locked.some(row => row.id === p.id)) throw new SfaMutationError(404, 'タスクが見つかりません')
-      const task = await tx.sfaTask.findUnique({ where: { id: p.id } })
+      const task = await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', true, { id: p.id }) })
       if (!task || task.organizationId !== c.organizationId) throw new SfaMutationError(404, 'タスクが見つかりません')
       assertVersion(expected, task.updatedAt)
       await tx.sfaTask.delete({ where: { id: task.id } })

@@ -3,27 +3,13 @@ const { load } = require('./load-typescript.cjs');
 
 const updatedAt = new Date('2026-09-24T00:00:00.000Z');
 const rows = Array.from({ length: 501 }, (_, index) => ({
-  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true,
+  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true, assigneeMemberId: 'fixture-member',
   name: index < 250 ? `検索対象 ${index}` : `通常 ${index}`,
   status: index % 2 ? 'working' : 'new', score: index % 3 === 0 ? 100 : index % 3 === 1 ? 50 : null,
-  updatedAt,
+  updatedAt, convertedAccountId: null,
 }));
 rows.push({ ...rows[0], id: 'foreign', organizationId: 'org-2', name: 'foreign-secret' });
-function matches(row, where) {
-  if (where.AND && !where.AND.every((part) => matches(row, part))) return false;
-  if (where.OR && !where.OR.some((part) => matches(row, part))) return false;
-  if (where.organizationId && row.organizationId !== where.organizationId) return false;
-  if (where.isActive !== undefined && row.isActive !== where.isActive) return false;
-  if (where.status && row.status !== where.status) return false;
-  if (where.name?.contains && !row.name.toLowerCase().includes(where.name.contains.toLowerCase())) return false;
-  if (where.score === null && row.score !== null) return false;
-  if (typeof where.score === 'number' && row.score !== where.score) return false;
-  if (where.score?.lt !== undefined && !(row.score !== null && row.score < where.score.lt)) return false;
-  if (where.updatedAt?.lt && !(row.updatedAt < where.updatedAt.lt)) return false;
-  if (where.updatedAt instanceof Date && row.updatedAt.getTime() !== where.updatedAt.getTime()) return false;
-  if (where.id?.lt && !(row.id < where.id.lt)) return false;
-  return true;
-}
+const { matches, exact } = require('./sfa-query-fixture.cjs');
 let pageCalls = 0;
 const prisma = { sfaLead: {
   findMany: async ({ where, orderBy, take }) => {
@@ -43,7 +29,7 @@ const { GET } = load('src/app/api/sfa/leads/route.ts', {
   ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', userId: 'fixture-user', memberId: 'fixture-member', role: 'member', organizationSlug: 'org-1' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
 });
 async function collect(params, expected) {

@@ -3,7 +3,9 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { lockSfaRecordRelation } from '@/lib/sfa/record-relations'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 
@@ -36,12 +38,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const baseWhere: Prisma.SfaContactWhereInput = {
-    organizationId: ctx.organizationId,
-    isActive: true,
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  if (accountId) await lockSfaRecordRelation(tx, scope, 'account', accountId)
+  const baseWhere = sfaRecordWhere(scope, 'contact', false, {
     ...(accountId ? { accountId } : {}),
     ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
-  }
+  })
   const pageWhere: Prisma.SfaContactWhereInput = cursor
     ? { AND: [baseWhere, { OR: [
       { updatedAt: { lt: cursor.updatedAt } },
@@ -49,18 +51,18 @@ export async function GET(req: NextRequest) {
     ] }] }
     : baseWhere
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaContact.findMany({ where: pageWhere, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: 201 }),
-    prisma.sfaContact.count({ where: baseWhere }),
+    tx.sfaContact.findMany({ where: pageWhere, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: 201 }),
+    tx.sfaContact.count({ where: baseWhere }),
   ])
   const contacts = rows.slice(0, 200)
 
   // 取引先名を付与
   const accIds = Array.from(new Set(contacts.map((c) => c.accountId).filter(Boolean))) as string[]
   const accs = accIds.length
-    ? await prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
+    ? await tx.sfaAccount.findMany({ where: sfaRecordWhere(scope, 'account', false, { id: { in: accIds } }), select: { id: true, name: true } })
     : []
-  const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
-  const withName = contacts.map((c) => ({ ...c, accountName: c.accountId ? accMap[c.accountId] || null : null }))
+  const accMap = new Map(accs.map((a) => [a.id, a.name]))
+  const withName = contacts.map((c) => ({ ...c, accountId: c.accountId && accMap.has(c.accountId) ? c.accountId : null, accountName: c.accountId ? accMap.get(c.accountId) || null : null }))
 
   const last = contacts[contacts.length - 1]
   return crmJson({
@@ -70,6 +72,7 @@ export async function GET(req: NextRequest) {
       ? Buffer.from(JSON.stringify({ updatedAt: last.updatedAt.toISOString(), id: last.id })).toString('base64url')
       : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
+  })
   } catch (error) { return crmError(error) }
 }
 

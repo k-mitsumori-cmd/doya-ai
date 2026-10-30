@@ -3,13 +3,15 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead, lockSfaRecordScope } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { redactSfaRelations, redactSfaRelation, lockSfaRecordRelation } from '@/lib/sfa/record-relations'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { dealBody, lockDealStage, dealStageChange } from '@/lib/sfa/deal-mutation'
 import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
-import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission, checkSfaQuota, type SfaQuotaExceeded } from '@/lib/sfa/limits'
 
@@ -26,9 +28,8 @@ export async function GET(req: NextRequest) {
     try {
       if (operations.length !== 1) throw new SfaMutationError(400, '操作情報が重複しています。')
       const operationId = sfaOperationId(operations[0])!
-      const recovery = await prisma.$transaction(async tx => {
-        await lockSfaMutationActor(tx, ctx)
-        return recoverSfaCreation(tx, ctx, 'deal', operationId, id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }))
+      const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+        return recoverSfaCreation(tx, ctx, 'deal', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaDeal.findFirst({ where: sfaRecordWhere(scope, 'deal', false, { id }) })))
       })
       return json(bigIntToNumber({ state: recovery.state, deal: recovery.row }))
     } catch (error) { return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。' }, error instanceof SfaMutationError ? error.status : 500) }
@@ -52,22 +53,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const where: Prisma.SfaDealWhereInput = { organizationId: ctx.organizationId, isActive: true }
+  const cursorFilter: Prisma.SfaDealWhereInput = {}
   if (cursor) {
-    where.OR = [
+    cursorFilter.OR = [
       { updatedAt: { lt: cursor.updatedAt } },
       { updatedAt: cursor.updatedAt, id: { lt: cursor.id } },
     ]
   }
 
   try {
+    return await withSfaRecordRead(ctx, async (tx, scope) => {
+    const where = sfaRecordWhere(scope, 'deal', false, cursorFilter)
     // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
     const [stages, page, stageGroups] = await Promise.all([
-      ensurePipeline(ctx.organizationId),
-      prisma.sfaDeal.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: pageSize + 1 }),
-      prisma.sfaDeal.groupBy({
+      ensurePipeline(ctx.organizationId, tx),
+      tx.sfaDeal.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: pageSize + 1 }),
+      tx.sfaDeal.groupBy({
         by: ['stageId'],
-        where: { organizationId: ctx.organizationId, isActive: true },
+        where: sfaRecordWhere(scope, 'deal'),
         _count: { _all: true },
         _sum: { amount: true },
       }),
@@ -78,19 +81,20 @@ export async function GET(req: NextRequest) {
     const accIds = Array.from(new Set(deals.map((d) => d.accountId).filter(Boolean))) as string[]
     const [accs, taskGroups] = await Promise.all([
       accIds.length
-        ? prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
+        ? tx.sfaAccount.findMany({ where: sfaRecordWhere(scope, 'account', false, { id: { in: accIds } }), select: { id: true, name: true } })
         : Promise.resolve([]),
       deals.length
-        ? prisma.sfaTask.groupBy({
+        ? tx.sfaTask.groupBy({
             by: ['dealId'],
-            where: { organizationId: ctx.organizationId, dealId: { in: deals.map((d) => d.id) }, status: { not: 'done' } },
+            where: sfaRecordWhere(scope, 'task', false, { dealId: { in: deals.map((d) => d.id) }, status: { not: 'done' } }),
             _count: { _all: true },
           })
         : Promise.resolve([]),
     ])
     const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
     const taskCount = new Map(taskGroups.map((row) => [row.dealId, row._count._all]))
-    const withName = deals.map((d) => ({
+    const safeDeals = await redactSfaRelations(tx, scope, deals)
+    const withName = safeDeals.map((d) => ({
       ...d,
       accountName: d.accountId ? accMap[d.accountId] || null : null,
       openTaskCount: taskCount.get(d.id) || 0,
@@ -108,10 +112,11 @@ export async function GET(req: NextRequest) {
       },
       { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
     )
+    })
   } catch (error) {
     // 列不足(P2022)などDB起因の失敗を Vercel ログで切り分けられるように記録する
     console.error('[sfa/deals] GET failed', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
-    return json({ error: '商談を取得できませんでした。時間をおいて再度お試しください。' }, 500)
+    return json({ error: error instanceof SfaMutationError ? error.message : '商談を取得できませんでした。時間をおいて再度お試しください。' }, error instanceof SfaMutationError ? error.status : 500)
   }
 }
 
@@ -123,15 +128,15 @@ export async function POST(req: NextRequest) {
     const { body, data } = dealBody(await req.json().catch(() => null), true)
     const operationId = sfaOperationId(body.operationId)
     const admitted = await withSfaAdmission(ctx.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, ctx)
+      const scope = await lockSfaRecordScope(tx, ctx)
       let created = false
       const deal = await createSfaOnce(tx, ctx, 'deal', operationId,
         { name: data.name, amount: data.amount!.toString(), accountId: data.accountId || null, stageId: data.stageId || null, startDate: data.startDate?.toISOString() || null },
-        id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }), async () => {
+        async id => redactSfaRelation(tx, scope, await tx.sfaDeal.findFirst({ where: sfaRecordWhere(scope, 'deal', false, { id }) })), async () => {
           // Replays are resolved before quota: a full organization may still recover its committed creation.
           const limit = await checkSfaQuota(tx, ctx.organizationId, { deals: 1 })
           if (limit) throw new DealQuotaError(limit, await canManageSfaBilling(tx, ctx.organizationId, ctx.userId))
-          const accountId = data.accountId ? await lockSfaRelation(tx, ctx, 'sfaAccount', data.accountId) : null
+          const accountId = data.accountId ? await lockSfaRecordRelation(tx, scope, 'account', data.accountId) : null
           const stage = await lockDealStage(tx, ctx, data.stageId || null)
           const now = new Date()
           created = true
@@ -141,7 +146,7 @@ export async function POST(req: NextRequest) {
             ...(stage ? dealStageChange(stage) : { stageId: null, probability: 0, status: 'open', wonAt: null, lostAt: null, lastActivityAt: now }),
           } })
         }, { retrySerializableRace: true })
-      return { deal, created }
+      return { deal: (await redactSfaRelation(tx, scope, deal))!, created }
     })
     if (admitted.limit) throw new DealQuotaError(admitted.limit, false)
     if (admitted.created.created) await recordServiceUsage({ userId: ctx.userId, serviceId: 'sfa', action: '商談作成', summary: data.name, metadata: { organizationId: ctx.organizationId } })
@@ -164,9 +169,8 @@ export async function DELETE(req: NextRequest) {
     const operations = new URL(req.url).searchParams.getAll('operationId')
     if (operations.length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
     const operationId = sfaOperationId(operations[0])!
-    const recovery = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, ctx)
-      return cancelSfaCreation(tx, ctx, 'deal', operationId, id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }))
+    const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+      return cancelSfaCreation(tx, ctx, 'deal', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaDeal.findFirst({ where: sfaRecordWhere(scope, 'deal', false, { id }) })))
     })
     return json(bigIntToNumber({ state: recovery.state, deal: recovery.row }))
   } catch (error) { return json({ error: error instanceof SfaMutationError ? error.message : '取り消し結果を確認できませんでした。' }, error instanceof SfaMutationError ? error.status : 500) }

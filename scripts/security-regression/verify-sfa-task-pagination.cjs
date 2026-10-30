@@ -1,9 +1,10 @@
 const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const {matches}=require('./sfa-query-fixture.cjs');
 const {load:loadModule,check,results}=require('./load-typescript.cjs');
 function api(rows){return loadModule('src/app/api/sfa/tasks/route.ts',withSfaAuthority({
  'next/server':{NextResponse:Response},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org'}),orgSlugFrom:()=>null},
- '@/lib/prisma':{prisma:{sfaTask:{findMany:async({where,orderBy,skip,take})=>rows.filter(r=>r.organizationId===where.organizationId&&(!where.dealId||r.dealId===where.dealId)).sort((a,b)=>{for(const order of orderBy){const [k,d]=Object.entries(order)[0];if(a[k]===b[k])continue;return (a[k]<b[k]?-1:1)*(d==='asc'?1:-1)}return 0}).slice(skip,skip+take)},sfaDeal:{findMany:async()=>[]}}},
+ '@/lib/prisma':{prisma:{sfaTask:{findMany:async({where,orderBy,skip,take})=>rows.filter(r=>matches(r,where)).sort((a,b)=>{for(const order of orderBy){const [k,d]=Object.entries(order)[0];if(a[k]===b[k])continue;return (a[k]<b[k]?-1:1)*(d==='asc'?1:-1)}return 0}).slice(skip,skip+take)},sfaDeal:{findUnique:async({where})=>['deal-a','deal-b'].includes(where.id)?{id:where.id,organizationId:'org',isActive:true,assigneeMemberId:'synthetic-member',name:'Synthetic deal'}:null,findMany:async({where})=>['deal-a','deal-b'].map(id=>({id,organizationId:'org',isActive:true,assigneeMemberId:'synthetic-member',name:'Synthetic deal'})).filter(row=>matches(row,where))}}},
 }));}
 const source=fs.readFileSync('src/app/(shell)/sfa/[orgSlug]/tasks/page.tsx','utf8'),ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='load')code=n.initializer.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
@@ -15,7 +16,7 @@ function ui(fetch){
 
 (async()=>{
  for(const count of [0,1,200,201,501])await check('all '+count+' tasks reachable through real GET and UI load',async()=>{
-  const rows=Array.from({length:count},(_,i)=>({id:String(i).padStart(4,'0'),status:i===count-1?'open':'done',organizationId:'org',title:'Synthetic',createdAt:'2026-10-07T00:00:00.000Z',updatedAt:'2026-10-07T00:00:00.000Z',dueDate:null,dealId:null}));rows.push({id:'foreign',organizationId:'other',status:'open'});
+  const rows=Array.from({length:count},(_,i)=>({id:String(i).padStart(4,'0'),status:i===count-1?'open':'done',organizationId:'org',assigneeMemberId:'synthetic-member',title:'Synthetic',createdAt:'2026-10-07T00:00:00.000Z',updatedAt:'2026-10-07T00:00:00.000Z',dueDate:null,dealId:null}));rows.push({id:'foreign',organizationId:'other',status:'open'});
   const route=api(rows),f=ui(url=>route.GET({nextUrl:new URL(url,'http://offline.invalid')}));
   await f.fn();if(count)assert.equal(f.state.tasks[0].status,'open');
   while(f.state.more)await f.fn(f.state.page+1);
@@ -23,7 +24,7 @@ function ui(fetch){
  });
  for(const page of ['0','-1','1.5','bad'])await check('invalid page '+page,async()=>assert.equal((await api([]).GET({nextUrl:new URL('http://offline.invalid/?page='+page)})).status,400));
  await check('deal filter reaches every task without including other deals or organizations',async()=>{
-  const rows=Array.from({length:501},(_,i)=>({id:String(i).padStart(4,'0'),status:'open',organizationId:'org',title:'Synthetic',createdAt:'2026-10-07T00:00:00.000Z',updatedAt:'2026-10-07T00:00:00.000Z',dueDate:null,dealId:i<250?'deal-a':'deal-b'}));
+  const rows=Array.from({length:501},(_,i)=>({id:String(i).padStart(4,'0'),status:'open',organizationId:'org',assigneeMemberId:'synthetic-member',title:'Synthetic',createdAt:'2026-10-07T00:00:00.000Z',updatedAt:'2026-10-07T00:00:00.000Z',dueDate:null,dealId:i<250?'deal-a':'deal-b'}));
   rows.push({id:'foreign',status:'open',organizationId:'other',title:'Synthetic',createdAt:'2026-10-07T00:00:00.000Z',updatedAt:'2026-10-07T00:00:00.000Z',dueDate:null,dealId:'deal-a'});
   const route=api(rows);const seen=new Set();let page=1,hasMore;
   do{const response=await route.GET({nextUrl:new URL(`http://offline.invalid/?dealId=deal-a&page=${page}`)});assert.equal(response.status,200);const body=await response.json();for(const task of body.tasks){assert.equal(task.dealId,'deal-a');assert(!seen.has(task.id));seen.add(task.id)}hasMore=body.hasMore;page++}while(hasMore);

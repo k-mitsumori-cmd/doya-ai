@@ -7,6 +7,7 @@ import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
 import { sfaInit } from '@/lib/sfa/client'
 import SfaPageHeading from '@/components/sfa/PageHeading'
 import SfaLoadError from '@/components/sfa/SfaLoadError'
+import TeamManagement from '@/components/sfa/TeamManagement'
 import { Trash2 } from 'lucide-react'
 import { confirmDialog } from '@/components/ds/dialog'
 
@@ -218,6 +219,7 @@ export default function SfaMembersPage() {
           )
         })}
       </div>
+      <TeamManagement orgSlug={orgSlug} />
     </div>
   )
 }

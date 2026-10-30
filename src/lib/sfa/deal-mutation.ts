@@ -1,3 +1,4 @@
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import type { Prisma, SfaDeal } from '@prisma/client'
 import type { SfaContext } from './types'
 import { parseSfaAmount } from './amount'
@@ -63,12 +64,13 @@ export function dealVersion(value: unknown): Date | undefined {
   if (!d || !Number.isFinite(d.getTime()) || d.toISOString() !== value) throw new SfaMutationError(400, '更新日時を確認できません。一覧を再読み込みしてください。')
   return d
 }
-export async function lockDeal(tx: Prisma.TransactionClient, ctx: SfaContext, id: string, write = true) {
+export async function lockDeal(tx: Prisma.TransactionClient, scope: SfaRecordScope, id: string, write = true) {
+  const ctx = scope.actor
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) throw new SfaMutationError(400, '商談の指定が正しくありません。')
   const rows = write ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_deals WHERE id = ${id} AND "organizationId" = ${ctx.organizationId} FOR UPDATE`
     : await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_deals WHERE id = ${id} AND "organizationId" = ${ctx.organizationId} FOR SHARE`
   if (!rows.some(row => row.id === id)) return null
-  return tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } })
+  return tx.sfaDeal.findFirst({ where: sfaRecordWhere(scope, 'deal', write, { id }) })
 }
 export async function lockDealStage(tx: Prisma.TransactionClient, ctx: SfaContext, requestedId: string | null) {
   const rows = requestedId

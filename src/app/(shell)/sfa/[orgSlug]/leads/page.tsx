@@ -1,5 +1,7 @@
 'use client'
 
+import RecordAccessSettings from '@/components/sfa/RecordAccessSettings'
+
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -309,6 +311,7 @@ export default function SfaLeadsPage() {
                   </div>
                 </div>
               </div>
+              <div className="mt-3"><RecordAccessSettings orgSlug={orgSlug} kind="lead" id={l.id} onChanged={() => load(filter, q)} /></div>
             </div>
           ))
         )}

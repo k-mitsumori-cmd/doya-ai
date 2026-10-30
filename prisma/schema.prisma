@@ -3123,6 +3123,7 @@ model SfaOrganization {
   updatedAt DateTime @updatedAt
 
   members SfaMember[]
+  teams   SfaTeam[]
 
   @@map("sfa_organizations")
 }
@@ -3141,10 +3142,41 @@ model SfaMember {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
+  teams SfaTeamMember[]
+
   @@unique([organizationId, userId])
+  @@unique([organizationId, id])
   @@index([organizationId])
   @@index([userId])
   @@map("sfa_members")
+}
+
+model SfaTeam {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   SfaOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String          @db.VarChar(80)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  members        SfaTeamMember[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@map("sfa_teams")
+}
+
+model SfaTeamMember {
+  id             String    @id @default(cuid())
+  organizationId String
+  teamId         String
+  memberId       String
+  createdAt      DateTime  @default(now())
+  team           SfaTeam   @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Cascade)
+  member         SfaMember @relation(fields: [organizationId, memberId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([organizationId, teamId, memberId])
+  @@index([organizationId, memberId])
+  @@map("sfa_team_members")
 }
 
 model SfaAccount {
@@ -3160,6 +3192,7 @@ model SfaAccount {
   capital         BigInt?
   creditRank      String?
   ownerMemberId   String? // 自社担当
+  isShared        Boolean  @default(false) // 組織内の有効メンバーへ閲覧のみ共有
   tags            Json?
   note            String?  @db.Text
   isActive        Boolean  @default(true)
@@ -3168,6 +3201,8 @@ model SfaAccount {
 
   @@index([organizationId])
   @@index([organizationId, name])
+  @@index([organizationId, ownerMemberId])
+  @@index([organizationId, isShared])
   @@map("sfa_accounts")
 }
 
@@ -3175,6 +3210,7 @@ model SfaContact {
   id             String   @id @default(cuid())
   organizationId String
   accountId      String?
+  ownerMemberId  String? // 単独の担当者レコードも担当を明示。既存nullは推測で割り当てない
   name           String
   nameKana       String?
   title          String?
@@ -3189,6 +3225,7 @@ model SfaContact {
 
   @@index([organizationId])
   @@index([organizationId, accountId])
+  @@index([organizationId, ownerMemberId])
   @@map("sfa_contacts")
 }
 
@@ -3212,6 +3249,7 @@ model SfaLead {
   updatedAt          DateTime @updatedAt
 
   @@index([organizationId, status])
+  @@index([organizationId, assigneeMemberId])
   @@map("sfa_leads")
 }
 
@@ -3271,6 +3309,7 @@ model SfaDeal {
 
   @@index([organizationId, stageId])
   @@index([organizationId, status])
+  @@index([organizationId, assigneeMemberId])
   @@map("sfa_deals")
 }
 
@@ -3305,6 +3344,7 @@ model SfaActivity {
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, dealId])
+  @@index([organizationId, memberId])
   @@map("sfa_activities")
 }
 

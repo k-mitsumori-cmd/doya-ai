@@ -7,6 +7,7 @@ import { SfaCsvExportLink } from '@/components/sfa/SfaCsvExportLink'
 import { isSfaCrmPage, sfaClientDate, sfaClientId, sfaJson, type SfaClientAccount, type SfaClientContact } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from './MutationRecovery'
+import RecordAccessSettings from './RecordAccessSettings'
 import SfaPageHeading from '@/components/sfa/PageHeading'
 import SfaEmpty from '@/components/sfa/SfaEmpty'
 import { Button } from '@/components/ds'
@@ -246,8 +247,9 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
       />}
       <div className="space-y-2">{list.rows.map(row => <div key={row.id} className="bg-white rounded-xl p-4 flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1"><p className="font-bold break-words">{row.name}</p><p className="text-xs text-slate-500 break-words">{'industry' in row ? [row.industry, row.prefecture].filter(Boolean).join(' · ') : [row.accountName, row.title, row.email, row.phone, row.isKeyPerson ? 'キーマン' : ''].filter(Boolean).join(' · ')}</p></div>
-        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を編集`} onClick={() => openForm(row)}>編集</button>
-        <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を削除`} onClick={() => { if (mutations.active()) setDeletion({ identity: mutations.identity, row }) }}>削除</button>
+        <button type="button" disabled={row.canEdit === false || mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を編集`} onClick={() => openForm(row)}>編集</button>
+        <button type="button" disabled={row.canEdit === false || mutations.blocked(kind + ':' + row.id)} className={btn} aria-label={`${row.name}を削除`} onClick={() => { if (mutations.active()) setDeletion({ identity: mutations.identity, row }) }}>削除</button>
+        <div className="basis-full"><RecordAccessSettings orgSlug={orgSlug} kind={kind} id={row.id} onChanged={() => setRefresh(v => v + 1)} /></div>
       </div>)}</div>
       {list.cursor && <div className="mt-4"><button type="button" onClick={loadMore} disabled={moreLoading} className={btn}>さらに表示</button>{moreError && <p role="alert">追加の{label}を読み込めませんでした。再度お試しください。</p>}</div>}
     </>}

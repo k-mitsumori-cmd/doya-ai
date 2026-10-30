@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere, canAccessSfaRecord } from '@/lib/sfa/record-policy'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 
@@ -35,11 +36,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const baseWhere: Prisma.SfaAccountWhereInput = {
-    organizationId: ctx.organizationId,
-    isActive: true,
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  const baseWhere = sfaRecordWhere(scope, 'account', false, {
     ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
-  }
+  })
   const pageWhere: Prisma.SfaAccountWhereInput = cursor
     ? { AND: [baseWhere, { OR: [
       { updatedAt: { lt: cursor.updatedAt } },
@@ -47,23 +47,24 @@ export async function GET(req: NextRequest) {
     ] }] }
     : baseWhere
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaAccount.findMany({
+    tx.sfaAccount.findMany({
       where: pageWhere,
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: 201,
       ...(optionsOnly ? { select: { id: true, name: true, updatedAt: true } } : {}),
     }),
-    prisma.sfaAccount.count({ where: baseWhere }),
+    tx.sfaAccount.count({ where: baseWhere }),
   ])
   const accounts = rows.slice(0, 200)
   const last = accounts[accounts.length - 1]
   return crmJson({
-    accounts,
+    accounts: optionsOnly ? accounts : accounts.map(account => ({ ...account, canEdit: canAccessSfaRecord(scope, 'account', account, true) })),
     totalCount,
     nextCursor: rows.length > 200 && last
       ? Buffer.from(JSON.stringify({ updatedAt: last.updatedAt.toISOString(), id: last.id })).toString('base64url')
       : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
+  })
   } catch (error) { return crmError(error) }
 }
 

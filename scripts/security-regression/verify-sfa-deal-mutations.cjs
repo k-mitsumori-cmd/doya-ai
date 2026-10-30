@@ -1,9 +1,11 @@
+const {matches}=require('./sfa-query-fixture.cjs');
 const assert = require('node:assert/strict'), fs = require('node:fs'), crypto = require('node:crypto');
 const { load } = require('./load-typescript.cjs');
 const authority = load('src/lib/sfa/mutation-authority.ts');
 const receipt = load('src/lib/sfa/creation-receipt.ts', { 'node:crypto': crypto, './mutation-authority': authority });
 const amount = load('src/lib/sfa/amount.ts');
-const helper = load('src/lib/sfa/deal-mutation.ts', { './amount': amount, './mutation-authority': authority });
+const policy=load('src/lib/sfa/record-policy.ts',{'./mutation-authority':authority});
+const helper = load('src/lib/sfa/deal-mutation.ts', { './amount': amount, './mutation-authority': authority, './record-policy':policy });
 const stamp = new Date('2026-10-07T00:00:00.000Z'), op = 'f1536c85-32e5-46f6-919a-8bc55a5a92fb';
 const results = [];
 async function check(name, fn) { await fn(); results.push(name); console.log('PASS ' + name); }
@@ -11,11 +13,11 @@ function fixture() {
   let active = true, actor = 'actor', org = 'org', failReceipt = false, usage = 0, id = 0, queue = Promise.resolve();
   let rows = new Map(), receipts = new Map();
   const stages = new Map(['open', 'won', 'lost'].map((name, order) => [name, { id: name, pipelineId: 'pipeline', name, order, probability: order === 1 ? 100 : 0, isWon: name === 'won', isLost: name === 'lost', pipeline: { organizationId: 'org' } }]));
-  const find = where => [...rows.values()].find(r => Object.entries(where).every(([k, v]) => r[k] === v)) || null;
+  const find = where => [...rows.values()].find(r => matches(r,where)) || null;
   const db = {
-    sfaMember: { findFirst: async ({ where }) => where.id ? active && where.userId === actor && where.organizationId === org ? { id: 'member' } : null : { userId: 'owner' }, count: async () => 2 },
+    sfaMember: { findFirst: async ({ where }) => where.id ? active && where.userId === actor && where.organizationId === org ? { id: 'member',role:'member' } : null : { userId: 'owner' }, count: async () => 2 },
     user: { findUnique: async () => ({ plan: 'FREE' }) },
-    sfaAccount: { count: async () => 0, findFirst: async ({ where }) => where.id === 'account' && where.organizationId === 'org' ? { id: 'account', name: 'Synthetic account' } : null },
+    sfaAccount: { count: async () => 0, findFirst: async ({ where }) => matches({id:'account',organizationId:'org',isActive:true,ownerMemberId:'member'},where)?{id:'account',organizationId:'org',isActive:true,ownerMemberId:'member',name:'Synthetic account'}:null },
     sfaStage: { findUnique: async ({ where }) => stages.get(where.id), findMany: async () => [...stages.values()] },
     sfaLineItem: { findMany: async () => [] }, sfaActivity: { findMany: async () => [] },
     systemSetting: { findUnique: async ({ where }) => receipts.get(where.key) || null, create: async ({ data }) => { if (failReceipt) throw Error('secret database failure'); receipts.set(data.key, data); return data; } },
@@ -29,6 +31,7 @@ function fixture() {
     $executeRaw: async () => 1,
     $queryRaw: async (strings, ...values) => {
       const sql = strings.join('?');
+      if (sql.includes('sfa_organizations')) return [{id:org}];
       if (sql.includes('sfa_members')) return active && values[1] === org && values[2] === actor ? [{ id: 'member' }] : [];
       if (sql.includes('sfa_accounts')) return values[0] === 'account' && values[1] === 'org' ? [{ id: 'account' }] : [];
       if (sql.includes('sfa_stages')) return values.length === 1 ? [{ id: 'open' }] : stages.has(values[0]) && values[1] === 'org' ? [{ id: values[0] }] : [];
@@ -41,7 +44,7 @@ function fixture() {
     queue = result.catch(() => {}); return result;
   };
   const limits = load('src/lib/sfa/limits.ts', { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma: db }, '@/lib/plan-utils': { tierFrom: () => 'FREE' } });
-  const mocks = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma: db }, '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: org, userId: actor, memberId: 'member' }), orgSlugFrom: () => 'alpha' }, '@/lib/sfa/format': load('src/lib/sfa/format.ts'), '@/lib/sfa/deal-mutation': helper, '@/lib/sfa/mutation-authority': authority, '@/lib/sfa/creation-receipt': receipt, '@/lib/sfa/limits': limits, '@/lib/service-usage': { recordServiceUsage: async () => { usage++; } } };
+  const mocks = { ...require('./sfa-deal-test-deps.cjs').dealDeps(db,{authority}), 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma: db }, '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: org, userId: actor, memberId: 'member',role:'member',organizationSlug:'alpha' }), orgSlugFrom: () => 'alpha' }, '@/lib/sfa/format': load('src/lib/sfa/format.ts'), '@/lib/sfa/deal-mutation': helper, '@/lib/sfa/mutation-authority': authority, '@/lib/sfa/creation-receipt': receipt, '@/lib/sfa/limits': limits, '@/lib/service-usage': { recordServiceUsage: async () => { usage++; } } };
   const collection = load('src/app/api/sfa/deals/route.ts', mocks), detail = load('src/app/api/sfa/deals/[id]/route.ts', mocks);
   const req = (body, query = '') => ({ url: 'https://example.invalid/api/sfa/deals' + query, json: async () => body });
   const ctx = id => ({ params: Promise.resolve({ id }) });
@@ -102,7 +105,7 @@ function fixture() {
   });
   await check('Malformed date, unknown fields, invalid amount, invalid related IDs and version fail before write', async () => {
     const f = fixture(); const row = (await (await f.post({ name: 'Initial' })).json()).deal;
-    for (const body of [{ startDate: '2026-02-30' }, { expectedCloseDate: '2026-01-01junk' }, { note: 5 }, { probability: '1e2' }, { amount: '1e309' }, { organizationId: 'foreign' }, { expectedUpdatedAt: 'bad', name: 'Wrong' }, { stageId: 'foreign' }, { accountId: 'foreign' }]) assert.equal((await f.patch(row.id, body)).status, 400);
+    for (const body of [{ startDate: '2026-02-30' }, { expectedCloseDate: '2026-01-01junk' }, { note: 5 }, { probability: '1e2' }, { amount: '1e309' }, { organizationId: 'foreign' }, { expectedUpdatedAt: 'bad', name: 'Wrong' }, { stageId: 'foreign' }, { accountId: 'foreign' }]) assert.equal((await f.patch(row.id, body)).status, body.accountId === 'foreign' ? 404 : 400);
     assert.equal(f.rows().get(row.id).name, 'Initial'); assert.equal(f.rows().get(row.id).updatedAt.getTime(), stamp.getTime());
   });
   await check('Actor/organization isolate creation receipts and all handled responses are private', async () => {

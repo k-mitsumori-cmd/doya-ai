@@ -4,12 +4,12 @@ const { load } = require('./load-typescript.cjs');
 let saved = [], relationReads = 0, transactions = 0;
 const prisma = {
   sfaTask: { create: async ({ data }) => { saved.push(data); return { id: 'task', ...data }; } },
-  sfaDeal: { findFirst: async () => { relationReads++; return { id: 'deal' }; } },
+  sfaDeal: { findFirst: async () => { relationReads++; return { id: 'deal', organizationId:'org',isActive:true,assigneeMemberId:'member' }; } },
   $transaction: async fn => { transactions++; return fn({ sfaActivity: { create: async ({ data }) => { saved.push(data); return { id: 'activity', ...data }; } } }); },
 };
 const mocks = {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor' }), orgSlugFrom: () => 'org' },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor',role:'member',organizationSlug:'org' }), orgSlugFrom: () => 'org' },
 };
 const task = load('src/app/api/sfa/tasks/route.ts', withSfaAuthority(mocks));
 const activity = load('src/app/api/sfa/activities/route.ts', withSfaAuthority(mocks));

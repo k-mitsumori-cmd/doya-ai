@@ -1,11 +1,12 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
+const {matches}=require('./sfa-query-fixture.cjs');
 const writes = [];
 const prisma = {
   sfaAccount: {
     create: async ({ data }) => { writes.push(['account', data]); return { id: 'account-1', ...data }; },
-    findFirst: async ({ where }) => where.id === 'account-1' && where.organizationId === 'org-1' && where.isActive === true ? { id: 'account-1' } : null,
+    findFirst: async ({ where }) => { const row={id:'account-1',organizationId:'org-1',isActive:true,ownerMemberId:'member-1'}; return matches(row,where)?row:null; },
   },
   sfaContact: { create: async ({ data }) => { writes.push(['contact', data]); return { id: 'contact-1', ...data }; } },
   sfaLead: { create: async ({ data }) => { writes.push(['lead', data]); return { id: 'lead-1', ...data }; } },
@@ -14,7 +15,7 @@ const mocks = {
   ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'actor' }), orgSlugFrom: () => null },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'actor', role: 'member', organizationSlug: 'org-1' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(prisma) }), sfaQuotaResponse: () => Response.json({ error: 'limit' }, { status: 402 }) },
 };
@@ -31,7 +32,7 @@ const request = (body) => ({ json: async () => body && typeof body === 'object' 
   for (const body of [null, [], { name: 123 }, { name: '担当者', accountId: 123 },
     { name: '担当者', email: {} }, { name: '担当者', isKeyPerson: 'yes' },
     { name: '担当者', accountId: 'foreign' }]) {
-    assert.equal((await createContact(request(body))).status, 400, `contact ${JSON.stringify(body)}`);
+    assert.equal((await createContact(request(body))).status, body?.accountId === 'foreign' ? 404 : 400, `contact ${JSON.stringify(body)}`);
   }
   for (const body of [null, [], { name: 123 }, { name: 'リード', email: 123 },
     { name: 'リード', source: 'unknown' }, { name: 'リード', phone: {} }]) {

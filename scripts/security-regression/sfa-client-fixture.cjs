@@ -14,11 +14,13 @@ const makeTask = (input = {}, id = 'task') => ({ id, title: 'Synthetic task', st
 const makeLead = (input = {}) => ({ id: 'lead-a', name: 'Synthetic lead', contactName: 'Contact', corporateNumber: null, email: null, phone: null, note: null, raw: {}, status: 'new', score: null, source: 'manual', convertedAccountId: null, updatedAt: stamp, ...input });
 const makeAccount = (input = {}) => ({ id: 'account-a', name: 'Synthetic account', industry: null, prefecture: null, url: null, note: null, createdAt: stamp, updatedAt: stamp, ...input });
 const makeContact = (input = {}) => ({ id: 'contact-a', name: 'Synthetic contact', accountId: null, title: null, department: null, email: null, phone: null, note: null, isKeyPerson: false, accountName: null, createdAt: stamp, updatedAt: stamp, ...input });
+const makeTeam = (input = {}) => ({ id: 'team-a', name: 'Synthetic team', createdAt: stamp, updatedAt: stamp, members: [], ...input });
 async function fixture(page, options = {}) {
   if (!options.keepStorage) window.sessionStorage.clear();
   let actor = 'actor-a', status = 'authenticated', orgSlug = 'alpha', component, currentHook;
   const leads = options.leads || [makeLead()];
   const accounts = structuredClone(options.accounts || []), contacts = structuredClone(options.contacts || []);
+  const teams = structuredClone(options.teams || []), teamMembers = options.teamMembers || [{ id: 'team-owner', name: 'Synthetic owner', role: 'owner' }, { id: 'team-member', name: 'Synthetic member', role: 'member' }];
   const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [], deals = structuredClone(options.deals || [makeDeal('deal-a'), makeDeal('deal-b')]);
   let writeReply, readReply, failStorage = false, timeout = false, recoveries = 0;
   const session = () => ({ status, data: status === 'unauthenticated' ? null : { user: { id: actor, plan: 'FREE' } } });
@@ -31,6 +33,15 @@ async function fixture(page, options = {}) {
     if (init.method && init.method !== 'GET') {
       writes.push(request);
       if (writeReply) return writeReply(request);
+      if (pathname === '/api/sfa/teams' && init.method === 'POST') {
+        const row = makeTeam({ id: 'team-' + writes.length, name: request.body.name, members: request.body.memberIds.map(memberId => ({ memberId, member: { ...teamMembers.find(member => member.id === memberId), status: 'ACTIVE' } })) });
+        teams.push(row); receipts.set(request.body.operationId, { kind: 'team', row }); return Response.json({ team: row });
+      }
+      if (pathname.startsWith('/api/sfa/teams/') && ['PATCH', 'DELETE'].includes(init.method)) {
+        const index = teams.findIndex(team => pathname.endsWith('/' + team.id)); assert(index >= 0); const before = teams[index];
+        if (init.method === 'DELETE') { teams.splice(index, 1); return Response.json({ ok: true }); }
+        const row = { ...before, name: request.body.name, members: request.body.memberIds.map(memberId => ({ memberId, member: { ...teamMembers.find(member => member.id === memberId), status: 'ACTIVE' } })), updatedAt: new Date(new Date(before.updatedAt).getTime() + 1).toISOString() }; teams[index] = row; return Response.json({ team: row });
+      }
       if (pathname.endsWith('/next-action') && init.method === 'POST') {
         const source = deals.find(d => d.id === request.body.dealId);
         const row = { id: request.body.operationId, dealId: source.id, dealName: source.name, sourceUpdatedAt: request.body.expectedUpdatedAt, startedAt: stamp, nextAction: 'Synthetic next action', reason: 'Synthetic reason', risk: '', tasks: [{ title: 'First candidate', dueDate: null }, { title: 'Second candidate', dueDate: null }] };
@@ -51,7 +62,7 @@ async function fixture(page, options = {}) {
       }
       if (init.method === 'DELETE' && url.searchParams.has('operationId')) {
         recoveries++; const saved = receipts.get(url.searchParams.get('operationId'));
-        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/teams') ? 'team' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
       }
       if (pathname.endsWith('/convert') && init.method === 'POST') {
         const leadId = pathname.split('/').at(-2), body = request.body;
@@ -97,7 +108,7 @@ async function fixture(page, options = {}) {
         return Response.json({ task: { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' } });
       }
       if (init.method === 'DELETE') return Response.json({ ok: true });
-      const kind = pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
+      const kind = pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/teams') ? 'team' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
       const row = kind === 'task' ? taskData(request.body) : kind === 'deal' ? { ...makeDeal('deal-' + writes.length), name: request.body.name.trim(), amount: Number(request.body.amount), accountId: request.body.accountId || null, startDate: request.body.startDate ? new Date(request.body.startDate).toISOString() : stamp } : activityData(request.body);
       if (kind === 'deal') deals.push(row);
       receipts.set(request.body.operationId, { kind, row });
@@ -106,8 +117,10 @@ async function fixture(page, options = {}) {
     if (readReply) { const result = await readReply(request); if (result) return result; }
     if (url.searchParams.has('operationId')) {
       const saved = receipts.get(url.searchParams.get('operationId'));
-      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/teams') ? 'team' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
     }
+    if (pathname === '/api/sfa/teams') return Response.json({ teams, members: options.canManage === false ? [] : teamMembers, canManage: options.canManage !== false });
+    if (pathname.startsWith('/api/sfa/teams/')) { const row = teams.find(team => pathname.endsWith('/' + team.id)); return Response.json({ state: row ? 'found' : 'missing', team: row || null }); }
     if (pathname.startsWith('/api/sfa/deals/')) { const row = deals.find(d => pathname.endsWith('/' + d.id)); return Response.json({ state: row ? 'found' : 'missing', deal: row || null }); }
     if (pathname.startsWith('/api/sfa/tasks/')) return Response.json({ state: 'found', task: tasks.find(t => pathname.endsWith('/' + t.id)) || null });
     if (pathname.startsWith('/api/sfa/leads/')) { const row = leads.find(l => pathname.endsWith('/' + l.id)); return Response.json({ state: row ? 'found' : 'missing', lead: row || null }); }
@@ -179,11 +192,12 @@ async function fixture(page, options = {}) {
     const { SfaShellContext } = load('src/lib/sfa/shell-context.ts');
     const shell = { publishMemberships: m => published.push(m) };
     component = () => React.createElement(SfaShellContext.Provider, { value: shell }, React.createElement(Layout, null, React.createElement(Child)));
-  } else component = load('src/app/(shell)/sfa/[orgSlug]/' + (page ? page + '/' : '') + 'page.tsx').default;
+  } else if (page === 'teams') { const Teams = load('src/components/sfa/TeamManagement.tsx').default; component = () => React.createElement(Teams, { orgSlug }); }
+  else component = load('src/app/(shell)/sfa/[orgSlug]/' + (page ? page + '/' : '') + 'page.tsx').default;
   const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
   const render = () => act(() => root.render(React.createElement(React.StrictMode, null, React.createElement(component))));
   await render();
-  return { container, writes, requests, notices, receipts, storage, makeTask, taskData, activityData, act, props, render,
+  return { container, writes, requests, notices, receipts, storage, teams, teamMembers, makeTask, taskData, activityData, act, props, render,
     hook: () => currentHook, recovered: () => recoveries, memberships: () => published.at(-1) ?? [],
     reply: fn => writeReply = fn, read: fn => readReply = fn, noStorage: () => failStorage = true, timeout: () => timeout = true,
     auth: async (a, s = 'authenticated') => { actor = a; status = s; await render(); }, org: async value => { orgSlug = value; await render(); },
@@ -193,4 +207,4 @@ async function fixture(page, options = {}) {
     close: async () => { await act(() => root.unmount()); container.remove(); },
   };
 }
-module.exports = { fixture, deferred, act, props, makeTask, makeDeal, makeLead, makeAccount, makeContact, stamp };
+module.exports = { fixture, deferred, act, props, makeTask, makeDeal, makeLead, makeAccount, makeContact, makeTeam, stamp };

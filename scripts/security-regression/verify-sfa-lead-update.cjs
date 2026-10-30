@@ -7,7 +7,7 @@ const source = fs.readFileSync('src/app/api/sfa/leads/[id]/route.ts', 'utf8');
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function fixture(overrides = {}) {
-  let lead = { id: 'lead', organizationId: 'org', isActive: true, status: 'new', convertedAccountId: null, score: null, note: null, updatedAt: new Date('2026-10-01T00:00:00.000Z'), ...overrides };
+  let lead = { id: 'lead', organizationId: 'org', isActive: true, assigneeMemberId:'member', status: 'new', convertedAccountId: null, score: null, note: null, updatedAt: new Date('2026-10-01T00:00:00.000Z'), ...overrides };
   let writes = 0;
   let beforeWrite = null;
   const prisma = { sfaLead: {
@@ -29,7 +29,7 @@ function fixture(overrides = {}) {
     ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor' }), orgSlugFrom: () => 'org' },
+    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor',role:'member',organizationSlug:'org' }), orgSlugFrom: () => 'org' },
     '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   };
   vm.runInNewContext(code, { exports: exported, URL, require: (name) => { assert(name in deps, name); return deps[name]; } });
