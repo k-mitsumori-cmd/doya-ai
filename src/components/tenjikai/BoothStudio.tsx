@@ -100,13 +100,18 @@ function extOf(dataUrl: string) {
   return m ? (m[1] === 'svg+xml' ? 'svg' : m[1] === 'jpeg' ? 'jpg' : m[1]) : 'png'
 }
 
+function graphicCsvCell(value: string): string {
+  const safe = /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(value) ? `'${value}` : value
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
 async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Images) {
   const safe = (t: string) => t.replace(/[\\/:*?"<>|\s]+/g, '_')
   const rows = [
     ['番号', '面', '幅(mm)', '高さ(mm)', '床からの高さ(mm)', '素材', '見出し', '画像ファイル'],
     ...panels.map((p, i) => [String(i + 1), p.name, String(p.widthMm), String(p.heightMm), String(p.baseMm), p.material, p.headline, images[p.id] ? `${String(i + 1).padStart(2, '0')}_${safe(p.name)}.${extOf(images[p.id])}` : '（未作成）']),
   ]
-  const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\r\n')
+  const csv = rows.map((r) => r.map(graphicCsvCell).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
   download(`ブース案${plan.variant}_グラフィック割付.csv`, url)
   setTimeout(() => URL.revokeObjectURL(url), 2000)
