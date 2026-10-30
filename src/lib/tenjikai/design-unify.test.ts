@@ -71,3 +71,9 @@ test('文字を含まない昔の画像だけ、見出しを重ねる（暗い�
   assert.match(art, /legacy=\{isLegacyImage\(legacySig, p\.id, images\[p\.id\]\)\}/)
   assert.doesNotMatch(art, /line-clamp-/)
 })
+
+test('細長い枠（ロールアップ）の仮の枠は、縦書きで折り返し、左右が切れない', () => {
+  const studio = read('src/components/tenjikai/CreativeStudio.tsx')
+  assert.match(studio, /ratio < 0\.6 \? [^\n]*\[writing-mode:vertical-rl\]/)
+  assert.match(studio, /\[overflow-wrap:anywhere\]/)
+})

@@ -25,6 +25,8 @@ export type KunPose =
   | 'lead-marketing' | 'lead-sales' | 'lead-hr' | 'lead-admin'
   | 'waiting' | 'report' | 'todo' | 'locked'
   | 'kpi-sales' | 'kpi-incoming' | 'kpi-spend' | 'kpi-deals' | 'kpi-hiring'
+  // 展示会の待ち画面（壁をローラーで塗る。ds/DoyaWorking が、作業中は paint-a と paint-b を入れ替え、できたら paint-done を出す）
+  | 'paint-a' | 'paint-b' | 'paint-done'
   | 'tool-banner' | 'tool-adimage' | 'tool-persona' | 'tool-asklink' | 'tool-popup' | 'tool-tenjikai' | 'tool-aishodan' | 'tool-doyalist' | 'tool-promane' | 'tool-shanai' | 'tool-income'
 
 /** 小さな動き。idle: 入るだけ / work: 作業中（上下） / think: 考え中（傾く） / cheer: できた（跳ねる） */
