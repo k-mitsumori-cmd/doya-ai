@@ -2,7 +2,7 @@
 // 経営ホームの見出しの候補と、選び方の回帰テスト。画面は描かない。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { HEADLINES, headlineCandidates, japanHour, pickHeadline, timeOfDay } from './headlines'
+import { HEADLINES, brandRenamedFlag, headlineCandidates, japanHour, pickHeadline, timeOfDay } from './headlines'
 
 test('候補: 全部で15〜23個。見出しの「！」は1つまで、問いかけに「！」は付けない', () => {
   assert.ok(HEADLINES.length >= 15 && HEADLINES.length <= 23)
@@ -19,16 +19,17 @@ test('問いかけ型と名乗り出る型が、だいたい半々（名前の�
   const ask = list.filter((h) => h.kind === 'ask').length
   const offer = list.length - ask
   assert.ok(Math.abs(ask - offer) <= 3, `問いかけ ${ask} / 名乗り出る ${offer}`)
-  const all = HEADLINES.filter((h) => !h.buddy)
+  const all = HEADLINES.filter((h) => !h.named)
   const a2 = all.filter((h) => h.kind === 'ask').length
   assert.ok(Math.abs(a2 - (all.length - a2)) <= 3)
 })
 
-test('名前（ドヤバディ）が入る言葉は、旗が on のときだけ候補に入る。ドヤAI とは書かない', () => {
-  assert.ok(headlineCandidates({ renamed: false, hour: 12 }).every((h) => !h.text.includes('ドヤバディ') && !h.buddy))
-  assert.ok(headlineCandidates({ renamed: true, hour: 12 }).some((h) => h.text.includes('ドヤバディ')))
+test('名前（ドヤ部下）が入る言葉は、旗が on のときだけ候補に入る。ドヤAI とは書かない', () => {
+  assert.ok(headlineCandidates({ renamed: false, hour: 12 }).every((h) => !h.text.includes('ドヤ部下') && !h.named))
+  assert.ok(headlineCandidates({ renamed: true, hour: 12 }).some((h) => h.text.includes('ドヤ部下')))
   for (const h of HEADLINES) assert.ok(!h.text.includes('ドヤAI'), h.text)
-  for (const h of HEADLINES) assert.equal(Boolean(h.buddy), h.text.includes('ドヤバディ'), `${h.text}: buddy の印と名前が合う`)
+  for (const h of HEADLINES.filter((x) => !x.named)) assert.ok(!h.text.includes('部下'), `${h.text}: 名前の旗が off の候補に「部下」を出さない`)
+  for (const h of HEADLINES) assert.equal(Boolean(h.named), h.text.includes('部下'), `${h.text}: named の印と「部下」が合う`)
 })
 
 test('時間帯: 朝・昼・夜の言葉は、その時間帯だけ。ほかの時間帯には出ない', () => {
@@ -58,4 +59,10 @@ test('日本時間の「時」: UTC 0時 = 日本の9時、UTC 15時 = 日本の
   assert.equal(japanHour(new Date('2026-10-30T00:00:00Z')), 9)
   assert.equal(japanHour(new Date('2026-10-30T15:00:00Z')), 0)
   assert.equal(japanHour(new Date('2026-10-30T14:59:00Z')), 23)
+})
+
+test('名前の旗: 空白と大文字小文字を許し、all だけが on（空・off・知らない値は off）', () => {
+  assert.equal(brandRenamedFlag('all'), true)
+  assert.equal(brandRenamedFlag(' ALL '), true)
+  for (const v of ['', 'off', 'preview', 'true', '1']) assert.equal(brandRenamedFlag(v), false)
 })

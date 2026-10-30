@@ -5,7 +5,7 @@
 // 依頼を受けるエージェントから各ツールへつなぐ。
 // ⚠️ サーバで集計してから描く（初回表示で数字が空にならないように）。
 // ⚠️ ここは読むだけ。組織の自動作成や契約の変更はしない。
-import { japanHour, pickHeadline } from '@/components/home-agent/headlines'
+import { brandRenamedFlag, japanHour, pickHeadline } from '@/components/home-agent/headlines'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
@@ -53,7 +53,7 @@ export default async function HomePage(props: { searchParams?: Promise<{ dept?: 
       }
     : undefined
   // 見出しの言葉は、開くたびに変わる候補から、サーバーで決める（時間帯は日本時間。名前の旗が on のときだけ「ドヤバディ」入りの言葉が候補に入る）
-  const headline = pickHeadline({ renamed: process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT === 'all', hour: japanHour() })
+  const headline = pickHeadline({ renamed: brandRenamedFlag(), hour: japanHour() })
   // key: 部署を切り替えたとき、ドヤくんの欄を作り直す（依頼の欄の初期値が部署で変わるため）
   return <HomeDashboard initial={summary} setupHidden={setupHidden} powerCard={power ? <DoyaPowerHomeCard view={power} /> : null} doyaPower={doyaPower} agentStage={agent ? <HomeAgent key={departments?.dept ?? 'all'} dept={departments?.dept ?? null} headline={headline} /> : null} departments={departments} />
 }
