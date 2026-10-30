@@ -6,11 +6,13 @@ import type { Metadata } from 'next'
 import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
 import { getServiceById } from './services'
 import { staticOgpPath } from './ogp'
+import { brandAlternateNames, brandName, brandNameWithFormer, brandText } from './brand'
 
+// ⚠️ サービス名は ./brand（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT）を通す。旗が off の間は、今の「ドヤAI」のまま。
 export const SITE_CONFIG = {
-  name: 'ドヤAI',
-  tagline: 'ドヤAIのサービス群',
-  description: 'ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。',
+  name: brandName(),
+  tagline: `${brandName()}のサービス群`,
+  description: brandText('ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。'),
   // 末尾スラッシュは定義時に一度だけ除去（url を使う全箇所＝org url / service url / OG url の二重スラッシュを防ぐ）
   // 既定は本番ドメイン（NEXT_PUBLIC_APP_URL 未設定でも canonical/OG が vercel.app に化けないように）
   url: (process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, ''),
@@ -24,6 +26,8 @@ export const SITE_CONFIG = {
 // 検索されうる別表記を構造化データの alternateName で明示し、
 // 旧称「ドヤマーケAI」（2026-10 にドヤAIへ改称）や「doya ai」等でもこのサイトが同一エンティティとして認識されるようにする。
 export const SITE_ALTERNATE_NAMES = [
+  // 切り替え後は、旧名「ドヤAI」「DOYA AI」などを別名として検索エンジンに伝える（旗が off の間は空）
+  ...brandAlternateNames(),
   'ドヤマーケAI',
   'ドヤ マーケAI',
   'ドヤマーケ AI',
@@ -87,9 +91,10 @@ function withoutTrailingSlash(url: string) {
 export const SERVICE_SEO = {
   // ポータル
   portal: {
-    title: 'ドヤAI | AI SaaSサービス群',
-    description: 'ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。',
-    keywords: ['ドヤAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
+    // 切り替え後は、しばらく「ドヤバディ（旧ドヤAI）｜…」にする（検索で「ドヤAI」を打った人にも届くように）
+    title: `${brandNameWithFormer()} | AI SaaSサービス群`,
+    description: brandText('ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。'),
+    keywords: [...(brandName() !== 'ドヤAI' ? [brandName()] : []), 'ドヤAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
     ogImage: '/ogp/portal.jpg',
   },
   

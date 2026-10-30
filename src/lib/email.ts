@@ -4,6 +4,8 @@
 // 全サービス共通で使えるメール送信ユーティリティ
 // 環境変数: RESEND_API_KEY, RESEND_FROM_EMAIL
 
+import { brandText } from '@/lib/brand'
+
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const SEND_EMAIL_TIMEOUT_MS = 12_000
 
@@ -32,7 +34,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     return { success: false, error: 'RESEND_API_KEY not configured' }
   }
 
-  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || 'noreply@doya-ai.surisuta.jp'
+  // 切り替え後（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all）は、送り主の名前・件名・本文の「ドヤAI」を「ドヤバディ」に。旗が off の間は一切変えない
+  const fromEmail = brandText(params.from || process.env.RESEND_FROM_EMAIL || 'noreply@doya-ai.surisuta.jp')
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), SEND_EMAIL_TIMEOUT_MS)
 
@@ -47,8 +50,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       body: JSON.stringify({
         from: fromEmail,
         to: Array.isArray(params.to) ? params.to : [params.to],
-        subject: params.subject,
-        html: params.html,
+        subject: brandText(params.subject),
+        html: brandText(params.html),
         reply_to: params.replyTo,
         tags: params.tags,
       }),
