@@ -9,7 +9,8 @@
  */
 
 import type { Metadata, Viewport } from 'next'
-import { Noto_Serif_JP, Cormorant_Garamond } from 'next/font/google'
+import { Noto_Serif_JP } from 'next/font/google'
+import localFont from 'next/font/local'
 import { MITSUBOSHI_BRAND } from '@/lib/mitsuboshi/_shared/constants'
 
 // 三ツ星アプリ専用フォントを next/font で最適化読み込み。
@@ -22,10 +23,14 @@ const notoSerifJp = Noto_Serif_JP({
   variable: '--font-mitsuboshi-jp',
 })
 
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '600'],
+// Keep the same family and weights without relying on Google CSS URL formats at build time.
+const cormorant = localFont({
+  src: [
+    { path: '../../../assets/fonts/CormorantGaramond-Variable.woff2', weight: '400', style: 'normal' },
+    { path: '../../../assets/fonts/CormorantGaramond-Variable.woff2', weight: '600', style: 'normal' },
+  ],
   display: 'swap',
+  adjustFontFallback: 'Times New Roman',
   variable: '--font-mitsuboshi-en',
 })
 

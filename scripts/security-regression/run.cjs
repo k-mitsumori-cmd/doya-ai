@@ -1068,6 +1068,10 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
   console.error('Security regression failed: verify-sfa-task-create.cjs');
   process.exit(1);
 }
+const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const sfaCsvLink = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-csv-link-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaCsvLink.error || sfaCsvLink.status !== 0) { console.error('Security regression failed: SFA CSV link'); process.exit(1); }
 const sfaExportAll = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-export-all.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaExportAll.error || sfaExportAll.status !== 0) {
   console.error('Security regression failed: verify-sfa-export-all.cjs');

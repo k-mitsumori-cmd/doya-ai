@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),vm=require('node:vm'),ts=require('typescript');
+const root=path.resolve(__dirname,'../..'),rel='src/app/(mitsuboshi)/layout.tsx',source=fs.readFileSync(path.join(process.env.DOYA_TEST_BASELINE||root,rel),'utf8'),ast=ts.createSourceFile(rel,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+let expression;for(const statement of ast.statements)if(ts.isVariableStatement(statement))for(const d of statement.declarationList.declarations)if(d.name.getText(ast)==='cormorant')expression=d.initializer;
+assert(expression&&ts.isCallExpression(expression));assert.equal(expression.expression.getText(ast),'localFont','Cormorant uses the local loader');
+const config=vm.runInNewContext('('+expression.arguments[0].getText(ast)+')');
+assert.equal(config.variable,'--font-mitsuboshi-en');assert.equal(config.display,'swap');assert.equal(config.adjustFontFallback,'Times New Roman');assert.deepEqual(Array.from(config.src,s=>s.weight),['400','600']);
+assert(config.src.every(s=>s.style==='normal'));assert.match(source,/import localFont from 'next\/font\/local'/);assert(!/import[^\n]*Cormorant_Garamond[^\n]*next\/font\/google/.test(source));
+const actualPath=path.resolve(root,path.dirname(rel),config.src[0].path);assert(config.src.every(s=>path.resolve(root,path.dirname(rel),s.path)===actualPath));
+const fontBytes=fs.readFileSync(actualPath),hash=crypto.createHash('sha256').update(fontBytes).digest('hex');assert.equal(fontBytes.subarray(0,4).toString(),'wOF2');assert(fontBytes.length<300000,'full glyph WOFF2 remains below300KB');
+const notice=fs.readFileSync(path.join(root,'assets/fonts/OFL-CormorantGaramond.txt'),'utf8');assert.match(notice,/Copyright 2015 the Cormorant Project Authors/);assert.match(notice,/SIL OPEN FONT LICENSE/);
+const fontkitImport=require('next/dist/compiled/@next/font/dist/fontkit').default,fontkit=fontkitImport.default||fontkitImport,font=fontkit(fontBytes);assert.match(font.familyName,/Cormorant Garamond/);assert(font.characterSet.length>=970);assert(font.variationAxes.wght.min<=400&&font.variationAxes.wght.max>=600);
+const shaped=font.layout('Cormorant Garamond 0123456789');assert(shaped.glyphs.every(g=>g.id!==0));assert(shaped.positions.every(p=>Number.isFinite(p.xAdvance)&&p.xAdvance>0));
+const loader=require('next/dist/compiled/@next/font/dist/local/loader').default;
+(async()=>{
+ const emitted=[],http=require('node:http'),https=require('node:https');const saved={httpGet:http.get,httpRequest:http.request,httpsGet:https.get,httpsRequest:https.request,fetch:global.fetch};let networkCalls=0;
+ const deny=()=>{networkCalls++;throw Error('External font request forbidden in this test')};http.get=http.request=https.get=https.request=global.fetch=deny;
+ let result;
+ try{result=await loader({functionName:'',variableName:'cormorant',data:[config],resolve:async p=>path.resolve(root,path.dirname(rel),p),loaderContext:{fs},emitFontFile:(data,ext,preload,fallback)=>{assert(data.equals(fontBytes));assert.equal(ext,'woff2');assert.equal(preload,true);assert.equal(fallback,true);emitted.push(data);return '/_next/static/media/'+hash+'.woff2'}})}finally{http.get=saved.httpGet;http.request=saved.httpRequest;https.get=saved.httpsGet;https.request=saved.httpsRequest;global.fetch=saved.fetch}
+ assert.equal(networkCalls,0);assert.equal(emitted.length,2);assert.equal((result.css.match(/@font-face/g)||[]).length,2);assert.match(result.css,/font-weight: 400/);assert.match(result.css,/font-weight: 600/);assert.match(result.css,/font-display: swap/);assert.equal(result.variable,'--font-mitsuboshi-en');assert.equal(result.adjustFontFallback.fallbackFont,'Times New Roman');assert(!/https?:/.test(result.css));
+ await assert.rejects(loader({functionName:'',variableName:'cormorant',data:[config],resolve:async()=>path.join(root,'assets/fonts/owned-missing-font-fixture.woff2'),loaderContext:{fs},emitFontFile:()=>{throw Error('Missing font must not emit')}}),/ENOENT/);
+ console.log(JSON.stringify({passed:7,fontSha256:hash,bytes:fontBytes.length,characters:font.characterSet.length,scope:'Actual Next local font loader, committed WOFF2 parsed/shaped by actual fontkit; CSS400/600, two CSS faces and serif fallback, network forbidden, license and missing-file check. Not full webpack or native/public rendering proof.'}));
+})().catch(e=>{console.error(e);process.exitCode=1});
