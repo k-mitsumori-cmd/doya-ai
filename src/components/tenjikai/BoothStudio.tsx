@@ -105,7 +105,8 @@ function graphicCsvCell(value: string): string {
   return `"${safe.replace(/"/g, '""')}"`
 }
 
-async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Images) {
+async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Images, signal?: AbortSignal) {
+  if (signal?.aborted) return
   const safe = (t: string) => t.replace(/[\\/:*?"<>|\s]+/g, '_')
   const rows = [
     ['番号', '面', '幅(mm)', '高さ(mm)', '床からの高さ(mm)', '素材', '見出し', '画像ファイル'],
@@ -114,11 +115,38 @@ async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Image
   const csv = rows.map((r) => r.map(graphicCsvCell).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
   download(`ブース案${plan.variant}_グラフィック割付.csv`, url)
-  setTimeout(() => URL.revokeObjectURL(url), 2000)
+  let revokeTimer: ReturnType<typeof setTimeout> | undefined
+  let revoked = false
+  const releaseUrl = () => {
+    if (revoked) return
+    revoked = true
+    if (revokeTimer !== undefined) clearTimeout(revokeTimer)
+    signal?.removeEventListener('abort', releaseUrl)
+    URL.revokeObjectURL(url)
+  }
+  signal?.addEventListener('abort', releaseUrl, { once: true })
+  revokeTimer = setTimeout(releaseUrl, 2000)
+  if (signal?.aborted) releaseUrl()
   for (const [i, p] of panels.entries()) {
     const img = images[p.id]
     if (!img) continue
-    await new Promise((r) => setTimeout(r, 250)) // まとめて保存するとブラウザーに止められるため、少し間をあける
+    if (signal?.aborted) return
+    // 保存の間隔をあけ、画面が外れたときは待機も保存も止める。
+    const ready = await new Promise<boolean>((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      let settled = false
+      const finish = () => {
+        if (settled) return
+        settled = true
+        if (timer !== undefined) clearTimeout(timer)
+        signal?.removeEventListener('abort', finish)
+        resolve(!signal?.aborted)
+      }
+      signal?.addEventListener('abort', finish, { once: true })
+      timer = setTimeout(finish, 250)
+      if (signal?.aborted) finish()
+    })
+    if (!ready || signal?.aborted) return
     download(`${String(i + 1).padStart(2, '0')}_${safe(p.name)}.${extOf(img)}`, img)
   }
 }
@@ -146,6 +174,21 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   const threeRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
+  const exportScope = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const scope = new AbortController()
+    exportScope.current = scope
+    return () => {
+      scope.abort()
+      if (exportScope.current === scope) exportScope.current = null
+    }
+  }, [])
+  const runExport = () => {
+    const scope = exportScope.current
+    if (!scope || scope.signal.aborted) return
+    void exportPack(plan, panels, panelImages, scope.signal)
+  }
+
 
   // 見本（マスター）: 背面壁の中央の画像
   const heroPanel = panels.find((p) => p.layout === 'hero')
@@ -220,7 +263,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           scope={allMade
             ? '3Dの完成図・割付表・面の画像を、まとめて書き出します。'
             : `まだ画像の無い${missing.length}面を、1面ずつ作ります。できた面から3Dの壁に貼られます。${left ? `（${left}）` : ''}`}
-          onRun={allMade ? () => void exportPack(plan, panels, panelImages) : running ? () => setBatchOpen(true) : () => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }}
+          onRun={allMade ? runExport : running ? () => setBatchOpen(true) : () => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }}
           disabled={!allMade && !running && blocked}
           disabledReason={kitBlocked && !disabled ? KIT_NEEDED_MESSAGE : IMAGEGEN_DISABLED_MESSAGE}
           running={running}
@@ -253,7 +296,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
         }
         sub={left && !allMade ? left : undefined}
         action={allMade ? (
-          <NextStepAction onClick={() => void exportPack(plan, panels, panelImages)} iconNode={<Download className="h-4 w-4" aria-hidden />}>
+          <NextStepAction onClick={runExport} iconNode={<Download className="h-4 w-4" aria-hidden />}>
             書き出す
           </NextStepAction>
         ) : running ? (
@@ -400,7 +443,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <h2 className="text-[18px] font-bold text-ink">書き出す</h2>
           <p className="text-[14px] leading-relaxed text-[var(--sub)]">グラフィックの割付表（CSV）と、作った面の画像を保存します。印刷会社への入稿の相談に使えます。</p>
           <div>
-            <button disabled={madeCount === 0} onClick={() => void exportPack(plan, panels, panelImages)} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
+            <button disabled={madeCount === 0} onClick={runExport} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
               <Download className="h-4 w-4" /> 割付表と画像を保存（{madeCount}面）
             </button>
             {madeCount === 0 && <p className="mt-1 text-[12px] text-[var(--muted)]">面の画像を作ると、保存できます。</p>}
