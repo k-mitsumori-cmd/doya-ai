@@ -32,6 +32,7 @@ import { normalizeValue, stashPrefill, withPrefillKey } from '@/lib/agent-router
 import type { AgentField, AgentRouteResponse } from '@/lib/agent-router/types'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
+import { TypewriterTextarea } from './TypewriterTextarea'
 import styles from './home-agent.module.css'
 import { RevealWords } from '@/components/ds/motion'
 
@@ -586,8 +587,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
               {/* 見出し → 説明 → 入力欄（虹色の枠）→ 例 → ボタン の順に、ゆったり縦に並べる */}
               <div className={styles.aura}>
                 <span className={styles.auraRing} aria-hidden="true" />
-                <textarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={4}
-                  placeholder="例: 来週の商談の準備をまとめて進めたい" />
+                <TypewriterTextarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={5} reduce={reduce} />
               </div>
               <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
               <div className={`${styles.chips} ${styles.exampleChips}`}>
