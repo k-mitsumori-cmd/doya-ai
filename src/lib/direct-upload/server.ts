@@ -21,11 +21,17 @@ export function getStorageAdmin(): SupabaseClient {
 export type SignedUpload = { signedUrl: string; path: string; token: string }
 
 /** バケットが無ければ（privateで）作ってから、署名付きアップロードURLを発行する */
-export async function issueSignedUpload(bucket: string, storagePath: string): Promise<SignedUpload> {
+export type BucketCreateOptions = { fileSizeLimit?: number; allowedMimeTypes?: string[] }
+
+/**
+ * ⚠️ bucketOptions は「バケットを新しく作るとき」だけ効く（既存バケットの設定は変えない）。
+ *    申告サイズは PUT 時には強制されないため、上限はバケット側の fileSizeLimit で守る。
+ */
+export async function issueSignedUpload(bucket: string, storagePath: string, bucketOptions: BucketCreateOptions = {}): Promise<SignedUpload> {
   const supabase = getStorageAdmin()
   let { data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(storagePath)
   if (error && /not found/i.test(error.message || '')) {
-    await supabase.storage.createBucket(bucket, { public: false })
+    await supabase.storage.createBucket(bucket, { public: false, ...bucketOptions })
     ;({ data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(storagePath))
   }
   if (error || !data) throw new Error(`storage: ${error?.message || 'signed url'}`)

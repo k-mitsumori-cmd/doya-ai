@@ -50,7 +50,11 @@ export async function issueStagedImageUpload(req: StageRequest): Promise<StageRe
     return { ok: false, error: `画像サイズは${Math.round(maxBytes / 1024 / 1024)}MB以下にしてください`, status: 400 }
   }
   const safeOwner = req.ownerKey.replace(/[^a-zA-Z0-9_-]/g, '')
-  const upload = await issueSignedUpload(STAGING_BUCKET, `${safeOwner}/${randomUUID()}.${ext}`)
+  const upload = await issueSignedUpload(STAGING_BUCKET, `${safeOwner}/${randomUUID()}.${ext}`, {
+    // 申告サイズは PUT 時に強制されないので、一時置き場のバケット自体に上限と形式を持たせる
+    fileSizeLimit: IMAGE_UPLOAD_MAX,
+    allowedMimeTypes: Object.keys(IMAGE_TYPES),
+  })
   return { ok: true, upload, maxBytes }
 }
 
