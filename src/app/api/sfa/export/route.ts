@@ -8,6 +8,8 @@ import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-autho
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
+import { canExportSfaCsv } from '@/lib/sfa/export-policy'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 function csvCell(v: unknown): string {
   const s = v == null ? '' : typeof v === 'bigint' ? String(v) : String(v)
@@ -17,12 +19,20 @@ function csvCell(v: unknown): string {
 }
 const BATCH_SIZE = 500
 const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+const permissionError = 'CSVの出力には管理者またはオーナーの権限が必要です。'
 
 async function authorizedRead<T>(ctx: SfaContext, signal: AbortSignal, read: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   signal.throwIfAborted()
   const value = await prisma.$transaction(async tx => {
     // ReadCommitted sees membership changes committed while waiting for its lock.
     await lockSfaMutationActor(tx, ctx)
+    const actor = await tx.sfaMember.findFirst({
+      where: { id: ctx.memberId, organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE', role: { in: ['admin', 'owner'] } },
+      select: { role: true },
+    })
+    if (!actor || !canExportSfaCsv(await ceilToolRole({ tool: 'sfa', userId: ctx.userId, organizationId: ctx.organizationId, toolRole: actor.role }))) {
+      throw new SfaMutationError(403, permissionError)
+    }
     signal.throwIfAborted()
     return read(tx)
   }, { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 30000 })
@@ -104,6 +114,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getSfaContext(orgSlugFrom(req))
     if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401, headers: privateHeaders })
+    if (!canExportSfaCsv(ctx.role)) return NextResponse.json({ error: permissionError }, { status: 403, headers: privateHeaders })
     if (type === 'accounts') {
       const boundary = await authorizedRead(ctx, req.signal, tx => tx.sfaAccount.findFirst({
         where: { organizationId: ctx.organizationId, isActive: true, createdAt: { lte: startedAt } },
