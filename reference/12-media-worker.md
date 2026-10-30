@@ -63,6 +63,7 @@ const job = await enqueueMediaJob({
 | Vercel・ワーカー両方 | MEDIA_JOB_INPUT_BUCKETS | 入力を許すバケット（カンマ区切り） |
 | Vercel・ワーカー両方 | MEDIA_OUTPUT_BUCKET | 出力のバケット（既定 media-jobs。非公開） |
 | ワーカー | DATABASE_URL | Supabase の接続（Vercel と同じ） |
+| ワーカー | DATABASE_CA_CERT | Supabase のルート証明書(PEM)。設定すると DB のサーバー証明書を検証する。本番では必ず設定する |
 | ワーカー | SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY | Storage 用（Vercel の NEXT_PUBLIC_SUPABASE_URL と同じ値） |
 | ワーカー | FFMPEG_THREADS | ffmpeg のスレッド数（CPU数に合わせる。例 4） |
 

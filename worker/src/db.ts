@@ -15,6 +15,17 @@ export type JobRow = {
 
 let pool: pg.Pool | null = null
 
+/**
+ * 本番は DATABASE_CA_CERT（Supabase の「Database」設定からダウンロードしたルート証明書の PEM）で
+ * サーバー証明書を検証する。未設定のときは暗号化だけで接続し、警告を出す。
+ */
+function sslOptions(): pg.ConnectionConfig['ssl'] {
+  const ca = process.env.DATABASE_CA_CERT?.trim()
+  if (ca) return { rejectUnauthorized: true, ca }
+  console.warn('警告: DATABASE_CA_CERT が未設定のため、DB のサーバー証明書を検証していません')
+  return { rejectUnauthorized: false }
+}
+
 export function getPool(): pg.Pool {
   if (pool) return pool
   const url = new URL(config.databaseUrl())
@@ -24,7 +35,7 @@ export function getPool(): pg.Pool {
   pool = new pg.Pool({
     connectionString: url.toString(),
     max: 3,
-    ssl: local ? undefined : { rejectUnauthorized: false }, // Supabase の接続は暗号化する
+    ssl: local ? undefined : sslOptions(),
     connectionTimeoutMillis: 15_000,
   })
   return pool
