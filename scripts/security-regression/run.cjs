@@ -1470,7 +1470,7 @@ if (promaneHistoricalLabor.error || promaneHistoricalLabor.status !== 0) { conso
 const doyalistCorporateXml = spawnSync(process.execPath, [path.join(__dirname, "verify-doyalist-corporate-xml.cjs")], { stdio: "inherit", timeout: 60000 });
 if (doyalistCorporateXml.error || doyalistCorporateXml.status !== 0) { console.error("Doyalist corporate XML regression failed"); process.exit(doyalistCorporateXml.status || 1); }
 
-const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs', 'verify-tenjikai-csv-export.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(tenjikaiActorScope.status || 1);
 
 const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
