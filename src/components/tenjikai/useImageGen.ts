@@ -43,14 +43,18 @@ export function isImageGenDisabled(q: ImageQuota | null): boolean {
   return !!q && q.enabled === false && !q.unknown
 }
 
-export async function requestImages(input: { prompt: string; aspectRatio: string; kind: ImageGenKind; referencePng?: string; count?: number }): Promise<ImageGenResult> {
+export async function requestImages(input: { prompt: string; aspectRatio: string; kind: ImageGenKind; referencePng?: string; count?: number }, signal?: AbortSignal): Promise<ImageGenResult> {
   try {
+    if (signal?.aborted) throw new Error('Image request cancelled')
     const res = await fetch('/api/tenjikai/image', {
       method: 'POST',
+      signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...input, count: input.count ?? 1, approved: true }),
     })
+    if (signal?.aborted) throw new Error('Image request cancelled')
     const json = await res.json().catch(() => ({}))
+    if (signal?.aborted) throw new Error('Image request cancelled')
     // ステータスコードなどの技術的な文言は出さない（統合仕様 §11）。サーバーの文言（日本語で書いたもの）があれば、それを理由として出す
     const serverMessage = typeof json.error === 'string' && json.error ? json.error : null
     if (res.status === 401) return { ok: false, tone: 'forbidden', message: 'ログインすると、画像を作れます。' }

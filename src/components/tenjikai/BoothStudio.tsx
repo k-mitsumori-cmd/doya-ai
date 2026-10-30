@@ -174,17 +174,17 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   const threeRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
-  const exportScope = useRef<AbortController | null>(null)
+  const operationScope = useRef<AbortController | null>(null)
   useEffect(() => {
     const scope = new AbortController()
-    exportScope.current = scope
+    operationScope.current = scope
     return () => {
       scope.abort()
-      if (exportScope.current === scope) exportScope.current = null
+      if (operationScope.current === scope) operationScope.current = null
     }
   }, [])
   const runExport = () => {
-    const scope = exportScope.current
+    const scope = operationScope.current
     if (!scope || scope.signal.aborted) return
     void exportPack(plan, panels, panelImages, scope.signal)
   }
@@ -212,7 +212,8 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   // 押したら、確認の画面（画面の真ん中）のまま「作り始めました」と面ごとの進み具合・失敗の理由を出す（2026-10-26 ユーザーの指摘）。
   // ⚠️ 前は確認の画面を閉じて 3D へ移っていたため、進み具合や「準備中」の知らせが画面の外に出て、作っているのか分からなかった
   const runBatch = async (targets: GraphicPanel[] = missing) => {
-    if (targets.length === 0) return
+    const scope = operationScope.current
+    if (!scope || scope.signal.aborted || targets.length === 0) return
     setBatchOpen(true)
     setView('3d')
     setStopReason(undefined)
@@ -220,6 +221,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
     const ordered = [...targets].sort((a, b) => Number(b.layout === 'hero') - Number(a.layout === 'hero'))
     const heroNow = panels.find((p) => p.layout === 'hero')
     let masterRef: string | undefined = heroNow && panelImages[heroNow.id] ? await toReferencePng(panelImages[heroNow.id]) : undefined
+    if (scope.signal.aborted) return
     const stop = await runPanelBatch(
       ordered,
       async (p) => {
@@ -228,15 +230,18 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           aspectRatio: nearestRatio(p.widthMm, p.heightMm),
           kind: 'graphic_panel',
           referencePng: p.layout !== 'hero' ? masterRef : undefined,
-        })
-        if (!r.ok || !r.images[0]) return r
+        }, scope.signal)
+        if (scope.signal.aborted || !r.ok || !r.images[0]) return r
         // 面の実寸の縦横比に切り出して保存する（3D の面に、切れずに貼るため。仕様 6 章）
         const fitted = await cropImageToAspect(r.images[0], p.widthMm / p.heightMm)
+        if (scope.signal.aborted) return r
         if (p.layout === 'hero') masterRef = await toReferencePng(fitted)
         return { ok: true as const, images: [fitted] }
       },
       { onUpdate: setFaces, onImage: (p, img) => setPanelImages((m) => ({ ...m, [p.id]: img })) },
+      scope.signal,
     )
+    if (scope.signal.aborted) return
     setStopReason(stop)
     void refresh()
   }

@@ -43,20 +43,26 @@ export async function runPanelBatch<P extends { id: string; name: string }>(
   targets: P[],
   request: (p: P) => Promise<BatchResult>,
   handlers: { onUpdate: (faces: BatchFace[]) => void; onImage: (p: P, image: string) => void },
+  signal?: AbortSignal,
 ): Promise<BatchFailure | undefined> {
+  if (signal?.aborted) return
   const list: BatchFace[] = targets.map((p) => ({ id: p.id, name: p.name, status: 'waiting' }))
   const put = (i: number, f: Partial<BatchFace>) => {
+    if (signal?.aborted) return
     list[i] = { ...list[i], ...f }
     handlers.onUpdate([...list])
   }
   for (const [i, p] of targets.entries()) {
+    if (signal?.aborted) return
     put(i, { status: 'working' })
+    if (signal?.aborted) return
     let r: BatchResult
     try {
       r = await request(p)
     } catch {
       r = { ok: false, tone: 'error', message: '通信できませんでした。接続を確かめて、もう一度お試しください。' }
     }
+    if (signal?.aborted) return
     const failure = failureForFace(r)
     if (!failure && r.ok) {
       handlers.onImage(p, r.images[0])
@@ -64,6 +70,7 @@ export async function runPanelBatch<P extends { id: string; name: string }>(
       continue
     }
     put(i, { status: 'failed', message: failure!.message })
+    if (signal?.aborted) return
     if (failure!.tone !== 'error') {
       for (let k = i + 1; k < list.length; k++) list[k] = { ...list[k], status: 'skipped', message: SKIPPED_MESSAGE }
       handlers.onUpdate([...list])
