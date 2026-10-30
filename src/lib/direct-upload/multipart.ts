@@ -214,3 +214,23 @@ export async function abortMultipart(row: Session) {
     await prisma.directUploadSession.update({ where: { id: row.id }, data: { status: 'ABORTED' } })
   }
 }
+
+/** 24時間たった未完了の送信を、全ユーザー分まとめて中止する（Cron 用。1回200件まで） */
+export async function purgeStaleMultipart(): Promise<{ aborted: number; failed: number }> {
+  const stale = await prisma.directUploadSession.findMany({
+    where: { status: 'UPLOADING', createdAt: { lt: new Date(Date.now() - 24 * 3600 * 1000) } },
+    take: 200,
+    orderBy: { createdAt: 'asc' },
+  })
+  let aborted = 0
+  let failed = 0
+  for (const row of stale) {
+    try {
+      await abortMultipart(row)
+      aborted++
+    } catch {
+      failed++
+    }
+  }
+  return { aborted, failed }
+}
