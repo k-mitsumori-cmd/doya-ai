@@ -7,10 +7,11 @@
 // - progress（0〜1）を渡すと、塗る高さを進み具合にそろえる。渡さないときは、塗って戻す動きを繰り返す
 // - steps は「いま何をしている途中か」の目安の一言。順に入れ替えて出す（進み具合の数字は progress で出し、ここでは作らない）
 // - 動きは位置・大きさ・濃さだけ。動きを減らす設定では、塗り終わった形で止める
-// - 絵は public/character/ の paint-a・paint-b・paint-done（-512.webp）。ドヤくんの共通部品 DoyaKun（ds/kun。ブランチ feat/motion-kun）と
-//   同じ置き場所・名前の付け方にしてある。DoyaKun が main に入ったら、下の3つの <img> を DoyaKun に替える（ポーズ名を KunPose に足す）。
-//   作り方は docs/design/images/working-bear/PROMPTS.md
+// - 絵は、ドヤくんの共通部品 DoyaKun（ds/kun）の paint-a・paint-b・paint-done（public/character/<ポーズ>-512.webp）。
+//   作業中は paint-a と paint-b を入れ替えて、ローラーを上げ下げしているように見せる。できたら paint-done（親指を立てる）
+//   絵の作り方は docs/design/images/working-bear/PROMPTS.md
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { DoyaKun } from '@/components/ds/kun'
 import styles from './DoyaWorking.module.css'
 
 export interface WorkingColors {
@@ -88,13 +89,10 @@ export default function DoyaWorking({ title, caption, steps, colors, progress, d
           <i className={styles.spark} />
         </div>
         <div className={styles.bear}>
-          {/* 小さな固定の絵なので next/image の変換は通さない（幅と高さを決めて、読み込みでずれないようにする） */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={styles.bearA} src="/character/paint-a-512.webp" width={512} height={512} alt="" draggable={false} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={styles.bearB} src="/character/paint-b-512.webp" width={512} height={512} alt="" draggable={false} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={styles.bearDone} src="/character/paint-done-512.webp" width={512} height={512} alt="" draggable={false} />
+          {/* 3枚を重ねて、濃さだけで入れ替える（act は idle。上下の動きは、この部品の bear の動きにまかせる） */}
+          <span className={styles.bearA}><DoyaKun pose="paint-a" size={240} /></span>
+          <span className={styles.bearB}><DoyaKun pose="paint-b" size={240} /></span>
+          <span className={styles.bearDone}><DoyaKun pose="paint-done" size={240} /></span>
         </div>
       </div>
       <div className={styles.text}>

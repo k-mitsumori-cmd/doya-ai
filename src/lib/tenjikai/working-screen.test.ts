@@ -35,6 +35,13 @@ test('待ち画面は、動きを減らす設定で止まり、絵の入れ替�
   }
 })
 
+test('待ち画面のクマは、ドヤくんの共通部品 DoyaKun の3つのポーズ（paint-a・paint-b・paint-done）で出す', () => {
+  const src = read('src/components/shell/DoyaWorking.tsx')
+  for (const p of ['paint-a', 'paint-b', 'paint-done']) assert.match(src, new RegExp(`<DoyaKun pose="${p}"`), p)
+  assert.doesNotMatch(src, /<img /, '絵は DoyaKun に任せる（直接 img を置かない）')
+  assert.match(read('src/components/ds/kun.tsx'), /\| 'paint-a' \| 'paint-b' \| 'paint-done'/)
+})
+
 test('待ち画面の絵の3枚が置いてある', () => {
   for (const f of ['paint-a', 'paint-b', 'paint-done']) assert.ok(existsSync(join(process.cwd(), `public/character/${f}-512.webp`)), f)
 })
