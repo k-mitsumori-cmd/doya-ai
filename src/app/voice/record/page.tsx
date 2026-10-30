@@ -5,6 +5,7 @@ import { useSession, signIn } from 'next-auth/react'
 import { Mic, Square, Play, Pause, Trash2, Upload, Download, Loader2, Scissors, X, Check, AlertCircle, LogIn, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { isVoiceProFromUser } from '@/lib/voice/plans'
+import { directUpload } from '@/lib/direct-upload/client'
 
 interface RecordingItem {
   id: string
@@ -190,12 +191,25 @@ export default function RecordPage() {
     try {
       const uploadBlob = rec.trimmedBlob || rec.blob
       const uploadDuration = rec.trimmedDurationMs || rec.durationMs
-      const formData = new FormData()
-      formData.append('file', uploadBlob, `${rec.label}.webm`)
-      formData.append('label', rec.label)
-      formData.append('durationMs', String(uploadDuration))
-      const res = await fetch('/api/voice/record/upload', { method: 'POST', body: formData })
-      const data = await res.json()
+      if (uploadBlob.size > 50 * 1024 * 1024) {
+        setError('ファイルサイズが大きすぎます（上限50MB）')
+        return
+      }
+      // 署名付きURLで Storage へ直接送る（Vercel を通さない）
+      let data: any
+      try {
+        data = await directUpload({
+          file: uploadBlob,
+          fileName: `${rec.label}.webm`,
+          issueUrl: '/api/voice/record/upload-url',
+          confirmUrl: '/api/voice/record/confirm',
+          confirmBody: { durationMs: uploadDuration, label: rec.label },
+        })
+      } catch (e: any) {
+        setError(e?.message || 'アップロードに失敗しました')
+        return
+      }
+      const res = { ok: true }
       if (!res.ok || !data.success) {
         setError(data.error || 'アップロードに失敗しました')
       } else {
