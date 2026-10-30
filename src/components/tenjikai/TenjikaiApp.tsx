@@ -15,6 +15,7 @@ import NoveltyPicker from './NoveltyPicker'
 import BudgetPlanner from './BudgetPlanner'
 import VendorBoard from './VendorBoard'
 import DocsVault from './DocsVault'
+import EmptyState from './EmptyState'
 import {
   SAMPLE_INPUT,
   applyBoothCopy,
@@ -30,7 +31,7 @@ import {
   type GeneratedPlan,
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
-import { loadProject, saveProject } from '@/lib/tenjikai/local-store'
+import { loadProjectResult, saveProject } from '@/lib/tenjikai/local-store'
 import { deriveKit, type BoothDesignKit } from '@/lib/tenjikai/design-kit'
 import { generateGraphicPlan } from '@/lib/tenjikai/graphics'
 
@@ -40,7 +41,15 @@ type Phase = 'input' | 'generating' | 'ready'
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
 // 出展プロジェクトは、この端末のブラウザ（localStorage）に利用者ごとに残す暫定の保存（src/lib/tenjikai/local-store.ts）。
 // サーバー保存の設計は docs/architecture/TENJIKAI-PERSISTENCE.md。
-export default function TenjikaiApp({ shell = false, userId = null }: { shell?: boolean; userId?: string | null }) {
+type TenjikaiAppProps = { shell?: boolean; userId?: string | null }
+
+export default function TenjikaiApp(props: TenjikaiAppProps) {
+  // Scope every draft, image, timer and pending result to the current actor.
+  // A new actor must never render or autosave the previous actor's project.
+  return <ActorProject key={props.userId ? `user:${props.userId}` : 'anonymous'} {...props} />
+}
+
+function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
   const router = useRouter()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
@@ -62,13 +71,18 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
   const [pending, setPending] = useState(false)
   const [animDone, setAnimDone] = useState(false)
   const requestSeq = useRef(0)
+  const restoredFields = useRef<Record<string, unknown>>({})
   // 保存の読み込みが済んだか。済むまでは、入力の画面を一瞬出さないため /tenjikai/booth などは空にしておく
   const [restored, setRestored] = useState(false)
   const [saveNote, setSaveNote] = useState<string | null>(null)
+  const [restoreStatus, setRestoreStatus] = useState<'invalid' | 'unavailable' | null>(null)
+  const [restoreAttempt, setRestoreAttempt] = useState(0)
 
   // 開いたとき、保存したプロジェクトがあればその内容で再開する（URL のセクションはそのまま）
   useEffect(() => {
-    const saved = loadProject(userId)
+    const result = loadProjectResult(userId)
+    const saved = result.project
+    restoredFields.current = saved ? Object.fromEntries(Object.entries(saved).filter(([key]) => key !== 'v' && key !== 'savedAt')) : {}
     if (saved) {
       setInput(saved.input)
       setGenerated(saved.generated)
@@ -82,14 +96,15 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
       }
       setPhase('ready')
     }
+    setRestoreStatus(result.status === 'invalid' || result.status === 'unavailable' ? result.status : null)
     setRestored(true)
-  }, [userId])
+  }, [userId, restoreAttempt])
 
   // 結果が出ているあいだ、変わるたびに保存する（画像の連続生成で何度も書かないよう少し待つ）
   useEffect(() => {
     if (!restored || phase !== 'ready') return
     const t = window.setTimeout(() => {
-      const r = saveProject(userId, { input, generated, variant, selectedNovelty, panelImages, designKit: kit ?? undefined, designKitConfirmed: kitConfirmed, legacySig })
+      const r = saveProject(userId, { ...restoredFields.current, input, generated, variant, selectedNovelty, panelImages, designKit: kit ?? undefined, designKitConfirmed: kitConfirmed, legacySig })
       setSaveNote(
         r === 'saved-without-images'
           ? 'この端末には、作った画像を保存しきれませんでした。再読み込みすると画像は消えます。ブース設計の画面から画像を書き出しておいてください。'
@@ -121,6 +136,8 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
   )
 
   const start = (next: ProjectInput) => {
+    restoredFields.current = {}
+    setRestoreStatus(null)
     setInput(next)
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
@@ -175,7 +192,7 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
     if (phase === 'input' || section === 'new') {
       return (
         <>
-          {phase === 'input' && section !== 'new' && (
+          {phase === 'input' && section !== 'new' && !restoreStatus && (
             <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
               <p className="rounded-xl border border-doya-200 bg-doya-50 px-4 py-2 text-xs font-bold text-doya-700">
                 この端末に保存した出展プロジェクトがありません。条件を入れると、続きの画面が使えます。
@@ -208,6 +225,17 @@ export default function TenjikaiApp({ shell = false, userId = null }: { shell?: 
 
   const body = (
     <>
+      {restoreStatus && (
+        <EmptyState
+          tone="error"
+          title={restoreStatus === 'invalid' ? '保存した内容を読み込めませんでした' : 'この端末の保存領域を利用できません'}
+          description={restoreStatus === 'invalid'
+            ? '元の保存内容は変更していません。読み込みをやり直すか、下の条件を確認して新しく作成してください。'
+            : '保存内容は変更していません。入力した内容は、再読み込みすると失われる場合があります。'}
+          action={{ label: '読み込みをやり直す', onClick: () => setRestoreAttempt(attempt => attempt + 1) }}
+          compact
+        />
+      )}
       {phase === 'ready' && saveNote && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{saveNote}</p>

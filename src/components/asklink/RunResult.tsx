@@ -2,7 +2,7 @@
 
 // ドヤAI質問リンク 結果画面（4-4）。作成直後と履歴の詳細で共用する
 // ⚠️ 編集中の機械チェックは表示用。保存する値はサーバーで作り直す（PATCH /api/asklink/runs/[id]）
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, Check, Code2, Copy, Download, ExternalLink, ImageIcon, Loader2, Pencil, RefreshCw,
 } from 'lucide-react'
@@ -24,6 +24,31 @@ async function copyText(text: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+type ManualCopyValue = { label: string; text: string }
+
+function ManualCopyField({ value }: { value: ManualCopyValue }) {
+  const field = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    field.current?.focus()
+    field.current?.select()
+  }, [value])
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-bold text-slate-500" role="status">
+        コピーできませんでした。下の{value.label}を選択して、手動でコピーしてください。
+      </p>
+      <textarea
+        ref={field}
+        aria-label={`${value.label}（手動コピー）`}
+        value={value.text}
+        readOnly
+        rows={3}
+        className="mt-3 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm leading-relaxed text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
+      />
+    </div>
+  )
 }
 
 async function fetchBlob(url: string): Promise<Blob | null> {
@@ -101,13 +126,15 @@ function LinkCard({
   const [buttonLabel, setButtonLabel] = useState(link.buttonLabel)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useFlash()
+  const [manualCopy, setManualCopy] = useState<ManualCopyValue | null>(null)
   const selectId = `asklink-q-${link.key}`
   const tap = TAP_NEXT
 
   useEffect(() => {
     setQuestion(link.question)
     setButtonLabel(link.buttonLabel)
-  }, [link.question, link.buttonLabel])
+    setManualCopy(null)
+  }, [link.question, link.buttonLabel, link.url])
 
   // 編集中は入力のたびにURLと機械チェックを作り直す
   const view = useMemo(
@@ -116,13 +143,12 @@ function LinkCard({
   )
 
   const copy = async (key: string, text: string) => {
-    if (await copyText(text)) return setFlash(key)
-    // 失敗時はテキストを選択状態にして手でコピーできるようにする
-    const el = document.getElementById(selectId) as HTMLTextAreaElement | null
-    if (el) {
-      el.focus()
-      el.select()
+    setFlash('')
+    if (await copyText(text)) {
+      setManualCopy(null)
+      return setFlash(key)
     }
+    setManualCopy({ label: key === 'url' ? 'URL' : '質問文', text })
   }
 
   const save = async () => {
@@ -228,6 +254,7 @@ function LinkCard({
           </>
         )}
       </div>
+      {manualCopy && <ManualCopyField value={manualCopy} />}
       {/* コピーできたことを読み上げる（ボタンの文字が変わるだけでは伝わらない） */}
       <span className="sr-only" aria-live="polite">{flash ? 'コピーしました' : ''}</span>
     </div>
@@ -246,8 +273,10 @@ function BannerCard({
 }: { banner: BannerDto; linkUrl: string; alt: string; busy: boolean; onGenerate: () => void }) {
   const [flash, setFlash] = useFlash()
   const [copyError, setCopyError] = useState<string | null>(null)
+  const [manualCopy, setManualCopy] = useState<ManualCopyValue | null>(null)
   const filename = `asklink-${banner.kind}.png`
   const tap = TAP_NEXT
+  useEffect(() => { setManualCopy(null) }, [linkUrl, banner.kind, banner.w, banner.h, alt])
 
   const copyImage = async () => {
     setCopyError(null)
@@ -273,7 +302,15 @@ function BannerCard({
   }
 
   const copyHtml = async () => {
-    if (await copyText(bannerHtml(linkUrl, banner, alt))) setFlash('html')
+    setFlash('')
+    setCopyError(null)
+    const text = bannerHtml(linkUrl, banner, alt)
+    if (await copyText(text)) {
+      setManualCopy(null)
+      setFlash('html')
+    } else {
+      setManualCopy({ label: '設置用HTML', text })
+    }
   }
 
   const generating = busy || banner.status === 'generating'
@@ -318,6 +355,7 @@ function BannerCard({
         </p>
       )}
       {copyError && <p className="mt-2 text-[11px] font-bold text-slate-500" role="status">{copyError}</p>}
+      {manualCopy && <ManualCopyField value={manualCopy} />}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {banner.url && !generating && (

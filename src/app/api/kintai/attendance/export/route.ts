@@ -13,7 +13,7 @@ function csvCell(value: string): string {
 }
 
 function xmlText(value: string): string {
-  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+  return value.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }
@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '出力形式が正しくありません' }, { status: 400 })
     }
 
-    const jstOffset = 9 * 60 * 60 * 1000
-    const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffset)
-    const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffset)
+    // attendance.date is SQL DATE: use calendar-date boundaries, not JST instants.
+    const monthStart = new Date(Date.UTC(year, month - 1, 1))
+    const monthEnd = new Date(Date.UTC(year, month, 1))
 
     const employees = await prisma.kintaiEmployee.findMany({
       // 退職・無効化後でも、対象月に勤怠がある従業員は過去月の出力に含める。

@@ -56,8 +56,8 @@ const request = (path) => new Request(`https://local.test${path}`)
     assert(csv.includes('"A,""B""\nC & <D>"'))
     assert(csv.includes('"退職済み"'))
     assert(csv.includes('"休暇なし","","","","","0","0","0","0","データなし"'))
-    assert.equal(range.gte.toISOString(), '2026-08-31T15:00:00.000Z')
-    assert.equal(range.lt.toISOString(), '2026-09-30T15:00:00.000Z')
+    assert.equal(range.gte.toISOString(), '2026-09-01T00:00:00.000Z')
+    assert.equal(range.lt.toISOString(), '2026-10-01T00:00:00.000Z')
   })
   await check('Excel XML escapes employee text and remains parseable', async () => {
     const response = await exportRoute.GET(request('/api/kintai/attendance/export?year=2026&month=09&format=excel'))
@@ -75,6 +75,92 @@ const request = (path) => new Request(`https://local.test${path}`)
     const values = rows.map(row => row.Cell.map(cell => cell.Data))
     assert(values.some(row => row[0] === '休暇なし' && row[9] === 'データなし'))
     assert(values.some(row => row[0] === '退職済み' && row[7] === 7 && row[8] === 11))
+  })
+  await check('SQL DATE month selection includes both endpoints across leap years and year changes', async () => {
+    // PostgreSQL DATE parameters discard time. Comparing timestamps here would hide
+    // the previous JST-offset bug (previous-month last day in, current last day out).
+    for (const [year, month, previous, first, last, next] of [
+      [2026, 10, '2026-09-30', '2026-10-01', '2026-10-31', '2026-11-01'],
+      [2024, 2, '2024-01-31', '2024-02-01', '2024-02-29', '2024-03-01'],
+      [2026, 2, '2026-01-31', '2026-02-01', '2026-02-28', '2026-03-01'],
+      [2026, 12, '2026-11-30', '2026-12-01', '2026-12-31', '2027-01-01'],
+      [2027, 1, '2026-12-31', '2027-01-01', '2027-01-31', '2027-02-01'],
+    ]) {
+      const fixtures = [previous, first, last, next].map((date, index) => ({
+        name: date, isActive: false, department: null,
+        attendances: [{ date: new Date(date + 'T00:00:00Z'), clockIn: null, clockOut: null,
+          workMinutes: [9, 1, 2, 99][index], overtimeMinutes: 0, lateMinutes: 0, earlyLeaveMinutes: 0, status: 'approved' }],
+      }))
+      const route = load('src/app/api/kintai/attendance/export/route.ts', {
+        ...mocks,
+        '@/lib/prisma': { prisma: { kintaiEmployee: { findMany: async ({ where, include }) => {
+          const sqlDate = value => value.toISOString().slice(0, 10)
+          const matches = (attendance, bounds) => {
+            const date = sqlDate(attendance.date)
+            return date >= sqlDate(bounds.gte) && date < sqlDate(bounds.lt)
+          }
+          return fixtures.filter(employee => where.OR.some(condition =>
+            condition.isActive === employee.isActive ||
+            (condition.attendances && employee.attendances.some(a => matches(a, condition.attendances.some.date)))
+          )).map(employee => ({ ...employee,
+            attendances: employee.attendances.filter(a => matches(a, include.attendances.where.date)),
+          }))
+        } } } },
+      })
+      for (const format of ['csv', 'excel']) {
+        const response = await route.GET(request(`/api/kintai/attendance/export?year=${year}&month=${month}&format=${format}`))
+        assert.equal(response.status, 200)
+        const body = await response.text()
+        assert(body.includes(first), `${format} must include retired employee on first day`)
+        assert(body.includes(last), `${format} must include retired employee on last day`)
+        assert(!body.includes(previous), `${format} must exclude previous month`)
+        assert(!body.includes(next), `${format} must exclude next month`)
+      }
+      const now = Date.parse(last + 'T00:15:00+09:00')
+      class FixedDate extends Date {
+        constructor(...args) { super(...(args.length ? args : [now])) }
+        static now() { return now }
+      }
+      const readMocks = {
+        ...mocks,
+        '@/lib/prisma': { prisma: {
+          kintaiAttendance: { findMany: async ({ where }) => {
+            assert.equal(where.employeeId, 'employee')
+            const start = where.date.gte.toISOString().slice(0, 10)
+            const end = where.date.lt.toISOString().slice(0, 10)
+            return fixtures.flatMap(e => e.attendances).filter(a => {
+              const date = a.date.toISOString().slice(0, 10)
+              return date >= start && date < end
+            })
+          } },
+          kintaiClockRecord: { findMany: async ({ where }) => {
+            assert.equal(where.timestamp.gte.toISOString(), new Date(Date.parse(last + 'T00:00:00+09:00') - 86400000).toISOString(),
+              'clock timestamp range must retain JST midnight and overnight carryover')
+            return []
+          } },
+          kintaiRequest: { findMany: async () => [] },
+          kintaiEmployee: { findUnique: async () => ({ name: 'synthetic' }) },
+        } },
+        '@/lib/kintai/format': { getClockStatusFromRecords: () => 'not_clocked_in' },
+        '@/lib/kintai/shift-records': { recordsWithCarryover: records => records },
+      }
+      for (const implicit of [false, true]) {
+        const attendance = load('src/app/api/kintai/attendance/route.ts', readMocks, { Date: FixedDate })
+        const response = await attendance.GET(request('/api/kintai/attendance' +
+          (implicit ? '' : `?month=${year}-${String(month).padStart(2, '0')}`)))
+        assert.equal(response.status, 200)
+        const body = await response.json()
+        assert.deepEqual(body.attendances.map(a => a.date.slice(0, 10)), [first, last])
+        assert.equal(body.summary.totalWorkMinutes, 3)
+      }
+      const dashboard = load('src/app/api/kintai/dashboard/route.ts', readMocks, { Date: FixedDate })
+      const response = await dashboard.GET()
+      assert.equal(response.status, 200)
+      const body = await response.json()
+      assert.equal(body.monthlySummary.totalWorkMinutes, 3)
+      assert.equal(body.todayAttendance.date.slice(0, 10), last,
+        'today attendance must remain visible on the last JST day, including just after midnight')
+    }
   })
   await check('invalid months, years and formats fail before querying employee data', async () => {
     const before = reads

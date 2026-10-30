@@ -1457,3 +1457,29 @@ for (const name of ["verify-promane-timesheet-creation-mounted.cjs", "verify-pro
 
 const promaneHistoricalLabor = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-historical-labor.cjs")], { stdio: "inherit", timeout: 60000 });
 if (promaneHistoricalLabor.error || promaneHistoricalLabor.status !== 0) { console.error("Promane historical labor regression failed"); process.exit(promaneHistoricalLabor.status || 1); }
+const doyalistCorporateXml = spawnSync(process.execPath, [path.join(__dirname, "verify-doyalist-corporate-xml.cjs")], { stdio: "inherit", timeout: 60000 });
+if (doyalistCorporateXml.error || doyalistCorporateXml.status !== 0) { console.error("Doyalist corporate XML regression failed"); process.exit(doyalistCorporateXml.status || 1); }
+
+const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(tenjikaiActorScope.status || 1);
+
+const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exit(tenjikaiLocalRestore.status || 1);
+
+const interviewWordpressExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-wordpress-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewWordpressExport.error || interviewWordpressExport.status !== 0) process.exit(interviewWordpressExport.status || 1);
+
+const interviewTextExports = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-text-exports.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTextExports.error || interviewTextExports.status !== 0) process.exit(interviewTextExports.status || 1);
+
+const spreadsheetXmlCharacters = spawnSync(process.execPath, [path.join(__dirname, 'verify-spreadsheet-xml-characters.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (spreadsheetXmlCharacters.error || spreadsheetXmlCharacters.status !== 0) process.exit(spreadsheetXmlCharacters.status || 1);
+
+const asklinkCopyRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-asklink-copy-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (asklinkCopyRecovery.error || asklinkCopyRecovery.status !== 0) process.exit(asklinkCopyRecovery.status || 1);
+
+const personaOutputRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-persona-output-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personaOutputRecovery.error || personaOutputRecovery.status !== 0) process.exit(personaOutputRecovery.status || 1);
+
+const seoHtmlTitle = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-html-title.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.status || 1);

@@ -20,7 +20,7 @@ import {
 function xmlEscape(value: any): string {
   if (value === null || value === undefined) return ''
   return String(value)
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
