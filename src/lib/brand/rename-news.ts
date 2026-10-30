@@ -12,7 +12,12 @@ export const RENAME_ANNOUNCEMENT_ID = 'announce:brand-rename-doya-buka'
 
 /** 切り替える日（YYYY-MM-DD、日本時間）。環境変数が無いときは、旗を on にしたビルドの既定日 */
 export function renameDate(raw: string | undefined = process.env.NEXT_PUBLIC_BRAND_RENAME_DATE): string {
-  return /^\d{4}-\d{2}-\d{2}$/.test((raw ?? '').trim()) ? (raw as string).trim() : '2026-11-01'
+  const v = (raw ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return '2026-11-01'
+  const [y, m, d] = v.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d))
+  // 2026-13-01 や 2026-02-30 のような、ない日付は受け取らない
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? v : '2026-11-01'
 }
 
 /** 「2026年11月1日」の形 */

@@ -2,14 +2,19 @@
 // 名前の変更のお知らせ（アプリ内の知らせとページ）が、旗が off の間は出ないことと、文面の決まりの回帰テスト。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { RENAME_ANNOUNCEMENT, RENAME_NEWS, RENAME_NEWS_PATH, renameAnnouncements, renameDate, renameDateLabel } from './rename-news'
-import { ANNOUNCEMENTS, activeAnnouncements } from '../notice/announcements'
+import { activeAnnouncements } from '../notice/announcements'
 
 test('旗が off の間は、お知らせの一覧に入らない（今のお知らせのまま）', () => {
   assert.deepEqual(renameAnnouncements(false), [])
-  assert.ok(ANNOUNCEMENTS.every((a) => a.id !== RENAME_ANNOUNCEMENT.id))
+  // 一覧（ANNOUNCEMENTS）は読み込み時に環境変数で決まるので、旗を空にした別プロセスで読んで確かめる
+  const code = `import('./src/lib/notice/announcements').then((m) => console.log(JSON.stringify((m.ANNOUNCEMENTS || m.default.ANNOUNCEMENTS).map((a) => a.id))))`
+  const out = execFileSync('npx', ['tsx', '-e', code], { cwd: process.cwd(), env: { ...process.env, NEXT_PUBLIC_BRAND_RENAME_ROLLOUT: '' }, encoding: 'utf8' })
+  const ids = JSON.parse(out.trim().split('\n').pop() as string) as string[]
+  assert.ok(ids.length > 0 && ids.every((id) => id !== RENAME_ANNOUNCEMENT.id))
 })
 
 test('旗が on のときは、切り替える日から30日、お知らせに出る。1回だけ見せる id は固定', () => {
@@ -41,4 +46,10 @@ test('お知らせのページ: 旗が off のときは、メタデータに新�
   const src = readFileSync(join(process.cwd(), 'src/app/news/rename-doya-buka/page.tsx'), 'utf8')
   assert.match(src, /export const metadata: Metadata = isBrandRenamed\(\)/)
   assert.match(src, /if \(!isBrandRenamed\(\)\) notFound\(\)/)
+})
+
+test('日付: ない日付（13月・2月30日）は受け取らず、既定の日にする', () => {
+  assert.equal(renameDate('2026-13-01'), '2026-11-01')
+  assert.equal(renameDate('2026-02-30'), '2026-11-01')
+  assert.equal(renameDate('2026-12-20'), '2026-12-20')
 })
