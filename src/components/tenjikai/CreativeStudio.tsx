@@ -182,10 +182,13 @@ export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed,
                 >
                   {/* 作る前は、仮の絵（見本）を出さない。名前と大きさだけの枠にする（2026-10-27 ユーザーの指摘「生成の前のサンプルがめちゃくちゃ」） */}
                   {imgs?.length ? <img src={imgs[shown[c.kind] ?? 0]} alt={`${c.name}の生成画像`} className="h-full w-full object-cover" /> : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-300 bg-white p-3 text-center" data-wireframe="creative">
-                      <span className="text-xs font-black text-gray-700">{c.name}</span>
-                      <span className="font-mono text-[10px] text-gray-500">{c.size}</span>
-                      <span className="text-[10px] text-gray-400">まだ作っていません</span>
+                    <div
+                      className={`flex h-full w-full items-center justify-center border-2 border-dashed border-gray-300 bg-white text-center [overflow-wrap:anywhere] ${ratio < 0.6 ? 'flex-col gap-2 p-1.5 [writing-mode:vertical-rl]' : 'flex-col gap-1 p-3'}`}
+                      data-wireframe="creative"
+                    >
+                      <span className="text-xs font-black leading-tight text-gray-700">{c.name}</span>
+                      <span className="font-mono text-[10px] leading-tight text-gray-500">{c.size}</span>
+                      <span className="text-[10px] leading-tight text-gray-400">まだ作っていません</span>
                     </div>
                   )}
                 </motion.div>

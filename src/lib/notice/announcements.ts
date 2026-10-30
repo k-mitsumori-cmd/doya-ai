@@ -5,6 +5,8 @@
 // ⚠️ 文面は yomiyasu の原則で書く。絵文字は使わない。中身が本番に出てから載せる。
 // ⚠️ id は変えない（変えると、見た人にもう一度出る）。
 
+import { renameAnnouncements } from '@/lib/brand/rename-news'
+
 export interface Announcement {
   id: string
   /** 載せた日（YYYY-MM-DD、日本時間） */
@@ -24,6 +26,8 @@ export const ANNOUNCEMENT_DAYS = 30
 export const NEW_TAG_DAYS = 7
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  // 名前の変更（ドヤAI → ドヤ部下）のお知らせ。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ入る（src/lib/brand/rename-news.ts）
+  ...renameAnnouncements(),
   {
     id: 'announce:2026-10-25-shell',
     date: '2026-10-25',

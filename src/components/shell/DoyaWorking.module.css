@@ -125,13 +125,15 @@
   aspect-ratio: 1;
   transform-origin: 50% 100%;
 }
-.bear img {
+/* 3枚の重ね先（DoyaKun の幅は px で決まるので、箱いっぱいに広げ直す） */
+.bear > span {
   position: absolute;
   inset: 0;
+  display: block;
+}
+.bear > span > span {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
+  animation: none;
 }
 .bearB, .bearDone { opacity: 0; }
 /* ローラーを上げ下げするように、2枚を入れ替える（位置と濃さだけ） */

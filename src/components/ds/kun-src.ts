@@ -13,6 +13,7 @@ const HAS_256 = new Set<string>([
   // 2026-10-29 に足した絵（すべて 256px 版あり）
   'mini-hello', 'mini-point', 'mini-working', 'lead-marketing', 'lead-sales', 'lead-hr', 'lead-admin', 'waiting', 'report', 'todo', 'locked',
   'kpi-sales', 'kpi-incoming', 'kpi-spend', 'kpi-deals', 'kpi-hiring',
+  'paint-a', 'paint-b', 'paint-done',
   'tool-banner', 'tool-adimage', 'tool-persona', 'tool-asklink', 'tool-popup', 'tool-tenjikai', 'tool-aishodan', 'tool-doyalist', 'tool-promane', 'tool-shanai', 'tool-income',
 ])
 
