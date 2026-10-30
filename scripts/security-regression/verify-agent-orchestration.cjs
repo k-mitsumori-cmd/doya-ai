@@ -266,9 +266,11 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const dash=read('src/app/(shell)/home/HomeDashboard.tsx');
     assert.match(dash,/\{agentStage \? null : <AgentPanel /);
     assert.match(dash,/cloneElement\(agentStage, \{ greeting:/,'the greeting moves into the new home');
-    // 見出しは「今日は、何をしますか？」の1つだけ。新しい欄の「どんなゴールを目指しますか？」は出さない
+    // 見出しは1つだけ。言葉はサーバーが選んだもの（headlines.ts、2026-10-30 から開くたびに変わる）。新しい欄の「どんなゴールを目指しますか？」は出さない
     const agent=read('src/components/home-agent/HomeAgent.tsx');
-    assert.match(agent,/<h1 id="home-agent-title" className=\{styles\.headTitle\}>今日は、何をしますか？<\/h1>/);
+    assert.equal((agent.match(/<h1 /g)||[]).length,1,'one heading');
+    assert.match(agent,/<h1 id="home-agent-title" className=\{styles\.headTitle\}[^\n]*\}>\{headlineText\}<\/h1>/);
+    assert.doesNotMatch(read('src/components/home-agent/headlines.ts'),/どんなゴールを目指しますか/);
     assert.doesNotMatch(agent,/どんなゴールを目指しますか/);
     assert.match(agent,/aria-labelledby="home-agent-title"/);
     // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
@@ -292,6 +294,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         'next-auth':{getServerSession:async()=>({user:{id:'u_1',email,name:'テスト'}})},
         '@/lib/auth':{authOptions:{}},
         '@/lib/home/summary':{getHomeSummary:async()=>({})},
+        '@/components/home-agent/headlines':{japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？'},
         'next/headers':{cookies:async()=>({get:()=>undefined})},
         './cookies':{SETUP_HIDE_COOKIE:'x'},
         '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>false},
@@ -338,10 +341,11 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         '@/components/shell/AppShell':{__esModule:true,default:()=>null},
         '@/components/agent-orchestration/AgentOrchestrator':{__esModule:true,default:()=>null},
         '@/components/home-agent/HomeAgent':{__esModule:true,default:()=>null},
+        '@/components/home-agent/headlines':{headlineCandidates:()=>[],japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？'},
         '@/lib/agent-orchestration/flag':loadFlag(envOf('all'),ALLOWED),
         '@/lib/agent-orchestration/recipes':loadCore().recipes,
       },{NODE_ENV:'production',AGENT_ORCHESTRATION_ROLLOUT:'all'});
-      await assert.rejects(()=>Promise.resolve().then(()=>page.default()),/NEXT_NOT_FOUND/,f);
+      await assert.rejects(()=>Promise.resolve().then(()=>page.default({searchParams:Promise.resolve({})})),/NEXT_NOT_FOUND/,f);
       assert.equal(notFound,1,f);
     }
     // 見本の結果で動かすのは、見本の画面だけ（経営ホームの本物は API で動かす）
