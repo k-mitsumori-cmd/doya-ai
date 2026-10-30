@@ -1,5 +1,6 @@
 'use client'
 
+import { downscaleToDataUrl } from '@/lib/image-downscale'
 import { templateImageUrl } from '@/lib/banner-template-storage'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
@@ -378,9 +379,10 @@ function BannerTestPageInner() {
     const file = e.target.files?.[0]
     if (file) {
       setLogoFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => setLogoPreview(reader.result as string)
-      reader.readAsDataURL(file)
+      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
+      downscaleToDataUrl(file, 512)
+        .then(url => setLogoPreview(url))
+        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
     }
   }, [])
   
@@ -388,9 +390,10 @@ function BannerTestPageInner() {
     const file = e.target.files?.[0]
     if (file) {
       setPersonFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => setPersonPreview(reader.result as string)
-      reader.readAsDataURL(file)
+      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
+      downscaleToDataUrl(file, 1024)
+        .then(url => setPersonPreview(url))
+        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
     }
   }, [])
 
