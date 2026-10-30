@@ -530,7 +530,7 @@ export default function NewDoyaSlideWizard() {
       {oneButton ? (
         <OneButtonBar
           eyebrow="ドヤスライド"
-          cta={busy ? '構成を作っています。このまま待ってね' : '資料のタイプとテーマが決まったら、押してね'}
+          cta={busy ? '構成を作っています。このままお待ちください' : '資料のタイプとテーマが決まったら、押してください'}
           label={busy ? '作成しています…' : recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
           scope="入力した内容から、スライドの構成を作ります。作り終えると、画像を作る画面へ移ります。"
           onRun={() => void submit()}

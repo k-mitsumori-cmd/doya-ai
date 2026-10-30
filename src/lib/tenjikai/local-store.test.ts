@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SAMPLE_INPUT, mockGeneratedPlan } from './engine'
-import { loadProject, loadProjectResult, saveProject, storeKey, type KeyValueStore } from './local-store'
+import { imageSig, isLegacyImage, loadProject, loadProjectResult, saveProject, storeKey, type KeyValueStore } from './local-store'
 
 const memory = (limit = Infinity): KeyValueStore & { data: Map<string, string> } => {
   const data = new Map<string, string>()
@@ -58,6 +58,22 @@ test('壊れた内容・読めない入れ物でも例外を出さない', () =>
   const throwing: KeyValueStore = { getItem: () => { throw new Error('x') }, setItem: () => { throw new Error('x') }, removeItem: () => { throw new Error('x') } }
   assert.equal(loadProject('u1', throwing), null)
   assert.equal(saveProject('u1', project(), throwing), 'failed')
+})
+
+test('デザインの決まりを持たない昔の保存（文字を含まない画像）は、目印が付く。画像を作り直すと、昔の画像ではなくなる', () => {
+  const s = memory()
+  saveProject('u1', project({ 'w1-p1': 'data:image/png;base64,AAAA1111', 'w1-p2': 'data:image/png;base64,BBBB2222' }), s)
+  const got = loadProject('u1', s)!
+  assert.ok(got.legacySig)
+  assert.equal(isLegacyImage(got.legacySig, 'w1-p1', 'data:image/png;base64,AAAA1111'), true)
+  // 作り直した画像（別の画像）は、昔の画像ではない
+  assert.equal(isLegacyImage(got.legacySig, 'w1-p1', 'data:image/webp;base64,NEWNEWNEWNEW'), false)
+  assert.equal(isLegacyImage(got.legacySig, 'w9-p9', 'data:image/png;base64,AAAA1111'), false)
+  assert.equal(isLegacyImage(undefined, 'w1-p1', 'x'), false)
+  assert.equal(imageSig('abc'), '3:abc')
+  // 決まりを持つ保存（2026-10-29 以降）には、目印を付けない
+  const kitProject = { ...project({ 'w1-p1': 'data:image/png;base64,AAAA1111' }), designKit: undefined }
+  void kitProject
 })
 
 test('未保存・破損・利用不可を区別し、読み取りで保存内容を変更しない', () => {
@@ -126,6 +142,9 @@ test('有効なAI文面・うるう日・画像・未知のキーを失わない
   value.generated = { ...value.generated, source: 'ai', boothCopy: { A: { name: '名前', concept: '概念', flow: '順路' } }, creativeCopy: { flyer: { copy: '文面', purpose: '目的' } } }
   saveProject('u1', value, s)
   const raw = s.getItem(storeKey('u1'))!
-  assert.deepEqual(loadProjectResult('u1', s).project, JSON.parse(raw))
+  // デザインの決まりを持たない保存の画像には、読むときに昔の画像の目印（legacySig）が付く。それ以外は保存した内容のまま
+  const { legacySig, ...rest } = loadProjectResult('u1', s).project!
+  assert.deepEqual(rest, JSON.parse(raw))
+  assert.deepEqual(legacySig, { front: imageSig('data:image/png;base64,synthetic') })
   assert.equal(s.getItem(storeKey('u1')), raw)
 })

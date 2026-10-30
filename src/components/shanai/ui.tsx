@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
 import { useInShanaiShell } from './shell-context'
+import { DoyaKun, type KunAct, type KunPose } from '@/components/ds/kun'
 
 export const ACCENT = 'var(--blue)'
 
@@ -34,12 +35,15 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   return <div className={`rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 sm:p-6 ${className}`}>{children}</div>
 }
 
-export function SectionTitle({ step, title, desc }: { step?: string; title: string; desc?: string }) {
+export function SectionTitle({ step, title, desc, kun }: { step?: string; title: string; desc?: string; /** 段に合ったドヤくん（2026-10-29 本人の指示「キャラクターがいなくて面白くない」） */ kun?: { pose: KunPose; act?: KunAct } }) {
   return (
-    <div className="mb-4">
-      {step && <p className="text-[11px] font-black tracking-wide text-[var(--blue-deep)]">{step}</p>}
-      <h2 className="text-lg font-black text-[var(--ink)]">{title}</h2>
-      {desc && <p className="mt-1 text-sm font-bold leading-relaxed text-[var(--sub)]">{desc}</p>}
+    <div className="mb-4 flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        {step && <p className="text-[11px] font-black tracking-wide text-[var(--blue-deep)]">{step}</p>}
+        <h2 className="text-lg font-black text-[var(--ink)]">{title}</h2>
+        {desc && <p className="mt-1 text-sm font-bold leading-relaxed text-[var(--sub)]">{desc}</p>}
+      </div>
+      {kun ? <DoyaKun pose={kun.pose} act={kun.act} size={72} className="-mt-2" /> : null}
     </div>
   )
 }

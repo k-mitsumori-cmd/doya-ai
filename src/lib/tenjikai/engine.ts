@@ -120,7 +120,8 @@ export function analyzeSite(url: string): SiteAnalysis {
         { title: '取材記事も自動化', body: '録音から文字起こし、インタビュー記事の下書きまで' },
       ],
       targets: ['中小企業のマーケ担当', 'Web制作・広告代理店', '一人で広報を担う経営者'],
-      colors: PALETTES[0],
+      // ドヤAIの、いまのブランドの色（青・紺・黄）。以前は旧ブランドの紫（PALETTES[0]）のままだった（2026-10-29）
+      colors: { primary: '#0066ff', secondary: '#0a0f3c', accent: '#ffd400' },
       tone: '親しみやすく、自信がある',
     }
   }

@@ -399,10 +399,10 @@ export default function SeoCreateWizardPage() {
   // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す（段階で中身が変わる）
   const oneButton = useOneButton()
   const oneButtonCopy = step === 1
-    ? { cta: 'キーワードを入れたら、押してね', label: '次へ', scope: '次の「読者と文体を決める」段階へ進みます。記事はまだ作りません。', off: 'キーワードを2文字以上入れると押せます。' }
+    ? { cta: 'キーワードを入れたら、押してください', label: '次へ', scope: '次の「読者と文体を決める」段階へ進みます。記事はまだ作りません。', off: 'キーワードを2文字以上入れると押せます。' }
     : step === 2
-      ? { cta: '読者を決めたら、押してね', label: '次へ', scope: '次の「記事の内容を確かめる」段階へ進みます。記事はまだ作りません。', off: '読者を「その他」にしたときは、2文字以上で書くと押せます。' }
-      : { cta: '内容を確かめたら、押してね', label: '記事を生成する', scope: 'ここまでの設定で、SEO記事を1本作ります。作った記事は編集画面で直せます。', off: '' }
+      ? { cta: '読者を決めたら、押してください', label: '次へ', scope: '次の「記事の内容を確かめる」段階へ進みます。記事はまだ作りません。', off: '読者を「その他」にしたときは、2文字以上で書くと押せます。' }
+      : { cta: '内容を確かめたら、押してください', label: '記事を生成する', scope: 'ここまでの設定で、SEO記事を1本作ります。作った記事は編集画面で直せます。', off: '' }
 
   async function generateTitleCandidates() {
     if (titleLoading) return
@@ -577,7 +577,7 @@ export default function SeoCreateWizardPage() {
           <div className="mb-4">
             <OneButtonBar
               eyebrow="ドヤSEO"
-              cta={loading ? '記事を作っています。このまま待ってね' : oneButtonCopy.cta}
+              cta={loading ? '記事を作っています。このままお待ちください' : oneButtonCopy.cta}
               label={loading ? '生成中...' : oneButtonCopy.label}
               scope={oneButtonCopy.scope}
               onRun={() => {

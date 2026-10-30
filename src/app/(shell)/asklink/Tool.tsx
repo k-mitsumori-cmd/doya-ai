@@ -123,7 +123,7 @@ export default function AskLinkTool() {
         <div className="mb-6">
           <OneButtonBar
             eyebrow="ドヤAI質問リンク"
-            cta={loading ? 'リンクとバナーを作っています。このまま待ってね' : '自社サイトの URL を入れたら、押してね'}
+            cta={loading ? 'リンクとバナーを作っています。このままお待ちください' : '自社サイトの URL を入れたら、押してください'}
             label="作成する"
             scope="入れた URL から、ChatGPT に質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
             onRun={() => formRef.current?.requestSubmit()}

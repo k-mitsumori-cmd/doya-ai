@@ -82,7 +82,7 @@ export function MemberList({
         console.error("[promane/member] rate update failed", res.status, data);
         return;
       }
-      toast.success("時間単価を更新したよ！");
+      toast.success("時間単価を更新しました");
       setEditingId(null);
       router.refresh();
     } catch (e: any) {

@@ -2,6 +2,9 @@
 // 展示会装飾の定石（上段は遠くから読む、中段は立ち止まった人が読む、下段は什器に隠れる）をそのままルール化している。
 
 import type { BoothElement, BoothPlan, SiteAnalysis } from './engine'
+import { buildDesignPrompt, deriveKit, kitBlock, type BoothDesignKit, type LayoutType } from './design-kit'
+import { nearestRatio } from './imagegen'
+import { aspectOf, safeZone } from './image-fit'
 
 export type Face = 'front' | 'side'
 
@@ -24,7 +27,9 @@ export interface GraphicPanel {
   baseMm: number // パネル下端の床からの高さ
   viewDistanceM: number
   role: string
-  visual: string // どんな画像を描くか
+  visual: string // どんな画像を描くか（画面の説明用。画像の指示文は design-kit.ts の buildDesignPrompt が作る）
+  /** 面の型（design-kit.ts の LayoutType。仕様 4.7） */
+  layout: LayoutType
   headline: string
   zones: GraphicZone[]
   material: string
@@ -53,8 +58,9 @@ function backwallPanels(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
       viewDistanceM: isHero ? 15 : 5,
       role: isHero ? '通路の15m先から「何の会社か」を伝える' : '近づいた人に、具体的な強みを1つだけ伝える',
       visual: isHero
-        ? `${a.brand}のロゴとキャッチコピーを大きく。背景はブランドカラーの大胆なグラデーション。人物写真は使わず、製品画面のシルエットを薄く重ねる`
-        : `「${vp.title}」を象徴する製品画面のイメージ（ノートPCまたはスマホに表示された画面）。余白を広く取り、見出しは短く`,
+        ? `「${a.headline.replace('\n', '')}」を大きく。ブランドの色の帯と円だけで作る（写真・製品画面・グラデーションは使わない）`
+        : `「${vp.title}」を見出しに。余白を広く取り、ブランドの色の帯と円だけで作る（製品画面の絵は描かない）`,
+      layout: (isHero ? 'hero' : 'appeal') as LayoutType,
       headline: isHero ? a.headline.replace('\n', '') : vp.title,
       zones: isHero
         ? [
@@ -88,7 +94,8 @@ function panelFor(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
           baseMm: 0,
           viewDistanceM: 3,
           role: 'ブース内で立ち止まった人に、導入効果の数字で納得してもらう',
-          visual: '導入効果を示す大きな数字と、簡単な棒グラフのインフォグラフィック。顧客ロゴは実在のものを描かず枠だけ',
+          visual: '見出し「導入効果」の下に、導入効果の数字3つを、画面の側で重ねる（数字は AI に作らせない）。顧客ロゴは実在のものを描かず枠だけ',
+          layout: 'number' as LayoutType,
           headline: '導入効果',
           zones: [
             { label: '上段', fromMm: 1800, toMm: mm(e.h), content: '見出し「導入企業の声」', tone: 'secondary' },
@@ -111,7 +118,8 @@ function panelFor(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
           baseMm: 0,
           viewDistanceM: 2,
           role: '名刺交換の動機を作る',
-          visual: `ブランドカラー一色の面に${a.brand}のロゴと「名刺交換でノベルティを進呈」の案内。シンプルに`,
+          visual: `ブランドの主色の面に、短い案内文「名刺交換でノベルティ進呈」。ロゴは実物を重ねる。シンプルに`,
+          layout: 'guide' as LayoutType,
           headline: '名刺交換でノベルティ進呈',
           zones: [
             { label: '上段', fromMm: 600, toMm: mm(e.h), content: `ロゴ「${a.brand}」と案内文`, tone: 'primary' },
@@ -133,7 +141,8 @@ function panelFor(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
           baseMm: 0,
           viewDistanceM: 8,
           role: '通路を歩く人の足を止める',
-          visual: `縦長の構図。上部に「${a.valueProps[0].title}」、中央に製品画面、下部にQRコード`,
+          visual: `縦長の構図。上部の帯に「${a.valueProps[0].title}」、中央に斜めの帯。下部の無地に、QRコードとロゴを実物で重ねる`,
+          layout: 'appeal' as LayoutType,
           headline: a.valueProps[0].title,
           zones: [
             { label: '上段', fromMm: 1400, toMm: mm(e.h), content: `キャッチ「${a.valueProps[0].title}」`, tone: 'primary' },
@@ -156,7 +165,8 @@ function panelFor(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
           baseMm: mm(e.z ?? 0),
           viewDistanceM: 30,
           role: 'ホールの遠くからブースの場所を知らせる',
-          visual: `白地に${a.brand}のロゴのみ。四面とも同じデザイン`,
+          visual: `主色の面にブランド名だけ。ロゴは実物を重ねる。四面とも同じデザイン`,
+          layout: 'guide' as LayoutType,
           headline: a.brand,
           zones: [{ label: '全面', fromMm: 0, toMm: mm(e.h), content: `ロゴ「${a.brand}」のみ`, tone: 'primary' }],
           material: 'ファブリック出力・トラス吊り',
@@ -175,7 +185,8 @@ function panelFor(e: BoothElement, a: SiteAnalysis): GraphicPanel[] {
           baseMm: 0,
           viewDistanceM: 4,
           role: '裏方の扉も広告面として使う',
-          visual: 'ブランドカラーのパターン（ロゴの形を繰り返し並べた柄）',
+          visual: 'ブランドの色の無地（帯と円だけ）。文字は描かない',
+          layout: 'guide' as LayoutType,
           headline: '',
           zones: [{ label: '全面', fromMm: 0, toMm: mm(e.h), content: 'ロゴの繰り返しパターン', tone: 'secondary' }],
           material: '粘着シート出力',
@@ -191,27 +202,35 @@ export function generateGraphicPlan(plan: BoothPlan, a: SiteAnalysis): GraphicPa
 }
 
 /**
- * ブース全体で1つのデザインの決まり（全部の面に同じ文を入れて、面ごとにばらばらにならないようにする）。
- * 2026-10-27 ユーザーの指摘「面ごとに色・字体・レイアウトがばらばらで、統一感がない」。
+ * ブース全体で1つのデザインの決まり（全部の面に、一字も違わずに同じ文を入れる）。
+ * 2026-10-29 から、決まりの中身は design-kit.ts の BoothDesignKit が持つ（色は5つの役割・帯と円の大きさ・面の型）。
+ * kit を渡さないときは、サイトの解析から作った下書きの決まりを使う。
  */
-export function boothDesignRules(a: SiteAnalysis) {
-  return [
-    '【ブース全体のデザインの決まり（全部の面で同じにする）】',
-    `・色: 背景の主色 ${a.colors.primary}、差し色 ${a.colors.accent}、サブ ${a.colors.secondary}。この3色と白だけを使う。ほかの色は足さない。`,
-    `・絵柄: フラットなベクターのイラストと幾何学の形（大きな斜めの帯と円）で統一する。写真・人物の写真・3D の描写は使わない。トーンは「${a.tone}」。`,
-    '・構図: 上から約3割は、あとで見出しの文字を重ねるため、主色の無地の帯として空けておく。下の約2割も、無地に近い落ち着いた面にする。',
-    '・隣の面とつながって見えるよう、帯と円は面の端で切れてよい。中央に大きな装飾を1つだけ置く。',
-  ].join('\n')
+export function boothDesignRules(a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a)) {
+  return kitBlock(kit)
 }
 
-export function buildPanelPrompt(p: GraphicPanel, a: SiteAnalysis) {
-  return [
-    `展示会ブースの「${p.name}」に貼る装飾グラフィックの背景デザイン。仕上がりサイズ 幅${p.widthMm.toLocaleString()}mm × 高さ${p.heightMm.toLocaleString()}mm（この縦横比で、引き伸ばさずに作る）。`,
-    `役割：${p.role}（想定視認距離 ${p.viewDistanceM}m）。`,
-    `描く内容：${p.visual}。`,
-    boothDesignRules(a),
-    // 文字は画像に描かせない。見出しは画面とデータの側で、正しい字体で重ねる（画像の中の小さな日本語は崩れるため）
-    '文字・数字・ロゴ・記号・認証マーク・QR コードは、一切描かない。看板や画面の中も無地にする。絵文字も描かない。',
-    '平面のデザインデータとして作る。写真のような斜めのアングルや、ブースの立体の絵にはしない。',
-  ].join('\n')
+/** 面の画像の指示文。文字（見出し）も含めた完成品の1枚にする。仕様 4.4・4.10 */
+export function buildPanelPrompt(p: GraphicPanel, a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a), opts: { hasReference?: boolean } = {}) {
+  // モデルが作る縦横比と面の実寸の差で、左右・上下が切られる。切られても文字が残る幅を先に入れる
+  const ratio = nearestRatio(p.widthMm, p.heightMm)
+  const safe = safeZone(ratio, p.widthMm / p.heightMm)
+  return buildDesignPrompt(kit, {
+    name: p.name,
+    widthMm: p.widthMm,
+    heightMm: p.heightMm,
+    role: p.role,
+    viewDistanceM: p.viewDistanceM,
+    layout: p.layout,
+    // ヒーローの見出しは、改行つきのまま渡す（2行の切れ目を、サイトの解析の改行に合わせる）
+    headline: p.layout === 'guide' && p.name.includes('扉') ? '' : p.layout === 'hero' ? a.headline : p.headline,
+    hasReference: opts.hasReference,
+    safeWidthPct: safe.safeWidthPct,
+    safeHeightPct: safe.safeHeightPct,
+  })
+}
+
+/** 面の画像を作るときの縦横比（モデルが受け付ける 10 種類のうち、面に近いもの）と、面の実寸の比 */
+export function panelAspect(p: GraphicPanel) {
+  return { ratio: nearestRatio(p.widthMm, p.heightMm), target: p.widthMm / p.heightMm, modelAspect: aspectOf(nearestRatio(p.widthMm, p.heightMm)) }
 }

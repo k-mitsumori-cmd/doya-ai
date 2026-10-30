@@ -97,7 +97,7 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
         imageSize={100}
         title="使い方ガイド"
         titleClassName="text-[32px] font-black tracking-tight text-gray-900"
-        legacyLead={<>ドヤプロマネの基本操作を解説するよ！</>}
+        legacyLead={<>ドヤプロマネの基本操作を解説します。</>}
         legacyLeadClassName="mt-0.5 text-[16px] text-gray-400 font-bold"
         lead="ドヤプロマネの基本の使い方です。"
       />
@@ -145,7 +145,7 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
       {/* Support */}
       <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-md p-7 text-center">
         <Image src="/character/love.png" alt="" width={80} height={80} className="mx-auto" unoptimized />
-        <p className="mt-3 text-[17px] font-black text-gray-900">困ったら気軽に連絡してね！</p>
+        <p className="mt-3 text-[17px] font-black text-gray-900">困ったときは、お気軽にご連絡ください。</p>
         <p className="mt-1 text-[12px] text-gray-500 font-bold">バグ報告・機能要望はワンクリックで Slack に届きます</p>
         <div className="mt-4 flex justify-center">
           <FeedbackButton variant="inline" className="rounded-full h-12 px-7 text-[14px] font-black bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 text-white shadow-lg">

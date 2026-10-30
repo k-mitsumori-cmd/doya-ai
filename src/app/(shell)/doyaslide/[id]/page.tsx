@@ -99,8 +99,7 @@ function aspectClass(a: string) {
   return 'aspect-[3/2]'
 }
 
-const GEN_MESSAGES = ['もくもく描いてるよ…', 'いい感じ…！🎨', '色を塗ってる…', 'ドヤれる仕上がりに…✨', 'あと少し…！']
-// 新しい見た目では、文の中の絵文字を外す（UI 品質。絵文字をアイコン・飾りに使わない）
+// 生成中の一言。丁寧な言い方で、絵文字は使わない（2026-10-29 に、くだけた言い方と絵文字の古い版を外した）
 const GEN_MESSAGES_NEXT = ['もくもく描いています…', 'いい感じです…', '色を塗っています…', 'ドヤれる仕上がりに…', 'あと少しです…']
 
 function EditorInner() {
@@ -437,7 +436,7 @@ function EditorInner() {
   // 生成中の楽しいメッセージ回し
   useEffect(() => {
     if (!generating) return
-    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES.length), 1500)
+    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES_NEXT.length), 1500)
     return () => clearInterval(t)
   }, [generating])
 
@@ -699,10 +698,10 @@ function EditorInner() {
           <OneButtonBar
             eyebrow="ドヤスライド"
             cta={total === 0
-              ? (structuring ? '構成を作っています。このまま待ってね' : 'テーマと設定が決まったら、押してね')
+              ? (structuring ? '構成を作っています。このままお待ちください' : 'テーマと設定が決まったら、押してください')
               : allDone ? '全部のスライドができました。書き出して使えます'
-              : generating ? 'スライドの絵を作っています。このまま待ってね'
-              : '構成を確かめたら、押してね'}
+              : generating ? 'スライドの絵を作っています。このままお待ちください'
+              : '構成を確かめたら、押してください'}
             label={total === 0
               ? (structuring ? '構成を作っています' : '構成とスライドをまとめて作る')
               : allDone ? (exporting === 'pdf' ? '書き出しています' : 'PDF で書き出す')

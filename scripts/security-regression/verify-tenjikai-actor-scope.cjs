@@ -29,7 +29,11 @@ function load(file, mocks = {}) {
   return exports;
 }
 const engine = load('src/lib/tenjikai/engine.ts');
-const store = load('src/lib/tenjikai/local-store.ts', { './engine': engine });
+const designKit = load('src/lib/tenjikai/design-kit.ts');
+const imageFit = load('src/lib/tenjikai/image-fit.ts');
+const imagegen = load('src/lib/tenjikai/imagegen.ts', { './design-kit': designKit, './image-fit': imageFit });
+const graphics = load('src/lib/tenjikai/graphics.ts', { './design-kit': designKit, './imagegen': imagegen, './image-fit': imageFit });
+const store = load('src/lib/tenjikai/local-store.ts', { './engine': engine, './design-kit': designKit });
 const nav = load('src/lib/tenjikai/nav.ts');
 let readStore = dom.window.localStorage;
 const Null = () => null;
@@ -49,6 +53,8 @@ const mocks = {
   'lucide-react': { Menu: Null },
   'next/navigation': { usePathname: () => '/tenjikai/' + section, useRouter: () => ({ push: href => routes.push(href) }) },
   '@/lib/tenjikai/nav': nav,
+  '@/lib/tenjikai/design-kit': designKit,
+  '@/lib/tenjikai/graphics': graphics,
   '@/lib/tenjikai/engine': { ...engine, requestGeneratedPlan: input => new Promise(resolve => requests.push({ input, resolve })) },
   '@/lib/tenjikai/local-store': { ...store, loadProjectResult: id => store.loadProjectResult(id, readStore), saveProject: (id, project) => { saves.push({ actor: id, project: structuredClone(project) }); return store.saveProject(id, project); } },
 };

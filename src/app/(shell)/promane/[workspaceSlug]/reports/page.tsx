@@ -79,7 +79,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
         <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm py-24 text-center animate-bounce-in">
           <Image src="/character/thinking.png" alt="" width={120} height={120} className="mx-auto animate-float" unoptimized />
           <p className="mt-4 text-[20px] font-black text-gray-400">レポートデータがないよ</p>
-          <p className="text-[15px] text-gray-300 font-bold mt-1">プロジェクトを作成すると表示されるよ！</p>
+          <p className="text-[15px] text-gray-300 font-bold mt-1">プロジェクトを作成すると表示されます。</p>
         </div>
       ) : (
         <>
