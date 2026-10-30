@@ -54,6 +54,7 @@ vercel ls doya-ai --scope=surisutas-projects
 | `reference/09-bootstrap.md` | バナーテンプレート一括生成 |
 | `reference/10-service-status.md` | サービスステータス一元管理 |
 | `reference/11-billing-spec.md` | **課金仕様の正本**（不変条件・反映4経路・状態遷移・監視・ランブック）。課金に触る前に必読 |
+| `reference/12-media-worker.md` | **メディアワーカー**（Cloud Run Jobs。重い動画・音声処理、`enqueueMediaJob()` の使い方） |
 | `reference/services/*.md` | 各サービスの詳細仕様 |
 
 ---

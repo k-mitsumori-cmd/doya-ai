@@ -21,6 +21,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/media-jobs",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/aishodan-evaluations",
       "schedule": "*/5 * * * *"
     },
