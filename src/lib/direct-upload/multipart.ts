@@ -85,25 +85,37 @@ export async function startMultipart(userId: string, input: { fileName: unknown;
     throw new MultipartError(`ファイルサイズが大きすぎます（上限${Math.round(MULTIPART_MAX_FILE_SIZE / 1024 / 1024 / 1024 * 10) / 10}GB）`)
   }
   const size = fileSize as number
-  const active = await prisma.directUploadSession.findMany({
-    where: { userId, status: 'UPLOADING', createdAt: { gt: new Date(Date.now() - 24 * 3600 * 1000) } },
-    select: { fileSize: true },
+  // 24時間たった未完了の送信は、このユーザー分に限り先に中止して片づける（数える範囲と使える範囲を同じにする）
+  const stale = await prisma.directUploadSession.findMany({
+    where: { userId, status: 'UPLOADING', createdAt: { lt: new Date(Date.now() - 24 * 3600 * 1000) } },
   })
-  const activeBytes = active.reduce((a, r) => a + Number(r.fileSize), 0)
-  if (active.length >= MAX_ACTIVE_SESSIONS || activeBytes + size > MAX_ACTIVE_BYTES) {
-    throw new MultipartError('送信中のファイルが多すぎます。完了または取り消してからお試しください', 429)
-  }
-  const objectKey = `${userId}/${safeName(fileName)}`
-  const out = await s3().send(new CreateMultipartUploadCommand({ Bucket: MULTIPART_BUCKET, Key: objectKey, ContentType: mime }))
-  if (!out.UploadId) throw new MultipartError('送信を始められませんでした', 503)
+  for (const old of stale) await abortMultipart(old).catch(() => {})
+
   const partSize = choosePartSize(size)
-  const row = await prisma.directUploadSession.create({
-    data: {
-      userId, bucket: MULTIPART_BUCKET, objectKey, uploadId: out.UploadId,
-      fileName: fileName.slice(0, 300), mimeType: mime, fileSize: BigInt(size), partSize,
-      purpose: typeof input.purpose === 'string' ? input.purpose.slice(0, 60) : null,
-    },
-  })
+  // 数える→作る を1つにするため、ユーザーごとに順番待ちさせる（同時に何本も始めて上限を超えるのを防ぐ）
+  const row = await prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('direct-upload-start'), hashtext(${userId}))`
+    const active = await tx.directUploadSession.findMany({ where: { userId, status: 'UPLOADING' }, select: { fileSize: true } })
+    const activeBytes = active.reduce((a, r) => a + Number(r.fileSize), 0)
+    if (active.length >= MAX_ACTIVE_SESSIONS || activeBytes + size > MAX_ACTIVE_BYTES) {
+      throw new MultipartError('送信中のファイルが多すぎます。完了または取り消してからお試しください', 429)
+    }
+    const objectKey = `${userId}/${safeName(fileName)}`
+    const out = await s3().send(new CreateMultipartUploadCommand({ Bucket: MULTIPART_BUCKET, Key: objectKey, ContentType: mime }))
+    if (!out.UploadId) throw new MultipartError('送信を始められませんでした', 503)
+    try {
+      return await tx.directUploadSession.create({
+        data: {
+          userId, bucket: MULTIPART_BUCKET, objectKey, uploadId: out.UploadId,
+          fileName: fileName.slice(0, 300), mimeType: mime, fileSize: BigInt(size), partSize,
+          purpose: typeof input.purpose === 'string' ? input.purpose.slice(0, 60) : null,
+        },
+      })
+    } catch (e) {
+      await s3().send(new AbortMultipartUploadCommand({ Bucket: MULTIPART_BUCKET, Key: objectKey, UploadId: out.UploadId })).catch(() => {})
+      throw e
+    }
+  }, { timeout: 20000 })
   return { id: row.id, partSize, totalParts: Math.ceil(size / partSize) }
 }
 
