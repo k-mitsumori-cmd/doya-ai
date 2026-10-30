@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { ffmpeg, probe } from '../ffmpeg.js'
+import { ffmpeg, probe, remoteInput } from '../ffmpeg.js'
 import { PermanentError } from '../storage.js'
 import type { Handler } from './types.js'
 
@@ -11,7 +11,7 @@ const handler: Handler = async ({ job, inputUrl, workDir, progress }) => {
   const format = (job.params?.format as string) === 'm4a' ? 'm4a' : 'mp3'
   const out = join(workDir, `audio.${format}`)
   const codec = format === 'm4a' ? ['-c:a', 'aac', '-b:a', '64k'] : ['-c:a', 'libmp3lame', '-b:a', '48k']
-  await ffmpeg(['-i', inputUrl, '-vn', '-map', '0:a:0', '-ac', '1', '-ar', '16000', ...codec, ...(format === 'm4a' ? ['-movflags', '+faststart'] : []), out], info.durationSec, (r) =>
+  await ffmpeg([...remoteInput(inputUrl), '-vn', '-map', '0:a:0', '-ac', '1', '-ar', '16000', ...codec, ...(format === 'm4a' ? ['-movflags', '+faststart'] : []), out], info.durationSec, (r) =>
     progress(r, '音声を抜き出し中')
   )
   return {

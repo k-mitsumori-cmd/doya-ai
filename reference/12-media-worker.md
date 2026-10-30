@@ -33,11 +33,24 @@ const job = await enqueueMediaJob({
 
 | kind | 内容 | 出力 | params |
 |---|---|---|---|
+| process_all | **おすすめ。** 入力を1回だけ読み、音声(audio.mp3)・720p(preview-720p.mp4)・サムネイル(thumb-N.jpg)をまとめて作る。`transcribe: true` で音声のあと文字起こしまで続ける | 左のすべて＋ transcript.json | `format`, `preview`(既定true), `thumbnails`(既定1, 0〜8), `atSeconds`, `transcribe`, `language` |
+| transcribe | 音声の文字起こし(AssemblyAI universal-2・話者分離)。有料API | transcript.json | `language`(既定ja) |
 | extract_audio | 音声だけを抜き出す（モノラル16kHz、文字起こし用） | audio.mp3 または audio.m4a | `format: 'mp3'｜'m4a'` |
 | thumbnail | JPEG（幅1280pxまで）。既定は長さの10%の位置 | thumb-1.jpg ... | `atSeconds`, `count`(1〜8) |
 | preview_720p | 高さ720pxまでの H.264/AAC の MP4（先頭から再生可）。元より大きくしない | preview-720p.mp4 | なし |
 
 種類を足す手順: `src/lib/media-jobs/kinds.ts` に名前とラベルを足す → `worker/src/handlers/` に処理を書く → `worker/src/handlers/index.ts` に登録する → イメージを作り直してデプロイする。
+
+### 一括処理(process_all)と読み出し量
+
+音声・720p・サムネイルを別々の3ジョブで流すと、入力を3回読む。process_all は1回の ffmpeg で音声と720pを同時に書き、サムネイルは作った720pのファイル(手元)から作るので、入力の読み出しは約1回分。ローカルの計測(12秒・530KBの動画)では、別々が入力の6.0回分、まとめが2.0回分だった(どちらも読み取り前の確認の読み込みを含む)。数GBの動画では確認の読み込みは先頭と末尾だけなので、差はもっと大きく約3倍になる。
+
+### 文字起こし(有料)
+
+- AssemblyAI は従量課金。`transcribe` を含む依頼は、`enqueueMediaJob()` に `allowPaidTranscription: true` を渡さないと断る。渡すのは、呼び出し側が利用者の枠・月の上限・1回の長さの上限(`INTERVIEW_PRICING` など)を確かめたあとだけ。
+- 二重課金の防止: AssemblyAI の ID を送信の直後に `media_job.result.assemblyId` へ保存する。再試行では新しく依頼せず、その ID の完了を待つだけ。依頼が 4xx で断られたとき、AssemblyAI 側がエラーを返したときは、再試行しない。
+- 入力にできるのは、自分の出力バケットの `{userId}/` の下だけ。
+- ワーカーに `ASSEMBLYAI_API_KEY` が要る。試験は模擬サーバー(`ASSEMBLYAI_BASE_URL`)だけで行い、本物の API は呼んでいない。
 
 ## 状態と再試行
 
@@ -46,8 +59,12 @@ const job = await enqueueMediaJob({
 - 実行中は20秒おきに `heartbeatAt` を更新する。5分以上更新が無いジョブは、別のワーカーまたは cron が拾い直す。ロックを失ったワーカーの更新は DB に反映されない。
 - 失敗したら、待ちを置いて `queued` に戻す。待ちは2分、6分、18分（指数）。`maxAttempts`（既定3）を使い切ると `failed`。入力が無い・許可外のバケット・音声や映像が無いファイルは、再試行せず即 `failed`。
 - 完了から30日たったジョブは、cron が出力ファイルと記録を消す。
+- 失敗したジョブは、cron が Slack(既存の運用チャンネル)に1件につき1回だけ知らせる。30分以上、順番待ちのままのジョブがあるときも知らせる。
+- 管理画面 `/admin/media-jobs`(管理者のみ。API は `/api/admin/media-jobs`)で、状態ごとの件数と一覧を見られる。
 
 ## 安全
+
+- 利用者のファイルは信用しない。ffmpeg の入力に使えるプロトコルを https/tls/tcp だけにし、ffprobe の形式名が許可リスト(mp4・mov・mkv・webm・mp3 など)に無いもの、および HLS・concat・dash などの「別の場所を読みに行く形式」を断る(SSRF対策。ローカル試験だけ `MEDIA_ALLOW_HTTP=1`)。
 
 - ワーカーの起動は Google の IAM で守る。Vercel 側は専用サービスアカウントの鍵で、対象ジョブを起動する権限（run.jobs.runWithOverrides）だけを持つ。公開された入口（HTTP）は作らない。
 - 鍵は環境変数だけで渡す。コード・ログ・Git・Obsidian に値を書かない。署名URLのトークンはエラー文から伏せる。
@@ -65,6 +82,7 @@ const job = await enqueueMediaJob({
 | ワーカー | DATABASE_URL | Supabase の接続（Vercel と同じ） |
 | ワーカー | DATABASE_CA_CERT | Supabase のルート証明書(PEM)。設定すると DB のサーバー証明書を検証する。本番では必ず設定する |
 | ワーカー | SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY | Storage 用（Vercel の NEXT_PUBLIC_SUPABASE_URL と同じ値） |
+| ワーカー | ASSEMBLYAI_API_KEY | 文字起こし用(有料)。使うときだけ設定する |
 | ワーカー | FFMPEG_THREADS | ffmpeg のスレッド数（CPU数に合わせる。例 4） |
 
 ## ローカルでの確かめ方

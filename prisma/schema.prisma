@@ -4634,7 +4634,7 @@ model MediaJob {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // extract_audio | thumbnail | preview_720p（src/lib/media-jobs/kinds.ts）
+  // extract_audio | thumbnail | preview_720p | process_all | transcribe（src/lib/media-jobs/kinds.ts）
   kind String
 
   // queued | running | succeeded | failed | canceled
@@ -4670,6 +4670,8 @@ model MediaJob {
   lockedBy     String?
   heartbeatAt  DateTime?
   dispatchedAt DateTime? // Cloud Run を最後に起動した時刻
+  // 失敗を Slack に知らせた時刻（二重に通知しない）
+  failureNotifiedAt DateTime?
 
   startedAt  DateTime?
   finishedAt DateTime?

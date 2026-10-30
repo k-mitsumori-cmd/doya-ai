@@ -6,14 +6,17 @@ import { prisma } from '@/lib/prisma'
 import { dispatchMediaJob, isWorkerDispatchConfigured } from '@/lib/media-jobs/dispatch'
 import { retryDelayMinutes, type MediaJobOutput } from '@/lib/media-jobs/kinds'
 import { mediaStorageAdmin } from '@/lib/media-jobs/status'
+import { postPlainToSlack } from '@/lib/notifications'
 
-// 5分おきに次の3つをする（Authorization: Bearer CRON_SECRET で保護）
+// 5分おきに次の4つをする（Authorization: Bearer CRON_SECRET で保護）
 //  1. 止まったジョブ（running のまま心拍が5分以上ない）を、順番待ちに戻す。回数を使い切っていたら失敗にする
 //  2. 順番待ちで、起動していない／起動から2分たっても動かないジョブを、Cloud Run で起動し直す
-//  3. 終わってから30日たったジョブの出力ファイルと記録を消す
+//  3. 失敗したジョブと、長く順番待ちのままのジョブを Slack に知らせる（失敗は1件につき1回だけ）
+//  4. 終わってから30日たったジョブの出力ファイルと記録を消す
 const STALE_MINUTES = 5
 const REDISPATCH_MINUTES = 2
 const BATCH = 20
+const STUCK_QUEUE_MINUTES = 30
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
@@ -77,7 +80,39 @@ export async function GET(request: Request) {
     }
   }
 
-  // 3. 古い出力ファイルと記録の削除。ファイルを消せなかった記録は残し、次回にやり直す
+  // 3. Slack 通知
+  let notified = 0
+  try {
+    const failedJobs = await prisma.mediaJob.findMany({
+      where: { status: 'failed', failureNotifiedAt: null },
+      orderBy: { finishedAt: 'asc' },
+      take: 20,
+      select: { id: true, kind: true, attempts: true, error: true, source: true },
+    })
+    const stuckBefore = new Date(now.getTime() - STUCK_QUEUE_MINUTES * 60_000)
+    const stuck = await prisma.mediaJob.count({ where: { status: 'queued', createdAt: { lt: stuckBefore }, runAfter: { lt: stuckBefore } } })
+    if (failedJobs.length > 0 || stuck > 0) {
+      const lines = failedJobs.map(
+        (j) => `・${j.kind}（${j.attempts}回試行）${j.source ? ` ${j.source.slice(0, 60)}` : ''} id=${j.id}\n　${(j.error || '').replace(/\s+/g, ' ').slice(0, 140)}`
+      )
+      const text = [
+        '【メディアワーカー】' + (failedJobs.length ? `ジョブが ${failedJobs.length} 件失敗しました` : '順番待ちのジョブが動いていません'),
+        ...lines,
+        stuck > 0 ? `${STUCK_QUEUE_MINUTES}分以上、順番待ちのままのジョブが ${stuck} 件あります。Cloud Run の起動設定を確認してください。` : '',
+        '詳細は管理画面の「メディアジョブ」で確認できます。',
+      ].filter(Boolean).join('\n')
+      await postPlainToSlack(text)
+      if (failedJobs.length > 0) {
+        await prisma.mediaJob.updateMany({ where: { id: { in: failedJobs.map((j) => j.id) } }, data: { failureNotifiedAt: new Date() } })
+      }
+      notified = failedJobs.length
+    }
+  } catch (e) {
+    // 通知に失敗したら、通知済みにせず次回にもう一度送る
+    console.warn('[media-jobs-cron] slack failed', e instanceof Error ? e.message : 'unknown')
+  }
+
+  // 4. 古い出力ファイルと記録の削除。ファイルを消せなかった記録は残し、次回にやり直す
   const oldJobs = await prisma.mediaJob.findMany({
     where: { status: { in: ['succeeded', 'failed', 'canceled'] }, finishedAt: { lt: new Date(now.getTime() - 30 * 86400_000) } },
     select: { id: true, outputs: true },
@@ -98,7 +133,7 @@ export async function GET(request: Request) {
   }
   const old = await prisma.mediaJob.deleteMany({ where: { id: { in: deletable } } })
 
-  const body = { ok: dispatchErrors === 0, requeued, failed, dispatched, dispatchErrors, deleted: old.count }
+  const body = { ok: dispatchErrors === 0, requeued, failed, dispatched, dispatchErrors, notified, deleted: old.count }
   console.warn('[media-jobs-cron]', body)
   return Response.json(body, { status: dispatchErrors ? 503 : 200 })
 }

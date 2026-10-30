@@ -4,7 +4,7 @@
 // 種類を足すとき: ここに名前を足し、worker/src/handlers に処理を書いて index.ts に登録する
 // ============================================
 
-export const MEDIA_JOB_KINDS = ['extract_audio', 'thumbnail', 'preview_720p'] as const
+export const MEDIA_JOB_KINDS = ['extract_audio', 'thumbnail', 'preview_720p', 'process_all', 'transcribe'] as const
 export type MediaJobKind = (typeof MEDIA_JOB_KINDS)[number]
 
 export const MEDIA_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed', 'canceled'] as const
@@ -14,6 +14,8 @@ export const MEDIA_JOB_KIND_LABELS: Record<MediaJobKind, string> = {
   extract_audio: '音声の抜き出し',
   thumbnail: 'サムネイルの作成',
   preview_720p: '閲覧用の軽い動画（720p）',
+  process_all: '音声・軽い動画・サムネイルの一括作成',
+  transcribe: '文字起こし',
 }
 
 export const MEDIA_JOB_STATUS_LABELS: Record<MediaJobStatus, string> = {
@@ -28,6 +30,10 @@ export type MediaJobParams = {
   extract_audio: { format?: 'mp3' | 'm4a' }
   thumbnail: { atSeconds?: number; count?: number }
   preview_720p: Record<string, never>
+  /** 入力を1回だけ読み、音声・720p・サムネイルをまとめて作る。transcribe: true で音声のあと文字起こしまで続ける（有料API） */
+  process_all: { format?: 'mp3' | 'm4a'; preview?: boolean; thumbnails?: number; atSeconds?: number; transcribe?: boolean; language?: string }
+  /** 音声ファイル（出力バケットの本人の階層）の文字起こし（AssemblyAI。有料API） */
+  transcribe: { language?: string }
 }
 
 export type MediaJobOutput = {

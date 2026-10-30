@@ -12,6 +12,9 @@ export type HandlerContext = {
   progress: (ratio: number, stage: string) => void
 }
 
-export type HandlerResult = { outputs: OutputFile[]; result: Record<string, unknown> }
+/** 成功のあとに続けて積むジョブ(例: 音声ができたら文字起こし) */
+export type FollowUp = { kind: string; inputBucket: string; inputPath: string; params?: Record<string, unknown>; dedupeKey: string }
+
+export type HandlerResult = { outputs: OutputFile[]; result: Record<string, unknown>; followUps?: FollowUp[] }
 
 export type Handler = (ctx: HandlerContext) => Promise<HandlerResult>

@@ -1,12 +1,12 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { config } from './config.js'
-import { claimJob, markFailed, markSucceeded, touch, type JobRow } from './db.js'
+import { claimJob, insertFollowUp, markFailed, markSucceeded, touch, type JobRow } from './db.js'
 import { handlers } from './handlers/index.js'
 import { PermanentError, signedInputUrl, uploadFile } from './storage.js'
 
 /** 1件のジョブを最後まで処理する。ロックを失ったら（他のワーカーに取られたら）途中で止める */
-export async function runJob(job: JobRow, workerId: string): Promise<'succeeded' | 'requeued' | 'failed' | 'lost'> {
+export async function runJob(job: JobRow, workerId: string): Promise<{ outcome: 'succeeded' | 'requeued' | 'failed' | 'lost'; followUpIds: string[] }> {
   const log = (m: string) => console.log(`[${job.id}] ${m}`)
   const handler = handlers[job.kind]
   const workDir = await mkdtemp(join(config.tmpDir(), 'mediajob-'))
@@ -31,7 +31,7 @@ export async function runJob(job: JobRow, workerId: string): Promise<'succeeded'
   try {
     if (!handler) throw new PermanentError(`未対応の種類です: ${job.kind}`)
     log(`開始 ${job.kind} (${job.attempts}/${job.maxAttempts}回目)`)
-    const inputUrl = await signedInputUrl(job.inputBucket, job.inputPath)
+    const inputUrl = await signedInputUrl(job.inputBucket, job.inputPath, job.userId)
     // 進み具合は 3%〜90% を処理に、90%〜99% を保存に割り当てる
     const out = await handler({
       job,
@@ -50,13 +50,20 @@ export async function runJob(job: JobRow, workerId: string): Promise<'succeeded'
     }
     const ok = await markSucceeded(job.id, workerId, saved, out.result)
     log(ok ? '完了' : 'ロックを失っていたため結果は反映しません')
-    return ok ? 'succeeded' : 'lost'
+    const followUpIds: string[] = []
+    if (ok) {
+      for (const f of out.followUps ?? []) {
+        const id = await insertFollowUp(job, f)
+        if (id) followUpIds.push(id)
+      }
+    }
+    return { outcome: ok ? 'succeeded' : 'lost', followUpIds }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     const permanent = e instanceof PermanentError
     const r = await markFailed(job, workerId, message, permanent)
     log(`失敗(${r}): ${message.slice(0, 300)}`)
-    return r
+    return { outcome: r, followUpIds: [] }
   } finally {
     clearInterval(hb)
     await rm(workDir, { recursive: true, force: true })

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import pg from 'pg'
 import { config } from './config.js'
 
@@ -9,6 +10,8 @@ export type JobRow = {
   inputBucket: string
   inputPath: string
   params: Record<string, unknown> | null
+  result: Record<string, unknown> | null
+  source: string | null
   attempts: number
   maxAttempts: number
 }
@@ -46,7 +49,7 @@ export async function closePool() {
   pool = null
 }
 
-const COLS = `id, "userId", kind, status, "inputBucket", "inputPath", params, attempts, "maxAttempts"`
+const COLS = `id, "userId", kind, status, "inputBucket", "inputPath", params, result, source, attempts, "maxAttempts"`
 
 /**
  * ジョブを1件確保する。UPDATE の条件が排他になっているので、同じジョブを2つのワーカーが
@@ -62,7 +65,7 @@ export async function claimJob(workerId: string, jobId?: string): Promise<JobRow
      WHERE id = (
        SELECT id FROM media_job
        WHERE ($2::text IS NULL OR id=$2)
-         AND ((status='queued' AND "runAfter" <= now())
+         AND ((status='queued' AND "runAfter" <= now() + interval '1 second')
            OR (status='running' AND "heartbeatAt" < now() - interval '5 minutes' AND attempts < "maxAttempts"))
        ORDER BY "runAfter", "createdAt"
        LIMIT 1
@@ -109,4 +112,23 @@ export async function markFailed(job: JobRow, workerId: string, message: string,
   )
   if ((rowCount ?? 0) === 0) return 'lost'
   return finalFail ? 'failed' : 'requeued'
+}
+
+/** 途中経過(外部サービスのIDなど)を result に足す。再試行で同じ課金を繰り返さないために使う */
+export async function checkpoint(jobId: string, data: Record<string, unknown>): Promise<void> {
+  await getPool().query(`UPDATE media_job SET result = COALESCE(result, '{}'::jsonb) || $2::jsonb WHERE id=$1`, [jobId, JSON.stringify(data)])
+}
+
+/** 成功のあとに続けるジョブを積む。dedupeKey が同じなら二重には積まない。積んだジョブの id を返す */
+export async function insertFollowUp(
+  parent: JobRow,
+  f: { kind: string; inputBucket: string; inputPath: string; params?: Record<string, unknown>; dedupeKey: string }
+): Promise<string | null> {
+  const { rows } = await getPool().query(
+    `INSERT INTO media_job (id, "userId", kind, "inputBucket", "inputPath", params, source, "dedupeKey", "updatedAt")
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,now())
+     ON CONFLICT ("dedupeKey") DO NOTHING RETURNING id`,
+    [`c${randomUUID().replace(/-/g, '')}`, parent.userId, f.kind, f.inputBucket, f.inputPath, JSON.stringify(f.params ?? null), parent.source, f.dedupeKey]
+  )
+  return rows[0]?.id ?? null
 }

@@ -18,8 +18,16 @@ async function main() {
       console.log(targetId ? `ジョブ ${targetId} は実行できる状態ではありません（処理済み・待ち時間中・他が実行中）` : '順番待ちのジョブはありません')
       break
     }
-    await runJob(job, workerId)
+    const { followUpIds } = await runJob(job, workerId)
     handled++
+    // 続けて積まれたジョブ(音声ができたあとの文字起こしなど)は、この実行の中でそのまま処理する
+    const queue = [...followUpIds]
+    while (queue.length > 0) {
+      const next = await claimJob(workerId, queue.shift())
+      if (!next) continue
+      queue.push(...(await runJob(next, workerId)).followUpIds)
+      handled++
+    }
   }
   console.log(`終了: ${handled}件を処理しました`)
 }

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { ffmpeg, probe } from '../ffmpeg.js'
+import { ffmpeg, probe, remoteInput } from '../ffmpeg.js'
 import { PermanentError } from '../storage.js'
 import type { Handler } from './types.js'
 
@@ -10,7 +10,7 @@ const handler: Handler = async ({ inputUrl, workDir, progress }) => {
   if (!info.hasVideo) throw new PermanentError('映像が入っていないファイルです')
   const out = join(workDir, 'preview-720p.mp4')
   const args = [
-    '-i', inputUrl,
+    ...remoteInput(inputUrl),
     '-map', '0:v:0', ...(info.hasAudio ? ['-map', '0:a:0'] : []),
     '-vf', "scale=-2:'min(720,ih)',format=yuv420p",
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '28', '-maxrate', '3M', '-bufsize', '6M',

@@ -13,8 +13,10 @@ function encodePath(p: string): string {
 }
 
 /** 入力の保存先を確かめる。許可していないバケットや、上の階層へ抜けるパスは読まない */
-export function assertReadable(bucket: string, path: string): void {
-  if (!config.inputBuckets().includes(bucket)) throw new PermanentError('入力のバケットが許可されていません')
+export function assertReadable(bucket: string, path: string, userId: string): void {
+  // 入力は許可したバケットだけ。自分の出力バケット(音声→文字起こしなど)は、本人の階層の下だけ読める
+  const ownOutput = bucket === config.outputBucket() && path.startsWith(`${userId}/`)
+  if (!ownOutput && !config.inputBuckets().includes(bucket)) throw new PermanentError('入力のバケットが許可されていません')
   if (!path || path.startsWith('/') || path.split('/').some((s) => s === '..' || s === '.') || path.includes('\0')) {
     throw new PermanentError('入力のパスが正しくありません')
   }
@@ -26,8 +28,8 @@ export class PermanentError extends Error {}
  * 入力を読むための署名つきURLを作る。ffmpeg にこのURLを直接渡すと、
  * 数GBの動画を /tmp に落とさず、必要な範囲だけを HTTP Range で読める。
  */
-export async function signedInputUrl(bucket: string, path: string, expiresIn = 6 * 3600): Promise<string> {
-  assertReadable(bucket, path)
+export async function signedInputUrl(bucket: string, path: string, userId: string, expiresIn = 6 * 3600): Promise<string> {
+  assertReadable(bucket, path, userId)
   const res = await fetch(`${config.supabaseUrl()}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${encodePath(path)}`, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
