@@ -131,23 +131,27 @@ export class MultipartQueue {
     const fp = fingerprint(item.file)
     try {
       // 1) 続きから送れるか確かめる。だめなら新しく始める
-      let id = readStore()[fp]?.id
+      let found: string | undefined = readStore()[fp]?.id
       let uploaded = new Map<number, number>()
       let partSize = 0
       let total = 0
-      if (id) {
+      if (found) {
         try {
-          const st = await api(`status?id=${encodeURIComponent(id)}`, undefined, ctl.signal)
+          const st = await api(`status?id=${encodeURIComponent(found)}`, undefined, ctl.signal)
           if (st.status === 'UPLOADING' && st.fileSize === item.file.size) {
             partSize = st.partSize; total = st.totalParts
             for (const p of st.uploadedParts) uploaded.set(p.partNumber, p.size)
             this.patch(item.key, { resumed: uploaded.size > 0 })
-          } else id = undefined
-        } catch { id = undefined }
+          } else found = undefined
+        } catch { found = undefined }
       }
-      if (!id) {
+      let id: string
+      if (found) {
+        id = found
+      } else {
         const s = await api('start', { fileName: item.file.name, mimeType: item.file.type, fileSize: item.file.size }, ctl.signal)
-        id = s.id as string; partSize = s.partSize; total = s.totalParts
+        id = s.id as string
+        partSize = s.partSize; total = s.totalParts
         uploaded = new Map()
         const store = readStore(); store[fp] = { id: id!, savedAt: Date.now() }; writeStore(store)
       }
