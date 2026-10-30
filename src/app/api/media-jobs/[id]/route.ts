@@ -7,11 +7,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { toMediaJobView } from '@/lib/media-jobs/status'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // ジョブ1件の進み具合と結果。完了していれば出力の署名URLを付ける
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 // 順番待ちのジョブの取り消し
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
