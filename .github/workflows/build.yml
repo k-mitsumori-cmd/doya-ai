@@ -75,3 +75,6 @@ jobs:
 
       - name: OpenAI deployment modules
         run: node scripts/regression/check-openai-traces.cjs
+
+      - name: Annual report native deployment modules
+        run: node scripts/regression/check-annual-report-traces.cjs
