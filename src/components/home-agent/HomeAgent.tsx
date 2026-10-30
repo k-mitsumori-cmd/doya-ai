@@ -33,6 +33,7 @@ import type { AgentField, AgentRouteResponse } from '@/lib/agent-router/types'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
 import { TypewriterTextarea } from './TypewriterTextarea'
+import { DEFAULT_HEADLINE } from './headlines'
 import styles from './home-agent.module.css'
 import { RevealWords } from '@/components/ds/motion'
 
@@ -245,7 +246,7 @@ async function taskViaApi(recipeId: string, taskId: string, answers: Record<stri
 
 /* ---------- 本体 ---------- */
 
-export default function HomeAgent({ executor = 'api', greeting, company, dept = null }: {
+export default function HomeAgent({ executor = 'api', greeting, company, dept = null, headline = DEFAULT_HEADLINE }: {
   /** sample は見本の結果で最後まで動かす（開発の確認ページ用。API も各ツールも呼ばない） */
   executor?: Executor
   /** 見出しの上のあいさつ（例「おつかれさまです、〇〇さん」）。経営ホームが渡す */
@@ -254,7 +255,11 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   company?: ReactNode
   /** 経営ホームで選んでいる部署（旗 DEPARTMENTS_ROLLOUT が on のときだけ渡される。null は「すべて」）。セールス以外の部署では依頼の欄の代わりに道具へのリンクを出す（examples.ts） */
   dept?: DepartmentId | null
+  /** 見出しの言葉。経営ホームのページ（サーバー）が、開くたびに変わる候補から決めて渡す（headlines.ts）。サーバーとブラウザで違う言葉が出てちらつかないため */
+  headline?: string
 }) {
+  // 画面を開いている間は、同じ言葉のままにする（作業の途中で router.refresh() などでページが作り直されても、見出しは変えない）
+  const [headlineText] = useState(headline)
   const toHref = useToolHref()
   const router = useRouter()
   // 「ドヤAIに頼む」: AI が依頼を読み、ツールと操作を選ぶ（/api/agent/route）。読んでいる間・画面を開いている間の表示
@@ -551,7 +556,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
         {company && scene === 'input' ? <div className={styles.headCompany}>{company}</div> : null}
         <div className={styles.headRow}>
           <div className={styles.headText}>
-            <h1 id="home-agent-title" className={styles.headTitle}>今日は、何をしますか？</h1>
+            <h1 id="home-agent-title" className={styles.headTitle} data-long={Array.from(headlineText).length >= 18 ? 'true' : undefined}>{headlineText}</h1>
             {scene !== 'input' ? <p className={styles.say}>{SAY[scene]}</p> : <p className={styles.heroSub}>やりたいことを書くだけ。ドヤAIが、全部のツールから合うものを選んで、準備まで進めます。</p>}
           </div>
           <div className={styles.kun} ref={kunRef}>
