@@ -7,20 +7,15 @@ import { randomUUID } from 'crypto'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { uploadHrPhoto } from '@/lib/hr/storage'
+import { readStagedImage, removeStaged } from '@/lib/direct-upload/stage'
 
-// 対応画像形式 → 拡張子
-const ALLOWED: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-}
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+const MIME_BY_EXT: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
 
 /**
  * POST /api/hr/upload
- * 従業員の顔写真をアップロードし、公開URLを返す。
- * FormData: { file: File }  →  { url: string }
+ * 従業員の顔写真のアップロード完了通知。ブラウザは /api/hr/upload-url で受け取った
+ * 署名付きURLへ直接送り済み。ここで一時ファイルを確かめ、最終の保存先に置いて公開URLを返す。
+ * JSON: { path }  →  { url: string }
  * 権限: ADMIN 以上（従業員情報の編集権限と同等）
  */
 export async function POST(req: NextRequest) {
@@ -33,30 +28,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const formData = await req.formData()
-    const file = formData.get('file')
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'ファイルがありません' }, { status: 400 })
-    }
+    const body = await req.json().catch(() => null)
+    const staged = await readStagedImage(ctx.organizationId, body?.path)
+    if (!staged.ok) return NextResponse.json({ error: staged.error }, { status: staged.status })
 
-    const ext = ALLOWED[file.type]
-    if (!ext) {
-      return NextResponse.json(
-        { error: 'JPG / PNG / WebP のみアップロードできます' },
-        { status: 400 }
-      )
-    }
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: '画像サイズは5MB以下にしてください' },
-        { status: 400 }
-      )
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer())
     // 組織スコープのパス + ランダムUUIDで推測困難に
-    const path = `${ctx.organizationId}/${randomUUID()}.${ext}`
-    const url = await uploadHrPhoto(buffer, path, file.type)
+    const path = `${ctx.organizationId}/${randomUUID()}.${staged.ext}`
+    const url = await uploadHrPhoto(staged.buffer, path, MIME_BY_EXT[staged.ext])
+    await removeStaged(staged.path)
 
     return NextResponse.json({ url })
   } catch (e: any) {

@@ -10,7 +10,7 @@ export type DirectUploadOptions = {
   issueUrl: string
   /** 完了を知らせる API。{ success, ... } を返すこと */
   confirmUrl: string
-  /** 発行 API に送る追加の項目（mimeType と fileSize は自動で入る） */
+  /** 発行 API の宛先に付ける追加の項目（例：?org=...）は URL に含めること。発行 API に送る追加の項目（mimeType と fileSize は自動で入る） */
   issueBody?: Record<string, unknown>
   /** 完了 API に送る追加の項目（path と mimeType は自動で入る） */
   confirmBody?: Record<string, unknown>
@@ -28,7 +28,8 @@ async function postJson(url: string, body: unknown, signal?: AbortSignal) {
     signal,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok || !data?.success) {
+  // success を返さない既存ルートの応答も通す（失敗は ok=false か success=false で判定）
+  if (!res.ok || data?.success === false) {
     throw new DirectUploadError(data?.error || 'アップロードに失敗しました')
   }
   return data

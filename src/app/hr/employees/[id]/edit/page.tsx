@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { directUpload } from '@/lib/direct-upload/client'
 
 interface Department {
   id: string
@@ -155,14 +156,13 @@ export default function EditEmployeePage() {
       // 新しい写真があれば先にアップロードしてURLを取得
       let finalPhotoUrl = photoUrl
       if (photoFile) {
-        const fd = new FormData()
-        fd.append('file', photoFile)
-        const up = await fetch('/api/hr/upload', { method: 'POST', body: fd })
-        if (!up.ok) {
-          const ed = await up.json().catch(() => ({}))
-          throw new Error(ed.error || '写真のアップロードに失敗しました')
-        }
-        finalPhotoUrl = (await up.json()).url
+        const up = await directUpload({
+          file: photoFile,
+          fileName: photoFile.name,
+          issueUrl: '/api/hr/upload-url',
+          confirmUrl: '/api/hr/upload',
+        })
+        finalPhotoUrl = up.url
       }
 
       const res = await fetch(`/api/hr/employees/${id}`, {
@@ -255,7 +255,7 @@ export default function EditEmployeePage() {
                     写真を削除
                   </button>
                 )}
-                <p className="text-xs text-slate-400">JPG, PNG, WebP 対応（5MB以下）</p>
+                <p className="text-xs text-slate-400">JPG, PNG, WebP 対応（10MB以下）</p>
               </div>
             </div>
           </div>

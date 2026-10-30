@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { directUpload } from '@/lib/direct-upload/client'
 
 interface Department {
   id: string
@@ -108,11 +109,12 @@ export default function NewEmployeePage() {
 
       if (photoFile) {
         try {
-          const formData = new FormData()
-          formData.append('file', photoFile)
-          const uploadRes = await fetch('/api/hr/upload', { method: 'POST', body: formData })
-          if (!uploadRes.ok) throw new Error('写真のアップロードに失敗しました')
-          const uploadData = await uploadRes.json()
+          const uploadData = await directUpload({
+            file: photoFile,
+            fileName: photoFile.name,
+            issueUrl: '/api/hr/upload-url',
+            confirmUrl: '/api/hr/upload',
+          })
           if (typeof uploadData.url !== 'string' || !uploadData.url) throw new Error('写真のURLを確認できません')
           const attachRes = await fetch(`/api/hr/employees/${encodeURIComponent(employeeId)}`, {
             method: 'PATCH',
@@ -221,7 +223,7 @@ export default function NewEmployeePage() {
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（5MB以下）</p>
+                  <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（10MB以下）</p>
                 </div>
               </div>
             </div>
