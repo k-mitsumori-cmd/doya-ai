@@ -1,5 +1,7 @@
 'use client'
 
+import RecordAccessSettings from '@/components/sfa/RecordAccessSettings'
+
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -228,6 +230,7 @@ export default function SfaTasksPage() {
       <button onClick={() => remove(t)} disabled={mutations.blocked('task:' + t.id)} aria-busy={mutations.blocked('task:' + t.id)} aria-label={`「${t.title}」を削除`} className="grid h-11 w-11 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 flex-shrink-0 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
         <Trash2 className="h-5 w-5" aria-hidden />
       </button>
+      <div className="basis-full"><RecordAccessSettings orgSlug={orgSlug} kind="task" id={t.id} onChanged={() => void load()} /></div>
     </div>
   )
 

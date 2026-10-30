@@ -1,7 +1,9 @@
+import { lockSfaRecordScope } from './record-authority'
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import { createHash } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import type { SfaContext } from './types'
-import { lockSfaMutationActor, SfaMutationError } from './mutation-authority'
+import { SfaMutationError } from './mutation-authority'
 import { sfaOperationId, SfaReceiptRaceError } from './creation-receipt'
 import { withSfaAdmission } from './limits'
 import { lockDeal, dealVersion } from './deal-mutation'
@@ -60,32 +62,32 @@ async function transaction<T>(c: SfaContext, work: (tx: Prisma.TransactionClient
   if (result.limit) throw new Error('Unexpected next-action resource limit')
   return result.created
 }
-async function observe(tx: Prisma.TransactionClient, c: SfaContext, key: string, r: Receipt | null): Promise<NextActionOperationState> {
+async function observe(tx: Prisma.TransactionClient, scope: SfaRecordScope, key: string, r: Receipt | null): Promise<NextActionOperationState> {
   if (!r) return { state: 'missing', suggestion: null }
   if (r.phase === 'pending' && new Date(r.expiresAt!).getTime() <= Date.now()) {
     await releaseSfaAiUsage(r.reservationId!, tx)
     r = { ...r, phase: 'failed' }; await save(tx, key, r, true)
   }
   if (r.phase !== 'complete') return { state: r.phase, suggestion: null }
-  const deal = await lockDeal(tx, c, r.dealId, false)
+  const deal = await lockDeal(tx, scope, r.dealId, false)
   return deal ? { state: 'found', suggestion: r.result! } : { state: 'unavailable', suggestion: null }
 }
 export async function claimNextAction(c: SfaContext, input: ReturnType<typeof nextActionOperationInput>) {
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, input.dealId, input.operationId), receipt = await locked(tx, key, input.dealId, input.operationId)
     if (receipt) {
       if (receipt.phase !== 'cancelled' && receipt.expectedUpdatedAt !== input.expectedUpdatedAt) throw new SfaMutationError(409, '同じAI操作の入力が変わっています。保存結果をご確認ください。')
-      return { outcome: await observe(tx, c, key, receipt) }
+      return { outcome: await observe(tx, scope, key, receipt) }
     }
-    const deal = await lockDeal(tx, c, input.dealId, false)
+    const deal = await lockDeal(tx, scope, input.dealId, false)
     if (!deal) throw new SfaMutationError(404, '商談が見つかりません。')
     if (typeof deal.name !== 'string' || !deal.name.trim() || deal.name.length > 10000) throw new SfaMutationError(409, '商談名を確認できません。商談名を修正してから実行してください。')
     if (deal.updatedAt.toISOString() !== input.expectedUpdatedAt) throw new SfaMutationError(409, '商談が変更されています。一覧を更新してから実行してください。')
     const [account, stage, activities] = await Promise.all([
-      deal.accountId ? tx.sfaAccount.findFirst({ where: { id: deal.accountId, organizationId: c.organizationId, isActive: true }, select: { name: true } }) : null,
+      deal.accountId ? tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id: deal.accountId }), select: { name: true } }) : null,
       deal.stageId ? tx.sfaStage.findFirst({ where: { id: deal.stageId, pipeline: { organizationId: c.organizationId } }, select: { name: true } }) : null,
-      tx.sfaActivity.findMany({ where: { organizationId: c.organizationId, dealId: deal.id }, orderBy: [{ occurredAt: 'desc' }, { id: 'asc' }], take: 8, select: { type: true, subject: true, body: true } }),
+      tx.sfaActivity.findMany({ where: sfaRecordWhere(scope, 'activity', false, { dealId: deal.id }), orderBy: [{ occurredAt: 'desc' }, { id: 'asc' }], take: 8, select: { type: true, subject: true, body: true } }),
     ])
     const quota = await reserveSfaAiUsageInTransaction(tx, c.organizationId, c.userId, 'next-action')
     if ('limit' in quota) return { quota }
@@ -101,18 +103,18 @@ export async function recoverNextAction(c: SfaContext, deal: string, operation: 
   const operationId = sfaOperationId(operation)
   if (!id(deal) || !operationId) throw new SfaMutationError(400, '商談と操作情報を指定してください。')
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, deal, operationId), receipt = await locked(tx, key, deal, operationId)
     if (!receipt && cancel) { await save(tx, key, { version: 1, phase: 'cancelled', dealId: deal, operationId }, false); return { state: 'cancelled' as const, suggestion: null } }
-    return observe(tx, c, key, receipt)
+    return observe(tx, scope, key, receipt)
   })
 }
 export async function settleNextAction(c: SfaContext, input: ReturnType<typeof nextActionOperationInput>, reservationId: string, value: unknown): Promise<SavedNextAction> {
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, input.dealId, input.operationId), r = await locked(tx, key, input.dealId, input.operationId)
     if (!r || r.phase !== 'pending' || r.reservationId !== reservationId || r.expectedUpdatedAt !== input.expectedUpdatedAt || new Date(r.expiresAt!).getTime() <= Date.now()) throw new SfaMutationError(409, 'このAI操作は完了できません。保存結果をご確認ください。')
-    const deal = await lockDeal(tx, c, input.dealId, false)
+    const deal = await lockDeal(tx, scope, input.dealId, false)
     if (!deal || deal.updatedAt.toISOString() !== input.expectedUpdatedAt) throw new SfaMutationError(409, '商談が変更されています。一覧をご確認ください。')
     const result = parseNextActionResult(value, day(r.startedAt!))
     const saved = { ...result, id: input.operationId, dealId: input.dealId, dealName: deal.name, sourceUpdatedAt: input.expectedUpdatedAt, startedAt: r.startedAt! }

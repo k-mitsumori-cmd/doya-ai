@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { lockSfaRecordScope, withSfaRecordRead } from '@/lib/sfa/record-authority'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { leadImportInput, createLeadImport, findLeadImport } from '@/lib/sfa/lead-import'
-import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
 import { withSfaAdmission } from '@/lib/sfa/limits'
 
@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     const input = leadImportInput(await req.json().catch(() => null))
     const operationId = sfaOperationId(input.body.operationId)
     const admitted = await withSfaAdmission(ctx.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, ctx)
-      return createLeadImport(tx, ctx, operationId, input)
+      const scope = await lockSfaRecordScope(tx, ctx)
+      return createLeadImport(tx, scope, operationId, input)
     })
     if (admitted.limit) throw new Error('Unexpected lead import admission limit')
     return json({ ok: true, ...admitted.created })
@@ -34,9 +34,8 @@ async function recover(req: NextRequest, cancel: boolean) {
     const operations = new URL(req.url).searchParams.getAll('operationId')
     if (operations.length !== 1) throw new SfaMutationError(400, '操作情報を指定してください。')
     const operationId = sfaOperationId(operations[0])!
-    const result = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, ctx)
-      const find = (id: string) => findLeadImport(tx, ctx, id)
+    const result = await withSfaRecordRead(ctx, async (tx, scope) => {
+      const find = (id: string) => findLeadImport(tx, scope, id)
       return cancel ? cancelSfaCreation(tx, ctx, 'lead-import', operationId, find) : recoverSfaCreation(tx, ctx, 'lead-import', operationId, find)
     })
     return json({ state: result.state, import: result.row })

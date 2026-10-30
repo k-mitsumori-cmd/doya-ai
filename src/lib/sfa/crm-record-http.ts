@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from './access'
 import { bigIntToNumber } from './format'
-import { lockSfaMutationActor, SfaMutationError } from './mutation-authority'
-import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from './limits'
-import { createCrmRecord, recoverCrmRecord, mutateCrmRecord, lockCrmRecord, crmRecordId, SfaCrmQuotaError } from './crm-record-mutation'
+import { SfaMutationError } from './mutation-authority'
+import { withSfaRecordRead } from './record-authority'
+import { canManageSfaBilling, sfaQuotaResponse } from './limits'
+import { createCrmRecord, recoverCrmRecord, mutateCrmRecord, lockCrmRecord, redactCrmRelation, crmRecordId, SfaCrmQuotaError } from './crm-record-mutation'
 import type { SfaContext } from './types'
 
 type Kind = 'account' | 'contact'
@@ -51,12 +52,10 @@ export async function crmDetail(req: NextRequest, params: Promise<{ id: string }
     if (!ctx) return crmJson({ error: 'ログイン/組織が必要です' }, { status: 401 })
     const id = crmRecordId((await params).id)
     if (method === 'GET') {
-      const result = await withSfaAdmission(ctx.organizationId, {}, async tx => {
-        await lockSfaMutationActor(tx, ctx)
-        return lockCrmRecord(tx, ctx, kind, id, false)
+      const row = await withSfaRecordRead(ctx, async (tx, scope) => {
+        return redactCrmRelation(tx, scope, kind, await lockCrmRecord(tx, scope, kind, id, false))
       })
-      if (result.limit) throw new Error('Unexpected record read admission limit')
-      return crmJson({ state: result.created ? 'found' : 'missing', [kind]: result.created })
+      return crmJson({ state: row ? 'found' : 'missing', [kind]: row })
     }
     let body: unknown
     if (method === 'DELETE') {

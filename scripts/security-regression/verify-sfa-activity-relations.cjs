@@ -4,6 +4,7 @@ const { load } = require('./load-typescript.cjs');
 
 let writes = 0;
 const findUnique = async ({ where }) => where.id === 'missing' ? null : ({
+  id: where.id, ownerMemberId: 'member-1', assigneeMemberId: 'member-1',
   organizationId: where.id === 'foreign' ? 'org-2' : 'org-1',
   isActive: where.id !== 'inactive',
 });
@@ -25,7 +26,7 @@ const request = (body) => ({ json: async () => ({ subject: '確認', ...body }) 
   for (const field of ['accountId', 'dealId', 'contactId']) {
     for (const value of ['foreign', 'inactive', 'missing', 123]) {
       const response = await POST(request({ [field]: value }));
-      assert.equal(response.status, 400, `${field}=${value} must not be silently removed`);
+      assert.equal(response.status, typeof value === 'number' ? 400 : 404, `${field}=${value} must not be silently removed`);
     }
   }
   assert.equal((await POST(request({ subject: 123 }))).status, 400);

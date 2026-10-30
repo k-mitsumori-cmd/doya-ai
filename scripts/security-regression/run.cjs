@@ -1070,6 +1070,12 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
 }
 const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
+const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaTeamClient.error || sfaTeamClient.status !== 0) { console.error('Security regression failed: SFA team settings'); process.exit(1); }
+const sfaRecordAccessMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-access-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaRecordAccessMounted.error || sfaRecordAccessMounted.status !== 0) { console.error('Security regression failed: SFA record access settings'); process.exit(1); }
 const sfaCsvLink = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-csv-link-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaCsvLink.error || sfaCsvLink.status !== 0) { console.error('Security regression failed: SFA CSV link'); process.exit(1); }
 const sfaExportAll = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-export-all.cjs')], { stdio: 'inherit', timeout: 60000 });

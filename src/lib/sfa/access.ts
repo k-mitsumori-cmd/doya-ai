@@ -173,22 +173,22 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
  * 商談画面を開いた時点でステージが自動生成され、カンバンが必ず描画される。
  * 既存ステージ（順序昇順）を返す。
  */
-export async function ensurePipeline(organizationId: string) {
-  let pipeline = await prisma.sfaPipeline.findFirst({
+export async function ensurePipeline(organizationId: string, db: Pick<typeof prisma, 'sfaPipeline' | 'sfaStage'> = prisma) {
+  let pipeline = await db.sfaPipeline.findFirst({
     where: { organizationId },
     orderBy: { createdAt: 'asc' },
   })
   if (!pipeline) {
-    pipeline = await prisma.sfaPipeline.create({
+    pipeline = await db.sfaPipeline.create({
       data: { organizationId, name: '標準パイプライン', isDefault: true },
     })
   }
-  let stages = await prisma.sfaStage.findMany({
+  let stages = await db.sfaStage.findMany({
     where: { pipelineId: pipeline.id },
     orderBy: { order: 'asc' },
   })
   if (stages.length === 0) {
-    await prisma.sfaStage.createMany({
+    await db.sfaStage.createMany({
       data: DEFAULT_STAGES.map((s) => ({
         pipelineId: pipeline!.id,
         name: s.name,
@@ -199,7 +199,7 @@ export async function ensurePipeline(organizationId: string) {
         isLost: !!s.isLost,
       })),
     })
-    stages = await prisma.sfaStage.findMany({
+    stages = await db.sfaStage.findMany({
       where: { pipelineId: pipeline.id },
       orderBy: { order: 'asc' },
     })

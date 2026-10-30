@@ -186,10 +186,12 @@ export function isSfaClientNextAction(v: unknown, dealId: string, operationId: s
 
 
 export interface SfaClientAccount {
+  canEdit?: boolean
   id: string; name: string; industry: string | null; prefecture: string | null; url: string | null; note: string | null
   createdAt: string; updatedAt: string
 }
 export interface SfaClientContact {
+  canEdit?: boolean
   id: string; name: string; accountId: string | null; title: string | null; department: string | null
   email: string | null; phone: string | null; note: string | null; isKeyPerson: boolean; accountName?: string | null
   createdAt: string; updatedAt: string
@@ -224,4 +226,26 @@ export function isSfaCrmPage(data: Record<string, unknown>, kind: 'account' | 'c
     && new Set(rows.map(r => r.id)).size === rows.length
     && Number.isSafeInteger(data.totalCount) && (data.totalCount as number) >= rows.length
     && (data.nextCursor === null || typeof data.nextCursor === 'string' && data.nextCursor.length > 0 && data.nextCursor.length <= 512)
+}
+
+export interface SfaClientTeam {
+  id: string; name: string; createdAt: string; updatedAt: string
+  members: { memberId: string; member: { id: string; name: string | null; role: string; status: string } }[]
+}
+export function isSfaClientTeam(value: unknown): value is SfaClientTeam {
+  if (!record(value) || !sfaClientId(value.id) || typeof value.name !== 'string' || !value.name.trim() || value.name.length > 80
+    || !sfaClientDate(value.createdAt) || !sfaClientDate(value.updatedAt) || !Array.isArray(value.members) || value.members.length > 500) return false
+  return value.members.every(item => record(item) && sfaClientId(item.memberId) && record(item.member) && item.member.id === item.memberId
+    && (item.member.name === null || typeof item.member.name === 'string') && ['owner', 'admin', 'manager', 'member'].includes(String(item.member.role))
+    && ['ACTIVE', 'PENDING', 'INACTIVE'].includes(String(item.member.status))) && new Set(value.members.map(item => item.memberId)).size === value.members.length
+}
+export function teamWriteMatches(row: SfaClientTeam, body: Record<string, unknown>, before?: SfaClientTeam) {
+  if (before && (row.id !== before.id || row.createdAt !== before.createdAt || row.updatedAt <= before.updatedAt)) return false
+  if (body.name !== undefined && row.name !== String(body.name).trim()) return false
+  if (body.memberIds !== undefined) {
+    if (!Array.isArray(body.memberIds) || body.memberIds.some(id => !sfaClientId(id))) return false
+    const actual = row.members.map(member => member.memberId).sort(), expected = [...body.memberIds].sort()
+    if (actual.length !== expected.length || actual.some((id, index) => id !== expected[index])) return false
+  }
+  return true
 }

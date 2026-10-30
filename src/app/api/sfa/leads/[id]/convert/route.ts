@@ -3,13 +3,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { lockSfaRecordScope, withSfaRecordRead } from '@/lib/sfa/record-authority'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { lockDealStage, dealStageChange } from '@/lib/sfa/deal-mutation'
 import { conversionInput, conversionValues, lockConversionLead, findConversion } from '@/lib/sfa/lead-conversion'
 import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
-import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { canManageSfaBilling, checkSfaQuota, sfaQuotaResponse, withSfaAdmission, type SfaQuotaExceeded } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -34,11 +34,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const { body, text, amount, expectedUpdatedAt } = conversionInput(await req.json().catch(() => null))
     const operationId = sfaOperationId(body.operationId)
     const admitted = await withSfaAdmission(c.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, c)
+      const scope = await lockSfaRecordScope(tx, c)
       return createSfaOnce(tx, c, `conversion:${id}`, operationId,
         { leadId: id, text, amount: amount.toString(), expectedUpdatedAt: expectedUpdatedAt?.toISOString() || null },
-        dealId => findConversion(tx, c, id, dealId), async () => {
-          const lead = await lockConversionLead(tx, c, id)
+        dealId => findConversion(tx, scope, id, dealId), async () => {
+          const lead = await lockConversionLead(tx, scope, id)
           if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
           if (lead.status === 'converted' || lead.convertedAccountId) throw new SfaMutationError(409, '既に転換済みです。一覧を確認してください。')
           if (expectedUpdatedAt && lead.updatedAt.getTime() !== expectedUpdatedAt.getTime()) throw new SfaMutationError(409, 'リードが更新されています。一覧を再読み込みして内容を確認してください。')
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             industry: v.industry, prefecture: v.prefecture, url: v.url, note: v.note, ownerMemberId: c.memberId,
           } })
           if (v.contactName) await tx.sfaContact.create({ data: {
-            organizationId: c.organizationId, accountId: account.id, name: v.contactName,
+            organizationId: c.organizationId, accountId: account.id, name: v.contactName, ownerMemberId: c.memberId,
             email: v.email, phone: v.phone, isKeyPerson: true,
           } })
           const now = new Date()
@@ -82,9 +82,8 @@ async function recover(req: NextRequest, ctx: Ctx, cancel: boolean) {
     const operations = new URL(req.url).searchParams.getAll('operationId')
     if (operations.length !== 1) throw new SfaMutationError(400, '操作情報を指定してください。')
     const operationId = sfaOperationId(operations[0])!
-    const recovery = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, c)
-      const find = (dealId: string) => findConversion(tx, c, id, dealId)
+    const recovery = await withSfaRecordRead(c, async (tx, scope) => {
+      const find = (dealId: string) => findConversion(tx, scope, id, dealId)
       return cancel ? cancelSfaCreation(tx, c, `conversion:${id}`, operationId, find)
         : recoverSfaCreation(tx, c, `conversion:${id}`, operationId, find)
     })

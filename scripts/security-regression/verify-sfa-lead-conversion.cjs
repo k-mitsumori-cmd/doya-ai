@@ -1,30 +1,32 @@
+const {matches}=require('./sfa-query-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto');
 const {load}=require('./load-typescript.cjs');
 const routePath='src/app/api/sfa/leads/[id]/convert/route.ts';
 const op='10000000-0000-4000-8000-000000000001';
 const authority=load('src/lib/sfa/mutation-authority.ts');
 const amount=load('src/lib/sfa/amount.ts');
-const deal=load('src/lib/sfa/deal-mutation.ts',{'./amount':amount,'./mutation-authority':authority});
-const conversion=load('src/lib/sfa/lead-conversion.ts',{'./amount':amount,'./deal-mutation':deal,'./mutation-authority':authority});
+const policy=load('src/lib/sfa/record-policy.ts',{'./mutation-authority':authority});
+const relations=load('src/lib/sfa/record-relations.ts',{'./mutation-authority':authority,'./record-policy':policy});
+const deal=load('src/lib/sfa/deal-mutation.ts',{'./amount':amount,'./mutation-authority':authority,'./record-policy':policy});
+const conversion=load('src/lib/sfa/lead-conversion.ts',{'./amount':amount,'./deal-mutation':deal,'./mutation-authority':authority,'./record-policy':policy,'./record-relations':relations});
 const receipt=load('src/lib/sfa/creation-receipt.ts',{'node:crypto':crypto,'./mutation-authority':authority});
 const format=load('src/lib/sfa/format.ts');
 function fixture(opts={}){
  let active=true, failReceipt=false, quota=0, changed=false;
  const context={userId:'actor',memberId:'member',organizationId:'org',organizationSlug:'alpha',role:'member'};
- let state={lead:{id:'lead',organizationId:'org',isActive:true,status:'new',convertedAccountId:null,name:'Initial lead',contactName:null,corporateNumber:null,email:null,phone:null,note:null,raw:{},updatedAt:new Date('2026-10-01T00:00:00.000Z'),...opts.lead},accounts:[],contacts:[],deals:[],receipts:{}};
- const matches=(r,w)=>Object.entries(w).every(([k,v])=>v&&typeof v==='object'?('not'in v?r[k]!==v.not:true):r[k]===v);
+ let state={lead:{id:'lead',organizationId:'org',isActive:true,assigneeMemberId:'member',status:'new',convertedAccountId:null,name:'Initial lead',contactName:null,corporateNumber:null,email:null,phone:null,note:null,raw:{},updatedAt:new Date('2026-10-01T00:00:00.000Z'),...opts.lead},accounts:[],contacts:[],deals:[],receipts:{}};
  const db={
-  $queryRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('sfa_members'))return active?[{id:'member'}]:[];if(sql.includes('sfa_leads')){if(opts.changeName&&!changed){state.lead.name='Fresh name';changed=true;}return[{id:'lead'}];}if(sql.includes('sfa_stages'))return opts.noStage?[]:[{id:'stage'}];throw Error(sql);},
+  $queryRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('sfa_organizations'))return[{id:'org'}];if(sql.includes('sfa_members'))return active?[{id:'member'}]:[];if(sql.includes('sfa_leads')){if(opts.changeName&&!changed){state.lead.name='Fresh name';changed=true;}return[{id:'lead'}];}if(sql.includes('sfa_stages'))return opts.noStage?[]:[{id:'stage'}];throw Error(sql);},
   $executeRaw:async()=>1,
-  sfaMember:{findFirst:async args=>args.select?.id?(active?{id:'member'}:null):{userId:'owner'},count:async()=>1},user:{findUnique:async()=>({plan:'FREE'})},
+  sfaMember:{findFirst:async args=>args.where.id?(active?{id:'member',role:'member'}:null):{userId:'owner'},count:async()=>1},user:{findUnique:async()=>({plan:'FREE'})},
   sfaLead:{findFirst:async({where})=>matches(state.lead,where)?structuredClone(state.lead):null,updateMany:async({where,data})=>{if(!matches(state.lead,where))return{count:0};Object.assign(state.lead,data);return{count:1};},update:async({data})=>{Object.assign(state.lead,data);return structuredClone(state.lead);}},
   sfaStage:{findUnique:async()=>({id:'stage',pipeline:{organizationId:'org'},probability:opts.won?100:25,isWon:!!opts.won,isLost:!!opts.lost})},
   systemSetting:{findUnique:async({where})=>state.receipts[where.key]||null,create:async({data})=>{if(failReceipt)throw Error('synthetic receipt persistence failure');state.receipts[data.key]={value:data.value};return data;}},
  };
- for(const [model,list]of[['sfaAccount','accounts'],['sfaContact','contacts'],['sfaDeal','deals']])db[model]={count:async()=>quota+state[list].filter(x=>x.isActive).length,create:async({data})=>{const r={id:list+(state[list].length+1),isActive:true,updatedAt:new Date(),...data};state[list].push(r);return structuredClone(r);},findFirst:async({where})=>structuredClone(state[list].find(r=>matches(r,where))||null)};
+ for(const [model,list]of[['sfaAccount','accounts'],['sfaContact','contacts'],['sfaDeal','deals']])db[model]={count:async()=>quota+state[list].filter(x=>x.isActive).length,create:async({data})=>{const r={id:list+(state[list].length+1),isActive:true,updatedAt:new Date(),...data};state[list].push(r);return structuredClone(r);},findMany:async({where})=>structuredClone(state[list].filter(r=>matches(r,where))),findFirst:async({where})=>structuredClone(state[list].find(r=>matches(r,where))||null)};
  db.$transaction=async fn=>{const before=structuredClone(state);try{return await fn(db);}catch(e){state=before;throw e;}};
  const limits=load('src/lib/sfa/limits.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/plan-utils':{tierFrom:()=> 'FREE'}});
- const route=load(routePath,{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/sfa/access':{getSfaContext:async()=>context,orgSlugFrom:()=> 'alpha'},'@/lib/sfa/limits':limits,'@/lib/sfa/format':format,'@/lib/sfa/deal-mutation':deal,'@/lib/sfa/lead-conversion':conversion,'@/lib/sfa/creation-receipt':receipt,'@/lib/sfa/mutation-authority':authority});
+ const route=load(routePath,{...require('./sfa-deal-test-deps.cjs').dealDeps(db,{authority}),'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/sfa/access':{getSfaContext:async()=>context,orgSlugFrom:()=> 'alpha'},'@/lib/sfa/limits':limits,'@/lib/sfa/format':format,'@/lib/sfa/deal-mutation':deal,'@/lib/sfa/lead-conversion':conversion,'@/lib/sfa/creation-receipt':receipt,'@/lib/sfa/mutation-authority':authority});
  const call=(method,body={},operation=op,id='lead')=>route[method]({url:`https://local/api/sfa/leads/${id}/convert?operationId=${operation}`,json:async()=>body},{params:Promise.resolve({id})});
  return{call,state:()=>state,revoke:()=>active=false,full:()=>quota=50,fail:()=>failReceipt=true};
 }
