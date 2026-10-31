@@ -142,7 +142,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack(config) {
-    // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
+    // Webpackの大きなディスクキャッシュによるメモリ不足を避けるため、必要なら無効にする。
+    // buildスクリプトとCIは同じ3GB上限・キャッシュ無効の条件でコンパイルする。
     if (process.env.DOYA_BUILD_NO_WEBPACK_CACHE === '1') config.cache = false
     // サービス名の切り替え（ドヤAI → ドヤバディ）。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のビルドのときだけ、
     // 画面の文言・AI の指示文・メール・title などの「ドヤAI」を、ビルドのときに置き換える（scripts/brand/rename-loader.cjs）。
