@@ -7,7 +7,8 @@
 
 import { isPaidPlan } from '@/lib/unified-plan'
 
-export type StoragePlanKey = 'free' | 'light' | 'pro' | 'enterprise'
+// 料金は「無料」と「プロ」の2つだけ（src/lib/unified-plan.ts）。有料なら契約コードを問わず pro として扱う
+export type StoragePlanKey = 'free' | 'pro'
 
 export type StoragePlan = {
   label: string
@@ -24,9 +25,7 @@ const GB = 1024 ** 3
 
 export const STORAGE_PLANS: Record<StoragePlanKey, StoragePlan> = {
   free: { label: '無料プラン', quotaBytes: 2 * GB, retentionDays: 30 },
-  light: { label: 'LIGHT', quotaBytes: 20 * GB, retentionDays: null },
   pro: { label: 'プロプラン', quotaBytes: 50 * GB, retentionDays: null },
-  enterprise: { label: 'エンタープライズ', quotaBytes: 200 * GB, retentionDays: null },
 }
 
 /** 有料から無料に変わったとき、既存ファイルを消すまでの猶予（日） */
@@ -35,11 +34,7 @@ export const POST_CANCEL_GRACE_DAYS = 30
 export const EXPIRY_NOTICE_DAYS = 7
 
 export function storagePlanKey(plan?: string | null): StoragePlanKey {
-  const p = (plan || '').trim().toUpperCase()
-  if (!isPaidPlan(p)) return 'free'
-  if (p === 'LIGHT') return 'light'
-  if (p === 'ENTERPRISE' || p === 'BUSINESS') return 'enterprise'
-  return 'pro'
+  return isPaidPlan(plan) ? 'pro' : 'free'
 }
 
 export function storagePlanFor(plan?: string | null): StoragePlan {

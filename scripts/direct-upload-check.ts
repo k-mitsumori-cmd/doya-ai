@@ -61,7 +61,7 @@ check('画像は jpg/png/webp のみ', !('image/svg+xml' in IMAGE_TYPES) && IMAG
 
 // 保存できる量・保持日数
 check('FREE は free', storagePlanKey('FREE') === 'free' && storagePlanKey(null) === 'free')
-check('LIGHT/PRO/ENTERPRISE の対応', storagePlanKey('LIGHT') === 'light' && storagePlanKey('banner-pro') === 'free' && storagePlanKey('PRO') === 'pro' && storagePlanKey('ENTERPRISE') === 'enterprise')
+check('有料の契約コードはすべて pro', ['LIGHT', 'PRO', 'ENTERPRISE'].every(c => storagePlanKey(c) === 'pro'))
 check('上限以内なら断らない', quotaMessage(2 * 1024 ** 3, 1 * 1024 ** 3, 1 * 1024 ** 3) === null)
 {
   const m = quotaMessage(2 * 1024 ** 3, 1.5 * 1024 ** 3, 1 * 1024 ** 3)
