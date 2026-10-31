@@ -1,5 +1,6 @@
 """Disposable Unix-socket PostgreSQL; never inherits application credentials."""
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,9 +24,20 @@ try:
     started = True
     subprocess.run([str(pg / 'pg_ctl'), '-D', str(folder / 'data'), '-o', f"-k {socket} -h '' -p 56485 -F -c timezone=UTC", '-l', str(folder / 'server.log'), '-w', 'start'], env=env, stdout=subprocess.DEVNULL, check=True, timeout=30)
     url = f'postgresql://doya_shanai@localhost:56485/postgres?host={socket}&sslmode=disable&connection_limit=8'
-    result = subprocess.run(['node', 'scripts/security-regression/verify-shanai-transcription-postgres.cjs'], cwd=root, env={**env, 'DOYA_PRIVATE_TEST_DATABASE_URL': url, 'DOYA_PRIVATE_TEST_SOCKET': str(socket)}, timeout=180)
+    # A fresh report inside this disposable fixture prevents stale copied reports from passing.
+    report = folder / 'results.json'
+    result = subprocess.run(['node', 'scripts/security-regression/verify-shanai-transcription-postgres.cjs'], cwd=root, env={**env, 'DOYA_PRIVATE_TEST_DATABASE_URL': url, 'DOYA_PRIVATE_TEST_SOCKET': str(socket), 'DOYA_SHANAI_TRANSCRIPT_PG_OUTPUT': str(report)}, timeout=180)
     if result.returncode:
         raise SystemExit(result.returncode)
+    if not report.is_file():
+        raise SystemExit('Transcription suite exited without a fresh completion report')
+    data = json.loads(report.read_text())
+    if not (data.get('complete') is True and data.get('expectedCases') == 28 and data.get('passed') == 28 and data.get('failed') == 0 and len(data.get('results', [])) == 28):
+        raise SystemExit('Transcription suite completion/count validation failed')
+    target = Path(os.environ.get('DOYA_SHANAI_TRANSCRIPT_PG_OUTPUT', str(root / 'docs/audits/2026-10-06-all-services-recheck/shanai-transcription-postgres-results.json')))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(data, indent=2) + '\n')
+
 finally:
     if started:
         subprocess.run([str(pg / 'pg_ctl'), '-D', str(folder / 'data'), '-m', 'fast', '-w', 'stop'], env=env, stdout=subprocess.DEVNULL, check=True, timeout=30)
