@@ -614,7 +614,32 @@ function Tagline() {
 
 /* ---------- 使い方の例 ---------- */
 
+/** Keep the added motion scoped to the use-case section. */
+function useCaseMotion() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const targets = Array.from(root.querySelectorAll<HTMLElement>(".v-case"));
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      for (const el of targets) {
+        const r = el.getBoundingClientRect();
+        el.classList.toggle("is-active-motion", r.top < innerHeight * .85 && r.bottom > 0);
+      }
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    addEventListener("scroll", schedule, { passive: true });
+    addEventListener("resize", schedule);
+    return () => { cancelAnimationFrame(frame); removeEventListener("scroll", schedule); removeEventListener("resize", schedule); };
+  }, []);
+  return ref;
+}
+
 function UseCases() {
+  const motionRef = useCaseMotion();
   const cases = [
     { dept: "marketing" as const, title: "記事を月に4本出す", ai: ["キーワードから構成を作る", "下書きを書く", "見出しの図をバナーで作る"], human: "内容を確かめて公開する" },
     { dept: "sales" as const, title: "来週の商談5件を準備する", ai: ["相手の会社を調べる", "提案の資料をスライドで作る", "聞くことの一覧を作る"], human: "資料を直して商談に出る" },
@@ -632,7 +657,7 @@ function UseCases() {
           </h2>
           <p className="v-lead">人がするのは、決めることと確かめることです。</p>
         </Reveal>
-        <div className="v-cases">
+        <div className="v-cases" ref={motionRef}>
           {cases.map((c, i) => (
             <Reveal key={c.title} className="v-case" delay={i * 100}>
               <div data-dept={c.dept} className="v-case-in">

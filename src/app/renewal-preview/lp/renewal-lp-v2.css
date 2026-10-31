@@ -1666,3 +1666,18 @@
 .v-price:not(.is-pro) .v-price-num small {
   white-space: nowrap;
 }
+
+/* 2026-10-28: only the approved use-case section keeps the added motion. */
+.v-case-in { transition:transform .5s var(--e),box-shadow .5s var(--e); }
+.v-case.is-active-motion .v-case-list.is-ai li { animation:v-task-in .75s var(--e) both; }
+.v-case.is-active-motion .v-case-list.is-ai li:nth-child(2) { animation-delay:.25s; }
+.v-case.is-active-motion .v-case-list.is-ai li:nth-child(3) { animation-delay:.5s; }
+.v-case.is-active-motion .v-case-list.is-human { animation:v-task-in .75s .8s var(--e) both; }
+@keyframes v-task-in { from { opacity:.25; transform:translateX(24px); } to { opacity:1;transform:translateX(0); } }
+@media(hover:hover) and (pointer:fine) {
+ .v-case-in:hover {transform:translateY(-8px);box-shadow:0 24px 64px -32px var(--dc);}
+}
+@media(prefers-reduced-motion:reduce){
+ .v-case-in {transform:none!important;}
+ .v-case-list li,.v-case-list.is-human {opacity:1!important;animation:none!important;}
+}
