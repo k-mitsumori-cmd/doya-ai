@@ -10,6 +10,9 @@ const DEFAULT_MOCKS={'@/lib/system-watch/watch-gate':{isSystemWatchFor:()=>false
 const lazyReal=(name,make)=>{let v;Object.defineProperty(DEFAULT_MOCKS,name,{enumerable:true,get(){return v??=make()}})};
 // 採点の満点（src/lib/adimage/score-max.ts）は他に依存しないので、本物をそのまま使う。Tool.tsx は '@/lib/adimage/score-max'、feedback.ts は './score-max' で読む
 lazyReal('@/lib/private-api-response',()=>load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}}));
+// ドヤパワーの重い処理の量（heavy-costs.ts）は原価の単価（src/lib/cost/unit-prices.ts）から計算する。costs.ts が取り込むので本物をそのまま使う（2026-10-31）
+lazyReal('@/lib/cost/unit-prices',()=>load('src/lib/cost/unit-prices.ts'));
+lazyReal('./heavy-costs',()=>load('src/lib/doya-power/heavy-costs.ts'));
 lazyReal('@/lib/hr/employee-number',()=>load('src/lib/hr/employee-number.ts'));
 lazyReal('@/lib/adimage/score-max',()=>load('src/lib/adimage/score-max.ts'));
 lazyReal('./score-max',()=>DEFAULT_MOCKS['@/lib/adimage/score-max']);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sendSpendReport } from '@/lib/spend-report'
+import { sendDailyCostReport } from '@/lib/cost/daily-report'
 import { sendErrorNotification } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await sendSpendReport()
+    await sendDailyCostReport()
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Cron] spend-report error:')

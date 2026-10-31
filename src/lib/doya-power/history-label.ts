@@ -17,6 +17,10 @@ export const ACTION_LABELS: Record<string, string> = {
   'voice.minute': '音声の AI商談・AI面接',
   'aio.scan.question': 'AI検索対策の調査',
   'agent.plan': 'ドヤくんの作戦づくり',
+  'upload.gb': '大きなファイルのアップロード',
+  'storage.gb.month': 'ファイルの保管の延長',
+  'video.process.gb': '動画の処理',
+  'gmail.send': 'Gmail の送信',
 }
 
 /** 付与の種類 → 画面の名前（内訳と履歴で同じ名前を使う） */
