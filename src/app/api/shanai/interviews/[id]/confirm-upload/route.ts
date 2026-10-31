@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         if (current.audioPath) await enqueueShanaiFileStoragePurge(tx, current, current.audioPath)
         await tx.shanaiInterview.update({
           where: { id },
-          data: { audioPath: path, audioMime: mimeType, audioSize: meta.size, transcriptStatus: 'none', transcriptError: null, transcriptJobId: null, transcriptSegments: Prisma.DbNull },
+          data: { audioPath: path, audioMime: mimeType, audioSize: meta.size, audioDurationSec: null, transcriptStatus: 'none', transcriptError: null, transcriptJobId: null, transcriptSegments: Prisma.DbNull },
         })
       } else {
         if (existingPhoto) return 'saved' as const

@@ -10,6 +10,8 @@ import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { assertFreeLimit, assertLimitForTier, planTierOf, type QuotaResult } from '@/lib/plan-limit'
+import { createTranscriptAttempt, existingTranscriptAttempt, RECORDING_CHANGED, type TranscriptReservation } from './transcription-attempt'
+import { lockShanaiStorage } from './storage-purge'
 
 export const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
 
@@ -116,20 +118,28 @@ export const MAX_TRANSCRIPT_RUNS_PER_INTERVIEW = 2
  */
 export async function reserveTranscript(
   userId: string,
-  interviewId: string
-): Promise<{ ok: true } | { ok: false; quota?: QuotaResult; reason?: string }> {
+  interviewId: string,
+  source: { audioPath: string; durationSec: number | null },
+): Promise<TranscriptReservation> {
   const tier = await planTierOf(userId)
   return withSerializableRetry(() =>
     prisma.$transaction(
       async (tx) => {
+        await lockShanaiStorage(tx, interviewId)
         const row = await tx.shanaiInterview.findFirst({
           where: ownInterview(userId, interviewId),
-          select: { transcriptRuns: true, transcribedAt: true },
+          select: { transcriptRuns: true, transcribedAt: true, audioPath: true, audioDurationSec: true, transcriptStatus: true, transcriptJobId: true },
         })
         if (!row) return { ok: false as const, reason: 'インタビューが見つかりません。' }
+        if (row.audioPath !== source.audioPath) return { ok: false as const, changed: true, reason: RECORDING_CHANGED }
+        const identity = { id: interviewId, userId, audioPath: source.audioPath }
+        const existing = await existingTranscriptAttempt(tx, identity, row)
+        if (existing) return existing
         if (row.transcriptRuns >= MAX_TRANSCRIPT_RUNS_PER_INTERVIEW) {
           return { ok: false as const, reason: '1件のインタビューで文字起こしできるのは2回までです。新しいインタビューを作成してください。' }
         }
+        if (source.durationSec === null) return { ok: false as const, needsDuration: true }
+        if (!Number.isFinite(source.durationSec) || source.durationSec <= 0) return { ok: false as const, reason: '録音の長さを確認できません。' }
         if (!row.transcribedAt) {
           const quota = await assertLimitForTier(
             'shanaiTranscripts',
@@ -150,7 +160,7 @@ export async function reserveTranscript(
             transcriptJobId: null,
           },
         })
-        return { ok: true as const }
+        return createTranscriptAttempt(tx, identity, source.durationSec)
       },
       { isolationLevel: 'Serializable', maxWait: 10000, timeout: 20000 }
     )

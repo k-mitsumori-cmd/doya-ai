@@ -5160,7 +5160,7 @@ model ShanaiInterview {
   audioPath          String?
   audioMime          String?
   audioSize          Int?
-  /// 'none' | 'processing' | 'done' | 'failed'
+  /// 'none' | 'processing' | 'done' | 'failed' | 'uncertain'（送信結果不明・自動再送しない）
   transcriptStatus   String   @default("none")
   transcriptJobId    String?
   /// [{ start, end, speaker, text }]
