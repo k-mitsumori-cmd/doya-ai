@@ -6,6 +6,9 @@ import { IMAGE_TYPES } from '../src/lib/direct-upload/stage'
 
 import { allowIssue } from '../src/lib/direct-upload/rate-limit'
 
+import { storagePlanKey, STORAGE_PLANS, formatBytes } from '../src/lib/storage-plans'
+import { quotaMessage, initialExpiry } from '../src/lib/direct-upload/stored-files'
+
 let failed = 0
 function check(name: string, ok: boolean) {
   console.log(`${ok ? 'OK ' : 'NG '} ${name}`)
@@ -55,6 +58,18 @@ check('画像は jpg/png/webp のみ', !('image/svg+xml' in IMAGE_TYPES) && IMAG
   check('窓の中で3回まで通る', okCount === 3)
   check('別の持ち主は影響されない', allowIssue(`${k}:other`, 3))
 }
+
+// 保存できる量・保持日数
+check('FREE は free', storagePlanKey('FREE') === 'free' && storagePlanKey(null) === 'free')
+check('LIGHT/PRO/ENTERPRISE の対応', storagePlanKey('LIGHT') === 'light' && storagePlanKey('banner-pro') === 'free' && storagePlanKey('PRO') === 'pro' && storagePlanKey('ENTERPRISE') === 'enterprise')
+check('上限以内なら断らない', quotaMessage(2 * 1024 ** 3, 1 * 1024 ** 3, 1 * 1024 ** 3) === null)
+{
+  const m = quotaMessage(2 * 1024 ** 3, 1.5 * 1024 ** 3, 1 * 1024 ** 3)
+  check('上限超過は「あと0.5GB」を案内', !!m && m.includes('あと512MB'))
+}
+check('無料の期限は30日後', initialExpiry('FREE', new Date('2026-11-01T00:00:00Z'))?.toISOString() === '2026-12-01T00:00:00.000Z')
+check('有料の契約中は期限なし', initialExpiry('PRO', new Date()) === null)
+check('台帳の容量表記', formatBytes(50 * 1024 ** 3) === '50GB' && STORAGE_PLANS.free.quotaBytes === 2 * 1024 ** 3)
 
 if (failed) { console.error(`${failed}件失敗`); process.exit(1) }
 console.log('すべて成功')

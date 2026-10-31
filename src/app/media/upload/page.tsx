@@ -29,6 +29,9 @@ export default function MediaUploadPage() {
       <p className="mt-2 text-sm text-slate-600">
         1ファイル20GBまでの動画・音声を送れます。複数のファイルをまとめて選べます。
       </p>
+      <p className="mt-2 text-sm text-slate-600">
+        保存できる量はプランごとに決まっています。<Link href="/settings/files" className="underline">保存しているファイルを確認・削除する</Link>
+      </p>
       <div className="mt-6">
         <MultipartUploadQueue onDone={f => setDone(d => [...d, { fileName: f.fileName, fileSize: f.fileSize }])} />
       </div>

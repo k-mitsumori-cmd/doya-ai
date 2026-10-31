@@ -4647,3 +4647,31 @@ model DirectUploadSession {
   @@index([userId, status])
   @@map("direct_upload_session")
 }
+
+// ============================================
+// 保存しているファイルの台帳（容量の上限・保持日数・削除の管理）
+// ============================================
+// 小分け送信が完了したファイルを1件ずつ記録する。合計の数え方・期限切れの削除・
+// 利用者の一覧と削除は、すべてこの表を見る。設定値は src/lib/storage-plans.ts。
+// ⚠️ 本番DBへの反映は doya-db-push スキルの手順で、本人の承認を取ってから行う。
+model StoredFile {
+  id          String    @id @default(cuid())
+  userId      String
+  bucket      String
+  objectKey   String
+  fileName    String
+  mimeType    String
+  fileSize    BigInt
+  source      String    @default("direct-upload")
+  sessionId   String?   @unique
+  createdAt   DateTime  @default(now())
+  // 消す日。null は期限なし（有料の契約中）。Cron が契約の状態に合わせて付け外しする
+  expiresAt   DateTime?
+  // 7日前の予告メールを送った日時（同じ期限で二重に送らない）
+  noticeSentAt DateTime?
+
+  @@unique([bucket, objectKey])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("stored_file")
+}

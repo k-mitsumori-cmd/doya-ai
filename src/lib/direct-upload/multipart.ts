@@ -24,6 +24,8 @@ import {
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import prisma from '@/lib/prisma'
+import { getUsedBytes, getUserPlan, initialExpiry, quotaMessage } from './stored-files'
+import { storagePlanFor } from '@/lib/storage-plans'
 
 export const MULTIPART_BUCKET = process.env.DIRECT_UPLOAD_MULTIPART_BUCKET || 'direct-uploads'
 /** 1本の上限。バケット側の上限（Supabase の設定）と小さい方が効く */
@@ -102,6 +104,10 @@ export async function startMultipart(userId: string, input: { fileName: unknown;
     if (active.length >= MAX_ACTIVE_SESSIONS || activeBytes + size > MAX_ACTIVE_BYTES) {
       throw new MultipartError('送信中のファイルが多すぎます。完了または取り消してからお試しください', 429)
     }
+    // プランごとの保存できる合計。台帳＋送信中の合計に、今回のぶんを足して判定する
+    const quota = storagePlanFor(await getUserPlan(userId)).quotaBytes
+    const over = quotaMessage(quota, await getUsedBytes(userId, tx as any), size)
+    if (over) throw new MultipartError(over, 413)
     const objectKey = `${userId}/${safeName(fileName)}`
     const out = await s3().send(new CreateMultipartUploadCommand({ Bucket: MULTIPART_BUCKET, Key: objectKey, ContentType: mime }))
     if (!out.UploadId) throw new MultipartError('送信を始められませんでした', 503)
@@ -191,7 +197,21 @@ export async function completeMultipart(row: Session) {
     await prisma.directUploadSession.update({ where: { id: row.id }, data: { status: 'ABORTED' } })
     throw new MultipartError('ファイルの大きさが一致しませんでした。もう一度送ってください', 409)
   }
-  await prisma.directUploadSession.update({ where: { id: row.id }, data: { status: 'COMPLETED', completedAt: new Date() } })
+  // 完了の記録と台帳への登録は同時に行う（台帳に無いファイルが容量の数え漏れにならないように）
+  const completedAt = new Date()
+  const plan = await getUserPlan(row.userId)
+  await prisma.$transaction([
+    prisma.directUploadSession.update({ where: { id: row.id }, data: { status: 'COMPLETED', completedAt } }),
+    prisma.storedFile.upsert({
+      where: { sessionId: row.id },
+      create: {
+        userId: row.userId, bucket: row.bucket, objectKey: row.objectKey, fileName: row.fileName,
+        mimeType: row.mimeType, fileSize: BigInt(actual), sessionId: row.id, createdAt: completedAt,
+        expiresAt: initialExpiry(plan, completedAt),
+      },
+      update: {},
+    }),
+  ])
   return { objectKey: row.objectKey, fileSize: actual }
 }
 
