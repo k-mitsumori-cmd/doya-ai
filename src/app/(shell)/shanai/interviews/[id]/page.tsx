@@ -149,7 +149,10 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const inputRef = useRef<HTMLInputElement>(null)
   const cancelled = useRef(false)
 
-  useEffect(() => () => void (cancelled.current = true), [])
+  useEffect(() => {
+    cancelled.current = false
+    return () => { cancelled.current = true }
+  }, [])
 
   const upload = async (file: File) => {
     setError(null)
@@ -171,6 +174,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
     try {
       for (let i = 0; i < 6 && !cancelled.current; i++) {
         const d = await api<{ pending?: boolean; interview?: Detail }>(`/api/shanai/interviews/${data.id}/transcribe`, { method: 'POST' })
+        if (cancelled.current) return
         if (!d.pending && d.interview) {
           onChange(d.interview)
           return

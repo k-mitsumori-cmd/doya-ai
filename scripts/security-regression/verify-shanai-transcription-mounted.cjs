@@ -34,7 +34,7 @@ const page = load('src/app/(shell)/shanai/interviews/[id]/page.tsx', { ...common
 
 const results = [];
 async function check(name, fn) { try { await fn(); results.push({ name, passed: true }); console.log('PASS ' + name); } catch (e) { results.push({ name, passed: false, error: e.message.slice(0, 300) }); console.error('FAIL ' + name + ': ' + e.message); } }
-async function render(data) { await React.act(async () => { mounted.render(React.createElement(page.TestSections.VoiceSection, { key: results.length, data, onChange: d => changed.push(d), reload: async () => { reloaded++; } })); }); }
+async function render(data) { await React.act(async () => { mounted.render(React.createElement(React.StrictMode, null, React.createElement(page.TestSections.VoiceSection, { key: results.length, data, onChange: d => changed.push(d), reload: async () => { reloaded++; } }))); }); }
 const button = () => [...document.querySelectorAll('button')].find(b => /文字起こしする|送信状況を確認する/.test(b.textContent));
 async function click() { assert(button()); await React.act(async () => { button().click(); await tick(); }); }
 (async () => {
@@ -57,9 +57,16 @@ async function click() { assert(button()); await React.act(async () => { button(
   await check('six pending responses stop with visible recovery and no endless loop', async () => {
     const d = fresh('processing'); response = () => Response.json({ pending: true }); await render(d); await click(); assert.equal(calls.length, 6); assert.equal(button().disabled, false); assert(document.querySelector('[role=alert]').textContent.includes('時間がかかっています'));
   });
+  for (const outcome of ['pending', 'completed']) await check('unmounted voice section ignores late ' + outcome + ' response', async () => {
+    if (!mounted) mounted = req('react-dom/client').createRoot(document.getElementById('root'));
+    const d = fresh('processing'); let finish; response = () => new Promise(resolve => { finish = resolve; }); await render(d); await click(); assert.equal(calls.length, 1); assert.equal(button().disabled, true);
+    await React.act(async () => mounted.unmount()); mounted = null;
+    await React.act(async () => { finish(Response.json(outcome === 'pending' ? { pending: true } : { interview: { ...d, audio: { ...d.audio, status: 'done' } } })); await tick(); });
+    assert.equal(calls.length, 1); assert.equal(changed.length, 0); assert.equal(reloaded, 0);
+  });
 })().catch(e => { results.push({ name: 'harness', passed: false, error: e.message }); }).finally(async () => {
   if (mounted) await React.act(async () => mounted.unmount()); dom.window.close();
   for (const [name, descriptor] of prior) { if (descriptor) Object.defineProperty(global, name, descriptor); else delete global[name]; }
-  const report = { root, passed: results.filter(r => r.passed).length, failed: results.filter(r => !r.passed).length, results, scope: 'Actual VoiceSection, api, Button and LimitNotice mounted with React/jsdom. Decorative DS leaves stubbed, fetch synthetic. No real browser, DB, uploads, network or provider calls.' };
+  const report = { root, passed: results.filter(r => r.passed).length, failed: results.filter(r => !r.passed).length, results, scope: 'Actual VoiceSection, api, Button and LimitNotice mounted with React/jsdom StrictMode, including unmount and late responses. Decorative DS leaves stubbed, fetch synthetic. No real browser, DB, uploads, network or provider calls.' };
   const out = process.env.DOYA_SHANAI_TRANSCRIPT_UI_OUTPUT || path.join(root, 'docs/audits/2026-10-06-all-services-recheck/shanai-transcription-mounted-results.json'); fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify({ passed: report.passed, failed: report.failed })); if (report.failed) process.exitCode = 1;
 });
