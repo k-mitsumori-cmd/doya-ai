@@ -1508,3 +1508,6 @@ if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanai
 
 const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);
+
+const homeTimeHydration = spawnSync(process.execPath, [path.join(__dirname, 'verify-home-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (homeTimeHydration.error || homeTimeHydration.status !== 0) process.exit(homeTimeHydration.status || 1);
