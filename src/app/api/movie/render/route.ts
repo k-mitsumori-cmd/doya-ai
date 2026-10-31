@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { higherPlan } from '@/lib/plan-utils'
 import { createRenderJob, renderVideo, failRenderJob } from '@/lib/movie/render'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
 import type { RenderConfig } from '@/lib/movie/types'
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (session?.user?.email) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { id: true },
+        select: { id: true, plan: true },
       })
       userId = user?.id ?? null
 
@@ -51,7 +52,8 @@ export async function POST(req: NextRequest) {
         const subscription = await prisma.userServiceSubscription.findUnique({
           where: { userId_serviceId: { userId, serviceId: 'movie' } },
         })
-        userPlan = subscription?.plan ?? 'FREE'
+        // 契約の基準は User.plan（INV-1）。古い行や行が無くても有料の権利を失わせない
+        userPlan = higherPlan(subscription?.plan, user?.plan)
       }
     }
     // ゲストの場合はFREE扱い
