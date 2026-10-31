@@ -6,6 +6,14 @@
 >
 > 本番がすでに「ドヤ部下」で出ている場合（旗 all の状態）は、この枝を出すと表示が「ドヤバディ」に変わる。旗と日付は変えなくてよい。出したあと、Stripe・HubSpot・Resend・ドリップの送り主の名前に「ドヤ部下」を入れていたなら、「ドヤバディ」に直す。
 
+> 2026-10-31 の変更（ロゴ）: ロゴは案1「ドヤ顔のバッジ」に決まった（本人の言葉「ロゴは1のドヤ顔バッジで進めてください」）。ファイルは `public/brand/doya-buddy/`（横長・マーク・アイコン・ファビコン・OGP）、作り方は `scripts/brand/doya-buddy-logo/`。**ロゴの出し分けはすべて旗の裏**: 旗 off の間は今のアイコン・OGP・マニフェストのまま、旗 all で新ロゴになる。
+>
+> - ファビコン・apple-touch-icon: `src/app/layout.tsx` の `icons`。旗 off 用の今のアイコンは `src/app/icon.png`・`apple-icon.png` から `public/brand/doya-ai-icon.png`・`doya-ai-apple-icon.png` に移した（ファイル規約の置き場は旗で出し分けられないため）。
+> - マニフェスト: 旗 all は `public/site-buddy.webmanifest`（名前「ドヤバディ」、新アイコン）。`rename-public.cjs` が書き換えるのは旗 off 用の `site.webmanifest` で、旗 all の本番では使わない。
+> - OGP: `src/lib/ogp.ts` が旗で `public/ogp/`（今）と `public/ogp-buddy/`（新ロゴ）を出し分ける。作り直しは `build-assets.py` → `render-logos.cjs native` → `ogp-to-jpg.py`。
+> - 画面のロゴ（`DoyaLogoMark`）と構造化データの `logo`: 旗 all で新アイコンを出す。
+> - メールの見出し画像は `public/brand/doya-buddy/email-header.png`（メールの本文にはまだ組み込んでいない）。
+
 アプリ側（コード）は、すべて旗 `NEXT_PUBLIC_BRAND_RENAME_ROLLOUT` の裏にあります。旗が off の間は、いまの表示のままです。
 この文書は「切り替える日に変える値（今の値 → 新しい値）」と、「本人がすること」の一覧です。**ここに書いた値は、実際には変えていません。**
 
