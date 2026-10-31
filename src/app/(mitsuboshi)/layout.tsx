@@ -9,20 +9,12 @@
  */
 
 import type { Metadata, Viewport } from 'next'
-import { Noto_Serif_JP } from 'next/font/google'
 import localFont from 'next/font/local'
+import './mitsuboshi-fonts.css'
 import { MITSUBOSHI_BRAND } from '@/lib/mitsuboshi/_shared/constants'
 
-// 三ツ星アプリ専用フォントを next/font で最適化読み込み。
-// display: 'swap' でロード中はシステムフォントで描画し、豆腐化を防ぐ。
-// Noto Serif JP は容量が大きいので weight を 400/700 の2種だけに絞ってモバイル帯域を節約。
-const notoSerifJp = Noto_Serif_JP({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-  variable: '--font-mitsuboshi-jp',
-})
-
+// Noto Serif JP uses the same official Unicode subsets, copied locally.
+// Keep Japanese subsets on demand and preload only latin, as before.
 // Keep the same family and weights without relying on Google CSS URL formats at build time.
 const cormorant = localFont({
   src: [
@@ -97,12 +89,13 @@ export default function MitsuboshiLayout({
 }) {
   return (
     <div
-      className={`${notoSerifJp.variable} ${cormorant.variable} relative min-h-screen bg-mitsuboshi-midnight font-mitsuboshi text-mitsuboshi-moon`}
+      className={`mitsuboshi-jp-font ${cormorant.variable} relative min-h-screen bg-mitsuboshi-midnight font-mitsuboshi text-mitsuboshi-moon`}
       style={{
         backgroundImage:
           'radial-gradient(circle at 20% 20%, rgba(35,40,81,0.8) 0%, transparent 55%), radial-gradient(circle at 80% 90%, rgba(22,27,58,0.9) 0%, transparent 60%), linear-gradient(180deg, #0B0E24 0%, #161B3A 100%)',
       }}
     >
+      <link rel="preload" href="/fonts/notoserifjp/13fe53f32a68bba55c11004d.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       {/* 星屑の微細な装飾 */}
       <div
         aria-hidden

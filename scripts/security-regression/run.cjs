@@ -1070,6 +1070,8 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
 }
 const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const mitsuboshiJapaneseFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-japanese-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiJapaneseFont.error || mitsuboshiJapaneseFont.status !== 0) { console.error('Security regression failed: Mitsuboshi Japanese font'); process.exit(1); }
 const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
 const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
@@ -1509,6 +1511,8 @@ const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, '
 if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
 const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-new-validation-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
+const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
 const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
