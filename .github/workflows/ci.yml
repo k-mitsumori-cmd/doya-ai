@@ -59,6 +59,9 @@ jobs:
       - name: Shanai transcription ownership and submission recovery (private Unix socket, no providers)
         run: python3 scripts/security-regression/verify-shanai-transcription-postgres.py
 
+      - name: Shanai fact generation and confirmed edits (private SQL and mounted UI, no providers)
+        run: python3 scripts/security-regression/verify-shanai-facts-postgres.py
+
       - name: Save synthetic native PDF evidence
         if: always()
         uses: actions/upload-artifact@v4

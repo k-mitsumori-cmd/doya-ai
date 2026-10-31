@@ -5,11 +5,12 @@
 // ⚠️ 上限値は plan-limit.ts の shanaiArticles / shanaiTranscripts に集約。services.ts の表示文言と合わせる。
 // ⚠️ 判定は LLM・文字起こしの**前**に、記録の作成と同じトランザクションで数える。
 // ⚠️ 数えるのは shanai_usage_log（台帳）。記事やインタビューの行を数えると、削除で枠が戻ってしまう。
+import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { assertFreeLimit, assertLimitForTier, planTierOf, type QuotaResult } from '@/lib/plan-limit'
+import { assertFreeLimit, assertLimitForTier, planTierOf, type PlanTier, type QuotaResult } from '@/lib/plan-limit'
 import { createTranscriptAttempt, existingTranscriptAttempt, RECORDING_CHANGED, type TranscriptReservation } from './transcription-attempt'
 import { lockShanaiStorage } from './storage-purge'
 
@@ -174,15 +175,15 @@ export const MAX_FACT_RUNS_PER_INTERVIEW = 5
  * 事実の抽出を始めてよいか。記事の枠が残っていること（抽出しても記事にできないなら費用だけかかる）と、
  * インタビューごとの回数を確認し、回数を1つ確保する。
  */
-export async function claimFactRun(userId: string, interviewId: string): Promise<{ ok: true } | { ok: false; quota?: QuotaResult; reason?: string }> {
-  const quota = await assertFreeLimit(
+export async function claimFactRun(userId: string, interviewId: string, tier: PlanTier, client: Prisma.TransactionClient): Promise<{ ok: true } | { ok: false; quota?: QuotaResult; reason?: string }> {
+  const quota = await assertLimitForTier(
     'shanaiArticles',
-    () => prisma.shanaiUsageLog.count({ where: { userId, kind: 'article' } }),
-    userId,
-    (since) => prisma.shanaiUsageLog.count({ where: { userId, kind: 'article', createdAt: { gte: since } } })
+    tier,
+    () => client.shanaiUsageLog.count({ where: { userId, kind: 'article' } }),
+    (since) => client.shanaiUsageLog.count({ where: { userId, kind: 'article', createdAt: { gte: since } } })
   )
   if (!quota.ok) return { ok: false, quota }
-  const claimed = await prisma.shanaiInterview.updateMany({
+  const claimed = await client.shanaiInterview.updateMany({
     where: { ...ownInterview(userId, interviewId), factRuns: { lt: MAX_FACT_RUNS_PER_INTERVIEW } },
     data: { factRuns: { increment: 1 } },
   })
