@@ -187,14 +187,6 @@ const LOGO = "/renewal-lp/brand/doya-buddy-logo-horizontal-light.svg";
 
 function Nav() {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const s = document.getElementById("u-top-sentinel");
-    if (!s) return;
-    const io = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting));
-    io.observe(s);
-    return () => io.disconnect();
-  }, []);
   const links = [
     { href: "#depts", label: "できること" },
     { href: "#story", label: "進め方" },
@@ -203,7 +195,7 @@ function Nav() {
   ];
   return (
     <>
-      <nav className={`u-nav ${scrolled || open ? "is-solid" : ""}`} aria-label="メイン">
+      <nav className="u-nav" aria-label="メイン">
         <Link href="/" className="u-logo" aria-label="ドヤバディ（旧ドヤAI）のトップへ">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={LOGO} alt="ドヤバディ" width={132} height={43} />
@@ -717,7 +709,6 @@ export function RenewalLpV3({ toolCount, pricing }: { toolCount: number; pricing
       <a href="#u-main" className="u-skip">
         本文へ移動
       </a>
-      <div id="u-top-sentinel" aria-hidden="true" />
       <Nav />
       <Hero toolCount={toolCount} pricing={pricing} />
       <div id="u-hero-end" aria-hidden="true" />
