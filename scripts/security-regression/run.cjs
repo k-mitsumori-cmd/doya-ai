@@ -1511,3 +1511,6 @@ if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRend
 
 const homeTimeHydration = spawnSync(process.execPath, [path.join(__dirname, 'verify-home-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (homeTimeHydration.error || homeTimeHydration.status !== 0) process.exit(homeTimeHydration.status || 1);
+
+const popupSiteStats = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-site-stats-request-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (popupSiteStats.error || popupSiteStats.status !== 0) process.exit(popupSiteStats.status || 1);
