@@ -27,8 +27,16 @@ export default function ShanaiNewPage() {
   const [, setError] = useState<string | null>(null)
   // 新しい見た目: 入力の誤りは欄の下に（aria-describedby でつなぐ）、送信の失敗は ErrorNotice で出す
   const [nameMissing, setNameMissing] = useState(false)
+  const [nameValidationAttempt, setNameValidationAttempt] = useState(0)
   const [failure, setFailure] = useState<unknown>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!nameMissing) return
+    // エラーを描画してから、固定ヘッダーに隠れない位置へ移す。
+    nameRef.current?.focus({ preventScroll: true })
+    nameRef.current?.scrollIntoView({ block: 'center', inline: 'nearest' })
+  }, [nameMissing, nameValidationAttempt])
 
   useEffect(() => {
     api<{ company: { sources: Source[] } | null }>('/api/shanai/company')
@@ -42,7 +50,8 @@ export default function ShanaiNewPage() {
     if (!form.intervieweeName.trim()) {
       setError('社員のお名前を入力してください。')
       setNameMissing(true)
-      nameRef.current?.focus()
+      // 空欄のまま押し直した場合も、描画後に入力欄へ戻す。
+      setNameValidationAttempt((attempt) => attempt + 1)
       return
     }
     setSaving(true)
