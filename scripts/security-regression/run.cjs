@@ -1514,3 +1514,6 @@ if (homeTimeHydration.error || homeTimeHydration.status !== 0) process.exit(home
 
 const popupSiteStats = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-site-stats-request-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (popupSiteStats.error || popupSiteStats.status !== 0) process.exit(popupSiteStats.status || 1);
+
+const popupInstallTime = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-install-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (popupInstallTime.error || popupInstallTime.status !== 0) process.exit(popupInstallTime.status || 1);
