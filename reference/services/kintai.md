@@ -118,7 +118,7 @@ nightMinutes     = 退勤時刻(JST)が 22時以降: (h-22)*60+m ／ 5時未満:
   `従業員名, 部署, 日付, 出勤, 退勤, 勤務時間(分), 残業時間(分), 遅刻(分), 早退(分), ステータス`
   - 勤怠が無い従業員は1行「データなし」で出力
   - ファイル名 `kintai_YYYY-MM.csv` / `Content-Type: text/csv; charset=utf-8`
-- **Excel**: SpreadsheetML(XML) `.xls`、シート名「YYYY年M月」、`Content-Type: application/vnd.ms-excel`
+- **Excel**: XLSX `.xlsx`（既存のExcelJSを使用）、シート名「YYYY年M月」、`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`。文字列は式として実行せず、勤務時間などは数値セルで出力。旧XML内容と`.xls`拡張子の不一致警告を解消。
 - 時刻は `Asia/Tokyo`・24時間表記
 
 ### GET `/api/kintai/attendance/admin?date=YYYY-MM-DD`（manager 以上）
