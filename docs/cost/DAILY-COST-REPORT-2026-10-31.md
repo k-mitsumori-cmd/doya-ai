@@ -9,8 +9,8 @@
 - 送り先は今までのコストレポートと同じ（`postPlainToSlack`。SystemSetting の `slack_webhook`）。見出しは `slack/notify.ts` が付ける。
 - 取れ方:
   - Claude / OpenAI … 各社の Admin キーで請求 API（既存の `spend-report.ts` の処理を再利用）
-  - Vercel … Billing API（`/v1/billing/charges`）。鍵が無いときは Pro 1席の日割りだけ
-  - Supabase … DB の `storage.objects` の合計サイズから見積り。配信量は API が無く「取得できない」
+  - Vercel と Supabase … Vercel の Billing API（`/v1/billing/charges`）の実際の請求額。Supabase は Vercel Marketplace 経由なので同じ請求に載り、名前で分けて出す。鍵が無いときは Pro 1席の日割りだけ
+  - Supabase の見積り … 実額が取れないときだけ。DB の `storage.objects` の合計サイズから出し、「見積り」と明記する
   - AssemblyAI … 使用量 API が無いので、アプリ内の音声の秒数 × 単価の見積り
   - Gemini … 「取得できない」と出す（請求は BigQuery への書き出しが要る）
   - Stripe … 残高の取引から前日・今月の売上と手数料
@@ -27,7 +27,7 @@
 | `storage.gb.month` | 保管の延長 1GB・1か月 | 約3円 | 2 | 保管のみ |
 | `video.process.gb` | 動画の処理 1GB | 約35円 | 12 | Cloud Run 4vCPU・8GiB で 900秒（仮）＋取り込み＋変換後の保管と配信 |
 | `transcribe.hour` | 文字起こし 60分 | 約29円 | 10（既存のまま） | AssemblyAI の単価 × 1.3 |
-| `gmail.send` | Gmail の送信 1通 | ほぼ 0円 | 1 | 方針で決めた値 |
+| `gmail.send` | Gmail の送信 1通 | ほぼ 0円 | 1（本人了承 10/31。機能は未実装） | 方針で決めた値 |
 | 画像生成 | 既存 | 27〜33円 | バナー10・修正7 | PRICING-NEW §3 |
 
 ## 3. つなぎ目
@@ -42,3 +42,9 @@ try { /* 処理 */ } catch (e) { await r.refund(); throw e }
 - 旗 `DOYA_POWER_ROLLOUT` が off のときは何も減らさず ok（`charged: 0`）で返す。
 - 同じ `key` の2回目は減らさない。
 - API の入口でセッションの本人に減らすなら、既存の `withDoyaPowerCharge({ action: 'upload.gb', units: ... })` を使う。
+
+## 決定（2026-10-31 本人）
+
+- 実際にかかったお金を優先する。見積りは実額が取れないときの補い。
+- ドヤパワーが足りないときは追加購入を促す。自動の従量課金にはしない。
+- 20GB のアップロードの1回の上限は未決（今のまま）。

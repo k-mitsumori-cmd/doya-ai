@@ -108,23 +108,28 @@ async function supabaseLines(p: ReturnType<typeof jstPeriods>): Promise<Line[]> 
   return lines
 }
 
-/** Vercel: Billing API（FOCUS 形式の請求）。取れなければ Pro の席の日割り */
-async function vercelLine(p: ReturnType<typeof jstPeriods>): Promise<{ line: Line; missing?: string }> {
+/**
+ * Vercel の請求 API（FOCUS 形式）。Supabase は Vercel Marketplace 経由で請求されるので、同じ請求に載る。
+ * ProviderName / ServiceName に supabase を含む行を Supabase、それ以外を Vercel として分けて、実際の請求額を出す。
+ * 取れなければ { vercel: 日割りの補い, supabase: null }（呼び出し側が Supabase を見積りで補う）
+ */
+async function vercelBilling(p: ReturnType<typeof jstPeriods>): Promise<{ vercel: Line; supabase: Line | null; missing?: string }> {
   const token = process.env.VERCEL_API_TOKEN?.trim()
   const team = process.env.VERCEL_TEAM_ID?.trim()
   const seatDay = toJpy(UNIT_PRICES.vercelProSeat.usd) / p.daysInMonth
   const fallback = (note: string, missing?: string) => ({
-    line: {
+    vercel: {
       label: 'Vercel',
       dayJpy: Math.round(seatDay),
       monthJpy: Math.round(seatDay * (p.dayOfMonth - 1)),
       basis: '日割り' as Basis,
       note: `${note}。Pro 1席の日割りだけ（従量の分は含まない）`,
     },
+    supabase: null,
     missing,
   })
   if (!token) return fallback('VERCEL_API_TOKEN 未設定', 'VERCEL_API_TOKEN')
-  const sum = async (from: Date, to: Date): Promise<number> => {
+  const sum = async (from: Date, to: Date) => {
     const q = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() })
     if (team) q.set('teamId', team)
     const res = await fetch(`https://api.vercel.com/v1/billing/charges?${q}`, {
@@ -132,21 +137,41 @@ async function vercelLine(p: ReturnType<typeof jstPeriods>): Promise<{ line: Lin
     })
     if (!res.ok) throw new Error(`Vercel ${res.status}`)
     const text = await res.text()
-    let usd = 0
+    let vercelUsd = 0
+    let supabaseUsd = 0
+    let supabaseRows = 0
     for (const raw of text.split('\n')) {
       if (!raw.trim()) continue
       try {
         const row = JSON.parse(raw)
-        usd += Number(row.BilledCost ?? row.EffectiveCost ?? 0)
+        const usd = Number(row.BilledCost ?? row.EffectiveCost ?? 0)
+        const who = `${row.ProviderName ?? ''} ${row.ServiceName ?? ''} ${row.InvoiceIssuerName ?? ''}`
+        if (/supabase/i.test(who)) {
+          supabaseUsd += usd
+          supabaseRows++
+        } else {
+          vercelUsd += usd
+        }
       } catch {
         /* 壊れた行は数えない */
       }
     }
-    return usd
+    return { vercelUsd, supabaseUsd, supabaseRows }
   }
   try {
     const [d, m] = await Promise.all([sum(p.yesterdayStart, p.todayStart), sum(p.monthStart, p.todayStart)])
-    return { line: { label: 'Vercel', dayJpy: Math.round(toJpy(d)), monthJpy: Math.round(toJpy(m)), basis: '実費' } }
+    const vercel: Line = { label: 'Vercel', dayJpy: Math.round(toJpy(d.vercelUsd)), monthJpy: Math.round(toJpy(m.vercelUsd)), basis: '実費' }
+    const supabase: Line | null =
+      m.supabaseRows > 0
+        ? {
+            label: 'Supabase（Vercel Marketplace の請求）',
+            dayJpy: Math.round(toJpy(d.supabaseUsd)),
+            monthJpy: Math.round(toJpy(m.supabaseUsd)),
+            basis: '実費',
+            note: '月額の基本料などは請求の確定日にまとめて載ることがあり、前日が 0 円でも今月の累計は増える',
+          }
+        : null
+    return { vercel, supabase }
   } catch (e: any) {
     return fallback(`請求 API の取得に失敗（${String(e?.message ?? e).slice(0, 40)}）`)
   }
@@ -252,10 +277,10 @@ export async function buildDailyCostReport(now = new Date()): Promise<DailyCostR
   const p = jstPeriods(now)
   const missingKeys: string[] = []
 
-  const [spend, supabase, vercel, assembly, stripe, acq] = await Promise.all([
+  const [spend, supabaseEst, billing, assembly, stripe, acq] = await Promise.all([
     buildSpendReport(now),
     supabaseLines(p),
-    vercelLine(p),
+    vercelBilling(p),
     assemblyLine(p),
     stripeRevenue(p),
     acquisitionBlock(),
@@ -273,9 +298,17 @@ export async function buildDailyCostReport(now = new Date()): Promise<DailyCostR
     basis: '取得できない',
     note: 'Google Cloud の請求は BigQuery への書き出しが要り、未設定。生成の回数は別のレポートで見る',
   })
-  lines.push(...supabase)
-  lines.push(vercel.line)
-  if (vercel.missing) missingKeys.push(vercel.missing)
+  // Supabase は Vercel の請求にある実額を優先。取れないときだけ、見積りで補う
+  if (billing.supabase) {
+    lines.push(billing.supabase)
+    // 実額が取れたら、配信量の「取得できない」行は要らない（請求に含まれる）。保管量の見積りは参考として注記に残す
+    const ref = supabaseEst.find((l) => l.basis === '見積り')
+    if (ref?.note) billing.supabase.note = `${billing.supabase.note}。参考（保管量）：${ref.note.split('。')[0]}`
+  } else {
+    lines.push(...supabaseEst.map((l) => (l.basis === '見積り' || l.basis === '日割り' ? { ...l, note: `${l.note ?? ''}（実額が取れないための見積り）` } : l)))
+  }
+  lines.push(billing.vercel)
+  if (billing.missing) missingKeys.push(billing.missing)
   lines.push(assembly)
 
   if (stripe.missing) missingKeys.push(stripe.missing)
