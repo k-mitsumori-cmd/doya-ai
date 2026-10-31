@@ -7,6 +7,8 @@ import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { hasMinRole } from '@/lib/kintai/access-client'
 
 const NON_WORKING_STATUSES = new Set(['absent', 'holiday', 'paid_leave', 'special_leave'])
 
@@ -18,6 +20,8 @@ function getStatusInfo(att: any): { label: string; color: string; bgColor: strin
 }
 
 export default function AdminAttendancePage() {
+  const { isActive, ready, role } = useKintaiAccess()
+  const canExport = ready === true && isActive === true && typeof role === 'string' && hasMinRole(role, 'hr_admin')
   const [date, setDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }))
   const [employees, setEmployees] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
@@ -116,7 +120,7 @@ export default function AdminAttendancePage() {
               <p className="text-sm font-bold text-slate-500">チームの出勤状況をチェック</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {canExport && <div className="flex items-center gap-2">
             <a
               href={`/api/kintai/attendance/export?year=${date.split('-')[0]}&month=${date.split('-')[1]}&format=csv`}
               className="px-4 py-2.5 bg-green-600 text-white font-bold text-sm rounded-full hover:bg-green-700 transition-all shadow-md flex items-center gap-1.5"
@@ -131,7 +135,7 @@ export default function AdminAttendancePage() {
               <span className="material-symbols-outlined text-lg">table_chart</span>
               Excel
             </a>
-          </div>
+          </div>}
         </div>
 
         {/* Date navigation */}

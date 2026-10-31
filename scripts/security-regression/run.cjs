@@ -1523,3 +1523,6 @@ if (minimatchPreprocessing.error || minimatchPreprocessing.status !== 0) process
 
 const kintaiAttendanceExportVisibility = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-attendance-export-visibility.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiAttendanceExportVisibility.status !== 0) process.exit(kintaiAttendanceExportVisibility.status || 1);
+
+const kintaiDepartmentExportAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-export-access.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiDepartmentExportAccess.error || kintaiDepartmentExportAccess.status !== 0) process.exit(kintaiDepartmentExportAccess.status || 1);

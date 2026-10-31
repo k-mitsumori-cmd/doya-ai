@@ -68,7 +68,7 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Next build
-        run: npx next build
+        run: DOYA_BUILD_NO_WEBPACK_CACHE=1 NODE_OPTIONS=--max-old-space-size=3072 npx next build
 
       - name: Satori deployment assets
         run: node scripts/regression/check-satori-traces.cjs
