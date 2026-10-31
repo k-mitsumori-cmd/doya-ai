@@ -1523,7 +1523,7 @@ Stripe → /api/stripe/webhook
 #### 手動同期エンドポイント
 
 ```
-GET /api/stripe/sync/latest → Stripe の最新状態を DB に反映
+POST /api/stripe/sync/latest → Stripe の最新状態を DB に反映
 ```
 
 ### 13.6 料金ページ UI パターン
