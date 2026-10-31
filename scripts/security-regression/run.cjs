@@ -1505,6 +1505,8 @@ if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.s
 
 const shanaiDrawingIds = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-docx-drawing-ids.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanaiDrawingIds.status || 1);
+const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-upload-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
 
 const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);
