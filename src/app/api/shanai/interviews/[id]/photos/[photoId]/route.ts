@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, notFound, ownInterview, unauthorized } from '@/lib/shanai/access'
 import { interviewDetailDto } from '@/lib/shanai/dto'
-import { removeFiles } from '@/lib/shanai/storage'
+import { enqueueShanaiFileStoragePurge, lockShanaiStorage } from '@/lib/shanai/storage-purge'
 import { clip, isCuid } from '@/lib/shanai/types'
 
 type Ctx = { params: Promise<{ id: string; photoId: string }> }
@@ -48,11 +48,20 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const { id, photoId } = await ctx.params
     const userId = await getShanaiUserId()
     if (!userId) return unauthorized()
-    const photo = await findPhoto(userId, id, photoId)
-    if (!photo) return notFound()
-    await prisma.shanaiPhoto.delete({ where: { id: photo.id } })
-    await removeFiles([photo.storagePath])
-    return json({ success: true, interview: await interviewDetailDto(id, userId) })
+    if (!isCuid(id) || !isCuid(photoId)) return notFound()
+    const outcome = await prisma.$transaction(async tx => {
+      await lockShanaiStorage(tx, id)
+      const interview = await tx.shanaiInterview.findFirst({ where: ownInterview(userId, id), select: { id: true, userId: true } })
+      if (!interview) return null
+      const photo = await tx.shanaiPhoto.findFirst({ where: { id: photoId, interviewId: id } })
+      if (!photo) return null
+      const remaining = await tx.shanaiPhoto.count({ where: { interviewId: id, storagePath: photo.storagePath, id: { not: photo.id } } })
+      if (!remaining) await enqueueShanaiFileStoragePurge(tx, interview, photo.storagePath)
+      await tx.shanaiPhoto.delete({ where: { id: photo.id } })
+      return { fileCleanupPending: remaining === 0 }
+    })
+    if (!outcome) return notFound()
+    return json({ success: true, ...outcome, interview: await interviewDetailDto(id, userId) })
   } catch (e) {
     console.error('[shanai/photo][DELETE] failed', (e as Error)?.name)
     return json({ error: '写真の削除に失敗しました。' }, 500)
