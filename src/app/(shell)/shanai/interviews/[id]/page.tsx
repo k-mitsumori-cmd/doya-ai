@@ -203,7 +203,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
         {data.audio.uploaded && data.audio.status !== 'done' && (
           <Button onClick={transcribe} loading={busy}>
             <Mic className="h-4 w-4" />
-            文字起こしする
+            {data.audio.status === 'uncertain' ? '送信状況を確認する' : '文字起こしする'}
           </Button>
         )}
         {progress !== null && <span className="text-xs font-black text-[var(--sub)]" role="status">アップロード中 {progress}%</span>}
@@ -216,8 +216,11 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
       {busy && <ProgressSteps steps={['録音の長さを確認しています', '文字起こしサービスに送っています', '話者を分けて文字にしています']} current={transcribeStep} note="30分の録音で数分かかります。" />}
       {data.audio.status === 'failed' && data.audio.error && !error && (
         <div className="mt-3">
-          <ErrorNotice what="文字起こしができませんでした。" how="録音ファイルの形式（mp3・m4a・wav など）を確かめて、もう一度「文字起こしする」を押してください。続くときは、録音を差し替えてください。" />
+          <ErrorNotice what="文字起こしができませんでした。" how={data.audio.error} />
         </div>
+      )}
+      {data.audio.status === 'uncertain' && !error && (
+        <div className="mt-3"><ErrorNotice what="文字起こしの送信状況を確認できません。" how={data.audio.error || '重複処理を避けるため再送を停止しています。時間をおいて再確認し、続く場合はお問い合わせください。'} /></div>
       )}
       {error && (
         <div className="mt-3">

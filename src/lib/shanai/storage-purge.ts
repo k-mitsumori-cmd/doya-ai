@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client'
 import { enqueueInterviewMaterialStoragePurge, enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
 
 const RETIRED_PREFIX = 'shanai-storage-retired:v1:'
+export const SHANAI_TRANSCRIPT_ATTEMPT_PREFIX = 'shanai-transcription-attempt:v1:'
 const SAFE_PART = /^[A-Za-z0-9_-]{1,128}$/
 
 function fileId(path: string) {
@@ -46,4 +47,5 @@ export async function enqueueShanaiInterviewStoragePurge(tx: Prisma.TransactionC
   }
   // The parent is deleted in this transaction, so no later confirmation can resolve these paths.
   await tx.systemSetting.deleteMany({ where: { key: { startsWith: RETIRED_PREFIX }, value: `${interview.userId}/${interview.id}` } })
+  await tx.systemSetting.deleteMany({ where: { key: { startsWith: `${SHANAI_TRANSCRIPT_ATTEMPT_PREFIX}${interview.id}:` } } })
 }
