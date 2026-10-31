@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-26T12:28:06.956Z",
-  "passed": 13,
+  "checkedAt": "2026-10-31T11:24:30.672Z",
+  "passed": 14,
   "cases": [
     "Same-frame create submits one UUID and never clears a newer draft",
     "Late old-organization success cannot close current form or announce success",
@@ -14,14 +14,15 @@
     "Same-actor authentication loading preserves create draft and rehydrates unknown operation",
     "Detail save includes expected version and preserves newer form changes",
     "Stale detail rejection keeps modal and input; no false success",
-    "Stage selection never optimistically changes confirmed board and sends one versioned write"
+    "Stage selection never optimistically changes confirmed board and sends one versioned write",
+    "Untouched redacted account is omitted from detail edit instead of unlinking stored parent"
   ],
   "sourceHashes": {
-    "src/app/(shell)/sfa/[orgSlug]/deals/page.tsx": "eee43e4610f453d355f4027a5f5c0e6a78398d2d0de5245dd4b84ae2aaad8e81",
-    "src/lib/sfa/use-client-mutations.ts": "791cb9176954efb80679c8a4647a36a73545db4ccb9b660a99ac2db607d89fb1",
-    "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
-    "src/components/sfa/MutationRecovery.tsx": "d66315703ee358a6c83ac6f3e6d73fc6a0263b0cf0ca913bcbe902e7318659de",
-    "scripts/security-regression/sfa-client-fixture.cjs": "8684a806fac4722263b1a7b80b090aac1bfd92b1daa35231b0091745c23e981c"
+    "src/app/(shell)/sfa/[orgSlug]/deals/page.tsx": "959764339d353c1ab3cb0ae32539f81f1af64789c421656da4684e58de1cc107",
+    "src/lib/sfa/use-client-mutations.ts": "cf0c28904cf667ab7f0e5a9bd4a42313068cb9c54e32260ca19080fd31600678",
+    "src/lib/sfa/client-response.ts": "52503359baf4c103ad9f3a6398def97a5e427b98701c93ae783cfb72f5c6186c",
+    "src/components/sfa/MutationRecovery.tsx": "b5c169887d34022344e475a6264964f3ef400e32496f688858d8f40f2e729132",
+    "scripts/security-regression/sfa-client-fixture.cjs": "f5bddd33fc5761856f0d7058e56a6940d9b394182c3796e5bf08e1620bf614f5"
   },
   "scope": "Actual deal page, shared mutation/recovery/session guard and bounded transport mounted in StrictMode. Synthetic browser DOM/navigation/auth/API; not real Next routing/private production/customer writes."
 }

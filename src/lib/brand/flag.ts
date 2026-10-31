@@ -1,9 +1,9 @@
 // ============================================
-// サービス名の切り替えの旗（ドヤAI → ドヤ部下）
+// サービス名の切り替えの旗（ドヤAI → ドヤバディ）
 // ============================================
-// 2026-10-30 本人の決定: サービス名を「ドヤAI」から「ドヤ部下」（英語 DOYA BUKA）に変える。URL（doya-ai.surisuta.jp）は変えない。
+// 2026-10-30 本人の決定: サービス名を「ドヤAI」から「ドヤバディ」（英語 DOYA BUDDY）に変える。URL（doya-ai.surisuta.jp）は変えない。
 //   NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=off（既定。値が無い・知らない値も off）… 今の「ドヤAI」のまま
-//   NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all                                      … 「ドヤ部下」に切り替える（切り替える日は本人が決める）
+//   NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all                                      … 「ドヤバディ」に切り替える（切り替える日は本人が決める）
 // ⚠️ 画面（クライアント）でも読むので、NEXT_PUBLIC_ を付けた名前にしている。値を変えたら再デプロイが要る（ビルドのときに埋め込まれる）。
 // ⚠️ 本番に出すのは、統括の監査と本人の承認のあと。
 export type BrandRenameRollout = 'off' | 'all'

@@ -43,8 +43,8 @@ test('旗が off（未設定・空・off）のとき: 送り主・件名・本�
 test('旗が all のとき: 送り主の名前・件名・本文のサービス名だけが変わり、ツール名は変わらない', async () => {
   for (const flag of ['all', ' ALL ']) {
     const b = await send(flag, params)
-    assert.equal(b.from, 'ドヤ部下 <noreply@example.test>')
-    assert.equal(b.subject, '【ドヤ部下】お問い合わせへのご返信')
-    assert.equal(b.html, '<p>ドヤ部下をご利用いただき、ありがとうございます。ドヤAIOとドヤAI質問リンクとドヤAI商談は、そのままです。</p>')
+    assert.equal(b.from, 'ドヤバディ <noreply@example.test>')
+    assert.equal(b.subject, '【ドヤバディ】お問い合わせへのご返信')
+    assert.equal(b.html, '<p>ドヤバディをご利用いただき、ありがとうございます。ドヤAIOとドヤAI質問リンクとドヤAI商談は、そのままです。</p>')
   }
 })

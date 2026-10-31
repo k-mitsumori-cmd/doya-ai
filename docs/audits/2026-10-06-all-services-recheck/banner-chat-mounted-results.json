@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:23:48.749Z",
+  "checkedAt": "2026-10-31T11:13:45.692Z",
   "passed": 13,
   "cases": [
     "same rendered send sends once, retains newer draft and rejects stale rendered callback",

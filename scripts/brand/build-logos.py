@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ドヤ部下のロゴ案（文字入り）を作る。文字は書体の字形を SVG のパス（ベクター）にして置くので、書体が無くても同じ形で開ける。
+"""ドヤバディのロゴ案（文字入り）を作る。文字は書体の字形を SVG のパス（ベクター）にして置くので、書体が無くても同じ形で開ける。
 
 使い方: FONT_DIR=<書体のフォルダ> python3 scripts/brand/build-logos.py [出力フォルダ]
   書体（すべて SIL Open Font License 1.1 = 商用で使える。github.com/google/fonts の ofl/ から取得）:
@@ -22,7 +22,7 @@ from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FONT_DIR = Path(os.environ.get('FONT_DIR', '.'))
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buka-logo-proposals'
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buddy-logo-proposals'
 MARK = base64.b64encode((ROOT / 'public/brand/doya-logo-mark-256.png').read_bytes()).decode()
 
 def brand_names():

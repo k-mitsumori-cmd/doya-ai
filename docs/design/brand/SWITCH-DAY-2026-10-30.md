@@ -1,6 +1,18 @@
-# ドヤAI → ドヤ部下：切り替える日の値の一覧と、本人がすること（2026-10-30）
+# ドヤAI → ドヤバディ：切り替える日の値の一覧と、本人がすること（2026-10-30）
 
-> 名前の経緯: 本人は最初「ドヤバディ」と決め、同じ日のうちに「ドヤ部下」（英語 DOYA BUKA）に決め直した。コードの名前の正本は `src/lib/brand/index.ts` の `BRAND_NAME_NEW`・`BRAND_EN_NEW`（英語名が変わっても、ここだけ直す）。Obsidian の一覧のファイル名には、古い名前（ドヤバディ）が残っている。
+> 名前の経緯: 本人は最初「ドヤバディ」と決め、同じ日のうちに「ドヤバディ」（英語 DOYA BUDDY）に決め直した。コードの名前の正本は `src/lib/brand/index.ts` の `BRAND_NAME_NEW`・`BRAND_EN_NEW`（英語名が変わっても、ここだけ直す）。Obsidian の一覧のファイル名には、古い名前（ドヤバディ）が残っている。
+
+> 2026-10-31 の変更: 名前は「ドヤ部下」（DOYA BUKA）から「ドヤバディ」（DOYA BUDDY）に改めた（本人の言葉「ドヤ部下をドヤバディに変更してください」）。コードの名前の正本は `src/lib/brand/index.ts` の `BRAND_NAME_NEW`・`BRAND_EN_NEW`。10/30 に「ドヤ部下」と案内したため、お知らせのページは `/news/rename-doya-buddy` に移し、旧 URL `/news/rename-doya-buka` は 308 で転送する。アプリ内のお知らせは id を新しくし、前の名前を見た人にも1回出す。前の名前「ドヤ部下」「DOYA BUKA」は、構造化データの別名と検索の言葉に残す。
+>
+> 本番がすでに「ドヤ部下」で出ている場合（旗 all の状態）は、この枝を出すと表示が「ドヤバディ」に変わる。旗と日付は変えなくてよい。出したあと、Stripe・HubSpot・Resend・ドリップの送り主の名前に「ドヤ部下」を入れていたなら、「ドヤバディ」に直す。
+
+> 2026-10-31 の変更（ロゴ）: ロゴは案1「ドヤ顔のバッジ」に決まった（本人の言葉「ロゴは1のドヤ顔バッジで進めてください」）。ファイルは `public/brand/doya-buddy/`（横長・マーク・アイコン・ファビコン・OGP）、作り方は `scripts/brand/doya-buddy-logo/`。**ロゴの出し分けはすべて旗の裏**: 旗 off の間は今のアイコン・OGP・マニフェストのまま、旗 all で新ロゴになる。
+>
+> - ファビコン・apple-touch-icon: `src/app/layout.tsx` の `icons`。旗 off 用の今のアイコンは `src/app/icon.png`・`apple-icon.png` から `public/brand/doya-ai-icon.png`・`doya-ai-apple-icon.png` に移した（ファイル規約の置き場は旗で出し分けられないため）。
+> - マニフェスト: 旗 all は `public/site-buddy.webmanifest`（名前「ドヤバディ」、新アイコン）。`rename-public.cjs` が書き換えるのは旗 off 用の `site.webmanifest` で、旗 all の本番では使わない。
+> - OGP: `src/lib/ogp.ts` が旗で `public/ogp/`（今）と `public/ogp-buddy/`（新ロゴ）を出し分ける。作り直しは `build-assets.py` → `render-logos.cjs native` → `ogp-to-jpg.py`。
+> - 画面のロゴ（`DoyaLogoMark`）と構造化データの `logo`: 旗 all で新アイコンを出す。
+> - メールの見出し画像は `public/brand/doya-buddy/email-header.png`（メールの本文にはまだ組み込んでいない）。
 
 アプリ側（コード）は、すべて旗 `NEXT_PUBLIC_BRAND_RENAME_ROLLOUT` の裏にあります。旗が off の間は、いまの表示のままです。
 この文書は「切り替える日に変える値（今の値 → 新しい値）」と、「本人がすること」の一覧です。**ここに書いた値は、実際には変えていません。**
@@ -16,20 +28,20 @@
 
 | 場所 | いまの値 | 新しい値 | どこで変えるか |
 |---|---|---|---|
-| `RESEND_FROM_EMAIL`（Vercel の環境変数） | 値は Vercel にあり、コードには無い（コードの既定は `noreply@doya-ai.surisuta.jp`） | 例 `ドヤ部下 <noreply@doya-ai.surisuta.jp>` | Vercel の環境変数。アドレスは今のドメインのまま（Resend のドメイン認証は変えなくてよい）。旗が on のときは、コードが送り主の名前の「ドヤAI」を自動で置き換えるが、名前が無い値（アドレスだけ）のときは、この環境変数に名前を足す必要がある |
-| ドリップ配信の送り主の名前（DB `dripSetting` の `fromName`。`src/app/api/cron/drip-sender/route.ts` が読む。`SystemSetting` ではない） | 管理画面で設定した値（コードの既定は「ドヤAI」。seed の例は「三森捷暉｜ドヤマーケ」） | 「ドヤ部下」（または「三森捷暉｜ドヤ部下」）。ドヤマーケの名前を使うかは本人が決める | 管理画面 `/admin/drip/settings` |
-| ドリップ配信・ようこそメールの本文のひな形（DB・管理画面） | 「ドヤAI」と書いてある所 | 「ドヤ部下」 | 管理画面のメールの編集。コードの中の固定の文は旗で自動 |
-| Slack の通知 | 見出しの札「ドヤAI」 | 「ドヤ部下」 | コードの中は旗で自動。Slack の Incoming Webhook アプリの表示名は、Slack の管理画面で変える |
-| メールの本文の置き換えの範囲 | — | — | 旗が all のとき、`src/lib/email.ts` は、送るメールの件名・本文・送り主の「ドヤAI」をすべて「ドヤ部下」に置き換える。利用者が書いた文（問い合わせの引用など）に「ドヤAI」があれば、それも置き換わる。ドヤAIO・ドヤAI質問リンク・ドヤAI商談は置き換えない |
-| サポートチャットの返信メール | 件名「【ドヤAI】お問い合わせへのご返信」、署名「ドヤAI 運営」 | 「【ドヤ部下】…」「ドヤ部下 運営」 | コードの中は旗で自動 |
+| `RESEND_FROM_EMAIL`（Vercel の環境変数） | 値は Vercel にあり、コードには無い（コードの既定は `noreply@doya-ai.surisuta.jp`） | 例 `ドヤバディ <noreply@doya-ai.surisuta.jp>` | Vercel の環境変数。アドレスは今のドメインのまま（Resend のドメイン認証は変えなくてよい）。旗が on のときは、コードが送り主の名前の「ドヤAI」を自動で置き換えるが、名前が無い値（アドレスだけ）のときは、この環境変数に名前を足す必要がある |
+| ドリップ配信の送り主の名前（DB `dripSetting` の `fromName`。`src/app/api/cron/drip-sender/route.ts` が読む。`SystemSetting` ではない） | 管理画面で設定した値（コードの既定は「ドヤAI」。seed の例は「三森捷暉｜ドヤマーケ」） | 「ドヤバディ」（または「三森捷暉｜ドヤバディ」）。ドヤマーケの名前を使うかは本人が決める | 管理画面 `/admin/drip/settings` |
+| ドリップ配信・ようこそメールの本文のひな形（DB・管理画面） | 「ドヤAI」と書いてある所 | 「ドヤバディ」 | 管理画面のメールの編集。コードの中の固定の文は旗で自動 |
+| Slack の通知 | 見出しの札「ドヤAI」 | 「ドヤバディ」 | コードの中は旗で自動。Slack の Incoming Webhook アプリの表示名は、Slack の管理画面で変える |
+| メールの本文の置き換えの範囲 | — | — | 旗が all のとき、`src/lib/email.ts` は、送るメールの件名・本文・送り主の「ドヤAI」をすべて「ドヤバディ」に置き換える。利用者が書いた文（問い合わせの引用など）に「ドヤAI」があれば、それも置き換わる。ドヤAIO・ドヤAI質問リンク・ドヤAI商談は置き換えない |
+| サポートチャットの返信メール | 件名「【ドヤAI】お問い合わせへのご返信」、署名「ドヤAI 運営」 | 「【ドヤバディ】…」「ドヤバディ 運営」 | コードの中は旗で自動 |
 
 ## 3. Stripe（お金に関わる。本人が確認して変える）
 
 | 場所 | いまの値 | 新しい値 | メモ |
 |---|---|---|---|
-| 商品名（商品カタログ） | Stripe の管理画面で確認（コードには商品名が無い。価格 ID は環境変数 `STRIPE_PRICE_*`） | 「ドヤ部下 プロ」など | 価格 ID は変えない（名前だけ変える） |
-| 請求書・領収書に出る事業者名・サービス名 | Stripe の管理画面で確認 | 「株式会社スリスタ」＋サービス名「ドヤ部下」 | 設定 → 公開情報 |
-| カードの明細に出る名前（statement descriptor） | Stripe の管理画面で確認 | 例 `DOYA BUKA` | 変えると、カードの明細の表記が変わる。利用者へのお知らせと合わせる |
+| 商品名（商品カタログ） | Stripe の管理画面で確認（コードには商品名が無い。価格 ID は環境変数 `STRIPE_PRICE_*`） | 「ドヤバディ プロ」など | 価格 ID は変えない（名前だけ変える） |
+| 請求書・領収書に出る事業者名・サービス名 | Stripe の管理画面で確認 | 「株式会社スリスタ」＋サービス名「ドヤバディ」 | 設定 → 公開情報 |
+| カードの明細に出る名前（statement descriptor） | Stripe の管理画面で確認 | 例 `DOYA BUDDY` | 変えると、カードの明細の表記が変わる。利用者へのお知らせと合わせる |
 | 顧客に送る Stripe のメール（領収書など） | 同上 | 同上 | Stripe の「メール」の設定 |
 
 ## 4. HubSpot
@@ -45,9 +57,9 @@
 
 | 場所 | いまの値 | 新しい値 | やり方 |
 |---|---|---|---|
-| `public/site.webmanifest`（`name`・`short_name`） | 「ドヤAI」 | 「ドヤ部下」 | `node scripts/brand/rename-public.cjs --write`（切り替える日に実行。変える所の一覧は、`--write` 無しで見られる） |
-| `public/resources/doya-ai/*.html`（配布資料3本） | 「ドヤAI」 | 「ドヤ部下」 | 同じスクリプトで書き換える |
-| OGP 画像（`public/ogp/*`） | 旧ロゴ・旧名が入っている可能性 | 新しいロゴの OGP | `scripts/brand/build-assets.py` と `render-logos.cjs`（ロゴが決まったら実行。ひな形と仮の試作は `docs/design/brand/doya-buka-assets/`） |
+| `public/site.webmanifest`（`name`・`short_name`） | 「ドヤAI」 | 「ドヤバディ」 | `node scripts/brand/rename-public.cjs --write`（切り替える日に実行。変える所の一覧は、`--write` 無しで見られる） |
+| `public/resources/doya-ai/*.html`（配布資料3本） | 「ドヤAI」 | 「ドヤバディ」 | 同じスクリプトで書き換える |
+| OGP 画像（`public/ogp/*`） | 旧ロゴ・旧名が入っている可能性 | 新しいロゴの OGP | `scripts/brand/build-assets.py` と `render-logos.cjs`（ロゴが決まったら実行。ひな形と仮の試作は `docs/design/brand/doya-buddy-assets/`） |
 | `public/logo.png`（構造化データのロゴ） | 旧ロゴ | 新しい文字入りロゴ | 同上 |
 | メールの見出し画像 | 旧ロゴ | 新しいロゴ | 同上（ひな形あり） |
 | ファビコン・アップルのアイコン | クマのマーク（文字なし） | 変えなくてよい（マークは同じ） | ロゴでマークも変える場合だけ |

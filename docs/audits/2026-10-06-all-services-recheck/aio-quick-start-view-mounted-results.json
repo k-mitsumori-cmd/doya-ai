@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:23:58.693Z",
+  "checkedAt": "2026-10-31T11:13:17.914Z",
   "passed": 6,
   "expected": 6,
   "checks": [
@@ -12,9 +12,9 @@
   ],
   "sourceHashes": {
     "src/app/(shell)/aio/Entry.tsx": "20b3026308ccccc94171f418572c10afca2bb69f5565b4d7e2335db373e33987",
-    "src/app/(shell)/aio/[orgSlug]/scan/page.tsx": "74f0aa7a64846f0e388999a764de58d33a70ff01a64d08ed49cb11e799a2aff0",
+    "src/app/(shell)/aio/[orgSlug]/scan/page.tsx": "95bcf1c1be9669e0689b919bb4ce2a431b28db32d724d20508c418f50e8a59b1",
     "src/components/aio/quick-start-status.tsx": "702c32f1f242ca3d59d511cfe5a59ae4043c38f155f58ea0966158b63c25644f",
-    "scripts/security-regression/verify-aio-quick-start-view-mounted.cjs": "0bef8f80b14ddef0b11b8ace25a86fdfac19e90afef6f0b7c21ee77cbce5273b"
+    "scripts/security-regression/verify-aio-quick-start-view-mounted.cjs": "3b5886516d824d32f4ea368ad67380de90c682be326beb277b4d42deaf6a64b7"
   },
   "scope": "Mounted actual integrated Entry/Scan/status with real bounded membership reader, synthetic quick-start hook and router. Hook behavior separately covered20 cases. No native/Next/production proof."
 }

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { RENAME_ANNOUNCEMENT, RENAME_NEWS, RENAME_NEWS_PATH, renameAnnouncements, renameDate, renameDateLabel } from './rename-news'
+import { RENAME_ANNOUNCEMENT, RENAME_ANNOUNCEMENT_ID, RENAME_NEWS, RENAME_NEWS_PATH_PREV, RENAME_NEWS_PATH, renameAnnouncements, renameDate, renameDateLabel } from './rename-news'
 import { activeAnnouncements } from '../notice/announcements'
 
 test('旗が off の間は、お知らせの一覧に入らない（今のお知らせのまま）', () => {
@@ -43,15 +43,15 @@ test('日付: 決まった形だけ受け取り、「2026年11月1日」の形�
 })
 
 test('文面: 旧名と新名が入り、URL・料金・アカウントが変わらないと書き、絵文字・感嘆符を使わない', () => {
-  assert.ok(RENAME_NEWS.title.includes('ドヤAI') && RENAME_NEWS.title.includes('ドヤ部下'))
+  assert.ok(RENAME_NEWS.title.includes('ドヤAI') && RENAME_NEWS.title.includes('ドヤバディ'))
   assert.ok(RENAME_ANNOUNCEMENT.body.includes('URL・料金・アカウント'))
-  const all = [RENAME_NEWS.title, RENAME_NEWS.description, RENAME_NEWS.lead('2026年11月1日'), RENAME_ANNOUNCEMENT.body, ...RENAME_NEWS.changes, ...RENAME_NEWS.unchanged, ...RENAME_NEWS.faq.flatMap((f) => [f.q, f.a])].join('\n')
+  const all = [RENAME_NEWS.title, RENAME_NEWS.description, RENAME_NEWS.lead('2026年11月1日'), RENAME_NEWS.prevNote, RENAME_ANNOUNCEMENT.body, ...RENAME_NEWS.changes, ...RENAME_NEWS.unchanged, ...RENAME_NEWS.faq.flatMap((f) => [f.q, f.a])].join('\n')
   assert.ok(!/！|!|\p{Extended_Pictographic}/u.test(all))
   assert.ok(RENAME_NEWS.unchanged.some((t) => t.includes('doya-ai.surisuta.jp')))
 })
 
 test('お知らせのページ: 旗が off のときは、メタデータに新しい名前を出さない（404 の画面にも出ない）', () => {
-  const src = readFileSync(join(process.cwd(), 'src/app/news/rename-doya-buka/page.tsx'), 'utf8')
+  const src = readFileSync(join(process.cwd(), 'src/app/news/rename-doya-buddy/page.tsx'), 'utf8')
   assert.match(src, /export const metadata: Metadata = isBrandRenamed\(\)/)
   assert.match(src, /if \(!isBrandRenamed\(\)\) notFound\(\)/)
 })
@@ -60,4 +60,15 @@ test('日付: ない日付（13月・2月30日）は受け取らず、既定の�
   assert.equal(renameDate('2026-13-01'), '2026-11-01')
   assert.equal(renameDate('2026-02-30'), '2026-11-01')
   assert.equal(renameDate('2026-12-20'), '2026-12-20')
+})
+
+test('前の名前（ドヤ部下）の案内: 旧URLを新しいURLへ恒久転送し、お知らせは id を新しくして、前の名前にふれる', () => {
+  assert.equal(RENAME_NEWS_PATH, '/news/rename-doya-buddy')
+  assert.equal(RENAME_NEWS_PATH_PREV, '/news/rename-doya-buka')
+  assert.notEqual(RENAME_ANNOUNCEMENT_ID, 'announce:brand-rename-doya-buka', '前の id のままだと、昨日見た人に出ない')
+  assert.ok(RENAME_NEWS.prevNote.includes('ドヤ部下'))
+  assert.ok(!RENAME_NEWS.lead().includes('年'), '本文の最初の文に日付を入れない（旗の日付は前の名前に切り替えた日）')
+  assert.ok(RENAME_NEWS.prevNote.includes('改めました'))
+  const cfg = readFileSync(join(process.cwd(), 'next.config.js'), 'utf8')
+  assert.ok(/source: '\/news\/rename-doya-buka', destination: '\/news\/rename-doya-buddy', permanent: true/.test(cfg), 'next.config.js に 308 の転送がある')
 })

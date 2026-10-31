@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 const { Resvg } = require('@resvg/resvg-js')
-const root = path.resolve((process.argv[2] && process.argv[2] !== 'native' ? process.argv[2] : '') || path.join(__dirname, '../../docs/design/brand/doya-buka-logo-proposals'))
+const root = path.resolve((process.argv[2] && process.argv[2] !== 'native' ? process.argv[2] : '') || path.join(__dirname, '../../docs/design/brand/doya-buddy-logo-proposals'))
 const native = process.argv.includes('native')
 let n = 0
 for (const dir of fs.readdirSync(root)) {

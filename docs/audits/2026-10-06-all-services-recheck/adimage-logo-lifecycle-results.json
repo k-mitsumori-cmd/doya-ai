@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:26:16.652Z",
+  "checkedAt": "2026-10-31T11:13:01.969Z",
   "passed": 15,
   "cases": [
     "Client file+pos uses declared22%/4% defaults; explicit zero padding remains zero",

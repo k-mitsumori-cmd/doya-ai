@@ -1,5 +1,5 @@
 // ============================================
-// 名前の変更のお知らせ（ドヤAI → ドヤ部下）の文面。アプリ内の知らせと、お知らせのページが使う
+// 名前の変更のお知らせ（ドヤAI → ドヤバディ）の文面。アプリ内の知らせと、お知らせのページが使う
 // ============================================
 // ⚠️ このファイルには旧名「ドヤAI」を、わざと書いている。src/lib/brand/ は、ビルド時の置き換え（scripts/brand/rename-loader.cjs）の対象外。
 // ⚠️ 文面は、本人と法務の確認前の案。yomiyasu の原則（短い文・主語と述語・比喩なし・絵文字なし）で書く。
@@ -7,8 +7,11 @@
 import { BRAND_EN_NEW, BRAND_NAME_NEW, BRAND_NAME_OLD } from './index'
 import { isBrandRenamed } from './flag'
 
-export const RENAME_NEWS_PATH = '/news/rename-doya-buka'
-export const RENAME_ANNOUNCEMENT_ID = 'announce:brand-rename-doya-buka'
+export const RENAME_NEWS_PATH = '/news/rename-doya-buddy'
+/** 2026-10-30 に出した、前の名前（ドヤ部下）の案内のページ。いまのページへ恒久転送する（next.config.js） */
+export const RENAME_NEWS_PATH_PREV = '/news/rename-doya-buka'
+/** 前の名前の案内を見た人にも、もう一度出すため、id を新しくしてある（前は announce:brand-rename-doya-buka） */
+export const RENAME_ANNOUNCEMENT_ID = 'announce:brand-rename-doya-buddy'
 
 /** 切り替える日（YYYY-MM-DD、日本時間）。環境変数が無いときは、旗を on にしたビルドの既定日 */
 export function renameDate(raw: string | undefined = process.env.NEXT_PUBLIC_BRAND_RENAME_DATE): string {
@@ -29,11 +32,14 @@ export function renameDateLabel(date: string = renameDate()): string {
 export const RENAME_NEWS = {
   title: `${BRAND_NAME_OLD}は「${BRAND_NAME_NEW}」に名前が変わりました`,
   description: `サービス名「${BRAND_NAME_OLD}」を「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。URL・料金・アカウントは、これまでと同じです。`,
-  lead: (dateLabel: string) =>
-    `${dateLabel}に、サービス名を「${BRAND_NAME_OLD}」から「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。サービスの中身は、これまでと同じです。`,
+  /** 日付は、前の名前（ドヤ部下）に切り替えた日（旗の日付）と同じになるため、この文には入れない。引数は互換のため残す */
+  lead: (_dateLabel?: string) =>
+    `サービス名を「${BRAND_NAME_OLD}」から「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。サービスの中身は、これまでと同じです。`,
+  /** 前の名前（ドヤ部下）を案内した人への一言 */
+  prevNote: `2026年10月30日に、いったん「ドヤ部下」（英語表記 DOYA BUKA）とお知らせしました。その後、名前を「${BRAND_NAME_NEW}」に改めました。ご案内が変わったことをお詫びします。`,
   changes: [
-    'サービス名とロゴが「ドヤ部下」になります。',
-    '画面・メール・お知らせの表記が「ドヤ部下」になります。',
+    'サービス名とロゴが「ドヤバディ」になります。',
+    '画面・メール・お知らせの表記が「ドヤバディ」になります。',
     '検索で「ドヤAI」と入れても、このサービスが見つかるようにしています。',
   ],
   unchanged: [
@@ -55,7 +61,7 @@ export const RENAME_NEWS = {
 export const RENAME_ANNOUNCEMENT = {
   id: RENAME_ANNOUNCEMENT_ID,
   title: `${BRAND_NAME_OLD}は「${BRAND_NAME_NEW}」に名前が変わりました`,
-  body: 'サービス名だけが変わります。URL・料金・アカウントは、これまでと同じです。くわしくは、お知らせのページをご覧ください。',
+  body: 'サービス名だけが変わります。10月30日にお知らせした「ドヤ部下」から、「ドヤバディ」に改めました。URL・料金・アカウントは、これまでと同じです。くわしくは、お知らせのページをご覧ください。',
   href: RENAME_NEWS_PATH,
   pose: 'hello',
 } as const

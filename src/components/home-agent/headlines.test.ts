@@ -24,12 +24,12 @@ test('問いかけ型と名乗り出る型が、だいたい半々（名前の�
   assert.ok(Math.abs(a2 - (all.length - a2)) <= 3)
 })
 
-test('名前（ドヤ部下）が入る言葉は、旗が on のときだけ候補に入る。ドヤAI とは書かない', () => {
-  assert.ok(headlineCandidates({ renamed: false, hour: 12 }).every((h) => !h.text.includes('ドヤ部下') && !h.named))
-  assert.ok(headlineCandidates({ renamed: true, hour: 12 }).some((h) => h.text.includes('ドヤ部下')))
+test('名前（ドヤバディ）が入る言葉は、旗が on のときだけ候補に入る。ドヤAI とは書かない', () => {
+  assert.ok(headlineCandidates({ renamed: false, hour: 12 }).every((h) => !h.text.includes('ドヤバディ') && !h.named))
+  assert.ok(headlineCandidates({ renamed: true, hour: 12 }).some((h) => h.text.includes('ドヤバディ')))
   for (const h of HEADLINES) assert.ok(!h.text.includes('ドヤAI'), h.text)
-  for (const h of HEADLINES.filter((x) => !x.named)) assert.ok(!h.text.includes('部下'), `${h.text}: 名前の旗が off の候補に「部下」を出さない`)
-  for (const h of HEADLINES) assert.equal(Boolean(h.named), h.text.includes('部下'), `${h.text}: named の印と「部下」が合う`)
+  for (const h of HEADLINES.filter((x) => !x.named)) assert.ok(!h.text.includes('バディ'), `${h.text}: 名前の旗が off の候補に「バディ」を出さない`)
+  for (const h of HEADLINES) assert.equal(Boolean(h.named), h.text.includes('バディ'), `${h.text}: named の印と「バディ」が合う`)
 })
 
 test('時間帯: 朝・昼・夜の言葉は、その時間帯だけ。ほかの時間帯には出ない', () => {

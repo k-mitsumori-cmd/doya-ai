@@ -5,6 +5,7 @@
 // 画像は表示の 2 倍の解像度（64 / 128 の webp）を使い、width と height を必ず指定してずれを防ぐ。
 // ============================================
 import Image from 'next/image'
+import { isBrandRenamed } from '@/lib/brand'
 
 type Props = {
   /** 記号の一辺（px）。 */
@@ -17,7 +18,12 @@ type Props = {
 
 export function DoyaLogoMark({ size = 28, className }: { size?: number; className?: string }) {
   // 表示 32px 以下は 64px（2倍）、それより大きければ 128px を使う
-  const src = size <= 32 ? '/brand/doya-logo-mark-64.webp' : '/brand/doya-logo-mark-128.webp'
+  // 旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときは、ドヤバディの新しいアイコン（青い板にドヤ顔のクマ）。off の間は今の記号のまま
+  const renamed = isBrandRenamed()
+  const small = size <= 32
+  const src = renamed
+    ? small ? '/brand/doya-buddy/icon/doya-buddy-icon-64.png' : '/brand/doya-buddy/icon/doya-buddy-icon-128.png'
+    : small ? '/brand/doya-logo-mark-64.webp' : '/brand/doya-logo-mark-128.webp'
   return (
     <Image
       src={src}
