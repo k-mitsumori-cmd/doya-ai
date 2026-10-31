@@ -190,7 +190,11 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   return (
     <Card>
       <SectionTitle step="ステップ1" title="録音" kun={{ pose: 'mic', act: 'idle' }} desc="mp3・m4a・wav・mp4 などの録音ファイルをアップロードしてください（90分・1GBまで）。" />
-      <input ref={inputRef} type="file" accept="audio/*,video/mp4,video/quicktime" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+      <input ref={inputRef} type="file" accept="audio/*,video/mp4,video/quicktime" className="hidden" onChange={(e) => {
+        const file = e.currentTarget.files?.[0]
+        e.currentTarget.value = ''
+        if (file) void upload(file)
+      }} />
       <div className="flex flex-wrap items-center gap-2">
         <Button variant={data.audio.uploaded ? 'secondary' : 'primary'} onClick={() => inputRef.current?.click()} disabled={progress !== null || busy}>
           <Upload className="h-4 w-4" aria-hidden="true" />
@@ -427,7 +431,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
     setFailure(e)
   }
 
-  const upload = async (files: FileList) => {
+  const upload = async (files: File[]) => {
     setError(null)
     for (const file of Array.from(files)) {
       setUploading(file.name)
@@ -463,7 +467,12 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
   return (
     <Card>
       <SectionTitle step="ステップ2" title="写真" kun={{ pose: 'camera', act: 'idle' }} desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => e.target.files && upload(e.target.files)} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => {
+        // value を空にすると FileList も空になるため、選んだ写真を先に控える。
+        const files = Array.from(e.currentTarget.files || [])
+        e.currentTarget.value = ''
+        if (files.length) void upload(files)
+      }} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {data.photos.map((p) => (
           <div key={p.id} className={`overflow-hidden rounded-[var(--r-sm)] border ${p.usage === 'thumbnail' ? 'border-[var(--blue)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)]'}`}>
