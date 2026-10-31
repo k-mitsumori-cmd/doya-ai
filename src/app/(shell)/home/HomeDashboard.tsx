@@ -261,7 +261,7 @@ function CompanySetupNote({ initiallyHidden, doyaPower }: { initiallyHidden: boo
 }
 
 function TodayCard({ summary }: { summary: HomeSummary }) {
-  const items = todayItems(summary)
+  const items = todayItems(summary, new Date(summary.generatedAt).getTime())
   return (
     <section className={styles.today} aria-labelledby="home-today">
       <h2 id="home-today" className={styles.todayTitle}>今日やること</h2>
@@ -332,8 +332,8 @@ function jstDateKey(iso: string | Date) {
   return `${j.getUTCFullYear()}-${String(j.getUTCMonth() + 1).padStart(2, '0')}-${String(j.getUTCDate()).padStart(2, '0')}`
 }
 
-function MiniCalendar({ events }: { events: HomeEvent[] }) {
-  const today = jstDateKey(new Date())
+function MiniCalendar({ events, generatedAt }: { events: HomeEvent[]; generatedAt: string }) {
+  const today = jstDateKey(generatedAt)
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState(today)
   const [y0, m0] = today.split('-').map(Number)
@@ -477,15 +477,17 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
 
   const s = summary
   const c = s.contract
+  // 初回描画はサーバーとブラウザで同じ集計時刻・日本時間を使う。
+  // 実行環境の時計やタイムゾーンで挨拶・時点・日付が変わると hydration が失敗する。
   const greeting = (() => {
-    const h = new Date().getHours()
+    const h = (new Date(s.generatedAt).getUTCHours() + 9) % 24
     return h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'おつかれさまです'
   })()
-  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
   // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
   const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
   const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
-  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : null
+  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }) : null
 
   return (
     <div className={styles.page}>
@@ -545,7 +547,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
       <div className={styles.gridWide}>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>カレンダー</h2><span className={styles.badge}>仮</span></div>
-          <MiniCalendar events={s.events} />
+          <MiniCalendar events={s.events} generatedAt={s.generatedAt} />
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
