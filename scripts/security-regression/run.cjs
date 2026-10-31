@@ -1509,6 +1509,8 @@ const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, '
 if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
 const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-new-validation-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
+const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
 const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);

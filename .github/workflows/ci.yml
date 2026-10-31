@@ -53,6 +53,9 @@ jobs:
       - name: SEO list activity and pagination (private Unix socket, no providers)
         run: python3 scripts/regression/seo-list-postgres.py
 
+      - name: Shanai storage deletion and concurrent registration (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-shanai-storage-postgres.py
+
       - name: Save synthetic native PDF evidence
         if: always()
         uses: actions/upload-artifact@v4
