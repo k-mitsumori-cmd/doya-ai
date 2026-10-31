@@ -27,7 +27,7 @@ export default function MediaUploadPage() {
     <main className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="text-xl font-black text-slate-900">動画・音声の取り込み</h1>
       <p className="mt-2 text-sm text-slate-600">
-        数百MBから数GBのファイルも送れます。複数のファイルをまとめて選べます。
+        1ファイル20GBまでの動画・音声を送れます。複数のファイルをまとめて選べます。
       </p>
       <div className="mt-6">
         <MultipartUploadQueue onDone={f => setDone(d => [...d, { fileName: f.fileName, fileSize: f.fileSize }])} />

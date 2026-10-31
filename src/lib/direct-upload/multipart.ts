@@ -27,13 +27,14 @@ import prisma from '@/lib/prisma'
 
 export const MULTIPART_BUCKET = process.env.DIRECT_UPLOAD_MULTIPART_BUCKET || 'direct-uploads'
 /** 1本の上限。バケット側の上限（Supabase の設定）と小さい方が効く */
-export const MULTIPART_MAX_FILE_SIZE = Number(process.env.DIRECT_UPLOAD_MULTIPART_MAX_BYTES) || 5 * 1024 * 1024 * 1024
+export const MULTIPART_MAX_FILE_SIZE = Number(process.env.DIRECT_UPLOAD_MULTIPART_MAX_BYTES) || 20 * 1024 * 1024 * 1024
 export const MULTIPART_MIN_PART = 16 * 1024 * 1024 // 8〜16MB の範囲。S3 の最小 5MB より大きく
 const MAX_PARTS = 10000
 const PRESIGN_EXPIRES = 3600
 /** 1人が同時に進められる送信の数と、その申告サイズの合計（途中のデータを溜め込ませない） */
 const MAX_ACTIVE_SESSIONS = 6
-const MAX_ACTIVE_BYTES = 20 * 1024 * 1024 * 1024
+/** 20GB のファイルを 2 本並べて送れる大きさ。環境変数で変えられる */
+const MAX_ACTIVE_BYTES = Number(process.env.DIRECT_UPLOAD_MULTIPART_MAX_ACTIVE_BYTES) || 40 * 1024 * 1024 * 1024
 
 const ALLOWED_PREFIX = ['video/', 'audio/']
 
@@ -67,6 +68,7 @@ export class MultipartError extends Error {
 
 /** ファイルの大きさから 1 パートの大きさを決める（10000 パートを超えない） */
 export function choosePartSize(fileSize: number): number {
+  // 16MB 単位なら 20GB でも 1280 パート。上限を超えるほど大きいファイルだけ、パートを大きくする
   return Math.max(MULTIPART_MIN_PART, Math.ceil(fileSize / (MAX_PARTS - 1)))
 }
 

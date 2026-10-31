@@ -11,6 +11,8 @@ const STORE_KEY = 'doya-multipart-v1'
 const FILE_CONCURRENCY = 2
 const PART_CONCURRENCY = 3
 const PART_RETRIES = 3
+/** サーバーの既定の上限（DIRECT_UPLOAD_MULTIPART_MAX_BYTES で変えた場合も、サーバーが正しい上限で断る） */
+const MAX_FILE_BYTES = 20 * 1024 ** 3
 
 export type QueueStatus = 'queued' | 'uploading' | 'completing' | 'done' | 'error' | 'paused'
 
@@ -89,6 +91,11 @@ export class MultipartQueue {
 
   add(files: File[]) {
     for (const file of files) {
+      if (file.size > MAX_FILE_BYTES) {
+        const key = `${fingerprint(file)}:big`
+        this.items.push({ key, file, status: 'error', percent: 0, etaSeconds: null, bytesPerSecond: 0, error: '1ファイル20GBまでです', objectKey: null, resumed: false })
+        continue
+      }
       const key = `${fingerprint(file)}:${Math.random().toString(36).slice(2, 7)}`
       this.items.push({ key, file, status: 'queued', percent: 0, etaSeconds: null, bytesPerSecond: 0, error: null, objectKey: null, resumed: false })
     }

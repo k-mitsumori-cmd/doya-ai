@@ -1,5 +1,5 @@
 // 直接アップロードの部品の検査（S3 の鍵が無くても動く部分）。実行: npx tsx scripts/direct-upload-check.ts
-import { choosePartSize, MULTIPART_MIN_PART } from '../src/lib/direct-upload/multipart'
+import { choosePartSize, MULTIPART_MIN_PART, MULTIPART_MAX_FILE_SIZE } from '../src/lib/direct-upload/multipart'
 import { isOwnStoragePath } from '../src/lib/direct-upload/server'
 import { normalizeVoiceMime } from '../src/lib/voice/record-upload'
 import { IMAGE_TYPES } from '../src/lib/direct-upload/stage'
@@ -14,7 +14,17 @@ function check(name: string, ok: boolean) {
 
 // パートの大きさ：最小16MB、どんな大きさでも10000パート以内
 check('小さいファイルは最小のパート', choosePartSize(100 * 1024 * 1024) === MULTIPART_MIN_PART)
-for (const gb of [1, 5, 50, 200, 500]) {
+// 1ファイルの既定の上限（20GB）と、1人の同時送信の合計（40GB＝20GBを2本）
+check('既定の上限は20GB', MULTIPART_MAX_FILE_SIZE === 20 * 1024 ** 3)
+{
+  const size = 20 * 1024 ** 3
+  const ps = choosePartSize(size)
+  const total = Math.ceil(size / ps)
+  const last = size - ps * (total - 1)
+  check(`20GB は ${total} パート（16MB単位）で1万以内`, ps === MULTIPART_MIN_PART && total === 1280 && last > 0 && last <= ps)
+  check('S3 の1パート上限5GB以内', ps <= 5 * 1024 ** 3)
+}
+for (const gb of [1, 5, 20, 50, 200, 500]) {
   const size = gb * 1024 ** 3
   const ps = choosePartSize(size)
   check(`${gb}GB が10000パート以内`, Math.ceil(size / ps) <= 10000 && ps >= MULTIPART_MIN_PART)
