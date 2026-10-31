@@ -1070,6 +1070,8 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
 }
 const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const mitsuboshiJapaneseFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-japanese-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiJapaneseFont.error || mitsuboshiJapaneseFont.status !== 0) { console.error('Security regression failed: Mitsuboshi Japanese font'); process.exit(1); }
 const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
 const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
