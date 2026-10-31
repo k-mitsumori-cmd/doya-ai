@@ -163,7 +163,8 @@ function PopupRow({ p, first, last, busy, onAction }: { p: PopupDto; first: bool
 export default function SiteDetailClient({ initial, created }: { initial: SiteDetail; created: boolean }) {
   const router = useRouter()
   const [days, setDays] = useState<7 | 30 | 90>(30)
-  const [data, setData] = useState<SiteDetail>(initial)
+  const [loadedData, setData] = useState<SiteDetail>(initial)
+  const data = loadedData.site.id === initial.site.id ? loadedData : initial
   const [loadError, setLoadError] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -171,6 +172,23 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
   const [confirm, setConfirm] = useState<null | { kind: 'popup'; p: PopupDto } | { kind: 'site' }>(null)
   const { show, node: toast } = useToast()
   const first = useRef(true)
+  const currentSiteId = useRef(initial.site.id)
+  currentSiteId.current = initial.site.id
+  const readActive = useRef(false)
+  const readVersion = useRef(0)
+  const readController = useRef<AbortController | null>(null)
+  const skeletonTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    readActive.current = true
+    return () => {
+      readActive.current = false
+      readVersion.current += 1
+      readController.current?.abort()
+      readController.current = null
+      clearTimeout(skeletonTimer.current)
+    }
+  }, [initial.site.id])
 
   useEffect(() => {
     if (created) show({ message: 'ポップアップの案ができました。プレビューで確かめて、使う案を公開してください。' })
@@ -178,22 +196,37 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
 
   const load = useCallback(
     async (d: number) => {
+      if (!readActive.current || currentSiteId.current !== initial.site.id) return
+      const version = ++readVersion.current
+      readController.current?.abort()
+      clearTimeout(skeletonTimer.current)
+      const controller = new AbortController()
+      readController.current = controller
+      const isCurrent = () => readActive.current && currentSiteId.current === initial.site.id
+        && readVersion.current === version && !controller.signal.aborted
       setLoadError(false)
+      setSwitching(false)
       // 300ms 未満で終わるなら骨組みを出さない（§11）
-      const t = setTimeout(() => setSwitching(true), 300)
+      const t = setTimeout(() => { if (isCurrent()) setSwitching(true) }, 300)
+      skeletonTimer.current = t
       try {
-        const res = await fetch(`/api/popup/sites/${initial.site.id}?days=${d}`, { cache: 'no-store' })
+        const res = await fetch(`/api/popup/sites/${initial.site.id}?days=${d}`, { cache: 'no-store', signal: controller.signal })
+        if (!isCurrent()) return
         if (res.status === 401) {
           window.location.href = `/auth/signin?callbackUrl=/popup/sites/${initial.site.id}`
           return
         }
         if (!res.ok) throw new Error('load')
-        setData(await res.json())
+        const next: SiteDetail = await res.json()
+        if (isCurrent()) setData(next)
       } catch {
-        setLoadError(true)
+        if (isCurrent()) setLoadError(true)
       } finally {
         clearTimeout(t)
-        setSwitching(false)
+        if (isCurrent()) {
+          readController.current = null
+          setSwitching(false)
+        }
       }
     },
     [initial.site.id]
