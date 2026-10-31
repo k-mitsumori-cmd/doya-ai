@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:28:09.389Z",
+  "checkedAt": "2026-10-31T11:24:38.124Z",
   "passed": 18,
   "cases": [
     "Same-frame conversion submits one UUID and expected source version",
@@ -22,12 +22,12 @@
     "Malformed lead page never exposes conversion control"
   ],
   "sourceHashes": {
-    "src/app/(shell)/sfa/[orgSlug]/leads/page.tsx": "e0ea30ec926838d02b61a13736e5fa93e67ea98fbfde2e898b1a8d0b9922acbe",
+    "src/app/(shell)/sfa/[orgSlug]/leads/page.tsx": "6b9987e0bb6e4b7b52eeb4e21c93e0d2d6fa1aac8d35846cf3f2873d48bbc1c7",
     "src/components/sfa/LeadConversionForm.tsx": "7f417e371f1e0b0cabab40ef606fe8d17f0d641767f6a151b15bdf1a9f12ae6f",
-    "src/components/sfa/MutationRecovery.tsx": "d66315703ee358a6c83ac6f3e6d73fc6a0263b0cf0ca913bcbe902e7318659de",
-    "src/lib/sfa/use-client-mutations.ts": "791cb9176954efb80679c8a4647a36a73545db4ccb9b660a99ac2db607d89fb1",
-    "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
-    "scripts/security-regression/sfa-client-fixture.cjs": "8684a806fac4722263b1a7b80b090aac1bfd92b1daa35231b0091745c23e981c"
+    "src/components/sfa/MutationRecovery.tsx": "b5c169887d34022344e475a6264964f3ef400e32496f688858d8f40f2e729132",
+    "src/lib/sfa/use-client-mutations.ts": "cf0c28904cf667ab7f0e5a9bd4a42313068cb9c54e32260ca19080fd31600678",
+    "src/lib/sfa/client-response.ts": "52503359baf4c103ad9f3a6398def97a5e427b98701c93ae783cfb72f5c6186c",
+    "scripts/security-regression/sfa-client-fixture.cjs": "f5bddd33fc5761856f0d7058e56a6940d9b394182c3796e5bf08e1620bf614f5"
   },
   "scope": "Actual leads page/form/shared mutation recovery/actor-org guard/bounded transport mounted under StrictMode; synthetic DOM, auth, routing and network. No real browser, PostgreSQL, customer data or paid provider calls."
 }

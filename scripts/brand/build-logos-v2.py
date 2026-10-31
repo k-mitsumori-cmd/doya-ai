@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ドヤ部下のロゴ案・第2弾（ゼロベース）。青い角丸の四角のクマのマーク（doya-logo-mark）は使わない。
+"""ドヤバディのロゴ案・第2弾（ゼロベース）。青い角丸の四角のクマのマーク（doya-logo-mark）は使わない。
 
 使い方: FONT_DIR=<書体のフォルダ> python3 scripts/brand/build-logos-v2.py [出力フォルダ]
 - 出力: <フォルダ>/<案>/<light|dark|mono>.svg（案 = d1〜d6）。light = 白い背景用、dark = 暗い背景用、mono = 白黒（1色）。
@@ -20,7 +20,7 @@ bl = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(bl)
 
 ROOT = bl.ROOT
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buka-logo-proposals-v2'
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buddy-logo-proposals-v2'
 JP, EN = bl.JP_FULL, bl.EN_FULL
 JP1, JP2 = bl.JP1, bl.JP2
 NAVY, BLUE = bl.NAVY, bl.BLUE
@@ -63,7 +63,7 @@ def sub(p, x, base, size=26, color=None, track=0.3, font='zen-maru-bold.ttf'):
 
 
 def d1(p):
-    """文字だけ: ドヤ顔の勢いで少し傾けた字。「ドヤ」と「部下」の間に点"""
+    """文字だけ: ドヤ顔の勢いで少し傾けた字。「ドヤ」と「バディ」の間に点"""
     f = 'dela.ttf'
     a, wa = tp(f, JP1, 128, 40, 150, 0.0, p['accent'])
     dot = f'<circle cx="{40 + wa + 22:.1f}" cy="108" r="9" fill="{p["ink"]}"/>'
@@ -71,7 +71,7 @@ def d1(p):
     x_end = 40 + wa + 44 + wb
     rays = ''.join(f'<path d="M{x_end + 14 + i * 4:.1f},{40 + i * 22} l22,-{10 - i * 2}" stroke="{p["accent"]}" stroke-width="7" stroke-linecap="round"/>' for i in range(3))
     s, _ = sub(p, 44, 196, 24, p['ink'], 0.42, f)
-    return 720, 220, f'<g transform="skewX(-7) translate(24,0)">{a}{dot}{b}</g>{rays}{s}'
+    return 800, 220, f'<g transform="skewX(-7) translate(24,0)">{a}{dot}{b}</g>{rays}{s}'
 
 
 def d2(p):
@@ -97,7 +97,7 @@ def d3(p):
     a, wa = tp('zen-maru-black.ttf', JP1, 112, 262, 126, 0.02, p['accent'])
     b, wb = tp('zen-maru-black.ttf', JP2, 112, 262 + wa + 2, 126, 0.02, p['ink'])
     s, _ = sub(p, 266, 176, 26, p['ink'], 0.42)
-    return 720, 216, f'{bub}{chk}{a}{b}{s}'
+    return 860, 216, f'{bub}{chk}{a}{b}{s}'
 
 
 def d4(p):
@@ -111,12 +111,12 @@ def d4(p):
     a, wa = tp('mplus-rounded-black.ttf', JP1, 112, 236, 144, 0.02, p['accent'])
     b, wb = tp('mplus-rounded-black.ttf', JP2, 112, 236 + wa + 2, 144, 0.02, p['ink'])
     s, _ = sub(p, 240, 192, 26, p['ink'], 0.42, 'mplus-rounded-black.ttf')
-    return 720, 216, f'{head}{hand}{a}{b}{s}'
+    return 840, 216, f'{head}{hand}{a}{b}{s}'
 
 
 def d5(p):
     """円の中のクマとネクタイ。たてに積む"""
-    cx, cy = 240, 112
+    cx, cy = 290, 112
     clip = f'<clipPath id="c5"><circle cx="{cx}" cy="{cy}" r="84"/></clipPath>'
     ring = f'<circle cx="{cx}" cy="{cy}" r="90" fill="none" stroke="{p["ink"]}" stroke-width="8"/>'
     head = bear_head(cx, cy - 6, 56, p)
@@ -125,16 +125,16 @@ def d5(p):
     a, wa = tp('zen-maru-black.ttf', JP1, 96, 0, 0, 0.02, p['accent'])
     b, wb = tp('zen-maru-black.ttf', JP2, 96, 0, 0, 0.02, p['ink'])
     W = wa + wb + 0.02 * 96
-    x0 = (480 - W) / 2
+    x0 = (580 - W) / 2
     a, _ = tp('zen-maru-black.ttf', JP1, 96, x0, 306, 0.02, p['accent'])
     b, _ = tp('zen-maru-black.ttf', JP2, 96, x0 + wa + 2, 306, 0.02, p['ink'])
     s, ws = sub(p, 0, 348, 24, p['accent'], 0.4)
-    s, _ = sub(p, (480 - ws) / 2, 348, 24, p['accent'], 0.4)
-    return 480, 372, f'{clip}{ring}{head}{tie}{a}{b}{s}'
+    s, _ = sub(p, (580 - ws) / 2, 348, 24, p['accent'], 0.4)
+    return 580, 372, f'{clip}{ring}{head}{tie}{a}{b}{s}'
 
 
 def d6(p):
-    """文字と一体: 「部」のうえからクマがのぞく"""
+    """文字と一体: 「バ」のうえからクマがのぞく"""
     f = 'zen-maru-black.ttf'
     size = 150
     a, wa = tp(f, JP1, size, 40, 232, 0.0, p['accent'])
@@ -143,16 +143,16 @@ def d6(p):
     head = bear_head(bx, 70, 44, p)
     paws = ''.join(f'<ellipse cx="{bx + sx * 40:.1f}" cy="116" rx="17" ry="12" fill="{p["head"]}"/>' for sx in (-1, 1))
     s, _ = sub(p, 46, 276, 24, p['ink'], 0.42)
-    return 700, 300, f'{a}{b}{paws}{head}{s}'
+    return 840, 300, f'{a}{b}{paws}{head}{s}'
 
 
 DESIGNS = {
-    'd1': (d1, '文字だけ（ドヤ顔の傾き）', '「ドヤ」と「部下」の字を少し傾けて、ドヤ顔の勢いを出す。間の点は、頼んだ仕事に「了解」と答える間。'),
-    'd2': (d2, '文字だけ（名札）', '社員証の形の枠に名前を入れる。「部下」として働く、という立ち位置を示す。'),
+    'd1': (d1, '文字だけ（ドヤ顔の傾き）', '「ドヤ」と「バディ」の字を少し傾けて、ドヤ顔の勢いを出す。間の点は、頼んだ仕事に「了解」と答える間。'),
+    'd2': (d2, '文字だけ（名札）', '社員証の形の枠に名前を入れる。いっしょに働く「バディ」という立ち位置を示す。'),
     'd3': (d3, 'シンボル（吹き出しとチェック）', '頼むと「了解」と返ってくることを、吹き出しとチェックで表す。四角を使わない。'),
     'd4': (d4, 'シンボル（敬礼するクマ）', 'ドヤくんの顔と敬礼で、「任せてください」を表す。顔だけを切り抜き、四角に入れない。'),
     'd5': (d5, 'シンボル（円・クマとネクタイ）', 'ネクタイを締めたクマを円で囲む。スタンプやアイコンとして小さくも使える、たて積みの形。'),
-    'd6': (d6, '文字と一体（のぞくクマ）', '「部」の字のうえからドヤくんがのぞく。文字の一部として、キャラクターが居場所を持つ。'),
+    'd6': (d6, '文字と一体（のぞくクマ）', '「バ」の字のうえからドヤくんがのぞく。文字の一部として、キャラクターが居場所を持つ。'),
 }
 
 
