@@ -40,7 +40,7 @@ function InstallCard({ site }: { site: SiteDetail['site'] }) {
         {site.lastSeenAt ? (
           <span className="pd-chip pd-chip-ok">
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-            設置を確認しました（{new Date(site.lastSeenAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}）
+            設置を確認しました（{new Date(site.lastSeenAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}）
           </span>
         ) : (
           <span className="pd-chip pd-chip-note">
