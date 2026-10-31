@@ -32,10 +32,11 @@ export function renameDateLabel(date: string = renameDate()): string {
 export const RENAME_NEWS = {
   title: `${BRAND_NAME_OLD}は「${BRAND_NAME_NEW}」に名前が変わりました`,
   description: `サービス名「${BRAND_NAME_OLD}」を「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。URL・料金・アカウントは、これまでと同じです。`,
-  lead: (dateLabel: string) =>
-    `${dateLabel}に、サービス名を「${BRAND_NAME_OLD}」から「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。サービスの中身は、これまでと同じです。`,
+  /** 日付は、前の名前（ドヤ部下）に切り替えた日（旗の日付）と同じになるため、この文には入れない。引数は互換のため残す */
+  lead: (_dateLabel?: string) =>
+    `サービス名を「${BRAND_NAME_OLD}」から「${BRAND_NAME_NEW}」（英語表記 ${BRAND_EN_NEW}）に変えました。サービスの中身は、これまでと同じです。`,
   /** 前の名前（ドヤ部下）を案内した人への一言 */
-  prevNote: `2026年10月30日に、いったん「ドヤ部下」（英語表記 DOYA BUKA）とお知らせしました。名前を「${BRAND_NAME_NEW}」に改めます。ご案内が変わったことをお詫びします。`,
+  prevNote: `2026年10月30日に、いったん「ドヤ部下」（英語表記 DOYA BUKA）とお知らせしました。その後、名前を「${BRAND_NAME_NEW}」に改めました。ご案内が変わったことをお詫びします。`,
   changes: [
     'サービス名とロゴが「ドヤバディ」になります。',
     '画面・メール・お知らせの表記が「ドヤバディ」になります。',

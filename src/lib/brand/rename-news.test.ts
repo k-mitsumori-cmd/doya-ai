@@ -45,7 +45,7 @@ test('日付: 決まった形だけ受け取り、「2026年11月1日」の形�
 test('文面: 旧名と新名が入り、URL・料金・アカウントが変わらないと書き、絵文字・感嘆符を使わない', () => {
   assert.ok(RENAME_NEWS.title.includes('ドヤAI') && RENAME_NEWS.title.includes('ドヤバディ'))
   assert.ok(RENAME_ANNOUNCEMENT.body.includes('URL・料金・アカウント'))
-  const all = [RENAME_NEWS.title, RENAME_NEWS.description, RENAME_NEWS.lead('2026年11月1日'), RENAME_ANNOUNCEMENT.body, ...RENAME_NEWS.changes, ...RENAME_NEWS.unchanged, ...RENAME_NEWS.faq.flatMap((f) => [f.q, f.a])].join('\n')
+  const all = [RENAME_NEWS.title, RENAME_NEWS.description, RENAME_NEWS.lead('2026年11月1日'), RENAME_NEWS.prevNote, RENAME_ANNOUNCEMENT.body, ...RENAME_NEWS.changes, ...RENAME_NEWS.unchanged, ...RENAME_NEWS.faq.flatMap((f) => [f.q, f.a])].join('\n')
   assert.ok(!/！|!|\p{Extended_Pictographic}/u.test(all))
   assert.ok(RENAME_NEWS.unchanged.some((t) => t.includes('doya-ai.surisuta.jp')))
 })
@@ -67,6 +67,8 @@ test('前の名前（ドヤ部下）の案内: 旧URLを新しいURLへ恒久転
   assert.equal(RENAME_NEWS_PATH_PREV, '/news/rename-doya-buka')
   assert.notEqual(RENAME_ANNOUNCEMENT_ID, 'announce:brand-rename-doya-buka', '前の id のままだと、昨日見た人に出ない')
   assert.ok(RENAME_NEWS.prevNote.includes('ドヤ部下'))
+  assert.ok(!RENAME_NEWS.lead().includes('年'), '本文の最初の文に日付を入れない（旗の日付は前の名前に切り替えた日）')
+  assert.ok(RENAME_NEWS.prevNote.includes('改めました'))
   const cfg = readFileSync(join(process.cwd(), 'next.config.js'), 'utf8')
   assert.ok(/source: '\/news\/rename-doya-buka', destination: '\/news\/rename-doya-buddy', permanent: true/.test(cfg), 'next.config.js に 308 の転送がある')
 })

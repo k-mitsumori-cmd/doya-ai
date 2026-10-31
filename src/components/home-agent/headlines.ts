@@ -14,7 +14,7 @@ export interface Headline {
   kind: HeadlineKind
   /** この時間帯だけ出す。無ければ1日じゅう */
   when?: TimeOfDay
-  /** サービス名「ドヤバディ」や「部下」が入る言葉。名前の旗が on のときだけ候補に入れる */
+  /** サービス名「ドヤバディ」や「バディ」が入る言葉。名前の旗が on のときだけ候補に入れる */
   named?: true
 }
 
