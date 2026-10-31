@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ドヤ部下の OGP 画像・メールの見出し画像を作る（ひな形。ロゴが決まったら、設定の PROPOSAL を差し替えて作り直す）。
+"""ドヤバディの OGP 画像・メールの見出し画像を作る（ひな形。ロゴが決まったら、設定の PROPOSAL を差し替えて作り直す）。
 
 使い方: FONT_DIR=<書体のフォルダ> python3 scripts/brand/build-assets.py [出力フォルダ]
         node scripts/brand/render-logos.cjs <出力フォルダ> native     … SVG を PNG に書き出す
@@ -19,7 +19,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buka-assets'
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'docs/design/brand/doya-buddy-assets'
 PROPOSAL = os.environ.get('BRAND_PROPOSAL', 'a')
 
 spec = importlib.util.spec_from_file_location('build_logos', ROOT / 'scripts/brand/build-logos.py')
@@ -65,7 +65,7 @@ def wrap_svg(w: int, h: int, body: str, bg: str, title: str) -> str:
 
 
 def logo_row(x, y, mark_size, jp_size):
-    """クマのマーク + 「ドヤ部下」（2色）。戻り値 = (SVG の部品, 全体の幅)"""
+    """クマのマーク + 「ドヤバディ」（2色）。戻り値 = (SVG の部品, 全体の幅)"""
     parts = [image(x, y, mark_size, mark_size, bl.MARK)]
     tx = x + mark_size + jp_size * 0.28
     base = y + mark_size / 2 + jp_size * 0.34
@@ -99,7 +99,7 @@ def tool(tid: str, name: str) -> str:
     sub, _ = label(bl.JP_FULL + 'のツール', 68, 400, 32, BLUE, 'zen-maru-bold.ttf', 0.04)
     m = ROOT / f'public/ui-renewal/mascots/{tid}.webp'
     art = image(700, 90, 460, 460, mascot(tid)) if m.exists() else ''
-    return wrap_svg(1200, 630, body + title + sub + art, '#f3f8ff', f'{name}｜ドヤ部下')
+    return wrap_svg(1200, 630, body + title + sub + art, '#f3f8ff', f'{name}｜ドヤバディ')
 
 
 def email_header() -> str:

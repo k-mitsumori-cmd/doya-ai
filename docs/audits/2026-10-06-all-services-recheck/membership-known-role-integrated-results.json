@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:23:41.378Z",
+  "checkedAt": "2026-10-31T11:21:50.343Z",
   "passed": 80,
   "observations": [
     {
@@ -649,7 +649,7 @@
     "src/lib/aio/types.ts": "12bfa0f70e875bd21838b25e49343021cd96babaf4b3c73793827b88e32f4e10",
     "src/lib/aio/access.ts": "8e214fbda4e6e83eedb08b82afcdaf9fd4f2e7759e7689979898d0bd2bb96d96",
     "src/lib/sfa/types.ts": "dc8a677b6f9b43cce2f0a807cd9be734af3c5e9059c1f38a8203fa12a398983a",
-    "src/lib/sfa/access.ts": "7c8f99156480b428e339f143a861fcf21620f34bfee9b77c2b8fda3c5b539b5a",
+    "src/lib/sfa/access.ts": "20429e4cfa21f295d0d38243d1f90259b88fe0e26e55fa9b0a85d59f58316e8f",
     "src/lib/sfa/constants.ts": "3bcc6ad502ee87cb98a6f042ed348334042049cdf384b6a96e4c411c93063a08",
     "src/lib/shodan/types.ts": "75c8f18337b7e3b338a2b151391dae2f51b298ab9481b655448c5dbc56102ae9",
     "src/lib/shodan/access.ts": "26b4d8f77353effae1cfb52e3d462c0da375d07cb11b730a700ca9b3fcdb50d3",

@@ -1,4 +1,4 @@
-// 名前の変更のお知らせのページ（ドヤAI → ドヤ部下）。ログイン前でも読める公開ページ
+// 名前の変更のお知らせのページ（ドヤAI → ドヤバディ）。ログイン前でも読める公開ページ
 // ⚠️ 旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ出す。off のときは 404（今の画面のまま）。
 // ⚠️ 文面は src/lib/brand/rename-news.ts（本人と法務の確認前の案）。このファイルには旧名を直接書かない（ビルド時の置き換えの対象のため）。
 import type { Metadata } from 'next'
@@ -39,6 +39,7 @@ export default function RenameNewsPage() {
       <p className="text-sm font-bold text-slate-500">お知らせ</p>
       <h1 className="mt-2 text-3xl font-black leading-tight" style={{ textWrap: 'balance' }}>{RENAME_NEWS.title}</h1>
       <p className="mt-6 leading-8 text-slate-700">{RENAME_NEWS.lead(renameDateLabel(date))}</p>
+      <p className="mt-4 leading-8 text-slate-700">{RENAME_NEWS.prevNote}</p>
       <h2 className="mt-10 text-xl font-black">変わること</h2>
       <ul className="mt-3 list-disc space-y-2 pl-6 leading-8 text-slate-700">
         {RENAME_NEWS.changes.map((t) => <li key={t}>{t}</li>)}

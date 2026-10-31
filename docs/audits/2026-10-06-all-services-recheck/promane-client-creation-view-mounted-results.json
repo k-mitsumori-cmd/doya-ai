@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T21:19:35.755Z",
+  "checkedAt": "2026-10-31T11:22:37.657Z",
   "expected": 3,
   "passed": 3,
   "cases": [
@@ -21,8 +21,8 @@
     }
   ],
   "sourceHashes": {
-    "src/components/promane/client-actions.tsx": "92cd09fa940fa78b6607f67e9e1a8859041dc28afbbe01701df9a7f798defc30",
-    "src/lib/promane/use-client-creation.ts": "161ce1a259ce020357773641edf3a6a6b07242a578f2619cc88352eb808b1d29",
+    "src/components/promane/client-actions.tsx": "fc30407bc8e4d31eddadf1ea0aba0eb53fb62174499357ca0bb405bda6ac6e34",
+    "src/lib/promane/use-client-creation.ts": "d432b5bd4604060c37a702233e7f738f81dcf2dddbb0fa7a30eebac86dea120d",
     "src/lib/promane/client-input.ts": "d114edd0fdc3bf16b7a4aa416b7e1cf38bb85d957bba6c4a96a49f0dbcb926f4"
   },
   "scope": "Actual mounted ClientActions and input parser in React StrictMode/real FormData; deferred synthetic fetch responses. Actual candidate hook and ClientActions with stateful dialog shell prevent same-frame duplication, reject empty acknowledgements, and close old-account draft. Synthetic HTTP/session, not real Next/database-linked UI or production/customer impact."
