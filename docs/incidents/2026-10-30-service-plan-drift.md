@@ -80,6 +80,13 @@ WHERE NOT EXISTS (SELECT 1 FROM "UserServiceSubscription" s WHERE s."userId" = u
 GROUP BY sid ORDER BY sid;
 ```
 
+## 本番で確かめた結果（2026-10-31・読み取り専用のトランザクション）
+
+- 値違いは0件。行が無いだけで、4つの新サービス（expense・popup・shanai・tenjikai）に限られた。
+- 原因は「1. 新サービスの行の補い忘れ」に決まった。利用者が困ることは無い。
+- 直し方は補完スクリプトに絞る。料金ページのボタンは Stripe の契約がある本人にしか使えないため選ばない。SQL は要らない。
+- 対象の人数と ID の先頭は、リポジトリに残さず、共有ノートの報告に書いた。
+
 ## 直し方（未実行・本人の承認が要る）
 
 おすすめの順に並べる。
