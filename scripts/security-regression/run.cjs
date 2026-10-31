@@ -1517,3 +1517,6 @@ if (popupSiteStats.error || popupSiteStats.status !== 0) process.exit(popupSiteS
 
 const popupInstallTime = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-install-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (popupInstallTime.error || popupInstallTime.status !== 0) process.exit(popupInstallTime.status || 1);
+
+const minimatchPreprocessing = spawnSync(process.execPath, [path.join(__dirname, 'verify-minimatch-preprocessing-bounds.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (minimatchPreprocessing.error || minimatchPreprocessing.status !== 0) process.exit(minimatchPreprocessing.status || 1);
