@@ -15,6 +15,10 @@ function csvCell(value: string): string {
 
 function spreadsheetText(value: string): string {
   return value.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, '')
+    // ExcelJS writes these literally, but Excel decodes them as OOXML escapes.
+    .replace(/_(?=x[0-9A-Fa-f]{4}_)/g, '_x005F_')
+    .replace(/\r/g, '_x000D_')
+    .replace(/\u007F/g, '_x007F_')
 }
 
 export async function GET(req: NextRequest) {

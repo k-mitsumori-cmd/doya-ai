@@ -12,6 +12,8 @@ const fixtures = [
   ['supplementary', '日本語\u{10000}🚀', '日本語\u{10000}🚀'],
   ['whitespace', 'A\tB\nC\rD', 'A\tB\nC\nD'],
   ['formula-like text', '\t=SUM(1,2)', '\t=SUM(1,2)'],
+  ['literal OOXML escapes', '_x0041_ _x005F_ _x000D_ _x00af_ _x005F_x0041_', '_x0041_ _x005F_ _x000D_ _x00af_ _x005F_x0041_'],
+  ['DEL character', 'Before\u007fAfter', 'Before\u007fAfter'],
 ]
 function routes(value) {
   const kintai = loadExcelExport('src/app/api/kintai/attendance/export/route.ts', {
@@ -47,14 +49,19 @@ const tableRows = table => Array.from(table.getElementsByTagNameNS(ns, 'Row')).m
       assert.equal(response.status, 200)
       assert.equal(response.headers.get('cache-control'), 'private, no-store')
       if (service === 'kintai') {
-        const book = await new ExcelJS.Workbook().xlsx.load(Buffer.from(await response.arrayBuffer()))
+        const bytes = Buffer.from(await response.arrayBuffer())
+        const book = await new ExcelJS.Workbook().xlsx.load(bytes)
         const sheet = book.getWorksheet('2026年10月')
-        const textExpected = expected
+        const textExpected = name === 'whitespace' ? value : expected
         assert.equal(sheet.rowCount, 3); assert.equal(sheet.columnCount, 10)
         assert.equal(sheet.getCell('A2').value, textExpected); assert.equal(sheet.getCell('B2').value, 'Dept ' + textExpected)
         assert.equal(sheet.getCell('A3').value, 'Empty ' + textExpected); assert.equal(sheet.getCell('B3').value, textExpected)
         assert.equal(sheet.getCell('F2').value, 0); assert.equal(sheet.getCell('J2').value, 'normal'); assert.equal(sheet.getCell('J3').value, 'データなし')
         sheet.eachRow(row => row.eachCell(cell => assert.notEqual(cell.type, ExcelJS.ValueType.Formula)))
+        if (process.env.DOYA_KINTAI_TEXT_ARTIFACT_DIR && ['literal OOXML escapes', 'DEL character'].includes(name)) {
+          const fs = require('node:fs'), path = require('node:path')
+          fs.writeFileSync(path.join(process.env.DOYA_KINTAI_TEXT_ARTIFACT_DIR, name === 'DEL character' ? 'kintai-xlsx-del-20261101.xlsx' : 'kintai-xlsx-literal-escapes-20261101.xlsx'), bytes)
+        }
       } else {
         const xml = new browser.window.DOMParser().parseFromString(await response.text(), 'application/xml')
         assert.equal(xml.getElementsByTagName('parsererror').length, 0, 'successful response must be well-formed XML 1.0')
@@ -74,6 +81,7 @@ const tableRows = table => Array.from(table.getElementsByTagNameNS(ns, 'Row')).m
       const csvResponse = await handlers[service].GET(new Request(`https://local.invalid/api/${service}/export?${query}&format=csv`))
       assert.equal(csvResponse.status, 200)
       if (name === 'noncharacters') assert((await csvResponse.text()).includes(value), 'XML-only cleanup must not remove valid Unicode from CSV data')
+      else if (['literal OOXML escapes', 'DEL character', 'whitespace'].includes(name)) assert((await csvResponse.text()).includes(value), 'XLSX escaping must not change the original CSV text')
       else await csvResponse.body.cancel()
     })
   }
