@@ -16,7 +16,7 @@ function page(rows, query) {
   return { data, has_more: start+data.length < rows.length }
 }
 function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = {}, subList, invoiceList, refundList,
-  endpoints = [], webhookList, users = [], serviceRows = [], manualGrants = [] }) {
+  endpoints = [], webhookList, users = [], serviceRows = [], manualGrants = [], allServiceIds = ['banner'] }) {
   let subscriptionCalls = 0, invoiceCalls = 0, refundCalls = 0, webhookCalls = 0
   const invoiceQueries = []
   const refundQueries = []
@@ -28,7 +28,7 @@ function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = 
     webhookEndpoints: { list: async (q) => { webhookCalls++; return webhookList ? webhookList(q) : page(endpoints, q) } } }
   const module = load('src/lib/billing-audit.ts', {
     '@/lib/stripe': { stripe, ACTIVE_LIKE_STATUSES: new Set(['active','trialing','past_due']),
-      isDoyaSubscription: (sub) => sub.metadata.app === 'doya-ai', ALL_SERVICE_IDS: ['banner'],
+      isDoyaSubscription: (sub) => sub.metadata.app === 'doya-ai', ALL_SERVICE_IDS: allServiceIds,
       resolvePlanIdFromSubscription: (sub) => ({ planId: Object.hasOwn(sub.metadata, 'planId') ? sub.metadata.planId : 'banner-pro' }),
       planTierFromPlanId: (id) => !id ? 'FREE' : id === 'bundle' ? 'BUNDLE' : id.endsWith('-light') ? 'LIGHT' : id.endsWith('-enterprise') ? 'ENTERPRISE' : 'PRO' },
     '@/lib/prisma': { prisma: {
@@ -236,6 +236,39 @@ function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = 
     assert.equal(audit.unmappedPlans.length, 1)
     assert.equal(audit.unmappedPlans[0].id, 'unmapped')
     assert(fixture({ subs: [], invoices: [] }).module.formatBillingAuditMessage(audit, { windowLabel: '24時間' }).includes('プランを特定できない契約'))
+  })
+  await check('billing audit separates missing service rows from wrong service plans', async () => {
+    // 2026-10: 新サービスを ALL_SERVICE_IDS に足したあと、既存の有料の人に行を補わず、重大の警告が出た
+    const missingSub = subscription('missing', 'doya-ai'); missingSub.metadata.userId = 'missing-user'
+    const wrongSub = subscription('wrong', 'doya-ai'); wrongSub.metadata.userId = 'wrong-user'
+    const okSub = subscription('ok', 'doya-ai'); okSub.metadata.userId = 'ok-user'
+    const users = [
+      { id: 'missing-user', email: 'missing@example.invalid', name: 'Missing', plan: 'PRO' },
+      { id: 'wrong-user', email: 'wrong@example.invalid', name: 'Wrong', plan: 'BUNDLE' },
+      { id: 'ok-user', email: 'ok@example.invalid', name: 'Ok', plan: 'PRO' },
+    ]
+    const serviceRows = [
+      { userId: 'missing-user', serviceId: 'banner', plan: 'PRO' },
+      { userId: 'wrong-user', serviceId: 'banner', plan: 'PRO' },
+      { userId: 'wrong-user', serviceId: 'seo', plan: 'FREE' },
+      { userId: 'ok-user', serviceId: 'banner', plan: 'PRO' },
+      { userId: 'ok-user', serviceId: 'seo', plan: 'PRO' },
+      { userId: 'ok-user', serviceId: 'asklink', plan: 'PRO' },
+    ]
+    const f = fixture({ subs: [missingSub, wrongSub, okSub], invoices: [], users, serviceRows, allServiceIds: ['banner', 'seo', 'asklink'] })
+    const audit = await f.module.runBillingAudit()
+    const byEmail = Object.fromEntries(audit.serviceDrift.map((d) => [d.email, JSON.parse(JSON.stringify(d))]))
+    assert.deepEqual(Object.keys(byEmail).sort(), ['missing@example.invalid', 'wrong@example.invalid'])
+    assert.deepEqual(byEmail['missing@example.invalid'].missing, ['seo', 'asklink'])
+    assert.deepEqual(byEmail['missing@example.invalid'].wrong, [])
+    assert.deepEqual(byEmail['wrong@example.invalid'].wrong, [{ serviceId: 'seo', plan: 'FREE' }])
+    assert.deepEqual(byEmail['wrong@example.invalid'].missing, ['asklink'])
+    assert.equal(byEmail['wrong@example.invalid'].expected, 'PRO')
+    const message = f.module.formatBillingAuditMessage(audit, { windowLabel: '直近24時間' })
+    assert(message.includes('値違い: seo=FREE'))
+    assert(message.includes('行なし: seo, asklink'))
+    const only = f.module.classifyServicePlanDrift(new Map([['banner', 'PRO']]), 'PRO', ['banner', 'popup'])
+    assert.deepEqual(JSON.parse(JSON.stringify(only)), { missing: ['popup'], wrong: [] })
   })
   await check('webhook endpoint check reaches page two', async () => {
     const endpoints = Array.from({ length: 100 }, (_, i) => ({ id: 'endpoint-'+i, url: 'https://other.example/'+i, status: 'enabled', enabled_events: [] }))
