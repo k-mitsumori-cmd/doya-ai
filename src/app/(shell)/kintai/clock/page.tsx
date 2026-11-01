@@ -155,11 +155,11 @@ export default function ClockPage() {
   }
 
   if (unknown) {
-    return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+    return <div role="alert" aria-busy={loading || acting} className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻結果を確認できませんでした</p>
       <p className="text-sm text-slate-600">再打刻せず、現在の状態を読み直してください。保存済みの打刻が見つかると通常画面へ戻ります。</p>
       <button type="button" disabled={loading || acting} onClick={() => void fetchRecords()} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white disabled:opacity-50">状態を再確認</button>
-      <button type="button" disabled={!canResume} onClick={() => void resume()} className="text-sm font-semibold underline disabled:opacity-50">最新の状態を確認して打刻を再開</button>
+      <button type="button" disabled={!canResume} onClick={() => void resume()} className="min-h-11 text-sm font-semibold underline disabled:opacity-50">最新の状態を確認して打刻を再開</button>
       <p className="text-xs text-slate-600">打刻の再開でも状態を読み直します。打刻は自動送信しません。</p>
     </div>
   }
