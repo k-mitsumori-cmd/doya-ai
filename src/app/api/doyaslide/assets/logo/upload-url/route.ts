@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserId } from '@/lib/doyaslide/access'
 import { issueStagedImageUpload } from '@/lib/direct-upload/stage'
@@ -8,6 +9,7 @@ import { issueStagedImageUpload } from '@/lib/direct-upload/stage'
 // POST /api/doyaslide/assets/logo/upload-url — ロゴの署名付きアップロードURLを発行
 // 続きは /api/doyaslide/assets/logo（完了通知）。SVGはスクリプト混入の恐れがあるため対象外。
 export async function POST(req: NextRequest) {
+  if (!directUploadRollout()) return NextResponse.json({ error: '直接アップロードは有効になっていません' }, { status: 404 })
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

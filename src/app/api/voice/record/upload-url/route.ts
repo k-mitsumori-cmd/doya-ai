@@ -8,6 +8,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { getServerSession } from 'next-auth'
@@ -26,6 +27,7 @@ import {
 } from '@/lib/voice/record-upload'
 
 export async function POST(req: NextRequest) {
+  if (!directUploadRollout()) return NextResponse.json({ error: '直接アップロードは有効になっていません' }, { status: 404 })
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
 
   try {

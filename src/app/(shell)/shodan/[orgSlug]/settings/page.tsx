@@ -10,6 +10,7 @@ import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 import { Skeleton } from '@/components/ds'
 import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 
 type Profile = {
   companyName: string; url: string; description: string; valueProp: string
@@ -144,15 +145,24 @@ export default function ShodanSettingsPage() {
     if (!canEdit()) return
     const file = e.target.files?.[0]
     if (!file) return
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { setOperationError('PNG / JPG / WebP、10MB以下のファイルを選択してください。'); return }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setOperationError('PNG / JPG / WebP、5MB以下のファイルを選択してください。'); return }
     const ticket = guard.begin('mutation')
     if (!ticket) return
     setUploadingLogo(true); setOperationError('')
     try {
-      const logoApi = '/api/shodan/company-profile/logo'
-      const org = `?org=${encodeURIComponent(orgSlug)}`
-      const d = await directUpload({ file, fileName: file.name, issueUrl: `${logoApi}/upload-url${org}`, confirmUrl: `${logoApi}${org}`, signal: ticket.signal })
-      if (!ticket.current()) return
+      let d: any
+      if (await isDirectUploadEnabled()) {
+        const logoApi = '/api/shodan/company-profile/logo'
+        const org = `?org=${encodeURIComponent(orgSlug)}`
+        d = await directUpload({ file, fileName: file.name, issueUrl: `${logoApi}/upload-url${org}`, confirmUrl: `${logoApi}${org}`, signal: ticket.signal })
+        if (!ticket.current()) return
+      } else {
+        const fd = new FormData(); fd.append('file', file)
+        const { res, data } = await requestOrgJson('shodan', '/api/shodan/company-profile/logo', orgSlug, { method: 'POST', body: fd, signal: ticket.signal })
+        if (!ticket.current()) return
+        if (!res.ok) throw new ShodanApiError(orgErrorMessage(data, res.status, true), res.status)
+        d = data
+      }
       if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, 200)
       revision.current++; draft.current = { ...draft.current, logoPath: d.path }; setLogoPath(d.path); setLogoUrl(d.url)
       setNotice('ロゴを読み込みました。設定を保存すると反映されます。')
@@ -330,7 +340,7 @@ export default function ShodanSettingsPage() {
                 </>
               )}
             </div>
-            <p className="text-[11px] font-bold text-slate-400 mt-1.5">PNG / JPG / WebP（10MBまで）</p>
+            <p className="text-[11px] font-bold text-slate-400 mt-1.5">PNG / JPG / WebP（5MBまで）</p>
           </div>
           <div>
             <label className="block text-xs font-black text-slate-600 mb-1.5">ブランドカラー</label>

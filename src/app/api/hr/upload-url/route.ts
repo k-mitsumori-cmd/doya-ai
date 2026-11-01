@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 import { NextRequest, NextResponse } from 'next/server'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
@@ -11,6 +12,7 @@ import { issueStagedImageUpload } from '@/lib/direct-upload/stage'
  * 続きは /api/hr/upload（完了通知）。権限は ADMIN 以上。
  */
 export async function POST(req: NextRequest) {
+  if (!directUploadRollout()) return NextResponse.json({ error: '直接アップロードは有効になっていません' }, { status: 404 })
   try {
     const ctx = await getHrContext()
     if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })

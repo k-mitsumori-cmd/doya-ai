@@ -6,6 +6,7 @@ import { Mic, Square, Play, Pause, Trash2, Upload, Download, Loader2, Scissors, 
 import Link from 'next/link'
 import { isVoiceProFromUser } from '@/lib/voice/plans'
 import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 
 interface RecordingItem {
   id: string
@@ -195,21 +196,32 @@ export default function RecordPage() {
         setError('ファイルサイズが大きすぎます（上限50MB）')
         return
       }
-      // 署名付きURLで Storage へ直接送る（Vercel を通さない）
+      let res: { ok: boolean }
       let data: any
-      try {
-        data = await directUpload({
-          file: uploadBlob,
-          fileName: `${rec.label}.webm`,
-          issueUrl: '/api/voice/record/upload-url',
-          confirmUrl: '/api/voice/record/confirm',
-          confirmBody: { durationMs: uploadDuration, label: rec.label },
-        })
-      } catch (e: any) {
-        setError(e?.message || 'アップロードに失敗しました')
-        return
+      if (await isDirectUploadEnabled()) {
+        // 署名付きURLで Storage へ直接送る（Vercel を通さない）
+        try {
+          data = await directUpload({
+            file: uploadBlob,
+            fileName: `${rec.label}.webm`,
+            issueUrl: '/api/voice/record/upload-url',
+            confirmUrl: '/api/voice/record/confirm',
+            confirmBody: { durationMs: uploadDuration, label: rec.label },
+          })
+        } catch (e: any) {
+          setError(e?.message || 'アップロードに失敗しました')
+          return
+        }
+        res = { ok: true }
+      } else {
+        const formData = new FormData()
+        formData.append('file', uploadBlob, `${rec.label}.webm`)
+        formData.append('label', rec.label)
+        formData.append('durationMs', String(uploadDuration))
+        const r = await fetch('/api/voice/record/upload', { method: 'POST', body: formData })
+        data = await r.json()
+        res = r
       }
-      const res = { ok: true }
       if (!res.ok || !data.success) {
         setError(data.error || 'アップロードに失敗しました')
       } else {
