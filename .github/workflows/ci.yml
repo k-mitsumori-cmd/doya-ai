@@ -53,6 +53,11 @@ jobs:
       - name: SEO list activity and pagination (private Unix socket, no providers)
         run: python3 scripts/regression/seo-list-postgres.py
 
+      - name: Expense initial loading continuity and retry guards (offline)
+        run: |
+          node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
+          DOYA_TEST_STRICT=1 node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
+
       - name: Shanai storage deletion and concurrent registration (private Unix socket, no providers)
         run: python3 scripts/security-regression/verify-shanai-storage-postgres.py
 
