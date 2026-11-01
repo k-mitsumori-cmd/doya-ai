@@ -80,7 +80,7 @@ function feedbackFixture({ fail = false } = {}) {
     const alerts = []
     const route = load('src/app/api/cron/spend-report/route.ts', {
       'next/server': { NextResponse: { json } },
-      '@/lib/spend-report': { sendSpendReport: async () => { throw Error('private spend detail') } },
+      '@/lib/cost/daily-report': { sendDailyCostReport: async () => { throw Error('private spend detail') } },
       '@/lib/notifications': { sendErrorNotification: async (details) => { alerts.push(details) } },
     }, { process: { env: { CRON_SECRET: 'secret' } } })
     const response = await route.GET(request('spend-report'))

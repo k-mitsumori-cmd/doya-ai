@@ -1259,3 +1259,42 @@ export async function sendAnalyticsReport(
 
   return { targets: targets.length, errors: allErrors, monthlySent }
 }
+
+// ---------- 日次コストレポートの「広告・集客」の節に使う ----------
+
+export type ChannelSessions = { name: string; sessions: number }
+
+/**
+ * GA4 の流入チャネル別セッション数（昨日と今月の累計）。最初の GA4 プロパティの全体を見る。
+ * 日次コストレポート（src/lib/cost/daily-report.ts）の「広告・集客」の節が使う。
+ * ⚠️ ここで取れるのは訪問の数だけ。広告費そのもの（Google 広告・Meta 広告の API）は取れない。
+ */
+export async function fetchChannelSessionsForCostReport(): Promise<{
+  target: string
+  yesterday: ChannelSessions[]
+  month: ChannelSessions[]
+} | null> {
+  const target = getTargets().find((t) => t.ga4PropertyId)
+  if (!target?.ga4PropertyId) return null
+  const token = await getAccessToken()
+  const base = `${GA4_API}/properties/${target.ga4PropertyId}:runReport`
+  const pf = ga4PathFilter(target.ga4PageFilter)
+  const monthStart = jstMonthStart(0)
+  const run = async (startDate: string, endDate: string): Promise<ChannelSessions[]> => {
+    const res = await googleApiPost(base, token, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+      metrics: [{ name: 'sessions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+      limit: 20,
+      ...pf,
+    })
+    return (res.rows || []).map((row: any) => ({
+      name: row.dimensionValues?.[0]?.value || '(不明)',
+      sessions: Number(row.metricValues?.[0]?.value) || 0,
+    }))
+  }
+  const y = jstDate(1)
+  const [yesterday, month] = await Promise.all([run(y, y), run(monthStart < y ? monthStart : y, y)])
+  return { target: target.name, yesterday, month }
+}
