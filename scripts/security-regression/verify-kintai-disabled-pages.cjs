@@ -30,6 +30,15 @@ const mocks = {
   '@/lib/kintai/use-escape': { useEscapeToClose: () => {} },
 }
 
+// Render the real extracted clock hook during SSR; effects remain unexecuted here.
+const loadTs = require('./load-typescript.cjs').load
+mocks['@/lib/kintai/use-clock'] = loadTs('src/lib/kintai/use-clock.ts', {
+  react: React,
+  './types': mocks['@/lib/kintai/types'],
+  './clock-response': loadTs('src/lib/kintai/clock-response.ts'),
+  './user-error': mocks['@/lib/kintai/user-error'],
+}, { setTimeout, clearTimeout, AbortController })
+
 function page(file) {
   const source = fs.readFileSync(path.join(root, file), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: {
