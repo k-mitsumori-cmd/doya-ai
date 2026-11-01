@@ -10,6 +10,7 @@ import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { Skeleton } from '@/components/ds'
 import { useEscapeToClose } from '@/lib/kintai/use-escape'
 import { useKintaiClock } from '@/lib/kintai/use-clock'
+import ErrorReportForm, { ErrorContactFooter } from '@/components/common/ErrorReportForm'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -44,6 +45,20 @@ export default function ClockPage() {
   const [now, setNow] = useState(new Date())
   const [confirmClockOut, setConfirmClockOut] = useState(false)
   const [hoverClockIn, setHoverClockIn] = useState(false)
+  const identity = JSON.stringify([access.actorId || '', access.organizationId || ''])
+  const [retryIdentity, setRetryIdentity] = useState<string | null>(null)
+  const [reportIdentity, setReportIdentity] = useState<string | null>(null)
+  const reportEnabled = reportIdentity === identity && (unknown || loadError)
+  useEffect(() => {
+    if (loading || acting) return
+    if (!unknown && !loadError) { setRetryIdentity(null); setReportIdentity(null); return }
+    if (retryIdentity === identity) setReportIdentity(identity)
+  }, [identity, retryIdentity, unknown, loadError, loading, acting])
+  const retryClockRead = () => { setRetryIdentity(identity); void fetchRecords() }
+  // Keep the real form mounted during later reads, preserving both draft and report ID.
+  const recoveryContact = reportEnabled
+    ? <div className="w-full" key={identity}><ErrorReportForm errorType="unknown" /></div>
+    : <ErrorContactFooter />
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
@@ -145,7 +160,7 @@ export default function ClockPage() {
     </div>
   }
 
-  if (loading && !hasLoaded) {
+  if (loading && !hasLoaded && !loadError && !reportEnabled) {
     return (
       <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-4" aria-busy="true" aria-label="打刻の状態を読み込み中">
         <Skeleton lines={2} height={40} />
@@ -158,9 +173,10 @@ export default function ClockPage() {
     return <div role="alert" aria-busy={loading || acting} className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻結果を確認できませんでした</p>
       <p className="text-sm text-slate-600">再打刻せず、現在の状態を読み直してください。保存済みの打刻が見つかると通常画面へ戻ります。</p>
-      <button type="button" disabled={loading || acting} onClick={() => void fetchRecords()} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white disabled:opacity-50">状態を再確認</button>
+      <button type="button" disabled={loading || acting} onClick={retryClockRead} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white disabled:opacity-50">状態を再確認</button>
       <button type="button" disabled={!canResume} onClick={() => void resume()} className="min-h-11 text-sm font-semibold underline disabled:opacity-50">最新の状態を確認して打刻を再開</button>
       <p className="text-xs text-slate-600">打刻の再開でも状態を読み直します。打刻は自動送信しません。</p>
+      {recoveryContact}
     </div>
   }
 
@@ -168,7 +184,8 @@ export default function ClockPage() {
     return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻状態を確認できませんでした</p>
       <p className="text-sm text-slate-600">打刻を再送せず、現在の状態を読み直してください。</p>
-      <button type="button" onClick={fetchRecords} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600">状態を再確認</button>
+      <button type="button" disabled={loading || acting} onClick={retryClockRead} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600 disabled:opacity-50">状態を再確認</button>
+      {recoveryContact}
     </div>
   }
 
