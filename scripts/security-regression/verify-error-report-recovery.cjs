@@ -1,4 +1,6 @@
 // Actual input/operation/route/component code; synthetic settings and notification transport only.
+// This standalone test child needs React act; the parent production build is unchanged.
+process.env.NODE_ENV='development'
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict')
 const repo=path.resolve(__dirname,'../..'),dep=n=>require(path.join(repo,'node_modules',n)),ts=dep('typescript'),results=[]
 const inputFile='src/lib/error-report-input.ts',operationFile='src/lib/error-report-operation.ts',componentFile='src/components/common/ErrorReportForm.tsx'
