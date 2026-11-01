@@ -30,10 +30,23 @@ export function DoyaPowerHomeCard({ view }: { view: DoyaPowerHomeView | null }) 
   if (!view) return null
   return (
     <section id="doya-power" className={styles.card} aria-labelledby="home-doya-power">
-      <div className={styles.head}>
-        <h2 id="home-doya-power" className={styles.title}>ドヤパワー</h2>
+      <div className={`${styles.head} ${styles.homeHead}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/shell/bear/todo/power.webp" width={56} height={56} alt="" aria-hidden className={styles.homeBear} decoding="async" />
+        <span>
+          <h2 id="home-doya-power" className={styles.title}>ドヤパワー</h2>
+          <span className={styles.homeLead}>ツールで作るたびに減る「使える量」です。生成に失敗したときは戻ります。</span>
+        </span>
       </div>
       <DoyaPowerGauge remaining={view.remaining} limit={view.limit} nextRecoveryAt={view.nextRecoveryAt ?? undefined} />
+      {/* 残りの意味（何回ぐらい使えるか）。2026-11-01 本人の指示 */}
+      <p className={styles.canDo}>
+        今の残りで、あと{' '}
+        {whatYouCanDo(view.remaining).slice(0, 3).map((w, i, all) => (
+          <span key={w.label} className={styles.canDoItem}>{w.label}{fmt(w.count)}{w.unit}{i < all.length - 1 ? '・' : ''}</span>
+        ))}
+        {' '}ほど作れます。
+      </p>
       <ExpiryNote view={view} />
       <ul className={styles.links}>
         <li><Link href="/home/doya-power" className={`${styles.link} ${styles.primary}`}>内訳と履歴を見る</Link></li>
