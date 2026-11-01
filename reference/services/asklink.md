@@ -278,3 +278,10 @@
 - `UNLISTED_SERVICE_IDS` から外し、`status: 'active'`（`badge: 'BETA'` / `isNew` は adimage と同じ扱い）。LP・料金ページの `noindex` を外した。トップ・sitemap・llms.txt・料金ページ・ツール切替は services.ts から派生するので個別の追記は無し。
 - 未ログインの紹介リンク許可リスト（`src/lib/safe-signin-callback.ts` の `PUBLIC_INTRO_SERVICES`）と指名検索の別表記（`src/lib/seo.ts` の `SERVICE_ALIASES`）に追加。
 - 公開サービス数の固定値（`scripts/security-regression/verify-google-analytics-services.cjs`）を17→18へ更新。
+
+### 2026-11-01：作成画面の画像待ち行列と完了表示
+
+- 画像処理中も次のURLから結果を作成できる。別の結果の画像は待ち行列に残し、1枚ずつ順番にPOSTする。同じ結果・種類の待機中または処理中のクリックは重複送信しない。
+- 通信失敗・401・不正な成功応答では、その呼び出しの残りだけ止める。別の結果の待ち行列は保持する。成否不明の有料処理を自動再試行しない。エラーと進捗は表示中の結果に対応させる。
+- 完了通知は定義済み3種類すべてがdoneかつ画像URLありで、表示中の結果の待ち行列も空で、通信エラーがない場合に限る。一部失敗・未作成・URL欠落・空の画像一覧では全完了を表示しない。
+- `verify-asklink-parent-queue-mounted.cjs` は実Tool・RunResult・DoneBanner・hookをStrictModeで組み合わせ、合成POST応答14条件を確認する。実プロバイダー生成・課金・保存・画面離脱後の復旧・別端末との同時生成を保証する検証ではない。既存の遅い画像応答14条件も維持する。
