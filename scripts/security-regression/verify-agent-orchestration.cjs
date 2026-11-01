@@ -276,7 +276,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
     const css=read('src/components/home-agent/home-agent.module.css');
     assert.match(css,/@media \(max-width: 600px\) \{\s*\n\s*\.exampleChips \{ flex-wrap: nowrap; overflow-x: auto;/);
-    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/className=\{`\$\{styles\.chips\} \$\{styles\.exampleChips\}`\}/);
+    // 例は 2026-11-01（#77）から、ToDo のドヤくんの絵つきのカード（styles.examples）。初めは EXAMPLES_FIRST 件だけ出し、残りは「ほかの例」で開く
+    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/<div className=\{styles\.examples\}>/);
+    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/examples\.slice\(0, EXAMPLES_FIRST\)/);
   });
   await check('Agent orchestration: the home page shows the agent only behind the flag (off: nothing, and the session is not read for it)',async()=>{
     const src=read(HOME);
@@ -306,6 +308,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         // 部署ごとの入口（DEPARTMENTS_ROLLOUT）は、このテストでは off（ホームは今のまま）として通す。旗そのものは verify-departments-flag.cjs が見る
         '@/lib/departments/flag':{isDepartmentsEnabled:async()=>false},
         '@/lib/departments':{DEPARTMENTS_COOKIE:'doya_departments',parseDepartmentsCookie:()=>[],parseDeptQuery:()=>null},
+        // 部門ごとの製品（PRODUCT_HUBS_ROLLOUT）も、このテストでは off として通す。旗そのものは src/lib/products.test.ts が見る
+        '@/lib/products/flag':{isProductHubsEnabled:async()=>false},
+        '../hub/ProductStrip':{__esModule:true,default:()=>null},
       },env);
       const el=await page.default();
       assert.equal(el.type,HomeDashboard);
