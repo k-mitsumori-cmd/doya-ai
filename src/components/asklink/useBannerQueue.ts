@@ -1,10 +1,10 @@
 'use client'
 
 // バナーを1枚ずつ順に作る（1リクエスト1枚。maxDuration=300 に収めるため、まとめて作らない）
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { RunDto } from '@/lib/asklink/dto'
 
-export function useBannerQueue(setRun: (run: RunDto) => void) {
+export function useBannerQueue(setRun: Dispatch<SetStateAction<RunDto | null>>) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // 新しい見た目では、文言ではなく状態から案内を決める（errors.ts）
@@ -27,7 +27,21 @@ export function useBannerQueue(setRun: (run: RunDto) => void) {
             break
           }
           const data = await res.json().catch(() => ({}))
-          if (data?.run) setRun(data.run)
+          const returned = data?.run
+          const banner = returned?.id === runId && Array.isArray(returned.banners)
+            ? (returned.banners as RunDto['banners']).find((item) => item?.kind === kind)
+            : null
+          if (res.ok && !banner) {
+            setErrorStatus(0)
+            break
+          }
+          if (banner) {
+            // 古い質問文や別の結果を戻さず、この応答が作ったバナーだけを反映する。
+            setRun((current) => {
+              if (!current || current.id !== runId) return current
+              return { ...current, banners: current.banners.map((item) => item.kind === kind ? banner : item) }
+            })
+          }
           if (!res.ok) {
             setError(data?.error || 'バナーの作成に失敗しました。')
             setErrorStatus(res.status)
