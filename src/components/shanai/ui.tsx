@@ -139,6 +139,8 @@ export async function uploadToInterview(interviewId: string, kind: 'audio' | 'ph
     })
     xhr.addEventListener('load', () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`アップロードに失敗しました（${xhr.status}）`))))
     xhr.addEventListener('error', () => reject(new Error('ネットワークエラーでアップロードできませんでした。')))
+    xhr.addEventListener('timeout', () => reject(new Error('アップロードが時間内に完了しませんでした。通信状況を確認して、もう一度お試しください。')))
+    xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました。もう一度お試しください。')))
     const form = new FormData()
     form.append('cacheControl', '3600')
     form.append('', file, file.name)

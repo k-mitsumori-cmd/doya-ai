@@ -33,7 +33,7 @@
    - 応答が指定枚数に足りない、または必須項目が空なら保存せず再試行可能なエラーにする
 5. /doyaslide/[id]?generate=1 に遷移 → POST /api/doyaslide/generate で全スライドを並行的に画像化
 6. エディタでプレビュー・チャット修正・再生成・ロゴ位置/サイズ調整・バージョン巻き戻し
-7. PNG(ZIP) / PDF で書き出し（POST /api/doyaslide/export）
+7. PNG(ZIP) / PDF で書き出し（GET /api/doyaslide/export）
 ```
 
 ## 画像生成（重要・統一規約）

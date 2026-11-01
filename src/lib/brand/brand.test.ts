@@ -1,5 +1,5 @@
 // 実行: npx tsx --test src/lib/brand/brand.test.ts
-// サービス名の切り替え（ドヤAI → ドヤ部下）の旗と、名前の関数の回帰テスト。
+// サービス名の切り替え（ドヤAI → ドヤバディ）の旗と、名前の関数の回帰テスト。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -15,16 +15,19 @@ test('旗: all だけが切り替え。値が無い・空・知らない値は o
   assert.equal(isBrandRenamed(''), false)
 })
 
-test('名前: 旗が off なら今のまま、all ならドヤ部下（旧ドヤAI を併記できる）', () => {
+test('名前: 旗が off なら今のまま、all ならドヤバディ（旧ドヤAI を併記できる）', () => {
   assert.equal(brandName(false), 'ドヤAI')
-  assert.equal(brandName(true), 'ドヤ部下')
+  assert.equal(brandName(true), 'ドヤバディ')
   assert.equal(brandNameEn(false), 'DOYA AI')
-  assert.equal(brandNameEn(true), 'DOYA BUKA')
+  assert.equal(brandNameEn(true), 'DOYA BUDDY')
   assert.equal(brandNameWithFormer(false), 'ドヤAI')
-  assert.equal(brandNameWithFormer(true), 'ドヤ部下（旧ドヤAI）')
+  assert.equal(brandNameWithFormer(true), 'ドヤバディ（旧ドヤAI）')
   assert.deepEqual(brandAlternateNames(false), [])
   assert.ok(brandAlternateNames(true).includes('ドヤAI'))
   assert.ok(brandAlternateNames(true).includes('DOYA AI'))
+  // 昨日（2026-10-30）の名前で探す人のため、前の名前も別名に残す
+  assert.ok(brandAlternateNames(true).includes('ドヤ部下'))
+  assert.ok(brandAlternateNames(true).includes('DOYA BUKA'))
 })
 
 test('文の置き換え: サービス名だけを変え、ツールの名前・URL の識別名は変えない。旗が off なら一切変えない', () => {
@@ -32,10 +35,10 @@ test('文の置き換え: サービス名だけを変え、ツールの名前・
   assert.equal(brandText(s, false), s)
   assert.equal(
     brandText(s, true),
-    'ドヤ部下に頼む。ドヤ部下は、ドヤAIOとドヤAI質問リンクとドヤAI商談とドヤバナーを束ねます。https://doya-ai.surisuta.jp',
+    'ドヤバディに頼む。ドヤバディは、ドヤAIOとドヤAI質問リンクとドヤAI商談とドヤバナーを束ねます。https://doya-ai.surisuta.jp',
   )
   assert.equal(brandText('', true), '')
-  assert.equal(brandText('ドヤAI', true), 'ドヤ部下')
+  assert.equal(brandText('ドヤAI', true), 'ドヤバディ')
 })
 
 test('旗が off（既定）の間は、サイト名・トップのタイトル・別名が、いまの表示のまま', async () => {

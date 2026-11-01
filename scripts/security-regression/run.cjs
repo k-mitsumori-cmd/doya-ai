@@ -1070,6 +1070,8 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
 }
 const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const mitsuboshiJapaneseFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-japanese-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiJapaneseFont.error || mitsuboshiJapaneseFont.status !== 0) { console.error('Security regression failed: Mitsuboshi Japanese font'); process.exit(1); }
 const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
 const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
@@ -1505,6 +1507,14 @@ if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.s
 
 const shanaiDrawingIds = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-docx-drawing-ids.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanaiDrawingIds.status || 1);
+const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-upload-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
+const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-new-validation-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
+const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
+const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
 const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);
@@ -1520,3 +1530,9 @@ if (popupInstallTime.error || popupInstallTime.status !== 0) process.exit(popupI
 
 const minimatchPreprocessing = spawnSync(process.execPath, [path.join(__dirname, 'verify-minimatch-preprocessing-bounds.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (minimatchPreprocessing.error || minimatchPreprocessing.status !== 0) process.exit(minimatchPreprocessing.status || 1);
+
+const kintaiAttendanceExportVisibility = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-attendance-export-visibility.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiAttendanceExportVisibility.status !== 0) process.exit(kintaiAttendanceExportVisibility.status || 1);
+
+const kintaiDepartmentExportAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-export-access.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiDepartmentExportAccess.error || kintaiDepartmentExportAccess.status !== 0) process.exit(kintaiDepartmentExportAccess.status || 1);

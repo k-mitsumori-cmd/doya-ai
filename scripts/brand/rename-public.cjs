@@ -1,4 +1,4 @@
-// 静的ファイル（public/）の「ドヤAI」を「ドヤ部下」にする（切り替える日に実行する。旗とは別）。
+// 静的ファイル（public/）の「ドヤAI」を「ドヤバディ」にする（切り替える日に実行する。旗とは別）。
 // 使い方: node scripts/brand/rename-public.cjs          … 変える所を一覧で見るだけ（ファイルは変えない）
 //         node scripts/brand/rename-public.cjs --write  … 実際に書き換える（変えたあと、git diff で確かめてからコミット）
 // - 対象: public/site.webmanifest（アプリ名）と public/resources/doya-ai/*.html（配布資料の HTML）。
@@ -20,6 +20,6 @@ for (const f of targets) {
   if (!n) continue
   total += n
   console.log(`${write ? '書き換え' : '変える所'}: ${path.relative(root, f)}（${n}件）`)
-  if (write) fs.writeFileSync(f, src.replace(RE, 'ドヤ部下'))
+  if (write) fs.writeFileSync(f, src.replace(RE, 'ドヤバディ'))
 }
 console.log(total ? `合計 ${total}件${write ? ' を書き換えました' : '（--write を付けると書き換えます）'}` : '変える所はありません')

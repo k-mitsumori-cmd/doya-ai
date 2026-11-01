@@ -142,9 +142,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack(config) {
-    // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
+    // Webpackの大きなディスクキャッシュによるメモリ不足を避けるため、必要なら無効にする。
+    // buildスクリプトとCIは同じ3GB上限・キャッシュ無効の条件でコンパイルする。
     if (process.env.DOYA_BUILD_NO_WEBPACK_CACHE === '1') config.cache = false
-    // サービス名の切り替え（ドヤAI → ドヤ部下）。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のビルドのときだけ、
+    // サービス名の切り替え（ドヤAI → ドヤバディ）。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のビルドのときだけ、
     // 画面の文言・AI の指示文・メール・title などの「ドヤAI」を、ビルドのときに置き換える（scripts/brand/rename-loader.cjs）。
     // 旗が off のビルドでは何も足さない（今のとおり）。
     if ((process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT || '').trim().toLowerCase() === 'all') {
@@ -260,6 +261,8 @@ const nextConfig = {
       // カンタンマーケAI（/kantan）は提供終了。後継のドヤ記事作成（/seo）へ集約。
       // ⚠️ 2026-08-17 に正式な提供終了としたので 308（恒久）にする。
       //    307のままだと旧URLがインデックスに残り続ける。
+      // 2026-10-31 サービス名を「ドヤバディ」に改めたので、前の名前（ドヤ部下）のお知らせの URL を新しい URL へ恒久転送する。
+      { source: '/news/rename-doya-buka', destination: '/news/rename-doya-buddy', permanent: true },
       { source: '/kantan', destination: '/seo', permanent: true },
       { source: '/kantan/:path*', destination: '/seo', permanent: true },
       // 旧スライド（Gemini→Googleスライド型）は廃止し、ドヤスライド（/doyaslide）に統一
