@@ -16,6 +16,8 @@ import { isDepartmentsEnabled } from '@/lib/departments/flag'
 import { DEPARTMENTS_COOKIE, parseDepartmentsCookie } from '@/lib/departments'
 import { isProductHubsEnabled } from '@/lib/products/flag'
 import { PRODUCT_COOKIE, PRODUCT_DEFAULT_COOKIE, parseProductId, productOfDepartment, resolveStartProduct } from '@/lib/products'
+import { getMemberProducts } from '@/lib/products/settings.server'
+import { orderProductsForSwitcher } from '@/lib/products/settings'
 import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 import { isOneButtonEnabled } from '@/lib/one-button/flag'
 import { doyaPowerCharger } from '@/lib/doya-power/charge'
@@ -52,7 +54,10 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
         const selfDefault = parseProductId(jar.get(PRODUCT_DEFAULT_COOKIE)?.value)
         const formerDept = parseDepartmentsCookie(jar.get(DEPARTMENTS_COOKIE)?.value)[0]
         const last = parseProductId(jar.get(PRODUCT_COOKIE)?.value) ?? (formerDept ? productOfDepartment(formerDept) : null)
-        return { enabled: true, start: resolveStartProduct({ selfDefault, last }), selfDefault }
+        // 段2: 会社が使う製品と、管理者が決めた担当・既定（会社の役割の旗も on のときだけ表を読む。読めなければ決まりは無いものとする）
+        const mine = await getMemberProducts((session?.user as { id?: string } | undefined)?.id ?? '', session?.user?.email ?? null)
+        const start = resolveStartProduct({ selfDefault, adminDefault: mine.adminDefault, last, isAdmin: mine.all, assigned: mine.assigned })
+        return { enabled: true, start, selfDefault, order: orderProductsForSwitcher(mine), canManage: mine.canManage }
       })()
     : undefined
   // 左下の「登録会社」（UI 品質 B-1）。失敗しても枠は出す

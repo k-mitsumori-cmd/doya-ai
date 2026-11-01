@@ -85,3 +85,10 @@
   .trigger, .chevron { transition: none; }
   .panel { animation: none; }
 }
+
+/* 会社で使っていない製品（段2）。隠さずに薄く出す。押せばその製品のホームへ移る */
+.item[data-dim='true'] { opacity: 0.6; }
+.item[data-dim='true']:hover, .item[data-dim='true']:focus-visible { opacity: 1; }
+.manage { justify-self: center; font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: none; padding: 4px 8px; border-radius: 8px; }
+.manage:hover { background: var(--blue-soft); }
+.manage:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

@@ -17,15 +17,19 @@ import ds from '@/components/ds/tokens.module.css'
 import { Check, ChevronDown } from 'lucide-react'
 import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
 import { brandName } from '@/lib/brand'
-import { PRODUCTS, PRODUCT_DEFAULT_COOKIE, getProduct, type ProductId } from '@/lib/products'
+import { PRODUCT_DEFAULT_COOKIE, PRODUCT_IDS, getProduct, type ProductId } from '@/lib/products'
 import { ShellIcon } from './icons'
 import { productShellTools } from './tools'
 import styles from './ProductSwitcher.module.css'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
 
-export default function ProductSwitcher({ current, selfDefault, onSelect, variant, labelClassName }: {
+export default function ProductSwitcher({ current, selfDefault, order, canManage = false, onSelect, variant, labelClassName }: {
   current: ProductId
+  /** 並び（段2。担当を先に、会社が使っていない製品は others へ）。無ければ決まった並びで全部 */
+  order?: { main: ProductId[]; others: ProductId[] }
+  /** 管理者以上なら、使う製品の設定（/home/products）への案内を出す */
+  canManage?: boolean
   /** 本人が既定にした製品（無ければ null） */
   selfDefault: ProductId | null
   /** 一覧から製品を選んだとき（ホームへ移る前に、枠の側で今の製品を変える） */
@@ -66,6 +70,35 @@ export default function ProductSwitcher({ current, selfDefault, onSelect, varian
     }
   }, [open])
 
+  const main = order?.main.length ? order.main : [...PRODUCT_IDS]
+  const others = order?.others ?? []
+  const renderItem = (id: ProductId, dim: boolean) => {
+    const p = getProduct(id)
+    const count = productShellTools(p.id).length
+    const isCurrent = p.id === current
+    return (
+      <li key={p.id}>
+        <Link
+          href={p.home}
+          className={styles.item}
+          data-dim={dim ? 'true' : undefined}
+          aria-current={isCurrent ? 'true' : undefined}
+          onClick={() => { onSelect(p.id); setOpen(false) }}
+          prefetch={false}
+        >
+          <span className={styles.itemIcon} data-product={p.id}><ShellIcon name={p.icon} size={18} strokeWidth={2} /></span>
+          <span className={styles.itemText}>
+            <b>{p.name}{def === p.id ? <span className={styles.defTag}>既定</span> : null}</b>
+            <small>{p.hint}</small>
+          </span>
+          <span className={styles.itemMeta}>
+            {isCurrent ? <Check size={16} aria-label="今の製品" /> : <span className={styles.count}>{p.id === 'management' ? '全体' : `${count}個`}</span>}
+          </span>
+        </Link>
+      </li>
+    )
+  }
+
   const makeDefault = () => {
     try { document.cookie = `${PRODUCT_DEFAULT_COOKIE}=${current}; path=/; max-age=${ONE_YEAR}; samesite=lax` } catch { /* 覚えられなくても動く */ }
     setDef(current)
@@ -100,36 +133,22 @@ export default function ProductSwitcher({ current, selfDefault, onSelect, varian
       <div ref={panelRef} id={listId} className={styles.panel} role="dialog" aria-label="製品を切り替える" style={pos ? ({ '--pop-top': `${pos.top}px`, '--pop-left': `${pos.left}px` } as CSSProperties) : undefined}>
         <p className={styles.panelTitle}>製品を切り替える</p>
         <ul className={styles.list}>
-          {PRODUCTS.map((p) => {
-            const count = productShellTools(p.id).length
-            const isCurrent = p.id === current
-            return (
-              <li key={p.id}>
-                <Link
-                  href={p.home}
-                  className={styles.item}
-                  aria-current={isCurrent ? 'true' : undefined}
-                  onClick={() => { onSelect(p.id); setOpen(false) }}
-                  prefetch={false}
-                >
-                  <span className={styles.itemIcon} data-product={p.id}><ShellIcon name={p.icon} size={18} strokeWidth={2} /></span>
-                  <span className={styles.itemText}>
-                    <b>{p.name}{def === p.id ? <span className={styles.defTag}>既定</span> : null}</b>
-                    <small>{p.hint}</small>
-                  </span>
-                  <span className={styles.itemMeta}>
-                    {isCurrent ? <Check size={16} aria-label="今の製品" /> : <span className={styles.count}>{p.id === 'management' ? '全体' : `${count}個`}</span>}
-                  </span>
-                </Link>
-              </li>
-            )
-          })}
+          {main.map((id) => renderItem(id, false))}
         </ul>
+        {others.length ? (
+          <>
+            <p className={styles.panelTitle}>会社で使っていない製品</p>
+            <ul className={styles.list}>
+              {others.map((id) => renderItem(id, true))}
+            </ul>
+          </>
+        ) : null}
         <div className={styles.foot}>
           {def === current
             ? <p className={styles.footNote}>ログインしたあと、{product.name}を最初に開きます</p>
             : <button type="button" className={styles.defButton} onClick={makeDefault}>{product.name}を既定にする</button>}
           <p className={styles.footHint}>ほかの製品のツールも開けます</p>
+          {canManage ? <Link href="/home/products" className={styles.manage} onClick={() => setOpen(false)} prefetch={false}>使う製品と担当を設定する</Link> : null}
         </div>
       </div>
       </div>, document.body) : null}

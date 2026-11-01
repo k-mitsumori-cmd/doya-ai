@@ -327,7 +327,7 @@ export default function AppShell({ children, userName, initialRecent, department
   /** 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されなければ今のメニューのまま */
   departments?: { enabled: boolean; primary: DepartmentId[] }
   /** 部門ごとの製品（旗 PRODUCT_HUBS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されたときは部署の入口より先に使う */
-  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null }
+  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean }
   /** 「動いているタスク」を出すか（旗 AGENT_ORCHESTRATION_ROLLOUT。サーバーが決める） */
   agentTasks?: boolean
   /** まとまりの開閉（cookie。押したものだけ） */
@@ -445,7 +445,7 @@ export default function AppShell({ children, userName, initialRecent, department
           <Menu size={20} />
         </button>
         {productsOn ? (
-          <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} onSelect={setProduct} variant="topbar" />
+          <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} onSelect={setProduct} variant="topbar" />
         ) : (
         <Link href={SHELL_HOME.href} className={styles.brand}>
           <DoyaLogoMark size={28} className={styles.brandMark} />{brandName()}
@@ -463,7 +463,7 @@ export default function AppShell({ children, userName, initialRecent, department
       <nav className={styles.sidebar} data-open={open} aria-label="ツール一覧">
         <div className={styles.sideHead}>
           {productsOn ? (
-            <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} onSelect={(id) => { setProduct(id); close() }} variant="sidebar" labelClassName={styles.navLabel} />
+            <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} onSelect={(id) => { setProduct(id); close() }} variant="sidebar" labelClassName={styles.navLabel} />
           ) : (
           <Link href={SHELL_HOME.href} className={styles.brand} onClick={close}>
             <DoyaLogoMark size={28} className={styles.brandMark} />

@@ -54,7 +54,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   /** 部署ごとの入口（サーバーの isDepartmentsEnabled() が真のときだけ layout が渡す。渡されなければ今のメニューのまま） */
   departments?: { enabled: boolean; primary: DepartmentId[] }
   /** 部門ごとの製品（サーバーの isProductHubsEnabled() が真のときだけ layout が渡す。部署の入口より先に使う） */
-  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null }
+  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean }
   /** 左のメニューに「動いているタスク」を出すか（サーバーの isAgentOrchestrationEnabled() で決めて渡す） */
   agentTasks?: boolean
   /** 左のメニューのまとまりの開閉（cookie から読んで渡す。src/lib/shell/nav-groups.ts） */

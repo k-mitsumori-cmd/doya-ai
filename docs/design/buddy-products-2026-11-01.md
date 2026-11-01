@@ -306,6 +306,62 @@ erDiagram
 3. 会社に入っていない個人の利用者は、cookie（`doya_product`・`doya_product_default`）だけで持ちます。`users` の表には列を足しません。
 4. 段5（任意）の予算の表 `budget_plan_lines`（companyId・月・区分・金額）は、三森さんが予算の入力を作ると決めたときだけ足します。
 
+> **2026-11-01 実装で変えた点（段2）**: 部署の表（`account_company_member_departments`）は作り替えず、残したまま新しい表 `account_company_member_products` を足しました。部署の表を使う権限の画面とテストを変えずに済むためです。部署の表は、段4で製品を全員に出したあとに片付けます（本番に流していなければ、流さずに schema から消す）。
+> - 並び順の列（`sortOrder`）と、既定を誰が決めたかの列（`defaultSetBy`）は作りませんでした。並びは製品の表の順で足り、本人の既定は cookie に残すためです。
+> - 表は `account_companies` に外部キーを張りません（部署の表と同じ形）。会社を消したときの片付けは、会社の削除の処理で行います（段4までに足す）。
+> - 製品の設定の変更は、役割の変更の記録（`account_company_role_events`）に書きません。製品は見え方だけで、権限を変えないためです。
+
+### 6.4 本番に流す SQL（段2。三森さんの OK のあと、統括が `apply-sql.cjs` で流す）
+
+```sql
+-- 部門ごとの製品の設定（docs/design/buddy-products-2026-11-01.md §5・§6）。既存の表には触らない
+CREATE TABLE IF NOT EXISTS "account_company_products" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "updatedBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "account_company_products_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "account_company_products_product_check"
+        CHECK ("productId" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "account_company_products_companyId_productId_key"
+    ON "account_company_products" ("companyId", "productId");
+
+CREATE TABLE IF NOT EXISTS "account_company_member_products" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "products" TEXT[],
+    "defaultProduct" TEXT,
+    "updatedBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "account_company_member_products_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "account_company_member_products_values_check"
+        CHECK ("products" <@ ARRAY['marketing', 'sales', 'hr', 'budget', 'management']::TEXT[]),
+    CONSTRAINT "account_company_member_products_default_check"
+        CHECK ("defaultProduct" IS NULL OR "defaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "account_company_member_products_companyId_userId_key"
+    ON "account_company_member_products" ("companyId", "userId");
+
+-- 2026-10-28 の決まりに合わせて RLS を有効にする（アプリの接続は RLS を通り抜けるので、読み書きは変わらない）
+ALTER TABLE "account_company_products" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "account_company_member_products" ENABLE ROW LEVEL SECURITY;
+```
+
+戻すときの SQL（表を消す。旗が off なら読まないので、消さなくても動きます）:
+
+```sql
+DROP TABLE IF EXISTS "account_company_member_products";
+DROP TABLE IF EXISTS "account_company_products";
+```
+
+- 前提: 会社の役割の旗（`COMPANY_ROLES_ROLLOUT`）が off でないこと。段2の画面と表は、会社の役割の仕組み（`/api/company/*`）の中で動くためです。会社の役割の表（ROLES §8.2）と、新しい料金の会社のメンバーの表（PRICING-NEW-MIGRATION.md）が本番に無いあいだは、段2の画面は 404 のままで、段1の画面だけが動きます。
+
 ### 6.3 コードの表（DB ではない）
 
 ```ts

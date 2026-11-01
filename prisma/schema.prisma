@@ -6098,6 +6098,45 @@ model AccountCompanyMemberDepartment {
   @@map("account_company_member_departments")
 }
 
+// ============================================
+// 部門ごとの製品の設定（段2。2026-11-01）
+// ============================================
+// 設計: docs/design/buddy-products-2026-11-01.md §5・§6（製品は見え方だけ。ツールの権限・課金は変えない）
+// ⚠️ 本番DBにはまだ無い。流す SQL は docs/design/buddy-products-2026-11-01.md §6.4（統括が三森さんの承認を取って流す）
+// ⚠️ 旗 PRODUCT_HUBS_ROLLOUT と COMPANY_ROLES_ROLLOUT のどちらかが off のあいだは、この2つの表を読む・書くコードは動かない（src/lib/products/settings.server.ts）
+// ⚠️ 既存の表（account_companies・account_company_members）には列を足さない
+// 製品の id: marketing | sales | hr | budget | management（正本は src/lib/products.ts）
+
+// 会社が使う製品。行が無い製品は「使う」とみなす。経営管理は止められない
+model AccountCompanyProduct {
+  id        String   @id @default(cuid())
+  companyId String
+  productId String
+  enabled   Boolean  @default(true)
+  updatedBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, productId])
+  @@map("account_company_products")
+}
+
+// メンバーの担当の製品と、既定で開く製品（管理者が決める）。持ち主も行を持てる（companyId と userId で持つ）
+// 本人が切り替えの一覧で選んだ既定は cookie（doya_product_default）に残し、こちらより先に使う
+model AccountCompanyMemberProduct {
+  id             String   @id @default(cuid())
+  companyId      String
+  userId         String
+  products       String[]
+  defaultProduct String?
+  updatedBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([companyId, userId])
+  @@map("account_company_member_products")
+}
+
 // ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26）。同じ人に二度付けないため
 // ⚠️ メールそのものは持たない（emailHash は小文字にそろえたメールの SHA-256）。退会して作り直しても、同じメールなら付けない
 // ⚠️ 会社を消しても記録は残す（外部キーを付けない）。処理は src/lib/pricing-v2/starter.server.ts
