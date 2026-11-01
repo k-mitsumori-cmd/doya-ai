@@ -129,16 +129,34 @@ export async function GET(request: NextRequest) {
         cooldownMs: 12 * 3600_000,
       })
     }
-    if (audit.serviceDrift.length > 0) {
+    // 値の違う行がある人（行を読むツールで無料扱いになりうる）と、行が無いだけの人
+    // （新サービスを ALL_SERVICE_IDS に足したあとの補完漏れ。権利は User.plan で判定するので無料には落ちない）を分ける
+    const wrongDrift = audit.serviceDrift.filter((d) => d.wrong.length > 0)
+    const missingOnlyDrift = audit.serviceDrift.filter((d) => d.wrong.length === 0 && d.missing.length > 0)
+    if (wrongDrift.length > 0) {
       await notifyAlert({
         kind: 'billing',
         level: 'critical',
-        title: `有料なのにサービス別プランが揃っていない利用者が ${audit.serviceDrift.length} 名います`,
-        context: '一部サービスだけ無料扱いになっています（2026-08 障害#5 と同じ状態）',
-        detail: audit.serviceDrift
-          .map((d) => `${d.email} / User.plan=${d.userPlan} / 未反映: ${d.broken.join(', ')}`)
+        title: `有料なのにサービス別プランが揃っていない利用者が ${wrongDrift.length} 名います`,
+        context: '一部サービスの行が有料の値になっていません（2026-08 障害#5 と同じ状態）',
+        detail: wrongDrift
+          .map((d) => `${d.email} / User.plan=${d.userPlan} / 値違い: ${d.wrong.map((w) => `${w.serviceId}=${w.plan}`).join(', ')}${d.missing.length ? ` / 行なし: ${d.missing.join(', ')}` : ''}`)
           .join('\n'),
         dedupKey: 'billing-service-plan-drift',
+        cooldownMs: 12 * 3600_000,
+      })
+    }
+    if (missingOnlyDrift.length > 0) {
+      await notifyAlert({
+        kind: 'billing',
+        level: 'warn',
+        title: `有料の利用者 ${missingOnlyDrift.length} 名に、サービス別プランの行が無いサービスがあります`,
+        context: '行が無いだけで、値の違う行はありません。権利は User.plan で判定するため、ツールは無料扱いになりません',
+        detail: [
+          ...missingOnlyDrift.map((d) => `${d.email} / User.plan=${d.userPlan} / 行なし: ${d.missing.join(', ')}`),
+          '補い方: 本人が料金ページの「課金状態を確認してプランを反映する」を押すか、運営が scripts/backfill-new-service-subscriptions.ts を --service=<id> で流す',
+        ].join('\n'),
+        dedupKey: 'billing-service-plan-missing-rows',
         cooldownMs: 12 * 3600_000,
       })
     }
