@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { Home, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function Error({
   error,
@@ -71,6 +72,7 @@ export default function Error({
         )}
         
         {/* サポート情報 */}
+        <ErrorReportForm errorType="500" />
         <div className="mt-10 pt-8 border-t border-gray-200">
           <p className="text-sm text-gray-500">
             問題が解決しない場合は
