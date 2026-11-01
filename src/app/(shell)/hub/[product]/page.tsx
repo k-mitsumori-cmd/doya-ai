@@ -20,19 +20,18 @@ import { brandRenamedFlag, japanHour, pickHeadline } from '@/components/home-age
 import { brandName } from '@/lib/brand'
 import HubView from '../HubView'
 
-type Ctx = { params: Promise<{ product: string }> | { product: string } }
+// Next.js 15 のページの params は Promise（.next/types の PageProps の決まり）
+type Ctx = { params: Promise<{ product: string }> }
 
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(ctx: Ctx): Promise<Metadata> {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
-  const id = parseProductId(p.product)
+  const id = parseProductId((await ctx.params).product)
   return { title: id ? `${brandName()} ${getProduct(id).name}` : 'ホーム', robots: { index: false, follow: false } }
 }
 
 export default async function ProductHubPage(ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
-  const id = parseProductId(p.product)
+  const id = parseProductId((await ctx.params).product)
   if (!(await isProductHubsEnabled())) notFound()
   if (!id) notFound()
   if (id === 'management') redirect('/home')
