@@ -213,7 +213,7 @@ async function postSlack(text: string): Promise<void> {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(voicePayload({ text })),
+    body: JSON.stringify(voicePayload({ text }, { app: 'ドヤAI', kind: 'report', severity: 'info' })),
   })
   if (!res.ok) {
     throw new Error(`Slack webhook error: ${res.status} ${await res.text().catch(() => '')}`)
@@ -798,7 +798,7 @@ function buildKeyEventCelebration(
 
   const total = all.reduce((s, x) => s + x.ev.count, 0)
   const lines: string[] = []
-  lines.push(`🎉 おめでとうございます！昨日キーイベントが合計${fmt(total)}件発生しました 🎉`)
+  lines.push(`昨日のキーイベントは合計${fmt(total)}件でした。`)
   lines.push('')
   lines.push('《キーイベント詳細》')
   for (const { ev } of all) {

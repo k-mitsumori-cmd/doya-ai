@@ -1,0 +1,8 @@
+{
+  "status": "confirmed-unfixed",
+  "problem": "Actual mounted QuoteTool and OrgSwitcher retain alpha company/item draft after selecting beta and loading beta data",
+  "selectedOrganization": "beta",
+  "retainedCustomer": "Alpha customer",
+  "retainedItem": "Alpha confidential item",
+  "scope": "Actual full QuoteTool + OrgSwitcher under StrictMode with synthetic organization API and decorative UI mocks. No actual customer data, document POST, paid API or DB."
+}

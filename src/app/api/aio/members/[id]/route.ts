@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAioContext, hasMinRole, orgSlugFrom } from '@/lib/aio/access'
 import { ROLE_HIERARCHY, type AioContext } from '@/lib/aio/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 type Ctx = { params: Promise<{ id: string }> }
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
@@ -23,13 +24,16 @@ async function mutateMember(ctx: AioContext, targetId: string, action: 'update' 
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
+        // 会社の役割の上限（ctx の役割）より上には上げない
+        const actorRole = lowerToolRole('aio', actor.role, ctx.role)
+        if (!actorRole) return { kind: 'forbidden' as const }
         const target = await tx.aioMember.findFirst({ where: { id: targetId, organizationId: ctx.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.role === 'owner') return { kind: 'owner' as const }
         if (target.id === actor.id) return { kind: 'self' as const }
-        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actor.role)) return { kind: 'peer' as const }
+        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actorRole)) return { kind: 'peer' as const }
         if (action === 'update') {
-          if (!role || rank(role) >= rank(actor.role)) return { kind: 'role' as const }
+          if (!role || rank(role) >= rank(actorRole)) return { kind: 'role' as const }
           const member = await tx.aioMember.update({ where: { id: target.id }, data: { role } })
           return { kind: 'updated' as const, member }
         }
@@ -79,5 +83,5 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'self') return NextResponse.json({ error: '自分自身は削除できません' }, { status: 400 })
   if (result.kind === 'peer') return NextResponse.json({ error: '自分と同格以上のメンバーは削除できません' }, { status: 403 })
   if (result.kind !== 'deleted') return NextResponse.json({ error: 'メンバーの削除を確認できませんでした' }, { status: 409 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, memberId: p.id })
 }

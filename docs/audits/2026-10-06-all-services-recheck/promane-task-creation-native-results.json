@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T21:54:24.244Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Actual task form sends one operation on native same-frame submit",
+    "Uncertain save preserves draft and disables actual input/select/submit fieldset",
+    "Native reload recovers saved operation without another create",
+    "Missing-save cancellation through actual confirmation keeps typed draft",
+    "Empty resolved acknowledgement never clears draft or reports saved",
+    "Native 390 and320px task/recovery layout has no horizontal document overflow",
+    "Native date labels stay on one readable line at320px and task input has accessible name",
+    "Committed deleted task recovery unlocks new submission without clearing draft or recreating task",
+    "Native project and account switch clear previous private draft"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-task-creation.ts": "49d87decf0e2f60ac41b70b207a844b0063aac39cafbd294734d4e338cb45f56",
+    "src/lib/promane/task-input.ts": "8670b7167cf8dd46ee4c512fed78a49a1f19526f6a1e54535b26ceb93d312b5c",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/components/promane/confirm-dialog.tsx": "05cd204469fb380c69650e89c430d4dd627a828aa1e6e666dc49fd2e96f74c89",
+    "src/components/promane/task-create-form.tsx": "949f120191da73a765069d4f6dcf0d5265c09cd8a3266f165281d4e2acc83d5c",
+    "src/components/promane/ui/button.tsx": "88b8543c1ed16d0811bdbf37fb1b5b7fd7cbae1bd8f6a710282ce8c1318ff117",
+    "src/components/promane/ui/input.tsx": "406c012a2e8a86c46816e92b503a15a981d5115d6ad125b48c64b3a734db72ec",
+    "src/components/promane/ui/select.tsx": "b71cdff64fd84392d95224be997c207bc4901b4e5bc1f1db852435bddf38e6a7"
+  },
+  "scope": "Native Chrome155, actual TaskCreateForm/hook/shared form controls/confirmation and Web Locks/localStorage. Synthetic localhost server-action transport/session/navigation; not actual authenticated Next/PostgreSQL-linked or production UI."
+}

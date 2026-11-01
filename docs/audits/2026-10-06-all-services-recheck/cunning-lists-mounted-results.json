@@ -1,0 +1,27 @@
+{
+  "passed": 21,
+  "checks": [
+    "Fetch deadline and explicit recovery: /api/cunning/knowledge",
+    "Body deadline cancels reader: /api/cunning/knowledge",
+    "Fetch deadline and explicit recovery: /api/cunning/sessions",
+    "Body deadline cancels reader: /api/cunning/sessions",
+    "Fetch deadline and explicit recovery: /api/cunning/company",
+    "Body deadline cancels reader: /api/cunning/company",
+    "Fetch deadline and explicit recovery: /api/cunning/profiles",
+    "Body deadline cancels reader: /api/cunning/profiles",
+    "Profile retry preserves both selected references and note, without fetching quota/history/knowledge",
+    "Large legitimate full applicant profile page above billing 64KiB is accepted",
+    "Malformed invalid company fields preserves previous profile list",
+    "Malformed error response preserves previous profile list",
+    "Malformed invalid JSON preserves previous profile list",
+    "Malformed excessive stream preserves previous profile list",
+    "Same-frame pagination is coalesced, failure preserves pages, explicit reload keeps later-page selected option",
+    "Pagination network failure releases lock and retains visible rows and cursor",
+    "Malformed list row cannot crash render or create unsafe links: /api/cunning/knowledge",
+    "Malformed list row cannot crash render or create unsafe links: /api/cunning/sessions",
+    "Actor/auth interruption cancels all scoped list reads and rejects resolved stale ABA completion",
+    "Missing refreshed knowledge keeps an explicit selected warning and blocks retained start callback until reselection",
+    "Unmount cancels every pending read and clears all deadlines"
+  ],
+  "scope": "Actual Tool mounted under StrictMode; actual bounded list/billing readers and parsers; synthetic network/timers only. No authenticated production calls, customer writes, AI, recording, upload or billing. Parent layout actor isolation is tested separately."
+}

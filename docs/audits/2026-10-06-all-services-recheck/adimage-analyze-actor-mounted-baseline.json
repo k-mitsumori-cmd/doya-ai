@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-07T10:52:59.572Z",
+  "finding": "Actual full Tool + recovery hook + native React18 StrictMode accepts a delayed analyze response for actor-a after the session has changed to actor-b, showing the previous actor synthetic copy and brand. Analyze callback has no actor epoch/abort fence; durable image/feedback operation guard does not cover analyze.",
+  "reproduced": true,
+  "syntheticAnalyzeRequests": 1,
+  "newActor": "actor-b",
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "4b830e136541cf29ffe25ca9305f7c1e434029551ee12dda836ccbad9115824e",
+    "src/app/api/adimage/analyze/route.ts": "fec1878bba8101be612f04e22f6dfd041d0d0079e5d63bbc4383e1e55e985bed"
+  },
+  "scope": "Actual mounted Tool, synthetic session/network/brand/copy only. No customer data or provider/database calls. Unfixed next cohort; current feedback release must not be called all-service completion."
+}

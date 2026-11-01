@@ -1,0 +1,89 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import { clsx } from 'clsx'
+import { CountUp, PageHeader, cardIn } from './ui'
+import { BUDGET_META, man, yen, type BudgetLine, type ProjectInput } from '@/lib/tenjikai/engine'
+import { Bars, Donut as DsDonut } from '@/components/ds/charts'
+export default function BudgetPlanner({ input, setInput, budget }: { input: ProjectInput; setInput: (i: ProjectInput) => void; budget: BudgetLine[] }) {
+  const total = budget.reduce((s, b) => s + b.amountYen, 0)
+  const diff = input.budgetYen - total
+  const usage = Math.min(1.3, total / input.budgetYen)
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
+      <PageHeader title="予算シミュレーター" desc="小間料・装飾・電気・制作物・ノベルティ・人件費を、会場の料金と単価表から積み上げています。設営案やノベルティを変えると即座に再計算されます。" />
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        <motion.div {...cardIn(0)} className="flex flex-col items-center gap-4 rounded-[var(--r)] border border-gray-200 bg-white p-6">
+          <DsDonut
+              label={`予算の内訳（見積合計 ${man(total)}）`}
+              size={180}
+              center={<span><span style={{ fontSize: 11, color: 'var(--sub)' }}>見積合計</span><br /><span style={{ fontSize: 18 }}>{man(total)}</span></span>}
+              colors={budget.map((b) => BUDGET_META[b.category].color)}
+              data={budget.map((b) => ({ label: BUDGET_META[b.category].label, value: b.amountYen }))}
+            />
+          <div className="w-full">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-xs font-black text-gray-500">総予算</span>
+              <CountUp value={input.budgetYen} format={man} className="font-mono text-lg font-semibold text-ink tabular" />
+            </div>
+            <input id="budget-slider" type="range" min={500000} max={10000000} step={100000} value={input.budgetYen} onChange={(e) => setInput({ ...input, budgetYen: Number(e.target.value) })} className="w-full accent-doya-500" />
+            <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-gray-100">
+              <motion.div animate={{ width: `${Math.min(100, usage * 100)}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} className={clsx('h-full rounded-full', diff >= 0 ? 'bg-emerald-500' : 'bg-rose-500')} />
+            </div>
+            <p className={clsx('mt-2 text-center text-sm font-black', diff >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+              {diff >= 0 ? `予算内です。残り ${man(diff)}` : `予算を ${man(-diff)} 超えています。設営案かノベルティを見直してください。`}
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div {...cardIn(1)} className="overflow-hidden rounded-[var(--r)] border border-gray-200 bg-white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-left font-mono text-[10px] uppercase tracking-wider text-gray-500">
+                <th className="px-5 py-3">費目</th>
+                <th className="hidden px-5 py-3 sm:table-cell">内訳</th>
+                <th className="px-5 py-3 text-right">金額</th>
+              </tr>
+            </thead>
+            <tbody>
+              {budget.map((b, i) => (
+                <motion.tr key={b.category} className="border-t border-gray-100">
+                  <td className="px-5 py-3 font-black text-ink">
+                    <span className="whitespace-nowrap">
+                      <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUDGET_META[b.category].color }} />
+                      {BUDGET_META[b.category].label}
+                    </span>
+                    {/* スマホでは内訳の列を出さず、費目の下に並べる（狭い列で1文字だけの行が出るため） */}
+                    <span className="mt-1 block text-[12px] font-normal leading-snug text-gray-500 sm:hidden">{b.detail}</span>
+                  </td>
+                  <td className="hidden px-5 py-3 text-xs text-gray-500 sm:table-cell">
+                    {b.detail}
+                  </td>
+                  <td className="whitespace-nowrap px-5 py-3 text-right font-mono tabular text-ink">{yen(b.amountYen)}</td>
+                </motion.tr>
+              ))}
+              <tr className="border-t-2 border-ink">
+                <td className="px-5 py-3 font-black text-ink sm:hidden">合計</td>
+                <td className="hidden px-5 py-3 font-black text-ink sm:table-cell" colSpan={2}>合計</td>
+                <td className="px-5 py-3 text-right font-mono text-base font-semibold tabular text-ink">{yen(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </motion.div>
+        {(budget.length > 0) && (
+          // 新しい見た目: 表の行ごとの細い棒をやめ、共通の Bars で費目ごとの金額と割合を並べる
+          <motion.div {...cardIn(2)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5 lg:col-span-2">
+            <h3 className="mb-3 text-sm font-black text-ink">費目ごとの金額</h3>
+            <Bars
+              data={budget.map((b) => ({ label: BUDGET_META[b.category].label, value: b.amountYen, tone: BUDGET_META[b.category].color, sub: `${total > 0 ? Math.round((b.amountYen / total) * 100) : 0}%` }))}
+              format={(n) => yen(n)}
+            />
+          </motion.div>
+        )}
+      </div>
+      <p className="text-[11px] text-gray-400">小間料と単価は目安です。実際の金額は、主催者の料金表と業者の見積で確かめてください。</p>
+    </div>
+  )
+}

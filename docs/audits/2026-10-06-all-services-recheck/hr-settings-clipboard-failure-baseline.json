@@ -1,0 +1,141 @@
+{
+  "checkedAt": "2026-10-08T18:00:03.842Z",
+  "expected": 31,
+  "passed": 29,
+  "cases": [
+    {
+      "scenario": "confirmed create survives refresh outage; persistent GET-only retry restores authoritative list",
+      "passed": true
+    },
+    {
+      "scenario": "confirmed deletion stays removed when refresh fails",
+      "passed": true
+    },
+    {
+      "scenario": "malformed200 create preserves draft and never announces success",
+      "passed": true
+    },
+    {
+      "scenario": "whitespace-only name cannot submit",
+      "passed": true
+    },
+    {
+      "scenario": "same-event rapid create submits once",
+      "passed": true
+    },
+    {
+      "scenario": "same-event rapid deletion submits once",
+      "passed": true
+    },
+    {
+      "scenario": "malformed list after confirmed create leaves known row and retry warning",
+      "passed": true
+    },
+    {
+      "scenario": "rejected create does not clear draft or announce success",
+      "passed": true
+    },
+    {
+      "scenario": "late mutation after page unmount cannot refresh or notify",
+      "passed": true
+    },
+    {
+      "scenario": "long valid Japanese department name remains supported",
+      "passed": true
+    },
+    {
+      "scenario": "lost create acknowledgment is recovered with GET only and cannot silently enable duplicate creation",
+      "passed": true
+    },
+    {
+      "scenario": "explicit missing-result retry uses original immutable name and exact operation despite edited draft",
+      "passed": true
+    },
+    {
+      "scenario": "cancel unreceived creation persists DELETE fence before user may start a new operation",
+      "passed": true
+    },
+    {
+      "scenario": "deleted creation result cannot offer replay or recreate automatically",
+      "passed": true
+    },
+    {
+      "scenario": "malformed deletion acknowledgment keeps known row and offers persistent GET-only reconciliation",
+      "passed": true
+    },
+    {
+      "scenario": "foreign organization refresh cannot replace known created row or enable next creation",
+      "passed": true
+    },
+    {
+      "scenario": "initial organization mismatch is a load error and never a mixed organization form",
+      "passed": true
+    },
+    {
+      "scenario": "initial malformed department row is a load error, without rendering private malformed data",
+      "passed": true
+    },
+    {
+      "scenario": "auth loading immediately hides all organization fields and sends no reads",
+      "passed": true
+    },
+    {
+      "scenario": "new actor receives fresh settings and authority without old drafts",
+      "passed": true
+    },
+    {
+      "scenario": "unauthenticated scope has login guidance and no private organization form",
+      "passed": true
+    },
+    {
+      "scenario": "old settings save acknowledgment after actor switch cannot toast or change new form",
+      "passed": true
+    },
+    {
+      "scenario": "actor ABA cannot accept first actor save result after returning to same account",
+      "passed": true
+    },
+    {
+      "scenario": "lost create intent stays scoped to original actor across authentication change",
+      "passed": true
+    },
+    {
+      "scenario": "old role member response after actor switch cannot reload, notify or reject unhandled",
+      "passed": true
+    },
+    {
+      "scenario": "old remove member response after actor switch cannot reload, notify or reject unhandled",
+      "passed": true
+    },
+    {
+      "scenario": "old invitation response cannot expose invitation token or trigger a new settings read",
+      "passed": true
+    },
+    {
+      "scenario": "late ownership transfer cannot notify or reload another actor",
+      "passed": true
+    },
+    {
+      "scenario": "late employee search cannot expose previous actor employee data",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(finish)\n\n    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:70:437\n    at async check (/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:22:692)\n    at async /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:70:1"
+    },
+    {
+      "scenario": "clipboard fallback failure is not reported as copied",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(!host.textContent.includes('コピー済み'))\n\n    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:71:802\n    at async check (/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:22:692)\n    at async /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs:71:1"
+    },
+    {
+      "scenario": "late clipboard rejection cannot copy old invitation through DOM fallback",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/app/hr/settings/page.tsx": "961e607aa6a573368e3ca75c8c159bb602a0431104d524afd022cc718f7a288a",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs": "b6b54d25872cdb0d3af7913ec8dd9429fd912b19501c60312469a3ff3d4b9234"
+  },
+  "scope": "Original10 user scenarios retained with explicit synthetic HTTP metadata adapter to the durable operation protocol; known input errors are checked in persistent UI, confirmed create requires explicit next-operation acknowledgment. Adds8 recovery/org/read-shape cases and9 authentication lifecycle cases. Actual full settings page and actual parser mounted in React StrictMode/JSDOM. Synthetic fetch, motion/link/toast only; real input and button events. Candidate overlay only; no root integration, native browser or production proof. Durable pending/recovery/retry/cancel is connected; actual Next/native/full frozen/root/release proofs remain required.",
+  "interpretation": "Clipboard failure is an actual candidate defect: execCommand false still announces copied. Employee search failure is missing URLSearchParams in VM test environment, not established product defect."
+}

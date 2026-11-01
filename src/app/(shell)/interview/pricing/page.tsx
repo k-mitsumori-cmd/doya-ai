@@ -1,0 +1,89 @@
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans';
+
+export default function InterviewPricingPage() {
+  const faqs = [
+    {
+      q: '無料プランでもインタビュー機能は使えますか？',
+      a: 'はい。無料プランでも基本的なインタビュー作成をお試しいただけます。利用回数や保存数には上限があり、上限はプランカードに記載しています。',
+    },
+    {
+      q: '記事生成の「1回」はどの操作で数えますか？',
+      a: '記事の初回生成と、同じプロジェクトでの再生成を、それぞれ1回として数えます。プロジェクトの作成だけでは記事生成の回数を消費しません。利用枠は日本時間の毎日0時に切り替わります。',
+    },
+    {
+      q: 'レシピの自動生成には別の上限がありますか？',
+      a: 'はい。記事生成とは別枠で、無料プランは1日5回、LIGHTは10回、PROは30回、Enterpriseは100回までです。失敗した生成は回数を返し、日本時間の毎日0時に枠が切り替わります。',
+    },
+    {
+      q: '校正・AI修正・翻訳などの回数はどう数えますか？',
+      a: '記事1件につき最初の校正1回は記事生成に含まれ、プロジェクトの最初のサムネイル画像1枚は追加枠を使用しません。その後の校正とサムネイル再生成、AI修正・タイトル提案・確認候補の抽出・SNS投稿文・翻訳は共通の追加AI編集枠を各1回使用します。ゲストは1日2回、無料会員は5回、LIGHTは10回、PROは30回、Enterpriseは100回です。失敗時は回数を返し、日本時間の毎日0時に切り替わります。',
+    },
+    {
+      q: 'プロプランの料金に含まれるものは？',
+      a: 'ドヤインタビューのプロ機能に加え、ドヤAIの全サービス（SEO・バナー・ペルソナなど）がプロプランとして解放されます。1つのご契約ですべてのサービスをプロ品質でご利用いただけます。',
+    },
+    {
+      q: '支払い方法やプラン変更は？',
+      a: 'クレジットカードでのお支払いに対応しています。プランのアップグレード・ダウングレードはいつでも可能です。',
+    },
+    {
+      q: '解約はいつでもできますか？',
+      a: 'はい。いつでも解約いただけます。解約後も契約期間の終了まではプロ機能をご利用いただけます。',
+    },
+  ];
+
+  return (
+    <main data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-50">
+      <div className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
+        {/* ヒーロー */}
+        <section className="text-center">
+          <span
+            className="inline-block rounded-full px-4 py-1 text-sm font-semibold"
+            style={{ backgroundColor: 'rgba(0, 102, 255, 0.1)', color: '#0066ff' }}
+          >
+            ドヤインタビュー
+          </span>
+          <h1 className="mt-4 text-3xl font-black text-slate-900 sm:text-4xl">
+            ドヤインタビュー 料金プラン
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
+            まずは無料で。AIインタビューで魅力的なコンテンツづくりを始めましょう。
+            プロプランなら、ドヤAIの全サービスでプロ機能を利用できます。各サービスにはプラン別の利用上限があります。
+          </p>
+        </section>
+
+        {/* プラン */}
+        <UnifiedPricingPlans serviceId="interview" className="my-12" />
+
+        {/* FAQ */}
+        <section className="mt-16">
+          <h2 className="mb-8 text-center text-2xl font-black text-slate-900">
+            よくあるご質問
+          </h2>
+          <div className="mx-auto max-w-3xl space-y-4">
+            {faqs.map((faq) => (
+              <div
+                key={faq.q}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="flex items-start gap-2 text-base font-bold text-slate-900">
+                  <span
+                    className="material-symbols-outlined text-xl"
+                    style={{ color: '#0066ff' }}
+                    aria-hidden
+                  >
+                    help
+                  </span>
+                  {faq.q}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                  {faq.a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

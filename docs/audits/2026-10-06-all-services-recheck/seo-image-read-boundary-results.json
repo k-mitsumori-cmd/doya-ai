@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-07T15:30:26.551Z",
+  "passed": 8,
+  "cases": [
+    {
+      "thumb": false,
+      "scenario": "owner"
+    },
+    {
+      "thumb": false,
+      "scenario": "deleted-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "owner-change-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "path-change-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner"
+    },
+    {
+      "thumb": true,
+      "scenario": "deleted-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner-change-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "path-change-during-download"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/seo/images/[id]/route.ts": "e656a4afea1a30479cb3acf9f7caa91c7052f49c5783bf14c2ff266162dd92c9"
+  },
+  "scope": "Actual SEO image GET and real local Sharp full/thumbnail bytes; synthetic identity/Prisma/storage await mutations. No actualDB or production incident evidence."
+}

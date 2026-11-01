@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'プライバシーポリシー | ドヤAI',
+  title: 'プライバシーポリシー',
   description: '株式会社スリスタが運営するドヤAI（ドヤバナーAI・ドヤ記事作成 等の各サービス）共通のプライバシーポリシー',
 }
 

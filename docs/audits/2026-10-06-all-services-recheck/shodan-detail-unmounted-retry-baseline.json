@@ -1,0 +1,26 @@
+{
+  "baseCommit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+  "mode": "unmount",
+  "previousVisible": false,
+  "currentOrg": "beta",
+  "currentId": "two",
+  "writes": [
+    {
+      "url": "/api/shodan/preparations?org=alpha",
+      "body": {
+        "url": "https://alpha-private.example.invalid"
+      }
+    }
+  ],
+  "reads": [
+    "/api/shodan/preparations/one?org=alpha",
+    "/api/shodan/preparations/one?org=alpha"
+  ],
+  "notices": [
+    "再生成を開始しました"
+  ],
+  "navigation": [
+    "/shodan/alpha/p/new-preparation"
+  ],
+  "scope": "Actual mounted ShodanAppLayout/detail page with actual bounded HTTP client; synthetic parameters/router/API only. No real provider, quota reservation or DB write. Parameter transition does not prove Next router segment reuse; unmount is executed separately."
+}

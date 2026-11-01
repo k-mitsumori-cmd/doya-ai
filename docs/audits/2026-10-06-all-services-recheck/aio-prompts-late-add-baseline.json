@@ -1,0 +1,11 @@
+{
+  "status": "confirmed-open",
+  "case": "Late alpha prompt addition clears beta draft, reloads alpha prompts into beta page and announces old success",
+  "currentScope": "beta",
+  "draftAfter": "",
+  "wrongScopeVisible": true,
+  "globalNotices": [
+    "追加しました"
+  ],
+  "scope": "Actual page/layout/bounded client; synthetic scope transition, not proof of real Next segment reuse. No DB/paid API or production writes."
+}

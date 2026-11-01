@@ -1,109 +1,48 @@
-'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/promane/ui/button'
-import { Input } from '@/components/promane/ui/input'
-import { toast } from 'sonner'
-import { Save } from 'lucide-react'
-
-interface Props {
-  workspace: { id: string; name: string; slug: string }
-  canEdit: boolean
-  currentSlug: string
+"use client";
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/promane/ui/button';
+import { Input } from '@/components/promane/ui/input';
+import { useWorkspaceOperation } from '@/lib/promane/use-workspace-operation';
+import { WorkspaceOperationNotice } from '@/components/promane/workspace-operation-notice';
+import { useConfirm } from '@/components/promane/confirm-dialog';
+import { toast } from 'sonner';
+interface Props { workspace: { id: string; name: string; slug: string; updatedAt: string }; canEdit: boolean; currentSlug: string }
+type Operation = ReturnType<typeof useWorkspaceOperation>;
+export function WorkspaceSettingsForm(props: Props) {
+  const operation = useWorkspaceOperation(props.workspace.id);
+  return <WorkspaceSettingsDraft key={operation.scopeKey} {...props} operation={operation} />;
 }
-
-export function WorkspaceSettingsForm({ workspace, canEdit, currentSlug }: Props) {
-  const router = useRouter()
-  const [name, setName] = useState(workspace.name)
-  const [slug, setSlug] = useState(workspace.slug)
-  const [saving, setSaving] = useState(false)
-
-  const changed = name !== workspace.name || slug !== workspace.slug
-
-  async function handleSave() {
-    if (!canEdit) return
-    if (!name.trim()) {
-      toast.error('ワークスペース名は必須です')
-      return
-    }
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/promane/workspaces/${workspace.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name !== workspace.name ? name.trim() : undefined,
-          slug: slug !== workspace.slug ? slug.trim() : undefined,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error(data?.error || '保存に失敗しました', { duration: 6000 })
-        return
-      }
-      toast.success('ワークスペース設定を保存しました ✓')
-      // slug が変わった場合は新URLにリダイレクト
-      if (data.workspace?.slug && data.workspace.slug !== currentSlug) {
-        router.push(`/promane/${data.workspace.slug}/settings`)
-      } else {
-        router.refresh()
-      }
-    } catch (e: any) {
-      toast.error(e?.message || '通信エラーが発生しました')
-    } finally {
-      setSaving(false)
-    }
+function WorkspaceSettingsDraft({ workspace, canEdit, currentSlug, operation }: Props & { operation: Operation }) {
+  const router = useRouter(), submitting = useRef(false), { confirm, ConfirmDialog } = useConfirm();
+  // Keep the draft and its original revision together during background refreshes.
+  const [baseline, setBaseline] = useState(workspace), [name, setName] = useState(workspace.name), [slug, setSlug] = useState(workspace.slug);
+  const changed = name !== baseline.name || slug !== baseline.slug;
+  const busy = operation.status === 'saving' || operation.status === 'checking';
+  function finish(result: Awaited<ReturnType<Operation['save']>>) {
+    if (!result || (result.state !== 'saved' && result.state !== 'superseded')) return;
+    setBaseline(result.entry); setName(result.entry.name); setSlug(result.entry.slug);
+    toast.success(result.state === 'superseded' ? '保存後に別の編集がありました。最新版を表示します' : 'ワークスペース設定を保存しました');
+    if (result.entry.slug !== currentSlug) router.push(`/promane/${result.entry.slug}/settings`);
+    router.refresh();
   }
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-[13px] font-bold text-gray-500 mb-1.5">
-          ワークスペース名 {!canEdit && <span className="text-gray-300">（編集権限なし）</span>}
-        </label>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={!canEdit}
-          maxLength={100}
-          className="h-12 rounded-2xl text-[15px] font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-        />
-      </div>
-
-      <div>
-        <label className="block text-[13px] font-bold text-gray-500 mb-1.5">
-          スラッグ（URL用）
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="text-[13px] font-bold text-gray-400">/promane/</span>
-          <Input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-            disabled={!canEdit}
-            pattern="^[a-z0-9][a-z0-9-]{2,49}$"
-            minLength={3}
-            maxLength={50}
-            className="h-12 rounded-2xl text-[15px] font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
-        <p className="text-[11px] text-gray-400 font-bold mt-1">
-          半角英数字とハイフン (3〜50文字)。変更するとURLが変わります
-        </p>
-      </div>
-
-      {canEdit && (
-        <div className="flex justify-end pt-2">
-          <Button
-            onClick={handleSave}
-            disabled={!changed || saving}
-            className="rounded-full font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 shadow-md disabled:opacity-40"
-          >
-            <Save className="h-4 w-4 mr-1.5" />
-            {saving ? '保存中...' : '保存'}
-          </Button>
-        </div>
-      )}
-    </div>
-  )
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); if (!canEdit || submitting.current || operation.status !== 'ready' || !changed) return;
+    submitting.current = true;
+    try { finish(await operation.save({ expectedUpdatedAt: baseline.updatedAt, name: name !== baseline.name ? name : undefined, slug: slug !== baseline.slug ? slug : undefined })); }
+    finally { submitting.current = false; }
+  }
+  return <form onSubmit={submit} className="space-y-4">
+    <WorkspaceOperationNotice operation={operation} finish={finish} />
+    <fieldset disabled={!canEdit || operation.status !== 'ready'} className="space-y-4">
+      <div><label htmlFor="workspace-settings-name" className="block text-sm font-bold text-gray-500 mb-2">ワークスペース名{!canEdit && '（編集権限なし）'}</label><Input id="workspace-settings-name" value={name} onChange={e => setName(e.target.value)} required maxLength={100} className="h-12 rounded-2xl" /></div>
+      <div><label htmlFor="workspace-settings-slug" className="block text-sm font-bold text-gray-500 mb-2">スラッグ（URL用）</label><div className="flex flex-wrap items-center gap-2"><span className="text-sm text-gray-500">/promane/</span><Input id="workspace-settings-slug" value={slug} onChange={e => setSlug(e.target.value)} required pattern="[a-zA-Z0-9][a-zA-Z0-9-]{2,49}" minLength={3} maxLength={50} className="min-w-0 flex-1 h-12 rounded-2xl" /></div><p className="text-xs text-gray-500 mt-1">半角英数字とハイフン（3〜50文字）。変更するとURLが変わります</p></div>
+      {canEdit && <div className="flex justify-end"><Button type="submit" disabled={!changed}>{busy ? '保存中...' : '保存'}</Button></div>}
+    </fieldset>
+    <Button type="button" variant="outline" disabled={busy || operation.status !== 'ready'} onClick={async () => {
+      if (changed && !await confirm({ title: '最新版を読み込む', message: 'この画面の未保存の入力を破棄して、保存済みの情報を読み込みます。', confirmLabel: '読み込む', tone: 'warning' })) return;
+      window.location.reload();
+    }}>最新版を読み込む</Button>
+    <ConfirmDialog />
+  </form>;
 }

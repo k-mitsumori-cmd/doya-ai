@@ -5,8 +5,11 @@ import { getServerSession } from 'next-auth'
 import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 import { ROLE_HIERARCHY, type SfaContext, type SfaRole } from './types'
 import { DEFAULT_STAGES } from './constants'
+
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-sfa-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
@@ -50,7 +53,7 @@ export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null
   // いずれも userId でスコープしているため、他人の組織は決して解決されない（IDOR安全）。
   let membership = orgSlug
     ? await prisma.sfaMember.findFirst({
-        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES }, organization: { slug: orgSlug } },
         include: { organization: true },
       })
     : null
@@ -58,18 +61,21 @@ export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null
   if (orgSlug && !membership) return null
   if (!membership) {
     membership = await prisma.sfaMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
       include: { organization: true },
       orderBy: { createdAt: 'desc' },
     })
   }
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'sfa', userId, organizationId: membership.organizationId, toolRole: membership.role })
+  if (!role) return null
 
   return {
     userId,
     organizationId: membership.organizationId,
     organizationSlug: membership.organization.slug,
-    role: membership.role as SfaRole,
+    role: role as SfaRole,
     memberId: membership.id,
   }
 }
@@ -79,7 +85,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
   const userId = await resolveUserId()
   if (!userId) return []
   const memberships = await prisma.sfaMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -91,7 +97,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
 }
 
 export function hasMinRole(currentRole: string, minRole: SfaRole): boolean {
-  return (ROLE_HIERARCHY[currentRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
+  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, currentRole) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, minRole) && ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[minRole]
 }
 
 /** 初回オンボーディング：組織＋オーナー＋既定パイプライン＋サンプルデータを作成（冪等） */
@@ -102,10 +108,11 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.sfaMember.findFirst({
-          where: { userId, status: 'ACTIVE' },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.sfaMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名は org-<timestamp> にフォールバック。
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
@@ -166,22 +173,22 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
  * 商談画面を開いた時点でステージが自動生成され、カンバンが必ず描画される。
  * 既存ステージ（順序昇順）を返す。
  */
-export async function ensurePipeline(organizationId: string) {
-  let pipeline = await prisma.sfaPipeline.findFirst({
+export async function ensurePipeline(organizationId: string, db: Pick<typeof prisma, 'sfaPipeline' | 'sfaStage'> = prisma) {
+  let pipeline = await db.sfaPipeline.findFirst({
     where: { organizationId },
     orderBy: { createdAt: 'asc' },
   })
   if (!pipeline) {
-    pipeline = await prisma.sfaPipeline.create({
+    pipeline = await db.sfaPipeline.create({
       data: { organizationId, name: '標準パイプライン', isDefault: true },
     })
   }
-  let stages = await prisma.sfaStage.findMany({
+  let stages = await db.sfaStage.findMany({
     where: { pipelineId: pipeline.id },
     orderBy: { order: 'asc' },
   })
   if (stages.length === 0) {
-    await prisma.sfaStage.createMany({
+    await db.sfaStage.createMany({
       data: DEFAULT_STAGES.map((s) => ({
         pipelineId: pipeline!.id,
         name: s.name,
@@ -192,7 +199,7 @@ export async function ensurePipeline(organizationId: string) {
         isLost: !!s.isLost,
       })),
     })
-    stages = await prisma.sfaStage.findMany({
+    stages = await db.sfaStage.findMany({
       where: { pipelineId: pipeline.id },
       orderBy: { order: 'asc' },
     })

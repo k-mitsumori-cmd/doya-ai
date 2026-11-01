@@ -43,7 +43,7 @@ async function serveFallbackImage(category: string): Promise<NextResponse> {
   try {
     const fileBuffer = await fs.promises.readFile(publicPath)
     const ext = path.extname(publicPath).toLowerCase().slice(1)
-    const mimeType = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'
+    const mimeType = ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'
 
     return new NextResponse(fileBuffer, {
       status: 200,
@@ -67,7 +67,7 @@ export async function GET(
   { params }: { params: Promise<{ category: string }> }
 ) {
   const { category: rawCategory } = await params
-  const category = decodeURIComponent(rawCategory)
+  const category = rawCategory
 
   if (!category) {
     return serveFallbackImage('default')
@@ -78,23 +78,20 @@ export async function GET(
 
   try {
     // banner_templateテーブルからランダムに画像を取得
-    type TemplateRow = { id: string; preview_image: string | null; category: string | null }
-
-    const templates = await prisma.$queryRaw<TemplateRow[]>`
-      SELECT id, preview_image, category
-      FROM banner_template
-      WHERE preview_image IS NOT NULL
-      ORDER BY RANDOM()
-      LIMIT 10
-    `
+    const templates = await prisma.bannerTemplate.findMany({
+      where: { isActive: true, imageUrl: { not: null } },
+      select: { id: true, imageUrl: true, previewUrl: true },
+      orderBy: { templateId: 'asc' },
+      take: 10,
+    })
 
     if (!templates || templates.length === 0) {
       return serveFallbackImage(category)
     }
 
     // indexに基づいて画像を選択（循環）
-    const selectedTemplate = templates[index % templates.length]
-    const imageData = selectedTemplate?.preview_image
+    const selectedTemplate = templates[((index % templates.length) + templates.length) % templates.length]
+    const imageData = selectedTemplate?.previewUrl || selectedTemplate?.imageUrl
 
     if (!imageData) {
       return serveFallbackImage(category)

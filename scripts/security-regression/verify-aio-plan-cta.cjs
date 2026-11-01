@@ -1,28 +1,24 @@
-const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
-const source=fs.readFileSync(path.resolve(__dirname,'../../src/components/aio/AioSidebar.tsx'),'utf8');
-const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText;
-const empty=()=>null,container=({children})=>React.createElement('div',null,children);let count=0;
-for(const plan of [null,'FREE','LIGHT','PRO','ENTERPRISE','BASIC','STARTER','BUSINESS','BUNDLE'])for(const isMobile of [false,true]){
- const exports={}, session=plan?{user:{plan}}:null;
- const mocks={'@/lib/plan-utils':require('./load-typescript.cjs').load('src/lib/plan-utils.ts'),react:{...React,useState:v=>[v,()=>{}]},'next/link':({href,children})=>React.createElement('a',{href},children),'next/navigation':{usePathname:()=>'/aio/test'},'next-auth/react':{useSession:()=>({data:session,status:plan?'authenticated':'unauthenticated'}),signOut(){}},'lucide-react':{LayoutDashboard:empty,CreditCard:empty,Zap:empty,Eye:empty,ScanSearch:empty},'@/components/TrialCallout':{TrialInlineSuffix:()=>React.createElement('span',null,'TRIAL_MARKER')},'@/components/sidebar/themes':{aioTheme:{}},'@/components/sidebar':new Proxy({useSidebarState:()=>({isCollapsed:false,showLabel:true,toggle(){}}),SidebarShell:container},{get:(o,k)=>k in o?o[k]:empty}),'@/components/ToolSwitcherMenu':{ToolSwitcherMenu:empty}};
- vm.runInNewContext(compiled,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error(n)}});const html=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test'}));const paid=plan&&!['FREE','LIGHT'].includes(plan);
- assert.ok(html.includes('href="/aio/pricing?org=test"'));
- if(paid){assert.ok(html.includes('プランを確認する'));assert.ok(!html.includes('プロにアップグレード')); assert.ok(!html.includes('TRIAL_MARKER'));assert.ok(!html.includes('→'));assert.ok(!html.includes('>UP<'));}
- else {assert.ok(html.includes('プロにアップグレード'));assert.ok(html.includes('TRIAL_MARKER'));}
- if(plan==='PRO'){
-  const orgHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'FREE',isOwner:false}));
-  assert.ok(orgHtml.includes('組織のプラン：FREE'));assert.ok(orgHtml.includes('組織オーナーにご相談ください'));assert.ok(!orgHtml.includes('プロにアップグレード'));
- }
- if(plan==='FREE'){
-  const orgHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'PRO',isOwner:true}));
-  assert.ok(orgHtml.includes('組織のプラン：PRO'));assert.ok(!orgHtml.includes('TRIAL_MARKER'));assert.ok(!orgHtml.includes('プロにアップグレード'));
- }
- if(plan==='LIGHT'){
-  const orgHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'LIGHT',isOwner:true}));
-  assert.ok(orgHtml.includes('組織のプラン：LIGHT'));assert.ok(orgHtml.includes('プロにアップグレード'));
-  const memberHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'LIGHT',isOwner:false}));
-  assert.ok(memberHtml.includes('組織オーナーにご相談ください'));assert.ok(!memberHtml.includes('プロにアップグレード'));
- }
- count++;console.log('PASS',plan||'GUEST',isMobile?'mobile':'desktop');
-}
-console.log(count+' rendered component checks passed');
+// ドヤAIO のプランの案内（2026-10-24 に古いサイドバー AioSidebar を消したあと）。
+// 新しい見た目では、プランと残りは共通の枠の左下（SidebarUsagePanel）が組織ごとに出す。
+// - 組織のページは AioShellFrame（ToolFrame）だけで包み、旧来のサイドバーのレイアウトに戻らない
+// - 枠の利用量は URL の組織（org: 'path'）で数える。別の組織のプランを出さない
+// 合成のデータだけ。DB・課金・AI には触れない。
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),{load}=require('./load-typescript.cjs');
+const root=path.resolve(__dirname,'../..');
+const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
+const layout=read('src/app/(shell)/aio/[orgSlug]/layout.tsx');
+assert.match(layout,/return <AioShellFrame orgSlug=\{orgSlug\}>\{children\}<\/AioShellFrame>/);
+assert.doesNotMatch(layout,/AioAppLayout|AioSidebar|isShellEnabled/);
+// 組織の確認（他組織は解決されない）は残す
+assert.match(layout,/const ctx = await getAioContext\(orgSlug\)/);
+assert.match(layout,/if \(!ctx \|\| ctx\.organizationSlug !== orgSlug\) redirect\('\/aio'\)/);
+for(const f of ['src/components/aio/AioSidebar.tsx','src/components/aio/AioAppLayout.tsx'])assert.equal(fs.existsSync(path.join(root,f)),false,f);
+const {SHELL_SERVICES,shouldShowShell}=load('src/components/shell/registry.ts',{'@/lib/ui/guest-path':load('src/lib/ui/guest-path.ts')});
+const aio=SHELL_SERVICES.find((s)=>s.id==='aio');
+assert.ok(aio&&aio.usage,'aio usage');
+assert.equal(aio.usage.service,'aio');
+assert.equal(aio.usage.org,'path');
+assert.equal(shouldShowShell('/aio/test',{signedIn:true}),true);
+assert.equal(shouldShowShell('/aio/test',{signedIn:false}),false);
+assert.equal(shouldShowShell('/aio/invite/tok',{signedIn:true}),false);
+console.log('PASS aio plan CTA is organization-scoped in the shell usage panel; legacy sidebar removed');

@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-08T03:38:48.274347+00:00",
+  "status": "local-only-not-released",
+  "confirmedFailures": [
+    {
+      "issue": "Previous actor header remains after account switch",
+      "baseline": "interview-article-stale-header-baseline.log",
+      "fixedBy": "Reset context-owned thumbnail, score, celebration and ancillary UI on identity/project changes",
+      "verifiedBy": "interview-article-recovery-mounted-results.json"
+    },
+    {
+      "issue": "Late initial recovery pending response overwrites fresh completed state",
+      "baseline": "interview-article-initial-recovery-race-baseline.log",
+      "fixedBy": "Initialization shares owned abort controller and context fence with explicit generation",
+      "verifiedBy": "interview-article-recovery-mounted-results.json"
+    }
+  ],
+  "additionalHardening": "Only known protocol/stream errors are rendered; browser storage errors use safe Japanese guidance. First baseline used cross-realm Error and did not reproduce raw diagnostic exposure; current regression injects same Error constructor. Do not claim earlier log demonstrated this defect.",
+  "checks": [
+    {
+      "report": "interview-article-recovery-mounted-results.json",
+      "passed": 19,
+      "changedSources": [],
+      "scope": "Actual full GeneratePage, protocol, stream and metadata modules mounted under StrictMode; native DOM/Response/AbortController and synthetic queued locks/shared storage/server/session/router/motion. Not native browser/history, Next auth, actual route or DB quota/provider proof."
+    },
+    {
+      "report": "interview-article-stream-client-results.json",
+      "passed": 30,
+      "changedSources": [],
+      "scope": "Actual client reader with native Response streams, UTF8 and AbortController; controlled timers/fetch. Not UI, native browser, server receipt, provider or database verification."
+    },
+    {
+      "report": "interview-article-operation-client-results.json",
+      "passed": 25,
+      "changedSources": [],
+      "scope": "Actual actor handshake and operation response reader with native Request/Response/body streams; synthetic fetch/timers. Not UI, native history, Next server, database, provider or production proof."
+    },
+    {
+      "report": "interview-article-intent-client-results.json",
+      "passed": 15,
+      "changedSources": [],
+      "scope": "Actual metadata client with synthetic shared storage/queued lock and hostile timer callbacks. No browser-native Web Locks, mounted wizard, provider, DB or deployment claim."
+    }
+  ],
+  "totalClientCases": 89,
+  "lint": {
+    "exitCode": 0,
+    "warnings": 3,
+    "scope": "Current page/protocol/intent/stream after initialization fence repair",
+    "log": "/tmp/doya-interview-client-current-lint.log"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "session": 60171,
+    "scope": "Current article generation page/clients/helper/API; later selection edits have separate session41187"
+  },
+  "scopeLimitations": [
+    "Synthetic mounted DOM, fetch/server/session/locks; not native browser or actual route/database in these client tests",
+    "Skill/legacy recipe private instruction handoff and custom navigation still incomplete",
+    "Fresh full frozen gate and production release pending",
+    "17 services /2074 criteria remain incomplete"
+  ]
+}

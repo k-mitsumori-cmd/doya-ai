@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-31T11:13:45.692Z",
+  "passed": 13,
+  "cases": [
+    "same rendered send sends once, retains newer draft and rejects stale rendered callback",
+    "A-B-A draft changes are retained",
+    "actor switch aborts request, remounts private state and rejects retained actor callback",
+    "auth refresh blocks loading, then permits fresh submission without stuck busy state",
+    "generation acquires shared lane before quota await; duplicate generation and concurrent chat rejected",
+    "new consultation keeps existing generated images",
+    "refinement shares lane and uses source image specification after a newer proposal",
+    "auth refresh preserves operation fence; late response ignored; next POST allowed only after terminal recovery confirmation",
+    "daily quota keeps draft and shows validated pricing CTA",
+    "malformed success preserves draft/image and blocks duplicate submission until recovery confirmation",
+    "deadline aborts transport, clears timer, retains draft and durable fence until terminal recovery confirmation",
+    "unmount aborts transport and ignores completion",
+    "guest submission is blocked with explicit sign-in link"
+  ],
+  "sourceHashes": {
+    "src/app/(shell)/banner/dashboard/chat/page.tsx": "e1f285962eda6197304826466d2e46f7e80d664c5745b58418e69714e45929d4",
+    "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
+    "src/lib/banner/refine-client.ts": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5",
+    "src/lib/banner/use-refine-recovery.ts": "3fd033a272826d0c8b12f2969ee5e3df0c1c858bfb42d86e3b94acf326211fbf",
+    "src/components/banner/BannerRefineRecovery.tsx": "c323f78beaa6c2ff0a3cb47c47c4f4953f870cdd82a9dfd89e9b591597a23ea0",
+    "src/lib/banner/text-client.ts": "f1dcb3861a6ee7f1376d7415bb04a9818b0f01e92cea3210950ce312b6c32632",
+    "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
+    "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
+  },
+  "scope": "Actual BannerChatPage, keyed workspace and request fence mounted under React18 StrictMode/jsdom. Actual refinement recovery hook/client/panel; synthetic auth/API/quota/Image decode events/locks/UI dependencies; no paid AI, customer DB or production calls. Image decode, cross-tab/server idempotency and real browser/provider flows remain unproven."
+}

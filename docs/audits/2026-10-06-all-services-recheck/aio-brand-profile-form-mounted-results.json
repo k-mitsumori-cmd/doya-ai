@@ -1,0 +1,13 @@
+{
+  "passed": 7,
+  "checks": [
+    "Actual settings form loads under StrictMode",
+    "Rendered text limits match server parser",
+    "Retained input callback cannot bypass brand limit; draft retained and no false success",
+    "31 aliases rejected before network without silently dropping input",
+    "31 competitors rejected before network",
+    "Normal form and exact boundary send normalized complete payload",
+    "Required brand name blocked before network"
+  ],
+  "scope": "Actual settings component under StrictMode with actual shared input parser and real DOM. Synthetic GET/send/UI shell only. Direct retained input callbacks exercise validation beyond native maxlength. Response acknowledgment, private auth flow and real persistence remain outside this test."
+}

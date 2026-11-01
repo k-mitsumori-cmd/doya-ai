@@ -1,11 +1,11 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-const source=fs.readFileSync(path.join(__dirname,'../../src/app/kintai/employees/page.tsx'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../../src/app/(shell)/kintai/employees/page.tsx'),'utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='toggleActive')callback=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);if(!callback)throw Error('Callback missing');
 const code=ts.transpileModule('globalThis.toggle='+callback,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 function harness(fetcher,initial=false,confirm=true){
  let rows=[{id:'employee',name:'synthetic',isActive:initial},{id:'other',name:'other',isActive:true}],calls=0,confirms=0,pending=new Set(),notice=null;const alerts=[];
- const sandbox={Set,window:{confirm:()=>{confirms++;return confirm}},JSON,alert:s=>alerts.push(s),setLimitNotice:v=>{notice=v},showEmployeeLimit:d=>{notice={message:d.error,href:d.canManageBilling===true?d.upgradeAvailable===true?'/kintai/pricing':d.contactUrl:undefined}},togglingRef:{current:new Set()},setTogglingIds:v=>{pending=v},setEmployees:fn=>{rows=fn(rows)},fetch:async(...a)=>{calls++;return fetcher(...a)}};
+ const sandbox={Set,window:{confirm:()=>{confirms++;return confirm}},confirmDialog:async()=>{confirms++;return confirm},JSON,alert:s=>alerts.push(s),alertDialog:async o=>{alerts.push(o)},userErrorMessage:(raw,fallback)=>typeof raw==='string'&&raw?raw:fallback,setLimitNotice:v=>{notice=v},showEmployeeLimit:d=>{notice={message:d.error,href:d.canManageBilling===true?d.upgradeAvailable===true?'/kintai/pricing':d.contactUrl:undefined}},togglingRef:{current:new Set()},setTogglingIds:v=>{pending=v},setEmployees:fn=>{rows=fn(rows)},fetch:async(...a)=>{calls++;return fetcher(...a)}};
  vm.runInNewContext(code,sandbox);return {toggle:()=>sandbox.toggle({...rows[0]}),state:()=>({rows,calls,confirms,alerts,notice,pending:pending.size,locked:sandbox.togglingRef.current.size})};
 }
 const success=active=>Response.json({employee:{id:'employee',isActive:active}});

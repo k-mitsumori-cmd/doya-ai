@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-07T01:06:56.308907+00:00",
+  "pid": 64438,
+  "privateFolder": "/tmp/doya-sfa-authority-8780212e",
+  "status": "failed",
+  "probeExitCode": 1,
+  "stopExitCode": 0,
+  "endedAt": "2026-10-07T01:06:58.546424+00:00",
+  "reason": "Synthetic deal table omitted updatedAt, which generated Prisma automatically updates. Local PostgreSQL logs confirm missing fixture column; not a production failure. Correct fixture and re-run every case. No source change."
+}

@@ -116,10 +116,11 @@ const response = { NextResponse: Response }
 
   await check('shodan detail hides previously stored provider failure details', async () => {
     const route = load('src/app/api/shodan/preparations/[id]/route.ts', {
+      ...require('./shodan-editor-test-helpers.cjs'),
       'next/server': response,
       '@prisma/client': { Prisma: { DbNull: Symbol('DbNull') } },
-      '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async () => ({ id: 'prep-1', organizationId: 'org-1', status: 'failed', errorMessage: secret, slideImages: [] }) } } },
-      '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => 'org' },
+      '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async ({ where, select }) => { assert.equal(where.organizationId, 'org-1'); if (select) assert.deepEqual(JSON.parse(JSON.stringify(where.organization.members.some)), { id: 'member-1', userId: 'user-1', status: 'ACTIVE' }); return { id: 'prep-1', organizationId: 'org-1', status: 'failed', errorMessage: secret, slideImages: [], updatedAt: new Date('2026-09-20T00:00:00Z') } } } } },
+      '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'user-1' }), orgSlugFrom: () => 'org' },
       '@/lib/shodan/types': { effectivePrepStatus: () => 'failed' },
       '@/lib/shodan/slide-generation-lease': { shodanSlideLeaseKey: () => 'lease' },
       '@/lib/shodan/storage': { signedUrl: async () => '' },

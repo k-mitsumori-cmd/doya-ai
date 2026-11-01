@@ -1,0 +1,60 @@
+{
+  "status": "confirmed-unfixed",
+  "results": [
+    {
+      "name": "negative unsupported quota",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    },
+    {
+      "name": "fractional quota",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    },
+    {
+      "name": "negative usage",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    },
+    {
+      "name": "unknown plan",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    },
+    {
+      "name": "contradictory plan",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    },
+    {
+      "name": "error in success",
+      "observed": "Accepted malformed metadata and cleared previous limit warning",
+      "state": {
+        "login": false,
+        "message": null,
+        "upgrade": null
+      }
+    }
+  ],
+  "scope": "Extracted actual refreshUsage callback with synthetic HTTP/setters; proves weak metadata validation, not real customer quota bypass. Server mutation quota remains independently enforced."
+}

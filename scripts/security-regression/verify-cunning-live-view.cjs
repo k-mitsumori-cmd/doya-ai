@@ -15,7 +15,7 @@ const tx = {
   cunningRecordingLease: { findUnique: async () => ({ stoppedAt: null }) },
 };
 const route = load('src/app/api/cunning/sessions/[id]/route.ts', {
-  'next/server': { NextResponse: Response },
+  '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
   '@prisma/client': { Prisma: { TransactionIsolationLevel: { RepeatableRead: 'RepeatableRead' } } },
   '@/lib/prisma': { prisma: { $transaction: async fn => fn(tx) } },
   '@/lib/cunning/access': { getUserId: async () => owner },

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T20:16:30.675Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "finding": "concurrent identical actual API calls save duplicate expenses",
+      "statuses": [
+        200,
+        200
+      ],
+      "savedRows": 2,
+      "totalAmount": 20000
+    },
+    {
+      "finding": "discarding acknowledgement then repeating request saves another expense",
+      "savedRows": 2,
+      "totalAmount": 20000
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/expenses/route.ts": "b30c37c97d0eda707985503cb841fca1aec025a6cb29688f1f48505ae8331815",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
+  },
+  "scope": "Actual expense POST route and Prisma in isolated Unix-socket PostgreSQL with project FK; synthetic session and workspace. Confirms duplicate records without operation IDs. No customer/provider/production writes or observed production-user impact."
+}

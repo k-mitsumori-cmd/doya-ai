@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T23:14:02.798Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    "create modal same-frame submits issue two identical POST requests and two success navigations",
+    "partial create acknowledgement reports success and routes to undefined workspace slug",
+    "empty settings acknowledgement reports saved and refreshes",
+    "same-mounted workspace prop switch retains old private values and sends them to new workspace"
+  ],
+  "conditional": [
+    "Same-mounted workspace prop change; actual Next navigation remount unproven."
+  ],
+  "sourceHashes": {
+    "src/components/promane/create-workspace-button.tsx": "3274521da84b7f5024b3f9c6b0ac5e8274e0a8944766f54198d762b7005a4d3e",
+    "src/components/promane/workspace-settings-form.tsx": "e03ca0c00592a0fc7c722ff53301ff7c06f934c1f627bc075fb7a57fa9b6984b"
+  },
+  "scope": "Actual current create/settings components in React StrictMode with synthetic HTTP responses/navigation. No production calls or writes; does not establish actual duplicate DB rows or authenticated Next behavior."
+}

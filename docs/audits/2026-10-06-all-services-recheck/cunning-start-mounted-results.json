@@ -1,0 +1,33 @@
+{
+  "passed": 27,
+  "checks": [
+    "Same-frame double activation creates one synthetic request and confirmed route",
+    "Malformed missing ID never navigates and requires history confirmation",
+    "Malformed path ID never navigates and requires history confirmation",
+    "Malformed foreign owner never navigates and requires history confirmation",
+    "Malformed wrong mode never navigates and requires history confirmation",
+    "Malformed error success never navigates and requires history confirmation",
+    "Malformed code success never navigates and requires history confirmation",
+    "Malformed missing session never navigates and requires history confirmation",
+    "HTTP500 remains unknown and hides raw diagnostic",
+    "Creation deadline unlocks UI but never automatically resubmits",
+    "Stalled creation body is cancelled; excessive body is unconfirmed",
+    "Known input denial retains draft and permits only an explicit retry",
+    "Unauthorized creation offers callback login without false success",
+    "Quota rejection emits sanitized service action and refreshes only quota, preserving selections",
+    "Reserved recording denial offers stop/recheck guidance without upgrade modal",
+    "Navigation failure keeps confirmed session action and never recreates it",
+    "Auth refresh cancels pending creation, preserves uncertainty and ignores late confirmation",
+    "Old actor ABA callback and loading/missing ID/guest cannot create sessions",
+    "Focus and plan refresh preserve draft; pending/zero metadata blocks retained callback",
+    "Malformed usage unknown plan never authorizes creation",
+    "Malformed usage error success never authorizes creation",
+    "Malformed usage contradictory tier never authorizes creation",
+    "Malformed usage invalid reservation never authorizes creation",
+    "Malformed usage missing usage never authorizes creation",
+    "Unmount cancels mutation and read listeners without navigation or automatic retry",
+    "Network creation failure remains unknown and preserves history recovery",
+    "Unauthorized or guest usage offers login and revalidated usage restores operation"
+  ],
+  "scope": "Actual Cunning Tool, real allowance/profile/mode modules and bounded reader mounted under StrictMode with real Session context. Synthetic network/timers/router only; no session creation, AI, recording, customer data, provider or DB mutation. Actor private-state remount is covered by separate actual layout tests."
+}

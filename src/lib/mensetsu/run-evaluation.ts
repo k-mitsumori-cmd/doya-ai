@@ -16,7 +16,8 @@ import { EVALUATION_STALE_MS, LEVEL_LABELS, type MensetsuLevel, type Rubric } fr
 
 export type RunEvaluationResult =
   | { ok: true; verdict: string }
-  | { ok: false; reason: string; status: number }
+  /** aiCalled: AI を呼んだあとの失敗（呼ぶ前の失敗には付けない。ドヤパワーを戻さない判断に使う） */
+  | { ok: false; reason: string; status: number; aiCalled?: true }
 
 /** sessionId を渡すと評価を実行し、結果を保存して status を evaluated にする */
 export async function runEvaluation(sessionId: string): Promise<RunEvaluationResult> {
@@ -161,13 +162,13 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
         await releaseClaim()
         return { ok: false, reason: saved === 'changed'
           ? '評価中に追加の発話が届きました。最新の発話で再評価してください。'
-          : '評価中に面接の状態が変わりました。再読み込みしてください。', status: 409 }
+          : '評価中に面接の状態が変わりました。再読み込みしてください。', status: 409, aiCalled: true }
       }
 
       return { ok: true, verdict: result.verdict }
     }
     await releaseClaim()
-    return { ok: false, reason: '最新の発話で再評価してください。', status: 409 }
+    return { ok: false, reason: '最新の発話で再評価してください。', status: 409, aiCalled: true }
   } catch (error) {
     await releaseClaim()
     throw error

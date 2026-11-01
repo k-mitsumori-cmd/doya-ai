@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-07T20:55:57.007Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    "truncated acknowledgement cannot mark the whole submitted note saved",
+    "exact 1000character acknowledgement clears only confirmed operation"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-time-entry-creation.ts": "3263d754ad306c3167a47267f2f6a25999a5901c7973560b623bbb21585d8f34"
+  },
+  "scope": "Actual React hook StrictMode and localStorage; synthetic server-action acknowledgements. No real Next transport or production writes."
+}

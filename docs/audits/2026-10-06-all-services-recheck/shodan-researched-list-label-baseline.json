@@ -1,0 +1,7 @@
+{
+  "status": "confirmed-open",
+  "case": "Idle researched list row is labeled 作成中 without running list job or polling",
+  "polling": false,
+  "writes": 0,
+  "scope": "Actual StrictMode list/layout/controller; synthetic researched row. Does not prove absence of a job on the real server. Type specification says researched is also a stable proposal-waiting state."
+}

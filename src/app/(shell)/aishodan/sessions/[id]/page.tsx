@@ -1,0 +1,457 @@
+'use client'
+
+// ============================================
+// ドヤAI商談 商談詳細
+// ============================================
+// 全文ログ・要約・ヒアリング結果・答えられなかった質問・適合判定。
+// ⚠️ スコアは参考値である旨を必ず画面に出す。人が上書きできるようにする。
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useParams } from 'next/navigation'
+import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
+import { notifyError } from '@/lib/ui/notify'
+import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
+
+interface Detail {
+  id: string
+  guestName: string | null
+  guestCompany: string | null
+  guestEmail: string | null
+  status: string
+  evaluationStatus?: 'ready' | 'manual' | 'pending' | 'retrying' | 'stopped' | 'unavailable' | null
+  hasPreviousOutcome?: boolean
+  startedAt: string | null
+  endedAt: string | null
+  schedulingClickedAt: string | null
+  roomName: string
+  isPreview: boolean
+  productName: string
+  turns: Array<{ id: string; speaker: string; text: string; phase: string | null }>
+  slots: Array<{ key: string; label: string; required: boolean; value: string | null }>
+  questions: Array<{ id: string; text: string; unanswered: boolean }>
+  outcome: {
+    fitScore: number
+    verdict: string
+    reason: string
+    nextAction: string | null
+    summary: any
+    overriddenAt: string | null
+  } | null
+}
+
+const VERDICT_STYLE: Record<string, string> = {
+  hot: 'bg-rose-50 text-rose-700 ring-rose-200',
+  warm: 'bg-amber-50 text-amber-700 ring-amber-200',
+  cold: 'bg-slate-100 text-slate-600 ring-slate-200',
+  unfit: 'bg-slate-100 text-slate-500 ring-slate-200',
+}
+
+/**
+ * 手で判定を入れるときの既定の適合度。
+ * ⚠️ AIの点数と混ざらないよう、区分の代表値だけを置く。
+ *    厳密な点数は後から編集できる。
+ */
+const MANUAL_FIT_SCORE: Record<Verdict, number> = { hot: 85, warm: 65, cold: 40, unfit: 15 }
+
+export default function AishodanSessionDetail() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
+  const params = useParams<{ id: string }>()
+  const id = params?.id
+  const [d, setD] = useState<Detail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
+  const [loadStatus, setLoadStatus] = useState(0)
+  /** 判定の保存・再評価に失敗したときの「何が起きたか・どうすればよいか」 */
+  const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠
+  const tap = AISHODAN_TAP
+  /**
+   * 判定の操作の失敗を、サーバーの文の代わりに利用者向けの文で知らせる。
+   * override / reEvaluate に onRejected として渡す（今までの見た目では渡さず、サーバーの文をそのまま出す）
+   */
+  function actionRejected(subject: string) {
+    return (status: number, serverMessage: string | undefined) => {
+      const f = describeAishodanFailure(status, subject, { serverMessage })
+      setActionFailure(f)
+      notifyError(setError, f.what)
+    }
+  }
+  function overrideNext(verdict: Verdict) {
+    setActionFailure(null)
+    return override(verdict, actionRejected('判定を保存できませんでした。'))
+  }
+  function reEvaluateNext() {
+    setActionFailure(null)
+    return reEvaluate(false, actionRejected('自動判定を作成できませんでした。'))
+  }
+
+  const load = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    try {
+      await ensureSelectedOrg('aishodan')
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`))
+      const j = await r.json()
+      if (!r.ok) throw new AishodanHttpError(j?.error || '読み込みに失敗しました', r.status)
+      setD(j.session)
+    } catch (e) {
+      setLoadStatus(failureStatus(e))
+      // 新しい見た目では、トーストにもサーバーの文を出さない
+      notifyError(setError, '商談を読み込めませんでした。')
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function override(verdict: Verdict, onRejected?: (status: number, serverMessage: string | undefined) => void) {
+    if (!id) return
+    setSaving(true)
+    setError('')
+    try {
+      // ⚠️ 判定がまだ無い商談（自動判定に失敗したもの）は適合度も一緒に送る。
+      //    サーバ側は判定と適合度が揃って初めて新規作成する。
+      const body: Record<string, unknown> = { verdict }
+      if (!d?.outcome) body.fitScore = MANUAL_FIT_SCORE[verdict]
+      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        if (onRejected) onRejected(res.status, j?.error)
+        else notifyError(setError, j?.error || '判定を保存できませんでした')
+        return
+      }
+      await load()
+    } catch {
+      notifyError(setError, '判定の保存結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /** 自動判定をやり直す。生成に失敗した商談を救うための導線 */
+  async function reEvaluate(overwriteManual = false, onRejected?: (status: number, serverMessage: string | undefined) => void) {
+    if (!id) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}/re-evaluate`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteManual }),
+      })
+      const j = await res.json().catch(() => null)
+      if (!res.ok) {
+        // 手入力を上書きしてよいか、一度だけ確かめる
+        if (j?.needsConfirm && !overwriteManual) {
+          if (await confirmDialog({ title: 'AIの判定で上書きしますか？', message: 'この商談の判定は、担当者が手で入力したものです。', confirmLabel: '上書きする', tone: 'danger' })) {
+            await reEvaluate(true, onRejected)
+          }
+          return
+        }
+        if (onRejected) onRejected(res.status, j?.error)
+        else notifyError(setError, j?.error || '判定を作成できませんでした')
+        return
+      }
+      await load()
+    } catch {
+      notifyError(setError, '再評価の結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
+  }
+  if (!d) {
+    // サーバーの文は出さない。見つからない・権限が無いときは一覧へ、通信の失敗はやり直す
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? '商談を読み込めませんでした。' : 'この商談は見つかりませんでした。')}
+          onRetry={() => void load()}
+          backHref="/aishodan/sessions"
+          backLabel="商談ログに戻る"
+        />
+      </div>
+    )
+  }
+
+  const summary = d.outcome?.summary || {}
+  const conditions: Array<{ label: string; met: boolean; weight: number; note: string }> = summary.conditions || []
+  const unanswered = d.questions.filter((q) => q.unanswered)
+
+  const canEvaluate = !!d.startedAt && !!d.endedAt && ['completed', 'evaluated'].includes(d.status)
+
+  return (
+    <div className="pb-12">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-4">
+          <Link href="/aishodan/sessions" className={`text-xs text-slate-500 hover:underline font-semibold inline-flex items-center rounded-lg${tap}`}>← 商談ログ</Link>
+          <AishodanHeading className="text-lg font-bold text-slate-900 break-words [text-wrap:balance]">
+            {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
+          </AishodanHeading>
+          <p className="text-xs text-slate-500 font-semibold break-words">
+            {d.productName} / {d.startedAt ? new Date(d.startedAt).toLocaleString('ja-JP') : '未実施'}
+            {d.guestEmail && ` / ${d.guestEmail}`}
+          </p>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+        {d.evaluationStatus && !['ready', 'manual'].includes(d.evaluationStatus) && (
+          <section role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
+            <p className="font-bold">
+              {d.evaluationStatus === 'stopped' ? '自動判定の再試行を停止しました。'
+                : d.evaluationStatus === 'retrying' ? '判定の作成に失敗したため、自動で再試行します。'
+                : d.evaluationStatus === 'pending' ? '最新の回答で判定を作成しています。'
+                : '判定を確定できていません。'}
+            </p>
+            <p className="mt-1">
+              {d.hasPreviousOutcome && '追加の回答があるため、以前のAI判定は表示していません。'}
+              {['stopped', 'unavailable'].includes(d.evaluationStatus)
+                ? '管理者の方は、再評価するか判定を手で入力してください。'
+                : '会話の記録は保存されています。しばらくしてから画面を再読み込みしてください。'}
+            </p>
+          </section>
+        )}
+        {/* 判定 */}
+        {d.outcome ? (
+          <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 p-4 sm:p-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <p className="text-xs text-slate-500 font-semibold">適合スコア</p>
+                <p className="text-4xl font-bold text-slate-900">{d.outcome.fitScore}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${VERDICT_STYLE[d.outcome.verdict]}`}>
+                {VERDICT_LABELS[d.outcome.verdict as Verdict]}
+              </span>
+              {d.outcome.overriddenAt && (
+                <span className="text-xs text-slate-500 font-semibold">手動で上書き済み</span>
+              )}
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-700 font-semibold">{d.outcome.reason}</p>
+            <p className="mt-2 text-[11px] text-slate-500">
+              スコアは参考値です。実際に追いかけるかどうかはご担当者がご判断ください。
+            </p>
+
+            {conditions.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {conditions.map((c, i) => (
+                  <li key={i} className="flex items-start gap-3 rounded-lg bg-slate-50 px-4 py-2.5">
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                        c.met ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-white'
+                      }`}
+                      aria-hidden={true}
+                    >
+                      {c.met ? '○' : '−'}
+                    </span>
+                    {/* 記号だけでは読み上げで伝わらない */}
+                    <span className="sr-only">{c.met ? '満たしている' : '満たしていない'}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {c.label} <span className="text-xs font-normal text-slate-500 font-semibold">（{c.weight}点）</span>
+                      </p>
+                      {c.note && <p className="mt-0.5 text-xs leading-relaxed text-slate-600 font-semibold">{c.note}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* ⚠️ 一次商談の成果はここ。判定スコアより先に目に入る位置に置く。 */}
+            <div className={`mt-4 rounded-xl border p-4 ${
+              d.schedulingClickedAt ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <p className={`text-sm font-semibold ${d.schedulingClickedAt ? 'text-emerald-800' : 'text-slate-700'}`}>
+                {d.schedulingClickedAt
+                  ? `日程調整に進みました（${new Date(d.schedulingClickedAt).toLocaleString('ja-JP')}）`
+                  : '日程調整には進んでいません'}
+              </p>
+              {!d.schedulingClickedAt && (
+                <p className="mt-1 text-xs text-slate-500 font-semibold">
+                  予約ページを開いていないため、こちらから連絡する必要があります。
+                </p>
+              )}
+            </div>
+
+            {d.outcome.nextAction && (
+              <div className="mt-4 rounded-xl border border-[#0066ff] bg-[#f2f6ff] p-4">
+                <p className="text-xs font-bold text-[#0066ff]">次のアクション</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-800 font-semibold">{d.outcome.nextAction}</p>
+              </div>
+            )}
+
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <button
+                onClick={() => void (reEvaluateNext())}
+                disabled={saving || !canEvaluate}
+                className={`rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40${tap}`}
+              >
+                自動判定をやり直す
+              </button>
+              {error ? (
+                <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+              ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+              <p className="mt-4 text-xs text-slate-500 font-semibold">判定を変える</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => (overrideNext(v))}
+                    disabled={saving || d.outcome?.verdict === v}
+                    aria-pressed={d.outcome?.verdict === v}
+                    className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold whitespace-nowrap${tap}`}
+                  >
+                    {VERDICT_LABELS[v]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm text-amber-900 font-semibold">
+              この商談はまだ判定されていません（状態: {SESSION_STATUS_LABELS[d.status] || d.status}）。
+            </p>
+            {/* ⚠️ 判定の生成は商談終了時の1回きりで、失敗すると作られない。
+                 やり直す導線が無いと、本物の見込み客が判定不能のまま埋もれる。 */}
+            <p className="mt-1 text-xs leading-relaxed text-amber-800 font-semibold">
+              {canEvaluate
+                ? '自動判定の作成に失敗した可能性があります。やり直すか、ご自身で判定を入力してください。'
+                : '自動判定は商談が終了してから実行できます。'}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void (reEvaluateNext())}
+                disabled={saving || !canEvaluate}
+                className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40 whitespace-nowrap${tap}`}
+              >
+                {saving ? '処理中…' : '自動判定をやり直す'}
+              </button>
+              <span className="text-xs text-amber-800 font-semibold">または手で入力:</span>
+              {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => (overrideNext(v))}
+                  disabled={saving}
+                  className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold whitespace-nowrap${tap}`}
+                >
+                  {VERDICT_LABELS[v]}
+                </button>
+              ))}
+            </div>
+            {error ? (
+              <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+            ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+          </section>
+        )}
+
+        {/* 要約 */}
+        {summary.headline?.length > 0 && (
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-sm font-bold text-slate-900">要約</h2>
+            <ul className="mt-3 space-y-1.5">
+              {summary.headline.map((h: string, i: number) => (
+                <li key={i} className="flex gap-2 text-sm text-slate-700 font-semibold">
+                  <span className="text-[#0066ff]">・</span>
+                  {h}
+                </li>
+              ))}
+            </ul>
+            {summary.challenge && (
+              <div className="mt-4">
+                <p className="text-xs font-bold text-slate-500">相手の課題</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700 font-semibold">{summary.challenge}</p>
+              </div>
+            )}
+            {summary.proposed && (
+              <div className="mt-3">
+                <p className="text-xs font-bold text-slate-500">提案した内容</p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700 font-semibold">{summary.proposed}</p>
+              </div>
+            )}
+            {summary.objections?.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-bold text-slate-500">示された懸念</p>
+                <ul className="mt-1 space-y-1">
+                  {summary.objections.map((o: string, i: number) => (
+                    <li key={i} className="text-sm text-slate-700 font-semibold">・{o}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ヒアリング結果 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">ヒアリング結果</h2>
+          <dl className="mt-3 divide-y divide-slate-100">
+            {d.slots.map((s) => (
+              <div key={s.key} className="flex gap-3 py-2.5 sm:gap-4">
+                <dt className="w-24 shrink-0 text-xs text-slate-500 font-semibold sm:w-32">
+                  {s.label}
+                  {s.required && <span className="ml-1 text-rose-500">*</span>}
+                </dt>
+                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'} min-w-0 break-words`}>
+                  {s.value || '聞き取れず'}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {/* 未回答質問 */}
+        {unanswered.length > 0 && (
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-sm font-bold text-slate-900">その場で答えられなかった質問</h2>
+            <p className="mt-1 text-xs text-slate-500 font-semibold">
+              資料に根拠が無く「確認して折り返す」と回答したものです。ご連絡の際にお答えください。
+            </p>
+            <ul className="mt-3 space-y-2">
+              {unanswered.map((q) => (
+                <li key={q.id} className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800 font-semibold">{q.text}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* 全文ログ */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">全文ログ</h2>
+          {d.turns.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500 font-semibold">発話がありません。</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {d.turns.map((t) => (
+                <div key={t.id} className={`flex gap-3 ${t.speaker === 'ai' ? '' : 'flex-row-reverse'}`}>
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${t.speaker === 'ai' ? 'bg-slate-100 text-slate-800' : 'bg-[#0066ff] text-white'} min-w-0 break-words`}
+                  >
+                    {t.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  )
+}

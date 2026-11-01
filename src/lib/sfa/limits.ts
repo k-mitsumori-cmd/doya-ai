@@ -101,7 +101,11 @@ export async function withSfaAdmission<T>(
         return { created: await create(tx) }
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      if ((error as { code?: string })?.code !== 'P2034' || attempt === 4) throw error
+      // Raw row-lock queries report serialization/deadlock SQLSTATE via P2010;
+      // model queries use P2034. Both require retrying the whole transaction.
+      const failure = error as { code?: string; meta?: { code?: string } }
+      const retryable = failure?.code === 'P2034' || failure?.code === 'SFA_RECEIPT_RACE' || failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code || '')
+      if (!retryable || attempt === 4) throw error
     }
   }
   throw new Error('SFA admission retry exhausted')

@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-08T00:15:40.344Z",
+  "status": "confirmed-repair-required",
+  "expected": 1,
+  "confirmed": 1,
+  "sourceHashes": {
+    "src/lib/promane/use-project-operation.ts": "0fe136526bdee96d64e925c52291d0063a28d3325a718e0217b29945be9f94c0",
+    "src/lib/promane/actions-projects.ts": "7a0132613b2b64d8c8db7efcdba535fe6db2d9a5305123e329cd4aabc50c5468",
+    "src/lib/promane/auth.ts": "886edf4e325c9546f21b87ede1424d906009e1d8f42f009aa8b1e45732e833cc",
+    "src/lib/promane/workspace-mutations.ts": "db9a72a3698ae597a149a22445f1a30c52db39c5860bacf2f60cb746636c2b25",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-mutable-slug-next-baseline.cjs": "feb7ccee018dd4582c8867962f5cb214e1420be4fe843a3910938679b1f9b7ca"
+  },
+  "case": "Actual native Next Server Action committed project with lost response; actual settings PATCH renamed same workspace; old slug metadata persisted while new slug form enabled a new operation and saved identical project twice.",
+  "beforePath": "/promane/shared-claim/projects/new",
+  "afterPath": "/promane/pending-project-renamed/projects/new",
+  "recoveryStatus": 500,
+  "syntheticRows": 2,
+  "scope": "Actual authenticated local Next build/native Chrome/full-schema private PostgreSQL with synthetic account. Confirmed project flow only. Other time/expense/client/task hook slug keys are source candidates, not authenticated reproductions. Not production/customer data."
+}

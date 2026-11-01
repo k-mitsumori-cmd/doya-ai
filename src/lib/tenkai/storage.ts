@@ -4,11 +4,11 @@
 // interviewパターンを踏襲し、tenkai-videos バケットを管理
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 const BUCKET_NAME = process.env.TENKAI_STORAGE_BUCKET || 'tenkai-videos'
 
 let _client: SupabaseClient | null = null
-let _bucketReady = false
 
 /**
  * サーバーサイド用 Supabase クライアント (service_role キー使用)
@@ -35,20 +35,7 @@ function getSupabaseAdmin(): SupabaseClient {
  * ストレージバケットを確保 (なければ作成)
  */
 async function ensureBucket(): Promise<void> {
-  if (_bucketReady) return
-  const supabase = getSupabaseAdmin()
-
-  const { data } = await supabase.storage.getBucket(BUCKET_NAME)
-  if (!data) {
-    const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: false,
-    })
-    if (error && !error.message?.includes('already exists')) {
-      throw new Error('保存先を準備できませんでした')
-    }
-  }
-
-  _bucketReady = true
+  await ensurePrivateImageBucket(getSupabaseAdmin().storage, BUCKET_NAME)
 }
 
 /**
@@ -84,6 +71,7 @@ export async function getDownloadSignedUrl(
   expiresInSeconds = 3600
 ): Promise<string> {
   const supabase = getSupabaseAdmin()
+  await ensureBucket()
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)

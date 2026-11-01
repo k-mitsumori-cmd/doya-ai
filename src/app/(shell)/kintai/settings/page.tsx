@@ -1,0 +1,457 @@
+'use client'
+
+import { PageTitle } from '@/components/kintai/ui-next'
+import { useEffect, useId, useState, useMemo, useRef } from 'react'
+import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { useKintaiWorkRuleCreation } from '@/lib/kintai/use-work-rule-creation'
+import { Skeleton } from '@/components/ds'
+import { alertDialog, ConfirmDialog } from '@/components/ds/dialog'
+import { useEscapeToClose } from '@/lib/kintai/use-escape'
+import { userErrorMessage } from '@/lib/kintai/user-error'
+
+function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes: number): string {
+  if (!workStart || !workEnd) return ''
+  const [sh, sm] = workStart.split(':').map(Number)
+  const [eh, em] = workEnd.split(':').map(Number)
+  const elapsed = (eh * 60 + em) - (sh * 60 + sm)
+  const totalMinutes = elapsed < 0 ? elapsed + 1440 : elapsed
+  const workMinutes = totalMinutes - breakMinutes
+  if (workMinutes <= 0) return ''
+
+  const halfWork = Math.floor(workMinutes / 2)
+  const breakStartMin = sh * 60 + sm + halfWork
+  const breakEndMin = breakStartMin + breakMinutes
+  const bsH = (breakStartMin >= 1440 ? '翌日' : '') + String(Math.floor(breakStartMin / 60) % 24).padStart(2, '0')
+  const bsM = String(breakStartMin % 60).padStart(2, '0')
+  const beH = (breakEndMin >= 1440 ? '翌日' : '') + String(Math.floor(breakEndMin / 60) % 24).padStart(2, '0')
+  const beM = String(breakEndMin % 60).padStart(2, '0')
+
+  const workH = Math.floor(workMinutes / 60)
+  const workM = workMinutes % 60
+  if (breakMinutes === 0) return `${workStart} - ${elapsed < 0 ? '翌日' : ''}${workEnd} 勤務 = ${workH}時間${workM > 0 ? `${workM}分` : ''}`
+
+  return `${workStart} - ${bsH}:${bsM} 勤務 → ${bsH}:${bsM} - ${beH}:${beM} 休憩 → ${beH}:${beM} - ${elapsed < 0 ? '翌日' : ''}${workEnd} 勤務 = ${workH}時間${workM > 0 ? `${workM}分` : ''}`
+}
+
+export default function SettingsPage() {
+  const access = useKintaiAccess()
+  const organizationId = access.organizationId || ''
+  const ready = Boolean(access.ready && access.actorId && organizationId && access.isActive !== false)
+  const canManage = access.role === 'hr_admin' || access.role === 'system_admin'
+  const identity = JSON.stringify([access.actorId || '', organizationId])
+  const signature = JSON.stringify([identity, ready, canManage])
+  const accessEpoch = useRef({ signature, version: 0 })
+  if (accessEpoch.current.signature !== signature) accessEpoch.current = { signature, version: accessEpoch.current.version + 1 }
+  const accessVersion = accessEpoch.current.version
+  const accessKey = JSON.stringify([signature, accessVersion])
+  const currentAccess = () => ready && accessEpoch.current.version === accessVersion
+
+  const [rules, setRules] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const requestVersion = useRef(0)
+  const formVersion = useRef(0)
+  const mounted = useRef(false)
+  const saveLock = useRef<object | null>(null)
+  const deleteVersion = useRef(0)
+  const deleteLock = useRef<object | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<any>(null)
+  const [form, setForm] = useState({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
+  const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
+  const formTitleId = useId()
+
+  const creation = useKintaiWorkRuleCreation(organizationId, ready && canManage, (state) => {
+    if (state === 'found' && !editing) { formVersion.current += 1; setShowForm(false) }
+    void fetchRules()
+  })
+
+  const fetchRules = async () => {
+    if (!currentAccess()) return
+    const version = ++requestVersion.current
+    setLoading(true)
+    setLoadError(false)
+    setRules([])
+    try {
+      const response = await fetch('/api/kintai/work-rules', { cache: 'no-store' })
+      if (!response.ok) throw new Error('就業ルールを読み込めませんでした')
+      const data = await response.json()
+      if (data?.organizationId !== organizationId || !Array.isArray(data?.rules)) throw new Error('就業ルールを読み込めませんでした')
+      if (version === requestVersion.current && currentAccess()) setRules(data.rules)
+    } catch {
+      if (version === requestVersion.current && currentAccess()) setLoadError(true)
+    } finally {
+      if (version === requestVersion.current && currentAccess()) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    mounted.current = true
+    saveLock.current = null; deleteLock.current = null; setSaving(false); setDeleting(false)
+    void fetchRules()
+    return () => { mounted.current = false; deleteVersion.current += 1; formVersion.current += 1; requestVersion.current += 1 }
+  // Every actor/org/readiness generation owns its reads and response callbacks.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessKey])
+
+  useEffect(() => { setShowForm(false); setEditing(null); setShowDeleteConfirm(null) }, [identity])
+
+  const openCreate = () => {
+    if (!currentAccess() || !canManage || creation.blocked) return
+    formVersion.current += 1
+    saveLock.current = null
+    setSaving(false)
+    setEditing(null)
+    setForm({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
+    setShowForm(true)
+  }
+
+  const openEdit = (rule: any) => {
+    if (!currentAccess() || !canManage) return
+    formVersion.current += 1
+    saveLock.current = null
+    setSaving(false)
+    setEditing(rule)
+    setForm({
+      name: rule.name, workStart: rule.workStart, workEnd: rule.workEnd,
+      breakMinutes: rule.breakMinutes, overtimeCalcMethod: rule.overtimeCalcMethod,
+      flexEnabled: rule.flexEnabled, coreStart: rule.coreStart || '', coreEnd: rule.coreEnd || '',
+    })
+    setShowForm(true)
+  }
+
+  const closeForm = () => { formVersion.current += 1; setShowForm(false) }
+  useEscapeToClose(showForm, closeForm, saving)
+
+  const handleSave = async () => {
+    if (!currentAccess() || !canManage || saveLock.current) return
+    if (editing && (typeof editing.revision !== 'string' || !/^[a-f0-9]{64}$/.test(editing.revision))) { await alertDialog({ title: '保存できませんでした', message: '最新の就業ルールを読み込み直してから、もう一度お試しください。', tone: 'error' }); return }
+    if (!form.name.trim()) { await alertDialog({ title: 'ルール名を入力してください', message: 'ルール名は必須です。例: 標準 (9:00-18:00)', tone: 'error' }); return }
+    const inputError = validateKintaiWorkRuleInput(form) || validateKintaiWorkRuleSchedule(form)
+    if (inputError) { await alertDialog({ title: '入力を確かめてください', message: inputError, tone: 'error' }); return }
+    const version = formVersion.current
+    const current = () => mounted.current && formVersion.current === version && currentAccess()
+    const attempt = {}
+    saveLock.current = attempt
+    setSaving(true)
+    try {
+      if (!editing) {
+        const row = await creation.create(form)
+        if (!row || !current()) return
+        setShowForm(false); void fetchRules(); return
+      }
+      const url = editing ? `/api/kintai/work-rules/${editing.id}` : '/api/kintai/work-rules'
+      const method = editing ? 'PATCH' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, organizationId, expectedRevision: editing.revision }) })
+      if (!current()) return
+      const data = await res.json().catch(() => null)
+      if (!current()) return
+      if (!res.ok) { await alertDialog({ title: '保存できませんでした', message: userErrorMessage(data?.error, '入力を確かめて、もう一度お試しください。'), tone: 'error' }); return }
+      if (!data?.rule || typeof data.rule.id !== 'string' || !data.rule.id
+        || typeof data.rule.revision !== 'string' || !/^[a-f0-9]{64}$/.test(data.rule.revision) || data.rule.revision === editing.revision
+        || data.rule.organizationId !== organizationId || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
+        await alertDialog({ title: '保存できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' })
+        return
+      }
+      setShowForm(false)
+      void fetchRules()
+    } catch { if (current()) await alertDialog({ title: '保存できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }) } finally {
+      if (saveLock.current === attempt) { saveLock.current = null; if (current()) setSaving(false) }
+    }
+  }
+
+  const openDelete = (rule: any) => {
+    if (!currentAccess() || !canManage) return
+    deleteVersion.current += 1
+    deleteLock.current = null
+    setDeleting(false)
+    setShowDeleteConfirm(rule)
+  }
+  const closeDelete = () => { deleteVersion.current += 1; setShowDeleteConfirm(null) }
+
+  const handleDelete = async () => {
+    if (!currentAccess() || !canManage || !showDeleteConfirm || deleteLock.current) return
+    if (typeof showDeleteConfirm.revision !== 'string' || !/^[a-f0-9]{64}$/.test(showDeleteConfirm.revision)) { await alertDialog({ title: '削除できませんでした', message: '最新の就業ルールを読み込み直してから、もう一度お試しください。', tone: 'error' }); return }
+    const version = deleteVersion.current
+    const current = () => mounted.current && deleteVersion.current === version && currentAccess()
+    const attempt = {}
+    deleteLock.current = attempt
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}?organizationId=${encodeURIComponent(organizationId)}&expectedRevision=${encodeURIComponent(showDeleteConfirm.revision)}`, { method: 'DELETE' })
+      if (!current()) return
+      const data = await res.json().catch(() => null)
+      if (!current()) return
+      if (!res.ok) { await alertDialog({ title: '削除できませんでした', message: userErrorMessage(data?.error, '少し待って、もう一度お試しください。'), tone: 'error' }); return }
+      if (data?.success !== true) { await alertDialog({ title: '削除できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }); return }
+      setShowDeleteConfirm(null)
+      void fetchRules()
+    } catch { if (current()) await alertDialog({ title: '削除できたか確かめられませんでした', message: '画面を再読み込みして、最新のルールを確かめてください。', tone: 'error' }) } finally {
+      if (deleteLock.current === attempt) { deleteLock.current = null; if (current()) setDeleting(false) }
+    }
+  }
+
+  const OT_LABELS: Record<string, string> = { daily: '日次', weekly: '週次', monthly: '月次' }
+
+  const preview = useMemo(() => computeSchedulePreview(form.workStart, form.workEnd, form.breakMinutes), [form.workStart, form.workEnd, form.breakMinutes])
+
+  const recoveryPanel = (creation.message || creation.pending) && (
+          <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3 text-sm text-slate-700">
+            <p>{creation.message || '保存結果を確認してください。自動で再保存は行いません。'}</p>
+            {creation.pending && <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={creation.busy} onClick={() => void creation.recover()} className="rounded-lg bg-[#0066ff] px-3 py-2 text-white disabled:opacity-50">保存結果を確認</button>
+              <button type="button" disabled={creation.busy} onClick={() => void creation.recover(true)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">未完了の操作を取り消す</button>
+            </div>}
+          </div>
+        )
+
+  if (!ready) return <div role="status" className="p-6 text-center">勤怠情報を確認しています。</div>
+
+  return (
+    <>
+
+      <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <div>
+              <PageTitle className="text-2xl font-black text-slate-800">就業ルール設定</PageTitle>
+              <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
+            </div>
+          </div>
+          <button onClick={openCreate} disabled={loading || loadError || creation.blocked} className="flex items-center gap-1.5 px-4 py-2 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20 disabled:opacity-50">
+            <span className="material-symbols-outlined text-lg">add</span>ルールを追加
+          </button>
+        </div>
+
+        {/* Explanation with bear */}
+        <div className="flex items-center gap-3 bg-[#0066ff]/5 border border-[#0066ff]/10 rounded-xl px-4 py-3">
+          <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
+          <p className="text-sm text-slate-600">就業ルールは従業員に割り当てて使用します。複数のルールを作成して、異なる勤務形態に対応できます。</p>
+        </div>
+
+        {(!showForm || editing) && recoveryPanel}
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-busy="true" aria-label="就業ルールを読み込み中">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border-2 border-slate-200 p-6"><Skeleton lines={4} height={16} /></div>
+            ))}
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+            就業ルールを読み込めませんでした。通信を確かめて、もう一度お試しください。
+            <button type="button" onClick={() => void fetchRules()} className="ml-2 font-bold underline">再読み込み</button>
+          </div>
+        ) : rules.length === 0 ? (
+          <div className="flex flex-col items-center py-16 text-center fade-in-up">
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={120} height={120} className="bear-float mb-4" />
+            <h3 className="text-lg font-bold text-slate-700 mb-1">就業ルールがありません</h3>
+            <p className="text-sm text-slate-400 mb-6">ルールを作成して従業員に割り当てましょう。</p>
+            <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-lg hover:bg-[#0047d6] transition-colors">
+              <span className="material-symbols-outlined text-lg">add</span>最初のルールを作成
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {rules.map((rule) => {
+              const [sh, sm] = (rule.workStart || '09:00').split(':').map(Number)
+              const [eh, em] = (rule.workEnd || '18:00').split(':').map(Number)
+              const elapsed = (eh * 60 + em) - (sh * 60 + sm)
+              const overnight = elapsed < 0
+              const totalMin = overnight ? elapsed + 1440 : elapsed
+              const workMin = totalMin - (rule.breakMinutes || 0)
+              const workH = Math.floor(workMin / 60)
+              const workM = workMin % 60
+              const barStart = sh * 60 + sm
+              const barEnd = eh * 60 + em
+              const barLeftPct = (barStart / 1440) * 100
+              const barEndPct = (barEnd / 1440) * 100
+              const segments = overnight
+                ? [{ left: 0, width: barEndPct }, { left: barLeftPct, width: 100 - barLeftPct }]
+                : [{ left: barLeftPct, width: barEndPct - barLeftPct }]
+
+              return (
+                <div key={rule.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 hover:shadow-xl hover:border-brand-200 transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-black text-slate-800">{rule.name}</h3>
+                      {rule.flexEnabled && (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#0066ff]/10 text-[#0066ff] rounded-full font-bold">
+                          <span className="material-symbols-outlined text-xs">sync</span>
+                          フレックス
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-0.5 ml-2 shrink-0">
+                      <button type="button" aria-label={`${rule.name}を編集する`} disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#0066ff] hover:bg-brand-50 rounded-lg transition-colors">
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                      </button>
+                      <button type="button" aria-label={`${rule.name}を削除する`} disabled={!canManage} onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Work time — big and clear */}
+                    <div className="bg-brand-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-xl text-[#0066ff]">schedule</span>
+                        <span className="text-2xl font-black text-[#0066ff]">{rule.workStart}</span>
+                        <span className="text-lg font-black text-slate-400">〜</span>
+                        <span className="text-2xl font-black text-[#0066ff]">{rule.workEnd}</span>
+                      </div>
+                      <p className="text-sm font-bold text-slate-500 mt-1">
+                        {workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務
+                      </p>
+                    </div>
+
+                    {/* Visual hours bar */}
+                    <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
+                      {segments.map((segment, index) => <div key={index}
+                        className="absolute top-0 bottom-0 bg-gradient-to-r from-[#0066ff]/40 to-[#0066ff]/60 rounded-full"
+                        style={{ left: `${segment.left}%`, width: `${Math.max(0, segment.width)}%` }}
+                      />)}
+                      <span className="absolute text-xs font-black text-[#0066ff] top-1/2 -translate-y-1/2" style={{ left: `${Math.max(3, barLeftPct - 2)}%` }}>{rule.workStart}</span>
+                      <span className="absolute text-xs font-black text-[#0066ff] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barEndPct + 1)}%` }}>{rule.workEnd}</span>
+                    </div>
+
+                    {/* Break */}
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base text-amber-500">coffee</span>
+                      <span className="text-slate-600">休憩 {rule.breakMinutes}分</span>
+                    </div>
+
+                    {/* Overtime calc */}
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base text-orange-500">calculate</span>
+                      <span className="text-slate-600">残業計算: {OT_LABELS[rule.overtimeCalcMethod] || rule.overtimeCalcMethod}</span>
+                    </div>
+
+                    {/* Flex core times */}
+                    {rule.flexEnabled && (rule.coreStart || rule.coreEnd) && (
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base text-[#0066ff]">sync</span>
+                        <span className="text-slate-600">コアタイム: {rule.coreStart || '-'} 〜 {rule.coreEnd || '-'}</span>
+                      </div>
+                    )}
+
+                    {/* Employee count */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100 mt-1">
+                      <span className="material-symbols-outlined text-base text-slate-400">group</span>
+                      <span className="text-slate-500 text-xs">
+                        使用中: <span className="font-bold text-slate-700">{rule._count?.employees || 0}</span>名
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {showForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeForm}>
+            <div role="dialog" aria-modal="true" aria-labelledby={formTitleId} className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="" width={40} height={40} className="bear-wiggle" />
+                  <h2 id={formTitleId} className="text-lg font-bold text-slate-800">{editing ? 'ルールを編集' : 'ルールを追加'}</h2>
+                </div>
+                <button type="button" aria-label="閉じる" onClick={closeForm} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">ルール名 <span className="text-red-500">*</span></label>
+                <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" placeholder="例: 標準 (9:00-18:00)" />
+              </div>
+
+              {/* Section: Work Time */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">schedule</span>勤務時間設定
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-sm font-medium text-slate-700 mb-1">始業</label>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" /></div>
+                  <div><label className="block text-sm font-medium text-slate-700 mb-1">終業</label>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" /></div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">休憩 (分)</label>
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" min={0} max={1440} step={1} value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: Number(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff]" />
+                </div>
+              </div>
+
+              {/* Section: Overtime & Flex */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                  <span className="material-symbols-outlined text-base text-[#0066ff]">more_time</span>残業・フレックス設定
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">残業計算方法</label>
+                  <select disabled={!canManage || saving || (!editing && Boolean(creation.pending))} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white">
+                    <option value="daily">日次</option><option value="weekly">週次</option><option value="monthly">月次</option>
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#0066ff] focus:ring-[#0066ff]" />
+                  <span className="text-sm font-medium text-slate-700">フレックスタイム制</span>
+                </label>
+                {form.flexEnabled && (
+                  <div className="grid grid-cols-2 gap-3 bg-[#0066ff]/5 rounded-lg p-3">
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">コア開始</label>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white" /></div>
+                    <div><label className="block text-sm font-medium text-slate-700 mb-1">コア終了</label>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white" /></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Schedule preview */}
+              {preview && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs font-bold text-slate-500 mb-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">preview</span>スケジュールプレビュー
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed">{preview}</p>
+                </div>
+              )}
+
+              {!editing && recoveryPanel}
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={closeForm} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
+                <button onClick={handleSave} disabled={!canManage || saving || (!editing && creation.blocked)} className="flex-1 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50">
+                  {saving ? '保存中...' : '保存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 削除の確認（共通のダイアログ） */}
+        <ConfirmDialog
+          open={!!showDeleteConfirm}
+          title={showDeleteConfirm ? `「${showDeleteConfirm.name}」を削除しますか？` : ''}
+          message={(showDeleteConfirm?._count?.employees || 0) > 0
+            ? `このルールは${showDeleteConfirm._count.employees}名の従業員に適用されています。元に戻せません。`
+            : '元に戻せません。'}
+          confirmLabel={deleting ? '削除中…' : '削除する'}
+          tone="danger"
+          busy={deleting}
+          onConfirm={() => void handleDelete()}
+          onCancel={closeDelete}
+        />
+      </div>
+    </>
+  )
+}

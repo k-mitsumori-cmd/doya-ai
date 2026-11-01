@@ -1,0 +1,9 @@
+{
+  "status": "confirmed-candidate-defect",
+  "case": "Selected knowledge missing from a successful refreshed list",
+  "observed": {
+    "displayed": "",
+    "submitted": "kb"
+  },
+  "scope": "Actual full Tool with synthetic responses and session creation stub only. Visible unselected option and submitted retained reference disagree. No actual production/customer or provider request."
+}

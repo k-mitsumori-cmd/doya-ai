@@ -157,6 +157,15 @@ export async function analyzeBrand(sourceUrl: string, manualText?: string): Prom
   ].join('\n')
 
   const raw = await geminiGenerateJson<BrandProfile>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'AdImageBrand')
+  // Provider JSON is untrusted even when its compile-time type is BrandProfile.
+  // Reject malformed values before they can become "[object Object]" in copy.
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)
+    || ['name', 'description', 'industry', 'tone'].some(key => {
+      const value = (raw as unknown as Record<string, unknown>)[key]
+      return value !== undefined && value !== null && typeof value !== 'string'
+    }) || !Array.isArray(raw.valueProps) || raw.valueProps.some(value => typeof value !== 'string' || value.length > 500)) {
+    throw new Error('Invalid brand analysis output')
+  }
 
   return {
     name: String(raw?.name || base.hostname).slice(0, 120),

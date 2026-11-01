@@ -1,0 +1,153 @@
+{
+  "checkedAt": "2026-10-08T14:40:28.619Z",
+  "expected": 17,
+  "passed": 17,
+  "cases": [
+    {
+      "path": "/api/hr/dashboard",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/organization",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/settings",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/dashboard",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/organization",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/settings",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/dashboard",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/organization",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/settings",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/dashboard",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/organization",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/hr/settings",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "passed": true
+    },
+    {
+      "name": "GET preserves all organization, member, employee, clock, attendance and request rows",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/dashboard/route.ts": "30c3ca9bf5a3ce626867dd2ce5da9fe0169264fdfc8964c2b7a0cf759a6a3260",
+    "src/app/api/hr/organization/route.ts": "828bae7a72ec4bb0fd0873a3aa1112e739ef83164f8c58795ce1441b9c053e22",
+    "src/app/api/hr/settings/route.ts": "b7d132d1688cea4747a7d765408e5c327e3b004fdb880881e53eb1e70dd04fbd",
+    "src/app/api/kintai/dashboard/route.ts": "9385a7a9beb32fa973cad7347d97394d930e1f72f2218d204a708ff21fe99b64",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "src/lib/hr/access.ts": "4ea515d387ad715eeffd36a038c0c841aa0d2d5e9c740816a44f4ecf4c017176",
+    "src/lib/kintai/access.ts": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+    "src/lib/auth.ts": "de0c865e7d82c818377ee9cfcaf75c99b7bda572ccbeffc16fd6eed5ce7a2be7",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-personalized-cache-next.cjs": "c9bcd89245c2fc55e577bbc520cda31eb367add7dda170fd97459cfc5a430917",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-cache-next-supervise.py": "6da9680857ca02826f6e85f1c446136af870f6798e4f53b64595b470376f35e5"
+  },
+  "scope": "Actual built Next/auth/Prisma GET requests against isolated Unix-only PostgreSQL with two synthetic users and organizations plus hidden member. Anonymous, cross-actor sequential reads, member filtering, expired session and complete domain-row snapshot checks. No production data, real provider, external network or production OAuth/browser cache execution."
+}

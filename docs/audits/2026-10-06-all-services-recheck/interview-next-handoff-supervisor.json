@@ -1,0 +1,13 @@
+{
+  "startedAt": "2026-10-08T04:11:54.690199+00:00",
+  "pid": 76098,
+  "gate": "docs/audits/2026-10-06-all-services-recheck/interview-generation-release-ab51afde-2c99-4b62-952e-a44453222087",
+  "status": "passed",
+  "serverPid": 79146,
+  "origin": "http://127.0.0.1:51513",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "serverExitCode": 0,
+  "serverStopped": true,
+  "endedAt": "2026-10-08T04:22:03.372379+00:00"
+}

@@ -60,9 +60,9 @@ const route = load('src/app/api/kintai/requests/route.ts', {
     const first = { requests: firstRows, nextCursor: 'request-99', total: 101, counts: { pending: 101 } }
     const current = appendKintaiRequestPage([], first, 101)
     assert.equal(current.length, 100)
-    assert.throws(() => appendKintaiRequestPage(current, { requests: [{ id: 'request-0' }], nextCursor: null, total: 101, counts: { pending: 101 } }, 101), /Duplicate/)
-    assert.throws(() => appendKintaiRequestPage(current, { requests: [{ id: 'new' }], nextCursor: null, total: 102, counts: { pending: 102 } }, 101), /changed/)
-    assert.throws(() => appendKintaiRequestPage(current, { requests: [], nextCursor: null, total: 101, counts: { pending: 101 } }, 101), /Incomplete/)
-    assert.throws(() => appendKintaiRequestPage([], { requests: [{ id: 'short' }], nextCursor: 'short', total: 2, counts: { pending: 2 } }, 2), /Invalid/)
+    assert.throws(() => appendKintaiRequestPage(current, { requests: [{ id: 'request-0' }], nextCursor: null, total: 101, counts: { pending: 101 } }, 101), /重複して届きました/)
+    assert.throws(() => appendKintaiRequestPage(current, { requests: [{ id: 'new' }], nextCursor: null, total: 102, counts: { pending: 102 } }, 101), /変わりました/)
+    assert.throws(() => appendKintaiRequestPage(current, { requests: [], nextCursor: null, total: 101, counts: { pending: 101 } }, 101), /一部を読み込めませんでした/)
+    assert.throws(() => appendKintaiRequestPage([], { requests: [{ id: 'short' }], nextCursor: 'short', total: 2, counts: { pending: 2 } }, 2), /正しく読み込めませんでした/)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

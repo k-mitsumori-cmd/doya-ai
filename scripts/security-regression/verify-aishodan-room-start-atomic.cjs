@@ -68,7 +68,7 @@ async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount =
     },
   }
   const exports = {}
-  vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in deps, name); return deps[name] }, console, Date, URL, process: { env: { NODE_ENV: 'test' } } })
+  vm.runInNewContext(compiled, { exports, require: (name) => { const dm = require('./load-typescript.cjs').DEFAULT_MOCKS; if (!(name in deps) && name in dm) return dm[name]; assert.ok(name in deps, name); if ((name === 'crypto' || name === 'node:crypto') && deps[name] && !deps[name].randomUUID) return { ...deps[name], randomUUID: require('node:crypto').randomUUID }; return deps[name] }, console, Date, URL, process: { env: { NODE_ENV: 'test' } } })
   const req = { url: 'https://example.com/api/aishodan/room/token/start', json: async () => ({ consent: true }), cookies: { get: () => undefined }, headers: { get: () => null } }
   const result = await exports.POST(req, { params: Promise.resolve({ token: 'token123' }) })
   return { status: result.status, body: await result.json(), count, usage, ledgerLifetime, ledgerMonthly, creates, attempts, countedWhere }

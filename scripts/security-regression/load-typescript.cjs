@@ -1,5 +1,45 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..');const ts=require(path.join(root,'node_modules/typescript'));let results=[];
-function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,file)) ? path.join(process.env.DOYA_TEST_BASELINE,file) : path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,process:{env:{}},console:{log(){},warn(){},error(){}},...globals},{filename:file});return exports}
+function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,file)) ? path.join(process.env.DOYA_TEST_BASELINE,file) : path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];if(n==='@/lib/private-api-response')return load('src/lib/private-api-response.ts',{'next/server':mocks['next/server']||{NextResponse:Response}});if(n in DEFAULT_MOCKS)return DEFAULT_MOCKS[n];throw Error('Unmocked '+n)},URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,process:{env:{}},console:{log(){},warn(){},error(){}},...globals},{filename:file});return exports}
+// ドヤパワーの減らす包み（src/lib/doya-power/charge.ts）と音声の部品（voice.ts）は、各サービスのテストでは「減らさない」（旗が off と同じ）として通す。
+// 減らす動きそのものは src/lib/doya-power/charge.test.ts が台帳（memory-db）で確かめる（2026-10-23）
+// 自動点検（system-watch）の合図と、作った記録の ID の部品は、各サービスのテストでは「自動点検ではない」として通す。
+// 合図と ID の扱いそのものは verify-agent-orchestration.cjs と src/lib/system-watch/*.test.ts が確かめる（2026-10-26）
+const DEFAULT_MOCKS={'@/lib/system-watch/watch-gate':{isSystemWatchFor:()=>false,systemWatchTokenFor:()=>null,systemWatchUserId:()=>null,jstDate:()=>'2026-10-26'},'@/lib/system-watch/marker':{SYSTEM_WATCH_PREFIX:'【自動点検】',SYSTEM_WATCH_HEADER:'x-doya-system-watch',isSystemWatchRequest:()=>false,withSystemWatchPrefix:(n)=>n,isSystemWatchName:()=>false,systemWatchToken:()=>null},'@/lib/system-watch/marked-records':{systemWatchRecordIds:async()=>[],excludeIds:()=>({}),markSystemWatchRecord:async()=>{}},'@/lib/shodan/ai-quota':{shodanAiLimitFor:()=>600,reserveShodanAi:async()=>({ok:true,used:1,key:'shodan-ai-quota:v1:org:2026-10'}),refundShodanAi:async()=>{},shodanAiLimitResponse:(limit,canManageBilling)=>({error:'limit',code:'LIMIT',canManageBilling})},'@/lib/doya-power/voice':{voiceCharger:{hold:async()=>({kind:'skip'}),allowance:async()=>null,settle:async()=>{},target:async()=>null},voiceTokenKey:(p)=>p+'-key'},'@/lib/doya-power/voice-core':{voiceChargeMinutes:(d)=>(Number.isFinite(d)&&d>0?Math.ceil(d):10)+3,voiceActualMinutes:()=>0,VOICE_CHARGE_GRACE_MINUTES:3},'@/lib/doya-power/flag':{doyaPowerRollout:()=>'off',isDoyaPowerEnabled:async()=>false,doyaPowerLedgerAllowed:()=>false},'@/lib/doya-power/charge':{withDoyaPowerCharge:(_spec,h)=>h,intIn:(v,min,max,f)=>{const n=typeof v==='number'?v:Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,Math.floor(n))):f},doyaPowerCharger:{charge:async()=>({kind:'skip'}),run:(o,fn)=>fn(),shellState:async()=>null,balanceView:async()=>null}}};
+// 新しい料金（src/lib/pricing-v2）は、本物の計算をそのまま使う。環境変数は空なので、価格は「未設定」、旗は off（今の料金のまま）として動く（2026-10-25）
+const lazyReal=(name,make)=>{let v;Object.defineProperty(DEFAULT_MOCKS,name,{enumerable:true,get(){return v??=make()}})};
+// 採点の満点（src/lib/adimage/score-max.ts）は他に依存しないので、本物をそのまま使う。Tool.tsx は '@/lib/adimage/score-max'、feedback.ts は './score-max' で読む
+lazyReal('@/lib/private-api-response',()=>load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}}));
+lazyReal('@/lib/hr/employee-number',()=>load('src/lib/hr/employee-number.ts'));
+lazyReal('@/lib/adimage/score-max',()=>load('src/lib/adimage/score-max.ts'));
+lazyReal('./score-max',()=>DEFAULT_MOCKS['@/lib/adimage/score-max']);
+lazyReal('@/lib/pricing-v2/plans',()=>load('src/lib/pricing-v2/plans.ts'));
+lazyReal('@/lib/pricing-v2/prices',()=>load('src/lib/pricing-v2/prices.ts'));
+lazyReal('@/lib/pricing-v2/view',()=>load('src/lib/pricing-v2/view.ts',{'@/lib/unified-plan':load('src/lib/unified-plan.ts')}));
+lazyReal('@/lib/pricing-v2/amount',()=>load('src/lib/pricing-v2/amount.ts'));
+lazyReal('@/lib/pricing-v2/team',()=>load('src/lib/pricing-v2/team.ts',{'./plans':DEFAULT_MOCKS['@/lib/pricing-v2/plans']}));
+lazyReal('@/lib/doyaslide/quote-handoff',()=>load('src/lib/doyaslide/quote-handoff.ts'));
+// チームの表を読むサーバーの部品は、旗が off と同じ動き（表を読まない）にする
+lazyReal('@/lib/pricing-v2/team.server',()=>({teamTablesAllowed:()=>false,teamSeatsForCompany:async()=>null,teamSeatsUsed:async()=>1,resolveCompanyForUser:async()=>null,ownerTeamContext:async()=>null,readOwnerTeamSubscription:async()=>null,saveSeatCache:async()=>{}}));
+lazyReal('@/lib/pricing-v2/power-pack.server',()=>({POWER_PACK_KIND:'power_pack',reportPowerPackFailure:async()=>true,fulfillPowerPackSession:async()=>({ok:false,reason:'not_power_pack'}),createPowerPackCheckout:async()=>({ok:false,status:404,code:'LEDGER_OFF',error:''})}));
+lazyReal('@/lib/pricing-v2/starter.server',()=>({starterTablesAllowed:()=>false,ensureStarterGrant:async()=>({granted:0,decision:{ok:false,reason:'flag_off'}})}));
+lazyReal('@/lib/pricing-v2/rollout',()=>load('src/lib/pricing-v2/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
+// 会社の役割（src/lib/company-roles）は、各サービスのテストでは旗が off と同じ動き（ツールの役割をそのまま使い、止めない）にする。
+// 役割ごとの判定そのものは src/lib/company-roles/company-roles.test.ts と verify-company-roles-*.cjs が確かめる（2026-10-26）
+lazyReal('@/lib/company-roles/roles',()=>load('src/lib/company-roles/roles.ts'));
+lazyReal('@/lib/company-roles/tool-roles',()=>load('src/lib/company-roles/tool-roles.ts',{'./roles':DEFAULT_MOCKS['@/lib/company-roles/roles']}));
+lazyReal('@/lib/company-roles/policy',()=>load('src/lib/company-roles/policy.ts'));
+lazyReal('@/lib/company-roles/rollout',()=>load('src/lib/company-roles/rollout.ts',{'@/lib/ui-next':load('src/lib/ui-next.ts')}));
+lazyReal('@/lib/company-roles/permissions',()=>load('src/lib/company-roles/permissions.ts',{'./roles':DEFAULT_MOCKS['@/lib/company-roles/roles'],'./policy':DEFAULT_MOCKS['@/lib/company-roles/policy']}));
+lazyReal('@/lib/company-roles/access.server',()=>({ceilToolRole:async(i)=>i.toolRole,authorizeCompanyActionForSession:async()=>({checked:false,allowed:true,mode:'off'}),companyRoleForSession:async()=>null,writeRoleEvent:async()=>false,recordAuthor:async()=>{},findRecordAuthor:async()=>null,prismaCompanyRoleDb:{}}));
+// ドヤスライドの止まった資料を戻す部品（generation-operation.ts の settleStaleDoyaSlideProject）は、一覧・詳細の GET を読む各テストでは「戻すものは無い」として通す。
+// 戻す動きそのものは verify-doyaslide-stale-recovery.cjs が確かめる（2026-10-26）
+DEFAULT_MOCKS['@/lib/doyaslide/generation-operation']={DOYASLIDE_OPERATION_LEASE_MS:15*60*1000,DOYASLIDE_STRUCTURE_STALE_MS:6*60*1000,isDoyaSlideStaleCandidate:()=>false,settleStaleDoyaSlideProject:async()=>'none'};
+// 「これ1つで全部進む」帯（旗 ONE_BUTTON_ROLLOUT）は、各画面のテストでは旗が off と同じ（帯を出さない）として通す。
+// 帯そのものは verify-one-button.cjs と src/lib/one-button/flag.test.ts が確かめる（2026-10-27）
+DEFAULT_MOCKS['@/components/agent-router/useDoyaPrefill']={useDoyaPrefill:()=>{}};
+DEFAULT_MOCKS['@/components/one-button/context']={useOneButton:()=>false,OneButtonContext:{Provider:({children})=>children}};
+DEFAULT_MOCKS['@/components/one-button/OneButtonBar']={OneButtonBar:()=>null};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
-module.exports={load,check,results};
+lazyReal('@/lib/hr/one-on-one-items',()=>load('src/lib/hr/one-on-one-items.ts'));
+module.exports={load,check,results,DEFAULT_MOCKS};

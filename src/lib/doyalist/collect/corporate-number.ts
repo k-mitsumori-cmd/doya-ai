@@ -1,22 +1,13 @@
-import { fetchCollectionJson } from './provider-json'
+import { fetchCollectionText } from './provider-json'
+import { parseCorporateNumberXml, type CorporateNumberResult } from './corporate-number-xml'
+import { resolvePrefectureCodes } from './prefecture-codes'
 
 const API_BASE = 'https://api.houjin-bangou.nta.go.jp/4'
-
-interface CorporateNumberResult {
-  corporateNumber: string
-  name: string
-  address: string
-  prefectureName: string
-  cityName: string
-  postCode: string
-  kind: string // 法人種別
-  updateDate: string
-}
 
 interface SearchParams {
   keyword?: string
   prefecture?: string
-  from?: number
+  divide?: number
   count?: number
   timeoutMs?: number
 }
@@ -27,41 +18,35 @@ export async function searchCorporateNumber(params: SearchParams): Promise<Corpo
     throw new Error('CORPORATE_NUMBER_API_KEY が設定されていません')
   }
 
+  if (typeof params.keyword !== 'string' || !params.keyword.trim()) throw new Error('法人名を指定してください')
+  const count = params.count ?? 50
+  if (!Number.isInteger(count) || count < 1 || count > 50) throw new Error('取得件数を確認してください')
+  if (params.divide !== undefined && (!Number.isInteger(params.divide) || params.divide < 1 || params.divide > 99999)) {
+    throw new Error('分割番号を確認してください')
+  }
+  const timeout = params.timeoutMs ?? 12_000
+  if (!Number.isFinite(timeout) || timeout < 0) throw new Error('取得時間を確認してください')
+
   const url = new URL(`${API_BASE}/name`)
   url.searchParams.set('id', apiKey)
-  url.searchParams.set('type', '12') // JSON format
-  url.searchParams.set('history', '0')
-  if (params.keyword) url.searchParams.set('name', params.keyword)
-  if (params.prefecture) url.searchParams.set('address', params.prefecture)
-  if (params.from) url.searchParams.set('from', String(params.from))
-  url.searchParams.set('count', String(params.count || 50))
+  url.searchParams.set('type', '12') // XML / Unicode, per NTA's v4 specification.
+  url.searchParams.set('change', '0')
+  url.searchParams.set('name', params.keyword.trim())
+  if (params.prefecture && params.prefecture !== '全国') {
+    const codes = params.prefecture === '99' ? ['99'] : resolvePrefectureCodes(params.prefecture)
+    if (codes.length !== 1) throw new Error('都道府県を1つ指定してください')
+    url.searchParams.set('address', codes[0])
+  }
+  if (params.divide !== undefined) url.searchParams.set('divide', String(params.divide))
 
-  const response = await fetchCollectionJson(url.toString(), {}, {
-    timeoutMs: Math.min(12_000, Math.max(1, params.timeoutMs ?? 12_000)),
+  const response = await fetchCollectionText(url.toString(), {}, {
+    timeoutMs: Math.ceil(Math.min(12_000, Math.max(1, timeout))),
     maxBytes: 4 * 1024 * 1024,
   })
   if (!response.ok) {
     throw new Error(`Corporate number API error: ${response.status}`)
   }
 
-  const data = response.data
-
-  if (!data?.['hojin-infos']?.['hojin-info']) {
-    return []
-  }
-
-  const results = Array.isArray(data['hojin-infos']['hojin-info'])
-    ? data['hojin-infos']['hojin-info']
-    : [data['hojin-infos']['hojin-info']]
-
-  return results.map((item: any) => ({
-    corporateNumber: item.corporate_number || '',
-    name: item.name || '',
-    address: [item.prefecture_name, item.city_name, item.street_number].filter(Boolean).join(''),
-    prefectureName: item.prefecture_name || '',
-    cityName: item.city_name || '',
-    postCode: item.post_code || '',
-    kind: item.kind || '',
-    updateDate: item.update_date || '',
-  }))
+  // NTA does not accept a result-count query parameter; bound the returned page locally.
+  return parseCorporateNumberXml(response.text).slice(0, count)
 }

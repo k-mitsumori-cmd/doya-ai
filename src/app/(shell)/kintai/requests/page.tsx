@@ -1,0 +1,336 @@
+'use client'
+
+import { Button, EmptyState, Skeleton } from '@/components/ds'
+import { alertDialog, confirmDialog } from '@/components/ds/dialog'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
+import { PageTitle } from '@/components/kintai/ui-next'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
+import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+
+const TABS = [
+  { key: '', label: 'すべて' },
+  { key: 'pending', label: '承認待ち' },
+  { key: 'approved', label: '承認済' },
+  { key: 'rejected', label: '却下' },
+  { key: 'withdrawn', label: '取下げ' },
+]
+
+function formatDateJa(dateStr: string): string {
+  const d = new Date(dateStr)
+  const jst = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
+  return `${jst.getMonth() + 1}月${jst.getDate()}日`
+}
+
+function getRequestSummary(r: any): string {
+  if (r.type === 'clock_fix' && r.details) {
+    const d = r.details as any
+    const clockLabel = CLOCK_TYPE_LABELS[d.clockType] || d.clockType || ''
+    const date = d.date ? formatDateJa(d.date) : ''
+    const time = d.correctedTime || ''
+    if (date && clockLabel && time) return `${date} ${clockLabel} → ${time}`
+    if (date && clockLabel) return `${date} ${clockLabel}の修正`
+  }
+  if (r.type === 'leave' && r.details) {
+    const d = r.details as any
+    if (d.startDate && d.endDate) {
+      const label: Record<string, string> = { paid: '有給休暇', special: '特別休暇', unpaid: '欠勤' }
+      return `${d.startDate} 〜 ${d.endDate} ${label[d.leaveType] || '休暇'}`
+    }
+    if (d.startDate) return `${d.startDate}（終了日を確認してください）`
+  }
+  if (r.type === 'overtime' && r.details) {
+    const d = r.details as any
+    if (typeof d.date === 'string' && (Number.isInteger(d.hours) || Number.isInteger(d.minutes))) {
+      return `${d.date} 残業予定 ${Number.isInteger(d.hours) ? d.hours : 0}時間${Number.isInteger(d.minutes) ? d.minutes : 0}分`
+    }
+  }
+  if (r.type === 'holiday_work' && r.details) {
+    const d = r.details as any
+    if (typeof d.date === 'string' && typeof d.startTime === 'string' && typeof d.endTime === 'string') {
+      return `${d.date} 休日出勤予定 ${d.startTime}〜${d.endTime}`
+    }
+  }
+  return ''
+}
+
+function getInitials(name: string): string {
+  if (!name) return '?'
+  return name.charAt(0).toUpperCase()
+}
+
+export default function RequestsPage() {
+  const { isActive } = useKintaiAccess()
+  const canWrite = isActive !== false
+  const [requests, setRequests] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [tab, setTab] = useState('')
+  const tabRef = useRef(tab)
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
+  useEffect(() => { tabRef.current = tab }, [tab])
+
+  const load = useCallback(() => {
+    if (tabRef.current !== tab) return
+    const seq = ++requestSeq.current
+    setLoading(true)
+    setLoadError(false)
+    setMoreLoading(false)
+    setMoreError(false)
+    setNextCursor(null)
+    fetchKintaiRequestPage<any>(tab)
+      .then((page) => {
+        const rows = appendKintaiRequestPage([], page, page.total)
+        if (requestSeq.current !== seq) return
+        setRequests(rows)
+        setNextCursor(page.nextCursor)
+        setTotal(page.total)
+        setCounts(page.counts)
+      })
+      .catch(() => { if (requestSeq.current === seq) setLoadError(true) })
+      .finally(() => { if (requestSeq.current === seq) setLoading(false) })
+  }, [tab])
+
+  useEffect(() => {
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
+
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const seq = requestSeq.current
+    setMoreLoading(true)
+    setMoreError(false)
+    try {
+      const page = await fetchKintaiRequestPage<any>(tab, nextCursor)
+      const merged = appendKintaiRequestPage(requests, page, total)
+      if (requestSeq.current !== seq) return
+      setRequests(merged)
+      setNextCursor(page.nextCursor)
+    } catch {
+      if (requestSeq.current === seq) setMoreError(true)
+    } finally {
+      if (requestSeq.current === seq) setMoreLoading(false)
+    }
+  }
+
+  const withdraw = async (id: string) => {
+    if (!(await confirmDialog({ title: 'この申請を取り下げますか？', message: '取り下げた申請は承認されません。必要ならもう一度申請してください。', confirmLabel: '取り下げる', tone: 'danger' }))) return
+    try {
+      const response = await fetch(`/api/kintai/requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'withdrawn' }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(userErrorMessage(result?.error, '少し待って、もう一度お試しください。'))
+      load()
+    } catch (error) {
+      await alertDialog({ title: '取り下げられませんでした', message: userErrorMessage(error instanceof Error ? error.message : null, KINTAI_NETWORK_ERROR), tone: 'error' })
+    }
+  }
+
+  return (
+    <>
+
+      <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <div>
+              <PageTitle className="text-xl font-bold text-slate-800">申請一覧</PageTitle>
+              <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
+            </div>
+          </div>
+          {canWrite && <Link
+            href="/kintai/requests/new"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-xl hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20"
+          >
+            <span className="material-symbols-outlined text-lg">add_circle</span>
+            新規申請
+          </Link>}
+        </div>
+
+        {/* Tabs with counts */}
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          {TABS.map((t) => {
+            const count = loading || loadError ? 0 : t.key ? counts[t.key] || 0 : Object.values(counts).reduce((sum, value) => sum + value, 0)
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  tab === t.key ? 'bg-white text-[#0066ff] shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {t.label}
+                {count > 0 && (
+                  <span className={`text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
+                    tab === t.key ? 'bg-[#0066ff]/10 text-[#0066ff]' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5" aria-busy="true" aria-label="申請を読み込み中">
+            <Skeleton lines={4} height={16} />
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">申請一覧を読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={load} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
+          </div>
+        ) : requests.length === 0 ? (
+          tab === 'pending'
+            ? <EmptyState art="/kintai/empty-records.webp" title="承認待ちの申請はありません" description="新しい申請が届くと、ここに並びます。" />
+            : <EmptyState
+                art="/kintai/empty-records.webp"
+                title={canWrite ? 'まだ申請はありません' : '表示する申請はありません'}
+                description={canWrite ? '打刻の修正・休暇・残業を、ここから申請できます。' : undefined}
+                action={canWrite ? <Button href="/kintai/requests/new" icon="PlusCircle">申請をつくる</Button> : undefined}
+              />
+        ) : requests.length === 0 ? (
+          <div className="text-center py-16 space-y-4 fade-in-up">
+            {tab === 'pending' ? (
+              <>
+                <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={100} height={100} className="bear-wiggle mx-auto" />
+                <div>
+                  <p className="text-slate-600 font-bold text-lg">承認待ちの申請はありません</p>
+                  <p className="text-sm text-slate-400 mt-1">新しい申請が届くまでお待ちください</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <img src="/kintai/characters/love_%E5%A4%A7%E5%A5%BD%E3%81%8D.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
+                <div>
+                  <p className="text-slate-600 font-bold text-lg">{canWrite ? '申請を作成してみましょう！' : '表示する申請はありません'}</p>
+                  {canWrite && <p className="text-sm text-slate-400 mt-1">打刻修正や休暇の申請ができます</p>}
+                </div>
+                {canWrite && <Link
+                  href="/kintai/requests/new"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#0066ff] text-white text-sm font-bold rounded-xl hover:bg-[#0047d6] transition-colors shadow-sm shadow-[#0066ff]/20"
+                >
+                  <span className="material-symbols-outlined text-lg">add_circle</span>
+                  新規申請を作成
+                </Link>}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {requests.map((r: any) => {
+              const summary = getRequestSummary(r)
+              return (
+                <div
+                  key={r.id}
+                  className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Type icon */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      r.type === 'clock_fix' ? 'bg-blue-50 text-blue-600' :
+                      r.type === 'leave' ? 'bg-green-50 text-green-600' :
+                      r.type === 'overtime' ? 'bg-orange-50 text-orange-600' :
+                      'bg-slate-50 text-slate-600'
+                    }`}>
+                      <span className="material-symbols-outlined text-xl">
+                        {r.type === 'clock_fix' ? 'edit_clock' :
+                         r.type === 'leave' ? 'event_busy' :
+                         r.type === 'overtime' ? 'more_time' :
+                         'work_history'}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-800 text-sm">
+                          {REQUEST_TYPE_LABELS[r.type] || r.type}
+                        </span>
+                        <StatusBadge status={r.status} />
+                      </div>
+
+                      {r.type === 'leave' && r.status === 'approved' && <p className="mt-2 text-xs text-slate-600">日程変更は管理者に承認取消を依頼し、取消後に本人が再申請してください。</p>}
+                      {r.type === 'leave' && r.status === 'withdrawn' && r.details?.leaveCancellation && (
+                        <div className="mt-2 text-xs text-slate-600"><p>承認取消: {r.details.leaveCancellation.reason}</p>{canWrite && <Link href="/kintai/requests/new?type=leave" className="underline">自分の休暇を新規申請する</Link>}</div>
+                      )}
+                      {summary && (
+                        <p className="text-xs text-[#0066ff] mt-1 font-medium">{summary}</p>
+                      )}
+
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                        <span className="flex items-center gap-0.5">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>calendar_today</span>
+                          {formatDateJa(r.submittedAt)}
+                        </span>
+                        {r.reason && (
+                          <span className="truncate max-w-[200px]" title={r.reason}>
+                            {r.reason}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="shrink-0">
+                      {canWrite && r.status === 'pending' && (
+                        <button
+                          onClick={() => withdraw(r.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>undo</span>
+                          取下げ
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {!loading && !loadError && nextCursor && (
+          <div className="text-center space-y-2">
+            <p className="text-xs text-slate-500">{requests.length} / {total}件を表示</p>
+            {moreError && <p role="alert" className="text-sm text-red-700">続きの読み込みに失敗しました。再試行するか一覧を更新してください。</p>}
+            <div className="flex justify-center gap-2">
+              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-brand-200 bg-white px-5 py-2 text-sm font-bold text-brand-600 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
+              {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-bold text-slate-700">一覧を更新</button>}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { bg: string; icon: string }> = {
+    pending: { bg: 'bg-yellow-50 text-yellow-700 border-yellow-200', icon: 'hourglass_top' },
+    approved: { bg: 'bg-green-50 text-green-700 border-green-200', icon: 'check_circle' },
+    rejected: { bg: 'bg-red-50 text-red-700 border-red-200', icon: 'cancel' },
+    withdrawn: { bg: 'bg-slate-100 text-slate-500 border-slate-200', icon: 'remove_circle' },
+  }
+  const c = config[status] || { bg: 'bg-slate-100 text-slate-600 border-slate-200', icon: 'help' }
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] px-2 py-0.5 rounded-full font-medium border ${c.bg}`}>
+      <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>{c.icon}</span>
+      {REQUEST_STATUS_LABELS[status] || status}
+    </span>
+  )
+}

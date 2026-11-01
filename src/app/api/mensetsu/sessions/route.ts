@@ -14,6 +14,8 @@ import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/o
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
+import { voiceCharger, voiceTokenKey } from '@/lib/doya-power/voice'
+import { voiceChargeMinutes } from '@/lib/doya-power/voice-core'
 
 /** 推測不能なワンタイムトークン（URLに載るため base64url） */
 function newToken(): string {
@@ -145,6 +147,15 @@ export async function POST(req: NextRequest) {
     Date.now() + Math.max(1, org?.retentionDays ?? 180) * 24 * 60 * 60 * 1000
   )
 
+  // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: URL を発行する前に、最大の分数ぶん（設定の分数 + 3分）を仮に減らす。
+  // 操作の ID は URL の文字列の要約（文字列そのものは台帳に残さない）。終わったら実際の分数との差を戻す（end・close・cron）
+  const token = newToken()
+  const voice = await voiceCharger.hold('mensetsu', ctx.organizationId, voiceTokenKey('mensetsu', token), voiceChargeMinutes(template.durationMin), {
+    insufficient: 'ドヤパワーが足りないため、面接URLを発行できません。回復を待つか、プランをご確認ください。',
+  })
+  if (voice.kind === 'blocked') return voice.response
+  const releaseVoice = async () => { if (voice.kind === 'charged') await voice.refund() }
+
   let result: { kind: 'created'; session: { id: string; token: string; expiresAt: Date; candidateName: string | null } } | { kind: 'limit' } | { kind: 'archived' } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
@@ -165,7 +176,7 @@ export async function POST(req: NextRequest) {
             organizationId: ctx.organizationId,
             createdAt: now,
             templateId,
-            token: newToken(),
+            token,
             candidateName,
             candidateEmail,
             expiresAt,
@@ -181,9 +192,12 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
       if ((error?.code === 'P2034' || error?.code === 'P2002') && attempt < 4) continue
       console.error('[mensetsu/sessions] creation failed', error?.code || 'unknown')
+      await releaseVoice()
       return NextResponse.json({ error: '面接URLを発行できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
     }
   }
+  // URL を作れなかったら、仮に減らした分を戻す
+  if (result?.kind !== 'created') await releaseVoice()
   if (result?.kind === 'limit') {
     let latestQuota: Awaited<ReturnType<typeof checkQuota>>
     try {

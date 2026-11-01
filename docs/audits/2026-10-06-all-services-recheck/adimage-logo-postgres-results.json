@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T14:45:58.350Z",
+  "passed": 15,
+  "cases": [
+    "Ten actual concurrent identical UUIDs admit exactly one logo mutation",
+    "Atomic logo+receipt settlement and duplicate finish change version once",
+    "Competing logo UUID cannot mutate until first operation settles",
+    "Pending logo prevents real image admission and consumes no image quota",
+    "Pending real image operation prevents logo admission and preserves brand",
+    "Changed input replay is rejected before another logo write",
+    "Missing cancellation fences a delayed POST without creating a logo",
+    "Expired worker cannot publish; terminal failure releases active pointer",
+    "Owner transfer during external upload prevents old actor publication and result leak",
+    "Newer brand update cannot be overwritten by late logo completion",
+    "Receipt-save failure rolls back logo reference and version together",
+    "Lost real transaction commit acknowledgment recovers saved logo without second publication",
+    "Owned deletion retains prior immutable object and never deletes newer logo",
+    "Private JSONB receipt restores edited copy and placement selection without another model call",
+    "Removal receipt retains editor context while clearing only the owned logo reference"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/logo-operation.ts": "d08913c7d568c05276605d7cd0f5bc83ffe2868d7ced8c5016fc5e3f567fd425",
+    "src/lib/adimage/image-operation.ts": "f2f8ad526eef6b83f81929d4d3c02a4ce6b294b46a5c7cc872e8e4c88b596371",
+    "src/lib/adimage/image-budget.ts": "773dae01f781e5b3a54f8751ccbee876a3b49005e34840b41ed61ee8bb168d23",
+    "src/lib/adimage/logo-input.ts": "eb202b0c7e89b2435fb41197da851ca161ae6025562abeb2b03084d682e00c20",
+    "src/lib/adimage/logo-context.ts": "b1821760907235b73f02a7f856a180098506f68c983980ac1d0ee1085aa99fcb"
+  },
+  "scope": "Actual logo+image operation and budget helpers on private Unix-socket PostgreSQL with real Prisma locks/transactions/rollback. Synthetic external upload boundary and lost-commit transport; no actual storage/API/Tool/OAuth/provider/customer data or production."
+}

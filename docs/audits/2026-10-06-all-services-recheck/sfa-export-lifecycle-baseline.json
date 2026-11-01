@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T06:07:33.289Z",
+  "status": "confirmed-follow-up-gaps-not-repaired",
+  "findings": [
+    "Streaming CSV continues reading/exporting next page after actor loses membership; context is checked once only.",
+    "Authenticated CSV response lacks private cache directive and Vary Cookie."
+  ],
+  "pageReads": 2,
+  "readsAfterRevocation": 1,
+  "contextChecks": 1,
+  "completedBytes": 25556,
+  "sourceHash": "0345d900ea61b02a50d55cc7ea0d543ede22a32579f0bb2bf94e1a16f9398e63",
+  "scope": "Actual export handler with 501 synthetic rows, native Response/ReadableStream and synthetic context/database revocation timing. No real DB concurrency, production request, customer data or provider calls. Formula escaping and finite pagination already exist; not classified as missing."
+}

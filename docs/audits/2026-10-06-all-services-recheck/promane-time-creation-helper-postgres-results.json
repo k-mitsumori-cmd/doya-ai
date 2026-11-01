@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T20:19:34.630Z",
+  "expected": 16,
+  "passed": 16,
+  "cases": [
+    "identical operation returns original saved row only once",
+    "changed input on same operation cannot create or change saved row",
+    "concurrent duplicate operation commits one time entry and receipt",
+    "cancel missing operation fences delayed original create",
+    "cancel after committed create recovers saved row without deletion",
+    "missing read does not write or create entry",
+    "deleted entry cannot be resurrected by replay",
+    "corrupt receipt fails closed for creation and recovery",
+    "receipt insert failure rolls back business row atomically",
+    "invalid operation identities rejected before receipt or row changes",
+    "receipt identity is isolated across user and workspace",
+    "replay preserves original hourly snapshot after rate change",
+    "foreign row reference in receipt cannot disclose other workspace entry",
+    "cancellation receipt failure leaves no partial cancellation",
+    "only rollback-safe transaction conflicts are retryable",
+    "concurrent cancel and create settle consistently without duplicates"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/time-entry-creation.ts": "000c014ffa1f82388ee4f3b523a721053acc0f379810792c1220825d4c1a2b4f"
+  },
+  "scope": "Candidate creation/recovery receipt helper, Prisma and isolated Unix-socket PostgreSQL with member FK and synthetic writable actor row locks. Actual server-action/client integration and intended role policy not tested. No customer/provider/production operations."
+}

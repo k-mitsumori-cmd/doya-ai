@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs')
 const{load,check,results}=require('./load-typescript.cjs')
 function fixture({secret='synthetic',fail=false,sessionFailure=false}={}){
  let calls=0,recoveryCalls=0;const logs=[]
- const route=load('src/app/api/cron/aishodan-work-cleanup/route.ts',{'@/lib/aishodan/recover-stale-sessions':{recoverStaleAishodanSessions:async()=>{recoveryCalls++;return{checked:1,completed:sessionFailure?0:1,aborted:0,skipped:0,failed:sessionFailure?1:0}}},'@/lib/aishodan/cleanup-work-tasks':{cleanupAishodanWorkTasks:async()=>{calls++;if(fail)throw Error('PRIVATE_DB_DETAIL');return{checked:25,removed:2,retained:23}}}},{process:{env:{CRON_SECRET:secret}},console:{error:(...args)=>logs.push(args)}})
+ const route=load('src/app/api/cron/aishodan-work-cleanup/route.ts',{'@/lib/aishodan/recover-stale-sessions':{releaseUnstartedAishodanHolds:async()=>({checked:0,released:0}),recoverStaleAishodanSessions:async()=>{recoveryCalls++;return{checked:1,completed:sessionFailure?0:1,aborted:0,skipped:0,failed:sessionFailure?1:0}}},'@/lib/aishodan/cleanup-work-tasks':{cleanupAishodanWorkTasks:async()=>{calls++;if(fail)throw Error('PRIVATE_DB_DETAIL');return{checked:25,removed:2,retained:23}}}},{process:{env:{CRON_SECRET:secret}},console:{error:(...args)=>logs.push(args)}})
  return{calls:()=>calls,recoveryCalls:()=>recoveryCalls,logs,run:async auth=>{const r=await route.GET(new Request('https://synthetic.invalid',{headers:auth?{authorization:auth}:{}}));return{status:r.status,body:await r.json()}}}
 }
 ;(async()=>{

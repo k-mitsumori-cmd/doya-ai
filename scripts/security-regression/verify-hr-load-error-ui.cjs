@@ -2,7 +2,8 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
-const { check } = require('./load-typescript.cjs')
+const { check, load } = require('./load-typescript.cjs')
+const { parseSettingsDepartmentList } = load('src/lib/hr/department-settings-client.ts')
 
 function extract(file, functionName) {
   const source = fs.readFileSync(file, 'utf8')
@@ -17,6 +18,20 @@ function extract(file, functionName) {
     ts.forEachChild(node, visit)
   }
   visit(ast)
+  // Period reads now live in a scoped effect. Await its actual promise chain in this
+  // harness; preserve the production callbacks and all original error/empty assertions.
+  if (!code && functionName === 'fetchPeriods') {
+    function findEffect(node) {
+      if (ts.isCallExpression(node) && node.expression.getText(ast) === 'useEffect') {
+        const callback = node.arguments[0]
+        if (callback && callback.getText(ast).includes('void loadHrEvaluationPeriodList(')) {
+          code = callback.getText(ast).replace('void loadHrEvaluationPeriodList(', 'return loadHrEvaluationPeriodList(')
+        }
+      }
+      ts.forEachChild(node, findEffect)
+    }
+    findEffect(ast)
+  }
   assert(code, `${functionName} not found in ${file}`)
   return ts.transpileModule(`(${code})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
 }
@@ -24,13 +39,23 @@ function extract(file, functionName) {
 function run(code, response) {
   const state = { loading: false, loadError: false, auditLogsError: false, canCreatePeriods: false, stats: null, periods: null, settings: null, departments: null }
   const controller = new AbortController()
+  const candidateFetch = async (...args) => typeof response === 'function' ? response(...args) : response
+  const { loadHrDepartmentList } = load('src/lib/hr/department-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
+  const periodClient = load('src/lib/hr/evaluation-period-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
   const env = {
-    fetch: async (...args) => typeof response === 'function' ? response(...args) : response,
-    controller,
+    ...periodClient,
+    organizationScope: { request: candidateFetch, isCurrent: () => true },
+    hint: { ready: true }, scopeError: '', expectedOrganization: 'synthetic-org',
+    loadedSnapshot: { current: null }, revision: 0,
+    setOrganizationId: () => {}, setLoginRequired: () => {},
+    loadHrDepartmentList,
+    fetch: candidateFetch,
+    controller, AbortController,
     Promise, Error, Array,
+    parseSettingsDepartmentList,
     ROLE_RANK: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 },
     setLoading: value => { state.loading = value },
-    setLoadError: value => { state.loadError = value },
+    setLoadError: value => { state.loadError = Boolean(value) },
     setAuditLogsError: value => { state.auditLogsError = value },
     setStats: value => { state.stats = value },
     setRecentOneOnOnes: () => {},
@@ -50,9 +75,9 @@ function run(code, response) {
 
 ;(async () => {
   const pages = [
-    ['dashboard', 'fetchDashboard', 'src/app/hr/dashboard/page.tsx'],
-    ['evaluations', 'fetchPeriods', 'src/app/hr/evaluations/page.tsx'],
-    ['settings', 'fetchSettings', 'src/app/hr/settings/page.tsx'],
+    ['dashboard', 'fetchDashboard', 'src/app/(shell)/hr/dashboard/page.tsx'],
+    ['evaluations', 'fetchPeriods', 'src/app/(shell)/hr/evaluations/page.tsx'],
+    ['settings', 'fetchSettings', 'src/app/(shell)/hr/settings/page.tsx'],
   ]
   for (const [name, fn, file] of pages) {
     const code = extract(file, fn)
@@ -72,7 +97,7 @@ function run(code, response) {
     })
   }
   await check('dashboard: valid zero counts are genuinely empty', async () => {
-    const code = extract('src/app/hr/dashboard/page.tsx', 'fetchDashboard')
+    const code = extract('src/app/(shell)/hr/dashboard/page.tsx', 'fetchDashboard')
     const state = await run(code, Response.json({ orgName: 'Example', canManageEmployees: false, canCreatePeriods: false, employeeCount: 0, departmentCount: 0, activeEvaluations: 0, monthlyOneOnOnes: 0, recentOneOnOnes: [], evaluationPeriods: [] }))
     assert.equal(state.loadError, false)
     assert.equal(state.stats.orgName, 'Example')
@@ -80,17 +105,17 @@ function run(code, response) {
     assert.equal(state.stats.canCreatePeriods, false)
   })
   await check('evaluations: valid empty list is distinct from an outage', async () => {
-    const code = extract('src/app/hr/evaluations/page.tsx', 'fetchPeriods')
-    const state = await run(code, Response.json({ success: true, periods: [], canCreatePeriods: false }))
+    const code = extract('src/app/(shell)/hr/evaluations/page.tsx', 'fetchPeriods')
+    const state = await run(code, Response.json({ success: true, format: 'hr-evaluation-period-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null, canCreatePeriods: false }))
     assert.equal(state.loadError, false)
     assert.equal(state.periods.length, 0)
     assert.equal(state.canCreatePeriods, false)
   })
   await check('settings: audit outage does not hide valid organization and departments', async () => {
-    const code = extract('src/app/hr/settings/page.tsx', 'fetchSettings')
+    const code = extract('src/app/(shell)/hr/settings/page.tsx', 'fetchSettings')
     const state = await run(code, async url => {
-      if (url === '/api/hr/settings') return Response.json({ settings: { name: 'Example' }, members: [], myRole: 'OWNER', myMemberId: 'member' })
-      if (url === '/api/hr/departments') return Response.json({ success: true, flat: [] })
+      if (url === '/api/hr/settings') return Response.json({ settings: { id: 'synthetic-org', name: 'Example' }, members: [], myRole: 'OWNER', myMemberId: 'member' })
+      if (url === '/api/hr/departments?format=pages') return Response.json({ success: true, format: 'hr-department-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null })
       return Response.json({ error: 'Failed' }, { status: 500 })
     })
     assert.equal(state.loadError, false)

@@ -1,6 +1,7 @@
 'use client'
 
-import toast from 'react-hot-toast'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { knownEvaluationDetailStatus, getHrEvaluationStatusPresentation, canEditHrEvaluation, getHrEvaluationClientPhase, getHrEvaluationWorkflowAction, type HrEvaluationWorkflowAction } from '@/lib/hr/evaluation-detail-client'
 
 import { useState, useRef } from 'react'
 import type { EvaluationRatingField } from '@/lib/hr/evaluation-access'
@@ -25,10 +26,17 @@ interface EvaluationFormProps {
   initialSelfComment?: string
   initialManagerComment?: string
   initialOverallScore?: number
+  initialEvaluatorId?: string | null
+  evaluatorOptions?: { id: string; label: string }[]
+  evaluatorOptionsMessage?: string
+  onReloadEvaluators?: () => void
   status?: string
   isManager?: boolean
   ratingField?: EvaluationRatingField
-  onSave?: (data: any) => void
+  onSave?: (data: any) => void | Promise<void>
+  onWorkflowAction?: (action: HrEvaluationWorkflowAction) => Promise<void>
+  onGenerateComment?: () => Promise<string>
+  disabled?: boolean
 }
 
 function StarInput({ value, onChange, disabled }: { value: number; onChange: (v: number) => void; disabled?: boolean }) {
@@ -69,11 +77,19 @@ export default function EvaluationForm({
   initialSelfComment = '',
   initialManagerComment = '',
   initialOverallScore = 0,
+  initialEvaluatorId = null,
+  evaluatorOptions,
+  evaluatorOptionsMessage = '',
+  onReloadEvaluators,
   status = 'DRAFT',
   isManager = false,
   ratingField = 'selfRating',
   onSave,
+  onGenerateComment,
+  onWorkflowAction,
+  disabled = false,
 }: EvaluationFormProps) {
+  const { fetch, toast, live } = useHrPageLifetime()
   const [goals, setGoals] = useState<Goal[]>(
     (initialGoals?.length ?? 0) > 0
       ? initialGoals
@@ -82,15 +98,21 @@ export default function EvaluationForm({
   const [selfComment, setSelfComment] = useState(initialSelfComment)
   const [managerComment, setManagerComment] = useState(initialManagerComment)
   const [overallScore, setOverallScore] = useState(initialOverallScore)
+  const [evaluatorId, setEvaluatorId] = useState(initialEvaluatorId ?? '')
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const aiLoadingRef = useRef(false)
 
-  const isReadOnly = status === 'FINALIZED'
-  const editingDisabled = isReadOnly || saving || aiLoading
+  const statusPresentation = getHrEvaluationStatusPresentation(status)
+  const [confirmWorkflow, setConfirmWorkflow] = useState(false), [workflowLoading, setWorkflowLoading] = useState(false)
+  const workflowRef = useRef(false)
+  const phase = getHrEvaluationClientPhase(status), workflow = getHrEvaluationWorkflowAction(status, ratingField)
+  const isReadOnly = !canEditHrEvaluation(status, ratingField)
+  const editingDisabled = disabled || isReadOnly || saving || aiLoading || workflowLoading
 
+  const goalEditingDisabled = editingDisabled || phase === 2
   const addGoal = () => {
     setGoals([
       ...goals,
@@ -108,15 +130,17 @@ export default function EvaluationForm({
   }
 
   const handleAiComment = async () => {
-    if (savingRef.current || aiLoadingRef.current || saving || aiLoading || isReadOnly) return
+    if (savingRef.current || aiLoadingRef.current || saving || aiLoading || isReadOnly || disabled || !live()) return
     aiLoadingRef.current = true
     setAiLoading(true)
     setAiResult(null)
     try {
       if (evaluationId && !(await handleSave())) {
-        setAiResult('エラー: 評価を保存できなかったため、AI生成は実行していません。入力内容を確認して保存をやり直してください。')
+        if (live()) setAiResult('エラー: 評価を保存できなかったため、AI生成は実行していません。入力内容を確認して保存をやり直してください。')
         return
       }
+      if (!live()) return
+      if (onGenerateComment) { const result = await onGenerateComment(); if (live()) setAiResult(result); return }
       const url = evaluationId
         ? `/api/hr/evaluations/${evaluationId}/ai-comment`
         : '/api/hr/evaluations/ai-comment'
@@ -133,28 +157,34 @@ export default function EvaluationForm({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'AI生成に失敗しました')
-      setAiResult(data.aiComment || data.comment || data.result || '')
+      if (!res.ok) throw new Error(typeof data?.error === 'string' && data.error ? data.error : 'AIのコメントを作れませんでした。時間をおいて、もう一度お試しください。')
+      if (live()) setAiResult(data.aiComment || data.comment || data.result || '')
     } catch (e: any) {
-      setAiResult(`エラー: ${e.message}`)
+      // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない。
+      //    英語や内部の文（通信の失敗など）は出さず、日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      if (live()) setAiResult(`エラー: ${/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : 'AIのコメントを作れませんでした。時間をおいて、もう一度お試しください。'}`)
     } finally {
       aiLoadingRef.current = false
-      setAiLoading(false)
+      if (live()) setAiLoading(false)
     }
   }
 
   const handleSave = async () => {
-    if (savingRef.current || saving || isReadOnly) return false
+    if (savingRef.current || saving || isReadOnly || disabled || !live()) return false
     savingRef.current = true
     setSaving(true)
     try {
+      const evaluatorChanged = (evaluatorId || null) !== initialEvaluatorId
+      if (evaluatorChanged && (ratingField !== 'finalRating' || phase === 2 || !evaluatorOptions || evaluatorId && (evaluatorId === employeeId || !evaluatorOptions.some(option => option.id === evaluatorId)))) throw Error('上司担当者を確認してから保存してください。')
       const payload = {
         evaluationId,
         employeeId,
-        goals,
-        ...(ratingField !== 'managerRating' ? { selfComment } : {}),
-        ...(ratingField !== 'selfRating' ? { managerComment } : {}),
+        ...(phase !== 2 ? { goals } : {}),
+        ...(phase === 0 && ratingField !== 'managerRating' ? { selfComment } : {}),
+        ...(phase !== 2 && ratingField !== 'selfRating' ? { managerComment } : {}),
         overallScore,
+        ...(evaluatorChanged ? { evaluatorId: evaluatorId || null } : {}),
       }
       if (onSave) {
         await onSave(payload)
@@ -166,21 +196,36 @@ export default function EvaluationForm({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
-        if (!res.ok) throw new Error('保存に失敗しました')
+        if (!res.ok) throw new Error('評価を保存できませんでした。時間をおいて、もう一度お試しください。')
       }
-      return true
+      return live()
     } catch (e: any) {
-      toast.error(e.message)
+      const message = typeof e?.message === 'string' ? e.message : ''
+      if (live()) toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '評価を保存できませんでした。通信を確かめて、もう一度お試しください。')
       return false
     } finally {
       savingRef.current = false
-      setSaving(false)
+      if (live()) setSaving(false)
     }
   }
 
   const handleManualSave = async () => {
     if (aiLoadingRef.current) return false
     return handleSave()
+  }
+
+  const handleWorkflow = async () => {
+    if (!workflow || !onWorkflowAction || workflowRef.current || disabled || savingRef.current || aiLoadingRef.current || !live()) return
+    workflowRef.current = true; setWorkflowLoading(true)
+    try {
+      if (!(await handleSave()) || !live()) return
+      await onWorkflowAction(workflow.action)
+      if (live()) setConfirmWorkflow(false)
+    } catch (error: any) {
+      const message = typeof error?.message === 'string' ? error.message : ''
+      if (live()) toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '操作を記録できませんでした。時間をおいて、もう一度お試しください。')
+    }
+    finally { workflowRef.current = false; if (live()) setWorkflowLoading(false) }
   }
 
   const totalWeight = goals.reduce((sum, g) => sum + (g.weight || 0), 0)
@@ -205,18 +250,26 @@ export default function EvaluationForm({
             )}
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ステータス</p>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                status === 'DRAFT' ? 'bg-slate-100 text-slate-600' :
-                status === 'SELF_REVIEW' ? 'bg-amber-100 text-amber-700' :
-                status === 'MANAGER_REVIEW' ? 'bg-blue-100 text-blue-700' :
-                'bg-emerald-100 text-emerald-700'
-              }`}>
-                {({ DRAFT: '下書き', SELF_REVIEW: '自己評価中', SELF_EVALUATION: '自己評価中', MANAGER_REVIEW: '上司評価中', SUBMITTED: '提出済み', REVIEWED: '評価済み', FINALIZED: '確定済み' } as Record<string, string>)[status] || '状態不明'}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusPresentation.color}`}>
+                {statusPresentation.label}
               </span>
             </div>
           </div>
         </div>
       )}
+
+      {ratingField === 'finalRating' && phase !== null && phase < 2 && <section className="bg-white rounded-3xl shadow-md p-6 space-y-2">
+        <label className="block text-sm font-bold" htmlFor="evaluation-evaluator">上司評価の担当者</label>
+        <select id="evaluation-evaluator" className="w-full min-w-0 rounded-xl border border-slate-300 px-3 py-2" value={evaluatorId} disabled={editingDisabled || !evaluatorOptions} onChange={event => setEvaluatorId(event.target.value)}>
+          <option value="">指定なし（管理者がレビューを行います）</option>
+          {evaluatorId && !evaluatorOptions?.some(option => option.id === evaluatorId) && <option value={evaluatorId}>指定済みの担当者（一覧を確認してください）</option>}
+          {evaluatorOptions?.filter(option => option.id !== employeeId).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+        </select>
+        <p className="text-xs text-slate-600">担当者の変更は、コメントなどの入力と一緒に「保存する」で反映されます。レビュー完了後は変更できません。</p>
+        <p className="text-xs text-slate-600">担当者が操作するには、有効な組織メンバーへの従業員情報の紐付けが必要です。<a className="font-bold text-blue-600 underline" href="/hr/settings">組織設定でメンバーと従業員の紐付けを確認する</a></p>
+        {evaluatorOptionsMessage && <p role="status" className="text-sm text-amber-800">{evaluatorOptionsMessage}</p>}
+        {!evaluatorOptions && onReloadEvaluators && <button type="button" className="rounded-full border px-4 py-2 text-sm font-bold" disabled={editingDisabled} onClick={onReloadEvaluators}>担当者一覧を再取得する</button>}
+      </section>}
 
       {/* Goals */}
       <div className="bg-white rounded-3xl shadow-md p-6">
@@ -245,7 +298,7 @@ export default function EvaluationForm({
               <button
                 type="button"
                 onClick={addGoal}
-                disabled={editingDisabled}
+                disabled={goalEditingDisabled}
                 className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-base font-bold hover:bg-sky-100 transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">add</span>
@@ -271,7 +324,7 @@ export default function EvaluationForm({
                     <button
                       type="button"
                       onClick={() => removeGoal(goal.id)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                       aria-label="目標を削除"
                       className="text-slate-400 hover:text-red-500 transition-colors"
                     >
@@ -286,7 +339,7 @@ export default function EvaluationForm({
                       type="text"
                       value={goal.title}
                       onChange={(e) => updateGoal(goal.id, 'title', e.target.value)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                       placeholder="目標タイトルを入力"
                     />
@@ -296,7 +349,7 @@ export default function EvaluationForm({
                     <textarea
                       value={goal.description}
                       onChange={(e) => updateGoal(goal.id, 'description', e.target.value)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                       rows={2}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="目標の詳細を入力"
@@ -310,7 +363,7 @@ export default function EvaluationForm({
                       max={100}
                       value={goal.weight}
                       onChange={(e) => updateGoal(goal.id, 'weight', parseInt(e.target.value) || 0)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                     />
                   </div>
@@ -319,7 +372,7 @@ export default function EvaluationForm({
                     <StarInput
                       value={goal.score}
                       onChange={(v) => updateGoal(goal.id, 'score', v)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -327,7 +380,7 @@ export default function EvaluationForm({
                     <textarea
                       value={goal.result}
                       onChange={(e) => updateGoal(goal.id, 'result', e.target.value)}
-                      disabled={editingDisabled}
+                      disabled={goalEditingDisabled}
                       rows={2}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="達成結果を記入"
@@ -351,7 +404,7 @@ export default function EvaluationForm({
           <textarea
             value={selfComment}
             onChange={(e) => setSelfComment(e.target.value)}
-            disabled={editingDisabled || ratingField === 'managerRating'}
+            disabled={editingDisabled || ratingField === 'managerRating' || phase !== 0}
             rows={4}
             className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
             placeholder="この評価期間の振り返りを記入してください..."
@@ -363,7 +416,7 @@ export default function EvaluationForm({
             <textarea
               value={managerComment}
               onChange={(e) => setManagerComment(e.target.value)}
-              disabled={editingDisabled}
+              disabled={editingDisabled || phase === 2}
               rows={4}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
               placeholder="部下への評価コメントを記入してください..."
@@ -386,14 +439,14 @@ export default function EvaluationForm({
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
+              <span className="material-symbols-outlined text-brand-400">auto_awesome</span>
               AI評価コメント生成
             </h3>
             <button
               type="button"
               onClick={handleAiComment}
-              disabled={saving || aiLoading}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              disabled={editingDisabled}
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-400 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-brand-400/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
@@ -410,13 +463,21 @@ export default function EvaluationForm({
         </div>
       )}
 
+      {isReadOnly && status !== 'FINALIZED' && knownEvaluationDetailStatus(status) && <p className="text-sm text-slate-600">この段階では編集できません。担当者によるレビュー・確定をお待ちください。</p>}
+      {workflow && onWorkflowAction && confirmWorkflow && <section role="alert" className="bg-white border border-slate-300 rounded-2xl p-5 space-y-3">
+        <p className="font-bold">{workflow.label}</p>
+        <p className="text-sm">現在の入力を保存してから、この操作を記録します。{workflow.action === 'finalize' ? '確定後は編集できません。' : '提出・レビュー後は、この段階の入力を変更できません。'}{ratingField === 'finalRating' && workflow.action !== 'finalize' ? '組織管理者として対象者・評価者に代わって記録します。' : ''}</p>
+        <button type="button" className="px-4 py-2 rounded-full border font-bold disabled:opacity-50" disabled={editingDisabled} onClick={() => void handleWorkflow()}>{workflowLoading ? '処理中...' : '保存して操作を確定する'}</button>
+        <button type="button" className="ml-3 px-4 py-2 rounded-full border disabled:opacity-50" disabled={workflowLoading} onClick={() => setConfirmWorkflow(false)}>キャンセル</button>
+      </section>}
       {/* Actions */}
       {!isReadOnly && (
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
+          {workflow && onWorkflowAction && <button type="button" className="px-5 py-3 rounded-full border border-blue-600 font-bold disabled:opacity-50" disabled={editingDisabled || confirmWorkflow} onClick={() => setConfirmWorkflow(true)}>{workflow.label}</button>}
           <button
             type="button"
             onClick={handleManualSave}
-            disabled={saving || aiLoading}
+            disabled={editingDisabled}
             className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>

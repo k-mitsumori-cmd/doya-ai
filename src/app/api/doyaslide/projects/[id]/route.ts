@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
 import { ASPECT_TO_SIZE, STYLE_PRESETS } from '@/lib/doyaslide/constants'
+import { DOYASLIDE_OPERATION_LEASE_MS, isDoyaSlideStaleCandidate, settleStaleDoyaSlideProject } from '@/lib/doyaslide/generation-operation'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -16,13 +17,20 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     const p = await ctx.params
 
-    const project = await prisma.doyaSlideProject.findFirst({
+    const load = () => prisma.doyaSlideProject.findFirst({
       where: { id: p.id, userId },
       include: {
         slides: { orderBy: { index: 'asc' } },
       },
     })
+    let project = await load()
     if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    // 止まったままの資料を、読むときに戻す（構成中 6 分・生成中 15 分。スライドだけが生成中のまま残ったものも）
+    const stuckSlide = project.slides.some((slide) => slide.status === 'generating') && Date.now() - project.updatedAt.getTime() >= DOYASLIDE_OPERATION_LEASE_MS
+    if (isDoyaSlideStaleCandidate(project) || stuckSlide) {
+      const settled = await settleStaleDoyaSlideProject(userId, project.id).catch(() => 'none' as const)
+      if (settled !== 'none') project = (await load()) ?? project
+    }
     return NextResponse.json({ project })
   } catch (e) {
     console.error('[doyaslide/projects/[id] GET]')

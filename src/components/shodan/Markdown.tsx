@@ -42,8 +42,8 @@ export default function Markdown({ source }: { source: string }) {
       const content = inline(h[2].trim(), nk())
       const cls =
         level === 1 ? 'text-2xl font-black text-slate-900 mt-2 mb-3'
-        : level === 2 ? 'text-xl font-black text-slate-900 mt-6 mb-2 pb-1 border-b-2 border-purple-100'
-        : level === 3 ? 'text-base font-black text-purple-700 mt-4 mb-1'
+        : level === 2 ? 'text-xl font-black text-slate-900 mt-6 mb-2 pb-1 border-b-2 border-brand-50'
+        : level === 3 ? 'text-base font-black text-brand-600 mt-4 mb-1'
         : 'text-sm font-black text-slate-700 mt-3 mb-1'
       blocks.push(React.createElement(`h${level}`, { key: nk(), className: cls }, content))
       i++; continue

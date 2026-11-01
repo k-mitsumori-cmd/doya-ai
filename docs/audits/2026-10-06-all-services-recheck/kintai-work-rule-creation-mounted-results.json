@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T18:15:02.355Z",
+  "passed": 13,
+  "expected": 13,
+  "cases": [
+    "operation metadata persists before POST and ack clears it",
+    "lost acknowledgement blocks manual retries",
+    "recovery retrieves saved row without another POST",
+    "missing recovery remains fenced until explicit cancellation",
+    "malformed success retains recovery metadata",
+    "wrong saved field retains recovery metadata",
+    "remount restores pending metadata without re-sending",
+    "different actor does not expose prior operation",
+    "late former-org acknowledgement cannot clear new-org pending",
+    "authentication loading fences a late acknowledgement",
+    "storage denial prevents POST",
+    "malformed restored metadata blocks new creation",
+    "unavailable recorded row clears fence without recreating"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+    "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+  },
+  "scope": "Actual mounted React creation hook and real identity guard with synthetic HTTP/storage/session transitions. No production operations. Full settings-page integration and native browser are separate checks."
+}

@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T04:19:37.422Z",
+  "passed": 10,
+  "cases": [
+    "12 actual Serializable concurrent manual creations replay one exact lead and receipt",
+    "10 real concurrent batch imports create one row set, one result marker and one receipt",
+    "Concurrent same-version PATCH admits one and persists monotonically newer version",
+    "Stale DELETE cannot remove a lead edited after review",
+    "All four actual writes wait behind actor revocation then reject without mutation",
+    "Cancellation after initial Serializable snapshot fences batch and rolls back result marker plus rows",
+    "Cancellation waits behind committed batch and returns result without deleting rows",
+    "Real receipt constraint failure rolls back earlier batch result marker and inserted row set",
+    "Overlong second CSV row prevents entire actual import with no silent truncation",
+    "Batch recovery cannot resurrect soft-deleted imported rows"
+  ],
+  "lockWaitObservations": [
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/leads/route.ts": "4f8a887b3b6a34560d78c6cc123aa01d5aaad00b1f44b4862e193ad84f40f9a4",
+    "src/app/api/sfa/leads/[id]/route.ts": "cb50dda81c788066326f1194f344d1c07b19dac3129545a7c050da87cf2624ac",
+    "src/app/api/sfa/leads/import/route.ts": "4dcc0a193f8b7e61a77da636e524991e41fc5ea611065e6e79488ac87950c316",
+    "src/lib/sfa/lead-mutation.ts": "76d8cdf62128b8f679c2fad4f1a0959d6cfe0e06fd0687399877a87b48dedfb0",
+    "src/lib/sfa/lead-import.ts": "d986d153c0bf990df40dc9309e9f3b7eb9b0411742d30880c325abecdbfa4cff",
+    "src/lib/sfa/creation-receipt.ts": "6a9e1363eb8f98a947ec70279c7f095906bd41bb679e270a8c4209402d5bb0ee",
+    "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
+  },
+  "scope": "Actual handlers/helpers and generated Prisma against private Unix-socket-only PostgreSQL17 synthetic schema/data. Real Serializable snapshots, row/advisory locks, conflicts and rollback. No production schema/FK completeness, customer/provider writes or mounted browser proof."
+}

@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-08T16:52:15.862786+00:00",
+  "priorGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-4c641eee-1540-47fb-9406-1094944d0b14",
+  "priorTerminal": "failed at Doyalist Next: inherited environment pointed at old SEO snapshot, while current snapshot unchanged and build passed",
+  "priorSuccessfulSteps": 129,
+  "priorChangedSources": [],
+  "freshGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+  "repair": "Exact full environment pointer corrected before fresh start. Source changes separately required by confirmed long-field compatibility defect; retain original150 plus6, boundary28 plus3 and actualNext35 plus3."
+}

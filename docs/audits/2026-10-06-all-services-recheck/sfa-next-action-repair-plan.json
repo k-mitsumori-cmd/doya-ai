@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-07T05:46:28.705911+00:00",
+  "status": "released-ci-ready-anonymous-publication-passed-private-flow-unproven",
+  "scope": "Next-action generation and recovery, not task creation already covered by shared durable task operations.",
+  "required": [
+    "Reject empty/non-string/oversized model fields before completing quota; preserve tested JST date normalization and valid empty risk.",
+    "Use actor/org/deal/UUID receipt: reserve quota and pending receipt atomically, fresh actor before provider, external provider outside DB locks.",
+    "Snapshot current owned active deal/version and org-scoped related account, stage and activities. Retained result describes execution-time data; do not imply it reflects later edits. Decide explicitly whether intervening changes conflict or preserve labelled historical snapshot.",
+    "Persist validated suggestion and quota completion in same transaction. Replay/recovery must not invoke provider.",
+    "Pending lease expiry refunds only its own pending allowance and prevents late completion. Completed suggestion remains recoverable without another quota charge.",
+    "Cancellation fences unclaimed UUID only; do not imply an executing provider can be cancelled.",
+    "Integrate shared durable client metadata, actor/org epoch and malformed/unknown response fences. Recovery displays original suggestion and preserves existing safe task selection/creation behavior.",
+    "Test same UUID, different UUID/version, actor removal, deleted/foreign deal, input changes, related data changes, pending recovery, expiry and late provider, receipt/write failure and cleanup uncertainty. Real private PostgreSQL concurrency is separate from synthetic fixtures.",
+    "Full frozen security/type/build/lint gate; exact allowlisted commit; main push; exact CI/SHA/READY; anonymous public checks. Authenticated real provider/customer flows stay explicitly unverified."
+  ],
+  "evidence": [
+    "sfa-next-action-lifecycle-baseline.json",
+    "sfa-next-action-result-baseline.json"
+  ],
+  "boundaries": [
+    "No paid provider calls",
+    "No production customer DB changes/migrations",
+    "No email/invite dispatch",
+    "Preserve pending edit-role policy"
+  ],
+  "localChecks": [
+    "32 model validation/route cases",
+    "24 durable API cases",
+    "21 mounted client cases",
+    "10 actual private PostgreSQL concurrency/rollback cases; stopped0",
+    "shared49 and deal13 regressions",
+    "score client21/API24/PG10 regressions including new legacy-name guard"
+  ],
+  "remaining": [
+    "Authenticated private real-browser/provider and all remaining service criteria"
+  ],
+  "remainingLifecycleReconfirmed": true,
+  "legacyNameFollowUp": {
+    "baseline": "Score name10001: POST200, recovery409,provider1 before repair.",
+    "fix": "Reject empty/blank/name>10000 before quota/provider in both score and next-action.",
+    "deployed": true
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-next-action-release-e4727c52-6f52-44d9-bb78-776e0606d8f6",
+  "fullGate": {
+    "build": 0,
+    "lint": 0,
+    "sourceFiles": 2697,
+    "changedSources": []
+  },
+  "release": {
+    "commit": "f09ef81ca5f643018015e2e3c265dd48d4c7807b",
+    "ciRun": 37576609179,
+    "deployment": "dpl_2LDAhdvReThR9zQHeWJfxGPXyRvo",
+    "url": "doya-r3x0b38fk-surisutas-projects.vercel.app",
+    "ci": "success",
+    "deploymentState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven"
+  }
+}

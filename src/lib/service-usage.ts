@@ -17,6 +17,7 @@ import { waitUntil } from '@vercel/functions'
 import { prisma, withRetry } from './prisma'
 import { serviceLabelOf } from './attribution'
 import { postToSlackBlocks } from './notifications'
+import { maskEmail } from './slack/notify'
 import { shouldSend } from './alert'
 import { isPaidPlan } from './unified-plan'
 
@@ -155,7 +156,8 @@ export async function notifyFirstServiceUse(opts: {
       safe(() => prisma.generation.groupBy({ by: ['serviceId'], where: { userId } }), [] as { serviceId: string }[]),
     ])
 
-    const who = user?.name || user?.email || '不明なユーザー'
+    // 氏名は出さず、メールアドレスは一部を伏せる（個人情報を広げないため）
+    const who = user?.email ? maskEmail(user.email) : '（メール未登録）'
     const plan = user?.plan || 'FREE'
     const planLabel = isPaidPlan(plan) ? `${plan}（有料）` : `${plan}（無料）`
 
@@ -185,12 +187,12 @@ export async function notifyFirstServiceUse(opts: {
     const blocks: unknown[] = [
       {
         type: 'header',
-        text: { type: 'plain_text', text: `【初めての利用】${label}`, emoji: true },
+        text: { type: 'plain_text', text: `【初めての利用】${label}`, emoji: false },
       },
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: `*ユーザー*\n${who}${user?.email ? `\n${user.email}` : ''}` },
+          { type: 'mrkdwn', text: `*ユーザー*\n${who}` },
           { type: 'mrkdwn', text: `*プラン*\n${planLabel}` },
           { type: 'mrkdwn', text: `*登録日*\n${signupLine}` },
           { type: 'mrkdwn', text: `*登録したサービス・流入元*\n${acquisition}` },
@@ -214,7 +216,7 @@ export async function notifyFirstServiceUse(opts: {
       },
     ]
 
-    await postToSlackBlocks(`[初回利用] ${label} - ${who}`, blocks)
+    await postToSlackBlocks(`[初回利用] ${label} - ${who}`, blocks, undefined, { app: 'ドヤAI', kind: 'usage', severity: 'info' })
   } catch (e) {
     console.error('[Usage] notifyFirstServiceUse failed:')
   }
@@ -230,6 +232,6 @@ export async function notifyServiceActivity(opts: Pick<ServiceUsageOptions, 'ser
       `利用区分：${opts.userId ? 'ログイン利用' : 'ゲスト利用'}`,
       `日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
     ].join('\n');
-    await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }]);
+    await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }], undefined, { app: 'ドヤAI', kind: 'usage', severity: 'info' });
   } catch (error) { console.error('[Usage] notification failed'); }
 }

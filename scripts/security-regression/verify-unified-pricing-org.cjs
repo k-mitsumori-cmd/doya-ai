@@ -4,6 +4,7 @@ const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 const React = require('react')
+const { load } = require('./load-typescript.cjs')
 const { renderToStaticMarkup } = require('react-dom/server')
 
 const source = fs.readFileSync(path.resolve(__dirname, '../../src/components/UnifiedPricingPlans.tsx'), 'utf8')
@@ -19,12 +20,14 @@ const pageExports = {}
 const mocks = {
   'react/jsx-runtime': require('react/jsx-runtime'),
   react: React,
-  'next-auth/react': { useSession: () => ({ data: { user: { plan: personalPlan } }, status: 'authenticated' }) },
+  'next-auth/react': { useSession: () => ({ data: { user: { id: 'synthetic-owner', plan: personalPlan } }, status: 'authenticated' }) },
   'next/link': ({ children, href, ...props }) => React.createElement('a', { href, ...props }, children),
   'next/navigation': { usePathname: () => '/aio/pricing' },
   '@/lib/pricing': { ENTERPRISE_CONTACT_MAILTO: 'mailto:example@example.invalid' },
   '@/components/CheckoutButton': { CheckoutButton: () => { checkoutCount++; return React.createElement('button', null, 'CHECKOUT') } },
   '@/components/TrialCallout': { TrialBadge: empty, TrialNote: empty, useTrialEligible: () => false },
+  // 新しい料金の旗（NEW_PRICING_ROLLOUT）は off と同じ（2026-10-25）
+  '@/components/pricing/useNewPricing': { useNewPricing: () => false },
   '@/lib/services': { getServiceById: () => service, getPublicServices: () => [service] },
   '@/lib/plan-utils': { higherPlan: (_a, b) => b, tierFrom: value => value === 'STARTER' ? 'PRO' : value },
   '@/lib/unified-plan': {
@@ -32,6 +35,12 @@ const mocks = {
       freeName: '無料プラン', proName: 'プロプラン', freeTagline: '無料', proNote: '統一プラン',
     } },
 }
+const billingReader = load('src/lib/billing-response-client.ts', {}, { AbortController })
+mocks['@/lib/plan-utils'] = load('src/lib/plan-utils.ts')
+mocks['@/hooks/useBillingPlanResync'] = load('src/hooks/useBillingPlanResync.ts', {
+  react: React, 'next-auth/react': mocks['next-auth/react'],
+  '@/lib/billing-response-client': billingReader, '@/lib/plan-utils': mocks['@/lib/plan-utils'],
+}, { AbortController })
 vm.runInNewContext(compiled, { exports: pageExports, require: name => {
   if (name in mocks) return mocks[name]
   throw new Error(`Unmocked ${name}`)

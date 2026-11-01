@@ -1,0 +1,746 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
+import { Clock, Download, Trash2, Image as ImageIcon, RefreshCw, Search, X } from 'lucide-react'
+import toast from 'react-hot-toast'
+import DashboardSidebar from '@/components/DashboardSidebar'
+import { useSession } from 'next-auth/react'
+import { motion } from 'framer-motion'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
+import { EmptyState } from '@/components/EmptyState'
+import { EmptyState as DsEmptyState, Button, Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
+
+interface HistoryItem {
+  id: string
+  category: string
+  keyword: string
+  size: string
+  createdAt: Date
+  banners: string[] // 画像は段階取得
+  bannerCount: number // バッチ内の枚数
+  bannerIds?: string[] // ダウンロード用（元画像のGeneration ID）
+}
+
+// 相対時間を表示
+function formatRelativeTime(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffMins < 1) return 'たった今'
+  if (diffMins < 60) return `${diffMins}分前`
+  if (diffHours < 24) return `${diffHours}時間前`
+  if (diffDays < 7) return `${diffDays}日前`
+  
+  return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+}
+
+const HISTORY_CACHE_KEY = 'doya-history-cache-v2'
+
+function readHistoryCache(userId: string): { items: HistoryItem[]; nextCursor: string | null } | null {
+  try {
+    const raw = sessionStorage.getItem(HISTORY_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed?.userId !== userId || !Array.isArray(parsed?.items) || !(parsed.nextCursor === null || typeof parsed.nextCursor === 'string')) {
+      sessionStorage.removeItem(HISTORY_CACHE_KEY)
+      return null
+    }
+    return { items: parsed.items.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) })), nextCursor: parsed.nextCursor }
+  } catch {
+    return null
+  }
+}
+
+function writeHistoryCache(userId: string, items: HistoryItem[], nextCursor: string | null) {
+  try {
+    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ userId, items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), nextCursor, ts: Date.now() }))
+  } catch {
+    // ignore
+  }
+}
+
+export default function BannerHistoryPage() {
+  const auth = useSession()
+  const userId = auth.status === 'authenticated' ? auth.data?.user?.id : null
+  useEffect(() => {
+    if (auth.status === 'unauthenticated') sessionStorage.removeItem(HISTORY_CACHE_KEY)
+  }, [auth.status])
+  return <BannerHistoryContent key={userId ? `user:${userId}` : `status:${auth.status}`} auth={auth} />
+}
+
+function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> }) {
+  // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
+  const { data: session, status } = auth
+  const userId = status === 'authenticated' ? session?.user?.id : null
+  const isGuest = status !== 'loading' && !userId
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [requiresUpgrade, setRequiresUpgrade] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [tipIndex, setTipIndex] = useState(0)
+  const [phase, setPhase] = useState<'list' | 'images' | 'idle'>('idle')
+  const [isStale, setIsStale] = useState(false) // キャッシュ表示中かどうか
+  const [searchQuery, setSearchQuery] = useState('')
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'this-month' | 'last-month'>('all')
+
+  // 検索・フィルター適用後の履歴
+  const filteredHistory = useMemo(() => {
+    let result = history
+
+    // 期間フィルター
+    if (periodFilter !== 'all') {
+      const now = new Date()
+      let startDate: Date
+      let endDate: Date
+      if (periodFilter === 'this-month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+      } else {
+        // last-month
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+      }
+      result = result.filter(item => {
+        const d = item.createdAt
+        return d >= startDate && d <= endDate
+      })
+    }
+
+    // キーワード検索
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      result = result.filter(item =>
+        item.keyword.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        item.size.toLowerCase().includes(q)
+      )
+    }
+
+    return result
+  }, [history, searchQuery, periodFilter])
+
+  const LOADING_TIPS = [
+    '有料プランでは保存済みのバナーをいつでも再ダウンロードできます',
+    '同じ訴求でも「数字」「限定」「無料」で反応が変わります',
+    '画像が多いほど履歴の集計に少し時間がかかります',
+    '重いときは一度更新すると改善する場合があります',
+  ]
+
+  useEffect(() => {
+    if (!isLoading && isLoaded) return
+    const t = window.setInterval(() => setTipIndex((v) => (v + 1) % LOADING_TIPS.length), 1800)
+    return () => window.clearInterval(t)
+  }, [isLoading, isLoaded])
+
+  const fetchBatchImages = useCallback(async (batchId: string) => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
+    try {
+      // 履歴表示は軽量化（サムネ）で取得
+      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}&thumb=1`, { signal: controller.signal, cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || '画像の取得に失敗しました')
+      const banners = Array.isArray(data?.banners) ? data.banners : []
+      const bannerIds = Array.isArray(data?.bannerIds) ? data.bannerIds : []
+      return {
+        // ここでは “サムネURL” を受け取る（/api/.../thumb）
+        banners: banners.map((b: any) => String(b || '').trim()).filter(Boolean),
+        bannerIds: bannerIds.filter((x: any) => typeof x === 'string'),
+      }
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }, [])
+
+  const fetchFullImage = async (id: string): Promise<string> => {
+    const res = await fetch(`/api/banner/history/image?id=${encodeURIComponent(id)}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error || '画像の取得に失敗しました')
+    const image = String(json?.image || '')
+    if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
+    return image
+  }
+
+  // ログインユーザーはAPIから、ゲストは履歴閲覧不可
+  // SWR風: キャッシュがあれば即表示→バックグラウンドで更新
+  const loadHistory = useCallback(async (forceRefresh = false) => {
+    if (status === 'loading') return
+
+    // キャッシュチェック（stale-while-revalidate）
+    if (!forceRefresh && userId) {
+      const cached = readHistoryCache(userId)
+      if (cached && cached.items.length > 0) {
+        setHistory(cached.items)
+        setNextCursor(cached.nextCursor)
+        setIsLoaded(true)
+        setIsLoading(false)
+        // 履歴権限や新しい生成は変わり得るため、キャッシュ表示後も必ず正本を確認する。
+        setIsStale(true)
+      }
+    }
+
+    setIsLoading(true)
+    setRequiresUpgrade(false)
+    setErrorMessage(null)
+    setPhase('list')
+    let timeout: number | undefined
+    try {
+      if (isGuest) {
+        // ゲストは履歴閲覧不可（有料プラン限定）
+        setHistory([])
+        setRequiresUpgrade(true)
+      } else {
+        // ログインユーザーはAPIから取得
+        const controller = new AbortController()
+        timeout = window.setTimeout(() => controller.abort(), 15_000)
+        // まず一覧（画像なし + 最初の3枚だけthumb URL）を高速取得
+        const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal, cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          // 有料プラン限定チェック
+          if (data.requiresUpgrade) {
+            setHistory([])
+            setNextCursor(null)
+            setRequiresUpgrade(true)
+            sessionStorage.removeItem(HISTORY_CACHE_KEY)
+          } else {
+            if (!Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の取得位置が不正です')
+            const items = Array.isArray(data.items) ? data.items : []
+            const list: HistoryItem[] = items.map((item: any) => ({
+              id: item.id,
+              category: item.category || '',
+              keyword: item.keyword || '',
+              size: item.size || '',
+              createdAt: new Date(item.createdAt),
+              // 最初の表示は previewThumbs を使う（追加リクエストを減らして爆速化）
+              banners: Array.isArray(item.previewThumbs) ? item.previewThumbs.map((x: any) => String(x || '')).filter(Boolean) : [],
+              bannerCount:
+                Number(item.bannerCount) > 0
+                  ? Number(item.bannerCount)
+                  : Array.isArray(item.banners)
+                    ? item.banners.length
+                    : 1,
+              bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: any) => typeof x === 'string') : undefined,
+            }))
+            setHistory(list)
+            setNextCursor(data.nextCursor)
+            if (userId) writeHistoryCache(userId, list, data.nextCursor)
+          }
+        } else {
+          toast.error('履歴を読み込めませんでした。通信を確かめて、もう一度お試しください。')
+          setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
+          setHistory([])
+          setNextCursor(null)
+          sessionStorage.removeItem(HISTORY_CACHE_KEY)
+        }
+      }
+    } catch (e) {
+      console.error('History load error:')
+      setHistory([])
+      setNextCursor(null)
+      sessionStorage.removeItem(HISTORY_CACHE_KEY)
+      if ((e as any)?.name === 'AbortError') {
+        setErrorMessage('履歴の取得がタイムアウトしました（通信状況をご確認のうえ再試行してください）')
+      } else {
+        setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
+      }
+    } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
+      setIsLoaded(true)
+      setIsLoading(false)
+      setIsStale(false)
+      setPhase('idle')
+    }
+  }, [isGuest, status, userId, fetchBatchImages])
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || isLoadingMore || !userId) return
+    setIsLoadingMore(true)
+    try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 15_000)
+      let res: Response
+      let data: any
+      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal, cache: 'no-store' }); data = await res.json() }
+      finally { window.clearTimeout(timeout) }
+      if (!res.ok || !Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string') || data.nextCursor === nextCursor) throw new Error(data?.error || '古い履歴を読み込めませんでした')
+      const page: HistoryItem[] = data.items.map((item: any) => ({
+        id: item.id, category: item.category || '', keyword: item.keyword || '', size: item.size || '',
+        createdAt: new Date(item.createdAt),
+        banners: Array.isArray(item.previewThumbs) ? item.previewThumbs.filter((x: unknown) => typeof x === 'string') : [],
+        bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: unknown) => typeof x === 'string') : [],
+        bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
+      }))
+      setHistory(previous => {
+        const merged = new Map(previous.map(item => [item.id, item]))
+        for (const item of page) {
+          const old = merged.get(item.id)
+          if (!old) { merged.set(item.id, item); continue }
+          const ids = [...new Set([...(old.bannerIds || []), ...(item.bannerIds || [])])].slice(0, 3)
+          const byId = new Map<string, string>([...(old.bannerIds || []).map((id, i): [string, string] => [id, old.banners[i]]), ...(item.bannerIds || []).map((id, i): [string, string] => [id, item.banners[i]])])
+          merged.set(item.id, { ...old, bannerCount: old.bannerCount + item.bannerCount, bannerIds: ids, banners: ids.map(id => byId.get(id) || '') })
+        }
+        const all = [...merged.values()].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        writeHistoryCache(userId, all, data.nextCursor)
+        return all
+      })
+      setNextCursor(data.nextCursor)
+    } catch (error) {
+      toast.error('古い履歴を読み込めませんでした。少し待って、もう一度お試しください。')
+    } finally { setIsLoadingMore(false) }
+  }, [nextCursor, isLoadingMore, userId])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
+  // バナー画像が空のアイテムを自動リトライで取得する
+  useEffect(() => {
+    if (!isLoaded || isLoading) return
+    const emptyItems = history.filter(item => item.bannerCount > 0 && item.banners.length === 0)
+    if (emptyItems.length === 0) return
+
+    const timers: ReturnType<typeof setTimeout>[] = []
+    emptyItems.forEach((item, idx) => {
+      // 各アイテムを1秒ずつずらして取得（サーバー負荷軽減）
+      const t = setTimeout(async () => {
+        try {
+          const got = await fetchBatchImages(item.id)
+          if (got.banners.length > 0) {
+            setHistory((prev) =>
+              prev.map((h) =>
+                h.id === item.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h
+              )
+            )
+          }
+        } catch {
+          // 失敗は無視（手動ボタンで再取得可能）
+        }
+      }, 2000 + idx * 1000)
+      timers.push(t)
+    })
+
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [isLoaded, isLoading, history.length, fetchBatchImages])
+
+  // セッションが「loading」のまま固まった時でも無限ローディングにしない（UX救済）
+  useEffect(() => {
+    if (status !== 'loading') return
+    const t = window.setTimeout(() => {
+      // 8秒待ってもセッションが取れない場合は画面を解放（再試行導線を出す）
+      setIsLoaded(true)
+      setIsLoading(false)
+      setHistory([])
+      setRequiresUpgrade(true)
+      setErrorMessage('ログイン状態の確認に時間がかかっています。再読み込みすると解消する場合があります。')
+    }, 8000)
+    return () => window.clearTimeout(t)
+  }, [status])
+
+  const handleDownload = async (genId: string, index: number) => {
+    try {
+      toast.loading('高画質画像を準備中...', { id: 'dl' })
+      const imageUrl = await fetchFullImage(genId)
+      const link = document.createElement('a')
+      link.href = imageUrl
+      link.download = `doya_banner_${Date.now()}_${index}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('ダウンロード開始', { id: 'dl' })
+    } catch (e: any) {
+      toast.error('ダウンロードできませんでした。通信を確かめて、もう一度お試しください。', { id: 'dl' })
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmDialog({ title: 'この画像を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
+    if (isGuest) {
+      // ゲストはlocalStorageから削除
+      const updated = history.filter(item => item.id !== id)
+      setHistory(updated)
+      localStorage.setItem('banner_history', JSON.stringify(updated.map(h => ({
+        ...h,
+        createdAt: h.createdAt.toISOString(),
+      }))))
+      toast.success('削除しました')
+    } else {
+      // ログインユーザーはAPI経由で削除（batchId = item.id）
+      try {
+        const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(id)}`, { method: 'DELETE' })
+        if (res.ok) {
+          const updated = history.filter(item => item.id !== id)
+          setHistory(updated)
+          if (userId) writeHistoryCache(userId, updated, nextCursor)
+          toast.success('削除しました')
+        } else {
+          toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
+        }
+      } catch {
+        toast.error('削除できませんでした。通信を確かめて、もう一度お試しください。')
+      }
+    }
+  }
+
+  if (!isLoaded) {
+    // 新しい見た目では枠を残し、一覧の場所に骨組みを出す（全面のくるくるにしない）
+      return (
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6" aria-busy="true">
+          <Skeleton lines={6} height={20} />
+          <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
+        </div>
+      )
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50/50">
+      <div className="hidden md:block">
+        <DashboardSidebar />
+      </div>
+      <div className="md:pl-[240px] transition-all duration-200">
+        {/* ヘッダー */}
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => loadHistory(true)}
+              disabled={isLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden />
+              最新の状態にする
+            </button>
+          </div>
+
+        {/* メイン */}
+        <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          {/* 検索バー＆フィルター（履歴がある場合のみ表示） */}
+          {!requiresUpgrade && !errorMessage && history.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {/* 検索バー */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="キーワード・業種・サイズで検索..."
+                  className="w-full pl-12 pr-10 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {/* 期間フィルター */}
+              <div className="flex items-center gap-2">
+                {([
+                  { key: 'all', label: 'すべて' },
+                  { key: 'this-month', label: '今月' },
+                  { key: 'last-month', label: '先月' },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setPeriodFilter(key)}
+                    className={`px-4 py-2 text-xs font-black rounded-xl border transition-all ${
+                      periodFilter === key
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-gray-200 hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {(searchQuery || periodFilter !== 'all') && (
+                  <span className="ml-2 text-xs font-bold text-slate-400">
+                    {filteredHistory.length}件
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isLoading && !requiresUpgrade && !errorMessage && (
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                <div className="text-xs font-black text-slate-800">
+                  {phase === 'list' ? '履歴一覧を読み込み中…' : phase === 'images' ? '画像を読み込み中…' : '読み込み中…'}
+                </div>
+                <div className="ml-auto text-[11px] font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</div>
+              </div>
+              <div className="mt-2 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-1/3 bg-blue-600 animate-pulse rounded-full" />
+              </div>
+            </div>
+          )}
+          {errorMessage ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
+            >
+              <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                <ImageIcon className="w-12 h-12 text-slate-300" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 mb-3">履歴を読み込めませんでした</h2>
+              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">{errorMessage}</p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => loadHistory()}
+                  className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-100 hover:scale-105"
+                >
+                  再試行
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all"
+                >
+                  再読み込み
+                </button>
+                <a
+                  href={SUPPORT_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-8 py-4 bg-white border border-gray-200 text-slate-800 font-black rounded-2xl transition-all hover:bg-slate-50"
+                >
+                  お問い合わせ
+                </a>
+              </div>
+            </motion.div>
+          ) : requiresUpgrade ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-3xl shadow-2xl"
+            >
+              {/* 背景デコレーション */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+              
+              <div className="relative z-10 text-center py-16 sm:py-20 px-6 sm:px-12">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/30 shadow-lg">
+                  <Clock className="w-10 h-10 text-white" />
+                </div>
+                
+                <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-md text-white text-xs font-black rounded-full uppercase tracking-widest mb-4">
+                  PRO Feature
+                </span>
+                
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">履歴 &amp; 再ダウンロード</h2>
+                
+                <p className="text-blue-100 mb-8 max-w-lg mx-auto leading-relaxed text-sm sm:text-base">
+                  有料プランなら、生成したバナーを<strong className="text-white">期限なく</strong>保存。<br />
+                  いつでも確認・再ダウンロードできます。
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <CheckoutButton
+                    planId="banner-pro"
+                    loginCallbackUrl="/banner/dashboard/history"
+                    variant="secondary"
+                    className="px-8 py-4 bg-white text-blue-600 font-black rounded-2xl transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    PROプランを始める
+                  </CheckoutButton>
+                  <Link href="/banner">
+                    <button className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-black rounded-2xl transition-all backdrop-blur-md">
+                      まずバナーを生成
+                    </button>
+                  </Link>
+                </div>
+                
+                <p className="mt-6 text-xs text-blue-200/80 font-bold">
+                  ¥9,980/月 〜 いつでもキャンセル可能
+                </p>
+              </div>
+            </motion.div>
+          ) : history.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm"
+            >
+              <DsEmptyState
+                  title="まだバナーをつくっていません"
+                  description="つくったバナーは、ここからいつでも見返して、もう一度ダウンロードできます。まずは見本を選んで、最初の1枚をつくりましょう。"
+                  action={<Button href="/banner/dashboard" icon="LayoutTemplate">見本から最初の1枚をつくる</Button>}
+                  art="/banner/empty-banners.webp"
+                />
+            </motion.div>
+          ) : filteredHistory.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm"
+            >
+              <EmptyState kind="no-results" title="該当するバナーが見つかりません" description="検索条件を変更して再度お試しください。" action={<button
+                onClick={() => { setSearchQuery(''); setPeriodFilter('all') }}
+                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all text-sm"
+              >
+                条件をリセット
+              </button>} />
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:gap-8">
+              {filteredHistory.map((item, idx) => (
+                <motion.div 
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-all group"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <Clock className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full uppercase tracking-wider">
+                            {item.category}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400">
+                            {formatRelativeTime(item.createdAt)}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-black text-slate-800 line-clamp-1">{item.keyword}</h3>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">サイズ</span>
+                        <span className="text-sm font-black text-slate-700">{item.size}</span>
+                      </div>
+                      <button 
+                        onClick={() => handleDelete(item.id)}
+                        className="p-3 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100"
+                        title="削除"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* バナー画像プレビュー */}
+                  {item.bannerCount > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                      {(item.banners.length > 0
+                        ? item.banners
+                        : Array.from({ length: Math.min(3, item.bannerCount) }, () => '')
+                      ).map((banner, i) => (
+                        <div
+                          key={i}
+                          className="relative aspect-video sm:aspect-square rounded-2xl overflow-hidden group/item cursor-pointer shadow-sm border border-slate-100 bg-slate-50"
+                        >
+                          {banner ? (
+                            <img
+                              src={banner}
+                              alt={`保存済みバナー ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                              onError={(e) => {
+                                // サムネ取得に失敗しても“壊れ画像”にしない
+                                const img = e.currentTarget
+                                if (!img.dataset.fallbackApplied) {
+                                  img.dataset.fallbackApplied = '1'
+                                  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors"
+                              onClick={async () => {
+                                try {
+                                  const got = await fetchBatchImages(item.id)
+                                  if (got.banners.length > 0) {
+                                    setHistory((prev) =>
+                                      prev.map((h) =>
+                                        h.id === item.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h
+                                      )
+                                    )
+                                  }
+                                } catch {
+                                  toast.error('画像の取得に失敗しました。もう一度お試しください。')
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+                                <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-blue-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
+                                </div>
+                                <div className="text-[11px] font-black text-slate-400">読み込み中（タップで再取得）</div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/item:opacity-100 transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
+                            {banner ? (
+                              <>
+                                <button
+                                  aria-label={`保存済みバナー ${i + 1} をダウンロード`}
+                                  onClick={() => {
+                                    const id = item.bannerIds?.[i]
+                                    if (!id) {
+                                      toast.error('画像IDが取得できませんでした。再読み込みしてください。')
+                                      return
+                                    }
+                                    void handleDownload(id, i)
+                                  }}
+                                  className="w-12 h-12 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+                                >
+                                  <Download className="w-6 h-6" />
+                                </button>
+                                <span className="text-white text-xs font-black uppercase tracking-widest">ダウンロード</span>
+                              </>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const got = await fetchBatchImages(item.id)
+                                    setHistory((prev) =>
+                                      prev.map((h) =>
+                                        h.id === item.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h
+                                      )
+                                    )
+                                    toast.success('画像を読み込みました')
+                                  } catch (err: any) {
+                                    toast.error('画像を読み込めませんでした。通信を確かめて、もう一度お試しください。')
+                                  }
+                                }}
+                                className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-xl hover:scale-105 transition-transform"
+                              >
+                                画像を表示
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+          {!requiresUpgrade && nextCursor && !errorMessage && <div className="mt-8 text-center"><button type="button" onClick={() => void loadMore()} disabled={isLoadingMore} className="rounded-2xl border border-blue-200 bg-white px-8 py-3 font-black text-blue-700 shadow-sm hover:bg-blue-50 disabled:opacity-50">{isLoadingMore ? '古い履歴を読み込み中…' : '古い履歴をさらに表示'}</button></div>}
+        </main>
+      </div>
+    </div>
+  )
+}

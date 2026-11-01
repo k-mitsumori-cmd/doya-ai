@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-08T04:11:22.441Z",
+  "expected": 24,
+  "passed": 24,
+  "cases": [
+    "Opening page performs only identity reads; explicit double click starts exactly one UUID POST",
+    "Remount restores completed draft with no generation or AI follow-ups",
+    "Explicit subsequent generation rechecks terminal result then creates one new UUID",
+    "Unmount aborts observation and late completion starts no follow-ups; remount recovers",
+    "Duplicate cancel clicks send one DELETE; cancelling blocks new generation until confirmed stopped",
+    "JSON quota rejection shows persistent pricing without automatic retry or follow-up",
+    "Mismatched streaming identity retains metadata and requires recovery before side-effects",
+    "Actor ABA discards late old-actor output and restores original actor via GET",
+    "Project switch isolates metadata and suppresses old-project completion",
+    "Corrupt stored intent blocks POST and is never silently replaced",
+    "Missing Web Locks never degrades to unsafe generation",
+    "Two mounted tabs share one claim and send only one POST and one set of follow-ups",
+    "Missing saved receipt never auto-posts; cancelling tombstones delayed intent",
+    "Storage replacement from another tab aborts old observation and recovers replacement without POST",
+    "Authentication loading never starts generation or identity handshake",
+    "Missing completion version does not trigger additional AI calls",
+    "Denied storage on initialization shows safe guidance without browser diagnostics",
+    "Switching actor clears the previous header and celebration without generating",
+    "Late initialization recovery cannot replace a freshly completed generation with stale pending",
+    "Owned memory handoff sends exact private instructions only in explicit POST",
+    "Lost handoff fails before creating receipt metadata or requesting generation",
+    "Foreign actor handoff never sends private instructions or claims an operation",
+    "Legacy private query is scrubbed and requires reselection without silently generating blank input",
+    "Saved article recovery works after memory handoff is lost but restart retains old metadata"
+  ],
+  "sourceHashes": {
+    "src/app/interview/projects/[id]/generate/page.tsx": "6a9e3146cc38af0aa9ef248d4da31e99f9588dbc8295355e14297cac91176579",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/article-intent-client.ts": "4d8976a2b0c0e6a037a01f7d57efc6da0f7286d5c4800421d3c80e3e51184bc1",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "src/lib/interview/article-stream-client.ts": "41578f7ec17e8ec7609e9d95029539d65d5e67b0068585e373b97dd8b683f15d",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-recovery-mounted.cjs": "932bc9b1f5c472065dbb52300b30ca06a70e1b0bfea045c57a99b64136353a5a"
+  },
+  "scope": "Actual full GeneratePage, protocol, stream and metadata modules mounted under StrictMode; native DOM/Response/AbortController and synthetic queued locks/shared storage/server/session/router/motion. Not native browser/history, Next auth, actual route or DB quota/provider proof."
+}

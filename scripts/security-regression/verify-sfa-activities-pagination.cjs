@@ -1,26 +1,17 @@
+const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
 const occurredAt = new Date('2026-09-24T00:00:00.000Z');
 const rows = Array.from({ length: 501 }, (_, index) => ({
-  id: String(index).padStart(6, '0'), organizationId: 'org-1',
+  id: String(index).padStart(6, '0'), organizationId: 'org-1', memberId: 'synthetic-member',
   accountId: index < 250 ? 'account-1' : 'account-2',
   dealId: index < 250 ? 'deal-1' : 'deal-2',
   occurredAt: index < 10 ? new Date('2026-09-25T00:00:00.000Z') : index >= 491 ? new Date('2026-09-23T00:00:00.000Z') : occurredAt,
 }));
 rows.push({ ...rows[0], id: 'foreign', organizationId: 'org-2' });
 
-function matches(row, where) {
-  if (where.AND && !where.AND.every((part) => matches(row, part))) return false;
-  if (where.OR && !where.OR.some((part) => matches(row, part))) return false;
-  if (where.organizationId && row.organizationId !== where.organizationId) return false;
-  if (where.accountId && row.accountId !== where.accountId) return false;
-  if (where.dealId && row.dealId !== where.dealId) return false;
-  if (where.occurredAt?.lt && !(row.occurredAt < where.occurredAt.lt)) return false;
-  if (where.occurredAt instanceof Date && row.occurredAt.getTime() !== where.occurredAt.getTime()) return false;
-  if (where.id?.lt && !(row.id < where.id.lt)) return false;
-  return true;
-}
+const { matches, exact } = require('./sfa-query-fixture.cjs');
 
 const prisma = { sfaActivity: {
   findMany: async ({ where, orderBy, take }) => {
@@ -32,11 +23,13 @@ const prisma = { sfaActivity: {
   count: async ({ where }) => rows.filter((row) => matches(row, where)).length,
 } };
 
-const { GET } = load('src/app/api/sfa/activities/route.ts', {
+for (const [name, ids] of [['sfaAccount', ['account-1', 'account-2']], ['sfaDeal', ['deal-1', 'deal-2']]]) prisma[name] = { findUnique: async ({ where }) => ids.includes(where.id) ? { id: where.id, organizationId: 'org-1', isActive: true, ownerMemberId: 'synthetic-member', assigneeMemberId: 'synthetic-member' } : null };
+
+const { GET } = load('src/app/api/sfa/activities/route.ts', withSfaAuthority({
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },
-});
+}));
 
 async function collect(params, expected) {
   const ids = new Set();

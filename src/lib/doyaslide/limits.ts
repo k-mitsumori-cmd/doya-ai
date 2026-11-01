@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/prisma'
 import { tierFrom, type PlanTier } from '@/lib/plan-utils'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { excludeIds, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 export interface DoyaSlideLimits {
   tier: PlanTier
@@ -104,7 +105,9 @@ export async function reserveMonthlySlides(
       })
     } else if (!isSameMonth(existing.lastUsageReset, now) || existing.monthlyUsage !== current || granted > 0) {
       await tx.userServiceSubscription.update({
-        where, data: { monthlyUsage: current + granted, lastUsageReset: now },
+        // Normal usage does not reset the period. Durable operations use this
+        // exact token to distinguish their reservation from a later reset.
+        where, data: { monthlyUsage: current + granted, lastUsageReset: isSameMonth(existing.lastUsageReset, now) ? existing.lastUsageReset : now },
       })
     }
     return { granted, limit, reservedMonth: monthStart(now) }
@@ -141,8 +144,10 @@ export async function countMonthlySlides(userId: string): Promise<number> {
 
 export async function countProjects(userId: string): Promise<number> {
   const now = new Date()
+  // 自動点検（system-watch の B1）が作ったプロジェクト（合図を確かめて ID を残したもの）は数えない
+  const watched = excludeIds(await systemWatchRecordIds(prisma, 'doyaslide-project', [userId], now))
   const [existing, ledger] = await Promise.all([
-    prisma.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) } } }),
+    prisma.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) }, ...watched } }),
     prisma.userServiceSubscription.findUnique({
       where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
       select: { monthlyUsage: true, lastUsageReset: true },

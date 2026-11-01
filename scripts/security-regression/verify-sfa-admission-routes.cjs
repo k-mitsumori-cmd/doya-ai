@@ -24,13 +24,15 @@ const transactional = prisma => ({ ...prisma, $transaction: async work => work(p
 const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => null }, json: async () => body });
 
 (async () => {
+  const accountDb = { sfaAccount: { create: async () => { attempted++; } } };
   const account = load('src/app/api/sfa/accounts/route.ts', {
-    ...shared,
-    '@/lib/prisma': { prisma: { sfaAccount: { create: async () => { attempted++; } } } },
+    ...shared, ...require('./sfa-crm-test-deps.cjs').crmDeps(accountDb, shared, { quotaInsideCreate: true }),
+    '@/lib/prisma': { prisma: accountDb },
   }).POST;
-  assert.equal((await account(request({ name: '会社' }))).status, 402);
+  assert.equal((await account(request({ name: '会社', operationId: '10000000-0000-4000-8000-000000000001' }))).status, 402);
 
   const deal = load('src/app/api/sfa/deals/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(),
     ...shared,
     '@/lib/prisma': { prisma: { sfaStage: { findFirst: async () => null }, sfaDeal: { create: async () => { attempted++; } } } },
     '@/lib/sfa/amount': { parseSfaAmount: () => 0n },
@@ -39,6 +41,7 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
   assert.equal((await deal(request({ name: '商談' }))).status, 402);
 
   const convert = load('src/app/api/sfa/leads/[id]/convert/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(),
     ...shared,
     '@/lib/prisma': { prisma: {
       sfaLead: { findUnique: async () => ({ id: 'lead', organizationId: 'org', isActive: true, status: 'new', convertedAccountId: null }) },

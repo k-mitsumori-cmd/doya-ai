@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-07T18:13:17.241101+00:00",
+  "status": "frozen48gates-passed-ready-for-reviewed-commit-push",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate",
+  "sourceHashes": {
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/app/kintai/settings/page.tsx": "41d64c3040e27ca541f9c91f9374e13a8e7cce62a630a98b222f42fc1a75042f",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/app/api/kintai/work-rules/route.ts": "49a6e3b737e9b0885ecfd686738dbfb660b5fd445011b731965eb0e2dc1041a7",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/app/api/kintai/work-rules/operations/[operationId]/route.ts": "9238fb4428300cf85170c04327eaa7116d931f6729774156c39c18212d3f78fa",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/app/api/kintai/work-rules/[id]/route.ts": "77944bffcc4f1bd8c5a768dd3cc98570870523233d6f97b3bf399d6ce52eacb9",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/components/kintai/KintaiLayout.tsx": "7335fe9c629ffb2597a813387346b4b9fbeb74c05bda5051fdc0a96d1ffcc00c",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/components/kintai/KintaiAccessContext.tsx": "c0751430274fcd5063f9a2eef9a6c4f36e383c41d67320728d45eeed58a3354e",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-candidate/src/lib/kintai/work-rule-operation.ts": "02874b8c2351d4a170cff25eefc8c7af10ed4cb74c3517e4e363f2e459e8832d"
+  },
+  "evidence": {
+    "kintai-work-rule-operation-postgres-results.json": {
+      "passed": 29,
+      "sourceHashesMatch": true
+    },
+    "kintai-work-rule-creation-mounted-results.json": {
+      "passed": 13,
+      "sourceHashesMatch": true
+    },
+    "kintai-settings-operation-mounted-results.json": {
+      "passed": 12,
+      "sourceHashesMatch": true
+    },
+    "kintai-settings-operation-native-results.json": {
+      "passed": 8,
+      "sourceHashesMatch": true
+    }
+  },
+  "repairs": [
+    "Require scoped creation operation ID before writes",
+    "Atomically persist rule and durable SystemSetting receipt under fresh org/actor locks",
+    "Replay returns same row; changed input conflicts; deleted rows never resurrect",
+    "Read-only recovery waits behind creation; cancellation fences late arrival without deleting committed row",
+    "Persist only operation metadata before network; no automatic POST repeat; remount recovery",
+    "Bind current actor/org/readiness and role; stale responses do not close different editor",
+    "Expose recovery actions inside modal as well as outside after closing it",
+    "Malformed POST/PATCH JSON returns400 before writes; receipt database failure rolls back business row"
+  ],
+  "productionApplied": false,
+  "migrationRequired": false,
+  "remaining": [
+    "Deployment CI/READY/assets/guest recovery checks pending",
+    "Stale PATCH edits and PATCH/DELETE unknown acknowledgements need separate review",
+    "Authenticated production operations and full-service audit remain unverified"
+  ],
+  "scope": "Synthetic/private local evidence only. Existing production settings47 repair is a separate released commit cb50bbc0.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-release-d3e1e127-a09a-41dc-826c-73d87bea987e",
+  "gateStatus": "passed"
+}

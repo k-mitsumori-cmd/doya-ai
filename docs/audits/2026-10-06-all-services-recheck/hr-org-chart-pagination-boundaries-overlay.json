@@ -1,0 +1,136 @@
+{
+  "checkedAt": "2026-10-08T17:02:45.171Z",
+  "expected": 31,
+  "passed": 31,
+  "cases": [
+    {
+      "name": "Valid chart uses GET no-store and releases every page timer",
+      "passed": true
+    },
+    {
+      "name": "All10001 employees remain reachable without former total-item ceiling",
+      "passed": true
+    },
+    {
+      "name": "Valid1500-level hierarchy assembles without recursive depth cap or stack overflow",
+      "passed": true
+    },
+    {
+      "name": "Declared page over1MiB is rejected before reading",
+      "passed": true
+    },
+    {
+      "name": "Actual page over1MiB rejected despite Content-Length null",
+      "passed": true
+    },
+    {
+      "name": "Actual page over1MiB rejected despite Content-Length 1",
+      "passed": true
+    },
+    {
+      "name": "Invalid UTF8 is rejected",
+      "passed": true
+    },
+    {
+      "name": "Malformed JSON is rejected",
+      "passed": true
+    },
+    {
+      "name": "HTTP401 preserves login recovery classification",
+      "passed": true
+    },
+    {
+      "name": "HTTP409 preserves changed-snapshot recovery classification",
+      "passed": true
+    },
+    {
+      "name": "HTTP202 with valid-looking page cannot establish success",
+      "passed": true
+    },
+    {
+      "name": "Already aborted scope never fetches",
+      "passed": true
+    },
+    {
+      "name": "Deadline terminates fetch ignoring abort",
+      "passed": true
+    },
+    {
+      "name": "Deadline terminates stalled body and cancels reader",
+      "passed": true
+    },
+    {
+      "name": "Scope abort terminates pending read without timer leak",
+      "passed": true
+    },
+    {
+      "name": "Duplicate employee within page cannot render twice",
+      "passed": true
+    },
+    {
+      "name": "Object-valued employee name cannot reach React",
+      "passed": true
+    },
+    {
+      "name": "Duplicate employee across pages cannot be counted as complete",
+      "passed": true
+    },
+    {
+      "name": "Changed revision cannot mix pages",
+      "passed": true
+    },
+    {
+      "name": "Changed totals cannot masquerade as one snapshot",
+      "passed": true
+    },
+    {
+      "name": "Premature final cursor is rejected instead of silently truncating",
+      "passed": true
+    },
+    {
+      "name": "Repeated cursor is rejected instead of looping",
+      "passed": true
+    },
+    {
+      "name": "Empty nonfinal page is rejected instead of looping",
+      "passed": true
+    },
+    {
+      "name": "More than50 rows in one transport page is rejected",
+      "passed": true
+    },
+    {
+      "name": "Existing parent cycle is surfaced without losing departments or employees",
+      "passed": true
+    },
+    {
+      "name": "Missing parent and inactive assignment preserve complete employee representation",
+      "passed": true
+    },
+    {
+      "name": "Abort between pages prevents the next private request",
+      "passed": true
+    },
+    {
+      "name": "Duplicate department across pages cannot hide a hierarchy branch",
+      "passed": true
+    },
+    {
+      "name": "Valid bounded long field remains compatible: departmentName",
+      "passed": true
+    },
+    {
+      "name": "Valid bounded long field remains compatible: employeeName",
+      "passed": true
+    },
+    {
+      "name": "Valid bounded long field remains compatible: photoUrl",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-boundaries.cjs": "25c05bb05fe81e81c48ea4ebd280ba858237f4ed504b8a95e5e2e65e79fe5d44"
+  },
+  "scope": "Actual paged client and hierarchy assembler with synthetic Response streams and deterministic deadlines. Retains original transport/abort/status/malformed/uniqueness safety requirements under new paged protocol; former arbitrary10000-item/depth64 rejection replaced by legitimate10001-item/1500-depth compatibility and cycle completeness. Root not integrated; no production/customer/provider requests."
+}

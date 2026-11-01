@@ -13,6 +13,7 @@ const projects = Array.from({ length: 75 }, (_, index) => ({
 let reads = 0
 const api = load('src/app/api/doyaslide/projects/route.ts', {
   'next/server': { NextResponse: Response },
+  '@/lib/doyaslide/create-project': { createProjectWithinLimit: async () => null, limitReachedBody: () => ({}) },
   '@/lib/prisma': { prisma: { doyaSlideProject: {
     findFirst: async ({ where }) => projects.find((project) => project.id === where.id && where.userId === 'owner'),
     findMany: async (query) => {

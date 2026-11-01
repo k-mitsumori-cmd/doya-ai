@@ -38,9 +38,11 @@ function fixture(callback = '/hr/dashboard', behavior = () => Promise.resolve(),
     } },
     'next/navigation': { useSearchParams: () => params },
     'next/link': { default: 'a' },
+    '@/components/brand/DoyaLogo': { default: 'DoyaLogo' },
     'framer-motion': { motion: { div: 'motion.div' } },
-    'lucide-react': Object.fromEntries(['BarChart3', 'PenLine', 'Palette', 'Sparkles', 'Mic', 'FileText', 'Wand2'].map(name => [name, name])),
+    'lucide-react': Object.fromEntries(['Briefcase', 'Megaphone', 'Receipt', 'Sparkles', 'Mic', 'FileText', 'Wand2', 'Users'].map(name => [name, name])),
     '@/lib/safe-signin-callback': callbackHelpers,
+    '@/lib/services': { getListedServiceCount: () => 18, getServiceById: id => ({ name: id }) },
   }
   const file = 'src/app/auth/signin/page.tsx'
   const exports = {}

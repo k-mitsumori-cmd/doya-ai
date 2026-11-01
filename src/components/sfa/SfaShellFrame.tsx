@@ -1,0 +1,39 @@
+'use client'
+
+// ============================================
+// ドヤ営業管理: 共通シェル（AppShell＋ToolFrame）に載せる枠
+// ============================================
+// ログインしているとき、src/app/(shell)/sfa/layout.tsx から使う。
+// ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここでは ToolFrame だけ。AppShell で包まない。
+// ⚠️ 組織の layout（[orgSlug]/layout.tsx）が取った所属組織の一覧を、文脈経由で受けて switcher に渡す。
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useParams } from 'next/navigation'
+import ToolFrame from '@/components/shell/ToolFrame'
+import ShellEntryFrame from '@/components/shell/ShellEntryFrame'
+import SfaOrgSwitcher from '@/components/sfa/SfaOrgSwitcher'
+import { sfaNav } from '@/lib/sfa/nav'
+import styles from './SfaShellFrame.module.css'
+import { SfaShellContext, type SfaShellContextValue, type SfaShellMembership } from '@/lib/sfa/shell-context'
+
+export default function SfaShellFrame({ children }: { children: ReactNode }) {
+  const params = useParams()
+  const orgSlug = typeof params?.orgSlug === 'string' ? params.orgSlug : ''
+  const [memberships, setMemberships] = useState<SfaShellMembership[]>([])
+  const publishMemberships = useCallback((next: SfaShellMembership[]) => setMemberships(next), [])
+  const value = useMemo<SfaShellContextValue>(() => ({ publishMemberships }), [publishMemberships])
+
+  // 組織の外（/sfa の入口・料金）は、 ShellEntryFrame が見出しの帯を付ける（今の見た目では何もしない）
+  if (!orgSlug) return <ShellEntryFrame serviceId="sfa">{children}</ShellEntryFrame>
+  return (
+    <SfaShellContext.Provider value={value}>
+      <ToolFrame
+        serviceId="sfa"
+        nav={sfaNav(orgSlug)}
+        switcher={<SfaOrgSwitcher orgSlug={orgSlug} memberships={memberships} />}
+      >
+        {/* 中の緑をブランドの青に置き換える（SfaShellFrame.module.css） */}
+        <div className={styles.content}>{children}</div>
+      </ToolFrame>
+    </SfaShellContext.Provider>
+  )
+}

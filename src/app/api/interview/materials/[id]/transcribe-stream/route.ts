@@ -108,7 +108,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
         const apiKey = process.env.ASSEMBLYAI_API_KEY
         if (!apiKey) {
-          sendEvent('fail', { message: 'ASSEMBLYAI_API_KEY が設定されていません' })
+          console.error('[interview] transcribe-stream provider is not configured')
+          sendEvent('fail', { message: '文字起こし機能が一時的にご利用いただけません。お手数ですが、時間をおいて再度お試しください。' })
           controller.close()
           return
         }

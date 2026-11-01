@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T00:40:39.405892+00:00",
+  "project": "prj_0HjbyDSXLIsYb4SYMfoDhpiQrVg2",
+  "environment": "production",
+  "window": "last 1h relative to query",
+  "level": "error",
+  "branchFilter": false,
+  "limit": 100,
+  "exitCode": 0,
+  "returnedJsonLines": 0,
+  "status": "query-succeeded-no-error-records-returned",
+  "limits": [
+    "No records returned in this bounded Vercel query; not proof that requests occurred, complete logging coverage, private workflows or no incidents.",
+    "No raw logs, customer identifiers or secrets saved to the repository."
+  ]
+}

@@ -29,9 +29,12 @@ export function profitLabel(value: number | null | undefined): string {
   return tone === 'positive' ? '黒字' : tone === 'negative' ? '赤字' : '±0'
 }
 
-export function profitEmoji(value: number | null | undefined): string {
-  const tone = profitTone(value)
-  return tone === 'positive' ? '📈' : tone === 'negative' ? '📉' : '➖'
+/**
+ * 以前は 📈📉➖ の絵文字を返していた。UI に絵文字を出さない決まり（UX 点検 FIX-PLAN 15）で空文字にした。
+ * 黒字・赤字は profitLabel() の文字と profitColorClass() の色で伝える。新しく使わないこと。
+ */
+export function profitEmoji(_value: number | null | undefined): string {
+  return ''
 }
 
 export function profitColorClass(value: number | null | undefined): {
@@ -114,10 +117,10 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 };
 
 export const PRIORITY_LABELS: Record<string, string> = {
-  low: "🐢 のんびり",
-  medium: "🚶 ふつう",
-  high: "🏃 いそぎ",
-  urgent: "🔥 超キンキュウ！",
+  low: "のんびり",
+  medium: "ふつう",
+  high: "いそぎ",
+  urgent: "超キンキュウ！",
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {

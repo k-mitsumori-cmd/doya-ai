@@ -4,15 +4,18 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT, CLAUDE_MODEL_LIGHT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
 import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
+import { isQuoteHandoffBrief } from '@/lib/doyaslide/quote-handoff'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
 import { z } from 'zod'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
 
 const SlideSchema = z.object({
   role: z.string().trim().min(1).max(120),
@@ -21,8 +24,16 @@ const SlideSchema = z.object({
   visualPrompt: z.string().trim().min(1).max(10000),
 })
 
+// 時間の上限（2026-10-26 統括の指摘。関数の上限 300 秒より前に、失敗として終わらせ、finally で状態を error に戻すため）
+// - 全体: 始まりから 240 秒で、AI の呼び出しを止める（seo/lib/gemini.ts の deadlineAt）
+// - AI の1回: 150 秒 / Web 検索: 10 秒（参考URLの読み込みは scrape.ts の 15 秒）
+const STRUCTURE_DEADLINE_MS = 240_000
+const STRUCTURE_LLM_REQUEST_MS = 150_000
+const STRUCTURE_SEARCH_MS = 10_000
+
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
+  const deadlineAt = Date.now() + STRUCTURE_DEADLINE_MS
   let claimedProjectId: string | null = null
   let claimedAt: Date | null = null
   try {
@@ -45,11 +56,12 @@ export async function POST(req: NextRequest) {
 
     const existingSlides = await prisma.doyaSlideSlide.count({ where: { projectId } })
     if (existingSlides > 0) {
-      return NextResponse.json({ error: 'このプロジェクトには構成が存在します。既存のスライドと履歴を保護するため、構成の作り直しはできません。' }, { status: 409 })
+      // code はエージェントが見分けるためのもの（やり直しで、もう構成があるなら成功として扱う）
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_EXISTS', error: 'このプロジェクトには構成が存在します。既存のスライドと履歴を保護するため、構成の作り直しはできません。' }, { status: 409 })
     }
     const stale = project.status === 'structuring' && project.updatedAt.getTime() < Date.now() - 6 * 60 * 1000
     if (project.status !== 'draft' && project.status !== 'error' && !stale) {
-      return NextResponse.json({ error: '構成を生成中です。完了後にお試しください。' }, { status: 409 })
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_BUSY', error: '構成を生成中です。完了後にお試しください。' }, { status: 409 })
     }
     const claimTime = new Date()
     const claimed = await prisma.doyaSlideProject.updateMany({
@@ -61,7 +73,9 @@ export async function POST(req: NextRequest) {
     }
     claimedProjectId = projectId
     claimedAt = claimTime
-    await reserveDoyaSlideTextCall(userId, 'structure')
+    // 自動点検（system-watch の B1）のときは、利用者の1日の文章生成の回数に数えない
+    // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図がある（watch-gate.ts）
+    if (!isSystemWatchFor(req.headers, userId)) await reserveDoyaSlideTextCall(userId, 'structure')
 
     // 参考URLがあれば内容を取得して参考情報に加える（失敗しても構成生成は続行）
     let ref = referenceText || ''
@@ -75,10 +89,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Webで調べて原稿の素材にする（SERPER_API_KEY があれば。失敗しても構成生成は続行）
-    if (hasSerpApiKey()) {
+    // 注意: 見積書から作った資料（customBrief の先頭に内部の目印）は、Web検索をしない。
+    //       検索語に取引先名・金額が入って外部へ出るのを、サーバー側で確実に止める（quote-handoff.ts）。
+    if (!isQuoteHandoffBrief(project.customBrief) && hasSerpApiKey()) {
       try {
         const q = [project.title, project.customBrief].filter(Boolean).join(' ').slice(0, 200)
-        const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6 })
+        const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6, timeoutMs: STRUCTURE_SEARCH_MS })
         if (organic.length) {
           const research = organic
             .map((r, i) => `${i + 1}. ${r.title}\n${r.snippet || ''}\n(${r.url})`)
@@ -99,7 +115,9 @@ export async function POST(req: NextRequest) {
     })
 
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(
-      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+      // 最大12枚分の見出し・本文・画像指示を返すため、既定の4,096トークンより大きくする
+      // 経営ホームのエージェントからの呼び出し（印のヘッダー）だけ、軽いモデルを使う（DESIGN.md §11.9）。画面からの呼び出しは今までどおり
+      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 }, deadlineAt, requestTimeoutMs: STRUCTURE_LLM_REQUEST_MS, ...(req.headers?.get?.('x-doya-agent-tier') === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
       'SlideStructure'
     )
 
@@ -142,6 +160,10 @@ export async function POST(req: NextRequest) {
         error: `本日の資料構成生成の運用上限（${e.limit}回）に達しました。明日お試しください。`,
       }, { status: 429 })
     }
+    if (e?.name === 'LlmDeadlineError') {
+      console.error('[doyaslide/structure] deadline exceeded')
+      return NextResponse.json({ code: 'DOYASLIDE_STRUCTURE_TIMEOUT', error: '構成づくりに時間がかかりすぎたため、止めました。もう一度お試しください。' }, { status: 504 })
+    }
     console.error('[doyaslide/structure]')
     return NextResponse.json({ error: `構成の生成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   } finally {
@@ -153,3 +175,10 @@ export async function POST(req: NextRequest) {
     }
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({
+  // 構成づくりのたびに減らす（続く画像の生成はこの量に含める）。
+  // ⚠️ 資料の ID を操作の ID にしない（作り直しのたびに有料の処理が動くのに、2回目から減らなくなるため）
+  action: 'slide.generate',
+}, postHandler)

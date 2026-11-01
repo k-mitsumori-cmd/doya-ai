@@ -432,7 +432,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     } catch (e: any) {
       cleanup()
       setState('error')
-      setError(e?.message || '商談を開始できませんでした')
+      setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '商談を始められませんでした。通信を確かめて、もう一度お試しください。'))
       return
     }
 
@@ -578,7 +578,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
         body: offer.sdp,
         headers: { Authorization: `Bearer ${clientSecret}`, 'Content-Type': 'application/sdp' },
       })
-      if (!sdpRes.ok) throw new Error('音声接続を確立できませんでした')
+      if (!sdpRes.ok) throw new Error('音声につながりませんでした。通信とマイクを確かめて、もう一度お試しください。')
       const answer = await sdpRes.text()
       await pc.setRemoteDescription({ type: 'answer', sdp: answer })
 
@@ -611,7 +611,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     } catch (e: any) {
       cleanup()
       setState('error')
-      setError(e?.message || '接続に失敗しました')
+      setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : '音声につながりませんでした。通信とマイクを確かめて、もう一度お試しください。'))
     }
   }, [api, cleanup, flushTurns, handleFunctionCall, pushLine, sessionId, textOnly, needsSaveRetry])
 

@@ -155,7 +155,14 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   serviceFeedback     ServiceFeedback[]
+  supportTickets      SupportTicket[]
   feedbackPromptState FeedbackPromptState?
+
+  // ドヤ展示会（開発中）
+  tenjikaiProjects TenjikaiProject[]
+
+  // アカウントの会社（1つのアカウントに会社は1つ。UI 品質 B-1・B-2）
+  accountCompany AccountCompany?
 }
 
 // ============================================
@@ -3118,6 +3125,7 @@ model SfaOrganization {
   updatedAt DateTime @updatedAt
 
   members SfaMember[]
+  teams   SfaTeam[]
 
   @@map("sfa_organizations")
 }
@@ -3136,10 +3144,41 @@ model SfaMember {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
+  teams SfaTeamMember[]
+
   @@unique([organizationId, userId])
+  @@unique([organizationId, id])
   @@index([organizationId])
   @@index([userId])
   @@map("sfa_members")
+}
+
+model SfaTeam {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   SfaOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String          @db.VarChar(80)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  members        SfaTeamMember[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@map("sfa_teams")
+}
+
+model SfaTeamMember {
+  id             String    @id @default(cuid())
+  organizationId String
+  teamId         String
+  memberId       String
+  createdAt      DateTime  @default(now())
+  team           SfaTeam   @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Cascade)
+  member         SfaMember @relation(fields: [organizationId, memberId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([organizationId, teamId, memberId])
+  @@index([organizationId, memberId])
+  @@map("sfa_team_members")
 }
 
 model SfaAccount {
@@ -3155,6 +3194,7 @@ model SfaAccount {
   capital         BigInt?
   creditRank      String?
   ownerMemberId   String? // 自社担当
+  isShared        Boolean  @default(false) // 組織内の有効メンバーへ閲覧のみ共有
   tags            Json?
   note            String?  @db.Text
   isActive        Boolean  @default(true)
@@ -3163,6 +3203,8 @@ model SfaAccount {
 
   @@index([organizationId])
   @@index([organizationId, name])
+  @@index([organizationId, ownerMemberId])
+  @@index([organizationId, isShared])
   @@map("sfa_accounts")
 }
 
@@ -3170,6 +3212,7 @@ model SfaContact {
   id             String   @id @default(cuid())
   organizationId String
   accountId      String?
+  ownerMemberId  String? // 単独の担当者レコードも担当を明示。既存nullは推測で割り当てない
   name           String
   nameKana       String?
   title          String?
@@ -3184,6 +3227,7 @@ model SfaContact {
 
   @@index([organizationId])
   @@index([organizationId, accountId])
+  @@index([organizationId, ownerMemberId])
   @@map("sfa_contacts")
 }
 
@@ -3207,6 +3251,7 @@ model SfaLead {
   updatedAt          DateTime @updatedAt
 
   @@index([organizationId, status])
+  @@index([organizationId, assigneeMemberId])
   @@map("sfa_leads")
 }
 
@@ -3266,6 +3311,7 @@ model SfaDeal {
 
   @@index([organizationId, stageId])
   @@index([organizationId, status])
+  @@index([organizationId, assigneeMemberId])
   @@map("sfa_deals")
 }
 
@@ -3300,6 +3346,7 @@ model SfaActivity {
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, dealId])
+  @@index([organizationId, memberId])
   @@map("sfa_activities")
 }
 
@@ -4622,6 +4669,1629 @@ model AskLinkBanner {
 
   @@unique([runId, kind])
   @@map("asklink_banner")
+}
+
+// ============================================================
+// ドヤポップアップ（popup）— 仕様: reference/services/popup.md
+// ------------------------------------------------------------
+// URL1つからポップアップを提案し、埋め込みタグで配信して、表示・クリックを日別に数える。
+// ⚠️ userId でスコープする（ログイン必須）。他人のサイト・案は findFirst({ id, userId }) で弾く。
+// ⚠️ creative / trigger / targeting / frequency の形は src/lib/popup/schema.ts の sanitize*() が正本。
+// ⚠️ 計測は生ログを持たず、popup_stat に日別で加算する（行数を表示回数に比例させない）。
+// ============================================================
+model PopupSite {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  sourceUrl   String
+  /// 表示を許すホスト（www なし・小文字）。サブドメインも許す
+  domain      String
+  /// 埋め込みタグに載せる公開キー（推測できない乱数）
+  siteKey     String    @unique
+  /// 抽出結果（asklink の SiteProfile と同じ形）
+  site        Json
+  /// サイト上で実際に見つかったURLの集合。ポップアップのリンク先はこの中から選ぶ
+  allowedUrls Json
+  /// 'b2b' | 'b2c'
+  audience    String    @default("b2b")
+  /// 'site' | 'manual'
+  source      String    @default("site")
+  /// 予約列（統合仕様 R-5）: 経営ホームの会社情報（CompanyProfile）を指す。null 可・FK なし。
+  /// 自社プロフィールの写しを新設しないため、会社情報が入ったらここで参照する
+  companyProfileId String?
+  /// 埋め込みタグからの最終アクセス（設置確認。10分に1回まで更新）
+  lastSeenAt  DateTime?
+  /// 削除日時。⚠️ 行は消さない（消すと提案回数の数え直しで無料枠が戻ってしまう）
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  popups Popup[]
+
+  @@index([userId, createdAt])
+  @@map("popup_site")
+}
+
+model Popup {
+  id        String    @id @default(cuid())
+  siteId    String
+  site      PopupSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  /// 'ask' | 'cta' | 'pages' | 'image'
+  kind      String
+  /// 'draft' | 'live' | 'paused'
+  status    String    @default("draft")
+  sortOrder Int       @default(0)
+  creative  Json
+  trigger   Json
+  targeting Json
+  frequency Json
+  /// 提案の理由（画面表示用）
+  reason    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  stats PopupStat[]
+
+  @@index([siteId, status, sortOrder])
+  @@index([userId])
+  @@map("popup")
+}
+
+model PopupStat {
+  popupId     String
+  popup       Popup    @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  /// JST の日付
+  day         DateTime @db.Date
+  /// 'main'（表示・閉じる・ボタン）か 'link:N'（リスト内のN番目のリンク）
+  target      String   @default("main")
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  closes      Int      @default(0)
+
+  @@id([popupId, day, target])
+  @@map("popup_stat")
+}
+
+// ============================================================
+// ドヤ展示会（tenjikai）— 試作: ~/Code/sandbox/doya-tenjikai
+// ------------------------------------------------------------
+// URLと出展条件から、ブース設営案・制作物・ノベルティ・予算・業者選定・締切を一括で用意する。
+// ⚠️ 開発中（coming_soon）。画面はまだDBを使っていない。
+// ⚠️ Vercel ビルドは db push しない。本番反映は doya-db-push スキルの手順で、承認を得てから行う。
+// ⚠️ userId でスコープする（ログイン必須）。他人のプロジェクトは findFirst({ id, userId }) で弾く。
+// ⚠️ TenjikaiGenerationJob は従量課金APIの実行ログ。承認した見込み額と結果を必ず残す。
+// ============================================================
+model TenjikaiVenue {
+  id           String            @id @default(cuid())
+  name         String
+  komaSizeM    Float
+  komaPriceYen Int
+  maxHeightM   Float
+  rules        Json?
+  projects     TenjikaiProject[]
+
+  @@map("tenjikai_venue")
+}
+
+model TenjikaiProject {
+  id             String                  @id @default(cuid())
+  userId         String
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId        String?
+  venue          TenjikaiVenue?          @relation(fields: [venueId], references: [id])
+  name           String
+  serviceUrl     String
+  eventName      String
+  eventStart     DateTime
+  eventDays      Int                     @default(3)
+  komaCols       Int
+  komaRows       Int
+  boothWidthM    Float
+  boothDepthM    Float
+  boothPosition  String // inline | corner | peninsula | island
+  budgetYen      Int
+  goal           String // lead | brand | demo
+  staffCount     Int                     @default(4)
+  status         String                  @default("draft") // draft | planning | ordering | ready | done
+  /// 会社情報（リニューアルの CompanyProfile）への予約列。null 可・FK なし（ADDON-SERVICES R-5）
+  companyProfileId String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  analysis       TenjikaiSiteAnalysis?
+  boothPlans     TenjikaiBoothPlan[]
+  creatives      TenjikaiCreative[]
+  novelties      TenjikaiNovelty[]
+  budgetLines    TenjikaiBudgetLine[]
+  vendorRequests TenjikaiVendorRequest[]
+  documents      TenjikaiDocument[]
+  tasks          TenjikaiTask[]
+  generationJobs TenjikaiGenerationJob[]
+
+  @@index([userId, createdAt])
+  @@index([userId, eventStart])
+  @@map("tenjikai_project")
+}
+
+model TenjikaiSiteAnalysis {
+  id          String          @id @default(cuid())
+  projectId   String          @unique
+  project     TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brand       String
+  category    String
+  headline    String
+  subline     String
+  valueProps  Json
+  targets     Json
+  brandColors Json
+  tone        String
+  logoUrl     String?
+  createdAt   DateTime        @default(now())
+
+  @@map("tenjikai_site_analysis")
+}
+
+model TenjikaiBoothPlan {
+  id          String                 @id @default(cuid())
+  projectId   String
+  project     TenjikaiProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variant     String // A | B | C
+  version     Int                    @default(1)
+  name        String
+  concept     String
+  flow        String
+  estimateYen Int
+  selected    Boolean                @default(false)
+  renderUrls  String[] // 画像生成した完成予想図
+  elements    TenjikaiBoothElement[]
+  panels      TenjikaiGraphicPanel[]
+  createdAt   DateTime               @default(now())
+
+  @@index([projectId, variant])
+  @@map("tenjikai_booth_plan")
+}
+
+model TenjikaiBoothElement {
+  id      String            @id @default(cuid())
+  planId  String
+  plan    TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  kind    String // wall | monitor | counter | table | demo | rollup | storage | sign
+  label   String
+  x       Float
+  y       Float
+  z       Float             @default(0)
+  w       Float
+  d       Float
+  h       Float
+  costYen Int
+
+  @@map("tenjikai_booth_element")
+}
+
+// グラフィック割付：どの部材のどの面に、どの高さで何を描くか
+model TenjikaiGraphicPanel {
+  id            String            @id @default(cuid())
+  planId        String
+  plan          TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  elementId     String
+  face          String // front | side
+  name          String
+  offsetMm      Int
+  widthMm       Int
+  heightMm      Int
+  baseMm        Int               @default(0)
+  viewDistanceM Float
+  role          String
+  visual        String // 描く画像の指示
+  headline      String
+  zones         Json // [{ label, fromMm, toMm, content, tone }]
+  material      String
+  imageUrl      String?
+  createdAt     DateTime          @default(now())
+
+  @@index([planId])
+  @@map("tenjikai_graphic_panel")
+}
+
+model TenjikaiCreative {
+  id               String          @id @default(cuid())
+  projectId        String
+  project          TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String // backwall | rollup | flyer | clearfile | card | loop
+  widthMm          Int
+  heightMm         Int
+  qty              Int
+  unitYen          Int
+  copy             String
+  purpose          String
+  imageUrls        String[]
+  recommendedPrint String? // raksul | printpac | graphic
+  status           String          @default("draft") // draft | approved | generated | final
+  version          Int             @default(1)
+  createdAt        DateTime        @default(now())
+
+  @@map("tenjikai_creative")
+}
+
+model TenjikaiNovelty {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  tier      String
+  unitYen   Int
+  quantity  Int
+  leadDays  Int
+  reason    String
+  selected  Boolean         @default(true)
+
+  @@map("tenjikai_novelty")
+}
+
+model TenjikaiBudgetLine {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category  String // space | build | electric | print | novelty | staff | logistics
+  label     String
+  amountYen Int
+  source    String          @default("ai") // ai | manual | quote
+  /// 発注済み（ordered）以降が支出管理への取り込み対象（ADDON-SERVICES §6 #12）
+  status    String          @default("planned") // planned | ordered | paid
+
+  @@map("tenjikai_budget_line")
+}
+
+model TenjikaiVendor {
+  id           String                  @id @default(cuid())
+  name         String
+  category     String // booth | print | novelty | staff
+  area         String
+  url          String?
+  minBudgetYen Int?
+  leadDays     Int?
+  isPartner    Boolean                 @default(false) // 送客計測の対象
+  requests     TenjikaiVendorRequest[]
+
+  @@map("tenjikai_vendor")
+}
+
+model TenjikaiVendorRequest {
+  id         String          @id @default(cuid())
+  projectId  String
+  project    TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     TenjikaiVendor  @relation(fields: [vendorId], references: [id])
+  status     String          @default("draft") // draft | sent | quoted | selected | declined
+  specPdfUrl String?
+  quotedYen  Int?
+  createdAt  DateTime        @default(now())
+
+  @@map("tenjikai_vendor_request")
+}
+
+model TenjikaiDocument {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind      String // rules | manual | application | quote | invoice | design | other
+  title     String
+  fileUrl   String
+  sizeBytes Int?
+  dueAt     DateTime?
+  createdAt DateTime        @default(now())
+  tasks     TenjikaiTask[]
+
+  @@map("tenjikai_document")
+}
+
+model TenjikaiTask {
+  id         String            @id @default(cuid())
+  projectId  String
+  project    TenjikaiProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   TenjikaiDocument? @relation(fields: [documentId], references: [id])
+  title      String
+  /// カレンダーに出す締切の種類。task 以外がホームのカレンダー対象（ADDON-SERVICES §4）
+  kind       String            @default("task") // task | application | submission | order
+  owner      String
+  daysBefore Int
+  dueAt      DateTime
+  done       Boolean           @default(false)
+
+  @@index([projectId, dueAt])
+  @@map("tenjikai_task")
+}
+
+// 従量課金APIの実行ログ。承認した見込み額と実行結果を必ず残す
+model TenjikaiGenerationJob {
+  id               String           @id @default(cuid())
+  /// 実行した利用者。画面のプロジェクトを保存する前でも記録できるよう、projectId より先にこちらで持つ
+  userId           String
+  /// 保存済みのプロジェクトから実行したときだけ入る
+  projectId        String?
+  project          TenjikaiProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String // creative_image | booth_render | graphic_panel
+  model            String
+  size             String
+  count            Int
+  estimatedCostYen Int
+  approvedAt       DateTime
+  status           String           @default("pending") // pending | done | failed
+  /// 実際に返ってきた枚数（done のとき）
+  imageCount       Int              @default(0)
+  /// 失敗の理由（利用者には出さない。例: upstream_429）
+  errorCode        String?
+  finishedAt       DateTime?
+  createdAt        DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@map("tenjikai_generation_job")
+}
+
+// ============================================
+// ドヤ社内インタビュー（shanai）
+// 仕様: reference/services/shanai.md
+// ============================================
+// ⚠️ 記事は「事実（ShanaiFact）」だけから書く。事実はどれも根拠
+//    （文字起こし・アンケート回答・会社サイトの原文）を持ち、原文に無い引用は保存しない。
+
+/// 会社情報（1ユーザー1社）。会社サイト・サービスサイトから読み取った内容を全インタビューで使い回す
+model ShanaiCompany {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String   @default("")
+  /// 会社サイトのトップURL
+  websiteUrl  String?
+  /// サムネに使う色（#RRGGBB）
+  brandColor  String   @default("#0066ff")
+  /// サイトから抽出した色の候補
+  colors      Json?
+  /// 利用者が補足する会社の説明（サイトに無い情報の手入力）
+  manualNote  String?  @db.Text
+  /// 予約列: 経営エージェントの自社プロフィール（8つ目の写しを増やさないため）。null 可・FK なし（統合仕様 R-5）
+  companyProfileId String?
+  crawledAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sources      ShanaiCompanySource[]
+  profileItems ShanaiProfileItem[]
+
+  @@map("shanai_company")
+}
+
+/// 読み取り対象のURL（会社サイト・サービスサイト・採用ページなど）
+model ShanaiCompanySource {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       ShanaiCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// 'corporate' | 'service' | 'recruit' | 'other'
+  kind          String   @default("corporate")
+  label         String   @default("")
+  url           String
+  lastCrawledAt DateTime?
+  /// 直近の読み取り失敗理由（利用者向けの日本語）
+  error         String?
+  createdAt     DateTime @default(now())
+
+  pages ShanaiWebPage[]
+
+  @@index([companyId])
+  @@map("shanai_company_source")
+}
+
+/// 読み取ったページの本文。プロフィール項目の引用はこの本文の中にあることを検証する
+model ShanaiWebPage {
+  id          String   @id @default(cuid())
+  sourceId    String
+  source      ShanaiCompanySource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  url         String
+  title       String   @default("")
+  contentText String   @db.Text
+  /// 内容が変わったページだけ要約し直すためのハッシュ
+  contentHash String
+  fetchedAt   DateTime @default(now())
+
+  profileItems ShanaiProfileItem[]
+
+  @@unique([sourceId, url])
+  @@map("shanai_web_page")
+}
+
+/// 会社プロフィールの1項目（ミッション・事業・サービスの特徴・数字・カルチャー・制度）
+model ShanaiProfileItem {
+  id        String   @id @default(cuid())
+  companyId String
+  company   ShanaiCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  webPageId String?
+  webPage   ShanaiWebPage? @relation(fields: [webPageId], references: [id], onDelete: SetNull)
+  /// 'mission' | 'business' | 'service' | 'number' | 'culture' | 'benefit' | 'other'
+  category  String
+  statement String   @db.Text
+  /// ページ本文からの原文引用（手入力の項目は null）
+  quote     String?  @db.Text
+  /// サービスURLから取った項目なら、そのソースID（社員と関わるサービスの対応づけに使う）
+  sourceId  String?
+  /// 'site' | 'manual'
+  origin    String   @default("site")
+  approved  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, category])
+  @@map("shanai_profile_item")
+}
+
+/// インタビュー1件（社員1名）。音声モードかアンケートモードのどちらか
+model ShanaiInterview {
+  id               String   @id @default(cuid())
+  userId           String
+  /// 'voice' | 'survey'
+  mode             String
+  /// 'DRAFT' | 'COLLECTING' | 'FACTS' | 'WRITING' | 'DONE'
+  status           String   @default("DRAFT")
+  intervieweeName  String
+  department       String   @default("")
+  position         String   @default("")
+  joinYear         String   @default("")
+  /// 記事の目的。'recruit'（採用広報） | 'internal'（社内報）
+  purpose          String   @default("recruit")
+  /// 'friendly' | 'formal' | 'passionate'
+  tone             String   @default("friendly")
+  /// 関わっているサービス（ShanaiCompanySource.id の配列）
+  serviceSourceIds Json?
+  /// サービスでの役割（自由記述）
+  roleInService    String   @default("")
+
+  // --- アンケートモード ---
+  /// 社員が回答する公開URLのトークン（ログイン不要）。src/lib/shanai/token.ts の CSPRNG で作る（cuid は使わない）
+  surveyToken       String   @unique
+  /// { [questionId]: { answer, followupQuestion?, followupAnswer? } }
+  surveyAnswers     Json?
+  surveySubmittedAt DateTime?
+  /// 公開回答画面で追加質問を作った回数（費用の乱用防止）
+  followupRuns      Int      @default(0)
+  /// 事実の抽出を行った回数（1インタビュー5回まで。AI費用の乱用防止）
+  factRuns          Int      @default(0)
+  /// 発行したアップロードURLの数（未確定のファイルを無制限に置かせないための上限判定に使う）
+  uploadUrlsIssued  Int      @default(0)
+
+  // --- 音声モード ---
+  audioPath          String?
+  audioMime          String?
+  audioSize          Int?
+  /// 'none' | 'processing' | 'done' | 'failed' | 'uncertain'（送信結果不明・自動再送しない）
+  transcriptStatus   String   @default("none")
+  transcriptJobId    String?
+  /// [{ start, end, speaker, text }]
+  transcriptSegments Json?
+  transcriptError    String?
+  audioDurationSec   Int?
+  /// このインタビューで文字起こしを依頼した回数（録音の差し替えは2回まで）
+  transcriptRuns     Int      @default(0)
+  /// 初めて文字起こしを依頼した日時（利用枠はこの日時で数える）
+  transcribedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos   ShanaiPhoto[]
+  facts    ShanaiFact[]
+  articles ShanaiArticle[]
+
+  @@index([userId, createdAt])
+  @@index([userId, transcribedAt])
+  @@map("shanai_interview")
+}
+
+/// 社員の写真（サムネ・本文用）
+model ShanaiPhoto {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  storagePath String
+  mimeType    String
+  /// 'thumbnail' | 'body'
+  usage       String   @default("body")
+  caption     String   @default("")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([interviewId])
+  @@map("shanai_photo")
+}
+
+/// 記事の根拠になる事実。sourceType の原文に quote が含まれることを保存時に検証する
+model ShanaiFact {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  /// 'transcript' | 'answer' | 'company'
+  sourceType  String
+  /// transcript: セグメント番号 / answer: 設問ID / company: ShanaiProfileItem.id
+  sourceRef   String
+  /// 'career' | 'work' | 'episode' | 'value' | 'team' | 'future' | 'company' | 'other'
+  category    String   @default("other")
+  statement   String   @db.Text
+  quote       String   @db.Text
+  approved    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([interviewId])
+  @@map("shanai_fact")
+}
+
+/// 生成した記事（版ごとに1行）。利用枠はこの行数で数える
+model ShanaiArticle {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  userId      String
+  version     Int      @default(1)
+  title       String
+  lead        String   @db.Text
+  /// [{ type: 'heading'|'qa'|'paragraph'|'quote'|'company', heading?, question?, body, factIds: string[] }]
+  blocks      Json
+  /// サムネに載せる一言（20字前後）
+  catchphrase String   @default("")
+  model       String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([interviewId, version])
+  @@index([userId, createdAt])
+  @@map("shanai_article")
+}
+
+/// 利用枠の台帳。インタビューを削除しても消さない（削除で枠が戻るのを防ぐ）
+model ShanaiUsageLog {
+  id          String   @id @default(cuid())
+  userId      String
+  /// 'article' | 'transcript'
+  kind        String
+  /// 参照のみ（インタビュー削除後も残すため外部キーにしない）
+  interviewId String?
+  /// 記事の行（生成に失敗したら台帳ごと消して枠を戻す）
+  articleId   String?  @unique
+  createdAt   DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+  @@map("shanai_usage_log")
+}
+
+// ============================================
+// ドヤ収入管理（income） 設計書: docs/design/2026-10-18-doya-income/README.md
+// ============================================
+model IncomeOrganization {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  /// 共通 Company 移行用（management-agent §16）。移行までは null
+  companyId         String?
+  /// SFA 連携先の組織（取引先・商談の取り込み元）
+  sfaOrganizationId String?
+  /// 支出の取り込み元（ドヤプロマネのワークスペース）。支出管理ができるまでの暫定（README §8.1）
+  promaneWorkspaceId String?
+  /// 支出の取り込み元の種類: promane / expense。両方は足さない（業務委託の二重計上。支出設計書 §8.3）
+  expenseSourceId    String?
+  /// ドヤ支出管理の組織（FK なし。ADDON-SERVICES §6 #11）
+  expenseOrganizationId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  members   IncomeMember[]
+  issuer    IncomeIssuer?
+  clients   IncomeClient[]
+  contracts IncomeContract[]
+  invoices  IncomeInvoice[]
+  payments  IncomePayment[]
+  reminders IncomeReminder[]
+  auditLogs IncomeAuditLog[]
+
+  @@index([companyId])
+  @@map("income_organizations")
+}
+
+model IncomeMember {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  /// owner / admin / manager / member
+  role           String             @default("member")
+  /// ACTIVE / PENDING / INACTIVE
+  status         String             @default("ACTIVE")
+  inviteEmail    String?
+  inviteToken    String?            @unique
+  createdAt      DateTime           @default(now())
+
+  calendar IncomeCalendarConnection?
+
+  @@unique([organizationId, userId])
+  @@map("income_members")
+}
+
+/// 請求元（自社）情報。QuoteIssuer から初期値を取り込める
+model IncomeIssuer {
+  organizationId       String             @id
+  /// 共通 CompanyProfile 移行用の予約列（null 可・FK なし。ADDON-SERVICES R-5）
+  companyProfileId     String?
+  organization         IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyName          String
+  postalCode           String?
+  address              String?            @db.Text
+  tel                  String?
+  personName           String?
+  /// 適格請求書発行事業者の登録番号（T + 13 桁）
+  invoiceRegNo         String?
+  logoPath             String?
+  sealPath             String?
+  bankName             String?
+  bankBranch           String?
+  /// ordinary（普通）/ checking（当座）
+  bankAccountType      String?
+  bankAccountNo        String?
+  bankAccountHolder    String?
+  /// 締め日。31 = 月末
+  defaultClosingDay    Int                @default(31)
+  /// 支払月。1 = 翌月
+  defaultPaymentMonths Int                @default(1)
+  /// 支払日。31 = 月末
+  defaultPaymentDay    Int                @default(31)
+  invoiceNotes         String?            @db.Text
+  /// 契約番号の頭（例: C → C-2026-0001）。null は C（2026-10-26）
+  contractNoPrefix     String?
+  /// 請求書番号の頭（例: INV → INV-2026-0001）。null は INV（2026-10-26）
+  invoiceNoPrefix      String?
+  updatedAt            DateTime           @updatedAt
+
+  @@map("income_issuers")
+}
+
+model IncomeClient {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  organization       IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  corporateNumber    String?
+  postalCode         String?
+  address            String?            @db.Text
+  billingContactName String?
+  billingDepartment  String?
+  billingEmail       String?
+  /// 振込名義（半角カナ正規化して保存）。入金照合に使う
+  payerNameKana      String?
+  /// 取引先ごとの支払条件。null なら IncomeIssuer の既定
+  closingDay         Int?
+  paymentMonths      Int?
+  paymentDay         Int?
+  /// SFA の取引先（FK なし。書き込み時に所有確認）
+  sfaAccountId       String?
+  note               String?            @db.Text
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  contracts IncomeContract[]
+  invoices  IncomeInvoice[]
+  schedules IncomeRevenueSchedule[]
+
+  @@index([organizationId, isActive])
+  @@index([organizationId, sfaAccountId])
+  @@map("income_clients")
+}
+
+model IncomeContract {
+  id                String             @id @default(cuid())
+  organizationId    String
+  organization      IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId          String
+  client            IncomeClient       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  title             String
+  contractNo        String?
+  /// recurring（定額継続）/ one_time（単発）/ milestone（分割）
+  type              String             @default("recurring")
+  /// draft / active / paused / ended / cancelled
+  status            String             @default("draft")
+  startDate         DateTime           @db.Date
+  endDate           DateTime?          @db.Date
+  autoRenew         Boolean            @default(false)
+  /// 自動更新の解約予告期限（終了日の何日前か）
+  renewalNoticeDays Int?
+  /// monthly / quarterly / yearly
+  billingCycle      String             @default("monthly")
+  /// advance（前払い）/ arrears（後払い）
+  issueTiming       String             @default("arrears")
+  /// none（初月から満額）/ daily（日割り）
+  prorate           String             @default("none")
+  /// 1 回の請求額（税抜）。明細の合計と一致させる
+  amountExclTax     Int
+  documentPath      String?
+  signedAt          DateTime?
+  /// AI 読み取り結果の原文（確認画面で並べて表示する）
+  aiExtracted       Json?
+  /// SFA 商談（FK なし・unique。受注 1 件から契約は 1 つ。ADDON-SERVICES §6 #9）
+  sfaDealId         String?            @unique
+  /// 見積（FK なし。§6 #10）
+  quoteDocumentId   String?
+  memo              String?            @db.Text
+  createdByUserId   String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  items     IncomeContractItem[]
+  schedules IncomeRevenueSchedule[]
+
+  /// 契約番号は会社（組織）の中で重ならない（NULL は何件でも可）
+  @@unique([organizationId, contractNo])
+  @@index([organizationId, status])
+  @@index([organizationId, endDate])
+  @@map("income_contracts")
+}
+
+model IncomeContractItem {
+  id         String         @id @default(cuid())
+  contractId String
+  contract   IncomeContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  name       String
+  quantity   Int            @default(1)
+  unitPrice  Int
+  /// 10 / 8 / 0
+  taxRate    Int            @default(10)
+  sortOrder  Int            @default(0)
+
+  @@map("income_contract_items")
+}
+
+/// 月次の売上予定。請求漏れ検知の要
+model IncomeRevenueSchedule {
+  id               String         @id @default(cuid())
+  organizationId   String
+  contractId       String
+  contract         IncomeContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           IncomeClient   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  /// 計上月（月初日）
+  period           DateTime       @db.Date
+  plannedIssueDate DateTime       @db.Date
+  amountExclTax    Int
+  /// planned / invoiced / skipped
+  status           String         @default("planned")
+  skipReason       String?
+  invoiceItem      IncomeInvoiceItem?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([contractId, period])
+  @@index([organizationId, period])
+  @@index([organizationId, status, plannedIssueDate])
+  @@map("income_revenue_schedules")
+}
+
+model IncomeInvoice {
+  id              String             @id @default(cuid())
+  organizationId  String
+  organization    IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          IncomeClient       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  /// 確定時に採番。下書きは null
+  invoiceNo       String?
+  title           String?
+  issueDate       DateTime           @db.Date
+  dueDate         DateTime           @db.Date
+  /// draft / confirmed / sent / void（入金状態は paidAmount から計算）
+  status          String             @default("draft")
+  subtotalExclTax Int                @default(0)
+  taxAmount       Int                @default(0)
+  totalInclTax    Int                @default(0)
+  /// 消込の合計。遅延は dueDate と残高から読むときに計算する
+  paidAmount      Int                @default(0)
+  /// [{ rate: 10, base: 300000, tax: 30000 }, ...] 税率ごとに 1 回丸め
+  taxBreakdown    Json?
+  /// 確定時点の請求元情報（登録番号・振込先など）
+  issuerSnapshot  Json?
+  /// 確定時点の請求先情報
+  clientSnapshot  Json?
+  notes           String?            @db.Text
+  pdfPath         String?
+  confirmedBy     String?
+  confirmedAt     DateTime?
+  sentAt          DateTime?
+  sentTo          String?
+  voidedAt        DateTime?
+  voidReason      String?
+  /// 再発行元
+  replacesId      String?
+  quoteDocumentId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  items       IncomeInvoiceItem[]
+  allocations IncomePaymentAllocation[]
+
+  @@unique([organizationId, invoiceNo])
+  @@index([organizationId, status, dueDate])
+  @@index([organizationId, clientId])
+  @@map("income_invoices")
+}
+
+model IncomeInvoiceItem {
+  id            String                 @id @default(cuid())
+  invoiceId     String
+  invoice       IncomeInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  scheduleId    String?                @unique
+  schedule      IncomeRevenueSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  name          String
+  quantity      Int                    @default(1)
+  unitPrice     Int
+  taxRate       Int                    @default(10)
+  amountExclTax Int
+  sortOrder     Int                    @default(0)
+
+  @@map("income_invoice_items")
+}
+
+model IncomeInvoiceSequence {
+  organizationId String
+  year           Int
+  lastNo         Int    @default(0)
+
+  @@id([organizationId, year])
+  @@map("income_invoice_sequences")
+}
+
+model IncomePayment {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  receivedOn     DateTime           @db.Date
+  amount         Int
+  /// 振込手数料の差引（先方負担のはずが差し引かれた等）
+  feeDeducted    Int                @default(0)
+  payerName      String?
+  /// manual / csv
+  source         String             @default("manual")
+  /// CSV 明細の重複取込防止キー（日付・金額・名義・残高のハッシュ等）
+  externalKey    String?
+  /// unmatched / partial / matched
+  status         String             @default("unmatched")
+  memo           String?
+  createdByUserId String
+  createdAt      DateTime           @default(now())
+
+  allocations IncomePaymentAllocation[]
+
+  @@unique([organizationId, externalKey])
+  @@index([organizationId, status])
+  @@index([organizationId, receivedOn])
+  @@map("income_payments")
+}
+
+model IncomePaymentAllocation {
+  id        String        @id @default(cuid())
+  paymentId String
+  payment   IncomePayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   IncomeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  amount    Int
+  /// rule / ai / manual
+  matchedBy String        @default("manual")
+  createdAt DateTime      @default(now())
+
+  @@unique([paymentId, invoiceId])
+  @@map("income_payment_allocations")
+}
+
+model IncomeReminder {
+  id              String             @id @default(cuid())
+  organizationId  String
+  organization    IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// issue_due / payment_due / overdue / renewal / contract_end / draft_contract
+  kind            String
+  dueOn           DateTime           @db.Date
+  /// schedule / invoice / contract
+  targetType      String
+  targetId        String
+  /// open / done / dismissed
+  status          String             @default("open")
+  notifiedAt      DateTime?
+  calendarEventId String?
+  createdAt       DateTime           @default(now())
+
+  @@unique([organizationId, kind, targetType, targetId])
+  @@index([organizationId, status, dueOn])
+  @@map("income_reminders")
+}
+
+model IncomeCalendarConnection {
+  id              String       @id @default(cuid())
+  memberId        String       @unique
+  member          IncomeMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// google / ics
+  provider        String
+  calendarId      String?
+  /// アプリ側で暗号化して保存（平文で持たない）
+  refreshTokenEnc String?      @db.Text
+  /// ICS 購読 URL 用。32 バイト以上の乱数、再発行で無効化
+  icsToken        String?      @unique
+  hideAmounts     Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("income_calendar_connections")
+}
+
+model IncomeAuditLog {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUserId    String
+  action         String
+  targetType     String
+  targetId       String
+  diff           Json?
+  createdAt      DateTime           @default(now())
+
+  @@index([organizationId, targetType, targetId])
+  @@map("income_audit_logs")
+}
+
+// ============================================
+// ドヤ支出管理（Expense）
+// 設計書: docs/design/2026-10-18-doya-expense/README.md
+// ⚠️ 本番反映は doya-db-push の手順で手動（Vercel ビルドは db push しない）
+// ============================================
+
+model ExpenseOrganization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  /// 共通 Company 移行用。会社情報ウィザードの冪等キー（ADDON-SERVICES §7）
+  companyId          String?  @unique
+  /// 自社プロフィールの予約列（FK なし。ADDON-SERVICES R-5）
+  companyProfileId   String?
+  /// 決算月（1〜12）
+  fiscalYearEndMonth Int      @default(3)
+  /// monthly = 翌月10日 / special = 納期の特例（7/10・1/20）
+  withholdingMode String   @default("monthly")
+  /// 通知先（https://hooks.slack.com/ のみ）
+  slackWebhookUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members        ExpenseMember[]
+  vendors        ExpenseVendor[]
+  paymentMethods ExpensePaymentMethod[]
+  contracts      ExpenseContract[]
+  schedules      ExpenseSchedule[]
+  bills          ExpenseBill[]
+  fxRates        ExpenseFxRate[]
+  reminders      ExpenseReminder[]
+  auditLogs      ExpenseAuditLog[]
+
+  @@map("expense_organizations")
+}
+
+model ExpenseMember {
+  id             String              @id @default(cuid())
+  organizationId String
+  /// 招待中（PENDING）でまだログインしていない人は null
+  userId         String?
+  /// 招待したメールアドレス（小文字）。本人がこのメールでログインしたときに userId を入れて ACTIVE にする
+  invitedEmail   String?
+  name           String
+  /// owner | admin | manager | member
+  role           String              @default("member")
+  /// ACTIVE | PENDING | INACTIVE
+  status         String              @default("ACTIVE")
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, invitedEmail])
+  @@index([userId, status])
+  @@index([invitedEmail, status])
+  @@map("expense_members")
+}
+
+model ExpenseVendor {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  /// company | individual（individual = 業務委託の個人）
+  kind               String              @default("company")
+  name               String
+  nameNormalized     String
+  /// 業務委託の担当業務
+  role               String?
+  invoiceRegNo       String?
+  withholdingDefault Boolean             @default(false)
+  bankName           String?
+  bankBranch         String?
+  bankAccountType    String?
+  bankAccountNo      String?
+  bankAccountHolder  String?
+  /// 締め日（31=月末）・支払月（1=翌月）・支払日（31=月末）
+  closingDay         Int                 @default(31)
+  paymentMonths      Int                 @default(1)
+  paymentDay         Int                 @default(31)
+  note               String?
+  organization       ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contracts          ExpenseContract[]
+  bills              ExpenseBill[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([organizationId, kind])
+  @@index([organizationId, nameNormalized])
+  @@index([organizationId, invoiceRegNo])
+  @@map("expense_vendors")
+}
+
+model ExpensePaymentMethod {
+  id               String              @id @default(cuid())
+  organizationId   String
+  /// card | transfer | debit
+  type             String
+  label            String
+  closingDay       Int?
+  withdrawalMonths Int?
+  withdrawalDay    Int?
+  organization     ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contracts        ExpenseContract[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([organizationId])
+  @@map("expense_payment_methods")
+}
+
+model ExpenseContract {
+  id                String                 @id @default(cuid())
+  organizationId    String
+  vendorId          String
+  paymentMethodId   String?
+  title             String
+  /// saas | contractor | rent | ads | payroll | utility | other
+  category          String
+  /// fixed | per_seat | hourly | per_deliverable | variable
+  billingModel      String                 @default("fixed")
+  /// 1/3/6/12、0=単発
+  frequencyMonths   Int                    @default(1)
+  anchorDate        DateTime               @db.Date
+  startDate         DateTime               @db.Date
+  endDate           DateTime?              @db.Date
+  autoRenew         Boolean                @default(false)
+  renewalNoticeDays Int                    @default(30)
+  /// JPY | USD
+  currency          String                 @default("JPY")
+  withholding       Boolean                @default(false)
+  /// avg3 | cap | planned（変動費の予測方法）
+  forecastMode      String                 @default("planned")
+  /// active | paused | ended
+  status            String                 @default("active")
+  note              String?
+  organization      ExpenseOrganization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor            ExpenseVendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  paymentMethod     ExpensePaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  prices            ExpenseContractPrice[]
+  schedules         ExpenseSchedule[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([organizationId, status])
+  @@index([vendorId])
+  @@map("expense_contracts")
+}
+
+model ExpenseContractPrice {
+  id            String          @id @default(cuid())
+  contractId    String
+  effectiveFrom DateTime        @db.Date
+  /// JPY は円、USD はセント
+  unitPrice     Int
+  /// 席数・予定時間・予定本数
+  quantity      Int             @default(1)
+  /// hourly の上限時間
+  capQuantity   Int?
+  taxRate       Int             @default(10)
+  taxIncluded   Boolean         @default(false)
+  contract      ExpenseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+
+  @@unique([contractId, effectiveFrom])
+  @@map("expense_contract_prices")
+}
+
+model ExpenseSchedule {
+  id                   String              @id @default(cuid())
+  organizationId       String
+  contractId           String?
+  /// contract | one_time | withholding_tax
+  kind                 String              @default("contract")
+  title                String
+  category             String
+  /// 計上月（月初日）
+  period               DateTime            @db.Date
+  /// 口座から出る日
+  plannedPayDate       DateTime            @db.Date
+  /// 契約から計算した予定額（差異の検出用）
+  plannedAmountExclTax Int                 @default(0)
+  amountExclTax        Int
+  taxAmount            Int                 @default(0)
+  withholdingAmount    Int                 @default(0)
+  netPayAmount         Int
+  estimated            Boolean             @default(false)
+  /// planned | billed | approved | paid | skipped
+  status               String              @default("planned")
+  skipReason           String?
+  paidOn               DateTime?           @db.Date
+  paidAmount           Int?
+  note                 String?
+  /// 他ツールから取り込んだ支出の出どころ（例: 'tenjikai.budgetLine'）。FK なし（ADDON-SERVICES §6 #12）
+  sourceType           String?
+  sourceId             String?
+  organization         ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contract             ExpenseContract?    @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  billLines            ExpenseBillLine[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@unique([contractId, period])
+  @@unique([organizationId, sourceType, sourceId])
+  @@index([organizationId, plannedPayDate])
+  @@index([organizationId, period])
+  @@index([organizationId, kind, period])
+  @@map("expense_schedules")
+}
+
+/// 受領した請求書（Phase2 で AI 読み取りと合わせて使う。表は Phase1 で作っておく）
+model ExpenseBill {
+  id              String              @id @default(cuid())
+  organizationId  String
+  vendorId        String?
+  documentPath    String
+  billNo          String?
+  issueDate       DateTime?           @db.Date
+  dueDate         DateTime?           @db.Date
+  subtotalExclTax Int?
+  taxAmount       Int?
+  totalInclTax    Int?
+  currency        String              @default("JPY")
+  invoiceRegNo    String?
+  extracted       Json?
+  /// uploaded | extracted | confirmed | rejected
+  status          String              @default("uploaded")
+  uploadedBy      String
+  organization    ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor          ExpenseVendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  lines           ExpenseBillLine[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([organizationId, vendorId, billNo])
+  @@index([organizationId, status])
+  @@map("expense_bills")
+}
+
+model ExpenseBillLine {
+  id            String           @id @default(cuid())
+  billId        String
+  scheduleId    String?
+  name          String
+  amountExclTax Int
+  taxRate       Int              @default(10)
+  bill          ExpenseBill      @relation(fields: [billId], references: [id], onDelete: Cascade)
+  schedule      ExpenseSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([billId])
+  @@index([scheduleId])
+  @@map("expense_bill_lines")
+}
+
+model ExpenseFxRate {
+  organizationId String
+  /// YYYY-MM
+  month          String
+  currency       String
+  /// 1 単位あたりの円
+  rate           Decimal             @db.Decimal(12, 4)
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime            @updatedAt
+
+  @@id([organizationId, month, currency])
+  @@map("expense_fx_rates")
+}
+
+model ExpenseReminder {
+  id             String              @id @default(cuid())
+  organizationId String
+  /// bill_missing | overdue | renewal | contract_end | amount_diff | withholding_due
+  kind           String
+  dueOn          DateTime            @db.Date
+  targetType     String
+  targetId       String
+  /// open | done | dismissed
+  status         String              @default("open")
+  notifiedAt     DateTime?
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@unique([organizationId, kind, targetType, targetId, dueOn])
+  @@index([organizationId, status, dueOn])
+  @@map("expense_reminders")
+}
+
+model ExpenseAuditLog {
+  id             String              @id @default(cuid())
+  organizationId String
+  actorUserId    String
+  action         String
+  targetType     String
+  targetId       String
+  diff           Json?
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("expense_audit_logs")
+}
+
+// ============================================
+// アカウントの会社（UI 品質 B-1・B-2）
+// ============================================
+// 1つのアカウントに会社は1つ（ユーザーの判断。2026-10-19）。左下のアカウント欄・経営ホーム・ツールの見出しに出す名前の正本。
+// ⚠️ 各ツールの組織（SfaOrganization など）の名前は書き換えない。登録のときに、候補として読むだけ。
+// ⚠️ 読み書きは本人だけ（/api/account/company は userId をセッションから決める）。
+model AccountCompany {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String // 会社名
+  websiteUrl String? // サイトの URL
+  industry   String? // 業種
+  logoUrl    String? // ロゴ（今は入力の画面なし。あとで足す）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // ドヤパワーの台帳（Prisma の上だけの関連。account_companies の列は増えない）
+  doyaPowerAccount DoyaPowerAccount?
+
+  // 新しい料金（組織単位）のメンバーと、買った人数の控え（Prisma の上だけの関連。account_companies の列は増えない）
+  members AccountCompanyMember[]
+  billing AccountCompanyBilling?
+
+  // 会社の役割の切り替え（Prisma の上だけの関連。account_companies の列は増えない）
+  roleSetting AccountCompanyRoleSetting?
+
+  @@map("account_companies")
+}
+
+// ============================================
+// 新しい料金（組織単位。2026-10-25）の会社のメンバーと、買った人数の控え
+// ============================================
+// 仕様: docs/architecture/management-agent/PRICING-NEW-2026-10-25.md §10 / PRICING-NEW-MIGRATION.md
+// ⚠️ 本番DBにはまだ無い。流す SQL は PRICING-NEW-MIGRATION.md（統括がユーザーの承認を取って流す）
+// ⚠️ 旗 NEW_PRICING_ROLLOUT が off のあいだは、この2つの表を読む・書くコードは動かない（src/lib/pricing-v2/team.server.ts）
+
+// 会社のメンバー。会社の持ち主（account_companies.userId）は行が無くても1人目として数える
+model AccountCompanyMember {
+  id          String         @id @default(cuid())
+  companyId   String
+  company     AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email       String // 小文字にそろえて入れる
+  userId      String? // 参加した人の User.id（招待中は null）
+  role        String         @default("member") // admin | member（持ち主は行を持たない）。会社の役割の旗の内側では manager | billing | guest も（ROLES-2026-10-26.md）
+  status      String         @default("invited") // invited | active | removed
+  inviteToken String?        @unique
+  invitedBy   String? // 招待した人の User.id
+  invitedAt   DateTime       @default(now())
+  joinedAt    DateTime?
+  removedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([companyId, email])
+  @@index([userId])
+  @@index([companyId, status])
+  @@map("account_company_members")
+}
+
+// 買った人数の控え（正は Stripe の契約の数量。User.plan は書かない＝課金の反映の経路ではない）
+// 人数の変更（/api/pricing/seats）と、古くなったとき（1日）の読み直しで更新する
+model AccountCompanyBilling {
+  id                   String         @id @default(cuid())
+  companyId            String         @unique
+  company              AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String
+  seats                Int
+  billingInterval      String // month | year
+  checkedAt            DateTime
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([stripeSubscriptionId])
+  @@map("account_company_billing")
+}
+
+// ============================================
+// 会社の中の役割（2026-10-26）
+// ============================================
+// 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §8
+// ⚠️ 本番DBにはまだ無い。流す SQL は ROLES-2026-10-26.md §8.2（統括がユーザーの承認を取って流す）
+// ⚠️ 旗 COMPANY_ROLES_ROLLOUT が off のあいだは、この3つの表を読む・書くコードは動かない（src/lib/company-roles/）
+// ⚠️ account_company_members には列を足さない（新しい料金の表を先に流したときに、Prisma の読み込みが落ちないように）
+
+// 役割の変更の記録。追記だけ（DB のトリガーで UPDATE と DELETE を止める）。会社を消しても残す（外部キーを付けない）
+model AccountCompanyRoleEvent {
+  id             String   @id @default(cuid())
+  companyId      String
+  actorUserId    String
+  targetMemberId String?
+  targetEmail    String // 小文字にそろえる
+  kind           String // invited | joined | role_changed | removed | migrated | policy_changed | departments_changed | tool_org_linked | tool_org_unlinked
+  fromRole       String?
+  toRole         String?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([targetMemberId])
+  @@map("account_company_role_events")
+}
+
+// 会社ごとに切り替えられる決まり（src/lib/company-roles/policy.ts。行が無ければ初期値）
+model AccountCompanyRoleSetting {
+  id        String         @id @default(cuid())
+  companyId String         @unique
+  company   AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  policy    Json
+  updatedBy String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("account_company_role_settings")
+}
+
+// 記録を作った人（「自分で作った見積を自分で確定しない」を判定するため）。既存の表に列を足さずに持つ
+// 旗が off でない間に作られた記録だけに残る。行が無い記録は「作った人が分からない」として、止める側に倒す（見積は管理者とオーナーだけが確定できる）
+model AccountCompanyRecordAuthor {
+  id        String   @id @default(cuid())
+  tool      String // quote | income など
+  recordId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([tool, recordId])
+  @@map("account_company_record_authors")
+}
+
+// ツールの組織と会社のつながり（全体設計書の CompanyServiceLink の簡易版。統括の再監査 2026-10-26 中A・中B への対応）
+// 1つの組織は1つの会社にだけつながる。つながった組織にだけ、会社の役割の上限と決まりを当てる。つながりは消えない（作った人が外されても変わらない）
+// つなぐ時: ①会社の持ち主が作った組織を、旗が off でない間に初めて判定したとき（自動）②会社の管理者以上が、自分が最上位の役割の組織をつなぐ（/api/company/tool-orgs）
+model AccountCompanyToolOrg {
+  id             String   @id @default(cuid())
+  companyId      String
+  tool           String // kintai | hr | quote | income | expense | promane | sfa | shodan | aio | mensetsu | aishodan
+  organizationId String // 各ツールの組織の id（プロマネはワークスペースの id）
+  linkedBy       String // つないだ人の User.id（自動のときは会社の持ち主）
+  createdAt      DateTime @default(now())
+
+  @@unique([tool, organizationId])
+  @@index([companyId])
+  @@map("account_company_tool_orgs")
+}
+
+// 社員ごとの部署（部署ごとの入口の段階3。ROLES-2026-10-26.md §11）。持ち主も行を持てる（持ち主は account_company_members に行が無いため、companyId と userId で持つ）
+// 部署の id: marketing | sales | hr | admin（正本は src/lib/departments.ts）。オーナーと管理者は、行に関係なく全部を見る
+model AccountCompanyMemberDepartment {
+  id          String   @id @default(cuid())
+  companyId   String
+  userId      String
+  departments String[]
+  updatedBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, userId])
+  @@map("account_company_member_departments")
+}
+
+// ドヤパワーの「はじめの付与（最初の100）」を受け取った記録（2026-10-26）。同じ人に二度付けないため
+// ⚠️ メールそのものは持たない（emailHash は小文字にそろえたメールの SHA-256）。退会して作り直しても、同じメールなら付けない
+// ⚠️ 会社を消しても記録は残す（外部キーを付けない）。処理は src/lib/pricing-v2/starter.server.ts
+model DoyaPowerStarterClaim {
+  id        String   @id @default(cuid())
+  emailHash String   @unique
+  userId    String   @unique
+  companyId String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  @@map("doya_power_starter_claims")
+}
+
+// ============================================
+// ドヤパワー（会社ごとのポイントの台帳。案。2026-10-19）
+// ============================================
+// 仕様: docs/architecture/management-agent/PRICING-POINTS-2026-10-19.md / DOYA-POWER-MIGRATION.md
+// 処理の正本: src/lib/doya-power/ledger.ts（残りは grant.remaining の合計が正。account.balance は表示用の写し）
+// ⚠️ 本番DBにはまだ無い。流す SQL は DOYA-POWER-MIGRATION.md（統括がユーザーの承認を取って流す）
+// ⚠️ 前払式支払手段（資金決済法）にあたるかは法務の確認が要る（purchase の有効期限を6か月以内に収めているのはそのため）
+
+// 会社ごとの口座（1社に1つ）
+model DoyaPowerAccount {
+  id              String         @id @default(cuid())
+  companyId       String         @unique
+  company         AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balance         Int            @default(0) // 表示用の写し（grant.remaining の有効な分の合計）
+  lastRecoveryDay String? // 毎日の回復を最後に付けた日（日本時間の YYYY-MM-DD）
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  grants       DoyaPowerGrant[]
+  transactions DoyaPowerTransaction[]
+
+  @@map("doya_power_accounts")
+}
+
+// 付与の1回分（種類・量・残り・有効期限）。減らすときは期限の近い順に remaining を減らす
+model DoyaPowerGrant {
+  id        String           @id @default(cuid())
+  accountId String
+  account   DoyaPowerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  kind      String // monthly | daily_recovery | bonus | mission | purchase
+  amount    Int // 付与した量
+  remaining Int // 残り（0 以上）
+  grantedAt DateTime         @default(now())
+  expiresAt DateTime? // null は期限なし（毎日の回復）
+  sourceKey String? // 二重付与を防ぐ鍵（monthly:2026-10 / daily:2026-10-19 / mission:<id> など）
+  createdAt DateTime         @default(now())
+
+  @@unique([accountId, sourceKey])
+  @@index([accountId, expiresAt])
+  @@index([accountId, kind, grantedAt])
+  @@map("doya_power_grants")
+}
+
+// 増減の記録（消費・戻し・付与・期限切れ）。消さない・書き換えない
+model DoyaPowerTransaction {
+  id           String           @id @default(cuid())
+  accountId    String
+  account      DoyaPowerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type         String // consume | refund | grant | expire
+  amount       Int // 増は正、減は負
+  balanceAfter Int
+  operationId  String?          @unique // consume だけ。同じ操作で二重に減らさない
+  refundOf     String?          @unique // refund だけ。戻した consume の operationId（戻しは1回だけ）
+  grantId      String? // grant / expire のときの付与
+  allocations  Json? // consume のとき、どの付与からいくつ減らしたか [{ grantId, amount }]
+  note         String?
+  createdAt    DateTime         @default(now())
+
+  @@index([accountId, createdAt])
+  @@map("doya_power_transactions")
+}
+
+// ============================================
+// 経営ホームのエージェント（ドヤくんに頼む）の実行の記録
+// ============================================
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §8。SQL の案: docs/architecture/agent-orchestration/MIGRATION.md
+// ⚠️ 本番DBにはまだ無い。旗 AGENT_RUNS_STORE=db のときだけ読む・書く（既定は off で、表に触れない）。
+// ⚠️ 本人の分だけを userId で絞って読む（他人の実行は読めない）。User への外部キーは付けない（User の表を変えないため）。
+model HomeAgentRun {
+  id            String          @id @default(cuid())
+  userId        String
+  recipeId      String // 'sales-prep'。AI の作戦は 'ai'
+  title         String
+  request       String? // 依頼の文
+  answers       Json // サーバーで確かめた答え
+  plan          Json // AgentPlan（検査したあとの形）
+  status        String          @default("planned") // planned / running / done / partial / canceled
+  powerUsed     Int             @default(0)
+  powerRefunded Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  tasks         HomeAgentTask[]
+
+  @@index([userId, createdAt])
+  @@map("home_agent_runs")
+}
+
+model HomeAgentTask {
+  id            String       @id @default(cuid())
+  runId         String
+  run           HomeAgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId        String // 同時に動かす数を本人ごとに数えるため（run の userId と同じ）
+  taskId        String // 作戦の中の id（'research' など）
+  action        String // 'shodan.research' など
+  delegated     Boolean      @default(true) // false は「ドヤくんに任せない」（動かさない）
+  status        String       @default("waiting") // waiting / running / done / failed / blocked / canceled / skipped
+  attempts      Int          @default(0)
+  result        Json? // AgentTaskResult
+  resume        Json? // 途中まで作れたもの（スライドのプロジェクトの id など）
+  error         String? // 利用者向けの文
+  failKind      String?
+  failHref      String?
+  failHrefLabel String?
+  powerUsed     Int          @default(0)
+  powerRefunded Int          @default(0)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([runId, taskId])
+  @@index([userId, status])
+  @@map("home_agent_tasks")
+}
+
+// ============================================
+// サポートチャット（気軽に聞けるチャット）の受付と、やり取りの履歴
+// ============================================
+// 設計: docs/architecture/support-chat/SUPPORT-CHAT-2026-10-26.md
+// 本番 DB への反映: prisma/manual-migrations/2026-10-26-support-chat.sql（追加だけ。既存の表は変えない）
+// ⚠️ 表が無いあいだ（反映の前）は、受付を ServiceFeedback（serviceId 'support'）に残す（src/lib/support-chat/store.ts）
+
+/// 「運営に伝える」で受け付けた1件
+model SupportTicket {
+  id               String           @id @default(cuid())
+  /// 画面に出す受付番号（例: DY-261026-4F7K）
+  ticketNo         String           @unique
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// howto / bug / billing / cancel / data / complaint / consult / security / other
+  category         String
+  /// open（未対応）/ in_progress（対応中）/ waiting_user（お客さまの返事待ち）/ closed（完了）
+  status           String           @default("open")
+  /// urgent / action / info（Slack の重さ）
+  severity         String
+  toolId           String?
+  pagePath         String?
+  /// 利用者が書いた内容（伏せ字のあと）
+  summary          String           @db.Text
+  /// ブラウザ・画面の幅・直近のエラー（伏せ字のあと）
+  env              Json?
+  /// ログインのメールに返してよいか
+  contactOk        Boolean          @default(true)
+  assigneeEmail    String?
+  firstReplyAt     DateTime?
+  lastStaffReplyAt DateTime?
+  /// 利用者が最後に返信を読んだ時刻（未読の印に使う）
+  userLastReadAt   DateTime?
+  closedAt         DateTime?
+  /// 満足度 1〜5（任意）
+  satisfaction     Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  messages         SupportMessage[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("support_ticket")
+}
+
+/// 受付ごとのやり取り（利用者・AI・運営）
+model SupportMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  /// user / ai / staff
+  role        String
+  body        String        @db.Text
+  /// AI の答えの根拠のリンク [{ label, href }]
+  sources     Json?
+  /// 運営の返信を書いた管理者のメール
+  authorEmail String?
+  /// 運営の返信をメールで送れたか（null は送っていない）
+  emailedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("support_message")
 }
 
 // ============================================

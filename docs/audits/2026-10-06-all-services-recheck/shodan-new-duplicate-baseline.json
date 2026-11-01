@@ -1,0 +1,7 @@
+{
+  "status": "confirmed-unfixed",
+  "source": "src/app/shodan/[orgSlug]/new/page.tsx",
+  "problem": "Actual run callback permits two same-frame preparations POST requests before state re-render",
+  "posts": 2,
+  "scope": "Actual AST-extracted callback and actual service transport; unresolved synthetic fetch, no live generation/provider/database. Does not establish duplicate billing or production incidents."
+}

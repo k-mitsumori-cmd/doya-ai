@@ -3,91 +3,142 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { redactSfaRelation, lockSfaRecordRelation } from '@/lib/sfa/record-relations'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
+import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
+
+const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
+  NextResponse.json(body, { ...options, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 
 // GET /api/sfa/tasks — タスク一覧（未完了を上に、期日昇順）。商談名も添えて返す
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const page = Number(req.nextUrl?.searchParams.get('page') || '1')
-  if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
-    return NextResponse.json({ error: 'ページ番号が不正です' }, { status: 400 })
+  const rawOperationId = (req.nextUrl || new URL(req.url)).searchParams.get('operationId')
+  if (rawOperationId !== null) {
+    try {
+      if ((req.nextUrl || new URL(req.url)).searchParams.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が重複しています。')
+      const operationId = sfaOperationId(rawOperationId)!
+      const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+        return recoverSfaCreation(tx, ctx, 'task', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', false, { id }), select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } })))
+      })
+      return json({ state: recovery.state, task: recovery.row })
+    } catch (error) {
+      return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    }
   }
-  const rawDealId = req.nextUrl?.searchParams.get('dealId')
+
+  const params = (req.nextUrl || new URL(req.url)).searchParams
+  const page = Number(params.get('page') || '1')
+  if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
+    return json({ error: 'ページ番号が不正です' }, { status: 400 })
+  }
+  const rawDealId = params.get('dealId')
   const dealId = rawDealId?.trim() || null
   if (rawDealId !== null && rawDealId !== undefined && (!dealId || dealId.length > 128)) {
-    return NextResponse.json({ error: '商談の指定が正しくありません' }, { status: 400 })
+    return json({ error: '商談の指定が正しくありません' }, { status: 400 })
   }
   const pageSize = 200
-  const rows = await prisma.sfaTask.findMany({
-    where: { organizationId: ctx.organizationId, ...(dealId ? { dealId } : {}) },
-    orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
-    skip: (page - 1) * pageSize,
-    take: pageSize + 1,
-    select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
-  })
-  const tasks = rows.slice(0, pageSize)
+  try {
+    return await withSfaRecordRead(ctx, async (tx, scope) => {
+    if (dealId) await lockSfaRecordRelation(tx, scope, 'deal', dealId)
+    const rows = await tx.sfaTask.findMany({
+      where: sfaRecordWhere(scope, 'task', false, { ...(dealId ? { dealId } : {}) }),
+      orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize + 1,
+      select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
+    })
+    const tasks = rows.slice(0, pageSize)
 
-  // dealId → 商談名（SfaTask に Prisma リレーションは無いため1クエリで引き当て）
-  const dealIds = Array.from(new Set(tasks.map((t) => t.dealId).filter((v): v is string => !!v)))
-  const deals = dealIds.length
-    ? await prisma.sfaDeal.findMany({
-        where: { id: { in: dealIds }, organizationId: ctx.organizationId },
-        select: { id: true, name: true },
-      })
-    : []
-  const dealName = new Map(deals.map((d) => [d.id, d.name]))
+    // dealId → 商談名（SfaTask に Prisma リレーションは無いため1クエリで引き当て）
+    const dealIds = Array.from(new Set(tasks.map((t) => t.dealId).filter((v): v is string => !!v)))
+    const deals = dealIds.length
+      ? await tx.sfaDeal.findMany({
+          where: sfaRecordWhere(scope, 'deal', false, { id: { in: dealIds } }),
+          select: { id: true, name: true },
+        })
+      : []
+    const dealName = new Map(deals.map((d) => [d.id, d.name]))
 
-  return NextResponse.json(
-    { tasks: tasks.map((t) => ({ ...t, dealName: t.dealId ? dealName.get(t.dealId) || null : null })), page, hasMore: rows.length > pageSize },
-    { headers: { 'Cache-Control': 'no-store' } }
-  )
+    return json(
+      { tasks: tasks.map((t) => ({ ...t, dealId: t.dealId && dealName.has(t.dealId) ? t.dealId : null, dealName: t.dealId ? dealName.get(t.dealId) || null : null })), page, hasMore: rows.length > pageSize },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
+    })
+  } catch (error) {
+    // 列不足(P2022)などDB起因の失敗を Vercel ログで切り分けられるように記録する
+    console.error('[sfa/tasks] GET failed', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
+    return json({ error: error instanceof SfaMutationError ? error.message : 'タスク一覧を取得できませんでした。時間をおいて再度お試しください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+  }
 }
 
 // POST /api/sfa/tasks — タスク追加（dealId で商談に紐付け可能）
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const parsedBody = await req.json().catch(() => null)
   if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    return json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const body = parsedBody as Record<string, unknown>
   const title = typeof body.title === 'string' ? body.title.trim() : ''
-  if (!title) return NextResponse.json({ error: 'タスク名は必須です' }, { status: 400 })
+  if (!title || title.length > 200) return json({ error: 'タスク名は1〜200文字で入力してください' }, { status: 400 })
 
   let dueDate: Date | null = null
   if (body.dueDate != null && body.dueDate !== '') {
-    if (typeof body.dueDate !== 'string') return NextResponse.json({ error: '期日が正しくありません' }, { status: 400 })
+    if (typeof body.dueDate !== 'string') return json({ error: '期日が正しくありません' }, { status: 400 })
     const day = body.dueDate.match(/^\d{4}-\d{2}-\d{2}(?=$|T)/)?.[0]
     const parsedDay = day ? new Date(`${day}T00:00:00.000Z`) : null
     const parsedDate = new Date(body.dueDate)
     if (!parsedDay || Number.isNaN(parsedDay.getTime()) || parsedDay.toISOString().slice(0, 10) !== day || Number.isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: '期日が正しくありません' }, { status: 400 })
+      return json({ error: '期日が正しくありません' }, { status: 400 })
     }
     dueDate = parsedDate
   }
 
-  // 商談への紐付け（IDOR対策: 自組織の商談のみ許可）
-  let dealId: string | null = null
   if (body.dealId != null && typeof body.dealId !== 'string') {
-    return NextResponse.json({ error: '商談の指定が正しくありません' }, { status: 400 })
+    return json({ error: '商談の指定が正しくありません' }, { status: 400 })
   }
-  if (typeof body.dealId === 'string' && body.dealId.trim()) {
-    const deal = await prisma.sfaDeal.findFirst({
-      where: { id: body.dealId.trim(), organizationId: ctx.organizationId, isActive: true },
-      select: { id: true },
+  const requestedDealId = typeof body.dealId === 'string' ? body.dealId.trim() || null : null
+  try {
+    const operationId = sfaOperationId(body.operationId)
+    const task = await withSfaRecordRead(ctx, async (tx, scope) => {
+      const saved = await createSfaOnce(tx, ctx, 'task', operationId,
+        { title, dueDate: dueDate?.toISOString() || null, dealId: requestedDealId },
+        async id => redactSfaRelation(tx, scope, await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', false, { id }), select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } })), async () => {
+        const dealId = requestedDealId ? await lockSfaRecordRelation(tx, scope, 'deal', requestedDealId) : null
+        return tx.sfaTask.create({
+          data: { organizationId: ctx.organizationId, title, dueDate, dealId, assigneeMemberId: ctx.memberId },
+          select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
+        })
+      })
+      return redactSfaRelation(tx, scope, saved)
     })
-    if (!deal) return NextResponse.json({ error: '選択した商談が見つかりません。画面を更新して選び直してください。' }, { status: 400 })
-    dealId = deal.id
+    return json({ task })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
   }
+}
 
-  const task = await prisma.sfaTask.create({
-    data: { organizationId: ctx.organizationId, title: title.slice(0, 200), dueDate, dealId, assigneeMemberId: ctx.memberId },
-    select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
-  })
-  return NextResponse.json({ task })
+// Cancels only the creation operation receipt, never the task/activity itself.
+export async function DELETE(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  try {
+    const params = (req.nextUrl || new URL(req.url)).searchParams
+    if (params.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
+    const operationId = sfaOperationId(params.get('operationId'))!
+    const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+      return cancelSfaCreation(tx, ctx, 'task', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaTask.findFirst({ where: sfaRecordWhere(scope, 'task', false, { id }), select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } })))
+    })
+    return json({ state: recovery.state, task: recovery.row })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '操作の取り消し結果を確認できませんでした。もう一度確認してください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+  }
 }

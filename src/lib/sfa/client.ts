@@ -1,3 +1,9 @@
+
+// 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
+function normalizeOrgSlug(slug: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(slug)) return slug
+  try { return decodeURIComponent(slug) } catch { return slug }
+}
 // ============================================
 // ドヤ営業管理（SFA）クライアント用 fetch ヘルパー
 // 現在のワークスペース(slug)を x-sfa-org ヘッダで送る
@@ -12,7 +18,7 @@ export function sfaInit(orgSlug: string, init: RequestInit = {}): RequestInit {
   return {
     cache: 'no-store',
     ...init,
-    headers: { 'x-sfa-org': encodeURIComponent(orgSlug || ''), ...(init.headers || {}) },
+    headers: { 'x-sfa-org': encodeURIComponent(normalizeOrgSlug(orgSlug || '')), ...(init.headers || {}) },
   }
 }
 
@@ -20,7 +26,7 @@ export function sfaInit(orgSlug: string, init: RequestInit = {}): RequestInit {
 export function withOrg(url: string, orgSlug: string): string {
   if (!orgSlug) return url
   const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}org=${encodeURIComponent(orgSlug)}`
+  return `${url}${sep}org=${encodeURIComponent(normalizeOrgSlug(orgSlug))}`
 }
 
 /** Native select controls need every account, including records beyond the first API page. */

@@ -42,9 +42,9 @@ const req = (value, method = 'POST') => new Request('https://doya.test/api/doyal
   assert.equal(writes.length, 0, 'invalid create requests must not write')
 
   const created = await create.POST(req({ name: '  Valid  ', description: '', industry: 'IT', keywords: '営業' }))
-  assert.equal(created.status, 200)
-  assert.equal(writes[0].data.name, 'Valid')
-  assert.equal(writes[0].data.description, null)
+  assert.equal(created.status, 409)
+  assert.equal((await created.json()).code, 'OPERATION_REQUIRED')
+  assert.equal(writes.length, 0, 'legacy valid create cannot bypass the durable operation')
 
   for (const body of [null, [], { name: '' }, { name: null }, { description: [] },
     { status: 'published' }, { status: null }, { targetSize: 'x'.repeat(101) }]) {
@@ -52,10 +52,10 @@ const req = (value, method = 'POST') => new Request('https://doya.test/api/doyal
     assert.equal(response.status, 400, JSON.stringify(body)?.slice(0, 100))
   }
   assert.equal((await detail.PATCH(req({ name: 'Valid', padding: 'x'.repeat(33000) }, 'PATCH'), ctx)).status, 413)
-  assert.equal(writes.length, 1, 'invalid update requests must not write')
+  assert.equal(writes.length, 0, 'invalid update requests must not write')
 
   const updated = await detail.PATCH(req({ name: '  Updated  ', description: null, status: 'archived' }, 'PATCH'), ctx)
   assert.equal(updated.status, 200)
-  assert.deepEqual(JSON.parse(JSON.stringify(writes[1].data)), { name: 'Updated', description: null, status: 'archived' })
+  assert.deepEqual(JSON.parse(JSON.stringify(writes[0].data)), { name: 'Updated', description: null, status: 'archived' })
   console.log('PASS Doyalist project create/update reject malformed and oversized input before writes')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

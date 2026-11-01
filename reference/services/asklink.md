@@ -239,7 +239,7 @@
 | DB | `asklink_run` / `asklink_banner`（userId スコープ。他人のIDは404） |
 | 画像の保存 | adimage のバケットに `asklink/<userId>/<runId>/` で保存。署名URLは都度発行 |
 | IDOR の静的検査 | `src/lib/asklink/scope.test.ts`。`npm run test:asklink`（ビルドに組み込み済み） |
-| システム画像 | Codex に依頼中。依頼文は `reference/services/asklink-images.md` |
+| システム画像 | Codex 内蔵の画像生成で作成済み（2026-10-09・定額枠）。`public/asklink/` に配置。依頼文と組み込み先は `reference/services/asklink-images.md` |
 
 - UIアイコンは `CLAUDE.md` のブランド規約に従い lucide-react を使う（Material Symbols は既存LPキット内の互換用で凍結）。LPキットの `icon` 指定だけは Material Symbols 名。
 - 設置用HTMLの画像は、署名URLが1時間で切れるため `asklink-○○.png` のファイル名を入れ、利用者が自分のサイトにアップロードしたURLへ置き換える形にした（画面の使い方欄に記載）。
@@ -255,3 +255,9 @@
   - 対策: 1回目で足りない文言があれば、縦を8本の細い帯（高さ16%・少しずつ重ねる）に切って2倍に拡大して読み直し、どちらかで読めれば合格とする（読み取り8回で約$0.02。画像の作り直し約$0.05より安い）。
   - 再判定の結果、3枚とも合格。
 - 修正後の再生成（2026-10-09）: ToB 2本・ToC 2本の4本すべて合格し、すべてに文中URLが入った（料金ページは「未確認」に正しく落ちた）。
+
+### 正式公開（2026-10-09）
+
+- `UNLISTED_SERVICE_IDS` から外し、`status: 'active'`（`badge: 'BETA'` / `isNew` は adimage と同じ扱い）。LP・料金ページの `noindex` を外した。トップ・sitemap・llms.txt・料金ページ・ツール切替は services.ts から派生するので個別の追記は無し。
+- 未ログインの紹介リンク許可リスト（`src/lib/safe-signin-callback.ts` の `PUBLIC_INTRO_SERVICES`）と指名検索の別表記（`src/lib/seo.ts` の `SERVICE_ALIASES`）に追加。
+- 公開サービス数の固定値（`scripts/security-regression/verify-google-analytics-services.cjs`）を17→18へ更新。

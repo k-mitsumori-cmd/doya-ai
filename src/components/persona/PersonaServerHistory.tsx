@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { deletePersonaRecord } from '@/lib/persona/history-records'
+import { confirmDialog } from '@/components/ds/dialog'
 
 type Item = { id: string; name: string; occupation: string; createdAt: string }
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/
-const buttonClass = 'rounded-lg border border-slate-600 px-3 py-2 text-sm text-purple-300 disabled:opacity-50'
+const buttonClass = 'rounded-lg border border-slate-600 px-3 py-2 text-sm text-brand-200 disabled:opacity-50'
 
 export default function PersonaServerHistory({ userId, onLocalChange }: { userId: string; onLocalChange: () => void }) {
   const storage = useMemo(() => personaBrowserStorage(userId), [userId])
@@ -36,7 +37,7 @@ export default function PersonaServerHistory({ userId, onLocalChange }: { userId
       setCursor(body.nextCursor)
       setLoaded(true)
     } catch {
-      if (!controller.signal.aborted) setError('保存済みの履歴を取得できませんでした。表示中の履歴は前回取得した内容です。再度お試しください。')
+      if (!controller.signal.aborted) setError('保存した履歴を読み込めませんでした。もう一度お試しください。')
     } finally {
       if (request.current === controller) { request.current = null; setBusy(false) }
     }
@@ -49,7 +50,7 @@ export default function PersonaServerHistory({ userId, onLocalChange }: { userId
 
   const act = async (item: Item, remove: boolean) => {
     if (request.current) return
-    if (remove && !window.confirm('このペルソナを保存済み履歴から削除しますか？ 保存画像も開けなくなります。使用済みの生成枠は戻りません。')) return
+    if (remove && !(await confirmDialog({ title: 'このペルソナを削除しますか？', message: '保存した画像も開けなくなります。使った生成の回数は戻りません。', confirmLabel: '削除する', tone: 'danger' }))) return
     const controller = new AbortController()
     request.current = controller
     setBusy(true)
@@ -75,9 +76,9 @@ export default function PersonaServerHistory({ userId, onLocalChange }: { userId
       }
     } catch {
       if (!controller.signal.aborted) setError(serverDeleted
-        ? '保存済み履歴は削除しましたが、このブラウザのコピーを消去できませんでした。ブラウザ内の履歴も削除してください。'
-        : remove ? '削除を確認できませんでした。一覧を再読み込みしてご確認ください。'
-          : 'ペルソナを開けませんでした。削除済みでないか、通信状態をご確認ください。')
+        ? 'このブラウザに残った写しは消せませんでした。ブラウザの履歴も削除してください。'
+        : remove ? '削除できたかを確かめられませんでした。一覧を読み込み直してください。'
+          : 'ペルソナを開けませんでした。通信を確かめて、もう一度お試しください。')
     } finally {
       if (request.current === controller) { request.current = null; setBusy(false) }
     }

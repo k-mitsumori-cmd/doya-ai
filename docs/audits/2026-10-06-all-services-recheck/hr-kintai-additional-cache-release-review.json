@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-08T16:24:26.733372+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58",
+  "reviewStatus": "full150-and-actualNext20-passed-awaiting-exact-publish",
+  "productionFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs"
+  ],
+  "requiredPrimaryFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs"
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/departments/route.ts": "645b57cd238159dada404e07746ef908cfa1f8e3a4d2eada1c899c1dddc3b050",
+    "src/app/api/hr/org-chart/route.ts": "21a9cccd3e6689b7de1b26b75d582c8b5eca01bf762ebe4f66e5d47f201fae5d",
+    "src/app/api/kintai/departments/route.ts": "3c70e0ec4c917a4473c750af6f15a0fbb1c8ad2be56c78c4939b22a8bed9ef84",
+    "scripts/security-regression/verify-related-records.cjs": "094761638730450093db2d9c27c13f751da8325e4b1fb79b1a19a9a90ef5a358",
+    "scripts/security-regression/run.cjs": "e8b6b5461bb5778411635e02019853d58f2c4eef9599ce97ba9801aa9084436e",
+    "scripts/security-regression/verify-hr-department-access.cjs": "2cb07cc5fc14d03b490c357111b57638e15c1561d7c649227f1fd23a6869e0f9",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs": "e878747515b060b119c8ef77419875d84ec8d35e1b849aefd1c32a16fb11d31d",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs": "eb2fdd0aca51b9c35bea0903889993ba2ffc2ee2582ea9c7152054d9d811ffcd",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs": "c9bba1e914430dd5a08d5848ae827d9409f306c3f9181d90a494156d8bec4ed8"
+  },
+  "compiledMarkerProof": {
+    "checks": {
+      "full150": true,
+      "frozenSourcesUnchanged": true,
+      "actualNext20": true,
+      "isolatedDatabaseStoppedAndRemoved": true,
+      "threeBuiltApiEntries": true,
+      "getOnlyPolicyChange": true
+    },
+    "apiEntries": [
+      {
+        "route": "/api/hr/departments",
+        "file": ".next/server/app/api/hr/departments/route.js",
+        "hash": "63af061b2557a5ad21a0f452f6d236a304aadb5b066df2ea19cb92240c4977ff"
+      },
+      {
+        "route": "/api/hr/org-chart",
+        "file": ".next/server/app/api/hr/org-chart/route.js",
+        "hash": "93a833c43454108fa985314412e7caad13cce4261148a6c31610ac095c0a1351"
+      },
+      {
+        "route": "/api/kintai/departments",
+        "file": ".next/server/app/api/kintai/departments/route.js",
+        "hash": "c83fe4adfc10919b79b9ba509f7c6bab6c2061b3522099a66eefc8ace3d8eb2e"
+      }
+    ],
+    "assets": {
+      ".next/server/app/api/hr/departments/route.js": "63af061b2557a5ad21a0f452f6d236a304aadb5b066df2ea19cb92240c4977ff",
+      ".next/server/app/api/hr/org-chart/route.js": "93a833c43454108fa985314412e7caad13cce4261148a6c31610ac095c0a1351",
+      ".next/server/app/api/kintai/departments/route.js": "c83fe4adfc10919b79b9ba509f7c6bab6c2061b3522099a66eefc8ace3d8eb2e"
+    }
+  },
+  "scope": "Three organization-scoped GET cache policies only; POST bodies and original queries/auth unchanged. Full150 plus actual Next20 synthetic two-organization/read-only/role/revoked-session verification. No production/customer writes, schema/dependency changes or paid generation. Full17-service2074 audit remains active."
+}

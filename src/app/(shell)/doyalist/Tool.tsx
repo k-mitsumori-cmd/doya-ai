@@ -1,0 +1,1116 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
+import toast, { Toaster } from 'react-hot-toast'
+import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
+import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
+import { KEYWORD_UNKNOWN_RESULT, parseKeywordTags, readKeywordResponse } from '@/lib/doyalist/keyword-response-client'
+import { resolveDoyalistSearchKeywords } from '@/lib/doyalist/search-keywords'
+import { parseDoyalistEstimate, type DoyalistEstimate } from '@/lib/doyalist/estimate-result'
+import { readBillingResponse } from '@/lib/billing-response-client'
+import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
+import { readExtractionIntent, claimExtractionIntent, clearExtractionIntent, type ExtractionIntent } from '@/lib/doyalist/extraction-intent-client'
+import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
+import Sym from '@/components/doyalist/Sym'
+import ShellLoading from '@/components/shell/ShellLoading'
+import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt, ToolNextStep, type NextStepView } from '@/components/ds'
+import { FirstSteps } from '@/components/ds/feedback'
+import { Check, Circle, X } from 'lucide-react'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
+
+export interface Company {
+  id?: string
+  name: string
+  website?: string | null
+  industry?: string | null
+  region?: string | null
+  size?: string | null
+  description?: string | null
+  contactPerson?: string | null
+  source?: string | null
+  enrichedData?: {
+    corporateNumber?: string | null
+    address?: string | null
+    prefecture?: string | null
+    representative?: string | null
+    capital?: string | null
+    employeeCount?: string | null
+    foundedYear?: number | string | null
+    businessSummary?: string | null
+    industry?: string | null
+  } | null
+}
+
+const CHARS = {
+  hello: '/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png',
+  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
+  working: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png',
+  jump: '/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png',
+  success: '/kintai/characters/success_%E6%88%90%E5%8A%9F.png',
+  point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
+  thumbsup: '/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png',
+  sleep: '/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png',
+}
+
+// "全国" を含むエリア配列を構築
+const AREA_PREFECTURES: Record<string, string[]> = {
+  '全国': [],
+  ...AREA_TO_PREFECTURES,
+}
+const AREAS = [...AREA_LIST]
+const COUNT_OPTIONS = [100, 500, 1000, 2000, 3000, 5000, 7000, 10000]
+// gBizINFO の詳細データ登録率が低い業界（実測ベース）
+// 上場・公共調達・補助金受給企業が中心の傾向のため、小規模代理店・店舗系は欠落しがち
+const SPARSE_INDUSTRIES = ['広告・マーケ', '小売・EC', 'コンサル', '飲食', '人材', 'その他']
+const PAGE_SIZE = 50
+const SORT_OPTIONS = [
+  { v: 'default', l: '抽出順' },
+  { v: 'name', l: '企業名' },
+  { v: 'founded_desc', l: '設立年（新しい順）' },
+  { v: 'founded_asc', l: '設立年（古い順）' },
+  { v: 'employees_desc', l: '従業員数（多い順）' },
+]
+
+const PREVIEW_FIELDS: { label: string; always: boolean }[] = [
+  { label: '法人名', always: true },
+  { label: '法人番号', always: true },
+  { label: '所在地（都道府県・住所）', always: true },
+  { label: '業種', always: false },
+  { label: '代表者名', always: false },
+  { label: '従業員数', always: false },
+  { label: '資本金', always: false },
+  { label: '設立年', always: false },
+  { label: '公式WebサイトURL', always: false },
+  { label: '事業概要', always: false },
+]
+
+/**
+ * 画面の状態の見本（/doyalist/dev/states。開発時だけ）で、抽出済みの結果やエラーを最初から出すための値。
+ * ⚠️ 本番の画面からは渡さない。渡さなければ今までどおり
+ */
+export type DoyalistToolPreview = {
+  companies?: Company[]
+  errorMsg?: string
+  errorHint?: string
+  quotaAction?: 'pricing' | 'contact'
+  filterText?: string
+}
+
+export default function DoyalistTool({ preview }: { preview?: DoyalistToolPreview } = {}) {
+  const { data: session, status } = useSession()
+  const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
+  const identity = useRef({ actor, version: 0, hasActor: Boolean(actor) })
+  if (identity.current.actor !== actor) identity.current = {
+    actor, version: identity.current.version + (identity.current.hasActor ? 1 : 0),
+    hasActor: identity.current.hasActor || Boolean(actor),
+  }
+  return <ScopedDoyalistTool key={identity.current.version} identityEpoch={identity} epoch={identity.current.version} preview={preview} />
+}
+
+function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number; preview?: DoyalistToolPreview }) {
+  // 旗 ONE_BUTTON_ROLLOUT（フックは早い return より前に呼ぶ）
+  const oneButton = useOneButton()
+  const { data: session, status } = useSession()
+  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）
+  const [industry, setIndustry] = useState('IT・ソフトウェア')
+  const [area, setArea] = useState('全国')
+  const [prefecture, setPrefecture] = useState('')
+  const [size, setSize] = useState('指定なし')
+  const [keywords, setKeywords] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const k = read('keywords'), p = read('prefecture'); if (k) setKeywords(k); if (p) setPrefecture(p) })
+  const [countInput, setCountInput] = useState('100')
+  useEffect(() => {
+    const defaults = readDoyalistPreferences()
+    if (defaults.defaultIndustry) setIndustry(defaults.defaultIndustry)
+    if (defaults.defaultRegion) setArea(defaults.defaultRegion)
+  }, [])
+  const count = Number(countInput)
+  const validCount = /^\d+$/.test(countInput) && Number.isSafeInteger(count) && count >= 1 && count <= 10000
+
+  const handleAreaChange = (v: string) => { setArea(v); setPrefecture('') }
+  const region = prefecture || area
+  const prefectureOptions = AREA_PREFECTURES[area] || []
+
+  const [generating, setGenerating] = useState(false)
+  const [companies, setCompanies] = useState<Company[]>(preview?.companies ?? [])
+  const [savedListId, setSavedListId] = useState<string | null>(preview?.companies?.length ? 'preview' : null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(preview?.errorMsg ?? null)
+  const [errorHint, setErrorHint] = useState<string | null>(preview?.errorHint ?? null)
+  const [warningMsg, setWarningMsg] = useState<string | null>(null)
+  const [quotaAction, setQuotaAction] = useState<'pricing' | 'contact' | null>(preview?.quotaAction ?? null)
+
+  // AI変換タグ
+  const [expanding, setExpanding] = useState(false)
+  const keywordEpoch = useRef({ keywords, industry, version: 0 })
+  if (keywordEpoch.current.keywords !== keywords || keywordEpoch.current.industry !== industry) {
+    keywordEpoch.current = { keywords, industry, version: keywordEpoch.current.version + 1 }
+  }
+  const keywordKey = keywordEpoch.current.version
+  const [storedTags, setStoredTags] = useState<{ key: number; tags: string[] } | null>(null)
+  const aiTags = storedTags?.key === keywordKey ? storedTags.tags : []
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+  const activeTagList = useMemo(() => storedTags?.key === keywordKey ? Array.from(activeTags) : [], [activeTags, storedTags, keywordKey])
+  const pendingKeyword = useRef<{ key: number; controller: AbortController; tid: string } | null>(null)
+  const cancelKeyword = useCallback(() => {
+    const operation = pendingKeyword.current
+    if (operation) { operation.controller.abort(); toast.dismiss(operation.tid) }
+    pendingKeyword.current = null
+  }, [])
+  useEffect(() => {
+    if (pendingKeyword.current && pendingKeyword.current.key !== keywordKey) { cancelKeyword(); setExpanding(false) }
+  }, [keywordKey, cancelKeyword])
+  useEffect(() => () => cancelKeyword(), [cancelKeyword])
+  const isSignedIn = status === 'authenticated' && Boolean(session?.user?.id)
+  const rawSearchWords = activeTagList.length ? activeTagList.join(',') : keywords
+  const estimateWords = resolveDoyalistSearchKeywords(industry, rawSearchWords)
+  const estimateScope = JSON.stringify([isSignedIn, session?.user?.id, industry, region, estimateWords])
+  const estimateEpoch = useRef({ scope: estimateScope, version: 0 })
+  if (estimateEpoch.current.scope !== estimateScope) estimateEpoch.current = { scope: estimateScope, version: estimateEpoch.current.version + 1 }
+  const estimateKey = estimateEpoch.current.version
+  const [estimateSnapshot, setEstimateSnapshot] = useState<{ key: number; loading: boolean; result: DoyalistEstimate | null } | null>(null)
+  const currentEstimate = isSignedIn && estimateSnapshot?.key === estimateKey ? estimateSnapshot : null
+  const estimateLoading = Boolean(currentEstimate?.loading)
+  const estimatedCount = currentEstimate?.result?.estimated ?? null
+  const estimateIsApprox = currentEstimate?.result?.isApprox ?? false
+  const estimateNote = currentEstimate?.result?.note || null
+
+  // Invalidate synchronously: an old response must not win between the input event and render.
+  const handleKeywordChange = (v: string) => {
+    if (v !== keywordEpoch.current.keywords) keywordEpoch.current = { ...keywordEpoch.current, keywords: v, version: keywordEpoch.current.version + 1 }
+    cancelKeyword(); setExpanding(false)
+    setKeywords(v); setStoredTags(null); setActiveTags(new Set())
+  }
+
+  const handleIndustryChange = (value: string) => {
+    if (value !== keywordEpoch.current.industry) keywordEpoch.current = { ...keywordEpoch.current, industry: value, version: keywordEpoch.current.version + 1 }
+    cancelKeyword(); setExpanding(false)
+    setIndustry(value); setStoredTags(null); setActiveTags(new Set())
+  }
+
+  const handleExpandKeyword = async () => {
+    if (pendingKeyword.current || identityEpoch.current.version !== epoch || keywordEpoch.current.version !== keywordKey) return
+    if (status !== 'authenticated' || !session?.user?.id) { toast.error('ログイン状態をご確認ください'); return }
+    if (!keywords.trim()) { toast.error('キーワードを入力してください'); return }
+    if (keywords.length > 1000) { toast.error('キーワードは1,000文字以内で入力してください'); return }
+    const operation = { key: keywordKey, controller: new AbortController(), tid: toast.loading('AIが検索ワードに変換中...') }
+    pendingKeyword.current = operation
+    const current = () => pendingKeyword.current === operation && !operation.controller.signal.aborted &&
+      identityEpoch.current.version === epoch && keywordEpoch.current.version === operation.key
+    setExpanding(true)
+    try {
+      const response = await readKeywordResponse({
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keyword: keywords, industry }),
+      }, operation.controller.signal)
+      if (!current()) return
+      const tags = response.ok ? parseKeywordTags(response.data) : null
+      if (!tags) throw new Error(KEYWORD_UNKNOWN_RESULT)
+      setStoredTags({ key: operation.key, tags }); setActiveTags(new Set(tags))
+      toast.success(`${tags.length}個のタグに変換しました`, { id: operation.tid })
+    } catch {
+      if (current()) toast.error(KEYWORD_UNKNOWN_RESULT, { id: operation.tid })
+    } finally {
+      if (current()) { pendingKeyword.current = null; setExpanding(false) }
+      operation.controller.abort()
+    }
+  }
+
+  // Match collection keywords, and hide previous results synchronously on scope/ABA changes.
+  useEffect(() => {
+    if (!isSignedIn) return
+    const ctrl = new AbortController()
+    const current = () => !ctrl.signal.aborted && estimateEpoch.current.version === estimateKey && identityEpoch.current.version === epoch
+    const unavailable = { estimated: null, isApprox: false, note: '参考件数を取得できませんでした。実際の取得件数は抽出後にご確認ください。' }
+    setEstimateSnapshot({ key: estimateKey, loading: true, result: null })
+    const words = JSON.parse(estimateScope)[4] as string[]
+    const timer = setTimeout(async () => {
+      if (!current()) return
+      if (words.some(word => word.length > 100)) {
+        setEstimateSnapshot({ key: estimateKey, loading: false, result: unavailable }); return
+      }
+      try {
+        const response = await readBillingResponse('/api/doyalist/estimate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industry, region, keywords: words }),
+        }, ctrl.signal)
+        if (!current()) return
+        const result = response.ok ? parseDoyalistEstimate(response.data) : null
+        setEstimateSnapshot({ key: estimateKey, loading: false, result: result || unavailable })
+      } catch {
+        if (current()) setEstimateSnapshot({ key: estimateKey, loading: false, result: unavailable })
+      }
+    }, 400)
+    return () => { clearTimeout(timer); ctrl.abort() }
+  }, [isSignedIn, estimateKey, estimateScope, industry, region, identityEpoch, epoch])
+
+  const toggleTag = (tag: string) => {
+    setActiveTags((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
+
+  const [filterText, setFilterText] = useState(preview?.filterText ?? '')
+  const [sortBy, setSortBy] = useState('default')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [filterHasUrl, setFilterHasUrl] = useState(false)
+  const [filterHasRep, setFilterHasRep] = useState(false)
+  const [filterHasEmployees, setFilterHasEmployees] = useState(false)
+
+  // 検索に使うキーワード: AIタグ（選択中）優先 → ユーザー入力 → なし
+  const searchKeywords = (): string => {
+    const selectedTags = activeTagList
+    if (selectedTags.length > 0) return selectedTags.join(',')
+    return keywords
+  }
+
+  const pendingCollection = useRef<{ controller: AbortController; tid: string } | null>(null)
+  const collectionAlive = useRef(true)
+  useEffect(() => {
+    collectionAlive.current = true
+    return () => {
+      collectionAlive.current = false
+      const operation = pendingCollection.current
+      if (operation) { operation.controller.abort(); toast.dismiss(operation.tid) }
+      pendingCollection.current = null
+    }
+  }, [])
+
+  const [extractionIntent, setExtractionIntent] = useState<ExtractionIntent | null>(null)
+  const [intentReady, setIntentReady] = useState(false)
+  const [extractionState, setExtractionState] = useState('unknown')
+  const [extractionProject, setExtractionProject] = useState<string | null>(null)
+  const recoveryAction = useRef<() => void>(() => {})
+  const cancellationDispatch = useRef(false)
+
+  const runExtraction = async (mode: 'new' | 'recover' | 'resume' | 'cancel') => {
+    if (pendingCollection.current || identityEpoch.current.version !== epoch) return
+    const actor = session?.user?.id
+    if (status !== 'authenticated' || !actor) { toast.error('ログイン状態をご確認ください'); return }
+    if (mode === 'new' && (!intentReady || !validCount)) return
+    const scope = { actor }
+    const operation = { controller: new AbortController(), tid: toast.loading(mode === 'new' || mode === 'resume' ? 'リストを抽出中...' : '保存状況を確認中...') }
+    pendingCollection.current = operation
+    const current = () => identityEpoch.current.version === epoch && collectionAlive.current && pendingCollection.current === operation && !operation.controller.signal.aborted
+    setGenerating(true)
+    setErrorMsg(null); setErrorHint(null); setWarningMsg(null); setQuotaAction(null)
+    try {
+      let intent = readExtractionIntent(scope)
+      let created = false
+      if (mode === 'new' && !intent) {
+        const response = await readBillingResponse('/api/doyalist/usage', { method: 'GET' }, operation.controller.signal)
+        if (!current()) return
+        const usage = response.ok ? parseCollectionUsage(response.data) : null
+        if (!usage) throw new Error('利用枠を確認できませんでした。時間をおいて再度お試しください。')
+        if (usage.remaining >= 0 && count > usage.remaining) {
+          const msg = usage.remaining === 0 ? `今月の企業生成上限（${usage.limit}社）に達しました。` : `月間上限（${usage.limit}社）を超えます。残り${usage.remaining}社まで生成可能です。`
+          setErrorMsg(msg); setErrorHint(usage.remaining > 0 ? `件数を${usage.remaining}社以下に変更すると、残り枠を利用できます。` : null)
+          setQuotaAction(usage.tier === 'FREE' || usage.tier === 'GUEST' ? 'pricing' : 'contact')
+          toast.error(msg, { id: operation.tid }); return
+        }
+        const claimed = await claimExtractionIntent(scope, count, operation.controller.signal)
+        intent = claimed.intent; created = claimed.created
+      }
+      if (!current()) return
+      if (!intent) { setExtractionIntent(null); setIntentReady(true); toast.dismiss(operation.tid); return }
+      setExtractionIntent(intent)
+      let pid: string | null = null
+      if (created) {
+        const dateStr = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const prepared = await readBillingResponse('/api/doyalist/operations', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operationId: intent.operationId, count: intent.count,
+            project: { name: `${industry}_${region}_${dateStr}`, industry, region, targetSize: size, keywords: searchKeywords() } }),
+        }, operation.controller.signal)
+        if (!current()) return
+        const ready = prepared.data.operation as Record<string, unknown> | undefined
+        if (!prepared.ok || prepared.data.success !== true || ready?.operationId !== intent.operationId || ready?.state !== 'ready' || ready?.count !== intent.count ||
+            typeof ready.projectId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(ready.projectId)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+        pid = ready.projectId
+      }
+      if (mode === 'resume') {
+        // Explicit resume always rechecks the receipt; it cannot recreate a project.
+        const checked = await readCollectionResponse({ method: 'GET' }, operation.controller.signal, '/api/doyalist/operations?operationId=' + intent.operationId)
+        if (!current()) return
+        if (checked.ok && checked.data.state === 'ready' && checked.data.operationId === intent.operationId && checked.data.count === intent.count &&
+            typeof checked.data.projectId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(checked.data.projectId)) pid = checked.data.projectId
+      }
+      const result = pid ? await readCollectionResponse({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId: intent.operationId, projectId: pid, count: intent.count }) }, operation.controller.signal)
+        : await readCollectionResponse(mode === 'cancel' ? { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: intent.operationId }) }
+          : { method: 'GET' }, operation.controller.signal, '/api/doyalist/operations' + (mode === 'cancel' ? '' : '?operationId=' + intent.operationId))
+      if (!current() || readExtractionIntent(scope)?.operationId !== intent.operationId) return
+      const { data } = result
+      if (data.operationId !== intent.operationId || !['missing', 'ready', 'pending', 'cancelling', 'completed', 'failed', 'cancelled', 'busy'].includes(data.state) ||
+          (data.state !== 'missing' && data.count !== intent.count && !(data.state === 'cancelled' && data.count === 0)) ||
+          (data.projectId !== null && (typeof data.projectId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(data.projectId)))) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+      setExtractionState(data.state); setExtractionProject(data.projectId)
+      if (data.state === 'completed') {
+        if (!result.ok || !data.projectId || !validCollectionResult(data, intent.count)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+        setCompanies(data.companies); setSavedListId(data.projectId); setVisibleCount(PAGE_SIZE)
+        if (typeof data.warning === 'string') setWarningMsg(data.warning)
+        await clearExtractionIntent(scope, intent.operationId, operation.controller.signal)
+        if (!current()) return
+        setExtractionIntent(null); setIntentReady(true)
+        toast.success(`${data.generated}社の保存済みリストを確認しました`, { id: operation.tid }); return
+      }
+      if (mode === 'cancel' && ['failed', 'cancelled'].includes(data.state)) {
+        await clearExtractionIntent(scope, intent.operationId, operation.controller.signal)
+        if (!current()) return
+        setExtractionIntent(null); setIntentReady(true); toast.success('前の操作を終了しました', { id: operation.tid }); return
+      }
+      if (data.state === 'failed' && ['no_hits', 'api_error', 'collection_timeout'].includes(data.code)) {
+        setErrorMsg(data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。' : data.code === 'collection_timeout' ? '企業データの取得が時間内に完了しませんでした。時間をおいてお試しください。' : '企業データAPIから応答がありませんでした。時間をおいてお試しください。')
+      }
+      const quota = result.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data.code)
+      if (quota) {
+        setErrorMsg('今月の企業生成枠を超えています。件数と利用枠をご確認ください。')
+        setQuotaAction(data.upgradeUrl === '/doyalist/pricing' ? 'pricing' : data.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
+      }
+      toast.dismiss(operation.tid)
+    } catch (error) {
+      if (!current()) return
+      // 日本語の文だけを出す（「Failed to fetch」などの英語は決まった文にする）
+      const msg = error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : DOYALIST_COLLECTION_UNKNOWN
+      setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
+    } finally {
+      if (current()) { pendingCollection.current = null; setGenerating(false) }
+      operation.controller.abort()
+    }
+  }
+  const handleCancelExtraction = () => {
+    if (cancellationDispatch.current || identityEpoch.current.version !== epoch) return
+    const pending = pendingCollection.current
+    if (pending) {
+      // Client abort does not prove rollback. Preserve the UUID and ask the
+      // server to fence delayed preparation/save before clearing anything.
+      pending.controller.abort(); toast.dismiss(pending.tid)
+      pendingCollection.current = null
+    }
+    cancellationDispatch.current = true
+    void runExtraction('cancel').finally(() => { cancellationDispatch.current = false })
+  }
+  recoveryAction.current = () => { void runExtraction('recover') }
+  useEffect(() => {
+    const actor = session?.user?.id
+    if (status !== 'authenticated' || !actor) { setIntentReady(false); return }
+    const load = () => {
+      try {
+        const intent = readExtractionIntent({ actor })
+        setExtractionIntent(intent); setExtractionState('unknown'); setIntentReady(true)
+        if (intent) recoveryAction.current()
+      } catch { setIntentReady(false); setErrorMsg('保存された抽出情報を確認できません。新しく抽出せずお問い合わせください。') }
+    }
+    load()
+    const sync = (event: StorageEvent) => { if (event.key === null || event.key === 'doyalist-extraction-intent:v1:' + actor) load() }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [session?.user?.id, status])
+  const handleGenerate = () => { void runExtraction('new') }
+
+  const downloadCSV = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=csv`)
+  const downloadExcel = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=excel`)
+
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。抽出中 → 途中の操作 → エラー → 結果 の順に決める
+  const cannotRun = generating || !validCount || !intentReady || Boolean(extractionIntent)
+  const nextStep: NextStepView = (() => {
+    if (generating) return { key: 'working', state: 'working' }
+    if (extractionIntent) {
+      const canResume = extractionState === 'ready' || extractionState === 'busy'
+      return canResume
+        ? { key: 'resume', state: 'error', onClick: () => void runExtraction('resume') }
+        : { key: 'resume', state: 'error', onClick: () => void runExtraction('recover'), actionLabel: '保存状況を確かめる' }
+    }
+    if (errorMsg) {
+      if (quotaAction) return { key: 'limit', state: 'error', href: quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact', actionLabel: quotaAction === 'pricing' ? undefined : '問い合わせる' }
+      if (errorMsg === DOYALIST_COLLECTION_UNKNOWN) return { key: 'error', state: 'error', href: '/doyalist/history', actionLabel: '履歴を見る' }
+      return { key: 'error', state: 'error', onClick: handleGenerate, disabled: cannotRun }
+    }
+    if (companies.length > 0) return { key: 'done', state: 'done', n: companies.length, onClick: () => { downloadCSV() }, disabled: !savedListId }
+    return { key: 'empty', state: 'empty', onClick: handleGenerate, disabled: cannotRun, icon: 'Search' }
+  })()
+
+  const filteredCompanies = useMemo(() => {
+    let list = companies
+    if (filterText.trim()) {
+      const q = filterText.toLowerCase()
+      list = list.filter((c) => {
+        const ed = c.enrichedData || {}
+        return c.name?.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || ed.address?.toLowerCase().includes(q) || ed.representative?.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q)
+      })
+    }
+    // データ有無で絞り込み
+    if (filterHasUrl) list = list.filter((c) => !!c.website)
+    if (filterHasRep) list = list.filter((c) => !!c.enrichedData?.representative)
+    if (filterHasEmployees) list = list.filter((c) => isValidEmployees(c.enrichedData?.employeeCount))
+    // データなしは末尾固定（昇順時も末尾）にする比較関数
+    const parseYear = (v: any): number | null => {
+      const n = parseInt(String(v || ''), 10)
+      return isNaN(n) || n <= 0 ? null : n
+    }
+    const parseEmpCount = (v: any): number | null => {
+      const m = String(v || '').match(/\d+/g)
+      if (!m) return null
+      const max = Math.max(...m.map(Number))
+      return max > 0 ? max : null
+    }
+    const sortWithNullsLast = <T,>(arr: T[], getValue: (x: T) => number | null, desc: boolean): T[] => {
+      return [...arr].sort((a, b) => {
+        const va = getValue(a)
+        const vb = getValue(b)
+        if (va === null && vb === null) return 0
+        if (va === null) return 1   // null は末尾
+        if (vb === null) return -1
+        return desc ? vb - va : va - vb
+      })
+    }
+    switch (sortBy) {
+      case 'name':
+        return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ja'))
+      case 'founded_desc':
+        return sortWithNullsLast(list, (c) => parseYear(c.enrichedData?.foundedYear), true)
+      case 'founded_asc':
+        return sortWithNullsLast(list, (c) => parseYear(c.enrichedData?.foundedYear), false)
+      case 'employees_desc':
+        return sortWithNullsLast(list, (c) => parseEmpCount(c.enrichedData?.employeeCount), true)
+      default:
+        return list
+    }
+  }, [companies, filterText, sortBy, filterHasUrl, filterHasRep, filterHasEmployees])
+
+  const visibleCompanies = filteredCompanies.slice(0, visibleCount)
+  const hasMore = filteredCompanies.length > visibleCount
+  const clearFilters = () => { setFilterText(''); setFilterHasUrl(false); setFilterHasRep(false); setFilterHasEmployees(false); setVisibleCount(PAGE_SIZE) }
+
+  // 新しい見た目: 押せる場所の大きさ（44px）・キーボードの枠・動きを減らす設定（UI 品質 S-51・a11y）
+  const focusRing = ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
+  const tap = ' min-h-11'
+  const calm = ' motion-reduce:animate-none'
+
+  // 新しい見た目では古いロゴのステッカーを出さず、共通の骨組みにする
+  if (status === 'loading') return <ShellLoading />
+
+  if (!session?.user) {
+    return (
+      <div className="flex items-center justify-center p-6 py-16">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-10 max-w-md w-full text-center space-y-5">
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-64 mx-auto" />
+          <p className="text-sm font-medium text-slate-600">AIが営業先リストを自動で作ります</p>
+          <a
+            href={`/auth/signin?callbackUrl=${encodeURIComponent('/doyalist')}`}
+            className="block w-full py-3.5 bg-[#0a1530] text-white font-bold rounded-2xl hover:bg-[#13234d] hover:shadow-xl transition-all"
+          >
+            Googleでログイン
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す
+
+  return (
+    <div className="p-4 lg:p-8 text-slate-800">
+      <Toaster position="top-center" />
+
+      <div className="max-w-7xl mx-auto pb-20">
+        {/* ===== Page Header ===== */}
+        <div className="mb-6 space-y-4">
+            {oneButton ? (
+              <OneButtonBar
+                eyebrow="ドヤリスト"
+                cta={generating ? '企業を抽出しています。このままお待ちください' : '業界・エリア・件数を選んだら、押してください'}
+                label={generating ? '抽出中...' : 'リストを抽出する'}
+                scope="選んだ条件に合う企業を、国の法人データから抽出します。CSV・Excelの書き出しは、抽出のあとにできます。"
+                onRun={handleGenerate}
+                disabled={cannotRun}
+                disabledReason={extractionIntent ? '前の抽出操作の確認が先です。下の案内を確認してください。' : '業界・エリア・件数（1〜10,000）を選ぶと押せます。'}
+                running={generating}
+              />
+            ) : null}
+            {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」を書く（UI 品質 H-3・S-57・S-58） */}
+            <ToolHero
+              title={<>条件を選ぶだけで、<wbr />実在する企業の<wbr />営業リストに</>}
+              lead={<>業界・エリア・規模を選ぶと、<wbr />国の法人データから<wbr />企業を抽出します。<wbr />CSV・Excel で<wbr />そのまま使えます。</>}
+              // 熊のキービジュアル（public/ui-renewal/mascots/doyalist.webp）が置かれるまでは、操作画面の絵を出す
+              art={toolHeroArt('doyalist') ?? '/doyalist/hero.webp'}
+              artAlt=""
+            />
+            <FirstSteps
+              id="doyalist"
+              steps={[
+                { title: '条件を選ぶ', body: '業界・エリア・企業規模を選びます。キーワードは任意です' },
+                { title: '件数を決めて抽出する', body: '1回で最大10,000社まで抽出できます' },
+                { title: 'CSV・Excel で書き出す', body: '絞り込んでから書き出すと、すぐ営業に使えます' },
+              ]}
+            />
+            <ToolNextStep tool="doyalist" view={nextStep} />
+          </div>
+
+        {/* ===== 2-Column Layout ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ===== LEFT: Form (2/3) ===== */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:p-8 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <img src={CHARS.point} alt="" className="w-10 h-10" />
+                <div>
+                  <h2 className="text-base font-bold text-[#0a1530]">どんな企業を探しますか？</h2>
+                  <p className="text-xs text-slate-500">業界・地域・規模を選んでください</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label={<><Sym name="apartment" className="align-middle text-base mr-1" />業界</>} value={industry} onChange={handleIndustryChange} options={INDUSTRIES} />
+                <Field label={<><Sym name="map" className="align-middle text-base mr-1" />エリア</>} value={area} onChange={handleAreaChange} options={AREAS} />
+                <Field label={<><Sym name="groups" className="align-middle text-base mr-1" />企業規模</>} value={size} onChange={setSize} options={SIZES} />
+              </div>
+
+              {/* キーワード + AI変換 */}
+              <div>
+                <label className="block mb-2">
+                    <span className="flex items-center gap-1 text-sm font-bold text-[#0a1530]"><Sym name="search" className="text-base" />キーワード</span>
+                    <span className="mt-0.5 block text-xs font-normal text-slate-500">任意。AIが法人検索の言葉に変換します</span>
+                  </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    aria-label="キーワード（任意）"
+                    value={keywords}
+                    onChange={(e) => handleKeywordChange(e.target.value)}
+                    placeholder="例: SaaS, AI, 営業効率化, 美容、コンサル..."
+                    className="min-w-0 flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); handleExpandKeyword() } }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleExpandKeyword}
+                    disabled={expanding || !keywords.trim()}
+                    className={`min-h-11 px-4 py-3 bg-white text-[#0066ff] border border-[#0066ff]/40 text-xs font-bold rounded-xl hover:bg-blue-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap${focusRing}`}
+                  >
+                    {expanding ? '変換中...' : <><Sym name="smart_toy" className="align-middle text-sm mr-0.5" />AIで変換</>}
+                  </button>
+                </div>
+
+                {/* AI生成タグ */}
+                {aiTags.length > 0 && (
+                  <div className="mt-3 p-3 bg-gradient-to-r from-brand-50 to-brand-100 border border-brand-100 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-black text-brand-600 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
+                      <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiTags.map((tag) => {
+                        const active = activeTags.has(tag)
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            aria-pressed={active}
+                            className={`min-h-11 inline-flex items-center gap-1${focusRing} px-3 py-1.5 rounded-full text-xs font-bold transition-all ${active
+                                ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow'
+                                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+                          >
+                            {(active ? <Check size={14} strokeWidth={2} aria-hidden /> : null)}{tag}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-brand-500 mt-2">
+                      {activeTags.size}個のタグを選択中
+                      {activeTags.size > 0 && ' → これらの語を含む法人を検索します'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {prefectureOptions.length > 0 && (
+                <div>
+                  <label className="block text-sm font-bold text-[#0a1530] mb-2"><Sym name="location_on" className="align-middle text-base mr-1" />都道府県（任意・絞り込み）</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <button type="button" aria-pressed={prefecture === ''} onClick={() => setPrefecture('')} className={`min-h-11${focusRing} py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === '' ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                      全て
+                    </button>
+                    {prefectureOptions.map((p) => (
+                      <button key={p} type="button" aria-pressed={prefecture === p} onClick={() => setPrefecture(p)} className={`min-h-11 px-1${focusRing} py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === p ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* gBizINFO登録率が低い業界の警告 */}
+              {SPARSE_INDUSTRIES.includes(industry) && (
+                <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-xs font-bold text-amber-700 leading-relaxed inline-flex items-start gap-1">
+                    <Sym name="warning" className="text-base" /><strong>「{industry}」業界は国の法人データへの登録が少ない傾向です</strong>
+                  </p>
+                  <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
+                    代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
+                    法人名・住所・法人番号は確実に取得できます。
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <p className="mb-2 flex flex-wrap items-baseline gap-x-2 text-sm font-bold text-[#0a1530]" id="doyalist-count-label">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap"><Sym name="bar_chart" className="text-base" />抽出する件数</span>
+                    <span className="whitespace-nowrap text-xs font-normal text-slate-500">1回最大10,000社</span>
+                  </p>
+                <div className="grid grid-cols-4 gap-2" role="group" aria-labelledby="doyalist-count-label">
+                  {COUNT_OPTIONS.map((c) => (
+                    <button key={c} type="button" aria-pressed={count === c} onClick={() => setCountInput(String(c))} className={`min-h-11 whitespace-nowrap px-0.5${focusRing} py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${count === c ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                      {c.toLocaleString()}社
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-3 block text-xs font-bold text-slate-700" htmlFor="doyalist-custom-count">任意の件数（1〜10,000社）</label>
+                <input
+                  id="doyalist-custom-count"
+                  type="number"
+                  min={1}
+                  max={10000}
+                  step={1}
+                  inputMode="numeric"
+                  value={countInput}
+                  onChange={(event) => setCountInput(event.target.value)}
+                  aria-invalid={!validCount}
+                  aria-describedby={!validCount ? 'doyalist-custom-count-error' : undefined}
+                  className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-[#0066ff] focus:outline-none focus:ring-2 focus:ring-blue-100 aria-[invalid=true]:border-rose-400"
+                />
+                {!validCount && (<p id="doyalist-custom-count-error" role="alert" className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>)}
+                {count >= 500 && (
+                  <p className="text-xs font-medium text-cyan-700 mt-2 inline-flex items-center gap-1">
+                    <Sym name="schedule" className="text-sm" />{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
+                  </p>
+                )}
+                {count >= 5000 && (
+                  <p className="text-xs font-medium text-amber-700 mt-1 inline-flex items-center gap-1">
+                    <Sym name="warning" className="text-sm" />大量抽出時はブラウザを閉じずにお待ちください
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating || !validCount || !intentReady || Boolean(extractionIntent)}
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {generating ? (
+                  <><img src={CHARS.working} alt="" className={`w-6 h-6 animate-spin${calm}`} />抽出中...</>
+                ) : (
+                  <><img src={CHARS.jump} alt="" className="w-6 h-6" />リストを抽出する</>
+                )}
+              </button>
+
+              {extractionIntent && (
+                <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-bold">前の抽出操作を確認してください（{extractionIntent.count}社）</p>
+                  <p className="mt-1">{extractionState === 'ready' ? 'プロジェクトは保存済みです。続けると、この操作の企業抽出を開始します。' : extractionState === 'pending' ? '抽出処理が進行中です。新しく抽出せず、保存状況を確認してください。' : extractionState === 'cancelling' ? '終了処理中です。処理の停止が確認できるまでお待ちください。' : extractionState === 'busy' ? '別の抽出が利用枠を一時確保しています。完了後にこの操作を続けられます。' : extractionState === 'failed' || extractionState === 'cancelled' ? 'この抽出は終了しました。操作を終了すると、新しい条件で抽出できます。' : '通信が途切れても、保存状況を確認してから次の操作に進めます。'}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button disabled={generating} onClick={() => void runExtraction('recover')} className={`rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50${tap}${focusRing}`}>保存状況を確認</button>
+                    {(extractionState === 'ready' || extractionState === 'busy') && <button disabled={generating} onClick={() => void runExtraction('resume')} className={`rounded-lg bg-cyan-700 px-3 py-2 font-bold text-white disabled:opacity-50${tap}${focusRing}`}>この抽出を続ける</button>}
+                    <button disabled={generating && cancellationDispatch.current} onClick={handleCancelExtraction} className={`rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50${tap}${focusRing}`}>この操作を終了</button>
+                    {extractionProject && <Link href="/doyalist/history" className={`px-3 py-2 underline inline-flex min-h-11 items-center${focusRing}`}>保存済みの履歴を見る</Link>}
+                  </div>
+                </div>
+              )}
+
+              {warningMsg && (
+                <div role="status" className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
+                  <Sym name="info" className="text-amber-600 text-xl flex-shrink-0" />
+                  <p className="flex-1 min-w-0 text-sm font-bold text-amber-900">{warningMsg}</p>
+                  <button type="button" onClick={() => setWarningMsg(null)} className={`-m-2 inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-amber-700 hover:text-amber-900${focusRing}`} aria-label="通知を閉じる"><X size={18} aria-hidden /></button>
+                </div>
+              )}
+              {/* エラー表示（toastだけだと見落としやすいので持続表示） */}
+              {/* 新しい見た目: 何が起きたか・どうすればよいか・次の操作を1つ（UI 品質 S-20）。文はこの画面で決めた日本語だけ */}
+              {errorMsg && (
+                <div className="mt-3 space-y-2">
+                  <ErrorNotice
+                    what={errorMsg}
+                    how={errorHint ?? (quotaAction === 'pricing' ? '来月まで待つか、料金プランを見直すと続けて抽出できます。'
+                      : quotaAction === 'contact' ? '追加の枠は、お問い合わせからご相談ください。'
+                      : errorMsg === DOYALIST_COLLECTION_UNKNOWN ? '同じ条件で何度も抽出せず、先に履歴を確かめてください。'
+                      : '条件を見直すか、時間をおいてもう一度お試しください。')}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {quotaAction ? (
+                      <Link href={quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
+                        {quotaAction === 'pricing' ? '料金プランを見る' : '追加枠を相談する'}
+                      </Link>
+                    ) : errorMsg === DOYALIST_COLLECTION_UNKNOWN ? (
+                      <Link href="/doyalist/history" className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>保存済みの履歴を見る</Link>
+                    ) : null}
+                    <button type="button" onClick={() => { setErrorMsg(null); setErrorHint(null); setQuotaAction(null) }} className={`inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-100${focusRing}`}>閉じる</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ===== RIGHT: Preview Panel (1/3) ===== */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:sticky lg:top-24">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <Sym name="search" className="text-xl text-slate-500" />
+                <h3 className="text-sm font-bold text-[#0a1530]">抽出プレビュー</h3>
+              </div>
+
+              <div className="py-5 text-center border-b border-slate-100">
+                <p className="text-xs font-bold text-slate-500 mb-1">最大取得件数</p>
+                <p className="text-4xl font-black text-[#0a1530]">{count.toLocaleString()}<span className="text-base font-bold text-slate-500 ml-1">社</span></p>
+
+                {/* 実数推定 */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-500">国の法人データでのキーワードの該当数（参考）</p>
+                  {estimateLoading ? (
+                    <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
+                  ) : estimatedCount !== null ? (
+                    <>
+                      <p className={`text-2xl font-black mt-1 ${
+                        estimatedCount >= count ? 'text-emerald-600' : estimateIsApprox ? 'text-slate-700' : 'text-amber-600'
+                      }`}>
+                        {estimateIsApprox ? '少なくとも ' : ''}
+                        <CountUp value={estimatedCount} />
+                        <span className="text-sm font-bold ml-0.5">社</span>
+                      </p>
+                      {!estimateIsApprox && estimatedCount < count && (
+                        <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
+                          <Sym name="warning" className="text-xs" />キーワード検索の参考件数が指定件数を下回っています。業種・規模などで絞り込んだ実際の取得数とは異なります
+                        </p>
+                      )}
+                      {estimateNote && (
+                        <p className="text-[10px] text-slate-400 mt-1">{estimateNote}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">{estimateNote || '推定不可'}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="py-4 space-y-2">
+                <p className="text-xs font-bold text-slate-700 mb-2 inline-flex items-center gap-1"><Sym name="checklist" className="text-sm" />取得できる情報</p>
+                {PREVIEW_FIELDS.map((f) => (
+                  <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
+                    <span className={`mt-0.5 flex-shrink-0 ${f.always ? 'text-emerald-500' : 'text-cyan-500'}`}>{f.always ? <Check size={12} strokeWidth={2.5} aria-hidden /> : <Circle size={12} strokeWidth={2} aria-hidden />}</span>
+                    <span className="flex-1">{f.label}</span>
+                    {!f.always && <span className="text-[9px] text-slate-400 whitespace-nowrap">登録時のみ</span>}
+                  </div>
+                ))}
+                <p className="text-[10px] text-slate-400 pt-2 mt-2 border-t border-slate-100 leading-relaxed">
+                  ※ <Circle size={10} strokeWidth={2.5} aria-hidden className="inline-block align-[-1px] text-cyan-500" /> の項目は、国の法人データへの登録状況によって取得できないことがあります（株式会社未上場の小規模法人など）
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Sym name="cell_tower" className="text-base" /><span>国の法人データ（経済産業省）</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Sym name="download" className="text-base" /><span>CSV/Excelダウンロード可</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== Loading ===== */}
+        {generating && companies.length === 0 && (
+          <div className="mt-6 bg-white rounded-3xl shadow-lg border border-slate-200 p-10 text-center space-y-4" role="status">
+            <img src={CHARS.thinking} alt="" className={`w-28 h-28 mx-auto animate-bounce${calm}`} />
+            <p className="text-lg font-bold text-[#0a1530]">クマが企業を探しています...</p>
+            <p className="text-xs font-medium text-slate-500">通常10〜60秒ほどかかります</p>
+          </div>
+        )}
+
+        {/* ===== 空の状態（UI 品質 S-17） ===== */}
+        {!generating && companies.length === 0 && (
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-white">
+            <DsEmptyState
+              title="まだリストがありません"
+              description="上で条件を選び、「リストを抽出する」を押すと、ここに企業が並びます。"
+              art="/doyalist/empty-lists.webp"
+              action={<button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>条件を選ぶ</button>}
+            />
+          </div>
+        )}
+
+        {/* ===== Results ===== */}
+        {companies.length > 0 && (
+          <div className="mt-6 bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <img src={CHARS.success} alt="" className={`w-12 h-12 animate-bounce${calm}`} />
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-[#0a1530]">
+                    <CountUp value={companies.length} duration={1500} />社できました
+                    <Sym name="auto_awesome" className={`ml-2 inline-block animate-pulse text-xl align-middle${calm}`} />
+                  </h2>
+                  <p className="text-xs font-medium text-slate-500">
+                    {companies.length < count ? `指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）` : `ダウンロードで保存できます`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={downloadCSV} aria-label="CSVでダウンロード" className={`min-h-11${focusRing} inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all`}><Sym name="download" className="text-base" />CSV</button>
+                <button type="button" onClick={downloadExcel} aria-label="Excelでダウンロード" className={`min-h-11${focusRing} inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all`}><Sym name="bar_chart" className="text-base" />Excel</button>
+              </div>
+            </div>
+
+            <div className="p-4 border-b border-slate-200 space-y-3">
+              <div className="flex gap-2 flex-wrap items-center">
+                <input
+                  type="text"
+                  value={filterText}
+                  onChange={(e) => { setFilterText(e.target.value); setVisibleCount(PAGE_SIZE) }}
+                  placeholder="名前・業種・住所で絞り込み"
+                  aria-label="名前・業種・住所で絞り込み"
+                  className="min-h-11 basis-full sm:basis-auto flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                />
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="並び替え" className="min-h-11 min-w-0 max-w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]">
+                  {SORT_OPTIONS.map((s) => <option key={s.v} value={s.v}>並び替え: {s.l}</option>)}
+                </select>
+                <span className="text-xs font-medium text-slate-500 whitespace-nowrap" aria-live="polite">{filteredCompanies.length}社表示中</span>
+              </div>
+              {/* データ有無フィルタ（チップ） */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-[11px] font-bold text-slate-500">絞り込み:</span>
+                {[
+                  { state: filterHasUrl, set: setFilterHasUrl, icon: 'language', label: '公式URLあり', count: companies.filter(c => !!c.website).length },
+                  { state: filterHasRep, set: setFilterHasRep, icon: 'person', label: '代表者名あり', count: companies.filter(c => !!c.enrichedData?.representative).length },
+                  { state: filterHasEmployees, set: setFilterHasEmployees, icon: 'groups', label: '従業員数あり', count: companies.filter(c => isValidEmployees(c.enrichedData?.employeeCount)).length },
+                ].map((f, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-pressed={f.state}
+                    onClick={() => { f.set(!f.state); setVisibleCount(PAGE_SIZE) }}
+                    className={`min-h-11 whitespace-nowrap${focusRing} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${f.state
+                        ? 'bg-cyan-500 text-white border-cyan-500 shadow shadow-cyan-500/20'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'}`}
+                  >
+                    <span className="inline-flex items-center gap-1"><Sym name={f.icon} className="text-sm" />{f.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
+                  </button>
+                ))}
+                {(filterHasUrl || filterHasRep || filterHasEmployees) && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilterHasUrl(false); setFilterHasRep(false); setFilterHasEmployees(false); setVisibleCount(PAGE_SIZE) }}
+                    className={`min-h-11 px-2 text-xs text-slate-500 hover:text-rose-500 underline${focusRing}`}
+                  >
+                    フィルタ解除
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 新しい見た目: 絞り込みで0社になったとき。絵は出さず、条件を消す操作を1つ（UI 品質 S-17） */}
+            {(filteredCompanies.length === 0) && (
+              <DsEmptyState
+                kind="no-results"
+                title="条件に合う企業はありません"
+                description="絞り込みの言葉やチップを外すと、抽出した企業がまた並びます。"
+                action={<button type="button" onClick={clearFilters} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>絞り込みをクリア</button>}
+              />
+            )}
+            <div className="divide-y divide-slate-100">
+              {visibleCompanies.map((c, i) => {
+                const ed = c.enrichedData || {}
+                // gBizINFOの直リンクは仕様変更で機能しないため、Google検索で代替
+                // 「{企業名} 法人番号 {番号}」で検索 → 公式サイト・gBizINFO・国税庁等が上位ヒット
+                const gbizUrl = ed.corporateNumber
+                  ? `https://www.google.com/search?q=${encodeURIComponent(c.name + ' 法人番号 ' + ed.corporateNumber)}`
+                  : null
+                return (
+                  <div key={c.id || i} className="p-4 sm:p-5 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0a1530] flex items-center justify-center text-white font-bold text-sm shadow">{i + 1}</div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {/* 企業名 + URL登録バッジ */}
+                        <div className="flex items-start gap-2 flex-wrap">
+                          {gbizUrl ? (
+                            <a
+                              href={gbizUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`group inline-flex items-center gap-1.5 min-w-0 max-w-full rounded${focusRing}`}
+                              title="Google検索で企業情報を確認"
+                            >
+                              <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors min-w-0 break-words">{c.name}</h3>
+                              <Sym name="arrow_outward" className="text-base text-slate-300 group-hover:text-cyan-500 transition-colors" />
+                            </a>
+                          ) : (
+                            <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
+                          )}
+                          {/* URL登録バッジ */}
+                          {c.website ? (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-md leading-tight" title="公式URL登録あり">
+                              <Check size={10} strokeWidth={2.5} aria-hidden />URL登録
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-md leading-tight" title="国の法人データにURLの登録なし">
+                              URL未登録
+                            </span>
+                          )}
+                          {/* 代表者情報バッジ */}
+                          {ed.representative && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
+                              <Check size={10} strokeWidth={2.5} aria-hidden />代表者
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          {isValidIndustry(c.industry) && <InfoRow icon="apartment" label="業種" value={c.industry!} />}
+                          {(ed.address || c.region) && <InfoRow icon="location_on" label="所在地" value={ed.address || c.region!} />}
+                          {ed.representative && <InfoRow icon="person" label="代表者" value={ed.representative} />}
+                          {isValidEmployees(ed.employeeCount) && <InfoRow icon="groups" label="従業員数" value={`${ed.employeeCount} 名`} />}
+                          {ed.capital && <InfoRow icon="payments" label="資本金" value={formatCapital(ed.capital)} />}
+                          {ed.foundedYear && <InfoRow icon="event" label="設立年" value={`${ed.foundedYear}年`} />}
+                        </div>
+                        {(ed.businessSummary || c.description) && (
+                          <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg">
+                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><Sym name="description" className="text-sm" />事業概要</p>
+                            <p className="text-sm text-slate-700 leading-relaxed">{ed.businessSummary || c.description}</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {c.website ? (
+                            <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors group">
+                              <Sym name="language" className="text-sm" />公式サイト
+                              <Sym name="arrow_outward" className="text-sm group-hover:translate-x-0.5 transition-transform" />
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="国の法人データに公式URLが登録されていません">
+                              <Sym name="language" className="text-sm" />登録URLなし
+                            </span>
+                          )}
+                          {gbizUrl && (
+                            <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors group" title="Google検索で企業情報を調べる">
+                              <Sym name="search" className="text-sm" />企業情報を検索
+                              <Sym name="arrow_outward" className="text-sm group-hover:translate-x-0.5 transition-transform" />
+                            </a>
+                          )}
+                          {ed.corporateNumber && (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-[11px] font-mono rounded-lg" title="法人番号">
+                              #{ed.corporateNumber}
+                            </span>
+                          )}
+                        </div>
+                        <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
+                          <span className="inline-flex items-center gap-0.5"><Sym name="cell_tower" className="text-xs" />情報ソース:</span>
+                          <span>{c.source === 'gbizinfo' ? '国の法人データ（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? '国の法人データ + 法人番号公表サイト' : c.source || '不明'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {hasMore && (
+              <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
+                <button type="button" onClick={() => setVisibleCount(visibleCount + PAGE_SIZE)} className={`min-h-11 [text-wrap:balance]${focusRing} px-6 py-2.5 bg-white text-[#0a1530] font-bold text-sm rounded-xl border-2 border-[#0a1530] hover:bg-[#0a1530] hover:text-white transition-all`}>
+                  さらに{Math.min(PAGE_SIZE, filteredCompanies.length - visibleCount)}社を表示（残り{filteredCompanies.length - visibleCount}社）
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 数値をスムーズにカウントアップ表示するコンポーネント
+ * - easeOutCubic で最初速く・最後ゆっくりに
+ * - 値が変わるたびに前の値からアニメーション
+ */
+function CountUp({ value, duration = 1200 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    const startValue = display
+    const diff = value - startValue
+    if (diff === 0) return
+    const startTime = performance.now()
+    let rafId: number
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime
+      const t = Math.min(1, elapsed / duration)
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      const current = Math.round(startValue + diff * eased)
+      setDisplay(current)
+      if (t < 1) {
+        rafId = requestAnimationFrame(tick)
+      } else {
+        setDisplay(value)
+      }
+    }
+    rafId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, duration])
+  return <span className="tabular-nums">{display.toLocaleString()}</span>
+}
+
+// 業種が表示に適しているか（数値コードや「指定なし」等は除外）
+function isValidIndustry(v: string | null | undefined): boolean {
+  if (!v) return false
+  const s = String(v).trim()
+  if (!s || s === '指定なし' || /^\d+$/.test(s)) return false
+  return true
+}
+// 従業員数が実在データかを判定
+function isValidEmployees(v: string | number | null | undefined): boolean {
+  if (v == null) return false
+  const s = String(v).trim()
+  if (!s || s === '指定なし') return false
+  // 数字が1つでも含まれていればOK
+  return /\d/.test(s)
+}
+
+// 資本金（円）を万円/百万円/億円表記に整形
+function formatCapital(v: string | number): string {
+  const n = typeof v === 'number' ? v : parseInt(String(v).replace(/[^\d]/g, ''), 10)
+  if (!Number.isFinite(n) || n <= 0) return String(v)
+  if (n >= 100000000) return `${(n / 100000000).toLocaleString(undefined, { maximumFractionDigits: 1 })}億円`
+  if (n >= 10000) return `${(n / 10000).toLocaleString()}万円`
+  return `${n.toLocaleString()}円`
+}
+
+function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-1.5">
+      <Sym name={icon} className="flex-shrink-0 text-slate-400 text-base" />
+      <div className="min-w-0 flex-1">
+        <span className="text-slate-400 mr-1">{label}:</span>
+        <span className="text-[#0a1530] font-medium">{value}</span>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, options }: { label: ReactNode; value: string; onChange: (v: string) => void; options: readonly string[] }) {
+  return (
+    <div>
+      <label className="block text-sm font-bold text-[#0a1530] mb-2">{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 cursor-pointer">
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  )
+}

@@ -14,7 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 import { THUMBNAIL_STORAGE_MARKER, signedInterviewThumbnailUrl, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
-import { claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
+import { claimThumbnailAutoAttempt, claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
 import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -205,11 +205,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     let articleContent = ''
     let articleTitle = ''
     let force = false
+    let auto = false
     try {
       const body = await req.json()
       articleContent = typeof body?.articleContent === 'string' ? body.articleContent.slice(0, 2000) : ''
       articleTitle = typeof body?.articleTitle === 'string' ? body.articleTitle.slice(0, 200) : ''
       force = body?.force === true
+      // 編集画面を開いたときの自動生成（利用者が押していない）。force とは併用しない。
+      auto = body?.auto === true && !force
     } catch {
       // ボディなしの場合は無視
     }
@@ -241,6 +244,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (project.thumbnailUrl && !force) {
       return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, project.thumbnailUrl, project.updatedAt) })
     }
+    // ゲスト（未ログイン）には自動で作らない。ボタンを押したときだけ作る。
+    if (auto && !userId) {
+      return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
+    }
     const token = await claimThumbnailLease(id)
     lease = { id, token }
     // A concurrent request may have finished between the first read and the lease.
@@ -253,6 +260,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (current.thumbnailUrl && !force) {
       return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, current.thumbnailUrl, current.updatedAt) })
     }
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'APIキーが設定されていません' }, { status: 500 })
+    }
+
     // The first image belongs to the project. Explicit regeneration spends one
     // shared manual AI-edit credit before reaching the paid image provider.
     if (current.thumbnailUrl && force) {
@@ -260,10 +272,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }
-
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'APIキーが設定されていません' }, { status: 500 })
+    // 自動生成は、利用枠を先に確かめてから、1件につき1回だけ試す（2026-10-19 原価見直し）。
+    // 枠は生成に成功したときだけ消費し、失敗したら finally で戻す。試した記録は失敗しても残す。
+    if (auto) {
+      const admission = await claimAuxBudget({ userId, guestId, plan, projectId: id })
+      if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
+      auxClaim = admission.claim
+      if (!await claimThumbnailAutoAttempt(id)) {
+        return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
+      }
     }
 
     // 記事内容・タイトルがなければDBから最新ドラフトまたは文字起こしを取得

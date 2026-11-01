@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T17:46:15.382595+00:00",
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "a7ee0fdfc03adaebf50b4a0e7fcd20f1969b217f818cb98e42ace5da395f2659"
+  },
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "screenshots": [
+    "kintai-settings-native-1280.png",
+    "kintai-settings-native-390.png",
+    "kintai-settings-native-mobile-dialog.png"
+  ],
+  "observations": [
+    "Desktop and390px mobile no horizontal overflow; night8h and day8h rendered",
+    "Night preview22:00-翌日06:00勤務8時間 omits zero-length break",
+    "Synthetic modal fits viewport; Material Symbols font is absent in standalone fixture, so icon rendering is not production verification"
+  ],
+  "scope": "Visual inspection of actual TSX with synthetic HTTP and compiled CSS only, not authenticated production E2E."
+}

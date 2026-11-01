@@ -23,7 +23,7 @@ export function parseTimesheetQuery(params: { month?: string | string[]; cursor?
 }
 
 export async function readTimesheet(db: Prisma.TransactionClient, userId: string, workspaceSlug: string, query: ReturnType<typeof parseTimesheetQuery>) {
-  const member = await db.promaneMember.findFirst({ where: { userId, isActive: true, workspace: { slug: workspaceSlug } }, select: { id: true, workspaceId: true } })
+  const member = await db.promaneMember.findFirst({ where: { userId, isActive: true, role: { in: ['owner', 'admin', 'member', 'guest'] }, workspace: { slug: workspaceSlug } }, select: { id: true, workspaceId: true } })
   if (!member) return null
   if (query.cursor && query.cursor.memberId !== member.id) throw new Error('Invalid cursor')
   const where = { memberId: member.id, ...(query.range ? { date: query.range } : {}) }
@@ -39,5 +39,5 @@ export async function readTimesheet(db: Prisma.TransactionClient, userId: string
   const last = entries.at(-1)
   const nextCursor = rows.length > 50 && last ? Buffer.from(JSON.stringify({ v: 1, month: query.month, id: last.id, date: last.date.toISOString(), memberId: member.id })).toString('base64url') : null
   const projects = await db.promaneProject.findMany({ where: { workspaceId: member.workspaceId }, select: { id: true, name: true, tasks: { select: { id: true, title: true } } }, orderBy: { name: 'asc' } })
-  return { memberId: member.id, entries, projects, nextCursor, totalCount: totals._count._all, totalMinutes: totals._sum.duration ?? 0 }
+  return { workspaceId: member.workspaceId, memberId: member.id, entries, projects, nextCursor, totalCount: totals._count._all, totalMinutes: totals._sum.duration ?? 0 }
 }

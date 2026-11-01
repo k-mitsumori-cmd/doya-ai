@@ -1,0 +1,206 @@
+// 実行: npx tsx --test src/lib/notice/notice.test.ts
+// ドヤくんの知らせの決まり（順番・作業中・once・旗）の回帰テスト。DB・ネットワーク・画面には触れない。
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { EMPTY_QUEUE, allowedAtLevel, closeNotice, dropBandNotices, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeKind } from './queue'
+import { addSeen, parseSeen, seenKey, SEEN_MAX } from './seen'
+import { decideGuidePopups, guidePopupsRollout } from './flag'
+import { activeAnnouncements, newToolIds, type Announcement } from './announcements'
+
+const n = (id: string, kind: NoticeKind, once = false): Notice => ({ id, kind, once, eyebrow: id, title: id })
+const none = new Set<string>()
+
+test('同時に来たら エラー → 承認待ち → 新機能 → ヒント の順に1つずつ出す', () => {
+  let s = EMPTY_QUEUE
+  for (const x of [n('h', 'hint'), n('f', 'feature'), n('a', 'approval'), n('e', 'error')]) s = enqueueNotice(s, x, none)
+  const order: string[] = []
+  for (;;) {
+    s = showNextNotice(s, false)
+    if (!s.current) break
+    order.push(s.current.id)
+    s = closeNotice(s).state
+  }
+  assert.deepEqual(order, ['e', 'a', 'f', 'h'])
+})
+
+test('表示中は次を出さない（同時に1つだけ）', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, n('f', 'feature'), none), false)
+  s = enqueueNotice(s, n('h', 'hint'), none)
+  assert.equal(showNextNotice(s, false).current?.id, 'f')
+})
+
+test('エラーは、表示中のヒントより先に出る（ヒントは列に戻る）', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, n('h', 'hint'), none), false)
+  s = enqueueNotice(s, n('e', 'error'), none)
+  assert.equal(s.current, null)
+  s = showNextNotice(s, false)
+  assert.equal(s.current?.id, 'e')
+  assert.deepEqual(s.queue.map((q) => q.id), ['h'])
+})
+
+test('作業中はエラーだけを出し、表示中のヒントは列に戻す', () => {
+  let s = enqueueNotice(enqueueNotice(EMPTY_QUEUE, n('h', 'hint'), none), n('f', 'feature'), none)
+  assert.equal(showNextNotice(s, true).current, null)
+  s = enqueueNotice(s, n('e', 'error'), none)
+  assert.equal(showNextNotice(s, true).current?.id, 'e')
+  const shown = showNextNotice(enqueueNotice(EMPTY_QUEUE, n('h', 'hint'), none), false)
+  assert.equal(pauseNotice(shown).current, null)
+  assert.deepEqual(pauseNotice(shown).queue.map((q) => q.id), ['h'])
+})
+
+test('見たことがある once の知らせと、同じ id の知らせは足さない', () => {
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('w', 'hint', true), new Set(['w'])).queue.length, 0)
+  const s = enqueueNotice(EMPTY_QUEUE, n('w', 'hint', true), none)
+  assert.equal(enqueueNotice(s, n('w', 'hint', true), none).queue.length, 1)
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('e', 'error'), new Set(['e'])).queue.length, 1)
+})
+
+test('見た記録: ユーザーごとのキー・壊れた値は空・上限で古いものを捨てる', () => {
+  assert.notEqual(seenKey('u1'), seenKey('u2'))
+  assert.deepEqual(parseSeen('not json'), [])
+  assert.deepEqual(parseSeen('{"a":1}'), [])
+  assert.deepEqual(parseSeen('["a",1,"b"]'), ['a', 'b'])
+  let list: string[] = []
+  for (let i = 0; i < SEEN_MAX + 5; i++) list = addSeen(list, `id${i}`)
+  assert.equal(list.length, SEEN_MAX)
+  assert.equal(list[0], 'id5')
+  assert.deepEqual(addSeen(['a', 'b'], 'a'), ['b', 'a'])
+})
+
+test('旗: 既定は off。preview は許可した人だけ、all は全員', () => {
+  // 本番で GUIDE_POPUPS_ROLLOUT を入れても通るよう、この確かめの間だけ環境変数を外す（統括の指摘 2026-10-26。round9 の問い合わせチャットと同じ）
+  const saved = process.env.GUIDE_POPUPS_ROLLOUT
+  delete process.env.GUIDE_POPUPS_ROLLOUT
+  try {
+    assert.equal(guidePopupsRollout(undefined), 'off')
+    assert.equal(guidePopupsRollout(), 'off')
+  } finally {
+    if (saved === undefined) delete process.env.GUIDE_POPUPS_ROLLOUT
+    else process.env.GUIDE_POPUPS_ROLLOUT = saved
+  }
+  assert.equal(guidePopupsRollout(' ALL '), 'all')
+  assert.equal(guidePopupsRollout('yes'), 'off')
+  assert.equal(decideGuidePopups({ rollout: 'off', email: 'a@x.jp', allow: ['a@x.jp'] }), false)
+  assert.equal(decideGuidePopups({ rollout: 'preview', email: 'a@x.jp', allow: ['a@x.jp'] }), true)
+  assert.equal(decideGuidePopups({ rollout: 'preview', email: 'b@x.jp', allow: ['a@x.jp'] }), false)
+  assert.equal(decideGuidePopups({ rollout: 'all', email: null, allow: [] }), true)
+})
+
+test('知らせの量: 少なめは承認待ちとエラーだけ、エラーだけはエラーだけ。知らない値はふつう', () => {
+  assert.equal(parseNoticeLevel('x'), 'normal')
+  assert.equal(parseNoticeLevel('less'), 'less')
+  assert.deepEqual((['error', 'approval', 'feature', 'hint'] as NoticeKind[]).filter((k) => allowedAtLevel(k, 'less')), ['error', 'approval'])
+  assert.deepEqual((['error', 'approval', 'feature', 'hint'] as NoticeKind[]).filter((k) => allowedAtLevel(k, 'errors')), ['error'])
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('h', 'hint'), none, 'less').queue.length, 0)
+  assert.equal(enqueueNotice(EMPTY_QUEUE, n('e', 'error'), none, 'errors').queue.length, 1)
+})
+
+test('新機能: お知らせは30日、メニューの札は7日で消える', () => {
+  const list: Announcement[] = [{ id: 'a', date: '2026-10-01', title: 't', body: 'b', toolId: 'quote' }]
+  const at = (d: string) => new Date(`${d}T12:00:00+09:00`)
+  assert.equal(activeAnnouncements(at('2026-09-30'), list).length, 0)
+  assert.equal(activeAnnouncements(at('2026-10-30'), list).length, 1)
+  assert.equal(activeAnnouncements(at('2026-10-31'), list).length, 0)
+  assert.ok(newToolIds(at('2026-10-07'), list).has('quote'))
+  assert.equal(newToolIds(at('2026-10-08'), list).size, 0)
+})
+
+test('離れる前の確認: 別の画面へ移るリンクだけを数える', async () => {
+  const { isLeavingLink, countsAsDraft, shouldNotifyFinished } = await import('./leave')
+  const o = 'https://doya-ai.example'
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote' }), true)
+  assert.equal(isLeavingLink({ href: '/quote?x=1', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: '#top', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote', target: '_blank' }), false)
+  assert.equal(isLeavingLink({ href: '/home', origin: o, currentPath: '/quote', modifier: true }), false)
+  assert.equal(isLeavingLink({ href: 'https://other.example/x', origin: o, currentPath: '/quote' }), false)
+  assert.equal(isLeavingLink({ href: 'mailto:a@b.jp', origin: o, currentPath: '/quote' }), false)
+  assert.equal(countsAsDraft({ tagName: 'TEXTAREA', inDialog: false, ignored: false }), true)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'search', inDialog: false, ignored: false }), false)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'text', inDialog: true, ignored: false }), false)
+  assert.equal(countsAsDraft({ tagName: 'INPUT', type: 'url', inDialog: false, ignored: false }), true)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 8000, ok: true }), true)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/quote', ms: 8000, ok: true }), false)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 2000, ok: true }), false)
+  assert.equal(shouldNotifyFinished({ startPath: '/quote', nowPath: '/home', ms: 8000, ok: false }), false)
+})
+
+test('成果物の記録: 3件まで・同じものは先頭へ・表示名は残さない・形の違う id は捨てる・1日より古いものは使わない・行き先の形を確かめる', async () => {
+  const { addArtifact, parseArtifacts, freshestArtifact, slideProjectPath, ARTIFACT_FRESH_MS } = await import('./artifacts')
+  const id = (n: number) => `ck${String(n).padStart(20, '0')}`
+  let list = addArtifact([], { kind: 'quote', id: id(1), at: 1 })
+  for (let i = 2; i <= 5; i++) list = addArtifact(list, { kind: 'quote', id: id(i), at: i, title: '株式会社サンプル様' } as never)
+  assert.equal(list.length, 3)
+  assert.equal(list[0].id, id(5))
+  assert.equal('title' in list[0], false)
+  assert.equal('title' in parseArtifacts(JSON.stringify([{ kind: 'quote', id: id(1), at: 1, title: '株式会社サンプル様' }]))[0], false)
+  list = addArtifact(list, { kind: 'quote', id: id(3), at: 9 })
+  assert.equal(list[0].id, id(3))
+  assert.equal(list.length, 3)
+  assert.equal(addArtifact([], { kind: 'quote', id: '../evil', at: 1 }).length, 0)
+  assert.deepEqual(parseArtifacts('[{"kind":"quote","id":"bad id","at":1},{"kind":"seo","id":"' + id(1) + '","at":1}]'), [])
+  const now = 10 * ARTIFACT_FRESH_MS
+  assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - ARTIFACT_FRESH_MS - 1 }], 'quote', now), null)
+  assert.equal(freshestArtifact([{ kind: 'quote', id: id(1), at: now - 1000 }], 'quote', now)?.id, id(1))
+  assert.equal(slideProjectPath(id(1)), `/doyaslide/${id(1)}?generate=1`)
+  // 同じ見積書から前に作った資料を開くときは、自動で生成しない（?generate=1 を付けない）
+  assert.equal(slideProjectPath(id(1), false), `/doyaslide/${id(1)}`)
+  assert.equal(slideProjectPath('//evil.example', false), null)
+  for (const bad of ['//evil.example', 'https://evil.example', '/\\evil', 'javascript:alert(1)', 123, null]) assert.equal(slideProjectPath(bad), null)
+})
+
+// ---- 1日1つまでに間引く知らせ（2026-10-27 統括の本番の確認） ----
+const paced = (id: string, kind: NoticeKind = 'hint'): Notice => ({ ...n(id, kind, true), paced: true })
+
+test('間引く知らせ: その日にまだ出していなければ、ふつうに出す', () => {
+  const s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, false)
+  assert.equal(s.current?.id, 'tool-intro:a')
+})
+
+test('間引く知らせ: その日に出していたら、出さずに「お知らせ」の列へ移す。ほかの知らせは出す', () => {
+  let s = EMPTY_QUEUE
+  for (const x of [paced('tool-intro:a'), paced('feat:b', 'feature'), n('e', 'error')]) s = enqueueNotice(s, x, none)
+  s = showNextNotice(s, false, true)
+  assert.equal(s.current?.id, 'e')
+  assert.deepEqual((s.held ?? []).map((q) => q.id).sort(), ['feat:b', 'tool-intro:a'])
+  s = showNextNotice(closeNotice(s).state, false, true)
+  assert.equal(s.current, null)
+  assert.equal(s.held?.length, 2)
+})
+
+test('間引く知らせ: 「お知らせ」の列にあるものは、同じ id をもう一度足さない', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, true)
+  s = enqueueNotice(s, paced('tool-intro:a'), none)
+  assert.equal(s.queue.length, 0)
+  assert.equal(s.held?.length, 1)
+})
+
+test('間引く知らせ: 「お知らせ」から開くと、その日に出していても出る', () => {
+  let s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), false, true)
+  s = openHeldNotice(s, 'tool-intro:a')
+  assert.equal(s.current?.id, 'tool-intro:a')
+  assert.equal(s.current?.paced, false)
+  assert.equal(s.held?.length, 0)
+  assert.equal(openHeldNotice(s, '').current?.id, 'tool-intro:a')
+})
+
+test('間引く知らせ: 作業中は列に残し、終わってから決まりを当てる', () => {
+  const s = showNextNotice(enqueueNotice(EMPTY_QUEUE, paced('tool-intro:a'), none), true, false)
+  assert.equal(s.current, null)
+  assert.equal(s.queue.length, 1)
+})
+
+test('間引く知らせの「日」は日本時間で数える', () => {
+  assert.equal(noticeDay(new Date('2026-10-27T14:59:00Z')), '2026-10-27')
+  assert.equal(noticeDay(new Date('2026-10-27T15:00:00Z')), '2026-10-28')
+})
+
+// ---- 帯がある画面では、ツールの「できること」のカードを出さない（2026-10-27 統括の決定・案 a） ----
+test('帯がある画面では、hideWithBand の知らせを列から外す。ほかの知らせと表示中のものは残す', () => {
+  const intro: Notice = { ...n('tool-intro:quote', 'hint', true), hideWithBand: true }
+  let s = enqueueNotice(enqueueNotice(EMPTY_QUEUE, intro, none), n('f', 'feature'), none)
+  assert.deepEqual(dropBandNotices(s, true).queue.map((q) => q.id), ['f'])
+  assert.equal(dropBandNotices(s, false), s)
+  s = showNextNotice(enqueueNotice(EMPTY_QUEUE, intro, none), false)
+  assert.equal(dropBandNotices(s, true).current?.id, 'tool-intro:quote')
+})

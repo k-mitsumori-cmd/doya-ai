@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
-const file=path.resolve(__dirname,'../../src/app/interview/projects/new/page.tsx'),source=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
+const file=path.resolve(__dirname,'../../src/app/(shell)/interview/projects/new/page.tsx'),source=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='handleSubmit')callback=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);
 const compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const reader=compile(fs.readFileSync(path.resolve(__dirname,'../../src/lib/interview/creation-response.ts'),'utf8'));

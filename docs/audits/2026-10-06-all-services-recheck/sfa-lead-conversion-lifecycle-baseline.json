@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-07T02:26:54.218Z",
+  "findings": 5,
+  "results": [
+    "Conversion creates account/deal after synthetic membership revocation following context resolution",
+    "Conversion copies stale lead snapshot even after source name changes before claim",
+    "Won default stage yields open deal without wonAt",
+    "Submitted 201-character deal name silently truncates to200",
+    "100-character lead contact name silently truncates to80 during conversion"
+  ],
+  "sourceHash": "03890e5b2f2ba43b1d8645b8d8ab45c9b10601e743fdf13911181c6dd8d38a5f",
+  "scope": "Actual conversion API and actual quota admission/amount/format helpers, synthetic Prisma and context. Existing conditional claim protects same-lead duplicate conversion; this probe does not claim a duplicate-write race. No real PostgreSQL scheduling/customer/provider writes."
+}

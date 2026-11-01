@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T08:01:37.935Z",
+  "receiptStartedAt": "2026-09-01T00:00:00.000Z",
+  "results": [
+    {
+      "method": "GET",
+      "status": 202,
+      "state": "pending"
+    },
+    {
+      "method": "DELETE",
+      "status": 202,
+      "state": "pending"
+    },
+    {
+      "method": "POST",
+      "status": 202,
+      "state": "pending"
+    }
+  ],
+  "providerCalls": 0,
+  "quotaCalls": 0,
+  "finding": "A month-old pending operation never expires or becomes acknowledgeable. Browser requires terminal state before clearing its single intent, so a killed process can permanently block this actor from further chat submission.",
+  "scope": "Actual route/HTTP/operation helper; synthetic stale database row/session. No real customer DB/provider or production mutation.",
+  "sourceHashes": {
+    "src/lib/banner/text-operation.ts": "75faa4e60e431e8d59a3361726c121a6f62467cf4fb635f146928f4e66883ed0",
+    "src/lib/banner/text-http.ts": "2e5cc9637a6828264e69b8d41b30d127a788f894cbe20425d24f192b37a78497",
+    "src/app/api/banner/chat/route.ts": "484bdcdd3a55ee4d80a42daf86d89cec2ebbabe8f327e6ff2e364018ede96511"
+  }
+}

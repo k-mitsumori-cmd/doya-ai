@@ -1,64 +1,45 @@
-'use client'
-
+// ============================================
+// 404（ページが見つからない）
+// ============================================
+// 新しい見た目（ドヤAI の青）にそろえる。古いブランドの紫のグラデーションと、
+// 今は無い入口（カンタンドヤAI・ドヤバナーAI）へのリンクは出さない（2026-10-24 メインの全画面の点検）。
+// ⚠️ ログインの有無で中身を変えない（どの画面の下でも同じ文字にする）。行き先は、経営ホーム・トップ・料金の3つだけ
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Home, ArrowLeft, Sparkles } from 'lucide-react'
+import tokens from '@/components/ds/tokens.module.css'
+import { Button, EmptyState } from '@/components/ds'
+import DoyaLogo from '@/components/brand/DoyaLogo'
+import { ServicePopupHide } from '@/components/ServicePopupGuard'
+
+// タブの題も 404 にする。ページが notFound() を呼んだときは、そのページの題ではなく、ここの題が使われる
+// （/home/roles が 404 なのに「メンバーと権限」と出ていた。2026-10-26 統括の指摘）
+export const metadata: Metadata = {
+  title: 'ページが見つかりません',
+  robots: { index: false, follow: false },
+}
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        {/* ロゴ */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-6 shadow-xl">
-          <Sparkles className="w-10 h-10 text-white" />
-        </div>
-        
-        {/* 404 */}
-        <h1 className="text-7xl font-extrabold text-gray-900 mb-4">404</h1>
-        
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          ページが見つかりません
-        </h2>
-        
-        <p className="text-gray-600 mb-8">
-          お探しのページは存在しないか、<br />
-          移動した可能性があります。
-        </p>
-        
-        {/* ナビゲーション */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/">
-            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all">
-              <Home className="w-5 h-5" />
-              トップへ戻る
-            </button>
-          </Link>
-          
-          <button 
-            onClick={() => window.history.back()}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            前のページへ
-          </button>
-        </div>
-        
-        {/* 追加のリンク */}
-        <div className="mt-10 pt-8 border-t border-gray-200">
-          <p className="text-sm text-gray-500 mb-4">お探しですか？</p>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            <Link href="/kantan/dashboard" className="text-violet-600 hover:underline">
-              カンタンドヤAI
-            </Link>
-            <Link href="/banner/dashboard" className="text-violet-600 hover:underline">
-              ドヤバナーAI
-            </Link>
-            <Link href="/auth/signin" className="text-violet-600 hover:underline">
-              ログイン
-            </Link>
-          </div>
-        </div>
+    <main className={`${tokens.ds} grid min-h-[100dvh] place-items-center bg-[var(--bg)] px-4 py-12`}>
+      {/* 404 は宣伝のページではないので、HubSpot のポップアップを出さない（URL では決められないため、ここで隠す。2026-10-25） */}
+      <ServicePopupHide />
+      <div className="w-full max-w-lg rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-6 shadow-[var(--shadow)] sm:p-8">
+        <div className="mb-4 flex justify-center"><DoyaLogo size={40} textClassName="text-xl font-black text-[var(--ink)]" /></div>
+        <p className="m-0 text-center text-[13px] font-bold tracking-[0.12em] text-[var(--blue)]">404</p>
+        {/* ページの見出し（h1）。EmptyState の見出しは p なので、ここで h1 を1つ持つ（2026-10-24 統括の確認） */}
+        <h1 className="m-0 mt-2 text-center text-[22px] font-bold leading-[1.4] text-[var(--ink)]">ページが見つかりません</h1>
+        <EmptyState
+          kind="no-results"
+          title="お探しのページは、ここにはありません"
+          description="URL が変わったか、ページが削除された可能性があります。経営ホームから、使いたいツールを選んでください。"
+          action={<Button href="/home" icon="LayoutDashboard">経営ホームへ</Button>}
+        />
+        <nav aria-label="ほかの行き先" className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-[var(--line)] pt-5 text-[14px] font-bold">
+          <Link href="/" className="text-[var(--blue)] hover:underline">トップページ</Link>
+          <Link href="/pricing" className="text-[var(--blue)] hover:underline">料金プラン</Link>
+          <Link href="/auth/signin" className="text-[var(--blue)] hover:underline">ログイン</Link>
+        </nav>
       </div>
-    </div>
+    </main>
   )
 }
-

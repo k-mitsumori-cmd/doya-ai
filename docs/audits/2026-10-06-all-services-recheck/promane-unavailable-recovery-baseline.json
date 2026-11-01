@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-07T21:47:39.736Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    {
+      "kind": "client",
+      "scenario": "terminal",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "expense",
+      "scenario": "terminal",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "task",
+      "scenario": "terminal",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "time",
+      "scenario": "terminal",
+      "status": "unknown",
+      "metadataRetained": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-client-creation.ts": "161ce1a259ce020357773641edf3a6a6b07242a578f2619cc88352eb808b1d29",
+    "src/lib/promane/use-expense-creation.ts": "f0074cfdc7b9c89296390b0287b00d2056c496b7d8cabba38da27bbd8082d155",
+    "src/lib/promane/use-task-creation.ts": "19aeea16b2bb713564344da2bf9414e36b32d3582758ca3abb924541d8e60f7f",
+    "src/lib/promane/use-time-entry-creation.ts": "3263d754ad306c3167a47267f2f6a25999a5901c7973560b623bbb21585d8f34"
+  },
+  "scope": "Four actual creation React hooks with real localStorage in StrictMode; synthetic session/transport and serialized lock adapter. Existing separate PostgreSQL suites prove committed-deleted receipt is unavailable and replay never recreates it. No production/customer writes or actual authenticated Next transport."
+}

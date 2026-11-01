@@ -1,6 +1,6 @@
 const fs=require('node:fs'),ts=require('typescript'),vm=require('node:vm'),assert=require('node:assert/strict');
 const {check,results}=require('./load-typescript.cjs');
-const source=fs.readFileSync('src/app/interview/projects/[id]/edit/page.tsx','utf8');
+const source=fs.readFileSync('src/app/(shell)/interview/projects/[id]/edit/page.tsx','utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let titleCode,unloadCode;
 function visit(n){
  if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='handleTitleChange')titleCode=n.initializer.getText(ast);

@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-08T17:23:04.766981+00:00",
+  "status": "candidate10-mounted-types2-passed-but-response-loss-still-unresolved",
+  "rootApplied": false,
+  "deployed": false,
+  "baseline": "hr-department-settings-baseline.json",
+  "defectsReproduced": 4,
+  "candidateProductionFiles": [
+    "src/app/hr/settings/page.tsx",
+    "src/lib/hr/department-settings-client.ts"
+  ],
+  "candidateOverlay": "hr-department-settings-repair-overlay",
+  "candidateVerification": {
+    "mountedCases": 10,
+    "virtualTypeFiles": 2
+  },
+  "additionalDefect": {
+    "status": "reproduced-unresolved",
+    "mounted": "hr-department-settings-response-loss-baseline.json",
+    "realPostgres": "hr-department-response-loss-postgres-baseline.json",
+    "realPostgresSupervisor": "hr-department-response-loss-postgres-supervisor.json",
+    "finding": "After a committed create with lost acknowledgment, GET-only list refresh and user retry can still create a second department. UI10 is insufficient for release. Same identical server POST persists two real DB rows.",
+    "next": "Durable actor/org-scoped operation receipt, immutable payload, read-only recovery and cancellation fence; preserve receipt through department deletion and never resurrect deleted rows."
+  },
+  "pending": [
+    "Implement durable creation/recovery and pending UI before this settings cohort release",
+    "Actual Next authenticated protocol, realDB concurrency, mounted/native interaction",
+    "Root integration with expanded full frozen gate and exact production release"
+  ],
+  "boundaries": "Synthetic only; no customer/production DB or provider writes. Separate from running root163 gate."
+}

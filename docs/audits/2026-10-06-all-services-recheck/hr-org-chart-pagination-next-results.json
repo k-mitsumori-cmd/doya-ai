@@ -1,0 +1,326 @@
+{
+  "checkedAt": "2026-10-08T17:03:11.033Z",
+  "expected": 38,
+  "passed": 38,
+  "cases": [
+    {
+      "name": "Anonymous /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Anonymous /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Anonymous /api/kintai/departments",
+      "path": "/api/kintai/departments",
+      "actor": "anonymous",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member A /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member A /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member A /api/kintai/departments",
+      "path": "/api/kintai/departments",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member B /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member B /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Member B /api/kintai/departments",
+      "path": "/api/kintai/departments",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Manager sees same-organization employees only",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Unlinked member sees no employee details",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Inactive HR membership /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Inactive HR membership /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Unknown HR membership role /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Unknown HR membership role /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Inactive attendance membership",
+      "path": "/api/kintai/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Unknown attendance membership role",
+      "path": "/api/kintai/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Revoked session /api/hr/departments",
+      "path": "/api/hr/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Revoked session /api/hr/org-chart",
+      "path": "/api/hr/org-chart",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Revoked session /api/kintai/departments",
+      "path": "/api/kintai/departments",
+      "actor": "A",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Active child remains visible below inactive parent",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Employee in inactive department remains represented separately",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Unassigned member sees own details only",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Foreign parent identifier cannot hide own child or expose foreign organization",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Inactive employee cannot enter unassigned presentation",
+      "path": "/api/hr/org-chart",
+      "actor": "B",
+      "status": 200,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "domainRowsUnchanged": true,
+      "passed": true
+    },
+    {
+      "name": "Paged anonymous read is private401",
+      "passed": true
+    },
+    {
+      "name": "Paged authenticated member sees own employee only",
+      "passed": true
+    },
+    {
+      "name": "Paged unlinked authenticated member sees no employees",
+      "passed": true
+    },
+    {
+      "name": "Actual Next/auth/SQL delivers all2002 enterprise employees exactly once over41 bounded pages without domain writes",
+      "passed": true
+    },
+    {
+      "name": "Actual Next paged endpoint rejects malformed cursor",
+      "passed": true
+    },
+    {
+      "name": "Actual other-organization session cannot reuse cursor",
+      "passed": true
+    },
+    {
+      "name": "Actual database edit between HTTP pages invalidates snapshot",
+      "passed": true
+    },
+    {
+      "name": "Actual paged client reads complete greater-than1MiB chart through actual Next/session/realDB",
+      "passed": true
+    },
+    {
+      "name": "Actual DB/API/client preserves a valid department name exceeding1024 characters",
+      "passed": true
+    },
+    {
+      "name": "Actual DB/API/client preserves a valid employee name exceeding1024 characters",
+      "passed": true
+    },
+    {
+      "name": "Actual DB/API/client preserves a valid photo URL exceeding8192 characters without domain writes",
+      "passed": true
+    },
+    {
+      "name": "Paged read fails closed after membership revocation",
+      "passed": true
+    },
+    {
+      "name": "Paged read fails closed after session revocation",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/hr/org-chart/page.tsx": "7ebb3876c2e40bcd31546befa48b62f75c7a7f9d993228d7f48e36e83d1feb88",
+    "src/components/hr/OrgChartView.tsx": "3875aaf263605ff8cb03dd296ecd426b557df58dc0572c1b2138038ffdf923e1",
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9",
+    "src/lib/hr/org-chart-pagination.ts": "05fee7aeae787ad1d0fe0ff01ab3c7bd8bbed51882d013d060000a813261283f",
+    "src/app/api/hr/departments/route.ts": "645b57cd238159dada404e07746ef908cfa1f8e3a4d2eada1c899c1dddc3b050",
+    "src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "src/app/api/kintai/departments/route.ts": "3c70e0ec4c917a4473c750af6f15a0fbb1c8ad2be56c78c4939b22a8bed9ef84",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "src/lib/hr/access.ts": "4ea515d387ad715eeffd36a038c0c841aa0d2d5e9c740816a44f4ecf4c017176",
+    "src/lib/kintai/access.ts": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+    "src/lib/auth.ts": "de0c865e7d82c818377ee9cfcaf75c99b7bda572ccbeffc16fd6eed5ce7a2be7",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-next.cjs": "12876b908e6e6b016282cbf699a906cc4995e3b9f641e5133465cc181b0cb730",
+    "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-next-supervise.py": "c94457588718cebd2e9632e9c309014d530d13677c0eccf43f2e8e2361eac93e"
+  },
+  "scope": "Actual built Next/auth/Prisma GETs against isolated Unix-only full-schema PostgreSQL. Two synthetic organizations and actors, member versus manager employee visibility, unlinked/inactive/unknown-role membership, revoked session, private response headers, and complete domain-row snapshots before/after every GET; inactive parent/employee department, foreign parent, role-restricted unassigned employees and resigned employee exclusion. Original25 legacy cases retained plus10 paged protocol cases, actual session authentication, real SQL and complete actual client chart larger than1MiB. No production/customer DB, paid provider, real OAuth/browser cache hit."
+}

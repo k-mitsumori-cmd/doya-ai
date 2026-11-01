@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
@@ -16,12 +17,12 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // OWNERのみ実行可能
     if (ctx.role !== HrMemberRole.OWNER) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: 'オーナーのみがオーナー権限を譲渡できます' },
         { status: 403 }
       )
@@ -31,11 +32,11 @@ export async function POST(req: NextRequest) {
     const { targetMemberId } = body
 
     if (!targetMemberId || typeof targetMemberId !== 'string') {
-      return NextResponse.json({ error: 'targetMemberId is required' }, { status: 400 })
+      return privateApiJson({ error: 'オーナーを譲る相手のメンバーを選んでから、もう一度お試しください。' }, { status: 400 })
     }
 
     if (targetMemberId === ctx.memberId) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: '自分自身にオーナーを譲渡することはできません' },
         { status: 400 }
       )
@@ -89,17 +90,17 @@ export async function POST(req: NextRequest) {
       },
     }).catch(() => {})
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       message: `オーナー権限を ${targetMember.user?.name || targetMember.user?.email || targetMemberId} に譲渡しました`,
     })
   } catch (e: any) {
     if (e instanceof TransferConflict) {
-      return NextResponse.json({ error: 'オーナー権限または譲渡先の状態が変わりました。再読み込みしてください' }, { status: 409 })
+      return privateApiJson({ error: 'オーナー権限または譲渡先の状態が変わりました。再読み込みしてください' }, { status: 409 })
     }
     console.error('[hr/organization/transfer-owner] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to transfer ownership' },
+    return privateApiJson(
+      { error: 'オーナーを譲れませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

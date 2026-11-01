@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T16:59:34.004Z",
+  "passed": 4,
+  "cases": [
+    "loaded version sent and same-turn duplicate submit blocked",
+    "409 retains draft and never shows success navigation",
+    "route switch hides previous form and loads new employee",
+    "late old employee response cannot replace new form or version"
+  ],
+  "sourceHashes": {
+    "src/app/hr/employees/[id]/edit/page.tsx": "a8ab346f564608ba83d8ae086dd65da19056082a609e93782e801a4f2f2f3fbe"
+  },
+  "scope": "Actual React page mounted in jsdom with synthetic API. Conflict/double submit and route load lifecycle; authenticated production and photo/upload/lost response recovery remain unverified."
+}

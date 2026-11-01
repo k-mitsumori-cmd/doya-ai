@@ -1,0 +1,9 @@
+{
+  "id": "dpl_8TJJu7WBukXhBzSjwpstSKbcT2y2",
+  "readyState": "READY",
+  "url": "doya-cv4swlc9b-surisutas-projects.vercel.app",
+  "target": "production",
+  "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
+  "checkedAt": "2026-10-07T06:24:54.393267+00:00",
+  "exactCommitEvidence": "vercel list doya-ai matching URL meta.githubCommitSha before deployment; CI headSha matches; published deployment markers"
+}

@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T16:44:20.216Z",
+  "passed": 6,
+  "cases": [
+    "owner",
+    "membership-revoked-after-read",
+    "employee-moved-after-read",
+    "role-demoted-after-read",
+    "version-changed-after-read",
+    "same-version-concurrent"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/photo/route.ts": "0fd5295b79c9c4b4d3b167f909ce0850aafea40634893de723c92a39d076ae9d"
+  },
+  "scope": "Actual legacy inline photo POST; synthetic session/DB with scope changes while body is read. No real customer DB/photo data or production writes."
+}

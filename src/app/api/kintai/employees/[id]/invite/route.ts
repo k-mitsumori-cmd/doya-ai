@@ -24,13 +24,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const token = createKintaiInviteToken()
     const admission = await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
-      if (!(await lockCurrentKintaiManager(tx, kctx))) return { kind: 'forbidden' as const }
+      const actorRole = await lockCurrentKintaiManager(tx, kctx)
+      if (!actorRole) return { kind: 'forbidden' as const }
 
       const employee = await tx.kintaiEmployee.findFirst({
         where: { id: p.id, organizationId: kctx.organizationId },
         include: { member: true },
       })
       if (!employee) return { kind: 'missing' as const }
+      // システム管理者の席への招待の再発行は、受諾した人がその席の権限を得るため、システム管理者だけに限る。
+      if (employee.member?.role === 'system_admin' && actorRole !== 'system_admin') return { kind: 'forbidden' as const }
       if (!employee.email) return { kind: 'no-email' as const }
       if (!employee.isActive || !employee.member || !['PENDING', 'INACTIVE'].includes(employee.member.status)) {
         return { kind: 'not-invitable' as const }

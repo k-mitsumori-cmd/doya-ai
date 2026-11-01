@@ -13,6 +13,7 @@ import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type QuoteRole } from '@/lib/quote/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const ROLES: QuoteRole[] = ['owner', 'admin', 'manager', 'member']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
       createdAt: true,
     },
   })
-  return NextResponse.json({ members, myRole: c.role, myUserId: c.userId })
+  return NextResponse.json({ members, myRole: c.role, myUserId: c.userId }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 export async function POST(req: NextRequest) {
@@ -47,20 +48,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メンバーを招待する権限がありません' }, { status: 403 })
   }
 
-  const body = await req.json().catch(() => ({}))
-  const email = String(body?.email || '').trim().toLowerCase()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.email !== 'string') {
+    return NextResponse.json({ error: '\u30e1\u30fc\u30eb\u30a2\u30c9\u30ec\u30b9\u306e\u5f62\u5f0f\u304c\u6b63\u3057\u304f\u3042\u308a\u307e\u305b\u3093' }, { status: 400 })
+  }
+  const email = body.email.trim().toLowerCase()
   const requestedRole = body?.role
   if (requestedRole !== undefined && !ROLES.includes(requestedRole)) {
     return NextResponse.json({ error: '招待権限の形式が正しくありません' }, { status: 400 })
   }
   const role = (requestedRole ?? 'member') as QuoteRole
 
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
   // ⚠️ 自分より上の権限は与えられない（権限の昇格を防ぐ）
-  if (ROLE_HIERARCHY[role] > ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
+  if (ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[c.role]) {
+    return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
   }
   // owner は組織にひとりだけ。招待では付与しない
   if (role === 'owner') {
@@ -76,7 +80,9 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: QuoteRole }[]>`SELECT role FROM quote_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      const actorRole = actor.length ? lowerToolRole('quote', actor[0].role, c.role) : null
+      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as QuoteRole]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.quoteMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
@@ -122,5 +128,5 @@ export async function POST(req: NextRequest) {
     // メール送信に失敗しても招待自体は作る（URLを手で渡せるように返す）
     url,
     emailSent: mail.success,
-  })
+  }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }

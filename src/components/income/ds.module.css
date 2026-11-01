@@ -1,0 +1,907 @@
+/*
+ * ドヤ収入管理の部品スタイル（ds のクリアと同じ見た目。ADDON-SERVICES §11）
+ * ⚠️ 色・角丸・影は src/components/ds/tokens.module.css（AppShell が当てる .ds）の変数だけを使う（D-2）。
+ */
+
+/* ---------- ページ枠 ---------- */
+.page {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+@media (min-width: 640px) {
+  .page {
+    padding: 32px 24px 64px;
+  }
+}
+.page :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.section {
+  margin-top: 16px;
+}
+.stackY {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sub {
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--sub);
+}
+.muted {
+  color: var(--muted);
+}
+.h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--ink);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.link {
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+}
+.link:hover {
+  color: var(--blue-deep);
+  text-decoration: underline;
+}
+.okText {
+  color: var(--ok-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.badText {
+  color: var(--bad-ink);
+}
+
+/* ---------- 見出し行 ---------- */
+.header {
+  margin-bottom: 24px;
+}
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--sub);
+}
+.crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--sub);
+  text-decoration: none;
+}
+.crumbs a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .title {
+    font-size: 22px;
+  }
+  /* 375px: 見出しの下にボタンを回し、ボタンは折り返す（横にはみ出さない） */
+  .titleRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .titleRow > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- カード ---------- */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  min-width: 0;
+}
+@media (min-width: 481px) {
+  .card {
+    padding: 24px;
+  }
+}
+.cardFlush {
+  padding: 0;
+  overflow: hidden;
+}
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 767px) {
+  .cardFlush {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* ---------- ボタン ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  max-width: 100%;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.primary {
+  background: var(--blue);
+  color: var(--paper);
+}
+.primary:hover:not(:disabled) {
+  background: var(--blue-deep);
+}
+.secondary {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--blue-soft);
+  border-color: var(--blue-line);
+}
+.danger {
+  background: var(--paper);
+  color: var(--bad-ink);
+  border-color: var(--line-strong);
+}
+.danger:hover:not(:disabled) {
+  background: var(--bad-bg);
+}
+.dangerSolid {
+  background: var(--bad-ink);
+  color: var(--paper);
+}
+.dangerSolid:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+@media (max-width: 767px) {
+  .sm {
+    min-height: 44px;
+  }
+}
+.spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+/* ---------- フォーム ---------- */
+.field {
+  display: block;
+  min-width: 0;
+}
+.label {
+  display: block;
+  margin-bottom: 6px;
+  /* 入力の名前は濃く太く（2026-10-27 ユーザー「入力するときのフォントが細い」） */
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--ink);
+}
+.hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.fieldError {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--bad-ink);
+}
+.input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  /* 入れた字は 600 の太さ・16px（iPhone で拡大されない大きさ）。2026-10-27 ユーザー「フォントが細い」 */
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.input::placeholder {
+  color: var(--muted);
+  font-weight: 500;
+}
+.input:hover:not(:disabled) {
+  border-color: var(--blue-line);
+}
+.input:focus-visible {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px var(--blue-soft);
+}
+/* 金額・数の入力は、太く大きく、桁がそろう数字で出す */
+.input[inputmode='numeric'],
+.input[inputmode='decimal'],
+.input[type='number'],
+.inputAmount {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.input:disabled {
+  background: var(--bg);
+  color: var(--sub);
+}
+.input[aria-invalid='true'] {
+  border-color: var(--bad-ink);
+}
+textarea.input {
+  min-height: 96px;
+  resize: vertical;
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.check {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--blue);
+}
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* ---------- 注意・エラー・状態色 ---------- */
+.errBox {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  background: var(--bad-bg);
+  color: var(--bad-ink);
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.note {
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  background: var(--note-bg);
+  color: var(--note-ink);
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+.info {
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.bOk {
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+}
+.bNote {
+  background: var(--note-bg);
+  color: var(--note-ink);
+}
+.bBad {
+  background: var(--bad-bg);
+  color: var(--bad-ink);
+}
+.bInfo {
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+}
+.bNeutral {
+  background: var(--bg);
+  color: var(--sub);
+}
+
+/* ---------- 概要タイル ---------- */
+.stat {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--blue-soft), transparent 55%),
+    var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  min-width: 0;
+}
+/* 上の帯のグラデーション（インフォグラフィックの見せ方。2026-10-27） */
+.stat::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue), var(--sky));
+}
+.toneOk::before {
+  background: linear-gradient(90deg, var(--ok-ink), var(--good));
+}
+.toneBad::before {
+  background: linear-gradient(90deg, var(--bad-ink), var(--pink));
+}
+@media (min-width: 481px) {
+  .stat {
+    padding: 24px;
+  }
+}
+.statLabel {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--sub);
+}
+.statValue {
+  margin-top: 8px;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.statUnit {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sub);
+}
+.statSub {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.toneBad .statValue {
+  color: var(--bad-ink);
+}
+.toneOk .statValue {
+  color: var(--ok-ink);
+}
+
+/* ---------- スケルトン ---------- */
+.skel {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--line) 0%, var(--bg) 50%, var(--line) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--ease-io) infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+  }
+}
+
+/* ---------- 空・エラー・権限なし ---------- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 16px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r);
+}
+.emptyImg {
+  display: block;
+  width: 200px;
+  max-width: 60%;
+  height: auto;
+}
+.emptyMsg {
+  margin: 0;
+  max-width: 30em;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--sub);
+}
+
+/* ---------- トースト ---------- */
+.toastHost {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  background: var(--navy);
+  color: var(--paper);
+  box-shadow: var(--shadow-lg);
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 500;
+  animation: toastIn 0.3s var(--ease);
+}
+.toastBad {
+  background: var(--bad-ink);
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation-name: toastFade;
+  }
+  @keyframes toastFade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ---------- タブ・月切替 ---------- */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tab {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--sub);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tab:hover {
+  background: var(--blue-soft);
+}
+.tabOn {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--paper);
+}
+.tabOn:hover {
+  background: var(--blue-deep);
+}
+.monthSw {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+.monthBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+}
+.monthBtn:hover {
+  background: var(--blue-soft);
+}
+.monthLabel {
+  min-width: 7rem;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ---------- 一覧の行 ---------- */
+.rowLink {
+  display: block;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s var(--ease);
+}
+.rowLink:hover {
+  border-color: var(--blue-line);
+  background: var(--blue-soft);
+}
+.lineRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: 44px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+.lineRow:last-child {
+  border-bottom: 0;
+}
+.lineRow:hover {
+  background: var(--blue-soft);
+}
+.divided {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ---------- 表（375px では縦積みのカード） ---------- */
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sub);
+  white-space: nowrap;
+}
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.table .r {
+  text-align: right;
+}
+.table tfoot td {
+  background: var(--bg);
+  font-weight: 700;
+}
+/* 列の多い表は広い画面でだけ最小幅を持つ（375px のカード表示を邪魔しない） */
+@media (min-width: 768px) {
+  .tableWide {
+    min-width: 720px;
+  }
+  .tableMid {
+    min-width: 560px;
+  }
+}
+.rowBad {
+  background: var(--bad-bg);
+}
+.rowDim {
+  color: var(--muted);
+}
+.cellBar {
+  min-width: 120px;
+}
+.bar {
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--bg);
+}
+.barFill {
+  height: 6px;
+  border-radius: 999px;
+}
+@media (max-width: 767px) {
+  .tableWrap {
+    overflow: visible;
+  }
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .table,
+  .table tbody,
+  .table tfoot,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+  .table tr {
+    margin-bottom: 12px;
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--paper);
+  }
+  .table tr.rowBad {
+    background: var(--bad-bg);
+  }
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 6px 0;
+    border: 0;
+    text-align: right;
+    min-height: 32px;
+  }
+  .table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sub);
+    text-align: left;
+  }
+  .table td.r {
+    text-align: right;
+  }
+  .table tfoot tr {
+    background: var(--bg);
+  }
+}
+
+/* ---------- ダイアログ ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: rgba(10, 15, 60, 0.45);
+}
+@media (min-width: 640px) {
+  .overlay {
+    align-items: center;
+    padding: 16px;
+  }
+}
+.modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 16px;
+  border-radius: var(--r) var(--r) 0 0;
+  background: var(--paper);
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s var(--ease);
+}
+@media (min-width: 640px) {
+  .modal {
+    padding: 24px;
+    border-radius: var(--r);
+  }
+}
+.modalWide {
+  max-width: 672px;
+}
+.modalFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+}
+.iconBtn:hover {
+  background: var(--bg);
+}
+
+/* ---------- 明細エディタ ---------- */
+.lineCard {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+}
+.totals {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-size: 14px;
+  color: var(--sub);
+}
+
+/* ---------- 入金完了カード ---------- */
+.done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.doneImg {
+  width: 96px;
+  height: auto;
+  flex: none;
+}

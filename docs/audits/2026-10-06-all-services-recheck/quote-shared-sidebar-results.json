@@ -1,0 +1,136 @@
+{
+  "cases": 32,
+  "passed": 32,
+  "failed": 0,
+  "results": [
+    {
+      "name": "banner account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "seo account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "persona account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "adimage account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "aio account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "shodan account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "quote account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "mensetsu account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "aishodan account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "banner persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "seo persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "persona persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "adimage persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "aio persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "shodan persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "quote persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "mensetsu persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "aishodan persistent sidebar refreshes after a route change",
+      "passed": true
+    },
+    {
+      "name": "Returning route cannot restore its previous usage while the new lookup is pending",
+      "passed": true
+    },
+    {
+      "name": "banner legacy service plan transition refreshes the same actor",
+      "passed": true
+    },
+    {
+      "name": "seo legacy service plan transition refreshes the same actor",
+      "passed": true
+    },
+    {
+      "name": "Returning actor and organization never restores old snapshot while pending",
+      "passed": true
+    },
+    {
+      "name": "Plan transition refreshes usage even for the same account",
+      "passed": true
+    },
+    {
+      "name": "Loading, guest and missing identity clear private usage without fetching",
+      "passed": true
+    },
+    {
+      "name": "Late previous-scope response cannot overwrite current usage",
+      "passed": true
+    },
+    {
+      "name": "Refresh event supersedes pending lookup; focus does not duplicate it",
+      "passed": true
+    },
+    {
+      "name": "Lookup timeout ends optional usage display and aborts the request",
+      "passed": true
+    },
+    {
+      "name": "Strict payload validation never crashes or invents an unlimited grant",
+      "passed": true
+    },
+    {
+      "name": "Unmount cancels pending work and removes refresh listeners",
+      "passed": true
+    },
+    {
+      "name": "Shodan refresh is scoped to the current actor and organization",
+      "passed": true
+    },
+    {
+      "name": "Unverified nullable organization suppresses usage and cancels old response",
+      "passed": true
+    },
+    {
+      "name": "Quote refresh is scoped to current actor and organization",
+      "passed": true
+    }
+  ],
+  "scope": "Actual common usage panel and bounded reader under StrictMode. 9 source-confirmed consumer services; synthetic sessions/organizations/responses only. No live private usage, DB, billing or AI."
+}

@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-07T17:39:08.044177+00:00",
+  "scope": "Kintai settings additional user-flow and calculator consistency review. Does not prove all-service completion.",
+  "findings": [
+    {
+      "id": "KINTAI-SETTINGS-ZERO-BREAK",
+      "severity": "display",
+      "evidence": "kintai-schedule-preview-baseline.json",
+      "baselineFailed": 4,
+      "sourceStatus": "zero-break preview repaired;9 isolated cases passed;45-gate running"
+    },
+    {
+      "id": "KINTAI-SETTINGS-EQUAL-ENDPOINT",
+      "severity": "display-vs-calculation",
+      "evidence": "kintai-schedule-consistency-baseline.json",
+      "baselineFailed": 2,
+      "candidateEvidence": "kintai-schedule-consistency-candidate-results.json",
+      "candidatePassed": 6,
+      "sourceStatus": "Applied to actual root; included in frozen47gate"
+    },
+    {
+      "id": "KINTAI-SETTINGS-LOST-CREATE-ACK",
+      "severity": "duplicate-write",
+      "evidence": "kintai-settings-lost-ack-baseline.json",
+      "observedPostCount": 2,
+      "observedServerRows": 2,
+      "sourceStatus": "reproduced on actual mounted React with synthetic committed-then-failed response; durable retry recovery unresolved"
+    },
+    {
+      "id": "KINTAI-SETTINGS-SAVE-EDIT-LOSS",
+      "severity": "unsaved-input-loss",
+      "evidence": "kintai-settings-save-edit-baseline.json",
+      "candidateEvidence": "kintai-settings-save-edit-candidate-results.json",
+      "sourceStatus": "Applied disabled fields during saving; included in frozen47gate"
+    }
+  ],
+  "releaseDecision": "Await47gate; lost-create-ack durable recovery remains unresolved. No whole-service or all-service completion claim.",
+  "productionMutations": false
+}

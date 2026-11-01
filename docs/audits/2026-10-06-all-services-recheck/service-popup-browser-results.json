@@ -1,0 +1,431 @@
+{
+  "checkedAt": "2026-10-06T20:05:42.650Z",
+  "passed": 8,
+  "scope": "Actual component rendered with ReactDOMServer and actual active registry; synthetic hooks and local widget fixtures in real browser; desktop and mobile viewport. Not proof of production or real widget integration.",
+  "checks": [
+    {
+      "size": {
+        "width": 1280,
+        "height": 720
+      },
+      "page": "work",
+      "expectedHidden": true,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "none",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "",
+          "pointerEvents": "none",
+          "tag": "IFRAME",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 1280,
+        "height": 720
+      },
+      "page": "marketing",
+      "expectedHidden": false,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "",
+          "pointerEvents": "auto",
+          "tag": "IFRAME",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 1280,
+        "height": 720
+      },
+      "page": "signed-in",
+      "expectedHidden": true,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "none",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "",
+          "pointerEvents": "none",
+          "tag": "IFRAME",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 1280,
+        "height": 720
+      },
+      "page": "unrelated",
+      "expectedHidden": false,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "",
+          "pointerEvents": "auto",
+          "tag": "IFRAME",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "page": "work",
+      "expectedHidden": true,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "none",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "",
+          "pointerEvents": "none",
+          "tag": "IFRAME",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "page": "marketing",
+      "expectedHidden": false,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "",
+          "pointerEvents": "auto",
+          "tag": "IFRAME",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "page": "signed-in",
+      "expectedHidden": true,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "none",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "",
+          "pointerEvents": "none",
+          "tag": "IFRAME",
+          "visibility": "hidden"
+        },
+        {
+          "display": "none",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "none",
+          "tag": "DIV",
+          "visibility": "hidden"
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "page": "unrelated",
+      "expectedHidden": false,
+      "passed": true,
+      "items": [
+        {
+          "display": "inline-block",
+          "id": "generate",
+          "pointerEvents": "auto",
+          "tag": "BUTTON",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "service-limit-modal",
+          "pointerEvents": "auto",
+          "tag": "P",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hubspot-messages-iframe-container",
+          "pointerEvents": "auto",
+          "tag": "ASIDE",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-web-interactives-top-anchor",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "",
+          "pointerEvents": "auto",
+          "tag": "IFRAME",
+          "visibility": "visible"
+        },
+        {
+          "display": "block",
+          "id": "hs-overlay-cta-late",
+          "pointerEvents": "auto",
+          "tag": "DIV",
+          "visibility": "visible"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "status": "confirmed-candidate-acknowledgment-gap",
+  "observed": "Synthetic saved content differs from submitted fields, but UI announces success and clears the draft.",
+  "scope": "Actual Company mounted page and reader; synthetic incorrect server acknowledgment only. No real customer/DB/provider call, and no claim this happened in production."
+}

@@ -7,6 +7,7 @@ const secret = 'PRIVATE_PROVIDER_OR_DATABASE_DETAIL'
 ;(async () => {
   let notifications = 0
   const refine = load('src/app/api/banner/refine/route.ts', {
+    ...require('./banner-refine-test-deps.cjs').refineModules,
     '@vercel/functions': { waitUntil: () => {} },
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => { throw new Error(secret) } },
@@ -27,6 +28,7 @@ const secret = 'PRIVATE_PROVIDER_OR_DATABASE_DETAIL'
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma: {}, withRetry: async () => { throw new Error(secret) } },
     '@/lib/email': { sendEmail: async () => { mailCalls++ } },
+    '@/lib/drip-click-link': { createClickLinkId: () => 'synthetic-link' },
     '@/lib/drip-tokens': { generateUnsubscribeToken: () => 'test' },
     crypto,
   }, { process: { env: { CRON_SECRET: 'test-secret' } } })

@@ -23,6 +23,7 @@ import {
   ScrollText,
   Clock,
   Building2,
+  MessageCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -31,6 +32,7 @@ const mainNavItems = [
   { icon: Zap, label: 'サービス管理', href: '/admin/services', badge: null },
   { icon: Users, label: 'ユーザー管理', href: '/admin/users', badge: null },
   { icon: BarChart3, label: 'アナリティクス', href: '/admin/analytics', badge: null },
+  { icon: MessageCircle, label: 'サポートの受付', href: '/admin/support', badge: null },
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
   { icon: Shield, label: '管理者アカウント', href: '/admin/admins', badge: null },
   { icon: Shield, label: '2要素認証', href: '/admin/2fa', badge: null },
@@ -59,7 +61,7 @@ const kintaiNavItems = [
 
 const serviceLinks = [
   { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
-  { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
+  { emoji: '✍️', label: 'ドヤ記事作成', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
   { emoji: '⏰', label: 'ドヤ勤怠', href: '/kintai/dashboard', gradient: 'from-purple-500 to-indigo-500' },
 ]
 

@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T00:39:00.954741+00:00",
+  "checks": [
+    "initial questions use fresh owner plan \"FREE\"",
+    "initial questions use fresh owner plan \"PRO\"",
+    "initial questions use fresh owner plan \"ENTERPRISE\"",
+    "initial questions use fresh owner plan \"LIGHT\"",
+    "initial questions use fresh owner plan \"UNKNOWN\"",
+    "initial questions use fresh owner plan \"\"",
+    "fallback five questions also respect free three-question contract",
+    "downgrade during generation cannot seed paid prompt capacity",
+    "billingMissing rolls back organization, owner and profile instead of opening prompts",
+    "duplicateOwners rolls back organization, owner and profile instead of opening prompts",
+    "generated blank/duplicate questions are not registered as separate slots",
+    "existing workspace data is reused unchanged without generation or trimming"
+  ],
+  "passed": 12,
+  "scope": "Actual quick-start route, actual createAioOrganization callback transaction and actual owner billing/unified plan policy. Auth, suggestion output and Prisma rollback are synthetic. No real DB concurrency, provider/customer write or initial-generation cost test."
+}

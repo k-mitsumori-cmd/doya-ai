@@ -1,0 +1,118 @@
+{
+  "checkedAt": "2026-10-07T04:31:47.438517+00:00",
+  "status": "committed-pushed-ci-success-production-ready-anonymous-publication-verified",
+  "baseCommit": "9d611e843b6f488259e45270c203c5533b811bfc",
+  "changes": [
+    "Fresh actor authority and locked active lead reread inside Serializable admission transaction.",
+    "Source version conflict check before conversion; original source text retained.",
+    "Receipt keyed by actor/org/lead/operation, replay before quota, exact account/deal pair recovery.",
+    "Cancellation fences late arrivals without deleting business records.",
+    "Strict typed bounded conversion overrides, no silent truncation, maximum-length account name retained in default deal name.",
+    "Shared locked stage outcome logic for won/lost/open.",
+    "Private no-store and Vary Cookie responses including errors/quota."
+  ],
+  "targetedApiEvidence": "sfa-lead-conversion-results.json",
+  "apiCases": 15,
+  "otherChecks": [
+    "TypeScript noEmit exit0",
+    "ESLint changed source exit0",
+    "Legacy conversion 11 cases pass (serialized synthetic concurrency, not PostgreSQL)",
+    "Admission routes pass without writes or email",
+    "Amount input regression pass"
+  ],
+  "remaining": [
+    "Authenticated real-browser verification of private conversion remains unverified.",
+    "Lead normal CRUD/import local repair and full frozen release gate running; not yet deployed.",
+    "AI score lifecycle confirmed gaps require repair; all17/2074 remaining criteria incomplete.",
+    "SFA record edit-role policy awaits user clarification; existing ACTIVE-member policy preserved."
+  ],
+  "limitations": [
+    "Local repair not yet deployed.",
+    "Mounted UI uses synthetic navigation/auth/API; PostgreSQL schema is isolated and synthetic.",
+    "Record-edit policy remains pending; current ACTIVE-member scope preserved.",
+    "Entire 17-service/2074-criterion goal remains incomplete."
+  ],
+  "clientEvidence": "sfa-lead-conversion-client-results.json",
+  "clientCases": 18,
+  "postgresEvidence": "sfa-lead-conversion-postgres-results.json",
+  "postgresCases": 12,
+  "postgresSupervisor": "sfa-lead-conversion-postgres-supervisor.json",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/sfa-lead-conversion-release-ae01c48f-0fe2-4844-9377-d5355e213026",
+  "sourceArtifactsMatchFrozenManifest": [
+    {
+      "artifact": "sfa-lead-conversion-results.json",
+      "passed": 15,
+      "sourceHashesMatchFreeze": true
+    },
+    {
+      "artifact": "sfa-lead-conversion-client-results.json",
+      "passed": 18,
+      "sourceHashesMatchFreeze": true
+    },
+    {
+      "artifact": "sfa-lead-conversion-postgres-results.json",
+      "passed": 12,
+      "sourceHashesMatchFreeze": true
+    }
+  ],
+  "nextConfirmedLeadCrudFindings": {
+    "status": "local-backend-repaired-client-postgres-release-pending",
+    "findings": 5,
+    "evidence": "sfa-lead-crud-lifecycle-baseline.json",
+    "probe": "probe-sfa-lead-crud-lifecycle.cjs",
+    "repairEvidence": "sfa-lead-crud-repair.json"
+  },
+  "fullGateResult": {
+    "startedAt": "2026-10-07T03:58:13.022811+00:00",
+    "pid": 86219,
+    "head": "9d611e843b6f488259e45270c203c5533b811bfc",
+    "sourceFiles": 2679,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:03:00.974966+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:03:03.051088+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-07T04:03:03.477561+00:00"
+  },
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "relatedRegression": {
+    "taskActivityMounted": 49,
+    "taskActivityReceiptApi": 64,
+    "dealMounted": 13,
+    "legacyConversionModes": 11
+  },
+  "commit": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+  "sourceFreezeReverifiedAfterCommit": true,
+  "pushExitCode": 0,
+  "ciRun": {
+    "id": 37569664245,
+    "status": "completed",
+    "headSha": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+    "conclusion": "success"
+  },
+  "productionDeployment": {
+    "id": "dpl_6wfiMfk6bp7aPvAedjVPEtAF5Nex",
+    "url": "doya-kz82m4kui-surisutas-projects.vercel.app",
+    "state": "BUILDING",
+    "target": "production",
+    "commit": "33737e13b3c9e967cc4ade37ae42b22fb6095426"
+  },
+  "productionVerification": {
+    "commit": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+    "ciRun": "37569664245",
+    "ci": "success",
+    "deployment": "dpl_6wfiMfk6bp7aPvAedjVPEtAF5Nex",
+    "deploymentState": "READY",
+    "publicEvidence": "sfa-lead-conversion-public.json",
+    "scope": "17 anonymous entries, 45 JS assets and unauthenticated/API cache/privacy. Authenticated writes and human browser review unproven."
+  }
+}

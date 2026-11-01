@@ -14,26 +14,22 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
+      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401, headers: privateHeaders })
     }
 
     // 組織オーナーの契約プランを基準に使用量を返す。
-    const plan = await getOrgPlan(ctx.organizationId)
+    // ⚠️ 4つの読み取りは互いに依存しないので同時に流す（以前は直列で、DB の往復が最大6回つながっていた）
+    const [plan, employeeCount, memberCount, org] = await Promise.all([
+      getOrgPlan(ctx.organizationId),
+      prisma.hrEmployee.count({ where: { organizationId: ctx.organizationId, status: 'ACTIVE' } }),
+      prisma.hrOrganizationMember.count({ where: { organizationId: ctx.organizationId, status: 'ACTIVE' } }),
+      // AI使用量（月次）
+      prisma.hrOrganization.findUnique({
+        where: { id: ctx.organizationId },
+        select: { aiUsageCount: true, aiUsageResetAt: true },
+      }),
+    ])
     const limits = getOrgPlanLimits(plan)
-
-    const employeeCount = await prisma.hrEmployee.count({
-      where: { organizationId: ctx.organizationId, status: 'ACTIVE' },
-    })
-
-    const memberCount = await prisma.hrOrganizationMember.count({
-      where: { organizationId: ctx.organizationId, status: 'ACTIVE' },
-    })
-
-    // AI使用量（月次）
-    const org = await prisma.hrOrganization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { aiUsageCount: true, aiUsageResetAt: true },
-    })
 
     // 月次リセット判定
     const aiUsageCount = org?.aiUsageResetAt &&

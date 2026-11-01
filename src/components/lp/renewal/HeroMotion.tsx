@@ -9,6 +9,7 @@ import {
   type CSSProperties,
 } from "react";
 import Image from "next/image";
+import { getListedServiceCount } from "@/lib/services";
 import { DemoScreen, DEMOS } from "./OperationDemo";
 import { ProductPreview } from "./ProductPreview";
 import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
@@ -114,7 +115,7 @@ export function HomeMotionScene() {
         ))}
       </div>
       <div className="doya-scene-heading">
-        <span /> YOUR AI TEAM <span className="doya-scene-count">17 TOOLS</span>
+        <span /> YOUR AI TEAM <span className="doya-scene-count">{getListedServiceCount()} TOOLS</span>
       </div>
       <div className="doya-flying-tool doya-flying-tool-one" aria-hidden="true">
         <Image

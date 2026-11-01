@@ -1,0 +1,8 @@
+{
+  "status": "confirmed-open",
+  "case": "Quick-start persists eight prompts without checking the free three-prompt cap",
+  "created": 8,
+  "documentedFreeLimit": 3,
+  "syntheticSuggestionCalls": 1,
+  "scope": "Actual quick-start route with synthetic authenticated free-user identity, organization transaction and suggestion result. No real DB, customer, network or paid AI. Real suggestion helper also permits up to eight (fallback five). Existing-data remediation and intended seed entitlement remain unverified."
+}

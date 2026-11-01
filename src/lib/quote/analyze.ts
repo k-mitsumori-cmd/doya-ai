@@ -13,8 +13,9 @@
 // ⚠️ **LLMの内部知識だけで金額を出すことは禁止。** 見積書は取引の意思表示であり、
 //    もっともらしいだけの数字を印字させると実害になる。根拠が無いものは空欄にする。
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT, CLAUDE_MODEL_LIGHT } from '@seo/lib/gemini'
 import { lookupMarket, marketTableForPrompt } from './market'
+import { isQuoteSuggestedItem } from './response-shape'
 import type { ProductProfile, SuggestedItem, PriceSource } from './types'
 
 const PRICE_HINTS = ['/price', '/pricing', '/plan', '/plans', '/service', '/services', '/lp', '/about']
@@ -127,6 +128,8 @@ export interface SuggestInput {
   situation?: string
   /** 想定予算（円）。あれば構成を寄せる */
   budget?: number | null
+  /** light のときは軽いモデル（経営ホームのエージェントから呼ばれたとき。DESIGN.md §11.9） */
+  tier?: 'light'
 }
 
 /** 見積書の品目候補を出す */
@@ -188,7 +191,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
     .join('\n')
 
   const raw = await geminiGenerateJson<{ items: SuggestedItem[] }>(
-    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, ...(input.tier === 'light' && CLAUDE_MODEL_LIGHT ? { claudeModel: CLAUDE_MODEL_LIGHT } : {}) },
     'QuoteItems'
   )
 
@@ -266,7 +269,7 @@ function normalizeItem(i: any): SuggestedItem {
   if (rangeMin != null && rangeMin <= 0) rangeMin = null
   if (rangeMax != null && rangeMax <= 0) rangeMax = null
 
-  return {
+  const normalized: SuggestedItem = {
     itemName: String(i.itemName).slice(0, 120),
     spec: String(i.spec || '').slice(0, 300),
     qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
@@ -278,21 +281,9 @@ function normalizeItem(i: any): SuggestedItem {
     rangeMin,
     rangeMax,
   }
-    return {
-      itemName: String(i.itemName).slice(0, 120),
-      spec: String(i.spec || '').slice(0, 300),
-      qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
-      unit: String(i.unit || '式').slice(0, 12),
-      unitPrice,
-      taxRate: Number(i.taxRate) === 8 ? 8 : 10,
-      priceSource,
-      sourceRef,
-      rangeMin,
-      rangeMax,
-    }
-  }
-
-
+  if (!isQuoteSuggestedItem(normalized)) throw new Error('invalid quote item response')
+  return normalized
+}
 
 // ============================================
 // 品目名だけから、その1行の内訳・数量・単価をAIで埋める

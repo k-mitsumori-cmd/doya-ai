@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T20:57:13.089Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "finding": "same-frame double submit calls POST twice",
+      "requests": 2,
+      "successToasts": 2,
+      "refreshes": 2
+    },
+    {
+      "finding": "malformed HTTP200 acknowledgement accepted without saved client",
+      "responseBody": {},
+      "successToasts": 1,
+      "refreshes": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/client-actions.tsx": "be86048ca26afab89b9bd2c184f48bf6c6c94cfebcfb648b65794aaf2e2b3974"
+  },
+  "scope": "Actual mounted ClientActions with stubbed dialog shell in React StrictMode/real FormData; deferred synthetic fetch responses. Confirms client duplicate and invalid-acknowledgement behavior, not actual duplicate DB writes or production/customer impact."
+}

@@ -1,9 +1,17 @@
+const departmentReadLoader = require('./load-typescript.cjs').load;
+const departmentReadModules = {'@/lib/hr/department-hierarchy':departmentReadLoader('src/lib/hr/department-hierarchy.ts'),'@/lib/hr/department-pagination':departmentReadLoader('src/lib/hr/department-pagination.ts',{'node:crypto':require('node:crypto')})};
+const operationModule = require('./load-typescript.cjs').load('src/lib/hr/department-operation.ts', {'node:crypto': require('node:crypto')});
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
 const forbiddenDb = new Proxy({}, { get: (_, key) => { throw Error(`DB accessed before role check: ${String(key)}`) } })
 const mocks = {
-  'next/server': { NextResponse: Response },
+  ...departmentReadModules,
+  '@/lib/hr/department-operation': operationModule, '@/lib/hr/department-input': load('src/lib/hr/department-input.ts'),
+  '@/lib/hr/department-mutation': load('src/lib/hr/department-mutation.ts', { '@/lib/prisma': { prisma: forbiddenDb } }),
+  '@/lib/private-api-response': privateApiResponse,
+    'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
   '@/lib/auth': {},
   '@/lib/prisma': { prisma: forbiddenDb },

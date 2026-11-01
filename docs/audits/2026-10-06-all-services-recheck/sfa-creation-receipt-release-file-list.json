@@ -1,0 +1,23 @@
+[
+  "src/lib/sfa/creation-receipt.ts",
+  "src/app/api/sfa/tasks/route.ts",
+  "src/app/api/sfa/activities/route.ts",
+  "scripts/security-regression/sfa-authority-fixture.cjs",
+  "scripts/security-regression/verify-sfa-mutation-authority.cjs",
+  "scripts/security-regression/verify-sfa-creation-receipts.cjs",
+  "scripts/security-regression/run.cjs",
+  "docs/audits/2026-10-06-all-services-recheck/criterion-matrix.csv",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-tasks-lifecycle-repair.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-results.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-receipt-postgres-results.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-receipt-postgres-supervisor.json",
+  "docs/audits/2026-10-06-all-services-recheck/verify-sfa-receipt-postgres.cjs",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-receipt-postgres-supervise.py",
+  "docs/audits/2026-10-06-all-services-recheck/production-error-log-sample-sfa-receipt.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-input-public-0200977e.json",
+  "docs/audits/2026-10-06-all-services-recheck/verify-sfa-input-public-0200977e.py",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-release-900c7c87-77ad-4005-94ab-89fdaf71d4ee/supervise.py",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-release-900c7c87-77ad-4005-94ab-89fdaf71d4ee/source-manifest.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-release-900c7c87-77ad-4005-94ab-89fdaf71d4ee/state.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-release-file-list.json"
+]

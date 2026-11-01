@@ -1,0 +1,56 @@
+/*
+ * ドヤAIOの紫・桃色を、ブランドの青にそろえる（UI 品質 H-3・S-22）
+ * ⚠️ 新しい見た目（[data-ui-next='true']。チェックリスト §5.1）のときだけ効く。
+ * ⚠️ 中身の Tailwind のクラス（purple / pink / fuchsia / violet）を書き換えず、ここで上書きする。
+ *    ツールの画面に新しく紫のクラスを足したら、ここにも足すこと（同じ濃さの青に置き換える。桃色のグラデーションは1段濃い青、
+ *    桃色の文字・背景・線はアクセントの桃色 #ff1e72 の段階）。
+ * 青の段階: 600 = --blue（#0066ff）。50〜200 は --blue-soft・--blue-line に近い淡い青。
+ */
+:global([data-ui-next='true']) .brand :global(.bg-fuchsia-50) { background-color: rgb(255 240 245); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-100) { background-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-50) { background-color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-500) { background-color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-600) { background-color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-700) { background-color: rgb(0 82 214); }
+:global([data-ui-next='true']) .brand :global(.border-purple-100) { border-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-200) { border-color: rgb(215 229 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-300) { border-color: rgb(169 200 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-400) { border-color: rgb(92 155 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-600) { border-color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.fill-fuchsia-600) { fill: rgb(224 0 90); }
+:global([data-ui-next='true']) .brand :global(.focus\:border-purple-400):focus { border-color: rgb(92 155 255); }
+:global([data-ui-next='true']) .brand :global(.focus\:border-purple-600):focus { border-color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-100):hover { background-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-50):hover { background-color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-800):hover { background-color: rgb(0 71 184); }
+:global([data-ui-next='true']) .brand :global(.hover\:text-purple-700):hover { color: rgb(0 82 214); }
+:global([data-ui-next='true']) .brand :global(.shadow-purple-500\/10) { --tw-shadow-color: rgb(43 128 255 / 0.1); --tw-shadow: var(--tw-shadow-colored); }
+:global([data-ui-next='true']) .brand :global(.shadow-purple-500\/25) { --tw-shadow-color: rgb(43 128 255 / 0.25); --tw-shadow: var(--tw-shadow-colored); }
+:global([data-ui-next='true']) .brand :global(.shadow-purple-500\/30) { --tw-shadow-color: rgb(43 128 255 / 0.3); --tw-shadow: var(--tw-shadow-colored); }
+:global([data-ui-next='true']) .brand :global(.text-fuchsia-600) { color: rgb(224 0 90); }
+:global([data-ui-next='true']) .brand :global(.text-fuchsia-700) { color: rgb(184 0 73); }
+:global([data-ui-next='true']) .brand :global(.text-purple-100) { color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-400) { color: rgb(92 155 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-50) { color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-500) { color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-600) { color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-700) { color: rgb(0 82 214); }
+:global([data-ui-next='true']) .brand :global(.text-purple-800) { color: rgb(0 71 184); }
+:global([data-ui-next='true']) .brand :global(.text-purple-900) { color: rgb(10 47 138); }
+:global([data-ui-next='true']) .brand :global(.text-purple-950) { color: rgb(10 15 60); }
+:global([data-ui-next='true']) .brand :global(.from-purple-100) { --tw-gradient-from: rgb(232 240 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(232 240 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-50) { --tw-gradient-from: rgb(242 247 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(242 247 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-600) { --tw-gradient-from: rgb(0 102 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-700) { --tw-gradient-from: rgb(0 82 214) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 82 214 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.via-fuchsia-600) { --tw-gradient-to: rgb(0 82 214 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), rgb(0 82 214) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.to-fuchsia-100) { --tw-gradient-to: rgb(215 229 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-fuchsia-100\/50) { --tw-gradient-to: rgb(215 229 255 / 0.5) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-fuchsia-50) { --tw-gradient-to: rgb(232 240 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-fuchsia-600) { --tw-gradient-to: rgb(0 82 214) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-fuchsia-700) { --tw-gradient-to: rgb(0 71 184) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-purple-50\/40) { --tw-gradient-to: rgb(242 247 255 / 0.4) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-purple-700) { --tw-gradient-to: rgb(0 82 214) var(--tw-gradient-to-position); }
+/* グラフ（recharts・SVG）の色の直書き（PURPLE = #7f19e6、淡い紫 #d8b4fe） */
+:global([data-ui-next='true']) .brand :global([stroke='#7f19e6']) { stroke: #0066ff; }
+:global([data-ui-next='true']) .brand :global([fill='#7f19e6']) { fill: #0066ff; }
+:global([data-ui-next='true']) .brand :global([fill='#d8b4fe']) { fill: #a9c8ff; }

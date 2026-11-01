@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T16:53:32.604Z",
+  "passed": 0,
+  "cases": [],
+  "failures": [
+    {
+      "scenario": "late-save-route-change",
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+    },
+    {
+      "scenario": "late-photo-route-change",
+      "error": "The expression evaluated to a falsy value:\n\n  assert(!container.innerHTML.includes('PRIVATE_OLD_PHOTO'))\n"
+    },
+    {
+      "scenario": "late-upload-route-change",
+      "error": "Expected values to be strictly equal:\n\n2 !== 1\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/hr/employees/[id]/edit/page.tsx": "47a0667fb247997404eed9386885519ae304ceee3e2922a22fe64ac48ca6e341"
+  },
+  "scope": "Mounted actual page with deferred synthetic PATCH/upload/FileReader responses across employee route transitions. No customer data/provider or production writes."
+}

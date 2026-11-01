@@ -22,6 +22,10 @@ import {
   SAFETY_RESOURCES,
 } from '@/lib/mitsuboshi/_shared/safety'
 import { DEFAULT_PERSONAS } from '@/lib/mitsuboshi/nagusame/personas/default'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { GUEST_COOKIE, readGuestId } from '@/lib/mitsuboshi/nagusame/guest'
+import { claimNagusameChat, claimNagusameGuestIp } from '@/lib/mitsuboshi/nagusame/limits'
 
 const MAX_HISTORY_LENGTH = 12 // user/assistant 合算で 12 件まで保持
 const MAX_INPUT_LEN = 1000
@@ -38,6 +42,18 @@ const CHAT_MODE_ADDENDUM = `
 
 export async function POST(req: NextRequest) {
   try {
+    // 有料の AI を呼ぶため、ログイン中のユーザーか、generate で発行した署名付きゲストに限る。
+    // 以前は誰でも回数の制限なく呼べた（2026-10-18 のシステム点検で発見）。
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id || null
+    const guestId = userId ? null : readGuestId(req.cookies.get(GUEST_COOKIE)?.value)
+    if (!userId && !guestId) {
+      return NextResponse.json(
+        { error: '最初の相談を送ってから、会話を続けてください。' },
+        { status: 401 }
+      )
+    }
+
     const body = await req.json().catch(() => ({}))
     const personaId = typeof body?.personaId === 'string' ? body.personaId : ''
     const rawMessages = Array.isArray(body?.messages) ? body.messages : []
@@ -88,6 +104,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: '会話履歴が不正です（末尾はユーザー発話である必要があります）' },
         { status: 400 }
+      )
+    }
+
+    // 1 日の上限を消費してから Claude を呼ぶ。数えられないときは呼ばない（費用を青天井にしない）。
+    const quotas = [await claimNagusameChat(userId ? { userId } : { guestId: guestId! })]
+    if (!userId && quotas[0] === 'allowed') quotas.push(await claimNagusameGuestIp(req.headers, 'chat'))
+    const blocked = quotas.find((q) => q !== 'allowed')
+    if (blocked) {
+      return NextResponse.json(
+        {
+          error: blocked === 'limited'
+            ? '本日お話しできる回数の上限に達しました。明日またお話ししましょう。'
+            : '混み合っています。時間をおいて再度お試しください。',
+          limitReached: blocked === 'limited',
+        },
+        { status: blocked === 'limited' ? 429 : 503 }
       )
     }
 

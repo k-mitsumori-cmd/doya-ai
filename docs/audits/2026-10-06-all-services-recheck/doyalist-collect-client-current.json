@@ -1,0 +1,27 @@
+{
+  "passed": 21,
+  "checks": [
+    "quota rejection preserves previous list and prevents project creation",
+    "503 blocks mutations and preserves previous list",
+    "missing success blocks mutations and preserves previous list",
+    "inconsistent ledger blocks mutations and preserves previous list",
+    "unknown tier blocks mutations and preserves previous list",
+    "quota network failure does not leak provider message",
+    "same-turn callback duplicate starts one project and one collection",
+    "malformed array never announces success or wipes previous result",
+    "empty list never announces success or wipes previous result",
+    "invalid display field never announces success or wipes previous result",
+    "inconsistent generated never announces success or wipes previous result",
+    "error success never announces success or wipes previous result",
+    "HTTP500 never announces success or wipes previous result",
+    "invalid project acknowledgement stops collection and requires history check",
+    "collection quota rejection preserves list and trusts only internal pricing action",
+    "late actor response cannot create project or replace result",
+    "35-second preflight deadline does not mutate",
+    "310-second collection deadline preserves data and reports unknown outcome",
+    "body interruption never announces success",
+    "oversized header is rejected without replacing previous list",
+    "large streamed 10,000-company response is accepted beyond billing reader limit"
+  ],
+  "scope": "Actual production handleGenerate callback and both actual bounded readers with synthetic network, clock and state. No real project creation, provider calls or DB changes. Mounted UI and remaining keyword/estimate workflows still require separate checks."
+}

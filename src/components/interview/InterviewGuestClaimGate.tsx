@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { interviewUserMessage } from '@/lib/interview/user-message'
 
 export default function InterviewGuestClaimGate({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function InterviewGuestClaimGate({ enabled, children }: { enabled
         router.refresh()
       })
       .catch(cause => {
-        if (active) setError(cause instanceof Error ? cause.message : '引き継ぎ状況を確認できませんでした。')
+        if (active) setError(interviewUserMessage(cause, '引き継ぎの状況を確かめられませんでした。もう一度お試しください。'))
       })
     return () => { active = false }
   }, [enabled, attempt, router])
@@ -38,8 +39,8 @@ export default function InterviewGuestClaimGate({ enabled, children }: { enabled
       {error ? (
         <>
           <p className="text-sm leading-7 text-slate-700">{error} ゲストの作業は削除されていません。</p>
-          <button type="button" onClick={() => setAttempt(value => value + 1)} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">
-            引き継ぎを再試行する
+          <button type="button" onClick={() => setAttempt(value => value + 1)} className="rounded-xl bg-[#0066ff] px-5 py-3 font-bold text-white">
+            もう一度引き継ぐ
           </button>
         </>
       ) : (

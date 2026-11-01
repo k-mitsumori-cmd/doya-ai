@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T15:31:21.514581+00:00",
+  "status": "frozen19gates-passed-ready-for-reviewed-commit-push",
+  "sourceCommit": "7624427b6544df489615dc28b5a9188d890f177e",
+  "findings": [
+    "Persona image reads could return old bytes after delete/ownership/path/status changes during storage await",
+    "SEO full images and thumbnails could return old bytes after article deletion/ownership/path or guest-claim changes"
+  ],
+  "repair": [
+    "Persona exact current job/project/lease/path/status and ownership check after storage await",
+    "SEO exact current image/article/path/mime/ownership check after storage and Sharp conversion; retain full-image fallback and guest-owned access; sanitize unexpected failures"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/private-image-read-release-02e37b71-1cb7-4be7-988b-422d584ad07f",
+  "scope": "Two services image read lifecycle repair, not all17-service completion",
+  "gateStatus": "passed"
+}

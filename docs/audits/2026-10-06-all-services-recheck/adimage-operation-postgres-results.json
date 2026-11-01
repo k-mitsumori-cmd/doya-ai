@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T09:52:15.899Z",
+  "passed": 2,
+  "cases": [
+    {
+      "operation": "generate",
+      "firstSaveCommittedBeforeSigningFailure": true,
+      "identicalPostRetryStatus": 200,
+      "simulatedProviderCalls": 2,
+      "savedConceptWrites": 2,
+      "chargedImages": 2,
+      "postgresSavedConcepts": 2
+    },
+    {
+      "operation": "refine",
+      "firstSaveCommittedBeforeSigningFailure": true,
+      "identicalPostRetryStatus": 200,
+      "simulatedProviderCalls": 2,
+      "savedConceptWrites": 2,
+      "chargedImages": 2,
+      "postgresSavedConcepts": 2
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/route.ts": "47ad275d4d86fa8582a920263368bff6c6adc7d4dbb18c1dcb22e32849a03186",
+    "src/app/api/adimage/concepts/[id]/refine/route.ts": "8a58434d9ca8e06da5748803727095430f5c4d921d9be7652197f18e8831ec7e",
+    "src/lib/adimage/image-budget.ts": "e7ae852ee4c5b462a077dcf3e5779dfc5999c59033a9b5c85f55fc85d87567d6"
+  },
+  "scope": "Actual full generate/refine POST, actual budget, Prisma and isolated PostgreSQL with foreign keys. Synthetic identity/provider/export/signing. Signing failure after committed save admits repeat2saved concepts/2charged images. No native browser/provider/customer DB."
+}

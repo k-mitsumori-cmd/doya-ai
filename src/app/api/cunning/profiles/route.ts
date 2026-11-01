@@ -5,9 +5,13 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 // GET /api/cunning/profiles — 応募者プロフィール一覧
 export async function GET(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const { searchParams } = new URL(req?.url || 'http://localhost/api/cunning/profiles')
@@ -32,6 +36,9 @@ export async function GET(req: NextRequest) {
 // POST /api/cunning/profiles — 応募者プロフィール作成/更新
 // body: { id?, name, resume?, motivation? }
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const body = await req.json().catch(() => null)

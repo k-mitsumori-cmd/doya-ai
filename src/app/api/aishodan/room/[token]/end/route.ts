@@ -16,6 +16,8 @@ import { deliverPendingCompletionNotifications, deliverPendingFailureNotificatio
 import { evaluateCurrentSession } from '@/lib/aishodan/evaluate-current-session'
 import { enqueueEvaluation } from '@/lib/aishodan/evaluation-task'
 import { POST as saveTurns } from '../turn/route'
+import { voiceCharger } from '@/lib/doya-power/voice'
+import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -72,6 +74,10 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     if (status === 'completed') await enqueueEvaluation(tx, current.id, current.organizationId, revision)
     return { status }
   }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  // ドヤパワー（旗の内側だけ）: この呼び出しで終わらせたときだけ、仮に減らした分を戻し、実際の分数ぶんを減らし直す
+  if (!('error' in ending) && !('alreadyEnded' in ending) && !('skipped' in ending)) {
+    await voiceCharger.settle('aishodan', s.organizationId, `session-${s.id}`, voiceActualMinutes(s.startedAt, new Date()))
+  }
   if ('error' in ending) return NextResponse.json({ error: ending.error }, { status: ending.status as number })
   if ('alreadyEnded' in ending || 'skipped' in ending || ending.status === 'aborted') {
     return NextResponse.json(ending)

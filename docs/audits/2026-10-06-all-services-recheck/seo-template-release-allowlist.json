@@ -1,0 +1,51 @@
+{
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/publish-seo-template.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-entitlements-anonymous-cache-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-entitlements-cache-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-entitlements-cache-policy-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-actor-comparison-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-actor-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-actor-native-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-119d036a-537d-4f7a-bb2d-f88ee31703bc/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-119d036a-537d-4f7a-bb2d-f88ee31703bc/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-119d036a-537d-4f7a-bb2d-f88ee31703bc/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-release-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/service-limit-plan-expanded-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/service-limit-plan-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-template-actor-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-template-public.py",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-seo-entitlements-ledger.cjs",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs",
+    "scripts/security-regression/verify-service-limit-provider-mounted.cjs",
+    "src/app/api/seo/entitlements/route.ts",
+    "src/app/seo/template/page.tsx",
+    "src/components/limits/ServiceLimitProvider.tsx",
+    "src/lib/seo-template-requests.ts"
+  ],
+  "reports": [
+    [
+      "seo-template-actor-integrated-results.json",
+      28
+    ],
+    [
+      "seo-template-actor-native-results.json",
+      9
+    ],
+    [
+      "service-limit-plan-integrated-results.json",
+      115
+    ],
+    [
+      "seo-entitlements-cache-integrated-results.json",
+      9
+    ]
+  ],
+  "releaseReady": true,
+  "pendingReason": null,
+  "note": "Exact4 production files, mandatory regressions and release evidence only. No quota/billing model changes. Full17-service2074 goal remains active."
+}

@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..'),compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 function extract(file,name){const source=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let result;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)===name)result=(ts.isCallExpression(n.initializer)?n.initializer.arguments[0]:n.initializer).getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(result);return compile('('+result+');')}
-const sources={template:extract('src/app/interview/templates/page.tsx','handleCreateFromTemplate'),dashboard:extract('src/app/interview/Tool.tsx','uploadFromDashboard')};
+const sources={template:extract('src/app/(shell)/interview/templates/page.tsx','handleCreateFromTemplate'),dashboard:extract('src/app/(shell)/interview/Tool.tsx','uploadFromDashboard')};
 const {findInterviewUploadAttempt}=require('./load-typescript.cjs').load('src/lib/interview/upload-attempt.ts',{}, {AbortController,setTimeout,clearTimeout});
 const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-response.ts'),'utf8')),tick=()=>new Promise(r=>setImmediate(r));
 const file={name:'synthetic.wav',size:10,type:'audio/wav',lastModified:1},template={sampleTitle:'synthetic',genre:'OTHER',description:'supplied template description'};

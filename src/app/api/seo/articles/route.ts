@@ -10,9 +10,10 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import {
   ensureGuestId, getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, setGuestCookie,
 } from '@/lib/seoAccess'
-import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
+import { createSeoArticleWithinLimit, SeoArticleQuotaError, SeoArticleOperationError, seoArticleOperationId } from '@/lib/seo-article-admission'
 import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     catch { return NextResponse.json({ success: false, error: '検索条件または取得位置が不正です。一覧を読み直してください。' }, { status: 400 }) }
     const owner = userId ? { userId } : guestId ? { userId: null, guestId } : null
     const result = owner ? await prisma.$transaction(tx => readSeoArticleList(tx, owner, query), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
-      : { articles: [], nextCursor: null, counts: { total: 0, running: 0, done: 0, draft: 0 }, matched: 0 }
+      : { articles: [], nextCursor: null, counts: { total: 0, running: 0, done: 0, draft: 0, executing: 0, needsReview: 0, polling: 0 }, matched: 0 }
     const res = NextResponse.json({ success: true, ...result }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (!userId && !guestId) {
       const newGuest = ensureGuestId()
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   try {
     await ensureSeoSchema()
     const session = await getServerSession(authOptions)
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     if (!userId && !guestId) guestId = ensureGuestId()
 
     const body = await req.json()
+    const operationId = seoArticleOperationId(body?.operationId)
     const input = SeoCreateArticleInputSchema.parse(body)
     const createJob = body?.createJob !== false
 
@@ -81,7 +83,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { article, job } = await createSeoArticleWithinLimit({
+    const { article, job, replayed } = await createSeoArticleWithinLimit({
+      operationId,
       userId: userId || null, guestId, plan, createJob,
       articleData: {
         status: createJob ? 'RUNNING' : 'DRAFT',
@@ -106,7 +109,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await recordServiceUsage({
+    if (!replayed) await recordServiceUsage({
       userId,
       serviceId: 'seo',
       action: createJob ? '記事生成ジョブ開始' : '記事作成（下書き）',
@@ -124,6 +127,9 @@ export async function POST(req: NextRequest) {
     if (!userId && guestId) setGuestCookie(res, guestId)
     return res
   } catch (e: any) {
+    if (e instanceof SeoArticleOperationError) {
+      return NextResponse.json({ success: false, code: 'SEO_CREATION_OPERATION_CONFLICT', error: e.message }, { status: e.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }
     if (e instanceof SeoArticleQuotaError) {
       return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT',
         error: e.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${e.limit}回/月）。${e.upgradeAvailable ? 'プランをアップグレードすると増やせます。' : '追加のご利用についてはお問い合わせください。'}`,
@@ -255,3 +261,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: (b) => (b?.createJob === false ? null : 'seo.article'), key: (b) => b?.operationId }, postHandler)

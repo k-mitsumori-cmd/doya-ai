@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-07T15:29:12.179Z",
+  "passed": 2,
+  "cases": [
+    {
+      "thumb": false,
+      "scenario": "owner"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner"
+    }
+  ],
+  "failures": [
+    {
+      "thumb": false,
+      "scenario": "article-deleted-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": false,
+      "scenario": "owner-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": false,
+      "scenario": "path-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": false,
+      "scenario": "guest-claimed-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": true,
+      "scenario": "article-deleted-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": true,
+      "scenario": "path-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "thumb": true,
+      "scenario": "guest-claimed-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/seo/images/[id]/route.ts": "6a9510327ec62d5b59598caee0026a3e4cbe6eb1f64e4375cfb57b157e4cf444"
+  },
+  "scope": "Actual SEO image GET, Prisma/private Unix-socket PostgreSQL/foreign keys and real Sharp full/thumbnail conversion. Synthetic bootstrap/session/storage. No customer DB or paid calls."
+}

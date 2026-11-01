@@ -33,7 +33,7 @@ export function Button({
         size === 'md' && 'px-4 py-2.5 text-sm',
         size === 'lg' && 'px-5 py-3 text-base',
         variant === 'primary' &&
-          'bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:from-blue-700 hover:to-violet-700 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30',
+          'bg-gradient-to-r from-blue-600 to-brand-500 text-white hover:from-blue-700 hover:to-brand-600 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30',
         variant === 'secondary' && 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200',
         variant === 'ghost' && 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900',
         variant === 'danger' && 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/25',

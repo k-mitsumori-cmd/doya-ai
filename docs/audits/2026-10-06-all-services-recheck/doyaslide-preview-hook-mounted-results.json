@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-08T01:58:52.607Z",
+  "expected": 7,
+  "passed": 7,
+  "cases": [
+    "Pending previews stop after exactly 36 requests without a remaining timer",
+    "Elapsed seven-minute deadline stops a delayed poll without another HTTP request",
+    "Explicit retry resets elapsed deadline and attempt count, and coalesces double clicks",
+    "Failed explicit retry retains a previously confirmed preview",
+    "Concurrent ensure and retry calls share one registered transport",
+    "Actor ABA ignores old responses and retained callbacks",
+    "Unmount aborts transport and retained timer callbacks cannot fetch"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/use-style-previews.ts": "9c53a7e3e8a83fff8ec6fe650c78404b1b0fd1c7bf445d1f0e332356d31fca85",
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs": "3fc3bffc2755e11c697f3486399ade3cff81879d33420f952bc78b58c232ddff"
+  },
+  "scope": "Actual React hook and transport reader mounted under StrictMode. Synthetic HTTP and deterministic clock. No provider, customer DB or production writes."
+}

@@ -1,0 +1,979 @@
+{
+  "checkedAt": "2026-10-08T06:47:48.786Z",
+  "passed": 120,
+  "cases": [
+    "aio \"admin\" GET",
+    "aio \"admin\" POST",
+    "aio \"admin\" role-change-before-lock",
+    "aio \"manager\" GET",
+    "aio \"manager\" POST",
+    "aio \"manager\" role-change-before-lock",
+    "aio \"member\" GET",
+    "aio \"member\" POST",
+    "aio \"member\" role-change-before-lock",
+    "aio \"owner\" GET",
+    "aio \"owner\" POST",
+    "aio \"owner\" role-change-before-lock",
+    "aio \"__UNRECOGNIZED__\" GET",
+    "aio \"__UNRECOGNIZED__\" POST",
+    "aio \"__UNRECOGNIZED__\" role-change-before-lock",
+    "aio \"\" GET",
+    "aio \"\" POST",
+    "aio \"\" role-change-before-lock",
+    "aio \"constructor\" GET",
+    "aio \"constructor\" POST",
+    "aio \"constructor\" role-change-before-lock",
+    "aio \"admin \" GET",
+    "aio \"admin \" POST",
+    "aio \"admin \" role-change-before-lock",
+    "shodan \"admin\" GET",
+    "shodan \"admin\" POST",
+    "shodan \"admin\" role-change-before-lock",
+    "shodan \"manager\" GET",
+    "shodan \"manager\" POST",
+    "shodan \"manager\" role-change-before-lock",
+    "shodan \"member\" GET",
+    "shodan \"member\" POST",
+    "shodan \"member\" role-change-before-lock",
+    "shodan \"owner\" GET",
+    "shodan \"owner\" POST",
+    "shodan \"owner\" role-change-before-lock",
+    "shodan \"__UNRECOGNIZED__\" GET",
+    "shodan \"__UNRECOGNIZED__\" POST",
+    "shodan \"__UNRECOGNIZED__\" role-change-before-lock",
+    "shodan \"\" GET",
+    "shodan \"\" POST",
+    "shodan \"\" role-change-before-lock",
+    "shodan \"constructor\" GET",
+    "shodan \"constructor\" POST",
+    "shodan \"constructor\" role-change-before-lock",
+    "shodan \"admin \" GET",
+    "shodan \"admin \" POST",
+    "shodan \"admin \" role-change-before-lock",
+    "quote \"admin\" GET",
+    "quote \"admin\" POST",
+    "quote \"admin\" role-change-before-lock",
+    "quote \"manager\" GET",
+    "quote \"manager\" POST",
+    "quote \"manager\" role-change-before-lock",
+    "quote \"member\" GET",
+    "quote \"member\" POST",
+    "quote \"member\" role-change-before-lock",
+    "quote \"owner\" GET",
+    "quote \"owner\" POST",
+    "quote \"owner\" role-change-before-lock",
+    "quote \"__UNRECOGNIZED__\" GET",
+    "quote \"__UNRECOGNIZED__\" POST",
+    "quote \"__UNRECOGNIZED__\" role-change-before-lock",
+    "quote \"\" GET",
+    "quote \"\" POST",
+    "quote \"\" role-change-before-lock",
+    "quote \"constructor\" GET",
+    "quote \"constructor\" POST",
+    "quote \"constructor\" role-change-before-lock",
+    "quote \"admin \" GET",
+    "quote \"admin \" POST",
+    "quote \"admin \" role-change-before-lock",
+    "mensetsu \"admin\" GET",
+    "mensetsu \"admin\" POST",
+    "mensetsu \"admin\" role-change-before-lock",
+    "mensetsu \"manager\" GET",
+    "mensetsu \"manager\" POST",
+    "mensetsu \"manager\" role-change-before-lock",
+    "mensetsu \"member\" GET",
+    "mensetsu \"member\" POST",
+    "mensetsu \"member\" role-change-before-lock",
+    "mensetsu \"owner\" GET",
+    "mensetsu \"owner\" POST",
+    "mensetsu \"owner\" role-change-before-lock",
+    "mensetsu \"__UNRECOGNIZED__\" GET",
+    "mensetsu \"__UNRECOGNIZED__\" POST",
+    "mensetsu \"__UNRECOGNIZED__\" role-change-before-lock",
+    "mensetsu \"\" GET",
+    "mensetsu \"\" POST",
+    "mensetsu \"\" role-change-before-lock",
+    "mensetsu \"constructor\" GET",
+    "mensetsu \"constructor\" POST",
+    "mensetsu \"constructor\" role-change-before-lock",
+    "mensetsu \"admin \" GET",
+    "mensetsu \"admin \" POST",
+    "mensetsu \"admin \" role-change-before-lock",
+    "aishodan \"admin\" GET",
+    "aishodan \"admin\" POST",
+    "aishodan \"admin\" role-change-before-lock",
+    "aishodan \"manager\" GET",
+    "aishodan \"manager\" POST",
+    "aishodan \"manager\" role-change-before-lock",
+    "aishodan \"member\" GET",
+    "aishodan \"member\" POST",
+    "aishodan \"member\" role-change-before-lock",
+    "aishodan \"owner\" GET",
+    "aishodan \"owner\" POST",
+    "aishodan \"owner\" role-change-before-lock",
+    "aishodan \"__UNRECOGNIZED__\" GET",
+    "aishodan \"__UNRECOGNIZED__\" POST",
+    "aishodan \"__UNRECOGNIZED__\" role-change-before-lock",
+    "aishodan \"\" GET",
+    "aishodan \"\" POST",
+    "aishodan \"\" role-change-before-lock",
+    "aishodan \"constructor\" GET",
+    "aishodan \"constructor\" POST",
+    "aishodan \"constructor\" role-change-before-lock",
+    "aishodan \"admin \" GET",
+    "aishodan \"admin \" POST",
+    "aishodan \"admin \" role-change-before-lock"
+  ],
+  "observations": [
+    {
+      "service": "aio",
+      "role": "admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "admin",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "manager",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "member",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "member",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "member",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aio",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "owner",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "__UNRECOGNIZED__",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "constructor",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "admin ",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "admin ",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aio",
+      "role": "admin ",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "admin",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "manager",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "member",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "member",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "member",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "shodan",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "owner",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "constructor",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "admin ",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "admin ",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "shodan",
+      "role": "admin ",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "admin",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "manager",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "member",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "member",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "member",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "quote",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "owner",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "__UNRECOGNIZED__",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "constructor",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "admin ",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "admin ",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "quote",
+      "role": "admin ",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "manager",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "member",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "member",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "member",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "mensetsu",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "owner",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "__UNRECOGNIZED__",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "constructor",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin ",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin ",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin ",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "manager",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "member",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "member",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "member",
+      "mode": "role-change-before-lock",
+      "status": 200,
+      "savedStatus": "ACTIVE"
+    },
+    {
+      "service": "aishodan",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "owner",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "__UNRECOGNIZED__",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "constructor",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin ",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin ",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING"
+    },
+    {
+      "service": "aishodan",
+      "role": "admin ",
+      "mode": "role-change-before-lock",
+      "status": 409,
+      "savedStatus": "PENDING"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/aio/invite/[token]/route.ts": "a38b737ded470d1f80006fc9444f0322fcfd13dc19c4a40059ab765cee87cb1b",
+    "src/app/api/shodan/invite/[token]/route.ts": "1e95e7057c85edaa05ff721dde1e78dab4e198f58314f087cb88c00e5bb6261d",
+    "src/app/api/quote/invite/[token]/route.ts": "b3bdca6c3a62849d9231f2a631d22c546922a2efc09cdc1c4b38422810ee4d20",
+    "src/app/api/mensetsu/invite/[token]/route.ts": "a5887c41801fdc3dd0441692d2980f7c6caa523cbbed5910bad4162a3ded15bb",
+    "src/app/api/aishodan/invite/[token]/route.ts": "ebbafe712ccb131c39b531d98b81d71ba8439d437273b78ad5c63df0872ff2e1",
+    "docs/audits/2026-10-06-all-services-recheck/verify-membership-invitation-role-integrated-postgres.cjs": "98facde5b42bb68e93f9e2229eaabd6c4b5cb81a02976a6d68491732d585adcc",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c"
+  },
+  "candidateHashes": {},
+  "scope": "Actual five invitation handlers and actual Prisma/private Unix PostgreSQL transactions, organization locks and stored activation results. Synthetic sessions and transaction-time role mutation; DMMF scalar tables, no foreign-key constraints in this fixture. No emails/providers/network/customer data and no evidence invalid roles exist in production."
+}

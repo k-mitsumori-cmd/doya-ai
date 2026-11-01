@@ -1,5 +1,5 @@
 import { cleanupAishodanWorkTasks } from '@/lib/aishodan/cleanup-work-tasks'
-import { recoverStaleAishodanSessions } from '@/lib/aishodan/recover-stale-sessions'
+import { recoverStaleAishodanSessions, releaseUnstartedAishodanHolds } from '@/lib/aishodan/recover-stale-sessions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,6 +13,8 @@ export async function GET(request: Request) {
   try {
     const sessions = await recoverStaleAishodanSessions()
     const tasks = await cleanupAishodanWorkTasks()
+    // ドヤパワー（旗の内側だけ）: 始まらなかった商談の、仮に減らした分を戻す。失敗しても、ほかの整理は止めない
+    await releaseUnstartedAishodanHolds().catch(() => console.error('[aishodan-work-cleanup] unstarted hold release unavailable'))
     return Response.json({ ok: sessions.failed === 0, ...tasks, sessions }, { status: sessions.failed ? 503 : 200 })
   } catch {
     console.error('[aishodan-work-cleanup] metadata cleanup unavailable')

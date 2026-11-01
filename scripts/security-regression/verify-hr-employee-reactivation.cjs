@@ -5,14 +5,14 @@ function fixture({ quotaReached = false, existingStatus = 'RESIGNED' } = {}) {
   const writes = []
   const events = []
   const tx = {
-    hrEmployee: { update: async ({ data }) => { writes.push(data); events.push('employee'); return { id: 'e', ...data } } },
+    hrEmployee: { updateMany: async ({ where, data }) => { assert.equal(where.organizationId, 'o'); assert.equal(where.updatedAt.toISOString(), '2026-10-07T00:00:00.000Z'); const member = where.organization.members.some; assert.equal(member.id, 'm'); assert.equal(member.userId, 'u'); assert.equal(member.status, 'ACTIVE'); assert.deepEqual(Array.from(member.role.in), ['OWNER', 'ADMIN']); writes.push(data); events.push('employee'); return { count: 1 } }, findFirst: async ({ where }) => { assert.equal(where.organizationId, 'o'); assert.equal(where.organization.members.some.id, 'm'); return { id: 'e', ...writes.at(-1) } } },
     hrEmployeeHistory: { create: async () => { events.push('history'); return { id: 'h' } } },
     hrDepartment: { findFirst: async () => ({ id: 'd2', name: 'New' }) },
   }
   const prisma = {
     hrEmployee: { findFirst: async ({ where }) => {
       assert.equal(where.organizationId, 'o')
-      return { id: 'e', status: existingStatus, departmentId: 'd1', department: { name: 'Old' } }
+      return { id: 'e', updatedAt: new Date('2026-10-07T00:00:00.000Z'), status: existingStatus, departmentId: 'd1', department: { name: 'Old' } }
     } },
     $transaction: async callback => { events.push('transaction'); return callback(tx) },
   }
@@ -31,7 +31,7 @@ function fixture({ quotaReached = false, existingStatus = 'RESIGNED' } = {}) {
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
-    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'o', role: 'ADMIN', memberId: 'm' }), hasMinRole: () => true },
+    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'o', userId: 'u', role: 'ADMIN', memberId: 'm' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN' }, EmployeeStatus: { ACTIVE: 'ACTIVE', RESIGNED: 'RESIGNED', ON_LEAVE: 'ON_LEAVE', RETIRED: 'RETIRED' } },
     '@/lib/hr/evaluation-access': {},
     '@/lib/hr/one-on-one-access': {},
@@ -66,7 +66,7 @@ function fixture({ quotaReached = false, existingStatus = 'RESIGNED' } = {}) {
     assert.equal((await f.patch({ status: 'UNKNOWN' })).status, 400)
     assert.equal(f.events.length, 0)
     assert.equal((await f.patch({ departmentId: 'd2' })).status, 200)
-    assert.deepEqual(f.events, ['transaction', 'history', 'employee'])
+    assert.deepEqual(f.events, ['transaction', 'employee', 'history'])
   })
   await check('logical delete and resignation history share one transaction', async () => {
     const f = fixture({ existingStatus: 'ACTIVE' })

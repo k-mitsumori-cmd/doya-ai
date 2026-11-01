@@ -1,0 +1,49 @@
+import type { Metadata } from 'next'
+import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
+import SeoShellFrame from '@/components/SeoShellFrame'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+export const metadata: Metadata = buildServiceMetadata('seo', {
+  keywords: SERVICE_SEO.seo.keywords,
+})
+
+const SVC = getServiceById('seo')!
+
+export default async function SeoLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
+  const user: any = session?.user || null
+  const isLoggedIn = !!user?.id
+  const planRaw = String(user?.seoPlan || user?.plan || (isLoggedIn ? 'FREE' : 'GUEST')).toUpperCase()
+  const currentPlan =
+    planRaw === 'PRO' || planRaw === 'BUNDLE' || planRaw === 'BASIC' || planRaw === 'STARTER' || planRaw === 'BUSINESS'
+      ? 'PRO'
+      : planRaw === 'ENTERPRISE'
+        ? 'ENTERPRISE'
+        : planRaw === 'LIGHT'
+          ? 'LIGHT'
+        : planRaw === 'FREE'
+          ? 'FREE'
+          : planRaw === 'GUEST'
+            ? 'GUEST'
+            : 'UNKNOWN'
+  const firstLoginAt = (user?.firstLoginAt as any) || null
+
+  return (
+    <>
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
+      {/* ログイン後は ToolFrame だけ（枠は (shell)/layout.tsx が出す） */}
+      {isLoggedIn
+        ? <SeoShellFrame currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>{children}</SeoShellFrame>
+        : children}
+    </>
+  )
+}

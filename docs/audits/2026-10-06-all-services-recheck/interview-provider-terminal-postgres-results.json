@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T04:11:52.430Z",
+  "expected": 10,
+  "passed": 10,
+  "cases": [
+    "max-tokens: no draft or quota charge for incomplete/invalid provider termination",
+    "safety: no draft or quota charge for incomplete/invalid provider termination",
+    "unknown: no draft or quota charge for incomplete/invalid provider termination",
+    "missing: no draft or quota charge for incomplete/invalid provider termination",
+    "invalid: no draft or quota charge for incomplete/invalid provider termination",
+    "late: no draft or quota charge for incomplete/invalid provider termination",
+    "conflicting: no draft or quota charge for incomplete/invalid provider termination",
+    "success: normal STOP saves article once, excludes reasoning and replays",
+    "separate: normal STOP saves article once, excludes reasoning and replays",
+    "thoughts: normal STOP saves article once, excludes reasoning and replays"
+  ],
+  "sourceHashes": {
+    "src/app/api/interview/articles/generate/route.ts": "3af157c649827926f4faaebccb1451ebdad30dc259a7d5c488223b6378466128",
+    "src/lib/interview/article-operation.ts": "a15bc3970235077fcca216f19cde5c41d925958544e474f00a5caef61b1c030a",
+    "src/lib/interview/article-budget.ts": "2ed544e20f6316e689dcd7713c4aa146b974b45a152486b3770cbc150ef351cc",
+    "src/lib/interview/access.ts": "6636478ea96697be077f24f73e140e89787530aa2b22e04b4be9b7a814fd9032",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884",
+    "src/lib/interview/gemini-request.ts": "5721ed946f39a11d1591da293914a1f23dfb5e69af7e0bdeb9cfbc7519582b04",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-provider-terminal-postgres.cjs": "48a47be49a7634ba21a32325a98f6afc0b0c6423bdec3503ddb791b4e78a25b8"
+  },
+  "scope": "Actual API/ORM/private Unix PostgreSQL with synthetic normal, incomplete and conflicting Gemini terminal responses; no external provider or customer data."
+}

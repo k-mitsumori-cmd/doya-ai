@@ -1,3 +1,4 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
@@ -32,14 +33,14 @@ const prisma = { ...db, $transaction: async fn => fn(db) };
 const recalc = load('src/lib/kintai/recalculate.ts', { '@/lib/prisma': { prisma }, './attendance': attendance, './shift-records': shift });
 const access = { getKintaiContext: async () => ({ employeeId: 'e1', organizationId: 'o1', userId: 'u1' }) };
 const clock = load('src/app/api/kintai/clock/route.ts', {
-  'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': access,
+  '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': access,
   '@/lib/kintai/recalculate': recalc, '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
   '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'employee' },
   '@/lib/kintai/shift-records': shift,
   '@/lib/service-usage': { recordServiceUsage: async () => {} },
 }, { Date: FixedDate });
 const dashboard = load('src/app/api/kintai/dashboard/route.ts', {
-  'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': access,
+  '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': access,
   '@/lib/kintai/format': load('src/lib/kintai/format.ts'), '@/lib/kintai/shift-records': shift,
 }, { Date: FixedDate });
 

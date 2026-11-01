@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
     const cutoffDate = await bannerHistoryCutoff(userId, firstLoginAt)
 
     if (!cutoffDate) {
-      return NextResponse.json({
+      return privateApiJson({
         items: [],
         message: '履歴機能は有料プラン限定です。プランをアップグレードしてください。',
         requiresUpgrade: true,
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
       let rows = rowsByBatch
       if (batchIdParam.includes('|')) {
         const ids = await legacyBannerIds(userId, batchIdParam, cutoffDate)
-        if (ids === null && rows.length === 0) return NextResponse.json({ error: '履歴の識別子が不正です' }, { status: 400 })
+        if (ids === null && rows.length === 0) return privateApiJson({ error: '履歴の識別子が不正です' }, { status: 400 })
         if (ids) rows = [...rows, ...ids.map(id => ({ id }))]
       }
 
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
       const bannerIds = rows.map((r) => r.id)
       const thumbs = bannerIds.map((id) => `/api/banner/history/thumb?id=${encodeURIComponent(id)}`)
 
-      return NextResponse.json({
+      return privateApiJson({
         id: batchIdParam,
         // 互換: banners は “表示用サムネURL” を返す
         banners: thumbs,
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
       }, {
         headers: {
           // 履歴はユーザー固有なので private キャッシュのみ
-          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+          'Cache-Control': 'private, no-store',
         }
       })
     }
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
     try {
       if (searchParams.has('cursor')) cursor = decodeBannerHistoryCursor(searchParams.get('cursor') || '', userId)
     } catch {
-      return NextResponse.json({ error: '履歴の取得位置が正しくありません。最初から読み直してください。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
+      return privateApiJson({ error: '履歴の取得位置が正しくありません。最初から読み直してください。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     }
 
     // images=0 の場合は output を取らず、レスポンスを極力軽くする
@@ -223,10 +224,10 @@ export async function GET(request: NextRequest) {
 
     const nextCursor = rows.length > processed && processed > 0
       ? encodeBannerHistoryCursor(rows[processed - 1], userId) : null
-    return NextResponse.json({ items, nextCursor }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    return privateApiJson({ items, nextCursor }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   } catch (e: any) {
     console.error('[banner history] failed')
-    return NextResponse.json({ error: '履歴の取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '履歴の取得に失敗しました' }, { status: 500 })
   }
 }
 
@@ -235,16 +236,16 @@ export async function DELETE(request: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const batchId = searchParams.get('batchId') || ''
-    if (!batchId) return NextResponse.json({ error: 'batchId is required' }, { status: 400 })
+    if (!batchId) return privateApiJson({ error: 'batchId is required' }, { status: 400 })
 
     // 旧形式は先に対象を確定し、新旧の画像を一度の削除で扱う。
     const legacyIds = batchId.includes('|') ? await legacyBannerIds(userId, batchId, new Date(0)) : []
-    if (legacyIds === null) return NextResponse.json({ error: '履歴の識別子が不正です' }, { status: 400 })
+    if (legacyIds === null) return privateApiJson({ error: '履歴の識別子が不正です' }, { status: 400 })
 
     await prisma.generation.deleteMany({
       where: {
@@ -258,9 +259,9 @@ export async function DELETE(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true })
+    return privateApiJson({ success: true })
   } catch (e: any) {
     console.error('[banner history] delete failed')
-    return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

@@ -1,0 +1,124 @@
+{
+  "checkedAt": "2026-10-08T17:02:44.815Z",
+  "expected": 11,
+  "passed": 11,
+  "cases": [
+    {
+      "scenario": "active-root",
+      "employeeRepresented": true,
+      "exactlyOnce": true,
+      "renderedDepartmentIds": [
+        "synthetic-dept"
+      ],
+      "unassignedIds": [],
+      "originalProbe": "verify-hr-org-chart-visibility-followup.cjs"
+    },
+    {
+      "scenario": "active-child-of-inactive-parent",
+      "employeeRepresented": true,
+      "exactlyOnce": true,
+      "renderedDepartmentIds": [
+        "synthetic-dept"
+      ],
+      "unassignedIds": [],
+      "originalProbe": "verify-hr-org-chart-visibility-followup.cjs"
+    },
+    {
+      "scenario": "employee-in-inactive-department",
+      "employeeRepresented": true,
+      "exactlyOnce": true,
+      "renderedDepartmentIds": [
+        "synthetic-dept"
+      ],
+      "unassignedIds": [
+        "synthetic-employee"
+      ],
+      "originalProbe": "verify-hr-org-chart-visibility-followup.cjs"
+    },
+    {
+      "scenario": "unassigned-employee",
+      "employeeRepresented": true,
+      "exactlyOnce": true,
+      "renderedDepartmentIds": [
+        "synthetic-dept"
+      ],
+      "unassignedIds": [
+        "synthetic-employee"
+      ],
+      "originalProbe": "verify-hr-org-chart-visibility-followup.cjs"
+    },
+    {
+      "file": "src/app/api/hr/org-chart/route.ts",
+      "mode": "member",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/hr/org-chart/route.ts",
+      "mode": "manager",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/hr/org-chart/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/hr/org-chart/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/kintai/departments/route.ts",
+      "mode": "member",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/kintai/departments/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    },
+    {
+      "file": "src/app/api/kintai/departments/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": true,
+      "cache": "private, no-store",
+      "vary": "Cookie",
+      "originalProbe": "verify-hr-org-chart-visibility-cache-regression.cjs"
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-visibility-followup.cjs": "53bc62aed6946aa4392174d55acad9da29c47a6d04ef136e52785d395e0d64a4",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-visibility-cache-regression.cjs": "d3cd1f145e8a70f33f8483e80f18667dca0a3ae40a720d8e41e6a0a9005699ca",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-legacy.cjs": "fe3213ec5fadd4e62cc4521f40b81daaaffc8f49d78c3f24bfbd577aa2369504",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/app/api/kintai/departments/route.ts": "3c70e0ec4c917a4473c750af6f15a0fbb1c8ad2be56c78c4939b22a8bed9ef84",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/scripts/security-regression/load-typescript.cjs": "fd38a12ff81485335d48040e03b92e5011943805bbcf62cf657572df41e39a0a"
+  },
+  "scope": "Original legacy API4 and cache7 probes executed unchanged against the pagination candidate. Only new unused paged import is adapted with a throwing stub; no original assertion removed. Paged behavior independently requires realDB18, boundary28, mounted14 and native10. No production/customer writes or production verification."
+}

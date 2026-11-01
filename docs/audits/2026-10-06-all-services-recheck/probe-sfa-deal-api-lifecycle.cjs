@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto');
+const {load}=require('../../../scripts/security-regression/load-typescript.cjs');
+const file='src/app/api/sfa/deals/[id]/route.ts';
+function fixture(initial={}){
+ let active=true,writes=0,record={id:'deal',organizationId:'org',isActive:true,name:'Original',status:'open',wonAt:null,lostAt:null,updatedAt:new Date('2026-10-07T00:00:00.000Z'),...initial};const seen=[];
+ const prisma={sfaDeal:{findUnique:async()=>({...record}),update:async({where,data})=>{writes++;seen.push({active,where,data});record={...record,...data};return record}},sfaStage:{findUnique:async()=>({id:'lost',probability:0,isWon:false,isLost:true,pipeline:{organizationId:'org'}})}};
+ const route=load(file,{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/sfa/access':{getSfaContext:async()=>{const ctx={organizationId:'org',userId:'actor',memberId:'member'};active=false;return ctx},orgSlugFrom:()=> 'alpha'},'@/lib/sfa/format':load('src/lib/sfa/format.ts'),'@/lib/sfa/amount':load('src/lib/sfa/amount.ts')});
+ return {seen,record:()=>record,writes:()=>writes,patch:body=>route.PATCH({json:async()=>body},{params:Promise.resolve({id:'deal'})}),remove:()=>route.DELETE({},{params:Promise.resolve({id:'deal'})})};
+}
+(async()=>{const results=[];
+ for(const action of ['patch','remove']){const f=fixture();const r=await(action==='patch'?f.patch({name:'New'}):f.remove());assert.equal(r.status,200);assert.equal(f.seen[0].active,false);results.push({name:action+' still writes after synthetic authority revocation following context resolution',status:r.status});}
+ {const f=fixture();const responses=await Promise.all([f.patch({name:'First',expectedUpdatedAt:'2026-10-07T00:00:00.000Z'}),f.patch({name:'Second',expectedUpdatedAt:'2026-10-07T00:00:00.000Z'})]);assert.ok(responses.every(r=>r.status===200));assert.equal(f.writes(),2);results.push({name:'Same expectedUpdatedAt is ignored and both deal writes succeed',statuses:responses.map(r=>r.status)});}
+ {const f=fixture({isActive:false});assert.equal((await f.patch({name:'Hidden changed'})).status,200);assert.equal(f.record().name,'Hidden changed');results.push({name:'Soft-deleted deal still accepts PATCH and reports success'});}
+ {const wonAt=new Date('2026-10-06T00:00:00.000Z');const f=fixture({status:'won',wonAt});assert.equal((await f.patch({stageId:'lost'})).status,200);assert.equal(f.record().status,'lost');assert.equal(f.record().wonAt,wonAt);assert.ok(f.record().lostAt);results.push({name:'Won to lost stage transition retains wonAt together with new lostAt'});}
+ {const f=fixture();const name='x'.repeat(201);assert.equal((await f.patch({name})).status,200);assert.equal(f.record().name.length,200);results.push({name:'Deal edit silently truncates submitted name to 200 characters'});}
+ const report={checkedAt:new Date().toISOString(),findings:results.length,results,sourceHash:crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),scope:'Actual deal PATCH/DELETE handlers with independent stateful synthetic Prisma and context revocation; no actual PG scheduling, live session or production writes. Separately unresolved business-deal lifecycle; current task/activity cohort is not a complete SFA repair.'};fs.writeFileSync('docs/audits/2026-10-06-all-services-recheck/sfa-deal-api-lifecycle-baseline.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({confirmedFindings:results.length}));
+})().catch(e=>{console.error(e);process.exitCode=1});

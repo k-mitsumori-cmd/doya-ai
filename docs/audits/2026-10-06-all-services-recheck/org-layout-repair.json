@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-06T18:15:33.881562+00:00",
+  "baseline": [
+    "hr-layout-session-refresh-baseline.json",
+    "kintai-layout-session-refresh-baseline.json"
+  ],
+  "mountedCases": 26,
+  "proof": "org-layout-mounted-current.json",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/org-layout-release-0aa07f8a-dc1c-4137-bcc3-51769a1b3e2f",
+  "changes": [
+    "Scope organization reads to actor epochs and reject late responses",
+    "Keep same actor draft mounted during SDK update and transient read failures",
+    "Hide retained view while authentication is loading; make retained view inert on confirmation errors with accessible retry",
+    "Bound read-only response body and deadline; validate management permissions",
+    "Refresh scalar plans, route changes and window focus without unmounting children"
+  ],
+  "crosschecks": [
+    "verify-hr-usage-error.cjs",
+    "verify-kintai-usage-error.cjs",
+    "verify-kintai-disabled-pages.cjs",
+    "verify-kintai-disabled-access.cjs",
+    "verify-hr-form-locks.cjs"
+  ],
+  "limits": [
+    "Synthetic session/context/network and draft tests do not prove actual customer private flows or native browser inert behavior",
+    "HR 401 and Kintai organizationId null retain existing no-organization behavior",
+    "No live member, HR, clock, AI, payment or DB writes"
+  ]
+}

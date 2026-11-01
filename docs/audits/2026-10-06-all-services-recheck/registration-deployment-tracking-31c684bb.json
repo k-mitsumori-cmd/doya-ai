@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-06T16:46:58.490844+00:00",
+  "commit": "31c684bbc05eddf1f1494ed61c4695c9524b522d",
+  "state": "Exact-SHA CI success; READY production aliases; 17 public HTML and 53 published scripts verified",
+  "ci": [
+    {
+      "conclusion": "success",
+      "databaseId": 37496876585,
+      "headSha": "31c684bbc05eddf1f1494ed61c4695c9524b522d",
+      "status": "completed",
+      "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37496876585"
+    }
+  ],
+  "deployments": [
+    {
+      "url": "doya-hqwexvokk-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "31c684bbc05eddf1f1494ed61c4695c9524b522d"
+    }
+  ],
+  "localEvidence": "registration-repair.json",
+  "scope": "Current registration classification/first-stamp cohort only; all-service goal remains active",
+  "remaining": [
+    "Complete17-service requirement/user-experience matrix with current scoped proofs",
+    "Authenticated live billing/device/OAuth/GA delivery not established; captured private PG concurrency is not production proof"
+  ],
+  "publicEvidence": "registration-public-31c684bb.json"
+}

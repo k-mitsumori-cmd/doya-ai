@@ -9,18 +9,9 @@
 // ⚠️ サーバ側の権限判定を UI で代替しないこと。ここでボタンを隠すのは
 //    体験のためであり、実際の防御は API 側（hasMinRole）が行う。
 
-import { useCallback, useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
-import { withOrg } from './OrgSwitcher'
-
-export interface MemberRow {
-  id: string
-  role: string
-  status: string
-  name: string | null
-  inviteEmail: string | null
-  userId: string | null
-}
+import { useOrgMemberManagement } from '@/lib/use-org-member-management'
+import type { OrganizationMemberRow, MemberService } from '@/lib/org-member-response'
+export type MemberRow = OrganizationMemberRow
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -34,117 +25,26 @@ export interface MemberPanelProps {
   /** 例: '/api/quote' */
   basePath: string
   /** 'quote' / 'aishodan' — ?org= の付与に使う */
-  service: string
+  service: MemberService
   /** 招待された人が何を扱えるようになるかの説明 */
   description: string
 }
 
 export default function MemberPanel({ basePath, service, description }: MemberPanelProps) {
-  const [members, setMembers] = useState<MemberRow[]>([])
-  const [myRole, setMyRole] = useState('member')
-  const [myUserId, setMyUserId] = useState<string | null>(null)
-  // ⚠️ メンバー行に名前が入っていないことがある（招待経由ではなくオーナー自身が作った場合）。
-  //    自分の行だけは、ログイン中の名前で埋めて「（名前未設定）」を見せない。
-  const { data: session } = useSession()
-  const [loading, setLoading] = useState(true)
-
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState('member')
-  const [busy, setBusy] = useState<string | null>(null)
-  const [inviteUrl, setInviteUrl] = useState('')
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await fetch(withOrg(service, `${basePath}/members`))
-      const d = await r.json()
-      if (r.ok) {
-        setMembers(d.members || [])
-        setMyRole(d.myRole || 'member')
-        setMyUserId(d.myUserId ?? null)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [basePath, service])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  async function invite() {
-    if (!email.trim()) return
-    setBusy('invite')
-    setError('')
-    setNotice('')
-    setInviteUrl('')
-    try {
-      const r = await fetch(withOrg(service, `${basePath}/members`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), role }),
-      })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '招待できませんでした')
-      setEmail('')
-      // ⚠️ メール送信に失敗しても招待自体は成立している。
-      //    URLを出して手渡しできるようにする（黙って失敗させない）。
-      setInviteUrl(d.url || '')
-      setNotice(d.emailSent ? '招待メールを送信しました。' : 'メールを送信できませんでした。下のURLを直接お渡しください。')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '招待できませんでした')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function changeRole(id: string, next: string) {
-    setBusy(`role-${id}`)
-    setError('')
-    try {
-      const r = await fetch(withOrg(service, `${basePath}/members/${id}`), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: next }),
-      })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '変更できませんでした')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '変更できませんでした')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function remove(id: string) {
-    setBusy(`member-${id}`)
-    setError('')
-    try {
-      const r = await fetch(withOrg(service, `${basePath}/members/${id}`), { method: 'DELETE' })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d?.error || '外せませんでした')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '外せませんでした')
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const canManage = ROLE_RANK[myRole] >= ROLE_RANK.admin
+  const {members,myRole,myUserId,loading,email,role,busy,inviteUrl,error,notice,loaded,canManage,unknown,
+    setEmail,setRole,invite,changeRole,remove,load,session}=useOrgMemberManagement(service,basePath)
+  const disabled=!!busy||unknown||!loaded
 
   return (
     <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
       <h2 className="text-base font-bold text-slate-900">メンバー</h2>
       <p className="mt-1 text-sm text-slate-600">{description}</p>
 
-      {error && <p className="mt-3 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p>}
-      {notice && <p className="mt-3 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">{notice}</p>}
+      {error && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p>}
+      {notice && <p role="status" className="mt-3 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">{notice}</p>}
 
+      {unknown && <p role="status" className="mt-3 text-sm text-amber-800">操作結果が未確認のため再送信を停止しています。</p>}
+      {(!loaded || unknown || error) && <button type="button" disabled={!!busy || loading} onClick={() => void load()} className="mt-3 text-sm font-semibold underline">メンバー情報を再読み込みする</button>}
       {loading ? (
         <p className="mt-4 text-sm text-slate-500">読み込み中...</p>
       ) : (
@@ -169,7 +69,7 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
                     <select
                       value={m.role}
                       onChange={(e) => changeRole(m.id, e.target.value)}
-                      disabled={busy === `role-${m.id}`}
+                      disabled={disabled}
                       className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:border-[#0066ff] focus:outline-none"
                     >
                       <option value="member">メンバー</option>
@@ -178,7 +78,7 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
                     </select>
                     <button
                       onClick={() => remove(m.id)}
-                      disabled={busy === `member-${m.id}`}
+                      disabled={disabled}
                       className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs text-rose-700 disabled:opacity-40"
                     >
                       {m.status === 'PENDING' ? '取り消す' : '外す'}
@@ -196,12 +96,17 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
               type="email"
+              aria-label="招待する方のメールアドレス"
+              maxLength={254}
+              disabled={disabled}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="招待する方のメールアドレス"
               className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
             />
             <select
+              aria-label="招待する方の権限"
+              disabled={disabled}
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
@@ -212,19 +117,17 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
             </select>
             <button
               onClick={invite}
-              disabled={busy === 'invite' || !email.trim()}
+              disabled={disabled || !email.trim()}
               className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
             >
               {busy === 'invite' ? '送信中...' : '招待する'}
             </button>
           </div>
-          {inviteUrl && (
-            <p className="mt-3 break-all rounded-lg bg-slate-50 p-3 text-xs text-slate-700">{inviteUrl}</p>
-          )}
         </>
       ) : (
-        <p className="mt-4 text-xs text-slate-500">メンバーの招待は管理者以上が行えます。</p>
+        loaded && <p className="mt-4 text-xs text-slate-500">メンバーの招待は管理者以上が行えます。</p>
       )}
+      {inviteUrl && <p className="mt-3 break-all rounded-lg bg-slate-50 p-3 text-xs text-slate-700">{inviteUrl}</p>}
     </section>
   )
 }

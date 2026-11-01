@@ -1,0 +1,127 @@
+{
+  "checkedAt": "2026-10-06T15:22:18.582689+00:00",
+  "commit": "1f1b5e8bf27ed6b817deec32287a90ec4ecd365d",
+  "deploymentId": "dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+  "pages": [
+    {
+      "id": "banner",
+      "path": "/banner/pricing",
+      "status": 200,
+      "finalPath": "/banner/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "seo",
+      "path": "/seo/pricing",
+      "status": 200,
+      "finalPath": "/seo/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "interview",
+      "path": "/interview/pricing",
+      "status": 200,
+      "finalPath": "/interview/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "persona",
+      "path": "/persona/pricing",
+      "status": 200,
+      "finalPath": "/persona/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "hr",
+      "path": "/hr/pricing",
+      "status": 200,
+      "finalPath": "/hr/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "kintai",
+      "path": "/kintai/pricing",
+      "status": 200,
+      "finalPath": "/kintai/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "doyalist",
+      "path": "/doyalist/pricing",
+      "status": 200,
+      "finalPath": "/doyalist/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "promane",
+      "path": "/promane/pricing",
+      "status": 200,
+      "finalPath": "/promane/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "doyaslide",
+      "path": "/doyaslide/pricing",
+      "status": 200,
+      "finalPath": "/doyaslide/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "cunning",
+      "path": "/cunning/pricing",
+      "status": 200,
+      "finalPath": "/cunning/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "sfa",
+      "path": "/sfa/pricing",
+      "status": 200,
+      "finalPath": "/sfa/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "shodan",
+      "path": "/shodan/pricing",
+      "status": 200,
+      "finalPath": "/shodan/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "aio",
+      "path": "/aio/pricing",
+      "status": 200,
+      "finalPath": "/aio/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "mensetsu",
+      "path": "/mensetsu/pricing",
+      "status": 200,
+      "finalPath": "/mensetsu/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "quote",
+      "path": "/quote/pricing",
+      "status": 200,
+      "finalPath": "/quote/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "aishodan",
+      "path": "/aishodan/pricing",
+      "status": 200,
+      "finalPath": "/aishodan/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "id": "adimage",
+      "path": "/adimage/pricing",
+      "status": 200,
+      "finalPath": "/adimage/pricing",
+      "deploymentMarker": true
+    }
+  ],
+  "scope": "Anonymous readonly HTML GET only. Confirms pricing route/status/redirect/deployment marker, not rendered JS, authentication, checkout, limits or each service full flow."
+}

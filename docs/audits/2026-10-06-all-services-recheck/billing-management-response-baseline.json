@@ -1,0 +1,192 @@
+{
+  "checkedAt": "2026-10-06T15:44:18.129Z",
+  "method": "Actual extracted TSX operation callbacks transpiled and executed with synthetic fetch, state and storage. Does not prove mounted actor switching or real billing.",
+  "sourceHashes": {
+    "src/app/banner/dashboard/plan/page.tsx": "670490b7d92307afc3208bb04a9fc9529bea1cd0a83bc9d8627bc2b417b67bf9",
+    "src/app/banner/dashboard/settings/page.tsx": "2d0fd2a0c124e08de4057fb27ec2d25ed5cc4c3028c0bb24248cb64bdb2a52c0",
+    "src/app/seo/dashboard/plan/page.tsx": "c68f2a372fa507bd25fd5c971456fbeef17cb1e502a09ae9cc48e3143a483663"
+  },
+  "cases": 18,
+  "rows": [
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約を受け付けました"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約を受け付けました"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約予約を取り消しました！引き続き有料プランをご利用いただけます。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約予約を取り消しました！引き続き有料プランをご利用いただけます。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "cancel",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "プランの解約をスケジュールしました。現在の請求期間終了後に無料プランに戻ります。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "cancel",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "プランの解約をスケジュールしました。現在の請求期間終了後に無料プランに戻ります。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "cancel",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "resume",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約をキャンセルしました！プランは継続されます。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "resume",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [
+        "解約をキャンセルしました！プランは継続されます。"
+      ],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "operation": "resume",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [],
+      "statusReloads": 1
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [],
+      "statusReloads": 1
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "cancel",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "empty-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [],
+      "statusReloads": 1
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "contradictory-200",
+      "unverifiedMutationAccepted": true,
+      "rawDiagnosticExposed": false,
+      "successMessages": [],
+      "statusReloads": 1
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "operation": "resume",
+      "scenario": "raw-error-500",
+      "unverifiedMutationAccepted": false,
+      "rawDiagnosticExposed": true,
+      "successMessages": [],
+      "statusReloads": 0
+    }
+  ],
+  "scope": "No live API, Stripe mutation, customer data or network access",
+  "nextRepair": "Shared bounded actor-scoped mutation control, strict cancellation/resume confirmation, local messages and verified readonly status refresh; mounted integration tests required"
+}

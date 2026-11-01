@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-06T21:11:50.026867+00:00",
+  "reason": "Align API URL validation with client: reject credentials and oversized URL before reserving quota or researching.",
+  "terminatedPids": [
+    85558,
+    85569,
+    85579,
+    85583,
+    85600,
+    85694
+  ]
+}

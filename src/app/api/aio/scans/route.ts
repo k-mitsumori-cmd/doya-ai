@@ -16,6 +16,7 @@ import { recordServiceUsage } from '@/lib/service-usage'
 import { decodeAioScanCursor, encodeAioScanCursor } from '@/lib/aio/scan-cursor'
 import { scanCoverageCounts } from '@/lib/aio/coverage'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { doyaPowerCharger } from '@/lib/doya-power/charge'
 
 // ⚠️ 上限の正本は lib/aio/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
@@ -71,40 +72,47 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const requested: EngineId[] | undefined = Array.isArray(body.engines) ? body.engines : undefined
 
-  const result = await runAndPersistScan(ctx.organizationId, { engines: requested })
+  // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 聞く質問の数ぶんを、スキャンの前に減らす。失敗の応答なら戻す。off のときは今までどおり
+  // 内側は、上で確かめた ctx・profile をそのまま使う（矢印関数にして、型の絞り込みを保つ）
+  const scanAndRespond = async (): Promise<Response> => {
+    const result = await runAndPersistScan(ctx.organizationId, { engines: requested, actor: ctx })
 
-  if (result.status === 'failed') {
-    if (result.code === 'PROMPT_LIMIT') return NextResponse.json({ error: result.error, code: result.code }, { status: 400 })
-    if (result.code === 'LIMIT') {
-      const canManageBilling = ctx.role === 'owner'
-      return NextResponse.json({ error: result.error, code: 'LIMIT', canManageBilling, ...(canManageBilling ? result.upgradeAvailable ? { upgradeUrl: '/aio/pricing' } : { contactUrl: HIGH_USAGE_CONTACT_URL } : {}) }, { status: 402 })
+    if (result.status === 'failed') {
+      if (result.code === 'FORBIDDEN') return NextResponse.json({ error: result.error, code: result.code }, { status: 403, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+      if (result.code === 'PROMPT_LIMIT') return NextResponse.json({ error: result.error, code: result.code }, { status: 400 })
+      if (result.code === 'LIMIT') {
+        const canManageBilling = ctx.role === 'owner'
+        return NextResponse.json({ error: result.error, code: 'LIMIT', canManageBilling, ...(canManageBilling ? result.upgradeAvailable ? { upgradeUrl: '/aio/pricing' } : { contactUrl: HIGH_USAGE_CONTACT_URL } : {}) }, { status: 402 })
+      }
+      if (result.code === 'BILLING_OWNER') {
+        return NextResponse.json({ error: result.error, code: result.code }, { status: 409 })
+      }
+      // 実行中での二重起動は409（コスト暴発防止のための連打ガード）。ユーザー操作なので生メッセージを返す。
+      if (result.code === 'INFLIGHT') {
+        return NextResponse.json({ id: result.id, status: 'processing', error: result.error, code: 'INFLIGHT' }, { status: 409 })
+      }
+      return NextResponse.json(
+        { id: result.id, status: 'failed', error: 'スキャンに失敗しました。時間をおいて再実行してください。' },
+        { status: 500 }
+      )
     }
-    if (result.code === 'BILLING_OWNER') {
-      return NextResponse.json({ error: result.error, code: result.code }, { status: 409 })
-    }
-    // 実行中での二重起動は409（コスト暴発防止のための連打ガード）。ユーザー操作なので生メッセージを返す。
-    if (result.code === 'INFLIGHT') {
-      return NextResponse.json({ id: result.id, status: 'processing', error: result.error, code: 'INFLIGHT' }, { status: 409 })
-    }
-    return NextResponse.json(
-      { id: result.id, status: 'failed', error: 'スキャンに失敗しました。時間をおいて再実行してください。' },
-      { status: 500 }
-    )
+    await recordServiceUsage({
+      userId: ctx.userId,
+      serviceId: 'aio',
+      action: 'AI可視性スキャン',
+      summary: profile.brandName ?? undefined,
+      count: prompts.length,
+      input: { engines: requested ?? avail, promptCount: prompts.length },
+      metadata: { scanId: result.id, organizationId: ctx.organizationId },
+    })
+
+    return NextResponse.json({
+      id: result.id,
+      status: 'done',
+      summary: result.summary,
+      recommendations: result.recommendations,
+    })
   }
-  await recordServiceUsage({
-    userId: ctx.userId,
-    serviceId: 'aio',
-    action: 'AI可視性スキャン',
-    summary: profile.brandName,
-    count: prompts.length,
-    input: { engines: requested ?? avail, promptCount: prompts.length },
-    metadata: { scanId: result.id, organizationId: ctx.organizationId },
-  })
-
-  return NextResponse.json({
-    id: result.id,
-    status: 'done',
-    summary: result.summary,
-    recommendations: result.recommendations,
-  })
+  const power = await doyaPowerCharger.charge('aio.scan.question', { units: prompts.length })
+  return doyaPowerCharger.run(power, scanAndRespond)
 }

@@ -1,0 +1,598 @@
+'use client'
+
+import { showServiceLimit } from '@/lib/service-limit-ui'
+
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { readBillingResponse } from '@/lib/billing-response-client'
+import { readCunningListResponse } from '@/lib/cunning/list-response-client'
+import Link from 'next/link'
+import toast from 'react-hot-toast'
+import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
+import type { CunningMode } from '@/lib/cunning/types'
+import { recordingAllowance } from '@/lib/cunning/allowance-client'
+import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { Button, EmptyState, FirstSteps, ToolHero } from '@/components/ds'
+import { UiIcon } from '@/components/icons'
+import { CunningModeIcon } from '@/components/cunning/mode-icon'
+import { Phrase, PHRASE_CLASS } from '@/components/cunning/phrase'
+
+interface KB { id: string; name: string; _count: { chunks: number } }
+interface Company { id: string; companyName: string | null; url: string }
+interface Applicant { id: string; name: string }
+interface SessionRow {
+  id: string
+  mode: string
+  title: string
+  status: string
+  durationSec: number
+  createdAt: string
+  _count: { answers: number }
+}
+
+export default function CunningTool() {
+  const router = useRouter()
+  // 新しい見た目（チェックリスト §5.1）のときだけ、ヒーロー・lucide のアイコン・空状態・折り返しの直しを出す
+  const { data: session, status: authStatus } = useSession()
+  const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
+  const allowed = authStatus === 'authenticated' && Boolean(actor)
+  const scope = JSON.stringify([actor, authStatus, (session?.user as { plan?: string } | undefined)?.plan])
+  const epoch = useRef({ scope, version: 0 })
+  if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
+  const contextKey = JSON.stringify([scope, epoch.current.version])
+  const contextRef = useRef(contextKey)
+  contextRef.current = contextKey
+  const mounted = useRef(true)
+  const startBusy = useRef(false)
+  const startUnknownRef = useRef(false)
+  const startAbort = useRef<AbortController | null>(null)
+  const confirmedStart = useRef<string | null>(null)
+  const [startUnknown, setStartUnknown] = useState(false)
+  const [startNotice, setStartNotice] = useState<string | null>(null)
+  const [confirmedSessionId, setConfirmedSessionId] = useState<string | null>(null)
+  const [loginRequired, setLoginRequired] = useState(false)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; startAbort.current?.abort() } }, [])
+  const [mode, setMode] = useState<CunningMode>('sales')
+  const [kbs, setKbs] = useState<KB[]>([])
+  const [kbError, setKbError] = useState(false)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [companyCursor, setCompanyCursor] = useState<string | null>(null)
+  const [applicantCursor, setApplicantCursor] = useState<string | null>(null)
+  const [companyTotal, setCompanyTotal] = useState(0)
+  const [applicantTotal, setApplicantTotal] = useState(0)
+  const [loadingMoreProfiles, setLoadingMoreProfiles] = useState<'company' | 'profiles' | null>(null)
+  const [profileError, setProfileError] = useState('')
+  const [sessions, setSessions] = useState<SessionRow[]>([])
+  const [sessionsError, setSessionsError] = useState(false)
+  const [sessionsLoaded, setSessionsLoaded] = useState(false)
+  const [storedUsage, setUsage] = useState<any>(null)
+  const [loadedUsageKey, setLoadedUsageKey] = useState('')
+  const usage = allowed && loadedUsageKey === contextKey ? storedUsage : null
+  const latestUsage = useRef(usage)
+  latestUsage.current = usage
+  const [usageError, setUsageError] = useState(false)
+  const usageRequest = useRef(0)
+  const knowledgeAbort = useRef<AbortController | null>(null)
+  const sessionsAbort = useRef<AbortController | null>(null)
+  const profilesAbort = useRef<AbortController | null>(null)
+  const profileLists = useRef({ companies, applicants, companyCursor, applicantCursor, companyTotal, applicantTotal })
+  profileLists.current = { companies, applicants, companyCursor, applicantCursor, companyTotal, applicantTotal }
+  const usageAbort = useRef<AbortController | null>(null)
+  const [kbId, setKbId] = useState('')
+  const [companyId, setCompanyId] = useState('')
+  const [applicantId, setApplicantId] = useState('')
+  const [personaNote, setPersonaNote] = useState('')
+  const [starting, setStarting] = useState(false)
+
+  const latestKnowledge = useRef(kbs)
+  latestKnowledge.current = kbs
+  const missingKnowledge = getMode(mode).context === 'knowledge' && Boolean(kbId) && !kbs.some(row => row.id === kbId)
+  const selectedKnowledge = useRef<KB | null>(null)
+  selectedKnowledge.current = kbs.find(row => row.id === kbId) || (selectedKnowledge.current?.id === kbId ? selectedKnowledge.current : null)
+  const selectedCompany = useRef<Company | null>(null)
+  const selectedApplicant = useRef<Applicant | null>(null)
+  selectedCompany.current = companies.find(row => row.id === companyId) || (selectedCompany.current?.id === companyId ? selectedCompany.current : null)
+  selectedApplicant.current = applicants.find(row => row.id === applicantId) || (selectedApplicant.current?.id === applicantId ? selectedApplicant.current : null)
+
+  const startDraft = useRef({ mode, kbId, companyId, applicantId, personaNote })
+  startDraft.current = { mode, kbId, companyId, applicantId, personaNote }
+
+  const def = getMode(mode)
+
+  const loadKnowledge = () => {
+    if (!allowed || contextRef.current !== contextKey || knowledgeAbort.current) return
+    const controller = new AbortController()
+    knowledgeAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
+    setKbError(false)
+    void readCunningListResponse('/api/cunning/knowledge', { method: 'GET' }, controller.signal)
+      .then(response => {
+        if (!current()) return
+        const data = response.data
+        if (!response.ok || data.error !== undefined || data.code !== undefined || !Array.isArray(data.bases) ||
+          data.bases.some((row: KB) => !row || typeof row.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id) ||
+            typeof row.name !== 'string' || !row._count || !Number.isSafeInteger(row._count.chunks) || row._count.chunks < 0)) throw new Error('Invalid knowledge list')
+        latestKnowledge.current = data.bases
+        setKbs(data.bases)
+      })
+      .catch(() => { if (current()) setKbError(true) })
+      .finally(() => { if (knowledgeAbort.current === controller) knowledgeAbort.current = null; controller.abort() })
+  }
+
+  const loadSessions = () => {
+    if (!allowed || contextRef.current !== contextKey || sessionsAbort.current) return
+    const controller = new AbortController()
+    sessionsAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
+    setSessionsError(false)
+    void readCunningListResponse('/api/cunning/sessions', { method: 'GET' }, controller.signal)
+      .then(response => {
+        if (!current()) return
+        const data = response.data
+        if (!response.ok || data.error !== undefined || data.code !== undefined || !Array.isArray(data.sessions) ||
+          data.sessions.length > 50 || data.sessions.some((row: SessionRow) => !row || typeof row.id !== 'string' ||
+            !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id) || typeof row.title !== 'string' || typeof row.mode !== 'string' ||
+            !Number.isSafeInteger(row.durationSec) || row.durationSec < 0 || !row._count ||
+            !Number.isSafeInteger(row._count.answers) || row._count.answers < 0)) throw new Error('Invalid session list')
+        setSessions(data.sessions)
+        setSessionsLoaded(true)
+      })
+      .catch(() => { if (current()) setSessionsError(true) })
+      .finally(() => { if (sessionsAbort.current === controller) sessionsAbort.current = null; controller.abort() })
+  }
+
+  const refreshUsage = (request = usageRequest.current) => {
+    if (!allowed || contextRef.current !== contextKey || usageAbort.current) return
+    latestUsage.current = null
+    setUsage(null)
+    setUsageError(false)
+    const controller = new AbortController()
+    usageAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && request === usageRequest.current && contextRef.current === contextKey
+    void readBillingResponse('/api/cunning/usage', { method: 'GET' }, controller.signal).then(response => {
+      if (!current()) return
+      const data = response.data
+      if (response.status === 401 || data.plan === 'GUEST') setLoginRequired(true)
+      if (!response.ok || data.error !== undefined || data.code !== undefined || typeof data.plan !== 'string' ||
+        !['FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(data.plan) || (data.tier !== undefined && data.tier !== data.plan) ||
+        typeof data.usedMinutes !== 'number' || !Number.isSafeInteger(data.usedMinutes) || data.usedMinutes < 0 ||
+        typeof data.reservedSeconds !== 'number' || !Number.isSafeInteger(data.reservedSeconds) || data.reservedSeconds < 0) throw new Error('usage unavailable')
+      recordingAllowance(data)
+      if (loginRequired) setStartNotice(null)
+      setLoginRequired(false)
+      latestUsage.current = data
+      setUsage(data)
+      setLoadedUsageKey(contextKey)
+    }).catch(() => { if (current()) setUsageError(true) }).finally(() => {
+      if (usageAbort.current === controller) usageAbort.current = null
+      controller.abort()
+    })
+  }
+  const refreshUsageRef = useRef(refreshUsage)
+  refreshUsageRef.current = refreshUsage
+  useEffect(() => {
+    if (allowed) refreshUsageRef.current()
+    const focus = () => refreshUsageRef.current()
+    if (allowed) window.addEventListener('focus', focus)
+    return () => {
+      usageAbort.current?.abort()
+      usageAbort.current = null
+      startAbort.current?.abort()
+      window.removeEventListener('focus', focus)
+    }
+  }, [allowed, contextKey])
+
+  const loadProfiles = () => {
+    if (!allowed || contextRef.current !== contextKey || profilesAbort.current) return
+    const controller = new AbortController()
+    profilesAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
+    setProfileError('')
+    void Promise.all([
+      readCunningListResponse('/api/cunning/company', { method: 'GET' }, controller.signal),
+      readCunningListResponse('/api/cunning/profiles', { method: 'GET' }, controller.signal),
+    ]).then(responses => {
+      if (!current()) return
+      if (responses.some(response => !response.ok || response.data.error !== undefined || response.data.code !== undefined)) throw new Error('Invalid profile list')
+      const companyPage = parseCunningProfilePage<Company>(responses[0].data)
+      const applicantPage = parseCunningProfilePage<Applicant>(responses[1].data)
+      if (companyPage.profiles.some(row => typeof row.url !== 'string' || (row.companyName !== null && typeof row.companyName !== 'string')) ||
+        applicantPage.profiles.some(row => typeof row.name !== 'string')) throw new Error('Invalid profile fields')
+      setCompanies(companyPage.profiles)
+      setCompanyCursor(companyPage.nextCursor)
+      setCompanyTotal(companyPage.total)
+      setApplicants(applicantPage.profiles)
+      setApplicantCursor(applicantPage.nextCursor)
+      setApplicantTotal(applicantPage.total)
+      // A retry must not erase a valid selected reference or the user's note.
+      profileLists.current = { companies: companyPage.profiles, applicants: applicantPage.profiles, companyCursor: companyPage.nextCursor, applicantCursor: applicantPage.nextCursor, companyTotal: companyPage.total, applicantTotal: applicantPage.total }
+    }).catch(() => { if (current()) setProfileError('企業・プロフィールを取得できませんでした。時間をおいて再読み込みしてください。') })
+      .finally(() => { if (profilesAbort.current === controller) profilesAbort.current = null; controller.abort() })
+  }
+
+  async function loadMoreProfiles(kind: 'company' | 'profiles') {
+    if (!allowed || contextRef.current !== contextKey || !mounted.current || profilesAbort.current) return
+    const lists = profileLists.current
+    const cursor = kind === 'company' ? lists.companyCursor : lists.applicantCursor
+    if (!cursor) return
+    const controller = new AbortController()
+    profilesAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
+    setLoadingMoreProfiles(kind)
+    setProfileError('')
+    try {
+      const response = await readCunningListResponse(`/api/cunning/${kind}?cursor=${encodeURIComponent(cursor)}`, { method: 'GET' }, controller.signal)
+      if (!current()) return
+      if (!response.ok || response.data.error !== undefined || response.data.code !== undefined) throw new Error('Invalid profile continuation')
+      if (kind === 'company') {
+        const page = parseCunningProfilePage<Company>(response.data)
+        if (page.profiles.some(row => typeof row.url !== 'string' || (row.companyName !== null && typeof row.companyName !== 'string'))) throw new Error('Invalid company fields')
+        const merged = appendCunningProfilePage(lists.companies, page, lists.companyTotal)
+        profileLists.current = { ...lists, companies: merged, companyCursor: page.nextCursor }
+        setCompanies(merged)
+        setCompanyCursor(page.nextCursor)
+      } else {
+        const page = parseCunningProfilePage<Applicant>(response.data)
+        if (page.profiles.some(row => typeof row.name !== 'string')) throw new Error('Invalid applicant fields')
+        const merged = appendCunningProfilePage(lists.applicants, page, lists.applicantTotal)
+        profileLists.current = { ...lists, applicants: merged, applicantCursor: page.nextCursor }
+        setApplicants(merged)
+        setApplicantCursor(page.nextCursor)
+      }
+    } catch {
+      if (current()) setProfileError('続きを取得できませんでした。一覧が更新された可能性があります。再読み込みしてください。')
+    } finally {
+      if (profilesAbort.current === controller) { profilesAbort.current = null; if (current()) setLoadingMoreProfiles(null) }
+      controller.abort()
+    }
+  }
+  const loadListsRef = useRef(() => {})
+  loadListsRef.current = () => { loadKnowledge(); loadProfiles(); loadSessions() }
+  useEffect(() => {
+    const refs = [knowledgeAbort, profilesAbort, sessionsAbort]
+    setLoadingMoreProfiles(null)
+    if (allowed) loadListsRef.current()
+    return () => {
+      for (const ref of refs) { ref.current?.abort(); ref.current = null }
+    }
+  }, [allowed, contextKey])
+
+  const start = async () => {
+    if (!allowed || contextRef.current !== contextKey || !mounted.current || startBusy.current || startUnknownRef.current || confirmedStart.current || usageAbort.current) return
+    try { if (!latestUsage.current || recordingAllowance(latestUsage.current) === 0) return } catch { return }
+    const draft = startDraft.current
+    const selectedMode = getMode(draft.mode)
+    if (selectedMode.context === 'knowledge' && draft.kbId && !latestKnowledge.current.some(row => row.id === draft.kbId)) {
+      setStartNotice('選択したナレッジが一覧にありません。参照先を選び直してください。')
+      return
+    }
+    if (draft.personaNote.length > 1000) { setStartNotice('設定は1,000文字以内で入力してください。'); return }
+    const controller = new AbortController()
+    startAbort.current = controller
+    startBusy.current = true
+    startUnknownRef.current = true
+    setStarting(true)
+    setStartNotice(null)
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
+    try {
+      const response = await readBillingResponse('/api/cunning/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: draft.mode,
+          knowledgeBaseId: selectedMode.context === 'knowledge' ? draft.kbId || null : null,
+          companyProfileId: selectedMode.context === 'company' ? draft.companyId || null : null,
+          applicantProfileId: selectedMode.context === 'company' ? draft.applicantId || null : null,
+          personaNote: draft.personaNote.trim() || null,
+        }),
+      }, controller.signal)
+      if (!current()) return
+      const data = response.data
+      if (!response.ok) {
+        if ([400, 401, 403, 404, 422, 429].includes(response.status)) {
+          startUnknownRef.current = false
+          if (response.status === 401) { setLoginRequired(true); setStartNotice('ログイン情報を確認できません。再度ログインしてください。'); return }
+          if (response.status === 403 && data.code === 'LIMIT') {
+            showServiceLimit('/api/cunning/sessions', response.status, {
+              code: 'LIMIT', error: '今月の利用上限に達しました。',
+              ...(data.upgradeUrl === '/cunning/pricing' ? { upgradeUrl: '/cunning/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }),
+            })
+            refreshUsageRef.current()
+            setStartNotice('今月の利用上限に達しました。プラン・利用条件をご確認ください。')
+            return
+          }
+          if (response.status === 403 && data.code === 'RECORDING_RESERVED') {
+            refreshUsageRef.current()
+            setStartNotice('別の録音で利用時間を確保しています。録音の停止後に利用状況を再確認してください。')
+            return
+          }
+          setStartNotice('セッションを開始できませんでした。入力内容と選択した資料をご確認ください。')
+          return
+        }
+        throw new Error('Unknown creation result')
+      }
+      const created = data.session as { id?: unknown; userId?: unknown; mode?: unknown } | undefined
+      if (data.error !== undefined || data.code !== undefined || !created || typeof created.id !== 'string' ||
+        !/^[a-zA-Z0-9_-]{1,128}$/.test(created.id) || created.userId !== actor || created.mode !== draft.mode) throw new Error('Unknown creation result')
+      confirmedStart.current = created.id
+      setConfirmedSessionId(created.id)
+      startUnknownRef.current = false
+      setStartNotice('セッションを作成しました。画面が開かない場合は、作成済みセッションを開いてください。')
+      try { router.push(`/cunning/live/${created.id}`) }
+      catch { setStartNotice('セッションは作成済みです。作成済みセッションを開いてください。') }
+    } catch {
+      // A transport/body failure cannot establish whether the server already created the session.
+    } finally {
+      if (startAbort.current === controller) {
+        startAbort.current = null
+        startBusy.current = false
+        if (mounted.current) {
+          setStarting(false)
+          if (startUnknownRef.current) {
+            setStartUnknown(true)
+            setStartNotice('作成結果を確認できませんでした。作成済みセッションがある可能性があります。履歴を確認してから、新しいセッションを作成してください。')
+          }
+        }
+      }
+      controller.abort()
+    }
+  }
+
+  const remaining = usage?.remainingSeconds
+  const overLimit = typeof remaining === 'number' && remaining !== -1 && remaining <= 0
+
+  return (
+    <div className="">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+        <div className="space-y-4 mb-4">
+            {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く */}
+            <ToolHero
+              title={<>相手の声をAIが聞き取り、<wbr />答えの案をその場で出します</>}
+              lead={<>モードを選んで開始し、会議や配信のタブの音声を共有するだけ。<wbr />質問を見つけると、回答のカンペを画面に出します。</>}
+              art="/cunning/hero.webp"
+            />
+            <FirstSteps
+              id="cunning"
+              steps={[
+                { title: 'モードを選ぶ', body: '商談・面接のほか、1on1や配信向けのモードがあります。' },
+                { title: '参照する資料を選ぶ（任意）', body: '商談はナレッジ、面接は応募先の企業を選ぶと、回答がより具体的になります。' },
+                { title: 'ライブを開始する', body: '会議のタブの音声の共有を許可すると、質問への答えの案が出ます。' },
+              ]}
+            />
+          </div>
+
+        {usage?.limits && (
+          <div className="mb-6 mt-3 inline-flex items-center gap-3 text-xs font-bold text-slate-500 bg-white rounded-full px-4 py-2 shadow-sm">
+            <span>プラン: {usage.plan}</span>
+            <span className="text-slate-300">|</span>
+            <span>
+              今月の利用 {usage.usedMinutes ?? 0}分
+              {usage.limits.maxMinutesPerMonth === -1 ? '' : ` / ${usage.limits.maxMinutesPerMonth}分`}
+              {usage.reservedSeconds > 0 ? `（録音中に確保 ${usage.reservedSeconds}秒）` : ''}
+            </span>
+          </div>
+        )}
+
+        {/* モード選択 */}
+        <div className="space-y-5 mb-6">
+          {/* メイン：商談・面接（大きく2カラム） */}
+          <div>
+            <p className="text-xs font-black text-slate-400 mb-2 ml-1">メイン</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(['sales', 'interview'] as const).map((id) => {
+                const m = MODES[id]
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMode(m.id)}
+                    aria-pressed={mode === m.id}
+                    className={`text-left p-4 sm:p-6 rounded-3xl border-2 transition-all bg-white flex items-center gap-4 ${mode === m.id
+                        ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-lg'
+                        : 'border-slate-200 hover:border-blue-300'}`}
+                  >
+                    <img src={`/character/${m.character}.png`} alt="" className="w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0" />
+                    <div className="min-w-0">
+                      <>
+                          <p className="font-black text-slate-900 text-lg inline-flex items-center gap-2">
+                            <CunningModeIcon mode={m.id} size={20} className="text-[#0066ff] flex-shrink-0" />{m.label}
+                          </p>
+                          <p className={`text-sm text-slate-500 font-bold mt-1 leading-relaxed ${PHRASE_CLASS}`}><Phrase text={m.desc} /></p>
+                        </>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* その他（同サイズで下に並べる） */}
+          <div>
+            <p className="text-xs font-black text-slate-400 mb-2 ml-1">その他のモード</p>
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-3">
+              {MODE_IDS.filter((id) => id !== 'sales' && id !== 'interview').map((id) => {
+                const m = MODES[id]
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMode(m.id)}
+                    aria-pressed={mode === m.id}
+                    className={`text-left p-4 rounded-2xl border-2 transition-all bg-white ${
+                      mode === m.id
+                        ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-md'
+                        : 'border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <img src={`/character/${m.character}.png`} alt="" className="w-12 h-12 object-contain mb-1" />
+                    <>
+                        <p className="font-black text-slate-800 text-sm inline-flex items-center gap-1.5">
+                          <CunningModeIcon mode={m.id} size={16} className="text-[#0066ff] flex-shrink-0" />{m.label}
+                        </p>
+                        <p className={`text-xs text-slate-500 font-bold mt-1 leading-relaxed ${PHRASE_CLASS}`}><Phrase text={m.desc} /></p>
+                      </>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* コンテキスト選択（モードに応じて） */}
+        {def.context === 'knowledge' && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+            {kbError && <div role="alert" className="mb-3 rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">ナレッジを取得できませんでした。<button type="button" onClick={() => loadKnowledge()} className="ml-2 underline">再読み込み</button></div>}
+            {missingKnowledge && <p role="alert" className="mb-3 text-sm font-bold text-amber-800">選択したナレッジが一覧にありません。参照先を選び直してください。</p>}
+            <label className="block text-sm font-black text-slate-700 mb-2">参照ナレッジ（任意）</label>
+            <select
+              value={kbId}
+              onChange={(e) => setKbId(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700"
+            >
+              <option value="">未選択（一般的な回答）</option>
+              {missingKnowledge && <option value={kbId}>{selectedKnowledge.current?.name || '選択したナレッジ'}（一覧にありません）</option>}
+              {kbs.map((k) => (
+                <option key={k.id} value={k.id}>{k.name}（{k._count.chunks}件）</option>
+              ))}
+            </select>
+            <Link href="/cunning/knowledge" className="inline-block mt-2 text-xs font-bold text-[#0B5CFF] hover:underline">
+              ＋ ナレッジを追加・編集
+            </Link>
+          </div>
+        )}
+        {def.context === 'company' && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 space-y-4">
+            {profileError && <div role="alert" className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">{profileError}<button type="button" onClick={loadProfiles} className="ml-2 underline">再読み込み</button></div>}
+            <div>
+              <label className="block text-sm font-black text-slate-700 mb-2">応募先企業（任意）</label>
+              <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
+                <option value="">未選択</option>
+                {selectedCompany.current && !companies.some(row => row.id === companyId) && <option value={companyId}>{selectedCompany.current.companyName || selectedCompany.current.url}（選択済み）</option>}
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.url}</option>)}
+              </select>
+              {companyCursor && <button type="button" onClick={() => void loadMoreProfiles('company')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'company' ? '読み込み中…' : `企業をさらに表示（${companies.length}/${companyTotal}件）`}</button>}
+            </div>
+            <div>
+              <label className="block text-sm font-black text-slate-700 mb-2">応募者プロフィール（任意）</label>
+              <select value={applicantId} onChange={(e) => setApplicantId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
+                <option value="">未選択</option>
+                {selectedApplicant.current && !applicants.some(row => row.id === applicantId) && <option value={applicantId}>{selectedApplicant.current.name}（選択済み）</option>}
+                {applicants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              {applicantCursor && <button type="button" onClick={() => void loadMoreProfiles('profiles')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'profiles' ? '読み込み中…' : `プロフィールをさらに表示（${applicants.length}/${applicantTotal}件）`}</button>}
+            </div>
+            <Link href="/cunning/company" className="inline-block text-xs font-bold text-[#0B5CFF] hover:underline">
+              ＋ 企業URLを解析・プロフィールを登録
+            </Link>
+          </div>
+        )}
+        {def.context === 'none' && (
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 text-sm font-bold text-blue-700">
+            <span className="inline-flex items-start gap-2"><CunningModeIcon mode={def.id} size={18} className="flex-shrink-0 mt-0.5" /><span className={PHRASE_CLASS}><Phrase text={`${def.label}：設定不要。開始して相手のコメント・発話に${def.trigger === 'any' ? '即レス' : '回答'}します。`} /></span></span>
+          </div>
+        )}
+
+        {/* キャラ設定 / 補足メモ（任意・全モード共通） */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+          <label className="block text-sm font-black text-slate-700 mb-2">
+            {def.category === 'entertainment' ? 'キャラ設定（任意）' : '補足メモ（任意）'}
+          </label>
+          <textarea
+            value={personaNote}
+            maxLength={1000}
+            onChange={(e) => setPersonaNote(e.target.value)}
+            rows={2}
+            placeholder={
+              def.category === 'entertainment'
+                ? '名前・口調・世界観など（例: 名前は「ドヤにゃん」。語尾は「〜にゃ」。元気で明るいキャラ）'
+                : '回答のトーンや前提（例: 丁寧でフォーマルに。専門用語は避ける）'
+            }
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 font-medium text-sm"
+          />
+          <p className="text-[11px] text-slate-400 font-bold mt-1">回答・想定問答にこの設定を反映します（{personaNote.length} / 1,000文字）</p>
+        </div>
+
+        {/* キャラの吹き出し（ポップな後押し） */}
+        <div className="flex items-end gap-2 mb-3">
+          <img src={`/character/${def.character}.png`} alt="" className="w-16 h-16 object-contain flex-shrink-0 motion-safe:animate-bounce" />
+          <div className="relative bg-white rounded-2xl rounded-bl-none shadow-sm px-4 py-2.5 font-black text-slate-700 text-sm">
+            <span className={PHRASE_CLASS}><Phrase text={`「${def.label}」で行くよ〜！準備できたらスタート！いっちょやったろ！`} /></span>
+          </div>
+        </div>
+
+        {startNotice && <div role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p>{startNotice}</p>
+          <div className="mt-2 flex flex-wrap gap-3 font-bold">
+            <Link href="/cunning/history" className="underline">セッション履歴を確認する</Link>
+            {confirmedSessionId && <Link href={`/cunning/live/${confirmedSessionId}`} className="underline">作成済みセッションを開く</Link>}
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="underline">再度ログインする</Link>}
+            <Link href={SUPPORT_CONTACT_URL} className="underline">お問い合わせ</Link>
+            {startUnknown && <button type="button" disabled={starting} onClick={() => { startUnknownRef.current = false; setStartUnknown(false); setStartNotice(null) }} className="underline">履歴を確認してから新しいセッションを作成</button>}
+          </div>
+        </div>}
+        <button
+          onClick={start}
+          disabled={starting || overLimit || missingKnowledge || !usage || !allowed || loginRequired || startUnknown || Boolean(confirmedSessionId)}
+          className="w-full py-4 rounded-2xl bg-[#0066ff] hover:bg-[#0047d6] text-white font-black text-lg shadow-lg shadow-blue-500/25 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066ff]"
+        >
+          {!usage ? (
+            usageError ? '利用状況を確認できませんでした' : '利用状況を確認中…'
+          ) : overLimit ? (
+            usage.reservedSeconds > 0 ? '別の録音で利用時間を確保しています' : '今月の利用上限に達しました'
+          ) : starting ? (
+            '開始中…'
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <UiIcon name="mic" size={22} />
+              ライブ開始！いくぞ〜
+            </span>
+          )}
+        </button>
+        {usageError && loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="mt-3 block underline">再度ログインする</Link>}
+        {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={() => refreshUsage()} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
+        {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl p-3 text-center font-bold border border-[#0066ff] bg-white text-[#0047d6]">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
+        <p className={`text-center text-xs font-bold mt-2 text-slate-500 ${PHRASE_CLASS}`}>
+          <Phrase text="開始後、会議・配信のタブの音声の共有を許可してください（Chrome・Edge推奨）" />
+        </p>
+
+        {/* 最近のセッション */}
+        {sessionsError && <div role="alert" className="mt-10 rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">最近のセッションを取得できませんでした。<button type="button" onClick={() => loadSessions()} className="ml-2 underline">再読み込み</button></div>}
+        {sessions.length > 0 && (
+          <div className="mt-10">
+            <h2 className="font-black text-slate-700 mb-3">最近のセッション</h2>
+            <div className="space-y-2">
+              {sessions.slice(0, 5).map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/cunning/history/${s.id}`}
+                  className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
+        >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CunningModeIcon mode={s.mode} size={18} className="text-[#0066ff] flex-shrink-0" />
+                    <span className="font-bold text-slate-700 truncate">{s.title}</span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 flex-shrink-0">
+                    {s._count.answers}回答 · {Math.floor(s.durationSec / 60)}分
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <Link href="/cunning/history" className="inline-block mt-3 text-xs font-bold text-[#0B5CFF] hover:underline">
+              すべての履歴を見る →
+            </Link>
+          </div>
+        )}
+        {sessionsLoaded && !sessionsError && sessions.length === 0 && (
+          <div className="mt-10">
+            <EmptyState
+              title="まだセッションがありません"
+              description={<>上でモードを選び、「ライブ開始」を押すと始まります。<wbr />会議で出した回答の案は、ここにたまります。</>}
+              art="/cunning/empty-cards.webp"
+              action={<Button variant="secondary" href="/cunning/knowledge" icon="BookOpen">商談のナレッジを登録する</Button>}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

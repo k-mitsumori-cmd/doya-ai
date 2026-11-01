@@ -1,0 +1,130 @@
+{
+  "checkedAt": "2026-10-06T18:14:45.224865+00:00",
+  "commit": "798212dfb6da6d0b859f9444b658a8b4b4569137",
+  "deployment": "dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+  "pages": [
+    {
+      "path": "/interview/projects/new",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedReadPublished": true,
+      "reservedMinutesPublished": true,
+      "reservationLabelPublished": true
+    },
+    {
+      "path": "/interview/projects",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedReadPublished": true,
+      "reservedMinutesPublished": true,
+      "reservationLabelPublished": true
+    }
+  ],
+  "scripts": [
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14291-939d53baea6a9329.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/31255-5f39a8151ec3e8a0.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/51219-3a91dd3dd8c6a8d5.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/81356-2a5b79913b42c970.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/82899-9f324d52c7cfd87e.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/84493-2e33edf249c4308d.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/88320-0ed19bdc67fceec5.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/interview/layout-11b0b19c25ed6fe2.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/interview/projects/new/page-78b45f33ff9ead53.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/interview/projects/page-5d7147de98f4ac21.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/layout-b92ddc1947c22f1c.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_4SxZSo31nJJoGMn7UCQW2Ntfexu5",
+      "status": 200
+    }
+  ],
+  "scope": "Anonymous published interview reservation usage and bounded reader code. SEO authenticated layout is omitted for anonymous users and is not publicly proven by this check; no authenticated generation, actual reservation or device QA proof."
+}

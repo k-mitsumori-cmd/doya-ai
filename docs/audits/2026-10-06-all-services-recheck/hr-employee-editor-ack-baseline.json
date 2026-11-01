@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-07T17:03:17.271Z",
+  "passed": 1,
+  "cases": [
+    "valid-acknowledgement"
+  ],
+  "failures": [
+    {
+      "scenario": "missing-employee",
+      "error": "Unverified acknowledgement produced success navigation\n\n1 !== 0\n"
+    },
+    {
+      "scenario": "wrong-employee",
+      "error": "Unverified acknowledgement produced success navigation\n\n1 !== 0\n"
+    },
+    {
+      "scenario": "false-success",
+      "error": "Unverified acknowledgement produced success navigation\n\n1 !== 0\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/hr/employees/[id]/edit/page.tsx": "a8ab346f564608ba83d8ae086dd65da19056082a609e93782e801a4f2f2f3fbe"
+  },
+  "scope": "Mounted actual editor and synthetic 200 PATCH responses; malformed/wrong employee/false success and valid saved-version acknowledgement. No production operations."
+}

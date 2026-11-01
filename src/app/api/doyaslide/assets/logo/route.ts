@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-    const formData = await req.formData()
+    const formData = await req.formData().catch(() => null)
+    if (!formData) return NextResponse.json({ error: 'ファイルの送信形式が正しくありません。' }, { status: 400 })
     const file = formData.get('file')
     const projectId = formData.get('projectId')
     if (projectId !== null && (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectId))) {

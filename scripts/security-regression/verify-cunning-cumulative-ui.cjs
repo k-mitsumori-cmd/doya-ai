@@ -1,5 +1,5 @@
 const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('node:assert/strict'),{check,load}=require('./load-typescript.cjs');
-const source=fs.readFileSync('src/app/cunning/live/[sessionId]/page.tsx','utf8'),ast=ts.createSourceFile('live.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const source=fs.readFileSync('src/app/(shell)/cunning/live/[sessionId]/page.tsx','utf8'),ast=ts.createSourceFile('live.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 function decl(name){let out;function walk(n){if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)===name))out=n.getText(ast);ts.forEachChild(n,walk)}walk(ast);assert(out);return out}
 function run(code,env){vm.runInNewContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{setTranscriptionIssue:()=>{},finishingRef:{current:false},refreshAudioRetry:()=>{},windowClientRef:{current:null},startWindowCycle:()=>{},finalAudioRetryRef:{current:{hasPending:()=>false}},recordingVersionRef:{current:1},recordingClientRef:{current:null},mountedRef:{current:true},pendingTranscriptIdsRef:{current:[]},requestAnswer:()=>{},...env})}
 const flush=()=>new Promise(r=>setImmediate(r));

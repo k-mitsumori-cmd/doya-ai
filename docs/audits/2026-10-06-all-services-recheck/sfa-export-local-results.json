@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-07T06:17:01.788349+00:00",
+  "status": "full-frozen-security-type-lint-build-and-private-postgres-passed-release-pending",
+  "commands": [
+    {
+      "command": "node scripts/security-regression/verify-sfa-export-all.cjs",
+      "exitCode": 0
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "exitCode": 0
+    },
+    {
+      "command": "npx eslint src/app/api/sfa/export/route.ts",
+      "exitCode": 0
+    }
+  ],
+  "coverage": [
+    "5001 accounts and5001 deals; all rows and exact big integer amount",
+    "Tenant and related label scope; formula escaping and UTF8 BOM",
+    "Initial and later DB failures",
+    "Revocation before boundary and between batches",
+    "Request abort during initial batch; cancelled stream stops future reads",
+    "Private cache headers and sanitized authentication/context failures"
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/export/route.ts": "0d81163fc42822b1df0ec235d43a3ce06782082bc62bbe4aa942b84aa7125085",
+    "scripts/security-regression/verify-sfa-export-all.cjs": "937275346aa650e27c5c3438c1a2303afca7477e2b0cbeb3efbde54e738c70e4"
+  },
+  "privatePostgresEvidence": "sfa-export-postgres-results.json",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/sfa-export-release-dc3b741e-5623-49ab-b1fe-21c9541523e0",
+  "limits": [
+    "Synthetic HTTP fixtures and private PG only; no authenticated production browser download verified",
+    "Not deployed"
+  ]
+}

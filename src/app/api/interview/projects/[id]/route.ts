@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 // ============================================
 // GET / PUT / DELETE /api/interview/projects/[id]
 // ============================================
@@ -5,7 +6,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
@@ -80,13 +81,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
 
     if (!project) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      return privateApiJson({ success: false, error: '見つかりませんでした' }, { status: 404 })
     }
 
     const ownerErr = checkOwnership(project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       project: {
         id: project.id,
@@ -125,7 +126,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
   } catch (e: any) {
     console.error('[interview/projects/[id]] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: '取得に失敗しました' },
       { status: 500 }
     )
@@ -150,7 +151,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     })
 
     if (!project) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      return privateApiJson({ success: false, error: '見つかりませんでした' }, { status: 404 })
     }
 
     const ownerErr = checkOwnership(project, userId, guestId)
@@ -173,7 +174,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     if ('recipeId' in data && data.recipeId !== null) {
       if (typeof data.recipeId !== 'string' || !data.recipeId.trim()) {
-        return NextResponse.json({ success: false, error: 'レシピの指定が正しくありません' }, { status: 400 })
+        return privateApiJson({ success: false, error: 'レシピの指定が正しくありません' }, { status: 400 })
       }
       const recipe = await prisma.interviewRecipe.findFirst({
         where: {
@@ -187,7 +188,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
         select: { id: true },
       })
       if (!recipe) {
-        return NextResponse.json({ success: false, error: 'レシピが見つかりません' }, { status: 404 })
+        return privateApiJson({ success: false, error: 'レシピが見つかりません' }, { status: 404 })
       }
     }
 
@@ -199,9 +200,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       if (!current || checkOwnership(current, userId, guestId)) return null
       return tx.interviewProject.update({ where: { id }, data })
     })
-    if (!updated) return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    if (!updated) return privateApiJson({ success: false, error: '見つかりませんでした' }, { status: 404 })
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       project: {
         id: updated.id,
@@ -212,7 +213,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     })
   } catch (e: any) {
     console.error('[interview/projects/[id]] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: '更新に失敗しました' },
       { status: 500 }
     )
@@ -237,7 +238,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     })
 
     if (!project) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      return privateApiJson({ success: false, error: '見つかりませんでした' }, { status: 404 })
     }
 
     const ownerErr = checkOwnership(project, userId, guestId)
@@ -257,12 +258,12 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       await tx.interviewProject.delete({ where: { id } })
       return 'deleted' as const
     })
-    if (deleted === 'missing') return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
-    if (deleted === 'processing') return NextResponse.json({ success: false, error: '文字起こし中はプロジェクトを削除できません。完了後に再試行してください。' }, { status: 409 })
+    if (deleted === 'missing') return privateApiJson({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    if (deleted === 'processing') return privateApiJson({ success: false, error: '文字起こし中はプロジェクトを削除できません。完了後に再試行してください。' }, { status: 409 })
 
-    return NextResponse.json({ success: true, fileCleanupPending: true })
+    return privateApiJson({ success: true, fileCleanupPending: true })
   } catch {
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: '削除に失敗しました' },
       { status: 500 }
     )

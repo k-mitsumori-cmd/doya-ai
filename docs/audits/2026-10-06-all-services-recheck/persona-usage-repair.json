@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-06T17:39:27.398416+00:00",
+  "status": "Full build/lint gate passed with 2565 unchanged runtime inputs",
+  "baseline": "persona-usage-mounted-baseline.json",
+  "current": "persona-usage-mounted-current.json",
+  "integration": "persona-sidebar-refresh-current.json",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/persona-usage-release-5c2c0246-b490-4c4d-8c2c-38d1e0b63cb3",
+  "changes": [
+    "Scope persona usage to authenticated actor, plan and revision with transition epochs",
+    "Bound streamed usage responses to 35 seconds and 64 KiB",
+    "Validate used/reserved/limit/remaining consistency and legitimate unlimited text",
+    "Clear stale remaining on refresh and reject obsolete replies",
+    "Emit actor-scoped validated usage events and subscribe persona sidebar"
+  ],
+  "scope": "11 mounted panel cases and actual two-component integration with synthetic reads. No live generation, quota writes or customer data. Other 7 shared sidebar consumers and all 17 complete user flows remain under audit."
+}

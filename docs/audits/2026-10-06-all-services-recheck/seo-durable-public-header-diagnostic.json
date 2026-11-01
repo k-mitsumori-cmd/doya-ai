@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-08T16:03:57.887540+00:00",
+  "interpretation": "Previous first-value-only Vary parsing misclassified multi-valued HTTP headers. Cookie must remain required; server code unchanged by this diagnostic.",
+  "observations": [
+    {
+      "path": "/api/seo/article-operation?operationId=00000002-1111-4111-8111-111111111111",
+      "status": 401,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ],
+      "cacheControlHeaderValues": [
+        "private, no-store"
+      ],
+      "varyCookie": true,
+      "privateNoStore": true
+    },
+    {
+      "path": "/api/hr/dashboard",
+      "status": 401,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ],
+      "cacheControlHeaderValues": [
+        "private, no-store"
+      ],
+      "varyCookie": true,
+      "privateNoStore": true
+    },
+    {
+      "path": "/api/hr/organization",
+      "status": 401,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ],
+      "cacheControlHeaderValues": [
+        "private, no-store"
+      ],
+      "varyCookie": true,
+      "privateNoStore": true
+    },
+    {
+      "path": "/api/hr/settings",
+      "status": 401,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ],
+      "cacheControlHeaderValues": [
+        "private, no-store"
+      ],
+      "varyCookie": true,
+      "privateNoStore": true
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "status": 401,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ],
+      "cacheControlHeaderValues": [
+        "private, no-store"
+      ],
+      "varyCookie": true,
+      "privateNoStore": true
+    }
+  ],
+  "allPassed": true,
+  "scope": "Anonymous read-only production requests; not authenticated customer data proof."
+}

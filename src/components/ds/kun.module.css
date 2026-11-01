@@ -1,0 +1,29 @@
+/* ds/kun — ドヤくんの小さな動き。位置と透明度だけを動かす（参考: ai-design-skills の B7 Motion） */
+.kun {
+  --kun-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative; display: inline-grid; justify-items: center; gap: 6px; flex: none;
+  width: var(--kun-size, 96px);
+  animation: kunIn 500ms var(--kun-ease) both;
+}
+.img { width: 100%; height: auto; display: block; user-select: none; }
+/* 入ってくる: 下から少し上がって現れる */
+@keyframes kunIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* 作業中: 小さく上下する（1.6秒で1回） */
+.kun[data-act='work'] .img { animation: kunWork 1.6s ease-in-out 500ms infinite; }
+@keyframes kunWork { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+/* 考え中: ゆっくり左右に傾く */
+.kun[data-act='think'] .img { transform-origin: 50% 90%; animation: kunThink 2.4s ease-in-out 500ms infinite; }
+@keyframes kunThink { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-4deg); } 70% { transform: rotate(3deg); } }
+/* できた: 1回だけ小さく跳ねる */
+.kun[data-act='cheer'] .img { animation: kunCheer 700ms var(--kun-ease) 300ms 1 both; }
+@keyframes kunCheer { 0% { transform: translateY(0); } 35% { transform: translateY(-14px); } 70% { transform: translateY(2px); } 100% { transform: translateY(0); } }
+/* 吹き出し */
+.say {
+  max-width: 220px; padding: 6px 12px; border-radius: 12px; background: var(--paper, #fff); border: 1px solid var(--line, #dfe6f2);
+  font-size: 12px; font-weight: 700; line-height: 1.5; text-align: center; color: var(--ink, #0b1b33); text-wrap: pretty;
+  animation: kunIn 500ms var(--kun-ease) 150ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kun, .say { animation: none; }
+  .kun[data-act] .img { animation: none; transform: none; }
+}

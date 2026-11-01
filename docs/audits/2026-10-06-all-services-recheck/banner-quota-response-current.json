@@ -1,0 +1,16 @@
+{
+  "passed": 10,
+  "results": [
+    "Valid bounded JSON uses private uncached GET",
+    "Total deadline releases fetch that ignores abort",
+    "Total deadline releases stalled body",
+    "Actor cancellation releases pending fetch",
+    "Already cancelled request never fetches",
+    "Non-success",
+    "Invalid JSON",
+    "Declared oversized body",
+    "Actual oversized body",
+    "Invalid UTF8"
+  ],
+  "scope": "Actual readonly quota reader; synthetic fetch, body, abort and deadline only. No network or customer data."
+}

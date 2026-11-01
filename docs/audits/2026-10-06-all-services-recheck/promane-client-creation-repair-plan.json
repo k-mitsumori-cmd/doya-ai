@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-10-07T21:18:34.476719+00:00",
+  "status": "frozen75gates-passed-ready-for-reviewed-commit-push",
+  "rootApplied": true,
+  "productionApplied": false,
+  "baselines": [
+    "promane-client-input-baseline-postgres-results.json",
+    "promane-client-submit-baseline.json"
+  ],
+  "findings": [
+    "API and server action create accept5001notecharacters but silently store5000",
+    "Update permits blank company invalid email and overlong note unlike create",
+    "Same-frame actual client form emits two POSTs and two success notifications",
+    "HTTP200{} is falsely accepted as successful creation",
+    "Concurrent identical actual API requests create two rows; no operation identity to distinguish retry from intentional duplicate"
+  ],
+  "required": [
+    "Use one shared input contract for create API/create action/update action; preserve existing200company and5000note boundaries without truncation, validate email/type and preserve accepted input",
+    "Durable client-create operation identity scoped by workspace and authenticated user, atomic row/receipt and recovery/cancellation fencing shared across API/action",
+    "Client synchronous duplicate guard and unknown-save recovery, strict saved-client acknowledgement, account/workspace draft isolation and no automatic resubmit",
+    "Isolated PostgreSQL mixed API/action replay race and validation boundaries plus mounted actual UI/hook and native responsive checks",
+    "Preserve existing access/deletion/project-link semantics; exact reviewed frozen release gate and CI/deployment/read-only production observation"
+  ],
+  "scope": "Root-integrated client creation/input/recovery/ack/draft and responsive modal repair. Synthetic isolated PostgreSQL20/client17/view3/native7 plus native draft3; no authenticated Next/production writes. All17service audit remains incomplete.",
+  "candidateRoot": "promane-client-creation-candidate",
+  "candidateInputContract": "Shared create/update validation and durable API/action receipt integrated; new independent root75release gate required.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-client-creation-release-ed6c92aa-bbfd-4f7b-9a6b-db424848d8a9",
+  "candidateEvidence": {
+    "postgres": "promane-client-creation-postgres-results.json",
+    "client": "promane-client-creation-client-mounted-results.json",
+    "view": "promane-client-creation-view-mounted-results.json",
+    "native": "promane-client-creation-native-results.json",
+    "typecheck": "promane-client-candidate-typecheck.log",
+    "smallModalBaseline": "promane-client-small-modal-baseline.json",
+    "smallModalRepaired": "promane-client-small-modal-observation.json",
+    "nativeVisuallyReviewedWidths": [
+      1280,
+      390,
+      320
+    ]
+  },
+  "existingRegressionChange": "All4 business authority/delete checks preserve original method coverage. Adapted receipt-aware synthetic fixture; denied POST now aborts and expects committed=false while denied DELETE retains committed=true. Real SQL/race/rollback proven separately with privatePG.",
+  "previousGate": "docs/audits/2026-10-06-all-services-recheck/promane-client-creation-release-063e94b3-f164-4d30-97f5-db7784905c24",
+  "previousGateStatus": "failed-build-fixture-missing-client-creation-module",
+  "dismissDraftBaseline": "promane-client-dismiss-draft-baseline.json",
+  "dismissDraftRepaired": "promane-client-dismiss-draft-results.json",
+  "gateSession": 63365,
+  "gateStatus": "passed"
+}

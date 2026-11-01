@@ -1,6 +1,8 @@
 import { concisePayload, conciseText } from './slack-concise';
 
 import { readableErrorPayload, readableErrorText } from './slack-readable-error';
+import { inferSlackMeta, styleSlackPayload, type SlackMeta } from './slack/notify';
+export type { SlackMeta } from './slack/notify';
 /** 数値を改変せず、短いコメントだけを追加する。生成APIは使わない。 */
 export type Mood = 'up' | 'down' | 'zero' | 'steady' | 'first' | 'pending' | 'error' | 'recovered' | 'test' | 'activity';
 const comments: Record<Mood, readonly string[]> = {
@@ -43,5 +45,18 @@ function baseSlackVoice(text: string, opts: { mood?: Mood; seed?: string; curren
 
 
 
-export function voicePayload<T>(payload: T): T { return concisePayload(readableErrorPayload(payload)); }
-export function withSlackVoice(text: string, opts: Parameters<typeof baseSlackVoice>[1] = {}): string { void opts; return conciseText(readableErrorText(text)); }
+/**
+ * Slack に送る直前の共通の整形。すべての送信元はここを通す。
+ * 1. エラーなら確認手順を足す（slack-readable-error）
+ * 2. 定期レポートなら主要な行に絞る（slack-concise）
+ * 3. 見出しを「【重さ】アプリ名｜種類：件名」にそろえ、絵文字を外す（slack/notify）
+ * meta を省くと、見出しの文言から種類と重さを推定する。
+ */
+export function voicePayload<T>(payload: T, meta?: SlackMeta): T {
+  const base = concisePayload(readableErrorPayload(payload));
+  return styleSlackPayload(base, meta ?? inferSlackMeta(base));
+}
+export function withSlackVoice(text: string, opts: Parameters<typeof baseSlackVoice>[1] & { app?: string } = {}): string {
+  const base = conciseText(readableErrorText(text));
+  return styleSlackPayload({ text: base }, inferSlackMeta({ text: base }, opts.app)).text;
+}

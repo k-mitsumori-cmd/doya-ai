@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-07T07:55:08.267Z",
+  "baseline": true,
+  "passed": 4,
+  "cases": [
+    {
+      "case": "same rendered result applied twice",
+      "occurrences": 2,
+      "finding": "same recovered reply is appended twice"
+    },
+    {
+      "case": "storage removal fails",
+      "occurrences": 2,
+      "finding": "conversation changed although receipt cannot be acknowledged"
+    },
+    {
+      "case": "retained apply after auth refresh",
+      "occurrences": 1,
+      "finding": "stale callback appends old result across auth lifecycle"
+    },
+    {
+      "case": "other tab replaces intent",
+      "occurrences": 1,
+      "finding": "stale result applied after receipt changed"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "009651473ee0e6bc47335a435de2cdec7e261d265a7a7f59d0d010775625741c",
+    "src/lib/banner/use-text-recovery.ts": "7951e44182237be6305ed5998e4131d7dfbf6881b9494a65d6bea5858e81dd46",
+    "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
+  },
+  "scope": "Actual mounted BannerChatPage and text hook/client/panel, React18 StrictMode/jsdom; synthetic auth/GET response/localStorage faults. No paid provider/customer DB/production mutation."
+}

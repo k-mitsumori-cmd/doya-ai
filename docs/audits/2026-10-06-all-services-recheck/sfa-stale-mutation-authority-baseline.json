@@ -1,0 +1,26 @@
+{
+  "status": "confirmed-open",
+  "results": [
+    {
+      "kind": "task-create",
+      "status": 200,
+      "writesAfterSyntheticMembershipRevocation": 1
+    },
+    {
+      "kind": "activity-create",
+      "status": 200,
+      "writesAfterSyntheticMembershipRevocation": 1
+    },
+    {
+      "kind": "task-update",
+      "status": 200,
+      "writesAfterSyntheticMembershipRevocation": 1
+    },
+    {
+      "kind": "task-delete",
+      "status": 200,
+      "writesAfterSyntheticMembershipRevocation": 1
+    }
+  ],
+  "scope": "Actual SFA task/activity handlers; synthetic membership changes after context validation at relation/task lookup. Proves handlers commit using the old authorization snapshot. Does not prove real DB scheduling, actual customer access or incident; no real writes."
+}

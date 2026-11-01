@@ -1,0 +1,266 @@
+{
+  "checkedAt": "2026-10-08T05:06:56.064819+00:00",
+  "status": "timer-polling-fixed-three-native-runs-passed9-with-all-assertions",
+  "failedGate": "doyalist-extraction-release-9007720e-7ceb-43e3-a3c5-4e2e985c1307",
+  "gateExitCode": 1,
+  "diagnosticSession": 28961,
+  "diagnosticExitCode": 1,
+  "checkpoint": "simultaneous-tabs-intent",
+  "casesPassedBeforeFailure": [
+    "Native page open uses real Web Locks support and never auto-generates",
+    "Native double click dispatches one project receipt and one collection, then clears acknowledged metadata",
+    "Native lost acknowledgement keeps metadata-only UUID and blocks fresh generation",
+    "Native reload recovers committed companies using GET without duplicate provider POST"
+  ],
+  "errors": [],
+  "calls": [
+    {
+      "path": "/api/doyalist/estimate",
+      "method": "POST",
+      "body": {
+        "industry": "IT・ソフトウェア",
+        "region": "全国",
+        "keywords": [
+          "システム",
+          "ソフトウェア",
+          "IT"
+        ]
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/usage",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "POST",
+      "body": {
+        "operationId": "65738739-e470-406b-8f67-44421d8ea2d3",
+        "count": 100,
+        "project": {
+          "name": "IT・ソフトウェア_全国_10/08 14:05",
+          "industry": "IT・ソフトウェア",
+          "region": "全国",
+          "targetSize": "指定なし",
+          "keywords": ""
+        }
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/collect",
+      "method": "POST",
+      "body": {
+        "operationId": "65738739-e470-406b-8f67-44421d8ea2d3",
+        "projectId": "native_project_1",
+        "count": 100
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/usage",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "POST",
+      "body": {
+        "operationId": "cb7cee48-fdac-4d20-922e-552075626be2",
+        "count": 100,
+        "project": {
+          "name": "IT・ソフトウェア_全国_10/08 14:05",
+          "industry": "IT・ソフトウェア",
+          "region": "全国",
+          "targetSize": "指定なし",
+          "keywords": ""
+        }
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/collect",
+      "method": "POST",
+      "body": {
+        "operationId": "cb7cee48-fdac-4d20-922e-552075626be2",
+        "projectId": "native_project_2",
+        "count": 100
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/estimate",
+      "method": "POST",
+      "body": {
+        "industry": "IT・ソフトウェア",
+        "region": "全国",
+        "keywords": [
+          "システム",
+          "ソフトウェア",
+          "IT"
+        ]
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/estimate",
+      "method": "POST",
+      "body": {
+        "industry": "IT・ソフトウェア",
+        "region": "全国",
+        "keywords": [
+          "システム",
+          "ソフトウェア",
+          "IT"
+        ]
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/usage",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/usage",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "POST",
+      "body": {
+        "operationId": "ae15caa4-81b3-4024-9ff1-43565fd341e6",
+        "count": 100,
+        "project": {
+          "name": "IT・ソフトウェア_全国_10/08 14:05",
+          "industry": "IT・ソフトウェア",
+          "region": "全国",
+          "targetSize": "指定なし",
+          "keywords": ""
+        }
+      },
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/operations",
+      "method": "GET",
+      "body": {},
+      "actor": "alpha"
+    },
+    {
+      "path": "/api/doyalist/collect",
+      "method": "POST",
+      "body": {
+        "operationId": "ae15caa4-81b3-4024-9ff1-43565fd341e6",
+        "projectId": "native_project_3",
+        "count": 100
+      },
+      "actor": "alpha"
+    }
+  ],
+  "pageStorage": {
+    "doyalist-extraction-intent:v1:alpha": "{\"version\":1,\"operationId\":\"ae15caa4-81b3-4024-9ff1-43565fd341e6\",\"createdAt\":\"2026-10-08T05:05:45.085Z\",\"count\":100}"
+  },
+  "otherStorage": {
+    "doyalist-extraction-intent:v1:alpha": "{\"version\":1,\"operationId\":\"ae15caa4-81b3-4024-9ff1-43565fd341e6\",\"createdAt\":\"2026-10-08T05:05:45.085Z\",\"count\":100}"
+  },
+  "receipts": [
+    [
+      "alpha:65738739-e470-406b-8f67-44421d8ea2d3",
+      {
+        "operationId": "65738739-e470-406b-8f67-44421d8ea2d3",
+        "projectId": "native_project_1",
+        "state": "completed",
+        "count": 100,
+        "generated": 1,
+        "success": true,
+        "companies": [
+          {
+            "id": "native_company_native_project_1",
+            "name": "SYNTHETIC_NATIVE_COMPANY",
+            "source": "gbizinfo",
+            "enrichedData": {}
+          }
+        ]
+      }
+    ],
+    [
+      "alpha:cb7cee48-fdac-4d20-922e-552075626be2",
+      {
+        "operationId": "cb7cee48-fdac-4d20-922e-552075626be2",
+        "projectId": "native_project_2",
+        "state": "completed",
+        "count": 100,
+        "generated": 1,
+        "success": true,
+        "companies": [
+          {
+            "id": "native_company_native_project_2",
+            "name": "SYNTHETIC_NATIVE_COMPANY",
+            "source": "gbizinfo",
+            "enrichedData": {}
+          }
+        ]
+      }
+    ],
+    [
+      "alpha:ae15caa4-81b3-4024-9ff1-43565fd341e6",
+      {
+        "operationId": "ae15caa4-81b3-4024-9ff1-43565fd341e6",
+        "projectId": "native_project_3",
+        "state": "pending",
+        "count": 100,
+        "generated": 0
+      }
+    ]
+  ],
+  "finding": "Native waitForFunction default requestAnimationFrame timed out on background tab even though post-timeout evaluate proves UUID present in both tabs and exactly one new operation/collection pending. Change polling to100ms timers, preserving all assertions and concurrency. Product failure not established by this timeout.",
+  "pendingRerunSession": 8384,
+  "firstRerunExitCode": 0,
+  "repeatRuns": [
+    {
+      "iteration": 1,
+      "checkedAt": "2026-10-08T05:07:12.124Z",
+      "exitCode": 0,
+      "passed": 9
+    },
+    {
+      "iteration": 2,
+      "checkedAt": "2026-10-08T05:07:18.759Z",
+      "exitCode": 0,
+      "passed": 9
+    }
+  ],
+  "sourceHashes": {
+    "src/app/doyalist/Tool.tsx": "77237d973c2dbcec0862767201a2da0193d4ac8f3d3c399dfe38ee7d99e887a0",
+    "src/lib/doyalist/constants.ts": "3a9025e2f3c93f589690ee169a51f905a03738f0e9ccd4da09b7f25230b41fa0",
+    "src/lib/doyalist/collect/prefecture-codes.ts": "d835452a6d69670e8929ade1a5f1f0a96679c464c25ea6684cbb6f7558845bf5",
+    "src/lib/doyalist/keyword-response-client.ts": "62051747a635b9b624fdab17ad227a1e1335b6d75a7b4c5ec6be6a30d1bbd9b7",
+    "src/lib/doyalist/search-keywords.ts": "5247d6740d562cdea4793977b6cfa54ea2e71b5f0edfd2abd7edd5066902f754",
+    "src/lib/doyalist/estimate-result.ts": "79ae6f7ddf34f0f915c7dff9b1d390a9aa9dc6dc30d35b2ea3586dae1fb40eb7",
+    "src/lib/doyalist/collect-response-client.ts": "50d0896e2a99cc0f7350e5bc8d6f1f94734446e42569513a49dca3922f8f9e6f",
+    "src/lib/doyalist/preferences.ts": "2bd68801d2a386bcbb7751066709b8784347647f364feddbdc01ad4d80ba183e",
+    "src/lib/doyalist/extraction-intent-client.ts": "191476ec993787a9c1b6a229cd0633827cb41f4c16a9af3e544b71622ebac467",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-native.cjs": "52506757a1cc4a2be82aa504de872dc5370631c5933cfb142063ebc8c9477eb7"
+  }
+}

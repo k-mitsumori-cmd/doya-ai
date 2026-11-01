@@ -11,6 +11,7 @@ import { CtaBand } from "./sections";
 import { MobileNavigation } from "./renewal/MobileNavigation";
 import { SERVICES } from "@/lib/services";
 import { Sym, accentVars } from "./primitives";
+import { DoyaLogoMark } from "@/components/brand/DoyaLogo";
 
 export interface LpShellProps {
   /** サービス名（例: ドヤ商談準備） */
@@ -96,17 +97,17 @@ export function LpShell({
               className="doya-header-brand"
               aria-label="ドヤAI トップ"
             >
-              <Image
-                src={
-                  service
-                    ? `/renewal/icons/${service.id}.webp`
-                    : "/character/hello.png"
-                }
-                width={40}
-                height={40}
-                alt=""
-                unoptimized
-              />
+              {service ? (
+                <Image
+                  src={`/renewal/icons/${service.id}.webp`}
+                  width={40}
+                  height={40}
+                  alt=""
+                  unoptimized
+                />
+              ) : (
+                <DoyaLogoMark size={40} />
+              )}
               <span>{serviceName}</span>
             </Link>
             <nav className="doya-desktop-nav" aria-label="メインナビゲーション">

@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-31T11:13:43.271Z",
+  "scope": "Actual candidate LinkCard/BannerCard mounted in React/jsdom with synthetic clipboard;not native permission or production verification. No network/provider/storage/real clipboard/customer records.",
+  "source": {
+    "path": "src/components/asklink/RunResult.tsx",
+    "sha256": "e62a3d89de5e67631bee06dae2f57c136fd9f380314d82fd193c6ed7274b14dd"
+  },
+  "cases": [
+    "URL denial selects exact requested URL and preserves question",
+    "Question denial selects exact question",
+    "Repeated rejection reselects complete text",
+    "Success clears fallback and announces success",
+    "Failure after success clears stale success announcement",
+    "Changed link clears stale fallback",
+    "HTML denial selects exact escaped installation code",
+    "HTML success and subsequent rejection reset correctly",
+    "Changed banner link clears stale installation code"
+  ],
+  "passed": 9,
+  "failed": 0
+}

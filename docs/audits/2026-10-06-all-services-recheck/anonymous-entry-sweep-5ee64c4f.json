@@ -1,0 +1,108 @@
+{
+  "checkedAt": "2026-10-06T19:04:27.378673+00:00",
+  "services": [
+    {
+      "service": "banner",
+      "status": 200,
+      "finalPath": "/banner",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "seo",
+      "status": 200,
+      "finalPath": "/seo",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "interview",
+      "status": 200,
+      "finalPath": "/interview",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "persona",
+      "status": 200,
+      "finalPath": "/persona",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "hr",
+      "status": 200,
+      "finalPath": "/hr",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "kintai",
+      "status": 200,
+      "finalPath": "/kintai",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "doyalist",
+      "status": 200,
+      "finalPath": "/doyalist",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "promane",
+      "status": 200,
+      "finalPath": "/promane",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "finalPath": "/doyaslide",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "finalPath": "/cunning",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "sfa",
+      "status": 200,
+      "finalPath": "/sfa",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "shodan",
+      "status": 200,
+      "finalPath": "/shodan",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "aio",
+      "status": 200,
+      "finalPath": "/aio",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "mensetsu",
+      "status": 200,
+      "finalPath": "/mensetsu",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "quote",
+      "status": 200,
+      "finalPath": "/quote",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "aishodan",
+      "status": 200,
+      "finalPath": "/aishodan",
+      "expectedDeploymentMarker": true
+    },
+    {
+      "service": "adimage",
+      "status": 200,
+      "finalPath": "/adimage",
+      "expectedDeploymentMarker": true
+    }
+  ],
+  "scope": "Anonymous GET of 17 service entry points only; not signed-in generation, payment, data or device QA. Deployment markers are recorded per page, not assumed globally."
+}

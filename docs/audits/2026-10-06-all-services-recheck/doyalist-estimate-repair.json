@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-06T19:10:19.026909+00:00",
+  "status": "local-release-passed-not-pushed",
+  "baseCommit": "70e12d8fe598c84a8f8ef9b21eef4ede86d8f77d",
+  "changes": [
+    "One shared search-keyword resolver for collection and preview including raw input, delimiters, first-three ordering and industry fallback",
+    "Preview uses actual selected tags or raw input matching project criteria",
+    "Strict success/number/boolean/note response validation; unavailable is never zero",
+    "35-second fetch/body deadline and 64KiB bounded reader; actor/condition/ABA cancellation",
+    "Remove claim that keyword hit count guarantees actual collected count",
+    "Unavailable preview hides server API-key/configuration details"
+  ],
+  "evidence": {
+    "mountedCases": 44,
+    "realApiSyntheticConsistencyCases": 6,
+    "existingQuotaAndPreservationRegression": "passed",
+    "typecheckExitCode": 0,
+    "targetedLintErrors": 0,
+    "existingImgWarnings": 7,
+    "fullGate": "doyalist-estimate-release-79601672-e409-459a-b3ab-37bec5eac6fa",
+    "fullGateStatus": "passed",
+    "unchangedSourceFiles": 2582
+  },
+  "limits": [
+    "No real provider, model, DB, project creation or customer mutation",
+    "Keyword hit count remains a sample and can differ after actual provider/industry/size filters",
+    "Reference preview is unavailable for search words exceeding endpoint supported 100 characters; collection is not silently altered",
+    "Slide/cunning layout lifecycle baseline reproduced and remains for next repair",
+    "17-service/2074-item full audit remains incomplete"
+  ]
+}

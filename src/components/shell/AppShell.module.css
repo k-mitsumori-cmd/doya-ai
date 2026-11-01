@@ -1,0 +1,267 @@
+/* 共通シェル — クリア（トークンは src/components/ds/tokens.module.css） */
+.shell {
+  --shell-mobile-bottom-inset: 0px;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.skip {
+  position: absolute; left: -9999px; top: 8px; z-index: 100;
+  padding: 8px 12px; border-radius: var(--r-sm); background: var(--paper); color: var(--blue); font-weight: 700;
+}
+.skip:focus { left: 8px; }
+
+.topbar { display: none; }
+.tabbar { display: none; }
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  padding: 16px 12px 12px;
+}
+
+.sideHead { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 12px; }
+
+.brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-weight: 800; font-size: 17px; letter-spacing: 0.01em;
+  color: var(--ink); text-decoration: none;
+}
+
+.brandMark {
+  /* 記号の画像（青い板＋ドヤくん）。透過の角丸なので、ダークでも板の青で形が保たれる */
+  width: 28px; height: 28px; flex: none;
+}
+
+.search {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  min-height: 40px; padding: 0 12px; margin-bottom: 8px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg);
+  color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.search:hover { border-color: var(--blue-line); color: var(--sub); }
+.search .kbd { margin-left: auto; }
+
+.kbd {
+  font: inherit; font-size: 11px; font-weight: 700; color: var(--muted);
+  padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper);
+}
+
+.navScroll { flex: 1; overflow-y: auto; padding-right: 2px; }
+
+.group { margin-top: 16px; }
+/* 「最近使ったツール」の複製の、今のページの印（aria-current は本来の区分の側だけ） */
+.navItem[data-active='true'] { color: var(--blue); }
+
+.groupLabel {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.08em; padding: 0 12px 4px; margin: 0;
+}
+
+.navItem {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 40px; padding: 0 12px; border-radius: 12px;
+  font-size: 14px; font-weight: 600; color: var(--sub); text-decoration: none;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.navItem svg { flex: none; }
+.navItem:hover { background: var(--bg); color: var(--ink); }
+.navItem[aria-current='page'] { background: var(--blue-soft); color: var(--blue); }
+
+/* 部署ごとの入口（DEPARTMENTS_ROLLOUT）。「ほかの部署」の畳み */
+.deptBlock { margin-top: 2px; }
+.deptToggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--sub); text-align: left;
+}
+.deptToggle:hover { background: var(--bg); color: var(--ink); }
+.deptToggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.deptChevron { flex: none; transition: transform 0.15s var(--ease); }
+.deptChevron[data-open='true'] { transform: rotate(90deg); }
+.deptBody[data-open='false'] { display: none; }
+
+.navLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.beta {
+  margin-left: auto; flex: none;
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px;
+  background: var(--note-bg); color: var(--note-ink);
+}
+
+.navItem:focus-visible,
+.iconButton:focus-visible,
+.search:focus-visible,
+.tab:focus-visible,
+.paletteItem:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* 利用量とプラン（SidebarUsagePanel は白い文字なので、今までのサイドバーと同じ青の上に置く） */
+.usage {
+  margin: 8px 0 0; padding: 4px 0 12px; border-radius: var(--r-sm);
+  background: linear-gradient(160deg, var(--blue), var(--blue-deep) 60%, var(--navy));
+}
+/* 数字を読み込むまで SidebarUsagePanel は何も描かない。空の青い箱を出さない */
+.usage:empty:not([data-hold='true']) { display: none; }
+
+.account { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 2px; }
+
+.userLine {
+  margin: 0; padding: 4px 12px 6px;
+  font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ログアウトは button なので、リンクと見た目をそろえる */
+.logout { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+/* 「お知らせ」の件数（1日1つの決まりで止めた知らせの数） */
+.noticeRow:disabled { cursor: default; opacity: .55; }
+.noticeRow:disabled:hover { background: transparent; color: inherit; }
+.noticeIcon { position: relative; display: inline-flex; flex: none; }
+/* 細いメニュー（768〜1279px）では件数の文字が隠れるので、鈴の右上に点を出す */
+.noticeDot { display: none; position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; border-radius: 99px; background: var(--blue); box-shadow: 0 0 0 2px var(--paper); }
+.noticeCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 8px; padding: 0 6px; border-radius: 99px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; }
+
+.main { min-width: 0; }
+
+/*
+ * 枠の中では、旧レイアウトの名残の「画面いっぱいの高さ」を外す（UI 品質 C-2）。
+ * 枠の中にもう1つ画面いっぱいの箱ができると、二重のスクロールや、読み込みが全画面に見える原因になる。
+ * ⚠️ 枠の外（LP など）には効かない（.main は AppShell の中だけ）。
+ * ⚠️ 新しい見た目（data-ui-next。チェックリスト §5.1）のときだけ効かせる。
+ */
+.shell[data-ui-next='true'] .main :global(.h-screen), .shell[data-ui-next='true'] .main :global(.h-dvh), .shell[data-ui-next='true'] .main :global(.h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.h-svh), .shell[data-ui-next='true'] .main :global(.h-lvh), .shell[data-ui-next='true'] .main :global(.h-\[100vh\]) { height: auto !important; }
+.shell[data-ui-next='true'] .main :global(.min-h-screen), .shell[data-ui-next='true'] .main :global(.min-h-dvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.min-h-svh), .shell[data-ui-next='true'] .main :global(.min-h-lvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100vh\]) { min-height: 0 !important; }
+/* ページの側の古い全画面の背景（料金・入口の外側。ページに data-legacy-backdrop を付けたもの）は、枠の中では出さない。
+   枠の地の色の上に、もう1枚の背景（白・薄い紫のグラデーション）が重なるのを止める（2026-10-23 ユーザーの指摘） */
+.shell[data-ui-next='true'] .main [data-legacy-backdrop] { background: none !important; min-height: 0 !important; }
+/* ⚠️ チャットの欄などの h-[calc(100vh-80px)] は、画面に合わせた大きさとして残す（S-63） */
+/* 枠の中の読み込み表示が小さくなりすぎないよう、中身の領域の最低の高さを持たせる */
+.shell[data-ui-next='true'] .main { min-height: calc(100vh - 1px); }
+
+.scrim { display: none; }
+
+.iconButton {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer;
+}
+.closeButton { display: none; }
+
+/* ---- ⌘K ---- */
+.paletteScrim {
+  position: fixed; inset: 0; z-index: 80; background: rgba(10, 15, 60, 0.32);
+  display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px;
+}
+.palette {
+  width: min(560px, 100%); max-height: 70vh; display: flex; flex-direction: column;
+  background: var(--paper); border-radius: var(--r); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.paletteInputRow { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.paletteInput { flex: 1; min-width: 0; border: 0; outline: none; font: inherit; font-size: 16px; color: var(--ink); background: transparent; }
+.paletteList { list-style: none; margin: 0; padding: 8px; overflow-y: auto; }
+.paletteItem {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 48px;
+  border: 0; border-radius: 12px; background: transparent; cursor: pointer; text-align: left; font: inherit; color: var(--ink);
+}
+.paletteItem[data-active='true'] { background: var(--blue-soft); }
+.paletteIcon {
+  flex: none; width: 32px; height: 32px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-soft); color: var(--blue);
+}
+.paletteText { display: grid; min-width: 0; }
+.paletteText b { font-size: 14px; }
+.paletteText small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paletteEmpty { padding: 24px; text-align: center; color: var(--muted); font-size: 14px; }
+
+/* ---- 768〜1279px: サイドバーはアイコンのみ ---- */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .shell { grid-template-columns: 76px minmax(0, 1fr); }
+  .sidebar { padding: 16px 10px 12px; }
+  .sideHead { justify-content: center; padding: 0 0 12px; }
+  .navLabel, .beta, .newTag, .groupLabel, .userLine, .usage { display: none; }
+  /* アイコンだけの幅では畳まない（部署の名前のボタンは出さず、全部のアイコンを出す） */
+  .deptToggle { display: none; }
+  .deptBody[data-open='false'] { display: block; }
+  .noticeDot { display: block; }
+  .search { justify-content: center; padding: 0; }
+  .navItem { justify-content: center; padding: 0; }
+  .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+}
+
+/* ---- 767px 以下: 引き出し＋下のタブバー ---- */
+@media (max-width: 767px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    position: sticky; top: 0; z-index: 30;
+    height: 60px; padding: 0 16px;
+    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .closeButton { display: inline-flex; }
+
+  .sidebar {
+    position: fixed; z-index: 50; left: 0; top: 0;
+    width: min(300px, 86vw);
+    transform: translateX(-104%);
+    transition: transform 0.24s var(--ease);
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar[data-open='true'] { transform: translateX(0); }
+
+  .scrim {
+    display: block; position: fixed; inset: 0; z-index: 40;
+    background: rgba(10, 15, 60, 0.32);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s var(--ease);
+  }
+  .scrim[data-open='true'] { opacity: 1; pointer-events: auto; }
+
+  .shell { --shell-mobile-bottom-inset: calc(68px + env(safe-area-inset-bottom)); }
+  .main { padding-bottom: var(--shell-mobile-bottom-inset); }
+
+  .tabbar {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+  }
+  .tab {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 52px; border: 0; background: transparent; cursor: pointer; font: inherit;
+    font-size: 11px; font-weight: 700; color: var(--muted); text-decoration: none; border-radius: 12px;
+  }
+  /* 新しい見た目の下のタブは「ホーム・すべて・アカウント」の3つで固定（点検 FRM-03）。文字は 11px 以上（CLR-04） */
+  .shell[data-ui-next='true'] .tabbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shell[data-ui-next='true'] .tab { font-size: 12px; }
+  .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .tab[aria-current='page'] { color: var(--blue); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .scrim, .navItem, .deptChevron { transition: none; }
+}
+
+/* 移っている間の細い線（UI 品質 C-3）。前のページはそのまま見せる */
+.progress {
+  position: sticky; top: 0; z-index: 40; height: 3px; margin-bottom: -3px; overflow: hidden;
+  background: var(--blue-soft);
+}
+.progress::after {
+  content: ''; position: absolute; inset: 0; width: 40%;
+  background: var(--blue); border-radius: 999px;
+  animation: shell-progress 1.1s var(--ease-io) infinite;
+}
+@keyframes shell-progress { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .progress::after { animation: none; width: 100%; opacity: 0.6; } }
+
+/* メニューの「新機能」の札（ドヤくんの知らせ。7日で消える） */
+.newTag { flex: none; margin-left: auto; padding: 0 7px; border-radius: 999px; background: #ff1e72; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px; }

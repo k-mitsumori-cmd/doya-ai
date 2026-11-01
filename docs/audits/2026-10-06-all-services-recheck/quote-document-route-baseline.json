@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-06T22:24:01.028955+00:00",
+  "sourceCommit": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+  "status": "confirmed-unfixed-priority",
+  "problem": "Late previous-route document response replaces current route state; save writes previous document input into current document URL",
+  "routeSequence": [
+    "one",
+    "two-pending",
+    "three-loaded",
+    "two-late-response",
+    "save-three-with-two-input"
+  ],
+  "requestUrl": "/api/quote/documents/three",
+  "submittedCompany": "Company two",
+  "probe": "probe-quote-document-route-scope.cjs",
+  "baselineLog": "/tmp/doya-quote-document-route-baseline.log",
+  "scope": "Actual QuoteDocumentPage mounted under StrictMode; synthetic navigation/API. No real document mutation, DB/provider call or verified customer incident.",
+  "requiredRepair": [
+    "Bind actor, verified organization, route ID and epoch across reads, edits, saves and PDF",
+    "Abort and reject late route responses and retained actions, including route/actor/org ABA",
+    "Require current loaded document ID equals current route before any mutation",
+    "Use synchronous current draft snapshot and lock; validate exact saved acknowledgement, preserve later edits, unknown stop",
+    "Actual mounted regression for route concurrency, org/auth transitions, numeric validation and PDF handoff"
+  ]
+}

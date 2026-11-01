@@ -1,9 +1,11 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { randomUUID } from 'crypto'
+import sharp from 'sharp'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { uploadHrPhoto } from '@/lib/hr/storage'
@@ -19,7 +21,7 @@ const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
  * POST /api/hr/upload
- * 従業員の顔写真をアップロードし、公開URLを返す。
+ * 従業員の顔写真を非公開保存し、組織権限を確認する表示URLを返す。
  * FormData: { file: File }  →  { url: string }
  * 権限: ADMIN 以上（従業員情報の編集権限と同等）
  */
@@ -27,41 +29,53 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+      return privateApiJson({ error: '認証が必要です' }, { status: 401 })
     }
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const formData = await req.formData()
     const file = formData.get('file')
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'ファイルがありません' }, { status: 400 })
+      return privateApiJson({ error: 'ファイルがありません' }, { status: 400 })
     }
 
     const ext = ALLOWED[file.type]
     if (!ext) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: 'JPG / PNG / WebP のみアップロードできます' },
         { status: 400 }
       )
     }
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
+    if (file.size === 0 || file.size > MAX_SIZE) {
+      return privateApiJson(
         { error: '画像サイズは5MB以下にしてください' },
         { status: 400 }
       )
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const source = Buffer.from(await file.arrayBuffer())
+    let buffer: Buffer
+    try {
+      const image = sharp(source, { limitInputPixels: 40_000_000, failOn: 'warning' })
+      const metadata = await image.metadata()
+      const expectedFormat = ext === 'jpg' ? 'jpeg' : ext
+      if (metadata.format !== expectedFormat) throw new Error('Image format mismatch')
+      // Decode and re-encode before storage; MIME labels alone do not establish image validity.
+      buffer = await image.rotate().toBuffer()
+      if (!buffer.length || buffer.length > MAX_SIZE) throw new Error('Decoded image exceeds limit')
+    } catch {
+      return privateApiJson({ error: '画像を読み込めませんでした。正しいJPG・PNG・WebPを指定してください。' }, { status: 400 })
+    }
     // 組織スコープのパス + ランダムUUIDで推測困難に
     const path = `${ctx.organizationId}/${randomUUID()}.${ext}`
     const url = await uploadHrPhoto(buffer, path, file.type)
 
-    return NextResponse.json({ url })
+    return privateApiJson({ url })
   } catch (e: any) {
     console.error('[hr/upload]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'アップロードに失敗しました' },
       { status: 500 }
     )

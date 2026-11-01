@@ -28,6 +28,7 @@ import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
 import { getOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
+import { excludeIds, systemWatchRecordIds } from '@/lib/system-watch/marked-records'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -228,6 +229,56 @@ export async function getUsageSummary(
       }
     }
 
+    case 'popup': {
+      // ⚠️ 上限は plan-limit.ts の popupProposals が正本。数え方も popup/access.ts と同じ
+      //    （無料は累計・有料は月次。削除したサイトも提案1回として数える）
+      const tier = String(plan || '').toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(plan) ? 'PRO' : 'FREE'
+      const [total, month] = await Promise.all([
+        prisma.popupSite.count({ where: { userId } }),
+        prisma.popupSite.count({ where: { userId, createdAt: { gte: jstStartOfMonthUtc() } } }),
+      ])
+      return {
+        title: '作った提案',
+        unit: '回',
+        total,
+        planLabel,
+        meters:
+          tier === 'FREE'
+            ? [{ label: '無料枠', used: total, limit: FREE_LIMITS.popupProposals }]
+            : [{ label: '今月', used: month, limit: (tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS).popupProposals }],
+      }
+    }
+
+    case 'shanai': {
+      // ⚠️ 上限は plan-limit.ts の shanaiArticles / shanaiTranscripts が正本。数え方も shanai/access.ts と同じ
+      //    （台帳 shanai_usage_log で数える。無料は累計・有料は月次。インタビューを消しても戻らない）
+      const tier = String(plan || '').toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(plan) ? 'PRO' : 'FREE'
+      const since = jstStartOfMonthUtc()
+      const [total, month, transcriptTotal, transcriptMonth] = await Promise.all([
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'article' } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'article', createdAt: { gte: since } } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'transcript' } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'transcript', createdAt: { gte: since } } }),
+      ])
+      const monthly = tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS
+      return {
+        title: '作った記事',
+        unit: '本',
+        total,
+        planLabel,
+        meters:
+          tier === 'FREE'
+            ? [
+                { label: '記事（無料枠）', used: total, limit: FREE_LIMITS.shanaiArticles },
+                { label: '文字起こし（無料枠）', used: transcriptTotal, limit: FREE_LIMITS.shanaiTranscripts },
+              ]
+            : [
+                { label: '記事（今月）', used: month, limit: monthly.shanaiArticles },
+                { label: '文字起こし（今月）', used: transcriptMonth, limit: monthly.shanaiTranscripts },
+              ],
+      }
+    }
+
     case 'banner': {
       // 生成予約と同じく、統一プランとサービス個別付与の上位を採用する。
       const sub = await prisma.userServiceSubscription.findUnique({
@@ -334,11 +385,13 @@ export async function getUsageSummary(
         key: 'quoteDocuments',
         plan: orgPlan,
         orgIds,
-        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', () =>
-          prisma.quoteDocument.count({ where: { organizationId: { in: ids } } })),
-        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', () =>
+        // 自動点検（system-watch の B1）が作った見積書は数えない（2026-10-26 ユーザー決定。ルートと同じく記録の ID で外す。
+        // 台帳はルートが合図つきのときに増やさない）。⚠️ 累計もルート（api/quote/documents）と同じく今月の ID だけを除く（2026-10-26 統括の再監査）
+        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', async () =>
+          prisma.quoteDocument.count({ where: { organizationId: { in: ids }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) } })),
+        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', async () =>
           prisma.quoteDocument.count({
-            where: { organizationId: { in: ids }, createdAt: { gte: since } },
+            where: { organizationId: { in: ids }, createdAt: { gte: since }, ...excludeIds(await systemWatchRecordIds(prisma, 'quote-document', ids).catch(() => [])) },
           }), since),
       })
     }
@@ -356,11 +409,14 @@ export async function getUsageSummary(
       //    失敗した調査や、止まったままの processing を含めて数えていたため、
       //    APIはまだ受け付けるのに画面だけ「使い切りました」と赤くなっていた。
       const staleBefore = new Date(Date.now() - PREP_STALE_MS)
+      // 自動点検（system-watch の B1）が作った商談準備は、月の枠に数えない（2026-10-26 ユーザー決定。ルートと同じ）
+      const watchIds = await systemWatchRecordIds(prisma, 'shodan-preparation', orgIds).catch(() => [])
       const used = orgIds.length
         ? await prisma.shodanPreparation.count({
             where: {
               organizationId: { in: orgIds },
               createdAt: { gte: jstStartOfMonthUtc() },
+              ...excludeIds(watchIds),
               OR: [
                 { status: 'done' },
                 { status: 'researched' },

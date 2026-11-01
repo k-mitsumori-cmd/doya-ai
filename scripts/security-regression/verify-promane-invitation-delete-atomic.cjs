@@ -26,7 +26,7 @@ function fixture({ active = true, accepted = false, foreign = false, changed = f
           },
         },
         promaneMember: { findFirst: async ({ where }) =>
-          memberActive && where.workspaceId === 'w' && where.role.in.includes('admin') ? { id: 'actor' } : null },
+          memberActive && where.workspaceId === 'w' && where.role.in.includes('admin') ? { id: 'actor', role: 'admin' } : null },
       })
       if (revokeOnConflict && attempts === 1) {
         memberActive = false

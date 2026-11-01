@@ -1,0 +1,55 @@
+/* ============================================
+ * ドヤインタビューAI 新しい見た目（UI 品質の直し）
+ * ============================================
+ * ⚠️ .next は、サーバーで isUiNext() が真のときだけ付ける（src/app/(shell)/interview/layout.tsx）。
+ *    偽のときは、このファイルの指定は何も効かない（今の見た目のまま）。
+ * 旧ブランドの紫（#7f19e6 / #6b12c9）を、ブランドの青（#0066ff / #0052cc）に置き換える。
+ * 下の一覧は、interview の部品で使われている Tailwind の色の指定をすべて並べたもの。
+ * 紫の指定を新しく足したら、ここにも足す（足さないと、新しい見た目でも紫のまま出る）。
+ */
+
+.next :global(.bg-\[\#7f19e6\]) { background-color: rgb(0 102 255); }
+.next :global(.bg-\[\#7f19e6\]\/10) { background-color: rgb(0 102 255 / 0.1); }
+.next :global(.bg-\[\#7f19e6\]\/20) { background-color: rgb(0 102 255 / 0.2); }
+.next :global(.bg-\[\#7f19e6\]\/5) { background-color: rgb(0 102 255 / 0.05); }
+.next :global(.bg-\[\#7f19e6\]\/50) { background-color: rgb(0 102 255 / 0.5); }
+.next :global(.bg-\[\#7f19e6\]\/\[0\.03\]) { background-color: rgb(0 102 255 / 0.03); }
+.next :global(.border-\[\#7f19e6\]) { border-color: rgb(0 102 255); }
+.next :global(.border-\[\#7f19e6\]\/10) { border-color: rgb(0 102 255 / 0.1); }
+.next :global(.border-\[\#7f19e6\]\/20) { border-color: rgb(0 102 255 / 0.2); }
+.next :global(.border-\[\#7f19e6\]\/25) { border-color: rgb(0 102 255 / 0.25); }
+.next :global(.border-\[\#7f19e6\]\/30) { border-color: rgb(0 102 255 / 0.3); }
+.next :global(.border-t-\[\#7f19e6\]) { border-top-color: rgb(0 102 255); }
+.next :global(.focus\:border-\[\#7f19e6\]:focus) { border-color: rgb(0 102 255); }
+.next :global(.focus\:ring-\[\#7f19e6\]:focus) { --tw-ring-color: rgb(0 102 255); }
+.next :global(.focus\:ring-\[\#7f19e6\]\/20:focus) { --tw-ring-color: rgb(0 102 255 / 0.2); }
+.next :global(.focus\:ring-\[\#7f19e6\]\/30:focus) { --tw-ring-color: rgb(0 102 255 / 0.3); }
+.next :global(.from-\[\#7f19e6\]) { --tw-gradient-from: rgb(0 102 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.next :global(.from-\[\#7f19e6\]\/10) { --tw-gradient-from: rgb(0 102 255 / 0.1) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.next :global(.from-\[\#7f19e6\]\/5) { --tw-gradient-from: rgb(0 102 255 / 0.05) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.next :global(.group:hover) :global(.group-hover\:text-\[\#7f19e6\]) { color: rgb(0 102 255); }
+.next :global(.hover\:bg-\[\#6b12c9\]:hover) { background-color: rgb(0 82 204); }
+.next :global(.hover\:bg-\[\#7f19e6\]\/10:hover) { background-color: rgb(0 102 255 / 0.1); }
+.next :global(.hover\:bg-\[\#7f19e6\]\/20:hover) { background-color: rgb(0 102 255 / 0.2); }
+.next :global(.hover\:bg-\[\#7f19e6\]\/\[0\.06\]:hover) { background-color: rgb(0 102 255 / 0.06); }
+.next :global(.hover\:border-\[\#7f19e6\]:hover) { border-color: rgb(0 102 255); }
+.next :global(.hover\:border-\[\#7f19e6\]\/20:hover) { border-color: rgb(0 102 255 / 0.2); }
+.next :global(.hover\:border-\[\#7f19e6\]\/30:hover) { border-color: rgb(0 102 255 / 0.3); }
+.next :global(.hover\:border-\[\#7f19e6\]\/40:hover) { border-color: rgb(0 102 255 / 0.4); }
+.next :global(.hover\:border-\[\#7f19e6\]\/50:hover) { border-color: rgb(0 102 255 / 0.5); }
+.next :global(.hover\:from-\[\#7f19e6\]\/5:hover) { --tw-gradient-from: rgb(0 102 255 / 0.05) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.next :global(.hover\:shadow-\[\#7f19e6\]\/20:hover) { --tw-shadow-color: rgb(0 102 255 / 0.2); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.hover\:shadow-\[\#7f19e6\]\/30:hover) { --tw-shadow-color: rgb(0 102 255 / 0.3); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.hover\:text-\[\#7f19e6\]:hover) { color: rgb(0 102 255); }
+.next :global(.hover\:to-\[\#7f19e6\]\/5:hover) { --tw-gradient-to: rgb(0 102 255 / 0.05) var(--tw-gradient-to-position); }
+.next :global(.hover\:via-\[\#7f19e6\]\/10:hover) { --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), rgb(0 102 255 / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+.next :global(.shadow-\[\#7f19e6\]\/10) { --tw-shadow-color: rgb(0 102 255 / 0.1); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.shadow-\[\#7f19e6\]\/20) { --tw-shadow-color: rgb(0 102 255 / 0.2); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.shadow-\[\#7f19e6\]\/25) { --tw-shadow-color: rgb(0 102 255 / 0.25); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.shadow-\[\#7f19e6\]\/30) { --tw-shadow-color: rgb(0 102 255 / 0.3); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.shadow-\[\#7f19e6\]\/5) { --tw-shadow-color: rgb(0 102 255 / 0.05); --tw-shadow: var(--tw-shadow-colored); }
+.next :global(.text-\[\#7f19e6\]) { color: rgb(0 102 255); }
+.next :global(.text-\[\#7f19e6\]\/50) { color: rgb(0 102 255 / 0.5); }
+.next :global(.text-\[\#7f19e6\]\/60) { color: rgb(0 102 255 / 0.6); }
+.next :global(.text-\[\#7f19e6\]\/\[0\.07\]) { color: rgb(0 102 255 / 0.07); }
+.next :global(.to-\[\#7f19e6\]\/\[0\.02\]) { --tw-gradient-to: rgb(0 102 255 / 0.02) var(--tw-gradient-to-position); }

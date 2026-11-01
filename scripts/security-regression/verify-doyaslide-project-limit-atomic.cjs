@@ -40,11 +40,16 @@ const limits = load('src/lib/doyaslide/limits.ts', {
   '@/lib/plan-utils': { tierFrom: () => 'FREE' },
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 });
+const createProject = load('src/lib/doyaslide/create-project.ts', {
+  '@/lib/prisma': { prisma },
+  '@/lib/doyaslide/limits': limits,
+});
 const docTypes = [{ value: 'proposal', defaultCount: 10, defaultAspect: 'wide' }];
 const route = load('src/app/api/doyaslide/projects/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/doyaslide/access': { getUserId: async () => 'user' },
+  '@/lib/doyaslide/create-project': createProject,
   '@/lib/doyaslide/limits': { ...limits, getUserDoyaSlideLimits: async () => ({ maxProjects: 3 }) },
   '@/lib/doyaslide/constants': {
     DOC_TYPES: docTypes,

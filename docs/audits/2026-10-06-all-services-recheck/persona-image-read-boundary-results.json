@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T15:30:26.188Z",
+  "passed": 5,
+  "cases": [
+    "owner",
+    "delete-during-download",
+    "owner-change-during-download",
+    "path-change-during-download",
+    "failed-job-during-download"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/persona/images/[id]/route.ts": "a5b912531035150d9f9bcaca216ae147fc131e415fa104266a04cce8d8f427f7"
+  },
+  "scope": "Actual image GET handler with synthetic session, Prisma query adapter and storage; deletion/owner/path/status changes inside storage await. Not real DB/browser/provider or production incident evidence."
+}

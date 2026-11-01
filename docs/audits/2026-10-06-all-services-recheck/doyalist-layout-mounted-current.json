@@ -1,0 +1,19 @@
+{
+  "passed": 13,
+  "checks": [
+    "doyalist: Same actor session object refresh preserves draft and avoids duplicate lookup",
+    "doyalist: SDK loading keeps the same actor child mounted and hidden",
+    "doyalist: New actor never sees previous actor plan or draft",
+    "doyalist: Actor ABA does not resurrect the old plan or input",
+    "doyalist: Late previous actor response cannot replace current plan",
+    "doyalist: Plan transition hides stale plan while retaining same actor draft",
+    "doyalist: Route refresh preserves draft and publishes only current reply",
+    "doyalist: Timeout retains input and retry recovers the confirmed plan",
+    "doyalist: Invalid plan never becomes a confirmed paid tier",
+    "doyalist: Missing identity and signed-out stale session hide private child without reads",
+    "doyalist: Unmount cancels pending read and focus listener",
+    "doyalist: Oversized streamed response stays unknown without losing draft",
+    "doyalist: Focus coalesces a pending read"
+  ],
+  "scope": "Actual DoyalistLayout, bounded response reader and real session/route React contexts under StrictMode. Synthetic drafts and read-only replies; no live billing, company generation, email or DB mutation."
+}

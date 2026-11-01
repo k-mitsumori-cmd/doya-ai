@@ -1,0 +1,253 @@
+{
+  "checkedAt": "2026-10-07T07:49:54.470Z",
+  "passed": true,
+  "activeCount": 17,
+  "publicCount": 17,
+  "retiredCount": 14,
+  "sourceEntries": [
+    {
+      "id": "banner",
+      "href": "/banner",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "seo",
+      "href": "/seo",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "interview",
+      "href": "/interview",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "persona",
+      "href": "/persona",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "hr",
+      "href": "/hr",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "kintai",
+      "href": "/kintai",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "doyalist",
+      "href": "/doyalist",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "promane",
+      "href": "/promane",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "doyaslide",
+      "href": "/doyaslide",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "cunning",
+      "href": "/cunning",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "sfa",
+      "href": "/sfa",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "shodan",
+      "href": "/shodan",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "aio",
+      "href": "/aio",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "mensetsu",
+      "href": "/mensetsu",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "quote",
+      "href": "/quote",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "aishodan",
+      "href": "/aishodan",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    },
+    {
+      "id": "adimage",
+      "href": "/adimage",
+      "available": true,
+      "localSitemap": true,
+      "localLlms": true
+    }
+  ],
+  "liveEntries": [
+    {
+      "id": "banner",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "seo",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "interview",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "persona",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "hr",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "kintai",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "doyalist",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "promane",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "doyaslide",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "cunning",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "sfa",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "shodan",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "aio",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "mensetsu",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "quote",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "aishodan",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    },
+    {
+      "id": "adimage",
+      "homeLink": true,
+      "sitemap": true,
+      "llms": true
+    }
+  ],
+  "publicEndpoints": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200
+    },
+    {
+      "path": "/llms.txt",
+      "status": 200
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/services.ts": "88041e2debc0d8f865506719031426653ebb0db4f8827e7a2bced72ac80eabeb",
+    "src/app/sitemap.ts": "cb537307fb1788411a0206a3ce71344b68663c75f36cfce7ea16871327e93b34",
+    "src/app/llms.txt/route.ts": "1690b3012ce8cf33317385d4b0c9bdecbc29ef1f95a8834fd5c4d1fe288d4557",
+    "src/components/lp/renewal/Renewal.tsx": "0db2ffaad4c3fb7cf26971f3362cd312e061cc8b373bf22cecad591a9908444d"
+  },
+  "scope": "Actual service catalog/sitemap/llms handlers plus anonymous read-only home/sitemap/llms. Proves source lists agree with17 service public links and exclude retired IDs locally. Does not prove retired generation API rejection or authenticated navigation/operation."
+}

@@ -1,0 +1,206 @@
+{
+  "checkedAt": "2026-10-07T03:44:23.277405+00:00",
+  "commit": "9d611e843b6f488259e45270c203c5533b811bfc",
+  "deployment": "dpl_9vq7aFK4maJJdSTyZLj5XrtT7erF",
+  "status": "anonymous-publication-passed-private-form-unproven",
+  "dealClientMarkers": {
+    "?recovery=1": true,
+    "deal:": true,
+    "/api/sfa/deals/": true
+  },
+  "sfaClientMarkers": {
+    "doya:sfa:pending:v1:": true,
+    "未保存ならこの操作を取り消す": true,
+    "保存結果を確認": true
+  },
+  "anonymousSfaApis": [
+    {
+      "path": "/api/sfa/tasks?org=audit-verification",
+      "status": 401,
+      "hasError": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    },
+    {
+      "path": "/api/sfa/activities?org=audit-verification",
+      "status": 401,
+      "hasError": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    },
+    {
+      "path": "/api/sfa/tasks/audit-verification?org=audit-verification",
+      "status": 401,
+      "hasError": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    }
+  ],
+  "entries": [
+    {
+      "service": "banner",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "seo",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "interview",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "persona",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "hr",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "kintai",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyalist",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "promane",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "sfa",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "shodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aio",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "mensetsu",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "quote",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aishodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "adimage",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "pages": [
+    {
+      "path": "/doyaslide/new",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/cunning/pricing",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/quote",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/quote/pricing",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/quote/settings",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/sfa/audit-verification",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/sfa/audit-verification/tasks",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/sfa/audit-verification/activities",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    },
+    {
+      "path": "/sfa/audit-verification/deals",
+      "status": 200,
+      "deploymentMarker": true,
+      "popupCssPresent": true
+    }
+  ],
+  "assets": 44,
+  "guestApis": [
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "guest": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "guest": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    }
+  ],
+  "quoteAnonymousUsage": {
+    "status": 200,
+    "signedIn": false,
+    "cacheControl": "private, no-store",
+    "varyCookie": true
+  },
+  "scope": "Anonymous read-only HTML/assets, guest usage and unauthenticated SFA 401 responses only. Uses a synthetic org slug; no authenticated browser or DB write. Does not prove authenticated wrapper/child behavior, private customer flows, actual AI generation, DB persistence or browser interaction. If alias advanced, absent old marker is not itself a bug."
+}

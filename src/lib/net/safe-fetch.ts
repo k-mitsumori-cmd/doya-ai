@@ -233,7 +233,25 @@ export async function safeFetchResource(rawUrl: string, opts: SafeFetchOptions =
 /** Text compatibility wrapper; all outbound IO remains in the pinned transport. */
 export async function safeFetchText(rawUrl: string, opts: SafeFetchOptions = {}): Promise<string | null> {
   const resource = await safeFetchResource(rawUrl, opts)
-  return resource ? resource.body.toString('utf8') : null
+  return resource ? decodeBody(resource.body, resource.contentType) : null
+}
+
+/**
+ * 本文を、宣言された文字コードで読む（2026-10-26。Shift_JIS・EUC-JP のサイトが文字化けしていた）。
+ * 順に Content-Type の charset → 先頭 4KB の <meta charset> / <meta http-equiv> → UTF-8。
+ * 知らない・読めない文字コードは UTF-8 で読む（今までと同じ）。
+ */
+export function decodeBody(body: Buffer, contentType = ''): string {
+  const fromHeader = /charset=["']?([\w-]+)/i.exec(contentType)?.[1]
+  const head = body.subarray(0, 4096).toString('latin1')
+  const fromMeta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head)?.[1]
+  const label = (fromHeader || fromMeta || 'utf-8').toLowerCase()
+  if (label === 'utf-8' || label === 'utf8') return body.toString('utf8')
+  try {
+    return new TextDecoder(label === 'x-sjis' || label === 'sjis' ? 'shift_jis' : label).decode(body)
+  } catch {
+    return body.toString('utf8')
+  }
 }
 
 /** HTMLからスクリプト/スタイル/タグを除去してプレーンテキスト化 */

@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-08T18:19:43.479Z",
+  "expected": 6,
+  "passed": 6,
+  "cases": [
+    "empty-department-name",
+    "whitespace-department-name",
+    "duplicate-department-code",
+    "malformed-json",
+    "valid-japanese-fields",
+    "valid-long-japanese-name"
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/scripts/security-regression/verify-hr-department-input.cjs": "1f5c8a3d0c16da7ac0031b1755159339eb04c023773cce00f099aa44e1230c33",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-regression-overlay/scripts/security-regression/verify-hr-department-input.cjs": "1f5c8a3d0c16da7ac0031b1755159339eb04c023773cce00f099aa44e1230c33",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-legacy.cjs": "15bbcd74bea1f7867960d5413702f313df20b3c96f3c3202324fcd96484bb951",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/app/api/hr/departments/route.ts": "10c38c62958527fa206ac9df8bcc7568579803faa4fb05aa35c018a7d5124ee8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-operation.ts": "04a8423447da228a050d10cc6eee0bf947991e74bc6b465280605e8d43bc6529",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-input.ts": "c8cad10c6d271c3c9ff075c9e0066d65e3a48d1af44a586a01f2efd8ca85890c",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-mutation.ts": "bc75490965e859a89450b540cebac07bdea3126fd978dac8ed870849629771a8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/app/api/hr/departments/[id]/route.ts": "0673b9338b845a0488df3a97624eb09d84bd8db71643641a69c0bd7462370d0c"
+  },
+  "scope": "Prepared mandatory fixture against durable operation candidate with actual operation parser/receipt helper loaded. All original input/concurrency assertions retained. Original assertions retained; actual input and mutation helper loaded with synthetic scoped Prisma/lock rows. Related33, member-access1, validation6 and cache3 are separate proofs. No actual DB/customer/provider writes; realDB47 is verified independently."
+}

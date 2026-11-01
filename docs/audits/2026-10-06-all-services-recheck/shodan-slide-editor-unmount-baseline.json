@@ -1,0 +1,16 @@
+{
+  "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "mode": "unmount",
+  "writes": [
+    {
+      "url": "/api/shodan/preparations/one/slides/regenerate?org=alpha",
+      "body": {
+        "index": 0
+      }
+    }
+  ],
+  "notices": [
+    "スライドを再生成しました"
+  ],
+  "scope": "Actual mounted editor and AppLayout with actual bounded client and synthetic HTTP. No paid providers, DB writes or customer data. Editor source unchanged in current detail candidate."
+}

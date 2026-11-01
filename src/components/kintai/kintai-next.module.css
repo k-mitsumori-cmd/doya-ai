@@ -1,0 +1,72 @@
+/* ============================================
+ * 勤怠: 新しい見た目（UI 品質の直し）だけで使う CSS
+ * ============================================
+ * ⚠️ KintaiShellFrame が、useUiNext() が真で枠の中のときだけ .scope を当てる。
+ * ⚠️ 色はトークン（var(--blue) など。AppShell の .ds が持つ）で書く。
+ */
+
+/* ---- 主ボタン・強調の紫を、ブランドの青にそろえる（S-48） ---- */
+.scope :global(.bg-purple-600), .scope :global(.bg-\[\#7f19e6\]) { background-color: var(--blue) !important; }
+.scope :global(.hover\:bg-purple-700:hover) { background-color: var(--blue-deep) !important; }
+.scope :global(.bg-purple-50), .scope :global(.bg-violet-50), .scope :global(.bg-purple-100) { background-color: var(--blue-soft) !important; }
+.scope :global(.hover\:bg-purple-50:hover) { background-color: var(--blue-soft) !important; }
+.scope :global(.text-purple-700), .scope :global(.text-purple-900), .scope :global(.text-violet-700),
+.scope :global(.text-violet-900), .scope :global(.text-violet-600), .scope :global(.text-\[\#7f19e6\]) { color: var(--blue) !important; }
+.scope :global(.border-purple-200), .scope :global(.border-purple-300), .scope :global(.border-purple-400),
+.scope :global(.border-violet-200), .scope :global(.ring-purple-200) { border-color: var(--blue-line) !important; --tw-ring-color: var(--blue-line); }
+.scope :global(.border-t-purple-600) { border-top-color: var(--blue) !important; }
+.scope :global(.from-purple-600), .scope :global(.from-\[\#7f19e6\]) { --tw-gradient-from: var(--blue) !important; --tw-gradient-to: var(--blue-deep) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.scope :global(.from-purple-50), .scope :global(.from-violet-50) { --tw-gradient-from: var(--blue-soft) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+
+/* ---- ダッシュボード ---- */
+.page { display: grid; gap: 24px; padding: 24px 32px 48px; max-width: 1120px; margin: 0 auto; }
+.heroTitle { display: inline; }
+/* 名前の途中で折り返さない（S-47） */
+.name { display: inline-block; }
+.heroMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.date { white-space: nowrap; }
+.time { font-size: 28px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+.heroActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+
+.sectionTitle { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: var(--ink); }
+.actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.action {
+  display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 16px 20px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper);
+  color: var(--ink); text-decoration: none; box-shadow: var(--shadow);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.action:hover { border-color: var(--blue); transform: translateY(-2px); }
+.action:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.actionIcon {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-soft); color: var(--blue);
+}
+.actionText { display: grid; gap: 2px; min-width: 0; }
+.actionLabel { font-size: 15px; font-weight: 700; }
+.actionSub { font-size: 13px; color: var(--sub); }
+
+.loading { display: grid; gap: 16px; padding: 24px 32px; }
+
+/* ---- 小さな札（招待中・参加済・ルール未設定）のアイコン ---- */
+.tagIcon { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+
+@media (max-width: 1023px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .page { padding: 16px 16px 40px; gap: 16px; }
+  .loading { padding: 16px; }
+  .stats { gap: 12px; }
+  .time { font-size: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action, .action:hover { transition: none; transform: none; }
+}
+
+/* 旧来の濃い紫（hover）も青に */
+.scope :global(.hover\:bg-\[\#6a14c2\]:hover), .scope :global(.hover\:bg-\[\#5b0fb3\]:hover) { background-color: var(--blue-deep) !important; }
+.scope :global(.to-\[\#5b0fb3\]) { --tw-gradient-to: var(--blue-deep) !important; }

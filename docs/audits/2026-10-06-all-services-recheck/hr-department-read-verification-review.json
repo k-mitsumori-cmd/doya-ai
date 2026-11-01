@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-08T18:47:40.963846+00:00",
+  "status": "candidate-verification-passed-awaiting-root-integration-and-full-gate",
+  "rootApplied": false,
+  "deployed": false,
+  "build": {
+    "status": "passed",
+    "sourcesUnchanged": true,
+    "report": "hr-department-read-candidate-build.json"
+  },
+  "reports": [
+    {
+      "file": "hr-department-read-next-results.json",
+      "expected": 80,
+      "passed": 80
+    },
+    {
+      "file": "hr-department-settings-paged-native-overlay.json",
+      "expected": 12,
+      "passed": 12
+    },
+    {
+      "file": "hr-department-consumer-native-overlay.json",
+      "expected": 9,
+      "passed": 9
+    },
+    {
+      "file": "hr-department-read-legacy-related.json",
+      "expected": 33,
+      "passed": 33
+    },
+    {
+      "file": "hr-department-read-legacy-access.json",
+      "expected": 1,
+      "passed": 1
+    },
+    {
+      "file": "hr-department-read-legacy-validation.json",
+      "expected": 6,
+      "passed": 6
+    },
+    {
+      "file": "hr-department-read-legacy-cache.json",
+      "expected": 3,
+      "passed": 3
+    },
+    {
+      "file": "hr-department-settings-paged-legacy-load-overlay.json",
+      "expected": 9,
+      "passed": 9
+    }
+  ],
+  "actualNextDatabaseCleanupVerified": true,
+  "sourceHashes": {
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/settings/page.tsx": "e918ed081f42d4d007abf32dce7bedf3bf9fc7c58581d856fd0b0b359fa2deaf",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/[id]/edit/page.tsx": "aba531f2917635c1dc5c15b747d7206f88451a24a4418b86c6a57c1d1d4b750d",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/api/hr/departments/route.ts": "dbf62d9d4d6f853ba53c6233f663e3524778df68827ab3fd71f5ad26164b47f8",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-hierarchy.ts": "8215b8edd56e57c441686eb363a63be6d7c9f4a8a9c10462a187e90b98ef7281",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea"
+  },
+  "originalScope": {
+    "services": 17,
+    "criteria": 2074,
+    "getEndpoints": 189
+  },
+  "requiredNext": [
+    "Integrate11 production files and adapted mandatory regression fixtures without unrelated changes",
+    "Preserve original176 commands/assertions/order; add read proofs and run a fresh frozen whole-service gate",
+    "Review exact changes, push only reviewed files, verify CI and READY deployment and public behavior",
+    "Continue original17-service audit; these candidate proofs do not establish whole-service completion"
+  ]
+}
