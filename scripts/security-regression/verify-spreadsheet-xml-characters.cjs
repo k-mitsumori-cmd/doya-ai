@@ -1,10 +1,12 @@
 const assert = require('node:assert/strict')
-const { JSDOM } = require('jsdom')
 const ExcelJS = require('exceljs')
+const JSZip = require('jszip')
+const { JSDOM } = require('jsdom')
+const browser = new JSDOM('')
+const sheetNs = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+const decodeXstring = value => value.replace(/_x([0-9A-Fa-f]{4})_/g, (_, code) => String.fromCharCode(parseInt(code, 16)))
 const { load, check } = require('./load-typescript.cjs')
 const loadExcelExport = require('./load-excel-export.cjs')
-const ns = 'urn:schemas-microsoft-com:office:spreadsheet'
-const browser = new JSDOM('')
 const fixtures = [
   ['normal', '日本語 & <tag> "quote" 🚀', '日本語 & <tag> "quote" 🚀'],
   ['controls', 'Before\u0000\u0001\u000b\u001fAfter', 'BeforeAfter'],
@@ -32,14 +34,13 @@ function routes(value) {
   }
   const csv = load('src/lib/doyalist/export-csv.ts')
   const stream = load('src/lib/doyalist/export-stream.ts', { '@/lib/prisma': { prisma }, '@/lib/doyalist/export-csv': csv })
+  const xlsx = load('src/lib/doyalist/export-xlsx.ts', { archiver: require('archiver'), 'node:stream': require('node:stream'), './export-stream': stream })
   const doyalist = load('src/app/api/doyalist/export/route.ts', {
     'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: 'owner' } }) },
-    '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma }, '@/lib/doyalist/export-stream': stream, 'node:stream': require('node:stream'),
+    '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma }, '@/lib/doyalist/export-stream': stream, '@/lib/doyalist/export-xlsx': xlsx, 'node:stream': require('node:stream'),
   })
   return { kintai, doyalist }
 }
-const tableRows = table => Array.from(table.getElementsByTagNameNS(ns, 'Row')).map(row =>
-  Array.from(row.getElementsByTagNameNS(ns, 'Cell')).map(cell => cell.getElementsByTagNameNS(ns, 'Data')[0].textContent))
 ;(async () => {
   for (const [name, value, expected] of fixtures) {
     const handlers = routes(value)
@@ -63,20 +64,23 @@ const tableRows = table => Array.from(table.getElementsByTagNameNS(ns, 'Row')).m
           fs.writeFileSync(path.join(process.env.DOYA_KINTAI_TEXT_ARTIFACT_DIR, name === 'DEL character' ? 'kintai-xlsx-del-20261101.xlsx' : 'kintai-xlsx-literal-escapes-20261101.xlsx'), bytes)
         }
       } else {
-        const xml = new browser.window.DOMParser().parseFromString(await response.text(), 'application/xml')
-        assert.equal(xml.getElementsByTagName('parsererror').length, 0, 'successful response must be well-formed XML 1.0')
-        const tables = xml.getElementsByTagNameNS(ns, 'Table')
-        const first = tableRows(tables[0])
-        assert(first.every(row => row.length === 13))
-        assert.equal(first[1][1], expected); assert.equal(first[1][3], expected); assert.equal(first[1][10], expected)
-        const approaches = tableRows(tables[1]); assert(approaches.every(row => row.length === 7))
-        assert.equal(approaches[1][3], expected); assert.equal(approaches[1][4], expected)
-        if (name === 'noncharacters') assert.equal(xml.getElementsByTagNameNS(ns, 'Worksheet')[0].getAttributeNS(ns, 'Name'), 'Audit BeforeAfter_企業')
-        for (const cell of xml.getElementsByTagNameNS(ns, 'Cell')) assert.equal(cell.hasAttributeNS(ns, 'Formula'), false)
-        if (name === 'formula-like text') {
-          const data = xml.getElementsByTagNameNS(ns, 'Data')
-          assert(Array.from(data).filter(node => node.textContent.includes('=SUM')).every(node => node.getAttributeNS(ns, 'Type') === 'String'))
-        }
+        assert.equal(response.headers.get('content-type'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        const zip = await JSZip.loadAsync(Buffer.from(await response.arrayBuffer()))
+        const documents = await Promise.all(['xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'].map(async path => {
+          const doc = new browser.window.DOMParser().parseFromString(await zip.file(path).async('string'), 'application/xml')
+          assert.equal(doc.getElementsByTagName('parsererror').length, 0)
+          return doc
+        }))
+        const cells = documents.map(doc => Object.fromEntries(Array.from(doc.getElementsByTagNameNS(sheetNs, 'c')).map(cell => {
+          assert.equal(cell.getAttribute('t'), 'inlineStr')
+          assert.equal(cell.getElementsByTagNameNS(sheetNs, 'f').length, 0)
+          return [cell.getAttribute('r'), decodeXstring(cell.textContent)]
+        })))
+        assert.equal(Object.keys(cells[0]).length, 26); assert.equal(Object.keys(cells[1]).length, 14)
+        const textExpected = name === 'whitespace' ? value : expected
+        for (const address of ['B2','D2','K2']) assert.equal(cells[0][address], textExpected)
+        for (const address of ['D2','E2']) assert.equal(cells[1][address], textExpected)
+        if (name === 'noncharacters') assert((await zip.file('xl/workbook.xml').async('string')).includes('Audit BeforeAfter_企業'))
       }
       const csvResponse = await handlers[service].GET(new Request(`https://local.invalid/api/${service}/export?${query}&format=csv`))
       assert.equal(csvResponse.status, 200)
