@@ -1,0 +1,58 @@
+// ============================================
+// 製品のホーム（/hub/sales・/hub/marketing・/hub/hr・/hub/budget）
+// ============================================
+// 設計: docs/design/buddy-products-2026-11-01.md §4.3（2026-11-01 本人の決定「おすすめで進める」）
+// - 中身は、部門の数字（経営ホームの集計から製品の分だけ）・ドヤくんに頼む（例を部門向けに）・製品のツール・ほかの製品。
+// - 経営管理のホームは今の経営ホーム（/home）なので、/hub/management は /home へ移る。
+// ⚠️ 旗 PRODUCT_HUBS_ROLLOUT が off の人には 404 を返す（見せない）。
+// ⚠️ ここは読むだけ。組織の自動作成や契約の変更はしない。
+import type { Metadata } from 'next'
+import { notFound, redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getHomeSummary } from '@/lib/home/summary'
+import { isProductHubsEnabled } from '@/lib/products/flag'
+import { departmentOfProduct, getProduct, parseProductId } from '@/lib/products'
+import { hubMetrics } from '@/lib/products/hub-metrics'
+import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
+import HomeAgent from '@/components/home-agent/HomeAgent'
+import { brandRenamedFlag, japanHour, pickHeadline } from '@/components/home-agent/headlines'
+import { brandName } from '@/lib/brand'
+import HubView from '../HubView'
+
+type Ctx = { params: Promise<{ product: string }> | { product: string } }
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(ctx: Ctx): Promise<Metadata> {
+  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const id = parseProductId(p.product)
+  return { title: id ? `${brandName()} ${getProduct(id).name}` : 'ホーム', robots: { index: false, follow: false } }
+}
+
+export default async function ProductHubPage(ctx: Ctx) {
+  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const id = parseProductId(p.product)
+  if (!(await isProductHubsEnabled())) notFound()
+  if (!id) notFound()
+  if (id === 'management') redirect('/home')
+
+  const session = await getServerSession(authOptions)
+  const userId = (session?.user as { id?: string } | undefined)?.id
+  if (!userId) redirect(`/auth/signin?callbackUrl=${encodeURIComponent(`/hub/${id}`)}`)
+
+  // 数字は経営ホームと同じ集計から選ぶ（読めない欄は state で分かる。ホーム全体は落とさない）
+  const summary = await getHomeSummary(userId).catch(() => null)
+  const metrics = summary ? hubMetrics(id, summary) : []
+  // 「ドヤくんに頼む」（旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ）。例と道具を、製品の部署に合わせて絞る
+  const agent = await isAgentOrchestrationEnabled()
+  const headline = pickHeadline({ renamed: brandRenamedFlag(), hour: japanHour() })
+  return (
+    <HubView
+      productId={id}
+      metrics={metrics}
+      metricsUnavailable={!summary}
+      agentStage={agent ? <HomeAgent key={id} dept={departmentOfProduct(id)} headline={headline} /> : null}
+    />
+  )
+}

@@ -32,7 +32,9 @@ check('Departments flag: the shell layout passes departments only from the serve
   assert.match(shell, /buildDepartmentGroups\(deptOn \? departments\?\.primary \?\? \[\] : \[\]\)/)
   assert.match(shell, /<ToolGroupsNav groups=\{toolGroups\}/)
   const page = read('src/app/(shell)/home/page.tsx')
-  assert.match(page, /const departmentsOn = await isDepartmentsEnabled\(\)/)
+  // 部門ごとの製品（PRODUCT_HUBS_ROLLOUT）が on のときは、部署の切り替えを読まない（製品のホームへのリンクに替わる。docs/design/buddy-products-2026-11-01.md）
+  assert.match(page, /const productsOn = await isProductHubsEnabled\(\)/)
+  assert.match(page, /const departmentsOn = !productsOn && \(await isDepartmentsEnabled\(\)\)/)
   assert.match(page, /departmentsOn\s*\n?\s*\? \{/)
 })
 

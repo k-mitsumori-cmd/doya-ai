@@ -1,0 +1,71 @@
+/* 製品のホーム（/hub/<id>）。経営ホーム（home.module.css）と同じ幅・余白・トークンにそろえる */
+.page { max-width: 1240px; margin: 0 auto; padding: 28px 28px 64px; display: grid; gap: 24px; }
+
+.head { display: flex; align-items: center; gap: 14px; }
+.headIcon {
+  display: grid; place-items: center; width: 48px; height: 48px; flex: none;
+  border-radius: var(--r-sm); background: var(--blue); color: #fff;
+}
+.headText { min-width: 0; }
+.eyebrow { margin: 0 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--blue); }
+.title { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+.lead { margin: 4px 0 0; font-size: 14px; color: var(--sub); text-wrap: pretty; }
+
+.agent { min-width: 0; }
+
+.section { display: grid; gap: 12px; min-width: 0; }
+.sectionTitle { margin: 0; font-size: 17px; font-weight: 800; }
+.note { margin: -4px 0 0; font-size: 13px; color: var(--muted); }
+.empty { margin: 0; padding: 14px 16px; border-radius: var(--r-sm); background: var(--note-bg); color: var(--note-ink); font-size: 14px; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.metric {
+  display: grid; gap: 4px; align-content: start; min-height: 108px; padding: 16px 18px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper);
+  color: var(--ink); text-decoration: none; transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.metric:hover { border-color: var(--blue-line); box-shadow: var(--shadow); }
+.metric:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.metricLabel { font-size: 13px; font-weight: 700; color: var(--sub); }
+.metricValue { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.metricSub { font-size: 12px; color: var(--muted); }
+.metricEmpty { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.metricOpen { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--blue); }
+
+.tools { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.tool {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; height: 100%;
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper);
+  color: var(--ink); text-decoration: none; transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.tool:hover { border-color: var(--blue-line); box-shadow: var(--shadow); }
+.tool:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.toolText { display: grid; gap: 2px; min-width: 0; }
+.toolText b { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.toolText small { font-size: 13px; color: var(--sub); line-height: 1.5; text-wrap: pretty; }
+.beta { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--note-bg); color: var(--note-ink); }
+
+.others { display: flex; flex-wrap: wrap; gap: 8px; }
+.other {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper);
+  color: var(--sub); font-size: 14px; font-weight: 700; text-decoration: none;
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.other:hover { border-color: var(--blue); color: var(--blue); }
+.other:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .page { padding: 20px 16px 48px; gap: 20px; }
+  .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric { min-height: 96px; padding: 14px; }
+  .metricValue { font-size: 18px; }
+  .tools { grid-template-columns: 1fr; }
+}
+@media (max-width: 380px) { .metrics { grid-template-columns: 1fr; } }
+
+@media (prefers-reduced-motion: reduce) { .metric, .tool, .other { transition: none; } }
+
+/* 経営ホームの上の「部門ごとに見る」（ProductStrip.tsx） */
+.strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.stripLabel { font-size: 13px; font-weight: 700; color: var(--muted); }

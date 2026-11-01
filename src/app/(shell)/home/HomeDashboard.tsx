@@ -503,7 +503,7 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null, departments }: {
+export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null, departments, productStrip = null }: {
   initial: HomeSummary
   setupHidden?: boolean
   /** ドヤパワーの欄（旗の内側だけ。page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
@@ -514,6 +514,8 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   doyaPower?: boolean
   /** 部署の切り替え（旗 DEPARTMENTS_ROLLOUT が on のときだけ page.tsx が渡す。渡されなければ今のホームのまま） */
   departments?: { primary: DepartmentId[]; dept: DepartmentId | null }
+  /** 製品のホームへのリンク（旗 PRODUCT_HUBS_ROLLOUT が on のときだけ page.tsx が渡す。部署の切り替えの代わりに出す） */
+  productStrip?: ReactNode
 }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
@@ -550,7 +552,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
-      {departments ? <DepartmentSwitcher primary={departments.primary} dept={departments.dept} /> : null}
+      {productStrip ?? (departments ? <DepartmentSwitcher primary={departments.primary} dept={departments.dept} /> : null)}
       {isValidElement<{ greeting?: string; company?: ReactNode }>(agentStage)
         ? cloneElement(agentStage, { greeting: `${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`, company: <ShellCompanyTag /> })
         : agentStage}
