@@ -30,9 +30,11 @@ const cases = [], scenarios = [
   ['network rejection', () => { throw new TypeError('synthetic offline') }, 0],
   ['HTTP 500', () => ({ ok: false, status: 500, json: async () => ({ error: 'synthetic server failure' }) }), 500],
   ['HTTP 401', () => ({ ok: false, status: 401, json: async () => ({}) }), 401],
+  ['HTTP 409 concurrent edit', () => ({ ok: false, status: 409, json: async () => ({}) }), 409],
   ['invalid JSON acknowledgement', () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('synthetic body') } }), 0],
   ['missing run acknowledgement', () => ({ ok: true, status: 200, json: async () => ({}) }), 0],
   ['wrong run acknowledgement', () => ({ ok: true, status: 200, json: async () => ({ run: { ...base, id: 'different-synthetic-run' } }) }), 0],
+  ['missing edited-link acknowledgement', () => ({ ok: true, status: 200, json: async () => ({ run: { ...base, links: [] } }) }), 0],
 ]
 ;(async () => {
   for (const [name, failure, status] of scenarios) {

@@ -2,7 +2,7 @@
 
 // ドヤAI質問リンク 結果画面（4-4）。作成直後と履歴の詳細で共用する
 // ⚠️ 編集中の機械チェックは表示用。保存する値はサーバーで作り直す（PATCH /api/asklink/runs/[id]）
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   AlertTriangle, Check, Code2, Copy, Download, ExternalLink, ImageIcon, Loader2, Pencil, RefreshCw,
 } from 'lucide-react'
@@ -394,7 +394,7 @@ function BannerCard({
 
 export interface RunResultProps {
   run: RunDto
-  onChange: (run: RunDto) => void
+  onChange: Dispatch<SetStateAction<RunDto | null>>
   /** 生成中のバナー（親が順番に回す） */
   bannerBusy: string | null
   onGenerateBanner: (kind: string) => void
@@ -444,7 +444,13 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
       if (!data?.run || data.run.id !== run.id || !Array.isArray(data.run.links)) {
         throw statusError('保存した結果を確認できませんでした。', 0)
       }
-      onChange(data.run)
+      const savedLink = (data.run.links as AskLink[]).find((link) => link?.key === key)
+      if (!savedLink) throw statusError('保存した質問文を確認できませんでした。', 0)
+      // 遅い応答の配列全体で、別のカードの保存済み内容や下書きを戻さない。
+      onChange((current) => {
+        if (!current || current.id !== run.id) return current
+        return { ...current, links: current.links.map((link) => link.key === key ? savedLink : link) }
+      })
       return true
     } catch (e) {
       setError((e as Error).message)

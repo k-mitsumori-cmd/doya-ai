@@ -58,6 +58,9 @@ jobs:
           node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
           DOYA_TEST_STRICT=1 node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
 
+      - name: AskLink concurrent question edits (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-asklink-edit-postgres.py
+
       - name: Shanai storage deletion and concurrent registration (private Unix socket, no providers)
         run: python3 scripts/security-regression/verify-shanai-storage-postgres.py
 

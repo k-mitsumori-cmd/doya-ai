@@ -93,7 +93,7 @@ export default function AskLinkRunPage() {
               </div>
             )
           )}
-          <RunResult run={run} onChange={setRun} bannerBusy={queue.busy} onGenerateBanner={(kind) => void queue.generate(run.id, [kind])} />
+          <RunResult key={run.id} run={run} onChange={setRun} bannerBusy={queue.busy} onGenerateBanner={(kind) => void queue.generate(run.id, [kind])} />
         </>
       )}
     </div>
