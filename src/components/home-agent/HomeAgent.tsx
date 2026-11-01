@@ -979,8 +979,9 @@ function RunBoard({ scene, plan, chosen, views, done, total, failed, reduce, onR
             <img src="/character/success-256.webp" width={120} height={120} alt="" aria-hidden className={styles.finaleBear} decoding="async" draggable={false} />
             <span className={styles.goalText}>
               <span className={styles.eyebrow}>できました</span>
-              <span className={styles.finaleTitle}>{done}件できました{failed ? `（${failed}件は作れませんでした）` : ''}</span>
+              <span className={styles.finaleTitle}>{done}件できました</span>
               {madeNames.length ? <span className={styles.finaleList}>{madeNames.join('、')}</span> : null}
+              {failed ? <span className={styles.finaleFail}>{failed}件は作れませんでした。下の「残りをやり直す」から、もう一度進められます。</span> : null}
             </span>
             <span className={styles.finaleCount}><b>{done}</b><small>/ {total} 件</small></span>
           </div>

@@ -47,7 +47,9 @@
   .card { padding: 12px; }
   .head { grid-template-columns: 48px minmax(0, 1fr); gap: 10px; }
   .head .bear, .head .bearBlank { width: 48px; height: 48px; }
-  .foot .open { flex: 1; justify-content: center; }
+  .foot { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .foot .open, .foot .toggle { justify-content: center; width: 100%; }
+  .foot > span:empty { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .card { animation: none; }
