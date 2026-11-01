@@ -267,6 +267,7 @@ export default function AskLinkTool() {
             )
           )}
           <RunResult
+            key={run.id}
             run={run}
             onChange={setRun}
             bannerBusy={queue.busy}
