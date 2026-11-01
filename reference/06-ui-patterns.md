@@ -2818,6 +2818,14 @@ src/
 
 ---
 
+## Material Symbolsの準備と初期描画
+
+- ルートの `MaterialSymbolsReady` は、初回描画後のeffectでフォント準備を確認し、既存の `fonts-loaded` クラスを付ける。サーバーHTMLと初回クライアント描画のbody属性を揃える。
+- 読み込み完了前は従来のCSSで文字表示を隠す。FontFaceSet未対応時の表示、window load待ち、フォント準備待ちの判定を維持する。effectの終了時は所有するフレームとloadリスナーを取り消す。
+- `verify-root-font-ready-hydration.cjs` は実RootLayoutと準備コンポーネントをSSR→hydrateする通常/StrictModeの12条件。周囲の認証・分析UIとフォントの時計は合成で、実Nextブラウザと本番の確認は別に行う。
+
+---
+
 ## 更新履歴
 
 | 日付 | 更新内容 |
