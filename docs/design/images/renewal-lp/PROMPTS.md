@@ -135,3 +135,20 @@ Art direction for ALL three (very important): NO city, NO buildings, NO skyline,
 
 Save all three files and then list the raw3/ folder.
 ```
+
+## desk-hero.webp（v3 のファーストビュー、2026-11-01、Codex 内蔵生成・定額）
+
+```
+Use your built-in image generation tool (not any API key, not a script, no network calls) to generate 1 image and save it as a PNG file named raw4/desk-hero.png (LANDSCAPE 3:2, 1536x1024).
+
+This is the full-bleed hero scene for the landing page of "ドヤバディ", a Japanese AI buddy that does office work (marketing, sales, HR, accounting) when you write what you want. The mascot is the polar bear "Doya-kun". Draw Doya-kun exactly like the attached references (ref-hero-sticker.png for the line style, ref-hello.png and ref-point.png for the face and outfit): white fluffy polar bear, round ears, wide blue visor goggles (blue frame, cyan rim, dark navy lens; the eyes are only glowing cyan shapes inside the lens), small black nose, a small confident smug smile, white hoodie with a blue </> symbol on the chest. Keep his bold thick navy comic outlines and flat colors so he looks like the same sticker character.
+
+Scene, as one plain sentence: on a bright morning in a small company office, Doya-kun stands beside a big wooden desk and happily clears a wall board of paper sticky notes, half of them already done and stacked in a neat pile.
+
+Style: painted background art in the manner of modern Japanese animated films (crisp painterly shapes, soft natural light), a warm and human place, NOT a digital or sci-fi space. Palette: warm cream, pale wood, soft peach window light, with brand blue #0066ff used only on a few small things (a mug, a notebook cover, his goggles) and tiny touches of yellow sticky notes. NO neon, NO glowing lines, NO grid, NO holograms, NO floating panels, NO city skyline, NO glossy blobs, NO sparkles. No gradients on the walls other than natural light falloff.
+
+Composition: the LEFT 55 percent of the frame is calm and uncluttered: a pale warm wall with soft window light and gentle shadow, nothing busy, because a dark headline will be placed there (keep this area bright and low contrast). On the RIGHT side: the wooden desk with a laptop, a mug and a small plant, the sticky-note board on the wall behind it with a few notes peeled off, and Doya-kun in front, full body, about 55 percent of the frame height, one paw holding a sticky note up proudly, looking pleased. Everything on the board and desk is blank or shows only simple checkmark shapes. ABSOLUTELY NO text, letters, numerals, words, logos or watermarks anywhere (the </> symbol on the hoodie is allowed). No film grain.
+
+Save the file and then list the raw4/ folder.
+
+```
