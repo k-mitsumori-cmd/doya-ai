@@ -171,9 +171,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const watched=await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),WATCH_USER);
     assert.equal(watched.label.prefix,'【自動点検】');
     assert.equal(watched.label.apply('お見積り',200),'【自動点検】お見積り');
-    for(const bad of ['', 'x', token.slice(0,-1)+'0', crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
+    for(const bad of ['', 'x', token.slice(0,-1)+(token.endsWith('0')?'1':'0'), crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
       const d=await rs.toolDepsFor(watchReq(bad?{'x-doya-system-watch':bad}:{}),WATCH_USER);
-      assert.equal(d.label,undefined,'wrong or missing signal must not label: '+bad);
+      assert.equal(d.label,undefined,'wrong or missing system-watch signal must not label');
     }
     // 正しい値でも、ほかの利用者・ログインの分からないリクエストには付けない
     assert.equal((await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),'someone-else')).label,undefined);
