@@ -31,7 +31,9 @@ async function main(){
  const React=dep('react'),noop=()=>null,link=({children,...props})=>React.createElement('a',props,children)
  const formResolve=n=>n==='react'?React:n==='react/jsx-runtime'?dep(n):n==='@/lib/error-report-input'?input:n==='@/lib/pricing'?{SUPPORT_CONTACT_URL:'https://support.invalid'}:n==='@/components/ds/kun-src'?{kunSrc:p=>'/character/'+p+'.webp'}:unexpected(n)
  const ActualForm=load(componentFile,formResolve).default
- const boundaryFiles=require('node:child_process').execFileSync('git',['ls-files','src/app'],{cwd:repo,encoding:'utf8'}).trim().split('\n').filter(f=>/(?:^|\/)(?:error|global-error|not-found)\.tsx$/.test(f))
+ // Vercel's build output may omit .git. Enumerate source files without a Git process.
+ const walk=folder=>fs.readdirSync(folder,{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?walk(path.join(folder,entry.name)):[path.join(folder,entry.name)])
+ const boundaryFiles=walk(path.join(repo,'src/app')).filter(f=>/(?:^|\/)(?:error|global-error|not-found)\.tsx$/.test(f)).map(f=>path.relative(repo,f).split(path.sep).join('/')).sort()
  for(const file of boundaryFiles)await test('Actual boundary includes report and contact '+file,()=>{
   const generic=new Proxy({__esModule:true,default:noop},{get:(object,key)=>key in object?object[key]:noop})
   const C=load(file,n=>n==='react'?React:n==='react/jsx-runtime'?dep(n):n==='next/link'?{__esModule:true,default:link}:n==='@/components/common/ErrorReportForm'?{__esModule:true,default:ActualForm}:n==='@/lib/pricing'?{SUPPORT_CONTACT_URL:'https://support.invalid'}:n.endsWith('.css')?{__esModule:true,default:{ds:'synthetic-ds'}}:generic).default
