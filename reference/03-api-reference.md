@@ -48,6 +48,12 @@ const id = p.id
 
 ## 認証 API
 
+### 利用者によるエラー報告
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/api/feedback/error-report` | 404・エラー画面から任意で送信。未ログイン可。同一Origin・JSON最大16KiB・入力上限・共有IP日次上限を検証し、報告IDと送信者スコープで二重通知を防止。通知成功の受領時だけsuccess=true。処理中202、内容変更409、上限429、不明503。preview/localでは通知・DB書込前に503。 |
+
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET/POST | `/api/auth/[...nextauth]` | NextAuth.js (Google OAuth) |

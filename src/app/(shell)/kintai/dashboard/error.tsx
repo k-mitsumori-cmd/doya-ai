@@ -1,7 +1,6 @@
 'use client'
 
-import { Bug } from 'lucide-react'
-import { useState } from 'react'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function DashboardErrorBoundary({
   error,
@@ -10,34 +9,13 @@ export default function DashboardErrorBoundary({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  const [showReport, setShowReport] = useState(false)
-  const [reportText, setReportText] = useState('')
-  const [sent, setSent] = useState(false)
-
-  async function handleReport() {
-    if (!reportText.trim()) return
-    try {
-      await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service: 'kintai',
-          type: 'error',
-          page: '/kintai/dashboard',
-          error: `${error.message} (digest: ${error.digest || 'none'})`,
-          description: reportText.trim(),
-        }),
-      })
-      setSent(true)
-    } catch {}
-  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
       <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} />
       <h2 className="text-2xl font-black text-slate-800">画面を表示できませんでした</h2>
       <div className="bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-3 max-w-lg text-center">
-        {/* 例外の文・digest は画面に出さない（報告の送信にだけ付ける） */}
+        {/* 例外の文・digest は画面にも報告にも渡さない。 */}
         <p className="text-base font-bold text-red-700">一時的な不具合です。少し待って、もう一度お試しください。</p>
       </div>
       <div className="flex items-center gap-3">
@@ -55,37 +33,8 @@ export default function DashboardErrorBoundary({
         </a>
       </div>
 
-      {!showReport && !sent && (
-        <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#0066ff] hover:underline">
-          <Bug size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" />エラーを報告する
-        </button>
-      )}
+      <ErrorReportForm errorType="500" />
 
-      {showReport && !sent && (
-        <div className="mt-3 w-full max-w-md bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-lg">
-          <p className="text-base font-black text-slate-800 mb-2">エラー報告</p>
-          <textarea
-            value={reportText}
-            onChange={(e) => setReportText(e.target.value)}
-            placeholder="どんな操作でエラーが出ましたか？"
-            rows={3}
-            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#0066ff] outline-none resize-none"
-          />
-          <button
-            onClick={handleReport}
-            disabled={!reportText.trim()}
-            className="mt-2 w-full px-6 py-3 bg-gradient-to-r from-[#0066ff] to-[#003985] text-white font-black rounded-full disabled:opacity-50 text-sm"
-          >
-            報告を送信
-          </button>
-        </div>
-      )}
-
-      {sent && (
-        <div className="mt-3 bg-green-50 border-2 border-green-200 rounded-2xl px-6 py-4 text-center">
-          <p className="text-base font-black text-green-700">ありがとうございます！</p>
-        </div>
-      )}
     </div>
   )
 }
