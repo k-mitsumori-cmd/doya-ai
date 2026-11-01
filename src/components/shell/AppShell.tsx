@@ -2,7 +2,7 @@
 // ============================================
 // 共通シェル（全ツール共通の枠）
 // ============================================
-// 左にツール一覧（区分: マーケティング・営業（セールス）・採用・人材管理・経理・バックオフィス）、右に中身。
+// 左に経営ホーム・動いているタスク・ツール一覧（部署のまとまり: ドヤマーケAI・ドヤセールスAI・ドヤ人事AI・ドヤ管理AI。見出しで開閉）、右に中身。
 // - 1280px 以上: サイドバー展開
 // - 768〜1279px: サイドバーはアイコンのみ
 // - 767px 以下: 上にメニューボタン、下にタブバー（ホーム・最近使ったツール・すべて）。サイドバーは引き出し
@@ -12,20 +12,21 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Bell, ChevronRight, CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
-import { ShellIcon } from './icons'
+import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, buildDepartmentGroups, type DepartmentShellGroup, type ShellTool } from './tools'
+import { ALL_SHELL_TOOLS, SHELL_HOME, buildDepartmentGroups, type DepartmentShellGroup, type ShellTool } from './tools'
 import { departmentOfTool, getDepartment, type DepartmentId } from '@/lib/departments'
 import { useToolHref } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
+import { NAV_GROUPS_COOKIE, serializeNavGroups } from '@/lib/shell/nav-groups'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { newToolIds } from '@/lib/notice/announcements'
 
@@ -39,6 +40,8 @@ function NEW_TOOL_IDS(): Set<string> {
 import styles from './AppShell.module.css'
 import { ShellPowerMeter } from './power'
 import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
+// 名前（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT が all ならドヤバディ、それ以外はドヤAI）
+import { brandName } from '@/lib/brand'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -168,79 +171,157 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false }:
   )
 }
 
+/** まとまりの見出しのアイコン（部署の id → lucide の名前） */
+const GROUP_ICONS: Record<string, ShellIconName> = { marketing: 'Megaphone', sales: 'Briefcase', hr: 'Users', admin: 'Wallet', other: 'LayoutGrid' }
+
 /**
- * 部署ごとの入口のメニュー（旗 DEPARTMENTS_ROLLOUT が on のときだけ使う）。
- * - 主の部署は、そのまま開いて並べる。ほかの部署は「ほかの部署」の下に畳み、部署の名前のボタンで開く（aria-expanded）。
- * - 主の部署がまだ決まっていないときは、畳まずに4つを今の順で並べる（buildDepartmentGroups が全部 primary にする）。
- * - 今開いているページが畳んだ部署の中にあるときは、その部署を開いておく（選択中の項目を隠さない）。
+ * ツールのまとまり（ドヤマーケAI・ドヤセールスAI・ドヤ人事AI・ドヤ管理AI。経営ホームの部署のタブと同じ分け方）。
+ * - 見出しを押すと開く・畳む（aria-expanded）。押した結果だけを cookie に覚え、次に開いたときも同じ形で出す。
+ * - 押していないまとまりは、今いるツールのまとまりだけを開く。別のまとまりのツールへ移ったら、そのまとまりを開く。
+ * - 主の部署（旗 DEPARTMENTS_ROLLOUT。経営ホームで選んだもの）があれば先に並べる。並びの決まりは buildDepartmentGroups。
  * - 768〜1279px のアイコンだけのサイドバーでは、畳まずに全部のアイコンを出す（CSS）。
  */
-function DepartmentNav({ groups, pathname, onNavigate, prefetch }: {
+function ToolGroupsNav({ groups, pathname, onNavigate, prefetch, initialOpen }: {
   groups: DepartmentShellGroup[]
   pathname: string
   onNavigate: (href: string) => void
   prefetch?: boolean
+  initialOpen?: Record<string, boolean>
 }) {
-  const [opened, setOpened] = useState<Set<string>>(() => new Set())
-  const main = groups.filter((g) => g.primary)
-  const others = groups.filter((g) => !g.primary)
-  const toggle = (id: string) => setOpened((prev) => {
-    const next = new Set(prev)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
+  const [explicit, setExplicit] = useState<Record<string, boolean>>(() => initialOpen ?? {})
+  const activeGroup = groups.find((g) => g.tools.some((t) => isActive(pathname, t)))
+  const activeId = activeGroup ? activeGroup.department ?? 'other' : null
+  // 畳んだまとまりのツールへ移ったら、そのまとまりを開く（今のページの項目を隠さない）
+  useEffect(() => {
+    if (!activeId) return
+    setExplicit((prev) => (prev[activeId] === false ? { ...prev, [activeId]: true } : prev))
+  }, [activeId])
+  const save = (next: Record<string, boolean>) => {
+    try { document.cookie = `${NAV_GROUPS_COOKIE}=${serializeNavGroups(next)}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax` } catch { /* 覚えられなくても動く */ }
+  }
+  const toggle = (id: string, open: boolean) => setExplicit((prev) => {
+    const next = { ...prev, [id]: !open }
+    save(next)
     return next
   })
   return (
-    <>
-      {main.map((g) => (
-        <div key={g.department ?? 'other'} className={styles.group}>
-          <p className={styles.groupLabel}>{g.label}</p>
-          {g.tools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={onNavigate} prefetch={prefetch} />)}
-        </div>
-      ))}
-      {others.length ? (
-        <div className={styles.group}>
-          <p className={styles.groupLabel}>ほかの部署</p>
-          {others.map((g) => {
-            const id = g.department ?? 'other'
-            const hasActive = g.tools.some((t) => isActive(pathname, t))
-            const open = opened.has(id) || hasActive
-            const bodyId = `shell-dept-${id}`
-            return (
-              <div key={id} className={styles.deptBlock}>
-                <button type="button" className={styles.deptToggle} aria-expanded={open} aria-controls={bodyId} onClick={() => toggle(id)}>
-                  <ChevronRight size={16} aria-hidden className={styles.deptChevron} data-open={open} />
-                  <span className={styles.navLabel}>{g.label}</span>
-                </button>
-                <div id={bodyId} className={styles.deptBody} data-open={open}>
-                  {g.tools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={onNavigate} prefetch={prefetch} />)}
-                </div>
+    <div className={styles.group}>
+      <p className={styles.groupLabel}>ツール</p>
+      {groups.map((g) => {
+        const id = g.department ?? 'other'
+        const open = explicit[id] ?? id === activeId
+        const bodyId = `shell-group-${id}`
+        const hasActive = id === activeId
+        return (
+          <div key={id} className={styles.deptBlock}>
+            <button type="button" className={styles.deptToggle} aria-expanded={open} aria-controls={bodyId} data-active={hasActive && !open ? 'true' : undefined} onClick={() => toggle(id, open)}>
+              <span className={styles.deptIcon}><ShellIcon name={GROUP_ICONS[id]} size={16} strokeWidth={2} /></span>
+              <span className={styles.navLabel}>{g.label}</span>
+              <span className={styles.deptCount} aria-label={`${g.tools.length}個のツール`}>{g.tools.length}</span>
+              <ChevronDown size={16} aria-hidden className={styles.deptChevron} data-open={open} />
+            </button>
+            <div id={bodyId} className={styles.deptBody} data-open={open} role="group" aria-label={g.label}>
+              <div className={styles.deptInner}>
+                {g.tools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={onNavigate} prefetch={prefetch} />)}
               </div>
-            )
-          })}
-        </div>
-      ) : null}
-    </>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** 「動いているタスク」の件数（/api/agent/runs/summary）。null はまだ読んでいない・読めない（件数を出さない） */
+type TaskCounts = { running: number; waiting: number; done: number; failed: number }
+const TASKS_HREF = '/home#home-agent-title'
+const TASKS_POLL_MS = 15_000
+
+/**
+ * 経営ホームの下の「動いているタスク」。ドヤくんに任せた ToDo の、実行中・できた（24時間以内）の件数を出す。
+ * - 押すと経営ホームの「ドヤくんに頼む」の欄（続きを進める・進めた仕事）へ移る。
+ * - 実行中があるあいだは、点が小さく脈打つ（動きを減らす設定では止める）。15秒ごとに数え直す（画面を見ているときだけ）。
+ * - 記録の表を使っていない（AGENT_RUNS_STORE が db でない）ときは、件数を出さずにリンクだけにする。
+ * ⚠️ 行の高さは件数の有無で変えない（読み込みのあとに下のメニューがずれないように）。
+ */
+function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {
+  const [counts, setCounts] = useState<TaskCounts | null>(null)
+  const [off, setOff] = useState(false)
+  const running = counts?.running ?? 0
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agent/runs/summary', { cache: 'no-store' })
+      if (res.status === 404) { setOff(true); return }
+      if (!res.ok) return
+      const j = await res.json()
+      if (typeof j?.running === 'number') setCounts({ running: j.running, waiting: j.waiting ?? 0, done: j.done ?? 0, failed: j.failed ?? 0 })
+    } catch { /* 数えられなくてもリンクは使える */ }
+  }, [])
+  // ページを移るたびに数え直す（経営ホームで任せた直後に、ほかのツールへ移っても増えた数が出る）
+  useEffect(() => { if (!off) void load() }, [pathname, load, off])
+  useEffect(() => {
+    if (off || running === 0) return
+    const t = setInterval(() => { if (document.visibilityState === 'visible') void load() }, TASKS_POLL_MS)
+    return () => clearInterval(t)
+  }, [running, load, off])
+  useEffect(() => {
+    if (off) return
+    const onVis = () => { if (document.visibilityState === 'visible') void load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [load, off])
+
+  const done = counts?.done ?? 0
+  const failed = counts?.failed ?? 0
+  const label = counts
+    ? running || done || failed
+      ? `動いているタスク: 実行中${running}件、できた${done}件${failed ? `、止まった${failed}件` : ''}`
+      : '動いているタスク: いま動いている作業はありません'
+    : '動いているタスク'
+  const onHome = pathname === '/home'
+  return (
+    <Link href={TASKS_HREF} className={`${styles.navItem} ${styles.tasksRow}`} onClick={() => onNavigate(onHome ? pathname : '/home')} title={label} aria-label={label} data-running={running > 0 ? 'true' : undefined}>
+      <span className={styles.tasksIcon}>
+        <ListTodo size={18} strokeWidth={2} aria-hidden />
+        {running > 0 ? <span className={styles.tasksPulse} aria-hidden /> : null}
+      </span>
+      <span className={styles.tasksText}>
+        <span className={styles.navLabel}>動いているタスク</span>
+        <span className={styles.tasksMeta} aria-hidden>
+          {counts && (running || done || failed) ? (
+            <>
+              {running ? <span className={styles.tasksChip} data-kind="running">実行中 {running}</span> : null}
+              {done ? <span className={styles.tasksChip} data-kind="done">できた {done}</span> : null}
+              {failed ? <span className={styles.tasksChip} data-kind="failed">止まった {failed}</span> : null}
+            </>
+          ) : <span className={styles.tasksNone}>{counts ? '動いている作業はありません' : 'ドヤくんに任せた作業'}</span>}
+        </span>
+      </span>
+    </Link>
   )
 }
 
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent, departments }: {
+export default function AppShell({ children, userName, initialRecent, departments, agentTasks = false, navGroups }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
   initialRecent?: string[]
   /** 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されなければ今のメニューのまま */
   departments?: { enabled: boolean; primary: DepartmentId[] }
+  /** 「動いているタスク」を出すか（旗 AGENT_ORCHESTRATION_ROLLOUT。サーバーが決める） */
+  agentTasks?: boolean
+  /** まとまりの開閉（cookie。押したものだけ） */
+  navGroups?: Record<string, boolean>
 }) {
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
   const toHref = useToolHref()
-  const groups = SHELL_GROUPS
   const deptOn = Boolean(departments?.enabled)
-  const deptGroups = useMemo(() => (deptOn ? buildDepartmentGroups(departments?.primary ?? []) : []), [deptOn, departments?.primary])
+  // ツールは部署のまとまり（ドヤマーケAI など）で並べる。主の部署は旗が on のときだけ使う（off なら既定の順）
+  const toolGroups = useMemo(() => buildDepartmentGroups(deptOn ? departments?.primary ?? [] : []).map((g) => ({ ...g, primary: true })), [deptOn, departments?.primary])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
   // 1日1つの決まりで止めた知らせ（新機能・「〜でできること」）。あるときだけ、左下に「お知らせ」を出す
@@ -329,7 +410,7 @@ export default function AppShell({ children, userName, initialRecent, department
           <Menu size={20} />
         </button>
         <Link href={SHELL_HOME.href} className={styles.brand}>
-          <DoyaLogoMark size={28} className={styles.brandMark} />ドヤAI
+          <DoyaLogoMark size={28} className={styles.brandMark} />{brandName()}
         </Link>
         {/* ドヤパワーの残り（旗が出すと決め、残りの値があるときだけ。無ければ何も描かない） */}
         <ShellPowerMeter variant="topbar" />
@@ -344,7 +425,7 @@ export default function AppShell({ children, userName, initialRecent, department
         <div className={styles.sideHead}>
           <Link href={SHELL_HOME.href} className={styles.brand} onClick={close}>
             <DoyaLogoMark size={28} className={styles.brandMark} />
-            <span className={styles.navLabel}>ドヤAI</span>
+            <span className={styles.navLabel}>{brandName()}</span>
           </Link>
           <button type="button" className={`${styles.iconButton} ${styles.closeButton}`} onClick={close} aria-label="メニューを閉じる">
             <X size={18} />
@@ -358,6 +439,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          {agentTasks ? <AgentTasksRow pathname={pathname} onNavigate={navigate} /> : null}
           {recentTools.length ? (
             <div className={styles.group}>
               <p className={styles.groupLabel}>最近使ったツール</p>
@@ -366,16 +448,7 @@ export default function AppShell({ children, userName, initialRecent, department
               ))}
             </div>
           ) : null}
-          {deptOn ? (
-            <DepartmentNav groups={deptGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
-          ) : groups.map((group) => (
-            <div key={group.stage} className={styles.group}>
-              <p className={styles.groupLabel}>{group.label}</p>
-              {group.tools.map((tool) => (
-                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
-              ))}
-            </div>
-          ))}
+          <ToolGroupsNav groups={toolGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} />
         </div>
         {/* 新しい見た目では、左下はどの画面でも同じもの（登録会社・ドヤパワー・アカウント・ログアウト）だけにする。
             ツールごとの「作った数 / 残り」は、ツールの見出しの帯（ToolFrame）に出す（2026-10-24 ユーザーの指摘「ツールを押すごとに変わるのは分かりにくい」） */}
