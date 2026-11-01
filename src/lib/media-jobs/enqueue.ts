@@ -111,9 +111,9 @@ export async function enqueueMediaJob<K extends MediaJobKind>(opts: EnqueueMedia
     try {
       const started = await dispatchMediaJob(job.id)
       if (started) await prisma.mediaJob.update({ where: { id: job.id }, data: { dispatchedAt: new Date() } })
-    } catch (e) {
+    } catch {
       // 起動に失敗してもジョブは queued で残る。cron(/api/cron/media-jobs)が再度起動する
-      console.warn('[media-jobs] dispatch failed', job.id, e instanceof Error ? e.message : 'unknown')
+      console.warn('[media-jobs] dispatch failed', job.id)
     }
   }
   return job

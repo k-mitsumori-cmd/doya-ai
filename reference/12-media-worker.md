@@ -77,6 +77,7 @@ const job = await enqueueMediaJob({
 | 置き場所 | 名前 | 内容 |
 |---|---|---|
 | Vercel | MEDIA_WORKER_GCP_SA_JSON | 起動用サービスアカウントの鍵（JSON全体） |
+| Vercel | MEDIA_JOBS_ENABLED | 1 のときだけ cron が動く。未設定なら何もせず 200 で終わる（本番に media_job の表を作る前は未設定のままにする） |
 | Vercel | MEDIA_WORKER_GCP_PROJECT / MEDIA_WORKER_GCP_REGION / MEDIA_WORKER_JOB_NAME | プロジェクトID / 例 asia-northeast1 / 既定 doya-media-worker |
 | Vercel・ワーカー両方 | MEDIA_JOB_INPUT_BUCKETS | 入力を許すバケット（カンマ区切り） |
 | Vercel・ワーカー両方 | MEDIA_OUTPUT_BUCKET | 出力のバケット（既定 media-jobs。非公開） |

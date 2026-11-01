@@ -24,6 +24,22 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // 機能の旗が立っていない間は何もしない（本番に media_job の表を作る前でも、cron が失敗しないようにする）
+  if (process.env.MEDIA_JOBS_ENABLED !== '1') {
+    return Response.json({ ok: true, skipped: 'disabled' })
+  }
+  // 表や列がまだ無い（DB に反映前）ときも、何もせず正常終了する。それ以外の DB の失敗は 500 にする
+  try {
+    await prisma.mediaJob.findFirst({ select: { id: true, failureNotifiedAt: true } })
+  } catch (e) {
+    const code = (e as { code?: string } | null)?.code
+    if (code === 'P2021' || code === 'P2022') {
+      return Response.json({ ok: true, skipped: 'table_missing' })
+    }
+    console.error('[media-jobs-cron] db check failed')
+    return Response.json({ ok: false, error: 'db_unavailable' }, { status: 500 })
+  }
+
   const now = new Date()
   const staleBefore = new Date(now.getTime() - STALE_MINUTES * 60_000)
 
@@ -107,9 +123,9 @@ export async function GET(request: Request) {
       }
       notified = failedJobs.length
     }
-  } catch (e) {
+  } catch {
     // 通知に失敗したら、通知済みにせず次回にもう一度送る
-    console.warn('[media-jobs-cron] slack failed', e instanceof Error ? e.message : 'unknown')
+    console.warn('[media-jobs-cron] slack notification failed')
   }
 
   // 4. 古い出力ファイルと記録の削除。ファイルを消せなかった記録は残し、次回にやり直す
