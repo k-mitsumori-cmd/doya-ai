@@ -20,6 +20,12 @@ export function isEncryptionConfigured(): boolean {
   }
 }
 
+// 機能の旗。GMAIL_SEND_ENABLED=1 で、鍵と Google の設定がそろっているときだけ有効。
+// 旗が off のとき（本番に表や鍵がない間）は、DB にも Google にも触れない。
+export function isGmailEnabled(): boolean {
+  return process.env.GMAIL_SEND_ENABLED === '1' && Boolean(process.env.GOOGLE_CLIENT_ID) && isEncryptionConfigured()
+}
+
 export function encryptToken(plain: string): string {
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', getKey(), iv)

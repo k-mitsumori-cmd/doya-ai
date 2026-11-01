@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { GmailSendError, sendGmail } from '@/lib/gmail/send'
+import { isGmailEnabled } from '@/lib/gmail/crypto'
 
 // 利用者が確認画面で「送信する」を押したときだけ呼ばれる。AI・cron からは呼ばない。
 export async function POST(req: NextRequest) {
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
   if ((site && site !== 'same-origin') || (origin && origin !== req.nextUrl.origin)) {
     return NextResponse.json({ error: '不正な要求です' }, { status: 403 })
   }
+  if (!isGmailEnabled()) return NextResponse.json({ error: 'Gmail 送信は、まだ利用できません', code: 'NOT_CONNECTED' }, { status: 503 })
   const session = await getServerSession(authOptions)
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

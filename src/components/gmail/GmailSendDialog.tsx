@@ -25,6 +25,7 @@ export default function GmailSendDialog({ open, onClose, initialText, source }: 
   const [replyTo, setReplyTo] = useState('')
   const [from, setFrom] = useState<string | null>(null)
   const [connected, setConnected] = useState<boolean | null>(null)
+  const [configured, setConfigured] = useState(true)
   const [phase, setPhase] = useState<Phase>('edit')
   const [error, setError] = useState('')
   const [reauth, setReauth] = useState(false)
@@ -40,6 +41,7 @@ export default function GmailSendDialog({ open, onClose, initialText, source }: 
     fetch('/api/gmail/status', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
+        setConfigured(d?.configured !== false)
         const ok = d?.connection?.status === 'ACTIVE'
         setConnected(ok)
         setFrom(ok ? d.connection.email : null)
@@ -84,6 +86,11 @@ export default function GmailSendDialog({ open, onClose, initialText, source }: 
           <div className="mt-4 space-y-4">
             <p className="text-sm text-slate-800">{to} 宛てに送信しました。送信済みは、Gmail の「送信済み」で確認できます。</p>
             <button onClick={onClose} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">閉じる</button>
+          </div>
+        ) : !configured ? (
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-slate-700">Gmail で送る機能は、まだ準備中です。いまは「コピー」して、お使いのメールで送ってください。</p>
+            <button onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">閉じる</button>
           </div>
         ) : connected === false || reauth ? (
           <div className="mt-4 space-y-4">
