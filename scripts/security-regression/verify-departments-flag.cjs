@@ -28,7 +28,9 @@ check('Departments flag: the shell layout passes departments only from the serve
   assert.match(gate, /departments=\{departments\}/)
   const shell = read('src/components/shell/AppShell.tsx')
   assert.match(shell, /const deptOn = Boolean\(departments\?\.enabled\)/)
-  assert.match(shell, /deptOn \? \(\s*<DepartmentNav/)
+  // 主の部署は旗が on のときだけ使う（off なら既定の順のまとまり）
+  assert.match(shell, /buildDepartmentGroups\(deptOn \? departments\?\.primary \?\? \[\] : \[\]\)/)
+  assert.match(shell, /<ToolGroupsNav groups=\{toolGroups\}/)
   const page = read('src/app/(shell)/home/page.tsx')
   assert.match(page, /const departmentsOn = await isDepartmentsEnabled\(\)/)
   assert.match(page, /departmentsOn\s*\n?\s*\? \{/)
