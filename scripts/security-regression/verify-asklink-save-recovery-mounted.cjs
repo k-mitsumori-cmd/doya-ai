@@ -51,6 +51,32 @@ const cases = [], scenarios = [
     cases.push(name + ': draft retained, error shown, explicit retry succeeds')
     console.log('PASS AskLink save recovery: ' + cases[cases.length - 1])
   }
+  requests = []; changes = []; call = 0
+  let release
+  respond = () => new Promise(resolve => { release = resolve })
+  await React.act(async () => mounted.render(React.createElement(Wrapper, { key: 'pending' })))
+  const pendingQuestion = await enterDraft(), submittedDraft = pendingQuestion.value
+  await click('保存する')
+  assert.equal(button('保存する').disabled, true)
+  const locked = pendingQuestion.readOnly && host.querySelector('input[aria-label="ボタン名"]').readOnly && button('やめる').disabled
+  if (!locked) {
+    await React.act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set.call(pendingQuestion, 'Synthetic later unsent draft')
+      pendingQuestion.dispatchEvent(new window.Event('input', { bubbles: true }))
+    })
+    assert.equal(pendingQuestion.value, 'Synthetic later unsent draft')
+  }
+  await click('保存する'); assert.equal(requests.length, 1)
+  await React.act(async () => {
+    release({ ok: true, status: 200, json: async () => ({ run: { ...base, links: [links.buildLink('understand', 'Synthetic', 'Synthetic button', submittedDraft, [])] } }) })
+    await new Promise(setImmediate)
+  })
+  const pendingObservation = { editingAndCancelLockedWhileSaving: locked, laterUnsentDraftLost: !locked && pendingQuestion.value === submittedDraft, requests: requests.length, savedDraft: pendingQuestion.value, scope: 'Synthetic drafts only; actual mounted editor with deferred PATCH acknowledgement.' }
+  if (process.env.DOYA_TEST_PENDING_REPORT) fs.writeFileSync(process.env.DOYA_TEST_PENDING_REPORT, JSON.stringify(pendingObservation, null, 2) + '\n')
+  assert.equal(locked, true, 'pending save must not accept a later draft that its acknowledgement discards')
+  assert.equal(pendingQuestion.value, submittedDraft); assert.equal(changes.length, 1)
+  cases.push('pending save locks editing and cancel until acknowledgement')
+  console.log('PASS AskLink save recovery: ' + cases[cases.length - 1])
   const report = { checkedAt: new Date().toISOString(), passed: cases.length, failed: 0, cases, source: { path: rel, sha256: crypto.createHash('sha256').update(source).digest('hex') }, scope: 'Actual RunResult and LinkCard mounted in React/JSDOM; real link builder and status copy. Notice shell/icons mocked; PATCH synthetic only. No network/DB/providers/real accounts or production persistence verification.' }
   const out = process.env.DOYA_TEST_REPORT || path.join(root, 'docs/audits/2026-10-06-all-services-recheck/asklink-save-recovery-mounted-results.json')
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify({ passed: cases.length, failed: 0 }))

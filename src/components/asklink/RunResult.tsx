@@ -166,6 +166,7 @@ function LinkCard({
           {editing ? (
             <input
               value={buttonLabel}
+              readOnly={saving}
               onChange={(e) => setButtonLabel(e.target.value)}
               className="mt-1 w-64 rounded-lg border border-slate-300 px-2 py-1 text-base font-black text-slate-900 min-h-11 max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
               aria-label="ボタン名"
@@ -180,7 +181,7 @@ function LinkCard({
       <textarea
         id={selectId}
         value={editing ? question : view.question}
-        readOnly={!editing}
+        readOnly={!editing || saving}
         onChange={(e) => setQuestion(e.target.value)}
         rows={editing ? 9 : 6}
         className={`mt-3 w-full resize-y rounded-xl border p-3 text-sm leading-relaxed text-slate-700 ${editing ? 'border-[#0066ff] bg-white' : 'border-slate-200 bg-slate-50'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]`}
@@ -219,6 +220,7 @@ function LinkCard({
             </button>
             <button
               type="button"
+              disabled={saving}
               onClick={() => {
                 setEditing(false)
                 setQuestion(link.question)
