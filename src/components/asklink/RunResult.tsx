@@ -430,19 +430,25 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
   const saveLink = async (key: string, buttonLabel: string, question: string) => {
     setError(null)
     setErrInfo(null)
-    const res = await fetch(`/api/asklink/runs/${run.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      setError(data?.error || '保存に失敗しました。')
-      setErrInfo({ status: res.status, action: 'save' })
+    try {
+      const res = await fetch(`/api/asklink/runs/${run.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw statusError(data?.error || '保存に失敗しました。', res.status)
+      // HTTP 200だけでは、保存した結果を受け取れたとは判断しない。
+      if (!data?.run || data.run.id !== run.id || !Array.isArray(data.run.links)) {
+        throw statusError('保存した結果を確認できませんでした。', 0)
+      }
+      onChange(data.run)
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      setErrInfo({ status: statusOf(e), action: 'save' })
       return false
     }
-    onChange(data.run)
-    return true
   }
 
   const found: { label: string; url: string | null }[] = [
