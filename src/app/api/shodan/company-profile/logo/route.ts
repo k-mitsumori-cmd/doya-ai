@@ -61,7 +61,7 @@ async function postDirect(req: NextRequest) {
   }
 }
 
-// 旗（DIRECT_UPLOAD_ROLLOUT）が off のあいだは、これまでの FormData の経路だけが動く。
+// 旗（NEXT_PUBLIC_DIRECT_UPLOAD_ROLLOUT）が off のあいだは、これまでの FormData の経路だけが動く。
 export async function POST(req: NextRequest) {
   if (isDirectConfirm(req)) {
     if (!directUploadRollout()) return NextResponse.json({ error: '直接アップロードは有効になっていません' }, { status: 404 })

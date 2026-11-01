@@ -1,7 +1,19 @@
 // ブラウザで画像を縮小して dataURL にする。JSON 本文に画像を載せる API が、
 // Vercel の約4.5MB の本文制限を超えないようにするために使う（AI に渡す画像は縮小で足りる）。
+// 旗 NEXT_PUBLIC_DIRECT_UPLOAD_ROLLOUT が off のあいだは、これまでどおり縮小せずに読み込む。
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
 
 export async function downscaleToDataUrl(file: File, maxEdge: number, quality = 0.85): Promise<string> {
+  if (!(await isDirectUploadEnabled())) return readAsDataUrl(file)
   const bitmap = await createImageBitmap(file)
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
   const w = Math.max(1, Math.round(bitmap.width * scale))
@@ -18,6 +30,7 @@ export async function downscaleToDataUrl(file: File, maxEdge: number, quality = 
 
 /** 生成済みの画像（dataURL）を、AI に渡すのに十分な大きさへ縮めて JPEG にする。縮められなければそのまま返す */
 export async function shrinkDataUrl(dataUrl: string, maxEdge = 1600, quality = 0.9): Promise<string> {
+  if (!(await isDirectUploadEnabled())) return dataUrl
   if (!dataUrl.startsWith('data:image/') || dataUrl.length < 1_500_000) return dataUrl // 小さいものは触らない
   try {
     const blob = await (await fetch(dataUrl)).blob()

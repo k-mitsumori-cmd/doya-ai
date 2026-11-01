@@ -137,7 +137,7 @@ async function postDirect(req: NextRequest) {
   }
 }
 
-// 旗（DIRECT_UPLOAD_ROLLOUT）が off のあいだは、これまでの FormData の経路だけが動く。
+// 旗（NEXT_PUBLIC_DIRECT_UPLOAD_ROLLOUT）が off のあいだは、これまでの FormData の経路だけが動く。
 // 完了通知が JSON のとき（直接アップロード）は、旗が on でなければ受け付けない。
 export async function POST(req: NextRequest) {
   if (isDirectConfirm(req)) {
