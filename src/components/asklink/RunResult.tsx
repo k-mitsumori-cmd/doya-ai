@@ -166,6 +166,7 @@ function LinkCard({
           {editing ? (
             <input
               value={buttonLabel}
+              readOnly={saving}
               onChange={(e) => setButtonLabel(e.target.value)}
               className="mt-1 w-64 rounded-lg border border-slate-300 px-2 py-1 text-base font-black text-slate-900 min-h-11 max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
               aria-label="ボタン名"
@@ -180,7 +181,7 @@ function LinkCard({
       <textarea
         id={selectId}
         value={editing ? question : view.question}
-        readOnly={!editing}
+        readOnly={!editing || saving}
         onChange={(e) => setQuestion(e.target.value)}
         rows={editing ? 9 : 6}
         className={`mt-3 w-full resize-y rounded-xl border p-3 text-sm leading-relaxed text-slate-700 ${editing ? 'border-[#0066ff] bg-white' : 'border-slate-200 bg-slate-50'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]`}
@@ -219,6 +220,7 @@ function LinkCard({
             </button>
             <button
               type="button"
+              disabled={saving}
               onClick={() => {
                 setEditing(false)
                 setQuestion(link.question)
@@ -430,19 +432,25 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
   const saveLink = async (key: string, buttonLabel: string, question: string) => {
     setError(null)
     setErrInfo(null)
-    const res = await fetch(`/api/asklink/runs/${run.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      setError(data?.error || '保存に失敗しました。')
-      setErrInfo({ status: res.status, action: 'save' })
+    try {
+      const res = await fetch(`/api/asklink/runs/${run.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw statusError(data?.error || '保存に失敗しました。', res.status)
+      // HTTP 200だけでは、保存した結果を受け取れたとは判断しない。
+      if (!data?.run || data.run.id !== run.id || !Array.isArray(data.run.links)) {
+        throw statusError('保存した結果を確認できませんでした。', 0)
+      }
+      onChange(data.run)
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      setErrInfo({ status: statusOf(e), action: 'save' })
       return false
     }
-    onChange(data.run)
-    return true
   }
 
   const found: { label: string; url: string | null }[] = [
