@@ -108,6 +108,8 @@ export async function GET(req: NextRequest) {
     // Use a real XLSX container so the downloaded extension matches its contents.
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet(`${year}年${month}月`)
+    const columnWidths = [26, 24, 14, 10, 10, 18, 18, 14, 14, 18]
+    columnWidths.forEach((width, index) => { worksheet.getColumn(index + 1).width = width })
     worksheet.addRow(['従業員名', '部署', '日付', '出勤', '退勤', '勤務時間(分)', '残業時間(分)', '遅刻(分)', '早退(分)', 'ステータス'])
     for (const emp of employees) {
       for (const att of emp.attendances) {
