@@ -4,21 +4,11 @@
 // 面接の録音を保存する。応募者の音声そのものなので、
 // 公開バケットに置かない・URLを直接持たせない・署名URLは短命にする。
 import { getSupabaseAdmin } from '@/lib/interview/storage'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 const BUCKET = process.env.MENSETSU_STORAGE_BUCKET || 'mensetsu'
-let _ready = false
-
 async function ensureBucket() {
-  if (_ready) return
-  const supabase = getSupabaseAdmin()
-  const { data } = await supabase.storage.getBucket(BUCKET)
-  if (!data) {
-    await supabase.storage
-      // 非公開・100MBまで（20分の音声で十分に収まる）
-      .createBucket(BUCKET, { public: false, fileSizeLimit: 104857600 })
-      .catch(() => {})
-  }
-  _ready = true
+  await ensurePrivateImageBucket(getSupabaseAdmin().storage, BUCKET, 104857600)
 }
 
 /** 録音を保存し、保存先パスを返す */
@@ -44,6 +34,7 @@ export async function signedRecordingUrl(
 ): Promise<string | null> {
   if (!path) return null
   try {
+    await ensureBucket()
     const supabase = getSupabaseAdmin()
     const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresSec)
     return data?.signedUrl || null
@@ -74,6 +65,7 @@ export async function createSignedUploadUrl(
 /** 実際にオブジェクトが存在するか（アップロード完了の確認用） */
 export async function recordingExists(path: string): Promise<boolean> {
   try {
+    await ensureBucket()
     const supabase = getSupabaseAdmin()
     const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
     const file = path.slice(path.lastIndexOf('/') + 1)

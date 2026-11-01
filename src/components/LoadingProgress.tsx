@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Zap, Brain, Lightbulb, Rocket, Coffee } from 'lucide-react';
+import { GenerationProgress } from '@/components/ds/feedback';
+import { DoyaKun } from '@/components/ds/kun'
+import { RevealWords } from '@/components/ds/motion'
 
 interface LoadingProgressProps {
   isLoading: boolean;
@@ -73,6 +76,40 @@ function formatSeconds(sec: number) {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}分${r.toString().padStart(2, '0')}秒`;
+}
+
+/** 新しい見た目で出す段階（API は段階を返さないので、時間の経過から目安で進め、最後の段で止まる） */
+const NEXT_STAGES = ['内容を読み取っています', 'AIが作っています', '仕上げています'];
+
+/**
+ * 新しい見た目の生成中の表示（UX 点検 FIX-PLAN 13）。
+ * 全面の暗幕を出さず、置いた場所（枠の中身の先頭）に、今の段階と残り時間の目安だけを出す。
+ * ほかの操作（タブの移動・入力の確認）は止めない。
+ */
+function LoadingProgressNext({ title, subtitle, estimateSec }: { title?: string; subtitle?: string; estimateSec: number }) {
+  const [startedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const ratio = (now - startedAt) / 1000 / Math.max(estimateSec, 1);
+  const current = Math.min(NEXT_STAGES.length - 1, Math.floor(ratio * NEXT_STAGES.length));
+  return (
+    <div className="sticky top-[76px] z-30 my-3 md:top-4" aria-label={title || '作成中'}>
+      {/* 作っている間は、作業中のドヤくんを横に置く（全ツール共通。2026-10-29 本人の指示「キャラクターがいなくて面白くない」）。題は1語ずつ濃くする */}
+      <div className="mb-2 flex items-center gap-3 px-1">
+        <DoyaKun pose="working" act="work" size={56} />
+        {title ? (
+          <div className="min-w-0">
+            <RevealWords as="p" className="text-sm font-bold text-slate-900" text={title} />
+            {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
+          </div>
+        ) : null}
+      </div>
+      <GenerationProgress stages={NEXT_STAGES} current={current} startedAt={startedAt} estimateSec={estimateSec} />
+    </div>
+  );
 }
 
 export default function LoadingProgress({ isLoading, estimatedSeconds = 15, operationKey, title, subtitle, tips }: LoadingProgressProps) {
@@ -186,131 +223,8 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
 
   if (!isLoading) return null;
 
-  // サービス固有の Tips が渡されていればそちらを使う
-  const activeTips = tips && tips.length > 0
-    ? tips.map((t, i) => ({ ...loadingTips[i % loadingTips.length], text: t }))
-    : loadingTips;
-  const safeTipIndex = tipIndex % activeTips.length;
-  const CurrentTipIcon = activeTips[safeTipIndex].icon;
-
-  // 平均が無ければ、固定の目安（operationKeyごとのデフォルト）を使用
-  const effectiveTotalSec = avgSec ?? baseEstimateSec;
-  const remainingSec = clamp(effectiveTotalSec - elapsedSec, 0, 60 * 60);
-  const showAvg = avgSec != null && avgSec > 0;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200]">
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-white/10">
-        {/* 何をしているのかを最初に大きく出す */}
-        {title && (
-          <div className="text-center mb-5">
-            <h2 className="text-xl font-black text-white leading-snug">{title}</h2>
-            {subtitle && <p className="mt-1.5 text-sm font-bold text-slate-300 leading-relaxed">{subtitle}</p>}
-          </div>
-        )}
-
-        {/* 円グラフ風プログレス */}
-        <div className="relative w-40 h-40 mx-auto mb-6">
-          {/* 背景の円 */}
-          <svg className="w-full h-full transform -rotate-90">
-            <circle
-              cx="80"
-              cy="80"
-              r="70"
-              stroke="currentColor"
-              strokeWidth="12"
-              fill="none"
-              className="text-slate-700"
-            />
-            {/* 進捗の円 */}
-            <circle
-              cx="80"
-              cy="80"
-              r="70"
-              stroke="url(#progressGradient)"
-              strokeWidth="12"
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 70}`}
-              strokeDashoffset={`${2 * Math.PI * 70 * (1 - progress / 100)}`}
-              className="transition-all duration-500 ease-out"
-            />
-            <defs>
-              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#2563EB" />
-                <stop offset="60%" stopColor="#F97316" />
-                <stop offset="100%" stopColor="#FBBF24" />
-              </linearGradient>
-            </defs>
-          </svg>
-          
-          {/* 中央のパーセント表示 */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-white">{Math.round(progress)}%</span>
-            <span className="text-sm text-gray-400">進捗は目安です（品質優先で前後します）</span>
-            <div className="mt-2 text-[11px] text-gray-300 font-bold text-center leading-relaxed">
-              {showAvg ? (
-                <>
-                  平均: {formatSeconds(avgSec!)}（直近{sampleCount}回）
-                  <span className="mx-2 text-gray-500">/</span>
-                  経過: {formatSeconds(elapsedSec)}
-                  <span className="mx-2 text-gray-500">/</span>
-                  残り目安: {formatSeconds(remainingSec)}
-                </>
-              ) : (
-                <>
-                  目安: {formatSeconds(baseEstimateSec)}
-                  <span className="mx-2 text-gray-500">/</span>
-                  経過: {formatSeconds(elapsedSec)}
-                  <span className="mx-2 text-gray-500">/</span>
-                  残り目安: {formatSeconds(remainingSec)}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 処理ステップ */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-blue-400 animate-pulse" />
-            <span className="text-white font-medium">
-              {processingSteps[currentStep]?.text || 'AIが生成中...'}
-            </span>
-          </div>
-        </div>
-
-        {/* プログレスバー（サブ） */}
-        <div className="w-full h-2 bg-slate-700 rounded-full mb-6 overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-blue-600 via-orange-500 to-amber-400 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Tips表示 */}
-        <div className="bg-slate-700/50 rounded-xl p-4 border border-white/5">
-          <div className="flex items-center gap-3">
-            <CurrentTipIcon className={`w-6 h-6 ${activeTips[safeTipIndex].color} flex-shrink-0`} />
-            <p className="text-gray-300 text-sm font-bold leading-relaxed">
-              {activeTips[safeTipIndex].text}
-            </p>
-          </div>
-        </div>
-
-        {/* アニメーションドット */}
-        <div className="flex justify-center gap-1 mt-4">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  // 新しい見た目では、全面の読み込みを出さない（決まり: 全面の読み込み・暗幕を出さない）
+  return <LoadingProgressNext title={title} subtitle={subtitle} estimateSec={avgSec ?? baseEstimateSec} />;
 }
 
 

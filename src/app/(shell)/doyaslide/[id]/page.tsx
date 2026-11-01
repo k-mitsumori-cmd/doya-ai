@@ -1,0 +1,1058 @@
+'use client'
+
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import toast from 'react-hot-toast'
+import { LOGO_POSITIONS, estimateGenSeconds, formatDuration } from '@/lib/doyaslide/constants'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import SlideImage from '@/components/doyaslide/SlideImage'
+import { useSession } from 'next-auth/react'
+import { useDoyaSlideRecovery } from '@/lib/doyaslide/use-operation-recovery'
+import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperationRecovery'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
+import { Skeleton } from '@/components/ds'
+import { confirmDialog } from '@/components/ds/dialog'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+
+interface Slide {
+  id: string
+  index: number
+  role: string | null
+  headline: string | null
+  subText: string | null
+  imageUrl: string | null
+  rawImageUrl: string | null
+  status: string
+  version: number
+  model: string | null
+}
+interface Project {
+  id: string
+  title: string
+  status: string
+  aspectRatio: string
+  logoUrl: string | null
+  logoPosition: string
+  logoSize: string
+  logoBackingChip: boolean
+  slides: Slide[]
+}
+interface Version {
+  id: string
+  version: number
+  imageUrl: string
+  createdAt: string
+}
+
+// Validate the fields used by the editor before replacing its last confirmed state.
+function validSlides(value: unknown, projectId: string): value is Slide[] {
+  if (!Array.isArray(value)) return false
+  const ids = new Set<string>()
+  const indexes = new Set<number>()
+  return value.every((s) => {
+    if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id || s.projectId !== projectId
+      || !Number.isInteger(s.index) || s.index < 0 || !Number.isInteger(s.version) || s.version < 1
+      || typeof s.status !== 'string'
+      || !['role', 'headline', 'subText', 'imageUrl', 'rawImageUrl', 'model'].every((key) => s[key] === null || typeof s[key] === 'string')
+      || ids.has(s.id) || indexes.has(s.index)) return false
+    ids.add(s.id)
+    indexes.add(s.index)
+    return true
+  })
+}
+
+function validProject(value: any, projectId: string): value is Project {
+  return !!value && typeof value === 'object' && value.id === projectId
+    && ['title', 'status', 'aspectRatio', 'logoPosition', 'logoSize'].every((key) => typeof value[key] === 'string')
+    && (value.logoUrl === null || typeof value.logoUrl === 'string')
+    && typeof value.logoBackingChip === 'boolean' && validSlides(value.slides, projectId)
+}
+
+async function readSlideResponse(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  let timer: number | undefined
+  try {
+    const stopped = new Promise<never>((_, reject) => {
+      timer = window.setTimeout(() => {
+        controller.abort()
+        reject(new Error('通信がタイムアウトしました。保存結果を確認してください。'))
+      }, timeoutMs)
+    })
+    const reading = (async () => {
+      const res = await fetch(url, { ...init, signal: controller.signal })
+      // Definitive access failures clear private state even with unreadable bodies.
+      if ([401, 403, 404].includes(res.status) && init.method !== 'POST') return { res, data: null }
+      return { res, data: await res.json() }
+    })()
+    // Abort alone cannot bound a transport/body reader that ignores its signal.
+    return await Promise.race([reading, stopped])
+  } finally {
+    if (timer !== undefined) window.clearTimeout(timer)
+  }
+}
+
+function aspectClass(a: string) {
+  if (a === 'square') return 'aspect-square'
+  if (a === 'vertical') return 'aspect-[2/3]'
+  return 'aspect-[3/2]'
+}
+
+// 生成中の一言。丁寧な言い方で、絵文字は使わない（2026-10-29 に、くだけた言い方と絵文字の古い版を外した）
+const GEN_MESSAGES_NEXT = ['もくもく描いています…', 'いい感じです…', '色を塗っています…', 'ドヤれる仕上がりに…', 'あと少しです…']
+
+function EditorInner() {
+  // 新しい見た目（チェックリスト §5.1）。ページの見出しは枠の h1 に任せて h2 にする（UI 品質 S-57）
+  const Heading = 'h2'
+  const params = useParams()
+  const router = useRouter()
+  const search = useSearchParams()
+  const id = params?.id as string
+  const { data: session, status: authStatus } = useSession()
+  const operation = useDoyaSlideRecovery(authStatus, (session?.user as { id?: string } | undefined)?.id || '', id)
+
+  const [project, setProject] = useState<Project | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [projectReadError, setProjectReadError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [structuring, setStructuring] = useState(false)
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、上に「これ1つで全部進む」帯を出す（ドヤくん＋大きなボタン1つ）
+  const oneButton = useOneButton()
+  const [structureNotice, setStructureNotice] = useState<string | null>(null)
+  const [exporting, setExporting] = useState<string | null>(null)
+  const [savingLogoConfig, setSavingLogoConfig] = useState(false)
+  const [logoRetryPatch, setLogoRetryPatch] = useState<Record<string, string | boolean> | null>(null)
+  const [chat, setChat] = useState<Record<string, { role: string; content: string }[]>>({})
+  const [chatInput, setChatInput] = useState('')
+  const [chatBusy, setChatBusy] = useState(false)
+  const [busySlide, setBusySlide] = useState<string | null>(null)
+  const [versions, setVersions] = useState<Version[]>([])
+  const [versionsError, setVersionsError] = useState<string | null>(null)
+  const [celebrate, setCelebrate] = useState(false)
+  const [funIdx, setFunIdx] = useState(0)
+  const [genElapsed, setGenElapsed] = useState(0)
+  const [limitMsg, setLimitMsg] = useState<string | null>(null)
+  const [limitUpgradeUrl, setLimitUpgradeUrl] = useState<string | null>(null)
+  const triggered = useRef(false)
+  const logoConfigBusyRef = useRef(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const mountedRef = useRef(true)
+  const wasGen = useRef(false)
+  const projectReadSequence = useRef(0)
+  const projectReadsActive = useRef(0)
+  const generationBusyRef = useRef(false)
+  const slideMutationBusyRef = useRef(false)
+  const structureBusyRef = useRef(false)
+  const exportBusyRef = useRef(false)
+  const versionsSequence = useRef(0)
+  const versionsTarget = useRef<string | null>(null)
+  const selectedSlideRef = useRef<string | null>(null)
+
+  const slides = project?.slides || []
+  const selected = slides.find((s) => s.id === selectedId) || slides[0] || null
+  selectedSlideRef.current = selected?.id || null
+  const doneCount = slides.filter((s) => s.imageUrl).length
+  const total = slides.length
+  const allDone = total > 0 && doneCount === total
+  // 残り時間: 並列生成なので「波数 × 1波の所要(SEC_PER_WAVE=70秒)」で見積もり、経過でカウントダウン。
+  // 旧実装は「枚数×11秒」で過小見積り(3枚=33秒)だった。
+  const remainingSlides = Math.max(0, total - doneCount)
+  const estTotalSec = estimateGenSeconds(remainingSlides)
+  const etaRemainingSec = Math.max(5, estTotalSec - genElapsed)
+  // 進捗バーは枚数ベースと時間ベースの大きい方を採用 → 1波の間も止まって見えず動く
+  const countPct = total ? (doneCount / total) * 100 : 0
+  const timePct = estTotalSec > 0 ? Math.min(96, (genElapsed / estTotalSec) * 100) : 0
+  const progressPct = generating ? Math.max(countPct, timePct) : countPct
+
+  const showQuotaNotice = useCallback((res: Response, d: any) => {
+    if (res.status !== 403 || d?.code !== 'LIMIT_REACHED') return false
+    setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
+    setLimitUpgradeUrl(d?.upgradeUrl === '/doyaslide/pricing' ? d.upgradeUrl : null)
+    return true
+  }, [])
+
+  // 上限超過を検知して常設バナーを出す共通ハンドラ（generate/regenerate/chat で共用）
+  const ensureOk = useCallback((res: Response, d: any, fallback: string) => {
+    if (!res.ok) {
+      showQuotaNotice(res, d)
+      throw new Error(typeof d?.error === 'string' ? d.error : fallback)
+    }
+  }, [showQuotaNotice])
+
+  const reload = useCallback(async (force = true): Promise<Project | null> => {
+    // Skip overlapping background polls; explicit refreshes invalidate older responses.
+    if (!force && projectReadsActive.current > 0) return null
+    const sequence = ++projectReadSequence.current
+    projectReadsActive.current++
+    const current = () => mountedRef.current && sequence === projectReadSequence.current
+    try {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/projects/${id}`, { cache: 'no-store' }, 30000)
+      if (!res.ok) {
+        if (current() && [401, 403, 404].includes(res.status)) {
+          setProject(null)
+          setSelectedId(null)
+          setVersions([])
+          setChat({})
+        }
+        if (current()) setProjectReadError(res.status === 401 ? 'ログインが必要です。再ログインしてから再読み込みしてください。'
+          : res.status === 403 ? 'このプロジェクトを閲覧できません。'
+          : res.status === 404 ? 'プロジェクトが見つかりません。'
+          : 'プロジェクトを読み込めませんでした。再読み込みしてください。')
+        return null
+      }
+      if (!validProject(data?.project, id)) {
+        if (current()) setProjectReadError('プロジェクトの内容を確認できませんでした。再読み込みしてください。')
+        return null
+      }
+      if (!current()) return null
+      setProject(data.project)
+      setSelectedId((prev) => data.project.slides.some((slide: Slide) => slide.id === prev) ? prev : data.project.slides[0]?.id || null)
+      setProjectReadError(null)
+      return data.project
+    } catch {
+      if (current()) setProjectReadError('プロジェクトを読み込めませんでした。再読み込みしてください。')
+      return null
+    } finally {
+      projectReadsActive.current--
+      if (current()) setLoading(false)
+    }
+  }, [id])
+
+  const loadVersions = useCallback(async (slideId: string) => {
+    if (!mountedRef.current || selectedSlideRef.current !== slideId) return
+    const sequence = ++versionsSequence.current
+    const changedSlide = versionsTarget.current !== slideId
+    versionsTarget.current = slideId
+    if (changedSlide && mountedRef.current) {
+      setVersions([])
+      setVersionsError(null)
+    }
+    const current = () => mountedRef.current && sequence === versionsSequence.current && selectedSlideRef.current === slideId
+    try {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/slides/${slideId}/revert`, { cache: 'no-store' }, 30000)
+      if (!res.ok) {
+        if (current() && [401, 403, 404].includes(res.status)) setVersions([])
+        throw new Error('履歴を読み込めませんでした。')
+      }
+      const seen = new Set<number>()
+      if (!Array.isArray(data?.versions) || !data.versions.every((v: any) => {
+        if (!v || typeof v.id !== 'string' || !v.id || v.slideId !== slideId
+          || !Number.isInteger(v.version) || v.version < 1 || seen.has(v.version)
+          || typeof v.imageUrl !== 'string' || !v.imageUrl
+          || typeof v.createdAt !== 'string' || !Number.isFinite(Date.parse(v.createdAt))) return false
+        seen.add(v.version)
+        return true
+      })) throw new Error('履歴の内容を確認できませんでした。')
+      if (current()) {
+        setVersions(data.versions)
+        setVersionsError(null)
+      }
+    } catch {
+      if (current()) setVersionsError('履歴を確認できませんでした。再読み込みしてください。')
+    }
+  }, [])
+
+  const performSlideMutation = async (slideId: string, url: string, body?: Record<string, unknown>) => {
+    if (url.endsWith('/regenerate') || url.endsWith('/chat')) {
+      const kind = url.endsWith('/chat') ? 'chat' : 'regenerate'
+      const result = await operation.submit(kind, body || {}, new AbortController().signal, slideId)
+      if (!result || !mountedRef.current) throw new Error('操作が中断されました。')
+      if (result.state === 'limit') {
+        showQuotaNotice({ status: 403 } as Response, result)
+        throw new Error('今月の生成上限に達しました。')
+      }
+      if (result.state !== 'completed' || result.results?.length !== 1) throw new Error('保存結果を確認してください。')
+      const confirmed = await reload()
+      const saved = confirmed?.slides.find(slide => slide.id === slideId)
+      const output = result.results[0]
+      if (!saved || saved.id !== output.slideId || saved.imageUrl !== output.imageUrl || saved.rawImageUrl !== output.rawImageUrl || saved.version !== output.version) throw new Error('保存結果を確認してください。')
+      if (!operation.acknowledge(result.operationId)) throw new Error('操作情報を更新できません。')
+      return { slide: saved, reply: kind === 'chat' ? '修正を反映しました。' : undefined }
+    }
+    const { res, data } = await readSlideResponse(url, {
+      method: 'POST',
+      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+    }, 310000)
+    ensureOk(res, data, '更新に失敗しました。')
+    if (!validSlides([data?.slide], id) || data.slide.id !== slideId || !data.slide.imageUrl || data.slide.status !== 'done') {
+      throw new Error('更新結果を確認できませんでした。')
+    }
+    const confirmed = await reload()
+    const saved = confirmed?.slides.find((slide) => slide.id === slideId)
+    if (!saved || saved.imageUrl !== data.slide.imageUrl || saved.rawImageUrl !== data.slide.rawImageUrl || saved.version !== data.slide.version) {
+      throw new Error('更新後の状態を確認できませんでした。')
+    }
+    return data
+  }
+
+  const stopPoll = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  const runGenerate = useCallback(async () => {
+    if (!mountedRef.current || generationBusyRef.current || slideMutationBusyRef.current || operation.blocked) return
+    generationBusyRef.current = true
+    setGenerating(true)
+    setLimitMsg(null)
+    setLimitUpgradeUrl(null)
+    // 生成中も数秒ごとに再取得してサムネを順次反映
+    stopPoll()
+    pollRef.current = setInterval(() => { void reload(false) }, 4000)
+    try {
+      // 未生成が無くなるまでバッチを自動継続（各呼び出しはサーバ側バジェット内で安全に返る）。
+      // 進捗が2回連続で止まったら中断（連続エラー/レート制限/上限）。最大12回の安全上限。
+      let prevRemaining = Infinity
+      let last: any = null
+      let quotaHit = false
+      let stall = 0
+      for (let i = 0; i < 12; i++) {
+        const result = await operation.submit('batch', { onlyPending: true }, new AbortController().signal)
+        if (!mountedRef.current) return
+        if (!result) throw new Error('操作が中断されました。')
+        if (result.state === 'limit' && showQuotaNotice({ status: 403 } as Response, result)) {
+          // 月間上限：エラー扱いせず上限案内としてループ停止
+          quotaHit = true
+          await reload()
+          break
+        }
+        if (!['completed', 'empty'].includes(result.state)) throw new Error('保存結果を確認してください。')
+        const confirmed = await reload()
+        if (!confirmed || !(result.results || []).every(output => confirmed.slides.some(slide => slide.id === output.slideId && slide.imageUrl === output.imageUrl && slide.rawImageUrl === output.rawImageUrl && slide.version === output.version))) throw new Error('保存結果を確認してください。')
+        if (!operation.acknowledge(result.operationId)) throw new Error('操作情報を更新できません。')
+        const d = { ...result, slides: confirmed.slides, errorCount: result.errorCount || 0, skipped: result.skipped || 0 }
+        if (!validSlides(d?.slides, id) || d.slides.length === 0
+          || !Number.isInteger(d.errorCount) || d.errorCount < 0
+          || !Number.isInteger(d.skipped) || d.skipped < 0) {
+          throw new Error('生成結果を確認できませんでした。状態を更新してから再試行してください。')
+        }
+        last = d
+        if (!confirmed || confirmed.slides.length !== d.slides.length
+          || !confirmed.slides.every((slide: Slide) => d.slides.some((result: Slide) => result.id === slide.id && result.imageUrl === slide.imageUrl && result.version === slide.version))) {
+          throw new Error('生成後の状態を確認できませんでした。状態を更新してから再試行してください。')
+        }
+        const remaining = d.slides.filter((s: Slide) => !s.imageUrl).length
+        if (remaining === 0) break
+        if (d.errorCount > 0) break // Failed AI calls require a new explicit user action.
+        if (d.skipped > 0) break // 月の上限スキップは再試行しても無駄
+        if (remaining >= prevRemaining) {
+          if (++stall >= 2) break // 2回連続で進捗が無ければ中断（一時的失敗は1回リトライ）
+        } else {
+          stall = 0
+        }
+        prevRemaining = remaining
+      }
+      const remaining = (last?.slides || []).filter((s: Slide) => !s.imageUrl).length
+      if (quotaHit) {
+        toast.error('今月の生成枚数の上限に達しました')
+      } else if (last?.skipped > 0) {
+        setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。${last.quota?.error || ''}`)
+        setLimitUpgradeUrl(last.quota?.upgradeUrl === '/doyaslide/pricing' ? last.quota.upgradeUrl : null)
+        toast(`${last.skipped}枚は上限のためスキップ${last.errorCount ? `／${last.errorCount}枚は生成失敗（再生成可）` : ''}`)
+      } else if (remaining > 0 || !last) {
+        toast.error(`${remaining}枚が未完成です。「未生成を生成」でもう一度お試しください`)
+      } else {
+        toast.success('スライドが完成しました！')
+      }
+    } catch {
+      toast.error('生成が完了したか確認できませんでした。状態を更新して、未生成のスライドを確認してください。')
+    } finally {
+      stopPoll()
+      try {
+        if (mountedRef.current) await reload()
+      } catch {
+        // A failed final refresh must never leave the editor locked.
+      } finally {
+        generationBusyRef.current = false
+        if (mountedRef.current) setGenerating(false)
+      }
+    }
+  }, [id, reload, showQuotaNotice, operation])
+
+  const retryStructure = async () => {
+    if (!mountedRef.current || structureBusyRef.current || generationBusyRef.current || slideMutationBusyRef.current) return
+    structureBusyRef.current = true
+    setStructureNotice(null)
+    setStructuring(true)
+    try {
+      const { res, data } = await readSlideResponse('/api/doyaslide/structure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id }),
+      }, 310000)
+      if (res.status === 429 && data?.code === 'DOYASLIDE_TEXT_DAILY_LIMIT') {
+        setStructureNotice('本日の資料構成生成の上限に達しました。明日お試しいただくか、お問い合わせください。')
+        return
+      }
+      ensureOk(res, data, '構成の生成に失敗しました。')
+      if (!validSlides(data?.slides, id) || data.slides.length === 0) throw new Error('構成の内容を確認できませんでした。')
+      const confirmed = await reload()
+      if (!confirmed || confirmed.slides.length !== data.slides.length
+        || !confirmed.slides.every((slide) => data.slides.some((result: Slide) => result.id === slide.id && result.index === slide.index && result.headline === slide.headline && result.subText === slide.subText))) {
+        throw new Error('保存された構成を確認できませんでした。')
+      }
+      if (!mountedRef.current) return
+      toast.success('構成を確認しました。画像の生成を始めます。')
+      await runGenerate()
+    } catch {
+      if (mountedRef.current) toast.error('構成の生成結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
+    } finally {
+      structureBusyRef.current = false
+      if (mountedRef.current) setStructuring(false)
+    }
+  }
+
+  useEffect(() => {
+    mountedRef.current = true
+    ;(async () => {
+      const p = await reload()
+      if (!p) return
+      if (search.get('generate') === '1' && !triggered.current) {
+        triggered.current = true
+        router.replace(`/doyaslide/${id}`)
+        // 見積書から作った直後など、構成がまだ無い下書きは、先に構成を作る（作れたら retryStructure が続けて画像を作る）
+        if (p.status === 'draft' && p.slides.length === 0) void retryStructure()
+        else if (p.slides.some((s) => !s.imageUrl)) runGenerate()
+      }
+    })()
+    return () => {
+      mountedRef.current = false
+      stopPoll()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 選択スライドのバージョン履歴を取得（スライド切替時のみ。ポーリングでは再取得しない）
+  useEffect(() => {
+    if (selected) loadVersions(selected.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id])
+
+  // 生成中の楽しいメッセージ回し
+  useEffect(() => {
+    if (!generating) return
+    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES_NEXT.length), 1500)
+    return () => clearInterval(t)
+  }, [generating])
+
+  // 生成中の経過秒カウント（残り時間カウントダウンの基準）。開始時に0へリセット。
+  useEffect(() => {
+    if (!generating) return
+    setGenElapsed(0)
+    const t = setInterval(() => setGenElapsed((e) => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [generating])
+
+  // 生成完了時にお祝い演出（ドヤくんジャンプ）
+  useEffect(() => {
+    const justFinished = wasGen.current && !generating
+    wasGen.current = generating
+    if (justFinished && total > 0 && slides.every((s) => s.imageUrl)) {
+      setCelebrate(true)
+      const t = setTimeout(() => {
+        if (mountedRef.current) setCelebrate(false)
+      }, 2600)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating])
+
+  const regenerate = async (slideId: string) => {
+    if (!mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current || operation.blocked) return
+    slideMutationBusyRef.current = true
+    setBusySlide(slideId)
+    try {
+      await performSlideMutation(slideId, `/api/doyaslide/slides/${slideId}/regenerate`)
+      if (!mountedRef.current) return
+      setLimitMsg(null)
+      setLimitUpgradeUrl(null)
+      toast.success('再生成しました。')
+      void loadVersions(slideId)
+    } catch {
+      if (mountedRef.current) toast.error('再生成の結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
+    } finally {
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) setBusySlide(null)
+    }
+  }
+
+  const revert = async (version: number) => {
+    if (!selected || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
+    const sid = selected.id
+    const target = versions.find((v) => v.version === version)
+    if (!target || versionsTarget.current !== sid || versionsError) {
+      toast.error('復元する履歴を確認できません。履歴を再読み込みしてください。')
+      return
+    }
+    slideMutationBusyRef.current = true
+    setBusySlide(sid)
+    try {
+      const data = await performSlideMutation(sid, `/api/doyaslide/slides/${sid}/revert`, { version })
+      if (data.slide.imageUrl !== target.imageUrl) throw new Error('復元結果を確認できませんでした。')
+      if (!mountedRef.current) return
+      toast.success(`v${version} に戻しました。`)
+      void loadVersions(sid)
+    } catch {
+      if (mountedRef.current) toast.error('巻き戻しの結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
+    } finally {
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) setBusySlide(null)
+    }
+  }
+
+  const sendChat = async () => {
+    if (!selected || !chatInput.trim() || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current || operation.blocked) return
+    const msg = chatInput.trim()
+    const sid = selected.id
+    slideMutationBusyRef.current = true
+    setChatBusy(true)
+    setBusySlide(sid)
+    try {
+      const data = await performSlideMutation(sid, `/api/doyaslide/slides/${sid}/chat`, { message: msg })
+      if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('修正の回答を確認できませんでした。')
+      if (!mountedRef.current) return
+      setLimitMsg(null)
+      setLimitUpgradeUrl(null)
+      setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'user', content: msg }, { role: 'assistant', content: data.reply }] }))
+      setChatInput((current) => current.trim() === msg ? '' : current)
+      toast.success('修正を反映しました。')
+      void loadVersions(sid)
+    } catch {
+      if (mountedRef.current) toast.error('修正結果を確認できませんでした。入力内容を保持しました。状態を更新してご確認ください。')
+      await reload().catch(() => {})
+    } finally {
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) {
+        setChatBusy(false)
+        setBusySlide(null)
+      }
+    }
+  }
+
+  const saveLogoConfig = async (patch: Record<string, string | boolean>) => {
+    if (logoConfigBusyRef.current) return
+    logoConfigBusyRef.current = true
+    setSavingLogoConfig(true)
+    try {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/projects/${id}/logo-config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }, 310000)
+      if (res.ok) {
+        if (!validProject(data?.project, id) || !Object.entries(patch).every(([key, value]) => data.project[key] === value)) throw new Error('ロゴ設定の更新結果を確認できませんでした')
+        setLogoRetryPatch(null)
+        toast.success('ロゴ設定を全スライドに反映しました')
+      } else {
+        setLogoRetryPatch(patch)
+        toast.error(typeof data?.error === 'string' && /[ぁ-んァ-ヶ一-龠]/.test(data.error) ? data.error : 'ロゴの設定を保存できませんでした。もう一度お試しください。')
+      }
+      await reload()
+    } catch {
+      setLogoRetryPatch(patch)
+      toast.error('ロゴ設定の更新結果を確認できませんでした。再読み込みしてご確認ください')
+      await reload().catch(() => {})
+    } finally {
+      logoConfigBusyRef.current = false
+      setSavingLogoConfig(false)
+    }
+  }
+
+  const exportAs = async (fmt: 'pdf' | 'zip') => {
+    if (!project || !mountedRef.current || exportBusyRef.current) return
+    if (!allDone && !(await confirmDialog({ title: '完成したスライドだけを書き出しますか？', message: 'まだ作っていないスライドは含まれません。', confirmLabel: '書き出す' }))) return
+    if (!mountedRef.current || exportBusyRef.current) return
+    exportBusyRef.current = true
+    setExporting(fmt)
+    try {
+      // Storage supplies the artifact URL; do not mistake starting a download for its completion.
+      const { res, data: d } = await readSlideResponse(`/api/doyaslide/export?projectId=${id}&format=${fmt}`, { cache: 'no-store' }, 310000)
+      if (!res.ok || typeof d?.url !== 'string' || !d.url.trim()
+        || typeof d.filename !== 'string' || !d.filename.endsWith(`.${fmt}`) || /[\\/\r\n]/.test(d.filename)
+        || !Number.isInteger(d.skipped) || d.skipped < 0) throw new Error('書き出し結果を確認できませんでした。')
+      const url = new URL(d.url)
+      if (url.protocol !== 'https:' || url.username || url.password) throw new Error('ダウンロード先を確認できませんでした。')
+      if (!mountedRef.current) return
+      const a = document.createElement('a')
+      a.href = url.href
+      a.download = d.filename
+      document.body.appendChild(a)
+      try { a.click() } finally { a.remove() }
+      if (d.skipped > 0) {
+        toast(`${d.skipped}枚は画像取得に失敗したため除外しました。ダウンロードを開始しました。`)
+      } else {
+        toast.success('ダウンロードを開始しました。')
+      }
+    } catch {
+      if (mountedRef.current) toast.error('書き出し結果を確認できませんでした。再試行してください。')
+    } finally {
+      exportBusyRef.current = false
+      if (mountedRef.current) setExporting(null)
+    }
+  }
+
+  if (loading) {
+    // 新しい見た目では、文字だけでなく骨組みを出す
+    return (
+      <div className="p-4 lg:p-8 max-w-6xl mx-auto" aria-busy="true">
+        <Skeleton lines={6} height={20} />
+      </div>
+    )
+  }
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
+        <img src="/character/error.png" alt="" className="w-24 h-24 object-contain" />
+        <p role="alert" className="font-black text-slate-700">{projectReadError || 'プロジェクトが見つかりません。'}</p>
+        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#0066ff] text-[#0066ff] font-bold rounded-xl">再読み込み</button>
+        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#0066ff] text-white font-bold rounded-xl">
+          一覧に戻る
+        </Link>
+      </div>
+    )
+  }
+
+  const ac = aspectClass(project.aspectRatio)
+  const chatLog = selected ? chat[selected.id] || [] : []
+
+  return (
+    <div className="p-4 lg:p-6 max-w-[1400px] mx-auto">
+      <DoyaSlideOperationRecovery recovery={operation} onConfirm={async () => {
+        const result = operation.result
+        if (!result) return
+        const confirmed = await reload()
+        if (!mountedRef.current) return
+        if (result.state === 'completed' && !confirmed) {
+          toast.error('現在の資料を確認できません。状態を再読み込みしてください。')
+          return
+        }
+        // The recovery API verifies that these exact saved versions still exist.
+        // A newer current image must not prevent closing an older saved operation.
+        const newer = result.state === 'completed' && !result.results?.every(output => confirmed?.slides.some(slide => slide.id === output.slideId && slide.imageUrl === output.imageUrl && slide.rawImageUrl === output.rawImageUrl && slide.version === output.version))
+        if (operation.acknowledge(result.operationId) && newer) toast('保存結果は履歴に残っています。現在表示中の版は変更していません。')
+      }} />
+      {projectReadError && (
+        <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>{projectReadError} 表示中の内容は最後に確認できたものです。</p>
+          <button onClick={() => { void reload() }} className="mt-2 font-bold underline">再読み込み</button>
+        </div>
+      )}
+      {/* header */}
+      <div className="flex flex-wrap items-center justify-between mb-3 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link href="/doyaslide/projects" className="text-slate-400 hover:text-slate-700">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </Link>
+          <Heading className="text-xl font-black text-slate-900 truncate">{project.title}</Heading>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <button
+            onClick={() => exportAs('pdf')}
+            disabled={exporting !== null || total === 0}
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-lg ${exporting === 'pdf' ? 'animate-spin' : ''}`}>
+              {exporting === 'pdf' ? 'progress_activity' : 'picture_as_pdf'}
+            </span>
+            PDF
+          </button>
+          <button
+            onClick={() => exportAs('zip')}
+            disabled={exporting !== null || total === 0}
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-lg ${exporting === 'zip' ? 'animate-spin' : ''}`}>
+              {exporting === 'zip' ? 'progress_activity' : 'folder_zip'}
+            </span>
+            ZIP
+          </button>
+          {allDone ? (
+            <span className="inline-flex whitespace-nowrap items-center gap-1 px-4 py-2 rounded-full bg-emerald-50 text-emerald-600 font-black text-sm">
+              <span className="material-symbols-outlined text-lg">check_circle</span>
+              全スライド完成
+            </span>
+          ) : oneButton ? null : (
+            <button
+              onClick={runGenerate}
+              disabled={generating || busySlide !== null || total === 0 || operation.blocked}
+              className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
+            >
+              <span className={`material-symbols-outlined text-lg ${generating ? 'animate-spin' : ''}`}>
+                {generating ? 'progress_activity' : 'bolt'}
+              </span>
+              {generating ? '生成中...' : '未生成を生成'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {oneButton ? (
+        <div className="mb-4">
+          <OneButtonBar
+            eyebrow="ドヤスライド"
+            cta={total === 0
+              ? (structuring ? '構成を作っています。このままお待ちください' : 'テーマと設定が決まったら、押してください')
+              : allDone ? '全部のスライドができました。書き出して使えます'
+              : generating ? 'スライドの絵を作っています。このままお待ちください'
+              : '構成を確かめたら、押してください'}
+            label={total === 0
+              ? (structuring ? '構成を作っています' : '構成とスライドをまとめて作る')
+              : allDone ? (exporting === 'pdf' ? '書き出しています' : 'PDF で書き出す')
+              : generating ? `作っています（${doneCount}/${total}枚）`
+              : `残り${remainingSlides}枚をまとめて作る`}
+            scope={total === 0
+              ? 'AIが章立てと本文を作り、続けて全スライドの絵を作ります。'
+              : allDone ? '全スライドを1つの PDF にします。ZIP は、上のボタンから書き出せます。'
+              : 'まだ絵の無いスライドを、まとめて作ります。できたものから下に並びます。'}
+            onRun={total === 0 ? () => void retryStructure() : allDone ? () => void exportAs('pdf') : () => void runGenerate()}
+            disabled={total === 0 ? structuring : allDone ? exporting !== null : (generating || busySlide !== null || operation.blocked)}
+            running={total === 0 ? structuring : generating}
+            progress={generating && total > 0 ? { done: doneCount, total } : undefined}
+            pose={allDone ? 'success' : undefined}
+          />
+        </div>
+      ) : null}
+
+      {total === 0 && (!oneButton || structureNotice || project.status === 'structuring') && (
+        <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
+          <p className="font-black text-slate-800">スライドの構成がまだありません</p>
+          <p className="mt-1 text-sm text-slate-600">作成中に処理が止まった場合も、このプロジェクトで再試行できます。</p>
+          {/* 上の帯（ONE_BUTTON）が出ているときは、同じ「構成を作る」ボタンを二重に出さない */}
+          {oneButton ? null : (
+          <button
+            onClick={retryStructure}
+            disabled={structuring}
+            className="mt-3 rounded-full bg-blue-600 px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+          >
+            {structuring ? '構成を生成中...' : '構成作成を再試行'}
+          </button>
+          )}
+          {structureNotice && <div role="alert" className="mt-3 text-sm text-amber-900"><p>{structureNotice}</p><Link href={SUPPORT_CONTACT_URL} className="font-bold underline">お問い合わせ</Link></div>}
+          {project.status === 'structuring' && (
+            <button onClick={() => reload()} className="ml-3 text-sm font-bold text-blue-700 underline">状態を更新</button>
+          )}
+        </div>
+      )}
+
+      {/* 上限超過バナー（消えない・アップグレード導線つき） */}
+      {limitMsg && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+          <span className="material-symbols-outlined text-amber-600">error</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-amber-800 text-sm">今月の生成枚数の上限に達しました</p>
+            <p className="text-xs font-bold text-amber-700 mt-0.5 leading-relaxed">{limitMsg}</p>
+            <p className="text-[11px] font-bold text-amber-600/80 mt-1">
+              ※ 生成・再生成・チャット修正はそれぞれ1枚分の生成枚数を消費します
+            </p>
+          </div>
+          <Link
+            href={limitUpgradeUrl || SUPPORT_CONTACT_URL}
+            className="flex-shrink-0 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-black shadow hover:shadow-lg transition-all"
+          >
+            {limitUpgradeUrl ? 'プランを確認' : 'お問い合わせ'}
+          </Link>
+          <button
+            onClick={() => { setLimitMsg(null); setLimitUpgradeUrl(null) }}
+            aria-label="閉じる"
+            className="flex-shrink-0 text-amber-400 hover:text-amber-600"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* 進捗バー */}
+      {total > 0 && (generating || !allDone) && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+            <span>
+              {generating ? 'もくもく生成中...' : '生成状況'}
+              {generating && (
+                <>
+                  <span className="ml-2 text-blue-600">残り 約{formatDuration(etaRemainingSec)}</span>
+                  {remainingSlides > 1 && (
+                    <span className="ml-2 text-slate-400">（{Math.min(remainingSlides, 4)}枚を並行生成中…）</span>
+                  )}
+                </>
+              )}
+            </span>
+            <span>
+              {doneCount} / {total} 枚 完成
+            </span>
+          </div>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-700"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_320px] gap-4">
+        {/* thumbnails */}
+        <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:max-h-[78vh] pb-2">
+          {slides.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedId(s.id)}
+              className={`flex-shrink-0 w-32 lg:w-full rounded-xl overflow-hidden border-2 transition-all ${
+                selected?.id === s.id ? 'border-blue-500 scale-[1.02]' : 'border-transparent hover:border-slate-200'
+              }`}
+            >
+              <div className={`${ac} bg-slate-100 flex items-center justify-center relative`}>
+                {s.imageUrl ? (
+                  <img src={doyaslideImageSrc(s.imageUrl)} alt="" className="w-full h-full object-cover" />
+                ) : s.status === 'generating' || generating ? (
+                  <span className="material-symbols-outlined animate-spin text-slate-400">progress_activity</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-400">未生成</span>
+                )}
+                <span className="absolute top-1 left-1 text-[10px] font-black bg-black/50 text-white rounded px-1">
+                  {s.index}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* preview */}
+        <div>
+          <div className={`relative ${ac} bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg`}>
+            {selected?.imageUrl ? (
+              <SlideImage
+                key={selected.imageUrl}
+                src={selected.imageUrl}
+                alt={selected.headline || ''}
+                className="w-full h-full object-contain animate-[fadeIn_.4s_ease]"
+              />
+            ) : generating || selected?.status === 'generating' ? (
+              <div className="text-center text-white/90">
+                <img src="/character/working.png" alt="" className="w-24 h-24 object-contain mx-auto animate-bounce" />
+                <p className="font-black mt-2">{(GEN_MESSAGES_NEXT)[funIdx]}</p>
+                <p className="text-xs text-white/60 mt-1">残り {total - doneCount} 枚</p>
+              </div>
+            ) : (
+              <div className="text-center text-white/50">
+                <p className="font-bold">未生成</p>
+              </div>
+            )}
+          </div>
+          {selected && (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-black text-slate-800 truncate">{selected.headline || `スライド ${selected.index}`}</p>
+                <p className="text-xs text-slate-400 font-bold truncate">
+                  {selected.role} ・ v{selected.version}
+                  {selected.model ? ` ・ ${selected.model}` : ''}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <button
+                  onClick={() => regenerate(selected.id)}
+                  disabled={busySlide !== null || generating || operation.blocked}
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <span className={`material-symbols-outlined text-lg ${busySlide === selected.id ? 'animate-spin' : ''}`}>
+                    {busySlide === selected.id ? 'progress_activity' : 'refresh'}
+                  </span>
+                  再生成
+                </button>
+                <span className="text-[10px] font-bold text-slate-400">生成枚数を1枚消費</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* right panel */}
+        <div className="space-y-4">
+          {/* chat */}
+          <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col h-[360px]">
+            <p className="font-black text-slate-800 text-sm mb-2 flex items-center gap-1">
+              <span className="material-symbols-outlined text-blue-600 text-lg">chat</span>
+              {selected ? `スライド${selected.index}を修正` : 'チャットで修正'}
+            </p>
+            <div className="flex-1 overflow-y-auto space-y-2 mb-2">
+              {chatLog.length === 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {['もっと青く', '背景を夜景に', '見出しを短く', 'ロゴを左下に'].map((ex) => (
+                    <button
+                      key={ex}
+                      onClick={() => setChatInput(ex)}
+                      className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100"
+                    >
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {chatLog.map((m, i) => (
+                <div
+                  key={i}
+                  className={`text-sm rounded-2xl px-3 py-2 max-w-[90%] ${
+                    m.role === 'user' ? 'bg-blue-100 text-blue-900 ml-auto' : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {m.content}
+                </div>
+              ))}
+              {chatBusy && (
+                <div className="text-sm bg-slate-100 text-slate-500 rounded-2xl px-3 py-2 inline-flex items-center gap-1">
+                  <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>修正中...
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent?.isComposing && e.keyCode !== 229 && !chatBusy && sendChat()}
+                placeholder="修正を入力..."
+                disabled={chatBusy || busySlide !== null || generating || !selected}
+                className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button onClick={sendChat} disabled={chatBusy || busySlide !== null || generating || !selected || operation.blocked} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
+                <span className="material-symbols-outlined text-lg">send</span>
+              </button>
+            </div>
+          </div>
+
+          {/* version history */}
+          {versionsError && (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <p>{versionsError}</p>
+              <button disabled={!selected} onClick={() => { if (selected) void loadVersions(selected.id) }} className="mt-2 font-bold underline">履歴を再読み込み</button>
+            </div>
+          )}
+          {versions.length > 1 && (
+            <div className="bg-white rounded-2xl shadow-sm p-4">
+              <p className="font-black text-slate-800 text-sm mb-3 flex items-center gap-1">
+                <span className="material-symbols-outlined text-blue-600 text-lg">history</span>
+                履歴（戻せます）
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {versions.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => revert(v.version)}
+                    disabled={busySlide !== null || generating || !!versionsError}
+                    className="flex-shrink-0 w-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 relative"
+                    title={`v${v.version} に戻す`}
+                  >
+                    <img src={doyaslideImageSrc(v.imageUrl)} alt={`v${v.version}`} className="w-full aspect-[3/2] object-cover" />
+                    <span className="absolute bottom-0 right-0 text-[9px] font-black bg-black/60 text-white px-1">
+                      v{v.version}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* logo config */}
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <p className="font-black text-slate-800 text-sm mb-3 flex items-center gap-1">
+              <span className="material-symbols-outlined text-blue-600 text-lg">branding_watermark</span>
+              ロゴ設定
+            </p>
+            {project.logoUrl ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">位置</label>
+                  <select
+                    value={project.logoPosition}
+                    disabled={savingLogoConfig}
+                    onChange={(e) => saveLogoConfig({ logoPosition: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl text-sm"
+                  >
+                    {LOGO_POSITIONS.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">サイズ</label>
+                  <div className="flex gap-2">
+                    {['S', 'M', 'L'].map((sz) => (
+                      <button
+                        key={sz}
+                        disabled={savingLogoConfig}
+                        onClick={() => saveLogoConfig({ logoSize: sz })}
+                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                          project.logoSize === sz ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={project.logoBackingChip}
+                    disabled={savingLogoConfig}
+                    onChange={(e) => saveLogoConfig({ logoBackingChip: e.target.checked })}
+                  />
+                  背景チップ（視認性UP）
+                </label>
+                <p className="text-[11px] text-slate-400">{savingLogoConfig ? '全スライドに反映中…' : '変更すると全スライドに反映されます'}</p>
+                {logoRetryPatch && (
+                  <button
+                    type="button"
+                    disabled={savingLogoConfig}
+                    onClick={() => saveLogoConfig(logoRetryPatch)}
+                    className="w-full rounded-xl border border-amber-400 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-50"
+                  >
+                    全スライドへの反映を再試行する
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 font-bold">ロゴは未設定です。新規作成時にアップロードできます。</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {celebrate && (
+        <div role="status" className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-10 py-7 flex flex-col items-center gap-2 animate-[fadeIn_.3s_ease]">
+            <img src="/character/jump.png" alt="" className="w-28 h-28 object-contain animate-bounce" />
+            <p className="text-xl font-black text-blue-700">{'完成しました！'}</p>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function EditorFallback() {
+  return <div className="p-4 lg:p-8 max-w-6xl mx-auto" aria-busy="true"><Skeleton lines={6} height={20} /></div>
+}
+
+export default function DoyaSlideEditorPage() {
+  return (
+    <Suspense fallback={<EditorFallback />}>
+      <EditorInner />
+    </Suspense>
+  )
+}

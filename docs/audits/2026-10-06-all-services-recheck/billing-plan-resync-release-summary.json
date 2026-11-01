@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-06T15:23:50.326988+00:00",
+  "status": "passed",
+  "gate": {
+    "startedAt": "2026-10-06T15:19:00.897046+00:00",
+    "pid": 25548,
+    "status": "passed",
+    "sourceFiles": 2542,
+    "head": "1f1b5e8bf27ed6b817deec32287a90ec4ecd365d",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T15:22:10.279116+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T15:22:12.164325+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T15:22:12.522913+00:00"
+  },
+  "manifestSha256": "19ddebac9b7c70eafbbc61f75f6aca77f3bb705f030973c12bee980483cdb930",
+  "sourceHashes": {
+    "src/hooks/useBillingPlanResync.ts": "de0a6fd723139abedad7e7bd9b986c329a2862e59994ed817156c99600d003a4",
+    "src/components/UnifiedPricingPlans.tsx": "1e5336e2b9ffdc77049450fbc80fbd7930050ee1628c30d07acdbbc731134722",
+    "src/app/banner/dashboard/plan/page.tsx": "670490b7d92307afc3208bb04a9fc9529bea1cd0a83bc9d8627bc2b417b67bf9",
+    "scripts/security-regression/verify-billing-plan-resync-mounted.cjs": "ffa46b120eea36e38bf351e1a0e663e6e403da27b0d9409c4218e19ab8ee01b2",
+    "scripts/security-regression/run.cjs": "b0d75ad9c4edefbb7f0960042a6fb2c14c9c30cdabb7802003ba96cff371d12b",
+    "scripts/security-regression/verify-unified-pricing-org.cjs": "b26a0cee1667076b2f21b78a9da83b193842c67098a3f820aa5f3d0f6d108b25"
+  },
+  "scope": "Whole offline security suite, types, Next production build and lint; actual full shared pricing/banner TSX mounted synthetically for43 cases; no real billing or authenticated browser claims"
+}

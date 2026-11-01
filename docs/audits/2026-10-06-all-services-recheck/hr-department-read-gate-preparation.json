@@ -1,0 +1,198 @@
+{
+  "checkedAt": "2026-10-08T18:48:43.485640+00:00",
+  "rootApplied": true,
+  "deployed": false,
+  "productionFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/hr/employees/[id]/edit/page.tsx",
+    "src/app/hr/employees/new/page.tsx",
+    "src/app/hr/settings/page.tsx",
+    "src/components/hr/DepartmentListState.tsx",
+    "src/components/hr/HrAuthenticatedScope.tsx",
+    "src/lib/hr/department-hierarchy.ts",
+    "src/lib/hr/department-list-client.ts",
+    "src/lib/hr/department-pagination.ts",
+    "src/lib/hr/use-department-list.ts",
+    "src/lib/hr/use-page-lifetime.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-hr-employee-admission.cjs",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs",
+    "scripts/security-regression/verify-related-records.cjs"
+  ],
+  "oldGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-release-08915923-b8ae-459b-9b48-e55ec70cca9f",
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-read-release-7de2d4d0-8268-4d0f-acc5-5d2a5a60ba9c",
+  "original176RetainedExactlyInOrder": true,
+  "expected": 192,
+  "added": [
+    [
+      "hr-department-read-hierarchy11",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-hierarchy-boundaries.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-route8",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-candidate.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-transport15",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-paged-transport.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-realPG13",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-read-postgres-supervise.py"
+      ]
+    ],
+    [
+      "hr-department-read-hook8",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-list-hook.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-consumer-mounted12",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-consumer-mounted.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-settings-mounted31",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-paged-mounted.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-settings-native12",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-paged-native.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-consumer-native9",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-consumer-native.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-types11",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-overlay-types.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-legacy-related",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-legacy.cjs",
+        "related"
+      ]
+    ],
+    [
+      "hr-department-read-legacy-access",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-legacy.cjs",
+        "access"
+      ]
+    ],
+    [
+      "hr-department-read-legacy-validation",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-legacy.cjs",
+        "validation"
+      ]
+    ],
+    [
+      "hr-department-read-legacy-cache",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-legacy.cjs",
+        "cache"
+      ]
+    ],
+    [
+      "hr-department-read-loader9",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-paged-legacy-load.cjs"
+      ]
+    ],
+    [
+      "hr-department-read-actualNext80",
+      [
+        "env",
+        "DOYA_USE_INTEGRATED_NEXT=1",
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-read-next-supervise.py"
+      ]
+    ]
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/departments/route.ts": "dbf62d9d4d6f853ba53c6233f663e3524778df68827ab3fd71f5ad26164b47f8",
+    "src/app/hr/employees/[id]/edit/page.tsx": "8da42556cea704c2cb89cee7d44222d936ef9e093b8f9a21349fce8c40f57bbb",
+    "src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "src/app/hr/settings/page.tsx": "e918ed081f42d4d007abf32dce7bedf3bf9fc7c58581d856fd0b0b359fa2deaf",
+    "src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "src/lib/hr/department-hierarchy.ts": "8215b8edd56e57c441686eb363a63be6d7c9f4a8a9c10462a187e90b98ef7281",
+    "src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea",
+    "src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db",
+    "scripts/security-regression/verify-hr-department-access.cjs": "c73df55bda077cf1d186fbf44f5a7beb37864210d5eb0edf0216a6485b37637e",
+    "scripts/security-regression/verify-hr-department-input.cjs": "067516e23976720a39a1da81e1a6be88332e0fffffc236bc553b1a293ec41dba",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs": "a3ca36fae29e0f8b9efd4a0d4f30041691cb68011d7e74333885f87bee29b71e",
+    "scripts/security-regression/verify-hr-employee-admission.cjs": "0386553fac69c232532bd06e716acebde65a29aba727a93da9e54f469d20af35",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs": "369fa5fcce188f767520e16af6fae66db4ad2dfe408e5cac223f6670b0a920a7",
+    "scripts/security-regression/verify-related-records.cjs": "dddb9cdd6a2633434e10a5faffa19e1ebf780f221c32ebd1e40a2fc2bd813e4e"
+  },
+  "scope": "Local11-file read repair includes department pagination, own counts and full employee initial-load error recovery.6 mandatory fixture adaptations and3 original full-page fixtures retain assertions. Fresh192 and exact production release remain pending.",
+  "priorFailedGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-read-release-d5c5f80e-d07b-45c5-9089-5decbab006c7",
+  "priorFailure": "Legacy full-page fixture lacked actual new component imports; product sources unchanged; all original case bodies retained and3 fixtures passed after real-module loading adaptation",
+  "adaptedExistingFullPageFixtures": [
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs",
+      "allOriginalCaseBodiesAndAssertionsRetained": true,
+      "hash": "842c7b622da3e1345a2caa42eab8aaed0dc3db57d2989cd21c58d840071f3f0b"
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs",
+      "allOriginalCaseBodiesAndAssertionsRetained": true,
+      "hash": "3216df03d66181319cec0ad5748f64847be7ab727eefa00830fc867582efd70d"
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-ack.cjs",
+      "allOriginalCaseBodiesAndAssertionsRetained": true,
+      "hash": "7b19c9145f26cc1e9200d0346e72b6c7fe9e84199a2dc9001bac2776f00fd79c"
+    }
+  ],
+  "additionalFixtureRepair": {
+    "allOriginalAdmissionAssertionsRetained": true,
+    "originalDepartmentCountBaselinePinnedTo": "07ab5052af9b8bd29e58bc3564337df7ea77b956",
+    "isolatedRealPG13Passed": true
+  },
+  "mandatoryPreflightStatus": "passed",
+  "initialEmployeeReadRepairIntegrated": true,
+  "consumerMountedCases": 14,
+  "consumerNativeCases": 13
+}

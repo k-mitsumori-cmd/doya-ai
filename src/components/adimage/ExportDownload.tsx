@@ -55,7 +55,7 @@ export default function ExportDownload({ conceptId }: { conceptId: string }) {
     } catch (error) {
       if (alive.current) setMessage(controller.signal.aborted
         ? '取得に時間がかかっています。時間をおいて再試行してください。'
-        : error instanceof Error ? error.message : 'ダウンロードに失敗しました。再試行してください。')
+        : error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'ダウンロードできませんでした。もう一度お試しください。')
     } finally {
       clearTimeout(timeout)
       request.current = null

@@ -1,0 +1,19 @@
+{
+  "passed": 12,
+  "organizationResponseCases": 21,
+  "checks": [
+    "Default organization is server-confirmed before explicit scoped private usage",
+    "Same-tab actual organization selection automatically refreshes actual sidebar to selected organization",
+    "Only matching actor and organization creation notification refreshes usage",
+    "Organization transition aborts pending membership lookup and ignores late old membership",
+    "Late previous-organization usage response never overwrites current display",
+    "No confirmed organization suppresses private usage instead of requesting implicit default",
+    "Duplicate/malformed membership response cannot authorize usage request",
+    "Server organization that mismatches explicit selection cannot authorize usage",
+    "Authentication loading ABA discards old membership and preserves only fresh confirmation",
+    "Actor transition cancels old confirmation and rejects its late reply",
+    "Cross-tab storage event verifies and displays newly selected organization",
+    "Focus retries failed membership read and restores only current confirmed organization usage"
+  ],
+  "scope": "Actual full QuoteSidebar, actual organization helper/hook/parser, common usage panel and bounded transports mounted under React StrictMode. Synthetic auth and API only; no real customer usage, DB, paid provider or billing."
+}

@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-10-31T11:19:12.576Z",
+  "expected": 6,
+  "behaviorPassed": 6,
+  "passed": 6,
+  "cases": [
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "allowed",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    },
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    },
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "allowed",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/organization/route.ts": "c8dbb95e6d67a6668d0b92f40a6f695c4374557a97e1aca20e2465187e3a3ac9",
+    "src/app/api/hr/settings/route.ts": "d858202add20ccc2e0aa73ea1d74464cdf247a591f6c4892fbf19b8fe25aadff",
+    "src/lib/hr/organization-choices.ts": "6a1b8975de15150a7fc7c1c26a460cdf727291f16fbbf9d775b69ef0d32d8b13",
+    "src/lib/private-api-response.ts": "29edd0d0ef89197cb2f040efc4d1a326992a1640990f5ba39838ad60fb7ef2e0"
+  },
+  "scope": "Actual HR organization/settings GET handlers; synthetic auth and DB read boundaries. Read scope and non-admin member filter checked. No customer/production requests, writes or cache leakage demonstrated. Current-source cache policy probe; overlay results are not production verification."
+}

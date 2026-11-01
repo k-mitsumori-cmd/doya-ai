@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { PrismaClient } from '@prisma/client'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 export type DoyaSlideTextTool = 'url-analysis' | 'structure'
@@ -21,6 +21,34 @@ export function doyaSlideTextUsageKey(userId: string, tool: DoyaSlideTextTool): 
   return `doyaslide-text-usage:v1:${tool}:${identity}`
 }
 
+function callPeriod(userId: string, tool: DoyaSlideTextTool, now: Date) {
+  if (!userId.trim()) throw new Error('DoyaSlide text tool identity is required')
+  const limit = DOYASLIDE_TEXT_DAILY_LIMITS[tool]
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('Unknown DoyaSlide text tool')
+  const key = doyaSlideTextUsageKey(userId, tool)
+  const day = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  return { limit, key, day }
+}
+
+/** Allows the operation receipt and its counted attempt to share one transaction. */
+export async function reserveDoyaSlideTextCallInTransaction(
+  userId: string,
+  tool: DoyaSlideTextTool,
+  tx: Prisma.TransactionClient,
+  now = new Date(),
+): Promise<{ used: number; remaining: number }> {
+  const { limit, key, day } = callPeriod(userId, tool, now)
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`
+  const current = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  const value = current?.value || ''
+  if (value && !/^\d{4}-\d{2}-\d{2}:\d+$/.test(value)) throw new Error('DoyaSlide text usage ledger invalid')
+  const used = value.startsWith(`${day}:`) ? Number(value.slice(day.length + 1)) : 0
+  if (!Number.isSafeInteger(used)) throw new Error('DoyaSlide text usage ledger invalid')
+  if (used >= limit) throw new DoyaSlideTextLimitError(limit)
+  await tx.systemSetting.upsert({ where: { key }, create: { key, value: `${day}:${used + 1}` }, update: { value: `${day}:${used + 1}` } })
+  return { used: used + 1, remaining: limit - used - 1 }
+}
+
 /** Reserve before external fetches and provider calls. Failed attempts still count. */
 export async function reserveDoyaSlideTextCall(
   userId: string,
@@ -28,25 +56,6 @@ export async function reserveDoyaSlideTextCall(
   db: PrismaClient = prisma,
   now = new Date(),
 ): Promise<{ used: number; remaining: number }> {
-  if (!userId.trim()) throw new Error('DoyaSlide text tool identity is required')
-  const limit = DOYASLIDE_TEXT_DAILY_LIMITS[tool]
-  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('Unknown DoyaSlide text tool')
-  const key = doyaSlideTextUsageKey(userId, tool)
-  const day = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
-
-  return db.$transaction(async tx => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`
-    const current = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
-    const value = current?.value || ''
-    if (value && !/^\d{4}-\d{2}-\d{2}:\d+$/.test(value)) throw new Error('DoyaSlide text usage ledger invalid')
-    const used = value.startsWith(`${day}:`) ? Number(value.slice(day.length + 1)) : 0
-    if (!Number.isSafeInteger(used)) throw new Error('DoyaSlide text usage ledger invalid')
-    if (used >= limit) throw new DoyaSlideTextLimitError(limit)
-    await tx.systemSetting.upsert({
-      where: { key },
-      create: { key, value: `${day}:${used + 1}` },
-      update: { value: `${day}:${used + 1}` },
-    })
-    return { used: used + 1, remaining: limit - used - 1 }
-  }, { timeout: 15000 })
+  callPeriod(userId, tool, now)
+  return db.$transaction(tx => reserveDoyaSlideTextCallInTransaction(userId, tool, tx, now), { timeout: 15000 })
 }

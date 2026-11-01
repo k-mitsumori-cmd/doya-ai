@@ -1,0 +1,137 @@
+{
+  "checkedAt": "2026-10-07T10:26:46.738805+00:00",
+  "sourceHashes": {
+    "src/lib/adimage/image-operation.ts": "158c050d434dde0abbf9c862d399ab173164135f803d32996f05dd22a0afd6ff",
+    "src/lib/adimage/image-operation-http.ts": "115054a5b0395265ad93d8cb397dc238fc4677bc71d8dad1e563731832793182",
+    "src/lib/adimage/image-budget.ts": "e7ae852ee4c5b462a077dcf3e5779dfc5999c59033a9b5c85f55fc85d87567d6",
+    "src/lib/adimage/access.ts": "f871a79bd698e79cd3c4b8e1071b69747be12bc56fddee129ec97239f1ce14a9",
+    "src/app/api/adimage/concepts/route.ts": "3a044c9e5a9851974dc2fecb3dcbcd2f06db648cf3e26eb785d7f3d3a0cc1c5d",
+    "src/app/api/adimage/concepts/[id]/refine/route.ts": "c36d81c9951164e99313282aaaaaf6749b53ccb194695736bb4e4c8d9d6cec95",
+    "src/app/api/adimage/operations/route.ts": "90f04fcf1c020a789cfe95db4c7e5bc4c20590e9eec32094cc1ff1817e0d2ea1",
+    "src/app/adimage/Tool.tsx": "5d75cae44b4ab22677d850af915c9b5d0d1c4d80e2eb805ba127629d5d44d6ed",
+    "src/lib/adimage/operation-client.ts": "2e92ca7dfdc327d3fbc83473d3fa2dfb9aa28c0a350dccb158ce94f263e16e0e",
+    "src/lib/adimage/use-operation-recovery.ts": "7124e7f71caf46afdc15e20e9b331dfff7b3770d794d86fbdcefe33fb39ccddb"
+  },
+  "typeCheck": {
+    "sessionId": 98613,
+    "exitCode": 0,
+    "command": "npx tsc --noEmit"
+  },
+  "targetedLint": {
+    "command": "npx eslint (7 AdImage changed TS files)",
+    "exitCode": 0,
+    "sessionId": 72310
+  },
+  "targetedRegressions": [
+    {
+      "script": "verify-adimage-image-budget.cjs",
+      "cases": 8,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-adimage-plan-admission.cjs",
+      "cases": 1,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-adimage-quota-reasons.cjs",
+      "cases": 18,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-auth-adimage.cjs",
+      "cases": 31,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-adimage-logo-availability.cjs",
+      "cases": 4,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-adimage-concept-pages.cjs",
+      "cases": 2,
+      "exitCode": 0
+    },
+    {
+      "script": "verify-adimage-operation-http.cjs",
+      "cases": 8,
+      "exitCode": 0
+    }
+  ],
+  "privatePostgres": {
+    "helper": "adimage-operation-helper-postgres-results.json",
+    "helperCases": 29,
+    "actualAPI": "adimage-operation-api-postgres-results.json",
+    "actualAPICases": 27,
+    "bothStoppedExitCode": 0
+  },
+  "scope": "Final frozen local gates passed, including actual Tool/hook/reader native Chrome5 with final compiled CSS. All identities/providers/backend in fixtures synthetic or privatePG; real auth/provider/customer DB/production process-kill E2E not proven. No cohort commit/push/remoteCI/production release yet. All17services2074criteria retained.",
+  "wholeSecurity": {
+    "status": "passed-in-frozen-build",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+    "scope": "npm run build invokes security regression, tsc and next build, all terminal0 with unchanged source"
+  },
+  "mounted": {
+    "hookCases": 13,
+    "hookEvidence": "adimage-operation-recovery-mounted-results.json",
+    "fullToolCases": 6,
+    "fullToolEvidence": "adimage-operation-tool-mounted-results.json",
+    "boundaryHandlerCases": 14,
+    "boundaryScript": "verify-adimage-response-owner.cjs"
+  },
+  "latestTypeCheck": {
+    "sessionId": 98613,
+    "exitCode": 0,
+    "command": "npx tsc --noEmit"
+  },
+  "clientLint": {
+    "exitCode": 0,
+    "sessionId": 47308,
+    "scope": "Current10TS/TSX files before final comments-only Tool edit"
+  },
+  "fullGate": {
+    "folder": "docs/audits/2026-10-06-all-services-recheck/adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+    "state": {
+      "startedAt": "2026-10-07T10:20:55.663697+00:00",
+      "pid": 93078,
+      "head": "1f91455121b5c69d66d5a436af40199e52aff994",
+      "sourceFiles": 2760,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "private-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:20:57.430604+00:00"
+        },
+        {
+          "name": "adimage-helper-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:20:59.202914+00:00"
+        },
+        {
+          "name": "adimage-api-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:21:01.449737+00:00"
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:25:50.717643+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:25:52.529489+00:00"
+        },
+        {
+          "name": "native-chrome",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T10:25:57.735229+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T10:25:58.245988+00:00"
+    }
+  }
+}

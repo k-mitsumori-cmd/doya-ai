@@ -1,6 +1,6 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript'), assert = require('node:assert/strict');
 const { check, results } = require('./load-typescript.cjs');
-const file = 'src/app/doyaslide/[id]/page.tsx';
+const file = 'src/app/(shell)/doyaslide/[id]/page.tsx';
 const source = fs.readFileSync(path.join(process.env.DOYA_TEST_ROOT || process.cwd(), file), 'utf8');
 const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
 const names = ['validSlides', 'validProject', 'readSlideResponse', 'reload', 'ensureOk', 'retryStructure', 'saveLogoConfig', 'exportAs'];
@@ -20,7 +20,7 @@ function fixture(handler, fetcher, overrideReload) {
   const timers = new Map(), success = [], errors = [], requests = [];
   let timerId = 0, pollCallback, pollCleared = false;
   const toast = m => errors.push(m); toast.error = m => errors.push(m); toast.success = m => success.push(m);
-  const context = { id: 'synthetic', selected: slide('https://example.invalid/old.png'), chatInput: state.chatInput, versions: state.versions, versionsError: null, versionsSequence: { current: 0 }, versionsTarget: { current: 's0' }, selectedSlideRef: { current: 's0' }, URL, project: state.project, allDone: true, confirm: () => true, structureBusyRef: { current: false }, exportBusyRef: { current: false }, logoConfigBusyRef: { current: false }, generated: 0, downloadClicks: 0, removedAnchors: 0, runGenerate: async () => { context.generated++; }, document: { createElement: () => ({ click: () => { context.downloadClicks++; }, remove: () => { context.removedAnchors++; } }), body: { appendChild: () => {} } }, AbortController, mountedRef: { current: true }, projectReadSequence: { current: 0 }, projectReadsActive: { current: 0 }, generationBusyRef: { current: false }, slideMutationBusyRef: { current: false }, pollRef: { current: null }, toast,
+  const context = { id: 'synthetic', selected: slide('https://example.invalid/old.png'), chatInput: state.chatInput, versions: state.versions, versionsError: null, versionsSequence: { current: 0 }, versionsTarget: { current: 's0' }, selectedSlideRef: { current: 's0' }, URL, project: state.project, allDone: true, confirm: () => true, confirmDialog: async () => context.confirm(), structureBusyRef: { current: false }, exportBusyRef: { current: false }, logoConfigBusyRef: { current: false }, generated: 0, downloadClicks: 0, removedAnchors: 0, runGenerate: async () => { context.generated++; }, document: { createElement: () => ({ click: () => { context.downloadClicks++; }, remove: () => { context.removedAnchors++; } }), body: { appendChild: () => {} } }, AbortController, mountedRef: { current: true }, projectReadSequence: { current: 0 }, projectReadsActive: { current: 0 }, generationBusyRef: { current: false }, slideMutationBusyRef: { current: false }, pollRef: { current: null }, toast,
     showQuotaNotice: (res, d) => { if (res.status !== 403 || d?.code !== 'LIMIT_REACHED') return false; state.limitMsg = d.error; state.limitUpgradeUrl = d.upgradeUrl === '/doyaslide/pricing' ? d.upgradeUrl : null; return true; },
     setInterval: fn => { pollCallback = fn; return 1; }, stopPoll: () => { pollCleared = true; },
     window: { setTimeout: (fn, ms) => { timers.set(++timerId, { fn, ms }); return timerId; }, clearTimeout: id => timers.delete(id) },

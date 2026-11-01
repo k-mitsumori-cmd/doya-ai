@@ -1,3 +1,5 @@
+const {adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
+const taskCreation=require('./load-typescript.cjs').load('src/lib/promane/task-creation.ts',{'node:crypto':require('node:crypto')});
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 const timeInput = load('src/lib/promane/time-input.ts')
@@ -38,7 +40,9 @@ function fixture(operation, conflict = false) {
   }
   const actions = load('src/lib/promane/actions-tasks.ts', {
     './time-input': timeInput,
-    '@/lib/prisma': { prisma },
+    './task-creation': taskCreation,
+    './task-input': load('src/lib/promane/task-input.ts',{'./time-input':timeInput}),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'user' }),
       requireWritableWorkspace: async () => ({ id: 'workspace' }),
@@ -46,7 +50,7 @@ function fixture(operation, conflict = false) {
     'next/cache': { revalidatePath() {} },
   })
   const call = () => operation === 'create'
-    ? actions.createTask('workspace', { projectId: 'project', title: 'Task' })
+    ? actions.createTask('workspace', { operationId, expectedUserId:'user', projectId: 'project', title: 'Task' })
     : operation === 'move'
       ? actions.moveTask('workspace', 'task', 'done', 0)
       : actions.deleteTask('workspace', 'task')
@@ -70,13 +74,13 @@ function fixture(operation, conflict = false) {
     { description: 'x'.repeat(5001) }, { description: {} },
   ]) {
     const invalid = fixture('create')
-    await assert.rejects(invalid.actions.createTask('workspace', { projectId: 'project', title: 'Task', ...patch }))
+    await assert.rejects(invalid.actions.createTask('workspace', { operationId, expectedUserId:'user', projectId: 'project', title: 'Task', ...patch }))
     await assert.rejects(invalid.actions.updateTask('workspace', 'task', patch))
     assert.equal(invalid.state().writes, 0)
   }
   const exact = fixture('create')
   const text = { title: '題'.repeat(200), description: '説'.repeat(5000) }
-  const created = await exact.actions.createTask('workspace', { projectId: 'project', ...text })
+  const created = await exact.actions.createTask('workspace', { operationId, expectedUserId:'user', projectId: 'project', ...text })
   const updated = await exact.actions.updateTask('workspace', 'task', text)
   assert.equal(created.title, text.title)
   assert.equal(created.description, text.description)

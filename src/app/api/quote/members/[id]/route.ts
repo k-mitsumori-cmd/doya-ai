@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { ROLE_HIERARCHY, type QuoteRole } from '@/lib/quote/types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 type Ctx = { params: Promise<{ id: string }> }
 const ROLES: QuoteRole[] = ['admin', 'manager', 'member']
@@ -25,15 +26,18 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
+        // 会社の役割の上限（ctx の役割）より上には上げない
+        const actorRole = lowerToolRole('quote', actor.role, c.role)
+        if (!actorRole) return { kind: 'forbidden' as const }
         const target = await tx.quoteMember.findFirst({ where: { id: targetId, organizationId: c.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.id === actor.id || target.userId === c.userId) return { kind: 'self' as const }
         const targetRank = ROLE_HIERARCHY[target.role as QuoteRole]
-        if (target.role === 'owner' || targetRank === undefined || targetRank >= ROLE_HIERARCHY[actor.role as QuoteRole]) {
+        if (target.role === 'owner' || targetRank === undefined || targetRank >= ROLE_HIERARCHY[actorRole as QuoteRole]) {
           return { kind: 'peer' as const }
         }
         if (action === 'update') {
-          if (!role || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor.role as QuoteRole]) return { kind: 'role' as const }
+          if (!role || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as QuoteRole]) return { kind: 'role' as const }
           await tx.quoteMember.update({ where: { id: target.id }, data: { role } })
           return { kind: 'updated' as const }
         }
@@ -65,8 +69,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (result.kind === 'self') return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
-  if (result.kind === 'role') return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
-  return NextResponse.json({ ok: true, role })
+  if (result.kind === 'role') return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
+  return NextResponse.json({ ok: true, memberId: p.id, role })
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
@@ -81,5 +85,5 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーは外せません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (result.kind === 'self') return NextResponse.json({ error: '自分自身は外せません' }, { status: 403 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, memberId: p.id })
 }

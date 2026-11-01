@@ -1,0 +1,25 @@
+{
+  "integratedAt": "2026-10-08T06:32:43.146363+00:00",
+  "files": [
+    "src/app/api/aio/organization/route.ts",
+    "src/app/api/aishodan/organizations/route.ts",
+    "src/app/api/hr/organization/route.ts",
+    "src/app/api/kintai/organization/route.ts",
+    "src/app/api/mensetsu/organizations/route.ts",
+    "src/app/api/quote/organizations/route.ts",
+    "src/app/api/sfa/organization/route.ts",
+    "src/app/api/shodan/organization/route.ts",
+    "src/lib/aio/access.ts",
+    "src/lib/aishodan/access.ts",
+    "src/lib/hr/access.ts",
+    "src/lib/kintai/access.ts",
+    "src/lib/mensetsu/access.ts",
+    "src/lib/quote/access.ts",
+    "src/lib/sfa/access.ts",
+    "src/lib/shodan/access.ts"
+  ],
+  "candidatePassed": 187,
+  "previousFullGate": "docs/audits/2026-10-06-all-services-recheck/membership-role-release-7bd6c38f-47c2-445a-a6fd-30afcaf3c524",
+  "previousFullGatePassed": 140,
+  "scope": "Actual private PostgreSQL scalar/composite uniqueness, synthetic users only. No customer rows or production impact proven."
+}

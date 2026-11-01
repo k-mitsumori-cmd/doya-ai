@@ -1,15 +1,16 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { useNewPricing } from '@/components/pricing/useNewPricing'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
+import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import {
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
@@ -32,12 +33,14 @@ function Sym({ name, size = 20, className = '', fill = false, style }: { name: s
  */
 export function UnifiedPricingPlans({
   serviceId,
+  billingOrganization,
   currentPlan,
   planSource = 'account',
   canPurchase = true,
   className,
 }: {
   serviceId: string
+  billingOrganization?: { actor: string; organizationId: string }
   currentPlan?: string | null
   planSource?: 'account' | 'organization'
   canPurchase?: boolean
@@ -46,21 +49,15 @@ export function UnifiedPricingPlans({
   const pathname = usePathname()
   const returnTo = pathname || `/${serviceId}/pricing`
   const trialEligible = useTrialEligible()
+  // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプロの申し込みの代わりに /pricing へ案内する
+  const newPricing = useNewPricing()
 
   // 決済済みなのに反映されていない方の自己回復。押しても二重課金にはならない
   // （/api/stripe/sync/latest は Stripe を読んで DB に写すだけ）。
   // ⚠️ 未ログインの初回訪問者に出すと「反映？何のこと？」となるので、
   //    ログイン済みかつ無料プランの方にだけ見せる。
   const { data: session, status: authStatus } = useSession()
-  const [resyncing, setResyncing] = useState(false)
-  const [resyncMessage, setResyncMessage] = useState<string | null>(null)
 
-  const svc = getServiceById(serviceId)
-  if (!svc) return null
-
-  const freeLimit = svc.pricing?.free?.limit || '無料でお試し'
-  const proLimit = svc.pricing?.pro?.limit || '上限が大幅アップ'
-  const features = svc.features || []
   // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
   // セッションはサーバー側で User.plan を読み直してから返される。
   const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
@@ -69,32 +66,17 @@ export function UnifiedPricingPlans({
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
   const planKnown = planSource === 'organization' ? Boolean(currentPlan) : Boolean(accountPlan)
 
-  const resyncPlan = async () => {
-    setResyncing(true)
-    setResyncMessage(null)
-    try {
-      const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setResyncMessage(
-          res.status === 401
-            ? 'ログインしてからお試しください。'
-            : res.status === 404
-              ? '有効なご契約が見つかりませんでした。お心当たりがある場合はお問い合わせください。'
-              : data?.error || '反映できませんでした。お手数ですがお問い合わせください。'
-        )
-        return
-      }
-      // ⚠️ ここで setState してもリロードが先に走るため文言は描画されない。
-      //    反映できたら黙って画面を更新する（更新後の表示が結果そのもの）。
-      window.location.reload()
-      return
-    } catch {
-      setResyncMessage('反映できませんでした。お手数ですがお問い合わせください。')
-    } finally {
-      setResyncing(false)
-    }
-  }
+  const svc = getServiceById(serviceId)
+  const { run: resyncPlan, busy: resyncing, disabled: resyncDisabled, message: resyncMessage } = useBillingPlanResync({
+    scope: JSON.stringify(['pricing', serviceId, planSource, canPurchase, billingOrganization?.actor, billingOrganization?.organizationId]),
+    enabled: Boolean(svc) && canPurchase && planKnown && plan === 'FREE',
+    keepBusyOnVerified: true,
+    onVerified: () => { window.location.reload() },
+  })
+  if (!svc) return null
+  const freeLimit = svc.pricing?.free?.limit || '無料でお試し'
+  const proLimit = svc.pricing?.pro?.limit || '上限が大幅アップ'
+  const features = svc.features || []
   const isFree = authStatus === 'authenticated' && !isPro && plan === 'FREE'
 
   // 全サービス利用の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
@@ -215,8 +197,16 @@ export function UnifiedPricingPlans({
             <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">{planSource === 'organization' ? '組織でご利用中のプラン' : 'ご利用中のプラン'}</span>
           ) : !canPurchase ? (
             <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">組織の契約変更はオーナーにご相談ください</span>
+          ) : newPricing ? (
+            <Link
+              href="/pricing"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#ffd400] px-6 py-4 text-center text-base font-black text-[#0a2540] shadow-xl ring-1 ring-[#ffe066] transition hover:bg-[#ffdd33]"
+            >
+              料金プランを見る
+            </Link>
           ) : (
             <CheckoutButton
+              billingOrganization={billingOrganization}
               planId={UNIFIED_PRO_PLAN_ID}
               loginCallbackUrl={returnTo}
               variant="secondary"
@@ -226,7 +216,7 @@ export function UnifiedPricingPlans({
               {trialEligible ? '初月無料でプロを試す' : 'プロにアップグレード'}
             </CheckoutButton>
           )}
-          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible ? '初月無料' : '月額のみ'}・追加課金なし</p>
+          <p className="mt-2.5 text-center text-[11px] font-bold text-white/70">いつでも解約OK・{trialEligible && !newPricing ? '初月無料' : '月額のみ'}・追加課金なし</p>
         </div>
       </div>
 
@@ -317,7 +307,8 @@ export function UnifiedPricingPlans({
           <button
             type="button"
             onClick={resyncPlan}
-            disabled={resyncing}
+            disabled={resyncDisabled}
+            aria-busy={resyncing}
             className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
           >
             {resyncing ? '確認しています…' : '課金状態を確認してプランを反映する'}
@@ -327,7 +318,7 @@ export function UnifiedPricingPlans({
             重複してお申し込みいただく必要はありません。
           </p>
           {resyncMessage && (
-            <p className="mt-2 text-xs font-bold text-slate-600">{resyncMessage}</p>
+            <p role="status" className="mt-2 text-xs font-bold text-slate-600">{resyncMessage}</p>
           )}
         </div>
       )}

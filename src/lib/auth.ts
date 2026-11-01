@@ -7,6 +7,7 @@ import { readAttributionFromCookies } from './attribution';
 import { enrollUserInDripSequences } from './drip-enroll';
 import { higherPlan } from './plan-utils';
 import { authLogger } from './auth-logger';
+import { isRecentRegistration } from './registration-classification';
 
 export const authOptions: NextAuthOptions = {
   logger: authLogger,
@@ -27,32 +28,30 @@ export const authOptions: NextAuthOptions = {
         try {
           const existing = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { firstLoginAt: true },
+            select: { firstLoginAt: true, createdAt: true },
           })
           if (!existing) {
             // 新規ユーザー（DB未作成）→ events.createUser に委譲
           } else if (!existing.firstLoginAt) {
-            // 既存だが未スタンプ（過去に取りこぼしたユーザーの救済）→ 記録＋自動エンロール
+            // ログイン情報の補完は新規登録とは別。作成日時から分類する。
             const attr = await readAttributionFromCookies()
-            await prisma.user.update({
-              where: { id: user.id },
+            const isNewRegistration = isRecentRegistration(existing.createdAt?.toISOString())
+            const claimed = await prisma.user.updateMany({
+              where: { id: user.id, firstLoginAt: null },
               data: {
                 firstLoginAt: new Date(),
-                signupService: attr.service,
-                signupSource: attr.source,
+                ...(isNewRegistration ? { signupService: attr.service, signupSource: attr.source } : {}),
               },
             })
-            // 新規登録通知
             sendEventNotification({
-              type: 'signup',
+              type: claimed.count === 1 && isNewRegistration ? 'signup' : 'login',
               userId: user.id,
               userEmail: user.email,
               userName: user.name,
               details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,
             }).catch(() => {})
-
-            // ドリップ配信: 自動エンロール（DB接続エラー時はリトライ）
-            withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
+            // 補完を獲得した処理だけが既存のエンロールを起動する。
+            if (claimed.count === 1) withRetry(() => enrollUserInDripSequences(user.id)).catch(() => {
               console.error('[Drip] Auto-enroll failed:')
             })
           } else {
@@ -82,6 +81,7 @@ export const authOptions: NextAuthOptions = {
               role: true, 
               plan: true,
               firstLoginAt: true,
+              createdAt: true,
               serviceSubscriptions: {
                 select: { serviceId: true, plan: true }
               }
@@ -116,12 +116,15 @@ export const authOptions: NextAuthOptions = {
             ;(session.user as any).openingPlan = svcPlan('opening')
             ;(session.user as any).doyalistPlan = svcPlan('doyalist')
             ;(session.user as any).kintaiPlan = svcPlan('kintai')
-            // 初回ログイン時刻（1時間生成し放題の判定用）
+            // 作成日時は登録計測、初回ログイン日時は既存利用情報として分ける。
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
+            ;(session.user as any).createdAt = dbUser.createdAt?.toISOString() || null
           }
-        } catch (dbErr: unknown) {
+        } catch {
           // eslint-disable-next-line no-console
-          void (console).error('Session callback DB error:', dbErr);
+          void (console).error('Session callback DB error:');
+          ;(session.user as any).createdAt = null
+          ;(session.user as any).firstLoginAt = null
           // フォールバック: userオブジェクトの情報を使用
           ;(session.user as any).id = user.id;
           (session.user as any).role = (user as any).role || 'USER';
@@ -143,24 +146,25 @@ export const authOptions: NextAuthOptions = {
         // 既に signIn 側で処理済みなら二重処理しない（べき等）
         const existing = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { firstLoginAt: true },
+          select: { firstLoginAt: true, createdAt: true },
         })
-        if (existing?.firstLoginAt) return
+        if (!existing || existing.firstLoginAt) return
 
         const attr = await readAttributionFromCookies()
-        await prisma.user.update({
-          where: { id: user.id },
+        const isNewRegistration = isRecentRegistration(existing.createdAt?.toISOString())
+        const claimed = await prisma.user.updateMany({
+          where: { id: user.id, firstLoginAt: null },
           data: {
             firstLoginAt: new Date(),
-            signupService: attr.service,
-            signupSource: attr.source,
+            ...(isNewRegistration ? { signupService: attr.service, signupSource: attr.source } : {}),
           },
-        }).catch(() => {})
+        })
+        if (claimed.count !== 1) return
 
-        // 新規登録通知（どのサービスから獲得したか＋流入経路つき）
+        // 確認できた作成日時と、成功した補完の結果で分類する。
         sendEventNotification({
-          type: 'signup',
-              userId: user.id,
+          type: isNewRegistration ? 'signup' : 'login',
+          userId: user.id,
           userEmail: user.email,
           userName: user.name,
           details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,

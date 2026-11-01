@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T15:46:11.836Z",
+  "passed": 6,
+  "cases": [
+    "owner",
+    "actual-delete-during-signing",
+    "membership-revoked-during-signing",
+    "organization-changed-during-signing",
+    "image-path-changed-during-signing",
+    "stale-processing-timeout"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/shodan/preparations/[id]/route.ts": "426ab461f6d40b1f9e9bce96ed8ced5fb84c4b14a854dba44c45c8cce0fc689e",
+    "src/lib/shodan/access.ts": "3b2d7335200b65ff8ef9c084370fbadf097bfeef6c9cd536a414b9fed76661fe"
+  },
+  "scope": "Actual Shodan GET/DELETE/access, actual Prisma/private Unix-socket PostgreSQL with organization foreign keys. Synthetic authenticated identity and storage signatures. No customer data, provider or email."
+}

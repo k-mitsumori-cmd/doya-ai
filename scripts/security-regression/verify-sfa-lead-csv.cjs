@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const fs = require('node:fs'), vm = require('node:vm'), ts = require('typescript');
 const { parseLeadCsv } = load('src/lib/sfa/lead-csv.ts');
 
 const normalize = (value) => JSON.parse(JSON.stringify(value));
@@ -23,3 +24,29 @@ for (const [csv, expected] of [
 const tooMany = `name\n${Array.from({ length: 501 }, (_, index) => `会社${index}`).join('\n')}`;
 assert.throws(() => parseLeadCsv(tooMany), /500件まで/);
 console.log('PASS SFA lead CSV: quoted newlines, commas, escaped quotes, BOM, and malformed input');
+
+;(async () => {
+  const source = fs.readFileSync('src/app/(shell)/sfa/[orgSlug]/leads/page.tsx', 'utf8');
+  const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let handler;
+  function visit(node) { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'doImport') handler = node.initializer.getText(ast); ts.forEachChild(node, visit); }
+  visit(ast); assert(handler);
+  let calls = 0;
+  const env = {
+    Error,
+    csv: '企業名,メモ\n合成会社,正常', parseLeadCsv,
+    mutations: { active: () => true, creationBlocked: () => false, create: async () => { calls++; return { id: 'synthetic-operation', imported: 1, skipped: 0, skippedRows: [] }; } },
+    importDraft: { current: { revision: 1 } },
+    isSfaClientLeadImport: load('src/lib/sfa/client-response.ts', {
+      '@/lib/org-client-response': load('src/lib/org-client-response.ts'), './task-date': load('src/lib/sfa/task-date.ts'),
+    }).isSfaClientLeadImport,
+    setFormError: value => env.error = value, setImportResult: value => env.result = value,
+    setCsv: value => env.csv = value, setImportOpen() {}, toast: { success() {} }, reload: { current() {} },
+  };
+  const run = vm.runInNewContext(ts.transpileModule('(' + handler + ')', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, env);
+  await run(); assert.match(env.result, /1件を取り込みました/); assert.equal(calls, 1);
+  env.csv = 'name,note\n"閉じていない,値';
+  await run(); assert.equal(env.result, '', 'A failed new import must not retain the previous success result');
+  assert.match(env.error, /引用符が閉じられていません/); assert.equal(calls, 1); assert.equal(env.csv, 'name,note\n"閉じていない,値');
+  console.log('PASS SFA CSV UI callback: a failed new import clears prior success, retains input and sends no request');
+})().catch(error => { console.error(error); process.exitCode = 1; });

@@ -10,6 +10,9 @@ import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, hasMinRole, type QuoteContext, type QuoteRole } from './types'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
+
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
 export { hasMinRole, ROLE_HIERARCHY }
 
@@ -56,7 +59,7 @@ export async function getQuoteContext(orgSlug?: string): Promise<QuoteContext | 
 
   let membership = orgSlug
     ? await prisma.quoteMember.findFirst({
-        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES }, organization: { slug: orgSlug } },
         include: { organization: true },
       })
     : null
@@ -76,19 +79,22 @@ export async function getQuoteContext(orgSlug?: string): Promise<QuoteContext | 
   }
   if (!membership) {
     membership = await prisma.quoteMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
       include: { organization: true },
       orderBy: { createdAt: 'asc' },
     })
   }
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ROLES-2026-10-26.md §4）
+  const role = await ceilToolRole({ tool: 'quote', userId, organizationId: membership.organizationId, toolRole: membership.role })
+  if (!role) return null
 
   return {
     userId,
     organizationId: membership.organizationId,
     organizationName: membership.organization.name,
     organizationSlug: membership.organization.slug,
-    role: membership.role as QuoteRole,
+    role: role as QuoteRole,
   }
 }
 
@@ -97,7 +103,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
   const userId = await resolveUserId()
   if (!userId) return []
   const memberships = await prisma.quoteMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -114,9 +120,10 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.quoteMember.findFirst({
-          where: { userId, status: 'ACTIVE' }, include: { organization: true },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.quoteMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const dup = await tx.quoteOrganization.findUnique({ where: { slug: base } })
@@ -133,4 +140,31 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     }
   }
   throw new Error('Organization creation retry exhausted')
+}
+
+/**
+ * 「材料にする」用に、見積書を1件だけ読む。
+ * 注意: id だけでは読まない。同じ1回の問い合わせの中で「自分が ACTIVE で所属する組織の見積書」に絞る。
+ *       他組織・存在しない・招待中のままは、どれも null（呼び出し側は同じ404にする）。
+ * 注意: 選ぶ項目は最小限。発行者情報（invoiceNo・印影）・confirmedBy・notes は読まない。
+ */
+export async function loadQuoteForHandoff(userId: string, documentId: string) {
+  return prisma.quoteDocument.findFirst({
+    where: {
+      id: documentId,
+      organization: { members: { some: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } } } },
+    },
+    select: {
+      title: true,
+      clientCompany: true,
+      status: true,
+      totalExclTax: true,
+      totalInclTax: true,
+      lineItems: {
+        orderBy: { ord: 'asc' },
+        take: 50,
+        select: { itemName: true, qty: true, unit: true, unitPrice: true },
+      },
+    },
+  })
 }

@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-07T06:04:03.021585+00:00",
+  "status": "released-exact-ci-ready-and-anonymous-publication-passed-private-flows-unproven",
+  "scope": "SFA accounts/contacts server and mounted pages",
+  "confirmed": [
+    "Account/contact requests ignore operationId and create duplicates.",
+    "Fresh actor authority is not held through create.",
+    "Contact relation can become inactive between lookup and create.",
+    "Pages allow repeated same-frame submissions; successful late responses clear drafts without actor/org/version checks.",
+    "Normal records have no exposed edit/delete route or UI; users cannot correct mistaken input."
+  ],
+  "required": [
+    "Add account/contact kinds to durable creation receipts; atomically fresh actor, receipt, relation validation, quota and create. Replay must work at capacity and never resurrect inactive rows.",
+    "Keep quota keyed to actual billing owner, check account admission inside new-create callback after receipt replay; contacts have no separate declared plan count.",
+    "GET and conditional cancellation recover only same actor/org/UUID. All handled responses private/no-store/VaryCookie; sanitized failures.",
+    "Expose versioned PATCH and soft DELETE with authoritative row locks and monotonically increasing updatedAt. Scope every record/related lookup to org and active state.",
+    "Account delete must not strand active contacts/deals: refuse with actionable message until linked active records are detached/handled. Preserve historical activity rows and unrelated fields.",
+    "Contact delete must not strand active deal.contactId references; refuse or explicitly handle per verified current relation policy. Do not silently delete related records.",
+    "Shared bounded transport, durable metadata/session guard, DTO/write-match validators; block same-frame duplicates and unknown retries; preserve in-flight edited form snapshot and actor/org isolation.",
+    "Bounded, scoped list reads with strict row/page/cursor validation; correct query changes and pagination; retain retry and account-options behavior.",
+    "Create/edit/delete controls with Japanese guidance and required confirmations; preserve current ACTIVE-member edit scope pending separately asked policy. No automatic invites/email.",
+    "Synthetic actual API and mounted component cases, actual private PostgreSQL races/rollback, full frozen build/security/type/lint, allowlisted push, exactCI/READY/anonymous-public verification. Authenticated customer/provider flows remain unverified until actually checked."
+  ],
+  "evidence": [
+    "sfa-account-contact-lifecycle-baseline.json",
+    "sfa-crm-client-baseline.json",
+    "sfa-crm-record-helper-results.json"
+  ],
+  "boundaries": [
+    "No customer DB writes/migrations",
+    "No email/invite sends",
+    "No paid AI/provider calls",
+    "Do not widen read/write roles beyond current ACTIVE-member service behavior",
+    "No subagents"
+  ],
+  "localChanges": [
+    "Strict bounded body/fields, required operation UUID and reviewed update version",
+    "Atomic fresh actor/receipt/quota/relation/create and conditional recovery/cancellation",
+    "Versioned edits, soft delete, and refusing deletes with active linked records",
+    "18 helper cases passed with synthetic Prisma rollback; TypeScript and ESLint passed",
+    "Collection POST/GET recovery/DELETE fence and detail GET/PATCH/soft DELETE connected with private/no-store/VaryCookie and sanitized failures",
+    "27 actual helper/HTTP cases, legacy malformed-input/pagination501/quota regressions passed; typecheck and touched-source ESLint passed",
+    "65 input-preservation boundary cases passed using actual CRM helper/HTTP fixture; invalid content still stops before quota admission and writes",
+    "Shared strict account/contact DTO/write-match validation, durable creation metadata, bounded transport and row mutation/recovery connected",
+    "Common scoped CRM pages with create/edit/confirmed soft delete, strict list/pagination/options, newer-draft retention, explicit discard and latest-list review controls",
+    "Quota CTA validates backend billing-owner boolean and exact local pricing path; nonowners and unsafe URLs do not get billing link",
+    "Actual deal detail explicitly clears contactId only on user-selected unlink/save; reviewed version required; name/note/amount/live deal retained",
+    "51 mounted CRM/deal cases and19 actual private PostgreSQL cases passed; PG stopExitCode0; existing shared49/deal13/conversion/score/next-action client regressions passed before final unlink addition (frozen gate reruns all)",
+    "Frozen 2705-source manifest unchanged; full build/security/type and lint exited0"
+  ],
+  "remaining": [
+    "Authenticated actual browser/customer flows, roles policy and other17-service criteria remain unverified"
+  ],
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c",
+  "release": {
+    "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
+    "ciRun": 37580253174,
+    "deployment": "dpl_8TJJu7WBukXhBzSjwpstSKbcT2y2",
+    "anonymousEntries": 17,
+    "assets": 49
+  }
+}

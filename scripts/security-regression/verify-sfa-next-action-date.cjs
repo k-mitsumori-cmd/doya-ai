@@ -3,6 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 let prompt = ''
 const { suggestNextAction } = load('src/lib/sfa/ai.ts', {
+  './lead-score-result': load('src/lib/sfa/lead-score-result.ts'),
   '@seo/lib/gemini': {
     GEMINI_TEXT_MODEL_DEFAULT: 'test-model',
     geminiGenerateJson: async ({ prompt: input }) => {

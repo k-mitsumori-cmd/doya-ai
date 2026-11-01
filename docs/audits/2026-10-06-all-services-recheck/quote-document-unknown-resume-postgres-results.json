@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T19:41:37.501Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "order": "resumed-user-first",
+      "firstStatus": 200,
+      "secondStatus": 409,
+      "lineRows": 1,
+      "winningPrice": 600,
+      "revisionRows": 1
+    },
+    {
+      "order": "delayed-old-first",
+      "firstStatus": 200,
+      "secondStatus": 409,
+      "lineRows": 1,
+      "winningPrice": 500,
+      "revisionRows": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/quote/documents/[id]/route.ts": "5108068aa5d4c5d1821d3930945b20700ebd7dd31ed0beeb660c32dfdd4705e6",
+    "src/lib/quote/document-revision.ts": "ae93932b9e8ab71853ad834f4bfcf161e46d5acf01ae2b2864d480e6d57bdbbc",
+    "src/lib/quote/document.ts": "a9aa22403aaf0b96bf4b5af8d1bae7255f08d8ca73d15c2f01ac13deb6e3e9e9",
+    "src/lib/quote/money.ts": "fa7063d9f7200ad03be960c8dd99de75b2c542fac6674d8ab6305c975da95fcf"
+  },
+  "scope": "Actual conditional Quote PATCH and revision/money/recalculation in isolated Unix-socket PostgreSQL. Two explicit schedules of delayed unknown old request versus later manual resumed save; one winner without duplicate line replacement. Candidate client behavior tested separately; no provider/customer/production writes."
+}

@@ -38,7 +38,7 @@ async function load(token: string) {
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const m = await load(p.token)
-  if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status === 'PENDING' && m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
@@ -60,7 +60,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
   const m = await load(p.token)
-  if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status !== 'PENDING') {
     return NextResponse.json({ error: 'この招待は既に使われています' }, { status: 409 })
   }
@@ -77,7 +77,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
       if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
-      if (invite.role === 'owner') return 'unavailable' as const
+      if (!['admin', 'manager', 'member'].includes(invite.role)) return 'unavailable' as const
       const already = await tx.mensetsuMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       if (already) {

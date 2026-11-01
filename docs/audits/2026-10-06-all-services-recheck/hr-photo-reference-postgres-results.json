@@ -1,0 +1,68 @@
+{
+  "checkedAt": "2026-10-07T17:07:07.570Z",
+  "passed": 14,
+  "cases": [
+    {
+      "field": "photoUrl",
+      "scenario": "foreign-photo"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "external-photo"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "inline-photo"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "invalid-type"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "own-photo"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "clear-photo"
+    },
+    {
+      "field": "photoUrl",
+      "scenario": "unchanged-legacy"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "foreign-photo"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "external-photo"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "inline-photo"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "invalid-type"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "own-photo"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "clear-photo"
+    },
+    {
+      "field": "thumbnailUrl",
+      "scenario": "unchanged-legacy"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/route.ts": "82da29a0bdcb94c2d882a5ab27c537133c3d8109255eb9f032995fe2f1a408eb",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598"
+  },
+  "scope": "Actual PATCH and Prisma with isolated Unix-socket PostgreSQL; foreign/external/inline/invalid references and own/clear/unchanged legacy compatibility. No storage requests/customer data/production writes."
+}

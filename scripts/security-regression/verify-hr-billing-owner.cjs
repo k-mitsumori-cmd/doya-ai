@@ -3,7 +3,8 @@ const { load } = require('./load-typescript.cjs');
 
 const HrMemberRole = { OWNER: 'OWNER', ADMIN: 'ADMIN' };
 const { getOrgPlanLimits } = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: {} } });
-assert.deepEqual({ ...getOrgPlanLimits('BUNDLE') }, { maxEmployees: 100, maxAiUsage: -1, maxMembers: -1 });
+// 2026-10-18: 有料でも AI を無制限にしない（PRO・BUNDLE は月100回）
+assert.deepEqual({ ...getOrgPlanLimits('BUNDLE') }, { maxEmployees: 100, maxAiUsage: 100, maxMembers: -1 });
 let role = 'ADMIN';
 let ctxUserId = 'u1';
 let customerCalls = 0;
@@ -57,6 +58,7 @@ const portal = load('src/app/api/hr/billing/portal/route.ts', {
   },
 });
 const generic = load('src/app/api/stripe/checkout/route.ts', {
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'next/server': { NextResponse: Response },
   'next-auth': common['next-auth'],
   '@/lib/auth': common['@/lib/auth'],

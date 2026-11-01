@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-07T04:54:55.523374+00:00",
+  "pid": 5545,
+  "head": "6956f5b641f97289f0b346dda2e4501ccaeadba0",
+  "sourceFiles": 2692,
+  "status": "interrupted-for-source-correction",
+  "gates": [],
+  "reason": "Add wrapping to saved result panel before release to prevent long company names or provider text from overflowing narrow screens. Not an observation timeout or test failure.",
+  "endedAt": "2026-10-07T04:57:25.581315+00:00"
+}

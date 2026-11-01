@@ -1,0 +1,332 @@
+'use client'
+
+// ============================================
+// ドヤ見積もりAI 見積書の詳細・確定・PDF
+// ============================================
+// 商談の場で開く画面。確定してPDFを出すまでが1画面で終わる。
+//
+// ⚠️ 「確定」は人の明示操作。下書きのPDFには「社内確認用」の透かしが入る。
+//    AIが出した金額を、人が見る前に客先へ渡させないための設計。
+
+import Link from 'next/link'
+import { useQuoteDocumentDetail } from '@/lib/quote/use-document-detail'
+import { useParams } from 'next/navigation'
+import { useEffect } from 'react'
+import { useNotice } from '@/components/notice/NoticeProvider'
+import { yen } from '@/lib/quote/money'
+import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
+import { DoyaKun } from '@/components/lp'
+import QuotePageHeading from '@/components/quote/QuotePageHeading'
+import { Button as DsButton, ErrorNotice } from '@/components/ds'
+import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
+
+// 新しい見た目で、キーボードで移ったときに見える枠（UI 品質 a11y）
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2'
+
+const SOURCE_STYLE: Record<string, string> = {
+  own_price: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  market: 'bg-blue-50 text-blue-700 border-blue-200',
+  competitor: 'bg-amber-50 text-amber-700 border-amber-200',
+  manual: 'bg-slate-100 text-slate-600 border-slate-200',
+  ai_estimate: 'bg-brand-50 text-brand-600 border-brand-100',
+  unknown: 'bg-rose-50 text-rose-700 border-rose-200',
+}
+
+export default function QuoteDocumentPage() {
+  const params = useParams<{ id: string }>()
+  const id = params?.id
+  const { doc, issuer, loading, saving, unknown, error, message, items, clientCompany, clientPerson,
+    discountType, discountValue, notes, paymentTerms, deliveryTerms, setClientCompany, setClientPerson,
+    setDiscountType, setDiscountValue, setNotes, setPaymentTerms, setDeliveryTerms, updateItem,
+    save, load, canApprove, pdfUrl, undoLastSave } = useQuoteDocumentDetail(id)
+  // (14) 保存できたら、画面の上の文に加えてトーストでも知らせる（旗 GUIDE_POPUPS_ROLLOUT の内側だけ。off なら何もしない）
+  const notice = useNotice()
+  // (7) 最近作った見積書として記録する（次のツールで「材料にしますか」と出すため。中身は残さない）
+  useEffect(() => {
+    if (doc?.id) notice.rememberArtifact({ kind: 'quote', id: doc.id })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc?.id])
+  useEffect(() => {
+    if (!message) return
+    // 「保存しました」のときだけ、6秒のあいだ「取り消す」を出す（保存の前の内容に戻す）
+    if (message === '保存しました') notice.notify({ title: message, sub: 'PDF は保存した内容で作られます', action: { label: '取り消す', onClick: () => { void undoLastSave() } }, durationMs: 6000 })
+    else notice.notify({ title: message, durationMs: 4000 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
+        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
+        <DoyaKun mood="working" size={88} />
+        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
+      </div>
+    )
+  }
+  if (!doc) {
+    // 新しい見た目: 生の文言は出さず「何が起きたか・どうするか」を出す（S-20）。
+    // ⚠️ 共通の hook は状態コードを返さないので、文言から種類を決める（error-copy.ts）
+    const kind = quoteErrorKind(0, error || '見つかりません')
+    const copy = quoteErrorCopy(kind, '見積書')
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+        <ErrorNotice what={copy.what} how={copy.how} onRetry={kind === 'failed' ? () => void load() : undefined} retryLabel="もう一度読み込む" />
+        <div className="flex flex-wrap gap-2">
+          {kind === 'login'
+            ? <DsButton href={`/auth/signin?callbackUrl=${encodeURIComponent(`/quote/documents/${id ?? ''}`)}`} icon="CircleUser">ログインし直す</DsButton>
+            : kind === 'limit'
+              ? <DsButton href="/quote/pricing" icon="CreditCard">料金プランを見る</DsButton>
+              : <DsButton href="/quote" variant="secondary" icon="Receipt">見積書の一覧へ戻る</DsButton>}
+        </div>
+      </div>
+    )
+  }
+
+  const hasUndecided = items.some((i) => i.priceSource === 'unknown' || i.unitPrice <= 0)
+  const pdfUnavailable = !pdfUrl
+
+
+  return (
+    <div className="pb-24">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <Link href="/quote" className={`inline-flex min-h-11 items-center rounded ${FOCUS} text-xs text-slate-500 hover:underline font-semibold`}>← 見積もり一覧</Link>
+            <QuotePageHeading className="truncate text-base font-bold text-slate-900">{doc.quoteNo}</QuotePageHeading>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              doc.status === 'draft' ? 'bg-slate-100 text-slate-600'
+              : doc.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-blue-50 text-blue-700'
+            }`}>
+              {QUOTE_STATUS_LABEL[doc.status] || doc.status}
+            </span>
+            <button
+              onClick={() => save()}
+              disabled={saving || unknown || doc.status !== 'draft'}
+              className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold`}
+            >
+              {saving ? '保存中...' : '保存'}
+            </button>
+            {pdfUnavailable ? (
+              <button disabled aria-describedby="quote-pdf-status" aria-label="PDFを開く"
+                className="min-h-11 rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white opacity-40">
+                PDF
+              </button>
+            ) : <a
+              href={pdfUrl || undefined}
+              target="_blank"
+              rel="noopener"
+              aria-label="PDFを開く（新しいタブ）"
+              className={`inline-flex min-h-11 items-center ${FOCUS} rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white`}
+            >
+              PDF
+            </a>}
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+        {message && <p role="status" className="text-sm font-semibold text-emerald-700">{message}</p>}
+        {unknown && <div role="status" className="space-y-2 text-sm font-semibold text-amber-800">
+          <p>保存結果が未確認のため再送信を停止しています。</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <button onClick={() => void load()} className={`min-h-11 text-left ${FOCUS} underline`}>再読み込みして確認する</button>
+            <button onClick={() => void load(true)} className={`min-h-11 text-left ${FOCUS} underline`}>最新内容を読み込んで編集を再開</button>
+          </div>
+          <p className="text-xs font-normal">入力内容は保持します。保存は内容をご確認後に操作してください。</p>
+        </div>}
+        {error && (() => {
+          // 新しい見た目: 権限・ログイン・上限は決まった文言に置き換える。入力の直し方（400・409）はそのまま見せる
+          const kind = quoteErrorKind(0, error)
+          const copy = kind === 'failed' || kind === 'missing' ? { what: error, how: unknown ? '' : '保存済みの内容を読み込み直すと、最新の状態を確認できます。' } : quoteErrorCopy(kind, '見積書')
+          return <ErrorNotice what={copy.what} how={copy.how || undefined} onRetry={unknown ? undefined : () => void load()} retryLabel="読み込み直す" />
+        })()}
+        {pdfUnavailable && (
+          <p id="quote-pdf-status" role="status" className="text-sm font-semibold text-amber-800">
+            {saving ? '保存中です。完了するとPDFを開けます。'
+              : error ? 'PDFを開く前に、保存をやり直すか画面を再読み込みして状態をご確認ください。'
+              : '未保存の変更があります。保存してからPDFを開いてください。'}
+          </p>
+        )}
+
+        {doc.status === 'draft' && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
+            この見積書は下書きです。PDFには「社内確認用」の透かしが入ります。内容を確認のうえ確定してください。
+          </div>
+        )}
+        {doc.status !== 'draft' && (
+          <p className="text-sm text-slate-600">内容を編集する場合は、下の「下書きに戻す」を押してください。</p>
+        )}
+        {!issuer && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
+            発行元情報が未設定です。このままPDFを出力すると、自社名の欄は手書き用の空欄になります。
+            <Link href="/quote/settings" className={`ml-1 font-bold underline ${FOCUS}`}>発行元設定</Link>
+          </div>
+        )}
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">宛先</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <input disabled={saving || unknown || doc.status !== 'draft'} aria-label="会社名" value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="会社名"
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+            <input disabled={saving || unknown || doc.status !== 'draft'} aria-label="ご担当者名" value={clientPerson} onChange={(e) => setClientPerson(e.target.value)} placeholder="ご担当者名"
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">明細</h2>
+          <div className="mt-3 space-y-3">
+            {items.map((it) => (
+              <div key={it.id} className="rounded-xl border border-slate-200 p-3 sm:p-4">
+                <input disabled={saving || unknown || doc.status !== 'draft'} aria-label="品目名" value={it.itemName} onChange={(e) => updateItem(it, { itemName: e.target.value })}
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none" />
+                <textarea disabled={saving || unknown || doc.status !== 'draft'} aria-label="内訳・含まれるもの" value={it.spec || ''} onChange={(e) => updateItem(it, { spec: e.target.value })} rows={2}
+                  placeholder="内訳・含まれるもの"
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold" />
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <label className="text-xs font-semibold">
+                    <span className="mb-1 block text-slate-500">数量</span>
+                    <input disabled={saving || unknown || doc.status !== 'draft'} value={it.qty} inputMode="numeric"
+                      onChange={(e) => {
+                        const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                        const v = raw.replace(/,/g, '')
+                        if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                        updateItem(it, { qty: Math.max(1, Number(v) || 1) })
+                      }}
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+                  </label>
+                  <label className="text-xs font-semibold">
+                    <span className="mb-1 block text-slate-500">単位</span>
+                    <input disabled={saving || unknown || doc.status !== 'draft'} value={it.unit} onChange={(e) => updateItem(it, { unit: e.target.value })}
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+                  </label>
+                  <label className="text-xs font-semibold">
+                    <span className="mb-1 block text-slate-500">単価</span>
+                    <input disabled={saving || unknown || doc.status !== 'draft'} value={it.unitPrice || ''} inputMode="numeric" placeholder="要見積"
+                      onChange={(e) => {
+                        const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                        const v = raw.replace(/,/g, '')
+                        if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                        // 人が金額を変えたら出所ラベルも「手入力」に揃える
+                        updateItem(it, { unitPrice: v === '' ? 0 : Number(v), priceSource: 'manual', sourceRef: '手入力' })
+                      }}
+                      className="w-28 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+                  </label>
+                  <div className="text-xs font-semibold">
+                    <span className="mb-1 block text-slate-500">金額</span>
+                    <span className="block py-1.5 text-sm font-bold text-slate-900">
+                      {it.unitPrice > 0 ? yen(it.qty * it.unitPrice) : '要見積'}
+                    </span>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${SOURCE_STYLE[it.priceSource] || SOURCE_STYLE.manual}`}>
+                    {PRICE_SOURCE_LABEL[it.priceSource as PriceSource] || it.priceSource}
+                  </span>
+                  {it.rangeMin != null && it.rangeMax != null && (
+                    <span className="text-[11px] text-slate-500">相場 {yen(it.rangeMin)}〜{yen(it.rangeMax)}</span>
+                  )}
+                </div>
+                {it.sourceRef && <p className="mt-2 text-[11px] text-slate-500">根拠: {it.sourceRef}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">値引き・条件</h2>
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold">
+              <span className="mb-1 block text-slate-500">値引き</span>
+              <select disabled={saving || unknown || doc.status !== 'draft'} value={discountType} onChange={(e) => setDiscountType(e.target.value)}
+                className="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold">
+                <option value="">なし</option>
+                <option value="rate">率（%）</option>
+                <option value="amount">金額（円）</option>
+              </select>
+            </label>
+            {discountType && (
+              <label className="text-xs font-semibold">
+                <span className="mb-1 block text-slate-500">{discountType === 'rate' ? '割引率' : '割引額'}</span>
+                <input disabled={saving || unknown || doc.status !== 'draft'} value={discountValue} inputMode="numeric"
+                  onChange={(e) => {
+                    const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                    const v = raw.replace(/,/g, '')
+                    if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > (discountType === 'rate' ? 100 : 2147483647))) return
+                    setDiscountValue(v)
+                  }}
+                  className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+              </label>
+            )}
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold">
+              <span className="mb-1 block text-slate-500">納期</span>
+              <span className={`mb-1 block text-xs ${deliveryTerms.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {deliveryTerms.length} / 2,000文字{deliveryTerms.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+              <textarea disabled={saving || unknown || doc.status !== 'draft'} value={deliveryTerms} onChange={(e) => setDeliveryTerms(e.target.value)} rows={2} aria-invalid={deliveryTerms.length > 2000 || undefined}
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+            </label>
+            <label className="text-xs font-semibold">
+              <span className="mb-1 block text-slate-500">お支払い条件</span>
+              <span className={`mb-1 block text-xs ${paymentTerms.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {paymentTerms.length} / 2,000文字{paymentTerms.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+              <textarea disabled={saving || unknown || doc.status !== 'draft'} value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2} aria-invalid={paymentTerms.length > 2000 || undefined}
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+            </label>
+          </div>
+          <label className="mt-3 block text-xs font-semibold">
+            <span className="mb-1 block text-slate-500">備考</span>
+              <span className={`mb-1 block text-xs ${notes.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {notes.length} / 2,000文字{notes.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+            <textarea disabled={saving || unknown || doc.status !== 'draft'} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} aria-invalid={notes.length > 2000 || undefined}
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
+          </label>
+        </section>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="space-y-1.5 text-sm font-semibold">
+            <div className="flex justify-between text-slate-600">
+              <span>税抜合計</span><span className="font-semibold text-slate-900">{yen(doc.totalExclTax)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>消費税</span><span className="font-semibold text-slate-900">{yen(doc.taxAmount)}</span>
+            </div>
+            <div className="flex items-baseline justify-between border-t border-slate-200 pt-2">
+              <span className="font-bold text-slate-900">合計（税込）</span>
+              <span className="text-2xl font-bold text-[#0066ff]">{yen(doc.totalInclTax)}</span>
+            </div>
+          </div>
+          {hasUndecided && (
+            <p className="mt-2 text-[11px] text-rose-600">「要見積」の品目は合計に含まれていません。</p>
+          )}
+          <p className="mt-2 text-[11px] text-slate-500">保存すると合計が再計算されます。</p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {doc.status === 'draft' ? (
+              <button onClick={() => save({ status: 'confirmed' })} disabled={saving || unknown || !canApprove}
+                className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-40`}>
+                内容を確認して確定する
+              </button>
+            ) : (
+              <button onClick={() => save({ status: 'draft' })} disabled={saving || unknown || !canApprove}
+                className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold`}>
+                下書きに戻す
+              </button>
+            )}
+            {doc.status === 'confirmed' && (
+              <button onClick={() => save({ status: 'sent' })} disabled={saving || unknown || !canApprove}
+                className={`min-h-11 whitespace-nowrap ${FOCUS} rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-40`}>
+                送付済みにする
+              </button>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}

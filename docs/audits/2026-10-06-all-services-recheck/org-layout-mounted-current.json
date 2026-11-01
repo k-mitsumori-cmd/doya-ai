@@ -1,0 +1,32 @@
+{
+  "passed": 26,
+  "checks": [
+    "hr: Same-actor session object refresh preserves draft and does not refetch",
+    "hr: SDK loading keeps draft mounted and hidden, then restores it",
+    "hr: Same-actor plan refresh preserves draft while checking",
+    "hr: Background failure disables the retained view and retry preserves draft",
+    "hr: New actor hides previous private child synchronously",
+    "hr: ABA actor return cannot resurrect old organization or draft",
+    "hr: Late prior actor response cannot replace current child",
+    "hr: Missing identity and signed-out stale session cannot display private child",
+    "hr: Timeout on a new actor stays unknown and never opens onboarding",
+    "hr: Verified absence of organization opens onboarding",
+    "hr: Malformed permission payload fails without granting an editable view",
+    "hr: Route-triggered permission refresh preserves existing child state",
+    "hr: Unmount cancels read and removes focus listener",
+    "kintai: Same-actor session object refresh preserves draft and does not refetch",
+    "kintai: SDK loading keeps draft mounted and hidden, then restores it",
+    "kintai: Same-actor plan refresh preserves draft while checking",
+    "kintai: Background failure disables the retained view and retry preserves draft",
+    "kintai: New actor hides previous private child synchronously",
+    "kintai: ABA actor return cannot resurrect old organization or draft",
+    "kintai: Late prior actor response cannot replace current child",
+    "kintai: Missing identity and signed-out stale session cannot display private child",
+    "kintai: Timeout on a new actor stays unknown and never opens onboarding",
+    "kintai: Verified absence of organization opens onboarding",
+    "kintai: Malformed permission payload fails without granting an editable view",
+    "kintai: Route-triggered permission refresh preserves existing child state",
+    "kintai: Unmount cancels read and removes focus listener"
+  ],
+  "scope": "Actual HR/Kintai layouts, bounded reader and real session/route React contexts under StrictMode; synthetic child drafts and organization replies only. No live membership, role, HR or clock writes."
+}

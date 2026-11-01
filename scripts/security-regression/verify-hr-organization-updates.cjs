@@ -1,3 +1,4 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
@@ -16,7 +17,8 @@ function fixture(routePath, method, role = 'ADMIN', failSave = false) {
     hasMinRole: (actual) => actual === 'ADMIN' || actual === 'OWNER',
   };
   const api = load(routePath, {
-    'next/server': { NextResponse: Response },
+    '@/lib/hr/organization-choices': load('src/lib/hr/organization-choices.ts', { 'node:crypto': require('node:crypto'), './types': load('src/lib/hr/types.ts') }),
+    '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => null },
     '@prisma/client': { Prisma: { DbNull: 'DB_NULL' } },
     '@/lib/auth': { authOptions: {} },

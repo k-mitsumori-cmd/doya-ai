@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-06T17:33:28.591409+00:00",
+  "finding": "Validated banner quota refresh and quota rejection did not update the persistent usage sidebar.",
+  "baseline": "banner-sidebar-refresh-baseline.json",
+  "current": "banner-sidebar-refresh-current.json",
+  "fix": [
+    "Emit actor-scoped banner usage events only after a validated current-scope response",
+    "Subscribe the banner sidebar and ignore other-actor or actor-less banner events"
+  ],
+  "crosschecks": [
+    "banner-sidebar-quota-crosscheck.json",
+    "banner-sidebar-panel-crosscheck.json"
+  ],
+  "scope": "Actual hook/panel integration with synthetic responses; authenticated production generation remains unverified. Other 8 usage-panel services still require completion-wiring audit.",
+  "fullGate": "banner-sidebar-refresh-release-03151306-ea54-4922-aff1-1b4439ccbea8",
+  "localState": "Full build/lint gate passed with 2563 unchanged runtime inputs"
+}

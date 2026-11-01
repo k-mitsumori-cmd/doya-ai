@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-07T16:04:47.991Z",
+  "passed": 8,
+  "cases": [
+    {
+      "service": "adimage",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "scenario": "public"
+    },
+    {
+      "service": "adimage",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adimage",
+      "scenario": "metadata-stall"
+    },
+    {
+      "service": "shodan",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "scenario": "public"
+    },
+    {
+      "service": "shodan",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "shodan",
+      "scenario": "metadata-stall"
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/generate.ts": "1ce7e9539d1f3931874ba1ddebb3bdf595ddcf37104b7200ede128aa1301cee0",
+    "src/lib/shodan/slide-image.ts": "f677fc48c65d676700e5cc72096588b85cd80fc762c20792558371bea6dd28f6",
+    "src/lib/private-storage-bucket.ts": "91200a12a8f9babbe44225c39265539409b157ddb2da3059617e4f9823f43744"
+  },
+  "scope": "Actual generators/storage/privacy helper with synthetic Supabase/provider. Unsafe metadata blocks before simulated provider or upload. No paid or external calls."
+}

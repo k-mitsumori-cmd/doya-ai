@@ -38,16 +38,16 @@ export default function AiInsightPanel({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200"
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 to-brand-50 border border-indigo-200"
     >
       {/* Header stripe */}
-      <div className="h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+      <div className="h-1 bg-gradient-to-r from-indigo-400 via-brand-300 to-brand-500" />
 
       <div className="p-5">
         {/* Title + AI label */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="material-symbols-outlined text-2xl bg-gradient-to-r from-indigo-500 via-brand-400 to-brand-600 bg-clip-text text-transparent">
               auto_awesome
             </span>
             {title && (
@@ -76,7 +76,7 @@ export default function AiInsightPanel({
         ) : (
           <>
             <div className="flex gap-3">
-              <div className="flex-1 text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
+              <div className="flex-1 min-w-0 break-words text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
                 {content}
               </div>
               {content && (

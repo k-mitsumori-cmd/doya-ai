@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-31T11:13:17.914Z",
+  "passed": 6,
+  "expected": 6,
+  "checks": [
+    "Entry loads bounded GET-only membership context and associates URL label",
+    "Pending operation fences Enter and keeps explicit cancel enabled in both views",
+    "Recovered result uses dashboard path without automatic scan flag",
+    "Only fresh confirmed completion requests first scan; recovered completion does not",
+    "Membership timeout exits spinner without a hidden quick-start mutation",
+    "Actor switch aborts prior membership request and excludes delayed redirect"
+  ],
+  "sourceHashes": {
+    "src/app/(shell)/aio/Entry.tsx": "20b3026308ccccc94171f418572c10afca2bb69f5565b4d7e2335db373e33987",
+    "src/app/(shell)/aio/[orgSlug]/scan/page.tsx": "95bcf1c1be9669e0689b919bb4ce2a431b28db32d724d20508c418f50e8a59b1",
+    "src/components/aio/quick-start-status.tsx": "702c32f1f242ca3d59d511cfe5a59ae4043c38f155f58ea0966158b63c25644f",
+    "scripts/security-regression/verify-aio-quick-start-view-mounted.cjs": "3b5886516d824d32f4ea368ad67380de90c682be326beb277b4d42deaf6a64b7"
+  },
+  "scope": "Mounted actual integrated Entry/Scan/status with real bounded membership reader, synthetic quick-start hook and router. Hook behavior separately covered20 cases. No native/Next/production proof."
+}

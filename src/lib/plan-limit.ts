@@ -38,6 +38,16 @@ export const FREE_LIMITS = {
   mensetsuSessions: 3,
   /** 質問リンクの作成回数（累計）。1回＝リンク2本＋バナー画像3枚 */
   asklinkRuns: 3,
+  /** ポップアップの提案回数（累計）。1回＝サイトの読み取り＋2〜3案 */
+  popupProposals: 3,
+  /** ポップアップを出すサイトの登録数（累計） */
+  popupSites: 1,
+  /** 展示会プランのAI作成回数（累計）。1回＝サイトの読み取り＋LLM3回（解析・ブース・制作物）。画像は作らない */
+  tenjikaiPlans: 3,
+  /** 社内インタビュー記事の生成回数（累計）。1回＝事実の抽出＋記事1本 */
+  shanaiArticles: 3,
+  /** 社内インタビューで文字起こしした録音の件数（累計）。1件＝最大90分 */
+  shanaiTranscripts: 3,
 } as const
 
 /**
@@ -58,6 +68,16 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   mensetsuTemplates: null,
   // 1回で画像3枚（作り直し込みで最大9枚）。画像生成の従量課金が直接効く
   asklinkRuns: 30,
+  // 1回でLLMを3〜7回（読み取り1＋質問リンク2〜6＋文言1）。画像は作らない
+  popupProposals: 30,
+  // 登録するだけで実費が出ない
+  popupSites: null,
+  // 1回でLLMを3回（解析1＋ブース1＋制作物1）。画像は作らない
+  tenjikaiPlans: 30,
+  // テキスト生成のみ（文字起こしは録音1本ごとに別途。記事の作り直しもここで数える）
+  shanaiArticles: 30,
+  // 音声の文字起こし（AssemblyAI の従量課金が直接効く）
+  shanaiTranscripts: 30,
 }
 
 /** ENTERPRISE の月次上限。個別契約のため広めに取るが、無制限にはしない */
@@ -69,7 +89,26 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   aishodanProducts: null,
   mensetsuTemplates: null,
   asklinkRuns: 100,
+  popupProposals: 100,
+  popupSites: null,
+  tenjikaiPlans: 100,
+  shanaiArticles: 100,
+  shanaiTranscripts: 100,
 }
+
+/**
+ * ドヤHR の AI（評価コメント・1on1 要約）の月次上限。組織単位で数える。
+ * ⚠️ 実装は src/lib/hr/billing.ts の getOrgPlanLimits。値を変えたら両方と services.ts の表示をそろえる。
+ * ⚠️ 2026-10-18 まで PRO・ENTERPRISE は無制限だった。無制限にしない（実費が青天井になる）。
+ */
+export const HR_AI_MONTHLY_LIMITS = { FREE: 3, LIGHT: 30, PRO: 100, ENTERPRISE: 500 } as const
+
+/**
+ * ドヤ営業管理（SFA）の AI（スコア・次の一手）の月次上限。組織単位で、2 種類の AI が同じ枠を使う。
+ * ⚠️ 実装は src/lib/sfa/ai-limit.ts。値を変えたら両方と services.ts の表示をそろえる。
+ * ⚠️ 2026-10-18 まで PRO・ENTERPRISE は無制限だった。無制限にしない。
+ */
+export const SFA_AI_MONTHLY_LIMITS = { FREE: 20, LIGHT: 300, PRO: 1000, ENTERPRISE: 5000 } as const
 
 export type FreeLimitKey = keyof typeof FREE_LIMITS
 

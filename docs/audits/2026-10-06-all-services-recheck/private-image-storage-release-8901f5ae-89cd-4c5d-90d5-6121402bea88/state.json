@@ -1,0 +1,131 @@
+{
+  "startedAt": "2026-10-07T16:04:18.768785+00:00",
+  "pid": 29029,
+  "head": "2d81675904b8632b54eb8b9d9b40279cc0655608",
+  "sourceFiles": 2817,
+  "status": "passed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:20.583212+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:22.923993+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:25.626121+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:28.246089+00:00"
+    },
+    {
+      "name": "analysis-budget-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:29.765331+00:00"
+    },
+    {
+      "name": "analysis-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:34.896407+00:00"
+    },
+    {
+      "name": "logo-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:36.703146+00:00"
+    },
+    {
+      "name": "logo-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:38.565505+00:00"
+    },
+    {
+      "name": "result-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:39.952331+00:00"
+    },
+    {
+      "name": "read-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:41.838560+00:00"
+    },
+    {
+      "name": "route-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:43.172318+00:00"
+    },
+    {
+      "name": "persona-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:44.213000+00:00"
+    },
+    {
+      "name": "seo-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:45.258758+00:00"
+    },
+    {
+      "name": "shodan-private-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:46.334787+00:00"
+    },
+    {
+      "name": "shodan-profile-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:47.416223+00:00"
+    },
+    {
+      "name": "private-bucket-policy",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:47.774631+00:00"
+    },
+    {
+      "name": "private-provider-preflight",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:47.996110+00:00"
+    },
+    {
+      "name": "private-compose",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:04:48.205142+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:09:53.144887+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:10:03.204496+00:00"
+    },
+    {
+      "name": "auth-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:10:11.149064+00:00"
+    },
+    {
+      "name": "native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:10:19.801023+00:00"
+    },
+    {
+      "name": "logo-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:10:24.787117+00:00"
+    },
+    {
+      "name": "logo-native-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T16:10:30.888084+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T16:10:31.172686+00:00"
+}

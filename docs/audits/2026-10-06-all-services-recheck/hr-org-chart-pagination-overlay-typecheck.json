@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-08T16:52:52.999Z",
+  "expectedOverlayFiles": 6,
+  "overlayFiles": [
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts",
+    "src/app/hr/org-chart/page.tsx",
+    "src/components/hr/OrgChartView.tsx",
+    "src/lib/hr/org-chart-pagination.ts",
+    "src/lib/hr/org-chart-paged-client.ts"
+  ],
+  "passed": true,
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/app/api/kintai/departments/route.ts": "3c70e0ec4c917a4473c750af6f15a0fbb1c8ad2be56c78c4939b22a8bed9ef84",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/app/hr/org-chart/page.tsx": "7ebb3876c2e40bcd31546befa48b62f75c7a7f9d993228d7f48e36e83d1feb88",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/components/hr/OrgChartView.tsx": "3875aaf263605ff8cb03dd296ecd426b557df58dc0572c1b2138038ffdf923e1",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/lib/hr/org-chart-pagination.ts": "05fee7aeae787ad1d0fe0ff01ab3c7bd8bbed51882d013d060000a813261283f",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay/src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9"
+  },
+  "scope": "Whole-root TypeScript program with six virtual overlay files; no emit and no root source mutation. Not integration/runtime/production proof."
+}

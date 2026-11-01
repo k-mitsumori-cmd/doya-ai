@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-07T15:42:01.164929+00:00",
+  "status": "fixed-actual-privatePG10cases-passed-frozen21gate-pending",
+  "source": "src/app/api/shodan/company-profile/route.ts",
+  "finding": "Profile GET returns old private profile/logo after membership revocation, profile deletion or logo replacement during signing await",
+  "nextRepair": "Read final scoped ACTIVE original membership and exact current profile after signing; reject absent/revoked profile without private body and changed version/logo with409; preserve no-profile null case and normal owned GET; add private no-store/Cookie headers and sanitized failures",
+  "scope": "Actual route/access/Prisma/private PostgreSQL; synthetic session/signature; no production impact evidence",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-private-read-release-1f0d9eb1-eda5-4311-a9cc-2945ff12abbf"
+}

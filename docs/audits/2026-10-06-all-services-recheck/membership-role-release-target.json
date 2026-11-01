@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-08T06:37:25.810313+00:00",
+  "name": "doya-ai",
+  "target": "production",
+  "id": "dpl_B3AC3g2XMXdAzax5dMbQCJBitqta",
+  "team": "surisutas-projects",
+  "url": "doya-97z1bmy9f-surisutas-projects.vercel.app",
+  "aliases": [
+    "doya-ai.vercel.app",
+    "doya-ai.surisuta.jp",
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "commit": "754d80a6e1958d1062fc8f7deaff318b505baa2b",
+  "readyState": "READY"
+}

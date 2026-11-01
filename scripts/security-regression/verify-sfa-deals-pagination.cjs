@@ -1,12 +1,13 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
+const {matches,exact}=require('./sfa-query-fixture.cjs');
 const timestamp = new Date('2026-09-24T00:00:00.000Z');
 
 async function verifyCount(count) {
   const rows = Array.from({ length: count }, (_, index) => ({
     id: String(index).padStart(4, '0'),
-    organizationId: 'org-1',
+    organizationId: 'org-1', assigneeMemberId: 'fixture-member',
     isActive: true,
     stageId: 'stage-1',
     accountId: null,
@@ -20,9 +21,9 @@ async function verifyCount(count) {
   const active = allRows.filter((row) => row.organizationId === 'org-1' && row.isActive);
   const targetDealId = rows[count - 1]?.id;
   const taskRows = targetDealId ? [
-    ...Array.from({ length: 250 }, (_, index) => ({ id: `old-${index}`, dealId: 'other-deal', organizationId: 'org-1', status: 'open' })),
-    ...Array.from({ length: 7 }, (_, index) => ({ id: `target-${index}`, dealId: targetDealId, organizationId: 'org-1', status: 'open' })),
-    { id: 'completed', dealId: targetDealId, organizationId: 'org-1', status: 'done' },
+    ...Array.from({ length: 250 }, (_, index) => ({ id: `old-${index}`, dealId: 'other-deal', organizationId: 'org-1', assigneeMemberId: 'fixture-member', status: 'open' })),
+    ...Array.from({ length: 7 }, (_, index) => ({ id: `target-${index}`, dealId: targetDealId, organizationId: 'org-1', assigneeMemberId: 'fixture-member', status: 'open' })),
+    { id: 'completed', dealId: targetDealId, organizationId: 'org-1', assigneeMemberId: 'fixture-member', status: 'done' },
     { id: 'foreign-task', dealId: targetDealId, organizationId: 'org-2', status: 'open' },
   ] : [];
   let listQueries = 0;
@@ -31,37 +32,37 @@ async function verifyCount(count) {
     sfaDeal: {
       findMany: async ({ where, orderBy, take }) => {
         listQueries++;
-        assert.equal(where.organizationId, 'org-1');
-        assert.equal(where.isActive, true);
+        assert.equal(exact(where,'organizationId'), 'org-1');
+        assert.equal(exact(where,'isActive'), true);
         assert.deepEqual(JSON.parse(JSON.stringify(orderBy)), [{ updatedAt: 'desc' }, { id: 'desc' }]);
         assert.equal(take, 101);
-        const cursorId = where.OR?.[1]?.id?.lt;
-        return active.filter((row) => !cursorId || row.id < cursorId)
+        return allRows.filter((row) => matches(row,where))
           .sort((a, b) => b.id.localeCompare(a.id)).slice(0, take);
       },
       groupBy: async ({ where, by }) => {
         groupQueries++;
-        assert.equal(where.organizationId, 'org-1');
+        assert.equal(exact(where,'organizationId'), 'org-1');
         assert.deepEqual(JSON.parse(JSON.stringify(by)), ['stageId']);
+        assert.equal(allRows.filter(row=>matches(row,where)).length,active.length);
         return [{ stageId: 'stage-1', _count: { _all: active.length },
           _sum: { amount: active.reduce((sum, row) => sum + row.amount, 0n) } }];
       },
     },
     sfaAccount: { findMany: async () => [] },
     sfaTask: { groupBy: async ({ where, by }) => {
-      assert.equal(where.organizationId, 'org-1');
+      assert.equal(exact(where,'organizationId'), 'org-1');
       assert.deepEqual(JSON.parse(JSON.stringify(by)), ['dealId']);
-      const matches = taskRows.filter((task) => task.organizationId === where.organizationId &&
-        where.dealId.in.includes(task.dealId) && task.status !== 'done');
+      const matched = taskRows.filter(task=>matches(task,where));
       const counts = new Map();
-      for (const task of matches) counts.set(task.dealId, (counts.get(task.dealId) || 0) + 1);
+      for (const task of matched) counts.set(task.dealId, (counts.get(task.dealId) || 0) + 1);
       return [...counts].map(([dealId, number]) => ({ dealId, _count: { _all: number } }));
     } },
   };
   const { GET } = load('src/app/api/sfa/deals/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(prisma),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null, ensurePipeline: async () => [{ id: 'stage-1' }] },
+    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId:'fixture-member',userId:'fixture-user',role:'member',organizationSlug:'org-1' }), orgSlugFrom: () => null, ensurePipeline: async () => [{ id: 'stage-1' }] },
     '@/lib/sfa/format': { bigIntToNumber: (value) => JSON.parse(JSON.stringify(value, (_, item) => typeof item === 'bigint' ? Number(item) : item)) },
     '@/lib/sfa/amount': load('src/lib/sfa/amount.ts'),
     '@/lib/service-usage': { recordServiceUsage: async () => {} },

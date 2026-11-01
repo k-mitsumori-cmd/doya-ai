@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 // PUT /api/aishodan/scenarios/[id] — シナリオ更新（フェーズ・スロット・ICP・ガードレール）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
+import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import { normalizeSchedulingLabel, validateSchedulingUrl } from '@/lib/aishodan/scheduling'
 import type { Guardrails, Icp, Persona, Phase, PricePolicy, Slot } from '@/lib/aishodan/types'
@@ -44,6 +44,10 @@ export async function PUT(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  // シナリオは配布済みのURLで見込み客に話す内容（価格の答え方・禁止事項など）を変えるので、同じく配布済みURLの挙動を変えるルームの更新（rooms/[id] PATCH）に合わせて manager 以上にする。
+  if (!hasMinRole(ctx.role, 'manager')) {
+    return NextResponse.json({ error: 'シナリオを編集する権限がありません。組織の管理者に依頼してください。' }, { status: 403 })
+  }
 
   const scenario = await loadOwned(p.id, ctx.organizationId)
   if (!scenario) return NextResponse.json({ error: 'シナリオが見つかりません' }, { status: 404 })

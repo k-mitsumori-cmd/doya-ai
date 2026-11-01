@@ -4,6 +4,7 @@
 // → AioScan を done/failed に更新、まで一連を担当する。
 // scans/route.ts（手動実行）と cron/aio-scan（定期実行）の両方から呼ぶ。
 // ============================================
+import type { AioContext } from '@/lib/aio/types'
 import { prisma } from '@/lib/prisma'
 import { availableEngines, SCAN_STALE_MS, AIO_MAX_PROMPTS_PER_SCAN, type EngineId } from '@/lib/aio/types'
 import { executeScan } from '@/lib/aio/scan'
@@ -20,6 +21,7 @@ export interface RunAndPersistOptions {
   // 反復回数（未指定なら共通の既定値）
   repetitions?: number
   // Scheduled scans require a paid organization owner at reservation time.
+  actor?: Pick<AioContext, 'userId' | 'memberId' | 'organizationId'>
   scheduled?: boolean
 }
 
@@ -81,6 +83,17 @@ export async function runAndPersistScan(
       SELECT id FROM aio_organizations WHERE id = ${organizationId} FOR NO KEY UPDATE
     `
     if (!organizations.length) return { kind: 'missing' } as const
+    if (!opts.scheduled) {
+      const actor = opts.actor
+      if (!actor || actor.organizationId !== organizationId) return { kind: 'forbidden' } as const
+      await tx.$queryRaw`SELECT id FROM aio_members WHERE id = ${actor.memberId}
+        AND "organizationId" = ${organizationId} AND "userId" = ${actor.userId} FOR SHARE`
+      const member = await tx.aioMember.findFirst({ where: {
+        id: actor.memberId, organizationId, userId: actor.userId, status: 'ACTIVE',
+        role: { in: ['owner', 'admin', 'manager', 'member'] },
+      }, select: { id: true } })
+      if (!member) return { kind: 'forbidden' } as const
+    }
     const cutoff = new Date(Date.now() - SCAN_STALE_MS)
     const inflight = await tx.aioScan.findFirst({
       where: { organizationId, status: 'processing', updatedAt: { gte: cutoff } },
@@ -105,6 +118,7 @@ export async function runAndPersistScan(
     })
     return { kind: 'reserved', scan } as const
   })
+  if (reservation.kind === 'forbidden') return { id: '', status: 'failed', code: 'FORBIDDEN', error: '組織へのアクセス権が変更されました。再読み込みしてください。' }
   if (reservation.kind === 'missing') return { id: '', status: 'failed', error: '組織が見つかりません' }
   if (reservation.kind === 'inflight') return {
     id: reservation.inflight.id, status: 'failed', code: 'INFLIGHT',

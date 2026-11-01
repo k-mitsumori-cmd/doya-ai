@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -18,7 +19,7 @@ function safeName(value: string): string {
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
 
   try {
     const PAGE_SIZE = 100
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       take: PAGE_SIZE,
     })
-    if (!firstProjects.length) return NextResponse.json({ error: 'エクスポートするプロジェクトがありません' }, { status: 404 })
+    if (!firstProjects.length) return privateApiJson({ error: 'エクスポートするプロジェクトがありません' }, { status: 404 })
 
     const archive = archiver('zip', { zlib: { level: 6 } })
     const output = new PassThrough()
@@ -70,9 +71,10 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="doyalist-all-projects.zip"',
         'Cache-Control': 'private, no-store',
+        Vary: 'Cookie',
       },
     })
   } catch {
-    return NextResponse.json({ error: 'エクスポートを準備できませんでした。時間をおいて再試行してください。' }, { status: 500 })
+    return privateApiJson({ error: 'エクスポートを準備できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

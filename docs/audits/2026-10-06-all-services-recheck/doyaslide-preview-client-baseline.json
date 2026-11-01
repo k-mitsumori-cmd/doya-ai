@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T01:39:46.319Z",
+  "status": "confirmed-repair-required",
+  "cases": [
+    {
+      "case": "empty successful response",
+      "confirmed": "All responses settled yet default corporate preview still says generating; no pending work or retry affordance"
+    },
+    {
+      "case": "quota response",
+      "confirmed": "All responses settled yet default corporate preview still says generating; no pending work or retry affordance"
+    },
+    {
+      "case": "server failure",
+      "confirmed": "All responses settled yet default corporate preview still says generating; no pending work or retry affordance"
+    },
+    {
+      "case": "late pending response after unmount",
+      "confirmed": "Actual unmounted Wizard schedules fresh preview polling timers after effect cleanup",
+      "scheduledTimers": 2
+    }
+  ],
+  "sourceHashes": {
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "d742e3a9ee7e5cc9de30ca8b23325c3610d075d425a73451e7578d2105aa010e",
+    "scripts/security-regression/verify-slide-wizard-usage-mounted.cjs": "6e05cd27ef028fe780ce70a254fc43051560f30defd5ef574cc1a010b94848dd",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-client-baseline.cjs": "27e27823c34e8b0a95c3015073cb2df2d43c5f319adb63ec02266b9c1184f092"
+  },
+  "scope": "Actual full NewDoyaSlideWizard under React StrictMode and real constants/session context. Synthetic HTTP responses, timers, router, and decorative children. Reuses existing usage fixture with explicit preview-response and timer adapters. No provider calls, production/customer DB writes or deployed interactions."
+}

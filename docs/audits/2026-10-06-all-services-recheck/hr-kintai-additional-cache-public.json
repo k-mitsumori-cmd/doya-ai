@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-08T16:40:15.669042+00:00",
+  "commit": "8ecafb9c366d7af397dee522fb4b5d309469af7e",
+  "deployment": "dpl_3powrRPHoCtCo193kFu9YPhSo3BY",
+  "passed": true,
+  "routes": [
+    {
+      "path": "/api/hr/departments",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "genericErrorOnly": true,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ]
+    },
+    {
+      "path": "/api/hr/org-chart",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "genericErrorOnly": true,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ]
+    },
+    {
+      "path": "/api/kintai/departments",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "genericErrorOnly": true,
+      "varyHeaderValues": [
+        "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "Cookie"
+      ]
+    }
+  ],
+  "scope": "Inherited exact-deployment17-service/static/SEO durable/banner/four cache checks plus three additional anonymous no-cookie GET401 private headers. No production/customer database writes, real OAuth, provider generation or actual customer cache execution."
+}

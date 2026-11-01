@@ -1,0 +1,97 @@
+'use client'
+
+import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { startGoogleSignIn } from '@/lib/use-navigation-submission'
+import { useAioQuickStart } from '@/lib/aio/use-quick-start'
+import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
+import { sym } from '@/components/aio/ui'
+import toast from 'react-hot-toast'
+import { ToolHero } from '@/components/ds'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+
+const EXAMPLES = ['https://doya-ai.surisuta.jp', 'https://example.co.jp']
+
+export default function AioScanPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const { orgSlug } = useParams<{ orgSlug: string }>()
+  const router = useRouter()
+  const [url, setUrl] = useState('')
+  const flow = useAioQuickStart({
+    url,
+    onComplete: (slug, autoScan) => router.push(`/aio/${encodeURIComponent(slug)}${autoScan ? '?scan=1' : ''}`),
+    onSignIn: () => startGoogleSignIn(`/aio/${encodeURIComponent(orgSlug)}/scan`),
+  })
+  const busy = !!flow.view?.busy
+  const oneButton = useOneButton()
+  const start = async () => {
+    if (flow.disabled) return
+    if (!url.trim()) { toast.error('URLを入力してください'); return }
+    await flow.start()
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {oneButton ? (
+        <div className="mb-5">
+          <OneButtonBar
+            eyebrow="ドヤAIO"
+            cta={busy ? '調査の準備をしています。このままお待ちください' : '調べたいサービスの URL を入れたら、押してください'}
+            label="調査を開始"
+            scope="入れた URL からサービス名と監視する質問を判定し、ChatGPT や Gemini での今の見え方を診断します。"
+            onRun={() => void start()}
+            disabled={flow.disabled}
+            disabledReason="準備ができるまで、少し待ってください。"
+            running={busy}
+          />
+        </div>
+      ) : null}
+      <div className="mb-5">
+          {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く */}
+          <ToolHero
+            title={<>AI検索で、自社が<wbr />どう語られているかを調べます</>}
+            lead={<>調べたいサービスのURLを入れるだけ。<wbr />サービス名も監視する質問もAIが判定して、<wbr />ChatGPT・Gemini などでの今の見え方を診断します。</>}
+            tool="aio"
+          />
+        </div>
+
+      <div className="bg-white rounded-2xl shadow-xl shadow-brand-400/10 border border-brand-50 p-5">
+        <label htmlFor="aio-scan-service-url" className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-brand-500">*</span></label>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input id="aio-scan-service-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="例: https://doya-ai.surisuta.jp"
+            inputMode="url" autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void start() } }}
+            className="flex-1 rounded-xl border-2 border-slate-200 focus:border-brand-500 outline-none px-4 py-3 font-bold transition-colors" />
+          <button onClick={start} disabled={flow.disabled}
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.97]">
+            {sym(busy ? 'hourglass_top' : 'rocket_launch')}{busy ? '準備中…' : '調査を開始'}
+          </button>
+        </div>
+        <AioQuickStartStatus flow={flow} />
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <span className="text-xs font-bold text-slate-400">例:</span>
+          {EXAMPLES.map((ex) => (
+            <button key={ex} onClick={() => setUrl(ex)} className="text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-50 rounded-full px-3 py-1.5 transition-colors">{ex}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="text-center mt-4">
+        <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="inline-flex items-center gap-1 text-sm font-bold text-brand-600 hover:underline">
+          {sym('insights', 18)}これまでの分析・結果ダッシュボードを見る
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+        {[['visibility', '言及率'], ['leaderboard', 'SoV'], ['link', '引用元'], ['tips_and_updates', '改善案']].map(([icon, label]) => (
+          <div key={label} className="bg-white rounded-xl border border-brand-50 p-3 text-center">
+            <span className="material-symbols-outlined text-brand-500 text-2xl">{icon}</span>
+            <p className="text-xs font-black text-slate-600 mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

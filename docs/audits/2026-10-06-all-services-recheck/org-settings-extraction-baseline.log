@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'Edited'
+- 'Extracted description'
+
+    at /private/tmp/doya-org-settings-extraction-probe.cjs:50:513
+    at async check (/private/tmp/doya-org-settings-extraction-probe.cjs:22:90)
+    at async /private/tmp/doya-org-settings-extraction-probe.cjs:50:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'Edited',
+  expected: 'Extracted description',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

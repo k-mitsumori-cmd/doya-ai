@@ -1,0 +1,609 @@
+'use client'
+
+// ============================================
+// ドヤAI商談 シナリオ編集
+// ============================================
+// AIが自動で用意した進め方を、人が調整するための画面。
+// フェーズ・ヒアリング項目・理想顧客像・ガードレール・話し方。
+//
+// ⚠️ ガードレール（価格の扱い・触れない話題・根拠が無いときの挙動）は、
+//    そのまま相手に届く発言を規定する。ここは必ず人が確認できる形で出す。
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useParams } from 'next/navigation'
+import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
+import { notifyError } from '@/lib/ui/notify'
+import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import { Skeleton } from '@/components/ds'
+import { ROLE_HIERARCHY, hasMinRole } from '@/lib/aishodan/types'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
+
+interface ScenarioData {
+  id: string
+  name: string
+  product: { id: string; name: string; profile: ProductProfile | null }
+  phases: Phase[]
+  slots: Slot[]
+  icp: Icp
+  guardrails: Guardrails
+  persona: Persona
+  durationMin: number
+  schedulingUrl: string | null
+  schedulingLabel: string | null
+}
+
+export default function AishodanScenarioPage() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
+  const params = useParams<{ id: string }>()
+  const id = params?.id
+  const [s, setS] = useState<ScenarioData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
+  const [loadStatus, setLoadStatus] = useState(0)
+  /** 保存に失敗したときの「何が起きたか・どうすればよいか」 */
+  const [saveFailure, setSaveFailure] = useState<AishodanFailure | null>(null)
+  /** 組織での自分の役割。読めないときは null（ボタンは出し、判定はサーバーに任せる） */
+  const [role, setRole] = useState<string | null>(null)
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠
+  const tap = AISHODAN_TAP
+  // シナリオの更新はマネージャー以上（PUT /api/aishodan/scenarios/[id]）。役割が読めないときは出しておく
+  const canEdit = !role || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, role) || hasMinRole(role, 'manager')
+
+  const load = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    try {
+      await ensureSelectedOrg('aishodan')
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`))
+      const d = await r.json()
+      if (!r.ok) throw new AishodanHttpError(d?.error || '読み込みに失敗しました', r.status)
+      setS(d.scenario)
+      // 役割は既存の組織の API から読む。失敗しても画面は止めない
+      void fetch(withOrg('aishodan', '/api/aishodan/organizations'))
+        .then((res) => (res.ok ? res.json() : null))
+        .then((org) => setRole(typeof org?.current?.role === 'string' ? org.current.role : null))
+        .catch(() => setRole(null))
+    } catch (e) {
+      setLoadStatus(failureStatus(e))
+      // 新しい見た目では、トーストにもサーバーの文を出さない
+      notifyError(setError, 'シナリオを読み込めませんでした。')
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function save() {
+    if (!id || !s) return
+    setSaving(true)
+    setMessage('')
+    setError('')
+    setSaveFailure(null)
+    try {
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: s.name,
+          durationMin: s.durationMin,
+          schedulingUrl: s.schedulingUrl ?? '',
+          schedulingLabel: s.schedulingLabel ?? '',
+          phases: s.phases,
+          slots: s.slots,
+          icp: s.icp,
+          guardrails: s.guardrails,
+          persona: s.persona,
+          profile: s.product.profile,
+        }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new AishodanHttpError(d?.error || '保存に失敗しました', r.status)
+      setS(d.scenario)
+      setMessage('保存しました')
+    } catch (e) {
+      // サーバーの文は、入力の誤りを伝える短い日本語の文（400 など）のときだけ出す
+      const f = describeAishodanFailure(failureStatus(e), 'シナリオを保存できませんでした。', { serverMessage: e instanceof AishodanHttpError ? e.message : undefined })
+      setSaveFailure(f)
+      notifyError(setError, f.what)
+      return
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function patch(p: Partial<ScenarioData>) {
+    setS((prev) => (prev ? { ...prev, ...p } : prev))
+  }
+
+  if (loading) {
+    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
+  }
+  if (!s) {
+    // サーバーの文は出さない。見つからない・権限が無いときはダッシュボードへ、通信の失敗はやり直す
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? 'シナリオを読み込めませんでした。' : 'このシナリオは見つかりませんでした。')}
+          onRetry={() => void load()}
+          backHref="/aishodan"
+          backLabel="ダッシュボードに戻る"
+        />
+      </div>
+    )
+  }
+
+  const profile = s.product.profile || {}
+  const totalWeight = s.icp.conditions.reduce((n, c) => n + c.weight, 0)
+
+  return (
+    <div className="pb-12">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <Link href="/aishodan" className={`text-xs text-slate-500 hover:underline font-semibold inline-flex items-center rounded-lg${tap}`}>← ダッシュボード</Link>
+            <AishodanHeading className="truncate text-base font-bold text-slate-900">{s.name}</AishodanHeading>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
+            <Link
+              href="/aishodan/preview"
+              className={`rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold inline-flex items-center whitespace-nowrap${tap}`}
+            >
+              試す
+            </Link>
+            {canEdit && (
+            <button
+              onClick={save}
+              disabled={saving}
+              className={`rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white disabled:opacity-40 whitespace-nowrap${tap}`}
+            >
+              {saving ? '保存中...' : '保存'}
+            </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        {!canEdit && <p role="note" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">シナリオの編集は、マネージャー以上の役割の人ができます。</p>}
+        {error ? (
+          <AishodanFailureNotice failure={saveFailure ?? describeAishodanFailure(0, error)} />
+        ) : error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {message && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
+
+        {/* 基本 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">基本</h2>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">シナリオ名</span>
+            <input
+              value={s.name}
+              onChange={(e) => patch({ name: e.target.value })}
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            />
+          </label>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">商談時間（分）</span>
+            <input
+              value={s.durationMin}
+              inputMode="numeric"
+              onChange={(e) => patch({ durationMin: Math.max(5, Math.min(45, Number(e.target.value.replace(/[^0-9]/g, '')) || 15)) })}
+              className="w-24 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            />
+            <span className="ml-2 text-xs text-slate-500 font-semibold">5〜45分</span>
+          </label>
+        </section>
+
+        {/* 日程調整 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">日程調整リンク</h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500 font-semibold">
+            設定すると、商談画面に「日程を決める」ボタンが出ます。AIも締めで必ず案内します。
+            一次商談の出口は次アポの確定なので、ここを入れておくと商談が次につながります。
+            Calendly・TimeRex・Googleカレンダーの予約ページなどのURLを貼ってください。
+          </p>
+          <label className="mt-4 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">予約ページのURL（https のみ）</span>
+            <input
+              value={s.schedulingUrl ?? ''}
+              onChange={(e) => patch({ schedulingUrl: e.target.value })}
+              placeholder="https://calendly.com/your-name/30min"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            />
+          </label>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">ボタンの文言（空なら「担当者と日程を決める」）</span>
+            <input
+              value={s.schedulingLabel ?? ''}
+              onChange={(e) => patch({ schedulingLabel: e.target.value })}
+              placeholder="担当者と日程を決める"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            />
+          </label>
+        </section>
+
+        {/* ガードレール */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">話してよいこと・いけないこと</h2>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">ここで決めた内容が、そのまま相手への発言を縛ります。</p>
+
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500">価格の扱い</p>
+            <div className="mt-2 space-y-2">
+              {(['disclose', 'rough', 'withhold'] as PricePolicy[]).map((v) => (
+                <label key={v} className="flex cursor-pointer items-center gap-2.5 min-h-11">
+                  <input
+                    type="radio"
+                    checked={s.guardrails.pricePolicy === v}
+                    onChange={() => patch({ guardrails: { ...s.guardrails, pricePolicy: v } })}
+                    className="h-4 w-4 accent-[#0066ff]"
+                  />
+                  <span className="text-sm text-slate-800 font-semibold">{PRICE_POLICY_LABELS[v]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500">資料に根拠が無い質問への対応</p>
+            <div className="mt-2 space-y-2">
+              <label className="flex cursor-pointer items-start gap-2.5 min-h-11 py-1">
+                <input
+                  type="radio"
+                  checked={s.guardrails.noEvidenceBehavior === 'defer'}
+                  onChange={() => patch({ guardrails: { ...s.guardrails, noEvidenceBehavior: 'defer' } })}
+                  className="mt-1 h-4 w-4 accent-[#0066ff]"
+                />
+                <span className="text-sm text-slate-800 font-semibold">
+                  確認して折り返すと伝える
+                  <span className="ml-1 text-xs text-slate-500 font-semibold">（推奨。推測で答えさせない）</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2.5 min-h-11 py-1">
+                <input
+                  type="radio"
+                  checked={s.guardrails.noEvidenceBehavior === 'general'}
+                  onChange={() => patch({ guardrails: { ...s.guardrails, noEvidenceBehavior: 'general' } })}
+                  className="mt-1 h-4 w-4 accent-[#0066ff]"
+                />
+                <span className="text-sm text-slate-800 font-semibold">
+                  一般論として簡潔に答える
+                  <span className="ml-1 text-xs text-slate-500 font-semibold">（断定はしません）</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500">競合他社への言及</p>
+            <div className="mt-2 flex flex-wrap gap-x-4">
+              <label className="flex cursor-pointer items-center gap-2 min-h-11">
+                <input
+                  type="radio"
+                  checked={s.guardrails.competitorPolicy === 'neutral'}
+                  onChange={() => patch({ guardrails: { ...s.guardrails, competitorPolicy: 'neutral' } })}
+                  className="h-4 w-4 accent-[#0066ff]"
+                />
+                <span className="text-sm text-slate-800 font-semibold">中立的な事実のみ述べる</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 min-h-11">
+                <input
+                  type="radio"
+                  checked={s.guardrails.competitorPolicy === 'avoid'}
+                  onChange={() => patch({ guardrails: { ...s.guardrails, competitorPolicy: 'avoid' } })}
+                  className="h-4 w-4 accent-[#0066ff]"
+                />
+                <span className="text-sm text-slate-800 font-semibold">触れない</span>
+              </label>
+            </div>
+          </div>
+
+          <label className="mt-4 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">触れてほしくない話題（1行に1件）</span>
+            <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
+              ここに書いた内容はAIへの指示に含まれます。AIが自分から話すことはなく、
+              指示を読み上げないようにもしていますが、相手がしつこく尋ねた場合に
+              漏れる可能性は残ります。具体的な社外秘の事実ではなく、
+              「係争中の案件」「未発表の機能」のような話題の分類で書いてください。
+            </span>
+            <textarea
+              value={s.guardrails.prohibitedTopics.join('\n')}
+              onChange={(e) =>
+                patch({
+                  guardrails: {
+                    ...s.guardrails,
+                    prohibitedTopics: e.target.value.split('\n').map((t) => t.trim()).filter(Boolean),
+                  },
+                })
+              }
+              rows={4}
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            />
+          </label>
+        </section>
+
+        {/* フェーズ */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">商談の進み方</h2>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
+            上から順に進みます。各フェーズは、目的が達成されるか上限のやりとり数に達すると次へ移ります。
+          </p>
+          <div className="mt-4 space-y-3">
+            {s.phases.map((ph, i) => (
+              <div key={ph.key} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0066ff] text-[11px] font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <input
+                    value={ph.name}
+                    onChange={(e) => {
+                      const next = [...s.phases]
+                      next[i] = { ...ph, name: e.target.value }
+                      patch({ phases: next })
+                    }}
+                    aria-label={`${i + 1}番目のフェーズの名前`}
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none min-w-0"
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                    上限
+                    <input
+                      value={ph.maxTurns}
+                      inputMode="numeric"
+                      onChange={(e) => {
+                        const next = [...s.phases]
+                        next[i] = { ...ph, maxTurns: Math.max(1, Math.min(40, Number(e.target.value.replace(/[^0-9]/g, '')) || 1)) }
+                        patch({ phases: next })
+                      }}
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                    />
+                  </label>
+                </div>
+                <textarea
+                  value={ph.goal}
+                  onChange={(e) => {
+                    const next = [...s.phases]
+                    next[i] = { ...ph, goal: e.target.value }
+                    patch({ phases: next })
+                  }}
+                  rows={2}
+                  placeholder="このフェーズで達成したいこと"
+                  aria-label="このフェーズで達成したいこと"
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ヒアリング項目 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">必ず聞くこと</h2>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
+            必須にした項目が埋まるまで、ヒアリングのフェーズを抜けません。増やしすぎると商談が長くなります。
+          </p>
+          <div className="mt-4 space-y-3">
+            {s.slots.map((sl, i) => (
+              <div key={sl.key} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    value={sl.label}
+                    onChange={(e) => {
+                      const next = [...s.slots]
+                      next[i] = { ...sl, label: e.target.value }
+                      patch({ slots: next })
+                    }}
+                    aria-label={`${i + 1}番目の聞くこと`}
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none min-w-0"
+                  />
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600 font-semibold min-h-11">
+                    <input
+                      type="checkbox"
+                      checked={sl.required}
+                      onChange={(e) => {
+                        const next = [...s.slots]
+                        next[i] = { ...sl, required: e.target.checked }
+                        patch({ slots: next })
+                      }}
+                      className="h-4 w-4 accent-[#0066ff]"
+                    />
+                    必須
+                  </label>
+                  <button
+                    onClick={() => patch({ slots: s.slots.filter((_, j) => j !== i) })}
+                    aria-label={`「${sl.label || `${i + 1}番目の項目`}」を削除`}
+                    className={`shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold whitespace-nowrap${tap}`}
+                  >
+                    削除
+                  </button>
+                </div>
+                <input
+                  value={sl.questionHint}
+                  onChange={(e) => {
+                    const next = [...s.slots]
+                    next[i] = { ...sl, questionHint: e.target.value }
+                    patch({ slots: next })
+                  }}
+                  placeholder="どう聞くかの例"
+                  aria-label="どう聞くかの例"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() =>
+              patch({
+                slots: [
+                  ...s.slots,
+                  { key: `slot_${Date.now()}`, label: '', type: 'text', required: false, questionHint: '' },
+                ],
+              })
+            }
+            className={`mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold${tap}`}
+          >
+            項目を追加
+          </button>
+        </section>
+
+        {/* 理想顧客像 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">理想の顧客像</h2>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
+            商談後のスコアは、この条件のうち根拠をもって満たせたものの重みの合計です（合計 {totalWeight}点）。
+          </p>
+          <div className="mt-4 space-y-3">
+            {s.icp.conditions.map((c, i) => (
+              <div key={c.key} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    value={c.label}
+                    onChange={(e) => {
+                      const next = [...s.icp.conditions]
+                      next[i] = { ...c, label: e.target.value }
+                      patch({ icp: { conditions: next } })
+                    }}
+                    aria-label={`${i + 1}番目の条件`}
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none min-w-0"
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                    重み
+                    <input
+                      value={c.weight}
+                      inputMode="numeric"
+                      onChange={(e) => {
+                        const next = [...s.icp.conditions]
+                        next[i] = { ...c, weight: Math.max(0, Math.min(100, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)) }
+                        patch({ icp: { conditions: next } })
+                      }}
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                    />
+                  </label>
+                </div>
+                <input
+                  value={c.match}
+                  onChange={(e) => {
+                    const next = [...s.icp.conditions]
+                    next[i] = { ...c, match: e.target.value }
+                    patch({ icp: { conditions: next } })
+                  }}
+                  placeholder="どんな状態なら満たしたと言えるか"
+                  aria-label="どんな状態なら満たしたと言えるか"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 商材情報 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">商材の情報</h2>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
+            サイトから自動で作成しました。ここが回答の最上位の根拠になります。誤りがあれば直してください。
+          </p>
+          <div className="mt-4 space-y-3">
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">一言で</span>
+              <input
+                value={profile.oneLiner || ''}
+                onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, oneLiner: e.target.value } } })}
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">提供価値</span>
+              <textarea
+                value={profile.valueProp || ''}
+                onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, valueProp: e.target.value } } })}
+                rows={3}
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">料金</span>
+              <textarea
+                value={profile.pricing || ''}
+                onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, pricing: e.target.value } } })}
+                rows={2}
+                placeholder="サイトに記載が無ければ空のままにしてください"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">話してはいけないこと（1行に1件）</span>
+              <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
+                同じくAIへの指示に含まれます。社外秘の事実そのものは書かず、話題の分類で書いてください。
+              </span>
+              <textarea
+                value={(profile.doNotMention || []).join('\n')}
+                onChange={(e) =>
+                  patch({
+                    product: {
+                      ...s.product,
+                      profile: {
+                        ...profile,
+                        doNotMention: e.target.value.split('\n').map((t) => t.trim()).filter(Boolean),
+                      },
+                    },
+                  })
+                }
+                rows={3}
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              />
+            </label>
+          </div>
+        </section>
+
+        {/* 話し方 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">話し方</h2>
+          <div className="mt-3 space-y-3">
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">口調</span>
+              <input
+                value={s.persona.tone}
+                onChange={(e) => patch({ persona: { ...s.persona, tone: e.target.value } })}
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              />
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">一人称</span>
+                <input
+                  value={s.persona.firstPerson}
+                  onChange={(e) => patch({ persona: { ...s.persona, firstPerson: e.target.value } })}
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </label>
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">1回の発話の長さ（字）</span>
+                <input
+                  value={s.persona.maxCharsPerUtterance}
+                  inputMode="numeric"
+                  onChange={(e) =>
+                    patch({
+                      persona: {
+                        ...s.persona,
+                        maxCharsPerUtterance: Math.max(40, Math.min(400, Number(e.target.value.replace(/[^0-9]/g, '')) || 120)),
+                      },
+                    })
+                  }
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </label>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}

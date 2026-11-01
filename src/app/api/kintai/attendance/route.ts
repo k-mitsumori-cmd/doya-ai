@@ -58,10 +58,9 @@ export async function GET(req: NextRequest) {
       month = jstNow.getUTCMonth() + 1
     }
 
-    // JST基準の月範囲（JSTの月初00:00 = UTC前日15:00）
-    const jstOffsetMs = 9 * 60 * 60 * 1000
-    const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffsetMs)
-    const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffsetMs)
+    // attendance.date is SQL DATE: use calendar-date boundaries, not JST instants.
+    const monthStart = new Date(Date.UTC(year, month - 1, 1))
+    const monthEnd = new Date(Date.UTC(year, month, 1))
 
     const attendances = await prisma.kintaiAttendance.findMany({
       where: {

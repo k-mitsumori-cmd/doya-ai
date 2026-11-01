@@ -28,6 +28,10 @@ const config: Config = {
           purple: '#8B5CF6',
           pink: '#EC4899',
         },
+        // ドヤ展示会（/tenjikai）専用。他サービスでは使わない。
+        // 値は ds トークン（--blue 等）を参照し、変数は src/app/tenjikai/tenjikai.css の .tenjikai-root で定義する
+        doya: { DEFAULT: 'color-mix(in srgb, var(--blue) calc(<alpha-value> * 100%), transparent)', 50: 'color-mix(in srgb, var(--blue-soft) calc(<alpha-value> * 100%), transparent)', 100: 'color-mix(in srgb, var(--blue-line) calc(<alpha-value> * 100%), transparent)', 200: 'color-mix(in srgb, var(--bar) calc(<alpha-value> * 100%), transparent)', 500: 'color-mix(in srgb, var(--blue) calc(<alpha-value> * 100%), transparent)', 600: 'color-mix(in srgb, var(--blue-deep) calc(<alpha-value> * 100%), transparent)', 700: 'color-mix(in srgb, var(--blue-deep) calc(<alpha-value> * 100%), transparent)', 900: 'color-mix(in srgb, var(--navy) calc(<alpha-value> * 100%), transparent)' },
+        ink: 'color-mix(in srgb, var(--ink) calc(<alpha-value> * 100%), transparent)',
         // アクセント（差し色・LPのサービス別アクセントの既定候補）
         accent: {
           rose: '#ff1e72',
@@ -102,6 +106,8 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
         'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+        // 最初から見える状態で、位置だけを動かす（LP キットの見出し・カード。F-12）
+        'rise-in': 'riseIn 0.5s ease-out both',
         'fade-in-down': 'fadeInDown 0.5s ease-out forwards',
         'scale-in': 'scaleIn 0.3s ease-out forwards',
         'slide-in-right': 'slideInRight 0.5s ease-out forwards',
@@ -116,6 +122,10 @@ const config: Config = {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        riseIn: {
+          '0%': { transform: 'translateY(20px)' },
+          '100%': { transform: 'translateY(0)' },
         },
         fadeInUp: {
           '0%': { opacity: '0', transform: 'translateY(20px)' },

@@ -88,13 +88,23 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   '@/lib/interview/prompts': { buildArticlePrompt: () => 'prompt' },
   '@/lib/service-usage': { recordServiceUsage: async () => { if (failUsageTracking) throw new Error('tracking failed'); } },
   '@/lib/interview/gemini-request': load('src/lib/interview/gemini-request.ts'),
-  '@/lib/interview/article-budget': {
-    claimArticleBudget: async (identity) => { assert.equal(identity.projectId, 'p1'); budgetCalls++; claimedIdentity = identity; return admission; },
-    refundArticleBudget: async () => { refunds++; },
+  'node:crypto': require('node:crypto'),
+  '@/lib/operational-json': load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array }),
+  '@/lib/interview/article-operation': {
+    ArticleOperationError: class extends Error {},
+    recoverArticleOperation: async () => ({state:'missing'}),
+    beginArticleOperation: async identity => {
+      assert.equal(identity.projectId, 'p1'); budgetCalls++; claimedIdentity = identity;
+      if (admission.state === 'allowed') return {state:'started'};
+      if (admission.state === 'owner_changed') return {state:'failed',code:'PROJECT_OWNER_CHANGED'};
+      return {state:'failed',code:'ARTICLE_LIMIT',limit:admission.limit};
+    },
+    completeArticleOperation: async (_identity, save) => ({state:'completed',result:await prisma.$transaction(save)}),
+    failArticleOperation: async () => { refunds++; return {state:'failed'} },
   },
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 }, {
-  TextEncoder, TextDecoder, ReadableStream, AbortController, AbortSignal,
+  TextEncoder, TextDecoder, ReadableStream, AbortController, AbortSignal, setInterval, clearInterval,
   process: { env: { GEMINI_API_KEY: 'test-key' } },
   fetch: async (url, init) => {
     providerCalls++;
@@ -109,16 +119,18 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
     if (oversizedProviderError) return new Response('private', { status: 400, headers: { 'content-length': String(64 * 1024 + 1) } });
     if (invalidKey) return new Response(JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.' } }), { status: 400, headers: { 'content-type': 'application/json' } });
     if (oversizedEvent) return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'x'.repeat(600000) }] } }] })}\n`);
-    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"},{"text":" end"}]}}]}');
+    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"},{"text":" end"}]},"finishReason":"STOP"}]}');
   },
 });
 
-const request = () => ({ json: async () => ({ projectId: 'p1', recipeId: 'r1' }) });
+const request = () => new Request('https://example.invalid/api/interview/articles/generate', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:'p1',recipeId:'r1',operationId:'10000000-0000-4000-8000-000000000001'})});
 async function events() {
   projectOwner = asGuest ? null : 'u1';
   projectGuestId = asGuest ? 'g1' : null;
   const res = await POST(request());
-  return (await res.text()).split('\n').filter((line) => line.startsWith('data: ')).map((line) => JSON.parse(line.slice(6)));
+  const text=await res.text(); await new Promise(resolve=>setTimeout(resolve,0));
+  if (!(res.headers.get('content-type')||'').includes('text/event-stream')) { const data=JSON.parse(text); return [{type:'error',...data,message:data.message||data.error}] }
+  return text.split('\n').filter((line) => line.startsWith('data: ')).map((line) => JSON.parse(line.slice(6)));
 }
 
 (async () => {
@@ -263,7 +275,7 @@ async function events() {
   guestProjectClaimed = false;
   assert.equal((await budget.claimArticleBudget(guestIdentity)).state, 'allowed');
   assert.equal(reservationLocks, 2);
-  assert.equal(reservationQueries, 1);
+  assert.equal(reservationQueries, 2, 'Existing quota is validated under its row lock before the atomic reservation');
   const guestClaim = { key: 'guest-budget-key', day: '2026-10-05', guestId: 'g1' };
   await budget.refundArticleBudget(guestClaim);
   assert.deepEqual(refundedKeys, ['guest-budget-key'], 'A refund before transfer only reduces the guest counter');

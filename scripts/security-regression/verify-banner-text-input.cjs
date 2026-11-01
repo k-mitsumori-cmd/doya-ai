@@ -7,10 +7,8 @@ function fixture(route, providerStatus = 200) {
     'next/server': { NextResponse: { json: (body, opts) => new Response(JSON.stringify(body), { status: opts?.status ?? 200 }) } },
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/banner/text-budget': {
-      reserveBannerTextCall: async () => ({ state: 'allowed', usage: { dailyLimit: 10, dailyUsed: 1, dailyRemaining: 9 } }),
-    },
-    '@/lib/banner/provider-response': {
+    '@/lib/banner/text-http': require('./banner-text-http-fixture.cjs').textHttpFixture(async () => ({ state: 'allowed', usage: { dailyLimit: 10, dailyUsed: 1, dailyRemaining: 9 } })),
+    '@/lib/banner/text-answer': load('src/lib/banner/text-answer.ts', { './provider-response': {
       requestBannerTextProvider: async () => {
         providerCalls++
         if (providerStatus !== 200) return { ok: false, status: providerStatus, text: 'SENSITIVE_PROVIDER_DETAIL' }
@@ -19,7 +17,7 @@ function fixture(route, providerStatus = 200) {
           : JSON.stringify({ reply: 'どんな写真を使いますか？', spec: { purpose: 'sns_ad', category: 'other', size: '1080x1080', keyword: 'テスト' } })
         return { ok: true, status: 200, text: JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }) }
       },
-    },
+    } }),
   }, {
     process: { env: { GOOGLE_AI_API_KEY: 'test-key' } },
     fetch: async () => { throw new Error('unexpected direct provider call') },

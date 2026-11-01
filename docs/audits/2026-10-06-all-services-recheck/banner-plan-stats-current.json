@@ -1,0 +1,56 @@
+{
+  "cases": 12,
+  "passed": 12,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Account switch replaces prior counts immediately and fetches own stats",
+      "passed": true
+    },
+    {
+      "name": "Late previous account response cannot populate the new account",
+      "passed": true
+    },
+    {
+      "name": "Returning alpha does not restore a stale count before its fresh response",
+      "passed": true
+    },
+    {
+      "name": "Plan grant change refreshes counts for same actor",
+      "passed": true
+    },
+    {
+      "name": "Malformed stats stay unknown {}",
+      "passed": true
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":-1,\"monthlyUsage\":0,\"monthlyLimit\":15}",
+      "passed": true
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0.5,\"monthlyUsage\":0,\"monthlyLimit\":15}",
+      "passed": true
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0,\"monthlyUsage\":-1,\"monthlyLimit\":15}",
+      "passed": true
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0,\"monthlyUsage\":0,\"monthlyLimit\":-2}",
+      "passed": true
+    },
+    {
+      "name": "Noncooperating fetch deadline hides counts and aborts request",
+      "passed": true
+    },
+    {
+      "name": "Loading and missing actor never show previous statistics",
+      "passed": true
+    },
+    {
+      "name": "Confirmed unlimited quota never displays minus-one allowance",
+      "passed": true
+    }
+  ],
+  "scope": "Actual plan screen and actual bounded stats hook with synthetic sessions, readonly replies and clocks. Billing hooks inert in this focused test; no network/generation/DB."
+}

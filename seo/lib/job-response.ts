@@ -1,4 +1,24 @@
 /** Execution credentials are server-only, including in nested article job lists. */
+export type SeoActivityState = 'executing' | 'waiting' | 'needs-review' | null
+export const SEO_JOB_STALE_AFTER_MS = 24 * 60 * 60 * 1000
+type JobActivityInput = {
+  status?: string
+  updatedAt?: Date | string | null
+  executionToken?: string | null
+  executionExpiresAt?: Date | string | null
+  supersededAt?: Date | string | null
+}
+const dateMs = (value: Date | string | null | undefined) => typeof value === 'string' ? Date.parse(value) : value?.getTime() ?? NaN
+
+/** Derive display state without changing records or exposing execution credentials. */
+export function seoArticleActivity(status: string | undefined, updatedAt: Date | string | null | undefined, job: JobActivityInput | null | undefined, now = new Date()): SeoActivityState {
+  if (status !== 'RUNNING') return null
+  const replaced = job?.supersededAt != null
+  if (job && ['queued', 'running'].includes(job.status || '') && !replaced && job.executionToken != null && dateMs(job.executionExpiresAt) > now.getTime()) return 'executing'
+  if (replaced || ['paused', 'cancelled', 'error', 'done'].includes(job?.status || '') || dateMs(job?.updatedAt ?? updatedAt) <= now.getTime() - SEO_JOB_STALE_AFTER_MS) return 'needs-review'
+  return 'waiting'
+}
+
 const PUBLIC_JOB_ERRORS = new Set([
   '生成サービスの利用上限に達しました。時間をおいて再試行してください。',
   '生成サービスからの応答が遅れています。時間をおいて再試行してください。',

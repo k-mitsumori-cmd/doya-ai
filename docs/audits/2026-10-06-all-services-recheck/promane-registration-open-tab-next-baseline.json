@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-08T01:01:26.480Z",
+  "status": "confirmed-repair-required",
+  "family": "time",
+  "expectedPath": "/promane/native-time-open-renamed/timesheet",
+  "observedPath": "/promane/native-client-open-renamed/timesheet",
+  "originalPath": "/promane/native-client-open-renamed/timesheet",
+  "savedRows": 1,
+  "case": "Actual native open tab recovered saved row after workspace rename but did not retain current workspace route",
+  "scope": "Synthetic local authenticated Next/private PostgreSQL only; no production/customer writes."
+}

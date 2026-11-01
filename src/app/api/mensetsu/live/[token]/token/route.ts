@@ -19,6 +19,7 @@ import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
 import { ADVANCE_TOOL, buildInterviewerInstructions } from '@/lib/mensetsu/interview'
 import { LEVEL_LABELS, type MensetsuLevel } from '@/lib/mensetsu/types'
 import { REALTIME_REQUEST_TIMEOUT_MS, readRealtimeJson, realtimeClientSecret } from '@/lib/realtime-token-response'
+import { voiceCharger, voiceTokenKey } from '@/lib/doya-power/voice'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -39,6 +40,16 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   if (s.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
   const graceMs = (s.template.durationMin * 60 + 10 * 60) * 1000
   if (s.startedAt && Date.now() - s.startedAt.getTime() > graceMs) {
+    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
+  }
+  // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 発行した会社の台帳だけを見る。
+  // 仮に減らした分数（設定の分数 + 3分）を超えて続けない。戻したあと（終わった・中止した）は続けない。
+  // 旗を入れる前に発行した面接（台帳に記録なし）は今までどおり
+  const voice = await voiceCharger.allowance('mensetsu', s.organizationId, voiceTokenKey('mensetsu', s.token), s.template.durationMin)
+  if (voice === 'closed') {
+    return NextResponse.json({ error: 'この面接は、いまはご利用いただけません。採用ご担当者にお問い合わせください。' }, { status: 409 })
+  }
+  if (voice && s.startedAt && Date.now() - s.startedAt.getTime() > voice.minutes * 60 * 1000) {
     return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
 

@@ -1,0 +1,91 @@
+{
+  "startedAt": "2026-10-07T15:05:02.797943+00:00",
+  "pid": 18859,
+  "head": "f9033bdec24fce0bc62b90cc59cb48f4712abddf",
+  "sourceFiles": 2801,
+  "status": "passed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:04.629266+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:06.995029+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:09.628095+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:12.284102+00:00"
+    },
+    {
+      "name": "analysis-budget-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:13.942643+00:00"
+    },
+    {
+      "name": "analysis-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:19.403556+00:00"
+    },
+    {
+      "name": "logo-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:21.226903+00:00"
+    },
+    {
+      "name": "logo-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:23.144337+00:00"
+    },
+    {
+      "name": "result-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:24.633685+00:00"
+    },
+    {
+      "name": "read-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:05:26.512914+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:09:54.496591+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:09:57.656675+00:00"
+    },
+    {
+      "name": "auth-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:10:05.556733+00:00"
+    },
+    {
+      "name": "native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:10:13.666881+00:00"
+    },
+    {
+      "name": "logo-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:10:18.144245+00:00"
+    },
+    {
+      "name": "logo-native-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T15:10:24.207839+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T15:10:24.799104+00:00"
+}

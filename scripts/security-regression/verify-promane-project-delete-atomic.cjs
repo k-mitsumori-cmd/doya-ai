@@ -1,3 +1,4 @@
+const {projectDependencies}=require('./promane-project-operation-fixture.cjs');
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
@@ -30,6 +31,7 @@ function fixture({ active = true, projectWorkspace = 'w', revokeDuringCommit = f
     },
   }
   const actions = load('src/lib/promane/actions-projects.ts', {
+    ...projectDependencies,
     './time-input': load('src/lib/promane/time-input.ts'),
     '@/lib/prisma': { prisma },
     '@/lib/promane/auth': {

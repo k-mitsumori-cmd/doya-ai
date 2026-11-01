@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-08T19:11:51.968Z",
+  "expected": 11,
+  "passed": 11,
+  "cases": [
+    {
+      "name": "Empty organization remains a valid empty hierarchy",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Shallow valid hierarchy preserves ordinary JSON contract and field values",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Valid depth5000 is built and serialized without recursion or row loss",
+      "passed": true,
+      "durationMs": 58
+    },
+    {
+      "name": "Valid depth20000 is built and serialized without recursion or row loss",
+      "passed": true,
+      "durationMs": 229
+    },
+    {
+      "name": "Wide10000-row hierarchy preserves every sibling and stable order",
+      "passed": true,
+      "durationMs": 7
+    },
+    {
+      "name": "Missing and foreign parent rows remain accessible without inventing foreign data",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Cycles and self-parent retain all rows with a deterministic presentation break",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Ordering is stable for equal sortOrder and independent of input mutation",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Duplicate identifiers fail closed rather than silently losing a department",
+      "passed": true,
+      "durationMs": 1
+    },
+    {
+      "name": "Shared references are allowed while true circular JSON fails closed",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Unicode, control characters, nulls and sparse arrays retain JSON semantics",
+      "passed": true,
+      "durationMs": 0
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-hierarchy.ts": "8215b8edd56e57c441686eb363a63be6d7c9f4a8a9c10462a187e90b98ef7281",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-hierarchy-boundaries.cjs": "31f95a5e63594a73299798926f21865e5602ab2deac051f69052657198b7c1fd"
+  },
+  "scope": "Candidate pure helper only. Iterative hierarchy and plain JSON serialization; depths5000/20000 and wide10000 retain all rows. Not wired into GET, transport pagination, three actual callers, real Next/DB/browser or production. No root source edits during live full176."
+}

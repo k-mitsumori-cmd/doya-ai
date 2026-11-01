@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-08T16:24:26.733372+00:00",
+  "releaseReady": true,
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-after-gate.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-after-gate.py",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-gate-repair.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-next-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-next-supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-next-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/before-frozen-pointer-repair/doyalist-next.log",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/before-frozen-pointer-repair/resume-controller-setup-attempt.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/before-frozen-pointer-repair/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/before-frozen-pointer-repair/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-repair-plan.json",
+    "docs/audits/2026-10-06-all-services-recheck/integrate-hr-kintai-additional-cache.py",
+    "docs/audits/2026-10-06-all-services-recheck/prepare-hr-kintai-additional-cache-release.py",
+    "docs/audits/2026-10-06-all-services-recheck/publish-hr-kintai-additional-cache.py",
+    "docs/audits/2026-10-06-all-services-recheck/resume-hr-kintai-additional-cache-gate.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-public-header-diagnostic.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-public.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-tracking.json",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-kintai-additional-cache-next.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-kintai-additional-cache-public.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-durable-public.py",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts"
+  ],
+  "requiredPrimaryFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs"
+  ],
+  "reports": [
+    [
+      "hr-kintai-additional-cache-next-results.json",
+      20
+    ]
+  ],
+  "scope": "Three organization-scoped GET cache policies only; POST bodies and original queries/auth unchanged. Full150 plus actual Next20 synthetic two-organization/read-only/role/revoked-session verification. No production/customer writes, schema/dependency changes or paid generation. Full17-service2074 audit remains active."
+}

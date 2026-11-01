@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-31T11:13:03.511Z",
+  "passed": 13,
+  "cases": [
+    "metadata persists before POST and two mounted callers cannot duplicate generation",
+    "network loss keeps intent across remount and recovery uses GET without generating",
+    "pending cannot acknowledge; missing requires DELETE fence before closing and a new UUID",
+    "auth A-loading-A and A-B-A fence late responses and preserve only scoped metadata",
+    "corrupt storage and stale guest callbacks cannot invoke provider",
+    "storage replacement clears obsolete result and old acknowledgment cannot consume another intent",
+    "failed storage removal cannot acknowledge completed operation or permit a new generation",
+    "quota guidance closes only rejected intent and retains safe pricing link",
+    "wrong operation/project/slide or malformed saved result keeps intent and blocks next AI",
+    "oversized UTF8 and stalled/aborted responses are bounded without clearing intent",
+    "abort terminates a non-cooperating fetch while metadata remains recoverable",
+    "refine POST binds parent route and recovered before/after result survives network loss",
+    "missing Web Locks rejects before POST without discarding an existing operation"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/operation-client.ts": "b055f4656e75e0e98ddcaaa20c75fdf2d99842071f26a1b7269068bd39970b98",
+    "src/lib/adimage/use-operation-recovery.ts": "b516219a9408e86b1d3b9b7270c9ea3eacd3f48a0e09bed17585f500a005bb1c"
+  },
+  "scope": "Actual client/hook React18 StrictMode; synthetic network/auth/locks. Full Tool, native browser, cross-process locks and production are not proven."
+}

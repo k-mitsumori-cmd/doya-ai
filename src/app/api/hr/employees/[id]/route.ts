@@ -2,7 +2,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
+import { HR_EMPLOYEE_NUMBER_CONFLICT, isEmployeeNumberConflict } from '@/lib/hr/employee-number'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
@@ -16,17 +18,32 @@ import { getOneOnOneReadWhere, getOneOnOneViewer, filterOneOnOneFields } from '@
 
 type Ctx = { params: Promise<{ id: string }> }
 
+class EmployeeWriteConflict extends Error {}
+const privateWriteHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+function employeeWriteScope(id: string, actor: { organizationId: string; memberId: string; userId: string }, existing: { updatedAt: Date }, sessionUserId: string) {
+  if (!actor.memberId || actor.userId !== sessionUserId || !(existing.updatedAt instanceof Date) || !Number.isFinite(existing.updatedAt.getTime())) throw new EmployeeWriteConflict()
+  return {
+    id, organizationId: actor.organizationId, updatedAt: existing.updatedAt,
+    organization: { members: { some: {
+      id: actor.memberId, userId: actor.userId, organizationId: actor.organizationId,
+      status: 'ACTIVE', role: { in: [HrMemberRole.OWNER, HrMemberRole.ADMIN] },
+    } } },
+  }
+}
+const writeConflictResponse = () => privateApiJson({ error: '従業員情報または権限が更新されています。再読み込みしてからお試しください。', code: 'EMPLOYEE_WRITE_CONFLICT' }, { status: 409, headers: privateWriteHeaders })
+
+
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
     const id = p.id
     if (!hasMinRole(hrCtx.role, HrMemberRole.MANAGER) && hrCtx.employeeId !== id) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return privateApiJson({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const evaluationWhere = await getEvaluationReadWhere(hrCtx)
@@ -55,15 +72,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
 
     if (!employee) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return privateApiJson({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const viewer = await getOneOnOneViewer(hrCtx)
-    return NextResponse.json({ success: true, canManageEmployees: hasMinRole(hrCtx.role, HrMemberRole.ADMIN), employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
+    return privateApiJson({ success: true, canManageEmployees: hasMinRole(hrCtx.role, HrMemberRole.ADMIN), employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
   } catch (e: any) {
     console.error('[hr/employees/[id]] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to fetch employee' },
+    return privateApiJson(
+      { error: '従業員の情報を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }
@@ -73,15 +90,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params
@@ -92,12 +109,25 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       include: { department: { select: { id: true, name: true } } },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return privateApiJson({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'expectedUpdatedAt')) {
+      const value = body.expectedUpdatedAt
+      const expected = typeof value === 'string' && value.length === 24 ? new Date(value) : null
+      if (!expected || !Number.isFinite(expected.getTime()) || expected.toISOString() !== value) {
+        return privateApiJson({ error: '更新日時を確認できません。再読み込みしてください。' }, { status: 400, headers: privateWriteHeaders })
+      }
+      if (expected.getTime() !== existing.updatedAt.getTime()) return writeConflictResponse()
+    }
+    for (const field of ['lastName', 'firstName']) {
+      if (Object.prototype.hasOwnProperty.call(body, field) && (typeof body[field] !== 'string' || !body[field].trim())) {
+        return privateApiJson({ error: '姓と名は空でない文字列で入力してください。' }, { status: 400 })
+      }
     }
     const {
       employeeNumber,
@@ -122,7 +152,21 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       customFieldValues,
     } = body
     if (status !== undefined && !Object.values(EmployeeStatus).includes(status)) {
-      return NextResponse.json({ error: '在籍状態の指定が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '在籍状態の指定が正しくありません' }, { status: 400 })
+    }
+
+    for (const field of ['photoUrl', 'thumbnailUrl'] as const) {
+      const value = body[field]
+      if (value === undefined || value === null || value === '') continue
+      // Existing legacy photos may be retained, but newly assigned photos must be private and in this organization.
+      if (typeof value !== 'string') {
+        return privateApiJson({ error: '写真の指定が正しくありません。' }, { status: 400, headers: privateWriteHeaders })
+      }
+      if (value === existing[field]) continue
+      const match = /^\/api\/hr\/photos\/([A-Za-z0-9_-]{1,128})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/.exec(value)
+      if (!match || match[1] !== hrCtx.organizationId) {
+        return privateApiJson({ error: 'この組織にアップロードした写真を指定してください。' }, { status: 400, headers: privateWriteHeaders })
+      }
     }
 
     const data: Record<string, any> = {}
@@ -152,6 +196,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const gradeChanged = grade !== undefined && grade !== existing.grade
 
     const persist = async (tx: Prisma.TransactionClient) => {
+      const scope = employeeWriteScope(id, hrCtx, existing, (session?.user as any).id)
+      const changed = await tx.hrEmployee.updateMany({
+        where: scope,
+        data: { ...data, updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+      })
+      if (changed.count !== 1) throw new EmployeeWriteConflict()
       if (deptChanged || posChanged || gradeChanged) {
         let newDeptName: string | null = null
         if (deptChanged && departmentId) {
@@ -180,11 +230,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           },
         })
       }
-      return tx.hrEmployee.update({
-        where: { id },
-        data,
+      const current = await tx.hrEmployee.findFirst({
+        where: { id, organizationId: hrCtx.organizationId, organization: scope.organization },
         include: { department: { select: { id: true, name: true, code: true } } },
       })
+      if (!current) throw new EmployeeWriteConflict()
+      return current
     }
 
     const reactivating = status === EmployeeStatus.ACTIVE && existing.status !== EmployeeStatus.ACTIVE
@@ -193,7 +244,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       : { allowed: true as const, value: await prisma.$transaction(persist) }
     if (!admission.allowed) {
       const canUpgrade = !['PRO', 'BUNDLE', 'ENTERPRISE'].includes(admission.plan.toUpperCase())
-      return NextResponse.json({
+      return privateApiJson({
         error: employeeLimitMessage(admission.plan, admission.limit),
         code: 'HR_ORG_EMPLOYEE_LIMIT',
         canManageBilling: hrCtx.role === HrMemberRole.OWNER,
@@ -202,10 +253,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
     const updated = admission.value
 
-    return NextResponse.json({ success: true, employee: updated })
+    return privateApiJson({ success: true, employee: updated }, { headers: privateWriteHeaders })
   } catch (e: any) {
+    if (e instanceof EmployeeWriteConflict) return writeConflictResponse()
+    if (isEmployeeNumberConflict(e)) return privateApiJson(HR_EMPLOYEE_NUMBER_CONFLICT, { status: 409 })
     console.error('[hr/employees PATCH]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '従業員情報を更新できませんでした' },
       { status: 500 }
     )
@@ -216,15 +269,15 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
     if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params
@@ -234,14 +287,21 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       where: { id, organizationId: hrCtx.organizationId },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+      return privateApiJson({ error: 'この従業員は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.hrEmployee.update({
-        where: { id },
-        data: { status: 'RESIGNED', resignDate: new Date() },
+      const scope = employeeWriteScope(id, hrCtx, existing, (session?.user as any).id)
+      if (existing.status === EmployeeStatus.RESIGNED) {
+        const current = await tx.hrEmployee.findFirst({ where: scope, select: { id: true } })
+        if (!current) throw new EmployeeWriteConflict()
+        return
+      }
+      const changed = await tx.hrEmployee.updateMany({
+        where: scope,
+        data: { status: 'RESIGNED', resignDate: new Date(), updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
       })
+      if (changed.count !== 1) throw new EmployeeWriteConflict()
       await tx.hrEmployeeHistory.create({
         data: {
           employeeId: id,
@@ -252,10 +312,11 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       })
     })
 
-    return NextResponse.json({ success: true })
+    return privateApiJson({ success: true }, { headers: privateWriteHeaders })
   } catch (e: any) {
+    if (e instanceof EmployeeWriteConflict) return writeConflictResponse()
     console.error('[hr/employees DELETE]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '従業員情報を削除できませんでした' },
       { status: 500 }
     )

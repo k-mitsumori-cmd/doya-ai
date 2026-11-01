@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     for (const report of reports) {
       // 手動の期間指定と明示的な月次再送は従来どおり送る。定期実行は日付別の配信記録を使う。
       if (overrideWindow > 0 || (report.kind === 'monthly' && url.searchParams.get('monthly') === '1')) {
-        await postPlainToSlack(report.text)
+        await postPlainToSlack(report.text, { app: 'ドヤAI', kind: 'billing', severity: 'info' })
       } else {
         await deliverBillingReport(`${dayKey}:${report.kind}`, report.text)
       }
@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
     // 重大な異常はアラート基盤にも流す（専用チャンネル/デデュープ付き）
     if (!audit.webhookOk) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: 'Stripe Webhook が本番に登録されていない/無効',
         context: '課金がプランに反映されず、課金通知も飛ばない状態です',
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
     }
     if (audit.mismatched.length > 0) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: `課金済みなのに無料プランのままの利用者が ${audit.mismatched.length} 名います`,
         detail: audit.mismatched.map((s) => `${s.email} / ${s.tier}(${s.status}) / DB:${s.dbPlan ?? '未登録'}`).join('\n'),
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
     }
     if (audit.tierDrift.length > 0) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: `Stripe契約とDBプランの階層が異なる利用者が ${audit.tierDrift.length} 名います`,
         detail: audit.tierDrift
@@ -118,6 +121,7 @@ export async function GET(request: NextRequest) {
     }
     if (audit.unmappedPlans.length > 0) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: `Stripe契約のプランを特定できないものが ${audit.unmappedPlans.length} 件あります`,
         detail: audit.unmappedPlans.map((s) => `${s.email || s.customerId} / sub:${s.id} / status:${s.status}`).join('\n'),
@@ -127,6 +131,7 @@ export async function GET(request: NextRequest) {
     }
     if (audit.serviceDrift.length > 0) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: `有料なのにサービス別プランが揃っていない利用者が ${audit.serviceDrift.length} 名います`,
         context: '一部サービスだけ無料扱いになっています（2026-08 障害#5 と同じ状態）',
@@ -139,6 +144,7 @@ export async function GET(request: NextRequest) {
     }
     if (audit.duplicates.length > 0) {
       await notifyAlert({
+        kind: 'billing',
         level: 'critical',
         title: `同一利用者で契約が重複しています（${audit.duplicates.length}件・過剰請求の恐れ）`,
         detail: audit.duplicates.map((d) => `${d.email}: ${d.subs.map((s) => `${s.id}(${s.status})`).join(' / ')}`).join('\n'),

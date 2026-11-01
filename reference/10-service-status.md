@@ -58,6 +58,7 @@
 | ドヤ商談準備 | `/shodan` | active | ✅ | ✅ 9頁 | ✅ 9件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
 | ~~ドヤ広告バナーAI~~ | ~~`/adbanner`~~ | **廃止** | — | — | — | — | — | — |
 | ドヤ広告画像AI | `/adimage` | active | ✅ | ✅ | ✅ | ✅ | ✅ 統一プラン | ✅ |
+| ドヤポップアップ | `/popup` | active（BETA） | ✅ | ✅ 4頁 | ✅ 9件（公開3件） | ✅ 3モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
@@ -343,10 +344,13 @@ grep "^model " prisma/schema.prisma
 | 2026-06-02 | ドヤカンニング (`/cunning`) MVP実装: Web会議のタブ音声→質問検出→回答カンペ。near-realtime文字起こし(OpenAI・whisperフォールバック)、gemini-flash回答、字句RAG、PiPカンペ、想定問答準備。7頁・11API・7モデル(cunning_*)。本番DBは手動DDLで作成。services.ts登録・cunning.md更新 |
 | 2026-06-02 | ドヤスライドを active 化（coming_soon→active、badge 開発中→NEW）。ドヤカンニングは coming_soon のまま |
 | 2026-06-12 | ドヤ営業管理(sfa)・ドヤカンニング(cunning)を active 化。ドヤスライドのプロンプトを「きちんとした企業資料」設計に全面改修（LayerX/スライドランド調査反映・デッキ内配色統一・ページ番号描画・スタイルプレビュー v4-document 焼き直し） |
+| 2026-10-17 | ドヤポップアップ (`/popup`) を開発中サービスとして追加（UNLISTED・coming_soon・BETA・noindex）。URLから3案を提案し、設置タグで配信・日別計測。本番DBは手動DDLで popup_site / popup / popup_stat を作成。仕様は popup.md |
+| 2026-10-18 | ドヤポップアップ (`/popup`) を公開（UNLISTED から外し active・BETA、LP と料金ページの noindex を解除、公開サービス数 18→19）。本番DBに `popup_site.companyProfileId` を追加 |
+| 2026-10-22 | ドヤカンニング (`/cunning`) を「開発中のベータ版」として一旦非表示（`services.ts` の `hidden: 'beta'`）。一覧（トップ・LP・料金・sitemap・llms.txt・ログイン後のメニュー・⌘K・最近使ったツール・経営ホームの例）から外し、公開サービス数 19→18。画面は許可リスト（`UI_PREVIEW_EMAILS`）の人だけが使え、ほかの人には案内を出す。`/api/cunning/*` は同じ条件で 403（`src/lib/beta-service.server.ts`）。戻すときは `hidden: 'beta'` の行を消す |
 
 ---
 
-⚠️ **公開状態の正本は `src/lib/services.ts` の `status` と `HIDDEN_SERVICE_IDS`。**
+⚠️ **公開状態の正本は `src/lib/services.ts` の `status` と `HIDDEN_SERVICE_IDS`（開発中のベータ版は各サービスの `hidden: 'beta'`）。**
 この表は手で更新するため古くなる。食い違ったらコード側を信じること。
 
 ## 廃止したサービス

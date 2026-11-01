@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-07T17:34:18.326Z",
+  "passed": false,
+  "locked": false,
+  "controls": 6,
+  "newerDraftLost": true,
+  "sourceHash": "8bc680b6563c38371960cf0ed1ba00809c5da1d54f377914a5097df0c73af3df",
+  "scope": "Actual React settings page with deferred synthetic save. Controls must prevent unsaved edits during save, or preserve edits when the old acknowledgement returns. No production requests."
+}

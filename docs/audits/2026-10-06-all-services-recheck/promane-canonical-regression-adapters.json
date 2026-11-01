@@ -1,0 +1,25 @@
+{
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-client-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-view-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-dismiss-draft-repair-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-client-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-view-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-view-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-client-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-view-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-creation-client-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-client.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-creation-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-creation-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-member-draft.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-unavailable-recovery-mounted.cjs"
+  ],
+  "scope": "Existing legacy-signature fixture adapters only; no original assertions removed. New canonical hooks/migration exercised separately by real helper/30 mounted/55 migration/27 private PG cases."
+}

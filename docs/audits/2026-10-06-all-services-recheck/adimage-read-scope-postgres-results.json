@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T15:05:26.328Z",
+  "passed": 8,
+  "cases": [
+    "History initially foreign brand never signs or returns its concepts",
+    "History ownership change during signing omits private results",
+    "ZIP initially foreign brand rejects before storage download",
+    "ZIP ownership change during download never returns archive bytes",
+    "Owned history reaches all501 rows across tied dates without duplicate or lost cursors",
+    "Owned ZIP retains actual archive bytes and all file contents",
+    "History image path change during signing returns private conflict instead of stale URL",
+    "ZIP image path change during download returns conflict without archive bytes"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/route.ts": "a918df2fe6897cd2471dbec4a14a5248a609af72bfbdd0a4a84f584fd478fdbe",
+    "src/app/api/adimage/concepts/[id]/export/route.ts": "4d1d8248509a30ba885b8ec41ce6b3564b7a9b93c41291ccdd3b32015239607e"
+  },
+  "scope": "Actual history and ZIP handlers, actual Prisma/private Unix-socket PostgreSQL and real local archiver. Synthetic storage bytes/signing and identity/providers; no production/customer data, external provider or mail."
+}

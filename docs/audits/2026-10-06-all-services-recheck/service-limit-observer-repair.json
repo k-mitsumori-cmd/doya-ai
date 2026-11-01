@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-06T16:58:34.708217+00:00",
+  "status": "full-local-gate-passed-not-deployed",
+  "baseline": "service-limit-observer-size-baseline.json",
+  "baselineCommit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
+  "confirmedProblem": "Optional global quota observer parsed unbounded cloned JSON when Content-Length was absent or understated; no total body deadline.",
+  "changes": [
+    "Read actual stream bytes, cap retained body at 65536 bytes",
+    "End optional inspection after 5000ms and ignore late stream data",
+    "Cancel inspection clone without awaiting cancellation of its tee peer",
+    "Preserve original fetch response and original body for page error handling"
+  ],
+  "targetedEvidence": [
+    "service-limit-observer-body-current.json",
+    "service-limit-observer-provider-current.json",
+    "service-limit-observer-classifier-current.log"
+  ],
+  "limitations": [
+    "No authenticated live generation or trial/billing/device flows",
+    "Transport can deliver a single chunk larger than the inspection cap; cap applies to retained/parsed inspection data",
+    "Read-only published metadata verification is not actual user incident recovery proof",
+    "Full 17-service requirement matrix remains incomplete"
+  ],
+  "sourceHashes": {
+    "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
+    "scripts/security-regression/verify-service-limit-ui.cjs": "f50142e6d3c26356e50b15ab1f0c4a570e0a4d13234a3c48f1b9efef61ca300e",
+    "scripts/security-regression/verify-service-limit-error-body.cjs": "6f043d6a46edd12c805b49b175ac1838da23f1079ecc635343168e8dbb9f0d9e",
+    "scripts/security-regression/run.cjs": "cc6a3e725fa60ed08615434f8af2829322218a53b1bd0f80c530120a54f2a8dc"
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/service-limit-observer-release-b8587675-da30-4d10-9235-5016fa5ca1fc",
+  "releaseState": {
+    "startedAt": "2026-10-06T16:57:46.443953+00:00",
+    "pid": 37408,
+    "head": "de81037a1623db27e864d344b616102e4a7449ae",
+    "sourceFiles": 2559,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:00:52.067589+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:00:53.700134+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T17:00:53.988179+00:00"
+  }
+}

@@ -21,7 +21,7 @@ export async function monitorCost(dry = false) {
   if (!dry) {
     await writeOps('cost-report:' + jstDay(1), { amount: comparable.length ? amount : null, budget: budget || null, projected, note, missing: report.costs.filter(c => c.money === null).map(c => c.label) });
     if (comparable.length) await writeOps('cost:' + jstDay(1), { amount, sources });
-    if (warnings.length) await sendOps('doya', ['【ドヤAI・要確認】費用の増え方をチェックしてね', ...warnings, note, '設定変更やAPI停止は自動で行っていません。利用内容と請求画面を確認してね。'].join('\n'), 'cost-warning:' + jstDay(), 'error');
+    if (warnings.length) await sendOps('doya', ['【ドヤAI・要確認】費用の増え方を確認してください', ...warnings, note, '設定変更やAPI停止は自動で行っていません。利用内容と請求画面を確認してください。'].join('\n'), 'cost-warning:' + jstDay(), 'error');
   }
   return { amount: comparable.length ? amount : null, budget: budget || null, projected, warnings, note, missing: report.costs.filter(c => c.money === null).map(c => c.label) };
 }

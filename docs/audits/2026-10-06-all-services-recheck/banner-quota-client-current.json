@@ -1,0 +1,19 @@
+{
+  "passed": 13,
+  "results": [
+    "Valid server count, exact boundary and over-limit prompt",
+    "Invalid count cannot pass or request quota",
+    "Strict monthly payload rejects fractional, unsafe and unrelated meters",
+    "Authenticated session without identity cannot generate as guest",
+    "Guest remains subject to endpoint policy",
+    "Old callbacks cannot restore usage after alpha beta alpha",
+    "Double precheck shares one lock; actor transition releases own lock only",
+    "Background focus does not invalidate an in-progress generation precheck",
+    "Accepted server limit supersedes a pending readonly response",
+    "Late old check cannot unlock a newer actor check",
+    "Unmounted callbacks cannot fetch or open prompts",
+    "Unlimited usage permits a valid count without upsell",
+    "Malformed server response is unknown and does not permit generation"
+  ],
+  "scope": "Actual mounted hook in StrictMode; synthetic sessions and readonly responses. No generation, OAuth, billing, customer DB or network."
+}

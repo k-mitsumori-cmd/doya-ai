@@ -1,0 +1,521 @@
+'use client'
+
+import { PageTitle } from '@/components/kintai/ui-next'
+import { Suspense, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
+import Link from 'next/link'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { Skeleton } from '@/components/ds'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
+
+const REQUEST_TYPES = [
+  { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
+  { key: 'leave', label: '休暇', icon: 'event_busy', desc: '有給休暇・特別休暇を申請します', disabled: false, bear: '/kintai/characters/ramen_%E4%BC%91%E6%86%A9.png' },
+  { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: false, bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png' },
+  { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: false, bear: '/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png' },
+]
+
+export default function NewRequestPage() {
+  const { isActive } = useKintaiAccess()
+  if (isActive === false) {
+    return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
+      <PageTitle className="text-xl font-bold text-slate-800">新規申請は利用できません</PageTitle>
+      <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の申請は引き続き確認できます。</p>
+      <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#0066ff] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
+    </div>
+  }
+  return (
+    <Suspense fallback={
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto" aria-busy="true" aria-label="申請の画面を読み込み中">
+        <Skeleton lines={5} height={18} />
+      </div>
+    }>
+      <NewRequestContent />
+    </Suspense>
+  )
+}
+
+function NewRequestContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [step, setStep] = useState(1)
+  const [type, setType] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+
+  // clock_fix form
+  const [fixDate, setFixDate] = useState('')
+  const [fixClockType, setFixClockType] = useState('clock_in')
+  const [fixTime, setFixTime] = useState('')
+  const [fixRecords, setFixRecords] = useState<Array<{ id: string; type: string; timestamp: string }>>([])
+  const [fixRecordId, setFixRecordId] = useState('')
+  const [recordsDate, setRecordsDate] = useState('')
+  const [recordsError, setRecordsError] = useState('')
+  const matchingRecords = recordsDate === fixDate ? fixRecords.filter(r => r.type === fixClockType) : []
+  const selectedRecord = matchingRecords.find(r => r.id === fixRecordId) || (matchingRecords.length === 1 ? matchingRecords[0] : undefined)
+  const [reason, setReason] = useState('')
+
+  // leave form
+  const [leaveStart, setLeaveStart] = useState('')
+  const [leaveEnd, setLeaveEnd] = useState('')
+  const [leaveType, setLeaveType] = useState('paid')
+
+  // overtime form
+  const [otDate, setOtDate] = useState('')
+  const [otHours, setOtHours] = useState('')
+  const [otMinutes, setOtMinutes] = useState('')
+
+  // holiday_work form
+  const [hwDate, setHwDate] = useState('')
+  const [hwStart, setHwStart] = useState('09:00')
+  const [hwEnd, setHwEnd] = useState('18:00')
+
+  // original clock times for clock_fix display
+  const [origClockIn, setOrigClockIn] = useState<string | null>(null)
+  const [origClockOut, setOrigClockOut] = useState<string | null>(null)
+
+  useEffect(() => {
+    const t = searchParams.get('type')
+    const d = searchParams.get('date')
+    if (t) { setType(t); setStep(2) }
+    if (d) setFixDate(d)
+  }, [searchParams])
+
+  useEffect(() => {
+    let active = true
+    setRecordsDate('')
+    setRecordsError('')
+    setFixRecordId('')
+    setOrigClockIn(null)
+    setOrigClockOut(null)
+    if (fixDate && type === 'clock_fix') {
+      fetch(`/api/kintai/clock?date=${encodeURIComponent(fixDate)}`)
+        .then(async r => {
+          if (!r.ok) throw new Error('打刻を取得できませんでした。日付を選び直して再試行してください。')
+          return r.json()
+        })
+        .then(d => {
+          if (!active) return
+          const recs = d.records || []
+          setFixRecords(recs)
+          setRecordsDate(fixDate)
+          const cin = recs.find((r: any) => r.type === 'clock_in')
+          const cout = recs.find((r: any) => r.type === 'clock_out')
+          setOrigClockIn(cin ? new Date(cin.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
+          setOrigClockOut(cout ? new Date(cout.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
+        })
+        .catch(e => { if (active) setRecordsError(userErrorMessage(e instanceof Error ? e.message : null, '打刻を読み込めませんでした。日付を選び直して、もう一度お試しください。')) })
+    }
+    return () => { active = false }
+  }, [fixDate, type])
+
+  const selectType = (key: string) => {
+    setType(key)
+    setStep(2)
+  }
+
+  const goBack = () => {
+    if (step === 1) {
+      router.back()
+    } else {
+      setStep(1)
+      setType('')
+      setError('')
+    }
+  }
+
+  const previewText = (): string => {
+    if (type === 'clock_fix' && fixDate && fixTime && fixClockType) {
+      // fixDate is YYYY-MM-DD from date input; parse as JST
+      const [, mm, dd] = fixDate.split('-')
+      const dateStr = `${parseInt(mm)}月${parseInt(dd)}日`
+      const clockLabel = CLOCK_TYPE_LABELS[fixClockType] || fixClockType
+      return `${dateStr}の${clockLabel}時刻を ${fixTime} に修正します`
+    }
+    return ''
+  }
+
+  const handleSubmit = async () => {
+    setError('')
+
+    // 必須フィールドを先に検証
+    const details: any = {}
+    if (type === 'clock_fix') {
+      if (!fixDate) { setError('対象日を入力してください'); return }
+      if (!fixTime) { setError('修正後時刻を入力してください'); return }
+      if (recordsDate !== fixDate) { setError(recordsError || '打刻を読み込み中です。しばらくお待ちください。'); return }
+      if (matchingRecords.length > 0 && !selectedRecord) { setError('訂正する打刻を選択してください'); return }
+      if (selectedRecord) { details.recordId = selectedRecord.id; details.expectedTimestamp = selectedRecord.timestamp }
+      details.date = fixDate
+      details.clockType = fixClockType
+      details.correctedTime = fixTime
+    } else if (type === 'leave') {
+      if (!leaveStart) { setError('開始日を入力してください'); return }
+      if (!leaveEnd) { setError('終了日を入力してください'); return }
+      const days = (new Date(leaveEnd + 'T00:00:00Z').getTime() - new Date(leaveStart + 'T00:00:00Z').getTime()) / 86400000 + 1
+      if (!Number.isFinite(days) || days < 1 || days > 366) { setError('開始日から終了日までを366日以内で指定してください'); return }
+      details.startDate = leaveStart
+      details.endDate = leaveEnd
+      details.leaveType = leaveType
+    } else if (type === 'overtime') {
+      if (!otDate) { setError('対象日を入力してください'); return }
+      if (!otHours && !otMinutes) { setError('時間または分を入力してください'); return }
+      details.date = otDate
+      details.hours = parseInt(otHours || '0')
+      details.minutes = parseInt(otMinutes || '0')
+    } else if (type === 'holiday_work') {
+      if (!hwDate) { setError('対象日を入力してください'); return }
+      if (!hwStart || !hwEnd) { setError('開始時刻と終了時刻を入力してください'); return }
+      details.date = hwDate
+      details.startTime = hwStart
+      details.endTime = hwEnd
+    }
+
+    if (!reason.trim()) { setError('理由を入力してください'); return }
+    setSubmitting(true)
+
+    try {
+      const res = await fetch('/api/kintai/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, details, reason }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'))
+        return
+      }
+
+      setSubmitted(true)
+      setTimeout(() => {
+        router.push('/kintai/requests')
+      }, 2000)
+    } catch {
+      setError(KINTAI_NETWORK_ERROR)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Success screen
+  if (submitted) {
+    return (
+      <>
+        <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 space-y-5">
+          <img src="/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png" alt="成功！" width={140} height={140} className="bear-jump" />
+          <h2 className="text-2xl font-bold text-slate-800 fade-in-scale">申請が完了しました！</h2>
+          <p className="text-sm text-slate-500 fade-in-scale" style={{ animationDelay: '0.2s' }}>承認されるまでしばらくお待ちください</p>
+          <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-[#0066ff] animate-spin mt-4" />
+          <p className="text-xs text-slate-400">申請一覧に戻ります...</p>
+        </div>
+      </>
+    )
+  }
+
+  const preview = previewText()
+
+  return (
+    <>
+
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
+        {/* Header with back button */}
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div className="flex-1">
+            <PageTitle className="text-lg font-bold text-slate-800">
+              {step === 1 ? '申請の種類を選択' : '申請内容を入力'}
+            </PageTitle>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {step === 1 ? '申請したい内容の種類を選んでください' : '必要な情報を入力して申請してください'}
+            </p>
+          </div>
+        </div>
+
+        {/* Step indicator with bear */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <img
+              src={step === 1 ? '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png' : '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png'}
+              alt=""
+              width={36}
+              height={36}
+              className="bear-wiggle"
+            />
+          </div>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+            step === 1 ? 'bg-[#0066ff] text-white' : 'bg-[#0066ff]/10 text-[#0066ff]'
+          }`}>
+            <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
+            種類を選択
+          </div>
+          <div className="w-6 h-px bg-slate-300" />
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+            step === 2 ? 'bg-[#0066ff] text-white' : 'bg-slate-100 text-slate-400'
+          }`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+              step === 2 ? 'bg-white/20' : 'bg-slate-200'
+            }`}>2</span>
+            詳細を入力
+          </div>
+        </div>
+
+        {/* Step 1: Type selection */}
+        {step === 1 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {REQUEST_TYPES.map((t) => (
+              <div
+                key={t.key}
+                role="button"
+                tabIndex={t.disabled ? -1 : 0}
+                onClick={() => !t.disabled && selectType(t.key)}
+                onKeyDown={(e) => { if (!t.disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectType(t.key) } }}
+                className={`relative text-left transition-all rounded-xl border select-none ${
+                  t.disabled
+                    ? 'border-slate-200 bg-slate-50 cursor-not-allowed p-4'
+                    : 'border-slate-200 bg-white hover:border-[#0066ff] hover:shadow-md hover:shadow-[#0066ff]/10 active:scale-[0.98] cursor-pointer p-5'
+                }`}
+              >
+                {t.disabled && (
+                  <span className="absolute top-2 right-2 text-[10px] font-bold text-slate-400 bg-slate-200 px-2 py-0.5 rounded-full">
+                    準備中
+                  </span>
+                )}
+                <div className="flex items-start gap-3">
+                  <img
+                    src={t.bear}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className={t.disabled ? 'opacity-30' : ''}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <div style={{ pointerEvents: 'none' }}>
+                    <p className={`font-bold ${t.disabled ? 'text-slate-400 text-sm' : 'text-slate-800'}`}>{t.label}</p>
+                    <p className={`text-xs mt-1 ${t.disabled ? 'text-slate-300' : 'text-slate-500'}`}>{t.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Step 2: clock_fix form */}
+        {step === 2 && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 fade-in-up">
+            <div>
+              <h2 className="font-bold text-slate-700 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#0066ff]">
+                  {type === 'clock_fix' ? 'edit_clock' : type === 'leave' ? 'event_busy' : type === 'overtime' ? 'more_time' : 'work_history'}
+                </span>
+                {type === 'clock_fix' ? '打刻修正申請' : type === 'leave' ? '休暇申請' : type === 'overtime' ? '残業申請' : '休日出勤申請'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {type === 'clock_fix' ? '打刻の修正が必要な場合は、対象の日時と理由を入力してください' :
+                 type === 'leave' ? '休暇を取得する日程と理由を入力してください' :
+                 type === 'overtime' ? '残業の予定日時と理由を入力してください' :
+                 '休日出勤の日程と理由を入力してください'}
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">error</span>
+                {error}
+              </div>
+            )}
+
+            {type === 'clock_fix' && (<div className="space-y-4">
+            {(origClockIn || origClockOut) && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">history</span>
+                  現在の打刻記録
+                </p>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="text-slate-400 text-xs">出勤</span>
+                    <p className="font-mono font-bold text-slate-700">{origClockIn || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs">退勤</span>
+                    <p className="font-mono font-bold text-slate-700">{origClockOut || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
+                <span className="material-symbols-outlined text-base text-slate-400">calendar_today</span>
+                対象日 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={fixDate}
+                onChange={(e) => setFixDate(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
+                <span className="material-symbols-outlined text-base text-slate-400">swap_horiz</span>
+                打刻種別
+              </label>
+              <select
+                value={fixClockType}
+                onChange={(e) => { setFixClockType(e.target.value); setFixRecordId('') }}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
+              >
+                {Object.entries(CLOCK_TYPE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+
+            {recordsError && <p role="alert" className="text-sm text-red-600">{recordsError}</p>}
+            {matchingRecords.length > 0 && (
+              <div>
+                <label htmlFor="fix-record" className="block text-sm font-medium text-slate-700 mb-1.5">訂正する打刻</label>
+                <select id="fix-record" value={selectedRecord?.id || ''} onChange={e => setFixRecordId(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                  <option value="">選択してください</option>
+                  {matchingRecords.map((record, index) => <option key={record.id} value={record.id}>{index + 1}回目：{new Date(record.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}</option>)}
+                </select>
+              </div>
+            )}
+            {recordsDate === fixDate && fixDate && matchingRecords.length === 0 && <p className="text-sm text-slate-600">この種別の打刻はありません。指定時刻の打刻を追加します。</p>}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
+                <span className="material-symbols-outlined text-base text-slate-400">schedule</span>
+                修正後時刻
+              </label>
+              <input
+                type="time"
+                required
+                value={fixTime}
+                onChange={(e) => setFixTime(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] bg-white"
+              />
+            </div>
+            </div>)}
+
+            {/* ===== Leave form ===== */}
+            {type === 'leave' && (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">開始日から終了日までの各日を終日休暇・欠勤として登録します。休日は自動除外されません。対象日だけを指定してください（1件366日以内）。打刻・勤怠がある日は承認できません。</p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">休暇種別</label>
+                  <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                    <option value="paid">有給休暇</option>
+                    <option value="special">特別休暇</option>
+                    <option value="unpaid">欠勤</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">開始日 <span className="text-red-500">*</span></label>
+                    <input type="date" required value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了日 <span className="text-red-500">*</span></label>
+                    <input type="date" required value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Overtime form ===== */}
+            {type === 'overtime' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
+                  <input type="date" required value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">時間 <span className="text-red-500">*</span></label>
+                    <input type="number" required min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">分</label>
+                    <input type="number" min="0" max="59" value={otMinutes} onChange={(e) => setOtMinutes(e.target.value)} placeholder="30" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Holiday work form ===== */}
+            {type === 'holiday_work' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
+                  <input type="date" required value={hwDate} onChange={(e) => setHwDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">開始時刻</label>
+                    <input type="time" required value={hwStart} onChange={(e) => setHwStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了時刻 <span className="text-red-500">*</span></label>
+                    <input type="time" required value={hwEnd} onChange={(e) => setHwEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Preview of change */}
+            {preview && (
+              <div className="p-3 rounded-xl bg-[#0066ff]/5 border border-[#0066ff]/10 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[#0066ff] text-base mt-0.5">info</span>
+                <div>
+                  <p className="text-xs font-medium text-[#0066ff]">変更内容のプレビュー</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{preview}</p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
+                <span className="material-symbols-outlined text-base text-slate-400">edit_note</span>
+                理由 <span className="text-red-500 text-xs ml-0.5">*必須</span>
+              </label>
+              <textarea
+                value={reason}
+                required
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder={type === 'clock_fix' ? '例: 打刻を忘れたため' : type === 'leave' ? '例: 私用のため' : type === 'overtime' ? '例: プロジェクト納期対応のため' : '例: イベント対応のため'}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066ff]/30 focus:border-[#0066ff] resize-none bg-white"
+              />
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full py-3.5 bg-[#0066ff] text-white font-bold rounded-xl hover:bg-[#0047d6] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-[#0066ff]/20"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  送信中...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-lg">send</span>
+                  申請内容を確認して提出
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}

@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T15:40:37.721Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    "Current FREE allowance appears on real DOM",
+    "Native typed private draft and old quota disappear on actor change",
+    "Same actor auth refresh hides then restores intact draft",
+    "Native repeated title click sends one request",
+    "Late title response cannot appear for another actor",
+    "Native title editing survives delayed title response",
+    "Late creation response cannot redirect new actor",
+    "Unknown write outcome offers history and prevents duplicate submit",
+    "Validated current creation follows actual job route",
+    "Native reload retains intent and read-only recovery exposes original article without another POST",
+    "Native missing operation is fenced by DELETE before acknowledged fresh creation",
+    "Native PRO to FREE downgrade cannot send selected20k above current limit",
+    "Native blocked storage prevents creation and sanitizes browser exception",
+    "Chrome two-tab concurrent DOM activation uses actual Web Locks and one shared intent to send one POST",
+    "Native cancellation operational limit retains intent and displays JST reset without provider resubmission"
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "src/app/seo/template/page.tsx": "6e0046f58b8a58c7b7b28d77113f4f7d02744ddf9e40c0e3b43c582a3287ba25",
+    "src/lib/use-seo-creation-recovery.ts": "5c6e35e8d0fb1580d2d55426fcc3bd7e482199e69c42981a3147b0e3b5e9b84d",
+    "src/lib/seo-template-requests.ts": "937add991f9fe649f6af109bd65a74a276cf82b6491e3aede8b7240f8d08bcb5",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c"
+  },
+  "scope": "Actual integrated page/catalog/request fence/response reader/durable recovery hook in native Chrome on loopback with synthetic auth, fetch API, navigation, motion and icons. Native typing/clicks checked; no Next router, real OAuth/provider, production or customer DB."
+}

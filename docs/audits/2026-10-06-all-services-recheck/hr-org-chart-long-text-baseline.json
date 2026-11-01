@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T16:50:53.095Z",
+  "defectsReproduced": 3,
+  "cases": [
+    {
+      "field": "departmentName",
+      "pageBytes": 4090,
+      "schemaStringFieldHasNoDeclaredLengthLimit": true,
+      "observedClientRejects": true
+    },
+    {
+      "field": "employeeName",
+      "pageBytes": 4091,
+      "schemaStringFieldHasNoDeclaredLengthLimit": true,
+      "observedClientRejects": true
+    },
+    {
+      "field": "photoUrl",
+      "pageBytes": 9528,
+      "schemaStringFieldHasNoDeclaredLengthLimit": true,
+      "observedClientRejects": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/hr/org-chart-paged-client.ts": "cea063ff085850888508bc6093c48c2ad78dd8ecc4932db476fc69bcf92c1e64",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-long-text-baseline.cjs": "db07243423a7d9764d8c4c3aaf39751349dd711540cd97e2e01c1c26de9a456e"
+  },
+  "scope": "Actual current root paged client rejects otherwise well-formed bounded pages because department/employee strings exceed1024 or photo URL exceeds8192. Prisma String fields and current department mutation paths impose no matching length constraint. Synthetic transport only, not an actual customer or DB occurrence. This is a defect baseline and blocks release until corrected and reverified."
+}

@@ -12,6 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # 失敗の要約（最後のステップ）が、この実行で書かれた記録だけを見るための開始時刻
+      - name: Record start time
+        run: echo "CI_STARTED_AT=$(date +%s%3N)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -23,11 +27,335 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Health-check report tests (offline)
+        run: npm run test:health-check
+
+      - name: Install PostgreSQL for isolated operation regression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql poppler-utils
+
+      - name: Native PDF and image dependencies (synthetic input, no providers)
+        run: npx tsx --test scripts/regression/native-pdf-image.test.ts
+
+      - name: Satori SVG escaping and production image renderers (synthetic input)
+        run: npx tsx --test scripts/regression/native-satori.test.ts
+
+      - name: Save synthetic Satori image evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-satori-${{ github.sha }}
+          path: /tmp/doya-native-satori-audit/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: SEO list activity and pagination (private Unix socket, no providers)
+        run: python3 scripts/regression/seo-list-postgres.py
+
+      - name: Shanai storage deletion and concurrent registration (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-shanai-storage-postgres.py
+
+      - name: Shanai transcription ownership and submission recovery (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-shanai-transcription-postgres.py
+
+      - name: Shanai fact generation and confirmed edits (private SQL and mounted UI, no providers)
+        run: python3 scripts/security-regression/verify-shanai-facts-postgres.py
+
+      - name: Save synthetic native PDF evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-pdf-${{ github.sha }}
+          path: /tmp/doya-native-pdf-audit/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: New service existing paid user backfill (private Unix socket, no external providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/new-service-backfill-private-postgres-supervise.py
+
+      - name: DoyaSlide operation regression (private Unix socket, synthetic providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/doyaslide-operation-postgres-supervise.py
+
+      - name: AdImage operation regression (private Unix socket, synthetic stored images)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-operation-helper-postgres-supervise.py
+
+      - name: AdImage API recovery regression (private Unix socket, synthetic providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-operation-api-postgres-supervise.py
+
+      - name: AdImage feedback recovery regression (private Unix socket, synthetic vision)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-feedback-postgres-supervise.py
+
+      - name: AdImage analysis budget regression (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-analysis-budget-postgres-supervise.py
+
+      - name: AdImage analysis recovery regression (private Unix socket, synthetic providers)
+        env:
+          DOYA_ANALYSIS_NATIVE_CHROME: '0'
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-analysis-postgres-supervise.py
+
+      - name: AdImage logo lifecycle regression (private Unix socket, synthetic storage)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-logo-postgres-supervise.py
+
+      - name: AdImage logo API workspace recovery (private Unix socket, synthetic providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-logo-api-postgres-supervise.py
+
+      - name: AdImage result scope after storage signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-result-scope-postgres-supervise.py
+
+      - name: AdImage history and ZIP scope after storage awaits (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-read-scope-postgres-supervise.py
+
+      - name: AdImage route ownership regression
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-route-scope-postgres-supervise.py
+
+      - name: Persona image ownership after download (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/persona-image-read-postgres-supervise.py
+
+      - name: SEO image ownership after download and thumbnail (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/seo-image-read-postgres-supervise.py
+
+      - name: Shodan private preparation after signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/shodan-private-read-postgres-supervise.py
+
+      - name: Shodan private profile after signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/shodan-profile-read-postgres-supervise.py
+
+      - name: Private image bucket metadata policy (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-private-image-bucket-policy.cjs
+
+      - name: Private image provider preflight (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-private-image-preflight.cjs
+
+      - name: Shodan private pixels and public DoyaSlide compatibility (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-shodan-private-compose.cjs
+
+      - name: Additional private recording and banner storage (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-additional-private-storage.cjs
+
+      - name: Shodan registered logo preflight (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-shodan-logo-preflight.cjs
+
+      - name: Media storage privacy across all service states (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-media-storage-privacy.cjs
+
+      - name: Interview existing storage capacity compatibility (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-interview-storage-limits.cjs
+
+      - name: HR private employee photo storage (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-storage.cjs
+
+      - name: HR employee photo authority after download (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-read.cjs
+
+      - name: HR legacy photo conditional writes (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-photo-write-scope.cjs
+
+      - name: HR legacy photo write concurrency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-postgres-supervise.py
+
+      - name: HR employee writes and history concurrency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-postgres-supervise.py
+
+      - name: HR employee stale editor versions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-employee-editor-version-postgres-supervise.py
+
+      - name: HR employee editor conflicts and route lifecycle (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs
+
+      - name: HR employee editor deferred callbacks (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs
+
+      - name: HR photo content validation (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-upload-source-validation.cjs
+
+      - name: HR private photo reference assignments (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-photo-reference-postgres-supervise.py
+
+      - name: HR saved employee acknowledgement (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-ack.cjs
+
+      - name: Kintai work-rule input validation (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-work-rule-input.cjs
+
+      - name: Kintai work-rule input validation (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-input-postgres-supervise.py
+
+      - name: Kintai settings creation recovery and editor lifecycle (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-revision-mounted.cjs
+
+      - name: Kintai schedule preview boundaries (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-preview.cjs
+
+      - name: Kintai settings and attendance consistency (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-consistency.cjs
+
+      - name: Kintai creation metadata and identity transitions (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-work-rule-creation-mounted.cjs
+
+      - name: Kintai access context propagation (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-access-provider-mounted.cjs
+
+      - name: Kintai work-rule creation receipts (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-postgres-supervise.py
+
+      - name: Kintai work-rule concurrent edit revisions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-postgres-supervise.py
+
+      - name: Kintai rest and work-window boundaries (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-cross-field-boundaries-supervise.py
+
+      - name: Quote document displayed revisions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/quote-document-revision-postgres-supervise.py
+
+      - name: Quote PDF reviewed document revisions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/quote-document-pdf-revision-postgres-supervise.py
+
+      - name: Quote detail editor lifecycle and revisions (offline)
+        run: |
+          node scripts/security-regression/verify-quote-document-mounted.cjs --group=all
+          node docs/audits/2026-10-06-all-services-recheck/verify-quote-document-revision-mounted.cjs
+
+      - name: Quote unknown-save recovery with delayed writes (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/quote-document-unknown-resume-postgres-supervise.py
+
+      - name: Quote explicit editing resume (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-quote-document-unknown-resume-mounted.cjs
+
+      - name: Promane time creation receipts (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-time-creation-helper-postgres-supervise.py
+
+      - name: Promane time creation server actions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-time-creation-action-postgres-supervise.py
+
+      - name: Promane time creation recovery and duplicate submits (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-creation-mounted.cjs
+
+      - name: Promane time note boundaries (private Unix socket and offline UI)
+        run: |
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-time-note-boundary-postgres-supervise.py
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-client.cjs
+
+      - name: Promane client creation and input consistency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-client-creation-postgres-supervise.py
+
+      - name: Promane project operations and owner limits (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-project-operation-actions-postgres-supervise.py
+
+      - name: Promane project input and recovery UI (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-input.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-view-mounted.cjs
+
+      - name: Promane workspace operations and authorization (private Unix socket)
+        run: |
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-helper-postgres-supervise.py
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-mutations-postgres-supervise.py
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-http-postgres-supervise.py
+
+      - name: Promane workspace create and settings recovery UI (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-view-mounted.cjs
+
+      - name: Promane task creation recovery (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-task-creation-postgres-supervise.py
+
+      - name: Promane committed-deleted recovery (offline actual hooks)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-promane-unavailable-recovery-mounted.cjs
+
+      - name: Promane task creation mounted hook and form (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-view-mounted.cjs
+
+      - name: Promane client recovery and context drafts (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-view-mounted.cjs
+
+      - name: Promane expense creation API and server action receipts (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-expense-creation-postgres-supervise.py
+
+      - name: Promane expense recovery and context draft boundaries (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-view-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-member-draft.cjs
+
+      - name: Promane immutable workspace scope and legacy cancellation (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-canonical-scope-postgres-supervise.py
+
+      - name: Promane canonical pending metadata and legacy migration (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-canonical-scope-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-pending-scope-migration.cjs
+
+      - name: Doyalist extraction reservation and quota (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-helper-postgres-supervise.py
+
+      - name: Doyalist API recovery and exact monthly capacity (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/doyalist-operation-route-postgres-supervise.py
+
+      - name: AIO quick-start reservations and replay (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-quick-start-operation-postgres-supervise.py
+
+      - name: AIO quick-start API and plan initialization (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-quick-start-api-postgres-supervise.py
+
+      - name: AIO scan admission fresh actor (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-scan-admission-actor-postgres-supervise.py
+
+      - name: AIO prompt and invite lock ordering (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-lock-order-postgres-supervise.py
+
+      - name: membership-known-role (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervise.py
+
+      - name: membership-aio-operation (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-aio-operation-integrated-postgres-supervise.py
+
+      - name: membership-invitation-role (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervise.py
+
+      - name: Kintai and Promane invitation roles (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-additional-invite-integrated-postgres-supervise.py
+
+      - name: Promane read and receipt role boundaries (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-known-read-receipt-role-integrated-postgres-supervise.py
+
+      - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
+
+      - name: DoyaSlide preview deadlines and recovery (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs
+
+      - name: DoyaSlide URL import safety (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-route.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-intent-client.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs
 
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Lint
         run: npm run lint
+
+      # どれかのステップが落ちたら、落ちた検査の名前と原因の行・ログの末尾を Summary に書く。
+      # 各 *-supervise.py は検査の出力をログファイルにしか残さないため、これが無いと「failed」しか分からない。
+      - name: Failure report
+        if: failure()
+        run: node scripts/ci-failure-report.cjs docs/audits

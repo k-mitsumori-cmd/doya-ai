@@ -18,6 +18,8 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { claimLegacyInterviewTranscription } from '@/lib/interview/transcription-legacy'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
+import { doyaPowerCharger } from '@/lib/doya-power/charge'
+import type { ChargeOutcome } from '@/lib/doya-power/charge-core'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -26,7 +28,7 @@ async function resolveId(ctx: Ctx): Promise<string> {
   return p.id
 }
 
-export async function POST(req: NextRequest, ctx: Ctx) {
+async function postHandler(req: NextRequest, ctx: Ctx, power: PowerHolder): Promise<Response> {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
@@ -77,6 +79,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       } catch {
         return NextResponse.json({ success: false, error: '音声の長さを確認できません。対応形式のファイルで再試行してください。', code: 'MEDIA_DURATION_UNAVAILABLE' }, { status: 422 })
       }
+      // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 長さが分かったら、予約の前に「60分ごとに」の量を減らす。
+      // 操作の ID は素材の ID（同じ素材の連打・再送では1回だけ）。足りなければ予約せずに 402。失敗の応答なら下の POST が戻す
+      const charged = await doyaPowerCharger.charge('transcribe.hour', { units: Math.max(1, Math.ceil(mediaSeconds / 3600)), key: `material-${materialId}` })
+      if (charged.kind === 'blocked') return charged.response
+      power.outcome = charged
       const admission = await reserveInterviewTranscription({ userId, guestId, plan }, { id: materialId, projectId: material.project.id }, mediaSeconds)
       if (admission.state === 'limit') {
         return NextResponse.json({ success: false, error: `今月の文字起こし残り時間を超えるファイルです。`, code: 'TRANSCRIPTION_LIMIT', limitExceeded: true, actionUrl: plan === 'PRO' || plan === 'ENTERPRISE' ? SUPPORT_CONTACT_URL : '/interview/pricing', usedMinutes: Math.ceil(admission.usedSeconds / 60), limitMinutes: Math.ceil(admission.limitSeconds / 60) }, { status: 429 })
@@ -257,17 +264,29 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
 function getErrorHint(e: any): string | undefined {
   const m = String(e?.message || '')
-  if (/OPENAI_API_KEY/i.test(m)) {
-    return 'OPENAI_API_KEY を環境変数に設定してください'
-  }
-  if (/GOOGLE_SPEECH/i.test(m)) {
-    return 'INTERVIEW_GOOGLE_SPEECH_API_KEY を環境変数に設定してください'
-  }
-  if (/ASSEMBLYAI_API_KEY/i.test(m)) {
-    return 'ASSEMBLYAI_API_KEY を環境変数に設定してください'
+  // 設定不備は利用者には直せないため、環境変数名を出さずに定型文で案内する（詳細はサーバー側の設定を確認する）
+  if (/OPENAI_API_KEY|GOOGLE_SPEECH|ASSEMBLYAI_API_KEY/i.test(m)) {
+    console.error('[interview] transcribe provider is not configured')
+    return '文字起こし機能が一時的にご利用いただけません。お手数ですが、時間をおいて再度お試しください。'
   }
   if (/タイムアウト/i.test(m)) {
     return 'ファイルが大きすぎる可能性があります。短い音声から試してください。'
   }
   return undefined
+}
+
+type PowerHolder = { outcome: ChargeOutcome }
+
+// ドヤパワー: 処理の途中で減らした分を、失敗（例外・4xx/5xx の応答）なら戻す。off のときは減らさないので何もしない
+export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
+  const power: PowerHolder = { outcome: { kind: 'skip' } }
+  let res: Response
+  try {
+    res = await postHandler(req, ctx, power)
+  } catch (e) {
+    if (power.outcome.kind === 'charged') await power.outcome.refund()
+    throw e
+  }
+  if (res.status >= 400 && power.outcome.kind === 'charged') await power.outcome.refund()
+  return res
 }

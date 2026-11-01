@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
-import { isTrialEligible } from '@/lib/trial'
+import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
+import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
+import { buildTeamLineItems, newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from '@/lib/pricing-v2/prices'
+import { decideLegacyPlanCheckout, decideTeamCheckout, subscriberKind } from '@/lib/pricing-v2/view'
+import { isEnterpriseSeatCount, isTeamSeatCount, TEAM_TRIAL_DAYS } from '@/lib/pricing-v2/plans'
 
 /** 同一オリジン内のパスだけを戻り先として許可する（オープンリダイレクト防止） */
 function safeReturnPath(raw: unknown): string | null {
@@ -73,7 +78,7 @@ export async function POST(request: NextRequest) {
     // セッションの user.id が欠ける/揺れる環境でも確実に userId を取得する
     const dbUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, stripeCustomerId: true },
+      select: { id: true, stripePriceId: true, ...TRIAL_USER_SELECT },
     })
     if (!dbUser?.id) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
@@ -81,12 +86,16 @@ export async function POST(request: NextRequest) {
 
     // HR の利用枠は組織オーナーの契約で決まる。メンバー個人の決済へ案内しない。
     if (requestedServiceId === 'hr' || String(planId).startsWith('hr-') || requestedReturnTo === '/hr' || requestedReturnTo?.startsWith('/hr/')) {
+      const selection = parseHrOrganizationSelection(request.headers, dbUser.id)
+      if (selection.kind === 'invalid') {
+        return NextResponse.json({ code: 'HR_BILLING_OWNER_REQUIRED', error: '選択した組織とログイン情報を確認してください。' }, { status: 403 })
+      }
       const membership = await prisma.hrOrganizationMember.findFirst({
-        where: { userId: dbUser.id, status: 'ACTIVE' },
+        where: { userId: dbUser.id, status: 'ACTIVE', ...(selection.kind === 'selected' ? { organizationId: selection.organizationId } : {}) },
         orderBy: { createdAt: 'desc' },
         select: { role: true },
       })
-      if (membership && membership.role !== 'OWNER') {
+      if ((selection.kind === 'selected' && !membership) || (membership && membership.role !== 'OWNER')) {
         return NextResponse.json({
           code: 'HR_BILLING_OWNER_REQUIRED',
           error: 'この組織のプランはオーナーのみ変更できます。組織のオーナーにご確認ください。',
@@ -112,8 +121,55 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // プランIDからStripe価格IDを取得
-    const priceId = getPriceId(planId, billingPeriod)
+    // ------------------------------------------------------------------
+    // 新しい料金（組織単位のチーム）。旗 NEW_PRICING_ROLLOUT の内側だけ
+    // ------------------------------------------------------------------
+    // ⚠️ 今の契約者（据え置き）は、ここで必ず止める（新しい金額で請求しない）。
+    //    下の二重契約ガード（Stripe を読む INV-9）も、このあと必ず通す。
+    const isTeam = planId === TEAM_PLAN_ID
+    const newPricingEnabled = isNewPricingEnabledFor(session.user.email)
+    const kind = subscriberKind({ plan: dbUser.plan, stripePriceId: dbUser.stripePriceId, newPriceIds: newPricingPriceIds() })
+    if (!isTeam) {
+      const legacyDecision = decideLegacyPlanCheckout({ enabled: newPricingEnabled, kind })
+      if (!legacyDecision.ok) {
+        return NextResponse.json({ code: legacyDecision.code, error: 'このプランの新しいお申し込みは終了しました。料金ページのチームプランをご覧ください。' }, { status: legacyDecision.status })
+      }
+    }
+    let teamLineItems: ReturnType<typeof buildTeamLineItems> = null
+    if (isTeam) {
+      if (billingPeriod !== 'monthly' && billingPeriod !== 'yearly') {
+        return NextResponse.json({ code: 'INVALID_INTERVAL', error: '支払いの間隔を選び直してください。' }, { status: 400 })
+      }
+      const seats = body?.seats
+      const decision = decideTeamCheckout({
+        enabled: newPricingEnabled,
+        configured: teamPriceConfig().ok,
+        kind,
+        seats,
+        isValidSeats: isTeamSeatCount,
+        isEnterpriseSeats: isEnterpriseSeatCount,
+      })
+      if (!decision.ok) {
+        const messages: Record<typeof decision.code, string> = {
+          NEW_PRICING_DISABLED: 'このプランは、まだお申し込みいただけません。',
+          NEW_PRICING_NOT_CONFIGURED: '決済の設定を確認しています。時間をおいて再度お試しください。',
+          LEGACY_KEEPS_PRICE: '今のご契約は、今の料金のまま続けてお使いいただけます。新しい契約は作成しません。',
+          ALREADY_ON_TEAM: 'すでにチームプランをご契約中です。人数の変更は契約の管理画面からお手続きください。',
+          INVALID_SEATS: '人数を選び直してください。',
+          ENTERPRISE_QUOTE: '50人以上は個別にお見積りします。お問い合わせください。',
+        }
+        if (decision.code === 'NEW_PRICING_NOT_CONFIGURED') console.error('[Checkout] team prices are not configured')
+        return NextResponse.json({ code: decision.code, error: messages[decision.code] }, { status: decision.status })
+      }
+      teamLineItems = buildTeamLineItems({ seats: seats as number, interval: billingPeriod }, isTeamSeatCount)
+      if (!teamLineItems) {
+        console.error('[Checkout] team line items could not be built')
+        return NextResponse.json({ code: 'NEW_PRICING_NOT_CONFIGURED', error: '決済の設定を確認しています。時間をおいて再度お試しください。' }, { status: 503 })
+      }
+    }
+
+    // プランIDからStripe価格IDを取得（チームは基本料の価格。明細は teamLineItems）
+    const priceId = isTeam ? teamLineItems![0]!.price : getPriceId(planId, billingPeriod)
     if (!priceId) {
       return NextResponse.json(
         { error: '無効なプランIDです' },
@@ -136,7 +192,8 @@ export async function POST(request: NextRequest) {
       })
       if (existing.length > 0) {
         const s = existing[0]!
-        const planChange = existing.length === 1 && !!s.priceId && s.priceId !== priceId
+        // チームへの切り替えは、カスタマーポータルではできない（明細が2つになる）。今の契約のまま止める
+        const planChange = !isTeam && existing.length === 1 && !!s.priceId && s.priceId !== priceId
         return NextResponse.json(
           {
             code: planChange ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED',
@@ -197,13 +254,19 @@ export async function POST(request: NextRequest) {
 
     // 初月無料（30日トライアル）の付与条件:
     //  (a) 月額プランのみ（年額や enterprise/bundle には付けない＝「初月無料」訴求の範囲に一致）
-    //  (b) 新規顧客のみ（メール横断で実サブスク履歴を照会。trial cycling防止）
+    //  (b) 新規顧客のみ（DB で有料なら対象外。そうでなければメール横断で実サブスク履歴を照会。trial cycling防止）
+    // チーム（新しい料金）は TEAM_TRIAL_DAYS（既定 0 ＝ 付けない）。今のプランは今までどおり
     const trialablePlan =
-      billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
+      billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle' && (!isTeam || TEAM_TRIAL_DAYS > 0)
     let trialDays: number | undefined
     if (trialablePlan) {
       try {
-        if (await isTrialEligible({ email: session.user.email, stripeCustomerId: dbUser.stripeCustomerId })) trialDays = UNIFIED_TRIAL_DAYS
+        if (await isTrialEligible({
+          email: session.user.email,
+          stripeCustomerId: dbUser.stripeCustomerId,
+          plan: dbUser.plan,
+          servicePlans: dbUser.serviceSubscriptions?.map(s => s.plan),
+        })) trialDays = isTeam ? TEAM_TRIAL_DAYS : UNIFIED_TRIAL_DAYS
       } catch {
         return NextResponse.json({
           code: 'TRIAL_CHECK_UNAVAILABLE',
@@ -215,7 +278,7 @@ export async function POST(request: NextRequest) {
     // Checkout Session作成
     const checkoutSession = await createReservedCheckoutSession({
       userId: dbUser.id,
-      signatureParts: { priceId, planId, service, email: session.user.email, successUrl, cancelUrl, trialDays },
+      signatureParts: { priceId, planId, service, email: session.user.email, successUrl, cancelUrl, trialDays, ...(teamLineItems ? { lineItems: teamLineItems } : {}) },
       create: (idempotencyKey, expiresAt) => createCheckoutSession({
         priceId,
         userId: dbUser.id,
@@ -225,7 +288,8 @@ export async function POST(request: NextRequest) {
         trialDays,
         idempotencyKey,
         expiresAt,
-        metadata: { planId, serviceId: service },
+        ...(teamLineItems ? { lineItems: teamLineItems } : {}),
+        metadata: { planId, serviceId: service, ...(isTeam ? { seats: String(body.seats), pricing: 'v2-2026-10' } : {}) },
       }),
     })
 

@@ -1,0 +1,29 @@
+/* ドヤ展示会の ds トークン（統合仕様 §11 / R-3）。ds/tokens.css が main に入ったら、このファイルをその読み込みに差し替える。
+   ⚠️ 値の直書きはこのファイルだけにする（D-2 の検査は src/app/(shell)/tenjikai を見る） */
+.tenjikai-root {
+  /* リニューアルの ds トークン（クリア。renewal.module.css の .root と同名・同値）。
+     ds/* が main に入ったら、この塊を ds の読み込みに差し替える。値は src/lib/tenjikai/tokens.ts と揃える */
+  --blue: #0066ff;
+  --blue-deep: #0047d6;
+  --blue-soft: #e8f0ff;
+  --blue-line: #d7e5ff;
+  --bar: #dbe7ff;
+  --k1: #00b4ff;
+  --navy: #0a0f3c;
+  --ink: #101633;
+  --sub: #4a5375;
+  --muted: #7a83a3;
+  --line: #e3e8f4;
+  --line-strong: #c6cde0;
+  --track: #eef1f8;
+  --bg: #f4f7fd;
+  --surface-2: #f8faff;
+  --paper: #ffffff;
+  --yellow: #ffd400;
+  --spot: rgba(0, 102, 255, 0.07);
+  --r: 22px;
+  --r-sm: 14px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14);
+  --shadow-lg: 0 2px 6px rgba(16, 22, 51, 0.05), 0 30px 60px -24px rgba(10, 15, 60, 0.28);
+}

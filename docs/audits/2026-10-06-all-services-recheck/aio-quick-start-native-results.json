@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T05:49:40.973Z",
+  "passed": 10,
+  "expected": 10,
+  "checks": [
+    "Native scan open exposes real Web Locks and never creates automatically",
+    "Native double click creates once and only confirmed fresh completion requests first scan",
+    "Native lost acknowledgement retains metadata-only intent; reload GET and manual open never rescan",
+    "Native simultaneous tabs share one UUID and dispatch one POST under actual Web Locks",
+    "Native immediate cancel sends DELETE independently and excludes late worker navigation",
+    "Native actor ABA recovers original receipt through GET and excludes stale automatic scan",
+    "Native IME confirmation Enter does not accidentally start diagnosis",
+    "Native expired session requires explicit login and SDK failure retains recovery fence",
+    "Native Entry mounts actual hook and bounded membership reader; double click dispatches one confirmed first scan",
+    "Native Entry expired auth and failed SDK preserve UUID and exact /aio return path without automatic retry"
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "src/app/aio/Entry.tsx": "e3ef32e1a254616af7ee8b73f6340c3a902548b3998afb3e790b339739e79019",
+    "src/app/aio/[orgSlug]/scan/page.tsx": "d7d0c4de741dd5f852bf53a3a602602a29945637bdbfcd405b690c466f926230",
+    "src/components/aio/quick-start-status.tsx": "59449f27a3c6b3ff45185562cbc7e5a7ec574e349f72f276b1ba6868c8bdfd0b",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "src/lib/aio/use-quick-start.ts": "b9e47569037aea8dc1283dbb9e87b15bf4aa6fd51218d2f410efd70653611c91",
+    "src/lib/aio/quick-start-response-client.ts": "6a722c2c76753bca98a5af3a92f10101753e99e42fc5c785a6818108cd79cacf",
+    "src/lib/aio/quick-start-intent-client.ts": "383b83958db7a5322387faa683d834c9ea89137a1132bcf33659991823c22da5",
+    "docs/audits/2026-10-06-all-services-recheck/verify-aio-quick-start-native.cjs": "626c8af1d251b5fda190b526ba0afddf02ce5fad787ac8c067ff224b21ae375b"
+  },
+  "scope": "Actual integrated Entry and Scan pages/hook/status/readers/metadata in native Chrome with real Web Locks, storage, cross-tab and reload. Synthetic loopback API/session/router/signin only; all nonlocal requests blocked. No actual Next/server DB/provider/customer production proof."
+}

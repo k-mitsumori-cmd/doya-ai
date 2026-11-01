@@ -1,3 +1,5 @@
+import { postSlack } from '@/lib/slack/notify'
+
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ============================================================
@@ -11,15 +13,115 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 //    許容できない場合は、デプロイせずに環境変数 SEO_CLAUDE_MODEL で
 //    'claude-sonnet-5' などへ戻せるようにしてある。
 const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-// 最大出力トークン数
-const CLAUDE_MAX_OUTPUT_TOKENS = 16384
+
+// ============================================================
+// 呼び出しごとの Claude のモデル（2026-10-26 ユーザー承認。経営ホームのエージェントの AI の使い分け）
+// ============================================================
+// 決まった形の下書き（見積の品目の案・スライドの構成）は軽いモデル、作戦づくりは頭を使うモデル。
+// 呼び出し側が claudeModel を渡したときだけ使う。渡さなければ今までどおり CLAUDE_MODEL_DEFAULT。
+// 2026-10-26 に実 API で生存を確かめた（claude-haiku-5-5・claude-sonnet-5-5 とも 200）。
+// 設計: docs/architecture/agent-orchestration/DESIGN.md §11.9
+export const CLAUDE_MODEL_LIGHT = process.env.SEO_CLAUDE_LIGHT_MODEL || 'claude-haiku-5-5'
+export const CLAUDE_MODEL_PLAN = process.env.SEO_CLAUDE_PLAN_MODEL || 'claude-sonnet-5-5'
+
+// ============================================================
+// 出力トークンの上限（2026-10-19 費用削減）
+// ============================================================
+// 呼び出し側が generationConfig.maxOutputTokens を渡さないときは既定の 4,096 を使う。
+// 長い出力が要る呼び出し（SEO記事の本文など）は、呼び出し側で明示的に大きい値を渡す。
+// どの値を渡しても、すべての提供元で 16,384 を超えない。
+export const TEXT_MAX_OUTPUT_TOKENS_DEFAULT = 4096
+export const TEXT_MAX_OUTPUT_TOKENS_CEILING = 16384
+
+export function resolveMaxOutputTokens(requested?: number): number {
+  const n =
+    typeof requested === 'number' && Number.isFinite(requested) && requested > 0
+      ? Math.floor(requested)
+      : TEXT_MAX_OUTPUT_TOKENS_DEFAULT
+  return Math.min(n, TEXT_MAX_OUTPUT_TOKENS_CEILING)
+}
+
+// ============================================================
+// 1回の呼び出しで外部APIへ送るリクエストの上限（2026-10-19 費用削減）
+// ============================================================
+// geminiGenerateText 1回あたり:
+//   Claude 最大3回（429/529/5xx/通信エラーのやり直しを含む。空の応答のやり直しは1回まで）
+//   → Gemini 最大2モデル × 各2回
+//   → OpenAI gpt-4o-mini 1回
+//   = 最大8回。これを超えるリクエストは送らない（requestBudget で強制する）。
+// geminiGenerateJson 1回あたり: 本体1回 ＋ JSONの修正1回 = 最大16回。
+export const TEXT_CALL_LIMITS = {
+  claudeAttempts: 3,
+  claudeEmptyRetries: 1,
+  geminiModels: 2,
+  geminiAttemptsPerModel: 2,
+  openaiAttempts: 1,
+} as const
+
+export const TEXT_CALL_MAX_REQUESTS =
+  TEXT_CALL_LIMITS.claudeAttempts +
+  TEXT_CALL_LIMITS.geminiModels * TEXT_CALL_LIMITS.geminiAttemptsPerModel +
+  TEXT_CALL_LIMITS.openaiAttempts
+
+export const JSON_CALL_MAX_TEXT_CALLS = 2
+export const JSON_CALL_MAX_REQUESTS = TEXT_CALL_MAX_REQUESTS * JSON_CALL_MAX_TEXT_CALLS
+
+// 最後の手段の OpenAI モデル。gpt-4o より安い gpt-4o-mini に固定する。
+export const OPENAI_FALLBACK_MODEL = 'gpt-4o-mini'
+
+// deadlineAt / requestTimeoutMs は、呼び出し側が渡したときだけ使う（渡さなければ、今までどおり時間の上限なし）
+type RequestBudget = { remaining: number; deadlineAt?: number; requestTimeoutMs?: number }
+
+function createRequestBudget(time?: { deadlineAt?: number; requestTimeoutMs?: number }): RequestBudget {
+  return { remaining: TEXT_CALL_MAX_REQUESTS, deadlineAt: time?.deadlineAt, requestTimeoutMs: time?.requestTimeoutMs }
+}
+
+/**
+ * 呼び出し全体の締め切り（deadlineAt）を過ぎた。フォールバックへは進まず、呼び出し元まで投げる。
+ * 呼び出し元（例: スライドの構成）は、これを受けて失敗として終わらせる（finally で状態を戻せるように）
+ */
+export class LlmDeadlineError extends Error {
+  constructor() {
+    super('LLM call deadline exceeded')
+    this.name = 'LlmDeadlineError'
+  }
+}
+
+class RequestBudgetExhaustedError extends Error {
+  constructor() {
+    super('LLM request budget exhausted')
+    this.name = 'RequestBudgetExhaustedError'
+  }
+}
+
+// 外部APIへのリクエストは必ずここを通す。上限を超える分は送らずに止める。
+// 時間の上限: 1回ごと（requestTimeoutMs）と、呼び出し全体の締め切り（deadlineAt）の短い方で fetch を止める。
+// どちらも無いときは、今までどおり fetch(url, init) をそのまま呼ぶ。
+async function budgetedFetch(budget: RequestBudget, url: string, init: RequestInit): Promise<Response> {
+  if (budget.deadlineAt !== undefined && Date.now() >= budget.deadlineAt) throw new LlmDeadlineError()
+  if (budget.remaining <= 0) throw new RequestBudgetExhaustedError()
+  budget.remaining -= 1
+  if (budget.deadlineAt === undefined && budget.requestTimeoutMs === undefined) return fetch(url, init)
+  const left = budget.deadlineAt !== undefined ? budget.deadlineAt - Date.now() : Infinity
+  const ms = Math.max(1, Math.min(budget.requestTimeoutMs ?? Infinity, left))
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(ms) })
+  } catch (e) {
+    if (budget.deadlineAt !== undefined && Date.now() >= budget.deadlineAt - 50) throw new LlmDeadlineError()
+    throw e
+  }
+}
+
+/** 締め切りの失敗は、フォールバックやリトライで飲み込まずに投げ直す */
+function rethrowDeadline(e: unknown): void {
+  if (e instanceof LlmDeadlineError) throw e
+}
 
 // ============================================================
 // Slack通知（Claudeクレジット切れ検知）
 // ============================================================
 // SLACK_WEBHOOK_URL 環境変数で設定。未設定なら通知スキップ。
 // 同じ種類の通知を1時間以内に連続送信しないようデデュプリケーション。
-let _lastCreditAlertAt = 0
 
 function isClaudeCreditError(status: number, body: string): boolean {
   // Anthropic APIのクレジット切れ: 400 + "credit" or "billing" in error body
@@ -33,34 +135,31 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL
   if (!webhookUrl) return
 
-  // 1時間以内の重複通知を抑制
-  const now = Date.now()
-  if (now - _lastCreditAlertAt < 60 * 60 * 1000) return
-  _lastCreditAlertAt = now
-
+  // 1時間以内の重複通知は postSlack の間引きで抑える
   const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
   try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    await postSlack(webhookUrl, {
         text: [
-          `<!channel>`,
-          `:warning: *[Claude APIクレジット切れ]* ${timestamp}`,
+          `*Claude API のクレジットが不足しています*`,
+          `発生時刻：${timestamp}（日本時間）`,
           ``,
           `Claude API（${CLAUDE_MODEL_DEFAULT}）のクレジットが不足しています。`,
           `現在 *Geminiフォールバック* で記事生成を継続中です。`,
           ``,
           `*対応が必要です:*`,
           `- Anthropic Console ( https://console.anthropic.com ) でクレジットをチャージしてください`,
-          `- チャージ後、自動的にClaude Sonnet 4.6での生成に復帰します`,
+          `- チャージ後、自動的にClaudeでの生成に復帰します`,
           ``,
           `*エラー詳細:*`,
           `\`HTTP ${status}\``,
         ].join('\n'),
-      }),
-    })
+      }, {
+        // 記事生成は Gemini で続いているが、放置すると品質が落ちたままになるので人を呼ぶ
+        meta: { app: 'ドヤAI', kind: 'billing', severity: 'urgent' },
+        dedupeKey: 'claude-credit-exhausted',
+        dedupeWindowMs: 60 * 60 * 1000,
+      })
     console.log('[Slack] Credit exhaustion alert sent')
   } catch (e: any) {
     // 通知失敗で処理を止めない
@@ -68,18 +167,27 @@ async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
   }
 }
 
+/**
+ * temperature を送ってよいモデルか。新しいモデル（Claude Haiku 5.5・Sonnet 5.5・Sonnet 5・Opus 5.x・Opus 4.7/4.8・Fable・Mythos）は、
+ * 既定以外の temperature / top_p / top_k を送ると 400 を返す（Anthropic のモデルの表。2026-10-26 本番の B1 で見積とスライドが Gemini に落ちていた）。
+ * そのモデルには送らない。既定の claude-haiku-4-5 などは今までどおり送る
+ */
+export function claudeAcceptsTemperature(model: string): boolean {
+  return !/^claude-(haiku-5|sonnet-5|opus-5|opus-4-[78]|fable|mythos)/.test(model)
+}
+
 async function generateTextWithClaude(
   prompt: string,
-  options?: { temperature?: number; maxTokens?: number; system?: string }
+  budget: RequestBudget,
+  options?: { temperature?: number; maxTokens?: number; system?: string; model?: string }
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません。Claude APIを使用するにはANTHROPIC_API_KEYが必要です。')
   }
 
-  const model = CLAUDE_MODEL_DEFAULT
-  // Claude Sonnet 4.6の出力上限を超えないようキャップ
-  const maxTokens = Math.min(options?.maxTokens ?? CLAUDE_MAX_OUTPUT_TOKENS, CLAUDE_MAX_OUTPUT_TOKENS)
+  const model = options?.model || CLAUDE_MODEL_DEFAULT
+  const maxTokens = resolveMaxOutputTokens(options?.maxTokens)
 
   const systemPrompt = options?.system ??
     'あなたはSEO・LLMO（LLM Optimization）に精通したプロフェッショナルなコンテンツ作成アシスタントです。' +
@@ -91,14 +199,16 @@ async function generateTextWithClaude(
     max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }],
     system: systemPrompt,
-    temperature: options?.temperature ?? 0.4,
+    ...(claudeAcceptsTemperature(model) ? { temperature: options?.temperature ?? 0.4 } : {}),
   })
 
-  // リトライロジック（429/5xx対応 — 最大3回試行）
+  // リトライロジック（429/5xx対応 — 最大 TEXT_CALL_LIMITS.claudeAttempts 回。空の応答のやり直しは1回まで）
+  const maxAttempts = TEXT_CALL_LIMITS.claudeAttempts
+  let emptyResponses = 0
   let lastError: Error | null = null
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await budgetedFetch(budget, 'https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,10 +228,11 @@ async function generateTextWithClaude(
             return text
           }
         }
-        // 空レスポンス — リトライ対象
+        // 空レスポンス — 課金されるため、やり直しは TEXT_CALL_LIMITS.claudeEmptyRetries 回まで
+        emptyResponses++
         lastError = new Error('Claude API returned empty content')
         console.warn(`[Claude] Empty response on attempt ${attempt + 1}`)
-        if (attempt < 2) {
+        if (emptyResponses <= TEXT_CALL_LIMITS.claudeEmptyRetries && attempt < maxAttempts - 1) {
           await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)))
           continue
         }
@@ -130,12 +241,14 @@ async function generateTextWithClaude(
 
       // 429（レート制限）/ 529（過負荷）/ 5xx はリトライ
       if (response.status === 429 || response.status === 529 || response.status >= 500) {
-        const delay = 1500 * Math.pow(2, attempt) + Math.random() * 500
-        console.log(
-          `[Claude] Rate limited or server error (${response.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/3)`
-        )
-        await new Promise(r => setTimeout(r, delay))
         lastError = new Error(`Claude API Error: ${response.status}`)
+        if (attempt < maxAttempts - 1) {
+          const delay = 1500 * Math.pow(2, attempt) + Math.random() * 500
+          console.log(
+            `[Claude] Rate limited or server error (${response.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/${maxAttempts})`
+          )
+          await new Promise(r => setTimeout(r, delay))
+        }
         continue
       }
 
@@ -150,38 +263,42 @@ async function generateTextWithClaude(
 
       throw new Error(`Claude API Error: ${response.status}`)
     } catch (e: any) {
+      rethrowDeadline(e)
+      if (e instanceof RequestBudgetExhaustedError) throw e
       // 明示的にthrowされた4xxエラーはそのまま再throw
       if (e?.message?.startsWith('Claude API Error:') && !/429|529|5\d\d/.test(e.message)) {
         throw e
       }
       lastError = e
-      if (attempt < 2) {
+      if (attempt < maxAttempts - 1) {
         const delay = 1500 * Math.pow(2, attempt)
         console.warn(`[Claude] Network error on attempt ${attempt + 1}, retrying in ${delay}ms...`)
         await new Promise(r => setTimeout(r, delay))
       }
     }
   }
-  throw lastError || new Error('Claude API request failed after 3 retries')
+  throw lastError || new Error(`Claude API request failed after ${maxAttempts} attempts`)
 }
 
-// OpenAI API用のヘルパー関数
-async function generateTextWithChatGPT(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+// OpenAI API用のヘルパー関数（最後の手段。gpt-4o-mini を1回だけ呼ぶ）
+async function generateTextWithChatGPT(
+  prompt: string,
+  budget: RequestBudget,
+  options?: { temperature?: number; maxTokens?: number }
+): Promise<string> {
   const openaiApiKey = process.env.OPENAI_API_KEY
   if (!openaiApiKey) {
     throw new Error('OPENAI_API_KEY環境変数が設定されていません。ChatGPTフォールバックを使用するにはOPENAI_API_KEYが必要です。')
   }
 
-  const model = process.env.CHATGPT_FALLBACK_MODEL || 'gpt-4o'
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await budgetedFetch(budget, 'https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${openaiApiKey}`,
     },
     body: JSON.stringify({
-      model: model,
+      model: OPENAI_FALLBACK_MODEL,
       messages: [
         {
           role: 'system',
@@ -193,8 +310,8 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
         },
       ],
       temperature: options?.temperature ?? 0.4,
-      max_tokens: options?.maxTokens ?? 16384,
-      // GPT-4oは最大16384トークン出力。それ以上はgpt-4o-2024-11-20等が必要
+      // gpt-4o-mini の出力上限は 16,384 トークン。resolveMaxOutputTokens の上限と同じ。
+      max_tokens: resolveMaxOutputTokens(options?.maxTokens),
     }),
   })
 
@@ -207,7 +324,7 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
 }
 
 // SEO用途のデフォルトモデル
-// - テキスト: Claude Sonnet 4.6（プライマリ）→ Geminiフォールバック
+// - テキスト: Claude Haiku 4.5（プライマリ）→ Gemini → gpt-4o-mini のフォールバック
 //   - SEO_CLAUDE_MODEL で Claude のモデルを変更可能
 //   - SEO_PRIMARY_LLM=gemini で Gemini をプライマリに戻すことも可能
 // - 画像(図解/サムネ): nano-banana-pro-preview（Gemini ネイティブ画像生成）
@@ -222,6 +339,12 @@ type GeminiPart =
 
 interface GenerateContentRequest {
   model: string
+  /** Claude を先に使うときのモデル（無ければ CLAUDE_MODEL_DEFAULT）。CLAUDE_MODEL_LIGHT / CLAUDE_MODEL_PLAN を渡す */
+  claudeModel?: string
+  /** 呼び出し全体の締め切り（Date.now() の値）。過ぎたら LlmDeadlineError を投げる。無ければ時間の上限なし（今までどおり） */
+  deadlineAt?: number
+  /** 外部 API への1回ごとの時間の上限（ミリ秒）。無ければ上限なし（今までどおり） */
+  requestTimeoutMs?: number
   parts: GeminiPart[]
   generationConfig?: {
     temperature?: number
@@ -430,26 +553,31 @@ function closeIncompleteJson(input: string): string {
   return s
 }
 
-// 空のテキストやエラー時のフォールバックモデル（順番に試行）
+// 空のテキストやエラー時のフォールバックモデル（順番に試行。最大 TEXT_CALL_LIMITS.geminiModels 個）
 // NOTE: モデルIDはGoogle側で予告なく廃止される。追加・変更時は必ず実APIで生存確認すること
 const FALLBACK_MODELS: string[] = [
-  'gemini-2.5-flash',
   'gemini-pro-latest',
   'gemini-2.5-flash',
 ]
 
-// レート制限(429)やサーバーエラー(5xx)時にリトライ
+function geminiModelsToTry(requested: string): string[] {
+  const list = [normalizeModelId(requested), ...FALLBACK_MODELS].filter(Boolean)
+  return Array.from(new Set(list)).slice(0, TEXT_CALL_LIMITS.geminiModels)
+}
+
+// レート制限(429)やサーバーエラー(5xx)時にリトライ（1モデルあたり最大 TEXT_CALL_LIMITS.geminiAttemptsPerModel 回）
 // 404はリトライせず即返し（モデル未提供は待っても変わらない）
 async function fetchWithRetry(
+  budget: RequestBudget,
   endpoint: string,
   options: RequestInit,
-  maxRetries = 2,
+  maxRetries: number = TEXT_CALL_LIMITS.geminiAttemptsPerModel,
   baseDelay = 1500
 ): Promise<Response> {
   let lastError: Error | null = null
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const res = await fetch(endpoint, options)
+      const res = await budgetedFetch(budget, endpoint, options)
 
       // 成功または4xx(429以外)はそのまま返す（404含む = リトライ不要）
       if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
@@ -458,18 +586,24 @@ async function fetchWithRetry(
 
       // 429またはサーバーエラーはリトライ
       if (res.status === 429 || res.status >= 500) {
-        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 500
-        console.log(`[Gemini] Rate limited or server error (${res.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/${maxRetries})`)
-        await new Promise(r => setTimeout(r, delay))
         lastError = new Error(`Gemini API Error: ${res.status}`)
+        if (attempt < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 500
+          console.log(`[Gemini] Rate limited or server error (${res.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/${maxRetries})`)
+          await new Promise(r => setTimeout(r, delay))
+        }
         continue
       }
 
       return res
     } catch (e: any) {
+      if (e instanceof RequestBudgetExhaustedError) throw e
+      rethrowDeadline(e)
       lastError = e
-      const delay = baseDelay * Math.pow(2, attempt)
-      await new Promise(r => setTimeout(r, delay))
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt)
+        await new Promise(r => setTimeout(r, delay))
+      }
     }
   }
   throw lastError || new Error('Gemini API request failed after retries')
@@ -478,10 +612,12 @@ async function fetchWithRetry(
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
   const promptText = joinPartsText(req.parts)
   const temperature = req.generationConfig?.temperature ?? 0.4
-  const requestedTokens = req.generationConfig?.maxOutputTokens ?? CLAUDE_MAX_OUTPUT_TOKENS
+  const requestedTokens = resolveMaxOutputTokens(req.generationConfig?.maxOutputTokens)
+  // この呼び出しで外部APIへ送れるリクエストは最大 TEXT_CALL_MAX_REQUESTS 回（時間の上限は、渡されたときだけ）
+  const budget = createRequestBudget({ deadlineAt: req.deadlineAt, requestTimeoutMs: req.requestTimeoutMs })
 
   // ──────────────────────────────────────────────────────
-  // プライマリ: Claude Sonnet 4.6
+  // プライマリ: Claude（既定 Haiku 4.5）
   // SEO_PRIMARY_LLM=gemini を設定した場合のみGeminiを優先する
   // ──────────────────────────────────────────────────────
   const primaryLlm = (process.env.SEO_PRIMARY_LLM || '').trim().toLowerCase()
@@ -489,15 +625,19 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
   if (useClaudePrimary && promptText) {
     try {
-      const result = await generateTextWithClaude(promptText, {
+      const result = await generateTextWithClaude(promptText, budget, {
         temperature,
         maxTokens: requestedTokens,
+        model: req.claudeModel,
       })
       if (result) return result
       console.warn('[Claude] Primary returned empty, falling back to Gemini...')
     } catch (e: any) {
+      rethrowDeadline(e)
       const msg = e?.message || ''
-      console.warn('[Claude] Primary failed, falling back to Gemini')
+      // 理由の種類と状態コードだけを書く（例外の本文やプロンプトは書かない）
+      const status = /^Claude API Error: (\d{3})$/.exec(String(e?.message ?? ''))?.[1]
+      console.warn(`[Claude] Primary failed (${status ? `status ${status}` : String(e?.name || 'Error').slice(0, 40)}), falling back to Gemini`)
 
       // クレジット切れの場合はSlack通知（エラーメッセージから判定）
       if (/credit|billing|balance|payment|insufficient|402/i.test(msg)) {
@@ -507,7 +647,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   }
 
   // ──────────────────────────────────────────────────────
-  // フォールバック1: Gemini（複数モデル試行）
+  // フォールバック1: Gemini（最大2モデル × 各2回）
   // ──────────────────────────────────────────────────────
   let geminiApiKey: string | null = null
   try {
@@ -518,13 +658,14 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   }
 
   if (geminiApiKey) {
-    const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
+    const modelsToTry = geminiModelsToTry(req.model)
 
     for (const model of modelsToTry) {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+      const isLastModel = model === modelsToTry[modelsToTry.length - 1]
 
       try {
-        const res = await fetchWithRetry(endpoint, {
+        const res = await fetchWithRetry(budget, endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -544,7 +685,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
           const isNotFound = res.status === 404 || /NOT_FOUND|not found/i.test(t)
           const isRateLimited = res.status === 429 || /rate limit|RESOURCE_EXHAUSTED/i.test(t)
 
-          if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+          if ((isNotFound || isRateLimited) && !isLastModel) {
             console.log(
               `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
             )
@@ -559,21 +700,20 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
         if (!text) {
           console.warn(`[Gemini] Model ${model} returned empty text`)
-          const currentIndex = modelsToTry.indexOf(model)
-          if (currentIndex < modelsToTry.length - 1) {
-            continue
-          }
+          if (!isLastModel) continue
           break
         }
 
         console.log(`[Gemini] Fallback succeeded with model: ${model}`)
         return text
       } catch (e: any) {
+        rethrowDeadline(e)
+        if (e instanceof RequestBudgetExhaustedError) break
         const msg = String(e?.message || '')
         const isNotFound = /404|NOT_FOUND|not found/i.test(msg)
         const isRateLimited = /429|rate limit|RESOURCE_EXHAUSTED/i.test(msg)
 
-        if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+        if ((isNotFound || isRateLimited) && !isLastModel) {
           console.log(`[Gemini] Model ${model} failed, trying next...`)
           continue
         }
@@ -585,7 +725,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   }
 
   // ──────────────────────────────────────────────────────
-  // フォールバック2: ChatGPT（最後の手段）
+  // フォールバック2: OpenAI gpt-4o-mini（最後の手段・1回だけ）
   // ──────────────────────────────────────────────────────
   if (!promptText) {
     throw new Error('All LLMs exhausted and no prompt text available')
@@ -594,11 +734,12 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   if (process.env.OPENAI_API_KEY) {
     console.log('[LLM] All primary/fallback failed, trying ChatGPT as last resort...')
     try {
-      return await generateTextWithChatGPT(promptText, {
+      return await generateTextWithChatGPT(promptText, budget, {
         temperature,
-        maxTokens: Math.min(requestedTokens, 16384),
+        maxTokens: requestedTokens,
       })
     } catch (e: any) {
+      rethrowDeadline(e)
       console.warn('[ChatGPT] Last resort also failed:')
     }
   }
@@ -622,10 +763,16 @@ export async function geminiGenerateJson<T>(
     req.prompt,
   ].join('\n')
 
+  // 本体の呼び出しと、修正の呼び出し（1回まで）は同じ出力上限を使う
+  const maxOutputTokens = resolveMaxOutputTokens(req.generationConfig?.maxOutputTokens)
+
   const text = await geminiGenerateText({
     model: req.model,
+    claudeModel: req.claudeModel,
+    deadlineAt: req.deadlineAt,
+    requestTimeoutMs: req.requestTimeoutMs,
     parts: [{ text: strictPrompt }],
-    generationConfig: req.generationConfig,
+    generationConfig: { ...(req.generationConfig || {}), maxOutputTokens },
   })
 
   // Step 1: 直接パース試行
@@ -644,7 +791,8 @@ export async function geminiGenerateJson<T>(
         const repairedClosed = repairJsonLike(closed)
         return JSON.parse(repairedClosed) as T
       } catch (e3: any) {
-        // Step 4: 最終手段 - Gemini自身に修正させる
+        // Step 4: 最終手段 - LLM自身に修正させる（1回だけ。出力上限は本体と同じ）
+        // 2026-10-19: 以前は上限を 65,536 に上げて呼び直していたが、費用が膨らむためやめた。
         try {
           const fixPrompt = [
             `You must output STRICT ${schemaName} only.`,
@@ -658,13 +806,17 @@ export async function geminiGenerateJson<T>(
 
           const fixedText = await geminiGenerateText({
             model: req.model,
+            claudeModel: req.claudeModel,
+            deadlineAt: req.deadlineAt,
+            requestTimeoutMs: req.requestTimeoutMs,
             parts: [{ text: fixPrompt }],
-            generationConfig: { temperature: 0, maxOutputTokens: 65536 },
+            generationConfig: { temperature: 0, maxOutputTokens },
           })
           const fixed = repairJsonLike(fixedText)
           return JSON.parse(fixed) as T
         } catch (e4: any) {
-          // Step 5: 閉じ括弧補完後のGemini修正
+          rethrowDeadline(e4)
+          // Step 5: 閉じ括弧補完のみで再パース
           try {
             const closed = closeIncompleteJson(text)
             return JSON.parse(closed) as T

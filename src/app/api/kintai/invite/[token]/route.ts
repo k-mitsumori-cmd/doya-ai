@@ -9,6 +9,7 @@ import { isKintaiInviteExpired } from '@/lib/kintai/invite-token'
 
 type Ctx = { params: Promise<{ token: string }> }
 class InvitationExpired extends Error {}
+const allowedInviteRoles = ['system_admin', 'hr_admin', 'manager', 'employee']
 const expiredMessage = '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。'
 
 export async function GET(req: NextRequest, ctx: Ctx) {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         organization: { select: { name: true } },
       },
     })
-    if (!member) {
+    if (!member || !allowedInviteRoles.includes(member.role)) {
       return NextResponse.json({ error: '無効または期限切れの招待リンクです' }, { status: 404 })
     }
 
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             where: { inviteToken: p.token, status: 'PENDING' },
             include: { organization: { select: { name: true } }, employee: { select: { email: true } } },
           })
-          if (!member) return { status: 404, error: '無効または期限切れの招待リンクです' }
+          if (!member || !allowedInviteRoles.includes(member.role)) return { status: 404, error: '無効または期限切れの招待リンクです' }
           if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) {
             return { status: 410, error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }
           }
@@ -88,6 +89,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           })
           if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) throw new InvitationExpired()
           if (existing) return { status: 409, error: 'このアカウントは既にこの組織に所属しています' }
+
+          // 参加すると、ほかの組織の所属は無効になる。その組織で唯一の有効なシステム管理者だった場合、
+          // 管理者のいない組織が残り、未使用の管理者席を乗っ取られる原因にもなるため、参加を断る。
+          const adminSeats = await tx.kintaiMember.findMany({
+            where: { userId, status: 'ACTIVE', role: 'system_admin', id: { not: member.id } },
+            select: { id: true, organizationId: true },
+          })
+          for (const seat of adminSeats) {
+            const otherAdmins = await tx.kintaiMember.count({
+              // 従業員として無効な管理者は数えない（PATCH の「最後のシステム管理者」判定と同じ条件）
+              where: { organizationId: seat.organizationId, id: { not: seat.id }, role: 'system_admin', status: 'ACTIVE', employee: { is: { isActive: true } } },
+            })
+            if (otherAdmins === 0) {
+              return { status: 409, error: '現在の組織で唯一のシステム管理者のため、この招待には参加できません。先に別の方へシステム管理者の権限を引き継いでください。' }
+            }
+          }
 
           await tx.kintaiMember.updateMany({
             where: { userId, status: 'ACTIVE', id: { not: member.id } },

@@ -1,0 +1,204 @@
+/*
+ * ツールの画面の一番下のドヤくん（ToolBearFooter）
+ * ⚠️ 色はトークン（tokens.module.css の .ds）だけ。動きは位置・回転・大きさだけで、絵はいつも見える（F-12）
+ */
+.footer {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px 12px;
+  margin: 48px auto 0;
+  padding: 16px 16px 0;
+  min-height: 150px;
+  max-width: 960px;
+  border-radius: var(--r) var(--r) 0 0;
+  background:
+    radial-gradient(60% 120% at 50% 100%, var(--blue-soft), transparent 70%),
+    linear-gradient(180deg, transparent, var(--blue-soft));
+  overflow: hidden;
+}
+/* 読み込みの間は見えないまま場所だけ取る（ToolBearFooter.tsx の settled） */
+.footer:not([data-settled='true']) { visibility: hidden; }
+.ground {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 18px;
+  height: 0;
+  border-top: 2px dashed var(--blue-line);
+}
+
+.stage {
+  position: relative;
+  flex: none;
+  padding: 0;
+  margin: 0 0 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.stage:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+.actor {
+  position: relative;
+  display: block;
+  width: 112px;
+  height: 112px;
+  transform-origin: 50% 100%;
+}
+.bear {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 112px;
+  height: 112px;
+  user-select: none;
+}
+.shadow {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 2px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(10, 15, 60, 0.18), transparent);
+}
+
+/* 吹き出し（1行で収まる長さにしている） */
+.bubble {
+  position: relative;
+  margin: 0 0 64px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--blue-line);
+  border-radius: 999px 999px 999px 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  transform-origin: 0% 100%;
+}
+@media (max-width: 480px) {
+  .footer { margin-top: 32px; min-height: 136px; gap: 4px 8px; padding: 12px 8px 0; }
+  .actor, .bear { width: 88px; height: 88px; }
+  .bubble { margin-bottom: 52px; font-size: 13px; padding: 8px 12px; }
+}
+
+/* ---- 効果の粒（飾り）。普段は見えない ---- */
+.fx { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.fx i { position: absolute; display: block; opacity: 0; }
+
+/* ---- 入ってきたとき（data-seen）に1回だけ動く ---- */
+.footer[data-seen='true'] .bubble { animation: bf-bubble 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 700ms both; }
+@keyframes bf-bubble { from { transform: scale(0.6) translateY(8px); } to { transform: none; } }
+
+/* 跳ねる（収入・見積もり・バナーなど）。上に金色の粒が上がる */
+.footer[data-motion='hop'][data-seen='true'] .actor { animation: bf-hop 1300ms cubic-bezier(0.33, 0, 0.3, 1) 1 both; }
+@keyframes bf-hop {
+  0% { transform: none; }
+  12% { transform: scale(1.06, 0.9); }
+  32% { transform: translateY(-26px) rotate(-5deg); }
+  50% { transform: scale(1.05, 0.92); }
+  66% { transform: translateY(-14px) rotate(4deg); }
+  82% { transform: scale(1.03, 0.96); }
+  100% { transform: none; }
+}
+.footer[data-motion='hop'] .fx i {
+  width: 14px; height: 14px; border-radius: 50%; top: 10px;
+  background: radial-gradient(circle at 35% 35%, var(--paper), var(--yellow) 45%, var(--fair));
+}
+.footer[data-motion='hop'] .fx i:nth-child(1) { left: 6px; }
+.footer[data-motion='hop'] .fx i:nth-child(2) { left: 50%; margin-left: -7px; top: -6px; }
+.footer[data-motion='hop'] .fx i:nth-child(3) { right: 6px; }
+.footer[data-motion='hop'][data-seen='true'] .fx i { animation: bf-coin 1100ms ease-out both; }
+.footer[data-motion='hop'][data-seen='true'] .fx i:nth-child(1) { animation-delay: 380ms; }
+.footer[data-motion='hop'][data-seen='true'] .fx i:nth-child(2) { animation-delay: 480ms; }
+.footer[data-motion='hop'][data-seen='true'] .fx i:nth-child(3) { animation-delay: 580ms; }
+@keyframes bf-coin {
+  0% { opacity: 0; transform: translateY(10px) scale(0.5); }
+  25% { opacity: 1; transform: translateY(-6px) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.9) rotateY(180deg); }
+}
+
+/* 押す（勤怠・支出・プロマネ）。タイムカードを押すように2回沈み、足元に輪が広がる */
+.footer[data-motion='stamp'][data-seen='true'] .actor { animation: bf-stamp 1200ms cubic-bezier(0.33, 0, 0.3, 1) 1 both; }
+@keyframes bf-stamp {
+  0% { transform: none; }
+  18% { transform: translateY(-10px) rotate(-3deg); }
+  30% { transform: scale(1.08, 0.86); }
+  46% { transform: none; }
+  60% { transform: translateY(-8px) rotate(3deg); }
+  72% { transform: scale(1.06, 0.9); }
+  100% { transform: none; }
+}
+.footer[data-motion='stamp'] .fx i {
+  left: 50%; bottom: 0; width: 60px; height: 16px; margin-left: -30px; border-radius: 50%;
+  border: 2px solid var(--sky);
+}
+.footer[data-motion='stamp'][data-seen='true'] .fx i:nth-child(1) { animation: bf-ripple 700ms ease-out 340ms both; }
+.footer[data-motion='stamp'][data-seen='true'] .fx i:nth-child(2) { animation: bf-ripple 700ms ease-out 840ms both; }
+@keyframes bf-ripple { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: scale(1.8); } }
+
+/* 手を振る（人事・面接・社内インタビューなど）。左右に揺れ、青い粒がふわっと上がる */
+.footer[data-motion='wave'][data-seen='true'] .actor { animation: bf-wave 1500ms ease-in-out 1 both; }
+@keyframes bf-wave {
+  0%, 100% { transform: none; }
+  15% { transform: rotate(-8deg); }
+  35% { transform: rotate(7deg); }
+  55% { transform: rotate(-6deg); }
+  75% { transform: rotate(4deg); }
+}
+.footer[data-motion='wave'] .fx i { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--sky), var(--blue)); top: 24px; }
+.footer[data-motion='wave'] .fx i:nth-child(1) { left: -4px; }
+.footer[data-motion='wave'] .fx i:nth-child(2) { right: -2px; top: 8px; }
+.footer[data-motion='wave'] .fx i:nth-child(3) { right: 10px; top: 40px; width: 7px; height: 7px; }
+.footer[data-motion='wave'][data-seen='true'] .fx i { animation: bf-float 1400ms ease-out both; }
+.footer[data-motion='wave'][data-seen='true'] .fx i:nth-child(2) { animation-delay: 200ms; }
+.footer[data-motion='wave'][data-seen='true'] .fx i:nth-child(3) { animation-delay: 420ms; }
+@keyframes bf-float { 0% { opacity: 0; transform: translateY(8px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-34px); } }
+
+/* 歩いてくる（記事・リスト・スライド・展示会など）。左から弾みながら来て、後ろに砂ぼこり */
+.footer[data-motion='walk'][data-seen='true'] .actor { animation: bf-walk 1300ms cubic-bezier(0.22, 1, 0.36, 1) 1 both; }
+@keyframes bf-walk {
+  0% { transform: translateX(-90px) rotate(-6deg); }
+  20% { transform: translate(-66px, -8px) rotate(5deg); }
+  40% { transform: translate(-40px, 0) rotate(-5deg); }
+  60% { transform: translate(-18px, -8px) rotate(4deg); }
+  80% { transform: translateX(-4px) rotate(-2deg); }
+  100% { transform: none; }
+}
+.footer[data-motion='walk'] .fx i { width: 12px; height: 12px; border-radius: 50%; background: var(--blue-line); bottom: 4px; left: 0; }
+.footer[data-motion='walk'][data-seen='true'] .fx i { animation: bf-dust 700ms ease-out both; }
+.footer[data-motion='walk'][data-seen='true'] .fx i:nth-child(1) { animation-delay: 250ms; }
+.footer[data-motion='walk'][data-seen='true'] .fx i:nth-child(2) { animation-delay: 550ms; left: 12px; }
+.footer[data-motion='walk'][data-seen='true'] .fx i:nth-child(3) { animation-delay: 850ms; left: 24px; }
+@keyframes bf-dust { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: translate(-24px, -10px) scale(1.6); } }
+
+/* 考える（商談・カンニング）。首をかしげ、頭の上に点が順に灯る */
+.footer[data-motion='think'][data-seen='true'] .actor { animation: bf-think 1600ms ease-in-out 1 both; }
+@keyframes bf-think {
+  0%, 100% { transform: none; }
+  25%, 70% { transform: rotate(7deg) translateY(-3px); }
+}
+.footer[data-motion='think'] .fx i { width: 9px; height: 9px; border-radius: 50%; background: var(--blue); top: -4px; }
+.footer[data-motion='think'] .fx i:nth-child(1) { right: 22px; }
+.footer[data-motion='think'] .fx i:nth-child(2) { right: 8px; top: -12px; }
+.footer[data-motion='think'] .fx i:nth-child(3) { right: -6px; top: -20px; }
+.footer[data-motion='think'][data-seen='true'] .fx i { animation: bf-dot 1500ms ease-in-out both; }
+.footer[data-motion='think'][data-seen='true'] .fx i:nth-child(2) { animation-delay: 200ms; }
+.footer[data-motion='think'][data-seen='true'] .fx i:nth-child(3) { animation-delay: 400ms; }
+@keyframes bf-dot { 0% { opacity: 0; transform: scale(0.3); } 30%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+/* ふだんは、絵に軽く触れると少し浮く */
+@media (hover: hover) {
+  .stage:hover .bear { transform: translateY(-3px); transition: transform 0.2s var(--ease); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer .actor, .footer .bubble, .footer .fx i { animation: none !important; }
+  .fx { display: none; }
+  .stage:hover .bear { transform: none; }
+}

@@ -10,9 +10,10 @@ async function call(body) {
   let created = null;
   const prisma = { sfaLead: { createMany: async ({ data }) => { created = data; return { count: data.length }; } } };
   const deps = {
+    ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member' }), orgSlugFrom: () => 'org' },
+    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor' }), orgSlugFrom: () => 'org' },
   };
   const exported = {};
   vm.runInNewContext(code, { exports: exported, require: (name) => { assert(name in deps, name); return deps[name]; } });
@@ -30,7 +31,7 @@ async function call(body) {
   assert.equal(oversized.status, 413);
   assert.equal(oversized.created, null);
 
-  const mixed = await call({ source: 'csv', rows: [null, 1, [], { name: {} }, { name: '  Company  ', contactName: ' Person ', email: {} }] });
+  const mixed = await call({ source: 'csv', rows: [null, 1, [], { name: {} }, { name: '  Company  ', contactName: ' Person ', email: null }] });
   assert.equal(mixed.status, 200);
   assert.equal(mixed.result.imported, 1);
   assert.equal(mixed.result.skipped, 4);
@@ -40,5 +41,11 @@ async function call(body) {
   assert.equal(mixed.created[0].contactName, 'Person');
   assert.equal(mixed.created[0].email, null);
   assert.equal(mixed.created[0].status, 'new');
+  const invalidField = await call({ rows: [{ name: 'Company', email: {} }] });
+  assert.equal(invalidField.status, 400);
+  assert.equal(invalidField.created, null);
+  const longField = await call({ rows: [{ name: 'Company', contactName: 'x'.repeat(81) }] });
+  assert.equal(longField.status, 400);
+  assert.equal(longField.created, null);
   console.log('PASS SFA lead import: malformed payloads, invalid rows, and row limit');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

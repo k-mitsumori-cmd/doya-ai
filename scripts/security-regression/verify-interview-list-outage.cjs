@@ -23,6 +23,7 @@ function route(file, unavailable) {
     },
     '@/lib/interview/recipes-seed': { PRESET_RECIPES: [] },
   };
+  mocks['@/lib/private-api-response'] = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': mocks['next/server'] });
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   vm.runInNewContext(code, { exports, require: (name) => {

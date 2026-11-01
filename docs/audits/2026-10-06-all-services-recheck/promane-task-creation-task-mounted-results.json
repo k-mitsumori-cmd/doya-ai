@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T21:49:41.640Z",
+  "expected": 17,
+  "passed": 17,
+  "cases": [
+    "StrictMode same-frame submits call actual creation lane once",
+    "lost acknowledgement survives remount and only recovers saved row",
+    "missing recovery retains fence without blind resubmit",
+    "explicit server cancellation unlocks a new operation identity",
+    "foreign or mismatched acknowledgement cannot report success",
+    "storage persistence failure sends no server action",
+    "corrupt operation metadata fails closed without overwrite",
+    "scope change ignores delayed old save acknowledgement",
+    "two mounted tabs serialize metadata and do not send distinct duplicates",
+    "failed recovery keeps operation and original write fence",
+    "unresponsive action times out to durable unknown and late success cannot unlock",
+    "missing Web Locks fails before server write",
+    "incomplete resolved action acknowledgement retains pending operation",
+    "account changes isolate pending operation and reject stale screen callbacks",
+    "anonymous browser cannot start a task request",
+    "invalid input preserves ready lane and sends no request or metadata",
+    "accepted note5000 and normalized fields require exact saved acknowledgement"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-task-creation.ts": "49d87decf0e2f60ac41b70b207a844b0063aac39cafbd294734d4e338cb45f56"
+  },
+  "scope": "Actual candidate React hook in StrictMode, real localStorage and serialized synthetic Web Locks; deferred synthetic server actions and session. Actual TaskCreateForm, native browser, PostgreSQL-linked UI and production not covered."
+}

@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-06T15:42:53.745943+00:00",
+  "problem": "Both cancellation notices retained previous authenticated actor cancellation date after account switch; reproduced with actual components and synthetic accounts.",
+  "baseline": "cancel-notice-actor-baseline.json",
+  "changes": [
+    "Authenticated actor/service/refresh scoped readonly status; abort and reject late previous context replies",
+    "35s deadline and64KiB bounded reader; strict coherent contract parsing",
+    "Visible localized unknown state with readonly retry; never assume missing contract from malformed reply",
+    "Current plan access wording includes legacy LIGHT"
+  ],
+  "tests": {
+    "parserGroups": 28,
+    "mountedCases": 48,
+    "mountedEvidence": "cancel-notice-mounted-current.json",
+    "parserEvidence": "subscription-status-client-current.json",
+    "releaseGate": "cancel-notice-release-ed948c2e-ad1b-4cbb-917f-69f42310219d",
+    "gateState": {
+      "startedAt": "2026-10-06T15:36:32.869780+00:00",
+      "pid": 27349,
+      "status": "passed",
+      "sourceFiles": 2546,
+      "head": "e94b78846f46abf655390396e6902d0d21812e9c",
+      "gates": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-06T15:39:42.477903+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-06T15:39:44.219102+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-06T15:39:44.513621+00:00"
+    }
+  },
+  "sourceHashes": {
+    "src/hooks/useSubscriptionStatus.ts": "283f26a94e6cc7b7c17d2754d939f2f10a71c223b6b311d79d984258f862fe06",
+    "src/lib/subscription-status-client.ts": "ea0d8c6d663e00ae4b1955c1aa94b10b58e2573d09706fb5b2a443e4121cb746",
+    "src/components/BannerCancelScheduleNotice.tsx": "e46af2e5cbb4f2b25e0a22a2d91165d374efa4202df4673347c60e35b2729305",
+    "src/components/SeoCancelScheduleNotice.tsx": "e80d7741e9fea8992f15fbde3557bcd2201450c9010102b438c452d6de779030",
+    "scripts/security-regression/verify-subscription-status-client.cjs": "cd9a843e8e8ee2819613e1139062561953546cce43df6d4685098e562132acf7",
+    "scripts/security-regression/verify-cancel-notice-mounted.cjs": "f2aa90f76099926be5682c8c5a08949c5ddb96d0afd01cd3ccd3d31ced5ea0fe",
+    "scripts/security-regression/run.cjs": "7937f1a2937e033e72516acd663d02144001778cabd915933b219edb9d039ede"
+  },
+  "boundaries": [
+    "Synthetic mounted/API tests; no real Stripe mutations, customer DB writes, paid providers or emails",
+    "Plan/settings cancellation and resume direct clients still require review",
+    "Same-page verified cancellation/resume refresh integration remains to be fixed",
+    "17-service matrix and authenticated browser end-to-end checks remain incomplete"
+  ],
+  "releaseState": "Prepared and locally verified; production not yet updated for this cohort"
+}

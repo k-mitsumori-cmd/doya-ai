@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T17:18:02.171Z",
+  "passed": 0,
+  "cases": [],
+  "failures": [
+    {
+      "scenario": "late-delete-new-confirmation",
+      "error": "The expression evaluated to a falsy value:\n\n  assert(button('削除する'))\n"
+    },
+    {
+      "scenario": "false-delete-ack",
+      "error": "The expression evaluated to a falsy value:\n\n  assert(button('削除する'))\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "8bad8dca6ed7a85550f7d1d871f5eab8219c2152ee92720638676838305f93d2"
+  },
+  "scope": "Actual settings page, synthetic rule list/deferred DELETE; no production deletion."
+}

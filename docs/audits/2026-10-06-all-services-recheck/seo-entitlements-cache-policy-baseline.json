@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-08T07:59:20.067Z",
+  "expected": 9,
+  "passed": 0,
+  "cases": [
+    {
+      "name": "guest without cookie",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "guest with existing cookie",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "FREE exhausted",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "LIGHT partly used",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "PRO partly used",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "ENTERPRISE partly used",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "schema unavailable",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "authentication unavailable",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    },
+    {
+      "name": "usage unavailable",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'private, no-store'\n"
+    }
+  ],
+  "source": "src/app/api/seo/entitlements/route.ts",
+  "sourceHash": "0995f5c2a95a4c671a0136fb621619918ace238cd46220cda2016689af0f0cbb",
+  "scope": "Actual entitlement route, pricing and access helpers with synthetic auth/usage/schema boundaries. Checks private cache policy on guest/FREE/LIGHT/PRO/ENTERPRISE success and503 schema/auth/usage paths, plus existing ledger response/outage/recent-login invariants. No production/customer writes."
+}

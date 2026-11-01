@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-07T15:32:55.222Z",
+  "passed": 1,
+  "cases": [
+    "owner"
+  ],
+  "failures": [
+    {
+      "scenario": "actual-delete-during-signing",
+      "error": "Old private preparation was returned after actual-delete-during-signing"
+    },
+    {
+      "scenario": "membership-revoked-during-signing",
+      "error": "Old private preparation was returned after membership-revoked-during-signing"
+    },
+    {
+      "scenario": "organization-changed-during-signing",
+      "error": "Old private preparation was returned after organization-changed-during-signing"
+    },
+    {
+      "scenario": "image-path-changed-during-signing",
+      "error": "Old private preparation was returned after image-path-changed-during-signing"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/shodan/preparations/[id]/route.ts": "21aab82cd6a61a4d1ee2096ac037fcb5340cd997df6913b0932111847e68be76",
+    "src/lib/shodan/access.ts": "3b2d7335200b65ff8ef9c084370fbadf097bfeef6c9cd536a414b9fed76661fe"
+  },
+  "scope": "Actual Shodan GET/DELETE/access, actual Prisma/private Unix-socket PostgreSQL with organization foreign keys. Synthetic authenticated identity and storage signatures. No customer data, provider or email.",
+  "sourceCommit": "7624427b6544df489615dc28b5a9188d890f177e"
+}

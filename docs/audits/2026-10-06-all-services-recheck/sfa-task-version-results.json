@@ -1,0 +1,42 @@
+{
+  "passed": 31,
+  "cases": [
+    "malformed PATCH version rejected null",
+    "malformed PATCH version rejected \"\"",
+    "malformed PATCH version rejected 0",
+    "malformed PATCH version rejected \"bad\"",
+    "malformed PATCH version rejected \"2099-01-01\"",
+    "malformed PATCH version rejected \"2099-01-01T00:00:00Z\"",
+    "malformed PATCH version rejected \"2099-02-30T00:00:00.000Z\"",
+    "version alone never toggles or writes",
+    "modern title update returns monotonically increasing full DTO",
+    "stale title never overwrites newer value",
+    "12 same-version concurrent changes have one winner",
+    "opposing same-version status writes cannot cancel each other",
+    "same-status explicit update preserves completion time and advances version",
+    "legacy empty toggle remains serialized but version advances",
+    "stale DELETE cannot remove a newer task",
+    "current-version DELETE removes exactly one task; recovery says absent",
+    "invalid DELETE version rejected ?expectedUpdatedAt=",
+    "invalid DELETE version rejected ?expectedUpdatedAt=bad",
+    "invalid DELETE version rejected ?expectedUpdatedAt=2099-01-01T00:00:00.000Z&expectedUpdatedAt=2099-01-01T00:00:00.000Z",
+    "legacy DELETE retained",
+    "read-only recovery returns current version under task share lock",
+    "recovery missing/foreign/empty lock discloses nothing {\"missing\":true}",
+    "recovery missing/foreign/empty lock discloses nothing {\"foreign\":true}",
+    "recovery missing/foreign/empty lock discloses nothing {\"emptyLock\":true}",
+    "GET denies revoked actor",
+    "PATCH denies revoked actor",
+    "DELETE denies revoked actor",
+    "anonymous GET rejected before transaction",
+    "PATCH invalid target rejected before transaction",
+    "DELETE invalid target rejected before transaction",
+    "invalid recovery target rejected before transaction"
+  ],
+  "scope": "Actual task detail handlers with actual fresh authority helper. Independent stateful synthetic Prisma with serialized transactions and SQL shape assertions. Actual PostgreSQL scheduling, modern client adoption and private production unproven.",
+  "checkedAt": "2026-10-07T01:23:14.712791+00:00",
+  "sourceHashes": {
+    "src/app/api/sfa/tasks/[id]/route.ts": "240319dfe3b340c10a5d9ef70d1053145f8656365b1f77d8bbbd7c65fd87ae64",
+    "src/app/api/sfa/tasks/route.ts": "91f2f00d0bda2f75a02771f90e35b17a1e2e28e01c4a7f4c19ed8f7face952b8"
+  }
+}

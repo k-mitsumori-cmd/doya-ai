@@ -1,0 +1,23 @@
+PASS New extraction prepares and collects once then clears metadata
+PASS Same turn repeated clicks cannot dispatch multiple mutations
+PASS Unknown collection response keeps intent and disables fresh generation
+PASS Reload metadata recovers by GET and never automatically POSTs
+PASS Explicit resume uses saved project and count without creating again
+PASS Cancel a recovered operation clears only after server confirms terminal
+PASS Unknown response later recovers committed result via GET only
+PASS Actor switch aborts old collection and excludes late private result
+AssertionError [ERR_ASSERTION]: User must be able to cancel while collection is still pending
+
+true !== false
+
+    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-cancel-mounted.cjs:25:339
+    at async check (/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-cancel-mounted.cjs:14:68)
+    at async /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-cancel-mounted.cjs:25:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+Incomplete mounted extraction verification 8

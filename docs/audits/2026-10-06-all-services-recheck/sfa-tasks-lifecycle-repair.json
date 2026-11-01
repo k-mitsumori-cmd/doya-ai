@@ -1,0 +1,370 @@
+{
+  "checkedAt": "2026-10-07T00:30:13.078066+00:00",
+  "status": "partially-repaired-task-activity-published-deal-cohort-local-gate-running",
+  "sourceCommit": "e1e4a38d76c4f5c49dcdc949c93a87dc51e0b6f7",
+  "evidence": [
+    "sfa-task-late-create-baseline.json",
+    "sfa-task-double-create-baseline.json",
+    "sfa-activity-late-create-baseline.json",
+    "sfa-activity-double-create-baseline.json",
+    "sfa-stale-mutation-authority-baseline.json",
+    "sfa-bulk-failure-baseline.json",
+    "sfa-manual-double-submit-baseline.json"
+  ],
+  "findings": [
+    "Actual task and activity creation both allow two same-frame POSTs.",
+    "Late alpha task/activity creation clears beta draft, shows global success and reloads alpha rows into beta scope.",
+    "Task title and activity subject/body silently truncated; invalid activity type/date silently replaced with note/server time (actual API synthetic proof).",
+    "Actual task create/update/delete and activity create commit after synthetic membership revocation between context validation and write. Fresh locked membership must be checked inside mutation transaction.",
+    "Actual mounted deal AI candidate bulk registration closes the proposal and reports success (0 tasks) when task POST returns 400; unsuccessful candidates are lost. Repair must preserve failed/uncertain candidates without blind retries."
+  ],
+  "nextRequirements": [
+    "Actor/org/epoch scoped reads and mutation controllers, persistent scoped results, shared synchronous operation guards",
+    "Creation replay protection and read recovery for uncertain outcomes, bounded full DTO transport, versioned task changes/deletions",
+    "Actual mounted and atomic API synthetic regression, frozen full gates, production verification"
+  ],
+  "limits": [
+    "Synthetic real-page scope transition, not proof of real Next segment reuse; no real customer writes, paid provider or DB operation.",
+    "All 17 services / 2074 criteria remain incomplete."
+  ],
+  "inputEvidence": "sfa-input-normalization-baseline.json",
+  "consumerInventory": [
+    "src/app/sfa/[orgSlug]/tasks/page.tsx",
+    "src/app/sfa/[orgSlug]/page.tsx",
+    "src/app/sfa/[orgSlug]/deals/page.tsx",
+    "src/app/sfa/[orgSlug]/activities/page.tsx"
+  ],
+  "repairDesignConstraints": [
+    "SFA active members are sales staff and may use task/activity mutations; do not impose AIO manager-only policy.",
+    "SFA tasks are hard-deleted. Creation receipts must survive deletion, so a deterministic task ID alone is insufficient to prevent resurrection. Existing SystemSetting transaction receipt pattern is available (interview project-create).",
+    "Fresh ACTIVE membership held against removal in each mutation transaction; validate task/related IDs by organization at commit; version task mutations and preserve legacy compatibility deliberately.",
+    "Cover all four consumers including AI suggested bulk tasks and deal timeline, not only standalone tasks page."
+  ],
+  "inputRepair": {
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
+    "cases": 65,
+    "evidence": "sfa-input-preservation-results.json",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-7a66f0dc-f4bc-420b-9373-80101ae5f9cc",
+    "scope": "Reject overlong task titles and activity subjects/bodies, invalid explicit activity type/date and malformed JSON before reads/writes. Existing four consumer paths share these POST routes. SFA lifecycle, versioning, replay and scope findings remain open.",
+    "supersededGate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-055b80ea-b68c-474c-8e7f-45a3864c7083",
+    "supersededReason": "Test runner insertion incorrectly passed two filenames to path.join, creating a nonexistent path. Corrected to separate independently checked subprocesses; baseline full gate correctly failed, not accepted.",
+    "expansionReason": "New actual-route proof shows silent truncation in 17 account/contact/lead fields; expand same input-preservation repair rather than leave related creation paths lossy.",
+    "supersededExpandedGate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-24d28e1c-84c5-4687-886a-1c8343a64897",
+    "manualDraftRetention": {
+      "cases": 7,
+      "evidence": "sfa-manual-draft-retention-results.json",
+      "scope": "Actual four page consumers and actual task/activity POST validators, synthetic auth/transport; overlong rejection retains manual draft. Other lifecycle/AI bulk remains open."
+    },
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "fullGateExitCode": 0,
+    "sourceFiles": 2658,
+    "changedSources": [],
+    "updatedAt": "2026-10-07T00:54:56.746090+00:00",
+    "commit": "0200977e081365aa8114a3ca0454475b60462777",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37554454155,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "0200977e081365aa8114a3ca0454475b60462777"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_BTitV7mwkcouR5Frkb2xU6NsqhyQ",
+        "url": "doya-p8zgduufy-surisutas-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "commit": "0200977e081365aa8114a3ca0454475b60462777"
+      }
+    ],
+    "publicationEvidence": "sfa-input-public-0200977e.json",
+    "publicVerificationExitCode": 0
+  },
+  "updatedAt": "2026-10-07T02:24:36.388584+00:00",
+  "relatedCollectionInputLoss": {
+    "status": "repaired-local-full-gate-passed-production-pending",
+    "cases": 17,
+    "evidence": "sfa-collection-input-loss-baseline.json",
+    "scope": "Account/contact/lead creation truncation repaired in 0200977e with task/activity validators. Collection update paths, other client lifecycle and real DB/private production remain unverified."
+  },
+  "mutationAuthorityRepair": {
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-mutation-authority-release-f4d44ff6-3742-4808-900d-585ecacd7bbb",
+    "evidence": "sfa-mutation-authority-results.json",
+    "repairs": [
+      "All four task/activity mutations recheck ACTIVE actor identity and allowed sales role inside transaction, holding membership FOR SHARE against concurrent removal/demotion.",
+      "Related account/deal/contact ownership and active state checked inside the write after row locks; deal locked exclusively up front to avoid share-lock upgrades while updating lastActivityAt.",
+      "Task changes/deletion read their current row under FOR UPDATE after actor check; stale initial context cannot authorize write.",
+      "Private no-store Cookie headers for handled JSON responses of task/activity routes and sanitized write failures."
+    ],
+    "limits": [
+      "71 stateful synthetic authority cases and 8 actual local PostgreSQL/Prisma lock/concurrency cases passed. Production database concurrency, external authentication and private production operation remain unverified.",
+      "Client actor/org scope, durable creation receipts, unknown-write recovery, optimistic versions and bulk candidate preservation remain open.",
+      "All 17 services / 2074 criteria remain incomplete."
+    ],
+    "supersededGate": "docs/audits/2026-10-06-all-services-recheck/sfa-mutation-authority-release-98b166ea-3d4e-4e83-897f-9665ff68040d",
+    "supersededReason": "Empty lock followed by new snapshot accepted; fixed actor, related and task lock row checks and added 10 regression cases.",
+    "emptyLockEvidence": "sfa-actor-empty-lock-baseline.json",
+    "cases": 71,
+    "fullGateExitCode": 0,
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "sourceFiles": 2661,
+    "changedSources": [],
+    "localPostgresEvidence": "sfa-authority-postgres-results.json",
+    "localPostgresCases": 8,
+    "localPostgresSupervisor": "sfa-authority-postgres-supervisor.json",
+    "commit": "528d7e41eb5c12370659cf6ab2bc3721502b7b8c",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37555641398,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "528d7e41eb5c12370659cf6ab2bc3721502b7b8c"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_BCi19saPn1FwFriov6jq5gTid2C3",
+        "url": "doya-29i83sa9q-surisutas-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "commit": "528d7e41eb5c12370659cf6ab2bc3721502b7b8c"
+      }
+    ],
+    "publicationEvidence": "sfa-authority-public-528d7e41.json",
+    "anonymousApiEvidence": "sfa-authority-anonymous-api-20261007.json",
+    "publicVerificationExitCode": 0
+  },
+  "manualDoubleSubmissionScope": "Actual four pages checked with held synthetic POST: six manual handlers submit twice; dashboard has a single-submit ref guard. Actor/org scope and persistent recovery remain separate requirements.",
+  "previousGoalTurnClassification": "Progress: shipped 4bdd and 9c, verified current source; this turn integrates all four task/activity consumers and cancellation receipts, with 48 mounted, 64 receipt and 29 actual PostgreSQL cases. Full release gate currently running; not complete.",
+  "nextRepairContract": [
+    "Retain current ACTIVE-member policy and fresh membership locks in all next task/activity transactions.",
+    "Creation request UUID bound to user/org/kind with durable SystemSetting receipt; task hard deletion must never allow a creation replay to resurrect a row. Reject changed payload reuse and corrupted receipts.",
+    "Task updatedAt DTO and version conditions; recover uncertain creates/changes/deletions with read-only authoritative results instead of blind replay.",
+    "Actor/org/epoch scoped bounded clients and persistent scoped notices across all four consumers, including AI bulk; preserve latest drafts and failed/uncertain candidates; no global success on rejected/unknown response.",
+    "AIO/shared org response transport is bounded but current helper contracts cover only aio/shodan; extend deliberately for SFA routes and quota guidance rather than bypass existing validation.",
+    "Do not claim entire SFA or 17-service audit complete from this authority cohort.",
+    "Unknown-write recovery: GET missing proves no committed receipt at that lock snapshot, not cancellation of a request that has not reached the receipt lock. Never issue a new UUID after missing alone. Preserve/retry exact same operation or atomically consume a cancellation receipt before unlocking for a new create; if persisting pending state, scope to actor/org and avoid exposing old-user private drafts. Implement together with all four client consumers, not as another claimed lifecycle completion."
+  ],
+  "creationReceiptRepair": {
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
+    "syntheticCases": 40,
+    "syntheticEvidence": "sfa-creation-receipt-results.json",
+    "localPostgresCases": 14,
+    "localPostgresEvidence": "sfa-receipt-postgres-results.json",
+    "localPostgresSupervisor": "sfa-receipt-postgres-supervisor.json",
+    "localPostgresSourcesMatchGate": true,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-creation-receipt-release-900c7c87-77ad-4005-94ab-89fdaf71d4ee",
+    "scope": "Task/activity POST accepts optional UUID-v4 operationId, normalized payload bound to actor/org/kind, atomic durable SystemSetting receipt and scoped GET recovery. Fresh actor lock retained. Legacy clients remain deliberately non-idempotent until all four consumers adopt operation UUID and recovery. No production DB migration or writes performed.",
+    "remaining": [
+      "All four UI consumers operation UUID adoption, actor/org/epoch guard and bounded full DTO response handling",
+      "Task updatedAt/version preconditions and read-only task mutation recovery",
+      "Persistent scoped unknown-write notices, latest draft retention and AI bulk failed/uncertain candidate retention",
+      "Full build/lint, commit/push, exact SHA CI/READY and production publication verification"
+    ],
+    "fullGateExitCode": 0,
+    "sourceFiles": 2663,
+    "changedSources": [],
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "commit": "f7f69af69d4647a8995f232aa0cce77bcb24658f",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37556538552,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "f7f69af69d4647a8995f232aa0cce77bcb24658f"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_DTKvs9hGiCMQWJ4RMgwYzLU4n6yB",
+        "url": "doya-gl261fxto-surisutas-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "commit": "f7f69af69d4647a8995f232aa0cce77bcb24658f"
+      }
+    ],
+    "publicationEvidence": "sfa-receipt-public-f7f69af6.json",
+    "publicVerificationExitCode": 0
+  },
+  "taskVersionRepair": {
+    "status": "ci-passed-production-verification-pending",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-task-version-release-660e2cc6-7024-4d43-b8d3-52ffd8505214",
+    "syntheticCases": 31,
+    "syntheticEvidence": "sfa-task-version-results.json",
+    "localPostgresCases": 17,
+    "localPostgresEvidence": "sfa-version-postgres-results.json",
+    "localPostgresSupervisor": "sfa-version-postgres-supervisor.json",
+    "localPostgresSourcesMatchGate": true,
+    "contract": [
+      "Task list/create/creation recovery/PATCH/detail GET include updatedAt.",
+      "Modern PATCH includes canonical ISO expectedUpdatedAt in JSON; version-only payload rejected. Modern DELETE specifies expectedUpdatedAt query parameter; malformed or repeated version rejected before transaction.",
+      "Actor SHARE then task UPDATE lock, fresh row version comparison, explicit monotonic updatedAt increment; conflicting modern writes return 409 VERSION_CONFLICT.",
+      "Detail GET takes actor and task SHARE locks and returns found/current task or missing/null. Missing is absence, never proof that this actor deleted it. No write/replay in recovery.",
+      "Legacy empty toggle and unversioned writes remain deliberately compatible until all four page consumers adopt modern contract."
+    ],
+    "remaining": [
+      "All four UI consumers operation UUID adoption, actor/org/epoch and bounded full DTO parsing",
+      "Latest draft retention, persistent scoped unknown-write recovery and AI bulk candidate retention",
+      "Exact commit CI/READY/publication verification and private production QA",
+      "All 17 services / 2074 criteria remain incomplete"
+    ],
+    "fullGateExitCode": 0,
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "sourceFiles": 2664,
+    "changedSources": [],
+    "commit": "4bdd9da5d63872a3d19dc2612ba784e227ad3696",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37557223994,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "4bdd9da5d63872a3d19dc2612ba784e227ad3696"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_6uc8J8qAvcganx3siA4NfFuwxPpN",
+        "url": "doya-60imm66jd-surisutas-projects.vercel.app",
+        "state": "BUILDING",
+        "target": "production",
+        "commit": "4bdd9da5d63872a3d19dc2612ba784e227ad3696"
+      }
+    ],
+    "releaseStatus": "4bdd exact SHA CI success and Vercel READY; latest public alias is 9c; historical 4bdd marker absence after alias advancement would not indicate failure."
+  },
+  "relatedGlobalQuotaNavigationFinding": {
+    "status": "pushed-ci-production-verification-pending",
+    "evidence": "service-limit-navigation-baseline.json",
+    "impact": "Global quota provider retains current actor but ignores navigation/org transitions; old SFA alpha quota can show a beta pricing CTA. Synthetic actual mounted provider evidence, private production unproven.",
+    "currentEvidence": "service-limit-navigation-current.json",
+    "commit": "9c8308a9dde221e745f246c387d9e3a47121bcc2",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891"
+  },
+  "clientLifecycleRepair": {
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
+    "consumerFiles": [
+      "src/app/sfa/[orgSlug]/tasks/page.tsx",
+      "src/app/sfa/[orgSlug]/page.tsx",
+      "src/app/sfa/[orgSlug]/deals/page.tsx",
+      "src/app/sfa/[orgSlug]/activities/page.tsx",
+      "src/app/sfa/[orgSlug]/layout.tsx"
+    ],
+    "evidence": [
+      "sfa-client-mounted-results.json",
+      "sfa-cancellation-results.json",
+      "sfa-client-postgres-results.json",
+      "sfa-client-postgres-supervisor.json",
+      "sfa-client-delete-mounted-results.json",
+      "sfa-client-update-mounted-results.json"
+    ],
+    "changes": [
+      "All four task/activity consumers use actual shared guard, bounded stream transport, complete used DTO validation, synchronous write lanes and UUID creation receipts. PATCH sends explicit status/fields and expectedUpdatedAt; DELETE sends expectedUpdatedAt query.",
+      "Unconfirmed creations fence all same-kind create forms in that actor/organization. sessionStorage retains operation metadata only, never customer titles, activity bodies or drafts. Scope-separated hydration permits read-only recovery after remount/reload.",
+      "GET missing does not release creation fence. Atomic cancellation receipt takes fresh actor lock then receipt advisory lock and permanently rejects a late original POST. Existing committed business rows are returned, never deleted. Unavailable created rows preserve receipt and fence.",
+      "Manual success clears only unchanged rendered draft revision; current actor/org/epoch and detail-modal epoch must still match. IME Enter does not submit.",
+      "AI bulk removes only confirmed candidates, stops at rejected/unknown response, retains remainder and reports only nonzero confirmed counts. Recovery found removes committed candidate; cancellation preserves candidate for explicit new attempt.",
+      "Layout retains same-actor draft while session loads and hides children; actor/org identity change resets subtree. Usage/sidebar values render only for current guard epoch.",
+      "Recognized SFA AI quota rejection relies on shared owner-aware quota UI and suppresses a second error toast. Global quota provider itself verified in prior 87 mounted cases and published 9c."
+    ],
+    "targetedResults": {
+      "mountedActualReactSynthetic": 49,
+      "actualApiSyntheticReceipts": 64,
+      "actualLocalPostgres": 29,
+      "typecheckExitCode": 0,
+      "targetedEslintExitCode": 0,
+      "additionalTaskDeleteMounted": 8,
+      "additionalTaskUpdateMounted": 14
+    },
+    "fullGate": "sfa-client-lifecycle-release-846754f1-da54-4180-8e3b-dc51ff08b0d1",
+    "limitations": [
+      "Mounted tests use mocked Next navigation/auth and synthetic API; no real Next router/browser or private production interaction proven.",
+      "Isolated actual PostgreSQL schema uses synthetic tables and data; no production DB mutation, migration, provider or paid AI calls.",
+      "Different browser tabs/devices may intentionally start distinct UUIDs; no claim of draft equivalence or cross-tab duplicate intent detection.",
+      "Closing a browser tab loses sessionStorage metadata; no full browser-restart recovery claim. Writes are still idempotent per operation, but a new operation from another tab is a separate intent.",
+      "Other SFA business routes (deal creation/edit/stage drag, accounts/contacts/leads/settings and AI-provider outcome/cost recovery) remain separately unaudited for full lifecycle.",
+      "All 17 services / 2074 criteria remain incomplete."
+    ],
+    "priorGate": {
+      "directory": "sfa-client-lifecycle-release-e01e6691-cbeb-4c10-bf07-bb93fb53871d",
+      "status": "failed",
+      "buildExitCode": 1,
+      "reason": "Legacy extracted-callback fixtures lacked shared guard/transport and full DTOs; migrated fixture scaffolds and replaced update/delete callback mocks with actual mounted page+hook tests. All prior response, failure, duplicate, retention and pagination cases retained; unknown retry now explicitly requires readonly recovery.",
+      "changedSourcesDuringGate": []
+    },
+    "fullGateResult": {
+      "startedAt": "2026-10-07T01:59:19.915718+00:00",
+      "pid": 74923,
+      "head": "9c8308a9dde221e745f246c387d9e3a47121bcc2",
+      "sourceFiles": 2670,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T02:07:21.226447+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T02:07:23.470865+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T02:07:23.665359+00:00"
+    },
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "commit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRun": 37560531150,
+    "productionDeployment": {
+      "id": "dpl_52MFz71ps622HajSR5zXMwDkhyNi",
+      "url": "doya-ekbbpiwce-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d"
+    },
+    "ciConclusion": "success",
+    "publicVerificationExitCode": 0,
+    "publicationEvidence": "sfa-client-public-c9aee675.json"
+  },
+  "findingsAreHistoricalBaseline": true,
+  "nextConfirmedDealLifecycleFinding": {
+    "status": "confirmed-open-not-fixed",
+    "evidence": "sfa-deal-create-lifecycle-baseline.json",
+    "probe": "probe-sfa-deal-create-lifecycle.cjs",
+    "findings": 2,
+    "priority": "next-cohort-after-current-task-activity-gate",
+    "scope": "Actual mounted deal creation sends two same-frame POSTs without UUID. Retained component old-org success also clears newer draft and emits global toast; actual production layout remount mitigates state reuse, so private Next/router draft loss not asserted. Deal create/edit/stage and fresh authority/version/idempotency require coherent server/client repair, not a cosmetic button-only patch.",
+    "apiEvidence": "sfa-deal-api-lifecycle-baseline.json",
+    "apiProbe": "probe-sfa-deal-api-lifecycle.cjs",
+    "apiFindings": 6,
+    "nextRequiredInvariants": [
+      "Deal creation UUID receipts inside quota admission and fresh ACTIVE member transaction; normalized payload hashes and cancellation receipts; no second count/usage on replay.",
+      "PATCH/DELETE fresh actor, active same-org deal and related account/stage locks with expectedUpdatedAt. Add updatedAt to board/DTO; monotonic versions and readonly recovery.",
+      "Strict nontruncating input, exact BigInt amount and preserved unrelated fields. Won/lost transitions clear opposite timestamp consistently.",
+      "Full deal create/edit/stage UI adoption, bounded read/write transport, actor/org/detail/drag epoch, persistent result recovery and latest draft retention; mounted independent fixture + actual PG race checks."
+    ],
+    "createApiBaseline": {
+      "evidence": "sfa-deal-create-api-baseline.json",
+      "probe": "probe-sfa-deal-create-api.cjs",
+      "confirmedFindings": 2,
+      "findings": [
+        "Actual POST/admission creates after synthetic actor revocation following context resolution.",
+        "Same operationId is ignored by actual deal POST; concurrent fixture calls commit two rows."
+      ],
+      "scope": "Actual handlers/helper with synthetic Prisma only. No customer writes or actual PostgreSQL scheduling proof."
+    },
+    "repairEvidence": "sfa-deal-lifecycle-repair.json"
+  }
+}

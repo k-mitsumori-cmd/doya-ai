@@ -1,3 +1,4 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
@@ -26,6 +27,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const prisma = { $transaction: async work => work(tx) }
   const deps = {
+    '@/lib/private-api-response': privateApiResponse,
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/department-integrity': integrity,

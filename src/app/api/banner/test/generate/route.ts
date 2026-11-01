@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 import { canUseBannerTemplate } from '@/lib/banner/template-access'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -190,7 +191,7 @@ ${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
   return prompt
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   // ⚠️ このルートは名前に反して**一般利用者の導線**（/banner/dashboard の
   //    「選んで生成」）から呼ばれる。同じ名前空間の templates/* が保守APIなので
   //    2026-09-02 に requireBannerAdmin を付けたが、それは誤りで、
@@ -397,3 +398,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+/** 修正の指示か（処理の側と同じく、前後の空白を除いて見る） */
+const isRefine = (b: Record<string, unknown> | null) => typeof b?.customPrompt === 'string' && b.customPrompt.trim().startsWith('【修正指示】')
+/** 作る枚数（処理の側の targetCount と同じ式。値が無い・数でなければ 10。1〜10 に収める） */
+const requestedImages = (b: Record<string, unknown> | null) => {
+  const n = Number(b?.count)
+  return Math.max(1, Math.min(10, Number.isFinite(n) ? Math.floor(n) : 10))
+}
+
+export const POST = withDoyaPowerCharge({
+  // 見本からの生成と、修正（「【修正指示】」で始まる指示）の両方がこの入口に来る
+  action: (b) => (isRefine(b) ? 'image.refine' : 'banner.generate'),
+  // 修正は1枚ごとに数える。生成は表のとおり「1回ごと」（バナー（1回3枚）10）
+  units: (b) => (isRefine(b) ? requestedImages(b) : 1),
+}, postHandler)

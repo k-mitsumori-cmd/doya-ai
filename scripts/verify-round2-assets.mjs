@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import sharp from 'sharp'
 
 const ROOT = process.cwd()
+const appDir = (id) => existsSync(path.join(ROOT, 'src/app/(shell)', id)) ? `(shell)/${id}` : id
 const r2a = ['seo','interview','persona','doyalist','doyaslide','cunning','promane']
 const ids = ['banner','seo','interview','persona','hr','kintai','doyalist','doyaslide','cunning','promane','sfa','shodan','aio','mensetsu','quote','aishodan','adimage']
 let checks = 0
@@ -26,7 +28,7 @@ for (const id of ids) {
   assert(meta.width === 512 && meta.height === 512, `${id}: icon dimensions`)
   assert(icon.length <= 80*1024, `${id}: icon ${icon.length} bytes`)
   assert(minAlpha === 0 && maxAlpha >= 250, `${id}: icon alpha ${minAlpha}-${maxAlpha}`)
-  const favicon = await fs.readFile(path.join(ROOT,'src/app',id,'icon.png'))
+  const favicon = await fs.readFile(path.join(ROOT,'src/app',appDir(id),'icon.png'))
   assert(icon.equals(favicon), `${id}: favicon differs`)
   for (const file of ['1-input.webp','2-process.webp','3-output.webp']) {
     const shot = await fs.readFile(path.join(ROOT,'public',id,'shots',file)); const sm = await sharp(shot).metadata()
@@ -45,7 +47,7 @@ for (const file of ['noroi-nikki-art.jpg','yurusen-art.jpg','hitorijime-art.jpg'
   assert(meta.width === 1536 && meta.height === 1024, `${file}: dimensions`)
 }
 
-const emojiTargets = ['src/app/banner/dashboard/create/page.tsx','src/app/seo/jobs/[id]/page.tsx','src/app/banner/dashboard/page.tsx']
+const emojiTargets = ['src/app/(shell)/banner/dashboard/create/page.tsx','src/app/(shell)/seo/jobs/[id]/page.tsx','src/app/(shell)/banner/dashboard/page.tsx']
 const emoji = /\p{Extended_Pictographic}|✓/gu
 for (const file of emojiTargets) {
   const source = await fs.readFile(path.join(ROOT,file),'utf8')

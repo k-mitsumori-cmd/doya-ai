@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T14:50:51.125Z",
+  "passed": 3,
+  "cases": [
+    "Native1280px multipart/socket loss/reload/GET restores logo and edited copy without upload or AI replay",
+    "Native390px second tab shares pending logo intent and acknowledgment through storage events",
+    "Native390px removal/socket loss/reload/GET restores empty logo and editing context without DELETE or AI replay"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "logoAttempts": 7,
+  "uniqueUploads": 1,
+  "uniqueDeletes": 1,
+  "analyzes": 1,
+  "sourceHashes": {
+    "src/lib/adimage/types.ts": "639c974cda7ab38d3628ec0e250d4465ae84049e3763741df38c0813cdfb3c7c",
+    "src/lib/adimage/analysis-result.ts": "5bc0d3ae198c5099a892d7303d840a3f06b6d58fd7b8c1aab1fcf32000aeb920",
+    "src/lib/adimage/logo-context.ts": "b1821760907235b73f02a7f856a180098506f68c983980ac1d0ee1085aa99fcb",
+    "src/lib/adimage/operation-client.ts": "b055f4656e75e0e98ddcaaa20c75fdf2d99842071f26a1b7269068bd39970b98",
+    "src/lib/adimage/use-operation-recovery.ts": "2382b442cf20ad23900e772bf35751b89f5a764f74ad7305c541c7bf7b572d3f",
+    "src/app/adimage/Tool.tsx": "8777fffb004a70c04a98f6836438a2a42fe72f341b9f76c3d072d2bcc7ca0312"
+  },
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "scope": "Actual Tool/hook/reader/context in Chrome with local HTTP multipart/socket loss, real storage/Web Locks/two tabs. Synthetic backend/auth; local CSS from prior build, hash recorded. Copy-stage recovery only, existing image/feedback workspace recovery remains unproven. No production/provider/customer data."
+}

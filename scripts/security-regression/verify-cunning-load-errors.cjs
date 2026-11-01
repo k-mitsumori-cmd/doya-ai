@@ -20,7 +20,7 @@ function getLoader(file, name, context) {
 
 async function checkList(response) {
   const state = { bases: ['previous'], loading: false, error: false }
-  const load = getLoader('src/app/cunning/knowledge/page.tsx', 'load', {
+  const load = getLoader('src/app/(shell)/cunning/knowledge/page.tsx', 'load', {
     loadRequest: { current: 0 },
     fetch: async () => response,
     setLoading: (value) => { state.loading = value },
@@ -33,7 +33,7 @@ async function checkList(response) {
 
 async function checkDetail(response) {
   const state = { base: { id: 'previous' }, loading: false, error: false, notFound: false }
-  const load = getLoader('src/app/cunning/knowledge/[id]/page.tsx', 'load', {
+  const load = getLoader('src/app/(shell)/cunning/knowledge/[id]/page.tsx', 'load', {
     id: 'own-base', loadRequest: { current: 0 },
     fetch: async () => response,
     setLoading: (value) => { state.loading = value },
@@ -47,13 +47,15 @@ async function checkDetail(response) {
 
 async function checkToolList(name, endpoint, response) {
   const state = { items: ['previous'], error: false }
-  const loader = getLoader('src/app/cunning/Tool.tsx', name, {
-    usageRequest: { current: 1 }, knowledgeRequest: { current: 0 }, sessionsRequest: { current: 0 },
+  const loader = getLoader('src/app/(shell)/cunning/Tool.tsx', name, {
+    allowed:true, contextRef:{current:'synthetic'}, contextKey:'synthetic', mounted:{current:true}, knowledgeAbort:{current:null}, sessionsAbort:{current:null}, AbortController,
+    readCunningListResponse:async(url)=>{assert.equal(url,endpoint);return {ok:response.ok,status:response.status,data:await response.json()}},
     fetch: async (url) => { assert.equal(url, endpoint); return response },
     setKbError: (value) => { state.error = value },
     setSessionsError: (value) => { state.error = value },
     setKbs: (value) => { state.items = value },
     setSessions: (value) => { state.items = value },
+    setSessionsLoaded: () => {},
   })
   loader()
   await new Promise(setImmediate)

@@ -35,6 +35,10 @@ async function serverFailure() {
 async function layout(response, preserveView = false) {
   const state = { usage: { organizationId: 'old' }, hasOrg: true, error: false }
   const loadUsage = callback('src/components/kintai/KintaiLayout.tsx', 'loadUsage', {
+    scopeKey: 'synthetic-scope', activeScope: { current: { key: 'synthetic-scope', allowed: true } },
+    pendingUsage: { current: null }, AbortController,
+    readBillingResponse: async () => ({ ok: response.ok, status: response.status, data: await response.clone().json() }),
+    setLoadedScope() {},
     usageRequest: { current: 0 }, fetch: async () => response,
     setUsage: (value) => { state.usage = value },
     setHasOrg: (value) => { state.hasOrg = value },
@@ -46,7 +50,7 @@ async function layout(response, preserveView = false) {
 
 async function pricing(response) {
   const state = { plan: 'FREE', error: false, loading: true, hasOrg: false, canManageBilling: false, loadedIdentity: '' }
-  const loadPlan = callback('src/app/kintai/pricing/page.tsx', 'loadPlan', {
+  const loadPlan = callback('src/app/(shell)/kintai/pricing/page.tsx', 'loadPlan', {
     identity: 'user', request: { current: 0 },
     fetch: async () => response,
     setUserPlan: (value) => { state.plan = value },
@@ -78,8 +82,14 @@ async function pricing(response) {
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: false })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: false, loadedIdentity: 'user' })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: true })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: true, loadedIdentity: 'user' })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
-  const pricingSource = fs.readFileSync('src/app/kintai/pricing/page.tsx', 'utf8')
-  assert.ok(pricingSource.includes('対象者は30日間無料'))
+  const pricingSource = fs.readFileSync('src/app/(shell)/kintai/pricing/page.tsx', 'utf8')
+  // 「初月無料」は直書きせず、TrialCallout の部品（対象者にだけ出す）で出す（課金の仕様。2026-10-24）
+  // 守る性質: 古い「全プラン14日間」を出さない・期間の文を直書きしない・案内そのものは残す
+  assert.match(pricingSource, /import \{ TrialNote \} from '@\/components\/TrialCallout'/)
+  assert.match(pricingSource, /<TrialNote \/>/)
+  assert.ok(!/日間無料|初月無料/.test(pricingSource))
   assert.ok(!pricingSource.includes('全プラン14日間'))
+  const trialSource = fs.readFileSync('src/components/TrialCallout.tsx', 'utf8')
+  assert.match(trialSource, /\{UNIFIED_TRIAL_DAYS\}日間無料/)
   console.log('PASS kintai usage: server failure never becomes onboarding or FREE')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T04:22:29.513939+00:00",
+  "status": "local_fix_focused_tests_passed_full_gate_prepared",
+  "defect": "Gemini MAX_TOKENS was acknowledged as completed and saved",
+  "repair": "Require one STOP before saving, reject abnormal/missing/conflicting completion and late text; omit thought parts",
+  "evidence": "interview-provider-terminal-postgres-results.json",
+  "focusedCases": 10,
+  "productionReflected": false,
+  "fullAuditComplete": false,
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/interview-generation-release-ab51afde-2c99-4b62-952e-a44453222087",
+  "previousGate": "stopped_for_new_confirmed_defect",
+  "focusedRouteCases": 21,
+  "focusedNativeApiCases": 9,
+  "focusedSecurityExitCode": 0,
+  "gateSession": 26007,
+  "gateStatus": "passed118-unchanged",
+  "sourceHashes": {
+    "src/app/api/interview/articles/generate/route.ts": "3af157c649827926f4faaebccb1451ebdad30dc259a7d5c488223b6378466128",
+    "src/app/api/interviewx/projects/[id]/generate-article/route.ts": "efd3c83eeef5179c26471bfb5b637f4cc5ff562e4c2b8d138b8a64c7f9f008b4",
+    "src/lib/retired-service.ts": "1880172e8cee7a02b3fb7ad7b5ec6173c8eb7bd4cd267edb4e520212a2c662ae"
+  },
+  "relatedScan": {
+    "scope": "src/app/api and src/lib TypeScript literal streamGenerateContent / generateContentStream / finishReason search",
+    "otherStreamingEndpoint": "/api/interviewx/projects/[id]/generate-article",
+    "disposition": "Source has SERVICE_RETIRED guard before original provider code; no claim of live HTTP verification or all provider integrations coverage."
+  },
+  "integratedHead": "3ea936ec0f333029c205b1452e696cfdc1cf531f",
+  "nextHandoffCases": 6
+}

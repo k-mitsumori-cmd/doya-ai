@@ -1,0 +1,89 @@
+{
+  "checkedAt": "2026-10-06T23:28:51.753546+00:00",
+  "status": "deployed-anonymous-publication-passed-private-flow-unproven",
+  "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "probe": "probe-shodan-slide-editor-lifecycle.cjs",
+  "findings": [
+    {
+      "evidence": "shodan-slide-editor-double-baseline.json",
+      "actual": "Actual mounted editor sends two same-turn regeneration POST requests."
+    },
+    {
+      "evidence": "shodan-slide-editor-unmount-baseline.json",
+      "actual": "Generation completion after actual unmount still announces global success."
+    },
+    {
+      "evidence": "shodan-slide-editor-pdf-unmount-baseline.json",
+      "actual": "Actual mounted PDF handler invokes save after editor unmount; PDF and image APIs are synthetic."
+    },
+    {
+      "evidence": "shodan-slide-editor-pdf-double-baseline.json",
+      "actual": "Two same-turn PDF actions each invoke save; state pdfBusy does not synchronously lock handler."
+    }
+  ],
+  "nextRequirements": [
+    "Validated actor/org/document-scoped reads and mutation tickets, synchronous regeneration/PDF operation locks",
+    "Latest synchronous instruction drafts and exact index/identity response acknowledgement",
+    "Preserve edits and unknown outcomes during same-actor auth refresh, no blind replay",
+    "Scoped bounded PDF image fetch/decode/assembly/save lifecycle; stop work after exit and prevent stale export",
+    "Partial image/structure alignment, active index safety, truthful 404 versus read failure and usage/upgrade guidance",
+    "Actual mounted synthetic regressions before full gate, release and production verification"
+  ],
+  "limitations": [
+    "Local frozen gate, CI success, exact commit production READY and anonymous publication passed. Authenticated private editor and actual download persistence remain unproven.",
+    "Synthetic PDF save invocation is not actual browser/filesystem persistence proof.",
+    "Real authenticated customer workflows, production AI/storage/DB persistence and durable multi-tab behavior remain unproven.",
+    "Full 17 services / 2074 criteria remain in scope; this cohort is partial evidence only."
+  ],
+  "lastCheckedAt": "2026-10-07T00:14:48.455413+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-slide-editor-release-54abc8e7-831b-4ffb-bfb3-97d5149b6817",
+  "releaseSession": 89145,
+  "candidateChecks": {
+    "mountedEditorCases": 34,
+    "pdfPipelineCases": 24,
+    "regenerateApiCases": 26,
+    "atomicSaveCases": 9,
+    "existingDetailMountedCases": 35,
+    "slideDeckRegression": "passed",
+    "scope": "Actual components/controller/transport/validators/PDF assembler and API with synthetic session/HTTP/browser decode/jsPDF/provider/storage/Prisma only. No private production, paid calls, customer DB writes or real filesystem download."
+  },
+  "candidateFixes": [
+    "Actor/org/document/epoch and saved-version scope; synchronous shared regeneration/PDF locks; retain newer drafts and uncertain outcomes.",
+    "Explicit reviewed retry guarded by server version comparison after preparation lease acquisition; stable opaque image key distinguishes signed URL renewal.",
+    "Missing image structure slots remain editable and atomic save fills aligned placeholders.",
+    "Bounded image fetch/stream/decode/total PDF processing; oversized response streams cancelled; no save after scope exit.",
+    "Regeneration authentication/billing/initial-read exceptions sanitized to controlled 503 response."
+  ],
+  "releaseExitCode": 0,
+  "sourceFiles": 2647,
+  "changedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "syntheticEvidence": "shodan-slide-editor-synthetic-results.json",
+  "previousGoalTurnClassification": "progress: prior goal turn shipped scoped detail repair and reproduced editor defects; current turn fixes editor/PDF, adds API/resource regressions, confirms detail production and reproduces list lifecycle defect.",
+  "commit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
+  "commitSession": 12584,
+  "commitExitCode": 0,
+  "pushSession": 52441,
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "ciRuns": [
+    {
+      "databaseId": 37549478378,
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "38a74a2d3f256a86438565a32ed092d0d0e38f4b"
+    }
+  ],
+  "ciWatchSession": 97681,
+  "productionDeployments": [
+    {
+      "uid": "dpl_AtHAbBaRmf1KNmUB524qidjWXNAJ",
+      "url": "doya-rm6g17h9x-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b"
+    }
+  ],
+  "ciWatchExitCode": 0,
+  "publicEvidence": "shodan-slide-editor-public-38a74a2d.json"
+}

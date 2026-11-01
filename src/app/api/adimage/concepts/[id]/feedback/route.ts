@@ -11,76 +11,65 @@ import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { evaluateCreative, REFINE_CHIPS } from '@/lib/adimage/feedback'
 import { downloadBuffer } from '@/lib/adimage/storage'
 import { findPlacement } from '@/lib/adimage/placements'
+import { AdImageFeedbackInputError, readAdImageFeedbackBody } from '@/lib/adimage/feedback-input'
+import { adImageTargetHash, beginAdImageOperation, recoverAdImageOperation, settleAdImageFeedbackOperation, failAdImageOperation } from '@/lib/adimage/image-operation'
+import { adImagePostInput, adImageOperationReply, adImageOperationErrorReply } from '@/lib/adimage/image-operation-http'
 import type { AdCopy } from '@/lib/adimage/types'
+
+function reply(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' } })
+}
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = await ctxParam.params
-  const identity = await getIdentity(req)
-  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
-  const auth = requireUser(identity)
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
-  const where = ownerWhere(identity)
-  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
-
-  const concept = await prisma.adImageConcept.findFirst({
-    where: { id: p.id, campaign: where },
-    include: {
-      creatives: { orderBy: { createdAt: 'asc' } },
-      campaign: { select: { brand: { select: { name: true } } } },
-    },
-  })
-  if (!concept) return NextResponse.json({ error: 'コンセプトが見つかりません' }, { status: 404 })
-
-  const body = await req.json().catch(() => ({}))
-
-  // 採点対象。指定が無ければ最初のクリエイティブを見る
-  const target = body?.creativeId
-    ? concept.creatives.find((c) => c.id === String(body.creativeId))
-    : concept.creatives[0]
-  if (!target) return NextResponse.json({ error: '対象の画像がありません' }, { status: 404 })
-
-  const buf = await downloadBuffer(target.imagePath)
-  if (!buf) return NextResponse.json({ error: '画像を読み込めませんでした' }, { status: 502 })
-
-  // ユーザーが押したチップを要望として渡す
-  const chipKeys: string[] = Array.isArray(body?.chips) ? body.chips.map((c: unknown) => String(c)) : []
-  const userRequests = REFINE_CHIPS.filter((c) => chipKeys.includes(c.key)).map((c) => c.request)
-  if (typeof body?.note === 'string' && body.note.trim()) {
-    userRequests.push(body.note.trim().slice(0, 500))
-  }
-
+  let input: ReturnType<typeof adImagePostInput> | undefined
+  let started = false
   try {
+    const p = await ctxParam.params
+    const identity = await getIdentity(req)
+    const auth = requireUser(identity)
+    if (!auth.ok) return reply({ error: auth.reason }, 401)
+    const where = ownerWhere(identity)
+    if (!where) return reply({ error: '利用者を識別できませんでした' }, 400)
+    const body = await readAdImageFeedbackBody(req)
+    input = adImagePostInput(identity.userId, 'feedback', p.id, body.operationId)
+    if (!body.creativeId) return reply({ error: '採点対象を選択してください。' }, 400)
+    const immutableBody = { creativeId: body.creativeId, chips: body.chips, note: body.note }
+    // Replay precedes source reads, storage downloads and every provider call.
+    const prior = await recoverAdImageOperation(input, false, immutableBody)
+    if (prior.state !== 'missing') return await adImageOperationReply(input, prior)
+    const concept = await prisma.adImageConcept.findFirst({
+      where: { id: p.id, campaign: { ...where, brand: where } },
+      include: { creatives: true, campaign: { include: { brand: true } } },
+    })
+    if (!concept) return reply({ error: 'コンセプトが見つかりません' }, 404)
+    const target = concept.creatives.find(c => c.id === body.creativeId)
+    if (!target) return reply({ error: '対象の画像がありません' }, 404)
+    const admission = await beginAdImageOperation(input, immutableBody, 0, adImageTargetHash('feedback', concept))
+    if (admission.state !== 'started') return await adImageOperationReply(input, admission)
+    started = true
+    const buf = await downloadBuffer(target.imagePath)
+    if (!buf) return reply({ error: '画像を読み込めませんでした' }, 502)
+    const userRequests = REFINE_CHIPS.filter(c => body.chips.includes(c.key)).map(c => c.request)
+    if (body.note) userRequests.push(body.note)
     const result = await evaluateCreative({
-      pngBase64: buf.toString('base64'),
-      copy: concept.copy as unknown as AdCopy,
+      pngBase64: buf.toString('base64'), copy: concept.copy as unknown as AdCopy,
       brandName: concept.campaign.brand.name,
       placementName: findPlacement(target.placementKey)?.name ?? target.placementKey,
       userRequests,
     })
-
-    const feedback = await prisma.adImageFeedback.create({
-      data: {
-        conceptId: concept.id,
-        creativeId: target.id,
-        source: userRequests.length > 0 ? 'user_chip' : 'ai_vision',
-        scores: result.scores as any,
-        advice: result.advice,
-        // ⚠️ 構造化して保存する。文字列連結だと何を指示したか後から追えない
-        directive: result.directives as any,
-      },
+    // The ownership/source check, feedback row and completion receipt share one commit.
+    const receipt = await settleAdImageFeedbackOperation(input, (tx, creativeId) => tx.adImageFeedback.create({
+      data: { conceptId: concept.id, creativeId, source: userRequests.length ? 'user_chip' : 'ai_vision', scores: result.scores as any, advice: result.advice, directive: result.directives as any },
       select: { id: true },
-    })
-
-    return NextResponse.json({
-      feedbackId: feedback.id,
-      scores: result.scores,
-      advice: result.advice,
-      directives: result.directives,
-    })
-  } catch (err) {
-    console.error('[adimage] feedback failed')
-    return NextResponse.json({ error: '採点に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
+    }))
+    return await adImageOperationReply(input, { state: 'completed', receipt })
+  } catch (error) {
+    if (error instanceof AdImageFeedbackInputError) return reply({ error: error.message }, error.status)
+    return adImageOperationErrorReply(error)
+  } finally {
+    // Completed rows survive a lost response; only an owned pending operation may fail.
+    if (started && input) await failAdImageOperation(input).catch(() => {})
   }
 }

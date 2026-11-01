@@ -1,3 +1,4 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
@@ -23,7 +24,7 @@ const billing = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: {} } }
     const end = new Date('2026-10-31T15:00:00.000Z')
     let countedWhere
     const api = load('src/app/api/hr/dashboard/route.ts', {
-      'next/server': { NextResponse: Response },
+      '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response },
       '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', role: 'ADMIN' }), hasMinRole: () => true },
       '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
       '@/lib/hr/billing': { hrJstMonthRange: () => ({ start, end }) },

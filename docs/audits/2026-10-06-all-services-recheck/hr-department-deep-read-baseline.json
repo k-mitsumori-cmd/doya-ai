@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-08T18:09:53.202Z",
+  "defectsReproduced": 1,
+  "cases": [
+    {
+      "count": 50,
+      "status": 200,
+      "durationMs": 2,
+      "defectReproduced": false,
+      "privateNoStore": true
+    },
+    {
+      "count": 5000,
+      "status": 500,
+      "durationMs": 85,
+      "defectReproduced": true,
+      "privateNoStore": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/departments/route.ts": "10c38c62958527fa206ac9df8bcc7568579803faa4fb05aa35c018a7d5124ee8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-deep-read-baseline.cjs": "993ae81caadb7b1c0e3b87bbb789eb13768cddaca766811cd93ed5b0dbc062eb"
+  },
+  "scope": "Actual current HR departments GET and private-response helper with synthetic scoped Prisma rows. A valid5000-department acyclic chain produces500 before clients can read the flat list. Current settings/new/edit employee screens all call this GET. No DB write, production occurrence, realDB capacity or browser claim. Recursive buildTree/JSON serialization path requires repair; no arbitrary valid hierarchy depth cap should be introduced."
+}

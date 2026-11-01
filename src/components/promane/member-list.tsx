@@ -9,10 +9,11 @@ import { Input } from "@/components/promane/ui/input";
 import { Button } from "@/components/promane/ui/button";
 import { Badge } from "@/components/promane/ui/badge";
 import { formatCurrency, formatDuration } from "@/lib/promane/format";
-import { Save, UserPlus } from "lucide-react";
+import { AlertTriangle, Pencil, Save, Timer, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { InviteModal } from "@/components/promane/invite-modal";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type MemberItem = {
   id: string;
@@ -24,10 +25,10 @@ type MemberItem = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: "👑 オーナー",
-  admin: "⚙️ 管理者",
-  member: "👤 メンバー",
-  guest: "👁 ゲスト",
+  owner: "オーナー",
+  admin: "管理者",
+  member: "メンバー",
+  guest: "ゲスト",
 };
 
 export function MemberList({
@@ -53,7 +54,7 @@ export function MemberList({
   let rate = 0;
   let rateError: string | null = null;
   try { rate = parsePromaneIntegerInput(rateInput, "時間単価", false) }
-  catch (error) { rateError = error instanceof Error ? error.message : "時間単価を確認してください" }
+  catch (error) { rateError = userErrorMessage(error instanceof Error ? error.message : null, "時間単価を確認してください") }
   const rateValid = rateError === null;
 
   async function handleSaveRate(memberId: string) {
@@ -74,19 +75,19 @@ export function MemberList({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data?.error || `更新に失敗しました（HTTP ${res.status}）`, {
+        toast.error(userErrorMessage(data?.error, '時間単価を更新できませんでした。もう一度お試しください。'), {
           duration: 6000,
           icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         });
         console.error("[promane/member] rate update failed", res.status, data);
         return;
       }
-      toast.success("時間単価を更新したよ！");
+      toast.success("時間単価を更新しました");
       setEditingId(null);
       router.refresh();
     } catch (e: any) {
       console.error("[promane/member] rate update exception");
-      toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
+      toast.error(userErrorMessage(e?.message, "通信できませんでした。通信を確かめて、もう一度お試しください。"), { duration: 6000 });
     }
   }
 
@@ -97,7 +98,7 @@ export function MemberList({
         <div className="mb-6 flex justify-end">
           <Button
             onClick={() => setInviteOpen(true)}
-            className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 transition-all hover:scale-105 active:scale-95"
+            className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-blue-500 to-brand-500 hover:from-blue-600 hover:to-brand-600 transition-all hover:scale-105 active:scale-95"
           >
             <UserPlus className="mr-2 h-5 w-5" />
             メンバーを招待
@@ -112,11 +113,11 @@ export function MemberList({
             <div
               key={member.id}
               className={`rounded-3xl bg-white ring-1 shadow-sm p-6 transition-all hover:shadow-xl hover:scale-[1.02] animate-slide-up stagger-${Math.min(i + 1, 5)} ${
-                isMe ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50/50 to-violet-50/50' : 'ring-gray-200 hover:ring-green-300'
+                isMe ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50/50 to-brand-50/50' : 'ring-gray-200 hover:ring-green-300'
               }`}
             >
               <div className="flex items-center gap-4 mb-5">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-violet-500 text-[20px] font-black text-white shadow-md">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-brand-400 text-[20px] font-black text-white shadow-md">
                   {member.displayName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -138,11 +139,11 @@ export function MemberList({
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[14px] font-bold text-gray-500">⏱ 総稼働</span>
+                  <span className="inline-flex items-center gap-1 text-[14px] font-bold text-gray-500"><Timer className="h-4 w-4" aria-hidden />総稼働</span>
                   <span className="text-[15px] font-black text-gray-900">{formatDuration(member.totalMinutes)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[14px] font-bold text-gray-500">💰 時間単価</span>
+                  <span className="inline-flex items-center gap-1 text-[14px] font-bold text-gray-500"><Wallet className="h-4 w-4" aria-hidden />時間単価</span>
                   {editingId === member.id ? (
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5">
@@ -173,8 +174,8 @@ export function MemberList({
                         </Button>
                       </div>
                       {rateError && (
-                        <p className="text-[10px] font-bold text-rose-600 max-w-[160px] text-right">
-                          ⚠️ {rateError}
+                        <p className="flex items-start justify-end gap-1 text-[11px] font-bold text-rose-600 max-w-[160px] text-right">
+                          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />{rateError}
                         </p>
                       )}
                     </div>
@@ -184,9 +185,10 @@ export function MemberList({
                         setEditingId(member.id);
                         setRateInput(String(member.hourlyRate ?? 0));
                       }}
-                      className="text-[16px] font-black text-blue-600 hover:text-blue-800 transition-colors"
+                      aria-label={`${member.displayName}の時間単価を変える`}
+                      className="inline-flex items-center gap-1 text-[16px] font-black text-blue-600 hover:text-blue-800 transition-colors"
                     >
-                      {formatCurrency(member.hourlyRate)}/h ✏️
+                      {formatCurrency(member.hourlyRate)}/h <Pencil className="h-4 w-4" aria-hidden />
                     </button>
                   )}
                 </div>

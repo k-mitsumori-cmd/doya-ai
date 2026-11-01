@@ -1,0 +1,631 @@
+{
+  "startedAt": "2026-10-08T05:07:29.331059+00:00",
+  "pid": 91722,
+  "head": "956af245deacca69eae72f253a0ece86aa28094a",
+  "sourceFiles": 3007,
+  "status": "passed",
+  "gates": [
+    {
+      "name": "promane-canonical-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:30.809094+00:00"
+    },
+    {
+      "name": "promane-canonical-scope-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:31.786144+00:00"
+    },
+    {
+      "name": "promane-pending-scope-migration",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:32.186884+00:00"
+    },
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:34.011362+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:37.011708+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:40.831591+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:44.295013+00:00"
+    },
+    {
+      "name": "analysis-budget-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:46.004645+00:00"
+    },
+    {
+      "name": "analysis-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:52.711883+00:00"
+    },
+    {
+      "name": "logo-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:54.721634+00:00"
+    },
+    {
+      "name": "logo-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:56.969465+00:00"
+    },
+    {
+      "name": "result-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:07:58.752269+00:00"
+    },
+    {
+      "name": "read-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:01.052385+00:00"
+    },
+    {
+      "name": "route-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:02.891451+00:00"
+    },
+    {
+      "name": "persona-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:04.110548+00:00"
+    },
+    {
+      "name": "seo-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:05.220504+00:00"
+    },
+    {
+      "name": "shodan-private-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:06.332314+00:00"
+    },
+    {
+      "name": "shodan-profile-read-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:07.439077+00:00"
+    },
+    {
+      "name": "private-bucket-policy",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:07.894150+00:00"
+    },
+    {
+      "name": "private-provider-preflight",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:08.152976+00:00"
+    },
+    {
+      "name": "private-compose",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:08.369311+00:00"
+    },
+    {
+      "name": "additional-private-storage",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:08.825808+00:00"
+    },
+    {
+      "name": "shodan-logo-preflight",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:09.040608+00:00"
+    },
+    {
+      "name": "media-storage-privacy",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:09.592049+00:00"
+    },
+    {
+      "name": "interview-storage-limits",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:09.799671+00:00"
+    },
+    {
+      "name": "hr-private-photo-storage",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:10.037226+00:00"
+    },
+    {
+      "name": "hr-private-photo-read",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:10.241045+00:00"
+    },
+    {
+      "name": "hr-photo-write-scope",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:10.437562+00:00"
+    },
+    {
+      "name": "hr-photo-write-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:11.426445+00:00"
+    },
+    {
+      "name": "hr-employee-write-scope-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:12.631207+00:00"
+    },
+    {
+      "name": "hr-editor-version-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:13.736777+00:00"
+    },
+    {
+      "name": "hr-editor-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:14.505127+00:00"
+    },
+    {
+      "name": "hr-editor-lifecycle",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:14.954401+00:00"
+    },
+    {
+      "name": "hr-upload-source-validation",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:15.162310+00:00"
+    },
+    {
+      "name": "hr-photo-reference-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:16.351407+00:00"
+    },
+    {
+      "name": "hr-editor-ack",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:16.940140+00:00"
+    },
+    {
+      "name": "kintai-work-rule-input",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:17.543765+00:00"
+    },
+    {
+      "name": "kintai-work-rule-input-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:18.622169+00:00"
+    },
+    {
+      "name": "kintai-settings-revision-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:19.302321+00:00"
+    },
+    {
+      "name": "kintai-work-rule-operation-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:20.377490+00:00"
+    },
+    {
+      "name": "kintai-schedule-preview",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:20.582537+00:00"
+    },
+    {
+      "name": "kintai-schedule-consistency",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:20.753383+00:00"
+    },
+    {
+      "name": "kintai-work-rule-creation-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:21.240563+00:00"
+    },
+    {
+      "name": "kintai-access-provider-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:22.110129+00:00"
+    },
+    {
+      "name": "kintai-work-rule-revision-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:23.415058+00:00"
+    },
+    {
+      "name": "kintai-work-rule-cross-field-boundaries",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:24.746794+00:00"
+    },
+    {
+      "name": "quote-revision-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:25.925447+00:00"
+    },
+    {
+      "name": "quote-revision-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:26.599973+00:00"
+    },
+    {
+      "name": "quote-all-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:27.529273+00:00"
+    },
+    {
+      "name": "quote-pdf-revision-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:28.611820+00:00"
+    },
+    {
+      "name": "quote-unknown-resume-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:29.230842+00:00"
+    },
+    {
+      "name": "quote-unknown-resume-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:30.200343+00:00"
+    },
+    {
+      "name": "promane-time-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:31.287052+00:00"
+    },
+    {
+      "name": "promane-time-actions-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:32.381789+00:00"
+    },
+    {
+      "name": "promane-time-client-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:32.895119+00:00"
+    },
+    {
+      "name": "promane-timesheet-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:33.321738+00:00"
+    },
+    {
+      "name": "promane-expense-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:34.449217+00:00"
+    },
+    {
+      "name": "promane-expense-client-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:34.951426+00:00"
+    },
+    {
+      "name": "promane-expense-view-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:35.394368+00:00"
+    },
+    {
+      "name": "promane-time-context-draft",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:35.822804+00:00"
+    },
+    {
+      "name": "promane-note-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:36.828553+00:00"
+    },
+    {
+      "name": "promane-note-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:37.458230+00:00"
+    },
+    {
+      "name": "promane-note-client",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:37.905602+00:00"
+    },
+    {
+      "name": "promane-client-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:38.999411+00:00"
+    },
+    {
+      "name": "promane-client-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:39.531018+00:00"
+    },
+    {
+      "name": "promane-client-view",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:39.963996+00:00"
+    },
+    {
+      "name": "promane-task-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:41.051712+00:00"
+    },
+    {
+      "name": "promane-task-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:41.618784+00:00"
+    },
+    {
+      "name": "promane-task-view",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:42.198513+00:00"
+    },
+    {
+      "name": "promane-unavailable-recovery-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:42.694353+00:00"
+    },
+    {
+      "name": "promane-project-input",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:42.896671+00:00"
+    },
+    {
+      "name": "promane-project-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:44.229001+00:00"
+    },
+    {
+      "name": "promane-project-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:44.735914+00:00"
+    },
+    {
+      "name": "promane-project-view",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:45.236821+00:00"
+    },
+    {
+      "name": "promane-workspace-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:46.261766+00:00"
+    },
+    {
+      "name": "promane-workspace-mutations-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:47.564866+00:00"
+    },
+    {
+      "name": "promane-workspace-http-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:48.696264+00:00"
+    },
+    {
+      "name": "promane-workspace-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:49.229816+00:00"
+    },
+    {
+      "name": "promane-workspace-view-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:49.826604+00:00"
+    },
+    {
+      "name": "doyaslide-preview-0",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:50.055467+00:00"
+    },
+    {
+      "name": "doyaslide-preview-1",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:50.539243+00:00"
+    },
+    {
+      "name": "doyaslide-preview-2",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:51.409278+00:00"
+    },
+    {
+      "name": "doyaslide-url-0",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:51.665875+00:00"
+    },
+    {
+      "name": "doyaslide-url-1",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:52.032934+00:00"
+    },
+    {
+      "name": "doyaslide-url-2",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:53.929969+00:00"
+    },
+    {
+      "name": "url-intent-client",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:54.146610+00:00"
+    },
+    {
+      "name": "url-operation-transport",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:54.543317+00:00"
+    },
+    {
+      "name": "url-operation-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:55.627530+00:00"
+    },
+    {
+      "name": "url-route-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:56.717881+00:00"
+    },
+    {
+      "name": "article-stream",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:57.245903+00:00"
+    },
+    {
+      "name": "article-protocol",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:57.633840+00:00"
+    },
+    {
+      "name": "article-intent",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:57.884512+00:00"
+    },
+    {
+      "name": "article-input",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:58.099280+00:00"
+    },
+    {
+      "name": "article-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:08:59.517620+00:00"
+    },
+    {
+      "name": "article-selection",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:00.544246+00:00"
+    },
+    {
+      "name": "article-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:07.536197+00:00"
+    },
+    {
+      "name": "article-operation-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:09.035407+00:00"
+    },
+    {
+      "name": "article-route-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:10.419776+00:00"
+    },
+    {
+      "name": "article-corruption-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:11.452732+00:00"
+    },
+    {
+      "name": "article-native-api-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:23.346515+00:00"
+    },
+    {
+      "name": "article-provider-terminal-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:24.589785+00:00"
+    },
+    {
+      "name": "doyalist-helper-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:25.969169+00:00"
+    },
+    {
+      "name": "doyalist-route-pg",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:27.735887+00:00"
+    },
+    {
+      "name": "doyalist-recovery-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:29.113540+00:00"
+    },
+    {
+      "name": "doyalist-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:35.602537+00:00"
+    },
+    {
+      "name": "doyalist-cancel-mounted",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:09:37.118639+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:15:40.089761+00:00"
+    },
+    {
+      "name": "doyalist-next",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:15:56.763950+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:15:58.823537+00:00"
+    },
+    {
+      "name": "doyaslide-url-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:20.041024+00:00"
+    },
+    {
+      "name": "doyaslide-preview-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:34.850880+00:00"
+    },
+    {
+      "name": "promane-workspace-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:38.532811+00:00"
+    },
+    {
+      "name": "promane-project-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:41.602521+00:00"
+    },
+    {
+      "name": "promane-task-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:45.047238+00:00"
+    },
+    {
+      "name": "kintai-settings-revision-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:49.698568+00:00"
+    },
+    {
+      "name": "promane-timesheet-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:52.804655+00:00"
+    },
+    {
+      "name": "promane-client-dismiss-draft-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:54.960020+00:00"
+    },
+    {
+      "name": "promane-client-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:16:58.155148+00:00"
+    },
+    {
+      "name": "promane-expense-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:01.340999+00:00"
+    },
+    {
+      "name": "quote-revision-native",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:04.452185+00:00"
+    },
+    {
+      "name": "auth-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:11.589301+00:00"
+    },
+    {
+      "name": "native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:20.002539+00:00"
+    },
+    {
+      "name": "logo-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:24.642325+00:00"
+    },
+    {
+      "name": "logo-native-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T05:17:30.963787+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-08T05:17:31.534030+00:00"
+}

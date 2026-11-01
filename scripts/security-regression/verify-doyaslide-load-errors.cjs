@@ -38,7 +38,7 @@ async function getUsage(failing) {
 
 async function projectList(projectResponse, usageResponse) {
   const state = { projects: ['previous'], loading: false, projectsError: false, usageError: false, usage: null }
-  const load = callback('src/app/doyaslide/projects/page.tsx', 'load', {
+  const load = callback('src/app/(shell)/doyaslide/projects/page.tsx', 'load', {
     loadRequest: { current: 0 },
     fetch: async (url) => url.startsWith('/api/doyaslide/projects?limit=30') ? projectResponse : usageResponse,
     setLoading: (value) => { state.loading = value },
@@ -56,7 +56,7 @@ async function projectList(projectResponse, usageResponse) {
 
 async function pricing(response) {
   const state = { plan: 'previous', error: false }
-  const loadPlan = callback('src/app/doyaslide/pricing/page.tsx', 'loadPlan', {
+  const loadPlan = callback('src/app/(shell)/doyaslide/pricing/page.tsx', 'loadPlan', {
     fetch: async () => response,
     setPlanError: (value) => { state.error = value },
     setPlan: (value) => { state.plan = value },
@@ -88,7 +88,7 @@ async function pricing(response) {
 
   const loaded = Array.from({ length: 30 }, (_, index) => ({ id: `project-${index}` }))
   const moreState = { projects: loaded, cursor: 'project-29', loading: false, error: '' }
-  const loadMore = callback('src/app/doyaslide/projects/page.tsx', 'loadMore', {
+  const loadMore = callback('src/app/(shell)/doyaslide/projects/page.tsx', 'loadMore', {
     nextCursor: moreState.cursor, loadingMore: false, loadRequest: { current: 1 },
     total: 31, projects: loaded, encodeURIComponent,
     fetch: async () => Response.json({ projects: [{ id: 'project-30', title: 'Next', generatedSlides: 1 }], total: 31, nextCursor: null }),
@@ -104,7 +104,7 @@ async function pricing(response) {
   assert.equal(moreState.error, '')
 
   const staleState = { projects: loaded, error: '' }
-  const staleMore = callback('src/app/doyaslide/projects/page.tsx', 'loadMore', {
+  const staleMore = callback('src/app/(shell)/doyaslide/projects/page.tsx', 'loadMore', {
     nextCursor: 'project-29', loadingMore: false, loadRequest: { current: 1 },
     total: 31, projects: loaded, encodeURIComponent,
     fetch: async () => Response.json({ projects: [{ id: 'project-29', title: 'Duplicate', generatedSlides: 1 }], total: 31, nextCursor: null }),

@@ -10,7 +10,7 @@ export const ROLE_HIERARCHY: Record<AishodanRole, number> = {
 }
 
 export function hasMinRole(role: string | undefined, min: AishodanRole): boolean {
-  return (ROLE_HIERARCHY[(role || '') as AishodanRole] ?? 0) >= ROLE_HIERARCHY[min]
+  return role !== undefined && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, role) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, min) && ROLE_HIERARCHY[role as AishodanRole] >= ROLE_HIERARCHY[min]
 }
 
 export interface AishodanContext {

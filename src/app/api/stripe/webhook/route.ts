@@ -19,6 +19,7 @@ import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-
 import { enqueueStripeWebhookNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 import Stripe from 'stripe'
+import { fulfillPowerPackSession, POWER_PACK_KIND, reportPowerPackFailure } from '@/lib/pricing-v2/power-pack.server'
 
 // ========================================
 // Stripe Webhook Handler
@@ -246,6 +247,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   const explicitDoya = session.metadata?.app === 'doya-ai' || isDoyaPlanId(session.metadata?.planId)
 
   if (session.metadata?.app && session.metadata.app !== 'doya-ai') return null
+  // ドヤパワーの追加購入（一回払い。新しい料金。src/lib/pricing-v2/power-pack.server.ts）。契約は無いので、ここで分ける。
+  // 付けられないとき（台帳の旗が off・付与の失敗）は例外にして、Stripe の再送で付け直す（支払い済みなのに付かない、を残さない）
+  if (session.mode === 'payment' && session.metadata?.kind === POWER_PACK_KIND) {
+    // 一時的な失敗（DB・Stripe につながらない）は例外のまま返し、Stripe の再送でやり直す。
+    // 直せない失敗（明細の不一致・台帳の旗が off・付与の失敗）は、運営に知らせて 200 で終える（再送しても直らないため。統括の点検 B4）
+    const r = await fulfillPowerPackSession(session)
+    if (!r.ok && r.reason !== 'not_paid' && r.reason !== 'not_power_pack') {
+      if (!(await reportPowerPackFailure(session.id, r.reason))) {
+        throw new Error(`[Webhook] power pack failure could not be reported for session ${session.id}: ${r.reason}`)
+      }
+      console.error(`[Webhook] power pack not fulfilled for session ${session.id}: ${r.reason}`)
+    }
+    return null
+  }
   if (!subscriptionId) {
     if (explicitDoya) throw new Error(`[Webhook] checkout.session.completed: subscription missing for session ${session.id}`)
     console.log(`[Webhook] checkout.session.completed: unrelated session ${session.id} skipped`)

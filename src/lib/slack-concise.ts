@@ -17,7 +17,7 @@ export function conciseText(input: string): string {
   if (error && text.includes('まず何が起きた？')) {
     const summary = text.match(/\*まず何が起きた？\*\n([^\n]+)/)?.[1];
     const action = text.match(/\*次にすること[^\n]*\n([^\n]+)/)?.[1];
-    const details = lines.filter(l => /^(?:[・*\s]*)(?:発生|日時|時刻|対象|サービス|環境|画面|バージョン|HTTP|原因|エラー内容|request|correlation|URL|確認ID)/i.test(l) && !/まず何が|影響範囲/.test(l));
+    const details = lines.filter(l => /^(?:[・*\s]*)(?:発生|日時|時刻|対象|サービス|環境|画面|バージョン|HTTP|原因|エラー内容|request|correlation|URL|確認ID)/i.test(l) && !/まず何が|影響範囲/.test(l) && l !== summary && l !== action);
     return Array.from(new Set([title, summary || '', action ? `対応：${action}` : '', ...details])).filter(Boolean).join('\n');
   }
   if (!/日報|レポート|朝刊|週報|月報|週次|月次|集客チェック|開発・審査状況|きのうの数値/.test(title)) return text;
@@ -36,12 +36,12 @@ export function conciseText(input: string): string {
   const selected = new Set(candidates.map((line,i)=>({line,i,s:score(line)})).sort((a,b)=>b.s-a.s||a.i-b.i).slice(0,12).map(x=>x.i));
   const short = candidates.filter((l,i)=>selected.has(i) || /要対応|要確認|取得失敗|送信失敗|障害/.test(l)).map(l=>l
     .replace(/（日本時間 0:00〜翌0:00。Google・ASPは各欄の対象期間）/g,'')
-    .replace(/。退会や離脱の確定ではないよ。/g,'（離脱確定ではありません）')
+    .replace(/。退会や離脱の確定では(?:ないよ|ありません)。/g,'（離脱確定ではありません）')
     .replace(/。同一購入の追跡IDがないため転換率は算出しません。/g,'（転換率は未計測）')
     .replace(/。購入や報酬の確定数ではありません。/g,'（成果確定ではありません）')
     .replace(/。前週同日（([^）]+)）のクリック：/g,'／前週同日 $1：')
     .replace(/。円表示は既存レポートの換算値.*$/,'')
-    .replace(/。承認報酬と実際の入金は別だよ。.*$/,'（発生日基準・税抜／入金とは別）')
+    .replace(/。承認報酬と実際の入金は別(?:だよ|です)。.*$/,'（発生日基準・税抜／入金とは別）')
     .replace(/台帳に取引IDがないため、未付与の確定判定ではありません。/g,'取引ID照合は未対応。')
     .replace(/購入と付与台帳の照合：取得した購入分に照合不一致なし。/g,'購入・付与：不一致なし。')
   );

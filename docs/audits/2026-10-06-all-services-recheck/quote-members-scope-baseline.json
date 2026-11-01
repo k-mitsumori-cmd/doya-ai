@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-06T22:22:28.022406+00:00",
+  "sourceCommit": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+  "status": "confirmed-unfixed-next-cohort",
+  "problem": "Retained invite handler from unmounted alpha MemberPanel creates synthetic beta invite after actual Settings organization switch",
+  "requestUrl": "/api/quote/members?org=beta",
+  "draftOrigin": "alpha",
+  "probe": "probe-quote-members-org-scope.cjs",
+  "baselineLog": "/tmp/doya-quote-members-org-baseline.log",
+  "scope": "Actual Settings candidate and actual MemberPanel mounted under StrictMode; synthetic fetch/session. No real invite, email, DB write or customer incident. MemberPanel underlying source unchanged.",
+  "requiredRepair": [
+    "Bind all member reads and writes to verified actor/org and epoch, including unmounted callbacks",
+    "Bound streaming responses and handle failed loads without unhandled rejection",
+    "Synchronous mutation locks, current input refs and exact acknowledgement validation; preserve unknown outcomes and recover by scoped reads",
+    "Verify actual mounted Settings with actual MemberPanel for invite, role, remove and auth/org ABA; synthetic only"
+  ]
+}

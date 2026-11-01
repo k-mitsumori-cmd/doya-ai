@@ -3,7 +3,7 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-const file = 'src/app/doyalist/pricing/page.tsx'
+const file = 'src/app/(shell)/doyalist/pricing/page.tsx'
 const source = fs.readFileSync(file, 'utf8')
 const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 let normalizeNode, loadNode

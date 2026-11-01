@@ -1,0 +1,33 @@
+{
+  "passed": 27,
+  "checks": [
+    "Actual mounted list survives quota rejection with pricing action",
+    "Actual mounted list survives invalid output and network failure",
+    "Actual mounted callback rejects same-turn repeated clicks",
+    "Account switch aborts collection and never paints prior account result",
+    "Account ABA does not restore prior private list",
+    "Same actor SDK refresh retains generated result and draft",
+    "Unknown quota keeps previous list and makes no project",
+    "Unmount aborts ongoing collection and dismisses pending toast",
+    "Keyword valid tags are normalized and duplicate keys are removed",
+    "Keyboard Enter and button same-turn share one paid request",
+    "Keyword string tags does not crash or announce success",
+    "Keyword empty success does not crash or announce success",
+    "Keyword object tag does not crash or announce success",
+    "Keyword missing success does not crash or announce success",
+    "Keyword oversize tag does not crash or announce success",
+    "Keyword contradictory error does not crash or announce success",
+    "Keyword editing and ABA cancel old output and unlock new conversion",
+    "Industry transition clears prior keyword tags and invalidates pending result",
+    "Keyword 65-second timeout unlocks button and hides technical detail",
+    "Keyword header size and stream errors preserve valid prior tags",
+    "Account switch aborts keyword conversion and suppresses old toast and tags",
+    "Unmount aborts keyword conversion and dismisses loading toast",
+    "Stale keyword callbacks cannot send after same-turn input or industry edit",
+    "Keyword body deadline cancels stalled stream",
+    "Keyword oversized chunk and HTTP error cannot overwrite valid tags",
+    "Same actor SDK refresh retains in-flight keyword result",
+    "Oversized keyword is rejected before provider request"
+  ],
+  "scope": "Actual mounted DoyalistTool/ScopedDoyalistTool under StrictMode, real Session context and actual bounded readers; synthetic network and clock, no live customer writes or provider requests."
+}

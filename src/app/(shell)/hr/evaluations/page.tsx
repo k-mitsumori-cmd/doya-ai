@@ -1,0 +1,348 @@
+'use client'
+import { PageTitle } from '@/components/hr/ui-next'
+import { Button, EmptyState } from '@/components/ds'
+import HrLoadError from '@/components/hr/HrLoadError'
+import HrPeriodCreationRecovery from '@/components/hr/HrPeriodCreationRecovery'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+
+import { useEffect, useId, useRef, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
+import Link from 'next/link'
+import { Plus, ChevronRight } from 'lucide-react'
+import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
+import { loadHrEvaluationPeriodList, HrEvaluationPeriodListReadError, type HrEvaluationPeriodListRow } from '@/lib/hr/evaluation-period-list-client'
+import { useHrPeriodCreation, findHrPeriodCreationOrganization } from '@/lib/hr/use-evaluation-period-creation'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { hrUserMessage } from '@/lib/hr/user-message'
+
+export default function EvaluationsPage() {
+  return <HrAuthenticatedScope callbackUrl="/hr/evaluations" resourceLabel="評価期間">{actor => <ScopedEvaluationsPage actor={actor} />}</HrAuthenticatedScope>
+}
+function ScopedEvaluationsPage({ actor }: { actor: string }) {
+  const organizationScope = useHrOrganizationRequest()
+  const lifetime = useHrPageLifetime()
+  const [periods, setPeriods] = useState<HrEvaluationPeriodListRow[]>([])
+  const [organizationId, setOrganizationId] = useState('')
+  const [canCreatePeriods, setCanCreatePeriods] = useState(false)
+  const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState<unknown>(null), [loginRequired, setLoginRequired] = useState(false)
+  // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
+  const errorStatus = loadError instanceof HrEvaluationPeriodListReadError ? loadError.status : undefined
+  const loadErrorText = loadError ? hrUserMessage(loadError, '評価期間を読み込めませんでした。時間をおいて再読み込みしてください。') : ''
+  const reduceMotion = useReducedMotion()
+  const still = Boolean(reduceMotion)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const dialogTitleId = useId(), nameId = useId(), startId = useId(), endId = useId()
+  const [hint, setHint] = useState<{ ready: boolean; organizationId?: string; error: string }>({ ready: false, error: '' })
+  const [revision, setRevision] = useState(0)
+  const loadedSnapshot = useRef<{ organizationId: string; revision: number } | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newPeriod, setNewPeriod] = useState({ name: '', startDate: '', endDate: '' })
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const selected = findHrPeriodCreationOrganization(actor, organizationScope.organizationId)
+        setHint(old => old.ready && old.organizationId === selected && !old.error ? old : { ready: true, organizationId: selected, error: '' })
+      } catch { setHint({ ready: true, error: '前回の作成操作を1件に特定できず、結果を安全に確認できません。操作記録は保持しています。下の案内から、各操作の結果を確認してください。記録を読み取れない場合は、ブラウザの保存設定をご確認ください。' }) }
+    }
+    const changed = (event: StorageEvent) => { if (event.key === null || event.key.startsWith('hr-period-create-intent:v1:')) refresh() }
+    refresh(); window.addEventListener('storage', changed); window.addEventListener('focus', refresh); window.addEventListener('hr-period-creation-reconciled', refresh)
+    return () => { window.removeEventListener('storage', changed); window.removeEventListener('focus', refresh); window.removeEventListener('hr-period-creation-reconciled', refresh) }
+  }, [actor])
+  const scopeError = hint.error || (organizationId && hint.organizationId && organizationId !== hint.organizationId ? '別の組織に未確認の作成操作があります。現在の入力と操作記録を保持しています。組織を確認してから再取得してください。' : '')
+  const expectedOrganization = organizationId || hint.organizationId || organizationScope.organizationId
+  const creation = useHrPeriodCreation('authenticated', actor, expectedOrganization ?? '')
+  const creating = creation.busy
+  useEffect(() => {
+    if (!hint.ready || scopeError) return
+    // A complete initial read already pins every packet to its server organization.
+    // Recording that identity must not discard the list and fetch it again.
+    if (expectedOrganization && loadedSnapshot.current?.organizationId === expectedOrganization && loadedSnapshot.current.revision === revision) return
+    const controller = new AbortController(); let live = true
+    setLoading(true); setLoadError(null); setLoginRequired(false)
+    void loadHrEvaluationPeriodList(controller.signal, expectedOrganization, organizationScope.request).then(data => {
+      if (!live || controller.signal.aborted) return
+      loadedSnapshot.current = { organizationId: data.organizationId, revision }
+      setOrganizationId(data.organizationId); setPeriods(data.rows); setCanCreatePeriods(data.canCreatePeriods); setLoading(false)
+    }).catch(error => {
+      if (!live || controller.signal.aborted) return
+      // 失敗そのものを持つ（状態コードは新しい見た目の出し分けに、文は今の見た目に使う）
+      setLoadError(error ?? true)
+      setLoginRequired(error instanceof HrEvaluationPeriodListReadError && error.status === 401)
+    }).finally(() => { if (live && !controller.signal.aborted) setLoading(false) })
+    return () => { live = false; controller.abort() }
+  }, [hint.ready, expectedOrganization, scopeError, revision])
+  // Move to result confirmation as soon as this scope persists an intent. Keep the private draft untouched.
+  useEffect(() => { if (creation.intent) setShowCreateModal(false) }, [creation.intent?.operationId])
+  const blocked = loading || Boolean(loadError) || Boolean(scopeError) || !canCreatePeriods || !creation.ready || Boolean(creation.intent) || creating
+  const fetchPeriods = () => setRevision(value => value + 1)
+  const closeCreateModal = () => { if (!creating && !creation.intent) setShowCreateModal(false) }
+  // 新しい見た目: 作成のダイアログは Esc で閉じ、開いたら期間名の欄に移る
+  const closeModalRef = useRef(closeCreateModal)
+  closeModalRef.current = closeCreateModal
+  useEffect(() => {
+    if (!showCreateModal) return
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const frame = requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>('input[type="text"]')?.focus())
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); closeModalRef.current() } }
+    document.addEventListener('keydown', onKey)
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onKey); opener?.focus() }
+  }, [showCreateModal])
+  async function handleCreatePeriod() {
+    if (blocked) return
+    await creation.create({ ...newPeriod })
+  }
+  async function acknowledgeCreation() {
+    const result = creation.result
+    if (!result || result.state === 'not_received' || scopeError) return
+    if (!await creation.acknowledge() || !creation.isCurrent() || !lifetime.live()) return
+    if (result.state === 'created') lifetime.router.push('/hr/evaluations/period/' + encodeURIComponent(result.period.id))
+    else { setShowCreateModal(false); fetchPeriods() }
+  }
+
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    DRAFT: { label: '準備中', color: 'bg-slate-100 text-slate-600' },
+    OPEN: { label: '進行中', color: 'bg-emerald-100 text-emerald-700' },
+    IN_REVIEW: { label: 'レビュー中', color: 'bg-amber-100 text-amber-700' },
+    CLOSED: { label: '終了', color: 'bg-blue-100 text-blue-700' },
+  }
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
+      <motion.div initial={still ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        {/* Header */}
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <PageTitle className="text-3xl font-black text-slate-900">評価管理</PageTitle>
+            <p className="text-sm text-slate-500 mt-1">MBO評価の期間を管理</p>
+          </div>
+          {canCreatePeriods && (
+            <button
+            type="button"
+            onClick={() => { if (!blocked) setShowCreateModal(true) }}
+            disabled={blocked}
+            className="min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus aria-hidden="true" className="w-5 h-5 shrink-0" />
+            評価期間を作成
+            </button>
+          )}
+        </div>
+
+        {scopeError && <div role="alert" className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-6">{scopeError}</div>}
+        {hint.error && organizationScope.organizationId && <HrPeriodCreationRecovery onReconciled={() => { setRevision(value => value + 1); window.dispatchEvent(new Event('hr-period-creation-reconciled')) }} />}
+        {creation.message && !creation.intent && <p role="alert">{creation.message}</p>}
+        {creation.intent && <section aria-label="評価期間の作成結果確認" className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+          <h2 className="text-lg font-bold">前回の評価期間作成の結果を確認してください</h2>
+          <p role="status" className="mt-2">{creating ? '操作結果を確認しています。' : creation.message || '新しく作成せず、前回の作成結果を確認してください。'}</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="button" disabled={creating || Boolean(scopeError)} onClick={() => void creation.recover()} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">作成結果を確認する</button>
+            {creation.result?.state === 'not_received' && <>
+              {creation.canRetry && <button type="button" disabled={creating || creation.loginRequired || creation.accessDenied || Boolean(scopeError)} onClick={() => void creation.retry()} className="rounded-xl border px-5 py-3 font-bold">同じ内容で作成を再開する</button>}
+              <button type="button" disabled={creating || creation.loginRequired || creation.accessDenied || Boolean(scopeError)} onClick={() => void creation.recover(true)} className="rounded-xl border px-5 py-3 font-bold">未受付の操作を終了する</button>
+            </>}
+            {creation.result && creation.result.state !== 'not_received' && <button type="button" disabled={creating || creation.loginRequired || creation.accessDenied || Boolean(scopeError)} onClick={() => void acknowledgeCreation()} className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{creation.result.state === 'created' ? '作成した評価期間を開く' : '結果を確認して一覧に戻る'}</button>}
+            {creation.loginRequired && <Link href="/auth/signin?callbackUrl=%2Fhr%2Fevaluations">ログインする</Link>}
+          </div>
+        </section>}
+        {/* Periods List */}
+        {scopeError ? null : loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-40 bg-white rounded-3xl shadow-md animate-pulse" />
+            ))}
+          </div>
+        ) : loadError ? (
+          <HrLoadError subject="評価期間の一覧" status={errorStatus} onRetry={() => void fetchPeriods()} />
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+            <h2 className="text-lg font-black text-rose-800">評価期間を取得できませんでした</h2>
+            <p className="mt-2 text-sm font-bold text-rose-700">{loadErrorText} 登録済みの評価期間は変更されていません。</p>
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fhr%2Fevaluations">ログインする</Link>}
+            <button type="button" onClick={() => void fetchPeriods()} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
+              再試行する
+            </button>
+          </div>
+        ) : periods.length > 0 ? (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.08 },
+              },
+            }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {periods.map((period) => {
+              const total = period.evaluationCount
+              const completed = period.completedEvaluations
+              const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+              const st = Object.prototype.hasOwnProperty.call(STATUS_MAP, period.status) ? STATUS_MAP[period.status] : { label: '状態未確認', color: 'bg-slate-100 text-slate-600' }
+              return (
+                <motion.div
+                  key={period.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 20, scale: 0.95 },
+                    visible: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                  whileHover={still ? undefined : { y: -4 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                >
+                  <Link
+                    href={`/hr/evaluations/period/${period.id}`}
+                    className="block bg-white rounded-3xl shadow-md p-5 sm:p-6 hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h3 className="min-w-0 break-words text-lg font-bold text-slate-900 [text-wrap:balance]">{period.name}</h3>
+                      <span className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-bold ${st.color}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mb-4">
+                      {period.startDate && !isNaN(new Date(period.startDate).getTime())
+                        ? new Date(period.startDate).toLocaleDateString('ja-JP')
+                        : '未設定'}
+                      {' 〜 '}
+                      {period.endDate && !isNaN(new Date(period.endDate).getTime())
+                        ? new Date(period.endDate).toLocaleDateString('ja-JP')
+                        : '未設定'}
+                    </p>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-500">進捗</span>
+                      <span className="text-base font-black text-blue-600">{pct}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={still ? { duration: 0 } : { duration: 1.2, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-slate-500">
+                        {completed}/{total}件完了
+                      </p>
+                      <ChevronRight aria-hidden="true" className="w-5 h-5 text-slate-400" />
+                    </div>
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        ) : (
+          // 新しい見た目: 空の状態は絵＋次にやること1つ（作れない人には一覧のかわりにダッシュボードへ）
+          <EmptyState
+            art="/hr/empty-members.webp"
+            title="評価期間はまだありません"
+            description={canCreatePeriods
+              ? '上期・下期などの評価期間を作り、従業員に評価シートを配ります。自己評価・上司評価・最終評価の順に進みます。'
+              : '管理者が評価期間を作成すると、ここに表示されます。'}
+            action={canCreatePeriods
+              ? <Button icon="Plus" onClick={() => { if (!blocked) setShowCreateModal(true) }} disabled={blocked}>評価期間を作成</Button>
+              : <Button variant="secondary" href="/hr/dashboard" icon="LayoutDashboard">ダッシュボードに戻る</Button>}
+          />
+        )}
+
+        {/* FAB（新しい見た目では出さない。見出しの横の主ボタンと同じ役目で、375px では一覧に重なるため） */}
+
+        {/* Create Modal */}
+        {canCreatePeriods && showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" onClick={closeCreateModal} />
+            <motion.div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={dialogTitleId}
+              initial={still ? false : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative bg-white rounded-3xl shadow-2xl p-5 sm:p-6 w-full max-w-md mx-4 max-h-[90dvh] overflow-y-auto"
+            >
+              <h2 id={dialogTitleId} className="text-lg font-bold text-slate-900 mb-4">評価期間を作成</h2>
+              <fieldset disabled={blocked} className="space-y-4">
+                {/* Presets */}
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">プリセットから選択</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const y = new Date().getFullYear()
+                      return [
+                        { label: `上期（${y}年4月〜9月）`, name: `${y}年度 上期評価`, start: `${y}-04-01`, end: `${y}-09-30` },
+                        { label: `下期（${y}年10月〜${y+1}年3月）`, name: `${y}年度 下期評価`, start: `${y}-10-01`, end: `${y+1}-03-31` },
+                        { label: '四半期（Q1）', name: `${y}年度 Q1評価`, start: `${y}-04-01`, end: `${y}-06-30` },
+                      ]
+                    })().map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setNewPeriod({ name: preset.name, startDate: preset.start, endDate: preset.end })}
+                        className="min-h-11 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] font-bold rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor={nameId} className="block text-sm font-bold text-slate-700 mb-1">期間名</label>
+                  <input
+                    id={nameId}
+                    type="text"
+                    value={newPeriod.name}
+                    onChange={(e) => setNewPeriod({ ...newPeriod, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="2026年度 上期評価"
+                  />
+                </div>
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
+                  <div className="min-w-0">
+                    <label htmlFor={startId} className="block text-sm font-bold text-slate-700 mb-1">開始日</label>
+                    <input
+                      id={startId}
+                      type="date"
+                      value={newPeriod.startDate}
+                      onChange={(e) => setNewPeriod({ ...newPeriod, startDate: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label htmlFor={endId} className="block text-sm font-bold text-slate-700 mb-1">終了日</label>
+                    <input
+                      id={endId}
+                      type="date"
+                      value={newPeriod.endDate}
+                      onChange={(e) => setNewPeriod({ ...newPeriod, endDate: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+              </fieldset>
+              {creation.message && <p role="alert" className="mt-3 text-sm text-rose-700">{creation.message}</p>}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  disabled={creating || Boolean(creation.intent)}
+                  className="min-h-11 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreatePeriod}
+                  disabled={blocked || !newPeriod.name.trim() || !newPeriod.startDate || !newPeriod.endDate}
+                  className="min-h-11 whitespace-nowrap flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+                >
+                  {creating ? '作成中...' : '作成'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  )
+}

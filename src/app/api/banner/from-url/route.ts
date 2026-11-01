@@ -13,6 +13,7 @@ import { higherPlan } from '@/lib/plan-utils'
 import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
+import { withDoyaPowerCharge, targetKeyOf } from '@/lib/doya-power/charge'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -1388,7 +1389,7 @@ async function extractPaletteViaVision(imageUrls: string[]): Promise<string[]> {
     .slice(0, 3)
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
     const session = await getServerSession(authOptions)
@@ -1777,3 +1778,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'URLからの自動生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+// バナーは表のとおり「1回ごと」に減らす（バナー（1回3枚）10）。枚数はプランと予約で処理の側が決めるので、ここでは数えない
+// 対象は「入力されたサイトのURL」（正規化して、フラグメントは除く）。baseImage（画像の base64）が本文に入るので、本文の上限を 6MB に上げて読む
+function bannerChargeTarget(b: Record<string, unknown> | null): string | null {
+  const raw = safeTrim(b?.targetUrl || b?.target_url, 2000)
+  try {
+    const u = new URL(raw)
+    u.hash = ''
+    return targetKeyOf('banner-url', u.href)
+  } catch {
+    return null
+  }
+}
+export const POST = withDoyaPowerCharge({ action: 'banner.generate', retry: true, targetBody: true, bodyMaxBytes: 6 * 1024 * 1024, target: bannerChargeTarget }, postHandler)

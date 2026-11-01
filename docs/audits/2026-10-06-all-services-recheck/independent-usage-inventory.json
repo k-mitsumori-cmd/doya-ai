@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-10-06T18:40:48.292456+00:00",
+  "scope": "8 active services with independent usage/plan interfaces, complementing the 9 shared SidebarUsagePanel consumers. This inventory is not flow verification.",
+  "services": [
+    {
+      "service": "interview",
+      "sources": [
+        "src/components/interview/InterviewSidebar.tsx",
+        "src/app/api/interview/usage/route.ts"
+      ],
+      "state": "798212df CI success, production READY and 2 anonymous pages/26 JS verified; authenticated transcription flow and immediate same-route completion remain under audit."
+    },
+    {
+      "service": "hr",
+      "sources": [
+        "src/components/hr/HrLayout.tsx",
+        "src/components/hr/HrSidebar.tsx",
+        "src/app/api/hr/usage/route.ts"
+      ],
+      "state": "4fa6d261 CI success, production READY, anonymous 2 pages/27 JS publish proof confirmed. Mounted actor/draft cases passed; real authenticated business flows remain under audit.",
+      "proof": "org-layout-repair.json"
+    },
+    {
+      "service": "kintai",
+      "sources": [
+        "src/components/kintai/KintaiLayout.tsx",
+        "src/components/kintai/KintaiSidebar.tsx",
+        "src/app/api/kintai/usage/route.ts"
+      ],
+      "state": "4fa6d261 CI success, production READY, anonymous 2 pages/27 JS publish proof confirmed. Mounted actor/draft cases passed; real authenticated business flows remain under audit.",
+      "proof": "org-layout-repair.json"
+    },
+    {
+      "service": "doyalist",
+      "sources": [
+        "src/components/doyalist/DoyalistLayout.tsx",
+        "src/components/doyalist/ToolForm.tsx",
+        "src/app/doyalist/Tool.tsx"
+      ],
+      "state": "5ee64c4f CI success/production READY/3 tool pages and 20 JS publication confirmed. be94f76d CI success, production build tracking. 70e12d8f keyword repair pushed after full gate; CI and production build tracking. Estimate criteria/types/deadline repair: 44 mounted cases, 6 synthetic actual-API cases and unchanged 2582-source full release gate passed, not pushed yet. Private business flow remains unverified.",
+      "proof": "doyalist-collect-repair.json"
+    },
+    {
+      "service": "promane",
+      "sources": [
+        "src/components/promane/sidebar.tsx",
+        "src/app/api/promane/usage/route.ts"
+      ],
+      "state": "Usage UI consumers and workspace scope require further inventory."
+    },
+    {
+      "service": "doyaslide",
+      "sources": [
+        "src/components/doyaslide/DoyaSlideLayout.tsx",
+        "src/components/doyaslide/NewDoyaSlideWizard.tsx",
+        "src/app/doyaslide/projects/page.tsx"
+      ],
+      "state": "Actual layout/context baseline reproduced: prior actor child draft persists, prior plan prop briefly visible, object refresh repeats read, focus/route lacks refresh. Synthetic wrapper probe only, not real customer data exposure. Repair pending.",
+      "proof": "slide-cunning-layout-baseline.json"
+    },
+    {
+      "service": "cunning",
+      "sources": [
+        "src/components/cunning/CunningLayoutShell.tsx",
+        "src/app/cunning/Tool.tsx",
+        "src/app/cunning/live/[sessionId]/page.tsx"
+      ],
+      "state": "Actual layout/context baseline reproduced: prior actor child draft persists, prior plan prop briefly visible, object refresh repeats read, focus/route lacks refresh. Synthetic wrapper probe only, not real customer data exposure. Repair pending.",
+      "proof": "slide-cunning-layout-baseline.json"
+    },
+    {
+      "service": "sfa",
+      "sources": [
+        "src/app/sfa/Entry.tsx",
+        "src/app/sfa/[orgSlug]/layout.tsx",
+        "src/app/api/sfa/usage/route.ts"
+      ],
+      "state": "Independent organization usage lookups located. Actor/organization/schema/deadline and completion consistency require mounted verification."
+    }
+  ]
+}

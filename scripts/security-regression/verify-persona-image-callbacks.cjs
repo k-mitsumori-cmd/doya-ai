@@ -14,8 +14,8 @@ function extract(file, name) {
   return ts.transpileModule('(' + callback + ');', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 }
 const code = {
-  portrait: extract('src/app/persona/Tool.tsx', 'handleGeneratePortrait'),
-  scene: extract('src/app/persona/Tool.tsx', 'handleGenerateScene'),
+  portrait: extract('src/app/(shell)/persona/Tool.tsx', 'handleGeneratePortrait'),
+  scene: extract('src/app/(shell)/persona/Tool.tsx', 'handleGenerateScene'),
   banner: extract('src/components/persona/PersonaBannerGenerator.tsx', 'generate'),
 };
 const reader = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../../src/lib/persona/image-response.ts'), 'utf8'), {
@@ -28,7 +28,8 @@ function fixture(kind, scenario) {
   const state = { image: '/api/persona/images/previous', error: '', loading: false, writes: 0, usage: 0, quota: null, action: null };
   const set = key => value => { state[key] = typeof value === 'function' ? value(state[key]) : value; };
   const env = {
-    crypto: require('node:crypto'), AbortController,
+    crypto: require('node:crypto'), AbortController, plan: 'PRO', isPaidPlan: () => true,
+    personaSceneIntent: (_data, _key, hasImage) => hasImage ? 'regenerate' : 'included',
     generatedData: persona, currentPersona: { current: persona }, currentRecordId: { current: 'synthetic' },
     portraitImage: state.image, sceneImages: { 'scene-1': state.image }, imageAttempts: { current: {} },
     imageRequests: { current: {} }, scenePending: { current: new Set() }, scenePrompts: { current: {} },

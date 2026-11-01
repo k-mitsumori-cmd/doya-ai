@@ -34,7 +34,7 @@ export async function sendOps(serviceKey: ServiceKey, text: string, receipt: str
     let hook = process.env[service.webhook];
     if (serviceKey === 'doya') hook = (await prisma.systemSetting.findUnique({ where: { key: 'slack_webhook' } }))?.value || process.env.SLACK_ANALYTICS_WEBHOOK_URL;
     if (!hook) throw new Error('通知先が未設定です');
-    const response = await fetch(hook, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: withSlackVoice(text, { mood, seed: receipt }) }), signal: AbortSignal.timeout(8000) });
+    const response = await fetch(hook, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: withSlackVoice(text, { mood, seed: receipt, app: service.name }) }), signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
     await writeOps('sent:' + receipt, { at: new Date().toISOString() });
     return true;

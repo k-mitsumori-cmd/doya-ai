@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-07T20:50:16.046792+00:00",
+  "status": "frozen67gates-passed-ready-for-reviewed-commit-push",
+  "rootApplied": true,
+  "productionApplied": false,
+  "clientBaseline": "promane-expense-submit-baseline.json",
+  "apiBaseline": "promane-expense-duplicate-postgres-baseline.json",
+  "findings": [
+    "Two same-frame expense submits cause2 actual requests and2 success messages",
+    "Actual concurrent identical API calls and discarded-ack retry persist2 expenses",
+    "HTTP200 without saved expense is accepted as success"
+  ],
+  "required": [
+    "Atomic durable operation receipt in expense POST with fresh actor/project scoping",
+    "Scoped read/cancellation fence after unknown save; no blind resend",
+    "Synchronous client lane, durable metadata identity, strict validated acknowledgement",
+    "Preserve money/date/project/authorization and aggregation behavior",
+    "Private PostgreSQL races/rollback and mounted/native coverage then frozen full release and public verification"
+  ],
+  "scope": "Confirmed Promane expense duplicate/malformed acknowledgement and context-draft defects; root integrated. Full17service2074criteria audit remains active. Authenticated production write E2E not verified.",
+  "candidateEvidence": {
+    "candidateRoot": "promane-expense-creation-candidate",
+    "postgres": "promane-expense-creation-postgres-results.json",
+    "postgresSupervisor": "promane-expense-creation-postgres-supervisor.json",
+    "client": "promane-expense-creation-client-mounted-results.json",
+    "view": "promane-expense-creation-view-mounted-results.json",
+    "typecheck": "promane-expense-creation-candidate-typecheck.log",
+    "remaining": [
+      "Frozen67gate pass without source change",
+      "Reviewed exact commit/push and CI/deployment/public observation",
+      "Authenticated actual Next transport/UI QA remains unverified"
+    ],
+    "scope": "Independent real isolated PostgreSQL API tests and actual React mounted component/hook with synthetic HTTP/session; no combined real Next/DB browser or production writes.",
+    "postgresCases": 20,
+    "native": "promane-expense-creation-native-results.json",
+    "nativeCases": 6,
+    "nativeVisuallyReviewed": [
+      1280,
+      390
+    ],
+    "serverAction": "Existing createExpense action now shares API receipt and required operation identity in candidate; cross-entrypoint replay/concurrency tested",
+    "contextDrafts": {
+      "financeBaseline": "promane-expense-native-account-draft-baseline.json",
+      "financeRepaired": "promane-expense-native-account-draft-observation.json",
+      "timeBaseline": "promane-timesheet-member-draft-baseline.json",
+      "timeRepaired": "promane-timesheet-member-draft-results.json"
+    }
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-expense-creation-release-6c5e41f7-2b90-4512-a0dd-5a50f7842df5",
+  "existingRegressionChange": "Business assertions preserved. POST denied on retry now aborts its transaction instead of returning a committed denial; exact expected committed=false while DELETE keeps prior committed=true denial. All8 atomic access tests pass.",
+  "gateSession": 32738,
+  "gateStatus": "passed"
+}

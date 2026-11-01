@@ -1,0 +1,9 @@
+{
+  "status": "reproduced",
+  "sameTurnPaidRequests": 2,
+  "nonArrayTagsBreakRendering": true,
+  "emptyResponseAnnouncedAsSuccess": true,
+  "oldKeywordResponseReplacesNewerTags": true,
+  "rawExceptionShown": true,
+  "scope": "Actual keyword callback with synthetic responses and React setters. No live AI, provider, DB or customer operations."
+}

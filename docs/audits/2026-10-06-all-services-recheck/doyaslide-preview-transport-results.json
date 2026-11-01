@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-08T01:58:52.135Z",
+  "expected": 21,
+  "passed": 21,
+  "cases": [
+    "Valid complete result validates and releases deadline/transport",
+    "Pending partial result retains validated public URL",
+    "Empty terminal result remains distinguishable from pending",
+    "Only exact shared-budget 429 yields capped result",
+    "HTTP failure cannot become ready",
+    "Other 429 cannot become shared cap",
+    "202 requires pending true",
+    "Missing pending rejected",
+    "Nonarray URLs rejected",
+    "Unsafe image protocol rejected",
+    "URL credentials rejected",
+    "More than three image URLs rejected",
+    "Inconsistent primary URL rejected",
+    "Error disguised as success rejected",
+    "Malformed JSON rejected",
+    "Oversized announced body rejected before reading",
+    "Oversized streamed body rejected and reader cancelled",
+    "Header stall has a bounded deadline and aborts transport",
+    "Body stall is bounded and reader is cancelled",
+    "Parent cancellation cannot wait on abort-ignoring transport",
+    "Already cancelled and invalid deadline never fetch"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-transport.cjs": "3fbddd54398c1529719aaad8098707bf706e00935a7d93e7eb73ea4e0aaca7aa"
+  },
+  "scope": "Actual preview reader with native Response/ReadableStream/AbortController and synthetic fetch/clock. No provider/network/DB/customer writes."
+}

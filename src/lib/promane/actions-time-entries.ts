@@ -1,9 +1,13 @@
 "use server";
 
 import { parsePromaneWorkDate, validatePromaneMinutes, parsePromaneExpense, validatePromaneInteger } from "./time-input";
+import { createPromaneTimeEntryOnce, recoverPromaneTimeEntry, promaneTimeOperationId, isPromaneTimeReceiptConflict } from "./time-entry-creation";
+import { createPromaneExpenseOnce, promaneExpenseOperationId, isPromaneExpenseReceiptConflict } from "./expense-creation";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 /** 数値バリデーション */
 function validateAmount(v: number | undefined | null, field: string): number {
@@ -21,7 +25,53 @@ async function retryTimeTransaction<T>(commit: () => Promise<T>): Promise<T> {
   throw new Error('記録を変更できませんでした');
 }
 
+async function retryTimeCreationTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit(); }
+    catch (error) {
+      if (!isPromaneTimeReceiptConflict(error)) throw error;
+      if (attempt === 2) throw new Error('同時に記録が変更されました。保存状態を確認してください');
+    }
+  }
+  throw new Error('保存状態を確認できませんでした');
+}
+
+async function retryExpenseCreationTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit(); }
+    catch (error) {
+      if (!isPromaneExpenseReceiptConflict(error)) throw error;
+      if (attempt === 2) throw new Error('保存状態を確認できません。再登録せず保存状態を確認してください');
+    }
+  }
+  throw new Error('保存状態を確認できませんでした');
+}
+
+async function lockWritableActor(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
+  const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
+    WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true
+      AND role IN ('owner','admin','member') FOR UPDATE`;
+  if (rows.length !== 1) throw new Error('ワークスペースの変更権限がありません');
+}
+
+export async function recoverTimeEntry(workspaceSlug: string, operationId: string, cancelIfMissing = false, workspaceId?: string, expectedUserId?: string) {
+  const { userId } = await requirePromaneAuthAction();
+  if (expectedUserId !== undefined && expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, workspaceId);
+  const id = promaneTimeOperationId(operationId);
+  if (typeof cancelIfMissing !== 'boolean') throw new Error('確認方法が不正です');
+  const result = await retryTimeCreationTransaction(() => prisma.$transaction(async tx => {
+    await lockWritableActor(tx, workspace.id, userId);
+    return recoverPromaneTimeEntry(tx, { workspaceId: workspace.id, userId }, id,
+      entryId => tx.promaneTimeEntry.findFirst({ where: { id: entryId, member: { workspaceId: workspace.id } } }), cancelIfMissing);
+  }, { isolationLevel: 'Serializable' }));
+  // A stale action URL must not render its old route before the client follows the canonical result.
+  if (result.state === 'found' && (!workspaceId || workspaceSlug === workspace.slug)) revalidatePath(`/promane/${workspaceId ? workspace.slug : workspaceSlug}/timesheet`);
+  return { ...result, ...(workspaceId ? { workspaceSlug: workspace.slug } : {}) };
+}
+
 export async function createTimeEntry(workspaceSlug: string, data: {
+  operationId: string; workspaceId?: string; expectedUserId?: string;
   taskId?: string;
   projectId?: string;
   memberId: string;
@@ -30,55 +80,62 @@ export async function createTimeEntry(workspaceSlug: string, data: {
   note?: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  if (data.expectedUserId !== undefined && data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, data.workspaceId);
 
+  const operationId = promaneTimeOperationId(data.operationId);
+  if (data.note !== undefined && typeof data.note !== "string") throw new Error("メモを確認してください");
+  if (data.note !== undefined && data.note.length > 1000) throw new Error("メモは1,000文字以内で入力してください");
   const duration = validatePromaneMinutes(data.duration);
   const workDate = parsePromaneWorkDate(data.date);
   if (!data.memberId) throw new Error("memberIdは必須です");
 
-  const entry = await retryTimeTransaction(() => prisma.$transaction(async tx => {
-    const actor = await tx.promaneMember.findFirst({
-      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
-      select: { id: true },
-    });
-    if (!actor) throw new Error('ワークスペースの変更権限がありません');
-    const member = await tx.promaneMember.findFirst({
-      where: { id: data.memberId, workspaceId: workspace.id },
-      select: { id: true, hourlyRate: true },
-    });
-    if (!member) throw new Error("メンバーが見つかりません");
+  const entry = await retryTimeCreationTransaction(() => prisma.$transaction(async tx => {
+    await lockWritableActor(tx, workspace.id, userId);
+    const scope = { workspaceId: workspace.id, userId };
+    const input = { memberId: data.memberId, duration, date: workDate.toISOString(),
+      projectId: data.projectId || null, taskId: data.taskId || null, note: data.note || null };
+    return createPromaneTimeEntryOnce(tx, scope, operationId, input,
+      id => tx.promaneTimeEntry.findFirst({ where: { id, member: { workspaceId: workspace.id } } }),
+      async () => {
+        const member = await tx.promaneMember.findFirst({
+          where: { id: data.memberId, workspaceId: workspace.id, isActive: true },
+          select: { id: true, hourlyRate: true },
+        });
+        if (!member) throw new Error("メンバーが見つかりません");
 
-    let projectId = data.projectId || null;
-    if (projectId) {
-      const project = await tx.promaneProject.findFirst({
-        where: { id: projectId, workspaceId: workspace.id }, select: { id: true },
+        let projectId = data.projectId || null;
+        if (projectId) {
+          const project = await tx.promaneProject.findFirst({
+            where: { id: projectId, workspaceId: workspace.id }, select: { id: true },
+          });
+          if (!project) throw new Error("プロジェクトが見つかりません");
+        }
+        if (data.taskId) {
+          const task = await tx.promaneTask.findFirst({
+            where: { id: data.taskId, project: { workspaceId: workspace.id } },
+            select: { id: true, projectId: true },
+          });
+          if (!task) throw new Error("タスクが見つかりません");
+          if (projectId && task.projectId !== projectId) throw new Error("選択したプロジェクトのタスクを指定してください");
+          projectId = task.projectId;
+        }
+        return tx.promaneTimeEntry.create({
+          data: {
+            taskId: data.taskId || null,
+            projectId,
+            memberId: data.memberId,
+            duration,
+            hourlyRateSnapshot: member.hourlyRate,
+            date: workDate,
+            note: data.note || null,
+          },
+        });
       });
-      if (!project) throw new Error("プロジェクトが見つかりません");
-    }
-    if (data.taskId) {
-      const task = await tx.promaneTask.findFirst({
-        where: { id: data.taskId, project: { workspaceId: workspace.id } },
-        select: { id: true, projectId: true },
-      });
-      if (!task) throw new Error("タスクが見つかりません");
-      if (projectId && task.projectId !== projectId) throw new Error("選択したプロジェクトのタスクを指定してください");
-      projectId = task.projectId;
-    }
-    return tx.promaneTimeEntry.create({
-      data: {
-        taskId: data.taskId || null,
-        projectId,
-        memberId: data.memberId,
-        duration,
-        hourlyRateSnapshot: member.hourlyRate,
-        date: workDate,
-        note: data.note?.slice(0, 1000) || null,
-      },
-    });
   }, { isolationLevel: 'Serializable' }));
 
-  revalidatePath(`/promane/${workspaceSlug}/timesheet`);
-  return entry;
+  if (!data.workspaceId || workspaceSlug === workspace.slug) revalidatePath(`/promane/${data.workspaceId ? workspace.slug : workspaceSlug}/timesheet`);
+  return { ...entry, ...(data.workspaceId ? { workspaceSlug: workspace.slug } : {}) };
 }
 
 export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {
@@ -100,6 +157,7 @@ export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {
 }
 
 export async function createExpense(workspaceSlug: string, data: {
+  operationId: string;
   projectId: string;
   category: string;
   amount: number;
@@ -109,20 +167,19 @@ export async function createExpense(workspaceSlug: string, data: {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
+  const operationId = promaneExpenseOperationId(data.operationId);
   const validated = parsePromaneExpense(data);
 
-  const expense = await retryTimeTransaction(() => prisma.$transaction(async tx => {
-    const actor = await tx.promaneMember.findFirst({
-      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
-      select: { id: true },
-    });
-    if (!actor) throw new Error('ワークスペースの変更権限がありません');
+  const expense = await retryExpenseCreationTransaction(() => prisma.$transaction(async tx => {
+    await lockWritableActor(tx, workspace.id, userId);
     const project = await tx.promaneProject.findFirst({
       where: { id: data.projectId, workspaceId: workspace.id },
       select: { id: true },
     });
     if (!project) throw new Error("プロジェクトが見つかりません");
-    return tx.promaneExpense.create({ data: validated });
+    return createPromaneExpenseOnce(tx, { workspaceId: workspace.id, userId }, operationId, validated,
+      id => tx.promaneExpense.findFirst({ where: { id, projectId: validated.projectId, project: { workspaceId: workspace.id } } }),
+      () => tx.promaneExpense.create({ data: validated }));
   }, { isolationLevel: 'Serializable' }));
 
   revalidatePath(`/promane/${workspaceSlug}/projects/${data.projectId}`);
@@ -162,9 +219,11 @@ export async function updateMemberRate(workspaceSlug: string, memberId: string, 
   await retryTimeTransaction(() => prisma.$transaction(async tx => {
     const actor = await tx.promaneMember.findFirst({
       where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!actor) throw new Error("時給を変更する権限がありません（owner/admin のみ）");
+    // 会社の役割の上限より上には上げない
+    const ceiled = actor ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspace.id, toolRole: actor.role }) : null;
+    if (!actor || (ceiled !== 'owner' && ceiled !== 'admin')) throw new Error("時給を変更する権限がありません（owner/admin のみ）");
     const updated = await tx.promaneMember.updateMany({
       where: { id: memberId, workspaceId: workspace.id },
       data: { hourlyRate: rate },

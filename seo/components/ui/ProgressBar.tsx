@@ -5,7 +5,7 @@ export function ProgressBar({ value, className }: { value: number; className?: s
   return (
     <div className={clsx('w-full h-2 rounded-full bg-gray-200 overflow-hidden', className)}>
       <div
-        className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-fuchsia-500 transition-all duration-500 ease-out relative"
+        className="h-full bg-gradient-to-r from-blue-500 via-brand-400 to-brand-600 transition-all duration-500 ease-out relative"
         style={{ width: `${v}%` }}
       >
         {/* Shimmer effect */}

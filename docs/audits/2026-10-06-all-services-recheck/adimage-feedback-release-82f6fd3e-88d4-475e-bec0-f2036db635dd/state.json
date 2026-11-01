@@ -1,0 +1,36 @@
+{
+  "startedAt": "2026-10-07T10:59:29.168007+00:00",
+  "pid": 98541,
+  "head": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+  "sourceFiles": 2769,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:59:31.256488+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:59:33.132320+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:59:35.314387+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:59:37.432280+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 1,
+      "endedAt": "2026-10-07T11:00:10.658640+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T11:00:11.128172+00:00"
+}

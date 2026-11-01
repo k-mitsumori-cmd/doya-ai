@@ -50,7 +50,37 @@ export function includedPersonaImages(data: PersonaImageSource): IncludedPersona
   return slots
 }
 
+/**
+ * 無料プランで付属枠として作れるシーン画像の枚数（1ペルソナあたり）。
+ * 付属枠は「肖像1枚＋シーン2枚」まで。残りのシーンは追加枠（1日の上限あり）で作る。
+ * 以前は1ペルソナで最大16枚を自動で作っており、無料の上限まで使うと1人月約1.5万円の原価になっていた。
+ */
+export const PERSONA_FREE_INCLUDED_SCENES = 2
+
+type SlotRef = { key?: unknown; kind?: unknown }
+
+/** 付属枠に入る画像か。有料プランは全スロット、無料プランは肖像と先頭のシーン2枚だけ。 */
+export function personaSlotIncludedForPlan(slots: readonly unknown[], slotKey: string, paid: boolean): boolean {
+  let scenes = 0
+  for (const value of slots) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+    const slot = value as SlotRef
+    if (slot.kind === 'scene') scenes++
+    if (slot.key !== slotKey) continue
+    if (paid || slot.kind === 'portrait') return true
+    return slot.kind === 'scene' && scenes <= PERSONA_FREE_INCLUDED_SCENES
+  }
+  return false
+}
+
 export type PersonaImageIntent = 'included' | 'extra' | 'regenerate'
+
+/** シーン画像のボタンが送る意図。画像があれば再生成、付属枠の内なら included、外なら extra。 */
+export function personaSceneIntent(data: PersonaImageSource | null | undefined, sceneKey: string, hasImage: boolean, paid: boolean): PersonaImageIntent {
+  if (hasImage) return 'regenerate'
+  try { return data && personaSlotIncludedForPlan(includedPersonaImages(data), sceneKey, paid) ? 'included' : 'extra' }
+  catch { return 'extra' }
+}
 
 /** A retry does not silently turn an included image into a paid/extra request. */
 export function personaImageAllowance(intent: PersonaImageIntent, slot: IncludedPersonaImage | undefined, hasSavedImage: boolean): 'included' | 'extra' | 'cached' {

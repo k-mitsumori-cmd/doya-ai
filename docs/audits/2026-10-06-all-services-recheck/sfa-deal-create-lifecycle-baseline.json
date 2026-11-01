@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T02:00:10.655Z",
+  "findings": 2,
+  "results": [
+    {
+      "name": "Current deal creation still sends two same-frame POSTs without operation UUID",
+      "observedPosts": 2,
+      "confirmed": true
+    },
+    {
+      "name": "Current retained deal page announces old-organization success and closes newer form after late response",
+      "confirmed": true,
+      "scope": "Actual component retained with mocked navigation; production layout identity remount is separately verified, so draft loss is not claimed for actual Next routing. Unscoped toast callback remains an open lifecycle issue."
+    }
+  ],
+  "sourceHashes": {
+    "src/app/sfa/[orgSlug]/deals/page.tsx": "f228da88972ebb594cabe7ae135cd79c47f2bb7912e4553483e623514500c80d",
+    "scripts/security-regression/sfa-client-fixture.cjs": "ad2034e50a3b786785ca4ebebb24378de2e0e699be562dd658aac3730bc8b635"
+  },
+  "scope": "Read-only source plus synthetic actual mounted page and fake transport only. No customer data/provider/production writes. This is a separate unresolved deal-business lifecycle cohort, not a regression in repaired task/activity clients."
+}

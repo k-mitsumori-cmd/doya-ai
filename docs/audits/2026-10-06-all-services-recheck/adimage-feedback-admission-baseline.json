@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T10:26:07.370Z",
+  "finding": "Ten concurrent identical authenticated FREE feedback POSTs each invoke the synthetic vision provider and save a separate feedback. Endpoint has no operation receipt, per-target in-flight guard or own daily meter. This is full actual route with stubbed identity/storage/provider/Prisma, not actual PostgreSQL or native concurrent feedback UI proof.",
+  "requestCount": 10,
+  "statuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "syntheticVisionCalls": 10,
+  "feedbackWrites": 10,
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/[id]/feedback/route.ts": "48dc20ef59ba68bd491b002795f16778e0732b1388d39b09f1f30a960be6da0e",
+    "src/app/adimage/Tool.tsx": "5d75cae44b4ab22677d850af915c9b5d0d1c4d80e2eb805ba127629d5d44d6ed"
+  },
+  "scope": "Next audit cohort. Current generation/refinement operation repair does not repair feedback POST. No customer DB or paid provider call."
+}

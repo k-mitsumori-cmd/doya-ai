@@ -129,12 +129,12 @@ export const KANTAN_PRICING: ServicePricing = {
 }
 
 // ========================================
-// ドヤライティングAI 料金設定
+// ドヤ記事作成 料金設定
 // ========================================
 // SEO記事生成はコストが読みづらいため、まずは控えめな上限で運用
 export const SEO_PRICING: ServicePricing = {
   serviceId: 'seo',
-  serviceName: 'ドヤライティングAI',
+  serviceName: 'ドヤ記事作成',
   serviceIcon: '🧠',
   guestLimit: 0,        // ゲスト: 生成不可（ログイン必須）
   freeLimit: 3,         // ログイン無料: 月3回まで
@@ -1150,7 +1150,7 @@ export const BUNDLE_PRICING = {
   originalPrice: '¥7,980',
   description: '両方使うなら断然お得',
   features: [
-    { text: 'ドヤライティングAI プロ', included: true },
+    { text: 'ドヤ記事作成 プロ', included: true },
     { text: 'ドヤバナーAI プロ', included: true },
     { text: '今後追加される新サービスも利用可能', included: true },
     { text: '優先サポート', included: true },
@@ -1694,7 +1694,7 @@ export const HR_PRICING: ServicePricing = {
       features: [
         { text: '従業員100名まで', included: true },
         { text: '全機能利用可能', included: true },
-        { text: 'AI機能（無制限）', included: true },
+        { text: 'AI機能（月100回）', included: true },
         { text: 'メンバー招待（無制限）', included: true },
         { text: 'カスタムフィールド', included: true },
         { text: '優先サポート', included: true },
@@ -1737,9 +1737,10 @@ export function getHrEmployeeLimitByUserPlan(plan: string | null | undefined): n
 export function getHrAiLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
+  // 実際に効く上限は src/lib/hr/billing.ts（正本は plan-limit.ts の HR_AI_MONTHLY_LIMITS）。表示用に同じ値を返す。
   switch (p) {
-    case 'ENTERPRISE':
-    case 'PRO': return -1
+    case 'ENTERPRISE': return 500
+    case 'PRO': return 100
     case 'LIGHT':
     case 'STARTER': return 30
     case 'FREE': return 3

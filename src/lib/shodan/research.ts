@@ -7,10 +7,10 @@
 //    ※記事数・更新頻度は信頼できる取得が難しいため計測しない
 // 外部HTTP取得は SSRF安全な共有ユーティリティ（@/lib/net/safe-fetch）経由。
 // ============================================
-import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
+import { safeFetchText, htmlToText, type SafeFetchFailure } from '@/lib/net/safe-fetch'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
 import { searchGbizInfo } from '@/lib/doyalist/collect/gbizinfo'
-import type { CompanyResearch, PressRelease } from './types'
+import type { CompanyResearch, PressRelease, ResearchDiagnostics } from './types'
 
 // ---- HTMLユーティリティ ----
 function extractTitle(html: string): string | undefined {
@@ -24,8 +24,34 @@ function extractOgImage(html: string, baseUrl: string): string | null {
   const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
   if (!m?.[1]) return null
-  try { return new URL(m[1].trim(), baseUrl).toString() } catch { return null }
+  try {
+    const image = new URL(m[1].trim(), baseUrl)
+    // 画像の形式だけで取得済みの企業情報を失敗扱いにしない。
+    if (!['http:', 'https:'].includes(image.protocol) || image.username || image.password || image.href.length > 8192) return null
+    return image.href
+  } catch { return null }
 }
+// ---- DB に入れられない文字を取り除く ----
+// 2026-10-26: 本番で、PR TIMES の検索結果の題に NUL（\u0000）が混じっていた（例「10\u0000時30分」）。
+// PostgreSQL の JSON / 文字の列は NUL を受け付けず（22P05 unsupported Unicode escape sequence）、
+// 調査の結果の保存が失敗して「企業調査に失敗しました」になっていた。
+// 保存の前に、すべての文字（キーも）から NUL と、改行・タブ以外の制御文字を取り除く。
+// eslint-disable-next-line no-control-regex
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
+
+/** 調査の結果から、DB に入れられない文字を取り除く（テストのため export） */
+export function stripControlChars<T>(value: T, depth = 0): T {
+  if (depth > 20) return value
+  if (typeof value === 'string') return value.replace(CONTROL, '') as T
+  if (Array.isArray(value)) return value.map((v) => stripControlChars(v, depth + 1)) as T
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k.replace(CONTROL, '')] = stripControlChars(v, depth + 1)
+    return out as T
+  }
+  return value
+}
+
 function decodeEntities(s: string): string {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
 }
@@ -216,22 +242,156 @@ function parseEmployee(s?: string | null): number | null {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
+// ---- 公式サイトを読む（失敗の理由を持ち帰り、1回だけ手を変えて読み直す） ----
+// 失敗のチェックリスト: docs/architecture/agent-orchestration/FAILURE-CHECKLIST.md S2〜S12
+export const HOMEPAGE_TIMEOUT_MS = 12000
+export const HOMEPAGE_RETRY_TIMEOUT_MS = 20000
+
+type HomepageResult = { html: string | null; url: string; failure?: SafeFetchFailure; attempts: number }
+
+/** www. を付けた・外した URL（付け外しできなければ null） */
+function toggleWww(raw: string): string | null {
+  try {
+    const u = new URL(raw)
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || !u.hostname.includes('.')) return null
+    u.hostname = u.hostname.startsWith('www.') ? u.hostname.slice(4) : `www.${u.hostname}`
+    return u.toString()
+  } catch { return null }
+}
+
+async function fetchHomepage(targetUrl: string, timeouts: [number, number] = [HOMEPAGE_TIMEOUT_MS, HOMEPAGE_RETRY_TIMEOUT_MS]): Promise<HomepageResult> {
+  const attempt = async (url: string, timeoutMs: number) => {
+    let failure: SafeFetchFailure | undefined
+    const html = await safeFetchText(url, { timeoutMs, onFailure: (f) => { failure = f } }).catch(() => null)
+    return { html, failure: html ? undefined : failure ?? { reason: 'network' as const } }
+  }
+  const first = await attempt(targetUrl, timeouts[0])
+  if (first.html) return { html: first.html, url: targetUrl, attempts: 1 }
+  const f = first.failure!
+  let next: string | null = null
+  let timeoutMs = timeouts[0]
+  if (f.reason === 'timeout') { next = targetUrl; timeoutMs = timeouts[1] }
+  else if (f.reason === 'dns' || f.reason === 'network') next = toggleWww(targetUrl)
+  else if (f.reason === 'http' && (f.status === 404 || f.status === 410)) {
+    try { const u = new URL(targetUrl); if (u.pathname !== '/' || u.search) next = `${u.origin}/` } catch { /* そのまま */ }
+  }
+  if (!next) return { html: null, url: targetUrl, failure: f, attempts: 1 }
+  const second = await attempt(next, timeoutMs)
+  // 2回目も失敗したら、最初の理由を返す（利用者が入れた URL の話にする）。時間切れだけは 2回目の長い方の話にする
+  if (second.html) return { html: second.html, url: next, attempts: 2 }
+  return { html: null, url: targetUrl, failure: f.reason === 'timeout' ? (second.failure ?? f) : f, attempts: 2 }
+}
+
+/** JavaScript で描くサイト向け: 題・説明・og・JSON-LD（会社の情報）から、AI に渡す短い文を作る */
+export function pageSummaryText(html: string): string {
+  // 読むのは <head> まで（無ければ先頭 64KB）。外のサイトの HTML なので、正規表現が遅くならないよう、長さと数に上限を付ける
+  const headEnd = html.search(/<\/head>/i)
+  const head = html.slice(0, Math.min(headEnd >= 0 ? headEnd : html.length, 64 * 1024))
+  const metas: Record<string, string> = {}
+  // <meta> を1つずつ読み、属性を単純な形で取り出す（1つのタグは 2,000 文字まで・200 個まで）
+  let count = 0
+  for (const m of head.matchAll(/<meta\b[^>]{0,2000}>/gi)) {
+    if (++count > 200) break
+    const attrs: Record<string, string> = {}
+    for (const a of m[0].matchAll(/([a-zA-Z:-]{1,40})\s*=\s*["']([^"']{0,2000})["']/g)) attrs[a[1].toLowerCase()] = a[2]
+    const key = (attrs.name || attrs.property || '').toLowerCase()
+    if (key && attrs.content && !(key in metas)) metas[key] = attrs.content
+  }
+  const parts: (string | undefined)[] = [
+    head.match(/<title[^>]{0,200}>([^<]{1,500})<\/title>/i)?.[1],
+    metas['description'],
+    metas['og:site_name'],
+    metas['og:title'],
+    metas['og:description'],
+  ]
+  // JSON-LD の Organization / Corporation / LocalBusiness
+  // JSON-LD は 5 つまで・1つ 50KB まで
+  let blocks = 0
+  for (const m of html.slice(0, 512 * 1024).matchAll(/<script\b[^>]{0,300}application\/ld\+json[^>]{0,300}>([\s\S]{0,51200}?)<\/script>/gi)) {
+    if (++blocks > 5) break
+    try {
+      const data = JSON.parse(m[1])
+      const nodes: unknown[] = Array.isArray(data) ? data : Array.isArray(data?.['@graph']) ? data['@graph'] : [data]
+      for (const n of nodes.slice(0, 20)) {
+        const o = (n && typeof n === 'object' ? n : {}) as Record<string, unknown>
+        const type = String(o['@type'] ?? '')
+        if (!/Organization|Corporation|LocalBusiness|Company/i.test(type)) continue
+        const addr = o.address && typeof o.address === 'object' ? Object.values(o.address as Record<string, unknown>).filter((x) => typeof x === 'string').join(' ') : o.address
+        const emp = o.numberOfEmployees && typeof o.numberOfEmployees === 'object' ? (o.numberOfEmployees as Record<string, unknown>).value : o.numberOfEmployees
+        parts.push(
+          typeof o.legalName === 'string' ? `会社名: ${o.legalName}` : typeof o.name === 'string' ? `会社名: ${o.name}` : undefined,
+          typeof o.description === 'string' ? o.description : undefined,
+          typeof addr === 'string' ? `住所: ${addr}` : undefined,
+          typeof o.telephone === 'string' ? `電話: ${o.telephone}` : undefined,
+          typeof o.foundingDate === 'string' ? `設立: ${o.foundingDate}` : undefined,
+          emp != null ? `従業員数: ${String(emp)}` : undefined,
+        )
+      }
+    } catch { /* 壊れた JSON-LD は読まない */ }
+  }
+  const seen = new Set<string>()
+  return parts
+    .map((p) => (p ? decodeEntities(String(p)).replace(/\s+/g, ' ').trim() : ''))
+    .filter((p) => p && !seen.has(p) && (seen.add(p), true))
+    .join('\n')
+    .slice(0, 3000)
+}
+
+/** 本文がこれより短ければ、JavaScript で描くサイトとみなし、題と説明を足して AI に渡す */
+export const SHORT_BODY_CHARS = 200
+
+const HTTP_BLOCKED = new Set([401, 403, 407, 429, 451])
+
+/** 調べられなかったときの、利用者向けの文（原因と次の一手。FAILURE-CHECKLIST.md S2〜S12・S21） */
+export function researchFailureMessage(d: ResearchDiagnostics | undefined): string {
+  const tail = '今月の利用枠は減っていません。'
+  const f = d?.homepage
+  if (!f || f.ok) {
+    return d?.jsRendered
+      ? `サイトから会社の情報を読み取れませんでした（中身を JavaScript で表示するサイトのようです）。会社名で調べ直してください。${tail}`
+      : `サイトから会社の情報を読み取れませんでした。会社名で調べ直してください。${tail}`
+  }
+  switch (f.reason) {
+    case 'dns': return `サイトが見つかりませんでした（ドメインが引けません）。URL の綴りを確かめるか、会社名で調べ直してください。${tail}`
+    case 'timeout': return `サイトが応答しませんでした（${Math.round(HOMEPAGE_RETRY_TIMEOUT_MS / 1000)}秒）。少し時間をおいてやり直すか、会社名で調べ直してください。${tail}`
+    case 'network': return `サイトにつながりませんでした（接続できないか、証明書に問題があります）。会社名で調べ直してください。${tail}`
+    case 'redirect': return `サイトの転送が多すぎて読めませんでした。転送先の URL を入れるか、会社名で調べ直してください。${tail}`
+    case 'content_type': return `入れた URL は Web ページではありませんでした（PDF など）。会社のトップページの URL を入れてください。${tail}`
+    case 'body': return `サイトが大きすぎて読み切れませんでした。会社名で調べ直してください。${tail}`
+    case 'url_rejected': return `このアドレスは調べられません（社内のアドレスなど）。公開している会社のサイトを入れてください。${tail}`
+    case 'http':
+      if (f.status && HTTP_BLOCKED.has(f.status)) return `サイトに読み込みを断られました（アクセスの制限）。会社名で調べ直してください。${tail}`
+      if (f.status === 404 || f.status === 410) return `そのページはありませんでした。会社のトップページの URL を入れるか、会社名で調べ直してください。${tail}`
+      return `サイトがエラーを返しました（相手のサイトの不具合）。時間をおいてやり直すか、会社名で調べ直してください。${tail}`
+    default: return `サイトを読めませんでした。会社名で調べ直してください。${tail}`
+  }
+}
+
 /**
  * 企業URLを起点に深掘り調査を実行して CompanyResearch を返す。
  * 失敗しても可能な範囲で部分結果を返す（throwしない）。
  */
-export async function researchCompany(targetUrl: string): Promise<CompanyResearch> {
-  // ホームページは一度だけ取得し、リンク抽出・マーケ検出・会社情報抽出で共有する
-  const homepage = await safeFetchText(targetUrl, { timeoutMs: 12000 }).catch(() => null)
-  const links = homepage ? extractLinks(homepage, targetUrl) : []
+export async function researchCompany(targetUrl: string, opts: { companyName?: string; /** テストだけで使う（1回目・読み直しの待ち時間） */ timeoutsMs?: [number, number] } = {}): Promise<CompanyResearch> {
+  // ホームページは一度だけ取得し、リンク抽出・マーケ検出・会社情報抽出で共有する（失敗したら理由に合わせて1回だけ読み直す）
+  const page = await fetchHomepage(targetUrl, opts.timeoutsMs)
+  const homepage = page.html
+  const links = homepage ? extractLinks(homepage, page.url) : []
   const titleName = homepage ? extractTitle(homepage) : undefined
+  const bodyChars = homepage ? htmlToText(homepage).length : 0
+  const jsRendered = !!homepage && bodyChars < SHORT_BODY_CHARS
+  const summary = jsRendered ? pageSummaryText(homepage) : ''
+  // JavaScript で描くサイトは本文がほぼ空なので、題・説明・JSON-LD を足して AI に渡す
+  const forAi = homepage ? (summary ? `${homepage}\n<div>${summary.replace(/[<>]/g, ' ')}</div>` : homepage) : null
 
-  // 取得済みHTMLを渡して二重取得を回避（会社名/事業内容/従業員数記載 等を抽出）
-  const basic = await scrapeCompanyWebsite(targetUrl, homepage || undefined).catch(() => null)
+  // 取得済みHTMLを渡して二重取得を回避（会社名/事業内容/従業員数記載 等を抽出）。
+  // 読めなかったときは、今までどおり scrapeCompanyWebsite が自分でもう1回読む（別の読み方で読める場合がある）
+  const basic = await scrapeCompanyWebsite(page.url, forAi || undefined).catch(() => null)
   // オウンドメディア/関連サイトは「所在」だけ収集（記事数・更新頻度は計測しない）
   const mediaInfo = summarizeOwnedMedia(findMediaUrls(links, targetUrl))
 
-  const companyName = basic?.companyName || titleName
+  const hint = opts.companyName?.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 100) || undefined
+  // 利用者が入れた会社名を先に使う（サイトが読めないときに、会社名で調べ直すため）
+  const companyName = hint || basic?.companyName || titleName
   const [gbizResult, pressResult] = await Promise.all([
     lookupGbiz(companyName, targetUrl),
     researchPressReleases(companyName),
@@ -270,7 +430,17 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
     pressReleases: pressResult.items,
     marketing,
     ownedMedia: mediaInfo,
-    rawNotes: homepage ? htmlToText(homepage).slice(0, 1500) : undefined,
+    rawNotes: homepage ? (htmlToText(homepage) || summary).slice(0, 1500) : undefined,
+    diagnostics: {
+      homepage: homepage ? { ok: true } : { ok: false, reason: page.failure?.reason ?? 'network', ...(page.failure?.status ? { status: page.failure.status } : {}) },
+      attempts: page.attempts,
+      bodyChars,
+      jsRendered,
+      usedPageSummary: !!summary,
+      aiExtracted: !!basic,
+      companyNameFrom: hint ? 'input' : basic?.companyName ? 'site' : titleName ? 'title' : null,
+    },
   }
-  return research
+  // 外のサイトの文に混じる NUL などは、DB に保存できない（保存が失敗して調査全体が失敗になる）。返す前に取り除く
+  return stripControlChars(research)
 }

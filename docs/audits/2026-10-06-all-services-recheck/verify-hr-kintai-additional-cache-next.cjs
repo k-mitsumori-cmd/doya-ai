@@ -1,0 +1,33 @@
+const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict'),{PrismaClient}=require('@prisma/client');
+const base='docs/audits/2026-10-06-all-services-recheck/',routes=['/api/hr/departments','/api/hr/org-chart','/api/kintai/departments'];
+(async()=>{
+ const origin=process.env.DOYA_E2E_ORIGIN,url=new URL(process.env.DATABASE_URL);assert.match(origin||'',/^http:\/\/127\.0\.0\.1:\d+$/);assert.match(url.searchParams.get('host')||'',/^\/tmp\/doya-sfa-authority-[a-f0-9]{8}\/socket$/);assert.equal(url.port,'56481');
+ const db=new PrismaClient({datasources:{db:{url:url.href}}}),tokens={},cases=[],models=['hrOrganization','hrOrganizationMember','hrDepartment','hrEmployee','kintaiOrganization','kintaiMember','kintaiDepartment','kintaiEmployee'];
+ const snapshot=()=>Promise.all(models.map(model=>db[model].findMany({orderBy:{id:'asc'}})));
+ try{
+  const c=await db.$queryRawUnsafe('SELECT inet_server_addr() AS address,current_user AS role');assert.equal(c[0].address,null);assert.equal(c[0].role,'doya_sfa');
+  for(const a of ['A','B']){
+   const userId='synthetic-additional-cache-'+a;tokens[a]=crypto.randomUUID();await db.user.create({data:{id:userId,email:userId+'@example.invalid',name:'SYNTHETIC_CACHE_'+a,plan:'FREE',role:'USER',firstLoginAt:new Date()}});await db.session.create({data:{sessionToken:tokens[a],userId,expires:new Date(Date.now()+86400000)}});
+   await db.hrOrganization.create({data:{id:'hr-'+a,name:'SYNTHETIC_CACHE_'+a,slug:'synthetic-hr-'+a.toLowerCase(),members:{create:{userId,role:'MEMBER',status:'ACTIVE',employeeId:'hr-self-'+a}}}});
+   await db.hrDepartment.create({data:{id:'hr-dept-'+a,organizationId:'hr-'+a,name:'SYNTHETIC_CACHE_'+a,parentId:null,sortOrder:0,isActive:true}});
+   for(const kind of ['self','hidden'])await db.hrEmployee.create({data:{id:'hr-'+kind+'-'+a,organizationId:'hr-'+a,departmentId:'hr-dept-'+a,firstName:'SYNTHETIC_EMPLOYEE_'+a+'_'+kind.toUpperCase(),lastName:'Synthetic',employeeNumber:kind,status:'ACTIVE'}});
+   await db.kintaiOrganization.create({data:{id:'kintai-'+a,name:'SYNTHETIC_CACHE_'+a,slug:'synthetic-kintai-'+a.toLowerCase(),members:{create:{userId,role:'employee',status:'ACTIVE',employee:{create:{organizationId:'kintai-'+a,name:'SYNTHETIC_CACHE_'+a,email:userId+'@example.invalid'}}}}}});
+   await db.kintaiDepartment.create({data:{id:'kintai-dept-'+a,organizationId:'kintai-'+a,name:'SYNTHETIC_CACHE_'+a}});
+  }
+  async function get(path,actor,status,label,{manager=false,noEmployee=false}={}){
+   const before=await snapshot(),r=await fetch(origin+path+'?organizationId=synthetic-foreign',{headers:actor?{Cookie:'next-auth.session-token='+tokens[actor]}:{},redirect:'error',signal:AbortSignal.timeout(15000)}),text=await r.text();assert.ok(text.length<32768);assert.equal(r.status,status,label+' '+text.slice(0,200));assert.equal(r.headers.get('cache-control'),'private, no-store');assert.ok((r.headers.get('vary')||'').split(',').some(x=>x.trim().toLowerCase()==='cookie'));const body=JSON.parse(text);
+   if(status===200){assert.ok(text.includes('SYNTHETIC_CACHE_'+actor));assert.equal(text.includes('SYNTHETIC_CACHE_'+(actor==='A'?'B':'A')),false);if(path==='/api/hr/org-chart'){assert.equal(text.includes('SYNTHETIC_EMPLOYEE_'+actor+'_HIDDEN'),manager);assert.equal(text.includes('SYNTHETIC_EMPLOYEE_'+actor+'_SELF'),!noEmployee)}else if(path==='/api/hr/departments'){assert.equal(body.flat.length,1);assert.equal(body.departments.length,1);assert.equal(body.flat[0].employeeCount,2)}else assert.equal(body.departments.length,1)}else assert.ok(body.error&&!text.includes('SYNTHETIC_'));
+   assert.deepEqual(await snapshot(),before,'GET mutated organization/member/department/employee rows');cases.push({name:label,path,actor:actor||'anonymous',status,privateNoStore:true,varyCookie:true,domainRowsUnchanged:true,passed:true});
+  }
+  for(const p of routes)await get(p,null,401,'Anonymous '+p);
+  for(const a of ['A','B'])for(const p of routes)await get(p,a,200,'Member '+a+' '+p);
+  const hrWhere={organizationId_userId:{organizationId:'hr-A',userId:'synthetic-additional-cache-A'}},kiWhere={organizationId_userId:{organizationId:'kintai-A',userId:'synthetic-additional-cache-A'}};
+  await db.hrOrganizationMember.update({where:hrWhere,data:{role:'MANAGER'}});await get('/api/hr/org-chart','A',200,'Manager sees same-organization employees only',{manager:true});
+  await db.hrOrganizationMember.update({where:hrWhere,data:{role:'MEMBER',employeeId:null}});await get('/api/hr/org-chart','A',200,'Unlinked member sees no employee details',{noEmployee:true});
+  await db.hrOrganizationMember.update({where:hrWhere,data:{employeeId:'hr-self-A',status:'INACTIVE'}});for(const p of routes.slice(0,2))await get(p,'A',401,'Inactive HR membership '+p);
+  await db.hrOrganizationMember.update({where:hrWhere,data:{status:'ACTIVE',role:'UNRECOGNIZED_ROLE'}});for(const p of routes.slice(0,2))await get(p,'A',401,'Unknown HR membership role '+p);await db.hrOrganizationMember.update({where:hrWhere,data:{role:'MEMBER'}});
+  await db.kintaiMember.update({where:kiWhere,data:{status:'INACTIVE'}});await get(routes[2],'A',401,'Inactive attendance membership');await db.kintaiMember.update({where:kiWhere,data:{status:'ACTIVE',role:'UNRECOGNIZED_ROLE'}});await get(routes[2],'A',401,'Unknown attendance membership role');await db.kintaiMember.update({where:kiWhere,data:{role:'employee'}});
+  await db.session.delete({where:{sessionToken:tokens.A}});for(const p of routes)await get(p,'A',401,'Revoked session '+p);
+  assert.equal(cases.length,20);const files=['src/app/api/hr/departments/route.ts','src/app/api/hr/org-chart/route.ts','src/app/api/kintai/departments/route.ts','src/lib/private-api-response.ts','src/lib/hr/access.ts','src/lib/kintai/access.ts','src/lib/auth.ts','prisma/schema.prisma',base+'verify-hr-kintai-additional-cache-next.cjs',base+'hr-kintai-additional-cache-next-supervise.py'];const report={checkedAt:new Date().toISOString(),expected:20,passed:cases.length,cases,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])),scope:'Actual built Next/auth/Prisma GETs against isolated Unix-only full-schema PostgreSQL. Two synthetic organizations and actors, member versus manager employee visibility, unlinked/inactive/unknown-role membership, revoked session, private response headers, and complete domain-row snapshots before/after every GET. No production/customer DB, paid provider, real OAuth/browser cache hit.'};fs.writeFileSync(base+'hr-kintai-additional-cache-next-results.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+ }finally{await db.$disconnect()}
+})().catch(e=>{console.error(e);process.exitCode=1});

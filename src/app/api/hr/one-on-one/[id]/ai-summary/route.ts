@@ -1,8 +1,10 @@
+import { privateApiJson } from '@/lib/private-api-response'
+import { validOneOnOneItems } from '@/lib/hr/one-on-one-items'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -18,12 +20,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const hrCtx = await getHrContext()
     if (!hrCtx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const p = await ctx.params
@@ -42,28 +44,31 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
 
     if (!oneOnOne) {
-      return NextResponse.json({ error: '1on1 record not found' }, { status: 404 })
+      return privateApiJson({ error: 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' }, { status: 404 })
     }
     if (!(await canAccessOneOnOne(hrCtx, oneOnOne))) {
-      return NextResponse.json({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
+      return privateApiJson({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
     }
     if (!canViewManagerNotes(await getOneOnOneViewer(hrCtx), oneOnOne)) {
-      return NextResponse.json({ error: '上司メモを含む要約の利用権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '上司メモを含む要約の利用権限がありません' }, { status: 403 })
     }
     if (oneOnOne.status === 'COMPLETED') {
-      return NextResponse.json({ error: '完了済みの1on1は要約を更新できません' }, { status: 409 })
+      return privateApiJson({ error: '完了済みの1on1は要約を更新できません' }, { status: 409 })
     }
 
+    if (!validOneOnOneItems(oneOnOne.agenda, 'agenda') || !validOneOnOneItems(oneOnOne.aiActionItems, 'actions')) {
+      return privateApiJson({ error: '保存されている1on1の項目を読み込めませんでした。組織の管理者にご相談ください。', code: 'ONE_ON_ONE_ITEMS_INVALID' }, { status: 409 })
+    }
     if (!oneOnOne.managerNotes && !oneOnOne.employeeNotes) {
-      return NextResponse.json(
-        { error: 'No notes to summarize. Add manager or employee notes first.' },
+      return privateApiJson(
+        { error: '要約するメモがありません。上司か本人のメモを書いてから、お試しください。' },
         { status: 400 }
       )
     }
 
     const admission = await reserveAiUsage(hrCtx.organizationId)
     if (!admission.granted) {
-      return NextResponse.json({ error: admission.error, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
+      return privateApiJson({ error: admission.error, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
     }
     let saved = false
     try {
@@ -86,15 +91,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         data: { aiSummary },
       })
       saved = true
-      return NextResponse.json({ success: true, aiSummary })
+      return privateApiJson({ success: true, aiSummary })
     } finally {
       if (!saved) await releaseAiUsage(admission.reservation)
     }
   } catch (e: any) {
-    if (e?.code === 'P2025') return NextResponse.json({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
+    if (e?.code === 'P2025') return privateApiJson({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
     console.error('[hr/one-on-one/[id]/ai-summary] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to generate AI summary' },
+    return privateApiJson(
+      { error: 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

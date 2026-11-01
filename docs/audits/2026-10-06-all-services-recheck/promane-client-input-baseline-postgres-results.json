@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T20:56:27.913Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    "API accepts5001characters and stores only5000",
+    "server action creation also silently truncates5001to5000",
+    "update action accepts blank company invalid email and5001character note unlike creation",
+    "concurrent identical API creates persist two client rows"
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/clients/route.ts": "c7ee4ecaff861f367a3babebbfa05a6613d64558beb1657c849835d9a13499dc",
+    "src/lib/promane/actions-clients.ts": "2e7222dd25fb5a13fe927deb13f20920972c48613e2e9e3c326c8dd6aa40322b",
+    "src/components/promane/client-actions.tsx": "be86048ca26afab89b9bd2c184f48bf6c6c94cfebcfb648b65794aaf2e2b3974"
+  },
+  "scope": "Actual API and server actions with isolated Unix-socket PostgreSQL and synthetic auth/workspace/customer data. No production/customer writes or email/provider calls. Identical requests can legitimately mean separate clients; operation identity is currently absent."
+}

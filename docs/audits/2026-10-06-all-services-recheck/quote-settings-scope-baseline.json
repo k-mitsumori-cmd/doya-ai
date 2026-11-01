@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-06T22:14:31.130950+00:00",
+  "sourceCommit": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+  "status": "confirmed-unfixed-next-cohort",
+  "problem": "Actual retained settings save callback sends alpha issuer form to beta after same-tab actual selection helper change",
+  "requestUrl": "/api/quote/issuer?org=beta",
+  "draftOrigin": "alpha",
+  "submittedCompany": "Alpha issuer",
+  "baselineLog": "/tmp/doya-quote-settings-org-baseline.log",
+  "probe": "probe-quote-settings-org-scope.cjs",
+  "scope": "Actual full QuoteSettingsPage plus actual OrgSwitcher helper mounted under StrictMode, synthetic API only. MemberPanel excluded; no actual cross-tenant DB write, incident or email.",
+  "requiredRepair": [
+    "Bind issuer form and every request to verified actor/organization; invalidate old callbacks, reset private form and abort requests on actor/org/auth changes",
+    "Bound membership discovery, issuer reads and save response parsing; validate complete issuer acknowledgement",
+    "Synchronous save guard and immutable current input snapshot; distinguish unknown and confirmed outcomes; keep edits made during save",
+    "Verify root client layout actor transitions, quote document detail and member operations separately",
+    "Run actual mounted response/scope/deadline regressions and release gates; do not claim full 17-service completion"
+  ]
+}

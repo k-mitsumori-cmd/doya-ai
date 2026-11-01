@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-06T17:31:43.727266+00:00",
+  "commit": "5a2ad81aca5804723fe8901fabc5a52418866ffc",
+  "deployment": "dpl_Dn4AFMaFZNwKo4VmJHReBfXdWuMc",
+  "path": "/banner/dashboard/plan",
+  "checks": {
+    "html200": true,
+    "exactDeployment": true,
+    "scripts200": true,
+    "scopedStatsPublished": true
+  },
+  "scripts": 27,
+  "scope": "Anonymous HTML and published scoped-statistics implementation only; not authenticated account data or billing operations."
+}

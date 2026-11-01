@@ -20,6 +20,7 @@ function harness(auth=true){const exports={},calls=[];let reads=0,model=0,browse
  if(name==='@/lib/service-usage')return{};
  if(name==='crypto')return{};
  if(name==='sharp')return()=>{throw Error('Unexpected image processing');};
+ if(name==='@/lib/doya-power/charge')return require('./load-typescript.cjs').DEFAULT_MOCKS['@/lib/doya-power/charge'];
  throw Error('Unexpected dependency '+name);
  },fetch(){throw Error('DIRECT FETCH');}});return{...exports,calls,get reads(){return reads},get model(){return model},get browser(){return browser},req(url){return{json:async()=>{reads++;return{targetUrl:url}}}}};}
 (async()=>{

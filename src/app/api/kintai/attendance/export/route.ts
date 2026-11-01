@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
+import ExcelJS from 'exceljs'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 
@@ -12,10 +13,12 @@ function csvCell(value: string): string {
   return `"${guarded.replace(/"/g, '""')}"`
 }
 
-function xmlText(value: string): string {
-  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+function spreadsheetText(value: string): string {
+  return value.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, '')
+    // ExcelJS writes these literally, but Excel decodes them as OOXML escapes.
+    .replace(/_(?=x[0-9A-Fa-f]{4}_)/g, '_x005F_')
+    .replace(/\r/g, '_x000D_')
+    .replace(/\u007F/g, '_x007F_')
 }
 
 export async function GET(req: NextRequest) {
@@ -40,9 +43,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '出力形式が正しくありません' }, { status: 400 })
     }
 
-    const jstOffset = 9 * 60 * 60 * 1000
-    const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffset)
-    const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffset)
+    // attendance.date is SQL DATE: use calendar-date boundaries, not JST instants.
+    const monthStart = new Date(Date.UTC(year, month - 1, 1))
+    const monthEnd = new Date(Date.UTC(year, month, 1))
 
     const employees = await prisma.kintaiEmployee.findMany({
       // 退職・無効化後でも、対象月に勤怠がある従業員は過去月の出力に含める。
@@ -102,67 +105,33 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Excel format using simple XML spreadsheet
-    const xmlHeader = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-<Worksheet ss:Name="${year}年${month}月">
-<Table>
-<Row>
-  <Cell><Data ss:Type="String">従業員名</Data></Cell>
-  <Cell><Data ss:Type="String">部署</Data></Cell>
-  <Cell><Data ss:Type="String">日付</Data></Cell>
-  <Cell><Data ss:Type="String">出勤</Data></Cell>
-  <Cell><Data ss:Type="String">退勤</Data></Cell>
-  <Cell><Data ss:Type="String">勤務時間(分)</Data></Cell>
-  <Cell><Data ss:Type="String">残業時間(分)</Data></Cell>
-  <Cell><Data ss:Type="String">遅刻(分)</Data></Cell>
-  <Cell><Data ss:Type="String">早退(分)</Data></Cell>
-  <Cell><Data ss:Type="String">ステータス</Data></Cell>
-</Row>`
-
-    let xmlRows = ''
+    // Use a real XLSX container so the downloaded extension matches its contents.
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet(`${year}年${month}月`)
+    const columnWidths = [26, 24, 14, 10, 10, 18, 18, 14, 14, 18]
+    columnWidths.forEach((width, index) => { worksheet.getColumn(index + 1).width = width })
+    worksheet.addRow(['従業員名', '部署', '日付', '出勤', '退勤', '勤務時間(分)', '残業時間(分)', '遅刻(分)', '早退(分)', 'ステータス'])
     for (const emp of employees) {
       for (const att of emp.attendances) {
         const date = new Date(att.date).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
         const clockIn = att.clockIn ? new Date(att.clockIn).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false, hour: '2-digit', minute: '2-digit' }) : ''
         const clockOut = att.clockOut ? new Date(att.clockOut).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false, hour: '2-digit', minute: '2-digit' }) : ''
-        xmlRows += `<Row>
-  <Cell><Data ss:Type="String">${xmlText(emp.name)}</Data></Cell>
-  <Cell><Data ss:Type="String">${xmlText(emp.department?.name || '')}</Data></Cell>
-  <Cell><Data ss:Type="String">${date}</Data></Cell>
-  <Cell><Data ss:Type="String">${clockIn}</Data></Cell>
-  <Cell><Data ss:Type="String">${clockOut}</Data></Cell>
-  <Cell><Data ss:Type="Number">${att.workMinutes}</Data></Cell>
-  <Cell><Data ss:Type="Number">${att.overtimeMinutes}</Data></Cell>
-  <Cell><Data ss:Type="Number">${att.lateMinutes}</Data></Cell>
-  <Cell><Data ss:Type="Number">${att.earlyLeaveMinutes}</Data></Cell>
-  <Cell><Data ss:Type="String">${xmlText(att.status)}</Data></Cell>
-</Row>`
+        // Assign strings, never formula objects, including names starting with =/+/−/@.
+        worksheet.addRow([
+          spreadsheetText(emp.name), spreadsheetText(emp.department?.name || ''),
+          date, clockIn, clockOut, att.workMinutes, att.overtimeMinutes,
+          att.lateMinutes, att.earlyLeaveMinutes, spreadsheetText(att.status),
+        ])
       }
       if (emp.attendances.length === 0) {
-        xmlRows += `<Row>
-  <Cell><Data ss:Type="String">${xmlText(emp.name)}</Data></Cell>
-  <Cell><Data ss:Type="String">${xmlText(emp.department?.name || '')}</Data></Cell>
-  <Cell><Data ss:Type="String"></Data></Cell>
-  <Cell><Data ss:Type="String"></Data></Cell>
-  <Cell><Data ss:Type="String"></Data></Cell>
-  <Cell><Data ss:Type="Number">0</Data></Cell>
-  <Cell><Data ss:Type="Number">0</Data></Cell>
-  <Cell><Data ss:Type="Number">0</Data></Cell>
-  <Cell><Data ss:Type="Number">0</Data></Cell>
-  <Cell><Data ss:Type="String">データなし</Data></Cell>
-</Row>`
+        worksheet.addRow([spreadsheetText(emp.name), spreadsheetText(emp.department?.name || ''), '', '', '', 0, 0, 0, 0, 'データなし'])
       }
     }
-
-    const xmlFooter = `</Table></Worksheet></Workbook>`
-    const excelContent = xmlHeader + xmlRows + xmlFooter
-
+    const excelContent = new Uint8Array(await workbook.xlsx.writeBuffer())
     return new NextResponse(excelContent, {
       headers: {
-        'Content-Type': 'application/vnd.ms-excel',
-        'Content-Disposition': `attachment; filename="kintai_${year}-${String(month).padStart(2, '0')}.xls"`,
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="kintai_${year}-${String(month).padStart(2, '0')}.xlsx"`,
         'Cache-Control': 'private, no-store',
       },
     })

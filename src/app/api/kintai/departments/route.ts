@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -12,7 +13,7 @@ import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 export async function GET() {
   try {
     const ctx = await getKintaiContext()
-    if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
 
     const departments = await prisma.kintaiDepartment.findMany({
       where: { organizationId: ctx.organizationId },
@@ -20,10 +21,10 @@ export async function GET() {
       orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json({ departments })
+    return privateApiJson({ departments })
   } catch (e) {
     console.error('[kintai/departments GET]')
-    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
 

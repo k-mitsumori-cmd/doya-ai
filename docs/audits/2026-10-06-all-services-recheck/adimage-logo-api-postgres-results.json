@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T14:46:00.102Z",
+  "passed": 10,
+  "cases": [
+    "Actual multipart POST/GET and strict client reader restore all private editor fields",
+    "Actual logo workspace GET freshly signs current owned images without image quota or upload replay",
+    "Actual stored feedback restores only matching owned concept and creative",
+    "Second brand reference cannot return workspace or sign its objects through this logo",
+    "Ownership transfer while signing hides workspace and private context in final response",
+    "Moving the image campaign to another owned brand while signing cannot leak the old workspace",
+    "Signing outage after committed upload is recoverable by GET without another storage write",
+    "Actual DELETE restores workspace and editor while clearing only current logo reference",
+    "Actual cancellation fences a late multipart POST and anonymous operation GET stays private",
+    "Ten actual API calls bind one UUID and upload one object while competitors recover pending"
+  ],
+  "sourceHashes": {
+    "src/app/api/adimage/brands/[id]/logo/route.ts": "9b8eb62c4056f5e4ec8a71dcc1e9d3f3b0376a748c84618f9390da34b6de5825",
+    "src/app/api/adimage/operations/route.ts": "90f04fcf1c020a789cfe95db4c7e5bc4c20590e9eec32094cc1ff1817e0d2ea1",
+    "src/lib/adimage/logo-input.ts": "eb202b0c7e89b2435fb41197da851ca161ae6025562abeb2b03084d682e00c20",
+    "src/lib/adimage/logo-context.ts": "b1821760907235b73f02a7f856a180098506f68c983980ac1d0ee1085aa99fcb",
+    "src/lib/adimage/logo-operation.ts": "d08913c7d568c05276605d7cd0f5bc83ffe2868d7ced8c5016fc5e3f567fd425",
+    "src/lib/adimage/logo-operation-http.ts": "b31e3b238e232a9745f55a2771d98d94bc18d37acb2e90bb18c69c06d9f49dc5",
+    "src/lib/adimage/image-operation-http.ts": "48ac5a2acddd0db62f23468ba6b5e1b364c007687b4ae5535537b5788b09a8cb",
+    "src/lib/adimage/image-operation.ts": "f2f8ad526eef6b83f81929d4d3c02a4ce6b294b46a5c7cc872e8e4c88b596371",
+    "src/lib/adimage/operation-client.ts": "b055f4656e75e0e98ddcaaa20c75fdf2d99842071f26a1b7269068bd39970b98"
+  },
+  "scope": "Actual logo and operations routes, strict client reader, real multipart/File/Sharp, actual Prisma+private Unix-socket PostgreSQL, actual owned workspace/feedback queries. Synthetic session, external storage upload/signatures and image/model setup. No native browser in this suite, paid providers, real customer data or production."
+}

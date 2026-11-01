@@ -69,11 +69,8 @@ async function main() {
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'member-1' } }) },
       '@/lib/auth': { authOptions: {} },
-      '@/lib/banner/text-budget': {
-        reserveBannerTextCall: async () => denied,
-        bannerTextLimitPayload: budget.bannerTextLimitPayload,
-      },
-      '@/lib/banner/provider-response': { requestBannerTextProvider: async () => { providerCalled = true; throw new Error('provider must not be called') } },
+      '@/lib/banner/text-http': require('./banner-text-http-fixture.cjs').textHttpFixture(async () => denied),
+      '@/lib/banner/text-answer': { requestBannerTextAnswer: async () => { providerCalled = true; throw new Error('provider must not be called') } },
     }, {
       process: { env: { GOOGLE_AI_API_KEY: 'local-test-key' } },
       fetch: async () => { providerCalled = true; throw new Error('provider must not be called') },
@@ -92,10 +89,8 @@ async function main() {
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'member-1' } }) },
       '@/lib/auth': { authOptions: {} },
-      '@/lib/banner/text-budget': {
-        reserveBannerTextCall: async () => { throw new Error('database unavailable') },
-      },
-      '@/lib/banner/provider-response': { requestBannerTextProvider: async () => { providerCalled = true; throw new Error('provider must not be called') } },
+      '@/lib/banner/text-http': require('./banner-text-http-fixture.cjs').textHttpFixture(async () => { throw new Error('database unavailable') }),
+      '@/lib/banner/text-answer': { requestBannerTextAnswer: async () => { providerCalled = true; throw new Error('provider must not be called') } },
     }, {
       process: { env: { GOOGLE_AI_API_KEY: 'local-test-key' } },
       fetch: async () => { providerCalled = true; throw new Error('provider must not be called') },

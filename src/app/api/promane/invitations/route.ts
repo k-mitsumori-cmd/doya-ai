@@ -1,11 +1,13 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 async function retryInvitationTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -31,13 +33,13 @@ export async function GET(req: NextRequest) {
     const userId = (session?.user as any)?.id as string | undefined
     const userEmail = session?.user?.email?.toLowerCase()
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const type = req.nextUrl.searchParams.get('type') || 'received'
 
     if (type === 'received') {
-      if (!userEmail) return NextResponse.json({ success: true, invitations: [] })
+      if (!userEmail) return privateApiJson({ success: true, invitations: [] })
       const invitations = await prisma.promaneInvitation.findMany({
         where: {
           email: userEmail,
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       })
-      return NextResponse.json({
+      return privateApiJson({
         success: true,
         invitations: invitations.map((i) => ({
           id: i.id,
@@ -68,21 +70,23 @@ export async function GET(req: NextRequest) {
 
     if (type === 'sent') {
       const workspaceId = req.nextUrl.searchParams.get('workspaceId')
-      if (!workspaceId) return NextResponse.json({ error: 'workspaceId は必須です' }, { status: 400 })
+      if (!workspaceId) return privateApiJson({ error: 'workspaceId は必須です' }, { status: 400 })
       const cursor = req.nextUrl.searchParams.get('cursor')
       if (req.nextUrl.searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-        return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+        return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
       }
       // 権限確認: owner/admin のみ
       const member = await prisma.promaneMember.findUnique({
         where: { workspaceId_userId: { workspaceId, userId } },
       })
-      if (!member?.isActive || !['owner', 'admin'].includes(member.role)) {
-        return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      // 会社の役割の上限より上には上げない
+      const ceiled = member?.isActive ? await ceilToolRole({ tool: 'promane', userId, organizationId: workspaceId, toolRole: member.role }) : null
+      if (!member?.isActive || !['owner', 'admin'].includes(member.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
+        return privateApiJson({ error: '権限がありません' }, { status: 403 })
       }
       const where = { workspaceId }
       if (cursor && !await prisma.promaneInvitation.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
-        return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+        return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
       }
       const [rows, total] = await Promise.all([
         prisma.promaneInvitation.findMany({
@@ -94,7 +98,7 @@ export async function GET(req: NextRequest) {
         prisma.promaneInvitation.count({ where }),
       ])
       const invitations = rows.slice(0, 50)
-      return NextResponse.json({
+      return privateApiJson({
         success: true,
         total,
         nextCursor: rows.length > 50 ? invitations[invitations.length - 1].id : null,
@@ -111,10 +115,10 @@ export async function GET(req: NextRequest) {
       }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
 
-    return NextResponse.json({ error: 'typeは received|sent のみ' }, { status: 400 })
+    return privateApiJson({ error: 'typeは received|sent のみ' }, { status: 400 })
   } catch (e: any) {
     console.error('[promane/invitations][GET]')
-    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
 
@@ -126,10 +130,10 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
-    if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
 
     const id = req.nextUrl.searchParams.get('id')
-    if (!id) return NextResponse.json({ error: 'id は必須です' }, { status: 400 })
+    if (!id) return privateApiJson({ error: 'id は必須です' }, { status: 400 })
 
     const result = await retryInvitationTransaction(() => prisma.$transaction(async tx => {
       const invitation = await tx.promaneInvitation.findUnique({
@@ -139,19 +143,21 @@ export async function DELETE(req: NextRequest) {
       if (invitation.acceptedAt) return { status: 410 as const, error: '既に承諾済みです' }
       const member = await tx.promaneMember.findFirst({
         where: { workspaceId: invitation.workspaceId, userId, isActive: true, role: { in: ['owner', 'admin'] } },
-        select: { id: true },
+        select: { id: true, role: true },
       })
-      if (!member) return { status: 403 as const, error: '権限がありません' }
+      // 会社の役割の上限より上には上げない
+      const ceiled = member ? await ceilToolRole({ tool: 'promane', userId, organizationId: invitation.workspaceId, toolRole: member.role }) : null
+      if (!member || (ceiled !== 'owner' && ceiled !== 'admin')) return { status: 403 as const, error: '権限がありません' }
       const deleted = await tx.promaneInvitation.deleteMany({
         where: { id, workspaceId: invitation.workspaceId, acceptedAt: null },
       })
       if (deleted.count !== 1) return { status: 409 as const, error: '招待の状態が変更されました。画面を更新してください' }
       return { status: 200 as const }
     }, { isolationLevel: 'Serializable' }))
-    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
-    return NextResponse.json({ success: true })
+    if (result.status !== 200) return privateApiJson({ error: result.error }, { status: result.status })
+    return privateApiJson({ success: true })
   } catch (e: any) {
     console.error('[promane/invitations][DELETE]')
-    return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

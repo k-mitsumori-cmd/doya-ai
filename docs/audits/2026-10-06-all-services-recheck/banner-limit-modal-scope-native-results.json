@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-08T07:17:39.565Z",
+  "source": "src/components/banner/BannerLimitModal.tsx",
+  "sourceHash": "65444b2c801eb163303aa4c64e1ca6d7a1bb1379f04cdc06e310cc62e4a739ca",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Current PRO contact notice opens",
+    "Actor transition hides old usage and notifies parent once",
+    "Invalidation restores trigger and removes Escape handler",
+    "Actor ABA cannot revive old notice",
+    "New explicit open remains available",
+    "Same actor plan transition hides old PRO action",
+    "Fresh FREE notice shows pricing action",
+    "Native Tab wraps to close button",
+    "Loading and restored session cannot revive notice"
+  ],
+  "errors": [],
+  "scope": "Actual integrated React component bundled with esbuild in native Chrome on loopback; auth/router/pricing/trial/motion boundaries synthetic. No OAuth, real billing, generation/provider, production or customer DB."
+}

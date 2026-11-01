@@ -45,9 +45,12 @@ export async function generateAndSavePersonaImage(input: ResolvedImage, requestB
   if (attempt.state === 'not_found') return error('ペルソナが見つかりません。', 404)
   if (attempt.state === 'plan_required') return NextResponse.json({ error: 'バナー画像生成は有料プランで利用できます。', code: 'PRO_REQUIRED', upgradeUrl: '/persona/pricing' }, { status: 403 })
   if (attempt.state === 'invalid_grant' || attempt.state === 'missing_original') return error('対象の画像を確認してください。', 400)
+  if (attempt.state === 'not_included') return error('この画像は無料プランの付属枠に含まれません。追加枠で作れます。', 400, 'NOT_INCLUDED')
   if (attempt.state === 'conflict') return error('この画像生成の要求IDは再利用できません。', 409, 'REQUEST_CONFLICT')
   if (attempt.state === 'pending') return error('この画像を生成中です。しばらくしてから再度お試しください。', 409, 'GENERATION_PENDING')
-  if (attempt.state === 'limit') return NextResponse.json({ error: `本日の追加画像・再生成の上限（${attempt.limit}枚）に達しました。`,
+  if (attempt.state === 'limit') return NextResponse.json({ error: attempt.scope === 'included'
+    ? `本日の付属画像の上限（${attempt.limit}枚）に達しました。`
+    : `本日の追加画像・再生成の上限（${attempt.limit}枚）に達しました。`,
     code: 'DAILY_LIMIT_REACHED', limitReached: true, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt,
     ...(attempt.upgradeAvailable ? { upgradeUrl: '/persona/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }),
   }, { status: 429 })

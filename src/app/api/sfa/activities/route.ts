@@ -3,10 +3,17 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { redactSfaRelations, redactSfaRelation, lockSfaRecordRelation } from '@/lib/sfa/record-relations'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import type { ActivityType } from '@/lib/sfa/types'
+import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
+
+const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
+  NextResponse.json(body, { ...options, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 
 const ACTIVITY_TYPES: ActivityType[] = ['call', 'meeting', 'email', 'note']
 const PAGE_SIZE = 200
@@ -14,13 +21,27 @@ const PAGE_SIZE = 200
 // GET /api/sfa/activities — 活動タイムライン（accountId/dealId で絞り込み可）
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+
+  const rawOperationId = (req.nextUrl || new URL(req.url)).searchParams.get('operationId')
+  if (rawOperationId !== null) {
+    try {
+      if ((req.nextUrl || new URL(req.url)).searchParams.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が重複しています。')
+      const operationId = sfaOperationId(rawOperationId)!
+      const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+        return recoverSfaCreation(tx, ctx, 'activity', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })))
+      })
+      return json({ state: recovery.state, activity: recovery.row })
+    } catch (error) {
+      return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    }
+  }
 
   const url = new URL(req.url)
   const accountId = url.searchParams.get('accountId')?.trim()
   const dealId = url.searchParams.get('dealId')?.trim()
   const rawCursor = url.searchParams.get('cursor') || ''
-  if (rawCursor.length > 512) return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  if (rawCursor.length > 512) return json({ error: 'ページ指定が正しくありません' }, { status: 400 })
 
   let cursor: { occurredAt: Date; id: string } | null = null
   if (rawCursor) {
@@ -31,15 +52,18 @@ export async function GET(req: NextRequest) {
       if (Number.isNaN(occurredAt.getTime()) || occurredAt.toISOString() !== parsed.occurredAt) throw new Error('Invalid date')
       cursor = { occurredAt, id: parsed.id }
     } catch {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return json({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
   }
 
-  const where: Prisma.SfaActivityWhereInput = {
-    organizationId: ctx.organizationId,
+  try {
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  if (accountId) await lockSfaRecordRelation(tx, scope, 'account', accountId)
+  if (dealId) await lockSfaRecordRelation(tx, scope, 'deal', dealId)
+  const where = sfaRecordWhere(scope, 'activity', false, {
     ...(accountId ? { accountId } : {}),
     ...(dealId ? { dealId } : {}),
-  }
+  })
   const pageWhere: Prisma.SfaActivityWhereInput = cursor ? {
     AND: [where, { OR: [
       { occurredAt: { lt: cursor.occurredAt } },
@@ -47,99 +71,134 @@ export async function GET(req: NextRequest) {
     ] }],
   } : where
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaActivity.findMany({
+    tx.sfaActivity.findMany({
       where: pageWhere,
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
       take: PAGE_SIZE + 1,
     }),
-    prisma.sfaActivity.count({ where }),
+    tx.sfaActivity.count({ where }),
   ])
-  const activities = rows.slice(0, PAGE_SIZE)
+  const activities = await redactSfaRelations(tx, scope, rows.slice(0, PAGE_SIZE))
   const last = activities[activities.length - 1]
   const nextCursor = rows.length > PAGE_SIZE && last
     ? Buffer.from(JSON.stringify({ occurredAt: last.occurredAt.toISOString(), id: last.id })).toString('base64url')
     : null
-  return NextResponse.json({ activities, totalCount, nextCursor }, { headers: { 'Cache-Control': 'no-store' } })
+  return json({ activities, totalCount, nextCursor }, { headers: { 'Cache-Control': 'no-store' } })
+  })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '活動を取得できませんでした。再度読み込んでください。' }, { status: error instanceof SfaMutationError ? error.status : 503 })
+  }
 }
 
 // POST /api/sfa/activities — 活動を記録（クイック入力）
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const parsedBody = await req.json().catch(() => ({}))
-  const body = parsedBody && typeof parsedBody === 'object' && !Array.isArray(parsedBody) ? parsedBody : {}
-  const type = (ACTIVITY_TYPES as string[]).includes(body.type) ? (body.type as ActivityType) : 'note'
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  if ('type' in body && (typeof body.type !== 'string' || !(ACTIVITY_TYPES as string[]).includes(body.type))) {
+    return json({ error: '活動の種類を選び直してください' }, { status: 400 })
+  }
+  const type: ActivityType = 'type' in body ? body.type as ActivityType : 'note'
   if ((body.subject != null && typeof body.subject !== 'string') || (body.body != null && typeof body.body !== 'string')) {
-    return NextResponse.json({ error: '内容の形式が正しくありません' }, { status: 400 })
+    return json({ error: '内容の形式が正しくありません' }, { status: 400 })
   }
   const subject = (body.subject as string | undefined)?.trim()
   const bodyText = (body.body as string | undefined)?.trim()
   if (!subject && !bodyText) {
-    return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
+    return json({ error: '内容を入力してください' }, { status: 400 })
+  }
+
+  if ((subject?.length || 0) > 200 || (bodyText?.length || 0) > 4000) {
+    return json({ error: '件名は200文字以内、本文は4000文字以内で入力してください' }, { status: 400 })
+  }
+
+  // Reject an explicitly invalid time instead of recording it as the current time.
+  let occurredAt = new Date()
+  if ('occurredAt' in body) {
+    const value = body.occurredAt
+    const format = /^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))?$/
+    const day = typeof value === 'string' ? value.slice(0, 10) : ''
+    const calendarDay = new Date(`${day}T00:00:00.000Z`)
+    const parsed = typeof value === 'string' ? new Date(value) : null
+    if (typeof value !== 'string' || !format.test(value) || !Number.isFinite(calendarDay.getTime()) || calendarDay.toISOString().slice(0, 10) !== day || !parsed || !Number.isFinite(parsed.getTime())) {
+      return json({ error: '活動日時には有効な日付を入力してください' }, { status: 400 })
+    }
+    occurredAt = parsed
   }
 
   const relatedFields = [body.accountId, body.dealId, body.contactId]
   if (relatedFields.some((id) => id != null && typeof id !== 'string')) {
-    return NextResponse.json({ error: '関連先の指定が正しくありません' }, { status: 400 })
+    return json({ error: '関連先の指定が正しくありません' }, { status: 400 })
   }
   const requestedAccountId = (body.accountId as string | undefined)?.trim() || null
   const requestedDealId = (body.dealId as string | undefined)?.trim() || null
   const requestedContactId = (body.contactId as string | undefined)?.trim() || null
 
-  // 指定された関連先を確認し、無効なIDを黙って外して保存しない。
-  const verifyOwn = async (model: 'sfaAccount' | 'sfaDeal' | 'sfaContact', id?: string) => {
-    if (!id) return null
-    const row = await (prisma[model] as any).findUnique({ where: { id }, select: { organizationId: true, isActive: true } })
-    return row && row.organizationId === ctx.organizationId && row.isActive ? id : null
-  }
-  const [accountId, dealId, contactId] = await Promise.all([
-    verifyOwn('sfaAccount', requestedAccountId || undefined),
-    verifyOwn('sfaDeal', requestedDealId || undefined),
-    verifyOwn('sfaContact', requestedContactId || undefined),
-  ])
-  if ((requestedAccountId && !accountId) || (requestedDealId && !dealId) || (requestedContactId && !contactId)) {
-    return NextResponse.json({ error: '関連先が見つかりません。画面を更新してもう一度お試しください。' }, { status: 400 })
-  }
-
-  let occurredAt = new Date()
-  if (typeof body.occurredAt === 'string' && body.occurredAt) {
-    const d = new Date(body.occurredAt)
-    if (!isNaN(d.getTime())) occurredAt = d
-  }
-
   try {
-    const activity = await prisma.$transaction(async (tx) => {
-      const created = await tx.sfaActivity.create({
-        data: {
-          organizationId: ctx.organizationId,
-          type,
-          subject: subject?.slice(0, 200) || null,
-          body: bodyText?.slice(0, 4000) || null,
-          accountId,
-          dealId,
-          contactId,
-          occurredAt,
-          memberId: ctx.memberId,
-        },
-      })
-
-      // 条件付き更新により、古い活動や更新順の逆転で最終活動日を戻さない。
-      if (dealId) {
-        await tx.sfaDeal.updateMany({
-          where: {
-            id: dealId,
+    const operationId = sfaOperationId(body.operationId)
+    const activity = await withSfaRecordRead(ctx, async (tx, scope) => {
+      const saved = await createSfaOnce(tx, ctx, 'activity', operationId,
+        { type, subject: subject || null, body: bodyText || null, accountId: requestedAccountId,
+          dealId: requestedDealId, contactId: requestedContactId, occurredAt: 'occurredAt' in body ? occurredAt.toISOString() : null },
+        async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })), async () => {
+        // Keep a fixed related-row lock order across activity writes.
+        const accountId = requestedAccountId ? await lockSfaRecordRelation(tx, scope, 'account', requestedAccountId) : null
+        const dealId = requestedDealId ? await lockSfaRecordRelation(tx, scope, 'deal', requestedDealId, true) : null
+        const contactId = requestedContactId ? await lockSfaRecordRelation(tx, scope, 'contact', requestedContactId) : null
+        const created = await tx.sfaActivity.create({
+          data: {
             organizationId: ctx.organizationId,
-            OR: [{ lastActivityAt: null }, { lastActivityAt: { lt: occurredAt } }],
+            type,
+            subject: subject || null,
+            body: bodyText || null,
+            accountId,
+            dealId,
+            contactId,
+            occurredAt,
+            memberId: ctx.memberId,
           },
-          data: { lastActivityAt: occurredAt },
         })
-      }
-      return created
+
+        // 条件付き更新により、古い活動や更新順の逆転で最終活動日を戻さない。
+        if (dealId) {
+          await tx.sfaDeal.updateMany({
+            where: {
+              id: dealId,
+              organizationId: ctx.organizationId,
+              OR: [{ lastActivityAt: null }, { lastActivityAt: { lt: occurredAt } }],
+            },
+            data: { lastActivityAt: occurredAt },
+          })
+        }
+        return created
+      })
+      return redactSfaRelation(tx, scope, saved)
     })
 
-    return NextResponse.json({ activity })
-  } catch {
-    return NextResponse.json({ error: '活動を保存できませんでした。もう一度お試しください。' }, { status: 500 })
+    return json({ activity })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+  }
+}
+
+// Cancels only the creation operation receipt, never the task/activity itself.
+export async function DELETE(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  try {
+    const params = (req.nextUrl || new URL(req.url)).searchParams
+    if (params.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
+    const operationId = sfaOperationId(params.get('operationId'))!
+    const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+      return cancelSfaCreation(tx, ctx, 'activity', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })))
+    })
+    return json({ state: recovery.state, activity: recovery.row })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '操作の取り消し結果を確認できませんでした。もう一度確認してください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
   }
 }

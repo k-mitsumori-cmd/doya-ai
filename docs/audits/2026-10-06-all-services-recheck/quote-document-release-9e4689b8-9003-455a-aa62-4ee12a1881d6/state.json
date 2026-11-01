@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-10-06T22:32:22.935968+00:00",
+  "pid": 97529,
+  "head": "a91db42504fd1b2df0ab2473ada544b784f550f2",
+  "sourceFiles": 2626,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T22:36:04.026059+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T22:36:05.734993+00:00"
+    }
+  ],
+  "changedSources": [
+    "scripts/security-regression/verify-quote-document-mounted.cjs",
+    "src/lib/quote/use-document-detail.ts"
+  ],
+  "endedAt": "2026-10-06T22:36:06.092039+00:00"
+}

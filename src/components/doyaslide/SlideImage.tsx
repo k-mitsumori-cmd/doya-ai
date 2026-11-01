@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 
 type SlideImageProps = {
   src: string
@@ -37,9 +38,10 @@ export default function SlideImage({ src, alt, className = '' }: SlideImageProps
         </div>
       )}
       {/* Generated slide URLs can be local or remote and need direct load/error events. */}
+      {/* 保存した公開URLは、配信API経由のURLに読み替えて表示する（バケット非公開化に備える。SEC-062） */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={doyaslideImageSrc(src)}
         alt={alt}
         onLoad={() => setStatus('loaded')}
         onError={() => setStatus('error')}

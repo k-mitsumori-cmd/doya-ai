@@ -1,0 +1,23 @@
+[
+  "src/components/limits/ServiceLimitProvider.tsx",
+  "src/components/Providers.tsx",
+  "scripts/security-regression/verify-service-limit-provider-mounted.cjs",
+  "docs/audits/2026-10-06-all-services-recheck/criterion-matrix.csv",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-provider-repair.json",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-tasks-lifecycle-repair.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-comparison-baseline.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-current.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-superseded-81-cases.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-superseded-gate.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-sfa-pricing-baseline.json",
+  "docs/audits/2026-10-06-all-services-recheck/probe-service-limit-sfa-pricing.cjs",
+  "docs/audits/2026-10-06-all-services-recheck/sfa-receipt-public-f7f69af6.json",
+  "docs/audits/2026-10-06-all-services-recheck/verify-sfa-receipt-public-f7f69af6.py",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891/supervise.py",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891/source-manifest.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891/state.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-f1db3b6f-e0ca-4ac1-bb79-bf3d4cdf3357/supervise.py",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-f1db3b6f-e0ca-4ac1-bb79-bf3d4cdf3357/source-manifest.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-f1db3b6f-e0ca-4ac1-bb79-bf3d4cdf3357/state.json",
+  "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-file-list.json"
+]

@@ -1,0 +1,6 @@
+{
+  "status": "confirmed-open",
+  "case": "same-frame prompt add sends two POSTs",
+  "writes": 2,
+  "scope": "Actual page/layout/bounded client; synthetic transport only."
+}

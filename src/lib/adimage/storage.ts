@@ -4,18 +4,11 @@
 // interview の Supabase 管理クライアントを再利用し、専用バケットに保存する。
 // 構成は adbanner/storage.ts と同型。
 import { getSupabaseAdmin } from '@/lib/interview/storage'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 const BUCKET = process.env.ADIMAGE_STORAGE_BUCKET || 'adimage'
-let _ready = false
-
-async function ensureBucket() {
-  if (_ready) return
-  const supabase = getSupabaseAdmin()
-  const { data } = await supabase.storage.getBucket(BUCKET)
-  if (!data) {
-    await supabase.storage.createBucket(BUCKET, { public: false, fileSizeLimit: 26214400 }).catch(() => {})
-  }
-  _ready = true
+export async function assertPrivateStorage(): Promise<void> {
+  await ensurePrivateImageBucket(getSupabaseAdmin().storage, BUCKET, 26214400)
 }
 
 /**
@@ -35,7 +28,7 @@ function safeObjectPath(path: string): string {
 
 export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
   path = safeObjectPath(path)
-  await ensureBucket()
+  await assertPrivateStorage()
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
     contentType: 'image/png',
@@ -49,7 +42,7 @@ export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
 export async function signedUrl(path: string, expiresSec = 3600): Promise<string | null> {
   if (!path) return null
   path = safeObjectPath(path)
-  await ensureBucket()
+  await assertPrivateStorage()
   const supabase = getSupabaseAdmin()
   const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresSec)
   return data?.signedUrl ?? null
@@ -58,7 +51,7 @@ export async function signedUrl(path: string, expiresSec = 3600): Promise<string
 export async function downloadBuffer(path: string): Promise<Buffer | null> {
   if (!path) return null
   path = safeObjectPath(path)
-  await ensureBucket()
+  await assertPrivateStorage()
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.storage.from(BUCKET).download(path)
   if (error || !data) return null

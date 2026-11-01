@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T21:43:05.965Z",
+  "expected": 6,
+  "passed": 6,
+  "cases": [
+    "FREE final slot concurrent actions admit one new project and deny other",
+    "FREE retry of successfully filled final slot is misreported as LIMIT rather than recovering original",
+    "owner limits count all owned workspaces and ignore unrelated owner projects",
+    "invited PRO staff cannot bypass FREE contract owner cap and is guided to owner",
+    "contract owner at cap receives billing-manager guidance",
+    "PRO owner preserves unlimited creation through real entitlement reader"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/actions-projects.ts": "00e185f9d07fff895bb3f6d6ddeb064abe556e1a95c2be642cb5dd1aa6c33b83",
+    "src/lib/promane/limits.ts": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+  },
+  "scope": "Actual project create action, actual limit reader and plan normalization with isolated Unix-socket PostgreSQL and synthetic User.plan rows. Synthetic auth/workspace resolver. No production/customer writes, provider calls or real Next browser transport. Current limit behavior preserved; final-slot retry ambiguity confirmed."
+}

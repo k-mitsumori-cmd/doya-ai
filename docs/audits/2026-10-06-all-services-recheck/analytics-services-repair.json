@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-06T16:13:21.686369+00:00",
+  "baseline": "analytics-account-service-baseline.json",
+  "changes": [
+    "Tool paths derive from source-loaded active service registry; four missing paths covered and retired paths omitted",
+    "Signup guards per account in localStorage; login/tool guards per account/browser session in sessionStorage",
+    "Authenticated identity required; cached loading/unauthenticated/missing identity never emits account events",
+    "Storage denial falls back to mounted tracker memory deduplication; delayed analytics readiness retries unsent events",
+    "No actor ID/email is included in gtag event payloads; purchase guard and verified JPY/trial semantics unchanged"
+  ],
+  "tests": {
+    "coverage": "analytics-services-current.json",
+    "groups": 13,
+    "publicServices": 17,
+    "actorsToolCoverage": 34,
+    "purchaseCrosscheck": "analytics-purchase-crosscheck-current.json",
+    "purchaseGroups": 10
+  },
+  "sourceHashes": {
+    "src/components/GoogleAnalytics.tsx": "1d8378df108d66dbc63402780c7eb6bd191d53cfe647826b0642037178e27785",
+    "scripts/security-regression/verify-google-analytics-services.cjs": "3ce23ccc2f49d7458a9e494dde6c8b7dad7f4eb02a575ff14754474e23c9f8ae",
+    "scripts/security-regression/verify-google-analytics-purchase.cjs": "028787e07bf0e0ed2fcc83021ae756ce90d4e14a6d63bf5610c5deb855d52232",
+    "scripts/security-regression/run.cjs": "f9a5994f985ccfc8180ec64ab696cb98a752151927871f280466df6e60797b42"
+  },
+  "gate": "analytics-services-release-38d1f492-0ad8-47d2-9f10-11845178839e",
+  "releaseState": "Full local build/lint passed with unchanged source; preparing production push",
+  "limitations": [
+    "Captured synthetic gtag in jsdom, no analytics network/customer data; real GA delivery not established",
+    "Old browser-global signup/login/tool keys are ignored because their owner is unknown; existing browser session can emit one new actor-scoped login/tool event on migration. Purchase keys remain unchanged.",
+    "FirstLoginAt30minute signup heuristic retained. Auth callback backfills missing firstLoginAt for existing users; source does not prove actual new registration. This needs separate auth/analytics repair. Current authOptions has Google as the only provider.",
+    "Storage-disabled dedup persists only for mounted tracker lifetime",
+    "All-service requirement matrix remains incomplete"
+  ],
+  "followupEvidence": {
+    "authSource": "src/lib/auth.ts",
+    "sha256": "26ff544fc8e9bd820ef17134f23aae862963c0ea9c37d90684783a1dc6f12fd0",
+    "finding": "Existing-user signIn backfills missing firstLoginAt and sends signup notification; session exposes firstLoginAt but not createdAt. Analytics recent-firstLogin heuristic may count old users as new."
+  },
+  "releaseGateState": {
+    "startedAt": "2026-10-06T16:12:14.597814+00:00",
+    "pid": 31025,
+    "head": "88ae1e2a3a42f578562e312eb2c0eba78221417e",
+    "sourceFiles": 2551,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:15:23.164220+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:15:24.825463+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T16:15:25.165189+00:00"
+  }
+}

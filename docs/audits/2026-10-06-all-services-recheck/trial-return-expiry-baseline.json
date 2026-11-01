@@ -1,0 +1,26 @@
+{
+  "status": "not-reproduced-expired-claim-on-account-return",
+  "returningRenders": [
+    {
+      "actor": "alpha",
+      "now": 62000,
+      "eligible": false
+    },
+    {
+      "actor": "alpha",
+      "now": 62000,
+      "eligible": false
+    },
+    {
+      "actor": "alpha",
+      "now": 62000,
+      "eligible": false
+    },
+    {
+      "actor": "alpha",
+      "now": 62000,
+      "eligible": false
+    }
+  ],
+  "scope": "Actual trial hook and cache under StrictMode, synthetic sessions and clock. No live trial/Stripe/API/DB operations."
+}

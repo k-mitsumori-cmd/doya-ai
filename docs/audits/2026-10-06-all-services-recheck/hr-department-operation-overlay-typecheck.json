@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-08T18:19:42.762Z",
+  "expectedOverlayFiles": 6,
+  "overlayFiles": [
+    "src/lib/hr/department-operation.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/department-operation/route.ts",
+    "src/lib/hr/department-settings-client.ts",
+    "src/lib/hr/use-department-creation.ts",
+    "src/app/hr/settings/page.tsx"
+  ],
+  "passed": true,
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-operation.ts": "04a8423447da228a050d10cc6eee0bf947991e74bc6b465280605e8d43bc6529",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/app/api/hr/departments/route.ts": "10c38c62958527fa206ac9df8bcc7568579803faa4fb05aa35c018a7d5124ee8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/app/api/hr/department-operation/route.ts": "2feabe0b4344177ea446de48f32dadf5ad73ead6d13ba043f8dfe3e4c39d8b71",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/app/hr/settings/page.tsx": "333a158d99205b4367e98305a65a691c717b67aa6d55278dd03f61468e98fb09"
+  },
+  "scope": "Whole-root TypeScript program with six virtual operation/server/client/page overlay files; no emit and no root source mutation. Not integration/runtime/production proof."
+}

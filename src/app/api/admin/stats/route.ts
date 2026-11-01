@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     const serviceIds = ['banner', 'writing', 'interview', 'copy', 'lp', 'voice', 'movie', 'hr', 'kintai']
     const serviceLabels: Record<string, { name: string; icon: string; gradient: string }> = {
       banner: { name: 'ドヤバナーAI', icon: '🎨', gradient: 'from-violet-500 to-fuchsia-500' },
-      writing: { name: 'ドヤライティングAI', icon: '✍️', gradient: 'from-emerald-500 to-cyan-500' },
+      writing: { name: 'ドヤ記事作成', icon: '✍️', gradient: 'from-emerald-500 to-cyan-500' },
       interview: { name: 'ドヤインタビュー', icon: '🎙️', gradient: 'from-rose-500 to-pink-500' },
       copy: { name: 'ドヤコピーAI', icon: '📝', gradient: 'from-amber-500 to-orange-500' },
       lp: { name: 'ドヤLP AI', icon: '📄', gradient: 'from-cyan-500 to-blue-500' },

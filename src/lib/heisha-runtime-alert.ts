@@ -27,7 +27,7 @@ export async function reportHeishaFailure(source: string): Promise<void> {
           `発生日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
           '確認すること：アプリのバージョンと再現手順を確認し、画面・処理の不具合を調べてください。',
           '端末報告は種類ごとに全実行環境で10分間まとめます。'
-        ].join('\n') })), signal: AbortSignal.timeout(5000),
+        ].join('\n') }, { app: '弊社、限界につき。', kind: 'error', severity: 'action' })), signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
     } catch { recent.delete(key); originalError('[runtime-alert] Slack delivery failed'); }

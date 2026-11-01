@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
-import { ensureBucket, getDetectedMaxFileSize, getFileMetadata, getSignedFileUrl } from '@/lib/interview/storage'
-import { getMaxFileSize } from '@/lib/interview/types'
+import { ensureBucket, getDetectedMaxFileSize, getFileMetadata, readFileHead } from '@/lib/interview/storage'
+import { getMaxFileSize, type MaterialType } from '@/lib/interview/types'
+import { matchesInterviewFileSignature, SIGNATURE_BYTES } from '@/lib/interview/file-signature'
 import { getInterviewGuestLimits, getInterviewLimitsByPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { enqueueInterviewMaterialStoragePurge } from '@/lib/interview/storage-purge-queue'
 
@@ -113,8 +114,41 @@ export async function POST(req: NextRequest) {
       }, { status: 413 })
     }
 
-    // 署名付きURLを取得してDBに保存
-    const fileUrl = await getSignedFileUrl(storagePath, 7 * 24 * 3600) // 7日間有効
+    // 中身の形式を確かめる（SEC-069）。拡張子と申告された MIME だけでは、別の形式のファイルを置けてしまう。
+    const head = await readFileHead(storagePath, SIGNATURE_BYTES)
+    if (!matchesInterviewFileSignature(material.type as MaterialType, material.mimeType, head)) {
+      const rejectedState = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+        const current = await tx.interviewMaterial.findUnique({
+          where: { id: materialId },
+          select: { projectId: true, filePath: true, project: { select: { userId: true, guestId: true } } },
+        })
+        if (!current || current.projectId !== material.projectId || checkOwnership(current.project, userId, guestId)) return 'missing' as const
+        if (current.filePath !== storagePath) return 'changed' as const
+        const rejected = await tx.interviewMaterial.updateMany({
+          where: { id: material.id, status: 'UPLOADED', fileUrl: null, filePath: storagePath },
+          data: { status: 'ERROR', error: 'ファイルの中身が対応している形式ではありません' },
+        })
+        if (!rejected.count) return 'changed' as const
+        await enqueueInterviewMaterialStoragePurge(tx, {
+          id: material.id, projectId: material.projectId, filePath: storagePath,
+          userId: current.project.userId, guestId: current.project.guestId,
+        })
+        return 'rejected' as const
+      })
+      if (rejectedState === 'missing') return NextResponse.json({ success: false, error: '素材が見つかりません' }, { status: 404 })
+      if (rejectedState === 'changed') return NextResponse.json({ success: false, error: '素材の状態が変更されました。再読み込みしてください。' }, { status: 409 })
+      return NextResponse.json({
+        success: false,
+        error: 'ファイルの中身が、選んだファイルの形式と一致しませんでした。元のファイルをもう一度選んでアップロードしてください。',
+        code: 'UPLOAD_CONTENT_MISMATCH',
+      }, { status: 415 })
+    }
+
+    // 確定済みの目印を DB に残す。以前は 7 日有効の署名付き URL を保存していたが、
+    // DB や応答から漏れると 7 日間だれでも素材を取れてしまうため、秘密を含まない値にした（SEC-069）。
+    // ファイルを読むときは、その場で短い署名付き URL を発行する（文字起こし・素材の取得 API）。
+    const fileUrl = `storage:${storagePath}`
 
     // DBステータス更新
     const updated = await prisma.$transaction(async tx => {

@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import sharp from 'sharp'
 import archiver from 'archiver'
 import { jsPDF } from 'jspdf'
@@ -19,20 +20,20 @@ import { errorSuffix } from '@/lib/doyaslide/errors'
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId()
-    if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
     const projectId = searchParams.get('projectId')
     const format = (searchParams.get('format') || 'pdf').toLowerCase() === 'zip' ? 'zip' : 'pdf'
-    if (!projectId) return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
+    if (!projectId) return privateApiJson({ error: 'projectIdは必須です' }, { status: 400 })
 
     const project = await prisma.doyaSlideProject.findFirst({
       where: { id: projectId, userId },
       include: { slides: { where: { imageUrl: { not: null } }, orderBy: { index: 'asc' } } },
     })
-    if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    if (!project) return privateApiJson({ error: '見つかりません' }, { status: 404 })
     if (project.slides.length === 0) {
-      return NextResponse.json({ error: '書き出せるスライドがありません' }, { status: 400 })
+      return privateApiJson({ error: '書き出せるスライドがありません' }, { status: 400 })
     }
 
     const safeTitle = (project.title || 'doyaslide').replace(/[^\w\-ぁ-んァ-ヶ一-龠]/g, '_').slice(0, 40) || 'doyaslide'
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     )
     const images = results.filter((x): x is NonNullable<typeof x> => x !== null)
     if (images.length === 0) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: `画像の取得に失敗しました${errorSuffix('all slide image fetches failed')}` },
         { status: 502 }
       )
@@ -94,12 +95,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { url } = await uploadExportFile(userId, buffer, format, safeTitle)
-    return NextResponse.json(
-      { url, filename: `${safeTitle}.${format}`, skipped },
-      { headers: { 'Cache-Control': 'no-store' } }
-    )
+    return privateApiJson({ url, filename: `${safeTitle}.${format}`, skipped })
   } catch (e: any) {
     console.error('[doyaslide/export]')
-    return NextResponse.json({ error: `エクスポートに失敗しました${errorSuffix(e)}` }, { status: 500 })
+    return privateApiJson({ error: `エクスポートに失敗しました${errorSuffix(e)}` }, { status: 500 })
   }
 }

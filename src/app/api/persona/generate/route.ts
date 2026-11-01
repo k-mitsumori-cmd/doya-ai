@@ -14,6 +14,7 @@ import { recordServiceUsage } from '@/lib/service-usage'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { readPersonaProviderJson } from '@/lib/persona/provider-response'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 
 export const runtime = 'nodejs'
@@ -121,7 +122,7 @@ async function geminiGenerateJson(prompt: string): Promise<PersonaResult> {
   throw lastError || new Error('All models failed')
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   let reservation: { userId: string; id: string; leaseToken: string } | null = null
   try {
     const session = await getServerSession(authOptions)
@@ -410,3 +411,6 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}`
     )
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'persona.generate', key: (b) => b?.requestKey }, postHandler)

@@ -28,7 +28,7 @@ const prisma = {
   },
 };
 const route = load('src/app/api/cunning/knowledge/route.ts', {
-  'next/server': { NextResponse: Response },
+  '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/cunning/access': { getUserId: async () => 'user' },
   '@/lib/cunning/limits': { getCunningLimits: async () => ({ maxKnowledgeBases: 1 }) },

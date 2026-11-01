@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-06T16:34:39.235960+00:00",
+  "baseline": "auth-registration-baseline.json",
+  "changes": [
+    "Registration uses DB account createdAt; repaired firstLoginAt is not registration evidence",
+    "Atomic User firstLoginAt-null compare-and-set claims first processing once across signIn/createUser",
+    "Existing older users remain login notifications and preserve historical signup attribution",
+    "Failed/unclaimed first stamp cannot start duplicate enrollment or registration notification",
+    "Session exposes server-confirmed creation date; DB failure clears uncertain dates while retaining paid plan fallback and sanitized logs"
+  ],
+  "sourceHashes": {
+    "src/lib/auth.ts": "de0c865e7d82c818377ee9cfcaf75c99b7bda572ccbeffc16fd6eed5ce7a2be7",
+    "src/lib/registration-classification.ts": "2db62e4cd3a1a20b792e4aab6d934bf04148f3c0cc0bc874fd9b8a2f53f49466",
+    "src/components/GoogleAnalytics.tsx": "92cfb32d3e63ebfa0a5bb65af5df191a85f1c268e8f9e384055d28fc1c68607d",
+    "scripts/security-regression/verify-auth-registration.cjs": "6422601dda9bfd3925b8d291ee6d91ce090d46d80d8ff08b2c7d4ffa8dd60242",
+    "scripts/security-regression/verify-registration-classification.cjs": "05f6328035529e0ff588011d0c8170ad97f6b92a6e63c74da98aa002f567d8c7",
+    "scripts/security-regression/verify-google-analytics-services.cjs": "9563261bfbaeb07879d80b2cc5f82dc27c9f698792d7cc39d853ab8d9d9cd45f",
+    "scripts/security-regression/verify-google-analytics-purchase.cjs": "5f91aee77c68caa3195dda8143f8963ad7844982dc5c22fe31ed41e6a5b13c3a",
+    "scripts/security-regression/run.cjs": "9f01b9ad3d304a786b0d64cc848096ff02107a80d311b60e5d587c9903c2f46d"
+  },
+  "tests": {
+    "authCallbackCases": 12,
+    "dateBoundaryCases": 24,
+    "actualAnalyticsGroups": 19,
+    "services": 17,
+    "purchaseCrosscheckGroups": 10,
+    "actualPrivatePostgresConcurrentCalls": 40,
+    "authErrors": 0,
+    "signupNotifications": 1,
+    "enrollments": 1
+  },
+  "privateDbEvidence": "registration-postgres-current.json",
+  "privateDbStopEvidence": "registration-postgres-supervisor.json",
+  "gate": "registration-release-e0159551-9fb2-497c-8302-8b7bc3718ba1",
+  "gateState": {
+    "startedAt": "2026-10-06T16:27:13.760533+00:00",
+    "pid": 32573,
+    "head": "5fe7658ee961cfde3ee8aa47b35e1e89e865b2a7",
+    "sourceFiles": 2554,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:30:25.853953+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:30:27.525255+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T16:30:27.889121+00:00"
+  },
+  "releaseState": "Full local gate passed; source unchanged; preparing commit and production push",
+  "boundaries": [
+    "No production customer DB changes or migrations performed by tests; no actual OAuth/mail/analytics delivery tested",
+    "Concurrent proof is actual Prisma/PG17 in a fresh private cluster with captured fake notification/enrollment, not production concurrency",
+    "Signup GA dedup remains per account/browser; global all-browser exactly-once delivery not established",
+    "17-service requirement matrix and device/authenticated billing end-to-end checks remain incomplete"
+  ]
+}

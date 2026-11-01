@@ -20,7 +20,7 @@ export function StatCard({
     green: { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'text-emerald-500', value: 'text-emerald-700' },
     amber: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'text-amber-500', value: 'text-amber-700' },
     red: { bg: 'bg-red-50', border: 'border-red-200', icon: 'text-red-500', value: 'text-red-700' },
-    purple: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-500', value: 'text-purple-700' },
+    purple: { bg: 'bg-brand-50', border: 'border-brand-100', icon: 'text-brand-400', value: 'text-brand-600' },
   }
   const t = toneMap[tone] || toneMap.gray
   return (

@@ -1,0 +1,11 @@
+{
+  "status": "confirmed-open",
+  "case": "activity late alpha create clears beta draft and reloads alpha rows in beta",
+  "currentScope": "beta",
+  "draftAfter": "",
+  "wrongScopeVisible": true,
+  "notices": [
+    "活動を記録しました"
+  ],
+  "scope": "Actual task page and helpers; synthetic scope transition, not proof of real Next segment reuse. No real customer/DB/paid operation."
+}

@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T04:52:29.663806+00:00",
+  "finding": "Immediate cancellation button disabled during pending extraction/preparation until POST returned. Reproduced in actual mounted Tool.",
+  "baseline": "doyalist-immediate-cancel-baseline.log",
+  "baselineToolHash": "5553b4b1b708c44ef91443337dbcace89643a05637ba68060b492425c5f03542",
+  "stoppedGate": "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-8df8f668-5352-46f9-8461-afad74d604b3",
+  "stoppedSession": 12087,
+  "stoppedSessionExitCode": 143,
+  "childrenAtStop": [
+    "node verify-interview-article-input-client.cjs, confirmed ended"
+  ],
+  "repair": "Abort only old client wait, retain UUID, issue separate server DELETE. Keep cancellation action available during pending POST; retain metadata and held capacity until server worker confirms terminal cancellation.",
+  "proofs": [
+    {
+      "path": "doyalist-extraction-cancel-mounted-results.json",
+      "passed": 11,
+      "sourceHashesCurrent": true,
+      "scope": "Actual mounted Tool under StrictMode and actual bounded transport/persistence; JSDOM storage, synthetic network and lock scheduler. Not native Web Locks, actual browser, API integration or production evidence."
+    },
+    {
+      "path": "doyalist-extraction-native-results.json",
+      "passed": 9,
+      "sourceHashesCurrent": true,
+      "scope": "Actual Tool and browser persistence/readers under StrictMode with native Chrome HTTP/fetch/abort/Web Locks/localStorage/storage events/reload/two tabs. Synthetic auth/framework/API receipt state, no actual Next hydration/database/provider/production evidence."
+    }
+  ]
+}

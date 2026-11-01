@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-08T02:45:10.172Z",
+  "expected": 6,
+  "passed": 6,
+  "cases": [
+    "AI proposal and public source metadata respect actual UI limits",
+    "Provider failure still returns bounded scraped fallback and truthful AI state",
+    "Daily operational cap prevents scraping and provider calls",
+    "Scraping failure counts one reserved attempt and never reaches provider",
+    "Guest requests do not reserve budget or call external services",
+    "Malformed bodies and invalid URLs reject before reservation"
+  ],
+  "sourceHashes": {
+    "src/app/api/doyaslide/analyze/route.ts": "b2e1d6ad3abf1fa8dc93a9d9ce2b132933a2a7f455874d2f2c48e7d581d9ebfe",
+    "src/lib/doyaslide/url-analysis-operation.ts": "801a83283f7abe0100f47722031451b6fb5883e1ec3bb96ec0f9e0fc7931a1c7",
+    "src/lib/doyaslide/text-budget.ts": "3b13bbebd945e3c14e63e4ae724ac2fdbaa801783bf204e98d959ed68c396a3a",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-route.cjs": "8f2b6177b5bae5e320150c49f1682f583f4083553d3ba949623d52d4481f9ab5"
+  },
+  "scope": "Actual POST handler with native Request/Response. Actual durable helper and budget with synthetic serialized DB/auth/scraper/provider dependencies; no real provider, database or production writes. Ledger atomicity is covered separately."
+}

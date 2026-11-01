@@ -1,0 +1,33 @@
+PASS Lost project creation acknowledgement recovers one owned project
+PASS Lost collection acknowledgement replay saves and counts once
+PASS Concurrent duplicate POST and GET never start second worker
+PASS Cancellation during provider work prevents late company save
+PASS Cancel before creation fences delayed project POST
+PASS Legacy collect without operation identity rejects before provider
+PASS Temporary held quota returns busy without upgrade offer
+PASS Consumed monthly quota gives pricing action without provider
+PASS Other actor cannot recover company result or replay collection
+PASS Failed provider terminalizes receipt and replay does not repeat provider
+PASS Partial provider timeout preserves saved result and warning
+PASS Unauthenticated operation endpoints reject without data or mutation
+PASS Already aborted collection cancels without provider or company writes
+PASS Deleted result recovery returns 410 without rerunning provider
+PASS Mismatched count conflicts before provider starts
+PASS Malformed UUID is a bounded private error before database work
+PASS No matching companies remains actionable after reload without new provider
+PASS Provider unavailable remains actionable after reload without new provider
+PASS Provider time budget exhausted remains actionable after reload without new provider
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+200 !== 409
+
+    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-operation-route-postgres.cjs:48:263
+    at async check (/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-operation-route-postgres.cjs:30:46)
+    at async /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-doyalist-operation-route-postgres.cjs:48:2 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 200,
+  expected: 409,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

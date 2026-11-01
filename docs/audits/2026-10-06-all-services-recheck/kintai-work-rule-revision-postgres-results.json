@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-07T18:36:44.775Z",
+  "passed": 20,
+  "expected": 20,
+  "cases": [
+    "legacy list revision is read-only",
+    "created revision is durable and replay stable",
+    "missing PATCH version rejects before writes",
+    "invalid PATCH version rejects",
+    "fresh PATCH advances revision atomically",
+    "second managers stale form cannot overwrite first",
+    "parallel PATCH permits exactly one version winner",
+    "stale DELETE cannot remove changed rule",
+    "fresh DELETE succeeds and original creation never resurrects",
+    "missing DELETE version rejects",
+    "duplicate DELETE version parameters reject",
+    "ABA same field restoration still rejects original version",
+    "out of band data change invalidates version without nonce update",
+    "corrupt revision fails closed",
+    "employee count changes do not invalidate business version",
+    "revision database failure rolls back row and generation",
+    "cancelled create never writes revision or row",
+    "receipt failure after revision insertion rolls all records back",
+    "creation replay after PATCH returns current revision without writes",
+    "revision from another rule cannot authorize PATCH"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "2ad1016c32a4d949f5ee972d94f09376308795de4d6ee58b6f9c0e72a738f0ed",
+    "src/app/api/kintai/work-rules/[id]/route.ts": "2a9d01e3b2c4e86ae7971ec4ff3662f3e6d69605a82a8ba414f414ef58d357a1",
+    "src/app/api/kintai/work-rules/operations/[operationId]/route.ts": "3d802ed019ede2ae6f3b11ba784f9c4108dc171c8787030540df3cb6884c2a53",
+    "src/lib/kintai/work-rule-revision.ts": "aab3dbc7e41c5c469b211866db74889d4c31ef4ee7f5a9af2f8c02483a497973",
+    "src/lib/kintai/work-rule-operation.ts": "02874b8c2351d4a170cff25eefc8c7af10ed4cb74c3517e4e363f2e459e8832d",
+    "src/lib/kintai/work-rule-input.ts": "3ceba2508906b90ddae79281ae1ea8326c5039deab9ee61a5f9480a138057ec3",
+    "src/lib/kintai/manager-admission.ts": "8d93a0b7ff71b1158f2c2739187b2a9a3649ac9bb2171271546a060d78f67d59",
+    "src/lib/kintai/employee-admission.ts": "b53980fcb978167a6a60a17f1d0ecb22ce47c84ec71faabdb610b51a93d6580b",
+    "src/app/kintai/settings/page.tsx": "8ced5f4f9a87c618b1791a63477c43590b519fcf2329e26ee70496d178ced424"
+  },
+  "scope": "Actual versioned API candidates, current authority/creation helpers and Prisma in isolated Unix-socket PostgreSQL. Stale forms, concurrent writers, ABA, deletion and real database-trigger rollback tested. Mocked session only. Frontend integration/type/build/production are separate checks."
+}

@@ -1,10 +1,12 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
-import toast from 'react-hot-toast'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AiInsightPanel from './AiInsightPanel'
+import { oneOnOneFormItems } from '@/lib/hr/one-on-one-items'
 
 interface AgendaItem {
   id: string
@@ -33,11 +35,12 @@ interface OneOnOneFormProps {
   employeeId?: string
   employeeName?: string
   initialDate?: string
-  initialDuration?: number
-  initialAgenda?: AgendaItem[]
-  initialManagerNote?: string
-  initialSharedNote?: string
-  initialActionItems?: ActionItem[]
+  initialDuration?: number | null
+  initialAgenda?: unknown
+  initialManagerNote?: string | null
+  initialSharedNote?: string | null
+  initialActionItems?: unknown
+  initialAiSummary?: string | null
   readOnly?: boolean
   canViewManagerNotes?: boolean
   onSave?: (data: any) => void
@@ -53,25 +56,29 @@ export default function OneOnOneForm({
   initialManagerNote = '',
   initialSharedNote = '',
   initialActionItems = [],
+  initialAiSummary = null,
   readOnly = false,
   canViewManagerNotes = false,
   onSave,
 }: OneOnOneFormProps) {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { toast, router, live } = useHrPageLifetime()
   const [date, setDate] = useState(initialDate)
   const [duration, setDuration] = useState(initialDuration)
+  const [initialItems] = useState(() => oneOnOneFormItems(initialAgenda, initialActionItems, recordId || 'draft'))
   const [agenda, setAgenda] = useState<AgendaItem[]>(
-    (initialAgenda?.length ?? 0) > 0
-      ? initialAgenda
+    initialItems && initialItems.agenda.length > 0
+      ? initialItems.agenda
       : [{ id: crypto.randomUUID(), topic: '', category: 'BUSINESS' }]
   )
   const [managerNote, setManagerNote] = useState(initialManagerNote)
   const [sharedNote, setSharedNote] = useState(initialSharedNote)
   const [actionItems, setActionItems] = useState<ActionItem[]>(
-    (initialActionItems?.length ?? 0) > 0
-      ? initialActionItems
+    initialItems && initialItems.actionItems.length > 0
+      ? initialItems.actionItems
       : [{ id: crypto.randomUUID(), content: '', assignee: '', dueDate: '', done: false }]
   )
-  const [aiResult, setAiResult] = useState<string | null>(null)
+  const [aiResult, setAiResult] = useState<string | null>(canViewManagerNotes ? initialAiSummary : null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
@@ -129,10 +136,13 @@ export default function OneOnOneForm({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'AI要約の生成に失敗しました')
+      if (!res.ok) throw new Error(typeof data?.error === 'string' && data.error ? data.error : 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。')
       setAiResult(data.aiSummary || data.summary || data.result || '')
     } catch (e: any) {
-      setAiResult(`エラー: ${e.message}`)
+      // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない。
+      //    英語や内部の文（通信の失敗など）は出さず、日本語の文だけを通す
+      const message = typeof e?.message === 'string' ? e.message : ''
+      setAiResult(`エラー: ${/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : 'AIの要約を作れませんでした。時間をおいて、もう一度お試しください。'}`)
     } finally {
       aiLoadingRef.current = false
       setAiLoading(false)
@@ -144,15 +154,24 @@ export default function OneOnOneForm({
     savingRef.current = true
     setSaving(true)
     try {
+      // 初期表示用の空行だけを除き、入力済み・一部入力・未知の保存項目は保つ。
+      const isEmptyInitialRow = (item: unknown, emptyFields: Record<string, unknown>) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+        const row = item as Record<string, unknown>
+        if (Object.keys(row).some(key => key !== 'id' && !Object.hasOwn(emptyFields, key))) return false
+        return Object.entries(emptyFields).every(([key, value]) =>
+          value === '' ? typeof row[key] === 'string' && row[key].trim() === '' : row[key] === value
+        )
+      }
       const payload = {
         recordId,
         employeeId,
         date: date ? new Date(date).toISOString() : null,
-        duration,
-        agenda,
+        ...(duration !== null ? { duration } : {}),
+        agenda: agenda.filter(item => !isEmptyInitialRow(item, { topic: '', category: 'BUSINESS' })),
         ...(canViewManagerNotes ? { managerNote } : {}),
         sharedNote,
-        actionItems,
+        actionItems: actionItems.filter(item => !isEmptyInitialRow(item, { content: '', assignee: '', dueDate: '', done: false })),
       }
       if (onSave) {
         await onSave(payload)
@@ -164,11 +183,12 @@ export default function OneOnOneForm({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
-        if (!res.ok) throw new Error('保存に失敗しました')
+        if (!res.ok) throw new Error('1on1の記録を保存できませんでした。時間をおいて、もう一度お試しください。')
       }
-      return true
+      return live()
     } catch (e: any) {
-      toast.error(e.message)
+      const message = typeof e?.message === 'string' ? e.message : ''
+      toast.error(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '1on1の記録を保存できませんでした。通信を確かめて、もう一度お試しください。')
       return false
     } finally {
       savingRef.current = false
@@ -180,6 +200,8 @@ export default function OneOnOneForm({
     if (aiLoadingRef.current) return false
     return handleSave()
   }
+
+  if (!initialItems) return <p role="alert">1on1の項目を読み込めませんでした。組織の管理者にご相談ください。</p>
 
   return (
     <div className="space-y-6">
@@ -209,11 +231,15 @@ export default function OneOnOneForm({
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">所要時間（分）</label>
             <select
-              value={duration}
+              value={duration ?? ''}
               onChange={(e) => setDuration(parseInt(e.target.value))}
               disabled={editingDisabled}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             >
+              <option value="" disabled>未設定</option>
+              {duration !== null && ![15, 30, 45, 60, 90].includes(duration) && (
+                <option value={duration}>{duration}分</option>
+              )}
               <option value={15}>15分</option>
               <option value={30}>30分</option>
               <option value={45}>45分</option>
@@ -254,7 +280,7 @@ export default function OneOnOneForm({
             >
               <div className="flex gap-3 items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-bold text-slate-400 mt-2">{index + 1}</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <input
                     type="text"
                     value={item.topic}
@@ -267,8 +293,11 @@ export default function OneOnOneForm({
                     value={item.category}
                     onChange={(e) => updateAgenda(item.id, 'category', e.target.value)}
                     disabled={editingDisabled}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+                    className="max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                   >
+                    {!AGENDA_CATEGORIES.some(c => c.value === item.category) && (
+                      <option value={item.category}>{item.category || '未設定'}</option>
+                    )}
                     {AGENDA_CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
@@ -304,7 +333,7 @@ export default function OneOnOneForm({
             共有メモ（上司・部下で共有）
           </label>
           <textarea
-            value={sharedNote}
+            value={sharedNote ?? ''}
             onChange={(e) => setSharedNote(e.target.value)}
             disabled={editingDisabled}
             rows={4}
@@ -317,7 +346,7 @@ export default function OneOnOneForm({
             上司メモ（担当上司・管理者のみ閲覧可）
           </label>
           <textarea
-            value={managerNote}
+            value={managerNote ?? ''}
             onChange={(e) => setManagerNote(e.target.value)}
             disabled={editingDisabled}
             rows={3}
@@ -407,18 +436,18 @@ export default function OneOnOneForm({
       </div>
 
       {/* AI Summary */}
-      {!readOnly && canViewManagerNotes && (
+      {canViewManagerNotes && (!readOnly || aiResult) && (
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
-              AI要約生成
+              <span className="material-symbols-outlined text-brand-400">auto_awesome</span>
+              AI要約
             </h3>
-            <button
+            {!readOnly && <button
               type="button"
               onClick={handleAiSummary}
               disabled={editingDisabled}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-400 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-brand-400/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
@@ -426,7 +455,7 @@ export default function OneOnOneForm({
                 <span className="material-symbols-outlined text-lg">auto_awesome</span>
               )}
               {aiLoading ? '生成中...' : 'AI要約生成'}
-            </button>
+            </button>}
           </div>
           {(aiLoading || aiResult) && (
             aiResult?.startsWith('エラー:')

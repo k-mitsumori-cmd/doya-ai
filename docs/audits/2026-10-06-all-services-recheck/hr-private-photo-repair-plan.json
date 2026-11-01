@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T16:28:25.174583+00:00",
+  "status": "source-repaired-targeted-regressions-passed-frozen30gate-pending",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/hr-private-photo-storage-baseline.json",
+  "sourceHashes": {
+    "src/lib/hr/storage.ts": "61d86c7af33dbfdea8a588c3bd61af089ab0f1dc33960b793b373227f0aef4b0"
+  },
+  "repairsRequired": [
+    "New uploads use a separate private bucket without changing historical public bucket configuration",
+    "Return stable same-origin photo API URL to keep existing employee create/edit flows",
+    "Read only after current organization membership and attached employee photo link checks; recheck after download",
+    "Private no-store response, bounded downloads and sanitized errors",
+    "Preserve legacy public and inline photo rendering until a separately reviewed historical migration is authorized"
+  ],
+  "scope": "Offline actual source/mocked storage only. Historical public employee photo objects, exposure counts and production settings have not been inspected or changed.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/media-storage-privacy-release-8654d861-2217-40ac-8717-312d5b7bfcd7",
+  "previousFailedGate": "docs/audits/2026-10-06-all-services-recheck/media-storage-privacy-release-3181a0de-7e41-44fd-a6f0-7ed89f38300f",
+  "productionApplied": false
+}

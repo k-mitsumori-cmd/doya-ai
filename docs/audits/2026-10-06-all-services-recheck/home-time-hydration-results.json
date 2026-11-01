@@ -1,0 +1,62 @@
+{
+  "passed": 8,
+  "cases": [
+    {
+      "name": "UTC server and Japan client",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "Japan server and UTC client",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "US client and legacy agent",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "Japan midnight during hydration",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "UTC server across Japan month boundary",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "Japan year boundary and US client clock",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "Morning greeting boundary",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    },
+    {
+      "name": "Evening greeting boundary",
+      "firstMarkupMatched": true,
+      "actualHydrationRecoverableErrors": 0,
+      "japanTimeLabelsVerified": true,
+      "summaryUnchanged": true
+    }
+  ],
+  "scope": "Actual HomeDashboard TSX, actual todayItems, actual React server rendering and hydrateRoot/jsdom. Synthetic summary, clocks, contexts, visual children and navigation. UTC/Japan/US and greeting/day/month/year boundaries. No DB, live browser, network, provider, real billing or full application proof."
+}

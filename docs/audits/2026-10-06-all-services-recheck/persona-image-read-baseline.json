@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-07T15:27:24.516Z",
+  "passed": 1,
+  "cases": [
+    "owner"
+  ],
+  "failures": [
+    {
+      "scenario": "delete-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "scenario": "owner-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "scenario": "path-change-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "scenario": "failed-job-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "scenario": "deleted-job-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "scenario": "failed-project-during-download",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/persona/images/[id]/route.ts": "5319127f7197ce7fde26c0863b2e4defbc5f3b46430eb5dcaf38d989bdccd23f",
+    "src/lib/persona/image-ledger.ts": "c67d9ac60c0c000a5bfdcf4017ceaec40ffc28f88b86486a33d6202faf919519"
+  },
+  "scope": "Actual persona image GET, actual deletePersonaProject, actual Prisma/private Unix-socket PostgreSQL and foreign keys. Synthetic session/storage bytes. No customer DB or paid provider."
+}

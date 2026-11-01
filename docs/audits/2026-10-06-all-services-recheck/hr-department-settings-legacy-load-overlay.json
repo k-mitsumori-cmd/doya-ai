@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-08T18:19:43.837Z",
+  "passed": 9,
+  "expected": 9,
+  "cases": [
+    "dashboard: failed request is an error, not an empty organization",
+    "dashboard: malformed success is an error, not an empty organization",
+    "evaluations: failed request is an error, not an empty organization",
+    "evaluations: malformed success is an error, not an empty organization",
+    "settings: failed request is an error, not an empty organization",
+    "settings: malformed success is an error, not an empty organization",
+    "dashboard: valid zero counts are genuinely empty",
+    "evaluations: valid empty list is distinct from an outage",
+    "settings: audit outage does not hide valid organization and departments"
+  ],
+  "scope": "Original9 initial loader assertions retained; candidate settings source, actual parser and explicit synthetic organization metadata adapter. Other two pages unchanged. No production runtime claim."
+}

@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-06T16:05:49.486516+00:00",
+  "commit": "88ae1e2a3a42f578562e312eb2c0eba78221417e",
+  "state": "Exact-SHA CI success; READY production aliases; four public paths and JS reflection confirmed",
+  "ci": {
+    "run": 37492880820,
+    "state": "completed",
+    "conclusion": "success",
+    "headSha": "88ae1e2a3a42f578562e312eb2c0eba78221417e"
+  },
+  "deployments": [
+    {
+      "url": "doya-d902dhoaw-surisutas-projects.vercel.app",
+      "state": "BUILDING",
+      "target": "production",
+      "commit": "88ae1e2a3a42f578562e312eb2c0eba78221417e"
+    }
+  ],
+  "localEvidence": "subscription-management-repair.json",
+  "fullGate": "subscription-management-release-summary.json",
+  "remaining": [
+    "Legacy callback investigation qualified by retired production308entrances; see legacy-checkout-public-reachability.json",
+    "Analytics missing4 public services and17-service requirement matrix remain"
+  ],
+  "scope": "Current management cohort only; goal remains active",
+  "deployment": {
+    "id": "dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+    "url": "doya-d902dhoaw-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "aliases": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ]
+  },
+  "publicEvidence": "subscription-management-public-88ae1e2a.json"
+}

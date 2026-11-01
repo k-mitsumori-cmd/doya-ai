@@ -25,7 +25,7 @@ function model(kind) {
   }
 }
 const common = {
-  'next/server': { NextResponse: Response },
+  '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: { cunningCompanyProfile: model('company'), cunningApplicantProfile: model('profiles') } },
   '@/lib/cunning/access': { getUserId: async () => 'own-user' },
 }

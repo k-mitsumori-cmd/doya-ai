@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-08T02:45:13.909Z",
+  "expected": 26,
+  "passed": 26,
+  "cases": [
+    "Nine concurrent admissions reserve one attempt and admit exactly one worker",
+    "Same UUID rejects changed source without another reservation",
+    "Different UUID waits for active actor intent without reserving a second attempt",
+    "Concurrent settlements and completed replay return one durable proposal",
+    "Failed admitted attempt stays counted and replay cannot start another worker",
+    "Cancellation before admission fences a delayed POST without spending budget",
+    "Cancellation after admission keeps counted attempt and fences late completion",
+    "Expired receipt remains failed and late settlement cannot revive it",
+    "Expired active intent releases next explicit operation without refunding old attempt",
+    "Receipt write failure rolls back budget reservation and active pointer",
+    "Active pointer failure also rolls back receipt and counted attempt",
+    "Result receipt failure leaves pending state and permits same-result settlement retry",
+    "Daily cap records terminal rejection without incrementing or creating active work",
+    "Corrupted daily ledger prevents both receipt admission and provider ownership",
+    "Read-only missing recovery writes no receipt and consumes no attempts",
+    "Other actor cannot read or cancel original actor receipt",
+    "Revoked actor cannot recover or settle a private result",
+    "Invalid UUID and URL fail before any ledger mutation",
+    "Forged receipt identity fails closed",
+    "Corrupted active pointer prevents new admission and old settlement",
+    "Six concurrent cancellations preserve exactly one counted attempt",
+    "Six concurrent expirations close once without refund",
+    "UUID case normalization cannot create a duplicate operation",
+    "Cancelling a completed intent preserves the saved proposal",
+    "Explicit new intent after failure spends one additional attempt",
+    "Different actors can independently admit operations"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-operation.ts": "801a83283f7abe0100f47722031451b6fb5883e1ec3bb96ec0f9e0fc7931a1c7",
+    "src/lib/doyaslide/text-budget.ts": "3b13bbebd945e3c14e63e4ae724ac2fdbaa801783bf204e98d959ed68c396a3a",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-postgres.cjs": "d2195c94bd2e4aebfaa6f313be6711671964055163f86b60be92f6e4b95700ce"
+  },
+  "scope": "Actual new operation helper and existing daily budget on private Unix-socket PostgreSQL. No actual analyze route integration, client metadata/recovery, provider or customer/production writes. Result replay helper coverage only."
+}

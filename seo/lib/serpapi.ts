@@ -37,6 +37,8 @@ export async function serpapiSearchGoogle(args: {
   hl?: 'ja' | 'en'
   num?: number
   start?: number
+  /** 時間の上限（ミリ秒）。無ければ今までどおり 30 秒 */
+  timeoutMs?: number
 }): Promise<{ organic: { title: string; url: string; snippet?: string }[] }> {
   const apiKey = getSearchApiKey()
   if (!apiKey) throw new Error('Search API key not configured (set SERPER_API_KEY)')
@@ -55,7 +57,8 @@ export async function serpapiSearchGoogle(args: {
   if (start) body.start = start
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 30_000)
+  const timeoutMs = Number.isFinite(args.timeoutMs) && (args.timeoutMs as number) > 0 ? Math.floor(args.timeoutMs as number) : 30_000
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
   try {
     res = await fetch(endpoint, {
@@ -69,7 +72,7 @@ export async function serpapiSearchGoogle(args: {
     })
   } catch (e: any) {
     clearTimeout(timer)
-    if (e?.name === 'AbortError') throw new Error('Serper request timed out (30s)')
+    if (e?.name === 'AbortError') throw new Error(`Serper request timed out (${Math.round(timeoutMs / 1000)}s)`)
     throw e
   }
   clearTimeout(timer)

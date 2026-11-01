@@ -15,15 +15,16 @@ export interface PlanLimits {
 
 /**
  * プランごとの制限値を返す
- * FREE:5名/3AI/2メンバー, STARTER:30/30/5, PRO:100/-1/-1, ENTERPRISE:-1/-1/-1
+ * FREE:5名/3AI/2メンバー, STARTER:30/30/5, PRO:100/100AI/-1, ENTERPRISE:-1/500AI/-1
+ * ⚠️ AI の月次上限は src/lib/plan-limit.ts の HR_AI_MONTHLY_LIMITS と同じ値にする（有料でも無制限にしない）。
  */
 export function getOrgPlanLimits(plan: string): PlanLimits {
   switch (plan.toUpperCase()) {
     case 'ENTERPRISE':
-      return { maxEmployees: -1, maxAiUsage: -1, maxMembers: -1 }
+      return { maxEmployees: -1, maxAiUsage: 500, maxMembers: -1 }
     case 'PRO':
     case 'BUNDLE':
-      return { maxEmployees: 100, maxAiUsage: -1, maxMembers: -1 }
+      return { maxEmployees: 100, maxAiUsage: 100, maxMembers: -1 }
     case 'STARTER':
     case 'LIGHT':
       return { maxEmployees: 30, maxAiUsage: 30, maxMembers: 5 }
@@ -132,7 +133,11 @@ export type HrAiAdmission =
 
 /** 組織行をロックし、月次リセットと枠の確保を同一トランザクションで行う。 */
 export async function reserveAiUsage(organizationId: string, now = new Date()): Promise<HrAiAdmission> {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(tx => reserveAiUsageInTransaction(tx, organizationId, now))
+}
+
+/** Use the caller transaction so live authority/version checks and quota admission are atomic. */
+export async function reserveAiUsageInTransaction(tx: Prisma.TransactionClient, organizationId: string, now = new Date()): Promise<HrAiAdmission> {
     const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
     if (rows.length === 0) return { granted: false as const, error: '組織が見つかりません' }
 
@@ -148,7 +153,13 @@ export async function reserveAiUsage(organizationId: string, now = new Date()): 
     const plan = await getOrgPlan(organizationId, tx)
     const limit = getOrgPlanLimits(plan).maxAiUsage
     if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0 && current >= limit) {
-      return { granted: false as const, error: `AI機能の月間利用回数（${limit}回）に達しています。プランをアップグレードしてください。` }
+      const paid = ['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+      return {
+        granted: false as const,
+        error: paid
+          ? `AI機能の今月の利用回数（${limit}回）に達しています。来月までお待ちいただくか、枠を増やしたい場合はお問い合わせください。`
+          : `AI機能の今月の利用回数（${limit}回）に達しています。プランを変更すると上限を増やせます。`,
+      }
     }
 
     const reservationResetAt = newMonth ? now : resetAt
@@ -159,7 +170,6 @@ export async function reserveAiUsage(organizationId: string, now = new Date()): 
         : { aiUsageCount: { increment: 1 } },
     })
     return { granted: true as const, reservation: { organizationId, resetAt: reservationResetAt } }
-  })
 }
 
 /** 保存できなかった生成だけ返却する。月替わり後の新しい枠は減らさない。 */

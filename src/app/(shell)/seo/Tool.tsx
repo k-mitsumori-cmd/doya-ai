@@ -1,0 +1,719 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ArrowRight,
+  FileText,
+  Search,
+  Plus,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Edit3,
+  Play,
+  Download,
+  Sparkles,
+  RefreshCcw,
+  Trash2,
+} from 'lucide-react'
+import { Button } from '@seo/components/ui/Button'
+import { Badge } from '@seo/components/ui/Badge'
+import { ProgressBar } from '@seo/components/ui/ProgressBar'
+import { FeatureGuide } from '@/components/FeatureGuide'
+import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
+import { Button as DsButton, EmptyState, Skeleton, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
+import { ErrorNotice } from '@/components/ds/feedback'
+import { confirmDialog } from '@/components/ds/dialog'
+import { seoUserMessage } from '@/components/seo/user-message'
+import type { SeoListActivity } from '@/lib/seo-article-list'
+
+// 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
+const HERO_ART = '/ui-renewal/keyart/seo.webp'
+
+type SeoArticleRow = {
+  id: string
+  title: string
+  keywords?: string[]
+  status: string
+  targetChars: number
+  createdAt: string
+  updatedAt: string
+  activityState?: SeoListActivity
+  jobs?: { id: string; status: string; progress: number; step: string }[]
+  images?: { id: string; kind: string; createdAt: string }[]
+}
+
+// ステップ定義（進行バー用）
+const WORKFLOW_STEPS = [
+  { id: 'keyword', label: 'キーワード', icon: Sparkles },
+  { id: 'outline', label: '構成', icon: FileText },
+  { id: 'generate', label: '本文', icon: Play },
+  { id: 'edit', label: '編集', icon: Edit3 },
+  { id: 'check', label: 'チェック', icon: CheckCircle2 },
+  { id: 'export', label: '出力', icon: Download },
+]
+
+// ステータスからステップを判定
+function getStepIndex(status: string): number {
+  switch (status) {
+    case 'DRAFT': return 1 // 構成済み
+    case 'RUNNING': return 2 // 本文生成中
+    case 'EDITING': return 3 // 編集中
+    case 'DONE': return 4 // チェック可能
+    case 'EXPORTED': return 5 // 出力済み
+    default: return 0
+  }
+}
+
+const STATUS_CONFIG = {
+  DRAFT: { label: '構成済み', color: 'text-blue-600', bg: 'bg-blue-100', tone: 'blue' as const },
+  RUNNING: { label: '作成途中', color: 'text-orange-600', bg: 'bg-orange-100', tone: 'amber' as const },
+  EDITING: { label: '編集中', color: 'text-brand-500', bg: 'bg-brand-50', tone: 'purple' as const },
+  DONE: { label: '完成', color: 'text-emerald-600', bg: 'bg-emerald-100', tone: 'green' as const },
+  EXPORTED: { label: '出力済', color: 'text-teal-600', bg: 'bg-teal-100', tone: 'green' as const },
+  ERROR: { label: 'エラー', color: 'text-red-600', bg: 'bg-red-100', tone: 'red' as const },
+} as const
+
+// ジョブステップ名を日本語に変換
+const STEP_LABELS: Record<string, string> = {
+  init: '準備中',
+  outline: '構成生成',
+  sections: '本文執筆',
+  integrate: '記事統合',
+  media: '図解生成',
+  done: '完成',
+  OUTLINE: '構成生成',
+  SECTIONS: '本文執筆',
+  INTEGRATE: '記事統合',
+  MEDIA: '図解生成',
+  DONE: '完成',
+  cmp_ref: '参考記事解析',
+  cmp_candidates: '候補収集',
+  cmp_crawl: 'サイト巡回',
+  cmp_extract: '情報抽出',
+  cmp_sources: '出典整形',
+  cmp_tables: '比較表生成',
+  cmp_outline: '章立て生成',
+  cmp_polish: '校正中',
+}
+
+class SeoArticleDeleteError extends Error {}
+
+export default function SeoTool() {
+  const router = useRouter()
+  const [articles, setArticles] = useState<SeoArticleRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [articleLimitAction, setArticleLimitAction] = useState<SeoLimitAction>(null)
+  const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [activeStatus, setActiveStatus] = useState<'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'>('ALL')
+  const isLoadingRef = useRef(false)
+  const listEpoch = useRef(0)
+  const retryMoreRef = useRef(false)
+  const [refreshStep, setRefreshStep] = useState(0)
+  const listAbort = useRef<AbortController | null>(null)
+  const loadedPages = useRef(1)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState<string | null>(null)
+  const [matched, setMatched] = useState(0)
+  const [counts, setCounts] = useState<{ total: number; running: number; done: number; draft: number; executing?: number; needsReview?: number; polling?: number }>({ total: 0, running: 0, done: 0, draft: 0 })
+
+  async function load(opts?: { showLoading?: boolean; more?: boolean }) {
+    if (isLoadingRef.current || (opts?.more && !nextCursor)) return
+    isLoadingRef.current = true
+    const epoch = listEpoch.current
+    const controller = new AbortController()
+    listAbort.current = controller
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    if (opts?.showLoading) { setLoading(true); setError(null) }
+    if (opts?.more) setMoreLoading(true)
+    setMoreError(null)
+    try {
+      let cursor: string | null = opts?.more ? nextCursor : null
+      const rows: SeoArticleRow[] = []
+      let json: any
+      const pages = opts?.more ? 1 : loadedPages.current
+      for (let page = 0; page < pages; page++) {
+        const params = new URLSearchParams({ q: query.trim(), status: activeStatus })
+        if (cursor) params.set('cursor', cursor)
+        const res = await fetch(`/api/seo/articles?${params}`, { cache: 'no-store', signal: controller.signal })
+        json = await res.json()
+        if (!res.ok || json.success === false) throw new Error(json.error || '記事一覧を取得できませんでした')
+        if (!Array.isArray(json.articles) || !(json.nextCursor === null || typeof json.nextCursor === 'string') || !json.counts || !Number.isFinite(json.matched)) throw new Error('記事一覧の形式を確認できませんでした')
+        rows.push(...json.articles)
+        cursor = json.nextCursor
+        if (!cursor) break
+      }
+      if (epoch !== listEpoch.current) return
+      setArticles(previous => {
+        const combined = opts?.more ? [...previous, ...rows] : rows
+        return [...new Map(combined.map(row => [row.id, row])).values()]
+      })
+      setNextCursor(cursor)
+      setCounts(json.counts)
+      setMatched(json.matched)
+      if (opts?.more) loadedPages.current++
+      setError(null)
+    } catch (e: any) {
+      if (epoch !== listEpoch.current) return
+      const message = e?.name === 'AbortError' ? '読み込みに時間がかかっています。もう一度お試しください。' : seoUserMessage(e, '記事の一覧を読み込めませんでした。通信を確かめてください。')
+      if (opts?.showLoading) setError(message)
+      else { retryMoreRef.current = !!opts?.more; setMoreError(message) }
+    } finally {
+      clearTimeout(timeout)
+      if (epoch === listEpoch.current) { isLoadingRef.current = false; setLoading(false); setMoreLoading(false) }
+    }
+  }
+
+  // Older API responses may not yet contain activity metadata during deployment.
+  const executingCount = counts.executing ?? counts.running
+  const needsReviewCount = counts.needsReview ?? 0
+  const waitingCount = Math.max(0, counts.running - executingCount - needsReviewCount)
+  const hasRunning = (counts.polling ?? counts.running) > 0
+  useEffect(() => {
+    listEpoch.current++
+    listAbort.current?.abort()
+    isLoadingRef.current = false
+    loadedPages.current = 1
+    setArticles([])
+    setNextCursor(null)
+    setLoading(true)
+    setMoreLoading(false)
+    setError(null)
+    setMoreError(null)
+    const timer = setTimeout(() => load({ showLoading: true }), 250)
+    return () => { clearTimeout(timer); listEpoch.current++; listAbort.current?.abort() }
+  }, [query, activeStatus, refreshStep])
+
+  // Refresh every loaded page, so polling cannot discard older articles already opened.
+  useEffect(() => {
+    if (!hasRunning) return
+    const timer = setInterval(() => load(), 6000)
+    return () => clearInterval(timer)
+  }, [hasRunning, query, activeStatus])
+
+  const filtered = articles
+
+  const topicChips = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const a of articles) {
+      for (const kw of a.keywords || []) {
+        const k = String(kw || '').trim()
+        if (!k) continue
+        counts.set(k, (counts.get(k) || 0) + 1)
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([k]) => k)
+  }, [articles])
+
+  // 記事の続きへのリンクを決定
+  function getResumeLink(a: SeoArticleRow): string {
+    // 一覧からは常に「本文＋画像が見られる記事詳細」へ統一（迷いをなくす）
+    return `/seo/articles/${a.id}${a.activityState === 'needs-review' ? '?auto=0' : ''}`
+  }
+
+  // 次にやること帯（新しい見た目だけ。ds/next-step）。作成中 → 読み込みの失敗 → 最新の記事の状態 の順に決める
+  const nextStep: NextStepView = (() => {
+    if (loading && articles.length === 0 && !error) return null
+    if (executingCount > 0) {
+      const r = articles.find((a) => a.activityState === 'executing' || (a.status === 'RUNNING' && a.activityState === undefined))
+      return { key: 'working', state: 'working', n: executingCount, href: r ? getResumeLink(r) : undefined }
+    }
+    if (error) return { key: 'loadError', state: 'error', onClick: () => void load({ showLoading: true }) }
+    if (needsReviewCount > 0 || waitingCount > 0) {
+      const needsReview = needsReviewCount > 0
+      const row = articles.find(a => a.activityState === (needsReview ? 'needs-review' : 'waiting'))
+      return { key: needsReview ? 'needsReview' : 'waiting', state: 'empty',
+        href: row ? getResumeLink(row) : undefined,
+        onClick: row ? undefined : () => { setQuery(''); setActiveStatus('RUNNING') },
+        actionLabel: row ? undefined : '作成途中を表示', icon: 'FileText' }
+    }
+    if (counts.total === 0) return { key: 'empty', state: 'empty', href: '/seo/create', icon: 'Plus' }
+    const latest = articles[0]
+    if (latest?.status === 'ERROR') return { key: 'error', state: 'error', href: getResumeLink(latest) }
+    const done = articles.find((a) => a.status === 'DONE' || a.status === 'EDITING' || a.status === 'EXPORTED')
+    if (done) return { key: 'done', state: 'done', href: getResumeLink(done) }
+    return { key: 'empty', state: 'empty', href: '/seo/create', icon: 'Plus' }
+  })()
+
+  async function regenerate(articleId: string) {
+    if (!articleId) return
+    setActionError(null)
+    setArticleLimitAction(null)
+    setRegenBusyId(articleId)
+    try {
+      const res = await fetch(`/api/seo/articles/${articleId}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetSections: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitAction(seoLimitActionFromResponse(json))
+        throw new Error(seoUserMessage(json?.error, '作り直せませんでした。少し待って、もう一度お試しください。'))
+      }
+      const jobId = String(json?.jobId || '').trim()
+      if (!jobId) throw new Error('作り直しを始められませんでした。もう一度お試しください。')
+      router.push(`/seo/jobs/${jobId}?auto=1`)
+    } catch (e: any) {
+      setActionError(seoUserMessage(e, '作り直せませんでした。少し待って、もう一度お試しください。'))
+    } finally {
+      setRegenBusyId(null)
+    }
+  }
+
+  async function deleteArticle(articleId: string) {
+    if (!articleId) return
+    if (!(await confirmDialog({ title: 'この記事を削除しますか？', message: '元に戻せません。', confirmLabel: '削除する', tone: 'danger' }))) return
+    setActionError(null)
+    setDeleteBusyId(articleId)
+    let timeout: number | undefined
+    try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
+      const res = await fetch(`/api/seo/articles/${articleId}`, {
+        method: 'DELETE',
+        signal: controller.signal,
+      })
+      const json = await res.json()
+      if (!res.ok || json?.success !== true) {
+        throw new SeoArticleDeleteError(seoUserMessage(json?.error, '削除できたかを確かめられませんでした。一覧を読み込み直してください。'))
+      }
+      // 成功: stateから該当記事を除去
+      setArticles((prev) => prev.filter((a) => a.id !== articleId))
+      setRefreshStep(step => step + 1)
+    } catch (e: any) {
+      setActionError(e instanceof SeoArticleDeleteError ? e.message : '削除できたかを確かめられませんでした。一覧を読み込み直してください。')
+    } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
+      setDeleteBusyId(null)
+    }
+  }
+
+  // トップストーリー（最新の1本を大きく）
+  function renderTopStory() {
+    const hero = filtered[0]
+    const rest = filtered.slice(1, 4)
+    const config = STATUS_CONFIG[hero.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+    const bannerId = hero.images?.[0]?.id || ''
+    const href = `/seo/articles/${hero.id}`
+    return (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-black text-gray-500 tracking-widest">トップストーリー</p>
+            <Link href={href} className="text-xs font-black text-gray-900 hover:underline">
+              これまでの話題 →
+            </Link>
+          </div>
+
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <Badge tone={config.tone}>{config.label}</Badge>
+              {(hero.keywords || [])[0] ? (
+                <span className="text-[11px] font-black text-gray-500 truncate max-w-[240px]">
+                  {(hero.keywords || [])[0]}
+                </span>
+              ) : null}
+            </div>
+            <Link href={href} className="block mt-2">
+              <h3 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words hover:underline decoration-gray-300">
+                  {hero.title}
+                </h3>
+            </Link>
+            <p className="mt-2 text-sm font-bold text-gray-600">
+              {(hero.keywords || []).slice(0, 6).join(' / ') || 'キーワード未設定'}
+            </p>
+            <p className="mt-2 text-xs font-bold text-gray-400">
+              更新: {new Date(hero.updatedAt || hero.createdAt).toLocaleDateString('ja-JP')}
+            </p>
+          </div>
+
+          {rest.length > 0 && (
+            <div className="mt-4">
+              <ul className="space-y-2">
+                {rest.map((a) => {
+                  const u = `/seo/articles/${a.id}`
+                  return (
+                    <li key={a.id} className="flex items-start gap-3">
+                      <span className="mt-[7px] w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                      <Link href={u} className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black text-gray-400">
+                          {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
+                        </p>
+                        <p className="text-sm font-black text-gray-900 truncate !whitespace-nowrap hover:underline">
+                          {a.title}
+                        </p>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className={`min-w-0 lg:col-span-1 ${bannerId ? '' : 'hidden lg:block'}`}>
+          <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+            {bannerId ? (
+              <img
+                src={`/api/seo/images/${bannerId}?thumb=1`}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <FileText className="w-8 h-8" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 新しい見た目（チェックリスト §5.1）のときの直し:
+  // - 見出し（h1）は枠（ToolFrame）の1つだけ。ページ内の見出しは h2、記事のタイトルは h3（S-56・S-57）
+  // - 画面いっぱいの高さ・二重の見出しの帯・二重の左右の余白を外す（S-63）
+  // - 375px で横にはみ出さない（M-1。トップストーリーの1行の題名が、グリッドの列を押し広げていた）
+  // - 読み込みの前後で中身が動かない（CLS。トップストーリーと件数の行が、読み込み後に上に差し込まれていた）
+  const Root = 'div'
+  return (
+    <Root className="min-w-0 bg-white">
+      <ToolHero
+          title={<>キーワードから、<wbr />検索で読まれる記事を</>}
+          lead="キーワードを入れると、AIが検索の意図を調べて、構成・本文・図解まで仕上げます。"
+          action={<DsButton href="/seo/create" icon="Plus">新規記事作成</DsButton>}
+          art={HERO_ART}
+          artAlt="ドヤ記事作成で、検索の意図から記事の構成を作っている画面"
+        />
+
+      <div className="mx-auto max-w-6xl pt-6">
+        <ToolNextStep tool="seo" view={nextStep} className="mb-6" />
+        {/* NewsPicks風: トップストーリー（最新の1本を大きく）。新しい見た目では、一覧の上に移す（読み込み後に上へ差し込まない） */}
+
+      {/* 統計カード */}
+      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6">
+          <div className="h-9 w-9 rounded-xl sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-blue-50">
+            <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">合計</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.total}</p>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6">
+          <div className="h-9 w-9 rounded-xl sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-orange-50">
+            <Clock className={`w-6 h-6 sm:w-7 sm:h-7 text-orange-600 ${executingCount > 0 ? 'animate-pulse' : ''}`} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">作成途中</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running}</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-gray-500">生成中 {executingCount}・要確認 {needsReviewCount}</p>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6">
+          <div className="h-9 w-9 rounded-xl sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-emerald-50">
+            <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">完成</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.done}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Progress Bar */}
+      <div className="mb-8 sm:mb-10">
+        {/* 進行バー（常時表示） */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            {WORKFLOW_STEPS.map((step, i) => (
+              <div key={step.id} className="flex-1 flex flex-col items-center relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
+                  i === 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  <step.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <p className={`text-[10px] sm:text-xs font-black mt-2 ${i === 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                  {step.label}
+                </p>
+                {i < WORKFLOW_STEPS.length - 1 && (
+                  <div className="absolute top-5 sm:top-6 left-[60%] w-[80%] h-0.5 bg-gray-100" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* タイトル & CTA */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h2>
+            <p className="text-sm text-gray-400 font-bold mt-1">
+              {counts.total}件の記事 · {executingCount}件が生成中 · {needsReviewCount}件が要確認 · {counts.done}件が完成
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-bold text-gray-600">
+                作成日時が新しい記事から最大50件を表示しています
+              </span>
+              <FeatureGuide
+                featureId="seo.generatedList"
+                title="生成記事一覧の使い方"
+                description="生成した記事を一覧で管理し、クリックひとつで本文・画像・SEO改善まで確認できます。"
+                steps={[
+                  'カードをクリックすると、記事詳細（本文＋画像）をすぐ開けます',
+                  '作成途中の記事も「途中の本文」や進捗を確認できます',
+                  '完成後はSEOスコアの改善提案→手動/AI修正で仕上げます',
+                  '必要に応じてダウンロードや画像の再生成も可能です',
+                ]}
+                imageMode="off"
+              />
+            </div>
+          </div>
+          {/* 新しい見た目では、主ボタンは上のヒーローの1つだけ */}
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6 flex">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <input
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
+            maxLength={200}
+            placeholder="タイトル・キーワードで検索..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {actionError && (
+        <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {actionError}
+          {articleLimitAction && <Link href={articleLimitAction.href} className="ml-3 underline underline-offset-2">{articleLimitAction.label}</Link>}
+        </div>
+      )}
+
+      {!error && (
+        // 読み込みの間も1行分の高さを取っておく（CLS）
+        <p className="mb-3 min-h-5 text-sm text-gray-500" aria-live="polite">{loading ? '\u00a0' : `${matched}件中 ${articles.length}件を表示 · 作成日時の新しい順`}</p>
+      )}
+      {/* Article Cards */}
+      {!loading && !error && filtered.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-gray-100 p-4 sm:p-6">{renderTopStory()}</div>
+      )}
+      <div className="space-y-3">
+        {loading ? (
+          // 記事のカードと同じ高さの骨組み（読み込み後に下の中身が動かないように）
+          <div className="space-y-3" aria-busy="true">
+            {[1, 2, 3].map((i) => <div key={i} className="min-h-[88px] rounded-2xl border border-gray-100 bg-white p-4 sm:p-5"><Skeleton lines={2} delayMs={0} /></div>)}
+          </div>
+        ) : error ? (
+          <ErrorNotice what={error} how="通信の状態を確かめて、もう一度読み込んでください。" onRetry={() => load({ showLoading: true })} retryLabel="読み込み直す" />
+        ) : filtered.length === 0 ? (
+          <div className="rounded-3xl border border-gray-100 bg-white">
+            {query.trim() || activeStatus !== 'ALL' ? (
+              <EmptyState kind="no-results" title="条件に一致する記事はありません" description="検索の言葉を変えるか、消してください。" />
+            ) : (
+              <EmptyState
+                kind="not-generated"
+                art="/seo/empty-articles.webp"
+                title="まだ記事はありません"
+                description="キーワードを1つ入れるだけで、構成から本文・図解まで作れます。最初の1本を作りましょう。"
+                action={<DsButton href="/seo/create" icon="Plus">新規記事作成</DsButton>}
+              />
+            )}
+          </div>
+        ) : loading ? (
+          <div className="py-20 text-center">
+            <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-400 font-black text-xs uppercase tracking-widest">読み込み中...</p>
+          </div>
+        ) : error ? (
+          <div className="py-16 bg-white rounded-3xl border border-red-100 text-center">
+            <AlertCircle className="w-12 h-12 text-red-300 mx-auto mb-3" />
+            <p className="text-red-600 font-bold text-sm">{error}</p>
+            <button onClick={() => load({ showLoading: true })} className="mt-4 px-6 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-black hover:bg-red-100 transition-colors">
+              再読み込み
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-center"
+          >
+            <div className="w-20 h-20 rounded-3xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-10 h-10 text-gray-200" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 mb-2">{query.trim() || activeStatus !== 'ALL' ? '条件に一致する記事はありません' : 'まだ記事はありません'}</h3>
+            <p className="text-sm text-gray-400 font-bold mb-6">{query.trim() || activeStatus !== 'ALL' ? '検索語やステータスを変更してください。' : '最初の1本を作りましょう'}</p>
+            <Link href="/seo/create">
+              <button className="h-12 px-8 rounded-xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                新規記事作成
+              </button>
+            </Link>
+          </motion.div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {filtered.map((a, idx) => {
+              const baseConfig = STATUS_CONFIG[a.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+              const config = a.status === 'RUNNING'
+                ? { ...baseConfig, label: a.activityState === 'executing' ? '生成中' : a.activityState === 'needs-review' ? '要確認' : a.activityState === 'waiting' ? '待機中' : baseConfig.label }
+                : baseConfig
+              const stepIndex = getStepIndex(a.status)
+              const job = a.jobs?.[0]
+              const mainKw = (a.keywords || [])[0] || ''
+              const detailHref = getResumeLink(a)
+              const resumeHref = getResumeLink(a)
+              const bannerId = a.images?.[0]?.id || ''
+
+              return (
+                <motion.div
+                  key={a.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: idx * 0.03 }}
+                >
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(detailHref)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') router.push(detailHref)
+                    }}
+                    className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
+                    title="クリックで記事詳細（本文/画像）を開く"
+                  >
+                      <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap md:gap-4">
+                        {/* バナーサムネ（一覧で”ひと目で違いが分かる”） */}
+                        <div className="hidden sm:block w-28">
+                          <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
+                            {bannerId ? (
+                              <img
+                                src={`/api/seo/images/${bannerId}?thumb=1`}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-blue-500/60">
+                                <FileText className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ステップインジケーター */}
+                        <div className="hidden sm:flex flex-col items-center gap-1">
+                          {WORKFLOW_STEPS.slice(0, 5).map((s, i) => (
+                            <div
+                              key={s.id}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                i < stepIndex ? 'bg-blue-600' : i === stepIndex ? 'bg-blue-400 animate-pulse' : 'bg-gray-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* メインコンテンツ */}
+                        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge tone={config.tone}>{config.label}</Badge>
+                            {mainKw && (
+                              <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded truncate max-w-[120px]">
+                                {mainKw}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate !whitespace-nowrap group-hover:text-blue-600 transition-colors">
+                            {a.title}
+                          </h3>
+                          <p className="text-[10px] text-gray-400 font-bold mt-1">
+                            最終更新: {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
+                          </p>
+                        </div>
+
+                        {/* 進捗 or CTA（新しい見た目では、375px で題名の下に回して右に寄せる） */}
+                        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                          {a.status === 'RUNNING' && a.activityState !== 'needs-review' && job && (
+                            <div className="hidden sm:block w-28">
+                              <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
+                                <span className="truncate">{STEP_LABELS[job.step] || job.step}</span>
+                                <span>{job.progress}%</span>
+                              </div>
+                              <ProgressBar value={job.progress} />
+                            </div>
+                          )}
+                          {a.status === 'ERROR' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                regenerate(a.id)
+                              }}
+                              disabled={regenBusyId === a.id}
+                              className="h-10 px-4 rounded-xl bg-white border border-red-200 text-red-700 hover:bg-red-50 text-xs font-black shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                              title="同じ記事を作り直します"
+                            >
+                              <RefreshCcw className={`w-4 h-4 ${regenBusyId === a.id ? 'animate-spin' : ''}`} />
+                              再生成
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(resumeHref)
+                            }}
+                            className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                            title="記事詳細（本文＋画像）を開く"
+                          >
+                            {a.activityState === 'needs-review' ? '内容を確認' : a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteArticle(a.id)
+                            }}
+                            disabled={deleteBusyId === a.id}
+                            className="h-10 w-10 rounded-xl bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            title="この記事を削除"
+                          >
+                            <Trash2 className={`w-4 h-4 ${deleteBusyId === a.id ? 'animate-pulse' : ''}`} />
+                          </button>
+                        </div>
+                      </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {moreError && <p role="alert" className="mt-4 text-sm text-red-700">{moreError} <button className="underline" onClick={() => load(retryMoreRef.current ? { more: true } : { showLoading: true })}>もう一度読み込む</button></p>}
+      {!loading && !error && nextCursor && <div className="mt-6 text-center"><button className="px-6 py-3 rounded-xl border bg-white font-bold disabled:opacity-50" disabled={moreLoading} onClick={() => load({ more: true })}>{moreLoading ? '読み込み中…' : '記事の続きを読み込む'}</button></div>}
+
+      </div>
+    </Root>
+  )
+}

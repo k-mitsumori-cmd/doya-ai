@@ -1,0 +1,26 @@
+[
+  {
+    "service": "aio",
+    "currentOrg": "beta",
+    "alphaMemberAppearsInBeta": false,
+    "reads": [
+      "alpha",
+      "alpha",
+      "alpha"
+    ],
+    "successNotices": 1,
+    "scope": "Actual AppLayout, member page and transport with synthetic HTTP; synthetic parameter update does not itself prove Next router segment reuse in production. No real invite/mail/customer data."
+  },
+  {
+    "service": "shodan",
+    "currentOrg": "beta",
+    "alphaMemberAppearsInBeta": false,
+    "reads": [
+      "alpha",
+      "alpha",
+      "alpha"
+    ],
+    "successNotices": 1,
+    "scope": "Actual AppLayout, member page and transport with synthetic HTTP; synthetic parameter update does not itself prove Next router segment reuse in production. No real invite/mail/customer data."
+  }
+]

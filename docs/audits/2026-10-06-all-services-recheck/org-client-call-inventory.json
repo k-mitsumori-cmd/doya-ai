@@ -1,0 +1,308 @@
+{
+  "checkedAt": "2026-10-06T20:16:57.311Z",
+  "counts": {
+    "aioGet": 10,
+    "aioSend": 7,
+    "shodanGet": 10,
+    "shodanSend": 10
+  },
+  "entries": [
+    {
+      "file": "src/app/aio/[orgSlug]/history/[id]/page.tsx",
+      "line": 19,
+      "helper": "aioGet",
+      "path": "`/api/aio/scans/${encodeURIComponent(id)}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/history/page.tsx",
+      "line": 32,
+      "helper": "aioGet",
+      "path": "path",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/members/page.tsx",
+      "line": 33,
+      "helper": "aioGet",
+      "path": "'/api/aio/members'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/members/page.tsx",
+      "line": 51,
+      "helper": "aioSend",
+      "path": "'/api/aio/members'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/members/page.tsx",
+      "line": 63,
+      "helper": "aioSend",
+      "path": "`/api/aio/members/${m.id}`",
+      "organization": "orgSlug",
+      "method": "'DELETE'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/page.tsx",
+      "line": 109,
+      "helper": "aioSend",
+      "path": "'/api/aio/scans'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+      "line": 38,
+      "helper": "aioGet",
+      "path": "'/api/aio/prompts'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+      "line": 59,
+      "helper": "aioSend",
+      "path": "'/api/aio/prompts'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+      "line": 73,
+      "helper": "aioSend",
+      "path": "`/api/aio/prompts/${p.id}`",
+      "organization": "orgSlug",
+      "method": "'PATCH'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+      "line": 77,
+      "helper": "aioSend",
+      "path": "`/api/aio/prompts/${p.id}`",
+      "organization": "orgSlug",
+      "method": "'DELETE'"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/settings/page.tsx",
+      "line": 25,
+      "helper": "aioGet",
+      "path": "'/api/aio/brand-profile'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/aio/[orgSlug]/settings/page.tsx",
+      "line": 61,
+      "helper": "aioSend",
+      "path": "'/api/aio/brand-profile'",
+      "organization": "orgSlug",
+      "method": "'PUT'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/members/page.tsx",
+      "line": 33,
+      "helper": "shodanGet",
+      "path": "'/api/shodan/members'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/members/page.tsx",
+      "line": 51,
+      "helper": "shodanSend",
+      "path": "'/api/shodan/members'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/members/page.tsx",
+      "line": 63,
+      "helper": "shodanSend",
+      "path": "`/api/shodan/members/${m.id}`",
+      "organization": "orgSlug",
+      "method": "'DELETE'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/new/page.tsx",
+      "line": 57,
+      "helper": "shodanGet",
+      "path": "'/api/shodan/company-profile'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/new/page.tsx",
+      "line": 75,
+      "helper": "shodanSend",
+      "path": "'/api/shodan/preparations'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+      "line": 83,
+      "helper": "shodanGet",
+      "path": "`/api/shodan/preparations/${id}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+      "line": 102,
+      "helper": "shodanSend",
+      "path": "'/api/shodan/preparations'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+      "line": 127,
+      "helper": "shodanSend",
+      "path": "`/api/shodan/preparations/${id}/slides/generate`",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+      "line": 150,
+      "helper": "shodanSend",
+      "path": "`/api/shodan/preparations/${prep.id}/generate`",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+      "line": 152,
+      "helper": "shodanGet",
+      "path": "`/api/shodan/preparations/${prep.id}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/slides/page.tsx",
+      "line": 60,
+      "helper": "shodanGet",
+      "path": "`/api/shodan/preparations/${id}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/p/[id]/slides/page.tsx",
+      "line": 67,
+      "helper": "shodanSend",
+      "path": "`/api/shodan/preparations/${id}/slides/regenerate`",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/page.tsx",
+      "line": 47,
+      "helper": "shodanGet",
+      "path": "'/api/shodan/preparations'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/page.tsx",
+      "line": 60,
+      "helper": "shodanGet",
+      "path": "'/api/shodan/company-profile'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/page.tsx",
+      "line": 75,
+      "helper": "shodanGet",
+      "path": "`/api/shodan/preparations?cursor=${encodeURIComponent(nextCursor)}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/page.tsx",
+      "line": 97,
+      "helper": "shodanGet",
+      "path": "`/api/shodan/preparations?watch=${ids.join(',')}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/page.tsx",
+      "line": 114,
+      "helper": "shodanSend",
+      "path": "`/api/shodan/preparations/${id}`",
+      "organization": "orgSlug",
+      "method": "'DELETE'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+      "line": 81,
+      "helper": "shodanGet",
+      "path": "'/api/shodan/company-profile'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+      "line": 118,
+      "helper": "shodanSend",
+      "path": "'/api/shodan/company-profile/extract'",
+      "organization": "orgSlug",
+      "method": "'POST'"
+    },
+    {
+      "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+      "line": 142,
+      "helper": "shodanSend",
+      "path": "'/api/shodan/company-profile'",
+      "organization": "orgSlug",
+      "method": "'PUT'"
+    },
+    {
+      "file": "src/lib/aio/dashboard.ts",
+      "line": 6,
+      "helper": "aioGet",
+      "path": "'/api/aio/scans'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/lib/aio/dashboard.ts",
+      "line": 7,
+      "helper": "aioGet",
+      "path": "'/api/aio/brand-profile'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/lib/aio/dashboard.ts",
+      "line": 8,
+      "helper": "aioGet",
+      "path": "'/api/aio/prompts'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/lib/aio/dashboard.ts",
+      "line": 9,
+      "helper": "aioGet",
+      "path": "'/api/aio/me'",
+      "organization": "orgSlug",
+      "method": "GET"
+    },
+    {
+      "file": "src/lib/aio/dashboard.ts",
+      "line": 17,
+      "helper": "aioGet",
+      "path": "`/api/aio/scans/${latest.id}`",
+      "organization": "orgSlug",
+      "method": "GET"
+    }
+  ],
+  "scope": "Static AST call inventory only; no assertion that all callers share the four confirmed malformed-success bugs. Used to review response contracts before changing shared helpers."
+}

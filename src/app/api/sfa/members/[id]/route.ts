@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { ROLE_HIERARCHY, type SfaContext } from '@/lib/sfa/types'
+import { lockSfaRecordScope } from '@/lib/sfa/record-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 type Ctx = { params: Promise<{ id: string }> }
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
@@ -15,29 +17,35 @@ async function mutateMember(ctx: SfaContext, targetId: string, action: 'update' 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async tx => {
-        // Serialize role changes/removals with this mutation before rechecking both rows.
+        // Organization first: team readers finish before role/removal changes.
+        // A fresh company ceiling participates in the same authority decision.
+        let scope
+        try { scope = await lockSfaRecordScope(tx, ctx, true) }
+        catch (error) {
+          if (error instanceof SfaMutationError && error.status === 403) return { kind: 'forbidden' as const }
+          throw error
+        }
+        const actorRole = scope.actor.role
         await tx.$queryRaw`SELECT id FROM sfa_members WHERE "organizationId" = ${ctx.organizationId}
-          AND id IN (${ctx.memberId}, ${targetId}) ORDER BY id FOR UPDATE`
-        const actor = await tx.sfaMember.findFirst({
-          where: { id: ctx.memberId, organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE', role: { in: ['owner', 'admin'] } },
-          select: { id: true, role: true },
-        })
-        if (!actor) return { kind: 'forbidden' as const }
+          AND id = ${targetId} FOR UPDATE`
         const target = await tx.sfaMember.findFirst({ where: { id: targetId, organizationId: ctx.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.role === 'owner') return { kind: 'owner' as const }
-        if (target.id === actor.id) return { kind: 'self' as const }
-        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actor.role)) return { kind: 'peer' as const }
+        if (target.id === ctx.memberId) return { kind: 'self' as const }
+        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actorRole)) return { kind: 'peer' as const }
         if (action === 'update') {
-          if (!role || rank(role) >= rank(actor.role)) return { kind: 'role' as const }
+          if (!role || rank(role) >= rank(actorRole)) return { kind: 'role' as const }
+          await tx.sfaOrganization.update({ where: { id: ctx.organizationId }, data: { updatedAt: new Date() } })
           const member = await tx.sfaMember.update({ where: { id: target.id }, data: { role } })
           return { kind: 'updated' as const, member }
         }
+        await tx.sfaOrganization.update({ where: { id: ctx.organizationId }, data: { updatedAt: new Date() } })
         await tx.sfaMember.delete({ where: { id: target.id } })
         return { kind: 'deleted' as const }
       }, { isolationLevel: 'Serializable' })
     } catch (error) {
-      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error
+      const e = error as { code?: string; meta?: { code?: string } }
+      if (!(e?.code === 'P2034' || e?.code === 'P2010' && ['40001', '40P01'].includes(e.meta?.code || ''))) throw error
       if (attempt === 2) throw new Error('メンバー情報が同時に変更されました。再読み込みしてお試しください')
     }
   }

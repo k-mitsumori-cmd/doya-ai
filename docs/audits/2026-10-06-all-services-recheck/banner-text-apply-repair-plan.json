@@ -1,0 +1,30 @@
+{
+  "updatedAt": "2026-10-07T07:59:34.618902+00:00",
+  "state": "local repaired; original and integrated frozen gates passed; included in pending exact allowlist release",
+  "baseline": "banner-text-apply-baseline.json",
+  "baselineCases": 4,
+  "mountedCases": 5,
+  "additionalRegression": "chat13,hook12,callbacks24 passed before full gate;typecheck0;eslint0 with existing img warnings",
+  "sourceFiles": [
+    "src/app/banner/dashboard/chat/page.tsx",
+    "src/lib/banner/use-text-recovery.ts",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs",
+    "scripts/security-regression/verify-banner-text-apply-mounted.cjs"
+  ],
+  "sourceHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "d47785f3066f7575de0d1063d3c4a61f5c7138e4c44cc08db949319da0088728",
+    "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
+    "scripts/security-regression/run.cjs": "bf32d90b0c08f69f3aea160a5ba11ecad487f459ebae592a5d707f2ecdfba4bf",
+    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs": "7ea6d62a01e4ef28473309bd67fb1cdba5614ab0969330ff3f328479ebabd406",
+    "scripts/security-regression/verify-banner-text-apply-mounted.cjs": "d5378e7b19da74a6e19fffa5e47a165005332e0dd680c069c00f00f37752429d"
+  },
+  "gate": "banner-text-apply-release-85705241-6d1c-4e38-9c82-8603f891a216",
+  "session": null,
+  "scope": "Actual React18/jsdom page/hook/panel. Synthetic GET/auth/storage fault schedules. No paid AI, production customer DB or authenticated native browser execution.",
+  "remaining": [
+    "commit exact allowlist/push/CI/READY/public",
+    "remaining all17/2074criteria"
+  ],
+  "integratedGate": "banner-operation-lease-release-35bfa718-8c54-41b6-9752-445221e54f92"
+}

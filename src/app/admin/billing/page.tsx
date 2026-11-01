@@ -192,7 +192,7 @@ export default function BillingPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">コンプリートパック</p>
-                    <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤライティングAI</p>
+                    <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤ記事作成</p>
                   </div>
                 </div>
                 <p className="text-sm text-white/60">

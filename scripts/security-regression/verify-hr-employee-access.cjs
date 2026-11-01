@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
-const context = { organizationId: 'o', userId: 'u', role: 'MEMBER' }
+const context = { organizationId: 'o', userId: 'u', memberId: 'm', role: 'MEMBER' }
 const forbiddenDb = new Proxy({}, { get: (_, key) => { throw Error(`DB accessed before role check: ${String(key)}`) } })
 const common = {
   'next/server': { NextResponse: Response },
@@ -9,7 +9,7 @@ const common = {
   '@/lib/auth': {},
   '@/lib/prisma': { prisma: forbiddenDb },
   '@/lib/hr/access': { getHrContext: async () => context, hasMinRole: role => role === 'ADMIN' || role === 'OWNER' },
-  '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
+  '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN', OWNER: 'OWNER' } },
 }
 
 ;(async () => {
@@ -41,8 +41,8 @@ const common = {
     let writes = 0
     const prisma = {
       hrEmployee: {
-        findFirst: async ({ where }) => { assert.equal(where.organizationId, 'o'); return { id: 'e' } },
-        update: async ({ data }) => { writes++; return data },
+        findFirst: async ({ where }) => { assert.equal(where.organizationId, 'o'); return { id: 'e', updatedAt: new Date('2026-10-07T00:00:00.000Z') } },
+        updateMany: async ({ where, data }) => { assert.equal(where.organizationId, 'o'); assert.equal(where.updatedAt.toISOString(), '2026-10-07T00:00:00.000Z'); const member = where.organization.members.some; assert.equal(member.id, 'm'); assert.equal(member.userId, 'u'); assert.equal(member.status, 'ACTIVE'); assert.deepEqual(Array.from(member.role.in), ['OWNER', 'ADMIN']); assert(data.updatedAt.getTime() > where.updatedAt.getTime()); writes++; return { count: 1 } },
       },
     }
     const photo = load('src/app/api/hr/employees/[id]/photo/route.ts', {

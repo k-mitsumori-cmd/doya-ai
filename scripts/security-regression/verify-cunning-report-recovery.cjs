@@ -29,7 +29,7 @@ async function scenario({ nowMs, status = 'ended', owner = 'u', hasContent = tru
     cunningRecordingLease: { findUnique: async () => lease },
   }
   const api = load('src/app/api/cunning/sessions/[id]/report/route.ts', {
-    'next/server': { NextResponse: { json: (data, init) => new Response(JSON.stringify(data), init) } },
+    '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: { json: (data, init) => new Response(JSON.stringify(data), init) } },
     '@/lib/prisma': { prisma: { $transaction: async (fn) => fn(tx), cunningSession: model } },
     '@/lib/cunning/access': { getUserId: async () => 'u' },
     '@/lib/cunning/report-freshness': { cunningReportFingerprint: async () => 'fingerprint', cunningReportStatus: () => 'current' },

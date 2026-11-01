@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-06T22:49:12.996003+00:00",
+  "status": "deployed-anonymous-passed-private-flow-unproven",
+  "baseCommit": "6e628ed14cbf24eade634f9543fd847865a247bb",
+  "services": [
+    "quote",
+    "aishodan"
+  ],
+  "mountedCases": 40,
+  "mountedScript": "scripts/security-regression/verify-org-members-mounted.cjs",
+  "inputCases": 10,
+  "inputScript": "scripts/security-regression/verify-org-member-invite-input.cjs",
+  "contractScript": "scripts/security-regression/verify-org-member-contracts.cjs",
+  "typecheckExitCode": 0,
+  "targetedLintExitCode": 0,
+  "gate": "docs/audits/2026-10-06-all-services-recheck/org-members-release-334ef1bd-6768-485e-bf48-cea3ffde3d10",
+  "fixes": [
+    "Pin member operations to actor, service, selected/verified organization and epoch",
+    "Reject retained callbacks after organization/auth transitions and double activation",
+    "Use exact invitation and member mutation acknowledgements; unknown writes stop resending and require scoped reads",
+    "Scope busy indicators and keep shared panel mounted through issuer/auth refresh so unknown recovery is retained",
+    "Preserve confirmed invite URL when follow-up list read fails; distinguish delivery status",
+    "Reject non-string and oversized emails before transaction or mail preparation",
+    "Private no-store Cookie-vary member list and invitation success responses",
+    "Remove displayed invite URL after cancellation or observed acceptance; retain on unconfirmed list failure"
+  ],
+  "scope": "All mutation verification uses synthetic HTTP, Prisma and mail stubs. No real customer DB writes or emails. Real browser persistence and multi-tab durable idempotency remain unproven. Full 17-service/2074-criterion goal remains active.",
+  "production": {
+    "status": "deployed-anonymous-passed-private-flow-unproven",
+    "commit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "parent": "6e628ed14cbf24eade634f9543fd847865a247bb",
+    "commitSession": 70159,
+    "commitExitCode": 0,
+    "pushSession": 72983,
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommitBeforePush": true,
+    "ciRun": 37543842675,
+    "ciWatchSession": 33011,
+    "deploymentId": "dpl_ABH4XmmHoEH446VtA83YL1KkaN4C",
+    "deploymentUrl": "doya-qovo6ih6u-surisutas-projects.vercel.app",
+    "deploymentStatus": "READY",
+    "deploymentCommitVerified": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "authenticatedFlow": "unproven",
+    "ciStatus": "completed-success",
+    "ciHeadShaVerified": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "ciWatchExitCode": 0,
+    "anonymousPublicVerification": "org-members-public-3fed1112.json"
+  },
+  "releaseSession": 7586,
+  "releaseStatus": "passed",
+  "lastCheckedAt": "2026-10-06T23:18:36.413069+00:00",
+  "previousGoalTurnClassification": "progress: fixed and synthetically verified shared member management; 36 mounted cases, 10 invite input cases; found AIO/Shodan late invite mutation bugs; prior document CI success verified",
+  "releaseGateHistory": [
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/org-members-release-2ec295a3-4ed3-4ccb-91b4-cde3766d17ca",
+      "session": 49619,
+      "exitCode": 0,
+      "status": "passed-before-additional-cancellation-url-fix",
+      "reason": "Superseded after mounted test reproduced cancelled invite URL remaining visible. Not current release proof."
+    }
+  ],
+  "releaseExitCode": 0,
+  "sourceFreezeFiles": 2631,
+  "sourceFreezeChangedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "anonymousPublicVerification": "org-members-public-3fed1112.json"
+}

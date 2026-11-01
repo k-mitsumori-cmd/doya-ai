@@ -17,6 +17,19 @@ function quota(value: string): { usedSeconds: number; reservedSeconds: number } 
   return { usedSeconds: Number(parsed.usedSeconds), reservedSeconds: Number(parsed.reservedSeconds) }
 }
 
+function dailyQuota(raw: string): { day: string; count: number } {
+  const value: unknown = JSON.parse(raw)
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid interview daily quota')
+  const row = value as Record<string, unknown>
+  if (typeof row.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.day)
+    || !Number.isFinite(Date.parse(row.day + 'T00:00:00Z'))
+    || new Date(row.day + 'T00:00:00Z').toISOString().slice(0, 10) !== row.day
+    || typeof row.count !== 'number' || !Number.isSafeInteger(row.count) || row.count < 0 || row.count > 2_147_483_647) {
+    throw new Error('Invalid interview daily quota')
+  }
+  return { day: row.day, count: row.count }
+}
+
 async function transferDailyBudget(tx: Prisma.TransactionClient, kind: 'article' | 'aux', userId: string, guestId: string, day: string) {
   const guestKey = `interview-${kind}:v1:${hash(`guest:${guestId}`)}`
   const userKey = `interview-${kind}:v1:${hash(`user:${userId}`)}`
@@ -24,12 +37,14 @@ async function transferDailyBudget(tx: Prisma.TransactionClient, kind: 'article'
     SELECT "value" FROM "SystemSetting" WHERE "key" = ${guestKey} FOR UPDATE
   `
   if (!guestRows.length) return
-  const guest = JSON.parse(guestRows[0].value) as { day?: unknown; count?: unknown }
-  if (typeof guest.day !== 'string' || !Number.isSafeInteger(guest.count) || Number(guest.count) < 0) {
-    throw new Error('Invalid interview daily quota')
-  }
+  const guest = dailyQuota(guestRows[0].value)
   if (guest.day !== day || guest.count === 0) return
-  const count = Number(guest.count)
+  const count = guest.count
+  const accountRows = await tx.$queryRaw<Array<{ value: string }>>`
+    SELECT "value" FROM "SystemSetting" WHERE "key" = ${userKey} FOR UPDATE
+  `
+  const account = accountRows.length ? dailyQuota(accountRows[0].value) : null
+  if (account?.day === day && account.count + count > 2_147_483_647) throw new Error('Interview daily quota overflow')
   await tx.$executeRaw`
     INSERT INTO "SystemSetting" ("id", "key", "value")
     VALUES (${randomUUID()}, ${userKey}, jsonb_build_object('day', ${day}, 'count', ${count})::text)

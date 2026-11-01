@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ProposalSlide } from '@/lib/shodan/types'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
@@ -10,7 +10,7 @@ function SlideView({ s, idx, total }: { s: ProposalSlide; idx: number; total: nu
   const isClosing = s.type === 'closing'
   return (
     <div className={`aspect-[16/9] w-full rounded-2xl border overflow-hidden flex flex-col ${
-      isCover || isClosing ? 'bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white border-purple-300' : 'bg-white border-slate-200'
+      isCover || isClosing ? 'bg-gradient-to-br from-brand-500 to-brand-700 text-white border-brand-200' : 'bg-white border-slate-200'
     }`}>
       {isCover || isClosing ? (
         <div className="flex-1 flex flex-col justify-center px-8 sm:px-12">
@@ -26,14 +26,14 @@ function SlideView({ s, idx, total }: { s: ProposalSlide; idx: number; total: nu
       ) : (
         <>
           <div className="px-6 sm:px-9 pt-6 sm:pt-8">
-            <div className="inline-block text-[10px] font-black text-fuchsia-600 bg-fuchsia-50 px-2 py-0.5 rounded-full mb-2">{s.subtitle || 'POINT'}</div>
-            <h2 className="text-xl sm:text-3xl font-black text-slate-900 leading-tight border-b-2 border-purple-100 pb-3">{s.title}</h2>
+            <div className="inline-block text-[10px] font-black text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full mb-2">{s.subtitle || 'POINT'}</div>
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 leading-tight border-b-2 border-brand-50 pb-3">{s.title}</h2>
           </div>
           <div className="flex-1 px-6 sm:px-9 py-4 sm:py-6">
             <ul className="space-y-2.5 sm:space-y-3">
               {(s.bullets || []).map((b, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm sm:text-lg font-bold text-slate-700">
-                  <span className="mt-0.5 grid place-items-center w-6 h-6 shrink-0 rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white text-xs">{i + 1}</span>
+                  <span className="mt-0.5 grid place-items-center w-6 h-6 shrink-0 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white text-xs">{i + 1}</span>
                   {b}
                 </li>
               ))}
@@ -49,11 +49,27 @@ function SlideView({ s, idx, total }: { s: ProposalSlide; idx: number; total: nu
   )
 }
 
-export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[]; fileBase?: string }) {
-  const [i, setI] = useState(0)
+export default function SlideDeck({ slides, fileBase, canExport }: { slides: ProposalSlide[]; fileBase?: string; canExport?: () => boolean }) {
+  // A new document/version owns a new cursor, even across an A -> B -> A change.
+  const currentScope = useRef({ slides, fileBase })
+  if (currentScope.current.slides !== slides || currentScope.current.fileBase !== fileBase) {
+    currentScope.current = { slides, fileBase }
+  }
+  const scope = currentScope.current
+  const [selection, setSelection] = useState({ scope, index: 0 })
+  const i = selection.scope === scope ? Math.min(selection.index, Math.max(0, slides.length - 1)) : 0
+  const select = (index: number | ((previous: number) => number)) => {
+    if (currentScope.current !== scope) return
+    setSelection(previous => {
+      if (currentScope.current !== scope) return previous
+      const cursor = previous.scope === scope ? previous.index : 0
+      const requested = typeof index === 'function' ? index(cursor) : index
+      return { scope, index: Math.max(0, Math.min(slides.length - 1, requested)) }
+    })
+  }
   if (!slides.length) return null
-  const prev = () => setI((v) => Math.max(0, v - 1))
-  const next = () => setI((v) => Math.min(slides.length - 1, v + 1))
+  const prev = () => select(v => v - 1)
+  const next = () => select(v => v + 1)
 
   return (
     <div>
@@ -64,7 +80,7 @@ export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[
           <span className="text-sm font-black text-slate-500">{i + 1} / {slides.length}</span>
           <button onClick={next} disabled={i === slides.length - 1} className="grid place-items-center w-9 h-9 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">{sym('chevron_right', 22)}</button>
         </div>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('print', 16)}印刷 / PDF</button>
+        <button onClick={() => { if (currentScope.current === scope && (!canExport || canExport())) window.print() }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('print', 16)}印刷 / PDF</button>
       </div>
 
       {/* 表示中スライド */}
@@ -73,9 +89,9 @@ export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[
       {/* サムネイル */}
       <div className="shodan-no-print mt-3 flex gap-2 overflow-x-auto pb-1">
         {slides.map((s, idx) => (
-          <button key={idx} onClick={() => setI(idx)}
-            className={`shrink-0 w-28 aspect-[16/9] rounded-lg border-2 text-left p-2 overflow-hidden transition-all ${idx === i ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200 hover:border-purple-300'}`}>
-            <div className="text-[8px] font-black text-purple-500">{idx + 1}</div>
+          <button key={idx} onClick={() => select(idx)}
+            className={`shrink-0 w-28 aspect-[16/9] rounded-lg border-2 text-left p-2 overflow-hidden transition-all ${idx === i ? 'border-brand-400 ring-2 ring-brand-100' : 'border-slate-200 hover:border-brand-200'}`}>
+            <div className="text-[8px] font-black text-brand-400">{idx + 1}</div>
             <div className="text-[9px] font-bold text-slate-600 leading-tight line-clamp-3">{s.title}</div>
           </button>
         ))}

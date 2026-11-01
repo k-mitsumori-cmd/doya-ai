@@ -1,0 +1,46 @@
+{
+  "passed": 8,
+  "results": [
+    {
+      "operation": "delete",
+      "mode": "success",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "403",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "404",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "500",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "network",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "malformed",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "duplicate",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "delete",
+      "mode": "retry",
+      "outcome": "PASS"
+    }
+  ],
+  "scope": "Actual tasks page, shared hook, bounded transport and complete DTO parsers mounted under StrictMode; synthetic auth/API. Replaces old callback mocks that allowed blind retry after unknown writes; all prior response/failure/duplicate/retention modes retained, with read-only recovery and expected versions."
+}

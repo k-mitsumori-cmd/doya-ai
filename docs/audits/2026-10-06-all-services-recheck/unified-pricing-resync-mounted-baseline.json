@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-06T15:00:49.314Z",
+  "sourceSha256": "2cd89b97cdb42bf16e7d3adf753ecf433dcd48933cdfe8c3bbd443e65c688697",
+  "cases": [
+    {
+      "kind": "malformed HTTP 200",
+      "reloads": 1
+    },
+    {
+      "kind": "private diagnostic surfaced",
+      "visible": true
+    },
+    {
+      "kind": "stale actor response",
+      "reloadsAfterActorChanged": 1,
+      "requests": 1
+    }
+  ],
+  "scope": "Actual shared pricing TSX and actual services/plan modules mounted in React18 StrictMode/jsdom; synthetic auth/API/navigation and mocked decorative children only. Reproduced client defects, not real production incidents; no network/payment/customer-data mutation."
+}

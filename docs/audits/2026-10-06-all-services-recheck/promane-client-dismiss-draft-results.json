@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T21:24:23.916Z",
+  "expected": 3,
+  "passed": 3,
+  "cases": [
+    "Unknown-save modal backdrop dismissal followed by missing-operation cancellation restores previous input",
+    "Unsubmitted native typed draft survives backdrop close and reopen without network or localStorage",
+    "Confirmed save clears old draft before the next intentional client creation"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-client-creation.ts": "161ce1a259ce020357773641edf3a6a6b07242a578f2619cc88352eb808b1d29",
+    "src/lib/promane/client-input.ts": "d114edd0fdc3bf16b7a4aa416b7e1cf38bb85d957bba6c4a96a49f0dbcb926f4",
+    "src/lib/promane/format.ts": "8164a0225a24cf3b434e5152bc7df2ea3d8eac17e9e48d1e81b454e211e890d9",
+    "src/components/promane/confirm-dialog.tsx": "05cd204469fb380c69650e89c430d4dd627a828aa1e6e666dc49fd2e96f74c89",
+    "src/components/promane/client-actions.tsx": "92cd09fa940fa78b6607f67e9e1a8859041dc28afbbe01701df9a7f798defc30",
+    "src/components/promane/ui/button.tsx": "88b8543c1ed16d0811bdbf37fb1b5b7fd7cbae1bd8f6a710282ce8c1318ff117",
+    "src/components/promane/ui/input.tsx": "406c012a2e8a86c46816e92b503a15a981d5115d6ad125b48c64b3a734db72ec",
+    "src/components/promane/ui/label.tsx": "2e901f9b1b6d86662d2edd92bb5ad49746dab2973a83c21e6e501e4b2016f78a",
+    "src/components/promane/ui/dialog.tsx": "fe6f5709e38bbe91ac4f1f66d4a23c6f2a27d36846c8463081e7b3d250041103"
+  },
+  "cssHash": "21e5de4261b40bf3c008017ecef21e9ea83b32db4a4171ad1a7798fdf1b2a974",
+  "chrome": "Chrome/155.0.8059.39",
+  "scope": "Actual candidate ClientActions, hook, shared input parser, actual shared dialog/form controls and confirmation modal in native Chrome/actual Web Locks/localStorage. Synthetic local HTTP transport and action responses, mocked navigation/session/icons/images/toasts/class merge. Actual native backdrop click and cancellation; prior draft restored after reopening without private localStorage content. Not real Next action transport, combined PostgreSQL E2E or production."
+}

@@ -82,16 +82,17 @@ export function ServiceCinematicHero({
         </div>
         <div className="doya-atelier-content">
           <div className="doya-atelier-copy">
-            <p className="doya-atelier-eyebrow">
+            {/* 指名検索の受け皿: h1 はサービス名そのもの。キャッチコピーは見た目だけ大見出し */}
+            <h1 className="doya-atelier-eyebrow">
               <span />
               {serviceName}{" "}
               <span className="doya-atelier-en">{config.category}</span>
-            </p>
-            <h1>
+            </h1>
+            <div className="doya-atelier-title">
               {config.title[0]}
               <br />
               <em>{config.title[1]}</em>
-            </h1>
+            </div>
             <p className="doya-atelier-lead">
               <span>{config.lead[0]}</span>
               <span>{config.lead[1]}</span>

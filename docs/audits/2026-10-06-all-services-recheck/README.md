@@ -1,6 +1,84 @@
+## 2026-10-07 追加確認の現在地
+
+- 共通広告ポップアップ対策は `a1395560` をmainへpush済み。実コンポーネント124件、実ブラウザの合成ウィジェット8条件、全体ビルド・型チェック・回帰・lintが合格し、2592ソースのhash一致を確認。React 18の初回サーバー描画で引用符がエスケープされてCSSが無効になる追加問題も修正。CI37524885747と本番dpl_CTU4XVzS4UoyataaN9eZ5dEy7bb2は、この記録時点では実行中・BUILDING。実本番の重なり解消は未確認。`service-popup-repair.json` / `service-popup-browser-results.json`。
+- 直前のCunning一覧・会社情報補修はCI成功、本番READY。匿名17入口・29JS・ゲスト使用状況APIをそれぞれのデプロイ識別子で確認。実ログイン後の会社情報保存・AI分析の通し確認を証明するものではない。`cunning-lists-public-3c4bde84.json` / `cunning-company-public-ae7e3ea7.json`。
+- AIOのブランド設定PUTが、不正JSON・空オブジェクト・型違いを200として受け取り、既存値をnull/空配列へ上書きし得ることを実APIと合成Prismaで再現。入力を保存前に検証し、省略した任意項目を保持する補修候補を実装。API/入力40件と実フォーム7件が合格。全体ビルド・型チェック・回帰・lintも終了コード0、2595ソース不変で合格。本番反映は未確認。本番DBへの試験書き込みは行っていない。`aio-brand-input-baseline.json` / `aio-brand-profile-repair.json`。
+- 商談準備・AIOの通信ヘルパーは、壊れたHTTP 200を空オブジェクトとして成功扱いする問題が残る。実コールバック4箇所で、設定保存成功・質問入力消去・スキャン完了の誤表示を合成再現。`org-client-write-baseline.json`。本番で実際に発生した証拠とは区別する。
+
+全17サービス・2074確認項目の完了は未証明。上記の部分検証を全サービスの不具合ゼロとは扱わず、未修正・未検証項目の調査を続ける。
+
+## 追加補修：営業リストの参考件数（候補・本番未反映）
+
+未変換の入力語を推定APIが無視し、抽出とは異なる条件の件数を表示する問題を補修。入力語/選択タグの区切りと最初の3語、業界の代替語を実抽出APIと共通化し、両APIの6合成ケースで一致を確認。不正な小数/負数/文字列真偽/オブジェクト文言を拒否し、35秒/64KiBで読取を制限。利用者/検索条件/ABAの古い応答を排除し、未確認は0件とせず、内部設定情報を利用者に出さない。「実際は○社程度」と取得数を約束する文言も修正。実画面44項目、既存の同時上限/一覧保持回帰、型チェック/対象lintは合格（既存img警告7、エラー0）。全体ゲート79601672はビルド/回帰/型チェック/lintすべて終了コード0、2582ソース不変で通過。現在の全hash一致も確認。1153efc1をmainへpush済み。CI37517219878はqueued、本番doya-dzbx1564lはBUILDINGで、READY/公開反映は未確認。実顧客DB/有料APIの試行ではありません。
+
+全サービスの巡回でドヤスライド/ドヤカンニングの実レイアウトにも、別利用者へ切り替えた時の子画面状態保持と旧プランの一時表示、同じ利用者オブジェクト更新の余分な再読取、focus/経路での確認欠落を合成再現。`slide-cunning-layout-baseline.json`。実顧客流出の確認ではなく、次の補修対象として残しています。17サービス/2074行の完了には達していません。
+
+## 追加補修：AIキーワード変換（候補）
+
+同時押下/Enterの二重送信、入力変更/業界変更/ABAで古いタグが上書きする問題を補修。同期的に操作を確保し、利用者・入力条件を確認してからタグを反映する。成功フラグ、1〜8個/各20文字以内の非空文字列を確認し、重複タグを整理。不正/空/エラー/サイズ超過を成功扱いせず、同じ条件の既存タグは保持。APIの60秒を妨げない65秒の本文込み期限と64KiB上限を追加。実画面27項目と既存の企業収集callback21項目が通過し、型チェック/対象lintも合格（既存img警告7、エラー0）。全体ゲート2b3bcd89はビルド/回帰/型チェック/lintすべて終了コード0、2579ソース不変で通過。現在の全hash一致も確認。70e12d8fをmainへpush済み。CI37516457064はqueued、本番デプロイdoya-pjrkkz2n1はBUILDINGで、READY/公開反映は未確認。実有料API/実保存/スマホ操作は未実施。
+
+先行5ee64c4fはCI成功・本番READY・営業文3画面/20公開JSで修正の反映を確認。`doyalist-tool-public-5ee64c4f.json`。企業収集be94f76dのCIは成功、本番ビルドは個別追跡中。追加巡回で推定件数が未変換のキーワードを無視すること、不正な数/真偽型を受け入れること、ブラウザ期限がないことを実画面の合成実行で再現（doyalist-estimate-client-baseline.json）。次の補修対象として残し、全17サービスの完了とはしません。
+
+## 追加補修：企業収集画面（候補・本番未反映）
+
+営業リストの枠拒否で旧一覧が消える、使用状況503でも作成を開始する、同じターンに作成と収集を二重送信する、不正応答を成功扱いする問題を補修。新一覧を確認できるまで旧一覧と保存先を保持し、サーバー利用枠の整合性を確認できない場合は書き込みを開始しない。アカウント切替後の遅い応答を排除し、タイムアウトは未保存と断定せず履歴確認を案内する。実callback/readerの21項目と、実画面/Session/StrictModeの8項目が合格。型チェック成功、対象lintはエラー0・既存img警告7。全体ビルド/回帰/型チェック/lintは終了コード0、2578ソース不変で合格。現在の全hash一致も確認。企業収集補修be94f76dをmainへpush済み。CI37515723316と本番ビルドは進行中で、READY/公開反映は未確認。`doyalist-collect-repair.json` と current 2件を参照。実生成・実保存・スマホQAは未実施。キーワード変換/推定件数の残りの処理は別途監査を継続する。追加の実callback合成検証でキーワード変換の同一ターン2送信、古い語の応答による新しいタグ上書き、型不正/空応答の成功扱い、例外文の露出を再現（doyalist-keyword-client-baseline.json）。未補修として残している。
+
+先行の営業文補修 `5ee64c4f` は検証済み2575ソースのhash一致を再確認してmainへpush済み。CI `37514661386` は成功。本番デプロイ `dpl_5vabnakeoRXdMUNTKNPrftwQF4tC` を追跡中。READY/公開反映を未確認のまま完了とはしない。全17サービス/2074行の一括完了ではありません。
+
 # 全サービスの現在版再確認（2026-10-06）
 
 31定義・公開17サービスを対象とする。82共通項目と40利用者観点の項目を17サービスへ展開した2074行の台帳は、項目別の完了証拠が揃うまで合格にしない。過去の修正・自動検証結果は現在版の全操作成功を代替しない。
+
+## 最新の追加補修：ドヤリスト営業文
+
+ToolFormの無料上限後PRO更新で生成を再開できない問題、空/不正応答の成功扱い、同時連打2要求、失敗時の旧結果消失を再現して補修。利用枠は認証/利用者/プラン/経路/ツール種別ごとに35秒・64KiBの実readerで確認し、未確認では生成を止め再取得を案内。生成完了と既存の利用枠読取が重なる場合は新しい読取を1回予約し、古い残数を確定させない。生成は310秒/64KiBの本文期限、同期refでの重複防止、成功/文章/履歴状態の検証、利用者やツール切替での取消を実装。前の文章は成功確定まで保持し、通信不明では履歴確認を案内。ブラウザ取消はサーバーの生成取消・利用枠返却を保証せず、複数端末や通信不明後の再実行をサーバー冪等処理で重複排除する証明ではありません。
+
+APIは生成文10,000文字に対して履歴8,000文字だけ保存しながらsavedToHistory=trueを返す問題と、サービス内容が空でも処理する問題を合成APIで再現。DBのbodyは既存Text型のため移行せず、生成文と同じ全文を保存する。共通の最大20,000文字を超える出力や不正出力は保存前に502とし、当該月の予約を返す。最大20,000日本語文字がJSON64KiB以内であることと、通常/長文/境界/保存失敗/生成失敗/上限/未認証/空入力/互換入力を13項目で検証。実DBや有料生成の確認ではありません。
+
+未ログインの営業文画面はサーバー側でToolForm自体を描画することを確認。新規候補の「利用枠を確認しています」が未ログインのまま残る問題も実画面で検出し、form/email/phoneのそれぞれに安全な戻り先付きログイン導線を追加。画面37項目、API13項目、既存の同時月枠・失敗返却・履歴削除での枠復活防止回帰と型チェックは合格。途中の2573/2575ソースゲートも通過。その後に候補の未ログイン表示と結果ABAを追加検出し、再度補修。最終ゲート06ce7ea5は全体ビルド/回帰/型チェック/lintが終了コード0、2575ソース不変で通過し、現在のソースとの全hash一致も確認。アカウント切替後の入力と結果は分離し、同一アカウント更新/最初の認証解決では入力を保持する。main/CI/本番READYは別途追跡。`doyalist-tool-mounted-current.json` / `doyalist-tool-api-current.json` / 各baselineを参照。
+
+先行4fa6d261は本番READY、公開HR/勤怠2ページ/27JSで補修コードを確認（org-layout-public-4fa6d261.json）。先行5c9b1512もCI成功・本番READYですが、DoyalistLayoutは認証後のサーバー分岐でしか描画しないため、匿名公開検証はnot-proven（doyalist-layout-public-5c9b1512.json）。実認証後の通し操作は未確認です。
+
+追加巡回では営業リスト作成の実callbackで、枠拒否時の旧リスト消失、使用状況503でもプロジェクト作成、malformed企業本文の成功扱い、同一ターンでプロジェクト/収集を各2要求することを合成実行で再現。`doyalist-collect-client-baseline.json`。次の補修対象として残し、全17サービス/2074台帳の完了とは判断しません。
+
+## 最新の追加確認：ドヤリストの認証更新
+
+実レイアウトの下書き消失/旧利用者PRO表示を補修し、実reader・Context・StrictModeで13項目を確認。入力を同じ利用者のSDK更新で保持し、別利用者では画面を作り直す。確認前のプランは未確認表示にして、利用者/プラン/経路単位の取消とfocus再確認、35秒/64KiB上限を設ける。既存料金/使用数回帰と型チェック通過。全体ビルド・回帰・型チェック・lintは終了コード0、2570ソース不変。main反映とCI/本番READYは別途追跡。`doyalist-layout-mounted-current.json`。
+
+営業文のToolFormでは、無料上限到達後に同じ利用者がPROへ更新され、合成サーバー残数が500になっても生成ボタンが無効のままになる問題を追加再現。`doyalist-tool-plan-refresh-baseline.json`。初回だけの使用状況取得と、残数更新の欠落が次の補修対象。課金・生成・通知の実行は行っていません。
+
+## 最新の追加確認：HR・勤怠の下書き保持
+
+HR・勤怠の実レイアウトでセッション更新時に下書きが消える問題を補修。利用者の切り替え/ABA/遅延応答を分離し、同じ利用者の認証更新は入力を保持して一時的に隠す。通信失敗時は保持した画面を操作不可にして再取得を案内。本文を含む35秒・64KiBの読取上限と管理権限の型を確認。26項目と既存の無効従業員/権限/入力ロック回帰が通過。全体ビルド・型チェック・回帰・lintは終了コード0、2569ソース不変。`org-layout-repair.json` / `org-layout-mounted-current.json`。本番反映はこの節の記録時点では未実施です。
+
+追加監査ではドヤリストのSDK更新時の下書き消失と、別利用者へ切り替えた直後の旧PRO表示を実レイアウトで再現。`doyalist-layout-session-baseline.json`。次の補修対象であり、全サービスの完了には達していません。
+
+インタビュー修正版798212dfはCI成功・本番READY、公開2ページ/26JSで予約分表示と応答readerの公開を確認。`deployment-state-798212df.json` / `interview-sidebar-public-798212df.json`。ce708c99も本番READYですが、SEOの認証後レイアウトは匿名応答に含まれず、この読み取りでは公開コード確認を代替しません。最初の公開検証は存在しない`/interview/dashboard`の選択で404となり、実在する経路へ修正後に確認したもので、利用者のサービス障害とは判断しません。
+
+## 追加点検：AIO・商談準備の操作応答（2026-10-07 JST）
+
+2サービスの実呼出し37箇所（読み取り20／書き込み17）、書き込み16種の応答契約を照合。実際の保存・プロンプト追加・スキャン処理が、不正JSONのHTTP200を成功扱いする反例を得たため、共通readerと操作別の確認条件を追加しました。送信内容はJSON化時点のスナップショットと照合し、未確認の書き込みを自動再送しません。読み取り30秒／書き込み310秒はbody読取も含み、実サイズ8MiBで停止します。既存の上限到達・組織オーナー向け導線は維持します。
+
+`org-client-response-results.json`：191項目、`org-client-route-results.json`：実APIと実helperの12項目、`org-client-callback-results.json`：実画面から抽出した処理12項目。ネットワーク・DB・生成・メールは合成です。全体の回帰・型チェック・ビルド・lintが終了コード0、2601ソースのハッシュ不変を再確認。`7775aa52`をmainへpush済みです。CIと本番ビルドは進行中で、この補修の本番反映はまだ確認していません。詳細は `org-client-response-repair.json`。
+
+商談準備でも取得503後に空の編集画面から既存設定を空で上書きできる経路を実画面・実helper・実PUTと合成DBで再現しています（`shodan-settings-load-failure-baseline.json`）。次の補修対象は `org-settings-next-repair.md`。AIOの「保存中に編集した新しい下書きへ古い保存済み表示が付く」反例も、別途残っています（`aio-brand-profile-stale-save-baseline.json`）。この通信修正だけで解決済みとは扱いません。利用者／組織切り替え・重複操作・未確認操作後の再実行制御、全17サービスの認証後の実業務なども引き続き点検対象です。
+
+## 現在の確認範囲（2026-10-07 JST）
+
+この文書の各節は作業時点の記録です。過去節の「未反映」「ゲート中」を現在の状態に読み替えず、次のコミット別記録を参照してください。2074行の台帳を一括合格にはしていません。
+
+- `31c684bb`：登録判定を実際のアカウント作成時刻に変更し、最初の処理を原子的に確保。CI成功・本番READY・17ページ/53公開JSの反映を確認済み。`registration-repair.json` / `registration-deployment-tracking-31c684bb.json` / `registration-public-31c684bb.json`。検証専用PostgreSQLの同時要求は本番DBや実通知配信の確認ではありません。
+- `cfa92165`：4バナー画面の共有上限判定を利用者切り替え・通信停止に対応。実フック13項目と応答読取10項目、全体ゲートが通過。CI成功・本番READY・4ページ/33公開JSを確認済み。`banner-quota-client-repair.json` / `banner-quota-client-deployment-tracking-cfa92165.json`。
+- `de81037a` / `74cb5e58`：共通上限案内の古い状態が復活する問題と、Content-Lengthに依存した無制限のJSON解析を補修。38項目/12項目と全体ゲートが通過しmainへpush済み。`74cb5e58`のCI成功・本番READY・17ページ/53公開JSの反映を確認済みです。`service-limit-provider-repair.json` / `service-limit-observer-repair.json` / `service-limit-observer-deployment-tracking-74cb5e58.json`。
+- バナーのプラン画面の統計：ログイン済み利用者の切り替えで以前の枚数が残る問題を実画面で再現し、統計だけを利用者・プラン単位に分離。12項目の画面検証と、既存の課金管理72項目・再同期43項目が通過。全体ゲートも通過しソース変化なし。`5a2ad81a`の本番READYとプラン画面の27公開JSを確認済みです。`banner-plan-stats-public-5a2ad81a.json`。`banner-plan-stats-baseline.json` / `banner-plan-stats-current.json` / `banner-plan-stats-repair.json`。
+
+- `c5257709` / `266c7368`：共通使用状況の利用者分離・不正応答対策と、バナーの使用数更新通知を補修。いずれもCI成功・本番READY。後者の公開4画面/32JSで、前者を含むコードと通知が本番にあることを確認。`banner-sidebar-public-266c7368.json`。
+- `8dfe4ece`：ペルソナ利用枠を認証・利用者・プラン・更新単位に分離し、予約枠/残りの整合性と通信上限を検証。11項目と実サイドバー連携、全体ゲート通過・main反映・CI成功。本番READYと公開2画面/23JSを確認済みです。`persona-usage-public-8dfe4ece.json` / `persona-usage-repair.json`。
+- 共通サイドバー9サービス：経路遷移後とSEO/バナー個別プラン変更時の残数更新を29項目で確認。SEOの古い二重取得を廃止し、「PROで生成し放題」を月30回の正しい案内に修正。実SEOサイドバー/共通パネル/React Contextを組み合わせた6項目と全体ゲートが通過。`sidebar-route-repair.json`。本番反映はこの節の記録時点では未確認です。
+- インタビューの文字起こしサイドバー：2分使用・28分予約・上限30分の合成応答で「残り28分」を表示する問題を実表示で再現し修正。予約を含む残り枠、認証/利用者/プラン/経路の分離、応答の時間/容量制限、未確認時の再取得、PROの相談導線を14項目で検証。全体ゲート通過。`interview-usage-repair.json`。本番反映は未確認、同一画面の完了通知は追加点検が必要です。
+- 次の未修正事項：HR・勤怠のレイアウトが同じ利用者のセッションオブジェクト更新で子画面を再マウントし、合成入力の下書きを失うことを実React Contextで再現。`hr-layout-session-refresh-baseline.json` / `kintai-layout-session-refresh-baseline.json`。顧客データでの発生確認ではありません。
+
+これらは主に実コードと合成認証・応答を用いた検証です。全17サービスの認証後の実業務、実機、外部認証完了、実課金、実AI生成を確認済みとするものではありません。CLIENT_FETCH_ERRORの原因・復旧、本番DBの全制約照合など、残る要件の監査を続けます。
 
 ## 今回の公開画面検証
 
@@ -531,3 +609,138 @@ probe-interview-create-response.cjs は実page callbackを合成fetchで実行�
 再実行 runId bd2618df-5ccb-4e14-9d95-5e8b08a4f114 / session32312 は終了コード0、changedSources空で完了。空き容量3.2GiBへの回復を確認後、同じ8sourceでPrisma生成→全体回帰→tsc→Nextの完全ゲートを実行。初回失敗証拠を保持し、合格記録はpersona-image-response-build.json/logへ分離。現在source8個のSHA256も合格時と一致。本番はmainへのpush後、同一commitのCIとデプロイを別途確認する。
 
 ドヤスライド親行ロックcohort26db0fbaはCI37417526314成功、Vercel dpl_229kBJfYCmrVrzkVfZyWS5LHofhU READY・本番alias割当を確認。匿名GET /persona /interview /doyaslideはHTTP200。これらは実認証・実画像生成・ブラウザレイアウトの証明ではない。deployment/public-smokeの対応JSONに状態を保存。
+
+
+### Slide/Cunning actor and plan lifecycle candidate
+
+Actual layout StrictMode cases: 33 passed. Actual usage GET guest/auth/failure cache isolation cases: 6 passed. Typecheck passed; targeted lint 0 errors, one pre-existing img warning. Full gate running; not committed/deployed. React18 inert uses the DOM property; the fixture reflects inert and asserts hidden/inert restoration. Evidence: slide-cunning-layout-repair.json.
+
+Additional confirmed unfixed child-flow issue: actual Slide Wizard refreshUsage accepts six malformed quota/plan/error-success responses and clears the previous upper-limit warning (slide-wizard-usage-baseline.json). This does not demonstrate server quota bypass or actual customer impact. All 17 services / 2074 rows remain the full audit scope; private business flow coverage remains incomplete.
+
+Cunning Tool start baseline: actual callback sends two same-frame requests, navigates to /cunning/live/undefined for HTTP200 with session {}, and displays a raw synthetic server error on HTTP500. Confirmed-unfixed evidence: cunning-start-baseline.json. This establishes client defects; duplicate DB rows/billing and actual customer impact remain unproven. Sources stay frozen while the layout release gate runs.
+
+
+### Slide Wizard strict usage metadata and synchronous creation guard
+
+Candidate validates canonical matching plan/tier, safe nonnegative integer usage and quota (-1 only as unlimited sentinel), and rejects error/code in a success body. Reads are bounded at 35 seconds / 64KiB, scoped to auth/actor/plan epochs, coalesced and cancelled on teardown. Missing/invalid quota disables new creation, retains user input and prior upper-limit explanation, and exposes recovery/login actions. Confirmed-project recovery remains separate. Actual mounted Wizard with real Session context/constants/reader passes 24 cases; legacy wizard recovery and project quota atomic regressions pass. No actual production writes, uploads or AI calls were made.
+
+Intermediate full gate 5a4eac0d passed with frozen sources but was intentionally not released: an added retained-handler probe reproduced one synthetic project request after latest exhausted quota. Added usageCanCreateRef synchronously invalidates permission before lookup and on server denial; retained-handler cases now pass. Final fresh gate e88aa5e0 is running via session62142. Do not push until terminal PASS and manifest verification. Source candidate not yet committed/deployed. Cunning start baseline remains unfixed and is next; full 17-service / 2074-row scope remains incomplete.
+
+Final Slide Wizard gate e88aa5e0 completed exit0 for full security, tsc, Next build and lint; changedSources empty; all 2586 source hashes verified before commit. No source from the skipped intermediate gate is published separately.
+
+
+### Cunning start safety and quota refresh
+
+Actual full Tool mounted 27 synthetic cases pass: synchronous duplicate lock, strict owned session ID/mode acknowledgment, auth/ABA/unmount cancellation, bounded 35s/64KiB creation/usage reads, unknown-outcome history recovery without automatic resend, confirmed-session recovery after navigation failure, sanitized quota/login/input denials. Quota refresh keeps draft and selected profiles. Full gate 3f78467a passed build/security/tsc/Next and lint with 2587 unchanged sources. This cohort does not provide durable server-side creation idempotency across reload/tabs. Recording time is independently controlled by server leases.
+
+Next confirmed issues: cunning-list-read-baseline.json proves unbounded knowledge list reads and raw network error assignment in profile/company load. slide-browser-guest-widget-overlap.json records an actual anonymous 1280x720 browser observation: a HubSpot consultation popup overlaps 9048 square pixels of the 300x52 create CTA (about 58 percent). Guest creation remains correctly disabled. Authenticated/mobile overlap remains unverified. No ad clicks, login, uploads or paid AI tests occurred. Existing anonymous style previews only return cache.
+
+Layout a748323a CI success and Vercel READY confirmed. Anonymous publication proof checks all 17 entries, 29 assets and 2 guest usage APIs, including private no-store and Cookie Vary. Initial proof parser lost duplicate Vary headers; combined all header values and reran successfully. This was a verifier issue, not a server cache defect. Authenticated wrapper/business flows remain unproven. Wizard 91f7b025 is pushed; CI/deployment pending in its tracking JSON. Full 17 services / 2074 criteria remain incomplete.
+
+
+### 組織設定の取得失敗・保存競合・下書き保護（候補、全体検証中）
+
+AIO/商談準備の初回取得失敗では編集を開かず、再試行を用意。利用者・組織・要求世代が変わると旧応答を破棄し、同じ利用者のセッション更新では下書きを保持する。保存中の追加入力を保存済みと表示せず、結果不明・409では入力を保持して保存済みの全項目を確認してから手動で再保存する。新UIは既存updatedAtによる条件更新を使う。ロゴ削除・抽出結果の適用直後の同一フレーム保存が旧値を送る2件も合成実画面で再現し、同期下書き更新へ補修した。
+
+実画面52件、実PUT/バージョン・競合48件合格。12レイアウトケースは合成状態HTMLのブラウザ確認で、認証済み本番書込の証明ではない。全体ゲート1125efdaを実行中。旧クライアントのバージョン省略PUTは互換維持のため条件更新対象外。実Postgres競合、権限剥奪との競合、実顧客操作、全17サービス2074項目の完了は未証明。根拠はorg-settings-repair.json。
+
+次巡の未補修: 商談準備の新規作成run実callbackと実通信helperで、同一フレームの2操作が2件のPOSTを送ることを合成未解決通信で確認（shodan-new-duplicate-baseline.json / probe-shodan-new-duplicate.cjs）。実生成、DB作成、重複課金は確認していない。設定cohortの固定ソースを変えず、次の補修対象とする。
+
+次巡の未補修: 商談準備のPOST応答researchがcompanyNameのみでも実helperが受理し、実findingsFrom表示関数がTypeErrorになることを確認（shodan-research-shape-baseline.json）。応答検証の全業務形状と、新規作成の連打・利用者/組織世代・取消・不明結果回復・利用枠の更新をまとめて次巡で補修する。現在の固定ゲートには含めない。
+
+次巡の未補修: 見積もりcreateDocument実callbackがHTTP200空オブジェクトを受けて/quote/documents/undefinedへ遷移し、同一フレーム2操作で2件POSTすることを合成通信で確認（quote-create-ack-baseline.json）。実見積もり作成や重複課金の証拠ではない。設定cohort後に応答・入力・利用者/組織・重複・不明結果回復を補修する。
+
+設定cohortの最終ゲート1125efdaはexec session64838が終了コード0。全体回帰・tsc・Next本番ビルド・lintが成功、2606ファイル全SHA256一致、changedSources空を確認。本番状態はorg-settings-repair.jsonのcommit/CI/productionを別途確認する。
+
+
+### 商談準備の新規作成補修候補（全体ゲート中）
+
+新規作成の同期連打ロック、利用者/組織世代・取消、不明結果の停止と履歴回復、確認済み結果への直接導線、遷移タイマー取消、調査応答の必要項目検証を導入。現在の操作から利用枠を更新し、外国組織/別利用者のイベントは無視する。上限拒否では同期的に再送を止め、無効ボタンの文言・半透明表示を整える。ブラウザ確認で見つかった停止中の待機文言を直し、初回ゲート24645642を終了143で取り消してから修正。最終固定ゲートb1953112を実行中。
+
+実新規作成画面32件、実応答/実API組合せ26件、共通サイドバー30件、既存通信契約191件、設定52件合格。PC1280/スマホ390幅の合成6状態12ケースは横あふれなし。実認証・本番生成・DB・複数タブの永久冪等性は未証明。全17サービス2074項目の完了とは扱わない。根拠はshodan-new-repair.json。
+
+見積もりの追加未補修: 実createDocument callbackと実OrgSwitcher/withOrgで、旧alpha組織の合成下書きが端末選択をbetaへ変えた後betaのAPIへ送信されることを確認（quote-create-org-baseline.json）。実DBへの誤保存/顧客影響は未確認。見積もりの補修では、重複・応答だけでなく表示中の確認済み組織と送信先の固定、組織/利用者切替時の破棄、ABA・別タブを含める。
+
+商談準備最終ゲートb1953112/session59912は終了0、全体回帰・tsc・Next本番ビルド・lint合格。2610全ファイルSHA256一致、変更源空。Next現行route matcher→実server layoutの合成2ケースでも二重デコードの排除を確認した。前回設定afd0bc77のCI37529749862は成功、VercelのREADYは別確認。見積もりの不正応答/組織切替のbaselineは引き続き未補修。
+
+### 追加のサーバー保存経路の補修
+
+実際の商談準備POSTを使った合成試験で、不正な企業調査のcompanyNameがオブジェクトでもresearchedとして保存されることを確認。クライアントの拒否だけでは月次枠の確定を防げないため、保存前に共通構造検証を追加した。失敗時は既存のfailed経路に移行し、成功結果・対象企業名を保存しない。過去の合格ゲートは無効化し、再実行中。提供元の呼び出し後の検証のため、提供元の実費が発生しないという意味ではない。実DB・本番生成の確認は未実施。
+
+調査エンジンが返す埋め込みOG画像を原因として企業情報全体が失敗する反例も合成HTMLで再現し、HTTP(S)画像以外・認証情報付き画像は画像のみ省略するよう補修。実際の調査エンジン→構造検証→POST保存まで6パターンを確認し、検証は計67件。またAPI側も認証情報付き・8192文字超のURLを予約・調査前に400で拒否。追加変更ごとに実行中ゲートを終了確認し、最終候補を再検証中。
+
+見積もりの組織切替は実際のQuoteToolとOrgSwitcherをStrictModeでマウントし、合成APIでalphaからbetaに切り替えてもalphaの宛先・明細が残ることを再現（quote-org-mounted-baseline.json）。AST抽出の書込経路の反例と合わせ、画面全体で入力の所属先を固定・切替時に破棄する補修が必要。実顧客・本番DB書込の発生を確認したという意味ではない。
+
+### 見積もりの組織・利用者スコープ補修（候補）
+
+QuoteToolの全ダッシュボード要求を確認済み利用者・組織と世代に束縛し、切替時の入力破棄、旧操作・旧応答の拒否、要求取消を追加。作成結果不明では入力を保持し重複再送を止める。実context18件、実画面7件、既存組織/商材復旧2件、既存共通契約191件、型チェック、対象lint、全体security回帰が合格。ただし上限/認証拒否後の古い操作、操作中の編集/行削除と全応答契約、詳細/設定、全体buildと本番通しなどは残るため、未コミット・未反映の補修候補。quote-workspace-repair.jsonを参照。
+
+商談準備45d947c3のCI成功・Vercel READYを確認。shodan-new-public-45d947c3.jsonで17公開入口・29配信ファイル・2ゲストusageを確認した。実認証商談作成・顧客DB・有料調査の本番通しを完了したという意味ではない。見積もりの追加補修はcontext19件・実画面17件・応答形状と実エンジン26件を確認し、型・対象lint合格。直前の全体security合格は追加補修前の履歴に移し、新しい全体回帰は未完了とした。
+
+見積もりの追加検証：AI入力中の単価777→遅い応答999による上書きを合成コンポーネントで再現し、補修候補で解消。削除した対象への応答、前方行削除による位置変更、既存手入力単価・出所、候補再生成中の編集保持を追加し実コンポーネント22ケース通過。型チェック・対象Lint通過。直前の全回帰session13648は終了0だが、この追加修正を含まないため最新全回帰を別に実行する。本番未反映、全17サービス2074項目と実認証通し確認は継続。
+
+見積もり追加補修：直前全回帰5404は終了0。入力直後の単価1234が旧100で送られる事象を再現し、要求開始時の同期スナップショットへ修正。宛先・URL・商材名・組織名も検証。遅い解析応答と保存完了が後続入力を消さない契約、作成待機中の編集を保持して確認済み作成リンクと明示的な別見積書作成へ進む契約を追加。実コンポーネント27ケース、コンテキスト19、応答形状／実エンジン26、既存書込回復・価格出所通過。最新全回帰を別に実行。本番未反映、Sidebarと子画面等の未完事項は継続。
+
+見積もりサイドバー：実コンポーネントで組織betaへ変更してもalphaの利用枠が残る事象を再現。所属確認後の明示org指定、同一タブ／別タブ・認証・利用者変更、遅い応答破棄、同一利用者＋組織の作成通知、focusでの読込失敗回復を補修候補へ追加。実Sidebar12ケース、組織応答21ケース、共通Sidebar32ケース、実Tool27ケース通過。型チェックと対象Lint終了0。直前全回帰69839は終了0だがSidebar追加前のため最新全回帰とは扱わない。最新全回帰とbuild/source-freeze、残る子画面・応答契約、本番反映は継続。全17サービス2074項目の完了は未確認。
+
+商材登録の上限：実ToolでメンバーにcanManageBilling=falseでもpricingが表示される矛盾応答を再現し、権限チェック・上限後同期停止・入力保持へ補修。認証再確認後の上限保持、owner→member変更後の導線非表示、課金権限不明時の抑制、402/429の適切な案内、別URL解析後の上限案内保持を含む実Tool33ケース通過。型チェック10365・対象Lint66160終了0。実Sidebar12、組織応答21と書込回復も通過。本番未反映。最新全回帰／build／source-freezeとAPIの黙示的切り詰め・保存後一覧失敗などの追加点検を継続し、全17サービス2074項目の完了は主張しない。
+
+保存入力・応答：実products APIでURLの500文字切り詰めを再現。2048文字以内のHTTP(S) URL完全保存、名前・プロフィール・組織／担当者名の超過を保存前400とする候補を追加。認証情報付き／正規化後超過URLは解析前に拒否。商材idだけで成功扱いせず、名称・URL・既知プロフィールの送信内容一致を確認。実Tool35ケース、応答形状32ケース、商材登録8グループ、一覧ページング／AI入力・既存書込回復通過。確認済み商材保存後の一覧失敗・読込回復・認証再確認でも保存済み表示と再送防止を検証。最新コードの全回帰・型・Next build・全Lintをsource-freeze付きで実行。未コミット・本番未反映、全17サービスの完了は未確認。
+
+直前release gate 8d20daacは全回帰・型・Next build・全Lint終了0、2618ソース不変で通過。ただし追加実API検証でHTTPS://example.invalidがhttps://https//example.invalidへ誤変換される問題を再現したため反映を保留して補修。大文字HTTP(S)・httpで始まるスキームなしホスト名を正しく解析し、明示的FTP/fileは解析前拒否する回帰を追加し通過。更新ソースの新しいrelease gateを開始。前回passを最新ソースのpassとは扱わない。本番未反映、全サービス目標は継続。
+
+最新release gate 58edbed0は全回帰・型・Next本番build・全Lintすべて終了0、2618ソース差分0で通過し、コミット直前にも全ハッシュ一致を再確認。今回の見積もりダッシュボード／保存API／サイドバーと共通限定変更を本番反映の対象にする。実認証・実AI／顧客DBの通し、見積もり子画面等と全17サービス2074項目の最終完了は未確認で、目標は継続。
+
+発行者設定の追加補修候補（2026-10-06T22:22:28.022406+00:00）: `quote-issuer-settings-repair.json`。実Settings/フック/輸送の合成回帰20件、API8群、型・限定lint通過。全体ゲート実行中・本番未反映。実MemberPanelを含めた別回帰で旧組織の招待ハンドラーが新組織へPOSTする問題を再現し、`quote-members-scope-baseline.json`へ記録。実招待・メール・顧客DB操作なし。全17サービスの完了ではない。
+
+詳細ページ競合の追加再現（2026-10-06T22:24:01.028955+00:00）: `quote-document-route-baseline.json`。実QuoteDocumentPageの合成回帰で、route two の遅延応答が route three の表示を置き換え、保存先 three へ two の宛先が送られることを確認。優先補修対象。実顧客の文書・DBは操作していない。発行者設定の候補回帰は読み込み失敗・復旧を追加し28件に拡大。
+
+Quote 3cd26ce7: CI 37539084448 success; deployment dpl_8m7Ass7nAsqopgLVbEMifzZiHEHJ READY. quote-workspace-public-3cd26ce7.json verifies 17 anonymous entries, 35 JS assets and guest usage private caching. Actual private workflows remain unproven. Issuer settings changes are a separate unreleased candidate.
+
+Quote issuer a91db425: 2622 source hashes and passed build/lint gate reverified; pushed HEAD to main. CI 37540664661 and deployment dpl_DjvpAn8sEcAQAfJcb4UPjtyZdgtp tracked separately. Quote document detail candidate: actual mounted 46 cases, response contract 7 groups, route data-loss reproduction prevented. Full gate session 33714 live; quote-document-detail-repair.json records limits and remaining member operations. No full-service completion claim.
+
+Quote document candidate extended to 48 mounted cases: explicit rendering after ref changes, preservation of newer draft through confirmed-to-draft status-only changes and read recovery. These were candidate bugs found before publication, not verified production incidents. First document gate 33714 predates these source edits and is superseded; a new full gate is required after it terminates. Issuer CI 37540664661 completed successfully for a91db425; production READY/public proof still tracked separately.
+
+## 共通メンバー管理の追加補修（候補・本番未反映）
+
+Quote/AI商談の実設定画面とMemberPanelで、組織・認証更新後の古い操作と応答、同一ターンの二重操作、通信不明からの読取復旧を合成検証。両サービス計40件が合格。発行者読込による子コンポーネント破棄で招待の未確認状態が失われる問題、認証中断時の送信中表示の残留、招待成功後の一覧読込失敗でURLが隠れる問題も補修候補に含む。招待APIは非文字列・長すぎるメールをトランザクション前に拒否し、10件を合成APIで確認。全体回帰・型チェック・ビルド・lintはorg-members-current-gate.txtのプロセスで実行中。本番反映・実DB保存・実メール・複数端末の冪等性は未確認。台帳6行へ部分証拠だけ追記し、全2074項目の完了とは扱わない。
+
+AIO/商談準備の実AppLayout・メンバー画面・通信ヘルパーでは、前組織の招待完了後に現在入力が消え、前組織の一覧が表示されることを合成パラメータ遷移で再現（other-members-late-invite-baseline.json）。Nextルーターの実際のセグメント再利用を証明する検証とは区別する。次の補修対象として残す。
+
+## 最新の補修と再巡回
+
+共通MemberPanelの補修は3fed1112をmainへpush済み。追加の取消・参加済みURL処理を含む40画面ケースと入力10ケースが合格し、全体回帰・型チェック・ビルド・lintも2631ソース不変で合格。CI37543842675と本番dpl_ABH4XmmHoEH446VtA83YL1KkaN4Cは別途追跡中。先行する見積書詳細6e628ed1はCI成功・本番READY、匿名17入口・36JSとゲスト使用状況を確認済み。実認証後の見積書保存・PDFや本番DB永続化の確認とは区別する。
+
+AIO/商談準備のメンバー管理も補修候補を実装。実AppLayout・実画面・既存の認証/組織ガード・厳格な応答確認・本文期限付き通信を組み合わせた48画面ケースが合格。取消/参加済みURL、認証更新後の未確認状態、自己/同格の削除抑止、前組織・離脱後の遅延応答を含む。GET/POSTの実APIを合成Prisma/token/mailで実行して応答確認モジュールとの一致を検証。既存の実APIメンバー更新/削除競合テストも維持し、AIO/商談準備の削除対象IDを確認する条件を追加。型チェックと対象lintも合格。現在はaio-shodan-members-current-gate.txtの全体ゲート実行中、本番未反映。追加の台帳6行は部分証拠にとどめる。
+
+
+2026-10-07追加点検: AIO/Shodanメンバー補修6bd0adb1はmainへpush済み、本番READYと認証後動作の証明は別途確認。前版3fed1112はREADY・匿名17入口/37JS確認済み。Shodan SlideDeckの資料枚数減少時クラッシュを実コンポーネントで再現・補修し、全体ゲート（2636ソース不変）に合格。詳細画面では組織切替/離脱後の再生成応答・同時再送・HTTP500誤表示の未修正4件を合成検証で確認。shodan-detail-lifecycle-repair.jsonとshodan-slide-deck-repair.json参照。17サービス/2074項目の全体完了・過去本番障害の解消は未証明。
+
+
+2026-10-07詳細画面追加補修: shodan-detail-lifecycle-repair.json。認証/組織/案件/保存版に結び付けた読み書き、再送抑止、保存後再確認、部分画像の再開導線、AI応答の保存前検証を実装。実ページ34件・DTO不正19件・AI出力不正4件と実GET応答契約を合成検証。全体ゲートは新モジュールのテスト読込を修正して再実行中。AIO/Shodanメンバー6bd0adb1はCI成功・READY・匿名17入口37JS配信を確認。スライドカーソル28ed5de2はCI成功、本番READY確認待ち。別画面のスライド編集にも二重送信/離脱後通知を再現し、shodan-slide-editor-repair.jsonに未修正として記録。認証後本番通し確認と17サービス全体完了は未証明。
+
+詳細画面の最終ゲートはdocs/audits/2026-10-06-all-services-recheck/shodan-detail-release-57233f37-a2e6-43d3-b759-538b8b3d7bc0で合格。2640ソース不変、回帰/型/本番ビルド/Lintが成功。コミットと本番公開・認証後の操作確認は同一視しない。
+
+公開前追加確認で再調査/スライド編集への遷移待ちの再操作を抑止する補修を追加し、実ページ35件を確認。更新前の成功ゲートは履歴として残し、最新ゲートのみ公開根拠とする。スライド編集のPDFにも離脱後保存・同一ターン二重保存を合成検証で再現し、未修正として記録。前版28ed5de2はCI成功・READY・匿名17入口/37JS配信を確認済み。
+
+遷移ロックを含む最終ゲート: docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-e5f3d966-4817-448e-88a1-f5d2ffba2270。回帰/型/本番ビルド/Lintすべて成功、2640ソース不変。以前の成功・取消ゲートは今回の公開根拠から除外。公開確認は別途。
+
+2026-10-07 スライド編集/PDFの追加補修候補: shodan-slide-editor-repair.json。実編集画面34件、PDF通信/容量/デコード/中断24件、実再生成API26件、原子的保存9件を合成検証。通信拒否時のストリーム取消と初期DB/認証/課金例外の制御も追加。実詳細35件・SlideDeck回帰も通過。ソース固定の全体ゲート89145を実行中、候補は未コミット・本番未反映。前版5c7bae1aのCI37547789734はsuccess、本番READYは確認待ち。2074行と全体の未確認状態を維持。
+
+一覧の追加不具合を実画面の合成テストで再現: shodan-list-delete-scope-baseline.json。旧組織の削除完了が組織切替後の現一覧件数を101から100に減らす。顧客DB操作なし。shodan-list-lifecycle-repair.jsonへ未修正として記録し、固定中のスライド編集ゲートとは分離。
+
+前版5c7bae1aは本番dpl_E5yAVo7tPzGYN4sj9mhgPp8v9s5b READYとGit SHA一致、CI37547789734 success、匿名17入口/37JS配信を再確認（shodan-detail-public-5c7bae1a.json）。認証後の顧客操作確認とは区別。
+
+スライド編集の最終ゲート54abc8e7は全回帰/型/Next本番ビルド/Lintすべて終了0、2647ソース不変。コミット直前にも全ハッシュ一致を再確認。今回の限定補修を本番反映する。認証後通し確認と一覧の未修正問題、全17サービスの全体完了は別途継続。
+
+2026-10-07 一覧/削除の補修候補: shodan-list-lifecycle-repair.json。実AppLayout/一覧/フック/DTO/輸送の合成回帰30件、一覧DTO/API14件、削除API15件、251件ページング4群を確認。旧組織の削除完了が新一覧へ作用する再現を防止。削除は行ロック内で更新日時照合し、結果不明は対象watchと一覧読取後に明示操作だけ再試行。先頭ページ外対象、StrictMode、認証更新、自社情報失敗も検証。型と限定lint通過、source-freeze全体ゲート91380を開始。候補は未コミット/本番未反映。全17サービス/2074項目の完了は未証明。
+
+他サービス再巡回: all-services-scope-triage-20261007.jsonは17サービスの非同期パラメータ画面を静的整理したもので、ガード文字列の有無は不具合や完了の証拠とは扱わない。実AIO監視プロンプト/AppLayout/輸送の合成再現で、旧組織の追加完了が新組織の下書きを消し旧質問を表示、同一フレーム追加が2POSTとなる問題を確認。aio-prompts-lifecycle-repair.jsonへ未修正として記録。顧客操作なし。固定中の一覧補修ゲートとは分離。
+
+一覧ゲートdc8b6980は全回帰/型/本番ビルド/Lint成功・2651ソース不変。ただし公開前に自動更新中の操作ボタンが有効に見える問題を合成再現したため、追加修正前の履歴として扱う。処理中表示と31件目の実画面回帰を追加して通過し、更新後ソースの新しいゲートを実行する。古い成功を公開根拠に流用しない。
+
+AIO監視プロンプトの追加再現: 実clientのLIMIT/canManageBilling=falseでも料金プラン導線が表示される（aio-prompts-member-quota-baseline.json）。契約管理権限に合わせた上限案内も次の補修範囲とする。前版スライド編集38a74a2dのCI37549478378はsuccess、Vercel READY/公開確認は追跡中。
+
+スライド編集38a74a2dはCI成功・Vercel dpl_AtHAbBaRmf1KNmUB524qidjWXNAJ READY/Git SHA一致、匿名17入口/37JS配信を確認（shodan-slide-editor-public-38a74a2d.json）。実認証編集・実生成/保存・端末へのPDF保存の証明ではない。
+
+一覧の最終ゲート3c2352e4は全回帰/型/Next本番ビルド/Lint終了0、2651ソース不変。コミット直前に追加ファイルも含む全スナップショット一致を再確認。旧dc8b6980の成功は追加修正後の根拠に使わず、今回の限定補修を本番反映する。AIO未修正再現と全17サービス/2074項目の通し確認は継続。

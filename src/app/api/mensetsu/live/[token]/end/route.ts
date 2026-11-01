@@ -13,6 +13,8 @@ import { prisma } from '@/lib/prisma'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
 import { POST as saveTurns } from '../turn/route'
 import { loadSessionByToken } from '@/lib/mensetsu/public'
+import { voiceCharger, voiceTokenKey } from '@/lib/doya-power/voice'
+import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -67,6 +69,9 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return updated.count === 1 ? next : null
   }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
   if (!ended) return NextResponse.json({ ok: true, alreadyEnded: true })
+
+  // ドヤパワー（旗の内側だけ）: 仮に減らした分を戻し、実際の分数ぶんを減らし直す（何度呼んでも1回だけ）
+  await voiceCharger.settle('mensetsu', s.organizationId, voiceTokenKey('mensetsu', s.token), voiceActualMinutes(s.startedAt, new Date()))
 
   // 発話があるものだけ評価する。中断（aborted）は評価しない
   if (ended === 'completed') {

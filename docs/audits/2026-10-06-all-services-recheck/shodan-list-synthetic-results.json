@@ -1,0 +1,93 @@
+{
+  "checkedAt": "2026-10-07T00:11:38.644605+00:00",
+  "checks": {
+    "mounted": {
+      "passedCases": 31,
+      "scope": "Synthetic actual page/controller/DTO/API only",
+      "cases": [
+        "same-frame delete has one confirmation and request with loaded version",
+        "cancel confirmation performs no write",
+        "same-frame pagination appends once",
+        "old delete callback inert after org",
+        "old delete callback inert after actor",
+        "old delete callback inert after auth",
+        "old delete callback inert after unmount",
+        "ABA org transition does not revive retained delete handler",
+        "late DELETE completion cannot change new org context",
+        "late DELETE completion cannot change new actor context",
+        "late DELETE completion cannot change new auth context",
+        "late DELETE completion cannot change new unmount context",
+        "old load-more callback inert after org change",
+        "late pagination cannot append previous org rows",
+        "server failure is persistent and never empty success",
+        "401 renders login and hides private list",
+        "malformed row does not render private list",
+        "profile failure is unknown and can recover",
+        "confirmed delete with list read failure cannot replay",
+        "uncertain delete requires read and explicit reviewed retry",
+        "uncertain removed target is observed absent without blind resend",
+        "uncertain target beyond first page can be reviewed and retried",
+        "same-actor auth refresh preserves uncertain deletion lock",
+        "updated deletion 409 forces fresh list before another confirmation",
+        "processing poll runs once and stops after completion",
+        "malformed poll row is rejected without corrupting list",
+        "poll completion after org transition is ignored",
+        "profile 403 hides rows and offers retry instead of permanent loading",
+        "missing processing watch row warns instead of reporting completion",
+        "retained delete callback cannot remove newer saved version",
+        "poll in flight visibly disables actions instead of dropping user clicks"
+      ]
+    },
+    "response": {
+      "passedCases": 14,
+      "scope": "Synthetic actual page/controller/DTO/API only",
+      "cases": [
+        "full list DTO and requested watch validate",
+        "malformed full row 0 rejected on list and watch",
+        "malformed full row 1 rejected on list and watch",
+        "malformed full row 2 rejected on list and watch",
+        "malformed full row 3 rejected on list and watch",
+        "malformed full row 4 rejected on list and watch",
+        "malformed full row 5 rejected on list and watch",
+        "malformed full row 6 rejected on list and watch",
+        "malformed full row 7 rejected on list and watch",
+        "duplicate initial IDs rejected by actual page append",
+        "foreign and duplicate watch rows rejected",
+        "actual list API private no-store Cookie vary ",
+        "actual list API private no-store Cookie vary ?watch=prep-1",
+        "list query failure sanitized and private"
+      ]
+    },
+    "deleteApi": {
+      "passedCases": 15,
+      "scope": "Synthetic actual page/controller/DTO/API only",
+      "cases": [
+        "successful research deletion erases content but retains the monthly usage marker",
+        "failed research can be removed without consuming quota",
+        "active research and generation cannot be deleted",
+        "malformed IDs return not found before acquiring locks",
+        "malformed deletion version rejected before locks null",
+        "malformed deletion version rejected before locks \"invalid\"",
+        "malformed deletion version rejected before locks 1",
+        "malformed deletion version rejected before locks {}",
+        "malformed deletion version rejected before locks \"2026-10-07T00:00:00Z\"",
+        "malformed deletion JSON rejected before locks",
+        "stale version rejected under lock without erasing content",
+        "matching version deletes and retains monthly marker",
+        "deletion database-error sanitized as uncertain 503",
+        "deletion auth-error sanitized as uncertain 503",
+        "deleted preparations are hidden from detail/list and still count toward the monthly cap"
+      ]
+    },
+    "pagination": {
+      "passedCases": 4,
+      "scope": "Synthetic actual page/controller/DTO/API only",
+      "cases": [
+        "251 Shodan preparations are reachable across three scoped pages",
+        "malformed and foreign Shodan cursors and watch IDs are rejected or scoped",
+        "status refresh updates an older preparation without dropping loaded pages",
+        "failed or inconsistent continuation does not become a complete Shodan list"
+      ]
+    }
+  }
+}

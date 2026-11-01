@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T16:56:33.208Z",
+  "cases": [
+    "valid-png"
+  ],
+  "passed": 1,
+  "failures": [
+    {
+      "scenario": "text-as-png",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "scenario": "empty-png",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "scenario": "jpeg-as-png",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "scenario": "corrupted-png",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/upload/route.ts": "6aabfa8dcd906a9f744f7f5b1a3a848dc68f12281dd5e691ce5aa3683d4c51c3"
+  },
+  "scope": "Actual upload route; real File and FormData; synthetic admin and storage sink; no actual provider/storage/production writes."
+}

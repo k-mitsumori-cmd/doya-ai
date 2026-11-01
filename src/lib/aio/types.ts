@@ -1,6 +1,8 @@
 // ============================================
 // ドヤAIO（AI可視性・AEO）型定義
 // ============================================
+export const AIO_FREE_PROMPT_LIMIT = 3
+
 export type AioRole = 'owner' | 'admin' | 'manager' | 'member'
 
 export interface AioContext {

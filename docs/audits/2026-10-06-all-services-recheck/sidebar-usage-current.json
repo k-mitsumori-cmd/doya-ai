@@ -1,0 +1,76 @@
+{
+  "cases": 17,
+  "passed": 17,
+  "failed": 0,
+  "results": [
+    {
+      "name": "banner account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "seo account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "persona account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "adimage account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "aio account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "shodan account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "quote account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "mensetsu account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "aishodan account change replaces previous private usage",
+      "passed": true
+    },
+    {
+      "name": "Returning actor and organization never restores old snapshot while pending",
+      "passed": true
+    },
+    {
+      "name": "Plan transition refreshes usage even for the same account",
+      "passed": true
+    },
+    {
+      "name": "Loading, guest and missing identity clear private usage without fetching",
+      "passed": true
+    },
+    {
+      "name": "Late previous-scope response cannot overwrite current usage",
+      "passed": true
+    },
+    {
+      "name": "Refresh event supersedes pending lookup; focus does not duplicate it",
+      "passed": true
+    },
+    {
+      "name": "Lookup timeout ends optional usage display and aborts the request",
+      "passed": true
+    },
+    {
+      "name": "Strict payload validation never crashes or invents an unlimited grant",
+      "passed": true
+    },
+    {
+      "name": "Unmount cancels pending work and removes refresh listeners",
+      "passed": true
+    }
+  ],
+  "scope": "Actual common usage panel and bounded reader under StrictMode. 9 source-confirmed consumer services; synthetic sessions/organizations/responses only. No live private usage, DB, billing or AI."
+}
