@@ -25,7 +25,7 @@ import type {
   AgentRunCreateRequest, AgentRunView,
 } from '@/lib/agent-orchestration/types'
 import { readPlanStream } from './stream'
-import { AGENT_EXAMPLES, agentPlansForDepartment, intentsOfDepartment } from './examples'
+import { EXAMPLES_FIRST, agentPlansForDepartment, examplesFor, intentsOfDepartment } from './examples'
 import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
 import { normalizeValue, stashPrefill, withPrefillKey } from '@/lib/agent-router/prefill'
@@ -35,6 +35,8 @@ import type { DepartmentId } from '@/lib/departments'
 import { TypewriterTextarea } from './TypewriterTextarea'
 import { DEFAULT_HEADLINE } from './headlines'
 import styles from './home-agent.module.css'
+import { RecentWork, TodoBear, WorkCard } from './WorkCards'
+import { saveLocalRun, type WorkItem } from './history'
 import { RevealWords } from '@/components/ds/motion'
 
 type Scene = 'input' | 'fill' | 'questions' | 'analyze' | 'plan' | 'confirm' | 'run' | 'done' | 'none'
@@ -271,7 +273,10 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const [fillError, setFillError] = useState<string | null>(null)
   // どれにも合わなかったときの、近い操作の案（行き止まりにしない）
   const [suggest, setSuggest] = useState<{ reason: string; links: { label: string; href: string }[] } | null>(null)
-  const toolsOnly = !agentPlansForDepartment(dept)
+  // 作戦にできない部署の依頼は、本物では「ドヤAIに頼む」がツールの画面を開く（/api/agent/route）。見本はそれが無いので、道具へのリンクだけを出す
+  const toolsOnly = executor === 'sample' && !agentPlansForDepartment(dept)
+  const examples = useMemo(() => examplesFor(dept), [dept])
+  const [moreExamples, setMoreExamples] = useState(false)
   const reduce = useReducedMotion()
   const [scene, setScene] = useState<Scene>('input')
   // 欄は空で始める（例の文を最初から入れると、書き足したときに後ろへつながってしまう）
@@ -310,6 +315,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const [store, setStore] = useState<RunStore>(executor === 'api' ? 'unknown' : 'off')
   const runIdRef = useRef<string | null>(null)
   const runDelegatedRef = useRef<string[]>([])
+  // 端末に残す「進めた仕事」の id（記録を使わない設定と見本のとき。1つの作戦で1つ）
+  const localIdRef = useRef<string | null>(null)
   useEffect(() => {
     if (executor !== 'api') { setSaved(loadSaved()); return }
     let live = true
@@ -338,7 +345,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
 
   const reset = () => {
     ctrl.current?.abort()
-    runIdRef.current = null; runDelegatedRef.current = []
+    runIdRef.current = null; runDelegatedRef.current = []; localIdRef.current = null
     setSources([]); setReasons([]); setPlan(null); setStates({}); setError(null); setQError(null)
   }
 
@@ -482,13 +489,27 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
       onChange: (s) => {
         setStates(s)
         // 記録があるときはサーバーが残す。無いときだけ端末に残す
-        if (!runId) saveRun({ recipeId, title, answers, plan, delegate, states: s, savedAt: Date.now() })
+        if (!runId) {
+          saveRun({ recipeId, title, answers, plan, delegate, states: s, savedAt: Date.now() })
+          localIdRef.current ??= `local-${Date.now().toString(36)}`
+          saveLocalRun({ localId: localIdRef.current, plan, delegate, states: s, savedAt: Date.now() })
+        }
       },
     })
     if (c.signal.aborted) return
     setStates(final)
     if (progressOf(final).finished) setScene('done')
   }, [plan, chosen, executor, sampleDeps, answers, recipeId, title, delegate, store])
+
+  // 「この内容で進める」→ ドヤくんが右へ飛んでいく（約0.7秒）→ 実行の画面。動きを減らす設定では、すぐ実行の画面へ
+  const [launching, setLaunching] = useState(false)
+  const launch = () => {
+    if (launching) return
+    const prev = Object.keys(states).length ? states : undefined
+    if (reduce) { void run(prev); return }
+    setLaunching(true)
+    window.setTimeout(() => { setLaunching(false); void run(prev) }, 720)
+  }
 
   /** 入力に戻るとき、続きを読み直す（記録があればサーバーから、無ければ端末から） */
   const refreshSaved = () => {
@@ -501,7 +522,9 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     reset()
     setRecipeId(s.recipeId); setTitle(s.title); setAnswers(s.answers); setPlan(s.plan); setDelegate(s.delegate); setStates(s.states)
     if (s.runId) { runIdRef.current = s.runId; runDelegatedRef.current = Object.entries(s.delegate).filter(([, v]) => v).map(([k]) => k) }
-    setScene('plan')
+    // 任せた ToDo がすべて済んでいれば、できた物の画面を開く（作戦の画面ではなく）
+    const mine = planTasks(s.plan).filter((t) => s.delegate[t.id] ?? t.delegate)
+    setScene(mine.length && mine.every((t) => s.states[t.id]?.status === 'done') ? 'done' : 'plan')
   }
 
   // 材料からドヤくんへ光が流れる線（Animated Beam）。1280px かつ動きを減らす設定でないときだけ
@@ -594,9 +617,21 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
                 <span className={styles.auraRing} aria-hidden="true" />
                 <TypewriterTextarea id="home-agent-ask" aria-labelledby="home-agent-title" aria-describedby="home-agent-lead" ref={askRef} className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} rows={5} reduce={reduce} />
               </div>
-              <p className={styles.chipsLabel}>例を押すと、欄に入ります</p>
-              <div className={`${styles.chips} ${styles.exampleChips}`}>
-                {AGENT_EXAMPLES.map((t) => <button key={t} type="button" className={styles.chip} aria-pressed={text === t} onClick={() => putExample(t)}>{t}</button>)}
+              <p className={styles.chipsLabel}>例を押すと、欄に入ります{dept ? '' : '（マーケ・セールス・人事・管理のどの仕事も頼めます）'}</p>
+              <div className={styles.examples}>
+                {(moreExamples ? examples : examples.slice(0, EXAMPLES_FIRST)).map((e) => (
+                  <button key={e.text} type="button" className={styles.example} aria-pressed={text === e.text} onClick={() => putExample(e.text)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/shell/bear/menu/${e.tool}-32.webp`} srcSet={`/shell/bear/menu/${e.tool}-32.webp 1x, /shell/bear/menu/${e.tool}-64.webp 2x`} width={28} height={28} alt="" aria-hidden decoding="async" />
+                    <span>{e.text}</span>
+                    {e.bundle ? <em className={styles.bundle}>まとめて</em> : null}
+                  </button>
+                ))}
+                {examples.length > EXAMPLES_FIRST ? (
+                  <button type="button" className={styles.exampleMore} aria-expanded={moreExamples} onClick={() => setMoreExamples((v) => !v)}>
+                    {moreExamples ? '例を減らす' : `ほかの例（${examples.length - EXAMPLES_FIRST}）`}
+                  </button>
+                ) : null}
               </div>
               {error ? <p className={styles.error} role="alert">{error}</p> : null}
               <div className={styles.row}>
@@ -608,6 +643,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
             )}
             {/* 新しい依頼を先に置き、前回の続きはその下にする（主な操作はゴールを書くこと。2026-10-26 統括の点検で、続きが上だと欄が 375px で y=507 まで下がっていた） */}
             {saved ? <ResumeCard saved={saved} onResume={() => resume(saved)} /> : null}
+            <RecentWork executor={executor} />
             <ToolShortcuts />
           </div>
         ) : null}
@@ -714,60 +750,17 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
 
         {(scene === 'plan' || scene === 'confirm') && plan ? (
           <PlanView plan={plan} tasks={tasks} states={states} total={total} chosen={remaining.length} power={power} reduce={reduce}
-            confirm={scene === 'confirm'}
+            confirm={scene === 'confirm'} launching={launching}
             onToggle={(id, v) => setDelegate((d) => ({ ...d, [id]: v }))}
-            onGo={() => setScene('confirm')}
+            onGo={() => { setScene('confirm'); requestAnimationFrame(() => stageRef.current?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })) }}
             onBack={() => setScene('plan')}
-            onRun={() => void run(Object.keys(states).length ? states : undefined)} />
+            onRun={launch} />
         ) : null}
 
         {(scene === 'run' || scene === 'done') && plan ? (
-          <div className={styles.sceneIn}>
-            <div className={styles.card}>
-              <div className={styles.row}>
-                <div>
-                  <p className={styles.eyebrow}>{scene === 'done' ? 'できました' : '並べて進めています'}</p>
-                  <p className={styles.title}>{scene === 'done' ? `${counts.done}件の ToDo が終わりました` : `${plan.concurrency}件ずつ同時に進めています`}</p>
-                </div>
-                <span className={styles.muted}>{counts.done} / {counts.total} 件</span>
-              </div>
-              <ul className={styles.runs}>
-                {views.map((v) => {
-                  const t = chosen.find((x) => x.id === v.id)!
-                  return (
-                    <li key={v.id} className={styles.run} data-status={v.status}>
-                      <span className={styles.ticon} aria-hidden="true">{TOOL_ICON[t.tool] ?? TOOL_ICON.default}</span>
-                      <span className={styles.srcBody}>
-                        <b>{t.title}</b>
-                        <span className={styles.muted}>
-                          {v.status === 'running' ? t.stages[v.stage ?? 0] : v.status === 'done' ? v.draft?.summary : v.status === 'failed' ? v.error?.text : `${t.toolName}・約${t.minutes}分`}
-                        </span>
-                        {v.status === 'done' && v.draft ? <Link href={v.draft.href} className={styles.link}>{v.draft.hrefLabel}</Link> : null}
-                        {v.status === 'failed' && v.error?.href ? <Link href={v.error.href} className={styles.link}>{v.error.hrefLabel ?? '開く'}</Link> : null}
-                        {v.status === 'failed' && failPowerText(v) ? <span className={styles.muted}>{failPowerText(v)}</span> : null}
-                      </span>
-                      <span className={styles.rstate}>
-                        {v.status === 'done' ? <><Check />できた</> : v.status === 'running' ? '進めています' : v.status === 'failed' ? '作れませんでした' : '待っています'}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-              {scene === 'done' && counts.failed ? (
-                <div className={styles.row}>
-                  <span className={styles.muted}>やり直すと、失敗した ToDo だけをもう一度進めます。</span>
-                  <button type="button" className={styles.btn} onClick={() => void run(states)}>残りをやり直す</button>
-                </div>
-              ) : null}
-            </div>
-            {scene === 'done' ? (
-              <div className={styles.memory}>
-                <b>作戦に残しました</b>
-                <span>ゴール・3つの柱と、できた下書きを、この作戦に残しました。次に経営ホームを開くと「続きを進める」から再開できます。送る・公開する操作は、各ツールで内容を確かめてから行ってください。</span>
-                <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={() => { reset(); setText(''); refreshSaved(); setScene('input') }}>経営ホームの入力に戻る</button>
-              </div>
-            ) : null}
-          </div>
+          <RunBoard scene={scene} plan={plan} chosen={chosen} views={views} done={counts.done} total={counts.total} failed={counts.failed} reduce={reduce}
+            onRetry={() => void run(states)}
+            onHome={() => { reset(); setText(''); refreshSaved(); setScene('input') }} />
         ) : null}
       </div>
     </section>
@@ -776,7 +769,7 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
 
 /* ---------- ゴール → 柱 → ToDo と、確かめ ---------- */
 
-function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, onToggle, onGo, onBack, onRun }: {
+function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, launching, onToggle, onGo, onBack, onRun }: {
   plan: AgentPlan
   tasks: (AgentPlanTask & { dependsOn: string[] })[]
   states: AgentStates
@@ -785,6 +778,8 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
   power: AgentPowerView
   reduce: boolean
   confirm: boolean
+  /** 「この内容で進める」を押して、ドヤくんが飛んでいく間 */
+  launching: boolean
   onToggle: (id: string, v: boolean) => void
   onGo: () => void
   onBack: () => void
@@ -794,35 +789,85 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
   const byId = new Map(tasks.map((t) => [t.id, t]))
   const short = power.enabled && power.remaining !== null && power.remaining < total
   if (confirm) {
+    const go = tasks.filter((t) => t.delegate && t.delegable && t.ready.ok && states[t.id]?.status !== 'done')
+    const rem = power.enabled ? power.remaining : null
+    // 残りのバー: 使う分を縞で示し、動かしたあとに残る分を青で示す（バーの全体は今の残り）
+    const usePct = rem && rem > 0 ? Math.min(100, (total / rem) * 100) : 0
     return (
-      <div className={`${styles.card} ${styles.confirm} ${styles.sceneIn}`}>
-        <p className={styles.eyebrow}>動かす前に確かめます</p>
-        <p className={styles.title}>{chosen}件の ToDo を、ドヤくんに任せますか？</p>
-        <dl className={styles.calc}>
-          <dt>合計で減るドヤパワー</dt><dd>{total.toLocaleString('ja-JP')}</dd>
-          {power.enabled && power.remaining !== null ? (<><dt>今の残り</dt><dd>{power.remaining.toLocaleString('ja-JP')}</dd><dt>動かしたあとの残り</dt><dd>{Math.max(0, power.remaining - total).toLocaleString('ja-JP')}</dd></>) : null}
-        </dl>
-        <ul className={styles.uses}>{tasks.filter((t) => t.delegate && t.delegable && t.ready.ok && states[t.id]?.status !== 'done').map((t) => <li key={t.id}>{t.toolName}: {t.uses}</li>)}</ul>
+      <div className={`${styles.card} ${styles.confirm} ${styles.confirmIn}`} data-launch={launching ? 'true' : undefined}>
+        <div className={styles.confirmHead}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/character/run-256.webp" width={96} height={96} alt="" aria-hidden className={styles.confirmBear} decoding="async" draggable={false} />
+          <span className={styles.goalText}>
+            <span className={styles.eyebrow}>動かす前に確かめます</span>
+            <span className={styles.title}>{chosen}件の ToDo を、ドヤくんに任せますか？</span>
+          </span>
+        </div>
+        <ul className={styles.goList}>
+          {go.map((t, i) => (
+            <li key={t.id} className={styles.goItem} style={{ ['--k' as string]: i }}>
+              <TodoBear tool={t.tool} size={48} />
+              <span className={styles.srcBody}>
+                <span className={styles.toolTag}>{t.toolName}</span>
+                <b>{t.title}</b>
+                <span className={styles.muted}>{t.uses}</span>
+              </span>
+              {t.power > 0
+                ? <span className={styles.cost}><Bolt />{t.power}</span>
+                : <span className={styles.costFree}>使いません</span>}
+            </li>
+          ))}
+        </ul>
+        <div className={styles.powerBox}>
+          <div className={styles.powerRow}>
+            <span className={styles.powerLabel}><Bolt />使うドヤパワー</span>
+            <b className={styles.powerBig}>{total.toLocaleString('ja-JP')}</b>
+          </div>
+          {rem !== null ? (
+            <>
+              <div className={styles.powerBar} role="img" aria-label={`今の残り ${rem.toLocaleString('ja-JP')} のうち、${total.toLocaleString('ja-JP')} を使います`}>
+                <i style={{ width: `${100 - usePct}%` }} />
+                <s style={{ width: `${Math.max(usePct, total > 0 ? 1.5 : 0)}%` }} />
+              </div>
+              <p className={styles.powerAfter}>今の残り <b>{rem.toLocaleString('ja-JP')}</b> <span aria-hidden="true">→</span> 進めたあと <b>{Math.max(0, rem - total).toLocaleString('ja-JP')}</b></p>
+            </>
+          ) : null}
+        </div>
         {short ? <p className={styles.error} role="alert">ドヤパワーが足りません。任せる ToDo を減らすか、回復を待ってください。</p> : null}
         <p className={styles.muted}>できる物はすべて下書きです。送る・公開する操作は、内容を確かめてから、あなたが行います。失敗した ToDo は、減った分を戻します。</p>
         <div className={styles.row}>
-          <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={onBack}>選び直す</button>
-          <button type="button" className={styles.btn} onClick={onRun} disabled={short || chosen === 0}>この内容で進める</button>
+          <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={onBack} disabled={launching}>選び直す</button>
+          <button type="button" className={`${styles.btn} ${styles.btnGo}`} onClick={onRun} disabled={short || chosen === 0 || launching}>この内容で進める</button>
         </div>
+        {/* 押したとき、ドヤくんが右へ飛んでいく（ビューン）。動きを減らす設定では出さない */}
+        {launching ? <span className={styles.zoom} aria-hidden="true"><img src="/character/run-256.webp" width={140} height={140} alt="" /><i /><i /><i /></span> : null}
       </div>
     )
   }
+  // 点数の棒: ゴールが10以下なら1点ずつの目盛り、それより多ければ1本の棒
+  const steps = g.target > 0 && g.target <= 10 ? g.target : 0
+  const after = power.enabled && power.remaining !== null ? Math.max(0, power.remaining - total) : null
   return (
     <div className={styles.sceneIn}>
       <div className={`${styles.card} ${styles.group}`} style={{ animationDelay: '0ms' }}>
-        <p className={styles.eyebrow}>ゴール（{g.period}）</p>
-        <p className={styles.title}>{g.statement}</p>
+        <div className={styles.goalHead}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/shell/bear/todo/goal.webp" width={72} height={72} alt="" aria-hidden className={styles.goalBear} decoding="async" draggable={false} />
+          <span className={styles.goalText}>
+            <span className={styles.eyebrow}>{g.period ? `${g.period}のゴール` : 'ゴール'}</span>
+            <span className={styles.title}>{g.statement}</span>
+          </span>
+        </div>
         <dl className={styles.gap}>
           <div><dt>今</dt><dd><Ticker value={g.now} reduce={reduce} /><small>{g.unit}</small></dd></div>
           <div><dt>ゴール</dt><dd><Ticker value={g.target} reduce={reduce} /><small>{g.unit}</small></dd></div>
-          <div><dt>差</dt><dd className={styles.accent}><Ticker value={g.gap} reduce={reduce} /><small>{g.unit}</small></dd></div>
+          <div><dt>あと</dt><dd className={styles.accent}><Ticker value={g.gap} reduce={reduce} /><small>{g.unit}</small></dd></div>
         </dl>
-        <p className={styles.muted}>{g.measure}の差を埋めるために、{plan.pillars.length}つの柱と{tasks.length}件の ToDo に分けました。どの ToDo も、このゴールにつながっています。</p>
+        <div className={styles.meter} role="img" aria-label={`${g.measure}は、ゴールの${g.target}${g.unit}のうち、今${g.now}${g.unit}です`}>
+          {steps ? Array.from({ length: steps }, (_, i) => <i key={i} data-on={i < g.now ? 'true' : undefined} />) : <b style={{ width: `${g.target ? Math.min(100, (g.now / g.target) * 100) : 0}%` }} />}
+        </div>
+        <p className={styles.muted}>{g.measure}の数を数えています。今は{g.now}{g.unit}で、ゴールの{g.target}{g.unit}まで、あと{g.gap}{g.unit}です。</p>
+        <p className={styles.muted}>あとの{g.gap}{g.unit}を埋めるために、{plan.pillars.length}つの柱と{tasks.length}件の ToDo に分けました。</p>
       </div>
       <div className={styles.tree}>
         {plan.pillars.map((p, pi) => (
@@ -834,19 +879,26 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
                 const t = byId.get(raw.id) ?? { ...raw, dependsOn: raw.after }
                 const done = states[t.id]?.status === 'done'
                 const can = t.delegable && t.ready.ok && !done
+                const on = Boolean(t.delegate) && can
                 return (
-                  <li key={t.id} className={styles.todo} data-off={!t.delegate || !can ? 'true' : undefined} style={{ ['--k' as string]: pi * 3 + ti }}>
-                    <span className={styles.ticon} aria-hidden="true">{TOOL_ICON[t.tool] ?? TOOL_ICON.default}</span>
+                  <li key={t.id} className={styles.todo} data-off={!on && !done ? 'true' : undefined} style={{ ['--k' as string]: pi * 3 + ti }}>
+                    <TodoBear tool={t.tool} />
                     <span className={styles.srcBody}>
+                      <span className={styles.toolTag}>{t.toolName}</span>
                       <b>{t.title}</b>
-                      <span className={styles.muted}>{t.toolName}・約{t.minutes}分・{t.makes}</span>
+                      <span className={styles.muted}>{t.makes}</span>
+                      <span className={styles.meta}>
+                        <span>約{t.minutes}分</span>
+                        {t.power > 0
+                          ? <span className={styles.cost} title="この ToDo で使うドヤパワー"><Bolt />ドヤパワー {t.power}</span>
+                          : <span className={styles.costFree}>ドヤパワーは使いません</span>}
+                      </span>
                       {!t.ready.ok ? <span className={styles.notice}>{t.ready.reason}{t.ready.href ? <> <Link href={t.ready.href} className={styles.link}>{t.ready.hrefLabel ?? '開く'}</Link></> : null}</span> : null}
                     </span>
                     <span className={styles.todoRight}>
-                      {t.power > 0 ? <span className={styles.cost}><Bolt />{t.power}</span> : null}
                       {done ? <span className={styles.rstate}><Check />済み</span> : (
-                        <label className={styles.ask}>
-                          <input type="checkbox" checked={Boolean(t.delegate) && can} disabled={!can} onChange={(e) => onToggle(t.id, e.target.checked)} />
+                        <label className={styles.ask} data-on={on ? 'true' : undefined}>
+                          <input type="checkbox" checked={on} disabled={!can} onChange={(e) => onToggle(t.id, e.target.checked)} />
                           ドヤくんに任せる
                         </label>
                       )}
@@ -859,8 +911,149 @@ function PlanView({ plan, tasks, states, total, chosen, power, reduce, confirm, 
         ))}
       </div>
       <div className={`${styles.total} ${styles.group}`} style={{ animationDelay: `${(plan.pillars.length + 1) * 160}ms` }}>
-        <span className={styles.muted}>任せる ToDo で <strong className={styles.sum}><Ticker value={total} reduce={reduce} /></strong> 減ります{power.enabled && power.remaining !== null ? `（今の残り ${power.remaining.toLocaleString('ja-JP')}）` : ''}</span>
+        <span className={styles.totalText}>
+          <b>{chosen > 0 ? `任せた ${chosen} 件を、ドヤくんが下書きまで作ります` : '任せる ToDo を選んでください'}</b>
+          <span className={styles.muted}>
+            使うドヤパワー <strong className={styles.sum}><Ticker value={total} reduce={reduce} /></strong>
+            {after !== null ? <span className={styles.nowrap}>（残り {power.remaining!.toLocaleString('ja-JP')} → {after.toLocaleString('ja-JP')}）</span> : null}
+          </span>
+        </span>
         <button type="button" className={styles.btn} onClick={onGo} disabled={chosen === 0}>{chosen === 0 && tasks.some((t) => states[t.id]?.status === 'done') ? 'すべて済んでいます' : 'まとめて進める'}</button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- 実行中 → 完成 ---------- */
+
+/** 完成のまとめの文に使う、ツールごとの短い名前 */
+const MADE_NAME: Record<string, string> = { shodan: '会社の調べ', quote: '見積の下書き', doyaslide: '提案スライドの構成' }
+const STATE_TEXT: Record<AgentTodoView['status'], string> = { waiting: '順番を待っています', running: '進めています', done: 'できた', failed: '作れませんでした' }
+const CONFETTI = Array.from({ length: 28 }, (_, i) => i)
+
+/**
+ * 実行中は、大きなドヤくんと全体の進み具合、ToDo ごとの段と進行バーを出す。
+ * 全部終わったら、紙吹雪（カードの中だけ・1回）→ まとめの見出し → できた物のカードが順に出る。
+ * 2026-11-01 本人の指示「もっと進めているド派手な感じに」「完成したら何ができていたかめっちゃ分かるように」
+ */
+function RunBoard({ scene, plan, chosen, views, done, total, failed, reduce, onRetry, onHome }: {
+  scene: 'run' | 'done'
+  plan: AgentPlan
+  chosen: (AgentPlanTask & { dependsOn: string[] })[]
+  views: AgentTodoView[]
+  done: number
+  total: number
+  failed: number
+  reduce: boolean
+  onRetry: () => void
+  onHome: () => void
+}) {
+  const finished = scene === 'done'
+  // 全体の進み具合: できた ToDo は1、動いている ToDo は段の進み（最後の段で 0.9 まで）
+  const part = views.reduce((n, v) => {
+    if (v.status === 'done') return n + 1
+    if (v.status === 'running') { const t = chosen.find((x) => x.id === v.id); const k = Math.max(1, t?.stages.length ?? 1); return n + Math.min(0.9, ((v.stage ?? 0) + 1) / (k + 1)) }
+    return n
+  }, 0)
+  const pct = total ? Math.round((part / total) * 100) : 0
+  const items: WorkItem[] = views.map((v) => {
+    const t = chosen.find((x) => x.id === v.id)!
+    return {
+      key: v.id, tool: t.tool, toolName: t.toolName, title: t.title, goal: plan.goal.statement, at: '',
+      status: v.status === 'done' ? 'done' : v.status === 'failed' ? 'failed' : 'open',
+      summary: v.status === 'done' ? v.draft?.summary ?? null : v.status === 'failed' ? v.error?.text ?? null : null,
+      points: v.draft?.points ?? [], ...(v.draft?.detail ? { detail: v.draft.detail } : {}),
+      href: v.status === 'done' ? v.draft?.href ?? null : v.error?.href ?? null,
+      hrefLabel: v.status === 'done' ? v.draft?.hrefLabel ?? null : v.error?.hrefLabel ?? null,
+    }
+  })
+  const madeNames = views.filter((v) => v.status === 'done').map((v) => { const t = chosen.find((x) => x.id === v.id)!; return MADE_NAME[t.tool] ?? t.toolName })
+
+  if (finished) {
+    return (
+      <div className={styles.sceneIn}>
+        <div className={`${styles.card} ${styles.finale}`}>
+          {!reduce && done > 0 ? <span className={styles.confetti} aria-hidden="true">{CONFETTI.map((i) => <i key={i} style={{ ['--c' as string]: i, ['--d' as string]: `${((i * 37) % 9) * 60}ms` }} />)}</span> : null}
+          <div className={styles.finaleHead}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/character/success-256.webp" width={120} height={120} alt="" aria-hidden className={styles.finaleBear} decoding="async" draggable={false} />
+            <span className={styles.goalText}>
+              <span className={styles.eyebrow}>できました</span>
+              <span className={styles.finaleTitle}>{done}件できました{failed ? `（${failed}件は作れませんでした）` : ''}</span>
+              {madeNames.length ? <span className={styles.finaleList}>{madeNames.join('、')}</span> : null}
+            </span>
+            <span className={styles.finaleCount}><b>{done}</b><small>/ {total} 件</small></span>
+          </div>
+          <div className={styles.workGrid}>
+            {items.map((it, i) => <WorkCard key={it.key} item={it} index={i + 1} />)}
+          </div>
+          {failed ? (
+            <div className={styles.row}>
+              <span className={styles.muted}>やり直すと、失敗した ToDo だけをもう一度進めます。</span>
+              <button type="button" className={styles.btn} onClick={onRetry}>残りをやり直す</button>
+            </div>
+          ) : null}
+        </div>
+        <div className={styles.memory}>
+          <b>作戦に残しました</b>
+          <span>できた物はすべて下書きです。送る・公開する操作は、各ツールで内容を確かめてから、あなたが行ってください。ここで作った物は、経営ホームの「ドヤくんが進めた仕事」から、あとで見返せます。</span>
+          <div className={styles.row}>
+            <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={onHome}>経営ホームの入力に戻る</button>
+            <Link href="/home/work" className={styles.link}>進めた仕事をすべて見る</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={styles.sceneIn}>
+      <div className={`${styles.card} ${styles.runHero}`}>
+        <div className={styles.runTop}>
+          <span className={styles.runBearWrap} aria-hidden="true">
+            <span className={styles.speed}><i /><i /><i /><i /></span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/character/run-256.webp" width={128} height={128} alt="" className={styles.runBear} decoding="async" draggable={false} />
+          </span>
+          <span className={styles.goalText}>
+            <span className={styles.eyebrow}>ドヤくんが進めています</span>
+            <span className={styles.title}>{plan.concurrency}件まで同時に進めています</span>
+            <span className={styles.muted}>この画面のまま待つと、できた物がここに並びます。</span>
+          </span>
+          <span className={styles.runCount} aria-live="polite"><b key={done} className={styles.pop}>{done}</b><small>/ {total} 件</small></span>
+        </div>
+        <div className={styles.bigBar} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="全体の進み具合">
+          <i style={{ width: `${pct}%` }} />
+          <span>{pct}%</span>
+        </div>
+        <ul className={styles.runs}>
+          {views.map((v, i) => {
+            const t = chosen.find((x) => x.id === v.id)!
+            const k = Math.max(1, t.stages.length)
+            const step = v.status === 'done' ? 100 : v.status === 'running' ? Math.round(Math.min(0.92, ((v.stage ?? 0) + 1) / (k + 1)) * 100) : 0
+            return (
+              <li key={v.id} className={styles.run} data-status={v.status} style={{ ['--k' as string]: i }}>
+                <span className={styles.runIcon}><TodoBear tool={t.tool} size={56} />{v.status === 'done' ? <span className={styles.doneBadge}><Check /></span> : null}</span>
+                <span className={styles.srcBody}>
+                  <span className={styles.toolTag}>{t.toolName}</span>
+                  <b>{t.title}</b>
+                  <span className={styles.stageText} key={`${v.status}-${v.stage ?? 0}`}>
+                    {v.status === 'running' ? t.stages[v.stage ?? 0] : v.status === 'done' ? v.draft?.summary : v.status === 'failed' ? v.error?.text : `${t.toolName}・約${t.minutes}分`}
+                  </span>
+                  {v.status !== 'failed' ? (
+                    <span className={styles.steps} aria-hidden="true">
+                      {t.stages.map((_, j) => <i key={j} data-on={v.status === 'done' || (v.status === 'running' && j <= (v.stage ?? 0)) ? 'true' : undefined} />)}
+                    </span>
+                  ) : null}
+                  <span className={styles.tbar} aria-hidden="true"><i style={{ width: `${step}%` }} /></span>
+                  {v.status === 'failed' && v.error?.href ? <Link href={v.error.href} className={styles.link}>{v.error.hrefLabel ?? '開く'}</Link> : null}
+                  {v.status === 'failed' && failPowerText(v) ? <span className={styles.muted}>{failPowerText(v)}</span> : null}
+                </span>
+                <span className={styles.rstate}>{v.status === 'done' ? <><Check />できた</> : STATE_TEXT[v.status]}</span>
+              </li>
+            )
+          })}
+        </ul>
       </div>
     </div>
   )
@@ -881,6 +1074,10 @@ function showValue(f: AgentField, v: string): string {
   return f.type === 'yen' ? `${Number(v).toLocaleString('ja-JP')}円` : v
 }
 
+/** 部門ごとの色の印（よく使う操作・例のボタン） */
+const DEPT_TONE: Record<string, string> = { 'マーケティング': 'marketing', '営業（セールス）': 'sales', '採用・人材管理': 'hr', '経理・バックオフィス': 'admin' }
+const DEPT_SHORT: Record<string, string> = { 'マーケティング': 'マーケ', '営業（セールス）': 'セールス', '採用・人材管理': '人事', '経理・バックオフィス': '管理' }
+
 function ToolShortcuts() {
   const items = HOME_INTENT_GROUPS.flatMap((g) => g.intents.slice(0, 2).map((i) => ({ ...i, group: g.label })))
   return (
@@ -888,9 +1085,23 @@ function ToolShortcuts() {
       <p className={styles.eyebrow}>ツールですぐ始める</p>
       <p id="home-agent-tools" className={styles.title}>よく使う操作</p>
       <ul className={styles.shortcuts}>
-        {items.map((i) => (
-          <li key={i.href}><Link href={i.href} className={styles.shortcut}><span className={styles.muted}>{i.group}</span><b>{i.label}</b></Link></li>
-        ))}
+        {items.map((i) => {
+          const tool = i.href.split('/')[1] ?? ''
+          return (
+            <li key={i.href}>
+              <Link href={i.href} className={styles.shortcut} data-tone={DEPT_TONE[i.group]}>
+                <TodoBear tool={tool} size={44} className={styles.shortcutBear} />
+                <span className={styles.shortcutText}>
+                  <span className={styles.shortcutDept}>{DEPT_SHORT[i.group] ?? i.group}</span>
+                  <b>{i.label}</b>
+                </span>
+                <span className={styles.shortcutArrow} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </span>
+              </Link>
+            </li>
+          )
+        })}
       </ul>
     </nav>
   )
@@ -910,19 +1121,30 @@ function failPowerText(v: AgentTodoView): string | null {
 /** 前回の作戦の続き。残っている ToDo を並べ、そこから再開する */
 function ResumeCard({ saved, onResume }: { saved: SavedRun; onResume: () => void }) {
   const p = progressOf(saved.states)
-  const left = planTasks(saved.plan)
-    .filter((t) => (saved.delegate[t.id] ?? t.delegate) && saved.states[t.id]?.status !== 'done')
+  const mine = planTasks(saved.plan).filter((t) => saved.delegate[t.id] ?? t.delegate)
+  const left = mine.filter((t) => saved.states[t.id]?.status !== 'done')
+  const made = mine.filter((t) => saved.states[t.id]?.status === 'done')
+  const all = p.total > 0 && left.length === 0
   const shown = left.slice(0, 4)
   return (
-    <div className={styles.resume}>
+    <div className={styles.resume} data-done={all ? 'true' : undefined}>
       <div className={styles.resumeHead}>
         <ProgressRing done={p.done} total={p.total} />
         <span className={styles.resumeText}>
-          <span className={styles.muted}>前回の作戦の続き</span>
+          <span className={styles.resumeEyebrow}>{all ? '前回の作戦は、すべてできました' : '前回の作戦の続き'}</span>
           <b>{saved.plan.goal.statement}</b>
           <span className={styles.muted}>ToDo {p.done} / {p.total} 件が完了</span>
         </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={all ? '/character/success-256.webp' : '/character/todo-256.webp'} width={88} height={88} alt="" aria-hidden className={styles.resumeBear} decoding="async" />
       </div>
+      {made.length ? (
+        <ul className={styles.madeChips} aria-label="できた物">
+          {made.map((t) => (
+            <li key={t.id}><TodoBear tool={t.tool} size={28} /><span>{saved.states[t.id]?.result?.summary ?? t.title}</span></li>
+          ))}
+        </ul>
+      ) : null}
       {shown.length ? (
         <ul className={styles.resumeList} aria-label="残っている ToDo">
           {shown.map((t) => (
@@ -936,20 +1158,27 @@ function ResumeCard({ saved, onResume }: { saved: SavedRun; onResume: () => void
           {left.length > shown.length ? <li className={styles.muted}>ほか {left.length - shown.length} 件</li> : null}
         </ul>
       ) : null}
-      <button type="button" className={styles.btn} onClick={onResume}>
-        {left.length ? `残り ${left.length} 件を進める` : '作戦を見る'}
-      </button>
+      <div className={styles.row}>
+        <button type="button" className={styles.btn} onClick={onResume}>
+          {left.length ? `残り ${left.length} 件を進める` : '作戦とできた物を見る'}
+        </button>
+      </div>
     </div>
   )
 }
 
+/** 進み具合の輪。真ん中に「できた数 / 全部」、全部できたらチェック */
 function ProgressRing({ done, total }: { done: number; total: number }) {
-  const c = 113, off = total ? c * (1 - done / total) : c
+  const c = 2 * Math.PI * 24, off = total ? c * (1 - done / total) : c
+  const all = total > 0 && done >= total
   return (
-    <svg className={styles.ring} viewBox="0 0 44 44" aria-hidden="true">
-      <circle cx="22" cy="22" r="18" fill="none" stroke="var(--blue-soft)" strokeWidth="5" />
-      <circle cx="22" cy="22" r="18" fill="none" stroke="var(--blue)" strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 22 22)" />
-    </svg>
+    <span className={styles.ringWrap} aria-hidden="true">
+      <svg className={styles.ring} viewBox="0 0 60 60">
+        <circle cx="30" cy="30" r="24" fill="none" stroke="var(--blue-soft)" strokeWidth="7" />
+        <circle cx="30" cy="30" r="24" fill="none" stroke={all ? 'var(--ok-ink)' : 'var(--blue)'} strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 30 30)" />
+      </svg>
+      <span className={styles.ringText} data-done={all ? 'true' : undefined}>{all ? <Check /> : <>{done}<small>/{total}</small></>}</span>
+    </span>
   )
 }
 
@@ -962,10 +1191,4 @@ const SOURCE_ICON: Record<AgentSourceView['kind'], JSX.Element> = {
   tools: svgI('M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z'),
   power: svgI('M13 2 4 14h7l-1 8 9-12h-7z'),
   history: svgI('M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2'),
-}
-const TOOL_ICON: Record<string, JSX.Element> = {
-  shodan: svgI('M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18'),
-  quote: svgI('M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'),
-  doyaslide: svgI('M3 4h18v12H3zM12 16v4M8 20h8'),
-  default: svgI('M4 4h16v16H4z'),
 }
