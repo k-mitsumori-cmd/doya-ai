@@ -1,4 +1,5 @@
 'use strict';
+process.env.NODE_ENV='test';
 // Isolated audit harness. No environment loading, sockets, credentials, DB or provider calls.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const repo=path.resolve(__dirname,'../..');
@@ -68,6 +69,6 @@ const summary={month:'2026-11',kpi:{thisMonthOut:0,thisMonthCount:0,paid:0,paidC
  item=await mount();const oldUnauthorized=current('usage');await item.close();item=null;await act(()=>{for(const r of oldUnauthorized)r.resolve({ok:false,status:401,json:async()=>({})})});assert.equal(redirects.length,0,'late401 after leaving expense must not redirect');cases.push({name:'unmounted permission401 cannot navigate back to expense',passed:true});
  assert.equal(cases.length,13);
  const report={checkedAt:new Date().toISOString(),strictMode:process.env.DOYA_TEST_STRICT==='1',expected:13,sourceHashes,cases,passed:cases.length,scope:'Actual current Layout, Dashboard, useExpenseQuery, expense Loading, ds Card and Skeleton mounted unchanged in React/JSDOM; controlled synthetic HTTP and virtual component timers. Visual peripherals mocked. No real network, credentials, provider, database, customer writes, CSS layout, native/browser timing or CLS measurement. This verifies initial-loading timer continuity and access/error guards only, not production CLS or all transitions.',finding:{confirmed:'Initial permission and summary share one300ms anti-flash delay; subsequent retries retain a new300ms delay.',fixImplemented:true,productionChanged:false},wholeAuditComplete:false};
- fs.writeFileSync(process.env.DOYA_TEST_REPORT||path.join(repo,'docs/audits/2026-10-06-all-services-recheck/expense-loading-continuity-results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({passed:report.passed,cases:cases.map(x=>x.name),phases:cases[0].phases}));
+ const reportPath=process.env.DOYA_TEST_REPORT||path.join(repo,'docs/audits/2026-10-06-all-services-recheck/expense-loading-continuity-results.json');fs.mkdirSync(path.dirname(reportPath),{recursive:true});fs.writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({passed:report.passed,cases:cases.map(x=>x.name),phases:cases[0].phases}));
  }finally{if(item)await item.close();dom.window.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
