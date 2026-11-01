@@ -22,6 +22,8 @@ import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
 import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
+import { NAV_GROUPS_COOKIE, parseNavGroups } from '@/lib/shell/nav-groups'
+import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
 import ShellGate from '@/components/shell/ShellGate'
 
 export default async function ShellGroupLayout({ children }: { children: ReactNode }) {
@@ -45,6 +47,10 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
     : [undefined, {}]
   // 最近使ったツール（最初の描画から並べ、あとから押し下げない）
   const initialRecent = signedIn ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
+  // 左のメニューのまとまり（ドヤマーケAI など）の開閉。最初の描画から開いた形で出し、あとから動かさない
+  const navGroups = signedIn ? parseNavGroups((await cookies()).get(NAV_GROUPS_COOKIE)?.value) : undefined
+  // 左のメニューの「動いているタスク」（ドヤくんに任せた ToDo）。旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ（off ならセッションも読まない）
+  const agentTasks = signedIn ? await isAgentOrchestrationEnabled() : false
   // ドヤパワーの残り（枠のゲージ）。旗が出すと決めた人だけ、本人の会社の台帳を読む（毎月の付与・毎日の回復は読むときに足す）。
   // ⚠️ 旗が off・会社が未登録・読めないときは null（ゲージは出ない）。off なら台帳に触れない
   const doyaPowerState = doyaPower ? await doyaPowerCharger.shellState().catch(() => null) : null
@@ -52,7 +58,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const userId = (session?.user as { id?: string } | undefined)?.id
   const doyaPowerFx = doyaPower && userId ? (await loadDoyaPowerFxForUser(userId).catch(() => null))?.fx ?? undefined : undefined
   return (
-    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments}>
+    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments} agentTasks={agentTasks} navGroups={navGroups}>
       {children}
     </ShellGate>
   )
