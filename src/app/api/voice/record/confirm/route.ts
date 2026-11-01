@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       storagePath,
     })
   } catch (error: any) {
-    console.error('Voice record confirm error:', error?.message)
+    console.error('[voice/record/confirm]')
     return NextResponse.json(
       { success: false, error: '録音の記録に失敗しました。しばらくしてから再度お試しください。' },
       { status: 500 }

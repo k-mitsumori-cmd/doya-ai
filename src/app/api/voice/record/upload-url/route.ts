@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       maxFileSize: VOICE_MAX_FILE_SIZE,
     })
   } catch (error: any) {
-    console.error('Voice record upload-url error:', error?.message)
+    console.error('[voice/record/upload-url]')
     if (error?.message?.includes('Supabase未設定')) {
       return NextResponse.json(
         { success: false, error: 'ストレージサービスが設定されていません。管理者にお問い合わせください。' },
