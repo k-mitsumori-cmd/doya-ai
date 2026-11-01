@@ -8,10 +8,14 @@ import { getUserId } from '@/lib/cunning/access'
 import { analyzeCompanyUrl } from '@/lib/cunning/company'
 import { reserveCunningCompanyAnalysis, CUNNING_COMPANY_DAILY_LIMIT, CunningCompanyDailyLimitError } from '@/lib/cunning/company-budget'
 import { CunningScrapeTooLargeError } from '@/lib/cunning/scraper'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 // POST /api/cunning/company/analyze — 採用URL解析 → 企業プロファイル保存
 // body: { url: string }
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

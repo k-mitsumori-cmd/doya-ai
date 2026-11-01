@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-06T17:06:51.548163+00:00",
+  "commit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
+  "state": "Exact-SHA CI success; READY production aliases and 4 HTML / 33 scripts reflected",
+  "ci": {
+    "id": 37498465793,
+    "status": "completed",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37498465793",
+    "conclusion": "success"
+  },
+  "deploymentEvidence": "banner-quota-client-deployments-cfa92165.json",
+  "localEvidence": "banner-quota-client-repair.json",
+  "remaining": [
+    "Continue full 17-service requirement matrix and authenticated device QA scope"
+  ],
+  "publicEvidence": "banner-quota-client-public-cfa92165.json"
+}

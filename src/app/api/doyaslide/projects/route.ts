@@ -5,9 +5,12 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
-import { getUserDoyaSlideLimits, DOYASLIDE_PROJECT_SERVICE_ID, isSameMonth, monthStart } from '@/lib/doyaslide/limits'
+import { getUserDoyaSlideLimits } from '@/lib/doyaslide/limits'
+import { createProjectWithinLimit, limitReachedBody } from '@/lib/doyaslide/create-project'
 import { getDocType, DOC_TYPES, ASPECT_TO_SIZE, STYLE_PRESETS, MIN_SLIDES, MAX_SLIDES } from '@/lib/doyaslide/constants'
 import { errorSuffix } from '@/lib/doyaslide/errors'
+import { isSystemWatchFor } from '@/lib/system-watch/watch-gate'
+import { isDoyaSlideStaleCandidate, settleStaleDoyaSlideProject } from '@/lib/doyaslide/generation-operation'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
 export async function GET(req: NextRequest) {
@@ -28,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (cursor && !await prisma.doyaSlideProject.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
       return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
-    const [rows, total] = await Promise.all([
+    const query = () => Promise.all([
       prisma.doyaSlideProject.findMany({
         where,
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
@@ -42,6 +45,16 @@ export async function GET(req: NextRequest) {
       }),
       prisma.doyaSlideProject.count({ where }),
     ])
+    let [rows, total] = await query()
+    // 止まったままの資料（構成中 6 分・生成中 15 分を超えたもの）を、読むときに戻す。戻したら読み直す
+    // 1回の読み込みで戻すのは5件まで、1件ずつ（同じ人の行を順にロックするため、まとめて走らせない）
+    const stale = rows.slice(0, limit).filter((row) => isDoyaSlideStaleCandidate(row)).slice(0, 5)
+    let settledAny = false
+    for (const row of stale) {
+      const result = await settleStaleDoyaSlideProject(userId, row.id).catch(() => 'none' as const)
+      if (result !== 'none') settledAny = true
+    }
+    if (settledAny) [rows, total] = await query()
     const page = rows.slice(0, limit)
     return NextResponse.json({
       projects: page.map((project) => ({
@@ -96,40 +109,14 @@ export async function POST(req: NextRequest) {
       stylePreset: stylePreset || 'corporate',
       status: 'draft',
     }
+    // 自動点検（system-watch の B1）のときだけ、作ったプロジェクトの ID を残し、月の件数の台帳を増やさない。
+    // 数えるときは、残した ID（今月の分）を除く。名前の「【自動点検】」では除かない（利用者が付けられるため）。
+    // 条件: 本人が SYSTEM_WATCH_TEST_USER_ID で、今日のその人の合図がある（watch-gate.ts）
+    const systemWatch = isSystemWatchFor(req.headers, userId)
     const limits = await getUserDoyaSlideLimits(userId)
-    const project = limits.maxProjects === -1
-      ? await prisma.doyaSlideProject.create({ data })
-      : await prisma.$transaction(async (tx) => {
-        const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
-        if (users.length === 0) throw new Error('DoyaSlide account not found')
-        const now = new Date()
-        const [existing, ledger] = await Promise.all([
-          tx.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) } } }),
-          tx.userServiceSubscription.findUnique({
-            where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
-            select: { monthlyUsage: true, lastUsageReset: true },
-          }),
-        ])
-        const used = Math.max(existing, ledger && isSameMonth(ledger.lastUsageReset, now) ? ledger.monthlyUsage : 0)
-        if (used >= limits.maxProjects) return null
-        const project = await tx.doyaSlideProject.create({ data })
-        await tx.userServiceSubscription.upsert({
-          where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
-          create: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID, monthlyUsage: used + 1, lastUsageReset: now },
-          update: { monthlyUsage: used + 1, lastUsageReset: now },
-        })
-        return project
-      })
+    const project = await createProjectWithinLimit(data, limits.maxProjects, { systemWatch })
     if (!project) {
-      return NextResponse.json(
-        {
-          error: `今月のプロジェクト作成数が上限（${limits.maxProjects}件）に達しています。プロプランではプロジェクト数の上限なく作成できます。`,
-          code: 'LIMIT_REACHED',
-          limit: limits.maxProjects,
-          upgradeUrl: '/doyaslide/pricing',
-        },
-        { status: 403 }
-      )
+      return NextResponse.json(limitReachedBody(limits.maxProjects), { status: 403 })
     }
     return NextResponse.json({ project }, { status: 201 })
   } catch (e: any) {

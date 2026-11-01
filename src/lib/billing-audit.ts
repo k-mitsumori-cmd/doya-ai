@@ -21,6 +21,7 @@ import {
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { subscriptionAmount, tieredPriceIdsMissingTiers, type TierLike } from '@/lib/pricing-v2/amount'
 import { getManualGrantEmails } from '@/lib/billing-manual-grants'
 
 export const BILLING_WEBHOOK_EXPECTED_URL =
@@ -77,6 +78,23 @@ function jstDate(d: Date): string {
 
 function jstDateTime(d: Date): string {
   return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+}
+
+/**
+ * 段階別の価格（新しい料金の人数の明細）の段階の表。一覧では付かない（expand は4段まで）ので、価格ごとに1回だけ取りに行く。
+ * 段階別の価格が無ければ（今の契約だけなら）Stripe を呼ばない
+ */
+async function loadTiersByPrice(subs: any[]): Promise<Map<string, TierLike[]>> {
+  const tiersByPrice = new Map<string, TierLike[]>()
+  for (const priceId of new Set(subs.flatMap((s) => tieredPriceIdsMissingTiers(s.items?.data ?? [])))) {
+    try {
+      const p: any = await stripe.prices.retrieve(priceId, { expand: ['tiers'] })
+      if (Array.isArray(p?.tiers)) tiersByPrice.set(priceId, p.tiers)
+    } catch {
+      console.error('[billing-audit] could not read price tiers')
+    }
+  }
+  return tiersByPrice
 }
 
 /** Stripe の全サブスクリプションをページングして取得 */
@@ -182,6 +200,8 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   const userByEmail = new Map(usersByEmail.map((u) => [String(u.email).toLowerCase(), u]))
   const resolvedUserById = new Map([...usersByEmail, ...usersById].map((u) => [u.id, u]))
 
+  const tiersByPrice = await loadTiersByPrice(live)
+
   const subscriptions: AuditSubscription[] = live.map((s) => {
     const cust = typeof s.customer === 'object' ? s.customer : null
     const customerEmail = (cust?.email as string | undefined)?.toLowerCase() || null
@@ -189,10 +209,11 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     const dbUser = metadataUserId ? userById.get(metadataUserId) : customerEmail ? userByEmail.get(customerEmail) : undefined
     const email = dbUser?.email?.toLowerCase() || customerEmail
     const { planId } = resolvePlanIdFromSubscription(s)
-    const price = s.items?.data?.[0]?.price
-    const interval = price?.recurring?.interval
-    const intervalCount = Math.max(1, Number(price?.recurring?.interval_count || 1))
-    const amount = Number(price?.unit_amount || 0)
+    // 全部の明細の合計（新しい料金のチームは 基本料＋人数 の2つ。人数は段階別の価格）
+    const total = subscriptionAmount(s.items?.data ?? [], tiersByPrice)
+    const interval = total.interval
+    const intervalCount = total.intervalCount
+    const amount = total.amount
     const billingInterval: AuditSubscription['billingInterval'] = interval === 'year' ? 'year' : interval === 'month' ? 'month' : 'other'
     const monthlyAmount = billingInterval === 'year' ? amount / (12 * intervalCount) :
       billingInterval === 'month' ? amount / intervalCount : 0
@@ -369,7 +390,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     audit.unknownBillingIntervals.length > 0
 
   lines.push(hasProblem ? '<!channel>' : '')
-  lines.push(`:credit_card: *[課金レポート/${opts.windowLabel}]* ${jstDateTime(new Date())}`)
+  lines.push(`*課金レポート（${opts.windowLabel}） ${jstDateTime(new Date())}*`)
   lines.push('')
 
   lines.push(`*${opts.windowLabel}の新規有料契約: ${audit.newInWindow.length}件*`)
@@ -393,14 +414,14 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (!audit.webhookOk) {
     lines.push('')
-    lines.push(`:rotating_light: *Stripe Webhook 異常*`)
+    lines.push(`*【要対応】Stripe Webhook 異常*`)
     lines.push(`・${audit.webhookDetail}`)
     lines.push('・このままでは新規契約がプランに反映されず、課金通知も飛びません。')
   }
 
   if (audit.mismatched.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *課金されているのに無料プランのままの方: ${audit.mismatched.length}名*`)
+    lines.push(`*【要対応】課金されているのに無料プランのままの方: ${audit.mismatched.length}名*`)
     for (const s of audit.mismatched) {
       lines.push(
         `・${s.email || s.customerId} ｜ Stripe: ${s.tier}(${s.status}) ｜ DB: ${s.dbUserFound ? s.dbPlan : 'ユーザー未登録'} ｜ sub: ${s.id}`
@@ -411,7 +432,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.tierDrift.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *Stripe契約とDBプランの階層不一致: ${audit.tierDrift.length}名*`)
+    lines.push(`*【要対応】Stripe契約とDBプランの階層不一致: ${audit.tierDrift.length}名*`)
     for (const d of audit.tierDrift) {
       lines.push(`・${d.email || d.userId} ｜ Stripe: ${d.stripeTier} ｜ DB: ${d.dbPlan} ｜ sub: ${d.subscriptionIds.join(', ')}`)
     }
@@ -420,7 +441,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.unmappedPlans.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *プランを特定できない契約: ${audit.unmappedPlans.length}件*`)
+    lines.push(`*【要対応】プランを特定できない契約: ${audit.unmappedPlans.length}件*`)
     for (const sub of audit.unmappedPlans) {
       lines.push(`・${sub.email || sub.customerId} ｜ sub: ${sub.id} ｜ Stripe状態: ${sub.status}`)
     }
@@ -429,7 +450,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.duplicates.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *同一利用者で契約が重複: ${audit.duplicates.length}件（過剰請求の恐れ）*`)
+    lines.push(`*【要対応】同一利用者で契約が重複: ${audit.duplicates.length}件（過剰請求の恐れ）*`)
     for (const d of audit.duplicates) {
       lines.push(`・${d.email}: ${d.subs.map((s) => `${s.id}(${s.status})`).join(' / ')}`)
     }
@@ -437,7 +458,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.serviceDrift.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *有料なのにサービス別プランが揃っていない方: ${audit.serviceDrift.length}名*`)
+    lines.push(`*【要対応】有料なのにサービス別プランが揃っていない方: ${audit.serviceDrift.length}名*`)
     for (const d of audit.serviceDrift) {
       lines.push(`・${d.email || '不明'} ｜ User.plan=${d.userPlan}（期待 ${d.expected}）｜ 未反映: ${d.broken.join(', ')}`)
     }
@@ -446,7 +467,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.overGranted.length > 0) {
     lines.push('')
-    lines.push(`:warning: *Stripeに有効な契約が無いのに有料プランのまま: ${audit.overGranted.length}名*`)
+    lines.push(`*【要確認】Stripeに有効な契約が無いのに有料プランのまま: ${audit.overGranted.length}名*`)
     for (const o of audit.overGranted.slice(0, 20)) {
       lines.push(`・${o.email || '不明'} ｜ DB: ${o.plan}`)
     }
@@ -456,7 +477,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.unknownBillingIntervals.length > 0) {
     lines.push('')
-    lines.push(`:warning: *請求周期を確認できない契約: ${audit.unknownBillingIntervals.length}件*`)
+    lines.push(`*【要確認】請求周期を確認できない契約: ${audit.unknownBillingIntervals.length}件*`)
     for (const s of audit.unknownBillingIntervals) lines.push(`・${s.email || s.customerId} ｜ sub: ${s.id}`)
     lines.push('・月次売上見込にはこれらの契約を含めていません。Stripeの価格設定を確認してください。')
   }
@@ -598,12 +619,14 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   ).length
 
   // トライアル中の方がいつ売上になるか（見込みの根拠）
-  const upcoming = live
-    .filter((s) => s.status === 'trialing')
+  const trialing = live.filter((s) => s.status === 'trialing')
+  const upcomingTiers = await loadTiersByPrice(trialing)
+  const upcoming = trialing
     .map((s) => ({
       email: (typeof s.customer === 'object' ? (s.customer?.email as string | undefined) : null) || null,
       at: new Date(s.current_period_end * 1000),
-      amount: s.items?.data?.[0]?.price?.unit_amount ?? 0,
+      // 全部の明細の合計。段階別の価格（チームの人数）は、段階の表を取りに行って数える
+      amount: subscriptionAmount(s.items?.data ?? [], upcomingTiers).amount,
     }))
     .sort((a, b) => a.at.getTime() - b.at.getTime())
 
@@ -625,7 +648,7 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
 
 export function formatMonthlyRevenueMessage(r: MonthlyRevenue): string {
   const lines: string[] = []
-  lines.push(`:chart_with_upwards_trend: *[月次売上レポート/${r.label}]*`)
+  lines.push(`*月次売上レポート（${r.label}）*`)
   lines.push('')
   lines.push(`*${r.label}の売上: ${yen(r.netTotal)}*`)
   lines.push(`・入金 ${r.paidCount}件 ｜ 合計 ${yen(r.paidTotal)}`)

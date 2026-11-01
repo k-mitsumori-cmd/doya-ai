@@ -1,0 +1,48 @@
+{
+  "passed": 7,
+  "results": [
+    {
+      "page": "tasks",
+      "field": "input[placeholder^=\"やること\"]",
+      "retainedLength": 201,
+      "status": 400
+    },
+    {
+      "page": "tasks",
+      "field": "input[placeholder^=\"活動内容\"]",
+      "retainedLength": 201,
+      "status": 400
+    },
+    {
+      "page": "activities",
+      "field": "input[placeholder^=\"件名\"]",
+      "retainedLength": 201,
+      "status": 400
+    },
+    {
+      "page": "activities",
+      "field": "textarea",
+      "retainedLength": 4001,
+      "status": 400
+    },
+    {
+      "page": "dashboard",
+      "field": "input[placeholder^=\"例: A社\"]",
+      "retainedLength": 201,
+      "status": 400
+    },
+    {
+      "page": "deals",
+      "field": "input[placeholder^=\"やること\"]",
+      "retainedLength": 201,
+      "status": 400
+    },
+    {
+      "page": "deals",
+      "field": "input[placeholder^=\"活動内容\"]",
+      "retainedLength": 201,
+      "status": 400
+    }
+  ],
+  "scope": "Actual four SFA pages plus actual task/activity POST validators, actual shared client/date/summary helpers. Synthetic auth/transport, account data and Character/Link shell. Proves overlong rejection retains manual drafts; does not prove other lifecycle, AI bulk, private production or actual DB/provider."
+}

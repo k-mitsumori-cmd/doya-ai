@@ -1,0 +1,21 @@
+/* 共通の枠の、ドヤパワーの残りの小さなゲージ。色はトークン。幅は決めておき、あとから変わらない */
+.meter {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px;
+  background: var(--blue-soft, #e8f0ff); color: var(--blue-deep, #0047d6); font-size: 12px; font-weight: 700; text-decoration: none;
+  flex: none;
+}
+.meter:hover { background: var(--blue-line, #d7e5ff); }
+.meter:focus-visible { outline: 2px solid var(--blue, #0066ff); outline-offset: 2px; }
+.meter[data-low='true'] { background: var(--note-bg, #fff7d6); color: var(--note-ink, #7a5b00); }
+.icon { flex: none; }
+.num { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: right; }
+.track { display: block; width: 40px; height: 4px; border-radius: 999px; background: rgba(0, 71, 214, 0.15); overflow: hidden; }
+.fill { display: block; height: 100%; border-radius: 999px; background: currentColor; }
+/* 左のメニューの上では、検索の下に1行で出す */
+.sidebarMeter { align-self: flex-start; margin: 4px 12px 0; }
+/* 768〜1279px のアイコンだけのサイドバーでは、数字と棒を隠して稲妻だけにする */
+@media (min-width: 768px) and (max-width: 1279px) { .sidebarMeter .num, .sidebarMeter .track { display: none; } .sidebarMeter { padding: 0 8px; } }
+
+/* 「足りない」の知らせ。右下に出す（スマホでは下のタブとプレビューの札の上） */
+.lowPower { position: fixed; right: 16px; bottom: 24px; z-index: 70; width: min(420px, calc(100vw - 32px)); }
+@media (max-width: 767px) { .lowPower { right: 12px; left: 12px; width: auto; bottom: calc(128px + env(safe-area-inset-bottom, 0px)); } }

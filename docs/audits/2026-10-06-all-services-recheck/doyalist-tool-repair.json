@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-06T18:48:49.597751+00:00",
+  "baselineCommit": "5c9b1512d75fc180635fa0e9245fb60a1c100bed",
+  "baselineProofs": [
+    "doyalist-tool-plan-refresh-baseline.json",
+    "doyalist-tool-response-baseline.json",
+    "doyalist-tool-history-baseline.json",
+    "doyalist-tool-empty-input-baseline.json"
+  ],
+  "unreleasedCandidateProofs": [
+    "doyalist-tool-guest-baseline.json",
+    "doyalist-tool-result-aba-baseline.json"
+  ],
+  "mountedCases": 37,
+  "apiCases": 13,
+  "proofs": [
+    "doyalist-tool-mounted-current.json",
+    "doyalist-tool-api-current.json",
+    "doyalist-tool-quota-crosscheck.log"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/doyalist-tool-account-release-06ce7ea5-f7e9-4a1c-ac04-5328de979c32",
+  "changes": [
+    "Refresh private approach quota on current session/plan/route/type, focus and polling; never start generation while unconfirmed",
+    "Queue one fresh usage read if generation finishes behind an earlier pending quota lookup",
+    "Preserve prior output until confirmed success; validate text, success and history acknowledgment",
+    "Bound generation response/body to 310 seconds/64KiB and reject synchronous duplicate operations",
+    "Preserve draft through first identity resolution and same-actor SDK updates; clear private state on subsequent account changes and invalidate actor/type ABA results",
+    "Provide guest login actions for form/email/phone and visible quota retry",
+    "Save full generated history, enforce common 20000-character output maximum, reject blank service input before quota/provider calls",
+    "Keep same-month reservation refund and history-deletion quota semantics"
+  ],
+  "limits": [
+    "Synthetic React/HTTP/Prisma/clock checks do not prove authenticated production generation or actual paid trial flows",
+    "Browser cancellation does not cancel server generation or guarantee a quota refund; uncertain outcomes require history review",
+    "Cross-device or post-disconnect retries are not proven server-idempotent by this change",
+    "Main DoyalistTool collection callback defects remain separately reproduced; all 17-service audit remains incomplete"
+  ]
+}

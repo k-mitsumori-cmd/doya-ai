@@ -1,0 +1,1 @@
+module.exports=()=>({url:'https://example.invalid/',companyName:'Company',marketing:{snsChannels:[],martechTools:[],summary:'未確認',hasContactForm:false,hasLeadMagnet:false,runsAds:false},ownedMedia:{hasOwnedMedia:false,mediaUrls:[],articleCountEstimate:0,updateFrequency:'unknown',frequencyNote:'未確認',siteScale:'unknown'}});

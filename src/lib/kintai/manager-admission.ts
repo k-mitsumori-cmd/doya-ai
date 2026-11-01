@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import type { KintaiContext, KintaiMemberRole } from './types'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 /** Hold the current member and employee rows while a mutation commits. */
 export async function lockCurrentKintaiActor(
@@ -19,8 +20,10 @@ export async function lockCurrentKintaiActor(
   `
   const actor = rows[0]
   if (actor?.status !== 'ACTIVE' || !actor.isActive) return null
-  return actor.role === 'employee' || actor.role === 'manager' || actor.role === 'hr_admin' || actor.role === 'system_admin'
-    ? actor.role
+  // 入口で会社の役割の上限を当てた役割（ctx.role）より上には上げない（ROLES-2026-10-26.md §4。旗が off なら ctx.role は DB の役割と同じ）
+  const role = ctx.role === undefined ? actor.role : lowerToolRole('kintai', actor.role, ctx.role)
+  return role === 'employee' || role === 'manager' || role === 'hr_admin' || role === 'system_admin'
+    ? role
     : null
 }
 

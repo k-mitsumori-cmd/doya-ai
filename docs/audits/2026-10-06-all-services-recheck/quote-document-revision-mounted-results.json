@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T19:33:00.891Z",
+  "passed": 5,
+  "cases": [
+    "displayed version sent and new acknowledged version used on next save",
+    "server conflict preserves unsaved draft and blocks PDF",
+    "same-version response cannot acknowledge save or permit duplicate",
+    "missing revision read never enables editor or save",
+    "confirmed status transition sends displayed version without content"
+  ],
+  "sourceHashes": {
+    "src/lib/quote/document-response.ts": "5dbb7d279990f4feddf1d383f210be6c9302725426b89f8a1f0a5df00c3af827",
+    "src/lib/quote/use-document-detail.ts": "66260b772be9cf7d513efa9e99e68956011261554d2ef851fe3450baf107a922",
+    "src/app/quote/documents/[id]/page.tsx": "d7e4cbce2408978118a1902b0cb67c35ea6753dc4d2da3c5d324f5e52af4eb7c"
+  },
+  "scope": "Actual mounted Quote detail page/hook/response parser in React StrictMode. Synthetic request/database/revision store mocks; real version hashing, locking and rollback covered separately in isolated PostgreSQL. No native or production authenticated E2E."
+}

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T03:58:58.649Z",
+  "status": "confirmed-not-repaired",
+  "findings": 5,
+  "results": [
+    "Lead creation writes after synthetic actor revocation immediately following context resolution.",
+    "Lead PATCH has no fresh actor check or expected-version input; sequential stale edits both succeed and last writer overwrites. This does not prove a concurrent PostgreSQL schedule.",
+    "Lead PATCH silently shortens a 100-character contact name to80 instead of rejecting or preserving input.",
+    "Lead logical DELETE writes after synthetic actor revocation following context resolution.",
+    "CSV import silently shortens company/contact fields and creates after synthetic actor revocation; no rejection/review result identifies truncation."
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/leads/route.ts": "4c4e127d61cee5ed95331c8fde568a55248a571735f49f84cec9f322621debd1",
+    "src/app/api/sfa/leads/[id]/route.ts": "ea1a6d97abf7a97fa2b98b4119b9a0464b485d1d7310b6642f804a1c60f6e23f",
+    "src/app/api/sfa/leads/import/route.ts": "093f00d95d1839f4802d0a21fb5c5a68c151524185b9718b19297db138388e28"
+  },
+  "scope": "Actual lead create/PATCH/DELETE/import handlers with synthetic Prisma/context. No production/customer/provider writes, actual PostgreSQL schedule or mounted UI proof. Separate from repaired conversion lifecycle."
+}

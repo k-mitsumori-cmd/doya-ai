@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
@@ -16,11 +17,11 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const url = req.nextUrl
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     const pageSize = url.searchParams.has('pageSize') ? Number(url.searchParams.get('pageSize')) : DEFAULT_PAGE_SIZE
     if (!Number.isSafeInteger(page) || page < 1 || page > MAX_PAGE
       || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
     const action = url.searchParams.get('action') || ''
     const userId = url.searchParams.get('userId') || ''
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
       prisma.hrAuditLog.count({ where }),
     ])
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       items,
       total,
@@ -57,8 +58,8 @@ export async function GET(req: NextRequest) {
     })
   } catch {
     console.error('[hr/audit-logs] failed')
-    return NextResponse.json(
-      { error: 'Failed to fetch audit logs' },
+    return privateApiJson(
+      { error: '操作の記録を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

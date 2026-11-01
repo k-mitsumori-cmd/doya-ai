@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T01:33:16.600Z",
+  "confirmedCases": 3,
+  "results": [
+    {
+      "path": "/sfa/pricing?org=alpha",
+      "action": "/sfa/pricing?org=pricing",
+      "confirmedWrongScope": true
+    },
+    {
+      "path": "/sfa/pricing",
+      "action": "/sfa/pricing?org=pricing",
+      "confirmedWrongScope": true
+    },
+    {
+      "path": "/sfa/invite/synthetic-token",
+      "action": "/sfa/pricing?org=invite",
+      "confirmedWrongScope": true
+    }
+  ],
+  "scope": "Actual mounted provider/classifier/observer with synthetic current quota and mocked Next pathname/search hooks; reserved SFA pricing/invite routes misinterpreted as organization slug. No private production operation.",
+  "providerSourceHash": "9ccdb6d1152f0f0ca755fb59986f98619c26fe7a7a6d34dc1688881efb5b9da0"
+}

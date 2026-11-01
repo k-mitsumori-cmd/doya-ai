@@ -11,6 +11,7 @@ import { assertFreeLimit, FREE_LIMITS } from '@/lib/plan-limit'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { generateTemplate } from '@/lib/mensetsu/template'
 import type { MensetsuLevel } from '@/lib/mensetsu/types'
+import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 const LEVELS: MensetsuLevel[] = ['newgrad', 'mid', 'manager']
 const PENDING_STATUS = 'generating'
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ templates })
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   let ownerUserId: string | null
@@ -226,3 +227,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '質問セットの生成または保存に失敗しました。時間をおいて再試行してください。' }, { status: 502 })
   }
 }
+
+// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
+export const POST = withDoyaPowerCharge({ action: 'text.generate' }, postHandler)

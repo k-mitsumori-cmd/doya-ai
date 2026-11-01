@@ -1,0 +1,78 @@
+/*
+ * ds/next-step — 次にやること帯（T1）と手順の札（T2）
+ * 見本はドヤ展示会のブース設計（src/components/tenjikai/BoothStudio.tsx）。値はそこの Tailwind の指定と同じにしている。
+ * ⚠️ 色・角丸はトークン名だけで書く（.ds か .tenjikai-root の中で使う前提）
+ * ⚠️ 高さを先に取る（CLS を出さない）。文が1行でも2行でも、帯の高さが変わらないようにする
+ */
+
+/* ---- NextStepBar ---- */
+.bar {
+  display: flex; flex-direction: column; gap: 12px;
+  min-height: 76px; padding: 16px;
+  border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--paper);
+  min-width: 0;
+}
+.text { min-width: 0; }
+/* 読み上げの領域は残したまま、中の文だけを入れ替える（入れ替えた文が読み上げられる） */
+.live { min-height: calc(2 * 1.5 * 15px); }
+.sentence { margin: 0; font-size: 15px; line-height: 1.5; font-weight: 700; color: var(--ink); animation: nextStepIn 180ms var(--ease) both; }
+.placeholder { display: block; width: min(60%, 320px); height: 22px; border-radius: 8px; background: var(--bg, #f4f7fd); }
+.sub { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: var(--sub); }
+.action { flex: none; display: flex; }
+.bar[data-state='error'] { border-color: color-mix(in srgb, var(--bad-ink, #c0123c) 35%, var(--line)); }
+
+@media (min-width: 640px) {
+  .bar { flex-direction: row; align-items: center; justify-content: space-between; }
+  /* 横に並ぶときは、ボタン（44px）が高さを決める。2行の文もその中に収まる */
+  .live { min-height: 0; }
+}
+
+/* ---- NextStepAction（帯の主ボタン。1つだけ） ---- */
+.primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0;
+  min-height: 44px; padding: 0 20px; border: 0; border-radius: var(--r-sm);
+  background: var(--blue); color: #fff;
+  font: inherit; font-size: 14px; font-weight: 900; line-height: 1.25; text-decoration: none; cursor: pointer;
+  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--blue) 30%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--blue) 30%, transparent);
+}
+.primary:hover { background: var(--blue-deep); }
+.primary:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.primary:disabled, .primary[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+.primary:disabled:hover { background: var(--blue); }
+.spin { animation: nextStepSpin 1s linear infinite; }
+
+/* ---- FlowSteps ---- */
+.steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(var(--cols-sm, 2), minmax(0, 1fr));
+}
+@media (min-width: 640px) {
+  .steps { grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
+}
+.step {
+  display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 42px;
+  padding: 8px 12px; border: 1px solid transparent; border-radius: var(--r-sm);
+  font-size: 13px; line-height: 1.4; font-weight: 700;
+}
+.step[data-state='now'] { border-color: var(--blue); background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+.step[data-state='done'] { background: color-mix(in srgb, var(--paper) 70%, transparent); color: var(--sub); }
+.step[data-state='next'] { background: color-mix(in srgb, var(--paper) 40%, transparent); color: var(--muted); }
+.mark {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 24px; height: 24px; border-radius: 999px; font-size: 12px;
+}
+.step[data-state='done'] .mark { background: var(--blue); color: #fff; }
+.step[data-state='now'] .mark { background: var(--blue-soft); color: var(--blue-deep); box-shadow: 0 0 0 2px var(--blue); }
+.step[data-state='next'] .mark { background: #f3f4f6; color: #6b7280; }
+.label { min-width: 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@keyframes nextStepIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@keyframes nextStepSpin { to { transform: rotate(360deg); } }
+
+/* 動きを減らす設定では、文の入れ替えも回る印も動かさない */
+@media (prefers-reduced-motion: reduce) {
+  .sentence, .spin { animation: none; }
+}

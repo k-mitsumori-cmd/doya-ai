@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-08T17:54:35.705Z",
+  "reproduced": true,
+  "retainedDuringLoading": true,
+  "retainedAfterActorChange": true,
+  "settingsReadsAfterActorChange": 0,
+  "sourceHash": "3c5a312eee0f6f2a318a1e0853736d9e64c4fffdd225ed0f793068d34db303d1",
+  "scope": "Actual candidate full settings page in native Chrome with synthetic useSession actor transitions. Prior organization form remains visible during loading and after actor change; no new settings GET. No production occurrence or actual OAuth claim. Unresolved; blocks candidate release."
+}

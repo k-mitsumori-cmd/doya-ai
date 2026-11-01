@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-06T19:35:06.148600+00:00",
+  "status": "confirmed-browser-overlap-unfixed",
+  "url": "https://doya-ai.surisuta.jp/doyaslide/new",
+  "deployment": "a748323a654a84dc43757ef371a4235c9af3563d",
+  "browser": "Codex in-app browser; anonymous guest observed",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "createDisabled": true,
+  "loginRequiredCopyVisible": true,
+  "buttonRect": {
+    "x": 844,
+    "y": 656,
+    "width": 300,
+    "height": 52
+  },
+  "popupRect": {
+    "x": 970,
+    "y": 544.5,
+    "width": 300,
+    "height": 165.5
+  },
+  "overlapSquarePixels": 9048,
+  "scope": "Actual DOM AX, screenshot and read-only geometry. HubSpot consultation slide-in obscures about 58 percent of the create CTA at this viewport. Anonymous CTA is correctly disabled; authenticated overlap and mobile remain unverified. No ad click, submission, login, upload or provider call initiated; anonymous style previews only serve cached images."
+}

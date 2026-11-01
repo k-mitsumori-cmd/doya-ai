@@ -1,6 +1,7 @@
 'use client'
 
-import React, { memo, useMemo, useState } from 'react'
+import React, { memo, useMemo, useState, type ComponentProps } from 'react'
+import { useInShell } from '@/components/shell/in-shell'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -232,7 +233,7 @@ function DashboardSidebarImpl({
 
         <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
           <div className="space-y-1">
-            <SidebarSectionTitle title={isBanner ? "ドヤバナーAI" : "ドヤライティングAI"} isCollapsed={isCollapsed} theme={dashboardTheme} />
+            <SidebarSectionTitle title={isBanner ? "ドヤバナーAI" : "ドヤ記事作成"} isCollapsed={isCollapsed} theme={dashboardTheme} />
             {activeNavItems.map((item) => (
               <SidebarNavLink
                 key={item.href + item.label}
@@ -252,7 +253,7 @@ function DashboardSidebarImpl({
 
         {/* Side Banner（プラン案内） */}
         {/* 作った数と残り。数字は /api/usage/banner から受け取るだけ */}
-        <SidebarUsagePanel service="banner" show={sessionReady && (isMobile || !isCollapsed)} />
+        <SidebarUsagePanel service="banner" show={sessionReady && (isMobile || !isCollapsed)} refreshEvent="banner:usage-changed" />
         <SidebarBanner />
 
         <ToolSwitcherMenu currentService="banner" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
@@ -375,4 +376,12 @@ function DashboardSidebarImpl({
   )
 }
 
-export default memo(DashboardSidebarImpl)
+const DashboardSidebarMemo = memo(DashboardSidebarImpl)
+
+// ⚠️ 共通の枠の中では、旧来のサイドバーを出さない（枠が二重になり、1280px でもページの幅がはみ出すため。UI 品質 S-55）。
+//    新しい見た目（チェックリスト §5.1）のときだけ
+export default function DashboardSidebar(props: ComponentProps<typeof DashboardSidebarImpl>) {
+  const inShell = useInShell()
+  if (inShell) return null
+  return <DashboardSidebarMemo {...props} />
+}

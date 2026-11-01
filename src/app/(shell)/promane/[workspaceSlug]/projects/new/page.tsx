@@ -1,0 +1,34 @@
+import Link from 'next/link';
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
+import PromanePageHeading from '@/components/promane/PromanePageHeading';
+import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { ProjectForm } from "@/components/promane/project-form";
+
+export default async function NewProjectPage({
+  params,
+}: {
+  params: Promise<{ workspaceSlug: string }>;
+}) {
+  const session = await requirePromaneAuth();
+  const { workspaceSlug } = await params;
+  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
+  if (!workspace) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
+
+  if (!canWritePromaneWorkspace(workspace.members[0]?.role)) {
+    return <div className="p-8"><p>このワークスペースは閲覧のみです。プロジェクトの追加・編集はできません。</p><Link className="underline" href={`/promane/${workspaceSlug}/projects`}>プロジェクト一覧を表示</Link></div>;
+  }
+
+  const clients = await prisma.promaneClient.findMany({
+    where: { workspaceId: workspace.id },
+    orderBy: { name: "asc" },
+  });
+
+  return (
+    <div className="p-6">
+      <PromanePageHeading className="mb-6 text-2xl font-bold">新規プロジェクト作成</PromanePageHeading>
+      <ProjectForm workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients} />
+    </div>
+  );
+}

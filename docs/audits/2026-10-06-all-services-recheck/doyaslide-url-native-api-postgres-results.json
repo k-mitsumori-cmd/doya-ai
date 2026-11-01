@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-08T02:48:11.322Z",
+  "expected": 8,
+  "passed": 8,
+  "cases": [
+    "Native duplicate import commits one actual PG attempt and one saved result while preserving edited title",
+    "Native lost acknowledgement and reload recover actual PG proposal by GET with no provider or attempt replay",
+    "Native concurrent tabs share real Web Locks and admit one actual route+PG reservation",
+    "Native active cancellation commits PG fence before late provider result and retains counted attempt and draft",
+    "Native shortened timeout retains identity and actual PG recovery avoids another counted attempt",
+    "Actual PG operational cap returns429 to native UI before scraper/provider and keeps count50",
+    "Native expired API session stops at401 without receipt/budget writes and retains client recovery identity",
+    "Corrupt actual PG ledger rolls admission back and native client keeps unknown intent rather than resubmitting"
+  ],
+  "providerCalls": 5,
+  "http": {
+    "posts": 8,
+    "gets": 6,
+    "deletes": 1
+  },
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-intent-client.ts": "9072873b93337e7060b0f7918f971d2d0e83374f003fb6b2fdfe0ada0365b83a",
+    "src/lib/doyaslide/url-analysis-operation-client.ts": "3ce832293cb60c195091607acf3b3634508c40e87c4d0474133827b283fdef4a",
+    "src/lib/doyaslide/url-analysis-client.ts": "e9b6619205cb97c54dae3c83e87b58350eee3c31a6e338cde3eb806dab6832b2",
+    "src/components/doyaslide/SlideImage.tsx": "55d32bd8ecabe5e3e288b023d07a91c9455ba0ed324f19e27a6a63a847deb244",
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "b51a1eb444d463073df309f0aab0ed839494d8533dc0ae2b5845e534029bebfd",
+    "src/lib/doyaslide/use-style-previews.ts": "9c53a7e3e8a83fff8ec6fe650c78404b1b0fd1c7bf445d1f0e332356d31fca85",
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "src/lib/doyaslide/constants.ts": "7d0e9e3ef825c325564bd9b6f6bdd1f8f54d9ffd6f2f46932bfecfb0d5961a40",
+    "src/app/api/doyaslide/analyze/route.ts": "b2e1d6ad3abf1fa8dc93a9d9ce2b132933a2a7f455874d2f2c48e7d581d9ebfe",
+    "src/lib/doyaslide/text-budget.ts": "3b13bbebd945e3c14e63e4ae724ac2fdbaa801783bf204e98d959ed68c396a3a",
+    "src/lib/doyaslide/url-analysis-operation.ts": "801a83283f7abe0100f47722031451b6fb5883e1ec3bb96ec0f9e0fc7931a1c7",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-native.cjs": "d1bc82e23d448f0508432b50d0d774083a54c8d610b15380d4c89dd726eb36df",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-native-api-postgres.cjs": "6dab6478d71cdbafad2555776e49a3a74348c9090138b8e9ffd08003b4fe95e0"
+  },
+  "scope": "Native Chrome actual Wizard + metadata/Web Locks + durable transport -> localhost HTTP -> actual analyze POST/GET/DELETE -> actual helper and budget -> private Unix-socket PostgreSQL -> native UI. Synthetic auth/scraper/provider and NextResponse=Response; not a native Next server/auth-cookie test. Client timeout shortened40ms only for timeout case. No real provider or production/customer DB writes."
+}

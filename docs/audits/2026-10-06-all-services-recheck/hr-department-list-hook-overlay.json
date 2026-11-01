@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-08T19:12:01.436Z",
+  "expected": 8,
+  "passed": 8,
+  "cases": [
+    {
+      "name": "Authentication loading hides prior list immediately and starts no further request",
+      "passed": true
+    },
+    {
+      "name": "HTTP failure is error state, distinct from confirmed empty organization",
+      "passed": true
+    },
+    {
+      "name": "GET-only retry preserves existing form draft",
+      "passed": true
+    },
+    {
+      "name": "Actor ABA cannot accept initial actor response after returning to same account",
+      "passed": true
+    },
+    {
+      "name": "Organization switch aborts previous request and ignores its late result",
+      "passed": true
+    },
+    {
+      "name": "Unmount aborts scope; late response cannot request or update another list",
+      "passed": true
+    },
+    {
+      "name": "Known rows remain available with error state when refresh fails",
+      "passed": true
+    },
+    {
+      "name": "Old retry callback cannot trigger read in new actor scope",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-list-hook.cjs": "727beefc181d4eb8707bdfb19b102ec12f52d3c74ff99817b88e971acc333925"
+  },
+  "scope": "Actual candidate hook mounted in React StrictMode/JSDOM. Synthetic loader isolates lifecycle, error/empty distinction and retry state. Does not yet wire three full pages or prove native/browser/Next/production behavior."
+}

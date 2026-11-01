@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T15:45:27.377138+00:00",
+  "status": "Confirmed source/spec mismatches; not yet fixed or mounted-verified",
+  "findings": [
+    {
+      "page": "src/app/seo/dashboard/plan/page.tsx",
+      "issue": "Cancellation dialog says1 article per day and5000 characters; actual free pricing and documented admission are3 articles per month and10000 characters.",
+      "evidence": [
+        "src/lib/pricing.ts SEO_PRICING.freeLimit=3 and charLimit.free=10000",
+        "reference/services/seo.md pricing table and monthly admission"
+      ]
+    },
+    {
+      "page": "src/app/seo/dashboard/plan/page.tsx",
+      "issue": "Page says SEO and banner are separate contracts, while cancellation/resume endpoints operate across unified active-like contracts.",
+      "evidence": [
+        "reference/11-billing-spec.md INV-2 and unified billing",
+        "subscription/cancel and resume findActiveLikeSubscriptions across all user contracts"
+      ]
+    },
+    {
+      "page": "src/app/banner/dashboard/settings/page.tsx",
+      "issue": "Truthy stale bannerPlan FREE overrides confirmed User.plan PRO/ENTERPRISE; same defect previously repaired on banner plan page remains on settings page.",
+      "evidence": [
+        "src/lib/plan-utils.ts higherPlan contract",
+        "src/app/banner/dashboard/settings/page.tsx bannerPlan||plan"
+      ]
+    }
+  ],
+  "sourceHashes": {
+    "src/app/seo/dashboard/plan/page.tsx": "c68f2a372fa507bd25fd5c971456fbeef17cb1e502a09ae9cc48e3143a483663",
+    "src/app/banner/dashboard/settings/page.tsx": "2d0fd2a0c124e08de4057fb27ec2d25ed5cc4c3028c0bb24248cb64bdb2a52c0",
+    "src/lib/pricing.ts": "37386582610f4d2792cd2a1984a047edcae9f31ad753f30b2808470ec98b91c1"
+  },
+  "nextRepair": "Correct descriptions with pricing constants and unified contract scope; mounted paid/free/actor fixtures with management response repair",
+  "boundary": "Source comparison only; no customer actions or billing mutations"
+}

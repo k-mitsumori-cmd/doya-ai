@@ -1,8 +1,8 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -16,11 +16,11 @@ export async function GET() {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const memberships = await prisma.promaneMember.findMany({
-      where: { userId, isActive: true },
+      where: { userId, isActive: true, role: { in: ['owner', 'admin', 'member', 'guest'] } },
       include: {
         workspace: {
           select: {
@@ -67,9 +67,9 @@ export async function GET() {
       myActiveTasks: wsTaskCountMap.get(m.workspace.id) || 0,
     }))
 
-    return NextResponse.json({ success: true, workspaces: result })
+    return privateApiJson({ success: true, workspaces: result })
   } catch (e: any) {
     console.error('[promane/workspaces][GET]')
-    return NextResponse.json({ error: 'ワークスペース取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: 'ワークスペース取得に失敗しました' }, { status: 500 })
   }
 }

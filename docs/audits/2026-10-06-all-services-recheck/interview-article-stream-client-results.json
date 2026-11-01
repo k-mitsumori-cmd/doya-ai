@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-08T04:11:14.474Z",
+  "passed": 30,
+  "cases": [
+    "Valid stream emits ordered progress and text and accepts saved draft",
+    "First terminal completion ignores duplicate completions, errors and further chunks",
+    "Quota terminal preserves upgrade/contact metadata and stops before later completion",
+    "Fragmented UTF8 and CRLF, comments and multiline data remain valid",
+    "Reject invalid JSON without completed side effect",
+    "Reject array payload without completed side effect",
+    "Reject unknown event without completed side effect",
+    "Reject missing draft without completed side effect",
+    "Reject unsafe draft without completed side effect",
+    "Reject invalid count without completed side effect",
+    "Reject invalid version without completed side effect",
+    "Reject invalid chunk without completed side effect",
+    "Reject oversized progress without completed side effect",
+    "Reject truncated terminal without completed side effect",
+    "Reject EOF before saved acknowledgement without completed side effect",
+    "Missing/wrong content type and excessive content length fail closed",
+    "Malformed UTF8 is rejected",
+    "Event and accumulated article bounds cancel the body",
+    "Total byte bound handles repeated valid small events",
+    "401 is login; other HTTP errors never expose raw diagnostic",
+    "Header stall deadline bounds abort-ignoring fetch with no resend",
+    "Body stall uses the same total deadline and cancels reader",
+    "Parent abort bounds noncooperative fetch and rejects late completion",
+    "Pre-aborted signal never starts transport",
+    "Completed JSON replay returns saved receipt without synthesizing fresh done",
+    "JSON quota and pending receipts remain typed operations without retries",
+    "JSON receipt from another actor or operation never emits any event",
+    "Streaming acknowledgement requires matching actor and UUID headers",
+    "Completion without version cannot trigger a done side effect",
+    "JSON body stall stays within the same POST deadline without resend"
+  ],
+  "sourceHashes": {
+    "src/lib/interview/article-stream-client.ts": "41578f7ec17e8ec7609e9d95029539d65d5e67b0068585e373b97dd8b683f15d",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-stream-client.cjs": "3ff77fbdfedcde50fa3974237cf8587902db55d67c27eaf211a74943b39f3780"
+  },
+  "scope": "Actual client reader with native Response streams, UTF8 and AbortController; controlled timers/fetch. Not UI, native browser, server receipt, provider or database verification."
+}

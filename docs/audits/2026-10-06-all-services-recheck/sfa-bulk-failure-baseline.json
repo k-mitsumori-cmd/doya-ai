@@ -1,0 +1,13 @@
+{
+  "status": "confirmed-open",
+  "writes": 1,
+  "httpStatus": 400,
+  "candidateLost": true,
+  "notices": [
+    {
+      "kind": "success",
+      "text": "タスクを0件追加しました"
+    }
+  ],
+  "scope": "Actual mounted SFA deals page and actual client/date/summary helpers. Synthetic GET, AI suggestion and failed task POST only; no paid AI, database, customer operation or production write."
+}

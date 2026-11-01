@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-08T04:11:24.117Z",
+  "expected": 18,
+  "passed": 18,
+  "cases": [
+    "src/app/interview/projects/[id]/skill/page.tsx: custom card has native link to existing skills management",
+    "src/app/interview/projects/[id]/recipe/page.tsx: custom card has native link to existing skills management",
+    "Project503 shows recovery and never claims transcription is incomplete",
+    "Malformed successful metadata is unavailable rather than falsely incomplete",
+    "Verified empty transcription still directs to the correct project materials",
+    "Session loading performs no metadata or recipe requests",
+    "Guest retains login guidance without reading authenticated project data",
+    "Actor switch aborts and ignores noncooperative old metadata and recipe responses",
+    "Project switch aborts old metadata and never overwrites the new project state",
+    "Unmount cancels all owned requests and suppresses late state updates",
+    "Actor switch clears typed private instructions and previous selected skill",
+    "Legacy route preserves guest recipe access while waiting for session resolution",
+    "Legacy route fences late recipes after account change and clears private edits",
+    "src/app/interview/projects/[id]/skill/page.tsx: private input stays outside URL and one double click creates one owned handoff",
+    "src/app/interview/projects/[id]/recipe/page.tsx: private input stays outside URL and one double click creates one owned handoff",
+    "Account change while resolving handoff identity aborts old navigation",
+    "Editing instructions while identity lookup is pending fences the old selection",
+    "Identity outage retains input and supports explicit retry without exposing diagnostics"
+  ],
+  "sourceHashes": {
+    "src/app/interview/projects/[id]/skill/page.tsx": "e8f8c51375194f71ea75385943af632df924820d014532ba742e2f36be8711f5",
+    "src/app/interview/projects/[id]/recipe/page.tsx": "f892988c8dacfcb8ba6c4730139e60b62f226b3ac8e290f50d89376464a19e36",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/use-article-input-navigation.ts": "ecc4a320fc18d7cc37c069fd8e0c79cfaf30e34f3236a11e2faf64268f318c8f",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-skill-selection-recovery.cjs": "f87f6a01fd3207290ddf1b49c04ee37756b5c2df25ac1d5e6ab3eadd4974411f"
+  },
+  "scope": "Actual full current and legacy selection TSX under StrictMode/JSDOM with native DOM, Response, AbortController; synthetic session/fetch/router/NextLink. Does not prove browser navigation, private input handoff, provider/DB or production behavior."
+}

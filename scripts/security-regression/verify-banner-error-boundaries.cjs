@@ -49,6 +49,7 @@ const common = {
   })
 
   const refine = load('src/app/api/banner/refine/route.ts', {
+    ...require('./banner-refine-test-deps.cjs').refineModules,
     ...common,
     sharp: () => {},
     '@/lib/resolve-image-model': {},

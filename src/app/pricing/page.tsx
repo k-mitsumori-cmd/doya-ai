@@ -1,48 +1,45 @@
-'use client'
+// ============================================
+// 料金ページ /pricing
+// ============================================
+// 料金ページ（UI 品質 B-3。PricingNext）。ログインしている人には、ほかの画面と同じ共通の枠（AppShell）の中で出す。
+// 新しい料金（PricingV2）は旗 NEW_PRICING_ROLLOUT の内側だけ。off なら、今までどおり PricingNext だけを出す（src/lib/pricing-v2/view.server.ts）。
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getAccountCompanyName } from '@/lib/shell/company.server'
+import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
+import { cookies } from 'next/headers'
+import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
+import ShellGate from '@/components/shell/ShellGate'
+import PricingNext from '@/components/pricing/PricingNext'
+import PricingV2 from '@/components/pricing/PricingV2'
+import { resolvePricingView } from '@/lib/pricing-v2/view.server'
+import { powerPackPriceId } from '@/lib/pricing-v2/prices'
+import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
+import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 
-import { Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
-import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
-
-function PricingContent() {
-  const searchParams = useSearchParams()
-  const canceled = searchParams.get('canceled') || searchParams.get('payment') === 'cancelled'
-
+export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams
+  const canceled = Boolean(params.canceled) || params.payment === 'cancelled'
+  const session = await getServerSession(authOptions).catch(() => null)
+  const view = await resolvePricingView(session?.user?.email, params.pricing)
+  // 新しい料金のときだけ: 追加購入を出すか（価格の設定とドヤパワーの台帳の旗）と、決済から戻ったときの値
+  const v2Extra = view === 'current' ? {} : {
+    canBuyPack: Boolean(powerPackPriceId()) && doyaPowerLedgerAllowed(),
+    powerPackSessionId: params.power_pack === 'done' && typeof params.cs === 'string' ? params.cs : null,
+    powerPackCanceled: params.power_pack === 'cancel',
+  }
+  if (!session?.user) {
+    return view === 'current'
+      ? <PricingNext canceled={canceled} serverSignedIn={false} />
+      : <PricingV2 view={view} canceled={canceled} serverSignedIn={false} {...v2Extra} />
+  }
+  const [company, toolHrefs, supportChat] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({})), isSupportChatEnabled()])
+  const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <div className="max-w-5xl mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-slate-900 mb-4">料金プラン</h1>
-          <p className="text-lg text-slate-600">
-            プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。
-          </p>
-        </div>
-
-        {canceled && (
-          <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-center">
-            決済がキャンセルされました。もう一度お試しください。
-          </div>
-        )}
-
-        {/* 全サービス共通の 無料 / プロ(¥9,980) 2プラン */}
-        <UnifiedPricingPlans serviceId="banner" />
-
-        <div className="mt-12 text-center">
-          <Link href="/banner" className="text-slate-500 hover:text-slate-700">
-            ← ドヤバナーAIに戻る
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function PricingPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>}>
-      <PricingContent />
-    </Suspense>
+    <ShellGate signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+      {view === 'current'
+        ? <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
+        : <PricingV2 view={view} canceled={canceled} inShell serverSignedIn {...v2Extra} />}
+    </ShellGate>
   )
 }

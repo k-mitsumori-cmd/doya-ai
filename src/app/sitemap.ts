@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next'
 import { SITE_CONFIG } from '@/lib/seo'
+import { isBrandRenamed } from '@/lib/brand'
+import { RENAME_NEWS_PATH } from '@/lib/brand/rename-news'
 import { getAllServices, getActiveServices, HIDDEN_SERVICE_IDS } from '@/lib/services'
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -15,6 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     // ログインページは sitemap に載せない（noindex 対象。指名検索の受け皿はトップと各LP）
+    // 名前の変更のお知らせ（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ載せる。検索で旧名を打った人が見つけやすいように）
+    ...(isBrandRenamed() ? [{ url: `${baseUrl}${RENAME_NEWS_PATH}`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.6 }] : []),
     {
       url: `${baseUrl}/terms`,
       lastModified: now,

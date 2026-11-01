@@ -1,0 +1,143 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getEvaluationReadWhere, getEvaluationReader } from '@/lib/hr/evaluation-access'
+import { prisma } from '@/lib/prisma'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { HrMemberRole } from '@/lib/hr/types'
+
+type Ctx = { params: Promise<{ id: string }> }
+
+export async function GET(req: NextRequest, ctx: Ctx) {
+  try {
+    const hrCtx = await getHrContext()
+    if (!hrCtx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const p = await ctx.params
+    const id = p.id
+
+    const evaluationWhere = await getEvaluationReadWhere(hrCtx)
+    const reader = await getEvaluationReader(hrCtx)
+
+    const period = await prisma.hrEvaluationPeriod.findFirst({
+      where: { id, organizationId: hrCtx.organizationId },
+      include: {
+        _count: { select: { evaluations: { where: evaluationWhere } } },
+      },
+    })
+    if (!period) {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      period: {
+        ...period,
+        canManageEvaluations: !!reader && reader.employeeId === null,
+        evaluationTemplate: period.evaluationTemplate as any,
+        evaluationCount: period._count.evaluations,
+      },
+    })
+  } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error')
+    return NextResponse.json(
+      { error: 'Failed to fetch evaluation period' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!(session?.user as any)?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const hrCtx = await getHrContext()
+    if (!hrCtx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const p = await ctx.params
+    const id = p.id
+
+    const existing = await prisma.hrEvaluationPeriod.findFirst({
+      where: { id, organizationId: hrCtx.organizationId },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+    }
+
+    await prisma.hrEvaluationPeriod.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error')
+    return NextResponse.json(
+      { error: 'Failed to delete evaluation period' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!(session?.user as any)?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const hrCtx = await getHrContext()
+    if (!hrCtx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const p = await ctx.params
+    const id = p.id
+
+    const existing = await prisma.hrEvaluationPeriod.findFirst({
+      where: { id, organizationId: hrCtx.organizationId },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+    }
+
+    const body = await req.json()
+    const { name, startDate, endDate, status, evaluationTemplate } = body
+
+    const data: Record<string, any> = {}
+    if (name !== undefined) data.name = name
+    if (startDate !== undefined) data.startDate = new Date(startDate)
+    if (endDate !== undefined) data.endDate = new Date(endDate)
+    if (status !== undefined) data.status = status
+    if (evaluationTemplate !== undefined) data.evaluationTemplate = evaluationTemplate
+
+    const updated = await prisma.hrEvaluationPeriod.update({
+      where: { id },
+      data,
+    })
+
+    return NextResponse.json({ success: true, period: updated })
+  } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error')
+    return NextResponse.json(
+      { error: 'Failed to update evaluation period' },
+      { status: 500 }
+    )
+  }
+}

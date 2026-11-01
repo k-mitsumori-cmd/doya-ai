@@ -2,21 +2,24 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest } from 'next/server'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere, canAccessSfaRecord } from '@/lib/sfa/record-policy'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
-import { bigIntToNumber } from '@/lib/sfa/format'
-import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+
+import { crmJson, crmError, crmRecovery, crmCreate, crmCancel } from '@/lib/sfa/crm-record-http'
 
 // GET /api/sfa/accounts — 取引先一覧（組織スコープ）
 export async function GET(req: NextRequest) {
+  try {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return crmJson({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const params = new URL(req.url).searchParams
+  if (params.has('operationId')) return await crmRecovery(req, ctx, 'account')
   const q = params.get('q')?.trim() || ''
   const optionsOnly = params.get('options') === '1'
-  if (q.length > 100) return NextResponse.json({ error: '検索条件が長すぎます' }, { status: 400 })
+  if (q.length > 100) return crmJson({ error: '検索条件が長すぎます' }, { status: 400 })
 
   let cursor: { updatedAt: Date; id: string } | null = null
   const rawCursor = params.get('cursor')
@@ -29,15 +32,14 @@ export async function GET(req: NextRequest) {
       if (Number.isNaN(updatedAt.getTime()) || updatedAt.toISOString() !== decoded.updatedAt) throw new Error('Invalid date')
       cursor = { updatedAt, id: decoded.id }
     } catch {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return crmJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
   }
 
-  const baseWhere: Prisma.SfaAccountWhereInput = {
-    organizationId: ctx.organizationId,
-    isActive: true,
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  const baseWhere = sfaRecordWhere(scope, 'account', false, {
     ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
-  }
+  })
   const pageWhere: Prisma.SfaAccountWhereInput = cursor
     ? { AND: [baseWhere, { OR: [
       { updatedAt: { lt: cursor.updatedAt } },
@@ -45,51 +47,27 @@ export async function GET(req: NextRequest) {
     ] }] }
     : baseWhere
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaAccount.findMany({
+    tx.sfaAccount.findMany({
       where: pageWhere,
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: 201,
       ...(optionsOnly ? { select: { id: true, name: true, updatedAt: true } } : {}),
     }),
-    prisma.sfaAccount.count({ where: baseWhere }),
+    tx.sfaAccount.count({ where: baseWhere }),
   ])
   const accounts = rows.slice(0, 200)
   const last = accounts[accounts.length - 1]
-  return NextResponse.json({
-    accounts: bigIntToNumber(accounts),
+  return crmJson({
+    accounts: optionsOnly ? accounts : accounts.map(account => ({ ...account, canEdit: canAccessSfaRecord(scope, 'account', account, true) })),
     totalCount,
     nextCursor: rows.length > 200 && last
       ? Buffer.from(JSON.stringify({ updatedAt: last.updatedAt.toISOString(), id: last.id })).toString('base64url')
       : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
+  })
+  } catch (error) { return crmError(error) }
 }
 
-// POST /api/sfa/accounts — 取引先作成
-export async function POST(req: NextRequest) {
-  const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const parsedBody = await req.json().catch(() => null)
-  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
-  }
-  const body = parsedBody as Record<string, unknown>
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) return NextResponse.json({ error: '会社名は必須です' }, { status: 400 })
-  if (['industry', 'prefecture', 'url', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
-    return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
-  }
 
-  const admitted = await withSfaAdmission(ctx.organizationId, { accounts: 1 }, (tx) => tx.sfaAccount.create({
-    data: {
-      organizationId: ctx.organizationId,
-      name: name.slice(0, 200),
-      industry: (body.industry as string | undefined)?.slice(0, 80) || null,
-      prefecture: (body.prefecture as string | undefined)?.slice(0, 40) || null,
-      url: (body.url as string | undefined)?.slice(0, 300) || null,
-      note: (body.note as string | undefined)?.slice(0, 2000) || null,
-      ownerMemberId: ctx.memberId,
-    },
-  }))
-  if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
-  return NextResponse.json({ account: bigIntToNumber(admitted.created) })
-}
+export async function POST(req: NextRequest) { return crmCreate(req, 'account') }
+export async function DELETE(req: NextRequest) { return crmCancel(req, 'account') }

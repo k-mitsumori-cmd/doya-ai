@@ -1,9 +1,10 @@
-import { publicSeoJob } from '@seo/lib/job-response'
+import { publicSeoJob, seoArticleActivity } from '@seo/lib/job-response'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { queueSeoArticleImagePurge, purgeQueuedSeoImages } from '@/lib/seo-image-purge'
+import { privateApiJson } from '@/lib/private-api-response'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,12 +15,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   
   try {
     const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    if (!owner) return privateApiJson({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
     const article = await prisma.seoArticle.findFirst({
       where: { id, ...owner },
       include: {
-        jobs: { orderBy: { createdAt: 'desc' } },
+        jobs: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
         sections: { orderBy: { index: 'asc' } },
         references: { orderBy: { createdAt: 'asc' } },
         audits: { orderBy: { createdAt: 'desc' }, take: 3 },
@@ -29,16 +30,17 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         knowledgeItems: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     })
-    if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    if (!article) return privateApiJson({ success: false, error: 'not found' }, { status: 404 })
     // 比較記事の場合は候補数も含める
     const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
     const comparisonConfig = article.comparisonConfig || null
     const comparisonCount = comparisonCandidates.length
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       article: {
         ...article,
+        activityState: seoArticleActivity(article.status, article.updatedAt, article.jobs?.[0]),
         jobs: (article.jobs || []).map(publicSeoJob),
         comparisonCount,
         comparisonCandidates,
@@ -48,7 +50,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
     console.error('[seo article get] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: '記事の操作に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )

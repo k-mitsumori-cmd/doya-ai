@@ -1,0 +1,93 @@
+{
+  "cases": 17,
+  "passed": 1,
+  "failed": 16,
+  "results": [
+    {
+      "name": "banner account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "seo account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "persona account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "adimage account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "aio account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "shodan account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "quote account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "mensetsu account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "aishodan account change replaces previous private usage",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('SYNTHETIC_OWNER_A'))\n"
+    },
+    {
+      "name": "Returning actor and organization never restores old snapshot while pending",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'SYNTHETIC_OWNER_A7枚今月3 / 15枚あと12枚使えます'\n- ''\n"
+    },
+    {
+      "name": "Plan transition refreshes usage even for the same account",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('SYNTHETIC_PRO'))\n"
+    },
+    {
+      "name": "Loading, guest and missing identity clear private usage without fetching",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'SYNTHETIC_OWNER_A7枚今月3 / 15枚あと12枚使えます'\n- ''\n"
+    },
+    {
+      "name": "Late previous-scope response cannot overwrite current usage",
+      "passed": true
+    },
+    {
+      "name": "Refresh event supersedes pending lookup; focus does not duplicate it",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n4 !== 3\n"
+    },
+    {
+      "name": "Lookup timeout ends optional usage display and aborts the request",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'SYNTHETIC_OWNER_A7枚今月3 / 15枚あと12枚使えます'\n- ''\n"
+    },
+    {
+      "name": "Strict payload validation never crashes or invents an unlimited grant",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'undefined'\n- 'function'\n"
+    },
+    {
+      "name": "Unmount cancels pending work and removes refresh listeners",
+      "passed": false,
+      "error": "Cannot read properties of undefined (reading 'aborted')"
+    }
+  ],
+  "scope": "Actual common usage panel and bounded reader under StrictMode. 9 source-confirmed consumer services; synthetic sessions/organizations/responses only. No live private usage, DB, billing or AI.",
+  "sourceCommit": "5a2ad81aca5804723fe8901fabc5a52418866ffc"
+}

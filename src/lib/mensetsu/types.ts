@@ -14,8 +14,7 @@ export const ROLE_HIERARCHY: Record<MensetsuRole, number> = {
 }
 
 export function hasMinRole(role: string | undefined, min: MensetsuRole): boolean {
-  const r = ROLE_HIERARCHY[(role || '') as MensetsuRole] ?? 0
-  return r >= ROLE_HIERARCHY[min]
+  return role !== undefined && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, role) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, min) && ROLE_HIERARCHY[role as MensetsuRole] >= ROLE_HIERARCHY[min]
 }
 
 export interface MensetsuContext {

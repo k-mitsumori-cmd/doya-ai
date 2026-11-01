@@ -95,6 +95,7 @@ const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: 
         '@/lib/prisma': { prisma: { seoArticle: { findUnique: async () => { databaseCalls++ } } } },
         '@/lib/seo-tool-admission': { SeoToolRateLimitError: class extends Error {}, reserveSeoToolCalls: async () => { throw Error('unexpected reservation') }, reserveSeoToolCall: async () => { throw Error('unexpected reservation') } },
         '@/lib/seo-image-lease': { SeoImageGenerationInProgressError: class extends Error {}, claimSeoImageLease: async () => { throw Error('unexpected lease') }, releaseSeoImageLease: async () => {} },
+        '@/lib/seo-image-auto-attempt': { seoImageEnsureTrigger: () => 'auto', claimSeoAutoImageAttempt: async () => { throw Error('unexpected attempt record') } },
         '@seo/lib/gemini': { geminiGenerateImagePng: async () => { providerCalls++ }, GEMINI_IMAGE_MODEL_DEFAULT: 'test' },
         '@seo/lib/storage': { ensureSeoStorage: async () => {}, saveBase64ToFile: async () => {} },
         '@seo/lib/bootstrap': { ensureSeoSchema: async () => { databaseCalls++ } },
@@ -114,7 +115,7 @@ const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: 
       ['src/app/api/seo/articles/[id]/images/diagram/route.ts', { title: '図解', description: '内容' }, 1],
       ['src/app/api/seo/articles/[id]/images/batch/route.ts', { diagrams: [{ title: 'A', description: '内容' }, { title: 'B', description: '内容' }] }, 2],
       ['src/app/api/seo/articles/[id]/images/suggest/route.ts', {}, 1],
-      ['src/app/api/seo/articles/[id]/images/ensure/route.ts', {}, 14],
+      ['src/app/api/seo/articles/[id]/images/ensure/route.ts', { trigger: 'manual' }, 14],
       ['src/app/api/seo/images/[id]/regenerate/route.ts', { prompt: '図解を再生成する' }, 1],
     ]
     class Limit extends Error { constructor() { super('limit'); this.limit = 100 } }
@@ -132,6 +133,7 @@ const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: 
         } },
         '@/lib/seo-tool-admission': { SeoToolRateLimitError: Limit, reserveSeoToolCalls: async (_userId, tool, count) => { assert.equal(tool, 'article-images'); reserved = count; throw new Limit() }, reserveSeoToolCall: async (_userId, tool) => { assert.equal(tool, 'image-suggestions'); reserved = 1; throw new Limit() } },
         '@/lib/seo-image-lease': { SeoImageGenerationInProgressError: class extends Error {}, claimSeoImageLease: async () => 'token', releaseSeoImageLease: async () => { released++ } },
+        '@/lib/seo-image-auto-attempt': load('src/lib/seo-image-auto-attempt.ts', { '@/lib/prisma': { prisma: {} } }),
         '@seo/lib/gemini': { geminiGenerateImagePng: async () => { providerCalls++ }, GEMINI_IMAGE_MODEL_DEFAULT: 'test' },
         '@seo/lib/storage': { ensureSeoStorage: async () => {}, saveBase64ToFile: async () => {} },
         '@seo/lib/bootstrap': { ensureSeoSchema: async () => {} },

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T20:24:21.642Z",
+  "expected": 5,
+  "passed": 5,
+  "cases": [
+    "Native actual view same-frame submission commits one synthetic request and one success",
+    "Native uncertain result keeps input disabled and durable operation metadata",
+    "Native remount recovers saved operation without another create",
+    "Native mobile missing recovery retains fence without horizontal overflow",
+    "Native explicit cancellation confirms intent and permits a new operation"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-time-entry-creation.ts": "ecb6ea01a39390e1ac564dd8da0f5b9213de8b1f9d54183f1d04aec9c6051c38",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/lib/promane/format.ts": "8164a0225a24cf3b434e5152bc7df2ea3d8eac17e9e48d1e81b454e211e890d9",
+    "src/components/promane/confirm-dialog.tsx": "05cd204469fb380c69650e89c430d4dd627a828aa1e6e666dc49fd2e96f74c89",
+    "src/components/promane/timesheet-view.tsx": "40bceb45be172baedd9b74737ca4f31f71e26350740a019e050607cd44eaeaa5",
+    "src/components/promane/ui/button.tsx": "88b8543c1ed16d0811bdbf37fb1b5b7fd7cbae1bd8f6a710282ce8c1318ff117",
+    "src/components/promane/ui/input.tsx": "406c012a2e8a86c46816e92b503a15a981d5115d6ad125b48c64b3a734db72ec",
+    "src/components/promane/ui/label.tsx": "2e901f9b1b6d86662d2edd92bb5ad49746dab2973a83c21e6e501e4b2016f78a",
+    "src/components/promane/ui/select.tsx": "b71cdff64fd84392d95224be997c207bc4901b4e5bc1f1db852435bddf38e6a7"
+  },
+  "cssHash": "21e5de4261b40bf3c008017ecef21e9ea83b32db4a4171ad1a7798fdf1b2a974",
+  "chrome": "Chrome/155.0.8059.39",
+  "scope": "Actual candidate TimesheetView, hook, input parser, shared form controls and confirmation modal in native Chrome/actual Web Locks/localStorage. Synthetic local HTTP transport and action responses, mocked navigation/icons/images/toasts/class merge. Screenshots require visual review. Not real Next action transport, combined PostgreSQL E2E or production."
+}

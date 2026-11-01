@@ -21,19 +21,26 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/doyaslide/analyze/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@seo/lib/gemini': { geminiGenerateJson: async () => ({ title: 'Title', brief: 'Brief' }), GEMINI_TEXT_MODEL_DEFAULT: 'mock' },
       '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/text-budget': { reserveDoyaSlideTextCall: async () => {} },
+      '@/lib/doyaslide/url-analysis-operation': {
+        UrlAnalysisOperationError: class extends Error {},
+        beginUrlAnalysisOperation: async () => ({state: 'started'}),
+        settleUrlAnalysisOperation: async (input,result) => ({operationId: input.operationId,state: 'completed',sourceUrl:input.url,result,reserved:true,code:null}),
+      },
       '@/lib/doyaslide/scrape': { scrapeUrlText: async () => { calls++; return { title: 'Title', description: 'Brief', text: 'Text' }; } },
       '@/lib/doyaslide/prompts': { buildAnalyzePrompt: () => 'prompt' },
-    });
-    await checkRoute('DoyaSlide analyze', route.POST, [null, { url: {} }, { url: 42 }], { url: 'https://example.com' }, () => calls);
+    }, { TextDecoder });
+    await checkRoute('DoyaSlide analyze', async req => {
+      const body=await req.json();
+      return route.POST(new Request('https://example.invalid/api/doyaslide/analyze', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body&&typeof body==='object'?{...body,operationId:'10000000-0000-4000-8000-000000000001'}:body)}));
+    }, [null, { url: {} }, { url: 42 }], { url: 'https://example.com' }, () => calls);
   }
   {
     let calls = 0;
     const route = load('src/app/api/cunning/company/analyze/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => ({ id: 'profile' }) } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/company-budget': { reserveCunningCompanyAnalysis: async () => {}, CUNNING_COMPANY_DAILY_LIMIT: 50, CunningCompanyDailyLimitError: class extends Error {} },
@@ -43,25 +50,14 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
     await checkRoute('Cunning company analyze', route.POST, [null, { url: [] }, { url: 42 }, { url: 'ftp://example.com' }, { url: 'not-a-url' }, { url: 'https://example.com/' + 'a'.repeat(2050) }], { url: 'https://example.com' }, () => calls);
   }
   {
-    let calls = 0;
-    const route = load('src/app/api/sfa/ai/next-action/route.ts', {
-      'next/server': server,
-      '@/lib/prisma': { prisma: {
-        sfaDeal: { findUnique: async () => ({ id: 'deal', organizationId: 'org', isActive: true, name: 'Deal', amount: 100, probability: 50 }) },
-        sfaActivity: { findMany: async () => [] },
-      } },
-      '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
-      '@/lib/sfa/ai': { suggestNextAction: async () => { calls++; return { action: 'Follow up' }; } },
-      '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
-      '@/lib/sfa/limits': { canManageSfaBilling: async () => { throw Error('No quota was reached'); } },
-      '@/lib/sfa/constants': { ACTIVITY_TYPE_LABEL: {} },
-    });
-    await checkRoute('SFA next action', route.POST, [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal' }, () => calls);
+    const { fixture, op, stamp } = require('./sfa-next-action-api-fixture.cjs');
+    const f = fixture();
+    await checkRoute('SFA next action', req => req.json().then(body => f.call('POST', body)), [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal', operationId: op, expectedUpdatedAt: stamp }, f.calls);
   }
   {
     let calls = 0;
     const route = load('src/app/api/cunning/knowledge/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: { cunningKnowledgeBase: { create: async () => { calls++; return { id: 'base' }; } } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/limits': { getCunningLimits: async () => ({ maxKnowledgeBases: -1 }) },
@@ -71,7 +67,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/knowledge/[id]/ingest/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: {
         cunningKnowledgeBase: { findUnique: async () => ({ userId: 'user' }), update: async () => ({}) },
         cunningKnowledgeChunk: { count: async () => 0, createMany: async () => { calls++; return { count: 1 }; } },
@@ -92,7 +88,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/profiles/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: { cunningApplicantProfile: { create: async () => { calls++; return { id: 'profile' }; } } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
     });
@@ -103,7 +99,8 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/preparations/[id]/slides/regenerate/route.ts', {
-      'next/server': server,
+      ...require('./shodan-editor-test-helpers.cjs'),
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: {
         user: { findUnique: async () => ({ plan: 'PRO' }) },
         shodanPreparation: { findFirst: async () => ({ id: 'item', slidesJson: [{ title: 'Slide' }], slideImages: [{ imagePath: 'old' }] }) },
@@ -124,7 +121,8 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/company-profile/route.ts', {
-      'next/server': server,
+      '@/lib/org-profile-version': load('src/lib/org-profile-version.ts'),
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/prisma': { prisma: { shodanCompanyProfile: { upsert: async () => { calls++; return { logoPath: null }; } } } },
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
       '@/lib/shodan/storage': { signedUrl: async () => null },
@@ -136,7 +134,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/company-profile/extract/route.ts', {
-      'next/server': server,
+      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
       '@/lib/shodan/research': { researchCompany: async () => { calls++; return { companyName: 'Acme' }; } },
       '@/lib/shodan/ai': { draftOwnProfile: async () => ({ companyName: 'Acme', gaps: [] }) },

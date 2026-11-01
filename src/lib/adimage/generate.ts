@@ -3,7 +3,7 @@
 // ============================================
 //   生成サイズで一枚絵を生成（テキスト込み）
 //     → 自動検査（OCR照合・混入・セーフエリア）
-//     → 不合格なら修正指示を足して再生成（最大2回）
+//     → 不合格なら修正指示を足して再生成（最大1回＝MAX_RETRIES）
 //     → 目標サイズへ「純粋な縮小」だけで書き出し（クロップなし）
 //
 // ⚠️ 書き出しで絶対に fit:'cover' を使わないこと。
@@ -14,7 +14,7 @@ import sharp from 'sharp'
 import { generateImageWithFallback } from '@/lib/image-generator'
 import { buildImagePrompt } from './prompt'
 import { isAcceptable, retryHint, verifyCreative } from './verify'
-import { uploadPng } from './storage'
+import { assertPrivateStorage, uploadPng } from './storage'
 import { overlayLogo, type LogoConfig } from './logo'
 import type { CompositionKey, Placement } from './placements'
 import type { AdCopy, BrandProfile, VerifyResult } from './types'
@@ -77,6 +77,7 @@ function aspectLabel(p: Placement): string {
 }
 
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
+  await assertPrivateStorage()
   const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt, designRefColors } = input
   const genSize = `${placement.genW}x${placement.genH}`
 

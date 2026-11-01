@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T23:12:51.140Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    "create canonical defaults and absent fields",
+    "equivalent retries stable regardless property order and optional blanks",
+    "patch never silently adds omitted values",
+    "patch explicit null and empty clear nullable fields",
+    "strict optimistic revision rejects missing invalid or noncanonical input",
+    "required text and limits reject without truncation",
+    "valid date-only leap day survives and timestamps are rejected",
+    "date order rejects in create and patch without dropping single-sided patch",
+    "all integer columns preserve zero and maximum and reject coercion overflow fractions",
+    "enum values preserve milestone and each project lifecycle status",
+    "operation metadata excluded from canonical business payload",
+    "description content and tags spacing preserved verbatim"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/project-input.ts": "79f15cb72f8322f2f3c3e600824191cb18fea64b4e1a191b5271d12bef17b521",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
+  },
+  "scope": "Actual selected canonical project input and shared validation; sourceHashes identify root or candidate. Actions/database/form integration not covered."
+}

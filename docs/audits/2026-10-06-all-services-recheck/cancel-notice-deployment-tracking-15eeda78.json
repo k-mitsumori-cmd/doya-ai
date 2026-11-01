@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-06T15:49:22.382677+00:00",
+  "commit": "15eeda78c8e3b8b127bed8ff9dd74d90d60f60a5",
+  "state": "Exact-SHA CI success; READY production aliases; four public paths and JS reflection confirmed",
+  "deployment": {
+    "id": "dpl_CDwy3CKhwHpuMan6URZ3Dez97waG",
+    "url": "doya-by9mwwd9b-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "aliases": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ]
+  },
+  "ciRun": 37489903709,
+  "localEvidence": "cancel-notice-repair.json",
+  "remainingEvidence": [
+    "billing-management-response-baseline.json",
+    "billing-management-user-spec-followup.json"
+  ],
+  "scope": "Current notice cohort only; all-service goal remains active",
+  "ci": {
+    "run": 37489903709,
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "15eeda78c8e3b8b127bed8ff9dd74d90d60f60a5"
+  },
+  "productionBuildEvidence": "cancel-notice-production-build-15eeda78.log",
+  "publicEvidence": "cancel-notice-public-15eeda78.json"
+}

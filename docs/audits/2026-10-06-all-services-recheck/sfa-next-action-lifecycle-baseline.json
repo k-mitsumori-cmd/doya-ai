@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-07T04:56:25.182Z",
+  "status": "confirmed-handler-gaps-not-repaired",
+  "findings": 2,
+  "results": [
+    "Actual next-action handler does not revalidate actor at admission/settlement; synthetic revocation after context resolution still returns result and settles mocked quota. Actual quota authority helper requires separate verification.",
+    "Two identical requests invoke mocked provider twice and complete two allowance records; no durable operation/recovery protocol, so response loss can lead to paid repeat generation."
+  ],
+  "sourceHash": "2617c9f03c067e43fcb65110c7257773b157a1c5c9ceda984a76c6a647bdc598",
+  "scope": "Actual next-action handler with synthetic Prisma/context/quota/provider. No real provider, production, PostgreSQL schedule or authenticated browser."
+}

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
 const profileInput = load('src/lib/quote/profile-input.ts')
+const analyzedUrls=[]
 const counters = { analyze: 0, suggest: 0, estimate: 0 }
 const profile = { summary: '説明', publishedPrices: ['月額10,000円'] }
 const deps = {
@@ -10,7 +11,7 @@ const deps = {
   '@/lib/prisma': { prisma: { quoteProduct: { findFirst: async () => ({ id: 'product', name: '商材', profile }) } } },
   '@/lib/quote/profile-input': profileInput,
   '@/lib/quote/analyze': {
-    analyzeProduct: async () => { counters.analyze++; return profile },
+    analyzeProduct: async url => { analyzedUrls.push(url); counters.analyze++; return profile },
     suggestItems: async input => { counters.suggest++; assert.equal(input.productName, '商材'); return [] },
     estimateItem: async input => { counters.estimate++; assert.equal(input.itemName, '作業'); return {} },
   },
@@ -22,7 +23,7 @@ const request = body => ({ json: async () => body })
 
 ;(async () => {
   await check('quote AI rejects malformed inputs before provider calls', async () => {
-    for (const body of [{ url: {} }, { url: 'a'.repeat(2049) }, []]) {
+    for (const body of [{ url: {} }, { url: 'a'.repeat(2049) }, { url:'https://user:pass@example.invalid/' }, { url:'FTP://example.invalid/file' }, { url:'file:///private/path' }, { url:'https://example.invalid/'+ '日'.repeat(300) }, []]) {
       assert.equal((await analyze.POST(request(body))).status, 400)
     }
     for (const body of [{ productName: {} }, { productName: '商材', profile: [] }, { productName: '商材', profile, budget: '1.5' }, { productName: '商材', profile, situation: {} }]) {
@@ -48,10 +49,13 @@ const request = body => ({ json: async () => body })
     assert.equal((await estimate.POST(request({ itemName: '作業', productId: 'product' }))).status, 200)
     assert.deepEqual(counters, { analyze: 1, suggest: 1, estimate: 1 })
   })
+
+  await check('quote URL parsing preserves uppercase schemes and http-prefixed bare hostnames', async()=>{for(const [input,expected] of [['HTTPS://example.invalid/service?q=1','https://example.invalid/service?q=1'],['hTtP://example.invalid/path','http://example.invalid/path'],['httpbin.example.invalid/service','https://httpbin.example.invalid/service']]){const response=await analyze.POST(request({url:input}));assert.equal(response.status,200);assert.equal(analyzedUrls.at(-1),expected);assert.equal((await response.json()).sourceUrl,expected)}})
   await check('quote provider malformed price arrays do not discard valid analysis', async () => {
     const module = load('src/lib/quote/analyze.ts', {
       '@/lib/net/safe-fetch': { safeFetchText: async () => '<title>会社</title>' + '内容'.repeat(150), htmlToText: html => html },
       '@seo/lib/gemini': { geminiGenerateJson: async () => ({ companyName: '会社', publishedPrices: 'wrong', optionCandidates: ['案', {}] }), GEMINI_TEXT_MODEL_DEFAULT: 'test' },
+      './response-shape': load('src/lib/quote/response-shape.ts'),
       './market': { lookupMarket: () => null, marketTableForPrompt: () => '' },
     })
     const result = await module.analyzeProduct('https://example.com')

@@ -1,0 +1,71 @@
+{
+  "checkedAt": "2026-10-06T17:24:03.772328+00:00",
+  "status": "full-local-gate-passed-not-deployed",
+  "baselineCommit": "5a2ad81aca5804723fe8901fabc5a52418866ffc",
+  "baseline": "sidebar-usage-baseline.json",
+  "malformedBaseline": "sidebar-usage-malformed-baseline.json",
+  "current": "sidebar-usage-current.json",
+  "malformedCurrent": "sidebar-usage-malformed-current.json",
+  "confirmedProblems": [
+    "Usage snapshots keyed only by URL survived authenticated actor transitions",
+    "Returning organization URL revived older snapshots before fresh response",
+    "Malformed summary object produced a React render error in a caught synthetic reproduction"
+  ],
+  "changes": [
+    "Track authenticated actor, plan, URL and transition version; hide prior scope synchronously",
+    "Gate private display/fetch on settled identity",
+    "Cancel superseded/unmounted requests and discard late replies",
+    "Coalesce focus refresh and prioritize explicit usage-update events",
+    "Use bounded readonly response reader (35 seconds / 64 KiB)",
+    "Validate summary labels, quantities and meters; preserve legitimate fractional usage and explicit null unlimited meters"
+  ],
+  "consumers": [
+    "banner",
+    "seo",
+    "persona",
+    "adimage",
+    "aio",
+    "shodan",
+    "quote",
+    "mensetsu",
+    "aishodan"
+  ],
+  "targetedResult": {
+    "cases": 17,
+    "passed": 17
+  },
+  "limitations": [
+    "9 source-confirmed consumers; this component is not the usage UI for every active service",
+    "Synthetic auth/org/error/deadline only; no live private data, billing or AI",
+    "16 baseline failures are not 16 independent production incidents",
+    "Actual authenticated multi-device/organization flows remain unverified",
+    "Full 17-service goal remains active"
+  ],
+  "sourceHashes": {
+    "src/components/sidebar/SidebarUsagePanel.tsx": "bcb7be5b7f2b12ca9cfdbde2d5b3595e4cb414eca7ba9309dbba26f248ff8a0b",
+    "scripts/security-regression/verify-sidebar-usage-mounted.cjs": "bf3b41125c3afdf7c457ed2880a371b95869615e2117118bbbe73e4588da839e",
+    "scripts/security-regression/run.cjs": "c8668edc89b6db91d66ac6beb9be1bf4c8ffb33e9ffe17d99d8839970c491db0"
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sidebar-usage-release-108d9a37-14bb-4bb2-afdd-5023e1e144f8",
+  "releaseState": {
+    "startedAt": "2026-10-06T17:21:50.144642+00:00",
+    "pid": 40123,
+    "head": "5a2ad81aca5804723fe8901fabc5a52418866ffc",
+    "sourceFiles": 2562,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:25:05.221013+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:25:06.889191+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T17:25:07.222268+00:00"
+  }
+}

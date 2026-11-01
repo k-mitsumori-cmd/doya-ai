@@ -50,6 +50,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ run: await toRunDto(saved) })
   } catch (e) {
     console.error('[asklink] regenerate links failed', (e as Error)?.name)
+    // 失敗した作り直しは回数に数えない（確保した1回を戻す。0 未満にはしない）
+    await prisma.askLinkRun
+      .updateMany({ where: { id: run.id, userId, linkGenerations: { gt: 0 } }, data: { linkGenerations: { decrement: 1 } } })
+      .catch(() => console.error('[asklink] failed to release link generation'))
     return NextResponse.json({ error: '作り直しに失敗しました。時間をおいてもう一度お試しください。' }, { status: 500 })
   }
 }

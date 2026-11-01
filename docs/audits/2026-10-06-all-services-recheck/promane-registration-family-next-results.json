@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-08T01:25:02.432Z",
+  "expected": 16,
+  "passed": 16,
+  "cases": [
+    "new-url: task: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "new-url: expense: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "new-url: client: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "new-url: time: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab: task: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab: expense: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab: client: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab: time: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "rename-before-submit: task: original open form saves once after rename and navigates to canonical route",
+    "rename-before-submit: expense: original open form saves once after rename and navigates to canonical route",
+    "rename-before-submit: client: original open form saves once after rename and navigates to canonical route",
+    "rename-before-submit: time: original open form saves once after rename and navigates to canonical route",
+    "original-open-tab-after-save: task: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab-after-save: expense: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab-after-save: client: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create",
+    "original-open-tab-after-save: time: actual native form saved once, lost acknowledgement retained canonical fence, renamed workspace recovered same row without another create"
+  ],
+  "sourceHashes": {
+    "src/components/promane/task-create-form.tsx": "7476b36725c5e3f87b3b2097f8810bb3dbc3fddcdca76f056777467237533e4e",
+    "src/components/promane/finance-tab.tsx": "cef8b514bc9c60cf555dfef183aa554ed10b5d0fe91c29eb090cba3358a0033b",
+    "src/components/promane/client-actions.tsx": "bb227c85e0f4addaa6399619b3128ec9d5a9964e44e338de6b469f8619dc9b5d",
+    "src/components/promane/timesheet-view.tsx": "d91c939ced3c79cfcc0ebd1af822734be8144af61dd518ef04c8fc303a373515",
+    "src/lib/promane/use-task-creation.ts": "7b5fa9a7229140594235b16dee3bac0469f10b5c9877560d186691ce2a78a290",
+    "src/lib/promane/use-expense-creation.ts": "2581a9eb7ece3550634e4415a45783cff049eea7377fc197ab856b5b722274f3",
+    "src/lib/promane/use-client-creation.ts": "d432b5bd4604060c37a702233e7f738f81dcf2dddbb0fa7a30eebac86dea120d",
+    "src/lib/promane/use-time-entry-creation.ts": "15e3ddbf8c12d7c4a900fc9a55b9b5c369a9ba18584b9093aa80447dc95dbb89",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-registration-family-next.cjs": "bb75ac5db4ae9aed8653ca26a4397865b5138b9d9c248848c504a2fc2635727a"
+  },
+  "scope": "Actual authenticated local Next production build/native Chrome/full-schema private PostgreSQL. Synthetic seeded sessions; actual task/expense/client/time form, backend write, workspace PATCH and recovery. Post-commit response failure injected. Legacy records/cancellation covered separately; no production/customer writes."
+}

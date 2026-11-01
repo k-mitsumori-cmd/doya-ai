@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-08T04:39:36.023762+00:00",
+  "finding": "Changing project keywords after preparing an extraction allowed the stale operation to return200 and dispatch provider instead of409. Actual API/current helper/private PG; synthetic auth/provider; production impact unverified.",
+  "baseline": "doyalist-search-criteria-race-baseline.log",
+  "sourceHashes": {
+    "src/lib/doyalist/extraction-operation.ts": "90b0ad9b61a3570cc1d00819672bf929c29813562a7f3bd9d3f70b85fae659ae",
+    "src/app/api/doyalist/collect/route.ts": "7941a70d747bf8d810312534c70b2db84ebae1cc97322453b96f36b936ea5dba"
+  }
+}

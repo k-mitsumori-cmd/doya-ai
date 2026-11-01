@@ -1,0 +1,135 @@
+{
+  "checkedAt": "2026-10-07T17:10:02.035Z",
+  "passed": 6,
+  "cases": [
+    {
+      "method": "POST",
+      "scenario": "day"
+    },
+    {
+      "method": "POST",
+      "scenario": "night"
+    },
+    {
+      "method": "POST",
+      "scenario": "defaults"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "day"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "night"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "defaults"
+    }
+  ],
+  "failures": [
+    {
+      "method": "POST",
+      "scenario": "negative-break",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "excessive-break",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "fractional-break",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-hour",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-minute",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-method",
+      "observedStatus": 201,
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-flex-type",
+      "observedStatus": 500,
+      "error": "Expected values to be strictly equal:\n\n500 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-time-type",
+      "observedStatus": 500,
+      "error": "Expected values to be strictly equal:\n\n500 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "negative-break",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "excessive-break",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "fractional-break",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-hour",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-minute",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-method",
+      "observedStatus": 200,
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-flex-type",
+      "observedStatus": 500,
+      "error": "Expected values to be strictly equal:\n\n500 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-time-type",
+      "observedStatus": 500,
+      "error": "Expected values to be strictly equal:\n\n500 !== 400\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "dca72debee45c61cb01125c9efe24aad6cd17bca56b8949578aa881b78ce47eb",
+    "src/app/api/kintai/work-rules/[id]/route.ts": "8faf68d88498b749d07cd51139430f2514c47408d63d8d054e24e7d0ff4380a6",
+    "src/lib/kintai/manager-admission.ts": "8d93a0b7ff71b1158f2c2739187b2a9a3649ac9bb2171271546a060d78f67d59",
+    "src/lib/kintai/employee-admission.ts": "b53980fcb978167a6a60a17f1d0ecb22ce47c84ec71faabdb610b51a93d6580b"
+  },
+  "scope": "Actual POST/PATCH, manager/admission row locks, Prisma and isolated PostgreSQL; invalid inputs leave work-rule rows unchanged; valid day/night/default behavior. No customer/provider/production writes."
+}

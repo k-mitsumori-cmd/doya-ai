@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-06T17:34:23.064274+00:00",
+  "banner": {
+    "status": "reproduced and fixed locally; full gate running",
+    "proof": "banner-sidebar-refresh-repair.json"
+  },
+  "persona": {
+    "status": "source candidate only",
+    "evidence": [
+      "src/app/persona/Tool.tsx handleGenerate success updates generatedData without usage event or navigation",
+      "handleModify success updates generatedData without usage event or navigation",
+      "src/components/PersonaSidebar.tsx mounts usage panel without refreshEvent"
+    ],
+    "next": "Mount actual persona handlers with synthetic responses, verify text and additional-image allowance summaries, actor transition and included-image policy before changing completion wiring."
+  },
+  "remainingServices": [
+    "seo",
+    "persona",
+    "shodan",
+    "quote",
+    "mensetsu",
+    "aishodan",
+    "aio",
+    "adimage"
+  ],
+  "scope": "9 shared usage-panel consumers, not all 17 service allowance interfaces. Other independent allowance interfaces remain in the full audit."
+}

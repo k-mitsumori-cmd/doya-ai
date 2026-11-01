@@ -9,11 +9,14 @@ const modelApi = load('src/lib/resolve-image-model.ts', {
 const calls = []
 const releases = []
 let response = new Response(JSON.stringify({ candidates: [{ content: { parts: [
-  { inlineData: { mimeType: 'image/png', data: 'aGVsbG8=' } },
+  { inlineData: { mimeType: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAuklEQVR4nOXOsQEAIAzAoFT/v9meweDATnPu+1k6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgLR0/UPEQbQj7AAAAAElFTkSuQmCC' } },
 ] } }] }))
 let notifications = 0
 const sharp = () => ({ resize() { return this }, png() { return this }, async toBuffer() { return Buffer.from('image') } })
+const dependencies=require('./banner-refine-test-deps.cjs');
 const api = load('src/app/api/banner/refine/route.ts', {
+  ...dependencies.refineModules,
+  '@/lib/banner/refine-operation':{...dependencies.operation,beginBannerRefinement:async()=>({state:'started'}),completeBannerRefinement:async(_user,_op,_hash,output)=>({id:'synthetic-generation',output}),failBannerRefinement:async()=>{releases.push(1);return 'failed'}},
   '@vercel/functions': { waitUntil: () => {} },
   'next/server': { NextResponse: { json: (body, options) => new Response(JSON.stringify(body), { status: options?.status || 200 }) } },
   'next-auth': { getServerSession: async () => ({ user: { id: 'u1' } }) },
@@ -31,7 +34,7 @@ const api = load('src/app/api/banner/refine/route.ts', {
   fetch(url, options) { calls.push({ url, options }); return Promise.resolve(response) },
   console: { error() {}, log() {}, warn() {} },
 })
-const request = () => ({ json: async () => ({ originalImage: 'data:image/png;base64,AA==', instruction: '文字を修正' }) })
+const request = () => new Request('https://local.test/api/banner/refine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({originalImage:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAuklEQVR4nOXOsQEAIAzAoFT/v9meweDATnPu+1k6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgpQNaOqClA1o6oKUDWjqgLR0/UPEQbQj7AAAAAElFTkSuQmCC',instruction:'文字を修正'})})
 const modelResponse = load('src/lib/banner/vision-response.ts')
 let modelFetchOptions
 let modelListResponse = new Response(JSON.stringify({ models: [
@@ -71,24 +74,26 @@ const modelsRoute = load('src/app/api/banner/models/route.ts', {
   })
   await check('banner refine uses the official Pro image endpoint with timeout and bounded response', async () => {
     const result = await api.POST(request())
-    assert.equal(result.status, 200)
+    assert.equal(result.status, 200,await result.clone().text())
     assert.equal((await result.json()).success, true)
     assert.equal(calls.length, 1)
     assert.equal(calls[0].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent')
     assert.ok(calls[0].options.signal)
     assert.equal(releases.length, 0)
   })
-  await check('invalid model and oversized response fail before charging quota', async () => {
+  await check('invalid model and oversized response return proven failure and release reserved quota', async () => {
     env.DOYA_BANNER_IMAGE_MODEL = 'gemini-2.5-flash-image'
     await assert.rejects(modelApi.resolveImageModel('offline'), /Nano Banana Pro/)
     const invalid = await api.POST(request())
-    assert.equal(invalid.status, 500)
+    assert.equal(invalid.status, 503)
+    assert.equal((await invalid.json()).state,'failed')
     assert.equal(calls.length, 1)
     assert.deepEqual(releases, [1])
     env.DOYA_BANNER_IMAGE_MODEL = 'nano-banana-pro'
     response = new Response('x', { headers: { 'content-length': String(32 * 1024 * 1024 + 1) } })
     const oversized = await api.POST(request())
-    assert.equal(oversized.status, 500)
+    assert.equal(oversized.status, 503)
+    assert.equal((await oversized.json()).state,'failed')
     assert.equal(calls.length, 2)
     assert.deepEqual(releases, [1, 1])
     assert.equal(notifications, 2)

@@ -1,0 +1,127 @@
+{
+  "checkedAt": "2026-10-06T20:06:50.464858+00:00",
+  "commit": "3c4bde84a93981654d590a3b38ae77f59a088450",
+  "deployment": "dpl_GLSeduD7eMPzTtMyu7zKaSyAr5d7",
+  "status": "anonymous-publication-passed-private-wrapper-unproven",
+  "entries": [
+    {
+      "service": "banner",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "seo",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "interview",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "persona",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "hr",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "kintai",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyalist",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "promane",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "sfa",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "shodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aio",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "mensetsu",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "quote",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aishodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "adimage",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "pages": [
+    {
+      "path": "/doyaslide/new",
+      "status": 200,
+      "deploymentMarker": true,
+      "retryCopyPresent": true,
+      "boundedReaderPresent": true
+    },
+    {
+      "path": "/cunning/pricing",
+      "status": 200,
+      "deploymentMarker": true,
+      "retryCopyPresent": false,
+      "boundedReaderPresent": true
+    }
+  ],
+  "assets": 29,
+  "guestApis": [
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "guest": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "guest": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    }
+  ],
+  "scope": "Anonymous read-only HTML/assets and guest usage only. Does not prove authenticated wrapper/child behavior, private customer flows, actual AI generation, DB persistence or browser interaction. If alias advanced, absent old marker is not itself a bug."
+}

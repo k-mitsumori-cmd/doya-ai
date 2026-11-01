@@ -90,8 +90,17 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         include: { member: { select: { id: true, role: true } } },
       })
       if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+      // システム管理者のメールアドレスは招待の宛先になる。hr_admin が書き換えて招待を出し直すと
+      // 席を乗っ取れるため、システム管理者のメールアドレスはシステム管理者だけが変更できる。
+      if (email !== undefined && email !== existingEmp.email && existingEmp.member?.role === 'system_admin' && actorRole !== 'system_admin') {
+        return NextResponse.json({ error: 'システム管理者のメールアドレスはシステム管理者のみ変更できます' }, { status: 403 })
+      }
       if (isActive === false && existingEmp.member?.role === 'system_admin') {
         return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
+      }
+      // 自分自身は無効化できない（DELETE と同じ決まり。監査の軽微6）
+      if (isActive === false && existingEmp.id === kctx.employeeId) {
+        return NextResponse.json({ error: '自分自身は無効化できません' }, { status: 403 })
       }
       if (isActive === true && !existingEmp.isActive) {
         const limit = await reachedKintaiEmployeeLimit(tx, kctx.organizationId)
@@ -114,6 +123,26 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (roleChanged && actorRole !== 'system_admin' &&
           (role === 'system_admin' || existingEmp.member?.role === 'system_admin')) {
         return NextResponse.json({ error: 'システム管理者の権限変更はシステム管理者のみ可能です' }, { status: 403 })
+      }
+      // hr_admin 同士で昇格・降格・無効化・メール変更ができると、互いの権限を奪い合えるため、
+      // システム管理者以外は「自分より下の権限の人」だけを変更でき、自分と同じか上の権限は付与できない。
+      if (actorRole !== 'system_admin') {
+        // hasMinRole(a, b) は「a が b 以上の権限か」。未知のロールは安全側（同格以上）に倒す。
+        const targetRole = existingEmp.member?.role
+        const targetIsPeerOrHigher = !!targetRole && (hasMinRole(targetRole, actorRole) || !hasMinRole(targetRole, 'employee'))
+        const isSelf = existingEmp.id === kctx.employeeId
+        const sensitiveChange = roleChanged
+          || (isActive !== undefined && isActive !== existingEmp.isActive)
+          || (email !== undefined && email !== existingEmp.email)
+        if (!isSelf && targetIsPeerOrHigher && sensitiveChange) {
+          return NextResponse.json({ error: '自分と同じか上の権限を持つ人の権限・メールアドレス・有効状態は変更できません' }, { status: 403 })
+        }
+        if (roleChanged && isSelf) {
+          return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
+        }
+        if (roleChanged && hasMinRole(role, actorRole)) {
+          return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
+        }
       }
       if (roleChanged && existingEmp.member?.role === 'system_admin') {
         const otherAdmins = await tx.kintaiMember.count({
@@ -139,6 +168,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (roleChanged && employee.member) {
         await tx.kintaiMember.update({ where: { id: employee.member.id }, data: { role } })
         employee.member.role = role
+      }
+      // 招待中にメールを直したら、前のメールあての招待リンクを使えなくする（招待は出し直す）
+      if (email !== undefined && email !== existingEmp.email && employee.member && employee.member.status !== 'ACTIVE') {
+        await tx.kintaiMember.update({ where: { id: employee.member.id }, data: { inviteEmail: email, inviteToken: null } })
+        employee.member.inviteToken = null
       }
 
       return NextResponse.json({ employee })
@@ -169,6 +203,17 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
       if (existingEmp.member?.role === 'system_admin') {
         return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
+      }
+      // PATCH の無効化と同じ決まり。自分自身は無効化できない。システム管理者以外は、自分と同じか上の権限の人を無効化できない
+      // （hr_admin どうしで互いを無効化し合えないように。ROLES-2026-10-26.md §2.1）。未知のロールは安全側（同格以上）に倒す。
+      if (existingEmp.id === kctx.employeeId) {
+        return NextResponse.json({ error: '自分自身は無効化できません' }, { status: 403 })
+      }
+      if (actorRole !== 'system_admin') {
+        const targetRole = existingEmp.member?.role
+        if (targetRole && (hasMinRole(targetRole, actorRole) || !hasMinRole(targetRole, 'employee'))) {
+          return NextResponse.json({ error: '自分と同じか上の権限を持つ人は無効化できません' }, { status: 403 })
+        }
       }
       await tx.kintaiEmployee.update({
         where: { id: p.id },

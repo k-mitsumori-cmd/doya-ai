@@ -1,0 +1,24 @@
+{
+  "status": "confirmed-invalid-input-can-clear-profile",
+  "results": [
+    {
+      "name": "malformed",
+      "status": 200,
+      "writes": 1,
+      "observed": "Invalid request replaces stored brand fields with null/empty values."
+    },
+    {
+      "name": "empty",
+      "status": 200,
+      "writes": 1,
+      "observed": "Invalid request replaces stored brand fields with null/empty values."
+    },
+    {
+      "name": "wrong-types",
+      "status": 200,
+      "writes": 1,
+      "observed": "Invalid request replaces stored brand fields with null/empty values."
+    }
+  ],
+  "scope": "Actual route with synthetic auth and Prisma only; no real DB writes or customer data."
+}

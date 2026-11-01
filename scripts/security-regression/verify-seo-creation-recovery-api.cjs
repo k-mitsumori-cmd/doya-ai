@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const {load}=require('./load-typescript.cjs');
+const helper=load('src/lib/seo-article-admission.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:{}},'@/lib/seoAccess':{}});
+const privateApi=load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}});
+const file='src/app/api/seo/article-operation/route.ts',op='11111111-1111-4111-8111-111111111111',cases=[];
+(async()=>{
+ for(const scenario of ['anonymous','missing-id','invalid-id','duplicate-id','found','missing','unavailable','cancelled','cancel','failure','rate-limit']){
+  const calls=[];let schemaReads=0;
+  const api=load(file,{'next-auth':{getServerSession:async()=>scenario==='anonymous'?null:{user:{id:'synthetic-actor'}}},'@/lib/auth':{},'@seo/lib/bootstrap':{ensureSeoSchema:async()=>schemaReads++},'@/lib/private-api-response':privateApi,'@/lib/seo-article-admission':{...helper,recoverSeoArticleCreation:async(...args)=>{calls.push(args);if(scenario==='rate-limit')throw new helper.SeoArticleOperationError(429,'本日の上限です');if(scenario==='failure')throw Error('SYNTHETIC_PRIVATE_DATABASE');return {state:scenario==='cancel'?'cancelled':scenario,articleId:scenario==='found'?'saved_article':null,jobId:scenario==='found'?'saved_job':null}}}});
+  const query=scenario==='missing-id'?'':scenario==='invalid-id'?'?operationId=not-valid':scenario==='duplicate-id'?'?operationId='+op+'&operationId='+op:'?operationId='+op;
+  const response=await api[['cancel','rate-limit'].includes(scenario)?'DELETE':'GET'](new Request('https://example.invalid/api/seo/article-operation'+query)),body=await response.json();
+  assert.equal(response.status,scenario==='anonymous'?401:['missing-id','invalid-id','duplicate-id'].includes(scenario)?400:scenario==='failure'?503:scenario==='rate-limit'?429:200);
+  assert.equal(response.headers.get('cache-control'),'private, no-store');assert.ok(response.headers.get('vary').split(',').some(x=>x.trim().toLowerCase()==='cookie'));assert.ok(!JSON.stringify(body).includes('SYNTHETIC_PRIVATE_DATABASE'));
+  if(['anonymous','missing-id','invalid-id','duplicate-id'].includes(scenario)){assert.equal(schemaReads,0);assert.equal(calls.length,0)}else{assert.equal(schemaReads,1);assert.deepEqual(calls[0],['synthetic-actor',op,['cancel','rate-limit'].includes(scenario)]);if(scenario==='rate-limit'){assert.equal(body.code,'SEO_CREATION_RECOVERY_LIMIT')}if(!['failure','rate-limit'].includes(scenario)){assert.equal(body.success,true);assert.equal(body.operationId,op);assert.equal(body.state,scenario==='cancel'?'cancelled':scenario)}}
+  cases.push({scenario,passed:true});
+ }
+ const files=[file,'src/lib/seo-article-admission.ts','src/lib/private-api-response.ts'];const report={checkedAt:new Date().toISOString(),expected:11,passed:cases.length,cases,sourceHashes:Object.fromEntries(files.map(f=>{const chosen=process.env.DOYA_TEST_BASELINE&&fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,f))?path.join(process.env.DOYA_TEST_BASELINE,f):f;return [f,crypto.createHash('sha256').update(fs.readFileSync(chosen)).digest('hex')]})),scope:'Actual GET/DELETE recovery API and actual operation-ID parser/private JSON helper; synthetic authentication, schema checks and recovery outcomes. No actual PostgreSQL, HTTP server, providers or production.'};fs.writeFileSync('docs/audits/2026-10-06-all-services-recheck/seo-creation-recovery-api-integrated.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
+})().catch(e=>{console.error(e);process.exitCode=1});

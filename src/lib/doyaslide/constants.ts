@@ -13,18 +13,17 @@ import type {
 export const DOC_TYPES: {
   value: DocType
   label: string
-  emoji: string
   defaultAspect: AspectRatio
   defaultCount: number
 }[] = [
-  { value: 'sales', label: '営業資料', emoji: '💼', defaultAspect: 'wide', defaultCount: 8 },
-  { value: 'proposal', label: '提案資料', emoji: '📑', defaultAspect: 'wide', defaultCount: 10 },
-  { value: 'sns', label: 'SNS用資料', emoji: '📱', defaultAspect: 'square', defaultCount: 6 },
-  { value: 'seminar', label: 'セミナー・登壇', emoji: '🎤', defaultAspect: 'wide', defaultCount: 10 },
-  { value: 'recruit', label: '採用', emoji: '🤝', defaultAspect: 'wide', defaultCount: 8 },
-  { value: 'pitch', label: 'ピッチ', emoji: '🚀', defaultAspect: 'wide', defaultCount: 10 },
-  { value: 'internal', label: '社内共有', emoji: '🏢', defaultAspect: 'wide', defaultCount: 8 },
-  { value: 'custom', label: '自由入力', emoji: '✨', defaultAspect: 'wide', defaultCount: 8 },
+  { value: 'sales', label: '営業資料', defaultAspect: 'wide', defaultCount: 8 },
+  { value: 'proposal', label: '提案資料', defaultAspect: 'wide', defaultCount: 10 },
+  { value: 'sns', label: 'SNS用資料', defaultAspect: 'square', defaultCount: 6 },
+  { value: 'seminar', label: 'セミナー・登壇', defaultAspect: 'wide', defaultCount: 10 },
+  { value: 'recruit', label: '採用', defaultAspect: 'wide', defaultCount: 8 },
+  { value: 'pitch', label: 'ピッチ', defaultAspect: 'wide', defaultCount: 10 },
+  { value: 'internal', label: '社内共有', defaultAspect: 'wide', defaultCount: 8 },
+  { value: 'custom', label: '自由入力', defaultAspect: 'wide', defaultCount: 8 },
 ]
 
 export function getDocType(value: string) {

@@ -1,0 +1,5 @@
+{
+  "checkedAt": "2026-10-07T16:00:13.121194+00:00",
+  "status": "locally-repaired-targeted-tests-passed-frozen24gate-pending",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/private-image-storage-release-4d429672-3d67-45d0-a71a-edb3554e7192"
+}

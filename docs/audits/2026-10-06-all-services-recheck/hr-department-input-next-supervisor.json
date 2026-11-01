@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-10-08T17:33:34.867609+00:00",
+  "pid": 70723,
+  "privateFolder": "/tmp/doya-sfa-authority-964343f5",
+  "appFolder": "/tmp/doya-sfa-authority-964343f5/app",
+  "origin": "http://127.0.0.1:50382",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-department-input-release-73d6952b-e5c4-4e40-8e9d-e9c43adc4cf0",
+  "status": "passed",
+  "scope": "Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic HR/Kintai users, organizations and sessions; cache headers, cross-actor reads and revoked session checks, plus inactive department hierarchy and unassigned employee representation. No provider credentials or production data; outbound network blocked.",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "serverExitCode": 0,
+  "stopExitCode": 0,
+  "postStopStatusExitCode": 3,
+  "privateFolderRemoved": true,
+  "endedAt": "2026-10-08T17:33:43.029870+00:00"
+}

@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-10-08T19:12:01.997Z",
+  "expected": 14,
+  "passed": 14,
+  "cases": [
+    {
+      "name": "New503 displays load error, preserves input and cannot be mistaken for no departments",
+      "passed": true
+    },
+    {
+      "name": "Pending new list is loading rather than empty organization",
+      "passed": true
+    },
+    {
+      "name": "Confirmed empty new list shows add-department guidance and permits optional unassigned registration",
+      "passed": true
+    },
+    {
+      "name": "New GET-only retry preserves entered employee name",
+      "passed": true
+    },
+    {
+      "name": "Malformed row cannot render private object or enable save",
+      "passed": true
+    },
+    {
+      "name": "Editor503 keeps assigned ID visible and disables selection/save without displaying unassigned",
+      "passed": true
+    },
+    {
+      "name": "Editor retry restores real department label without changing employee input",
+      "passed": true
+    },
+    {
+      "name": "Successful list missing existing department preserves selection and requires explicit correction",
+      "passed": true
+    },
+    {
+      "name": "Auth loading removes all employee form data immediately and starts no new read",
+      "passed": true
+    },
+    {
+      "name": "Actor switch ignores old pending department response and remounts employee fields",
+      "passed": true
+    },
+    {
+      "name": "Old new-employee save response cannot notify, upload or navigate after actor switch",
+      "passed": true
+    },
+    {
+      "name": "Old editor save acknowledgment cannot notify or navigate in another actor scope",
+      "passed": true
+    },
+    {
+      "name": "Employee503 remains a recoverable read error and GET-only retry restores verified editor",
+      "passed": true
+    },
+    {
+      "name": "Employee404 alone displays missing employee and never enables an editor",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/[id]/edit/page.tsx": "8da42556cea704c2cb89cee7d44222d936ef9e093b8f9a21349fce8c40f57bbb",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-consumer-mounted.cjs": "fc5bc9d80a75b570bbc4222eb7ab6f3dbc752394a1e1a5627442f1c5b9975b87"
+  },
+  "scope": "Actual candidate full new/edit pages, auth boundary, lifetime, shared hook and stream parser mounted React StrictMode/JSDOM. Synthetic HTTP/auth/motion. No root integration, actual Next/DB/browser or production claim. Settings tested separately."
+}

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict'),{load}=require('./load-typescript.cjs')
-const source=fs.readFileSync('src/app/persona/Tool.tsx','utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
+const source=fs.readFileSync('src/app/(shell)/persona/Tool.tsx','utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
 let effect,restore
 function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect'){const s=n.arguments[0].getText(ast);if(s.includes('const verifySavedAccess'))effect=s;if(s.includes("accountStorage.getItem('doya_persona_last')"))restore=s}ts.forEachChild(n,visit)}visit(ast)
 const compile=s=>ts.transpileModule('('+s+');',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText

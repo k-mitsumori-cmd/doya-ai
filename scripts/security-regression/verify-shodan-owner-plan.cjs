@@ -19,6 +19,8 @@ function fixture(ownerPlan, actorPlan, role, owners = ['owner']) {
   }
   const mocks = {
     'next/server': { NextResponse: Response },
+  ...require('./shodan-editor-test-helpers.cjs'),
+
     '@/lib/prisma': { prisma },
     '@/lib/shodan/access': { getShodanContext: async () => member, orgSlugFrom: () => 'org-slug' },
     '@/lib/shodan/billing': { getShodanBilling: (db, orgId) => getShodanBilling(db, orgId) },

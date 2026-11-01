@@ -1,0 +1,69 @@
+{
+  "cases": 12,
+  "passed": 0,
+  "failed": 12,
+  "results": [
+    {
+      "name": "Account switch replaces prior counts immediately and fetches own stats",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('777'))\n"
+    },
+    {
+      "name": "Late previous account response cannot populate the new account",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('888'))\n"
+    },
+    {
+      "name": "Returning alpha does not restore a stale count before its fresh response",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('777'))\n"
+    },
+    {
+      "name": "Plan grant change refreshes counts for same actor",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('888'))\n"
+    },
+    {
+      "name": "Malformed stats stay unknown {}",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":-1,\"monthlyUsage\":0,\"monthlyLimit\":15}",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0.5,\"monthlyUsage\":0,\"monthlyLimit\":15}",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0,\"monthlyUsage\":-1,\"monthlyLimit\":15}",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Malformed stats stay unknown {\"totalBanners\":0,\"monthlyUsage\":0,\"monthlyLimit\":-2}",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Noncooperating fetch deadline hides counts and aborts request",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('使用状況を取得できません'))\n"
+    },
+    {
+      "name": "Loading and missing actor never show previous statistics",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(!f.container.textContent.includes('777'))\n"
+    },
+    {
+      "name": "Confirmed unlimited quota never displays minus-one allowance",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(f.container.textContent.includes('上限なし'))\n"
+    }
+  ],
+  "scope": "Actual plan screen and actual bounded stats hook with synthetic sessions, readonly replies and clocks. Billing hooks inert in this focused test; no network/generation/DB.",
+  "sourceCommit": "74cb5e58569c62a5e38f0629cbf6336c2adca9aa"
+}

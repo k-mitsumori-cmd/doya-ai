@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-06T16:02:18.412604+00:00",
+  "baseline": [
+    "billing-management-response-baseline.json",
+    "billing-management-user-spec-followup.json"
+  ],
+  "changes": [
+    "Three actual management screens use shared actor/service/auth-generation scoped status and mutations",
+    "Bounded35s/64KiB POST and readonly recovery; no automatic mutation retries",
+    "Strict coherent all-result period-end cancellation and resume confirmation",
+    "Synchronous duplicate lock and abort/suppress stale/unmounted replies",
+    "Unknown or partial outcomes block mutations until coherent readonly recovery; unverified recovery keeps lock",
+    "Verified operations refresh same-actor notices; no purchase events; no browser cancellation caches",
+    "Confirm dialogs cannot follow account switches or reappear on returning actor",
+    "Unified plan scope copy; SEO free limits sourced from pricing constants; banner/SEO plan precedence via higherPlan"
+  ],
+  "targetedEvidence": {
+    "mounted": "subscription-management-mounted-current.json",
+    "mountedCases": 72,
+    "parser": "subscription-mutation-parser-current.json",
+    "parserCases": 34,
+    "resyncCrosscheckCases": 43,
+    "noticeCrosscheckCases": 48,
+    "partialServerCrosscheck": "subscription-management-server-crosscheck.json",
+    "partialClientCoverage": "Moved extracted callback cases to72 full-screen mounted cases; server cancellation/ownership/partial/outbox assertions retained"
+  },
+  "sourceHashes": {
+    "src/hooks/useSubscriptionManagement.ts": "58b7b1a00d945e56f8527138e99c218509d5ca26f0c24a33c32af68bf48a13c7",
+    "src/hooks/useSubscriptionStatus.ts": "c764d91c3050a75b0d4a7f4664d56b6e93262871fbda821cc48e01d837c81cc1",
+    "src/lib/subscription-mutation-client.ts": "772f512895d12db21f95d4cb588cde1ad55a36dce5651ede0ae4ed77f4a68be8",
+    "src/app/banner/dashboard/plan/page.tsx": "6fea0c4d4ca68a97536b3a05ca182e732ef61e2693935a974fa031119a672df4",
+    "src/app/banner/dashboard/settings/page.tsx": "394b69acdbc34f963514bebbcc8c780e1fd597ddde106c79f9d6b345d4a6c091",
+    "src/app/seo/dashboard/plan/page.tsx": "0e39f90c4ea18181586371f45af79fc0c3f01058938233995185acd3978f0a4b",
+    "scripts/security-regression/verify-subscription-management-mounted.cjs": "f3fb99c737557d34b82ca36b48b4e34c1f17bb626dd2f8f7792c916e5f049645",
+    "scripts/security-regression/verify-subscription-mutation-client.cjs": "b5f6937f08d19618b1dfa1bf5462fb22abb2c65e16a40fb01b633b87f9a9b40e",
+    "scripts/security-regression/verify-cancel-notice-mounted.cjs": "1eae77793ee744b73fdd1aa8ed789dc30c0f94815f8a85ec5f6dd44f8b169206",
+    "scripts/security-regression/verify-billing-plan-resync-mounted.cjs": "22ef300bc6a775de1263ea85ffaaa8601fd2cccbd9d0d8991dd3b5439fe296b1",
+    "scripts/security-regression/verify-cancellation-partial.cjs": "e06b675cec2f370a21a53e18e4e694b0a3a01767df7ae6be1fa64b2e14bead86",
+    "scripts/security-regression/run.cjs": "b57cb621ba3972fb84e3aaeb2b3bf14aa77574a5e83c0a4cc4a977edcd1d97bf"
+  },
+  "gate": "subscription-management-release-da75e986-e681-458b-a7e8-e377ee662ace",
+  "releaseState": "Full local gate passed, no source drift; preparing commit and production push",
+  "remaining": [
+    "Legacy checkout clients tenkai pricing/PricingTable and InterviewXSidebar need individual review",
+    "Analytics4 missing service paths and broader17-service matrix remain",
+    "No authenticated live Stripe operations, customer DB writes, paid provider calls, messages or device QA performed"
+  ],
+  "releaseGateState": {
+    "startedAt": "2026-10-06T16:01:07.339484+00:00",
+    "pid": 29632,
+    "head": "15eeda78c8e3b8b127bed8ff9dd74d90d60f60a5",
+    "sourceFiles": 2550,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:04:20.297019+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:04:22.156427+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T16:04:22.533605+00:00"
+  }
+}

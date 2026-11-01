@@ -19,18 +19,18 @@ type Recipe = {
 };
 export const DEMOS: Record<string, Recipe> = {
   banner: {
-    load: () => import("@/app/banner/landing/mocks"),
+    load: () => import("@/app/(shell)/banner/landing/mocks"),
     screens: ["BannerTemplatesMock", "BannerVariantsMock", "BannerSizesMock"],
     labels: ["業種を選ぶ", "バナー案を見る", "サイズを選んで出力"],
   },
   seo: {
-    load: () => import("@/app/seo/mocks"),
+    load: () => import("@/app/(shell)/seo/mocks"),
     screens: ["SeoBriefMock", "SeoOutlineMock", "SeoAuditMock"],
     labels: ["記事の条件を入力", "構成を確認", "公開前にチェック"],
     typing: "BtoB マーケティング AI活用",
   },
   interview: {
-    load: () => import("@/app/interview/mocks"),
+    load: () => import("@/app/(shell)/interview/mocks"),
     screens: [
       "InterviewUploadMock",
       "InterviewTranscriptMock",
@@ -39,33 +39,33 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["音声をアップロード", "文字起こしを確認", "記事を確認"],
   },
   persona: {
-    load: () => import("@/app/persona/mocks"),
+    load: () => import("@/app/(shell)/persona/mocks"),
     screens: ["PersonaBriefMock", "PersonaProfileMock", "PersonaPlanMock"],
     labels: ["商材の条件を入力", "顧客像を確認", "施策の要点を見る"],
   },
   hr: {
-    load: () => import("@/app/hr/mocks"),
+    load: () => import("@/app/(shell)/hr/mocks"),
     screens: ["HrEmployeesMock", "HrOrgChartMock", "HrEvalMock"],
     labels: ["従業員を選ぶ", "組織図を見る", "人事評価を確認"],
   },
   kintai: {
-    load: () => import("@/app/kintai/mocks"),
+    load: () => import("@/app/(shell)/kintai/mocks"),
     screens: ["KintaiClockMock", "KintaiSummaryMock", "KintaiRequestsMock"],
     labels: ["出勤を打刻", "勤怠を集計", "申請を確認"],
   },
   doyalist: {
-    load: () => import("@/app/doyalist/mocks"),
+    load: () => import("@/app/(shell)/doyalist/mocks"),
     screens: ["DoyalistFilterMock", "DoyalistTableMock", "DoyalistMessageMock"],
     labels: ["検索条件を指定", "企業リストを見る", "営業文面を確認"],
   },
   promane: {
-    load: () => import("@/app/promane/mocks"),
+    load: () => import("@/app/(shell)/promane/mocks"),
     screens: ["PromaneProjectMock", "PromaneBoardMock", "PromaneProfitMock"],
     labels: ["案件を入力", "タスクを整理", "収支を確認"],
     typing: "新サービスサイト制作",
   },
   doyaslide: {
-    load: () => import("@/app/doyaslide/mocks"),
+    load: () => import("@/app/(shell)/doyaslide/mocks"),
     screens: [
       "DoyaSlideBriefMock",
       "DoyaSlideStructureMock",
@@ -75,17 +75,17 @@ export const DEMOS: Record<string, Recipe> = {
     typing: "新規事業の社内提案資料",
   },
   cunning: {
-    load: () => import("@/app/cunning/mocks"),
+    load: () => import("@/app/(shell)/cunning/mocks"),
     screens: ["CunningKnowledgeMock", "CunningLiveMock", "CunningAnswerMock"],
     labels: ["資料を登録", "会話から質問を検出", "回答と根拠を確認"],
   },
   sfa: {
-    load: () => import("@/app/sfa/mocks"),
+    load: () => import("@/app/(shell)/sfa/mocks"),
     screens: ["SfaPipelineMock", "SfaAccountsMock", "SfaDashboardMock"],
     labels: ["商談を選ぶ", "顧客情報を見る", "営業状況を確認"],
   },
   shodan: {
-    load: () => import("@/app/shodan/mocks"),
+    load: () => import("@/app/(shell)/shodan/mocks"),
     screens: [
       "ShodanResearchMock",
       "ShodanHypothesisMock",
@@ -94,27 +94,27 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["企業情報を見る", "課題仮説を確認", "提案資料を見る"],
   },
   aio: {
-    load: () => import("@/app/aio/mocks"),
+    load: () => import("@/app/(shell)/aio/mocks"),
     screens: ["AioEnginesMock", "AioSovMock", "AioCitationsMock"],
     labels: ["AI別の状況を見る", "競合シェアを比較", "引用元を確認"],
   },
   mensetsu: {
-    load: () => import("@/app/mensetsu/mocks"),
+    load: () => import("@/app/(shell)/mensetsu/mocks"),
     screens: ["MensetsuLiveMock", "MensetsuScoreMock", "MensetsuGuardMock"],
     labels: ["面接を進める", "評価を確認", "質問の基準を見る"],
   },
   quote: {
-    load: () => import("@/app/quote/mocks"),
+    load: () => import("@/app/(shell)/quote/mocks"),
     screens: ["QuoteLinesMock", "QuoteTaxMock", "QuotePdfMock"],
     labels: ["見積明細を確認", "税・値引きを確認", "PDFを書き出す"],
   },
   aishodan: {
-    load: () => import("@/app/aishodan/mocks"),
+    load: () => import("@/app/(shell)/aishodan/mocks"),
     screens: ["AishodanTalkMock", "AishodanSlotsMock", "AishodanFitMock"],
     labels: ["AIと商談を進める", "ヒアリングを整理", "商談結果を確認"],
   },
   adimage: {
-    load: () => import("@/app/adimage/mocks"),
+    load: () => import("@/app/(shell)/adimage/mocks"),
     screens: ["AdImageGridMock", "AdImageVerifyMock", "AdImageRefineMock"],
     labels: ["媒体別の画像を見る", "文字をチェック", "改善点を確認"],
   },

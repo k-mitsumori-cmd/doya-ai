@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-07T20:46:56.190Z",
+  "expected": 20,
+  "passed": 20,
+  "cases": [
+    "same operation retry preserves one saved expense and ID",
+    "concurrent identical POSTs commit one expense",
+    "same operation with different amount rejected without overwriting",
+    "missing GET is read-only and cannot create expense or receipt",
+    "explicit missing cancellation fences delayed original POST",
+    "cancelling committed operation recovers expense without deleting",
+    "deleted expense is not resurrected by replay",
+    "foreign project or missing workspace cannot create or recover",
+    "same-workspace wrong-project recovery cannot disclose saved expense",
+    "revoked viewer and anonymous callers cannot create read or cancel",
+    "missing malformed and ambiguous operation identities rejected before writes",
+    "strict money date description and action input checks preserved",
+    "receipt failure rolls back expense and returns no false success",
+    "corrupt receipt fails closed for creation recovery cancellation",
+    "operation identity isolated by actor and workspace",
+    "concurrent cancellation create settles consistently without duplicates",
+    "API and existing server action share original receipt instead of bypassing protection",
+    "server action rejects revoked actor foreign project and invalid identity",
+    "existing server action rolls back expense when receipt storage fails",
+    "concurrent API and server action commit one operation across entry points"
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/expenses/route.ts": "3b288eead1ee1c0ebd0ac34cb82ca783f15e03658d2ae949fcf3b4c2f94a3d40",
+    "src/lib/promane/expense-creation.ts": "58cd5c23e4a46d915ce8edd6996f5f43150d51c543212998e0d4485b57f0b511",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/lib/promane/actions-time-entries.ts": "f1af973bd4d72db3b8faed8f41fcf2c6c369aaa07f27ce306e52971f606c3457",
+    "src/lib/promane/time-entry-creation.ts": "000c014ffa1f82388ee4f3b523a721053acc0f379810792c1220825d4c1a2b4f"
+  },
+  "scope": "Actual candidate expense GET/POST routes, existing server action and receipt helper and Prisma in isolated Unix-socket PostgreSQL with project FK. Synthetic session, actual workspace/member/project checks and actor lock; no customer/provider/production operations. Client/real Next/browser not covered."
+}

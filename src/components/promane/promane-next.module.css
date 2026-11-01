@@ -1,0 +1,9 @@
+/* プロマネの新しい見た目（UI 品質の直し）。PromaneShellFrame が useUiNext() が真のときだけ .next を付ける */
+.next { min-width: 0; }
+
+/* 375px: 今までの画面の外側の余白（p-8 = 32px）を 16px にし、横のはみ出しを出さない */
+@media (max-width: 639px) {
+  .next :global(.p-8),
+  .next :global(.p-6) { padding: 16px; }
+  .next :global(.rounded-3xl.p-8) { padding: 20px; }
+}

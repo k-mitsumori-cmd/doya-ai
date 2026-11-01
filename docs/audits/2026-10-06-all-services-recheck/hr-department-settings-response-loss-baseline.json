@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-08T17:21:01.901Z",
+  "expected": 1,
+  "defectsReproduced": 1,
+  "repairStatus": "unresolved-durable-operation-required",
+  "passed": 1,
+  "cases": [
+    {
+      "scenario": "lost POST acknowledgment followed by GET reconciliation still permits duplicate creation in current candidate",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-settings-repair-overlay/src/app/hr/settings/page.tsx": "b81a2b9202af509d9d4d37e1f65a03716d411754542af983080147b8d393971d",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-settings-repair-overlay/src/lib/hr/department-settings-client.ts": "cc639904d84fdeb60aaed26e6eae002f53865fd5b1182eb6b8b826246cfb2a6a",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-response-loss-baseline.cjs": "fa603fdcc4280b4f9d61ba50b7c7dc44bd5aa3862f25a6d4ea4f007680083926"
+  },
+  "scope": "Actual full settings page and actual parser mounted in React StrictMode/JSDOM. Synthetic fetch, motion/link/toast only; real input and button events. Candidate overlay only; no root integration, native browser or production proof. Lost POST response durable reconciliation remains open; do not release this candidate as a complete solution."
+}

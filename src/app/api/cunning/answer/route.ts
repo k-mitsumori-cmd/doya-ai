@@ -13,10 +13,14 @@ import { retrieveChunks } from '@/lib/cunning/rag'
 import { resolveSessionContext } from '@/lib/cunning/context'
 import { admitCunningAnswer, releaseFailedCunningAnswer, hasCurrentCunningAnswerClaim } from '@/lib/cunning/answer-admission'
 import type { ApplicantProfileLite, CompanyProfileLite, CunningMode, KnowledgeChunkLite } from '@/lib/cunning/types'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 // POST /api/cunning/answer — 質問テキスト → 回答(要点＋スクリプト＋根拠)
 // body: { sessionId, question, recentTranscript? }
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const t0 = Date.now()
   let failedClaim: { userId: string; sessionId: string; token: string; claimedAt: Date } | undefined
   const releaseFailure = async () => {

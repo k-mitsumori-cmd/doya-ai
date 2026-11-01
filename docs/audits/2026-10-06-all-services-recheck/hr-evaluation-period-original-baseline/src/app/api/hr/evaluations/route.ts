@@ -1,0 +1,179 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getHrContext } from '@/lib/hr/access'
+import { getEvaluationReader } from '@/lib/hr/evaluation-access'
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
+
+export async function GET(req: NextRequest) {
+  try {
+    const ctx = await getHrContext()
+    if (!ctx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const reader = await getEvaluationReader(ctx)
+    if (!reader) return NextResponse.json({ error: '評価を閲覧する権限がありません' }, { status: 403 })
+
+    const url = req.nextUrl
+    const periodId = url.searchParams.get('periodId') || ''
+    const employeeId = url.searchParams.get('employeeId') || ''
+    const status = url.searchParams.get('status') || ''
+    const page = Number(url.searchParams.get('page') || '1')
+    const requestedPageSize = Number(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))
+    if (!Number.isSafeInteger(page) || page < 1 || page > 1_000_000 ||
+        !Number.isSafeInteger(requestedPageSize) || requestedPageSize < 1) {
+      return NextResponse.json({ error: 'ページ番号・件数が不正です' }, { status: 400 })
+    }
+    const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
+
+    const where: any = { period: { is: { organizationId: ctx.organizationId } } }
+    if (reader.employeeId !== null) {
+      where.OR = [{ employeeId: reader.employeeId }, { evaluatorId: reader.employeeId }]
+    }
+
+    if (periodId) {
+      where.periodId = periodId
+      const period = await prisma.hrEvaluationPeriod.findFirst({
+        where: { id: periodId, organizationId: ctx.organizationId },
+      })
+      if (!period) {
+        return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+      }
+    } else {
+      where.period = { is: { organizationId: ctx.organizationId } }
+    }
+
+    if (employeeId) where.employeeId = employeeId
+    if (status) where.status = status
+
+    const [items, total] = await Promise.all([
+      prisma.hrEvaluation.findMany({
+        where,
+        include: {
+          employee: {
+            select: {
+              id: true, firstName: true, lastName: true,
+              position: true, departmentId: true,
+              department: { select: { id: true, name: true } },
+            },
+          },
+          evaluator: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          period: { select: { id: true, name: true, startDate: true, endDate: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.hrEvaluation.count({ where }),
+    ])
+
+    return NextResponse.json({
+      success: true,
+      items: items.map((e) => ({
+        ...e,
+        goals: e.goals as any,
+        competencies: e.competencies as any,
+      })),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    })
+  } catch {
+    console.error('[hr/evaluations][GET] failed')
+    return NextResponse.json(
+      { error: 'Failed to fetch evaluations' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!(session?.user as any)?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const ctx = await getHrContext()
+    if (!ctx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const reader = await getEvaluationReader(ctx)
+    if (!reader || reader.employeeId !== null) {
+      return NextResponse.json({ error: '評価の作成はオーナー・管理者のみ実行できます' }, { status: 403 })
+    }
+
+    const body = await req.json()
+    const { periodId, employeeId, evaluatorId, goals, competencies } = body
+
+    if (!periodId || !employeeId) {
+      return NextResponse.json({ error: 'periodId and employeeId are required' }, { status: 400 })
+    }
+
+    const period = await prisma.hrEvaluationPeriod.findFirst({
+      where: { id: periodId, organizationId: ctx.organizationId },
+    })
+    if (!period) {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 })
+    }
+
+    const employee = await prisma.hrEmployee.findFirst({
+      where: { id: employeeId, organizationId: ctx.organizationId },
+    })
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+    }
+
+    if (evaluatorId) {
+      const evaluator = await prisma.hrEmployee.findFirst({
+        where: { id: evaluatorId, organizationId: ctx.organizationId }, select: { id: true },
+      })
+      if (!evaluator) return NextResponse.json({ error: '評価者が同じ組織に存在しません' }, { status: 400 })
+    }
+
+    const existing = await prisma.hrEvaluation.findFirst({
+      where: { periodId, employeeId },
+    })
+    if (existing) {
+      return NextResponse.json(
+        { error: 'この従業員の評価はこの期間に既に作成されています' },
+        { status: 400 }
+      )
+    }
+
+    const evaluation = await prisma.hrEvaluation.create({
+      data: {
+        periodId,
+        employeeId,
+        evaluatorId: evaluatorId || null,
+        goals: goals || null,
+        competencies: competencies || null,
+        status: 'DRAFT',
+      },
+      include: {
+        employee: {
+          select: { id: true, firstName: true, lastName: true, position: true },
+        },
+        period: { select: { id: true, name: true } },
+      },
+    })
+
+    return NextResponse.json({ success: true, evaluation })
+  } catch {
+    console.error('[hr/evaluations][POST] failed')
+    return NextResponse.json(
+      { error: 'Failed to create evaluation' },
+      { status: 500 }
+    )
+  }
+}

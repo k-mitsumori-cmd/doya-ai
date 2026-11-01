@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -19,20 +20,20 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const body = await req.json().catch(() => ({}))
     const { workspaceId, email, role = 'member' } = body || {}
 
     if (typeof workspaceId !== 'string' || !workspaceId || typeof email !== 'string' || !email) {
-      return NextResponse.json({ error: 'workspaceId と email は必須です' }, { status: 400 })
+      return privateApiJson({ error: 'workspaceId と email は必須です' }, { status: 400 })
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'メールアドレス形式が不正です' }, { status: 400 })
+      return privateApiJson({ error: 'メールアドレス形式が不正です' }, { status: 400 })
     }
     if (!['admin', 'member', 'guest'].includes(role)) {
-      return NextResponse.json({ error: 'role が不正です' }, { status: 400 })
+      return privateApiJson({ error: 'role が不正です' }, { status: 400 })
     }
 
     const issued = await issuePromaneInvitation({
@@ -43,13 +44,13 @@ export async function POST(req: NextRequest) {
     })
     if (!issued.success) {
       const { status, ...response } = issued.response
-      return NextResponse.json(response, { status })
+      return privateApiJson(response, { status })
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://doya-ai.surisuta.jp'
     const inviteUrl = `${baseUrl}/promane/invite/${issued.invitation.token}`
     if (issued.reused) {
-      return NextResponse.json({ success: true, token: issued.invitation.token, inviteUrl, reused: true })
+      return privateApiJson({ success: true, token: issued.invitation.token, inviteUrl, reused: true })
     }
 
     // 招待メール送信（Resend）
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
       console.error('[promane/invite] email delivery failed after invitation creation')
     }
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       token: issued.invitation.token,
       inviteUrl,
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[promane/invite][POST]')
-    return NextResponse.json({ error: '招待リンク発行に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '招待リンク発行に失敗しました' }, { status: 500 })
   }
 }
 

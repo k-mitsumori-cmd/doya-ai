@@ -48,6 +48,34 @@ function errorFamily(args: unknown[]): string {
   return 'unclassified';
 }
 
+/**
+ * 既知の警告の種類（決まった名前だけ）。console.error の1つ目の引数が、Node や外部のライブラリの決まった警告の形なら、
+ * その種類の名前だけを返す。⚠️ 中身（引数の文字列）は返さない・通知にもログにも載せない。合わなければ null（今までどおり）。
+ * 2026-10-26 本番の B1 の中で、中身の分からない汎用のエラー通知が出たため、統括の依頼で足した。
+ */
+export const WARNING_KINDS = ['max-listeners', 'deprecation', 'experimental', 'anthropic-sdk', 'google-genai-sdk', 'openai-sdk', 'prisma', 'react-warning', 'node-warning'] as const
+export type WarningKind = typeof WARNING_KINDS[number]
+export function warningKind(args: unknown[]): WarningKind | null {
+  const first = args[0]
+  let text = ''
+  try {
+    if (typeof first === 'string') text = first
+    else if (first instanceof Error) text = `${first.name}: ${first.message}`
+  } catch { return null }
+  if (!text) return null
+  const head = text.slice(0, 600)
+  if (/MaxListenersExceededWarning|Possible EventTarget memory leak|Possible EventEmitter memory leak|MaxListenersExceeded/i.test(head)) return 'max-listeners'
+  if (/DeprecationWarning/.test(head)) return 'deprecation'
+  if (/ExperimentalWarning/.test(head)) return 'experimental'
+  if (/^\s*(?:\[?Anthropic\b|@anthropic-ai\/sdk)/i.test(head)) return 'anthropic-sdk'
+  if (/^\s*\[?GoogleGenerativeAI\b|@google\/(?:generative-ai|genai)/i.test(head)) return 'google-genai-sdk'
+  if (/^\s*(?:\[?OpenAI\b|openai(?:\.|:|\s+SDK))/i.test(head)) return 'openai-sdk'
+  if (/^\s*(?:prisma:|PrismaClient|\[?prisma\b)/i.test(head)) return 'prisma'
+  if (/^Warning: /.test(head)) return 'react-warning'
+  if (/^\(node:\d+\)\s+(?:\[[A-Z0-9_-]+\]\s+)?[A-Za-z]*Warning\b/.test(head)) return 'node-warning'
+  return null
+}
+
 /** Fixed categories only: never retain or deliver stack frames or console text. */
 function safeFrameKinds(stack: string | undefined): string[] {
   return (stack?.split('\n').slice(2, 10) ?? []).map(line => {
@@ -123,7 +151,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[] } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[]; warningKind?: string | null } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -165,12 +193,15 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const stackLineCount = Number.isSafeInteger(options.stackLineCount) ? Math.max(0, Math.min(20, options.stackLineCount!)) : 0;
       const stackTraceLimit = Number.isSafeInteger(options.stackTraceLimit) ? Math.max(0, Math.min(100, options.stackTraceLimit!)) : -1;
       const firstArgLength = ['non-string', 'empty', '1-32', '33-128', '129-512', '513+'].includes(options.firstArgLength ?? '') ? options.firstArgLength : 'unknown';
+      // 種類は決まった名前だけを通す（中身は持たない）
+      const kind = (WARNING_KINDS as readonly string[]).includes(options.warningKind ?? '') ? options.warningKind as WarningKind : null;
       const frameKinds = (options.frameKinds ?? []).filter(kind =>
         ['node-internal', 'prisma', 'next', 'vercel', 'bundler', 'anonymous', 'app-bundle', 'other'].includes(kind)).slice(0, 8);
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
         incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, firstArgLength, family, stackState, frameKinds,
+        ...(kind ? { warningKind: kind } : {}),
         stackLineCount, stackHasLocation: options.stackHasLocation === true,
         stackExternalLocation: options.stackExternalLocation === true,
         stackScriptLocation: options.stackScriptLocation === true,
@@ -187,6 +218,7 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           options.clientReported ? '何が起きた：端末からエラー報告を受信しました。発生状況は未検証です。' : '何が起きた：アプリの処理中にエラーを検知しました。',
           '環境：本番',
           `発生箇所：${key}`,
+          ...(kind ? [`種類：${kind}（既知の警告の形。中身は送っていません）`] : []),
           `発生日時：${new Date(now).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
           `照合ID：${incidentId}`,
           `照合指紋：${signature}`,
@@ -194,7 +226,7 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           ...(deployment.id ? [`デプロイID：${deployment.id}`] : []),
           '確認すること：この時刻のサーバーログを確認し、失敗した処理の原因を調べてください。',
           options.clientReported ? '端末報告は種類ごとに全実行環境で10分間まとめます。' : '同じ発生箇所の通知は、全実行環境で10分間まとめます。'
-        ].join('\n') })), signal: AbortSignal.timeout(5000),
+        ].join('\n') }, { app: 'ドヤAI', kind: 'error', severity: 'action' })), signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
     } catch {
@@ -227,7 +259,7 @@ export function installRuntimeAlerts(): void {
       stackExternalScriptLocation: (stack?.split('\n').slice(2).some(line =>
         !line.includes('node:internal') && /\.[cm]?[jt]sx?(?:\?[^\s():]*)?:\d{1,7}:\d{1,7}/.test(line))) ?? false,
       stackTraceLimit: (Error as ErrorConstructor & { stackTraceLimit?: number }).stackTraceLimit,
-      errorTypes: errorTypes(args), signature: errorFingerprint(source, args),
+      errorTypes: errorTypes(args), signature: errorFingerprint(source, args), warningKind: warningKind(args),
     });
     try { waitUntil(task); } catch { void task; }
   };

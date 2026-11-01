@@ -18,7 +18,7 @@ function expression(file, variable) {
 }
 
 async function pricing(service, response, org = '') {
-  const file = `src/app/${service}/pricing/page.tsx`
+  const file = `src/app/${fs.existsSync(`src/app/(shell)/${service}`) ? '(shell)/' : ''}${service}/pricing/page.tsx`
   // useCallback wraps the actual async callback.
   const source = fs.readFileSync(file, 'utf8')
   const original = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -43,10 +43,14 @@ async function pricing(service, response, org = '') {
   return state
 }
 
+// 旧来のサイドバーのプラン表示。カンニング（cunning）と営業管理（sfa）のサイドバーは共通の枠に載せ替えて消した（プランは枠の利用量の欄が出す）。
+// 未ログインの人に今も出るサイドバー（DoyaSlideLayout など）だけを確かめる
+const SIDEBARS = { doyaslide: 'DoyaSlideSidebar' }
+const sidebarFile = (service) => SIDEBARS[service] && `src/components/${service}/${SIDEBARS[service]}.tsx`
+const hasSidebar = (service) => Boolean(sidebarFile(service)) && fs.existsSync(sidebarFile(service))
+assert.ok(hasSidebar('doyaslide'), 'DoyaSlideSidebar（未ログインの人のサイドバー）が見つからない')
 function sidebar(service, plan, isLoggedIn) {
-  const component = { sfa: 'SfaSidebar', cunning: 'CunningSidebar', doyaslide: 'DoyaSlideSidebar' }[service]
-  const file = `src/components/${service}/${component}.tsx`
-  return vm.runInNewContext(expression(file, 'planLabel'), { plan, isLoggedIn })
+  return vm.runInNewContext(expression(sidebarFile(service), 'planLabel'), { plan, isLoggedIn })
 }
 
 ;(async () => {
@@ -55,6 +59,7 @@ function sidebar(service, plan, isLoggedIn) {
     assert.equal(unavailable.plan, null); assert.equal(unavailable.error, true)
     const valid = await pricing(service, Response.json({ plan: 'PRO', role: 'owner', onboarded: true }))
     assert.equal(valid.plan, 'PRO'); assert.equal(valid.error, false)
+    if (!hasSidebar(service)) continue
     assert.equal(sidebar(service, undefined, true), '未確認')
     assert.equal(sidebar(service, undefined, false), 'GUEST')
     assert.equal(sidebar(service, 'PRO', true), 'PRO')
@@ -68,7 +73,7 @@ function sidebar(service, plan, isLoggedIn) {
   assert.equal(member.url, '/api/sfa/usage?org=team-a'); assert.equal(member.role, 'member'); assert.equal(member.loading, false)
   const foreign = await pricing('sfa', Response.json({ onboarded: false, memberships: [] }), 'foreign')
   assert.equal(foreign.error, true, 'an invalid selected organization cannot be treated as a new account')
-  assert.equal(sidebar('sfa', 'LIGHT', true), 'LIGHT')
+  if (hasSidebar('sfa')) assert.equal(sidebar('sfa', 'LIGHT', true), 'LIGHT')
   assert.equal(planUtils.higherPlan('FREE', 'BUNDLE'), 'PRO')
   for (const [raw, expected] of [['BANNER_PRO', 'PRO'], ['PRO_MONTHLY', 'PRO'], ['BASIC', 'PRO'], ['PREMIUM', 'PRO'], ['BANNER_LIGHT', 'LIGHT'], ['ENTERPRISE_MONTHLY', 'ENTERPRISE']]) {
     assert.equal(planUtils.tierFrom(raw), expected, raw)

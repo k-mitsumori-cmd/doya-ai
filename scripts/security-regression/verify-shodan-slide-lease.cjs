@@ -56,6 +56,8 @@ function database() {
       let providerCalls = 0
       const route = load(file, {
         'next/server': { NextResponse: Response },
+  ...require('./shodan-editor-test-helpers.cjs'),
+
         '@/lib/prisma': { prisma: {
           shodanPreparation: { findFirst: async () => ({ id: 'prep', slidesJson: [{ title: 'Slide' }], slideImages: [{ title: 'Slide', imagePath: 'existing' }] }) },
           shodanCompanyProfile: { findUnique: async () => null },
@@ -85,6 +87,8 @@ function database() {
     let releases = 0
     const route = load('src/app/api/shodan/preparations/[id]/slides/generate/route.ts', {
       'next/server': { NextResponse: Response },
+  ...require('./shodan-editor-test-helpers.cjs'),
+
       '@/lib/prisma': { prisma: {
         shodanPreparation: { findFirst: async () => ({ id: 'prep', slidesJson: [{ title: 'Slide' }], slideImages: ++reads === 1 ? [] : [{ title: 'Slide', imagePath: 'finished' }] }) },
         shodanCompanyProfile: { findUnique: async () => null },

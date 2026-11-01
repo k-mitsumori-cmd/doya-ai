@@ -11,11 +11,13 @@ import {
   getMonthlyUsage,
 } from '@/lib/doyaslide/limits'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 // GET /api/doyaslide/usage — プラン・利用状況
 export async function GET() {
   try {
     const userId = await getUserId()
-    if (!userId) return NextResponse.json({ plan: 'GUEST', tier: 'GUEST' })
+    if (!userId) return NextResponse.json({ plan: 'GUEST', tier: 'GUEST' }, { headers: privateHeaders })
 
     const [tier, limits, projects, slidesThisMonth] = await Promise.all([
       getUserTier(userId),
@@ -29,7 +31,7 @@ export async function GET() {
       tier,
       limits,
       usage: { projects, slidesThisMonth },
-    })
+    }, { headers: privateHeaders })
   } catch (e) {
     console.error('[doyaslide/usage]')
     return NextResponse.json(

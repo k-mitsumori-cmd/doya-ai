@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T07:18:56.475125+00:00",
+  "passed": 5,
+  "browser": "Codex in-app browser",
+  "url": "http://127.0.0.1:58431/index.html",
+  "proof": "banner-refine-native-browser.txt",
+  "screenshot": "banner-refine-native-browser.png",
+  "fixture": "banner-refine-native-fixture",
+  "source": {
+    "source": "src/lib/banner/refine-client.ts",
+    "sha256": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5"
+  },
+  "scope": "Actual bundled refine-client.ts native Image/Response/stream/Web Locks in localhost browser. Two same-origin frames, not separate browser processes. No service/provider/customer database calls. Full authenticated production page flow remains unverified."
+}

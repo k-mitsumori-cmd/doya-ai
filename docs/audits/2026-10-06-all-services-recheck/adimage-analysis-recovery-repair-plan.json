@@ -1,0 +1,161 @@
+{
+  "updatedAt": "2026-10-07T13:41:06.683314+00:00",
+  "status": "Implemented and frozen9gate passed; commit/push/public verification pending",
+  "baseline": {
+    "report": "adimage-analysis-lost-response-postgres-baseline.json",
+    "nativeAutomaticPosts": 2,
+    "storedBrands": 2,
+    "syntheticBrandCalls": 2,
+    "syntheticCopyCalls": 2,
+    "chargedAttempts": 2,
+    "manualRetry": false
+  },
+  "preservedPolicy": {
+    "freeDailyAttempts": 20,
+    "proDailyAttempts": 160,
+    "refund": "Source rejection before first AI invocation only",
+    "noProductionDbWrites": true,
+    "noPaidProviderCalls": true
+  },
+  "requirements": [
+    "Persist actor-bound UUID intent before POST; unknown result never admits a new analysis automatically.",
+    "Compare immutable input hash and return same completed result without repeated AI or quota consumption.",
+    "Short serializable transaction locks canonical User.plan, shared actor active pointer, analysis lease and operation receipt.",
+    "Atomic brand save, validated draft output, completed receipt and analysis budget finalization. Never replay after commit uncertainty.",
+    "Preserve source rejection refund; provider failure or expired worker remains consumed; cancelled/missing tombstones prevent delayed POST admission.",
+    "GET/DELETE recovery authenticates actor and current brand ownership; deleted/transferred source is unavailable; no raw input/URL in localStorage or logs.",
+    "Shared actor fence must work bidirectionally across analyze, generate, refine and feedback, with old session/ABA callbacks ignored.",
+    "Bound request/response bytes, reading deadlines and malformed provider output; do not silently truncate user instructions.",
+    "Private PostgreSQL concurrency, lost commit ack, late expiry, cancel-before-arrival, ownership transfer and native Chrome auto-retry tests.",
+    "Frozen whole build/security/lint/native gate then exact commit/push/CI/READY/public evidence; authenticated production/provider E2E remains unverified."
+  ],
+  "preparedBoundary": {
+    "file": "src/lib/adimage/analysis-input.ts",
+    "status": "Wired into actual analyze POST before admission",
+    "tests": "scripts/security-regression/verify-adimage-analysis-input.cjs",
+    "deadlineTest": "Real native stream, injected 20ms timer replacing production15s",
+    "typecheck": "Final npx tsc --noEmit and ESLint completed exit0, session18115 observed terminal; current input/result/budget/helper source",
+    "eslint": "passed npx eslint src/lib/adimage/analysis-input.ts"
+  },
+  "next": "Check exact source snapshot after commit before authorized origin HEAD:main push; verify exact CI/production READY/public, then continue17service2074criterion audit including auth-expiry recovery and logo lifecycle.",
+  "atomicBudget": {
+    "file": "src/lib/adimage/analysis-budget.ts",
+    "preserves": "FREE20/PRO160 and source-before-AI refund semantics",
+    "changes": [
+      "New transaction admission locks canonical User.plan and validates legacy ledger",
+      "New finalization rejects expired/stale lease using wall clock; failed completion rolls back result/quota together",
+      "Only proven-aborted serialization/deadlock P2010 SQLSTATE40001/40P01 retry, bounded5; never transport or uncertain commit"
+    ],
+    "privatePostgresCases": 14,
+    "latestAdditionalCase": "Actual private PostgreSQL confirms expired lease rejects finalize/refund even when transaction began before expiry; pg_sleep void fixture fixed, latest supervisor exit0/stop0",
+    "existingImageRecoverySuites": "Shared helper29, generate/refine actualAPI27 and feedback25 passed after transaction retry change; no whole frozen release gate yet",
+    "transactionRetryGroups": 3
+  },
+  "preparedOutput": {
+    "file": "src/lib/adimage/analysis-result.ts",
+    "test": "scripts/security-regression/verify-adimage-analysis-result.cjs",
+    "groups": 4,
+    "maxSerializedUtf8Bytes": 49152,
+    "status": "Wired into route, completed receipt validation, HTTP recovery and client response validation"
+  },
+  "currentWholeSecurity": {
+    "session": 11935,
+    "exitCode": 0,
+    "qualification": "Previous preliminary run passed but source changed during run, not current release proof; current frozen build ran security again successfully"
+  },
+  "nextRequiredProcess": {
+    "wholeSecuritySession": 11935,
+    "finalLintTypecheckSession": 18115,
+    "analysisPgSession": 55654,
+    "analysisPgObservedExitCode": 0,
+    "postgresStopped": true,
+    "finalLintTypecheckExitCode": 0
+  },
+  "implementation": {
+    "kind": "analyze added to existing actor/UUID receipt, active pointer, GET/DELETE and same metadata-only browser intent",
+    "atomic": "Brand insert, validated drafts/result receipt and analysis attempt finalization commit together in serializable transaction; canonical plan locked; no image quota consumed",
+    "deduplication": "Same operation replay checked before source or provider calls. Failed/cancelled/expired IDs cannot repeat; changed input rejected",
+    "recovery": "Owned current unchanged brand required; deleted/transferred/changed results unavailable; new unsent input retained; failed source import offers manual description with explicit close",
+    "providerValidation": "Malformed object fields cannot turn into [object Object] brand/copy; strict bounded draft output and actualUTF8 capacity validated",
+    "client": "Shared recovery hook owns analyze request deadline, UUID storage before network, Web Locks/cross-tab fence, actor/status ABA and explicit acknowledgment",
+    "databaseMigration": "None; existing SystemSetting and AdImageBrand only; no customer DB write or paid provider call performed"
+  },
+  "verification": {
+    "privateAnalysisApiCases": 18,
+    "includes": "Native fetch and full native Tool → actual POST/GET → actual private PostgreSQL; completed-save socket loss+reload+ack yield one provider/brand/charged attempt",
+    "privateAnalysisBudgetCases": 14,
+    "privateExistingImageHelperCases": 29,
+    "privateExistingImageApiCases": 27,
+    "privateExistingFeedbackCases": 25,
+    "privateDoyaSlideCases": 55,
+    "fullMountedToolAnalysisCases": 5,
+    "existingFullMountedToolCases": 10,
+    "auxiliaryActorCases": 6,
+    "providerOutputGroups": 2,
+    "inputGroups": 4,
+    "outputGroups": 4,
+    "transactionRetryGroups": 3,
+    "nativeExistingToolCases": 8,
+    "frozenGate": {
+      "startedAt": "2026-10-07T13:24:34.964411+00:00",
+      "pid": 6732,
+      "head": "4945e35e20f4b31e22e8ee46469e0d716bc7a71a",
+      "sourceFiles": 2781,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "private-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:36.648442+00:00"
+        },
+        {
+          "name": "adimage-helper-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:38.436406+00:00"
+        },
+        {
+          "name": "adimage-api-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:40.545732+00:00"
+        },
+        {
+          "name": "adimage-feedback-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:42.716658+00:00"
+        },
+        {
+          "name": "analysis-budget-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:44.156257+00:00"
+        },
+        {
+          "name": "analysis-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:24:48.962728+00:00"
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:29:24.587681+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:29:26.550342+00:00"
+        },
+        {
+          "name": "native-chrome",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T13:29:35.838825+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T13:29:36.236724+00:00",
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-analysis-release-f76b62b3-733c-4e4c-9b19-09335f75501f",
+      "session": 58246,
+      "observedExitCode": 0
+    },
+    "CI": "New analysisAPI16 cases without Chrome; native18 cases verified locally. Existing private budget14 also registered.",
+    "production": "Not published; previous4945e35e feedback cohort confirmed READY/public"
+  }
+}

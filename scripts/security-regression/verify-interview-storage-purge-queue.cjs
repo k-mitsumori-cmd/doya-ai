@@ -32,6 +32,7 @@ const fileOps = {
   remove: async paths => { if (removalFailure) return { error: {} }; paths.forEach(path => objects.delete(path)); return { error: null } },
 }
 const storage = load('src/lib/interview/storage.ts', {
+  '@/lib/private-storage-bucket': load('src/lib/private-storage-bucket.ts', { '@/lib/fetch-timeout': load('src/lib/fetch-timeout.ts', {}, { setTimeout, clearTimeout, AbortController }) }),
   'node:crypto': { randomUUID: () => 'test-uuid' },
   '@supabase/supabase-js': { createClient: () => ({ storage: {
     getBucket: async () => ({ data: { public: publicBucket } }),

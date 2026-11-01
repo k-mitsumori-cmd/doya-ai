@@ -1,0 +1,9 @@
+{
+  "status": "reproduced",
+  "priorCompanyListClearedByQuotaRejection": true,
+  "failedQuotaReadStillCreatesProject": true,
+  "malformedCollectBodyAnnouncedAsSuccess": true,
+  "sameTurnProjectWrites": 2,
+  "sameTurnCollectionPosts": 2,
+  "scope": "Actual DoyalistTool handleGenerate AST callback with synthetic quota/collect responses, state and project helper. No real company collection, project write, provider, email or DB mutation."
+}

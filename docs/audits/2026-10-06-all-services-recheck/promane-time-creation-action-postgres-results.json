@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-07T20:19:35.699Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    "actual action sequential replay returns one original row and snapshot",
+    "actual concurrent actions commit one row",
+    "changed input rejects and preserves original row",
+    "fresh revoked actor cannot create recover or cancel",
+    "fresh viewer cannot mutate or recover",
+    "foreign and inactive target members cannot create records",
+    "project task binding validated and inferred without double writes",
+    "invalid input and operation rejected before any write",
+    "read missing does not create then cancellation fences old action",
+    "recover saved operation after lost acknowledgement never creates again",
+    "receipt failure rolls back actual action and skips revalidation",
+    "concurrent create cancellation converges without phantom success"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/time-entry-creation.ts": "000c014ffa1f82388ee4f3b523a721053acc0f379810792c1220825d4c1a2b4f",
+    "src/lib/promane/actions-time-entries.ts": "fb51e67e95d552a7def45dce5655a4d8fb80506ecc6d6ebce703de97634ab422",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
+  },
+  "scope": "Candidate actual server actions, receipt helper, input parser and Prisma with isolated Unix-socket PostgreSQL/member FK. Synthetic authentication and workspace resolution; actual fresh writable actor lock and scoped records. Client/native UI, intended coworker policy and production are not tested."
+}

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-06T17:17:43.123551+00:00",
+  "commit": "74cb5e58569c62a5e38f0629cbf6336c2adca9aa",
+  "state": "Exact-SHA CI success; READY production aliases and 17 HTML / 53 JS verified",
+  "ci": {
+    "id": 37501019600,
+    "status": "completed",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37501019600",
+    "conclusion": "success"
+  },
+  "deployments": [
+    {
+      "url": "doya-95nikxi2l-surisutas-projects.vercel.app",
+      "state": "READY",
+      "commit": "74cb5e58569c62a5e38f0629cbf6336c2adca9aa"
+    }
+  ],
+  "localEvidence": [
+    "service-limit-provider-repair.json",
+    "service-limit-observer-repair.json"
+  ],
+  "remaining": [
+    "Continue full 17-service requirement/user-experience matrix; authenticated real operations remain unproven"
+  ],
+  "publicEvidence": "service-limit-observer-public-74cb5e58.json"
+}

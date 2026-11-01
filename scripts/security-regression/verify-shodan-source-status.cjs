@@ -13,6 +13,7 @@ function researcher({ homepage, basic, gbiz, press }) {
 }
 
 const facts = load('src/lib/shodan/ai.ts', {
+  './preparation-response': load('src/lib/shodan/preparation-response.ts', { './research-response': load('src/lib/shodan/research-response.ts') }),
   '@seo/lib/gemini': {},
 }).researchToFacts
 

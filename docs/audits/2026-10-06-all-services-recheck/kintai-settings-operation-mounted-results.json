@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T18:15:00.665Z",
+  "passed": 12,
+  "expected": 12,
+  "cases": [
+    "night rule renders eight hours",
+    "late old PATCH cannot close newer editor",
+    "malformed PATCH success preserves draft",
+    "wrong PATCH row acknowledgement preserves draft",
+    "same-turn duplicate create blocked and valid ack closes form",
+    "lost create acknowledgement cannot manually resubmit; recovery closes draft",
+    "remount restores unknown operation and explicit cancellation enables new create",
+    "pending save disables all eight form controls",
+    "late DELETE preserves a different confirmation",
+    "false DELETE acknowledgement preserves confirmation",
+    "role downgrade disables existing edit and prevents PATCH",
+    "actor switch hides prior form and late create acknowledgement"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "41d64c3040e27ca541f9c91f9374e13a8e7cce62a630a98b222f42fc1a75042f",
+    "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+    "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+  },
+  "scope": "Actual mounted settings TSX, actual creation hook and actor/org guard; synthetic API/session/access provider. Save/recovery/remount/cancellation and role/actor transitions. Parent layout, native UI and production authenticated E2E remain separate checks."
+}

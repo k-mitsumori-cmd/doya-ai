@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const privateApiResponse = load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 
 function fixture(service, { failAt, conflictOnce = false } = {}) {
   const state = { organizations: [], members: [], employees: [], rules: [], departments: [] };
@@ -43,6 +44,7 @@ function fixture(service, { failAt, conflictOnce = false } = {}) {
     catch (error) { Object.assign(state, snapshot); throw error; }
   } };
   const access = load(`src/lib/${service}/access.ts`, {
+    ...(service === 'hr' ? { 'next/headers': { headers: async () => new Headers() }, './organization-selection': load('src/lib/hr/organization-selection.ts') } : {}),
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
@@ -82,6 +84,7 @@ function fixture(service, { failAt, conflictOnce = false } = {}) {
 
     let creations = 0;
     const route = load(`src/app/api/${service}/organization/route.ts`, {
+      '@/lib/private-api-response': privateApiResponse,
       'next/server': { NextResponse: Response },
       '@prisma/client': { Prisma: { DbNull: 'DB_NULL' } },
       'next-auth': { getServerSession: async () => ({ user: { id: 'user', email: 'owner@example.com' } }) },
@@ -91,6 +94,7 @@ function fixture(service, { failAt, conflictOnce = false } = {}) {
         getOrCreateOrganization: async () => { creations++; return { id: 'org', name: 'Acme', slug: 'acme' }; },
       },
       '@/lib/hr/types': { HrMemberRole: {} },
+      '@/lib/hr/organization-choices': load('src/lib/hr/organization-choices.ts', { 'node:crypto': require('node:crypto'), './types': { HrMemberRole: {} } }),
     });
     const badBodies = service === 'hr'
       ? [null, [], {}, { name: {} }, { name: 'Acme', slug: {} }, { name: 'Acme', slug: '../bad' }, { name: 'Acme', industry: {} }]

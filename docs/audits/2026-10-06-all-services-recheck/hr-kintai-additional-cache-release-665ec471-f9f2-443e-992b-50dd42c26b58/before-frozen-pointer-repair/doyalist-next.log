@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/doyalist-next-extraction-supervise.py", line 3, in <module>
+    manifest=json.loads((gate/'source-manifest.json').read_text());assert all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in manifest.items()),'Frozen source changed'
+AssertionError: Frozen source changed

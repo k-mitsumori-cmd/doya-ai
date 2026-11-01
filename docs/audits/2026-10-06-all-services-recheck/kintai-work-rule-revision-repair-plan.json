@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-07T18:36:03.817366+00:00",
+  "status": "frozen49gates-passed-ready-for-reviewed-commit-push",
+  "productionApplied": false,
+  "rootApplied": true,
+  "baseline": "kintai-work-rule-stale-postgres-baseline.json",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate",
+  "sourceHashes": {
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/api/kintai/work-rules/route.ts": "2ad1016c32a4d949f5ee972d94f09376308795de4d6ee58b6f9c0e72a738f0ed",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/api/kintai/work-rules/[id]/route.ts": "2a9d01e3b2c4e86ae7971ec4ff3662f3e6d69605a82a8ba414f414ef58d357a1",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/api/kintai/work-rules/operations/[operationId]/route.ts": "3d802ed019ede2ae6f3b11ba784f9c4108dc171c8787030540df3cb6884c2a53",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/lib/kintai/work-rule-revision.ts": "aab3dbc7e41c5c469b211866db74889d4c31ef4ee7f5a9af2f8c02483a497973",
+    "src/lib/kintai/work-rule-operation.ts": "02874b8c2351d4a170cff25eefc8c7af10ed4cb74c3517e4e363f2e459e8832d",
+    "src/lib/kintai/work-rule-input.ts": "3ceba2508906b90ddae79281ae1ea8326c5039deab9ee61a5f9480a138057ec3",
+    "src/lib/kintai/manager-admission.ts": "8d93a0b7ff71b1158f2c2739187b2a9a3649ac9bb2171271546a060d78f67d59",
+    "src/lib/kintai/employee-admission.ts": "b53980fcb978167a6a60a17f1d0ecb22ce47c84ec71faabdb610b51a93d6580b",
+    "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/kintai/settings/page.tsx": "8ced5f4f9a87c618b1791a63477c43590b519fcf2329e26ee70496d178ced424"
+  },
+  "repairs": [
+    "Require displayed revision for PATCH and DELETE",
+    "Compare revision while holding fresh organization and manager locks",
+    "Advance persistent generation with business write atomically",
+    "Detect ABA restoration and out-of-band field changes",
+    "Return conflict without saving or deleting; retain client draft",
+    "Expose current revision from list, creation replay and recovery without read backfill"
+  ],
+  "evidence": {
+    "isolatedPostgres": {
+      "passed": 20,
+      "expected": 20,
+      "supervisor": "kintai-work-rule-revision-postgres-supervisor.json"
+    },
+    "mountedReact": {
+      "passed": 18,
+      "expected": 18,
+      "sourceHashes": {
+        "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/kintai/settings/page.tsx": "8ced5f4f9a87c618b1791a63477c43590b519fcf2329e26ee70496d178ced424",
+        "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+        "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+      }
+    },
+    "nativeChrome": {
+      "passed": 11,
+      "sourceHashes": {
+        "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-candidate/src/app/kintai/settings/page.tsx": "8ced5f4f9a87c618b1791a63477c43590b519fcf2329e26ee70496d178ced424",
+        "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+        "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+      },
+      "verifierHash": "cf379ef773864cb4ad0a95d325c9479c3bd924571fc2ffa6148d6fd57445fbf8",
+      "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+      "scope": "Actual settings TSX, creation hook and identity guard in native Chrome with synthetic local HTTP. Current local .next CSS hashes recorded; candidate source may precede build. Synthetic PATCH and committed-but-unacknowledged POST/recovery only. No customer/auth/provider/production operations. Screenshots require visual review separately.",
+      "visualReview": "Latest root-built conflict screenshot inspected; draft and usable controls retained at390px. Standalone fixture uses text for Material Symbols icons. Authenticated production interaction remains unverified."
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "log": "kintai-work-rule-revision-candidate-typecheck.log",
+      "note": "Candidate files and root transitive imports with project NextAuth declarations; full root build remains required."
+    },
+    "frozenRootGate": {
+      "passed": 49,
+      "changedSources": [],
+      "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-release-cf02f044-87ee-448e-9800-90337bb06422"
+    }
+  },
+  "remaining": [
+    "Reviewed commit, authorized push and exact deployment verification",
+    "PATCH/DELETE lost acknowledgement recovery and cross-field schedule validation remain separate concerns",
+    "Full-service audit and authenticated production E2E remain pending"
+  ],
+  "scope": "Synthetic private Unix-socket PostgreSQL and offline actual React component. No production/customer data writes.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-release-cf02f044-87ee-448e-9800-90337bb06422",
+  "gateStatus": "passed"
+}

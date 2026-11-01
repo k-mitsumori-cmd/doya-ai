@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-08T17:33:05.576Z",
+  "expected": 3,
+  "passed": 3,
+  "cases": [
+    {
+      "mode": "allowed",
+      "behaviorPassed": true,
+      "cacheControl": "private, no-store",
+      "vary": "Cookie",
+      "privateNoStore": true
+    },
+    {
+      "mode": "denied",
+      "behaviorPassed": true,
+      "cacheControl": "private, no-store",
+      "vary": "Cookie",
+      "privateNoStore": true
+    },
+    {
+      "mode": "failure",
+      "behaviorPassed": true,
+      "cacheControl": "private, no-store",
+      "vary": "Cookie",
+      "privateNoStore": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/scripts/security-regression/verify-hr-department-private-cache.cjs": "24950db70a629d95a6321489d9bfd7b02759ee6924d26eb970be5a6095b573bf",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-input-regression-overlay/scripts/security-regression/verify-hr-department-private-cache.cjs": "24950db70a629d95a6321489d9bfd7b02759ee6924d26eb970be5a6095b573bf",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-legacy.cjs": "f6b0766f6cff01d5e8543c3bfe5f52c6c6d4d7c446fd6466601253423b93ad97",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-input-repair-overlay/src/lib/hr/department-input.ts": "c8cad10c6d271c3c9ff075c9e0066d65e3a48d1af44a586a01f2efd8ca85890c",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-input-repair-overlay/src/lib/hr/department-mutation.ts": "bc75490965e859a89450b540cebac07bdea3126fd978dac8ed870849629771a8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-input-repair-overlay/src/app/api/hr/departments/route.ts": "bbdbdc6a094959fee8786f16f54e5c93cd922f6e3882c0a7c45315a8c04f1c01",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-input-repair-overlay/src/app/api/hr/departments/[id]/route.ts": "0673b9338b845a0488df3a97624eb09d84bd8db71643641a69c0bd7462370d0c"
+  },
+  "scope": "Prepared mandatory fixture against combined input/concurrency overlay. Original assertions retained; actual input and mutation helper loaded with synthetic scoped Prisma/lock rows. Related33, member-access1, validation6 and cache3 are separate proofs. No actual DB/customer/provider writes; realDB47 is verified independently."
+}

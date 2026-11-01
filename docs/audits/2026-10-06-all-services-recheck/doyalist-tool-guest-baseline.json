@@ -1,0 +1,7 @@
+{
+  "status": "reproduced",
+  "guestKeepsCheckingLabel": true,
+  "loginLinkPresent": false,
+  "guestPrivateReads": 0,
+  "scope": "Actual ToolForm/useApproachUsage with real React contexts and synthetic read-only initial signed-in reply. Anonymous server layout separately inspected to confirm ToolForm is rendered. No actual OAuth, provider or DB writes."
+}

@@ -1,0 +1,15 @@
+{
+  "status": "confirmed-unfixed",
+  "source": "src/app/quote/Tool.tsx",
+  "cases": [
+    {
+      "problem": "HTTP200 empty object redirects to undefined document",
+      "route": "/quote/documents/undefined"
+    },
+    {
+      "problem": "Same-frame createDocument calls send two POST requests",
+      "posts": 2
+    }
+  ],
+  "scope": "Actual AST-extracted createDocument; synthetic fetch/window/state only. No real quote document created, customer data, billing or email."
+}

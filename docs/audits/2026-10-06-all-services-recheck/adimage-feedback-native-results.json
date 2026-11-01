@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T13:29:35.687Z",
+  "passed": 8,
+  "cases": [
+    "Native Chrome persistent socket loss after synthetic save keeps UUID and blocks another generation",
+    "Native reload restores metadata without repeating analyze or generation",
+    "390px second tab shares actor intent through native localStorage and blocks competing operations",
+    "GET recovery and explicit acknowledgment clear one operation and propagate native storage event without provider replay",
+    "Native refinement recovery shows before/after images and preserves newer unsent draft without another generation",
+    "Native feedback socket loss recovers scores and before/after images, preserves newer unsent note and invokes synthetic vision once",
+    "Native feedback reload and cross-tab GET recovery restore saved scores with no POST replay; acknowledgment propagates storage event",
+    "Native account switch during held analyze response hides the old actor private copy and allows new actor analysis"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "persistentLossHttpAttempts": 5,
+  "syntheticGenerations": 3,
+  "syntheticFeedbacks": 2,
+  "sourceHashes": {
+    "src/lib/adimage/types.ts": "639c974cda7ab38d3628ec0e250d4465ae84049e3763741df38c0813cdfb3c7c",
+    "src/lib/adimage/analysis-result.ts": "5bc0d3ae198c5099a892d7303d840a3f06b6d58fd7b8c1aab1fcf32000aeb920",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a",
+    "src/lib/adimage/use-operation-recovery.ts": "45aa451440c93205e83e9ac6c6e4f8a57b66d51a7882efe76d9ac2156978af4b",
+    "src/app/adimage/Tool.tsx": "b02bed0b03e5a394e6581374c44c6bbcc4f7d8e3dadd89e5418ef63d81c74615"
+  },
+  "cssHash": "665cfb1175de9e10d014b7d96d99a9582f25eaa93fc8d4fedd34be38cf3a6b66",
+  "scope": "Actual Tool/hook/reader in native Chrome, real local HTTP/socket loss/localStorage/Web Locks and two tabs at1280/390px. Synthetic backend and artwork; decorative LP/export/loading components mocked. CSS loaded from local .next build; source/CSS hashes are recorded separately. No real auth, paid provider, customer DB or production process kill."
+}

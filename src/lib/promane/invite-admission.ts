@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getUserPromaneLimits } from '@/lib/promane/limits'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 type AdmissionError = {
   status: number
@@ -34,7 +35,9 @@ export async function issuePromaneInvitation(args: {
         const inviter = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
-        if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role)) {
+        // 会社の役割の上限より上には上げない
+        const ceiled = inviter?.isActive ? await ceilToolRole({ tool: 'promane', userId: args.userId, organizationId: args.workspaceId, toolRole: inviter.role }) : null
+        if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
           return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
         }
         const existingMember = await tx.promaneMember.findFirst({
@@ -121,7 +124,7 @@ export async function acceptPromaneInvitation(args: {
           where: { token: args.token },
           include: { workspace: { select: { id: true, slug: true, userId: true } } },
         })
-        if (!invitation) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
+        if (!invitation || !['admin', 'member', 'guest'].includes(invitation.role)) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
         if (invitation.acceptedAt) return { success: false, response: { status: 410, error: '既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' } }
         if (invitation.expiresAt.getTime() <= Date.now()) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
         if (!args.email || args.email.toLowerCase() !== invitation.email.toLowerCase()) {

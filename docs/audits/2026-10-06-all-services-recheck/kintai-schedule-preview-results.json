@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-07T17:38:31.026Z",
+  "passed": 9,
+  "cases": [
+    {
+      "name": "day without break",
+      "expected": "09:00 - 17:00 勤務 = 8時間",
+      "actual": "09:00 - 17:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "night without break",
+      "expected": "22:00 - 翌日06:00 勤務 = 8時間",
+      "actual": "22:00 - 翌日06:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "short shift without break",
+      "expected": "23:45 - 翌日00:15 勤務 = 0時間30分",
+      "actual": "23:45 - 翌日00:15 勤務 = 0時間30分",
+      "passed": true
+    },
+    {
+      "name": "day with break",
+      "expected": "09:00 - 13:00 勤務 → 13:00 - 14:00 休憩 → 14:00 - 18:00 勤務 = 8時間",
+      "actual": "09:00 - 13:00 勤務 → 13:00 - 14:00 休憩 → 14:00 - 18:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "night with next day break",
+      "expected": "22:00 - 翌日02:00 勤務 → 翌日02:00 - 翌日03:00 休憩 → 翌日03:00 - 翌日07:00 勤務 = 8時間",
+      "actual": "22:00 - 翌日02:00 勤務 → 翌日02:00 - 翌日03:00 休憩 → 翌日03:00 - 翌日07:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "break crossing midnight",
+      "expected": "20:00 - 23:30 勤務 → 23:30 - 翌日00:30 休憩 → 翌日00:30 - 翌日04:00 勤務 = 7時間",
+      "actual": "20:00 - 23:30 勤務 → 23:30 - 翌日00:30 休憩 → 翌日00:30 - 翌日04:00 勤務 = 7時間",
+      "passed": true
+    },
+    {
+      "name": "equal endpoints preserve zero-duration semantics",
+      "expected": "",
+      "actual": "",
+      "passed": true
+    },
+    {
+      "name": "empty time",
+      "expected": "",
+      "actual": "",
+      "passed": true
+    },
+    {
+      "name": "no working time",
+      "expected": "",
+      "actual": "",
+      "passed": true
+    }
+  ],
+  "sourceHash": "a7ee0fdfc03adaebf50b4a0e7fcd20f1969b217f818cb98e42ace5da395f2659",
+  "scope": "Actual TSX preview function; day/night/minute/zero-break rendering. No database or provider calls."
+}

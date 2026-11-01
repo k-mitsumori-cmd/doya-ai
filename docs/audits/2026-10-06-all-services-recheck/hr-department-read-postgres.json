@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-08T19:12:00.787Z",
+  "expected": 13,
+  "passed": 13,
+  "cases": [
+    {
+      "name": "Private synthetic PostgreSQL uses Unix socket with no TCP address",
+      "passed": true,
+      "durationMs": 14
+    },
+    {
+      "name": "Every own department, including inactive rows, is paged once without foreign rows",
+      "passed": true,
+      "durationMs": 7
+    },
+    {
+      "name": "Stale context is rejected after role downgrade",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Stale context is rejected after inactive membership",
+      "passed": true,
+      "durationMs": 1
+    },
+    {
+      "name": "Department update between pages rejects mixed revisions",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Direct SQL change also changes MVCC revision",
+      "passed": true,
+      "durationMs": 3
+    },
+    {
+      "name": "Employee reassignment invalidates department count snapshot",
+      "passed": true,
+      "durationMs": 4
+    },
+    {
+      "name": "Department insertion invalidates previous page",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Department deletion invalidates previous page",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Foreign organization edits do not invalidate own snapshot",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Foreign employee assigned to own department cannot affect exposed employee count",
+      "passed": true,
+      "durationMs": 23
+    },
+    {
+      "name": "Large Unicode field is split and reconstructed exactly from real PostgreSQL",
+      "passed": true,
+      "durationMs": 278
+    },
+    {
+      "name": "Paged reads do not change department, employee or audit data",
+      "passed": true,
+      "durationMs": 46
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-original-baseline/src/app/api/hr/departments/route.ts": "10c38c62958527fa206ac9df8bcc7568579803faa4fb05aa35c018a7d5124ee8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-postgres.cjs": "e026b8f0b8f0f5e73f25211ddab7a6ebb471e9c053d7a7e420af3cb8c6ed6540"
+  },
+  "scope": "Real isolated Unix-only PostgreSQL with full current Prisma schema and synthetic own/foreign organizations. Actual candidate helper including MVCC revisions and bounded Unicode fragments. No production data/provider calls; route/Next/browser/client page wiring remains unverified."
+}

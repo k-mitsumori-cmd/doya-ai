@@ -1,0 +1,21 @@
+Warning: Received `true` for a non-boolean attribute `jsx`.
+
+If you want to write it to the DOM, pass a string instead: jsx="true" or jsx={value.toString()}.
+    at style
+    at div
+    at NewDoyaSlideWizard (evalmachine.<anonymous>:88:74)
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== 0
+
+    at /private/tmp/doya-wizard-stale-handler-probe.cjs:31:349
+    at async check (/private/tmp/doya-wizard-stale-handler-probe.cjs:13:84)
+    at async /private/tmp/doya-wizard-stale-handler-probe.cjs:31:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+Incomplete wizard verification 22

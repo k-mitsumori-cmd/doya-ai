@@ -1,0 +1,5 @@
+{
+  "status": "candidate-defect-reproduced",
+  "previousActorOutputResurrectedAfterAba": true,
+  "scope": "Actual unreleased ToolForm candidate and synthetic generation/session contexts only. No live service or customer data."
+}

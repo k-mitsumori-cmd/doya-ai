@@ -55,7 +55,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
     '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
   }
   const exports = {}
-  vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
+  vm.runInNewContext(compiled, { exports, require: (name) => { const dm = require('./load-typescript.cjs').DEFAULT_MOCKS; if (!(name in dependencies) && name in dm) return dm[name]; assert.ok(name in dependencies, name); if ((name === 'crypto' || name === 'node:crypto') && dependencies[name] && !dependencies[name].randomUUID) return { ...dependencies[name], randomUUID: require('node:crypto').randomUUID }; return dependencies[name] }, console, Date, URL })
   const response = await exports.POST({ json: async () => ({ templateId: 'template', candidateName: '候補者' }) })
   return { status: response.status, body: await response.json(), count, creates, attempts, usageSummary }
 }
@@ -109,7 +109,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
     }
     const exports = {}
-    vm.runInNewContext(compiled, { exports, require: name => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
+    vm.runInNewContext(compiled, { exports, require: name => { const dm = require('./load-typescript.cjs').DEFAULT_MOCKS; if (!(name in dependencies) && name in dm) return dm[name]; assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
     const request = { json: async () => ({ templateId: 'template' }) }
     for (let i = 0; i < 3; i++) { assert.equal((await exports.POST(request)).status, 200); rows = [] }
     const blocked = await exports.POST(request)

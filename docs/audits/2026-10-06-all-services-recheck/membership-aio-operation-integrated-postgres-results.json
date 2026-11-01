@@ -1,0 +1,40 @@
+{
+  "candidateHashes": {
+    "src/lib/aio/quick-start-operation.ts": "538cef7efeb2b663474074f03c8acd91b2956cb77b197b5e882ce25e23e012b7"
+  },
+  "checkedAt": "2026-10-08T06:47:47.226Z",
+  "expected": 25,
+  "passed": 25,
+  "cases": [
+    "Concurrent same UUID admits exactly one provider worker",
+    "Concurrent same host aliases separate UUIDs to one durable worker/result",
+    "Lost completion acknowledgment replay never creates second workspace",
+    "Exact19 plus parallel different hosts reserves only one slot",
+    "Held slot is busy, then explicit resume starts after failure releases it",
+    "Existing same-host workspace reused at20 without worker",
+    "HTTP/www/path equivalents reuse same-host workspace",
+    "Changed host under same UUID is rejected before admission",
+    "Cancel before preparation tombstone fences late request",
+    "Alias cancellation retains slot until legitimate worker terminates",
+    "Expired worker cannot save or disturb replacement worker",
+    "Wrong worker token fails before completion or failure release",
+    "Failed initialization rolls back workspace/member/profile and retains receipt",
+    "Foreign actor cannot recover or finish original receipt",
+    "Missing saved workspace returns410 without creating replacement",
+    "Another creation of same-host during provider work is reused at commit",
+    "Fresh committed count at20 blocks pending save without orphan workspace",
+    "Corrupted durable receipt fails closed before workspace mutation",
+    "Completed receipt after invalid role __UNRECOGNIZED__",
+    "Same host invalid role membership never reused __UNRECOGNIZED__",
+    "Completed receipt after invalid role constructor",
+    "Same host invalid role membership never reused constructor",
+    "Completed receipt after invalid role admin ",
+    "Same host invalid role membership never reused admin ",
+    "Invalid-role active rows still count towards workspace safety cap"
+  ],
+  "sourceHashes": {
+    "src/lib/aio/quick-start-operation.ts": "538cef7efeb2b663474074f03c8acd91b2956cb77b197b5e882ce25e23e012b7",
+    "docs/audits/2026-10-06-all-services-recheck/verify-membership-aio-operation-integrated-postgres.cjs": "5e0424f5c54e804f2f72d092d8bf9a8fd07c6eec74266cb9a11d13612ea61752"
+  },
+  "scope": "Candidate operation helper/actual Prisma/private Unix PostgreSQL with synthetic users/workspaces. No API/browser/provider integration and not production evidence. Does not prove all workspace writers or client operation persistence."
+}

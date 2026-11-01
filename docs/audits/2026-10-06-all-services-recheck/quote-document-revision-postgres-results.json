@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-07T19:33:00.248Z",
+  "expected": 17,
+  "passed": 17,
+  "cases": [
+    "stale second manager preserves first save",
+    "blank required title rejects without mutation",
+    "malformed JSON rejects without mutation",
+    "missing and invalid PATCH revisions fail closed",
+    "GET stable legacy revision performs no writes",
+    "two concurrent same-version writes admit one winner",
+    "stale DELETE rejected and fresh DELETE cascades lines",
+    "missing and duplicate DELETE revisions fail closed",
+    "ABA restore does not revive original revision",
+    "external document and line changes invalidate displayed version",
+    "status-only transitions preserve approval guards",
+    "fresh revoked manager cannot approve or delete",
+    "inactive membership cannot mutate",
+    "foreign document cannot mutate",
+    "corrupt revision record rejects reads and mutations",
+    "revision persistence failure rolls back document lines and totals",
+    "updatedAt-only change does not invalidate revision"
+  ],
+  "sourceHashes": {
+    "src/app/api/quote/documents/[id]/route.ts": "5108068aa5d4c5d1821d3930945b20700ebd7dd31ed0beeb660c32dfdd4705e6",
+    "src/lib/quote/document.ts": "a9aa22403aaf0b96bf4b5af8d1bae7255f08d8ca73d15c2f01ac13deb6e3e9e9",
+    "src/lib/quote/money.ts": "fa7063d9f7200ad03be960c8dd99de75b2c542fac6674d8ab6305c975da95fcf",
+    "src/lib/quote/document-revision.ts": "ae93932b9e8ab71853ad834f4bfcf161e46d5acf01ae2b2864d480e6d57bdbbc"
+  },
+  "scope": "Actual Quote GET/PATCH/DELETE and revision helper, actual money/recalculation with Prisma isolated Unix-socket PostgreSQL and line-item cascade FK. Synthetic managers/session only; no customer/provider/production operations. Client integration and authenticated production E2E not covered."
+}

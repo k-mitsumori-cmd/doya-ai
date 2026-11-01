@@ -3,7 +3,8 @@ const fs = require('node:fs')
 const { load, check } = require('./load-typescript.cjs')
 
 const schedule = JSON.parse(fs.readFileSync('vercel.json', 'utf8')).crons.find(job => job.path === '/api/cron/aio-scan')?.schedule
-assert.equal(schedule, '0 3,9,15,21 * * *')
+// 2026-10-19 ユーザーの判断で自動スキャンを止めた。vercel.json の crons に戻っていないことを確かめる
+assert.equal(schedule, undefined)
 
 const now = Date.now()
 const ago = days => new Date(now - days * 86400000)
@@ -13,7 +14,7 @@ const failed = days => ({ status: 'failed', createdAt: ago(days), updatedAt: ago
 const json = (body, options) => ({ body, status: options?.status || 200 })
 const request = token => ({ headers: { get: () => token } })
 
-function fixture(orgs, { usage = {}, preflight = [] } = {}) {
+function fixture(orgs, { usage = {}, preflight = [], enabled = true } = {}) {
   const calls = []
   let dbReads = 0
   const prisma = {
@@ -43,7 +44,7 @@ function fixture(orgs, { usage = {}, preflight = [] } = {}) {
     '@/lib/unified-plan': { isPaidPlan: plan => plan === 'PRO' },
     '@/lib/aio/quota': { scanQuota: () => ({ since: ago(30), limit: 30 }) },
     '@/lib/aio/types': { SCAN_STALE_MS: 600000 },
-  }, { process: { env: { CRON_SECRET: 'secret' } } })
+  }, { process: { env: { CRON_SECRET: 'secret', ...(enabled ? { AIO_SCHEDULED_SCAN_ENABLED: '1' } : {}) } } })
   return { route, calls, get dbReads() { return dbReads } }
 }
 
@@ -52,6 +53,14 @@ function fixture(orgs, { usage = {}, preflight = [] } = {}) {
     const f = fixture([organization('a')])
     assert.equal((await f.route.GET(request(null))).status, 401)
     assert.equal(f.dbReads, 0)
+  })
+
+  await check('AIO scheduled scan does nothing unless AIO_SCHEDULED_SCAN_ENABLED=1', async () => {
+    const f = fixture([organization('a')], { enabled: false })
+    const response = await f.route.GET(request('Bearer secret'))
+    assert.equal(response.body.skipped, true)
+    assert.equal(f.dbReads, 0)
+    assert.deepEqual(f.calls, [])
   })
 
   await check('four daily slots rotate through eight paid organizations without repeat scans', async () => {

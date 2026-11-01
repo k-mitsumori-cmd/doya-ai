@@ -113,6 +113,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!actorRole) throw new RequestForbidden('申請を変更する権限がありません')
       if (status === 'approved' || status === 'rejected' || cancellingLeave) {
         if (!hasMinRole(actorRole, 'manager')) throw new RequestForbidden('承認権限がありません')
+        // 自分の申請を自分で承認・却下できると、打刻修正や休暇を誰の確認もなく通せてしまう（SEC-106）。
+        // システム管理者だけは、1 人だけの組織でも運用が止まらないよう、自分の申請も処理できる。
+        if (existing.employeeId === kctx.employeeId && actorRole !== 'system_admin') {
+          throw new RequestForbidden('自分の申請は承認・却下できません。ほかの管理者に依頼してください')
+        }
         if (actorRole === 'manager') {
           const requester = await tx.kintaiEmployee.findUnique({
             where: { id: existing.employeeId }, select: { organizationId: true, departmentId: true },

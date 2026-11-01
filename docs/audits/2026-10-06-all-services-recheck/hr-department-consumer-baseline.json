@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T18:22:17.194Z",
+  "defectsReproduced": 3,
+  "cases": [
+    {
+      "name": "New employee503 is falsely presented as no departments, with add-department link and no retry warning",
+      "defectReproduced": true
+    },
+    {
+      "name": "New employee pending request is falsely presented as an empty organization",
+      "defectReproduced": true
+    },
+    {
+      "name": "Editor503 displays existing assigned employee as unassigned with enabled department selector and no warning",
+      "defectReproduced": true,
+      "storedDepartmentId": "synthetic-existing-department",
+      "displayedSelectValue": "",
+      "dataLossClaim": false
+    }
+  ],
+  "sourceHashes": {
+    "src/app/hr/employees/new/page.tsx": "dc29e6e94a738916580396809418e3a6e4f4001505fea4293b4d537f73acb2fe",
+    "src/app/hr/employees/[id]/edit/page.tsx": "7f8d3d8304c0f73a16996fd8d37c76a9bfde649deefa31f792619a336281b0ab",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-consumer-baseline.cjs": "da4b769b9738b96017c3ca70826e93da255a74e6bb0dcb1cd5249429cecd5575"
+  },
+  "scope": "Actual current full pages mounted React StrictMode/JSDOM with synthetic GET only. No submit/write/real-user data/provider/production traffic. Editor display mismatch proved; no automatic department data loss claimed. Requires shared paged loading, explicit error/empty distinction, GET-only retry and scoped lifetime."
+}

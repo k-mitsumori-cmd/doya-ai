@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T11:21:46.794911+00:00",
+  "status": "Reproduced and repaired in source, regression pass; not yet published",
+  "finding": "Actual private PostgreSQL concurrent analysis budget admission emitted Prisma P2010 meta.code40001. Existing transaction wrapper retried P2034 only and surfaced an avoidable failure.",
+  "evidence": {
+    "prismaCode": "P2010",
+    "sqlState": "40001",
+    "message": "could not serialize access due to concurrent update",
+    "oldSharedHelperSha256": "e7ae852ee4c5b462a077dcf3e5779dfc5999c59033a9b5c85f55fc85d87567d6"
+  },
+  "testHarnessIssue": "Initial Promise.all rejection triggered Prisma disconnect while other transactions were pending. Isolated idle transaction PID2913 was terminated through private Unix socket for diagnosis; supervisor then exited1 and PostgreSQL stopped0. This failed run is not a pass. Fixture now awaits allSettled before disconnect.",
+  "repair": "Retry whole aborted transactions for P2034 or P2010 SQLSTATE40001/40P01 only. Keep five-attempt bound and unique conflict opt-in. Never retry ambiguous transport/connection errors.",
+  "proof": [
+    "adimage-analysis-budget-postgres-results.json",
+    "adimage-analysis-budget-postgres-supervisor.json",
+    "scripts/security-regression/verify-adimage-transaction-retry.cjs"
+  ],
+  "scope": "Isolated actual DB + synthetic/offline error boundaries; no production incident or customer write claimed."
+}

@@ -1,0 +1,16 @@
+{
+  "status": "confirmed-invalid-json-success-in-helpers",
+  "results": [
+    {
+      "service": "shodan",
+      "observed": "HTTP 200 malformed JSON resolves as an empty success object rather than rejecting.",
+      "source": "src/lib/shodan/client.ts"
+    },
+    {
+      "service": "aio",
+      "observed": "HTTP 200 malformed JSON resolves as an empty success object rather than rejecting.",
+      "source": "src/lib/aio/client.ts"
+    }
+  ],
+  "scope": "Actual production GET helpers with synthetic responses only. No external API, organization/customer data, provider or DB call. Each caller needs review to determine user impact; this is not evidence that a production incident occurred."
+}

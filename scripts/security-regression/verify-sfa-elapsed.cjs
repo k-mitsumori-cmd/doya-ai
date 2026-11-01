@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-const source=fs.readFileSync(path.join(__dirname,'../../src/app/sfa/[orgSlug]/deals/page.tsx'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../../src/app/(shell)/sfa/[orgSlug]/deals/page.tsx'),'utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='elapsedLabel')code=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);if(!code)throw Error('elapsedLabel missing');
 class FixedDate extends Date {constructor(...args){super(...(args.length?args:['2026-09-20T00:00:00Z']))}}

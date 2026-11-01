@@ -1,0 +1,34 @@
+/*
+ * ドヤ社内インタビュー トークンの補い
+ * ⚠️ 色・角丸・影などの本体は段0の ds（src/components/ds/tokens.module.css の .ds）を使う。
+ *    ここには ds に無い補助の値だけを置く。ds に入ったら、この定義を消して ds 側を使う。
+ *    他サービスに漏らさないよう .shanai-ds の中だけで定義する（layout.tsx で .ds と一緒に当てる）。
+ */
+.shanai-ds {
+  --surface-2: #f8faff;
+  --track: #eef1f8;
+  --skel-a: #eef2fa;
+  --skel-b: #f9fbff;
+  font-variant-numeric: tabular-nums;
+}
+
+.shanai-ds :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.shanai-skeleton {
+  background: linear-gradient(90deg, var(--skel-a) 25%, var(--skel-b) 37%, var(--skel-a) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--r-sm);
+  animation: shanai-skel 1.4s var(--ease-io) infinite;
+}
+
+@keyframes shanai-skel {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shanai-skeleton { animation: none; }
+}

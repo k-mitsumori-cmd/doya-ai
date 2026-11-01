@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-08T02:51:20.844Z",
+  "expected": 13,
+  "passed": 13,
+  "cases": [
+    "Native duplicate callbacks send one POST and preserve edited title and brief",
+    "Native reload and lost acknowledgement recover saved UUID by GET without resending or overwriting draft",
+    "Second native tab shares metadata-only intent and uses GET while original analysis is pending",
+    "Native timeout keeps identity; explicit cancellation fences delayed result and new manual import uses one new POST",
+    "Native persistent recovery and cancellation controls fit390 and320px",
+    "Cancellation after completion offers explicit adoption or discard and preserves current draft",
+    "Two native tabs starting simultaneously use real Web Locks and shared storage to admit one POST",
+    "Native actor ABA cannot apply old output and restores the original actor recovery identity",
+    "Native active POST can be cancelled immediately; duplicate cancellation sends one DELETE and late completion cannot overwrite draft",
+    "Native operational cap gives persistent manual continuation and clears terminal intent",
+    "Native expired login retains recovery identity and blocks project creation",
+    "Native corrupt operation metadata blocks new analysis instead of overwriting it",
+    "Native unmount aborts observation while retaining operation metadata for recovery"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-intent-client.ts": "9072873b93337e7060b0f7918f971d2d0e83374f003fb6b2fdfe0ada0365b83a",
+    "src/lib/doyaslide/url-analysis-operation-client.ts": "3ce832293cb60c195091607acf3b3634508c40e87c4d0474133827b283fdef4a",
+    "src/lib/doyaslide/url-analysis-client.ts": "e9b6619205cb97c54dae3c83e87b58350eee3c31a6e338cde3eb806dab6832b2",
+    "src/components/doyaslide/SlideImage.tsx": "55d32bd8ecabe5e3e288b023d07a91c9455ba0ed324f19e27a6a63a847deb244",
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "b51a1eb444d463073df309f0aab0ed839494d8533dc0ae2b5845e534029bebfd",
+    "src/lib/doyaslide/use-style-previews.ts": "9c53a7e3e8a83fff8ec6fe650c78404b1b0fd1c7bf445d1f0e332356d31fca85",
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "src/lib/doyaslide/constants.ts": "7d0e9e3ef825c325564bd9b6f6bdd1f8f54d9ffd6f2f46932bfecfb0d5961a40",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-native.cjs": "d1bc82e23d448f0508432b50d0d774083a54c8d610b15380d4c89dd726eb36df",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-native.cjs": "200b44237182df31ccf7d8b661d7f39845138f168e2dff462652242c53c5b76c"
+  },
+  "scope": "Native Chrome actual Wizard, intent storage/Web Locks and bounded durable-protocol client, actual localhost HTTP. Synthetic durable server/auth/provider; native timeout shortened to40ms. External resources blocked. Private PG API/ledger proof separate; no real provider/customer DB/production writes or authenticated deployment claim."
+}

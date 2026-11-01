@@ -11,6 +11,7 @@
 // 再契約者はトライアル対象外なので、TrialBadge / TrialNote 側で自動的に非表示になる。
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Check, X, Rocket, CalendarClock } from 'lucide-react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
@@ -39,6 +40,19 @@ export default function BannerLimitModal({
   message,
   upgradeUrl,
 }: BannerLimitModalProps) {
+  const { data: session, status } = useSession()
+  const user = session?.user as { id?: string; email?: string; plan?: string; bannerPlan?: string } | undefined
+  const actor = user?.id || user?.email || ''
+  const scope = JSON.stringify([status, actor, user?.plan, user?.bannerPlan])
+  const knownSession = status !== 'loading' && (status !== 'authenticated' || Boolean(actor))
+  // An open notice belongs to the session/plan that opened it. Invalidate it
+  // synchronously on changes, including alpha -> beta -> alpha and loading.
+  // Only a new explicit closed -> open transition may show another notice.
+  const notice = useRef({ scope, wasOpen: false, valid: false, notified: false })
+  if (!isOpen) notice.current = { scope, wasOpen: false, valid: false, notified: false }
+  else if (!notice.current.wasOpen) notice.current = { scope, wasOpen: true, valid: knownSession, notified: false }
+  else if (notice.current.scope !== scope) notice.current = { ...notice.current, scope, valid: false }
+  const visible = isOpen && knownSession && notice.current.valid
   const router = useRouter()
   const trialEligible = useTrialEligible()
 
@@ -46,10 +60,16 @@ export default function BannerLimitModal({
   const returnFocus = useRef<HTMLElement | null>(null)
   const close = useRef(onClose)
   close.current = onClose
+  useEffect(() => {
+    if (isOpen && !visible && !notice.current.notified) {
+      notice.current.notified = true
+      close.current()
+    }
+  }, [isOpen, visible, scope])
 
   // Remember the trigger before an async quota check disables it and moves focus to body.
   useEffect(() => {
-    if (isOpen) return
+    if (visible) return
     const remember = () => {
       const element = document.activeElement
       if (element instanceof HTMLElement && element !== document.body) returnFocus.current = element
@@ -57,11 +77,11 @@ export default function BannerLimitModal({
     remember()
     document.addEventListener('focusin', remember)
     return () => document.removeEventListener('focusin', remember)
-  }, [isOpen])
+  }, [visible])
 
   // ESC and keyboard focus remain inside the modal.
   useEffect(() => {
-    if (!isOpen) return
+    if (!visible) return
     const previous = returnFocus.current || document.activeElement as HTMLElement | null
     panel.current?.focus()
     const handler = (e: KeyboardEvent) => {
@@ -75,9 +95,9 @@ export default function BannerLimitModal({
     }
     window.addEventListener('keydown', handler)
     return () => { window.removeEventListener('keydown', handler); previous?.focus() }
-  }, [isOpen])
+  }, [visible])
 
-  if (!isOpen) return null
+  if (!visible) return null
 
   const isEnterprise = (monthlyLimit ?? 0) >= (BANNER_PRICING.enterpriseLimit ?? 1000)
   const isPro = !isEnterprise && (monthlyLimit ?? 0) >= BANNER_PRICING.proLimit
@@ -117,7 +137,7 @@ export default function BannerLimitModal({
           className="relative max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-3xl border border-gray-700 bg-gray-900 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-600/20 via-brand-500/10 to-transparent" />
 
           <button
             onClick={onClose}
@@ -128,7 +148,7 @@ export default function BannerLimitModal({
           </button>
 
           <div className="relative p-6 sm:p-7">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-brand-500 shadow-lg shadow-blue-500/30">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
 
@@ -152,7 +172,7 @@ export default function BannerLimitModal({
                     initial={{ width: 0 }}
                     animate={{ width: `${usagePercent}%` }}
                     transition={{ delay: 0.25, duration: 0.5, ease: 'easeOut' }}
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-brand-400"
                   />
                 </div>
                 <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-gray-400">
@@ -165,7 +185,7 @@ export default function BannerLimitModal({
             {!contactAction && (
               <div className="mt-4 space-y-2">
                 {nextPlan && (
-                  <div className="rounded-xl border border-blue-500/60 bg-gradient-to-r from-blue-600/20 to-purple-600/20 px-4 py-3">
+                  <div className="rounded-xl border border-blue-500/60 bg-gradient-to-r from-blue-600/20 to-brand-500/20 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -191,7 +211,7 @@ export default function BannerLimitModal({
                   if (destination.startsWith('https://')) window.location.assign(destination)
                   else router.push(destination)
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-brand-500 px-6 py-3.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Rocket className="h-5 w-5" />
                 {contactAction

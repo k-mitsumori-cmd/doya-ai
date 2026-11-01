@@ -1,0 +1,335 @@
+{
+  "checkedAt": "2026-10-07T16:29:00.987Z",
+  "passed": 64,
+  "cases": [
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "private"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "public"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "private"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "public"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "public"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "missing-create-failed"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/movie/storage.ts": "8c956ebc19fbb1cb29a9ce5273c168d38f1cc0ccfc10943dc68c13c1697c6d64",
+    "src/lib/voice/storage.ts": "c66dcf4722ef4d4ab5862cac5bddf2bc8d413a26848789d7e5b65f29b32211a2",
+    "src/lib/tenkai/storage.ts": "3e2b3f252000a0b3568c9929f225510ed964b77a4acd35daf6d0773152f4b06b",
+    "src/lib/interview/storage.ts": "e9ac900746b051a0af0484eaa318b2768dbd8cd9b2e5501b817bad1ba57c7f13",
+    "src/lib/private-storage-bucket.ts": "8e1d02af013f4667cda3cb10527b727951a2472387eec1f777138195633f9c5f"
+  },
+  "scope": "Actual Movie/Voice/Tenkai/Interview storage modules; synthetic Supabase metadata and object APIs. No production configuration, provider calls, customer data or storage writes."
+}

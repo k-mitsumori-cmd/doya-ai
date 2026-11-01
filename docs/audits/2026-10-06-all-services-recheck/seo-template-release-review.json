@@ -1,0 +1,109 @@
+{
+  "checkedAt": "2026-10-08T08:16:16.337055+00:00",
+  "status": "four-production-diffs-reviewed-fresh146-passed-unchanged-compiled-proof-rechecked",
+  "productionFiles": [
+    "src/app/seo/template/page.tsx",
+    "src/lib/seo-template-requests.ts",
+    "src/components/limits/ServiceLimitProvider.tsx",
+    "src/app/api/seo/entitlements/route.ts"
+  ],
+  "productionHashes": {
+    "src/app/seo/template/page.tsx": "a59fd6f79a6dabfee379d4fdad4825334ecac16f868ce7982ea89b560027d009",
+    "src/lib/seo-template-requests.ts": "937add991f9fe649f6af109bd65a74a276cf82b6491e3aede8b7240f8d08bcb5",
+    "src/components/limits/ServiceLimitProvider.tsx": "80fffd613d05d070f329734372a91b843a6653166a478a4debb15ef36b439af8",
+    "src/app/api/seo/entitlements/route.ts": "f8a8f971bc494973635f4e66fa27df3d885d8c9b2ba151fbc9465f493808c54d"
+  },
+  "reviewed": [
+    "Actual page and actual new hook full diffs reviewed; status/actor/plan epoch, synchronous shared lane, current render ownership, abort/unmount cleanup",
+    "Bounded actual response reader, validated entitlement fields and safe create identifiers; no backend quota/billing changes",
+    "Manual title preserved; prompt ABA invalidates old title; confirmed saved destination survives navigation failure",
+    "Mandatory28 mounted checks plus native9; all previous142 full gates retained",
+    "Shared notice versioned scope includes all7 service-plan fields explicitly exposed in auth callback. Existing87 shared-provider assertions retained plus28 new cases, integrated115/115 passed; no plan entitlement logic changed.",
+    "Entitlement response success and503 set explicit private,no-store and Vary Cookie. Mandatory ledger test retains prior usage/outage/recent-login invariants and expands to9 actual route paths. No DB/billing/provider behavior changes."
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/seo-template-release-119d036a-537d-4f7a-bb2d-f88ee31703bc",
+  "limitations": [
+    "Synthetic auth/fetch/router boundaries; actual customer OAuth/provider execution unverified",
+    "Unknown create latch only current workspace; reload/cross-device durable recovery remains unproven",
+    "Transport abort does not prove server mutation canceled",
+    "Other personalized GET cache candidates need individual review; no actual customer cache exposure proved."
+  ],
+  "publication": "Ready for exact allowlisted commit/push; CI/READY/public still pending",
+  "baselineHarnessDiagnostic": "Baseline process SIGKILL occurred while strict assert tried to format a huge React DOM object. Boolean assertion preserves same null requirement, both baseline28 and integrated28 now finish. Baseline3/28; integrated28/28.",
+  "pendingAdditionalRepair": {
+    "status": "shared service-plan repair included and verified115; no pending repair inside four-source cohort",
+    "separateNextCohort": "HR/Kintai dashboard cache gap overlay9 passed, not integrated; full17-service187-GET/2074 audit incomplete"
+  },
+  "previousGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/seo-template-release-8680d1c7-4f73-40d8-9d99-553ae4466664",
+    "status": "passed144-unchanged"
+  },
+  "validation": {
+    "sharedMounted": 115,
+    "seoMounted": 28,
+    "priorFullGate": 144,
+    "tscSession": 27570,
+    "tscExitCode": 0,
+    "eslintSession": 23225,
+    "eslintExitCode": 0,
+    "freshGate": "docs/audits/2026-10-06-all-services-recheck/seo-template-release-119d036a-537d-4f7a-bb2d-f88ee31703bc",
+    "freshGatePid": 49767,
+    "freshGateSession": 61690,
+    "cacheMounted": 9,
+    "cacheTscSession": 7330,
+    "cacheTscExitCode": 0,
+    "prior145": "passed unchanged",
+    "freshGateStatus": "passed146-unchanged"
+  },
+  "previous145Gate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/seo-template-release-66f80a43-52cd-42ba-8ab4-4db76a08726d",
+    "status": "passed145-unchanged"
+  },
+  "compiledMarkerProof": {
+    "checkedAt": "2026-10-08T08:14:19.447151+00:00",
+    "checks": {
+      "認証情報を確認しています。": true,
+      "ログイン情報を確認できません。": true,
+      "タイトル生成中に条件が変わりました。新しい条件でもう一度お試しください。": true,
+      "二重作成を避けるため、記事一覧で保存状況をご確認ください。": true,
+      "記事は保存済みです。下のリンクから作成済みの記事を開いてください。": true,
+      "作成済みの記事を開く": true,
+      "[\"bannerPlan\",\"seoPlan\",\"kantanPlan\",\"interviewPlan\",\"openingPlan\",\"doyalistPlan\",\"kintaiPlan\"]": true,
+      "compiledEntitlementPrivateCache": true,
+      "compiledEntitlementCookieVary": true
+    },
+    "assets": {
+      ".next/static/chunks/13907-40f306bf6daabfee.js": "4055876237f8969abe2de61351c0eb9869b4db0ca762db359accbc3643e44745",
+      ".next/static/chunks/15209-c0cf82bf780b84a3.js": "6f0885ea6b61fdbbfd70a059a6848d538afe132f5eb64cf2bdc1c6c558f86a16",
+      ".next/static/chunks/25148-0301a12f0550b9ed.js": "8f86bbb4a89a35942cfc879258ce3e53945a4b198cfe6110046f8599fda61f51",
+      ".next/static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+      ".next/static/chunks/37841-bca59f777a664db1.js": "2de6e5f7ba05e094621d809b863d12dfe1d4c15cbbf42f55fdd7539605f67eda",
+      ".next/static/chunks/46332-42d84f2e9c53b313.js": "64a0fd5898f1136c3c006ab5ac3059b7fbfcfb42850dff0302951c4d53c08779",
+      ".next/static/chunks/58746-b1dfa18ee786844f.js": "42c9c2973d765fb50e8c6aa57a6272d146ef214a6a5982f8fd3f2ecb2e7ed663",
+      ".next/static/chunks/62044-a2aba522b8ca062f.js": "bc5ec005a1b8bf7fc05ef401f078dfd630e1d3c4f983d60e64df02a2abb85462",
+      ".next/static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+      ".next/static/chunks/6829-d3dd010d9eb63fe2.js": "2ded488fea66ab67a1f43f88cdde14221b59c880f5e4667d69509deed46061ec",
+      ".next/static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+      ".next/static/chunks/72527-a1c4a5318eab614c.js": "92cecebd60257ceac9dd38214d937f18b6f5169f504081e36ad14779014d8929",
+      ".next/static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+      ".next/static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+      ".next/static/chunks/80483-2a0039f0252195ab.js": "b755306b9f74a5a58750a91f4df4e43728b3531357f60931ef21c552f97b7cab",
+      ".next/static/chunks/85945-b1658f7e213a3acb.js": "8abd1cf5447d72739b7446a24882b15ace1140fa6d030504d0c5aaf589d2fb94",
+      ".next/static/chunks/91553-75723235649e0114.js": "bc4a80d15f7a0ab83dbf3decc3af32bf65539cc1101daceff272c602ed15251c",
+      ".next/static/chunks/92438-345ef7ea98ecda7e.js": "fcc8c11acf399a67e32d295684e2ff98d870aa08202f5a97fce85224234fa9cb",
+      ".next/static/chunks/app/layout-db97452efd391f63.js": "d87de13e444d40c17fc41d0168ad8b612ed7415aca1452e89192221786bb0378",
+      ".next/static/chunks/app/seo/layout-af86a2d76f7e8199.js": "501103ecc8d3b517fe1e392db8faba166d7ff133f4bb05b5ef9a621306f39802",
+      ".next/static/chunks/app/seo/template/layout-6743f0dd421fe788.js": "86eb62204460ab64f260dc5d409d9f25e4141e4e8ef10c06fb51d59a6aadda58",
+      ".next/static/chunks/app/seo/template/page-027f88eddeadbb11.js": "88f3ccc6490dbe9583b42bc89342d9d805e4de682e34142a6ebeb8769f760dfe",
+      ".next/static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+      ".next/static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+      ".next/static/css/3b70ed336a912b9b.css": "b6cb25ed4a22191e6f59a5d925d31327d4500d17b63702630daaa9ed3f5ef4c3",
+      ".next/static/css/546e5542e033f4d1.css": "527ab39f879c9cedab7bf9ec8a039b58682ee6c1f7338dfd3b387b6fb0e82b4a"
+    },
+    "apiEntry": {
+      "file": ".next/server/app/api/seo/entitlements/route.js",
+      "hash": "ec335aafb78023f6821fa2b4b2751f92f54223369eb0558f84cb87bca9c7fa8a"
+    },
+    "scope": "Compiled client bundles and entitlement route entry markers; not actual OAuth/customer/provider execution."
+  }
+}

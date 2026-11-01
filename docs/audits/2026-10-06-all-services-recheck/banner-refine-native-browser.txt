@@ -1,0 +1,13 @@
+Browser tab: 7, Title: "Banner native verification", URL: "http://127.0.0.1:58431/index.html".
+0 AXWebArea Banner native verification, URL: 127.0.0.1:58431/index.html
+	1 heading バナー修正・実ブラウザ検証, Value: 1
+		2 text バナー修正・実ブラウザ検証
+	3 button (disabled) 検証を実行, ID: run
+	4 text PASS Native Image decode: PNG320x50 accepted
+PASS Native Image decode: fake PNG rejected
+PASS Native response bound: oversized declared body rejected
+PASS Native streaming abort: reader cancelled
+PASS Native Web Locks: separate frames admit exactly one metadata-only operation
+ALL 5 NATIVE CHECKS PASSED; no service/provider/customer database calls
+
+The focused UI element is 0 AXWebArea Banner native verification, URL: 127.0.0.1:58431/index.html

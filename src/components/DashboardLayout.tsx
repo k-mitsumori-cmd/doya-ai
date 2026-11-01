@@ -13,8 +13,17 @@ import {
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useInShell } from '@/components/shell/in-shell'
 
+// ⚠️ 共通の枠の中では、旧来のサイドバー付きの外枠を出さない（枠が二重になり、別の画面に見えるため。UI 品質 C-7）
+//    新しい見た目（チェックリスト §5.1）のときだけ
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const inShell = useInShell()
+  if (inShell) return <>{children}</>
+  return <LegacyDashboardLayout>{children}</LegacyDashboardLayout>
+}
+
+function LegacyDashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)

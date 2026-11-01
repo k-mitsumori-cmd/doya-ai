@@ -1,0 +1,170 @@
+{
+  "checkedAt": "2026-10-07T11:07:10.456360+00:00",
+  "status": "Current unchanged-source full gate passed seven commands, 2769 sources. Feedback and auxiliary actor fences ready for exact allowlist commit/push; not yet deployed.",
+  "findings": {
+    "fabricatedScores": {
+      "before": "Missing/nonfinite values default to 3; numeric coercion/clamping hides invalid evaluations; invalid target falls back to visual; objects become string instructions.",
+      "repair": "Reject all invalid scores/directives/advice before saving. Sum five exact integer grades 1..5 locally. Valid empty directives preserved.",
+      "evidence": "Output fixture fails on original source with Missing expected rejection; four output test groups and five complete actual route test groups pass with synthetic vision/Prisma. No paid provider or actual database used."
+    },
+    "unboundedBody": {
+      "before": "req.json() without byte/stream deadline bounds; invalid JSON silently becomes an empty evaluation request.",
+      "repair": "8KiB actual/declared bytes, 15s/abort deadline, fatal UTF8, object/allowed keys, identifier, note500, seven known unique chips; fail before storage/provider; private no-store replies.",
+      "evidence": "Actual route fixtures cover invalid inputs, oversize, stalled and aborted streams; no provider/write on rejection."
+    },
+    "duplicateExecution": {
+      "status": "source repaired; full gate/release pending",
+      "evidence": "adimage-feedback-postgres-results.json: ten identical concurrent POSTs, one synthetic vision invocation and one saved feedback; no image quota usage; shared actor fence rejects competing image/refine/feedback UUIDs."
+    },
+    "ownershipChangedDuringVision": {
+      "status": "source repaired; full gate/release pending",
+      "evidence": "adimage-feedback-postgres-results.json: real PostgreSQL rejects save after campaign/brand owner, copy, image path or brand name change during vision; feedback and receipt atomic; no production writes."
+    }
+  },
+  "verification": {
+    "targetedOutputGroups": 4,
+    "targetedActualRouteGroups": 6,
+    "existingRelatedRecords": "passed with actual feedback and input modules; foreign creative rejection and same-concept success assertions retained",
+    "eslint": "passed changed TS/TSX modules",
+    "typecheck": "passed before frozen gate; full gate type check will follow current security",
+    "initialWholeSecurity": "failed because old verify-related-records fixture lacked new input module; fixture migrated, targeted entire related-record suite passed",
+    "wholeBuild": {
+      "session": 16005,
+      "exitCode": 0,
+      "qualification": "Source changed during this preliminary run; not a frozen-source release gate."
+    },
+    "production": "Feedback cohort not committed or deployed",
+    "targetedTotalGroups": 14,
+    "targetedClientGroups": 4,
+    "existingCallbackCases": 15,
+    "actualMountedToolCases": 10,
+    "actualMountedHookCases": 13,
+    "privatePostgresFeedbackCases": 25,
+    "privatePostgresSharedImageCases": 29,
+    "privatePostgresImageApiCases": 27,
+    "nativeChromePreflightCases": 8,
+    "frozenGate": {
+      "startedAt": "2026-10-07T11:01:12.801019+00:00",
+      "pid": 98961,
+      "head": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+      "sourceFiles": 2769,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "private-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:01:15.368429+00:00"
+        },
+        {
+          "name": "adimage-helper-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:01:17.171663+00:00"
+        },
+        {
+          "name": "adimage-api-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:01:19.324168+00:00"
+        },
+        {
+          "name": "adimage-feedback-postgres",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:01:21.359211+00:00"
+        },
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:06:16.605530+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:06:18.489644+00:00"
+        },
+        {
+          "name": "native-chrome",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T11:06:27.941890+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T11:06:28.431742+00:00",
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-feedback-release-3150c24e-b355-4924-9716-307eb9b7c665",
+      "session": 95858,
+      "observedProcessExitCode": 0
+    },
+    "auxiliaryActorMountedCases": 6,
+    "previousFrozenGate": {
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-feedback-release-fc8dd369-8457-4318-88cf-dd27948135f9",
+      "session": 43552,
+      "exitCode": 1,
+      "commands": "all7exit0",
+      "status": "failed because Tool.tsx changed during the run to fix reproduced analyze actor leak; never a current-source release pass"
+    },
+    "previousFrozenGates": [
+      {
+        "path": "docs/audits/2026-10-06-all-services-recheck/adimage-feedback-release-fc8dd369-8457-4318-88cf-dd27948135f9",
+        "session": 43552,
+        "exitCode": 1,
+        "commands": "all7exit0",
+        "status": "failed because Tool.tsx changed during the run to fix reproduced analyze actor leak; never a current-source release pass"
+      },
+      {
+        "path": "docs/audits/2026-10-06-all-services-recheck/adimage-feedback-release-82f6fd3e-88d4-475e-bec0-f2036db635dd",
+        "session": 7723,
+        "exitCode": 1,
+        "status": "source unchanged; build stopped at old logoRemoval fixture missing imageOperation/operation variables; fixture adapted with original failure/success assertions preserved; targeted4 passed"
+      }
+    ],
+    "nativeVisualInspection": "Desktop1280/mobile390 screenshots visually inspected after waiting for finite CSS animations. All five score bars, total15/25, advice, directive, recovery panel and before/after images are visible. Synthetic artwork only.",
+    "nativeChromeFinalCases": 8
+  },
+  "nextRequired": [
+    "Gate passed. Recheck exact source snapshot after commit and before authorized main push; verify exact CI/READY and anonymous public assets.",
+    "On full gate pass and verified source snapshot equality, prepare exact allowlist commit, push authorized origin HEAD:main and verify exact CI, production READY and verify-adimage-feedback-public.py.",
+    "Continue audit of analyze durable result/replay, uncertain requests, deadlines/input-response validation and logo lifecycle. Actor/duplicate callback guards do not prove these flows complete.",
+    "Preserve all17services2074criteria; authenticated production/provider/customer-data/process-kill E2E remains unproven."
+  ],
+  "scope": {
+    "services": 17,
+    "criteria": 2074,
+    "exactPending": 1859,
+    "scopeReduced": false
+  },
+  "sourceHashes": {
+    "src/lib/adimage/image-operation.ts": "2c58e86ab050fb6f64b4700b7e878ad01231cfba646f4c5687a5a08e645cd46c",
+    "src/lib/adimage/image-operation-http.ts": "62e055bf64cd88ce32f56dc3e24235dc18b81be9acef174d65c5092ad67ab7f6",
+    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45",
+    "src/lib/adimage/use-operation-recovery.ts": "7d162d1d9484249aee5a74002108ac666b1adab5805ddc742a50fee9a613e69d",
+    "src/lib/adimage/feedback.ts": "8b9b8598e92b24b9042da1cda21f111ea519af8f650ad17d9060b881b289e5cf",
+    "src/lib/adimage/feedback-input.ts": "67d03e98ec576d75161e62de69b536d877aa4b556e57b770dc9189dca0203a7e",
+    "src/app/adimage/Tool.tsx": "aa09112bf2b7b1c017faabfaedd068d58ba94f1aac259df6b66cefcb2786e8de",
+    "src/app/api/adimage/concepts/[id]/feedback/route.ts": "d31e1d4f60724d667c3ede202894bb9d08d5035759ef1245eb968b38b163e44b"
+  },
+  "implementation": {
+    "protocol": "Feedback extends the existing actor/UUID/target/source receipt and single actor active pointer; no separate DB schema or migration. Same operation is checked before source/storage/provider; malformed or missing operation UUID cannot fall back to untracked work.",
+    "persistence": "Owner/campaign/brand/concept/creative locks, exact source hash ignoring feedback history for feedback operations, feedback insert and completed receipt in one short serializable transaction. Vision is outside the transaction. Failed/expired/cancelled IDs never repeat vision.",
+    "recovery": "GET/DELETE operations endpoint accepts feedback kind. Completed feedback recovery rechecks owned and unchanged source, own creative/feedback identity and fresh signed URLs; returns validated scores/directives and before/after comparison. Deleted/transferred/changed results are unavailable without replay.",
+    "client": "Existing actor-only metadata/localStorage/Web Locks/hook handles feedback; actual reader validates grades/total/directives/creative binding. Full Tool synchronously excludes duplicate work, preserves newer unsent notes, hides old actor responses.",
+    "budget": "Vision feedback never claims/settles/releases image quota. Independent numeric feedback quota has not been invented or changed."
+  },
+  "nextFinding": {
+    "report": "adimage-analyze-actor-mounted-baseline.json",
+    "status": "Actor response leak repaired in source; six auxiliary mounted cases and native account-switch case pass; full gate and release pending. Durable analyze result receipt/replay and logo operation lifecycle remain to be audited.",
+    "finding": "Actual full Tool shows delayed actor-a analyze copy after session changed to actor-b. Synthetic private content only, no customer incident claimed."
+  },
+  "pendingProductDecision": {
+    "status": "asked async, unanswered",
+    "question": "Independent AI feedback allowance: first per-creative evaluation included with daily extra3/50; all daily3/50; all daily20/160. No numeric budget has been silently changed.",
+    "independentWork": "Do not block existing dedupe/recovery/ownership repair, gate or release on this decision. Implement new quota only after user answer."
+  },
+  "nextAnalysisRecoveryFinding": {
+    "checkedAt": "2026-10-07T11:05:37.991018+00:00",
+    "status": "actual native Chrome/private PostgreSQL baseline reproduced, unrepaired",
+    "evidence": [
+      "adimage-analysis-lost-response-postgres-baseline.json",
+      "adimage-analysis-lost-response-postgres-supervisor.json"
+    ],
+    "finding": "One native fetch POST automatically retried after local HTTP socket loss following actual route commit:2requests/2savedbrands/2synthetic brand calls/2synthetic copy calls/2analysis budget attempts, no manual retry.",
+    "next": "After current feedback release verification, implement durable analyze intent/receipt/result recovery and atomic analysis budget settlement, input/response bounds, actor/target fences; preserve existing FREE20/PRO160 preparation attempts and source-rejection refund semantics until product instruction changes."
+  }
+}

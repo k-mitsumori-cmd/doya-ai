@@ -10,6 +10,7 @@ import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { ROLE_HIERARCHY } from '@/lib/sfa/types'
 import { sendEmail } from '@/lib/email'
 import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: string }[]>`SELECT role FROM sfa_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || rank(role) >= rank(actor[0].role)) return { kind: 'forbidden' as const }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      const actorRole = actor.length ? lowerToolRole('sfa', actor[0].role, ctx.role) : null
+      if (!actorRole || rank(role) >= rank(actorRole)) return { kind: 'forbidden' as const }
       const dup = await tx.sfaMember.findFirst({
         where: duplicateWhere,
       })

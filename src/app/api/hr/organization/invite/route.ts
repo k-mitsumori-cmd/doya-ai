@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -20,22 +21,22 @@ export async function POST(req: NextRequest) {
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
     const body = await req.json()
     const { email } = body
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'email is required' }, { status: 400 })
+      return privateApiJson({ error: '招待する相手のメールアドレスを入力して、もう一度お試しください。' }, { status: 400 })
     }
     const emailNorm = email.trim().toLowerCase()
     if (emailNorm.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
-      return NextResponse.json({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
+      return privateApiJson({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
     }
 
     // メンバー数制限チェック
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (memberLimitError) {
       const plan = await getOrgPlan(ctx.organizationId)
       const canUpgrade = !['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
-      return NextResponse.json({
+      return privateApiJson({
         error: memberLimitError,
         code: 'HR_ORG_MEMBER_LIMIT',
         canManageBilling: ctx.role === HrMemberRole.OWNER,
@@ -61,7 +62,8 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM hr_organization_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('OWNER', 'ADMIN') FOR UPDATE`
-      if (actor.length === 0) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      if (actor.length === 0 || (ctx.role !== 'OWNER' && ctx.role !== 'ADMIN')) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
 
       const existingMember = await tx.hrOrganizationMember.findFirst({
         where: { organizationId: ctx.organizationId, user: { email: emailNorm }, status: 'ACTIVE' },
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
       })
       return { invitation, organizationName: organization?.name || '組織' }
     })
-    if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status })
+    if ('error' in result) return privateApiJson({ error: result.error }, { status: result.status })
     const { invitation, organizationName } = result
 
     // 招待URL生成
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
       details: { email: emailNorm, role: inviteRole, emailSent },
     })
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       emailSent,
       invitation: {
@@ -128,8 +130,8 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[hr/organization/invite] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to create invitation' },
+    return privateApiJson(
+      { error: '招待を作成できませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )
   }

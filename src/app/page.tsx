@@ -11,6 +11,7 @@ import {
 import { LpShell, CtaBand, HowItWorks } from "@/components/lp";
 import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
+import { getListedServiceCount } from "@/lib/services";
 
 export default function HomePage() {
   return (
@@ -24,18 +25,19 @@ export default function HomePage() {
       <section className="doya-home-hero doya-home-cinematic">
         <div className="doya-home-composition">
           <div className="doya-home-copy">
-            <span className="doya-eyebrow">
+            {/* 指名検索の受け皿: h1 はサイト名。キャッチコピーは見た目だけ大見出し */}
+            <h1 className="doya-eyebrow">
               <Sparkles size={16} />
-              制作・営業・業務管理を支える17のAIツール
-            </span>
-            <h1>
+              ドヤAI｜マーケティング・営業・採用・経理を支える{getListedServiceCount()}のAIツール
+            </h1>
+            <div className="doya-home-title">
               その仕事、
               <br />
               <em>
                 <span>ドヤくんと</span>
                 <span>やってみよう。</span>
               </em>
-            </h1>
+            </div>
             <p>
               バナーも、記事も、商談準備も。
               <br />
@@ -50,7 +52,7 @@ export default function HomePage() {
               </a>
             </div>
             <div className="doya-home-signature">
-              <span>17</span>の得意を、あなたのチームに。
+              <span>{getListedServiceCount()}</span>の得意を、あなたのチームに。
             </div>
           </div>
           <HomeMotionScene />
@@ -130,7 +132,7 @@ export default function HomePage() {
           {
             icon: "edit",
             title: "やりたい仕事を選ぶ",
-            desc: "制作・マーケティング、営業、人事・業務管理から、ご自身の課題に合うサービスを選びます。",
+            desc: "マーケティング、営業、採用・人材管理、経理・バックオフィスから、ご自身の課題に合うツールを選びます。",
           },
           {
             icon: "play_arrow",

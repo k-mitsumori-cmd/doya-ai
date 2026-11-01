@@ -25,6 +25,14 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/income-schedule",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/expense-schedule",
+      "schedule": "0 22 * * *"
+    },
+    {
       "path": "/api/cron/aishodan-evaluations",
       "schedule": "*/5 * * * *"
     },
@@ -77,10 +85,6 @@
       "schedule": "0 11 * * *"
     },
     {
-      "path": "/api/cron/aio-scan",
-      "schedule": "0 3,9,15,21 * * *"
-    },
-    {
       "path": "/api/cron/analytics-report",
       "schedule": "0 22 * * *"
     },
@@ -105,6 +109,14 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/system-watch",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/system-watch-paid",
+      "schedule": "40 23 * * *"
+    },
+    {
       "path": "/api/cron/mensetsu-purge",
       "schedule": "40 1 * * *"
     },
@@ -125,27 +137,27 @@
       "schedule": "15 0 * * *"
     },
     {
-      "path": "/api/cron/service-operations?mode=daily",
+      "path": "/api/cron/service-operations-daily",
       "schedule": "50 21 * * *"
     },
     {
-      "path": "/api/cron/service-operations?mode=watch",
+      "path": "/api/cron/service-operations-watch",
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/cron/service-operations?mode=reviews",
+      "path": "/api/cron/service-operations-reviews",
       "schedule": "5 */4 * * *"
     },
     {
-      "path": "/api/cron/service-operations?mode=cost",
+      "path": "/api/cron/service-operations-cost",
       "schedule": "30 22 * * *"
     },
     {
-      "path": "/api/cron/service-operations?mode=weekly",
+      "path": "/api/cron/service-operations-weekly",
       "schedule": "40 0 * * 1"
     },
     {
-      "path": "/api/cron/service-operations?mode=travel",
+      "path": "/api/cron/service-operations-travel",
       "schedule": "35 0 * * *"
     },
     {

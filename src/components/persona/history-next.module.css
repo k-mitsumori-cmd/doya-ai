@@ -1,0 +1,24 @@
+/*
+ * ペルソナの生成履歴を、明るい色で出す（UI 品質 H-3・H-4）
+ * 今の履歴の画面は、暗い背景（slate-950）の色で作られている。共通の枠の中では、ほかのツールと同じ明るい色にする。
+ * ⚠️ 新しい見た目（[data-ui-next='true']。チェックリスト §5.1）のときだけ効く。
+ * ⚠️ 画面の Tailwind のクラスを書き換えず、ここで上書きする。紫の上書きは brand-next.module.css が持つ。
+ */
+:global([data-ui-next='true']) .light :global(.text-white) { color: #101633; }
+:global([data-ui-next='true']) .light :global(.text-slate-300) { color: #4a5375; }
+:global([data-ui-next='true']) .light :global(.text-slate-400) { color: #4a5375; }
+:global([data-ui-next='true']) .light :global(.text-slate-500) { color: #7a83a3; }
+:global([data-ui-next='true']) .light :global(.text-slate-600) { color: #7a83a3; }
+:global([data-ui-next='true']) .light :global(.text-red-400) { color: #c0123c; }
+:global([data-ui-next='true']) .light :global(.hover\:text-red-300:hover),
+:global([data-ui-next='true']) .light :global(.hover\:text-red-400:hover) { color: #c0123c; }
+:global([data-ui-next='true']) .light :global(.hover\:bg-red-900\/20:hover),
+:global([data-ui-next='true']) .light :global(.hover\:bg-red-900\/30:hover) { background-color: #ffecef; }
+:global([data-ui-next='true']) .light :global(.bg-slate-900\/80) { background-color: #ffffff; box-shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14); }
+:global([data-ui-next='true']) .light :global(.border-slate-700) { border-color: #e3e8f4; }
+:global([data-ui-next='true']) .light :global(.hover\:border-slate-600:hover) { border-color: #c6cde0; }
+:global([data-ui-next='true']) .light :global(.border-slate-600) { border-color: #c6cde0; }
+/* 暗い背景の向けの淡い紫の文字は、明るい背景では読みにくい。濃い青にする（brand-next より強くするため .light を2回書く） */
+:global([data-ui-next='true']) .light.light :global(.text-purple-300),
+:global([data-ui-next='true']) .light.light :global(.text-purple-400) { color: #0047d6; }
+:global([data-ui-next='true']) .light.light :global(.hover\:bg-purple-900\/30:hover) { background-color: #e8f0ff; }

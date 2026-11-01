@@ -10,9 +10,13 @@ import { canStartSession } from '@/lib/cunning/limits'
 import { parseCunningSessionInput } from '@/lib/cunning/session-input'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { betaServiceDenied } from '@/lib/beta-service.server'
 
 // GET /api/cunning/sessions — セッション一覧
 export async function GET(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const params = new URL(req?.url || 'http://localhost/api/cunning/sessions').searchParams
@@ -41,6 +45,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/cunning/sessions — セッション作成
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版（services.ts の hidden: 'beta'）。許可した人のほかは、ここで 403
+  const betaDenied = await betaServiceDenied('cunning')
+  if (betaDenied) return betaDenied
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 

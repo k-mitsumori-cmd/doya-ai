@@ -59,7 +59,7 @@ async function deliverNotifications(limit = 1, scope?: { sessionId: string; orga
         !failedEvaluation && session.outcome?.nextAction ? `次アクション: ${slackText(session.outcome.nextAction, '')}` : '',
         `${process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'}/aishodan/sessions/${task.sessionId}`,
       ].filter(Boolean)
-      await postToSlackBlocks(title, [{ type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } }], AbortSignal.timeout(15000))
+      await postToSlackBlocks(title, [{ type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } }], AbortSignal.timeout(15000), { app: 'AI商談', kind: 'usage', severity: 'info' })
       if (failedEvaluation) {
         // Keep a receipt so repeated provider failures for this revision do not repeat the notice.
         await prisma.systemSetting.updateMany({ where: { key: row.key, value: held }, data: {

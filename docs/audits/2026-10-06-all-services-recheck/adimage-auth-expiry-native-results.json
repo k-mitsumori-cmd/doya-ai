@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T13:57:29.994Z",
+  "passed": 2,
+  "cases": [
+    "1280px native Chrome401 guidance, login callback navigation, retained UUID and GET restoration without POST replay",
+    "390px native Chrome401 guidance, login callback navigation, retained UUID and GET restoration without POST replay"
+  ],
+  "posts": 2,
+  "gets": 2,
+  "chrome": "Chrome/155.0.8059.39",
+  "sourceHashes": {
+    "src/lib/adimage/types.ts": "639c974cda7ab38d3628ec0e250d4465ae84049e3763741df38c0813cdfb3c7c",
+    "src/lib/adimage/analysis-result.ts": "5bc0d3ae198c5099a892d7303d840a3f06b6d58fd7b8c1aab1fcf32000aeb920",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a",
+    "src/lib/adimage/use-operation-recovery.ts": "9c5707d3bed76e28acae25047e96a41f88a5a0a5179fe615ff8343a8f3cbb1c6",
+    "src/app/adimage/Tool.tsx": "49706aff9734afd39462903cc2a4095767168ce50ad48a3674ea195e68f14e72"
+  },
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "scope": "Native Chrome, actual Tool/hook/client, localhost HTTP/storage/locks. Synthetic session and signin redirect, no real OAuth, provider, production or customer data."
+}

@@ -1,0 +1,114 @@
+{
+  "passed": 12,
+  "cases": [
+    {
+      "name": "native-wide-framed",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 1
+    },
+    {
+      "name": "native-wide-plain",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 0
+    },
+    {
+      "name": "native-tall-framed",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 1
+    },
+    {
+      "name": "native-tall-plain",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 0
+    },
+    {
+      "name": "missing-wide-framed",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 0,
+      "sharpCalls": 2
+    },
+    {
+      "name": "missing-wide-plain",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 0,
+      "sharpCalls": 1
+    },
+    {
+      "name": "missing-tall-framed",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 0,
+      "sharpCalls": 2
+    },
+    {
+      "name": "missing-tall-plain",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 0,
+      "sharpCalls": 1
+    },
+    {
+      "name": "render-failure-wide-framed",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 2
+    },
+    {
+      "name": "render-failure-wide-plain",
+      "width": 1200,
+      "height": 630,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 1
+    },
+    {
+      "name": "render-failure-tall-framed",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 2
+    },
+    {
+      "name": "render-failure-tall-plain",
+      "width": 1080,
+      "height": 1350,
+      "decoded": true,
+      "nativeLoads": 1,
+      "nativeConstructors": 1,
+      "sharpCalls": 1
+    }
+  ],
+  "scope": "Actual Satori, bundled font/frame files, native Resvg and sharp. Synthetic annual report and native import/constructor failure injection. All PNGs decoded; no paid provider, account, database or network."
+}

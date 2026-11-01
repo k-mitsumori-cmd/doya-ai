@@ -48,13 +48,13 @@ export function Hero({
           <DoyaKun mood={mood} size={132} priority />
         </div>
         {eyebrow && (
-          <span className="inline-flex items-center gap-1.5 text-xs md:text-sm font-black tracking-wide mb-5 px-3.5 py-1.5 rounded-full animate-fade-in-up"
+          <span className="inline-flex items-center gap-1.5 text-xs md:text-sm font-black tracking-wide mb-5 px-3.5 py-1.5 rounded-full animate-rise-in"
             style={{ color: 'var(--lp-accent)', background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)' }}>
             <Sym name="bolt" size={16} />
             {eyebrow}
           </span>
         )}
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.12] text-slate-900 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.12] text-slate-900 animate-rise-in" style={{ animationDelay: '0.05s' }}>
           {title}
           {highlight && (
             <>
@@ -63,10 +63,10 @@ export function Hero({
             </>
           )}
         </h1>
-        <p className="mt-6 text-lg md:text-xl text-slate-600 font-bold leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+        <p className="mt-6 text-lg md:text-xl text-slate-600 font-bold leading-relaxed animate-rise-in" style={{ animationDelay: '0.12s' }}>
           {subtitle}
         </p>
-        <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 animate-rise-in" style={{ animationDelay: '0.2s' }}>
           <Link href={ctaHref}
             className="inline-flex items-center gap-2 px-9 py-4 text-white font-black text-lg rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:scale-[0.97]"
             style={{ background: '#0066ff', boxShadow: '0 12px 30px rgba(0,102,255,0.32)' }}>
@@ -81,7 +81,7 @@ export function Hero({
             </Link>
           )}
         </div>
-        {note && <p className="mt-4 text-xs font-bold text-slate-400 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>{note}</p>}
+        {note && <p className="mt-4 text-xs font-bold text-slate-400 animate-rise-in" style={{ animationDelay: '0.28s' }}>{note}</p>}
       </div>
     </section>
   )
@@ -102,7 +102,7 @@ export function Benefits({ title, lead, items }: { title: React.ReactNode; lead?
         <SectionHeading eyebrow="WHY" title={title} lead={lead} />
         <div className="grid md:grid-cols-3 gap-6">
           {items.map((b, i) => (
-            <div key={b.title} className="group relative bg-white rounded-3xl border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all animate-fade-in-up" style={{ animationDelay: `${0.06 * i}s` }}>
+            <div key={b.title} className="group relative bg-white rounded-3xl border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all animate-rise-in" style={{ animationDelay: `${0.06 * i}s` }}>
               <div className="w-14 h-14 rounded-2xl grid place-items-center mb-5"
                 style={{ background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)', color: 'var(--lp-accent)' }}>
                 <Sym name={b.icon} size={28} />
@@ -125,7 +125,7 @@ export function FeatureGrid({ title = '主な機能', lead, features }: { title?
         <SectionHeading eyebrow="FEATURES" title={title} lead={lead} />
         <div className="grid sm:grid-cols-2 gap-4">
           {features.map((f, i) => (
-            <div key={i} className="flex items-start gap-3 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm animate-fade-in-up" style={{ animationDelay: `${0.04 * i}s` }}>
+            <div key={i} className="flex items-start gap-3 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm animate-rise-in" style={{ animationDelay: `${0.04 * i}s` }}>
               <span className="shrink-0 grid place-items-center w-8 h-8 rounded-lg mt-0.5"
                 style={{ background: 'color-mix(in srgb, #0066ff 10%, transparent)', color: '#0066ff' }}>
                 <Sym name="check" size={18} fill />
@@ -147,7 +147,7 @@ export function UseCases({ title = 'こんな課題を解決します', items }:
         <SectionHeading eyebrow="USE CASES" title={title} />
         <div className="space-y-3">
           {items.map((u, i) => (
-            <div key={i} className="flex items-center gap-4 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm animate-fade-in-up" style={{ animationDelay: `${0.04 * i}s` }}>
+            <div key={i} className="flex items-center gap-4 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm animate-rise-in" style={{ animationDelay: `${0.04 * i}s` }}>
               <Sym name="arrow_circle_right" size={26} style={{ color: 'var(--lp-accent)' } as React.CSSProperties} />
               <p className="text-sm md:text-base font-bold text-slate-700">{u}</p>
             </div>

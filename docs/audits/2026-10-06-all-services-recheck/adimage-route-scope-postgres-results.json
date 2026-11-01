@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T15:23:21.969Z",
+  "passed": 5,
+  "cases": [
+    "Refine foreign brand rejects before any logo storage read or provider call",
+    "Design references clear private industry matching after ownership transfer during template await",
+    "Owned design references keep matching public templates",
+    "Design references use current industry after editing during template await",
+    "Initially foreign design brand keeps public templates without private hints"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/[id]/refine/route.ts": "553698391f72b82902d23bb8bc87a11729e58c8751c2fc17dfee3e529d9f2b9e",
+    "src/app/api/adimage/design-refs/route.ts": "51ba163023fc623b24d3fcea0f5789691ffd6278178f04e17a2a627b387de6fe"
+  },
+  "scope": "Actual route handlers and Prisma/private Unix-socket PostgreSQL for ownership; synthetic public template inventory, identity, logo bytes and providers. No customer data or paid calls."
+}

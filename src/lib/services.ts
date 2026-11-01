@@ -58,6 +58,16 @@ export interface Service {
   requiresAuth: boolean
   isNew?: boolean
   badge?: string
+
+  /**
+   * 'beta' … 開発中のベータ版として、一旦すべての一覧から外す（2026-10-22 ユーザー指示。最初は cunning）。
+   * status とは別の旗。status は「公開中か」、こちらは「誰に見せるか」を表す。
+   * - 外から見える一覧（トップ・LP・料金・sitemap・llms.txt）にも、ログイン後のメニュー・⌘K・最近使ったツールにも出さない
+   * - 画面と API は、許可した人（UI_PREVIEW_EMAILS）だけが使える。ほかの人には「開発中のベータ版です」と 403
+   *   （src/lib/beta-service.ts・src/lib/beta-service.server.ts）
+   * - 定義・ページ・API・DB は残す。この行を消せば、そのまま元に戻る
+   */
+  hidden?: 'beta'
 }
 
 // ============================================
@@ -972,13 +982,14 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '従業員5名まで',
+        // AI の回数は src/lib/plan-limit.ts の HR_AI_MONTHLY_LIMITS とそろえる
+        limit: '従業員5名まで / AI 月3回',
         dailyLimit: 3,
         price: 0,
       },
       pro: {
         name: 'プロプラン',
-        limit: '従業員100名まで',
+        limit: '従業員100名まで / AI 月100回',
         dailyLimit: -1,
         price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_PRO_PRICE_ID,
@@ -1200,6 +1211,8 @@ export const SERVICES: Service[] = [
       },
     },
     status: 'active',
+    // 2026-10-22 ユーザー指示「開発中のベータ版として一旦非表示」。戻すときはこの行を消す
+    hidden: 'beta',
     category: 'other',
     order: 23,
     requiresAuth: true,
@@ -1293,10 +1306,11 @@ export const SERVICES: Service[] = [
       'まずはシンプルに商談を見える化したい',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '3名 / 取引先・商談 各50件', dailyLimit: -1, price: 0 },
+      // AI の回数は src/lib/plan-limit.ts の SFA_AI_MONTHLY_LIMITS とそろえる
+      free: { name: '無料プラン', limit: '3名 / 取引先・商談 各50件 / AI 月20回', dailyLimit: -1, price: 0 },
       pro: {
         name: 'プロプラン',
-        limit: '50名 / 無制限',
+        limit: '50名 / 取引先・商談 無制限 / AI 月1,000回',
         dailyLimit: -1,
         price: UNIFIED_PRO_PRICE,
       },
@@ -1359,7 +1373,7 @@ export const SERVICES: Service[] = [
     id: 'aio',
     name: 'ドヤAIO',
     shortName: 'AIO',
-    description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を定点観測（AEO/回答エンジン最適化）。',
+    description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を測って比べる（AEO/回答エンジン最適化）。',
     longDescription:
       '監視したい質問（プロンプト）を登録すると、ChatGPT・Gemini・Claude・Perplexityに反復で投げ、自社ブランドの言及率・Share of Voice・引用元ドメイン・感情を測定します。競合との比較、時系列の推移、AIに引用されるための改善アクション（メディア掲載・サイトのAI可読化・比較コンテンツ）まで提案。検索の次の「AIに選ばれる」競争を可視化します。組織スコープ・チーム招待対応。',
     icon: '🔍',
@@ -1666,11 +1680,235 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '3回まで（1回＝リンク2本＋バナー3枚）', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '月30回まで作成できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    // 開発中。UNLISTED_SERVICE_IDS に入れ、LP は noindex
-    status: 'coming_soon',
+    status: 'active',
+    // 2026-10-09: 正式公開。開発中の間は NEW ではなく BETA を出す（adimage と同じ）
     badge: 'BETA',
     category: 'web',
     order: 32,
+    requiresAuth: true,
+    isNew: true,
+  },
+
+  // ----------------------------------------
+  // ドヤポップアップ（Popup）
+  // 仕様: reference/services/popup.md
+  // ----------------------------------------
+  {
+    id: 'popup',
+    name: 'ドヤポップアップ',
+    shortName: 'ポップアップ',
+    description: 'サイトのURLを入れるだけで、AIがポップアップを提案。タグを1行貼れば表示され、クリック率まで計測できます。',
+    longDescription:
+      '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、そのサイトに合ったポップアップを3案提案します。ChatGPTにサイトのことを相談できる「AIに聞く」ボタン、問い合わせや資料ダウンロードへの案内、次に読むおすすめページの3つです。バナーはサイトの色に合わせて自動でデザインされるので、画像を用意する必要はありません。設置タグをサイトに1行貼るだけで、表示するタイミング・端末・ページ・頻度を決めて配信でき、表示数・クリック数・クリック率を日別に確認できます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/popup',
+    dashboardHref: '/popup',
+    pricingHref: '/popup/pricing',
+    guideHref: '/popup',
+    features: [
+      'URLを入れるだけで、サイトに合ったポップアップを3案提案',
+      'ChatGPTに相談できる「AIに聞く」ボタンを自動で作成',
+      '問い合わせ・資料・おすすめページへの案内も、サイトで見つかったURLだけで作成',
+      'バナーはサイトの色で自動デザイン。画像の用意は不要（画像のアップロードも可）',
+      '設置タグを1行貼るだけ。表示のタイミング・端末・ページ・頻度を設定',
+      '表示数・クリック数・クリック率を日別に計測',
+    ],
+    useCases: [
+      'HubSpotなどを契約せずに、サイトにポップアップを出したい',
+      'ポップアップに何を出せばよいか、AIに考えてほしい',
+      '出したポップアップが押されているか、数字で確かめたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の popupProposals / popupSites。ここを変えたら両方直す
+    pricing: {
+      free: { name: '無料プラン', limit: '提案3回・1サイトまで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '提案は月30回、サイトは何件でも登録できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    status: 'active',
+    // 2026-10-18: 正式公開。当面は NEW ではなく BETA を出す（asklink と同じ扱い）
+    badge: 'BETA',
+    category: 'web',
+    order: 33,
+    requiresAuth: true,
+    isNew: true,
+  },
+
+  // ----------------------------------------
+  // ドヤ展示会（Tenjikai）
+  // 試作: ~/Code/sandbox/doya-tenjikai（設計書 docs/）
+  // ----------------------------------------
+  {
+    id: 'tenjikai',
+    name: 'ドヤ展示会',
+    shortName: '展示会',
+    description: 'サービスのURLと出展条件を入れるだけで、展示会のブース設営案・制作物・ノベルティ・予算・業者選定・締切管理までを一括で準備します。',
+    longDescription:
+      '自社サービスのURLと、展示会名・小間数・予算・出展の目的を入力すると、サイトの内容から訴求点とブランドカラーを読み取り、ブースのレイアウト案を3パターン、背面パネルやチラシなどの制作物のコピー、目的に合ったノベルティ、費用の内訳を用意します。施工・印刷・ノベルティの業者候補と発注に使う仕様書、会期から逆算した締切の一覧もまとめて作るため、初めての出展でも準備の抜け漏れを防げます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0a0f3c]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/tenjikai',
+    dashboardHref: '/tenjikai',
+    // 料金が未確定のため共通の料金ページへ（service-limit-ui は末尾が /pricing のものだけ使う）
+    pricingHref: '/pricing',
+    guideHref: '/tenjikai',
+    features: [
+      'URLからサービスの訴求点とブランドカラーを読み取り',
+      '小間数と目的に合わせたブースのレイアウト案を3パターン',
+      '背面パネル・ロールアップ・チラシなど制作物のコピーとサイズ',
+      '目的と配る数に合わせたノベルティの提案',
+      '小間代から施工・印刷・人件費までの予算シミュレーション',
+      '業者候補の比較と、会期から逆算した締切の一覧',
+    ],
+    useCases: [
+      '初めての展示会出展で、何をいつまでに準備すればよいか分からない',
+      'ブースの施工会社に出す要望をまとめたい',
+      '展示会の予算を社内で説明できる形にしたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の tenjikaiPlans。ここを変えたら両方直す（料金は開発中のため仮）
+    pricing: {
+      free: { name: '無料プラン', limit: 'AIでの作成3回まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: 'AIでの作成は月30回まで', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。UNLISTED_SERVICE_IDS に入れ、/tenjikai は noindex
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'web',
+    order: 34,
+    requiresAuth: true,
+  },
+  // ----------------------------------------
+  // ドヤ社内インタビュー（Shanai）
+  // 仕様: reference/services/shanai.md
+  // ----------------------------------------
+  {
+    id: 'shanai',
+    name: 'ドヤ社内インタビュー',
+    shortName: '社内インタビュー',
+    description: '録音か社員アンケートと写真から、会社の魅力が伝わる社員インタビュー記事とサムネを自動で作成します。',
+    longDescription:
+      '社内インタビューの録音をアップロードするか、社員にアンケートのURLを送るだけで、採用広報や社内報に使える社員インタビュー記事を作成します。会社サイト・サービスサイトのURLを登録しておくと、ミッションや事業、制度などを読み取り、社員の仕事が会社のどこにつながっているかまで記事の中で紹介します。記事は録音・回答・会社サイトから原文つきで抜き出した事実だけをもとに書くため、書いていないことを盛った文章になりません。写真とサムネ入りのWordファイルでダウンロードできます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/shanai',
+    dashboardHref: '/shanai',
+    pricingHref: '/shanai/pricing',
+    guideHref: '/shanai',
+    features: [
+      '録音をアップロードするだけで、文字起こしから記事まで自動で作成',
+      'アンケートは最低文字数とAIの追加質問で、記事にできる材料を集める',
+      '会社サイト・サービスサイトを読み取り、会社ならではの記事に',
+      '原文つきの事実だけで記事を書き、根拠のない段落は警告',
+      '本人の写真で作るサムネ画像（画像生成AIは使いません）',
+      '写真・サムネ入りの Word ファイルでダウンロード',
+    ],
+    useCases: [
+      '採用サイトに社員インタビューを載せたいが、書く人がいない',
+      '社内インタビューの録音が手つかずのまま残っている',
+      '社員にアンケートを書いてもらい、記事にまとめたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の shanaiArticles / shanaiTranscripts。ここを変えたら両方直す
+    pricing: {
+      free: { name: '無料プラン', limit: '記事3本・録音の文字起こし3件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '記事は月30本、録音の文字起こしは月30件まで作成できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'text',
+    order: 35,
+    requiresAuth: true,
+  },
+  {
+    id: 'income',
+    name: 'ドヤ収入管理',
+    shortName: '収入管理',
+    description: '契約を登録すると、毎月の売上予定が自動で作られます。請求書の発行から入金の確認まで、請求漏れと入金の確認漏れに気づけるB2B向けの収入管理ツールです。',
+    longDescription:
+      'B2Bの「契約 → 毎月の売上 → 請求書 → 入金」を、1つの流れで管理します。契約（月額・期間・支払条件）を登録すると、計上月ごとの売上予定が自動で作られます。請求予定日を過ぎても請求書が無い月は、「請求漏れ」として表示されます。月次の一覧から、請求書（適格請求書）をまとめて作成できます。入金を登録すると、金額と振込名義から照合の候補が出ます。支払期日を過ぎた未入金は、「入金遅延」として一覧に出ます。ドヤプロマネの経費・人件費と合わせて、月ごとの粗利も確認できます。仕訳や確定申告は会計ソフトで行う前提の、シンプルな管理ツールです。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/income',
+    dashboardHref: '/income',
+    pricingHref: '/income/pricing',
+    guideHref: '/income',
+    features: [
+      '契約を登録すると、毎月の売上予定を自動で作成',
+      '請求予定日を過ぎても請求書が無い月を「請求漏れ」として表示',
+      '月次の一覧から、取引先ごとに請求書をまとめて作成（適格請求書・税率ごとの内訳）',
+      '入金を登録すると、金額と振込名義から照合の候補を表示',
+      '支払期日を過ぎた未入金を「入金遅延」として一覧に表示',
+      'ドヤプロマネの経費・人件費と合わせて月ごとの粗利を表示',
+    ],
+    useCases: [
+      '月額契約の請求書を出し忘れることがある',
+      '振り込まれたかどうかを、毎月通帳と見比べて確かめている',
+      '会計ソフトほど細かくなくていいので、売上と入金を大まかに把握したい',
+    ],
+    // 開発中は上限なし（設計書 docs/design/2026-10-18-doya-income §12 Q6）
+    pricing: {
+      free: { name: '無料プラン', limit: '開発中のため上限なし', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '開発中のため上限なしでお使いいただけます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'other',
+    order: 36,
+    requiresAuth: true,
+  },
+  // ----------------------------------------
+  // ドヤ支出管理（Expense）
+  // 設計: docs/design/2026-10-18-doya-expense/README.md
+  // ----------------------------------------
+  {
+    id: 'expense',
+    name: 'ドヤ支出管理',
+    shortName: '支出管理',
+    description: '契約ごとに支払いを登録すると、毎月の出金と12か月先までの予定が分かります。',
+    longDescription:
+      'SaaS・業務委託・家賃などの契約を登録すると、口座からお金が出る日と金額が12か月先まで並びます。年払いや半年払いの契約も、支払う月に予定が入ります。カードで払う契約は、締め日と引落日から出金日を計算します。業務委託は、人ごとに請求書の受け取りから支払いまでの状態を記録できます。源泉所得税の納付予定も、報酬の支払いから自動で計算します。ドヤ収入管理と合わせて使うと、毎月の粗利と口座残高の見込みが分かります。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'cyan',
+    gradient: 'from-cyan-600 to-teal-800',
+    bgGradient: 'from-cyan-50 to-teal-50',
+    href: '/expense',
+    dashboardHref: '/expense',
+    pricingHref: '/expense/pricing',
+    guideHref: '/expense',
+    features: [
+      'SaaS・業務委託・家賃などの契約を登録できます',
+      '12か月先までの出金予定を自動で作ります',
+      'カードの締め日と引落日から出金日を計算します',
+      '業務委託の請求書と支払いの状態を人ごとに記録できます',
+      '源泉所得税の納付予定を自動で計算します',
+    ],
+    useCases: [
+      '毎月の支出の合計をすぐに確認したい',
+      '業務委託の請求書の受け取り漏れと支払い漏れをなくしたい',
+      '年払いと半年払いが重なる月を前もって知りたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '開発中のため制限なし', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '開発中のため制限なし', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'other',
+    order: 37,
     requiresAuth: true,
   },
 ]
@@ -1724,7 +1962,24 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['asklink']) // 2026-09-07: 全17サービスLP公開 / 2026-10-08: asklink は開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>(['tenjikai', 'shanai', 'income', 'expense']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開。tenjikai は開発中
+
+// 開発中のベータ版として、一旦すべての一覧から外すサービスID（Service.hidden === 'beta' から作る）。
+// UNLISTED と違い、ログイン後のメニュー・⌘K・最近使ったツールからも外す。画面と API は許可した人だけが使える。
+// ⚠️ 切り替えは SERVICES の hidden の1か所だけ。ここに id をベタ書きしない。
+export const BETA_HIDDEN_SERVICE_IDS: ReadonlySet<string> = new Set(
+  SERVICES.filter((s) => s.hidden === 'beta').map((s) => s.id),
+)
+
+export function isBetaHiddenService(serviceId: string): boolean {
+  return BETA_HIDDEN_SERVICE_IDS.has(serviceId)
+}
+
+/** パス（/cunning/history など）が、ベータで隠しているツールの下か */
+export function isBetaHiddenPath(pathname: string): boolean {
+  const p = (pathname || '').split(/[?#]/)[0]
+  return SERVICES.some((s) => s.hidden === 'beta' && (p === s.href || p.startsWith(`${s.href}/`)))
+}
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
@@ -1733,6 +1988,7 @@ export const UNLISTED_SERVICE_IDS = new Set<string>(['asklink']) // 2026-09-07: 
 export const HIDDEN_SERVICE_IDS = new Set([
   ...Array.from(RETIRED_SERVICE_IDS),
   ...Array.from(UNLISTED_SERVICE_IDS),
+  ...Array.from(BETA_HIDDEN_SERVICE_IDS),
 ])
 
 // アクティブなサービスのみ取得（提供終了は常に除外）。
@@ -1740,6 +1996,14 @@ export const HIDDEN_SERVICE_IDS = new Set([
 //    サイドバーの他サービス一覧など「使う人向け」の導線はこちらを使う。
 //    対外的な一覧（トップ・sitemap・公開LP）は getPublicServices() を使うこと。
 export function getActiveServices(): Service[] {
+  // 開発中のベータ版（hidden: 'beta'）は、ログイン後の一覧からも外す
+  return getRunningServices().filter(s => !BETA_HIDDEN_SERVICE_IDS.has(s.id))
+}
+
+// 動いているサービス（提供終了を除く）。開発中のベータ版（hidden: 'beta'）も含む。
+// ⚠️ 一覧には使わない。ツールの画面かどうかの判定（ポップアップを出さない・計測でツールとして数える）だけに使う。
+//    ベータ版も、許可した人が開いたときはツールの画面として扱うため。
+export function getRunningServices(): Service[] {
   return SERVICES
     .filter(s => !RETIRED_SERVICE_IDS.has(s.id))
     // ⚠️ 開発中（UNLISTED_SERVICE_IDS）は status が 'coming_soon' でも**残す**。
@@ -1755,6 +2019,19 @@ export function getPublicServices(): Service[] {
   return SERVICES
     .filter(s => s.status === 'active' && !HIDDEN_SERVICE_IDS.has(s.id))
     .sort((a, b) => a.order - b.order)
+}
+
+// 外に向けて「いくつのAIツールがあるか」を言うときの一覧と数。
+// LP・トップ・料金ページの「○○のAIツール」「全○○ツール」は、必ずこの関数から出す（数字を直書きしない）。
+// 公開中（status が active か beta）で、提供終了・開発中・ベータで隠したもの（HIDDEN_SERVICE_IDS）を除く。
+export function getListedServices(): Service[] {
+  return SERVICES
+    .filter(s => (s.status === 'active' || s.status === 'beta') && !HIDDEN_SERVICE_IDS.has(s.id))
+    .sort((a, b) => a.order - b.order)
+}
+
+export function getListedServiceCount(): number {
+  return getListedServices().length
 }
 
 // 全サービス（近日公開含む）をorder順で取得

@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -19,17 +20,17 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     let body: unknown
     try { body = await req.json() } catch {
-      return NextResponse.json({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
+      return privateApiJson({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
     }
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return privateApiJson({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
     const { token } = body as { token?: unknown }
     if (typeof token !== 'string' || !token.trim() || token.length > 256) {
-      return NextResponse.json({ error: '有効な招待トークンが必要です', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
+      return privateApiJson({ error: '有効な招待トークンが必要です', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
     }
 
     // 招待トークンを検索
@@ -41,17 +42,17 @@ export async function POST(req: NextRequest) {
     })
 
     if (!invitation) {
-      return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+      return privateApiJson({ error: '招待が見つかりません' }, { status: 404 })
     }
 
     const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
     const accountEmail = account?.email?.trim().toLowerCase()
     if (!accountEmail || accountEmail !== invitation.email.trim().toLowerCase()) {
-      return NextResponse.json({ error: '招待先のメールアドレスでログインしてください', code: 'INVITE_EMAIL_MISMATCH' }, { status: 403 })
+      return privateApiJson({ error: '招待先のメールアドレスでログインしてください', code: 'INVITE_EMAIL_MISMATCH' }, { status: 403 })
     }
 
     if (invitation.role !== 'MEMBER') {
-      return NextResponse.json({ error: 'この招待の権限を確認できません。管理者に再招待を依頼してください' }, { status: 403 })
+      return privateApiJson({ error: 'この招待の権限を確認できません。管理者に再招待を依頼してください' }, { status: 403 })
     }
 
     if (invitation.status === 'EXPIRED' || (invitation.status === 'PENDING' && invitation.expiresAt.getTime() <= Date.now())) {
@@ -61,10 +62,10 @@ export async function POST(req: NextRequest) {
           data: { status: 'EXPIRED' },
         })
       }
-      return NextResponse.json({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
+      return privateApiJson({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
     }
     if (invitation.status !== 'PENDING') {
-      return NextResponse.json({ error: 'この招待は既に使用済み、またはキャンセルされています', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
+      return privateApiJson({ error: 'この招待は既に使用済み、またはキャンセルされています', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
     }
 
     // 既にこの組織のメンバーか確認
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       },
     })
     if (existingMember) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: '既にこの組織のメンバーです' },
         { status: 400 }
       )
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       return { allowed: true as const, member }
     })
     if (!admission.allowed) {
-      return NextResponse.json({
+      return privateApiJson({
         error: `メンバー数の上限（${admission.limit}名）に達しています。組織の管理者にプラン変更を依頼してください。`,
         code: 'HR_ORG_MEMBER_LIMIT',
       }, { status: 403 })
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
       },
     }).catch(() => {})
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       organization: {
         id: invitation.organization.id,
@@ -156,16 +157,16 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     if (e instanceof InviteExpiredError) {
-      return NextResponse.json({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
+      return privateApiJson({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
     }
     if (e instanceof InviteNoLongerAvailableError) {
-      return NextResponse.json({ error: 'この招待は使用済み、キャンセル済み、または確認できません。招待の状態を再確認してください。', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
+      return privateApiJson({ error: 'この招待は使用済み、キャンセル済み、または確認できません。招待の状態を再確認してください。', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
     }
     if (e?.code === 'P2002') {
-      return NextResponse.json({ error: '既にこの組織のメンバーです' }, { status: 409 })
+      return privateApiJson({ error: '既にこの組織のメンバーです' }, { status: 409 })
     }
     console.error('[hr/organization/invite/accept]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '招待を受諾できませんでした' },
       { status: 500 }
     )

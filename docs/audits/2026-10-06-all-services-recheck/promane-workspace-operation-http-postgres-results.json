@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-08T01:17:11.079Z",
+  "expected": 16,
+  "passed": 16,
+  "cases": [
+    "HTTP create complete acknowledgement includes durable outcome and original workspace",
+    "HTTP create retry and recovery do not repeat usage or create",
+    "HTTP FREE cap is actionable and successful final slot replay remains success",
+    "all endpoints require a valid authenticated actor before parsing or writing",
+    "wrong authenticated account cannot accept old actor intent",
+    "malformed JSON and input return typed 400 without writes",
+    "read missing and explicit cancellation are never success acknowledgements",
+    "partial failures after commit can recover instead of repeating business work",
+    "PATCH complete outcome advances revision and preserves canonical ID",
+    "PATCH stale revision reports 409 terminal rejection without overwriting",
+    "PATCH invalid revision name and slug return 400",
+    "PATCH slug collision reports actionable terminal 409",
+    "PATCH and recovery reject foreign and revoked managers",
+    "HTTP superseded recovery returns latest revision and slug",
+    "deleted committed target returns unavailable without data or success",
+    "unknown database error returns safe 500 and rolls back workspace membership"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/workspace-operation.ts": "19ff4b3dcf0167d8841e7ede41b32c370667a32d5e2dc002eb9bf196b433cb92",
+    "./src/lib/promane/workspace-input.ts": "459cb71604c1a6a6c3255fe3bb5e073cef8f66d582cd906762a2f1c6bd0b6343",
+    "./src/lib/promane/workspace-mutations.ts": "db9a72a3698ae597a149a22445f1a30c52db39c5860bacf2f60cb746636c2b25",
+    "./src/lib/promane/workspace-response.ts": "dd9cd41c35f05c1df06cb334b07063eccedbbf69d8c8e4b8959695cd7fe117fc",
+    "./src/app/api/promane/workspaces/create/route.ts": "6d3c296779b58355a32f4847cf42b660cfe6f1da2a5800c641d319eedb1a2d9f",
+    "./src/app/api/promane/workspaces/[id]/route.ts": "bc89e7513d57f2a07b994e6d6aa3169fdfbfa9c35805f1efc7452f7c2e99efec",
+    "./src/app/api/promane/workspaces/recover/route.ts": "e96780a650ce5ec7cd34faa23d86abdabdf3c6c2a135d743c2f67f7917238876",
+    "src/lib/promane/limits.ts": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+  },
+  "scope": "Actual candidate HTTP wrappers/response/mutations/helper/input with real isolated PostgreSQL and root limits/plan normalization. Synthetic authenticated sessions and usage telemetry. Native Next transport, UI and production writes not covered."
+}

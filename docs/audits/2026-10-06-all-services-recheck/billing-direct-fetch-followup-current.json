@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-06T16:02:18.412604+00:00",
+  "calls": [
+    {
+      "file": "src/app/tenkai/pricing/page.tsx",
+      "line": 144,
+      "source": "const res = await fetch('/api/stripe/checkout', {"
+    },
+    {
+      "file": "src/components/interviewx/InterviewXSidebar.tsx",
+      "line": 92,
+      "source": "const res = await fetch('/api/stripe/checkout', {"
+    },
+    {
+      "file": "src/components/tenkai/PricingTable.tsx",
+      "line": 143,
+      "source": "const res = await fetch('/api/stripe/checkout', {"
+    },
+    {
+      "file": "src/lib/trial-eligibility-client.ts",
+      "line": 19,
+      "source": "const response = await fetch('/api/stripe/trial-eligibility', { cache: 'no-store', signal: controller.signal })"
+    }
+  ],
+  "scope": "Source-only inventory; existing bounded trial fetch is not automatically a defect. Dynamic billing reader and confirmed management flow are covered separately."
+}

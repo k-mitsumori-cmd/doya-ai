@@ -1,0 +1,335 @@
+{
+  "checkedAt": "2026-10-07T06:05:17.892817+00:00",
+  "goalStatus": "active-not-complete",
+  "scope": "17 services /2074 criteria",
+  "scoreRelease": {
+    "commit": "1574f271a669a520aa6a678ecd5c8b1d3afc4f02",
+    "ciRun": 37574824146,
+    "ciWatchSession": 14072,
+    "ciWatchLog": "/tmp/doya-score-ci-watch.log",
+    "deployment": "dpl_CfyuSWWKKV6W8Jng7ndVFd65ucud",
+    "url": "doya-11ivh20fz-surisutas-projects.vercel.app",
+    "lastObservedState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven",
+    "gate": "sfa-score-release-312b4083-10ab-4a8b-8d1c-7930c5667c68",
+    "gateStatus": "passed-build-security-types-lint-no-source-change-at-commit-push",
+    "ci": "success"
+  },
+  "localNextAction": {
+    "source": [
+      "src/lib/sfa/ai.ts",
+      "scripts/security-regression/run.cjs",
+      "scripts/security-regression/verify-sfa-next-action-result.cjs"
+    ],
+    "implemented": "Durable receipt/reservation/result protocol, fresh actor, scoped client recovery, strict model output and score/next-action legacy name guard.",
+    "tests": "model32/API24/client21/privatePostgreSQL10; shared49/deal13 and scoreAPI24/client21/PG10 regressions; all private PG servers stopped0",
+    "notCommitted": false,
+    "notDeployed": false,
+    "stillRequired": "Authenticated private flow and all other service criteria",
+    "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-next-action-release-e4727c52-6f52-44d9-bb78-776e0606d8f6",
+    "gateSession": 55896,
+    "releaseCommit": "f09ef81ca5f643018015e2e3c265dd48d4c7807b",
+    "ciRun": 37576609179,
+    "ciWatchSession": 30659,
+    "deployment": "dpl_2LDAhdvReThR9zQHeWJfxGPXyRvo",
+    "url": "doya-r3x0b38fk-surisutas-projects.vercel.app",
+    "gateStatus": "passed2697-no-source-change-at-commit-push",
+    "ci": "success",
+    "deploymentState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven"
+  },
+  "next": [
+    "Commit/push current validated DoyaSlide recovery repair; exact CI/READY/public verification",
+    "Continue all17services2074criteria;1859 exactpending and all partial rows incomplete"
+  ],
+  "boundaries": [
+    "No customer DB/migrations/emails/invites/paid providers",
+    "No subagents",
+    "Preserve unrelated dirty docs",
+    "No goal completion until whole scope proved"
+  ],
+  "followingCohort": {
+    "scope": "SFA accounts/contacts CRUD and client recovery",
+    "findings": 5,
+    "evidence": "sfa-account-contact-lifecycle-baseline.json",
+    "status": "released; see currentCrmRelease evidence",
+    "notes": "Same operationId duplicate rows, stale actor write, contact relation inactive race reproduced with actual handlers and synthetic DB schedules.",
+    "helper": "src/lib/sfa/crm-record-mutation.ts",
+    "helperCases": 27,
+    "clientFindings": 6,
+    "clientEvidence": "sfa-crm-client-baseline.json",
+    "localSourceChanges": [
+      "src/lib/sfa/crm-record-mutation.ts",
+      "src/lib/sfa/creation-receipt.ts",
+      "scripts/security-regression/verify-sfa-crm-record-mutation.cjs"
+    ],
+    "fullSecuritySession": null,
+    "fullSecurityLog": "current frozen gate build.log; previous /tmp/doya-crm-full-security-retry.log is prior source only",
+    "priorFullSecurity": "88398 terminal0 before client/UI edits; not evidence for current frozen source",
+    "mountedCases": 51,
+    "postgresCases": 19,
+    "postgresStopped": 0,
+    "gateSession": null,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c",
+    "remaining": "Authenticated private flow and remaining service criteria",
+    "releaseAllowlist": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-file-list.json",
+    "lastObservedGate": "terminal passed; obsolete running-session pointer removed"
+  },
+  "updatedAt": "2026-10-07T08:13:21.555481+00:00",
+  "currentCrmRelease": {
+    "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
+    "mainPush": "succeeded",
+    "ciRun": 37580253174,
+    "ciStatus": "success",
+    "deploymentUrl": "doya-cv4swlc9b-surisutas-projects.vercel.app",
+    "deploymentId": "dpl_8TJJu7WBukXhBzSjwpstSKbcT2y2",
+    "deploymentStatus": "READY",
+    "localGate": "passed",
+    "anonymousCheck": "17 entries49assets and private401passed"
+  },
+  "currentExportRepair": {
+    "commit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb",
+    "push": "succeeded",
+    "ciRun": 37581509278,
+    "ciStatus": "success",
+    "deploymentUrl": "doya-ejb8xki3v-surisutas-projects.vercel.app",
+    "deploymentStatus": "READY",
+    "fullGate": "passed",
+    "privatePostgres": "3 cases with verified result timestamp/source hashes and500row batch; stopExitCode0",
+    "publicVerification": "pending",
+    "deploymentId": "dpl_5N4h3Xs1DRYPy1m8BZULSPJKht2Q"
+  },
+  "scopeCounts": {
+    "services": 17,
+    "criteria": 2074,
+    "itemByItemUnverified": 1859,
+    "countMeaning": "Exact pending-status rows only; partial-evidence rows also require remaining verification, not complete"
+  },
+  "nextRepair": {
+    "status": "refine full gate passed; release prepared; chat operation baseline confirmed",
+    "productionCommit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb"
+  },
+  "currentBannerClientRepair": {
+    "scope": "chat shared lane, drafts, actor lifecycle and refine failure guidance",
+    "mountedCases": 13,
+    "callbacksCases": 24,
+    "generationCases": 6,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/banner-chat-release-ed07d06b-2b6b-425a-8d3d-9bd0f54b8787",
+    "session": 88228,
+    "sourceState": "d8350a05 client-only checkpoint committed, not pushed; integrated create/chat/recovery sources uncommitted",
+    "firstGate": "failed due missing AST fixture bindings; corrected preserving assertions",
+    "localCommit": "d8350a05",
+    "fullGate": "passed",
+    "push": "not performed; integrated server/API/UX release pending"
+  },
+  "currentBannerOperationRepair": {
+    "source": [
+      "src/lib/banner/refine-operation.ts",
+      "src/lib/banner/refine-input.ts",
+      "src/app/api/banner/refine/route.ts"
+    ],
+    "privatePostgres": "24 cases passed with current6source hashes, evidenceValid true, stopExitCode0",
+    "inputCases": "9 groups actual sharp/stream/abort validation passed",
+    "targetedRegression": "model5, error boundary7, private cron errors, callbacks24, mounted chat13 passed",
+    "typecheck": "terminal0 current source",
+    "eslint": "terminal0 API/input/helper",
+    "state": "committed and pushed; CI/deployment in progress, not yet READY/public verified",
+    "remainingPlan": "banner-refine-operation-repair-plan.json",
+    "mounted": "actual chat13/create7/recovery12 passed; synthetic API/decode-events/locks",
+    "fullGate": {
+      "folder": "docs/audits/2026-10-06-all-services-recheck/banner-refine-release-283f98a9-4d1a-4606-913a-8664592dd84a",
+      "session": 7877,
+      "status": "passed",
+      "sourceFiles": 2716,
+      "changedSources": []
+    },
+    "nativeBrowser": "5 current-source native helper checks passed; authenticated production unverified",
+    "commit": "d2888f6f49940faf2e28f0ed84d00b5d043d6831",
+    "push": "succeeded",
+    "ciRun": 37586923514,
+    "ciWatchSession": 72926,
+    "deploymentUrl": "doya-jzl8g1beo-surisutas-projects.vercel.app",
+    "deploymentState": "READY",
+    "deploymentId": "dpl_EYLCF5L4Ewr1DccLW1F8aq7GPVZS",
+    "ciStatus": "success",
+    "publicVerification": "17 service entries29assets/create+chat recovery bundle and anonymous private401 passed; authenticated provider flow unverified"
+  },
+  "followingBannerChatRepair": {
+    "evidence": "banner-chat-operation-current-baseline.json",
+    "status": "released-anonymous-public-verified",
+    "findings": [
+      "Same UUID two POSTs =>two admissions/two provider calls",
+      "Network uncertainty =>three model attempts for one admitted call",
+      "503=>six provider invocations for one admitted budget unit"
+    ],
+    "progress": {
+      "privatePostgresCases": 23,
+      "mountedChatCases": 13,
+      "mountedRecoveryCases": 12,
+      "bodyCases": 6,
+      "providerHelperCases": 14,
+      "actualRouteProviderCases": 8,
+      "typecheck": "exit0",
+      "eslint": "0errors5imagewarnings",
+      "gate": "docs/audits/2026-10-06-all-services-recheck/banner-text-operation-release-fa7e32e9-aba7-492d-93d2-e0a50abc7a74",
+      "session": null,
+      "remaining": [
+        "Full frozen security/build/lint gate",
+        "Review and release allowlist; commit/push/CI/READY/public verification",
+        "Remaining services/2074criteria and authenticated live flows"
+      ],
+      "firstGate": "failed: AST callback fixture lacked new textRecovery dependency; fixed fixture preserving24 cases; current full gate running",
+      "resultValidationCases": 14,
+      "invalidAnswer": "reproduced permanent pending; repaired definite output rejection to failed before save; synthetic actual helper14+PG23 passed",
+      "fullGate": "passed2728files-no-source-change"
+    },
+    "commit": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+    "push": "succeeded",
+    "ciRun": 37590060910,
+    "ciWatchSession": null,
+    "ciStatus": "success",
+    "deployment": "dpl_GE25vzuT7nvtqBaqGPKefRAUYBp7",
+    "deploymentUrl": "doya-4umrm5i0t-surisutas-projects.vercel.app",
+    "deploymentState": "READY",
+    "publicVerification": "17 public entries27assets, chat recovery markers and unauthenticated chat/copy401 private/no-store/Cookie verified; authenticated live flow unproven"
+  },
+  "catalogCheck": {
+    "sourceServices": 17,
+    "retiredExcluded": 14,
+    "publicEntryConsistency": "home/sitemap/llms17 matched",
+    "evidence": "service-catalog-current.json",
+    "matrix": "17 C001 rows partial only"
+  },
+  "followingBannerTextApplyRepair": {
+    "status": "local-repaired-full-gate-passed-not-released",
+    "baseline": "banner-text-apply-baseline.json",
+    "baselineCases": 4,
+    "actualMountedCases": 5,
+    "regressionResults": "banner-text-apply-results.json",
+    "otherChecks": "chat13/hook12/callbacks24/typecheck passed",
+    "gate": "banner-text-apply-release-85705241-6d1c-4e38-9c82-8603f891a216",
+    "session": null,
+    "findings": [
+      "same-render double application duplicates reply",
+      "storage failure changed conversation before acknowledgement",
+      "auth refresh retained callback applies stale reply",
+      "replaced cross-tab intent still permitted stale reply"
+    ],
+    "repair": "acknowledge validates current actor/lifecycle and stored UUID, returns consumption result; apply and immediate success update conversation only after consumption succeeds",
+    "gateStatus": "passed2729files-no-source-change"
+  },
+  "retiredEntryCheck": {
+    "retiredServiceIds": 14,
+    "routeFiles": 111,
+    "httpHandlers": 147,
+    "unclassifiedPrefixes": 0,
+    "scope": "Actual constants and AST-extracted guard prefix; no deployed API/module-init proof",
+    "evidence": "retired-route-entry-current.json"
+  },
+  "bannerOperationLeaseRepair": {
+    "status": "full-gate-passed-not-yet-committed",
+    "criterion": "Banner C065 (partial: chat/copy/refine only)",
+    "baseline": "banner-text-stale-pending-baseline.json",
+    "repair": "15minute pending lease exceeds route maxDuration300; recovery/admission/save fence closes operation; text remains counted once, refinement refunds only locked unmatched-result reservation in its original period; completed results immutable",
+    "tests": "21 deterministic boundary/rollback; textPG37/refinePG32 current hashes and stop0; mountedText13 including expired clear/new UUID; mountedApply5",
+    "remaining": [
+      "Mounted expired recovery/new-operation workflow",
+      "Frozen full build/security/lint",
+      "Commit/push CI READY public check",
+      "All17services2074criteria including other C065paths"
+    ],
+    "gate": "banner-operation-lease-release-35bfa718-8c54-41b6-9752-445221e54f92",
+    "session": null,
+    "fullGate": {
+      "startedAt": "2026-10-07T08:11:55.171907+00:00",
+      "pid": 72784,
+      "head": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+      "sourceFiles": 2730,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T08:16:51.824347+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T08:16:53.812979+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T08:16:54.270610+00:00"
+    }
+  },
+  "nextDoyaSlideRecoveryRepair": {
+    "status": "all-local-gates-passed; commit-and-release-next; not-released",
+    "evidence": "doyaslide-stale-reservation-baseline.json",
+    "finding": "Stale process reserved full free20 images but0completed; resume checks quota before stale reclamation, returns403twice with0provider/0writes; no durable per-operation reservation ownership exists",
+    "requirement": "Atomic durable reservation with owned outstanding balance and result settlement; expiry fences late workers and releases only failed/unstarted matching-period amounts once. Never guess-refund existing aggregate usage. Include batch/regenerate/chat flows and deletion/actor/month reset/concurrent quota tests.",
+    "next": "Collect current frozen gate then review allowlisted changes for commit/push and exact CI/READY/public verification",
+    "additionalFinding": "Actual single-slide regenerate/chat routes both return409generating after30minutes with completed project; no expiry recovery in either path.",
+    "source": "src/lib/doyaslide/generation-operation.ts",
+    "privatePostgresCases": 55,
+    "privatePostgresEvidence": "doyaslide-operation-postgres-results.json",
+    "privatePostgresStopExitCode": 0,
+    "sourceChecks": "PrivatePG55, full security suite, tsc, production Next build, lint all terminal0; unchanged2745source manifest.",
+    "remaining": [
+      "Collect current frozen gate: privatePostgres55/security/type/build/lint and unchanged2745source hashes",
+      "Review explicit allowlist then commit/push; verify Linux CI, Vercel READY, exact deployment public assets and anonymous endpoints",
+      "Authenticated production verification and real provider/process-kill remain separate; no paid provider/customer DB action authorized",
+      "Legacy untracked generating rows require explicit reconciliation/support; never guess aggregate refunds",
+      "Continue all17services2074criteria, including1859exactpending rows and all partial rows"
+    ],
+    "sources": [
+      "src/lib/doyaslide/generation-operation.ts",
+      "src/lib/doyaslide/generation-worker.ts",
+      "src/app/api/doyaslide/operations/route.ts"
+    ],
+    "actualRecoveryApiEvidence": "Private PostgreSQL55cases and11current source hashes; includes actual unified/legacy routes, delayed rejection fencing, owned refunds and revert→regeneration.",
+    "productionBugResolved": false,
+    "ciRegression": "Worker5 orchestration groups, actual React hook11/fullpage7, handlers46; private PostgreSQL55 registered in CI; Linux execution pending.",
+    "securityRun": {
+      "sessionId": 22106,
+      "log": "doyaslide-operation-editor-security.log",
+      "status": "terminal0; source edits occurred during run, and reset-token fix afterwards; no frozen-gate claim"
+    },
+    "priorSecurityRun": {
+      "sessionId": 4209,
+      "status": "terminal0; predates full editor changes"
+    },
+    "mountedEvidence": {
+      "hookAndPanel": "doyaslide-operation-recovery-mounted-results.json",
+      "hookCases": 11,
+      "fullEditor": "doyaslide-operation-editor-mounted-results.json",
+      "fullEditorCases": 7,
+      "handlerCases": "mutation16/read-generation15/structure-logo-export15 with actual response reader and explicit hook fixture boundary"
+    },
+    "apiCoverage": "Actual batch/regenerate/chat legacy bindings and unified POST/GET/DELETE share actor/project/kind/UUID receipt. Missing-UUID old requests reject with reload guidance and zero provider/quota writes.",
+    "ciCoverage": "Private PostgreSQL55case probe registered in .github/workflows/ci.yml; portable initdb discovery prepared. Local macOS passed; Linux GitHub runner not yet exercised.",
+    "nativeBrowser": {
+      "status": "passed",
+      "evidence": "doyaslide-operation-native-results.json",
+      "cases": 5,
+      "visualCheck": "Latest desktop and390px mobile screenshots inspected; header actions and completion badge fit after responsive repair. Synthetic slide index0 is a fixture, not actual production data.",
+      "scope": "Actual editor/hook/storage/readers, native Chrome WebLocks/localStorage/HTTP; synthetic backend/provider only."
+    },
+    "frozenGate": {
+      "path": "docs/audits/2026-10-06-all-services-recheck/doyaslide-operation-release-704ddac9-122f-4eb3-afcd-3a7d617d3447",
+      "status": "passed",
+      "evidence": "state.json",
+      "sourceFiles": 2745,
+      "changedSources": []
+    }
+  },
+  "doyaslideRecoveryTurnClassification": {
+    "classification": "progress",
+    "checkedAt": "2026-10-07T09:19:32.914608+00:00",
+    "evidence": [
+      "doyaslide-operation-native-results.json",
+      "doyaslide-operation-native-mobile.png",
+      "doyaslide-operation-postgres-results.json"
+    ],
+    "note": "NativeChrome5 and current frozen gate passed; staged explicit DoyaSlide allowlist only. Goal remains active."
+  }
+}

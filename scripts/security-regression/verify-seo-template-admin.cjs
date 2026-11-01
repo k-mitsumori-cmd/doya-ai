@@ -24,7 +24,7 @@ const denied = new Response(JSON.stringify({ error: '管理者認証が必要で
       'next/server': { NextResponse: Response },
       '@/lib/admin-guard': { requireAdmin },
       '@/lib/nanobanner': { generateBanners, isNanobannerConfigured: () => true },
-      '@/app/seo/template/data': { articleTemplates: [] },
+      '@/app/(shell)/seo/template/data': { articleTemplates: [] },
     })
     const request = { json: async () => { sideEffects++; throw Error('must not read request') } }
     for (const response of [

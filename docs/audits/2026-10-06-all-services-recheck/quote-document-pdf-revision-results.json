@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T19:33:02.445Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    "current displayed revision assembles matching PDF without writing revision record",
+    "missing displayed revision fails before rendering",
+    "invalid displayed revision fails before rendering",
+    "duplicate displayed revision fails before rendering",
+    "stale document revision fails instead of rendering unreviewed edits",
+    "stale external line change invalidates reviewed PDF",
+    "corrupt revision record fails closed without rendering",
+    "foreign document cannot be rendered",
+    "anonymous caller receives401 without revision or render",
+    "issuer remains optional for current reviewed document",
+    "renderer failure returns500 instead of a successful PDF",
+    "current version after saved edit renders updated content exactly once"
+  ],
+  "sourceHashes": {
+    "src/app/api/quote/documents/[id]/pdf/route.ts": "4943f4b0889086b167c7f72c94ad9997ae7b0f9431476125b42e4aa6bee34484",
+    "src/app/api/quote/documents/[id]/route.ts": "5108068aa5d4c5d1821d3930945b20700ebd7dd31ed0beeb660c32dfdd4705e6",
+    "src/lib/quote/document-revision.ts": "ae93932b9e8ab71853ad834f4bfcf161e46d5acf01ae2b2864d480e6d57bdbbc",
+    "src/lib/quote/document.ts": "a9aa22403aaf0b96bf4b5af8d1bae7255f08d8ca73d15c2f01ac13deb6e3e9e9",
+    "src/lib/quote/money.ts": "fa7063d9f7200ad03be960c8dd99de75b2c542fac6674d8ab6305c975da95fcf"
+  },
+  "scope": "Actual PDF GET data assembly and revision guard, actual document GET/PATCH with Prisma and isolated Unix-socket PostgreSQL. Synthetic identity and PDF renderer capturing exact inputs only. No real PDF engine, browser, paid providers, customer or production writes."
+}

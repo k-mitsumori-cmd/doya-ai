@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T03:56:56.693Z",
+  "passed": 12,
+  "cases": [
+    "12 actual concurrent same-operation conversions return exactly one account/contact/deal pair and receipt",
+    "Different-operation simultaneous conversion of same lead commits only one pair",
+    "Actual membership revocation lock wait rejects conversion with no business writes",
+    "Source change after initial Serializable snapshot retries then rejects reviewed stale version",
+    "Legacy unversioned conversion uses fresh source after real Serializable conflict retry",
+    "Committed receipt cancellation fences late original conversion",
+    "Cancellation after initial Serializable snapshot still fences delayed conversion",
+    "Cancellation waits behind in-flight conversion receipt and returns committed exact pair",
+    "Concurrent last-slot conversions admit one pair, preserve rejected source and avoid orphan receipt",
+    "Actual receipt constraint failure rolls back lead claim and account/contact/deal creation together",
+    "Actual conversion persists matching won default stage/status/timestamp",
+    "Unavailable exact conversion receipt never resurrects deleted deal"
+  ],
+  "lockWaitObservations": [
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/leads/[id]/convert/route.ts": "061ada7ae29b919ff17c3f92863e8b5c55b3010732b3f10c43ee73e66799103c",
+    "src/lib/sfa/lead-conversion.ts": "588b0ff9ae95cc20ec96b6abdacc0250fc232693fb998e1d43c8be1e4fae34d4",
+    "src/lib/sfa/creation-receipt.ts": "7c66784078e0dd73e9a55f6b4294325204f29e5add8db8bbbaad8734f501a2b3",
+    "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
+  },
+  "scope": "Actual conversion handlers/helpers/generated Prisma and private Unix-socket-only PostgreSQL17 synthetic schema/data. Real Serializable conflicts, receipt/authority row-lock waits and commits; not production schema/FK coverage or private production browser."
+}

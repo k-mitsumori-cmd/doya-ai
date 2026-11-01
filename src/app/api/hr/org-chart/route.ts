@@ -1,8 +1,9 @@
+import { readHrOrgChartPage, HrOrgChartPageError } from '@/lib/hr/org-chart-pagination'
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { OrgChartNode } from '@/lib/hr/types'
@@ -34,11 +35,21 @@ function buildOrgTree(
     }))
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+    }
+
+    if (req) {
+      const params = new URL(req.url).searchParams
+      if (params.get('format') === 'pages') {
+        if (params.getAll('format').length !== 1 || params.getAll('cursor').length > 1) {
+          return privateApiJson({ error: '組織図の取得条件が正しくありません', code: 'INVALID_ORG_CHART_CURSOR' }, { status: 400 })
+        }
+        return privateApiJson(await readHrOrgChartPage(prisma, ctx, params.get('cursor')))
+      }
     }
 
     const [org, departments, employees] = await Promise.all([
@@ -69,17 +80,22 @@ export async function GET() {
       }),
     ])
 
+    // An inactive parent must not hide an otherwise active child department.
+    const activeDepartmentIds = new Set(departments.map(d => d.id))
+    const visibleDepartments = departments.map(d => ({
+      ...d, parentId: d.parentId && activeDepartmentIds.has(d.parentId) ? d.parentId : null,
+    }))
     const employeesByDept = new Map<string, any[]>()
     for (const emp of employees) {
-      const key = emp.departmentId || '__unassigned__'
+      const key = emp.departmentId && activeDepartmentIds.has(emp.departmentId) ? emp.departmentId : '__unassigned__'
       if (!employeesByDept.has(key)) employeesByDept.set(key, [])
       employeesByDept.get(key)!.push(emp)
     }
 
-    const tree = buildOrgTree(departments, employeesByDept)
+    const tree = buildOrgTree(visibleDepartments, employeesByDept)
     const unassigned = employeesByDept.get('__unassigned__') || []
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       orgName: org?.name || '',
       orgChart: tree,
@@ -93,9 +109,10 @@ export async function GET() {
       })),
     })
   } catch (e: any) {
+    if (e instanceof HrOrgChartPageError) return privateApiJson({ error: e.status === 409 ? '組織図が更新されました。再取得してください' : e.status === 401 ? 'ログイン状態を確認してください' : '組織図の取得条件が正しくありません', code: e.code }, { status: e.status })
     console.error('[hr/org-chart] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to fetch org chart' },
+    return privateApiJson(
+      { error: '組織図を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
   }

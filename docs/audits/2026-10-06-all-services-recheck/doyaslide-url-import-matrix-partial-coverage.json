@@ -1,0 +1,87 @@
+{
+  "checkedAt": "2026-10-08T02:44:39.368978+00:00",
+  "scope": "Partial coverage only; full17-service and authenticated production completion not established",
+  "changedRows": [
+    {
+      "id": "C059",
+      "before": {
+        "serviceId": "doyaslide",
+        "id": "C059",
+        "category": "入力・外部接続",
+        "criterion": "外部APIのタイムアウト・再試行が有界である",
+        "status": "一部検証済み：見本取得の期限・回数上限、失敗と上限の表示、明示再確認、入力保持を合成35項目と実ブラウザ7項目で確認／他処理・本番通し未確認、最終98工程実行中",
+        "evidence": "doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json"
+      },
+      "after": {
+        "serviceId": "doyaslide",
+        "id": "C059",
+        "category": "入力・外部接続",
+        "criterion": "外部APIのタイムアウト・再試行が有界である",
+        "status": "部分補修・隔離検証済み：URL解析の固定操作ID・枠確保同時保存・結果確認・即時取消・編集保持を隔離PG41、操作保存/通信40、実画面25、Chrome13項目で確認。見本取得の補修は本番反映済み。URL解析は総合106工程実行中・未反映／他経路・本番認証後通し未確認",
+        "evidence": "doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json; doyaslide-url-operation-postgres-results.json; doyaslide-url-route-postgres-results.json; doyaslide-url-intent-client-results.json; doyaslide-url-operation-transport-results.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json"
+      }
+    },
+    {
+      "id": "C070",
+      "before": {
+        "serviceId": "doyaslide",
+        "id": "C070",
+        "category": "UI・アクセシビリティ",
+        "criterion": "入力をエラー時に失わない",
+        "status": "一部検証済み：見本取得の期限・回数上限、失敗と上限の表示、明示再確認、入力保持を合成35項目と実ブラウザ7項目で確認／他処理・本番通し未確認、最終98工程実行中",
+        "evidence": "doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json"
+      },
+      "after": {
+        "serviceId": "doyaslide",
+        "id": "C070",
+        "category": "UI・アクセシビリティ",
+        "criterion": "入力をエラー時に失わない",
+        "status": "部分補修・隔離検証済み：URL解析の固定操作ID・枠確保同時保存・結果確認・即時取消・編集保持を隔離PG41、操作保存/通信40、実画面25、Chrome13項目で確認。見本取得の補修は本番反映済み。URL解析は総合106工程実行中・未反映／他経路・本番認証後通し未確認",
+        "evidence": "doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json; doyaslide-url-operation-postgres-results.json; doyaslide-url-route-postgres-results.json; doyaslide-url-intent-client-results.json; doyaslide-url-operation-transport-results.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json"
+      }
+    },
+    {
+      "id": "U11",
+      "before": {
+        "serviceId": "doyaslide",
+        "id": "U11",
+        "category": "user-experience",
+        "criterion": "開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。",
+        "status": "一部検証済み：見本取得の期限・回数上限、失敗と上限の表示、明示再確認、入力保持を合成35項目と実ブラウザ7項目で確認／他処理・本番通し未確認、最終98工程実行中",
+        "evidence": "doyaslide-editor-recovery-regression.log; doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json"
+      },
+      "after": {
+        "serviceId": "doyaslide",
+        "id": "U11",
+        "category": "user-experience",
+        "criterion": "開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。",
+        "status": "部分補修・隔離検証済み：URL解析の固定操作ID・枠確保同時保存・結果確認・即時取消・編集保持を隔離PG41、操作保存/通信40、実画面25、Chrome13項目で確認。見本取得の補修は本番反映済み。URL解析は総合106工程実行中・未反映／他経路・本番認証後通し未確認",
+        "evidence": "doyaslide-editor-recovery-regression.log; doyaslide-preview-transport-results.json; doyaslide-preview-hook-mounted-results.json; doyaslide-preview-wizard-mounted-results.json; doyaslide-preview-native-results.json; doyaslide-url-operation-postgres-results.json; doyaslide-url-route-postgres-results.json; doyaslide-url-intent-client-results.json; doyaslide-url-operation-transport-results.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json"
+      }
+    },
+    {
+      "id": "U13",
+      "before": {
+        "serviceId": "doyaslide",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "一部不整合を隔離環境で再現・修正中：URL解析APIは操作IDを無視し、同一IDの逐次2回・並行5回で解析枠と合成providerが2/5回実行。画面内連打防止は修正・検証済みだが、再読込/別タブの永続結果確認は未実装。本番通し未確認",
+        "evidence": "doyaslide-url-replay-baseline-postgres-results.json; doyaslide-url-replay-baseline-postgres-supervisor.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json"
+      },
+      "after": {
+        "serviceId": "doyaslide",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "部分補修・隔離検証済み：URL解析の固定操作ID・枠確保同時保存・結果確認・即時取消・編集保持を隔離PG41、操作保存/通信40、実画面25、Chrome13項目で確認。見本取得の補修は本番反映済み。URL解析は総合106工程実行中・未反映／他経路・本番認証後通し未確認",
+        "evidence": "doyaslide-url-replay-baseline-postgres-results.json; doyaslide-url-replay-baseline-postgres-supervisor.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json; doyaslide-url-operation-postgres-results.json; doyaslide-url-route-postgres-results.json; doyaslide-url-intent-client-results.json; doyaslide-url-operation-transport-results.json; doyaslide-url-import-mounted-results.json; doyaslide-url-import-native-results.json"
+      }
+    }
+  ],
+  "unchangedDataRows": 2070,
+  "beforeSha256": "dd40b40303ac6464018a62ab478166e344778d7291362ed13df2341d2edefd61",
+  "afterSha256": "8ef795063ddffa7d2958e7b64fcba37975fa3ad3b45f8639791b0a2bd4c30e8e",
+  "bomPreserved": true,
+  "allCriteriaComplete": false
+}

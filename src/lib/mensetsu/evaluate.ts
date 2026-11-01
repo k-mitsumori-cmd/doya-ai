@@ -87,7 +87,7 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
     .join('\n')
 
   const raw = await geminiGenerateJson<EvaluationResult>(
-    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+    { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } },
     'MensetsuEvaluation'
   )
 

@@ -7,6 +7,7 @@ function fixture(service, action, scenario) {
   const actor = { id: 'actor', organizationId: 'org', userId: 'user', status: 'ACTIVE', role: 'admin' }
   const target = { id: 'target', organizationId: 'org', status: 'ACTIVE', role: scenario === 'unknown-target-role' ? 'legacy-unknown' : 'member' }
   let attempts = 0, writes = 0
+  let orgLocked=false,actorLocked=false,targetLocked=false
   const mutate = data => {
     if (attempts === 1 && scenario === 'actor-revoked') {
       actor.status = 'INACTIVE'
@@ -24,7 +25,15 @@ function fixture(service, action, scenario) {
     $transaction: async (fn, options) => {
       assert.equal(options.isolationLevel, 'Serializable')
       attempts++
-      return fn({ $queryRaw: async sql => {
+      orgLocked=false;actorLocked=false;targetLocked=false
+      return fn({ sfaOrganization:{update:async({where})=>{assert(orgLocked&&actorLocked&&targetLocked);assert.equal(where.id,'org');return{id:'org'}}}, $queryRaw: async (sql,...values) => {
+        if(service==='sfa'){
+          const text=sql.join('?')
+          if(text.includes('sfa_organizations')){assert(!orgLocked&&!actorLocked&&!targetLocked);assert.match(text,/FOR UPDATE/);assert.equal(values[0],'org');orgLocked=true;return[{id:'org'}]}
+          assert(orgLocked);assert.match(text,/FROM sfa_members/)
+          if(values.includes('user')){assert(!targetLocked);assert.match(text,/FOR SHARE/);actorLocked=true;return[{id:'actor'}]}
+          assert(actorLocked);assert.match(text,/FOR UPDATE/);assert(values.includes('target'));targetLocked=true;return[{id:'target'}]
+        }
         assert.match(sql.join('?'), /ORDER BY id FOR UPDATE/)
         assert.match(sql.join('?'), new RegExp(`FROM ${service}_members`))
         return [{ id: 'actor' }, { id: 'target' }]
@@ -40,6 +49,7 @@ function fixture(service, action, scenario) {
     },
   }
   const route = load(`src/app/api/${service}/members/[id]/route.ts`, {
+    ...(service==='sfa'?require('./sfa-deal-test-deps.cjs').dealDeps(prisma):{}),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     [`@/lib/${service}/access`]: {
@@ -61,7 +71,8 @@ function fixture(service, action, scenario) {
     assert.deepEqual(invalid.state(), { attempts: 0, writes: 0, target: { id: 'target', organizationId: 'org', status: 'ACTIVE', role: 'member' } })
     for (const action of ['PATCH', 'DELETE']) {
       const valid = fixture(service, action)
-      assert.equal((await valid.call()).status, 200)
+      const response=await valid.call();assert.equal(response.status,200)
+      if(action==='DELETE'&&['aio','shodan'].includes(service))assert.equal((await response.json()).memberId,'target')
       assert.deepEqual({ attempts: valid.state().attempts, writes: valid.state().writes }, { attempts: 1, writes: 1 })
 
       for (const scenario of ['actor-revoked', 'target-promoted', 'unknown-target-role']) {

@@ -732,7 +732,7 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <h3 className="font-medium text-white">コンプリートパック</h3>
-                      <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤライティングAI</p>
+                      <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤ記事作成</p>
                     </div>
                   </div>
                   
@@ -809,7 +809,7 @@ export default function AdminUsersPage() {
                         <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
                           <div className="flex items-center gap-2 mb-2">
                             <span>✍️</span>
-                            <span className="text-sm font-medium text-white">ドヤライティングAI</span>
+                            <span className="text-sm font-medium text-white">ドヤ記事作成</span>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>

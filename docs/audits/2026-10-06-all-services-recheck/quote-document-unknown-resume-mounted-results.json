@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-07T19:41:36.604Z",
+  "passed": 4,
+  "cases": [
+    "explicit resume keeps draft without an automatic repeat PATCH",
+    "resume after unrelated later save sends current server version",
+    "failed resume read cannot clear unknown fence or lose input",
+    "retained resume handler cannot carry private draft into another organization"
+  ],
+  "sourceHashes": {
+    "src/lib/quote/use-document-detail.ts": "f1e9373bad8ea384d694b1856ed0ae1381626b9105f7fc66827633dd13cfa6cc",
+    "src/app/quote/documents/[id]/page.tsx": "8e4063faeacd5ba68e078c320e8520a4301a44761b4206efaff1e11b8f2133de"
+  },
+  "scope": "Candidate actual mounted detail page/hook, synthetic transport/revision-store. Explicit user recovery requires verified scoped read and preserves conditional-version retry. No customer/provider/production operations."
+}

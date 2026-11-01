@@ -1,0 +1,11 @@
+{
+  "startedAt": "2026-10-06T23:33:31.847829+00:00",
+  "pid": 14844,
+  "head": "ddd3fbd6c5f792fa5be8e96c6a85396daea04a2c",
+  "sourceFiles": 2640,
+  "status": "cancelled-superseded",
+  "gates": [],
+  "exitCode": 143,
+  "endedAt": "2026-10-06T23:34:52.294651+00:00",
+  "reason": "Expanded confirmed navigation lock to slide generation transition after freeze; stopped exact owned gate process tree, terminal session64771 exit143. Not release proof."
+}

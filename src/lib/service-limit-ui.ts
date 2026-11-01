@@ -62,6 +62,39 @@ export function showServiceLimit(path: string, status: number, data: unknown): b
   return true
 }
 
+/** Inspection is optional and must not retain an unbounded or stalled cloned body. */
+export async function readServiceLimitError(response: Response): Promise<unknown | null> {
+  if (!response.body || Number(response.headers.get('content-length') || 0) > 65536) return null
+  const reader = response.body.getReader()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let stopped = false
+  const stop = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { stopped = true; reject(new Error('Limit inspection timed out')) }, 5000)
+  })
+  const work = (async () => {
+    const chunks: Uint8Array[] = []
+    let size = 0
+    while (true) {
+      const chunk = await reader.read()
+      if (stopped) return null
+      if (chunk.done) break
+      size += chunk.value.byteLength
+      if (size > 65536) return null
+      chunks.push(chunk.value)
+    }
+    const bytes = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
+  })()
+  try { return await Promise.race([work, stop]) } catch { return null } finally {
+    stopped = true
+    clearTimeout(timer)
+    // A tee cancellation can await the original consumer: do not await it here.
+    try { void reader.cancel().catch(() => {}) } catch {}
+  }
+}
+
 /** Observe a cloned JSON error, preserving the response/body and existing error handling. */
 export function observeServiceLimits(original: typeof fetch, origin: string, notify: (limit: ServiceLimit) => void): typeof fetch {
   return async (input, init) => {
@@ -71,7 +104,7 @@ export function observeServiceLimits(original: typeof fetch, origin: string, not
       if (url.origin !== origin || !url.pathname.startsWith('/api/') || ![400, 402, 403, 429].includes(response.status) || !response.headers.get('content-type')?.includes('application/json')) return response
       // Request content is never copied or logged. Only small JSON errors are inspected.
       if (Number(response.headers.get('content-length') || 0) > 65536) return response
-      void response.clone().json().then(data => {
+      void readServiceLimitError(response.clone()).then(data => {
         const limit = classifyServiceLimit(url.pathname, response.status, data)
         if (limit) notify(limit)
       }).catch(() => {})

@@ -2,16 +2,20 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { createWithinEmployeeLimit, employeeLimitMessage } from '@/lib/hr/billing'
+import { privateApiJson } from '@/lib/private-api-response'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 const MAX_CSV_CHARS = 1_000_000
 const MAX_CSV_ROWS = 500
+// JSON may encode each CSV UTF-16 code unit as a six-byte Unicode escape.
+const MAX_JSON_BYTES = MAX_CSV_CHARS * 6 + 1024
 
 function parseCSV(text: string): { row: number; cells: string[] }[] {
   const rows: { row: number; cells: string[] }[] = []
@@ -64,39 +68,39 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return privateApiJson({ error: 'この操作に必要な権限がありません。組織の管理者にご相談ください。' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await readOperationalJson(req, MAX_JSON_BYTES)
     const { csvText } = body
 
     if (!csvText || typeof csvText !== 'string') {
-      return NextResponse.json({ error: 'csvText is required' }, { status: 400 })
+      return privateApiJson({ error: 'CSVの内容が空です。ファイルを選ぶか、内容を貼り付けてください。' }, { status: 400 })
     }
     if (csvText.length > MAX_CSV_CHARS) {
-      return NextResponse.json({ error: 'CSVは100万文字以内にしてください' }, { status: 413 })
+      return privateApiJson({ error: 'CSVは100万文字以内にしてください' }, { status: 413 })
     }
 
     let rows: { row: number; cells: string[] }[]
     try {
       rows = parseCSV(csvText.replace(/^\uFEFF/, ''))
     } catch (error) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+      return privateApiJson({ error: (error as Error).message }, { status: 400 })
     }
     if (rows.length < 2) {
-      return NextResponse.json({ error: 'CSV must have header and at least one data row' }, { status: 400 })
+      return privateApiJson({ error: 'CSVには見出しの行と1行以上のデータが必要です。内容を確かめてください。' }, { status: 400 })
     }
     if (rows.length - 1 > MAX_CSV_ROWS) {
-      return NextResponse.json({ error: `一度に登録できるのは${MAX_CSV_ROWS}名までです` }, { status: 413 })
+      return privateApiJson({ error: `一度に登録できるのは${MAX_CSV_ROWS}名までです` }, { status: 413 })
     }
 
     const headers = rows[0].cells.map((h) => h.toLowerCase().trim())
@@ -120,8 +124,8 @@ export async function POST(req: NextRequest) {
     const lastNameIdx = colMap['lastname']
     const firstNameIdx = colMap['firstname']
     if (lastNameIdx === undefined || firstNameIdx === undefined) {
-      return NextResponse.json(
-        { error: 'CSV must contain lastName and firstName columns' },
+      return privateApiJson(
+        { error: 'CSVに lastName と firstName の列が必要です。見出しを確かめてください。' },
         { status: 400 }
       )
     }
@@ -147,7 +151,7 @@ export async function POST(req: NextRequest) {
         const lastName = row[lastNameIdx]
         const firstName = row[firstNameIdx]
         if (!lastName || !firstName) {
-          results.push({ row: rowNumber, success: false, error: 'lastName/firstName missing' })
+          results.push({ row: rowNumber, success: false, error: 'この行は姓か名が空です。入力してから、もう一度取り込んでください。' })
           continue
         }
         if (limitNotice) {
@@ -218,7 +222,7 @@ export async function POST(req: NextRequest) {
     const successCount = results.filter((r) => r.success).length
     const failCount = results.filter((r) => !r.success).length
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       imported: successCount,
       failed: failCount,
@@ -226,8 +230,14 @@ export async function POST(req: NextRequest) {
       ...(limitNotice ? { code: 'HR_ORG_EMPLOYEE_LIMIT', limitNotice } : {}),
     })
   } catch (e: any) {
+    if (e instanceof OperationalBodyError) {
+      return privateApiJson(
+        { error: e.status === 413 ? '送信内容が大きすぎます。CSVは100万文字以内にしてください。' : '送信内容を読み取れませんでした。CSVを選び直すか、内容を貼り直してください。' },
+        { status: e.status }
+      )
+    }
     console.error('[hr/employees/import]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '従業員の一括登録に失敗しました' },
       { status: 500 }
     )

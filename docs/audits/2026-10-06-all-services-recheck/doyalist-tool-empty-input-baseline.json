@@ -1,0 +1,9 @@
+{
+  "status": "reproduced",
+  "emptyInputAccepted": true,
+  "displayedLength": 10000,
+  "storedLength": 8000,
+  "savedToHistory": true,
+  "historyMatchesDisplayed": false,
+  "scope": "Actual API POST and operational JSON reader; synthetic session, quota, model output and Prisma stub capturing saved body. No real provider, quota debit, email or DB write."
+}

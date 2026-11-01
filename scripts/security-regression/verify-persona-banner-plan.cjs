@@ -25,6 +25,7 @@ const { load } = require('./load-typescript.cjs')
     '@/lib/unified-plan': { isPaidPlan: value => value !== 'FREE' && value !== 'GUEST' },
     './usage-day': { personaUsageDay: () => new Date('2026-10-02T00:00:00Z') },
     './project-ledger': { releasePersonaProjectReservation: async () => {} },
+    './image-entitlements': load('src/lib/persona/image-entitlements.ts'),
   })
   const db = { $transaction: async work => work(tx) }
   const input = { userId: 'owner', projectId: 'project', requestKey: 'banner-1',

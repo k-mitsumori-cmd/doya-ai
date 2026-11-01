@@ -32,7 +32,7 @@ export async function deliverBillingReport(
   reportKey: string,
   message: string,
   db: Pick<PrismaClient, 'systemSetting'> = prisma,
-  send: (text: string) => Promise<void> = postPlainToSlack,
+  send: (text: string) => Promise<void> = (text) => postPlainToSlack(text, { app: 'ドヤAI', kind: 'billing', severity: 'info' }),
 ): Promise<'sent' | 'already_sent'> {
   if (!KEY_PATTERN.test(reportKey)) throw new Error('Billing report key is invalid')
   const key = KEY_PREFIX + reportKey

@@ -1,38 +1,19 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ts = require('typescript');
 
-const source = fs.readFileSync('src/app/api/sfa/ai/score/route.ts', 'utf8');
-const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-
+const {fixture,op,stamp}=require('./sfa-score-api-fixture.cjs');
 async function run(body, lead) {
-  let aiCalls = 0;
-  let writes = 0;
-  const prisma = {
-    sfaLead: { findUnique: async () => lead },
-    $transaction: async fn => fn({ sfaLead: { updateMany: async () => { writes++; return { count: 1 }; } } }),
-  };
-  const deps = {
-    'next/server': { NextResponse: Response },
-    '@/lib/prisma': { prisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
-    '@/lib/sfa/ai': { scoreLead: async () => { aiCalls++; return { score: 70 }; } },
-    '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
-    '@/lib/sfa/limits': { canManageSfaBilling: async () => { throw Error('No quota was reached'); } },
-  };
-  const exported = {};
-  vm.runInNewContext(code, { exports: exported, require: (name) => { assert(name in deps, name); return deps[name]; } });
-  const response = await exported.POST({ json: async () => body });
-  return { status: response.status, aiCalls, writes };
+ const f=fixture(); f.state().lead=lead?{...lead,updatedAt:new Date(stamp),score:null}:null;
+ const request=body&&typeof body==='object'&&!Array.isArray(body)?{...body,operationId:op,expectedUpdatedAt:stamp}:body;
+ const response=await f.call('POST',request);
+ return {status:response.status,aiCalls:f.calls(),writes:f.state().lead?.score===70?1:0};
 }
 
 (async () => {
-  const active = { id: 'lead', organizationId: 'org', isActive: true, name: 'Company', raw: null, status: 'new', note: null, source: 'manual' };
+  const active = { id: 'lead', organizationId: 'org', assigneeMemberId: 'member', isActive: true, name: 'Company', raw: null, status: 'new', note: null, source: 'manual' };
   for (const body of [null, [], {}, { leadId: 1 }, { leadId: {} }, { leadId: '  ' }]) {
     assert.deepEqual(await run(body, active), { status: 400, aiCalls: 0, writes: 0 });
   }
-  for (const lead of [null, { ...active, isActive: false }, { ...active, organizationId: 'foreign' }]) {
+  for (const lead of [null, { ...active, isActive: false }, { ...active, organizationId: 'foreign' }, { ...active, assigneeMemberId: 'other-assignee' }]) {
     assert.deepEqual(await run({ leadId: 'lead' }, lead), { status: 404, aiCalls: 0, writes: 0 });
   }
   assert.deepEqual(await run({ leadId: 'lead' }, active), { status: 200, aiCalls: 1, writes: 1 });

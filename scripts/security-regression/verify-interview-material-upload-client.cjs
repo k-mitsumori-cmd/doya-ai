@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..'),compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-const file='src/app/interview/projects/[id]/materials/page.tsx',src=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const file='src/app/(shell)/interview/projects/[id]/materials/page.tsx',src=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 function extract(name){let source;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)===name)source=(ts.isCallExpression(n.initializer)?n.initializer.arguments[0]:n.initializer).getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(source);return compile('('+source+');')}
 const {findInterviewUploadAttempt}=require('./load-typescript.cjs').load('src/lib/interview/upload-attempt.ts',{}, {AbortController,setTimeout,clearTimeout});
 const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-response.ts'),'utf8')),tick=()=>new Promise(r=>setImmediate(r));

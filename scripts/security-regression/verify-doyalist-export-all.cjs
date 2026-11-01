@@ -66,7 +66,7 @@ const route = load('src/app/api/doyalist/export-all/route.ts', {
     failData = false
   })
 
-  const source = fs.readFileSync('src/app/doyalist/settings/page.tsx', 'utf8')
+  const source = fs.readFileSync('src/app/(shell)/doyalist/settings/page.tsx', 'utf8')
   const ast = ts.createSourceFile('settings.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   let declaration
   function walk(node) {

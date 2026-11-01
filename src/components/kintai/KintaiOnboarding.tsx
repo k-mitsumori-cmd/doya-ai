@@ -1,7 +1,9 @@
 'use client'
 
+import { PageTitle } from './ui-next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 
 export default function KintaiOnboarding() {
   const router = useRouter()
@@ -29,27 +31,27 @@ export default function KintaiOnboarding() {
         body: JSON.stringify({ name: orgName.trim(), employeeName: employeeName.trim() }),
       })
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || '組織の作成に失敗しました')
+        const data = await res.json().catch(() => ({}))
+        throw new Error(userErrorMessage(data?.error, '組織を作れませんでした。入力を確かめて、もう一度お試しください。'))
       }
       window.location.href = '/kintai/clock'
     } catch (e: any) {
-      setError(e.message)
+      setError(userErrorMessage(e?.message, KINTAI_NETWORK_ERROR))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-brand-50 via-brand-50 to-indigo-50 relative overflow-hidden">
 
       {/* ===== Floating Decorative Dots ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="float-dot-1 absolute top-[20%] left-[10%] w-4 h-4 rounded-full bg-[#7f19e6]/10" />
+        <div className="float-dot-1 absolute top-[20%] left-[10%] w-4 h-4 rounded-full bg-[#0066ff]/10" />
         <div className="float-dot-2 absolute top-[15%] right-[12%] w-5 h-5 rounded-full bg-amber-300/15" />
         <div className="float-dot-1 absolute bottom-[25%] left-[15%] w-3 h-3 rounded-full bg-emerald-400/10" />
         <div className="float-dot-2 absolute bottom-[30%] right-[20%] w-4 h-4 rounded-full bg-rose-300/10" />
-        <div className="float-dot-1 absolute top-[50%] right-[5%] w-3 h-3 rounded-full bg-[#7f19e6]/5" />
+        <div className="float-dot-1 absolute top-[50%] right-[5%] w-3 h-3 rounded-full bg-[#0066ff]/5" />
       </div>
 
       <div className="relative z-10 w-full max-w-md card-pop">
@@ -80,19 +82,19 @@ export default function KintaiOnboarding() {
         </div>
 
         {/* ===== Card ===== */}
-        <div className="bg-white rounded-3xl shadow-2xl shadow-[#7f19e6]/8 border border-slate-200/80 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-[#0066ff]/8 border border-slate-200/80 overflow-hidden">
           <div className="p-8 pt-10">
             {/* ===== Header ===== */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#7f19e6]/5 rounded-full mb-4">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#0066ff]/5 rounded-full mb-4">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0066ff] to-[#003985] flex items-center justify-center">
                   <span className="material-symbols-outlined text-white text-sm">schedule</span>
                 </div>
-                <span className="text-xs font-bold text-[#7f19e6]">ドヤ勤怠</span>
+                <span className="text-xs font-bold text-[#0066ff]">ドヤ勤怠</span>
               </div>
-              <h1 className="text-2xl font-black text-slate-900 mb-2">
+              <PageTitle className="text-2xl font-black text-slate-900 mb-2">
                 ドヤ勤怠へようこそ！
-              </h1>
+              </PageTitle>
               <p className="text-sm text-slate-500">
                 組織を作成して勤怠管理を始めましょう
               </p>
@@ -102,7 +104,7 @@ export default function KintaiOnboarding() {
             <div className="space-y-5">
               <div className="fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  <span className="material-symbols-outlined text-sm align-middle mr-1 text-[#7f19e6]">apartment</span>
+                  <span className="material-symbols-outlined text-sm align-middle mr-1 text-[#0066ff]">apartment</span>
                   組織名（会社名・チーム名）
                 </label>
                 <input
@@ -117,7 +119,7 @@ export default function KintaiOnboarding() {
 
               <div className="fade-in-up" style={{ animationDelay: '0.2s' }}>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  <span className="material-symbols-outlined text-sm align-middle mr-1 text-[#7f19e6]">person</span>
+                  <span className="material-symbols-outlined text-sm align-middle mr-1 text-[#0066ff]">person</span>
                   あなたの氏名
                 </label>
                 <input
@@ -146,7 +148,7 @@ export default function KintaiOnboarding() {
             <button
               onClick={handleCreate}
               disabled={loading}
-              className="btn-glow w-full mt-7 py-4 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:scale-[0.97]"
+              className="btn-glow w-full mt-7 py-4 bg-gradient-to-r from-[#0066ff] to-[#003985] text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:scale-[0.97]"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-3">

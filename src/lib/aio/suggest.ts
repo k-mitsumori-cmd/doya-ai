@@ -4,6 +4,8 @@
 // 組織作成を意識させない“即・現状チェック”フローで使う。
 // 失敗時は名前ベースの汎用プロンプトにフォールバックする（必ず何か返す）。
 // ============================================
+import { getDomainWithoutSuffix } from 'tldts'
+import { domainToUnicode } from 'node:url'
 import { geminiGenerateJson } from '@seo/lib/gemini'
 import { safeFetchText } from '@/lib/net/safe-fetch'
 
@@ -36,10 +38,9 @@ export function domainToBrandName(url: string): string {
     let host = new URL(url).hostname.toLowerCase().replace(/^www\./, '')
     // 既知の汎用サブドメインを除去
     host = host.replace(/^(app|service|portal|my|go|get|web|www2)\./, '')
-    // TLD（.co.jp / .com / .jp / .ai 等）を落として第2レベルラベルを取る
-    const parts = host.split('.')
-    const label = parts.length >= 2 ? parts[parts.length - 2] : parts[0]
-    const name = (label || host).replace(/[-_]+/g, ' ').trim()
+    // Resolve public/private suffixes instead of treating co/com as the brand.
+    const label = getDomainWithoutSuffix(host, { allowPrivateDomains: true }) || host
+    const name = domainToUnicode(label).replace(/[-_]+/g, ' ').trim()
     return name ? name.slice(0, 60) : host.slice(0, 60)
   } catch {
     return (url || '').replace(/^https?:\/\//, '').slice(0, 60)

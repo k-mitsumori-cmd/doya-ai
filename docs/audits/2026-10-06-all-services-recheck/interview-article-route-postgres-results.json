@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-08T04:11:35.346Z",
+  "expected": 21,
+  "passed": 21,
+  "cases": [
+    "Actual POST writes one draft and receipt; same POST and GET replay call no provider or quota again",
+    "Eight concurrent identical POSTs admit only one provider and one draft",
+    "Pending GET and other UUID POST do not start external work or consume quota",
+    "DELETE marks cancelling; worker poll aborts provider before refund and releases once",
+    "Cancel tombstone before delayed POST prevents provider and quota reservation",
+    "Provider failure refunds once; same UUID cannot generate again",
+    "Lost completion acknowledgement still recovers committed draft without refund or regeneration",
+    "Metrics outage leaves saved article completed and counted once",
+    "Actual draft transaction failure rolls back draft, recipe counter and reservation",
+    "Five explicit generations count five; sixth returns persistent pricing cap before provider",
+    "PRO limit provides contact action without misleading free trial action",
+    "Missing operation ID and malformed input fail before quota/provider",
+    "Anonymous requests fail with 401 before DB or provider writes",
+    "Another account cannot read or cancel saved article, nor recover actor scope",
+    "Same UUID changed instructions conflicts without new provider or reservation",
+    "Owned actor scope handshake reads no quota and returns no personal identity",
+    "Completed but deleted draft is unavailable; replay never regenerates it",
+    "Guest cookie retains two-article policy and distinct scope; old guest denied after account ownership",
+    "Cross-origin mutation and duplicate query arguments are rejected without writes",
+    "Malformed provider JSON after partial text cannot save a partial article",
+    "Malformed provider UTF8 fails closed and refunds failed attempt once"
+  ],
+  "sourceHashes": {
+    "src/app/api/interview/articles/generate/route.ts": "3af157c649827926f4faaebccb1451ebdad30dc259a7d5c488223b6378466128",
+    "src/lib/interview/article-operation.ts": "a15bc3970235077fcca216f19cde5c41d925958544e474f00a5caef61b1c030a",
+    "src/lib/interview/article-budget.ts": "2ed544e20f6316e689dcd7713c4aa146b974b45a152486b3770cbc150ef351cc",
+    "src/lib/interview/access.ts": "6636478ea96697be077f24f73e140e89787530aa2b22e04b4be9b7a814fd9032",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884",
+    "src/lib/interview/gemini-request.ts": "5721ed946f39a11d1591da293914a1f23dfb5e69af7e0bdeb9cfbc7519582b04",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-route-postgres.cjs": "574afbbe0adfc32046f4601495ca5fcc41f20660a42740af98799d0ac1ee1305"
+  },
+  "scope": "Actual POST/GET/DELETE route, durable helper, budget, ownership and guest-cookie parser on private Unix PostgreSQL. Actual ORM draft/project/recipe writes with synthetic session/provider/prompts/metrics and controlled cancellation poll ticks. Native Request/Response SSE; not native Next server/auth cookies/browser durable client, external provider, production/customer data."
+}

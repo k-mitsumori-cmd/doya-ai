@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       : null
 
     const lines: string[] = []
-    lines.push(`:inbox_tray: *[お問い合わせ受信レポート/直近${days}日]* ${jstDateTime(new Date())}`)
+    lines.push(`*お問い合わせ受信レポート（直近${days}日） ${jstDateTime(new Date())}*`)
     lines.push('')
     lines.push(`*受信件数: ${received}件*（累計 ${total}件）`)
 
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       lines.push('・フォームが壊れていないか、サイドバーの「お問い合わせ・改善依頼」から1件テスト送信して確認できます。')
     }
 
-    await postPlainToSlack(lines.join('\n'))
+    await postPlainToSlack(lines.join('\n'), { app: 'ドヤAI', kind: 'report', severity: 'info' })
 
     // ⚠️ 「ずっと0件」は壊れているときと見分けがつかない。長期の沈黙は異常として扱う。
     //    （2026-08 の不具合は12日間気づかれなかった）

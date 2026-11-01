@@ -3,37 +3,25 @@ const { load } = require('./load-typescript.cjs');
 
 const timestamp = new Date('2026-09-24T00:00:00.000Z');
 const accounts = Array.from({ length: 501 }, (_, index) => ({
-  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true,
+  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true, ownerMemberId: 'fixture-member',
   name: index < 250 ? `検索対象 ${index}` : `通常 ${index}`, updatedAt: timestamp,
 }));
 accounts.push({ ...accounts[0], id: 'foreign', organizationId: 'org-2', name: 'foreign-secret' });
 accounts.push({ ...accounts[0], id: 'inactive-account', isActive: false, name: '旧取引先' });
 const contacts = Array.from({ length: 501 }, (_, index) => ({
-  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true,
+  id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true, ownerMemberId: 'fixture-member',
   name: index < 250 ? `検索対象 ${index}` : `通常 ${index}`, updatedAt: timestamp,
   accountId: index === 0 ? 'foreign' : index === 1 ? 'inactive-account' : '000001',
 }));
 contacts.push({ ...contacts[0], id: 'foreign-contact', organizationId: 'org-2' });
 
-function matches(row, where) {
-  if (where.AND && !where.AND.every((part) => matches(row, part))) return false;
-  if (where.OR && !where.OR.some((part) => matches(row, part))) return false;
-  if (where.organizationId && row.organizationId !== where.organizationId) return false;
-  if (where.isActive !== undefined && row.isActive !== where.isActive) return false;
-  if (where.accountId && row.accountId !== where.accountId) return false;
-  if (where.id?.lt && !(row.id < where.id.lt)) return false;
-  if (where.id?.in && !where.id.in.includes(row.id)) return false;
-  if (where.updatedAt?.lt && !(row.updatedAt < where.updatedAt.lt)) return false;
-  if (where.updatedAt instanceof Date && row.updatedAt.getTime() !== where.updatedAt.getTime()) return false;
-  if (where.name?.contains && !row.name.toLowerCase().includes(where.name.contains.toLowerCase())) return false;
-  return true;
-}
+const { matches, exact } = require('./sfa-query-fixture.cjs');
 function model(rows, isAccount) {
   return {
     findMany: async ({ where, orderBy, take, select }) => {
       if (!orderBy) {
         assert(isAccount, 'Only accounts may be looked up by id');
-        assert.equal(where.organizationId, 'org-1', 'Contact account names stay organization-scoped');
+        assert.equal(exact(where, 'organizationId'), 'org-1', 'Contact account names stay organization-scoped');
         return rows.filter((row) => matches(row, where));
       }
       assert.deepEqual(JSON.parse(JSON.stringify(orderBy)), [{ updatedAt: 'desc' }, { id: 'desc' }]);
@@ -52,10 +40,11 @@ const prisma = { sfaAccount: model(accounts, true), sfaContact: model(contacts, 
 const mocks = {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', userId: 'fixture-user', memberId: 'fixture-member', role: 'member', organizationSlug: 'org-1' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
-  '@/lib/sfa/limits': { withSfaAdmission: async () => { throw Error('GET must not admit quota') }, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
+  '@/lib/sfa/limits': { withSfaAdmission: async () => { throw Error('GET must not admit quota') }, checkSfaQuota: async () => null, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
 };
+Object.assign(mocks, require('./sfa-crm-test-deps.cjs').crmDeps(prisma, mocks));
 const accountGet = load('src/app/api/sfa/accounts/route.ts', mocks).GET;
 const contactGet = load('src/app/api/sfa/contacts/route.ts', mocks).GET;
 
@@ -76,7 +65,7 @@ async function collect(get, type, params, expected) {
       assert(!row.id.startsWith('foreign'));
       seen.add(row.id);
       if (type === 'contacts' && row.id === '000000') assert.equal(row.accountName, null, 'Foreign account name is hidden');
-      if (type === 'contacts' && row.id === '000001') assert.equal(row.accountName, '旧取引先', 'Own inactive account name remains visible for history');
+      if (type === 'contacts' && row.id === '000001') { assert.equal(row.accountName, null, 'Inactive parent name remains hidden'); assert.equal(row.accountId, null, 'Inactive parent identifier remains hidden'); }
     }
     cursor = body.nextCursor;
   } while (cursor);
@@ -104,36 +93,38 @@ async function collect(get, type, params, expected) {
 
   const writes = [];
   const writePrisma = {
-    sfaAccount: { findFirst: async ({ where }) => where.id === 'valid' && where.organizationId === 'org-1' && where.isActive === true ? { id: 'valid' } : null },
+    sfaAccount: { findFirst: async ({ where }) => { const row = { id: 'valid', organizationId: 'org-1', isActive: true, ownerMemberId: 'member' }; return matches(row, where) ? row : null; }, findMany: async ({ where }) => { const row = { id: 'valid', organizationId: 'org-1', isActive: true, ownerMemberId: 'member' }; return matches(row, where) ? [row] : []; } },
     sfaContact: { create: async ({ data }) => { writes.push(['contact', data]); return { id: 'contact', ...data }; } },
     sfaStage: { findFirst: async () => null },
     sfaDeal: {
-      findUnique: async () => ({ id: 'deal', organizationId: 'org-1' }),
+      findUnique: async () => ({ id: 'deal', organizationId: 'org-1', isActive: true, assigneeMemberId: 'member', updatedAt: timestamp }),
       create: async ({ data }) => { writes.push(['deal-create', data]); return { id: 'deal', accountId: data.accountId }; },
       update: async ({ data }) => { writes.push(['deal-update', data]); return { id: 'deal', accountId: data.accountId }; },
     },
   };
   const writeMocks = {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(writePrisma),
     ...mocks,
     '@/lib/sfa/amount': load('src/lib/sfa/amount.ts'),
     '@/lib/prisma': { prisma: writePrisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member', userId: 'owner' }), orgSlugFrom: () => null },
+    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member', userId: 'owner', role: 'member', organizationSlug: 'org-1' }), orgSlugFrom: () => null },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
-    '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(writePrisma) }), sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
+    '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(writePrisma) }), checkSfaQuota: async () => null, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
   };
+  Object.assign(writeMocks, require('./sfa-crm-test-deps.cjs').crmDeps(writePrisma, writeMocks));
   const createContact = load('src/app/api/sfa/contacts/route.ts', writeMocks).POST;
   const createDeal = load('src/app/api/sfa/deals/route.ts', writeMocks).POST;
   const updateDeal = load('src/app/api/sfa/deals/[id]/route.ts', writeMocks).PATCH;
   const ctx = { params: Promise.resolve({ id: 'deal' }) };
   for (const accountId of ['foreign', 'inactive', 'missing']) {
-    const request = () => ({ json: async () => ({ name: 'テスト', accountId }) });
-    assert.equal((await createContact(request())).status, 400);
-    assert.equal((await createDeal(request())).status, 400);
-    assert.equal((await updateDeal(request(), ctx)).status, 400);
+    const request = (creating = false) => ({ json: async () => ({ name: 'テスト', accountId, ...(creating ? { operationId: '10000000-0000-4000-8000-000000000001' } : {}) }) });
+    assert.equal((await createContact(request(true))).status, 404);
+    assert.equal((await createDeal(request())).status, 404);
+    assert.equal((await updateDeal(request(), ctx)).status, 404);
   }
   assert.equal(writes.length, 0, 'Invalid accounts cannot be silently discarded or written');
-  const validRequest = () => ({ json: async () => ({ name: 'テスト', accountId: 'valid' }) });
-  assert.equal((await createContact(validRequest())).status, 200);
+  const validRequest = (creating = false) => ({ json: async () => ({ name: 'テスト', accountId: 'valid', ...(creating ? { operationId: '10000000-0000-4000-8000-000000000001' } : {}) }) });
+  assert.equal((await createContact(validRequest(true))).status, 200);
   assert.equal((await createDeal(validRequest())).status, 200);
   assert.equal((await updateDeal(validRequest(), ctx)).status, 200);
   assert(writes.every(([, data]) => data.accountId === 'valid'));

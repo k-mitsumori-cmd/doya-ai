@@ -1,0 +1,25 @@
+{
+  "originalMountedCases": 28,
+  "retainedOriginalMountedCases": 28,
+  "newRuntimeMountedCases": 51,
+  "nativeChromeCases": 15,
+  "newMandatoryServerCases": {
+    "receipt": 23,
+    "recoveryAPI": 11,
+    "POST": 10
+  },
+  "productionFiles": [
+    "src/app/api/seo/articles/route.ts",
+    "src/app/api/seo/article-operation/route.ts",
+    "src/app/seo/template/page.tsx",
+    "src/lib/use-seo-creation-recovery.ts",
+    "src/lib/seo-article-admission.ts"
+  ],
+  "originalGETChecklistRowsPreserved": 187,
+  "currentGETChecklistRows": 188,
+  "status": "integrated-full150-and-actualNext19-passed-awaiting-release",
+  "productionRelease": "not released",
+  "realPostgresCases": 13,
+  "actualNextCases": 19,
+  "fullGate": 150
+}

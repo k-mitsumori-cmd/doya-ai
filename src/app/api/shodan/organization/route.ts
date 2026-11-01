@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName.slice(0, 80))
     return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
   } catch (e: any) {
+    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
     console.error('[shodan/organization]')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }

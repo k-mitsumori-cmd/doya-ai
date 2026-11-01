@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-10-08T05:49:27.530Z",
+  "status": "candidate-revoked-member-blocked",
+  "passed": 9,
+  "cases": [
+    "active-control",
+    "inactive-before-auth",
+    "revoked-before-admission",
+    "deleted-before-admission",
+    "revoked-while-waiting",
+    "helper-missing-actor",
+    "helper-foreign-actor",
+    "helper-scheduled-paid",
+    "helper-scheduled-free"
+  ],
+  "observations": [
+    {
+      "mode": "active-control",
+      "status": 200,
+      "providerCalls": 1,
+      "savedScans": 1
+    },
+    {
+      "mode": "inactive-before-auth",
+      "status": 401,
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "revoked-before-admission",
+      "status": 403,
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "deleted-before-admission",
+      "status": 403,
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "revoked-while-waiting",
+      "status": 403,
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "helper-missing-actor",
+      "resultStatus": "failed",
+      "code": "FORBIDDEN",
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "helper-foreign-actor",
+      "resultStatus": "failed",
+      "code": "FORBIDDEN",
+      "providerCalls": 0,
+      "savedScans": 0
+    },
+    {
+      "mode": "helper-scheduled-paid",
+      "resultStatus": "done",
+      "code": null,
+      "providerCalls": 1,
+      "savedScans": 1
+    },
+    {
+      "mode": "helper-scheduled-free",
+      "resultStatus": "failed",
+      "code": "PAID_REQUIRED",
+      "providerCalls": 0,
+      "savedScans": 0
+    }
+  ],
+  "candidateSourceHashes": {
+    "src/lib/aio/run.ts": "505cf0c3b1d6db2cfea8a99e84c47abea7d5e7dc44e57f431ea973d33e4b5501",
+    "src/app/api/aio/scans/route.ts": "cba1869516d8730556622b237537a5fc0dbbc7cf2b73a2cc5bea2021e0e289a3"
+  },
+  "sourceHashes": {
+    "src/app/api/aio/scans/route.ts": "cba1869516d8730556622b237537a5fc0dbbc7cf2b73a2cc5bea2021e0e289a3",
+    "src/lib/aio/access.ts": "580bf91fc4aeae109ff6f9ed22964a9c4f50b358419a6ed537ec67ced99ac185",
+    "src/lib/aio/run.ts": "505cf0c3b1d6db2cfea8a99e84c47abea7d5e7dc44e57f431ea973d33e4b5501",
+    "src/lib/aio/billing.ts": "d78dfd363b8e40d9f5d04f94d61083a68974b1143c4ad9ac374783b6206cb023",
+    "docs/audits/2026-10-06-all-services-recheck/verify-aio-scan-admission-actor-postgres.cjs": "0c8ee46abed97d9fff76ced34605d3d047e4f2a8885a557233561b123f1de0b8"
+  },
+  "scope": "Actual API, authentication membership lookup, reservation/billing/completion helper, Prisma and Unix private PostgreSQL. Synthetic auth session, scan provider output and service-usage telemetry only. No real external provider/customer DB or production impact proof."
+}

@@ -1,0 +1,782 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { readAioDashboard } from '@/lib/aio/dashboard'
+import { aioSend, AioApiError } from '@/lib/aio/client'
+import { TrialNote } from '@/components/TrialCallout'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary } from '@/lib/aio/types'
+import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
+import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
+import toast from 'react-hot-toast'
+import { AlertTriangle, Star } from 'lucide-react'
+import { EmptyState } from '@/components/ds'
+import { AreaChart, Bars, Donut, Ring } from '@/components/ds/charts'
+import { UiIcon } from '@/components/icons'
+import { ShellCostBadge } from '@/components/shell/power'
+
+type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
+
+interface ScanRow { id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null; ownCitationPct: number | null; createdAt: string; coverage: ScanCoverageCounts | null }
+interface Summary {
+  coverage?: ScanSummary['coverage']
+  totalRuns: number; brandRuns: number; awarenessPct: number; shareOfVoice: number; ownCitationPct: number
+  sentiment: { positive: number; neutral: number; negative: number }
+  perEngine: { engine: EngineId; awarenessPct: number | null }[]
+  sov: { brand: string; mentions: number; pct: number; isOwn: boolean }[]
+  citations: { domain: string; count: number; channel: string; isOwn: boolean }[]
+  promptBreakdown: { promptId: string; text: string; perEngine: { engine: EngineId; mentioned: number; total: number }[]; samples?: { engine: EngineId; answer: string; brandMentioned: boolean; competitors: string[] }[] }[]
+  recommendations?: { title: string; detail: string; priority: string }[]
+}
+
+
+export default function AioDashboard() {
+  const { orgSlug } = useParams<{ orgSlug: string }>()
+  return <OrganizationDashboard key={orgSlug} orgSlug={orgSlug} />
+}
+
+function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const Title = 'h2'
+  const loadSequence = useRef(0)
+  const searchParams = useSearchParams()
+  const autoScanTriggered = useRef(false)
+  const [tab, setTab] = useState<Tab>('visibility')
+  const [scans, setScans] = useState<ScanRow[]>([])
+  const [summary, setSummary] = useState<Summary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [errorSource, setErrorSource] = useState<'load' | 'scan'>('load')
+  const [scanLimit, setScanLimit] = useState<string | null>(null)
+  const [scanLimitAction, setScanLimitAction] = useState<'owner' | 'upgrade' | 'contact' | null>(null)
+  const [brandName, setBrandName] = useState<string | null>(null)
+  const [activePrompts, setActivePrompts] = useState<number | null>(null)
+  const [promptTexts, setPromptTexts] = useState<string[]>([])
+  // 前回スキャンとの差分（定点観測の肝）。done が2件以上あるときだけ算出
+  const [deltas, setDeltas] = useState<{ awareness: number; sov: number; citation: number } | null>(null)
+  // 直近のスキャンが失敗していたら通知する
+  const [lastFailed, setLastFailed] = useState(false)
+  // 有料プランか（false の無料ユーザーにはプロ限定セクションをブラー表示）
+  const [isPaid, setIsPaid] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+
+  const load = async () => {
+    const sequence = ++loadSequence.current
+    setError(null)
+    setLoading(true)
+    try {
+      const data = await readAioDashboard(orgSlug)
+      if (sequence !== loadSequence.current) return
+      const plan = data.plan.toUpperCase()
+      setIsPaid(plan !== 'FREE' && plan !== 'GUEST')
+      setIsOwner(data.isOwner)
+      setBrandName(data.profile?.brandName || null)
+      const active = data.prompts.filter(p => p.isActive !== false)
+      setActivePrompts(active.length)
+      setPromptTexts(active.map(p => p.text || '').filter(Boolean))
+      setScans(data.items)
+      setLastFailed(data.lastFailed)
+      const { latest, prev } = data
+      setDeltas(latest && prev && isCompleteScan(latest.coverage) && isCompleteScan(prev.coverage)
+        && [latest.awarenessPct, latest.shareOfVoice, latest.ownCitationPct, prev.awarenessPct, prev.shareOfVoice, prev.ownCitationPct].every(value => typeof value === 'number' && Number.isFinite(value)) ? {
+        awareness: Math.round(((latest.awarenessPct ?? 0) - (prev.awarenessPct ?? 0)) * 10) / 10,
+        sov: Math.round(((latest.shareOfVoice ?? 0) - (prev.shareOfVoice ?? 0)) * 10) / 10,
+        citation: Math.round(((latest.ownCitationPct ?? 0) - (prev.ownCitationPct ?? 0)) * 10) / 10,
+      } : null)
+      setSummary(data.summary)
+    } catch (e: any) {
+      if (sequence === loadSequence.current) {
+        setErrorSource('load')
+        setError((/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : 'データの読み込みに失敗しました'))
+      }
+    } finally {
+      if (sequence === loadSequence.current) setLoading(false)
+    }
+  }
+  useEffect(() => {
+    load()
+    return () => { loadSequence.current++ }
+  }, [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tooManyPrompts = (activePrompts ?? 0) > AIO_MAX_PROMPTS_PER_SCAN
+
+  const runScan = async () => {
+    if (tooManyPrompts) return
+    setRunning(true)
+    setError(null)
+    setScanLimit(null)
+    setScanLimitAction(null)
+    toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
+    try {
+      const result = await aioSend<{ summary?: { coverage?: ScanCoverageCounts } }>('/api/aio/scans', orgSlug, 'POST')
+      const coverage = result.summary?.coverage
+      if (coverage?.failed) toast(`一部を測れませんでした（${coverage.succeeded}/${coverage.attempted} 回成功）。結果を確かめてください。`, { id: 'scan', icon: <AlertTriangle size={18} className="text-amber-500" aria-hidden /> })
+      else toast.success('スキャン完了', { id: 'scan' })
+      await load()
+    } catch (e: any) {
+      const raw: string = (/[ぁ-んァ-ヶ一-龠]/.test(String(e?.message ?? '')) ? e.message : 'スキャンできませんでした。時間をおいて、もう一度お試しください。')
+      // ⚠️ サーバーの「APIキー未設定」は内部の言葉。利用者には、ふだんの言葉で出す
+      const msg = /APIキー/.test(raw) ? 'いまはAIに問い合わせできません。時間をおいて、もう一度お試しください。' : raw
+      toast.error(msg, { id: 'scan' })
+      if (e instanceof AioApiError && e.code === 'LIMIT') {
+        setScanLimit(msg)
+        setScanLimitAction(e.canManageBilling === false ? 'owner'
+          : e.upgradeUrl === '/aio/pricing' ? 'upgrade'
+          : e.contactUrl === HIGH_USAGE_CONTACT_URL ? 'contact'
+          : isOwner ? isPaid ? 'contact' : 'upgrade' : 'owner')
+      } else {
+        setErrorSource('scan')
+        setError(msg)
+      }
+    } finally { setRunning(false); window.dispatchEvent(new Event('aio:usage-changed')) }
+  }
+
+  const trend = useMemo(
+    () => scans.filter((s) => s.status === 'done' && isCompleteScan(s.coverage) && Number.isFinite(s.awarenessPct) && Number.isFinite(s.shareOfVoice)).slice().reverse().map((s) => ({
+      date: new Date(s.createdAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
+      認知度: s.awarenessPct ?? 0,
+      SoV: s.shareOfVoice ?? 0,
+    })),
+    [scans]
+  )
+
+  // ?scan=1 は quick-start 直後の「今すぐスキャンして」という明示要求。
+  // 既存doneの有無に関わらず1回だけ実行し、リロードでの二重実行を防ぐためURLからscanを除去する。
+  useEffect(() => {
+    if (loading || error || tooManyPrompts || autoScanTriggered.current) return
+    if (searchParams.get('scan') !== '1') return
+    autoScanTriggered.current = true
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `/aio/${encodeURIComponent(orgSlug)}`)
+    if (!running) runScan()
+  }, [loading, running, searchParams, error, tooManyPrompts]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <DashboardSkeleton />
+  // スキャン実行中は（既存結果の有無に関わらず）派手な進捗演出を表示。前回結果は消さない＝失敗しても残る
+  if (running) return <ScanProgress brandName={brandName} prompts={promptTexts} />
+
+  // ドヤくん（公式マスコット）のひとこと — 状況に応じて表情(mood)と台詞が変化
+  const doya: { mood: Mood; message: string } = (() => {
+    if (error) return { mood: 'thinking', message: 'うまく読み込めなかったみたい…下のボタンでもう一度試してね' }
+    if (!brandName) return { mood: 'hello', message: 'まずはブランド設定を済ませよう！追跡対象を登録すると分析がはじまるよ' }
+    if (activePrompts === 0) return { mood: 'point', message: '監視プロンプトがまだ0件だよ。質問を追加してスキャンしてみよう！' }
+    if (!summary) return { mood: 'present', message: '準備OK！まずはスキャンしてみよう！' }
+    if (summary.awarenessPct >= 60) return { mood: 'success', message: `認知度${summary.awarenessPct}%！AIによく登場してるね、いい感じ！` }
+    if (summary.awarenessPct >= 30) return { mood: 'thumbsup', message: `認知度${summary.awarenessPct}%。あと一歩、推奨アクションで伸ばしていこう！` }
+    return { mood: 'focus', message: `認知度${summary.awarenessPct}%。AIへの露出はこれから。「推奨」タブを見てみよう！` }
+  })()
+
+  // 設定未完了アラート（ブランド未設定・アクティブプロンプト0件）
+  const setupBanner = !brandName ? (
+    <Link href={`/aio/${orgSlug}/settings`}
+      className="relative flex items-center gap-3 mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 pr-24 hover:bg-amber-100/70 transition-colors overflow-hidden">
+      <div>
+        <div className="flex items-center gap-1.5 text-amber-800 font-black text-sm">{sym('lightbulb')}まず「ブランド設定」を済ませましょう</div>
+        <p className="text-xs font-bold text-amber-700/80 mt-1">追跡する自社ブランドと競合を登録すると、AEO分析が正しく動きます。</p>
+      </div>
+      <DoyaKun mood="point" size={64} className="!absolute -bottom-1 right-3" float={false} />
+    </Link>
+  ) : activePrompts === 0 ? (
+    <Link href={`/aio/${orgSlug}/prompts`}
+      className="relative flex items-center gap-3 mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 pr-24 hover:bg-amber-100/70 transition-colors overflow-hidden">
+      <div>
+        <div className="flex items-center gap-1.5 text-amber-800 font-black text-sm">{sym('add_task')}監視プロンプトを追加しましょう</div>
+        <p className="text-xs font-bold text-amber-700/80 mt-1">AIに投げる質問を登録すると、表示状況やシェアを計測できます。</p>
+      </div>
+      <DoyaKun mood="point" size={64} className="!absolute -bottom-1 right-3" float={false} />
+    </Link>
+  ) : null
+
+  const errorBanner = error ? (
+    <div className="flex items-start gap-3 mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4">
+      <span className="text-rose-500 mt-0.5">{sym('error')}</span>
+      <div className="min-w-0 flex-1">
+        <div className="text-rose-800 font-black text-sm">{errorSource === 'scan' ? 'スキャンに失敗しました' : '読み込みに失敗しました'}</div>
+        <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">{error}</p>
+      </div>
+      <button onClick={load} disabled={running}
+        className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
+        {sym('refresh', 16)}{errorSource === 'scan' ? '結果を確認' : '再試行'}
+      </button>
+    </div>
+  ) : null
+
+  const scanLimitBanner = scanLimit ? (
+    <div role="alert" className="mb-5 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4">
+      <p className="text-sm font-black text-brand-800">スキャンの利用枠に達しました</p>
+      <p className="mt-1 text-xs font-bold text-brand-700">{scanLimit}</p>
+      {scanLimitAction === 'owner' && <p className="mt-2 text-xs font-bold text-brand-600">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
+      {scanLimitAction === 'upgrade' && <TrialNote className="mt-2" />}
+      {scanLimitAction === 'contact' ? (
+        <a href={HIGH_USAGE_CONTACT_URL} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
+          追加枠について相談する
+        </a>
+      ) : scanLimitAction === 'upgrade' ? (
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
+          料金プランを確認する
+        </Link>
+      ) : null}
+    </div>
+  ) : null
+
+  // 直近スキャンが失敗していたときの通知（エラー読み込みとは別）
+  const failedBanner = !error && !scanLimit && lastFailed ? (
+    <div className="flex items-start gap-3 mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4">
+      <span className="text-rose-500 mt-0.5 shrink-0">{sym('warning')}</span>
+      <div className="min-w-0 flex-1">
+        <div className="text-rose-800 font-black text-sm">前回のスキャンは失敗しました</div>
+        <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">AIの応答が返らなかった可能性があります。少し時間をおいて、もう一度スキャンしてください。</p>
+      </div>
+      <button onClick={runScan} disabled={running || tooManyPrompts}
+        className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
+        {sym('refresh', 16)}再スキャン
+      </button>
+    </div>
+  ) : null
+
+  const coverageBanner = summary?.coverage && summary.coverage.failed > 0 ? (
+    <div role="status" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+      <p className="font-black">一部の回答を測定できませんでした</p>
+      <p>予定 {summary.coverage.attempted} 回のうち、成功 {summary.coverage.succeeded} 回・未測定 {summary.coverage.failed} 回です。数値と改善提案は成功した回答のみを対象としています。未測定は「言及なし」や0点を意味しません。</p>
+      <p>外部AIの応答や測定処理に失敗した可能性があります。測定条件が異なるため、過去の数値との単純比較はできません。必要に応じて残りの利用枠を確認して再スキャンしてください。</p>
+    </div>
+  ) : summary && !summary.coverage ? (
+    <div role="status" className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
+      この過去のスキャンには測定範囲の記録がありません。数値を他のスキャンと比較する際はご注意ください。
+    </div>
+  ) : null
+
+  const promptLimitBanner = tooManyPrompts ? (
+    <div role="alert" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p>有効な質問が{activePrompts}件あります。1回の測定は{AIO_MAX_PROMPTS_PER_SCAN}件までです。先頭の質問だけを測定することはありません。</p>
+      <Link href={`/aio/${encodeURIComponent(orgSlug)}/prompts`} className="font-bold underline">監視プロンプトで対象を選び直す</Link>
+    </div>
+  ) : null
+
+  const RunButton = (
+    <button onClick={runScan} disabled={running || tooManyPrompts}
+      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black shadow-lg shadow-brand-400/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+      <span className="material-symbols-outlined text-[20px]">{running ? 'hourglass_top' : 'play_arrow'}</span>
+      {running ? 'スキャン中…' : 'スキャン実行'}
+      {/* 減る量は、今のスキャンで聞く質問の数ぶん（ドヤパワーの旗の内側だけ） */}
+      <ShellCostBadge action="aio.scan.question" units={Math.max(1, activePrompts ?? 0)} />
+    </button>
+  )
+
+  if (!summary && error) return <div className="max-w-2xl mx-auto p-6">{errorBanner}</div>
+
+  if (!summary) {
+    // 新しい見た目: 空状態の絵と説明と、次にやること（スキャン実行）を1つだけ出す
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        {errorBanner}
+        {scanLimitBanner}
+        {failedBanner}
+        {coverageBanner}
+        {setupBanner}
+        {promptLimitBanner}
+        <EmptyState
+          title="まだスキャン結果がありません"
+          description={<>サービス名とURLは登録済みです。<wbr />「スキャン実行」を押すと、AIでの今の見え方を調べます。<wbr />監視する質問は<Link href={`/aio/${encodeURIComponent(orgSlug)}/prompts`} className="text-[#0047d6] underline">監視プロンプト</Link>で編集できます。</>}
+          art="/aio/empty-scans.webp"
+          action={RunButton}
+        />
+        <p className="mt-4 text-center">
+          <Link href={`/aio/${encodeURIComponent(orgSlug)}/scan`} className="text-sm font-bold text-[#0047d6] hover:underline">別のURLを調べる</Link>
+        </p>
+      </div>
+    )
+  }
+
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <DoyaKun mood={doya.mood} size={56} float={false} className="shrink-0" />
+          <div className="min-w-0">
+            <Title className="text-2xl font-black text-slate-900">AEO ダッシュボード</Title>
+            <p className="text-sm font-bold text-brand-600">{doya.message}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-brand-100 text-brand-600 font-black text-sm hover:bg-brand-50 transition-colors">スキャン履歴</Link>
+          <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-brand-100 text-brand-600 font-black text-sm hover:bg-brand-50 transition-colors">
+            {sym('add', 18)}別のURLを調べる
+          </Link>
+          {RunButton}
+        </div>
+      </div>
+
+      {errorBanner}
+      {scanLimitBanner}
+      {failedBanner}
+      {coverageBanner}
+      {setupBanner}
+        {promptLimitBanner}
+
+      {/* タブ */}
+      <div className="flex gap-1 border-b border-slate-200 mb-5 overflow-x-auto">
+        {([['visibility', '表示状況'], ['sov', 'シェア・オブ・ボイス'], ['citations', '引用'], ['recommend', '推奨']] as [Tab, string][]).map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`px-4 py-2.5 text-sm font-black whitespace-nowrap border-b-2 transition-colors ${tab === k ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'visibility' && <VisibilityTab summary={summary} trend={trend} delta={deltas?.awareness ?? null} brandName={brandName} />}
+      {tab === 'sov' && <SovTab summary={summary} delta={deltas?.sov ?? null} locked={!isPaid} orgSlug={orgSlug} />}
+      {tab === 'citations' && <CitationsTab summary={summary} delta={deltas?.citation ?? null} locked={!isPaid} orgSlug={orgSlug} />}
+      {tab === 'recommend' && <RecommendTab summary={summary} locked={!isPaid} orgSlug={orgSlug} brandName={brandName} />}
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-5xl mx-auto p-6 animate-pulse">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-slate-200" />
+          <div className="space-y-2">
+            <div className="h-6 w-56 rounded-lg bg-slate-200" />
+            <div className="h-4 w-40 rounded bg-slate-100" />
+          </div>
+        </div>
+        <div className="h-11 w-36 rounded-xl bg-slate-200" />
+      </div>
+      <div className="flex gap-2 border-b border-slate-200 mb-5 pb-1">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="h-7 w-24 rounded-lg bg-slate-200" />)}
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className={`bg-white rounded-2xl border border-slate-200 p-5 ${i >= 2 ? 'md:col-span-2' : ''}`}>
+            <div className="h-4 w-40 rounded bg-slate-200 mb-4" />
+            <div className="h-40 rounded-xl bg-slate-100" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// スキャン中の派手な進捗演出。実際の監視プロンプト・エンジンを小出しに見せて飽きさせない。
+function ScanProgress({ brandName, prompts }: { brandName: string | null; prompts: string[] }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、絵文字の代わりに lucide のアイコンを出す
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const engines = ['ChatGPT', 'Gemini', 'Claude', 'Perplexity']
+  const STEPS = [
+    { icon: 'send', label: 'AIに質問を投げています' },
+    { icon: 'forum', label: 'AIの回答を読み取っています' },
+    { icon: 'leaderboard', label: '競合とのシェアを集計しています' },
+    { icon: 'link', label: '引用元ドメインを調べています' },
+    { icon: 'tips_and_updates', label: '改善アクションを作成しています' },
+  ]
+  const stepIdx = Math.min(STEPS.length - 1, Math.floor(tick / 7))
+  const pct = Math.min(95, Math.round(100 * (1 - Math.exp(-tick / 45))))
+  const activeEngine = Math.floor(tick / 2) % engines.length
+  const currentPrompt = prompts.length ? prompts[Math.floor(tick / 3) % prompts.length] : null
+  const TIPS = [
+    'AIに引用されるには、比較記事や第三者メディアでの言及が効きます。',
+    'ChatGPTとPerplexityでは“推されるサービス”が違うことがよくあります。',
+    'スキャンを重ねると、認知度やSoVの推移が時系列で見えるようになります。',
+    'FAQや料金を構造化しておくと、AIが回答に引用しやすくなります。',
+  ]
+  const tip = TIPS[Math.floor(tick / 5) % TIPS.length]
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-700 to-brand-600 text-white shadow-xl shadow-brand-400/30 p-6 sm:p-8">
+        <div className="pointer-events-none absolute inset-0 opacity-30">
+          {[...Array(6)].map((_, i) => (
+            <span key={i} className="absolute rounded-full bg-white/40 animate-pulse"
+              style={{ width: 8 + (i % 3) * 6, height: 8 + (i % 3) * 6, top: `${(i * 37) % 90}%`, left: `${(i * 53) % 90}%`, animationDelay: `${i * 0.3}s` }} />
+          ))}
+        </div>
+        <div className="relative text-center">
+          <div className="flex justify-center animate-bounce"><DoyaKun mood="thinking" size={92} /></div>
+          <p className="mt-3 text-sm font-black text-brand-50">{brandName ? `「${brandName}」をAIで調査中` : 'AIでの現状を調査中'}</p>
+          <div className="text-5xl sm:text-6xl font-black tabular-nums mt-1">{pct}<span className="text-2xl">%</span></div>
+          <div className="mt-3 h-3 rounded-full bg-white/20 overflow-hidden">
+            <div className="h-full rounded-full bg-white transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 font-black text-sm">
+            <span className="material-symbols-outlined text-[18px] animate-pulse">{STEPS[stepIdx].icon}</span>
+            {STEPS[stepIdx].label}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mt-4">
+        {engines.map((e, i) => {
+          const on = i === activeEngine
+          return (
+            <div key={e} className={`rounded-xl border p-3 text-center transition-all duration-300 ${on ? 'border-brand-300 bg-brand-50 scale-105 shadow' : 'border-slate-200 bg-white'}`}>
+              <p className={`text-xs font-black ${on ? 'text-brand-600' : 'text-slate-400'}`}>{e}</p>
+              <p className={`text-[10px] font-bold mt-0.5 ${on ? 'text-brand-400' : 'text-slate-300'}`}>{on ? '質問中…' : '待機'}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {currentPrompt && (
+        <div className="mt-4 bg-white rounded-2xl border border-brand-50 p-4">
+          <p className="text-[11px] font-black text-brand-400 mb-1">いま調べている質問</p>
+          <p key={currentPrompt} className="text-sm font-bold text-slate-800 animate-fade-in-up">「{currentPrompt}」</p>
+        </div>
+      )}
+
+      <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+        {STEPS.map((s, i) => (
+          <div key={s.label} className={`flex items-center gap-3 text-sm font-bold transition-colors ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-brand-600' : 'text-slate-300'}`}>
+            <span className="material-symbols-outlined text-[20px]">{i < stepIdx ? 'check_circle' : i === stepIdx ? 'progress_activity' : 'radio_button_unchecked'}</span>
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up"><span className="inline-flex items-center gap-1"><UiIcon name="idea" size={14} className="flex-shrink-0" />{tip}</span></p>
+      <p className="text-center text-[11px] font-bold text-slate-300 mt-2">完了までふつう数分かかります。このままお待ちください。</p>
+    </div>
+  )
+}
+
+function Card({ children, title, className = '' }: { children: React.ReactNode; title?: string; className?: string }) {
+  return (
+    <div className={`bg-white rounded-2xl border border-slate-200 p-5 ${className}`}>
+      {title && <h3 className="text-sm font-black text-slate-700 mb-3">{title}</h3>}
+      {children}
+    </div>
+  )
+}
+
+function Gauge({ pct, label, delta }: { pct: number; label: string; delta?: number | null }) {
+  // 新しい見た目: 共通の Ring。大きさは旧ゲージと同じ 160px で、高さを変えない
+  return (
+    <div className="text-center">
+      <div className="inline-grid place-items-center">
+        <Ring value={Math.min(pct, 100) / 100} size={160} label={`${label} ${pct}%`}>
+          <div className="text-center">
+            <p className="text-3xl font-black text-slate-900 tabular-nums">{pct}%</p>
+            {delta != null && <div className="mt-1 flex justify-center"><DeltaBadge value={delta} /></div>}
+          </div>
+        </Ring>
+      </div>
+      <p className="text-sm font-bold text-slate-500 mt-1">{label}</p>
+    </div>
+  )
+}
+
+// プロ限定セクションのゲート。無料ユーザーには中身にブラーをかけ、
+// 「プロでここから先が見れる」案内をオーバーレイ表示する（データ自体は自社のものを表示）。
+function ProGate({ locked, orgSlug, children, note }: { locked: boolean; orgSlug: string; children: React.ReactNode; note?: string }) {
+  if (!locked) return <>{children}</>
+  return (
+    <div className="relative">
+      <div className="blur-[6px] pointer-events-none select-none" aria-hidden>{children}</div>
+      <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/30">
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`}
+          className="flex flex-col items-center gap-2 text-center px-6 py-5 rounded-2xl bg-white/95 border border-brand-100 shadow-lg shadow-brand-400/10 hover:-translate-y-0.5 transition-all">
+          <span className="material-symbols-outlined text-brand-500 text-[28px]">lock</span>
+          <span className="font-black text-slate-900 text-sm">ここから先はプロプランで閲覧できます</span>
+          <span className="text-xs font-bold text-slate-500">{note || 'SoV・引用元・改善アクションなど、AEO改善に効く詳細データが解放されます'}</span>
+          <span className="mt-1 inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm">プロプランを見る{sym('arrow_forward', 16)}</span>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// 前回スキャンとの差分バッジ（増=緑 / 減=赤 / 変化なし=灰）
+function DeltaBadge({ value, suffix = 'pt' }: { value: number; suffix?: string }) {
+  if (value === 0) return <span className="inline-flex items-center gap-0.5 text-[11px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">±0 前回比</span>
+  const up = value > 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] font-black px-1.5 py-0.5 rounded-full ${up ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+      <span className="material-symbols-outlined text-[13px] leading-none">{up ? 'arrow_upward' : 'arrow_downward'}</span>
+      {up ? '+' : ''}{value}{suffix} 前回比
+    </span>
+  )
+}
+
+function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary; trend: any[]; delta?: number | null; brandName?: string | null }) {
+  const competitors = summary.sov.filter((s) => !s.isOwn)
+  const zeroAware = summary.awarenessPct === 0
+  const label = brandName ? `「${brandName}」` : 'このブランド'
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      {zeroAware && (
+        <div className="md:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-500 mt-0.5 shrink-0">emoji_objects</span>
+            <div className="min-w-0">
+              <p className="font-black text-amber-800 text-sm">AIはまだ{label}を回答に挙げていません</p>
+              <p className="text-xs font-bold text-amber-700/90 mt-1 leading-relaxed">
+                {competitors.length > 0
+                  ? `計測自体は成功していて、競合（${competitors.slice(0, 3).map((c) => c.brand).join('・')} など）はAIに挙げられています。つまり「競合は推されるのに自社は未言及」＝まさにAEOで改善すべき状態です。`
+                  : 'まだ十分なデータが集まっていません。プロンプトを増やすか、再スキャンしてみてください。'}
+                「シェア・オブ・ボイス」で競合との差を、「推奨」タブで具体的な打ち手を確認しましょう。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      <Card title="ブランド認知度（言及率）">
+        <div className="grid place-items-center py-2"><Gauge pct={summary.awarenessPct} label="AIの回答に登場した割合" delta={delta} /></div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {summary.perEngine.map((e) => (
+            <div key={e.engine} className="text-center bg-slate-50 rounded-xl py-2">
+              <p className="text-[11px] font-bold text-slate-400">{ENGINE_LABEL[e.engine] || e.engine}</p>
+              <p className="text-lg font-black text-slate-800">{e.awarenessPct === null ? '未測定' : `${e.awarenessPct}%`}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card title="認知度・SoVの推移（全件測定済みのみ）">
+        {trend.length <= 1 ? (
+          <p className="text-sm text-slate-400 font-bold py-12 text-center">全件測定済みのスキャンが2回以上あると推移が表示されます</p>
+        ) : (
+          // 新しい見た目: 共通の AreaChart（2系列は実線と破線、凡例の文字でも区別）
+          <div style={{ minHeight: 220 }}>
+            <AreaChart
+              labels={trend.map((t) => String(t.date))}
+              series={[
+                { name: '認知度', values: trend.map((t) => Number(t['認知度']) || 0) },
+                { name: 'SoV', values: trend.map((t) => Number(t.SoV) || 0), tone: 'cyan' },
+              ]}
+              height={200}
+              format={(n) => `${n}%`}
+            />
+          </div>
+        )}
+      </Card>
+
+      <Card title="センチメント分析（言及時の論調）" className="md:col-span-2">
+        <div className="flex justify-center py-1">
+            <Donut
+              label={`センチメント ポジティブ${summary.sentiment.positive}% ニュートラル${summary.sentiment.neutral}% ネガティブ${summary.sentiment.negative}%`}
+              data={[
+                { label: 'ポジティブ', value: summary.sentiment.positive },
+                { label: 'ニュートラル', value: summary.sentiment.neutral },
+                { label: 'ネガティブ', value: summary.sentiment.negative },
+              ]}
+            />
+          </div>
+      </Card>
+
+      <Card title="プロンプト別の言及状況（クリックで実際のAI回答を表示）" className="md:col-span-2">
+        <PromptBreakdown summary={summary} brandName={brandName} />
+      </Card>
+    </div>
+  )
+}
+
+// 回答文中の自社名(紫)・競合名(ピンク)をハイライトして読みやすく表示
+function HighlightAnswer({ text, brandName, competitors }: { text: string; brandName?: string | null; competitors: string[] }) {
+  const own = (brandName || '').trim()
+  const comps = competitors.filter((c) => c && c.trim()).map((c) => c.trim())
+  const terms = [own, ...comps].filter(Boolean)
+  if (terms.length === 0) return <>{text}</>
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // 長い語から優先してマッチ
+  const sorted = [...new Set(terms)].sort((a, b) => b.length - a.length)
+  const re = new RegExp(`(${sorted.map(esc).join('|')})`, 'gi')
+  const parts = text.split(re)
+  return (
+    <>
+      {parts.map((part, i) => {
+        const low = part.toLowerCase()
+        if (own && low === own.toLowerCase()) return <mark key={i} className="bg-brand-50 text-brand-700 font-black rounded px-0.5">{part}</mark>
+        if (comps.some((c) => c.toLowerCase() === low)) return <mark key={i} className="bg-pink-50 text-pink-700 font-bold rounded px-0.5">{part}</mark>
+        return <span key={i}>{part}</span>
+      })}
+    </>
+  )
+}
+
+function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?: string | null }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const compNames = summary.sov.filter((s) => !s.isOwn).map((s) => s.brand)
+  return (
+    <div className="space-y-2">
+      {summary.promptBreakdown.map((p) => {
+        const open = openId === p.promptId
+        const totalMeasured = p.perEngine.reduce((a, e) => a + e.total, 0)
+        const totalMentioned = p.perEngine.reduce((a, e) => a + e.mentioned, 0)
+        const hasSamples = (p.samples?.length || 0) > 0
+        return (
+          <div key={p.promptId} className="rounded-xl border border-slate-200 overflow-hidden">
+            <button onClick={() => setOpenId(open ? null : p.promptId)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors">
+              <span className={`material-symbols-outlined text-[20px] shrink-0 transition-transform ${open ? 'rotate-90' : ''} text-slate-400`}>chevron_right</span>
+              <span className="flex-1 text-sm font-bold text-slate-700 min-w-0 truncate" title={p.text}>{p.text}</span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                {p.perEngine.map((e) => (
+                  <span key={e.engine} title={ENGINE_LABEL[e.engine] || e.engine}
+                    className={`text-[11px] font-black px-1.5 py-0.5 rounded ${e.mentioned > 0 ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-400'}`}>
+                    {(ENGINE_LABEL[e.engine] || e.engine).slice(0, 2)} {e.total === 0 ? '未測定' : `${e.mentioned}/${e.total}`}
+                  </span>
+                ))}
+              </span>
+            </button>
+            {open && (
+              <div className="px-3 pb-3 pt-1 bg-slate-50/60 border-t border-slate-100 space-y-3">
+                <p className="text-[11px] font-bold text-slate-400">
+                  {totalMeasured === 0 ? 'このプロンプトは測定できませんでした。言及の有無は判定できません。' : totalMentioned > 0 ? `このプロンプトで自社が ${totalMentioned} 回言及されました。` : 'このプロンプトでは自社はまだ言及されていません。下の回答に挙がっているのが競合です。'}
+                </p>
+                {hasSamples ? p.samples!.map((s, i) => (
+                  <div key={i} className="bg-white rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-black text-slate-600">{ENGINE_LABEL[s.engine] || s.engine}</span>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${s.brandMentioned ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                        {s.brandMentioned ? '自社あり' : '自社なし'}
+                      </span>
+                      {s.competitors.length > 0 && <span className="text-[10px] font-bold text-pink-600">競合: {s.competitors.slice(0, 5).join('・')}</span>}
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
+                      <HighlightAnswer text={s.answer} brandName={brandName} competitors={compNames} />
+                    </p>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-400 font-bold">回答の記録がありません（このスキャンは抜粋保存前のものか、回答が空でした）。</p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function SovTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?: number | null; locked: boolean; orgSlug: string }) {
+  const data = summary.sov.slice(0, 10).map((s) => ({ name: s.brand, pct: s.pct, isOwn: s.isOwn }))
+  return (
+    <ProGate locked={locked} orgSlug={orgSlug} note="競合と比較した自社のシェア・オブ・ボイスはプロプランで閲覧できます">
+    <div className="grid md:grid-cols-2 gap-4">
+      <Card title="シェア・オブ・ボイス">
+        {delta != null && <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-500">自社SoV {summary.shareOfVoice}%<DeltaBadge value={delta} /></div>}
+        <table className="w-full text-sm">
+          <tbody>
+            {summary.sov.slice(0, 10).map((s, i) => (
+              <tr key={s.brand} className="border-b border-slate-50">
+                <td className="py-2 w-6 text-slate-400 font-bold">{i + 1}</td>
+                <td className={`py-2 font-bold ${s.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{s.brand}{s.isOwn && <span className="ml-1 inline-flex items-center gap-0.5 align-middle text-[10px] font-black"><Star size={12} className="fill-current" aria-hidden />自社</span>}</td>
+                <td className="py-2 text-right font-black text-slate-800">{s.pct}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      <Card title="占有率（上位10）">
+        <Bars
+            format={(n) => `${n}%`}
+            data={data.map((d) => ({ label: d.name, value: d.pct, highlight: d.isOwn ? '自社' : undefined }))}
+          />
+      </Card>
+    </div>
+    </ProGate>
+  )
+}
+
+function CitationsTab({ summary, delta, locked, orgSlug }: { summary: Summary; delta?: number | null; locked: boolean; orgSlug: string }) {
+  const channelLabel: Record<string, string> = { own: '自社', media: 'メディア', competitor: '競合', affiliate: 'アフィリエイト', other: 'その他' }
+  return (
+    <ProGate locked={locked} orgSlug={orgSlug} note="AIがどのサイトを引用しているか・自社の引用率はプロプランで閲覧できます">
+    <div className="grid md:grid-cols-2 gap-4">
+      <Card title="自社ドメイン引用率">
+        <div className="grid place-items-center py-2"><Gauge pct={summary.ownCitationPct} label="AIの引用元に占める自社サイト" delta={delta} /></div>
+      </Card>
+      <Card title="AIがよく引用するドメイン">
+        {summary.citations.length === 0 ? (
+          <p className="text-sm text-slate-400 font-bold py-8 text-center">引用元データがありません</p>
+        ) : (
+          <table className="w-full text-sm">
+            <tbody>
+              {summary.citations.map((c) => (
+                <tr key={c.domain} className="border-b border-slate-50">
+                  <td className={`py-2 font-bold ${c.isOwn ? 'text-brand-600' : 'text-slate-700'}`}>{c.domain}{c.isOwn && <span className="ml-1 inline-flex items-center gap-0.5 align-middle text-[10px] font-black"><Star size={12} className="fill-current" aria-hidden />自社</span>}</td>
+                  <td className="py-2 text-slate-400 text-xs font-bold">{channelLabel[c.channel] || c.channel}</td>
+                  <td className="py-2 text-right font-black text-slate-800">{c.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    </div>
+    </ProGate>
+  )
+}
+
+function RecommendTab({ summary, locked, orgSlug, brandName }: { summary: Summary; locked: boolean; orgSlug: string; brandName?: string | null }) {
+  const META: Record<string, { label: string; bar: string; pill: string; icon: string }> = {
+    high: { label: '今すぐ着手', bar: 'bg-rose-500', pill: 'bg-rose-100 text-rose-700', icon: 'priority_high' },
+    medium: { label: 'おすすめ', bar: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700', icon: 'recommend' },
+    low: { label: '余裕があれば', bar: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600', icon: 'schedule' },
+  }
+  const orderOf = (p: string) => (p === 'high' ? 0 : p === 'low' ? 2 : 1)
+  const recs = [...(summary.recommendations || [])].sort((a, b) => orderOf(a.priority) - orderOf(b.priority))
+  const who = brandName ? `「${brandName}」` : 'あなたのサービス'
+
+  const body = recs.length === 0 ? (
+    <Card><p className="text-slate-400 font-bold text-center py-8">改善アクションがありません。スキャンを実行すると、AIに選ばれるための打ち手が表示されます。</p></Card>
+  ) : (
+    <div className="space-y-4">
+      {/* 現状＋使い方のイントロ */}
+      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 border border-brand-50 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined text-brand-500 mt-0.5">tips_and_updates</span>
+          <div className="min-w-0">
+            <p className="font-black text-slate-900 text-sm sm:text-base">AIに選ばれるための改善アクション</p>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 mt-1 leading-relaxed">
+              現在のAI認知度は <span className="text-brand-600 font-black">{summary.awarenessPct}%</span>。{who}がAIの回答にもっと登場するための打ち手を<strong className="text-slate-700">優先度の高い順</strong>に並べました。上から順に取り組むのがおすすめです。
+            </p>
+          </div>
+        </div>
+        {/* 凡例 */}
+        <div className="flex flex-wrap gap-2 mt-3 pl-8">
+          {Object.entries(META).map(([k, m]) => (
+            <span key={k} className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${m.pill}`}>
+              <span className="material-symbols-outlined text-[13px]">{m.icon}</span>{m.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* アクション一覧（番号付きステップ） */}
+      {recs.map((r, i) => {
+        const m = META[r.priority] || META.medium
+        return (
+          <div key={i} className="flex bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className={`w-1.5 shrink-0 ${m.bar}`} />
+            <div className="p-4 sm:p-5 flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-black text-sm shrink-0">{i + 1}</span>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${m.pill}`}>
+                  <span className="material-symbols-outlined text-[14px]">{m.icon}</span>{m.label}
+                </span>
+                <h3 className="font-black text-slate-900 text-sm sm:text-base">{r.title}</h3>
+              </div>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.detail}</p>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+  return (
+    <ProGate locked={locked} orgSlug={orgSlug} note="AEOを伸ばす具体的な改善アクションはプロプランで閲覧できます">
+      {body}
+    </ProGate>
+  )
+}

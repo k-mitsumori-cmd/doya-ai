@@ -1,0 +1,6 @@
+/* 共通の枠の中では、組織の切り替えを ToolFrame の switcher に出す。
+   ページ（Tool.tsx・preview）の見出しにある OrgSwitcher（header の中の label > select）は隠し、二重にしない。
+   ⚠️ ページ本体は変えない約束なので、ここで表示だけを止める。ページの見出しに別の select を足すときは、ここも見直す */
+.content :global(header) label:has(> select) {
+  display: none;
+}

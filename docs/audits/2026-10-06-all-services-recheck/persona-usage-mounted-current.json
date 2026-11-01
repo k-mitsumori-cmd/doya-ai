@@ -1,0 +1,51 @@
+{
+  "cases": 11,
+  "passed": 11,
+  "results": [
+    {
+      "name": "Actor transition refreshes and hides previous private remaining count",
+      "passed": true
+    },
+    {
+      "name": "Guest and loading clear private usage without another private fetch",
+      "passed": true
+    },
+    {
+      "name": "Initial loading performs no private usage request",
+      "passed": true
+    },
+    {
+      "name": "Malformed negative remaining is unknown rather than displayed",
+      "passed": true
+    },
+    {
+      "name": "Pending refresh hides previous remaining instead of displaying it as current",
+      "passed": true
+    },
+    {
+      "name": "ABA return does not restore previous actor snapshot",
+      "passed": true
+    },
+    {
+      "name": "Late old actor reply cannot overwrite the current actor",
+      "passed": true
+    },
+    {
+      "name": "Focus coalesces a pending lookup and deadline marks usage unknown",
+      "passed": true
+    },
+    {
+      "name": "Valid reservations and unlimited text remain readable; inconsistent allowance fails",
+      "passed": true
+    },
+    {
+      "name": "Missing authenticated identity never fetches private usage",
+      "passed": true
+    },
+    {
+      "name": "Unmount aborts pending lookup and removes focus listener",
+      "passed": true
+    }
+  ],
+  "scope": "Actual mounted PersonaUsagePanel; synthetic sessions and read-only mocked responses. No live customer data."
+}

@@ -1,0 +1,6 @@
+{
+  "status": "next-audit-source-candidate",
+  "finding": "Seven shared usage-panel consumers omit refreshEvent; several generation pages stay mounted after successful generation. Banner generation emits no usage completion event in the inspected source.",
+  "scope": "Static source observation, not yet mounted end-to-end reproduction of a real page generation.",
+  "next": "Verify post-generation usage refresh wiring for all 9 consumers; preserve actor/organization scoping and avoid treating a timeout as generation failure."
+}

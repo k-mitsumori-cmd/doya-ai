@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-31T11:24:38.872Z",
+  "passed": 15,
+  "results": [
+    "Fresh membership authority rejects POST, GET and DELETE without writes",
+    "Conversion copies lead reread after row lock, not pretransaction snapshot",
+    "Stale submitted lead version conflicts without reserving quota or receipt",
+    "Won and lost stages produce matching status and outcome dates",
+    "201-character explicit deal name rejected without truncation",
+    "Legacy long contact preserved in source; explicit reviewed override converts intact",
+    "Default deal name fits without shortening source account name",
+    "Replay and exact-pair recovery work after organization quota becomes full",
+    "Same operation with changed input conflicts; original pair remains intact",
+    "Missing recovery does not create; cancellation fences late POST",
+    "Cancellation after commit returns found without deleting business records",
+    "Unavailable exact receipt never substitutes another deal or resurrects deleted data",
+    "Receipt failure rolls back account, contact, deal and conversion claim together",
+    "Full quota leaves source and receipt unchanged with private response",
+    "Receipts bind to lead ID; different lead cannot read the created pair"
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/leads/[id]/convert/route.ts": "c20563ecfe285268b8e7815a8276b259f073f69c551a695ddaf5b7f1a6e9ce5f",
+    "src/lib/sfa/lead-conversion.ts": "e0125d16c86e34adccbb7cfe69569baeb4802f10c4d144b963d7cd4664178ca7",
+    "src/lib/sfa/creation-receipt.ts": "b6f2e72bc05947f347c848dff21be65d00ff55d06444e586071a291d1f8b80b5"
+  },
+  "scope": "Actual route and conversion/receipt/stage/authority/admission helpers with synthetic rollback Prisma. Sequential scenarios only; no real PostgreSQL concurrency or mounted UI verification, no customer/provider writes."
+}

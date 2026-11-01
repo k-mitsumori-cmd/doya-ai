@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-07T21:49:42.060Z",
+  "expected": 6,
+  "passed": 6,
+  "cases": [
+    {
+      "finding": "same-frame submit invokes one creation",
+      "actionCalls": 1,
+      "successToasts": 1,
+      "refreshes": 1
+    },
+    {
+      "finding": "empty action acknowledgement retains draft without success",
+      "acknowledgement": {},
+      "successToasts": 0,
+      "clearedDraft": false
+    },
+    {
+      "finding": "same-mounted project change clears previous project draft"
+    },
+    {
+      "finding": "explicit cancellation of missing save preserves draft and does not resend"
+    },
+    {
+      "finding": "recover saved task clears draft and refreshes without creating again"
+    },
+    {
+      "finding": "account switch clears previous private draft"
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/task-create-form.tsx": "949f120191da73a765069d4f6dcf0d5265c09cd8a3266f165281d4e2acc83d5c",
+    "src/lib/promane/use-task-creation.ts": "49d87decf0e2f60ac41b70b207a844b0063aac39cafbd294734d4e338cb45f56",
+    "src/lib/promane/task-input.ts": "8670b7167cf8dd46ee4c512fed78a49a1f19526f6a1e54535b26ceb93d312b5c"
+  },
+  "scope": "Actual TaskCreateForm mounted in React StrictMode with controlled input state. Actual hook/parser and task form, synthetic actions/session/navigation and select shells. Not native browser, actual Next action transport, database-linked UI or production/customer writes."
+}

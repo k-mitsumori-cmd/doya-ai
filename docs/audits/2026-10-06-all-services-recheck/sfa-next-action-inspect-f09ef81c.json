@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-07T05:47:51.793373+00:00",
+  "id": "dpl_2LDAhdvReThR9zQHeWJfxGPXyRvo",
+  "url": "doya-r3x0b38fk-surisutas-projects.vercel.app",
+  "target": "production",
+  "state": "READY",
+  "evidence": "vercel inspect --logs ended status Ready; public verifier passed deployment marker for17entries and46assets",
+  "buildLog": "/tmp/doya-next-action-deployment-build-tail.log"
+}

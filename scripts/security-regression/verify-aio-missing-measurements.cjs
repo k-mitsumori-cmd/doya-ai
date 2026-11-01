@@ -17,7 +17,7 @@ function fixture(options = {}) {
     } },
   });
   const db = {
-    aioMember: { findMany: async () => [{ userId: 'owner' }] },
+    aioMember: { findFirst: async () => ({ id: 'member' }), findMany: async () => [{ userId: 'owner' }] },
     user: { findUnique: async () => ({ plan: 'PRO' }) },
     aioBrandProfile: { findUnique: async () => ({ brandName: 'Synthetic', aliases: [], competitors: [] }) },
     aioPrompt: { findMany: async () => [{ id: 'p1', text: 'question1' }, { id: 'p2', text: 'question2' }] },
@@ -42,7 +42,7 @@ function fixture(options = {}) {
     '@/lib/aio/billing': load('src/lib/aio/billing.ts'),
     '@/lib/aio/quota': { scanQuota: () => ({ paid: true, since: new Date(0), limit: 30 }) },
   });
-  return { state, run: () => runner.runAndPersistScan('synthetic', { repetitions: 2 }) };
+  return { state, run: () => runner.runAndPersistScan('synthetic', { repetitions: 2, actor: { userId: 'owner', memberId: 'member', organizationId: 'synthetic' } }) };
 }
 (async () => {
   for (const [label, options] of [['all provider failures', { allFail: true }], ['blank answers', { empty: true }], ['analysis failures', { analysisFail: true }]]) {

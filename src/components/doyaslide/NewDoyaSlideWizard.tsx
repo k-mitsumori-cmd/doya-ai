@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { readBillingResponse } from '@/lib/billing-response-client'
+import { useStylePreviews } from '@/lib/doyaslide/use-style-previews'
+import { UrlAnalysisError, validAnalysisUrl } from '@/lib/doyaslide/url-analysis-client'
+import { claimUrlAnalysisIntent, clearUrlAnalysisIntent, readUrlAnalysisIntent } from '@/lib/doyaslide/url-analysis-intent-client'
+import { fetchUrlAnalysisOperation, type UrlAnalysisSavedResult } from '@/lib/doyaslide/url-analysis-operation-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import {
   DOC_TYPES,
@@ -22,10 +27,23 @@ import {
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
+import { ShellCostBadge } from '@/components/shell/power'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { Briefcase, Building2, FileText, Mic, Rocket, Smartphone, Sparkles, Users, type LucideIcon } from 'lucide-react'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
+
+// 資料タイプのアイコン（絵文字の代わりに lucide。FIX-PLAN 15）
+const DOC_TYPE_ICON: Record<string, LucideIcon> = {
+  sales: Briefcase, proposal: FileText, sns: Smartphone, seminar: Mic,
+  recruit: Users, pitch: Rocket, internal: Building2, custom: Sparkles,
+}
 
 type Aspect = 'wide' | 'square' | 'vertical'
+const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
 
-const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
+const COLOR_SWATCHES = ['#2563eb', '#0066ff', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
 const FUN_MESSAGES = [
   '入力内容を処理しています…',
@@ -71,6 +89,19 @@ function validWizardSlides(value: any, projectId: string, count: number): boolea
   })
 }
 
+function parseProjectUsage(data: Record<string, unknown>) {
+  if (data.error !== undefined || data.code !== undefined || typeof data.plan !== 'string' ||
+    !['GUEST', 'FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(data.plan) || data.tier !== data.plan) {
+    throw new Error('利用状況を確認できませんでした')
+  }
+  if (data.plan === 'GUEST') return { tier: 'GUEST', limit: 0, used: 0 }
+  const limit = (data.limits as { maxProjects?: unknown } | undefined)?.maxProjects
+  const used = (data.usage as { projects?: unknown } | undefined)?.projects
+  if (typeof limit !== 'number' || !Number.isSafeInteger(limit) || limit < -1 ||
+    typeof used !== 'number' || !Number.isSafeInteger(used) || used < 0) throw new Error('利用状況を確認できませんでした')
+  return { tier: data.plan, limit, used }
+}
+
 function frameClass(a: Aspect) {
   if (a === 'square') return 'aspect-square'
   if (a === 'vertical') return 'aspect-[2/3]'
@@ -78,8 +109,22 @@ function frameClass(a: Aspect) {
 }
 
 export default function NewDoyaSlideWizard() {
+  // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（UI 品質 S-57）
+  const Heading = 'h2'
   const router = useRouter()
-  const { status: authStatus } = useSession()
+  const { data: session, status: authStatus } = useSession()
+  const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
+  const allowed = authStatus === 'authenticated' && Boolean(actor)
+  const usageScope = JSON.stringify([actor, authStatus, (session?.user as { plan?: string } | undefined)?.plan])
+  const usageEpoch = useRef({ scope: usageScope, version: 0 })
+  if (usageEpoch.current.scope !== usageScope) usageEpoch.current = { scope: usageScope, version: usageEpoch.current.version + 1 }
+  const usageContextKey = JSON.stringify([usageScope, usageEpoch.current.version])
+  const activeUsageContext = useRef(usageContextKey)
+  activeUsageContext.current = usageContextKey
+  const usageVerifiedRef = useRef('')
+  const usageCanCreateRef = useRef(false)
+  const usagePendingRef = useRef<AbortController | null>(null)
+  const [usageStatus, setUsageStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [title, setTitle] = useState('')
   const [titleEdited, setTitleEdited] = useState(false)
   const [docType, setDocType] = useState('proposal')
@@ -88,6 +133,37 @@ export default function NewDoyaSlideWizard() {
   const [urlBusy, setUrlBusy] = useState(false)
   const [importedRef, setImportedRef] = useState('')
   const [importedUrl, setImportedUrl] = useState('')
+  const [urlNotice, setUrlNotice] = useState('')
+  const [urlPending, setUrlPending] = useState(false)
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const t = read('theme'); if (t) { setTitle(t); setTitleEdited(true) } })
+  const [urlSavedResult, setUrlSavedResult] = useState<UrlAnalysisSavedResult | null>(null)
+  const urlRequestRef = useRef<AbortController | null>(null)
+  const urlCancelRef = useRef<AbortController | null>(null)
+  const urlDraftRef = useRef({ url, title, brief, importedUrl })
+  urlDraftRef.current = { url, title, brief, importedUrl }
+  const urlEditRevision = useRef({ title: 0, brief: 0 })
+  useEffect(() => {
+    setUrlBusy(false); setUrlNotice(''); setUrlSavedResult(null); setUrlPending(false)
+    const syncIntent = () => {
+      if (!allowed || activeUsageContext.current !== usageContextKey) return
+      try {
+        const pending = readUrlAnalysisIntent(actor)
+        setUrlPending(!!pending)
+        if (pending) setUrlNotice('前のURL取り込みの操作情報があります。「取り込み結果を確認」で結果を確認してください。新しい解析は開始しません。')
+      } catch {
+        setUrlPending(true)
+        setUrlNotice('保存された取り込み情報を確認できません。新しい解析をせず、お問い合わせください。')
+      }
+    }
+    syncIntent()
+    window.addEventListener('focus', syncIntent)
+    window.addEventListener('storage', syncIntent)
+    return () => {
+      urlRequestRef.current?.abort(); urlRequestRef.current = null
+      window.removeEventListener('focus', syncIntent); window.removeEventListener('storage', syncIntent)
+    }
+  }, [actor, allowed, usageContextKey])
   const [slideCount, setSlideCount] = useState(8)
   const [aspect, setAspect] = useState<Aspect>('wide')
   const [style, setStyle] = useState('corporate')
@@ -108,89 +184,63 @@ export default function NewDoyaSlideWizard() {
   const [loginRequired, setLoginRequired] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
   const [elapsed, setElapsed] = useState(0)
-  const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [previewPage, setPreviewPage] = useState(0)
-  const fetchedStyles = useRef<Set<string>>(new Set())
-  const previewRetryTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-
-  useEffect(() => {
-    const timers = previewRetryTimers.current
-    return () => { for (const timer of timers.values()) clearTimeout(timer); timers.clear() }
-  }, [])
-
+  const stylePreviews = useStylePreviews(usageContextKey, GENERATED_PREVIEW_STYLES)
   const refreshUsage = useCallback(async () => {
-    const response = await fetch('/api/doyaslide/usage', { cache: 'no-store' })
-    if (!response.ok) throw new Error('利用状況を確認できませんでした')
-    const data = await response.json()
-    if (data?.tier === 'GUEST') {
-      setLoginRequired(true)
-      return
-    }
-    const limit = data?.limits?.maxProjects
-    const used = data?.usage?.projects
-    if (typeof limit !== 'number' || typeof used !== 'number') throw new Error('利用状況を確認できませんでした')
-    setLoginRequired(false)
-    if (limit >= 0 && used >= limit) {
-      setProjectLimitMessage(`今月のプロジェクト作成数が上限（${limit}件）に達しました。`)
-      setProjectUpgradeUrl(data?.tier === 'FREE' ? '/doyaslide/pricing' : null)
-    } else {
-      setProjectLimitMessage(null)
-      setProjectUpgradeUrl(null)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (authStatus !== 'authenticated') return
-    void refreshUsage().catch(() => {})
-  }, [authStatus, refreshUsage])
-
-  const loadPreview = (s: string): Promise<void> => {
-    if (previews[s]?.length === STYLE_PREVIEW_SAMPLE_SLIDES.length || fetchedStyles.current.has(s)) return Promise.resolve()
-    fetchedStyles.current.add(s)
-    return fetch(`/api/doyaslide/style-preview?style=${s}`)
-      .then((r) => r.json())
-      .then((d) => {
-        const urls: string[] = d.urls || (d.url ? [d.url] : [])
-        if (urls.length) setPreviews((p) => ({ ...p, [s]: urls }))
-        if (d.pending) {
-          fetchedStyles.current.delete(s)
-          if (!previewRetryTimers.current.has(s)) {
-            const timer = setTimeout(() => {
-              previewRetryTimers.current.delete(s)
-              void loadPreview(s)
-            }, 10000)
-            previewRetryTimers.current.set(s, timer)
-          }
-        }
-      })
-      .catch(() => {
-        fetchedStyles.current.delete(s)
-      })
-  }
-
-  // 既存スタイルのプレビューだけを逐次先読み。
-  // 個別サンプルを持つ追加テンプレート20種は、静的な3ページだけを表示する。
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      for (const s of STYLE_PRESETS.filter((preset) => !preset.sampleImages?.length)) {
-        if (cancelled) break
-        await loadPreview(s.value)
+    if (!allowed || activeUsageContext.current !== usageContextKey || usagePendingRef.current || !mountedRef.current) return
+    const controller = new AbortController()
+    usagePendingRef.current = controller
+    usageVerifiedRef.current = ''
+    usageCanCreateRef.current = false
+    setUsageStatus('loading')
+    const current = () => mountedRef.current && !controller.signal.aborted && activeUsageContext.current === usageContextKey
+    try {
+      const response = await readBillingResponse('/api/doyaslide/usage', { method: 'GET' }, controller.signal)
+      if (!current()) return
+      if (response.status === 401) setLoginRequired(true)
+      if (!response.ok) throw new Error('利用状況を確認できませんでした')
+      const data = parseProjectUsage(response.data)
+      setLoginRequired(data.tier === 'GUEST')
+      if (data.tier === 'GUEST') { setUsageStatus('error'); return }
+      if (data.limit !== -1 && data.used >= data.limit) {
+        setProjectLimitMessage(`今月のプロジェクト作成数が上限（${data.limit}件）に達しました。`)
+        setProjectUpgradeUrl(data.tier === 'FREE' ? '/doyaslide/pricing' : null)
+      } else {
+        setProjectLimitMessage(null)
+        setProjectUpgradeUrl(null)
       }
-    })()
-    return () => {
-      cancelled = true
+      usageCanCreateRef.current = data.limit === -1 || data.used < data.limit
+      usageVerifiedRef.current = usageContextKey
+      setUsageStatus('ready')
+    } catch {
+      if (current()) setUsageStatus('error')
+    } finally {
+      if (usagePendingRef.current === controller) usagePendingRef.current = null
+      controller.abort()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [allowed, usageContextKey])
+
+  useEffect(() => {
+    usageVerifiedRef.current = ''
+    usageCanCreateRef.current = false
+    setUsageStatus('loading')
+    if (allowed) void refreshUsage()
+    const focus = () => { void refreshUsage() }
+    if (allowed) window.addEventListener('focus', focus)
+    return () => {
+      usagePendingRef.current?.abort()
+      usagePendingRef.current = null
+      window.removeEventListener('focus', focus)
+    }
+  }, [allowed, refreshUsage])
 
   // スタイル切替でページを先頭に戻し、既存スタイルだけ代表ページを取得する。
   useEffect(() => {
     setPreviewPage(0)
     const selectedPreset = STYLE_PRESETS.find((preset) => preset.value === style)
-    if (!selectedPreset?.sampleImages?.length) void loadPreview(style)
+    if (!selectedPreset?.sampleImages?.length) void stylePreviews.ensure(style)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style])
+  }, [style, stylePreviews.ensure])
 
   // 生成中の楽しいメッセージ回し + 経過時間カウント
   useEffect(() => {
@@ -207,6 +257,7 @@ export default function NewDoyaSlideWizard() {
   }, [busy])
 
   const onDocType = (v: string) => {
+    urlEditRevision.current.title++
     setDocType(v)
     const dt = DOC_TYPES.find((d) => d.value === v)
     if (dt) {
@@ -219,49 +270,114 @@ export default function NewDoyaSlideWizard() {
   const fillSample = () => {
     const s = DOC_TYPE_SAMPLES[docType as keyof typeof DOC_TYPE_SAMPLES]
     if (!s) return
+    urlEditRevision.current.title++; urlEditRevision.current.brief++
     setTitle(s.title)
     setBrief(s.brief)
     setTitleEdited(false)
     toast.success('サンプルを入力しました')
   }
 
-  const importUrl = async () => {
-    const requestedUrl = url.trim()
-    if (!requestedUrl) {
-      toast.error('URLを入力してください')
+  const runUrlOperation = async (action: 'start' | 'recover' | 'cancel' | 'adopt' | 'discard') => {
+    if (!mountedRef.current || !allowed || activeUsageContext.current !== usageContextKey || urlRequestRef.current) return
+    const draft = urlDraftRef.current
+    const requestedUrl = draft.url.trim()
+    if (action === 'start' && !validAnalysisUrl(requestedUrl)) {
+      setUrlNotice('httpまたはhttpsのURLを入力してください。認証情報を含むURLは使用できません。')
       return
     }
-    setImportedRef('')
-    setImportedUrl('')
+    const controller = new AbortController()
+    urlRequestRef.current = controller
+    if (action === 'cancel') urlCancelRef.current = controller
+    const revision = { ...urlEditRevision.current }
+    const current = () => mountedRef.current && !controller.signal.aborted && urlRequestRef.current === controller
+      && activeUsageContext.current === usageContextKey
     setUrlBusy(true)
+    setUrlNotice(action === 'start' ? 'URLを取り込み中です。資料のタイトルと内容は編集できます。' : '保存された取り込み結果を確認しています。新しい解析は開始しません。')
     try {
-      const res = await fetch('/api/doyaslide/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: requestedUrl }),
-      })
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '取り込みに失敗しました')
-      if (typeof d.referenceText !== 'string' || !d.referenceText.trim()) {
-        throw new Error('URLの本文を取得できませんでした。別のURLをお試しいただくか、URLを削除して内容を直接入力してください。')
+      let intent = readUrlAnalysisIntent(actor)
+      let created = false
+      if (action === 'start') {
+        const claim = await claimUrlAnalysisIntent(actor, controller.signal)
+        intent = claim.intent; created = claim.created
       }
-      const replacingImportedUrl = !!importedUrl && importedUrl !== requestedUrl
-      setTitle(d.title || (replacingImportedUrl ? '' : title))
-      setBrief(d.brief || (replacingImportedUrl ? '' : brief))
-      setImportedRef(d.referenceText)
-      setImportedUrl(requestedUrl)
-      setTitleEdited(true)
-      if (d.aiAnalyzed) {
-        toast.success('URLの内容を取り込み、AIで資料案を作成しました')
+      if (!current()) return
+      if (!intent) { setUrlPending(false); setUrlSavedResult(null); setUrlNotice('確認待ちの取り込みはありません。'); return }
+      setUrlPending(true)
+      if (action === 'adopt' || action === 'discard') {
+        const saved = urlSavedResult
+        if (!saved || saved.operationId !== intent.operationId || saved.state !== 'completed' || !saved.result || !saved.sourceUrl) throw new Error('Saved result changed')
+        if (action === 'adopt') {
+          // Explicit adoption may restore a different URL; it never runs automatically after reload.
+          setUrl(saved.sourceUrl); setTitle(saved.result.title); setBrief(saved.result.brief)
+          urlEditRevision.current.title++; urlEditRevision.current.brief++
+          setImportedRef(saved.result.referenceText); setImportedUrl(saved.sourceUrl); setTitleEdited(true)
+        }
+        await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+        if (!current()) return
+        setUrlPending(false); setUrlSavedResult(null)
+        setUrlNotice(action === 'adopt' ? '保存済みのURL・タイトル・説明を取り込みました。内容をご確認ください。' : '保存結果を使わずに操作を終了しました。次に「取り込む」を押すと新しい解析として枠を使用します。')
+        return
+      }
+      const operation = await fetchUrlAnalysisOperation(intent, created ? 'POST' : action === 'cancel' ? 'DELETE' : 'GET', controller.signal, created ? requestedUrl : undefined)
+      if (!current()) return
+      if (readUrlAnalysisIntent(actor)?.operationId !== intent.operationId) {
+        setUrlPending(!!readUrlAnalysisIntent(actor)); setUrlSavedResult(null)
+        setUrlNotice('別の画面で取り込み操作が更新されました。現在の入力は変更していません。結果を再確認してください。')
+        return
+      }
+      if (operation.state === 'completed' && operation.result && operation.sourceUrl) {
+        setUrlSavedResult(operation)
+        if (created && urlDraftRef.current.url.trim() === requestedUrl && operation.sourceUrl === requestedUrl) {
+          const replacingImportedUrl = !!draft.importedUrl && draft.importedUrl !== requestedUrl
+          const editedTitle = urlEditRevision.current.title !== revision.title
+          const editedBrief = urlEditRevision.current.brief !== revision.brief
+          if (!editedTitle) setTitle(operation.result.title || (replacingImportedUrl ? '' : draft.title))
+          if (!editedBrief) setBrief(operation.result.brief || (replacingImportedUrl ? '' : draft.brief))
+          setImportedRef(operation.result.referenceText); setImportedUrl(requestedUrl); setTitleEdited(true)
+          await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+          if (!current()) return
+          setUrlPending(false); setUrlSavedResult(null)
+          setUrlNotice((operation.result.aiAnalyzed ? 'URLの内容を取り込み、AIで資料案を作成しました。' : 'URL本文を取り込みました。AI提案は利用できなかったため、タイトルと説明をご確認ください。')
+            + (editedTitle || editedBrief ? '待機中に編集した項目はそのまま残しました。' : ''))
+        } else {
+          setUrlNotice('前の解析は完了しています。現在の入力は変更していません。「保存結果を取り込む」を押すと、URL・タイトル・説明を保存結果に置き換えます。')
+        }
+      } else if (operation.state === 'failed' || operation.state === 'cancelled') {
+        await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+        if (!current()) return
+        setUrlPending(false); setUrlSavedResult(null)
+        setUrlNotice(operation.code === 'DOYASLIDE_TEXT_DAILY_LIMIT'
+          ? '本日の参考URL解析の運用上限に達しました。明日お試しいただくか、URLを削除して内容を直接入力してください。'
+          : operation.state === 'cancelled' ? 'この取り込みは取り消しました。開始済みの解析枠は戻りません。次の取り込みは新しい解析になります。'
+          : 'このURL解析は終了しましたが、結果を取得できませんでした。開始済みの解析枠は戻りません。別のURLを試すか、内容を直接入力してください。')
       } else {
-        toast('URL本文を取り込みました。AI提案は利用できなかったため、タイトルと説明をご確認ください。')
+        setUrlSavedResult(null)
+        setUrlNotice(operation.state === 'missing' ? '取り込みの受付を確認できません。新しい解析は開始せず、結果を再確認するか「取り込みを取消」を押してください。'
+          : operation.state === 'busy' ? '別のURL解析が処理中です。新しい解析は開始していません。時間をおいて結果を確認してください。'
+          : 'URL解析は処理中です。再解析せず「取り込み結果を確認」で結果を確認してください。')
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (error) {
+      if (!current()) return
+      const kind = error instanceof UrlAnalysisError ? error.kind : 'unknown'
+      if (kind === 'login') setLoginRequired(true)
+      try { setUrlPending(!!readUrlAnalysisIntent(actor)) } catch { setUrlPending(true) }
+      setUrlNotice(kind === 'login' ? 'ログインの有効期限を確認してください。入力内容と操作情報は保持しています。'
+        : kind === 'failure' ? 'URLまたは操作情報を確認してください。新しい解析を始める前に、前の取り込み結果を確認してください。'
+        : '取り込み結果を確認できませんでした。新しい解析は開始せず「取り込み結果を確認」を押してください。入力内容は保持しています。')
     } finally {
-      setUrlBusy(false)
+      if (urlCancelRef.current === controller) urlCancelRef.current = null
+      if (urlRequestRef.current === controller) { urlRequestRef.current = null; if (mountedRef.current && activeUsageContext.current === usageContextKey) setUrlBusy(false) }
+      controller.abort()
     }
   }
+  const cancelUrlOperation = () => {
+    // Stop observing first; DELETE durably fences the original operation even if it continues on the server.
+    if (!allowed || activeUsageContext.current !== usageContextKey || !mountedRef.current) return
+    if (urlCancelRef.current && !urlCancelRef.current.signal.aborted) return
+    urlRequestRef.current?.abort(); urlRequestRef.current = null
+    return runUrlOperation('cancel')
+  }
+  const importUrl = () => runUrlOperation('start')
 
   const onLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -274,6 +390,7 @@ export default function NewDoyaSlideWizard() {
 
   const submit = async () => {
     if (authStatus !== 'authenticated' || loginRequired || submitBusyRef.current || creationUnknownRef.current || !mountedRef.current) return
+    if (activeUsageContext.current !== usageContextKey || !allowed || (!createdProjectRef.current && (usageVerifiedRef.current !== usageContextKey || !usageCanCreateRef.current || projectLimitMessage))) return
     if (url.trim() && (importedUrl !== url.trim() || !importedRef)) {
       toast.error('参考URLを「取り込む」で読み込んでから作成してください。URLを使わない場合は入力欄を空にしてください。')
       return
@@ -293,8 +410,9 @@ export default function NewDoyaSlideWizard() {
         })
         if (!mountedRef.current) return
         if (res.status >= 400 && res.status < 500) creationMayHaveSucceeded = false
-        if (res.status === 401) setLoginRequired(true)
+        if (res.status === 401) { usageVerifiedRef.current = ''; usageCanCreateRef.current = false; setLoginRequired(true) }
         if (res.status === 403 && data?.code === 'LIMIT_REACHED') {
+          usageCanCreateRef.current = false
           setProjectLimitMessage(typeof data.error === 'string' ? data.error : '今月のプロジェクト作成数が上限に達しました。')
           setProjectUpgradeUrl(data?.upgradeUrl === '/doyaslide/pricing' ? data.upgradeUrl : null)
           return
@@ -376,7 +494,7 @@ export default function NewDoyaSlideWizard() {
 
   // 追加テンプレートは「専用表紙 → 個別本文2枚」の3ページだけを見せる。
   // 21枚の全体一覧画像は使わず、実際の本文レイアウトを読み取れる大きさに保つ。
-  const generatedStylePages = currentStyle?.sampleImages?.length ? [] : previews[style] || []
+  const generatedStylePages = currentStyle?.sampleImages?.length ? [] : stylePreviews.entries[style]?.urls || []
   const staticStylePages = [currentStyle?.coverImage, ...(currentStyle?.sampleImages || [])].filter(
     (url): url is string => !!url
   )
@@ -386,12 +504,18 @@ export default function NewDoyaSlideWizard() {
   ]
   const curPage = stylePages.length ? Math.min(previewPage, stylePages.length - 1) : 0
   const currentPreviewUrl = stylePages[curPage]
+  const previewState = stylePreviews.entries[style]
+  const previewLoading = !previewState || previewState.status === 'idle' || previewState.status === 'loading'
   const isStaticTemplatePreview = !!currentPreviewUrl && staticStylePages.includes(currentPreviewUrl)
   const previewKind = currentPreviewUrl === currentStyle?.coverImage
     ? '表紙'
     : isStaticTemplatePreview
       ? '本文サンプル'
       : '生成例'
+
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す。押せる条件は下の主ボタンと同じ
+  const oneButton = useOneButton()
+  const submitDisabled = busy || creationResultUnknown || (!recoveryProjectId && (Boolean(projectLimitMessage) || usageVerifiedRef.current !== usageContextKey || usageStatus !== 'ready')) || !allowed || loginRequired
 
   return (
     <div className="p-5 lg:p-10 max-w-3xl mx-auto pb-40">
@@ -402,7 +526,20 @@ export default function NewDoyaSlideWizard() {
         <span className="material-symbols-outlined text-lg">arrow_back</span>
         プロジェクト一覧
       </Link>
-      <h1 className="text-3xl font-black text-slate-900 mb-3">スライドを作る</h1>
+      <Heading className="text-2xl font-black text-slate-900 mb-3">スライドを作る</Heading>
+      {oneButton ? (
+        <OneButtonBar
+          eyebrow="ドヤスライド"
+          cta={busy ? '構成を作っています。このままお待ちください' : '資料のタイプとテーマが決まったら、押してください'}
+          label={busy ? '作成しています…' : recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
+          scope="入力した内容から、スライドの構成を作ります。作り終えると、画像を作る画面へ移ります。"
+          onRun={() => void submit()}
+          disabled={submitDisabled}
+          disabledReason={loginRequired || authStatus === 'unauthenticated' ? 'ログインすると押せます。' : '入力内容や利用状況を確認中です。少し待つか、下の案内を確認してください。'}
+          running={busy}
+          extra={<ShellCostBadge action="slide.generate" />}
+        />
+      ) : null}
       {(authStatus === 'unauthenticated' || loginRequired) && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
           <span>スライドを作成するにはログインが必要です。</span>
@@ -440,7 +577,7 @@ export default function NewDoyaSlideWizard() {
                       on ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-slate-100'
                     }`}
                   >
-                    <span>{d.emoji}</span>
+                    {(() => { const DocIcon = DOC_TYPE_ICON[d.value] || FileText; return <DocIcon size={20} strokeWidth={1.75} aria-hidden className={on ? 'text-white' : 'text-slate-600'} /> })()}
                   </div>
                   <div className="min-w-0">
                     <div className={`text-sm font-black ${on ? 'text-blue-700' : 'text-slate-700'}`}>{d.label}</div>
@@ -460,6 +597,7 @@ export default function NewDoyaSlideWizard() {
           <input
             value={title}
             onChange={(e) => {
+              urlEditRevision.current.title++
               setTitle(e.target.value)
               setTitleEdited(true)
             }}
@@ -474,7 +612,7 @@ export default function NewDoyaSlideWizard() {
           </div>
           <textarea
             value={brief}
-            onChange={(e) => setBrief(e.target.value)}
+            onChange={(e) => { urlEditRevision.current.brief++; setBrief(e.target.value) }}
             maxLength={20000}
             placeholder={
               'ここに「誰に・何を・どう伝えたいか」をたっぷり書いてください。\n例) 対象は中小企業の経営者。導入で月20時間の工数削減ができること、料金プラン、導入事例を入れたい。最後は無料相談に誘導。\n\n※ 箇条書きでもOK。たくさん書くほど、いいスライドになります！'
@@ -492,16 +630,17 @@ export default function NewDoyaSlideWizard() {
               <input
                 value={url}
                 onChange={(e) => {
+                  urlRequestRef.current?.abort(); urlRequestRef.current = null; setUrlBusy(false); setUrlNotice('')
                   setUrl(e.target.value)
                   setImportedRef('')
                 }}
                 disabled={urlBusy}
                 placeholder="https://example.com/service"
-                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+                className="min-w-0 flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
               />
               <button
                 onClick={importUrl}
-                disabled={urlBusy}
+                disabled={urlBusy || !allowed || urlPending}
                 className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap inline-flex items-center gap-1 active:scale-95 transition"
               >
                 <span className={`material-symbols-outlined text-base ${urlBusy ? 'animate-spin' : ''}`}>
@@ -510,6 +649,16 @@ export default function NewDoyaSlideWizard() {
                 取り込む
               </button>
             </div>
+            {urlPending && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('recover')} className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-60">取り込み結果を確認</button>
+                {urlSavedResult ? <>
+                  <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('adopt')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">保存結果を取り込む</button>
+                  <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('discard')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60">保存結果を使わず終了</button>
+                </> : <button type="button" disabled={!allowed} onClick={cancelUrlOperation} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60">取り込みを取消</button>}
+              </div>
+            )}
+            {urlNotice && <p role="status" className="mt-2 text-xs font-bold text-blue-800">{urlNotice}</p>}
             {url.trim() && importedUrl === url.trim() && importedRef && (
               <p role="status" className="mt-2 text-xs font-bold text-emerald-700">参考URLの本文を取り込み済みです。</p>
             )}
@@ -519,7 +668,7 @@ export default function NewDoyaSlideWizard() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認できます。</p>
+          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大きな見本の左右の矢印で複数ページの仕上がりを確認できます。</p>
           {/* スタイル一覧（既存2グループ + 追加テンプレート20種） */}
           {([
             { group: 'business', title: 'ビジネス系（きちんとした資料）' },
@@ -531,7 +680,7 @@ export default function NewDoyaSlideWizard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {STYLE_PRESETS.filter((s) => s.group === group).map((s) => {
                   const on = style === s.value
-                  const thumbnail = s.coverImage || previews[s.value]?.[0] || s.previewImage
+                  const thumbnail = s.coverImage || stylePreviews.entries[s.value]?.urls[0] || s.previewImage
                   return (
                     <button
                       key={s.value}
@@ -542,7 +691,7 @@ export default function NewDoyaSlideWizard() {
                     >
                       <div className={`${s.coverImage || s.previewImage ? 'aspect-video' : 'aspect-[3/2]'} bg-slate-100 flex items-center justify-center overflow-hidden`}>
                         {thumbnail ? (
-                          <img src={thumbnail} alt={s.label} className="w-full h-full object-cover" />
+                          <img src={doyaslideImageSrc(thumbnail)} alt={s.label} className="w-full h-full object-cover" />
                         ) : (
                           <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
                         )}
@@ -565,6 +714,12 @@ export default function NewDoyaSlideWizard() {
                   <span className="text-[11px] font-bold text-slate-400">{previewKind} ・ {curPage + 1} / {stylePages.length}</span>
                 )}
               </div>
+              {previewState && (!previewLoading || previewState.urls.length > 0) && (previewState.status !== 'ready' || previewState.urls.length < STYLE_PREVIEW_SAMPLE_SLIDES.length) && !currentStyle?.sampleImages?.length && (
+                <div role="status" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-slate-800">
+                  <p>{previewState.message || '一部の見本を表示しています。資料の作成は続けられます。'}</p>
+                  {!previewLoading && <button type="button" className="mt-2 font-bold underline" onClick={() => { void stylePreviews.retry(style) }}>見本を再確認</button>}
+                </div>
+              )}
               <div className={`relative ${isStaticTemplatePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
                   <SlideImage
@@ -575,8 +730,8 @@ export default function NewDoyaSlideWizard() {
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
-                    <img src="/character/working.png" alt="" className="w-16 h-16 object-contain animate-bounce" />
-                    <p className="text-xs font-bold">ページを生成中…</p>
+                    <img src="/character/working.png" alt="" className={`w-16 h-16 object-contain ${previewLoading ? 'animate-bounce' : ''}`} />
+                    <p className="text-xs font-bold text-center px-4">{previewLoading ? '見本を準備中…' : '見本は未表示です'}</p>
                   </div>
                 )}
                 <div className="absolute bottom-2 left-2 bg-black/55 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur">
@@ -731,7 +886,14 @@ export default function NewDoyaSlideWizard() {
             </div>
           </div>
         )}
-        {projectLimitMessage && (
+        {allowed && usageStatus !== 'ready' && (
+          <div role={usageStatus === 'error' ? 'alert' : 'status'} className="max-w-3xl mx-auto mb-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {usageStatus === 'error' ? '利用状況を確認できませんでした。入力内容は保持しています。' : '利用状況を確認しています。'}
+            {usageStatus === 'error' && <button type="button" onClick={() => void refreshUsage()} className="ml-2 underline">利用状況を再確認する</button>}
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fdoyaslide%2Fnew" className="ml-2 underline">ログインする</Link>}
+          </div>
+        )}
+        {projectLimitMessage && !loginRequired && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
             <span>{projectLimitMessage}</span>
             <div className="flex shrink-0 items-center gap-2">
@@ -740,116 +902,39 @@ export default function NewDoyaSlideWizard() {
             </div>
           </div>
         )}
+        {busy ? (
+          /* 新しい見た目では画面全体を覆わず、主ボタンの場所に進み具合を出す（FIX-PLAN 13）。段は経過時間からの目安 */
+          <div role="status" aria-live="polite" className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-600 mb-1.5">
+              <span className="inline-flex items-center gap-1.5">
+                <img src="/character/working.png" alt="" className="w-6 h-6 object-contain" />
+                {GEN_STEPS[genStep].label}中…（{slideCount}枚）
+              </span>
+              <span className="text-[#0066ff] whitespace-nowrap">残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}（目安）</span>
+            </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-[#0066ff] rounded-full transition-[width] duration-1000 ease-linear" style={{ width: `${meterPct}%` }} />
+            </div>
+          </div>
+        ) : (
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           <p className="text-xs font-bold text-slate-500 hidden sm:block">
             {aspect === 'wide' ? '横' : aspect === 'square' ? '正方形' : '縦'}・{slideCount}枚 / {currentStyle?.label}スタイル
           </p>
           <button
             onClick={submit}
-            disabled={busy || creationResultUnknown || (Boolean(projectLimitMessage) && !recoveryProjectId) || authStatus !== 'authenticated' || loginRequired}
+            disabled={submitDisabled}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>
             {recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
+            <ShellCostBadge action="slide.generate" />
           </button>
         </div>
+        )}
       </div>
 
-      {/* 生成中オーバーレイ（楽しい・進捗メーター付き） */}
-      {busy && (
-        <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6">
-          {/* キャラ + 浮遊スパークル */}
-          <div className="relative">
-            <img src="/character/working.png" alt="作業中" className="w-32 h-32 object-contain anim-bob" />
-            <span className="material-symbols-outlined absolute -top-1 -right-1 text-amber-400 anim-twinkle">auto_awesome</span>
-            <span
-              className="material-symbols-outlined absolute top-8 -left-3 text-blue-400 text-base anim-twinkle"
-              style={{ animationDelay: '0.6s' }}
-            >
-              auto_awesome
-            </span>
-          </div>
-
-          <p className="text-lg font-black text-slate-800 text-center anim-msg" key={funIdx}>
-            {FUN_MESSAGES[funIdx]}
-          </p>
-
-          {/* 作業ステップ: 検索 → 分析 → 構成 → 生成 */}
-          <div className="w-full max-w-sm space-y-1.5">
-            {GEN_STEPS.map((s, i) => {
-              const done = i < genStep
-              const active = i === genStep
-              return (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all duration-300 ${
-                    active
-                      ? 'bg-white shadow-sm ring-1 ring-blue-200 scale-[1.02]'
-                      : done
-                        ? 'opacity-70'
-                        : 'opacity-40'
-                  }`}
-                >
-                  <span
-                    className={`material-symbols-outlined text-xl ${
-                      done ? 'text-emerald-500' : active ? 'text-blue-600 anim-spin' : 'text-slate-400'
-                    }`}
-                  >
-                    {done ? 'check_circle' : active ? 'progress_activity' : s.icon}
-                  </span>
-                  <span className={`text-sm font-black ${active ? 'text-slate-800' : 'text-slate-500'}`}>
-                    {s.label}
-                    {active ? '中…' : ''}
-                  </span>
-                  {active && (
-                    <span className="ml-auto flex gap-1">
-                      {[0, 1, 2].map((d) => (
-                        <span
-                          key={d}
-                          className="w-1.5 h-1.5 rounded-full bg-blue-500 anim-dot"
-                          style={{ animationDelay: `${d * 0.18}s` }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* どんどんスライドが生まれる演出 */}
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: Math.min(slideCount, 8) }).map((_, i) => (
-              <span
-                key={i}
-                className="w-6 h-4 rounded-sm bg-gradient-to-br from-blue-400 to-indigo-500 shadow-sm anim-pop"
-                style={{ animationDelay: `${i * 0.18}s` }}
-              />
-            ))}
-          </div>
-
-          {/* 進捗メーター + 枚数連動の予想時間 */}
-          <div className="w-full max-w-sm">
-            <div className="flex items-center justify-between text-xs font-black text-slate-600 mb-1.5">
-              <span className="inline-flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm text-blue-600">image</span>
-                {slideCount}枚を生成
-              </span>
-              <span className="text-blue-600">完成まで 約{formatDuration(estTotalSec)}</span>
-            </div>
-            <div className="w-full h-3 bg-white/80 rounded-full overflow-hidden ring-1 ring-blue-100 shadow-inner">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-[width] duration-1000 ease-linear anim-stripe"
-                style={{ width: `${meterPct}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mt-1.5">
-              <span>経過 {formatDuration(elapsed)}</span>
-              <span>残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 生成中オーバーレイ（楽しい・進捗メーター付き）。旧の見た目だけ */}
 
       <style jsx>{`
         .anim-up {

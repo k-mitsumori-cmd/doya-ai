@@ -1,0 +1,8 @@
+{
+  "checkedAt": "2026-10-06T14:48:17.022Z",
+  "sourceSha256": "af54dc05e29de1eb2c085ba3d5ff29928e7309b0d87b97fb189486d62c96e4e8",
+  "guardBeforeReady": "1",
+  "eventsAfterReady": 0,
+  "reproduced": true,
+  "scope": "Actual mounted TSX, synthetic verified event and missing-then-ready gtag; no network or real payment. Follow-up finding, not included in the frozen current release cohort."
+}

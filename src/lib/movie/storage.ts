@@ -2,6 +2,7 @@
 // ドヤムービーAI - Supabase Storage
 // ============================================
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 let _supabase: SupabaseClient | null = null
 function getSupabase() {
@@ -17,11 +18,7 @@ function getSupabase() {
 const BUCKET = 'movie-renders'
 
 export async function ensureMovieBucket() {
-  const { data: buckets } = await getSupabase().storage.listBuckets()
-  const exists = buckets?.some(b => b.name === BUCKET)
-  if (!exists) {
-    await getSupabase().storage.createBucket(BUCKET, { public: false })
-  }
+  await ensurePrivateImageBucket(getSupabase().storage, BUCKET)
 }
 
 export async function uploadMovieFile(
@@ -46,6 +43,7 @@ export async function uploadMovieFile(
 }
 
 export async function getSignedMovieUrl(path: string, expiresIn = 3600): Promise<string> {
+  await ensureMovieBucket()
   const { data, error } = await getSupabase().storage
     .from(BUCKET)
     .createSignedUrl(path, expiresIn)

@@ -1,3 +1,4 @@
+const {timeCreation,expenseCreation,adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
@@ -46,8 +47,8 @@ function fixture({ active = true, foreign = false, projectId = 'p', revokeDuring
     },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-input': load('src/lib/promane/time-input.ts'),
-    '@/lib/prisma': { prisma },
+    './time-entry-creation':timeCreation,'./expense-creation':expenseCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
       requireWritableWorkspace: async () => ({ id: 'w' }),
@@ -78,7 +79,9 @@ function apiFixture() {
       committed = true
       return result
     },
-    promaneWorkspace: { findFirst: async () => active ? { id: 'w' } : null },
+    // 本物の DB は、本人のメンバーの行（役割）も返す（会社の役割の上限を当てるため）
+    promaneWorkspace: { findFirst: async () => active ? { id: 'w', members: [{ role: 'member' }] } : null },
+    promaneMember: { findFirst: async () => active ? { id: 'actor' } : null },
     promaneProject: { findFirst: async () => ({ id: 'p' }) },
     promaneExpense: {
       create: async ({ data }) => { writes++; return data },
@@ -86,14 +89,14 @@ function apiFixture() {
     },
   }
   const api = load('src/app/api/promane/expenses/route.ts', {
-    '@/lib/promane/time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/promane/expense-creation':expenseCreation,'@/lib/promane/time-input': load('src/lib/promane/time-input.ts'),
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
   })
   return {
-    post: () => api.POST({ json: async () => ({ workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
+    post: () => api.POST({ json: async () => ({ operationId, workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
     delete: () => api.DELETE({ nextUrl: new URL('https://example.test/api/promane/expenses?workspaceSlug=ws&id=expense') }),
     state: () => ({ attempts, writes, committed }),
   }
@@ -119,7 +122,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneMember: {
       findFirst: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
-        if (where.userId) return active ? { id: 'actor' } : null
+        if (where.userId) return active ? { id: 'actor', role: 'admin' } : null
         return foreignTarget ? null : { id: 'm', hourlyRate: 2500 }
       },
       updateMany: async ({ where }) => {
@@ -133,8 +136,8 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneExpense: { create: async ({ data }) => { writes++; return data } },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-input': load('src/lib/promane/time-input.ts'),
-    '@/lib/prisma': { prisma },
+    './time-entry-creation':timeCreation,'./expense-creation':expenseCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
       requireWritableWorkspace: async () => ({ id: 'w' }),
@@ -142,8 +145,8 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     'next/cache': { revalidatePath() {} },
   })
   return {
-    time: () => actions.createTimeEntry('ws', { memberId: 'm', duration: 60, date: '2026-09-01' }),
-    expense: () => actions.createExpense('ws', { projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }),
+    time: () => actions.createTimeEntry('ws', { operationId, memberId: 'm', duration: 60, date: '2026-09-01' }),
+    expense: () => actions.createExpense('ws', { operationId, projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }),
     rate: () => actions.updateMemberRate('ws', 'm', 3000),
     state: () => ({ attempts, writes, committed }),
   }
@@ -168,7 +171,7 @@ function rateApiFixture({ foreignTarget = false } = {}) {
     },
     promaneWorkspace: { findFirst: async () => ({ id: 'w' }) },
     promaneMember: {
-      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor' } : null,
+      findFirst: async ({ where }) => active && where.role.in.includes('admin') ? { id: 'actor', role: 'admin' } : null,
       updateMany: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
         writes++
@@ -180,7 +183,7 @@ function rateApiFixture({ foreignTarget = false } = {}) {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
   })
   return {
     run: () => api.PATCH({ json: async () => ({ workspaceSlug: 'ws', hourlyRate: 3000 }) }, { params: Promise.resolve({ id: 'm' }) }),
@@ -223,7 +226,8 @@ function rateApiFixture({ foreignTarget = false } = {}) {
       const f = apiFixture()
       const response = await f[method]()
       assert.equal(response.status, 403)
-      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: true })
+      // POST now aborts the denied transaction; DELETE still returns its denial from the transaction.
+      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: method === 'delete' })
     }
   })
   await check('time, expense and rate writes recheck access after serialization conflicts', async () => {

@@ -22,6 +22,7 @@ import { retrieve } from '@/lib/aishodan/knowledge'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { REALTIME_REQUEST_TIMEOUT_MS, readRealtimeJson, realtimeClientSecret } from '@/lib/realtime-token-response'
 import type { ProductProfile } from '@/lib/aishodan/types'
+import { voiceCharger } from '@/lib/doya-power/voice'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -51,6 +52,13 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     if (Date.now() - s.startedAt.getTime() > graceMs) {
       return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
     }
+  }
+  // ドヤパワー（旗の内側だけ）: ルームを出している会社の台帳だけを見る。仮に減らした分数（シナリオの分数 + 3分）を超えて続けない。
+  // 戻したあと（終わった）は続けない。旗を入れる前に始めた商談（台帳に記録なし）は今までどおり
+  const voice = await voiceCharger.allowance('aishodan', s.organizationId, `session-${s.id}`, cfg.durationMin)
+  if (voice === 'closed') return NextResponse.json({ error: 'この商談は終了しています。' }, { status: 409 })
+  if (voice && s.startedAt && Date.now() - s.startedAt.getTime() > voice.minutes * 60 * 1000) {
+    return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
   }
 
   const apiKey = process.env.OPENAI_API_KEY

@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T16:30:34.413Z",
+  "passed": 1,
+  "cases": [
+    "owner"
+  ],
+  "failures": [
+    {
+      "scenario": "membership-revoked-after-read",
+      "error": "Private photo written after scope changed\n\n1 !== 0\n",
+      "writes": 1,
+      "active": false,
+      "org": "org"
+    },
+    {
+      "scenario": "employee-moved-after-read",
+      "error": "Private photo written after scope changed\n\n1 !== 0\n",
+      "writes": 1,
+      "active": true,
+      "org": "foreign"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/photo/route.ts": "6d30e0c6be48e0f7278d3a6d376b00f2d35962d6e9d611affafc16d20eacf1f1"
+  },
+  "scope": "Actual legacy inline photo POST; synthetic session/DB with scope changes while body is read. No real customer DB/photo data or production writes."
+}

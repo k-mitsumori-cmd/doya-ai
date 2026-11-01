@@ -9,6 +9,7 @@ import { escapeHtml } from '@/lib/html-escape'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { ROLE_HIERARCHY } from '@/lib/shodan/types'
 import { sendEmail } from '@/lib/email'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true, role: true, status: true, inviteEmail: true, acceptedAt: true, createdAt: true },
   })
-  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // POST /api/shodan/members — メンバー招待（admin+）
@@ -60,7 +61,9 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: string }[]>`SELECT role FROM shodan_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || rank(role) >= rank(actor[0].role)) return { kind: 'forbidden' as const }
+      // 会社の役割の上限（ctx の役割）より上には上げない
+      const actorRole = actor.length ? lowerToolRole('shodan', actor[0].role, ctx.role) : null
+      if (!actorRole || rank(role) >= rank(actorRole)) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.shodanMember.findFirst({
         where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
@@ -103,5 +106,5 @@ export async function POST(req: NextRequest) {
       </div>`,
   })
 
-  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } })
+  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }

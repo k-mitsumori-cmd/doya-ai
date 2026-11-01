@@ -21,7 +21,8 @@ import {
   MousePointer2,
   ShieldCheck,
 } from "lucide-react";
-import { SERVICES, HIDDEN_SERVICE_IDS } from "@/lib/services";
+import { SERVICES, HIDDEN_SERVICE_IDS, getListedServices } from "@/lib/services";
+import { SHELL_GROUPS } from "@/components/shell/tools";
 import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
@@ -32,6 +33,9 @@ import { OpeningCurtain, OPENING_COPY } from "./OpeningCurtain";
 import type { Step } from "../sections";
 import "./renewal.css";
 import "./hero-motion.css";
+
+// 操作の3段階の写真（public/<id>/shots/）がまだ無いサービス。写真を置いたら外す
+const NO_STEP_SHOTS = new Set(["income", "expense", "tenjikai"]);
 
 export const RenewalContext = createContext("");
 export function RenewalFrame({
@@ -259,6 +263,7 @@ export function Workflow({
   const name = useContext(RenewalContext);
   const service = SERVICES.find((s) => s.name === name);
   const [active, setActive] = useState(0);
+  const [failedShot, setFailedShot] = useState<string | null>(null);
   return (
     <section id="doya-how" className="doya-workflow">
       <div className="doya-section-inner">
@@ -344,7 +349,8 @@ export function Workflow({
                   : "詳しい使い方は、各サービスのページでご覧いただけます。"}
             </p>
           </div>
-          {service ? (
+          {/* 操作画面の写真が無い・読めないサービスは、ドヤくんの絵を出す（収入管理など） */}
+          {service && !NO_STEP_SHOTS.has(service.id) && failedShot !== `${service.id}-${active}` ? (
             <ProductPreview
               className="doya-step-image"
               key={`${service.id}-${active}`}
@@ -358,6 +364,7 @@ export function Workflow({
                 width={1280}
                 height={800}
                 sizes="(max-width: 800px) 95vw, 640px"
+                onError={() => setFailedShot(`${service.id}-${active}`)}
               />
             </ProductPreview>
           ) : (
@@ -457,32 +464,18 @@ export function ResourcePack() {
   );
 }
 
+// 分類は、ログイン後のメニュー（src/components/shell/tools.ts の SHELL_GROUPS）と同じ4つにそろえる。
+// マーケティング / 営業（セールス） / 採用・人材管理 / 経理・バックオフィス
 const groups = [
-  { name: "すべて", ids: [] },
-  {
-    name: "制作・マーケティング",
-    ids: [
-      "banner",
-      "seo",
-      "interview",
-      "persona",
-      "doyaslide",
-      "aio",
-      "adimage",
-    ],
-  },
-  {
-    name: "営業",
-    ids: ["doyalist", "sfa", "shodan", "cunning", "quote", "aishodan"],
-  },
-  { name: "人事・業務管理", ids: ["hr", "kintai", "promane", "mensetsu"] },
+  { name: "すべて", ids: [] as string[] },
+  ...SHELL_GROUPS.filter((g) => g.stage !== "other").map((g) => ({
+    name: g.label,
+    ids: g.tools.map((t) => t.id),
+  })),
 ];
 export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
   const [filter, setFilter] = useState(0);
-  const all = SERVICES.filter(
-    (s) =>
-      !HIDDEN_SERVICE_IDS.has(s.id) && ["active", "beta"].includes(s.status),
-  ).sort((a, b) => a.order - b.order);
+  const all = getListedServices();
   const shown =
     filter === 0 ? all : all.filter((s) => groups[filter].ids.includes(s.id));
   return (
@@ -507,7 +500,7 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
           ))}
         </div>
         <p className="doya-result-count" aria-live="polite">
-          {shown.length}サービス
+          {shown.length}ツール
         </p>
         <div className="doya-service-grid">
           {shown.map((s) => (

@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const { createOrgClient } = require('./org-client-test-loader.cjs');
 
 let membershipRole = 'owner';
 let quotaResponse = { error: '無料枠に達しました', code: 'LIMIT', canManageBilling: true, upgradeUrl: '/aio/pricing' };
-const { aioSend, aioGet, AioApiError } = load('src/lib/aio/client.ts', {}, {
+const { aioSend, aioGet, AioApiError } = createOrgClient('aio', {
   AbortSignal,
   fetch: async (url, init) => {
     const path = new URL(url, 'https://example.test').pathname;
@@ -17,7 +18,7 @@ const { aioSend, aioGet, AioApiError } = load('src/lib/aio/client.ts', {}, {
     if (path === '/api/aio/me') return Response.json({ plan: 'FREE', memberships: membershipRole ? [{ slug: 'acme', role: membershipRole }] : [] });
     throw new Error(`Unexpected path: ${path}`);
   },
-});
+}).client;
 
 (async () => {
   await assert.rejects(() => aioSend('/api/aio/scans', 'acme', 'POST'), (error) => {

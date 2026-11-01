@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T06:25:51.066Z",
+  "passed": 3,
+  "cases": [
+    "initial boundary read waits behind revocation and refuses with403",
+    "revocation committed between batches stops before next private page query",
+    "authorized page holds shared membership lock; revocation waits until batch transaction ends"
+  ],
+  "lockWaitObservations": [
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/export/route.ts": "0d81163fc42822b1df0ec235d43a3ce06782082bc62bbe4aa942b84aa7125085",
+    "src/lib/sfa/mutation-authority.ts": "1310ba745586b9373620f9a73520a9ecc915a392d4f73a9c5a191642906bb3ba"
+  },
+  "scope": "Actual export route/authority helper and Prisma against private Unix-socket-only PostgreSQL synthetic schema. Proves membership lock ordering and per-batch revocation. No customer data, production writes or provider calls. Does not prove full production schema or browser download UI."
+}

@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-08T07:08:27.805359+00:00",
+  "status": "integrated-types-and-targeted-regressions-passed-fresh142-starting",
+  "productionFiles": [
+    "src/app/banner/dashboard/chat/page.tsx",
+    "src/app/banner/dashboard/create/page.tsx",
+    "src/app/banner/dashboard/page.tsx",
+    "src/app/banner/test/page.tsx",
+    "src/components/banner/BannerLimitModal.tsx",
+    "src/components/banner/useBannerQuota.ts"
+  ],
+  "productionHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "e21e5de44f2fdadf3c287710434db9e5e26e7a7234ae01c9d8388e83d788acf1",
+    "src/app/banner/dashboard/create/page.tsx": "72a651708b923988788d63785a005a2e0a677f18a699e2130099b52afcd1e089",
+    "src/app/banner/dashboard/page.tsx": "f3954070f9ac7c61cfedd55823764d4165237f112526f17576f6648aa217fb8f",
+    "src/app/banner/test/page.tsx": "0bd712b5c3d027a007348dc9ecaf3889bffb86b582e4373f27abd3af7471589c",
+    "src/components/banner/BannerLimitModal.tsx": "65444b2c801eb163303aa4c64e1ca6d7a1bb1379f04cdc06e310cc62e4a739ca",
+    "src/components/banner/useBannerQuota.ts": "4d895eb469378984083d8ce9c6bb7cf82df5c1caf150ffdbace0fe6c5a285f3b"
+  },
+  "baselineLegacy": "3/22;19 violated expectations",
+  "candidateLegacy": "22/22",
+  "candidateModal": "13/13 mounted;9/9 native",
+  "quotaScopeHook": "17 mounted cases passed",
+  "existingCreateChatText": "7+13+5 mounted cases passed with candidate implementation; quota mocks add new method without removing assertions",
+  "limitations": [
+    "Synthetic sessions/responses, no actual provider or production customer data",
+    "Native Next/OAuth session transition not yet proven",
+    "Full17services2074 audit incomplete"
+  ],
+  "notes": [
+    "Six production files only. Legacy main/edit share existing request fence; actor key resets private workspace; progress/finish timers cleaned. All four screens report monthly rejection through scope-bound quota callback.",
+    "Existing source was fully diff reviewed. React checklist: stable top-level workspace key, effects clean timers/listeners, hooks unconditional, focus trap follows visible state, no new fetch waterfall or dependencies."
+  ],
+  "typeCheckExitCode": 0,
+  "integratedLegacyPassed": 22,
+  "integratedModalPassed": 13,
+  "integratedQuotaPassed": 17,
+  "integratedNativeModalPassed": 9,
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-2106149d-303f-44cd-b679-b59757de6938"
+}

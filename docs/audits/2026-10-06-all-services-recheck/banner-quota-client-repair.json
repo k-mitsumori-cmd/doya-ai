@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-06T16:44:08.206473+00:00",
+  "status": "full-local-release-gate-passed-not-yet-deployed",
+  "baselineCommit": "31c684bbc05eddf1f1494ed61c4695c9524b522d",
+  "baseline": "banner-quota-client-baseline.json",
+  "currentHookTests": "banner-quota-client-current.json",
+  "currentReaderTests": "banner-quota-response-current.json",
+  "typeCheck": {
+    "exitCode": 0,
+    "log": "banner-quota-client-typecheck.log"
+  },
+  "changes": [
+    "Reject invalid count and non-integer/ambiguous monthly meter",
+    "Hide prior actor snapshot immediately including alpha beta alpha transitions",
+    "Actor-scoped precheck lock and stale callback guards including unmount",
+    "Coalesce concurrent readonly refreshes",
+    "Bound fetch and body to 10 seconds and 64 KiB; abort superseded and unmounted requests"
+  ],
+  "consumers": [
+    "/banner/dashboard",
+    "/banner/test",
+    "/banner/dashboard/create",
+    "/banner/dashboard/chat"
+  ],
+  "limitations": [
+    "Synthetic sessions and readonly quota responses only",
+    "No paid image generation or production DB write",
+    "Client precheck does not reserve capacity; server admission remains authoritative",
+    "Current repair not deployed yet",
+    "Whole 17-service audit remains incomplete"
+  ],
+  "sourceHashes": {
+    "src/components/banner/useBannerQuota.ts": "f8d5dd1c4e4a3a20729653277c32bf99bbba6cd62d184abf7f8d02bd87ee8914",
+    "src/lib/banner-quota-response-client.ts": "7c7e189642a62d8fb88b4635b5286b31a9c32f0a3c456b48f74b99af59c63931",
+    "scripts/security-regression/verify-banner-quota-client.cjs": "a0083f02a89eefe4eea6297b94cfff0c29f1aff00cd443d5b29295f61905a7d1",
+    "scripts/security-regression/verify-banner-quota-response.cjs": "d82195ac7ef2640e721815f5c286aa3cb22923c4b8131b5f670b6231d70df72e",
+    "scripts/security-regression/run.cjs": "a877c05302f6d1b4e42c8631db4ce0282cf099cdbe7ac29c8ac9b8ab61ca36ba"
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/banner-quota-client-release-019314e6-ba16-4f9a-997d-f31c149f776a",
+  "releaseState": {
+    "startedAt": "2026-10-06T16:43:46.125301+00:00",
+    "pid": 34242,
+    "head": "31c684bbc05eddf1f1494ed61c4695c9524b522d",
+    "sourceFiles": 2557,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:46:52.936917+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:46:54.581322+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T16:46:54.858257+00:00"
+  }
+}

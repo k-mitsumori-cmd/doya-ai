@@ -1,0 +1,154 @@
+{
+  "checkedAt": "2026-10-06T15:16:58.421492+00:00",
+  "commit": "1f1b5e8bf27ed6b817deec32287a90ec4ecd365d",
+  "deploymentId": "dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+  "pages": [
+    {
+      "path": "/banner/pricing",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/interview/pricing",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/persona/pricing",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/pricing",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "scope": "Anonymous readonly HTML/JS GETs only. No JS execution, authenticated session, billing mutation, Stripe or analytics calls.",
+  "assets": [
+    {
+      "path": "/_next/static/chunks/13251-a6953bd5c0a8a2dd.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/14291-71bccb1d25a9a803.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/14566-41ef404e67f4252a.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/31255-3fcf0e2e4e4104b7.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/51219-3a91dd3dd8c6a8d5.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/81356-66c64379f4d6308b.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/82899-9f324d52c7cfd87e.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/84493-2e33edf249c4308d.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/banner/layout-11df8efead34c1ab.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/banner/pricing/page-d106c43a122418cc.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/interview/layout-c5707f4bda10f229.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/interview/pricing/page-cca77c08def6699b.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/layout-0e7c57afacba65bc.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/persona/pricing/page-cca77c08def6699b.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/app/pricing/page-9b95e658af186298.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    },
+    {
+      "path": "/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_5whwj5guJLD1iCELgcWgco62d5C1",
+      "status": 200
+    }
+  ],
+  "allAssets200": true,
+  "boundedBillingClientPublished": true,
+  "analyticsReadinessPublished": true,
+  "status": "reflected"
+}

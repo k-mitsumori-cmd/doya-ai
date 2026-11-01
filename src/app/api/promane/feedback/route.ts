@@ -1,9 +1,10 @@
-import { applyContextComment } from '../../../../lib/slack-context-comment';
+import { privateApiJson } from '@/lib/private-api-response'
+import { voicePayload } from '../../../../lib/slack-voice';
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -24,10 +25,10 @@ export async function POST(req: NextRequest) {
     const { type = 'other', message, page = '' } = body || {}
 
     if (!message || typeof message !== 'string' || !message.trim()) {
-      return NextResponse.json({ error: 'message は必須です' }, { status: 400 })
+      return privateApiJson({ error: 'message は必須です' }, { status: 400 })
     }
     if (message.length > 5000) {
-      return NextResponse.json({ error: 'メッセージは5000文字以内' }, { status: 400 })
+      return privateApiJson({ error: 'メッセージは5000文字以内' }, { status: 400 })
     }
 
     // 通知が落ちても管理画面から確認できるよう、ログイン済みの声は先に保存する。
@@ -55,13 +56,13 @@ export async function POST(req: NextRequest) {
       webhookUrl = process.env.SLACK_WEBHOOK_URL || null
     }
 
-    const typeLabel = type === 'bug' ? '🐛 バグ報告' : type === 'feature' ? '💡 機能要望' : '💬 その他'
+    const typeLabel = type === 'bug' ? 'バグ報告' : type === 'feature' ? '機能要望' : 'その他'
     const slackPayload = {
-      text: `ドヤプロマネ フィードバック`,
+      text: `ドヤプロマネへのご意見（${typeLabel}）`,
       blocks: [
         {
           type: 'header',
-          text: { type: 'plain_text', text: `${typeLabel} - ドヤプロマネ`, emoji: true },
+          text: { type: 'plain_text', text: `ドヤプロマネへのご意見（${typeLabel}）`, emoji: false },
         },
         {
           type: 'section',
@@ -81,31 +82,31 @@ export async function POST(req: NextRequest) {
 
     if (!webhookUrl) {
       console.error('[promane/feedback] Slack Webhook URL未設定', { feedbackId: saved?.id })
-      if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
-      return NextResponse.json({ error: '現在フィードバックを送信できません。内容を残したまま、時間をおいて再試行してください。' }, { status: 503 })
+      if (saved) return privateApiJson({ success: true, stored: true, notified: false })
+      return privateApiJson({ error: '現在フィードバックを送信できません。内容を残したまま、時間をおいて再試行してください。' }, { status: 503 })
     }
 
     try {
       const r = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(applyContextComment(slackPayload)),
+        body: JSON.stringify(voicePayload(slackPayload, { app: 'ドヤプロマネ', kind: 'inquiry', severity: 'action' })),
         signal: AbortSignal.timeout(10_000),
       })
       if (!r.ok) {
         console.error('[promane/feedback] Slack webhook failed', { status: r.status, feedbackId: saved?.id })
-        if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
-        return NextResponse.json({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
+        if (saved) return privateApiJson({ success: true, stored: true, notified: false })
+        return privateApiJson({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
       }
     } catch (e) {
       console.error('[promane/feedback] Slack送信失敗', { feedbackId: saved?.id, error: e instanceof Error ? e.name : 'UnknownError' })
-      if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
-      return NextResponse.json({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
+      if (saved) return privateApiJson({ success: true, stored: true, notified: false })
+      return privateApiJson({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
     }
 
-    return NextResponse.json({ success: true, stored: !!saved, notified: true })
+    return privateApiJson({ success: true, stored: !!saved, notified: true })
   } catch (e: any) {
     console.error('[promane/feedback]')
-    return NextResponse.json({ error: 'フィードバック送信に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: 'フィードバック送信に失敗しました' }, { status: 500 })
   }
 }

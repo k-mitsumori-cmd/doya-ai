@@ -19,6 +19,7 @@ import { TASK_STATUS_LABELS } from "@/lib/promane/format";
 import { toast } from "sonner";
 import Image from "next/image";
 import { TaskEditModal } from "./task-edit-modal";
+import { userErrorMessage } from '@/lib/promane/user-error'
 
 type TaskItem = {
   id: string;
@@ -40,9 +41,11 @@ export function KanbanBoard({
   tasks: initialTasks,
   workspaceSlug,
   members = [],
+  canWrite,
 }: {
   tasks: TaskItem[];
   workspaceSlug: string;
+  canWrite: boolean;
   members?: { id: string; displayName: string }[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
@@ -58,12 +61,14 @@ export function KanbanBoard({
   );
 
   function handleDragStart(event: DragStartEvent) {
+    if (!canWrite) return;
     const task = tasks.find((t) => t.id === event.active.id);
     if (task) setActiveTask(task);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     setActiveTask(null);
+    if (!canWrite) return;
     const { active, over } = event;
     if (!over) return;
 
@@ -92,16 +97,16 @@ export function KanbanBoard({
       setTasks((prev) => prev.map((item) =>
         item.id === taskId ? { ...item, status: task.status } : item
       ));
-      toast.error(error instanceof Error ? error.message : "タスクの移動に失敗しました");
+      toast.error(userErrorMessage(error instanceof Error ? error.message : null, "タスクを移動できませんでした。もう一度お試しください。"));
       return;
     }
 
     if (newStatus === "done") {
-      toast.success(`🎉 「${task.title}」完了おめでとう！！`, {
+      toast.success(`「${task.title}」を完了にしました`, {
         icon: <Image src="/character/jump.png" alt="" width={36} height={36} unoptimized />,
         duration: 4000,
         style: {
-          background: "linear-gradient(135deg, #dbeafe, #ede9fe)",
+          background: "linear-gradient(135deg, #dbeafe, #eaf2ff)",
           border: "2px solid #818cf8",
           fontSize: "15px",
           fontWeight: 900,
@@ -127,6 +132,7 @@ export function KanbanBoard({
             <KanbanColumn
               key={status}
               id={status}
+              disabled={!canWrite}
               title={TASK_STATUS_LABELS[status]}
               count={columnTasks.length}
             >
@@ -135,7 +141,7 @@ export function KanbanBoard({
                 strategy={verticalListSortingStrategy}
               >
                 {columnTasks.map((task) => (
-                  <KanbanCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />
+                  <KanbanCard key={task.id} task={task} canWrite={canWrite} onEdit={() => setEditingTask(task)} />
                 ))}
               </SortableContext>
             </KanbanColumn>
@@ -144,7 +150,7 @@ export function KanbanBoard({
       </div>
 
       <DragOverlay>
-        {activeTask && <KanbanCard task={activeTask} isDragging />}
+        {activeTask && <KanbanCard task={activeTask} canWrite={canWrite} isDragging />}
       </DragOverlay>
 
       {editingTask && (
@@ -163,6 +169,7 @@ export function KanbanBoard({
             dueDate: editingTask.dueDate ?? null,
           }}
           members={members}
+          canWrite={canWrite}
         />
       )}
     </DndContext>

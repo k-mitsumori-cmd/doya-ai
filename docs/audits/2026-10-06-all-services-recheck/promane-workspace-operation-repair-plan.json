@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-10-08T00:27:12.771814+00:00",
+  "status": "canonical-scope-root-repair-in-progress-new-full-gate-required",
+  "scope": "Promane explicit workspace creation and owner/admin settings editing; default workspace admission is separate and must preserve its existing behavior",
+  "evidence": [
+    "promane-workspace-ui-baseline.json",
+    "promane-workspace-operation-baseline-postgres-results.json",
+    "promane-workspace-operation-baseline-postgres-supervisor.json"
+  ],
+  "confirmed": [
+    "Same-frame create sends two identical POSTs and success navigations",
+    "Partial create acknowledgement can route to /promane/undefined",
+    "Empty settings acknowledgement falsely reports saved",
+    "Actual PRO repeated/concurrent identical creates persist two workspaces and owner memberships",
+    "Actual FREE final-slot retry returns LIMIT instead of recovering original successful workspace",
+    "Actual settings API ignores stale revision token and overwrites later saved name",
+    "Actual authenticated Next project save committed with lost response; settings renamed workspace; old recovery returned 500 and new slug enabled a duplicate project (2 rows)"
+  ],
+  "conditional": [
+    "Same-mounted workspace prop switch submits prior draft under new workspace ID; actual Next navigation remount unproven",
+    "Existing Promane pending-operation browser keys use mutable workspaceSlug; recovery across a slug rename needs explicit browser/server reproduction before claiming impact"
+  ],
+  "requirements": [
+    "Explicit intent identity and actor binding, atomic workspace+owner membership+terminal receipt",
+    "Preserve user-row lock, paying owner workspace caps, plan normalization and upgrade/contact guidance",
+    "Persist terminal declines, lost-ack recovery/cancel, no resurrection after deletion",
+    "Settings must keep owner/admin-only authority, slug uniqueness/validation, add optimistic revision and superseded-edit recovery",
+    "Strict complete acknowledgement before success/navigation, durable metadata only, preserve private draft on uncertainty and isolate account/workspace/create-vs-edit",
+    "Canonical workspace ID for metadata/recovery across slug rename where available; investigate all existing Promane hooks for same boundary",
+    "Actual private PG race/rollback/replay/cancellation/actor/cap/slug tests, mounted/native UI, full frozen gate and CI/READY/public proof"
+  ],
+  "boundaries": [
+    "No production/customer database writes or migrations",
+    "Only synthetic isolated PostgreSQL accounts/sessions and no external notifications/providers",
+    "Workspace code integrated locally but not committed/deployed",
+    "Full17service2074criteria goal active; cohort tests do not establish full service completion",
+    "Publication held: 13 workspace E2E cases passed, separate project mutable-slug baseline confirms required repair."
+  ],
+  "goalScope": "All17services2074criteria still active; individual service subsets cannot prove completion",
+  "candidateHelper": "promane-workspace-operation-candidate/src/lib/promane/workspace-operation.ts",
+  "candidateInput": "promane-workspace-operation-candidate/src/lib/promane/workspace-input.ts",
+  "candidateHelperEvidence": [
+    "promane-workspace-operation-helper-postgres-results.json",
+    "promane-workspace-operation-helper-postgres-supervisor.json"
+  ],
+  "candidateHelperCases": 15,
+  "candidateTypecheck": "promane-workspace-candidate-typecheck.json",
+  "candidateStatus": "Integrated into root, not committed or deployed",
+  "nextCandidateWork": "See promane-canonical-scope-repair-plan.json. Prior workspace snapshot passed; canonical repair not release-ready.",
+  "candidateEvidence": [
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-helper-postgres-results.json",
+      "passed": 15
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-mutations-postgres-results.json",
+      "passed": 28
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-http-postgres-results.json",
+      "passed": 16
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-mounted-results.json",
+      "passed": 20
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-view-mounted-results.json",
+      "passed": 10
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-native-results.json",
+      "passed": 12
+    }
+  ],
+  "candidateCases": 101,
+  "projectReleaseStatus": "CI-success-production-READY-anonymous-public-proof-passed",
+  "rootIntegration": "12 workspace production files plus real-module security regression fixture and CI/spec updates",
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-release-ddee2249-208c-46a8-ba07-68271e82cdb5",
+  "currentGateSession": 20717,
+  "previousGateFailure": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-release-00a5d508-17bf-4bab-89e0-e18d30f24fb7",
+    "session": 64849,
+    "terminalExitCode": 1,
+    "cause": "Verified Next webpack ENOSPC and supervisor write ENOSPC. Failed, not counted as passed. Only completed stopped owned probe databases and generated webpack cache cleaned."
+  },
+  "gateStatus": "passed91-unchanged",
+  "authenticatedNextEvidence": "promane-workspace-next-e2e-results.json",
+  "authenticatedNextCases": 13
+}

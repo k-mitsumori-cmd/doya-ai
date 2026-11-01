@@ -5,6 +5,7 @@ let storageError = true
 const storageLogs = []
 let pathId = 0
 const storage = load('src/lib/interview/storage.ts', {
+  '@/lib/private-storage-bucket': load('src/lib/private-storage-bucket.ts', { '@/lib/fetch-timeout': load('src/lib/fetch-timeout.ts', {}, { setTimeout, clearTimeout, AbortController }) }),
   'node:crypto': { randomUUID: () => `unique-${++pathId}` },
   '@supabase/supabase-js': { createClient: () => ({ storage: { from: () => ({
     remove: async () => ({ error: storageError ? { message: 'private path and provider detail' } : null }),

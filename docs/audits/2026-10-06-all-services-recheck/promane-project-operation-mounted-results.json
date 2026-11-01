@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T23:12:52.694Z",
+  "expected": 23,
+  "passed": 23,
+  "cases": [
+    "StrictMode same-frame submits call actual creation lane once",
+    "lost acknowledgement survives remount and only recovers saved row",
+    "missing recovery retains fence without blind resubmit",
+    "explicit server cancellation unlocks a new operation identity",
+    "foreign or mismatched acknowledgement cannot report success",
+    "storage persistence failure sends no server action",
+    "corrupt operation metadata fails closed without overwrite",
+    "scope change ignores delayed old save acknowledgement",
+    "two mounted tabs serialize metadata and do not send distinct duplicates",
+    "failed recovery keeps operation and original write fence",
+    "unresponsive action times out to durable unknown and late success cannot unlock",
+    "missing Web Locks fails before server write",
+    "incomplete resolved action acknowledgement retains pending operation",
+    "account changes isolate pending operation and reject stale screen callbacks",
+    "anonymous browser cannot start a task request",
+    "invalid input preserves ready lane and sends no request or metadata",
+    "accepted note5000 and normalized fields require exact saved acknowledgement",
+    "terminal LIMIT is surfaced and unlocks only after durable outcome",
+    "invalid rejection shape retains unknown fence",
+    "lost response terminal LIMIT recovery never creates another project",
+    "update acknowledgement enforces exact requested patch and revision identity",
+    "update superseded recovery preserves latest record and never resubmits",
+    "committed unavailable recovery clears only terminal operation metadata"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/use-project-operation.ts": "0fe136526bdee96d64e925c52291d0063a28d3325a718e0217b29945be9f94c0"
+  },
+  "scope": "Actual selected project hook in React StrictMode with real localStorage and synthetic Web Locks/actions/session. sourceHashes identify root or candidate; form/native/real Next transport not covered."
+}

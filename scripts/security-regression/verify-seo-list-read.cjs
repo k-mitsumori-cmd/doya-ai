@@ -25,7 +25,7 @@ function fixture(userId, guestId, fail=false) {
 }
 (async()=>{
   await check('search cursor validates query binding, dates and user input limits',()=>{
-    const {parseSeoListQuery}=load('src/lib/seo-article-list.ts',{'@prisma/client':{Prisma:{}}});
+    const {parseSeoListQuery}=load('src/lib/seo-article-list.ts',{'@prisma/client':{Prisma:{}},'@seo/lib/job-response':load('seo/lib/job-response.ts')});
     const valid={v:1,id:'row',at:'2026-09-20T00:00:00.123Z',q:'日本語',status:'DONE'};
     const encoded=data=>Buffer.from(JSON.stringify(data)).toString('base64url');
     const parsed=parseSeoListQuery(new URLSearchParams({q:' 日本語 ',status:'DONE',cursor:encoded(valid)}));

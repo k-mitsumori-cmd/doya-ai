@@ -1,0 +1,152 @@
+{
+  "checkedAt": "2026-10-07T15:48:49.082Z",
+  "passed": 6,
+  "cases": [
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "private"
+    }
+  ],
+  "failures": [
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/storage.ts": "3d30c3cd3d9d507743260d7ca8491877a7659dec870aee0c525f9b4471f531dc",
+    "src/lib/shodan/storage.ts": "a4f59ff04781bd1d7e29d589aeac3b98f6daf757b41bbc6bd0af48614365b1c3"
+  },
+  "scope": "Actual AdImage/Shodan storage modules with synthetic Supabase object/metadata adapter. Misconfiguration and warm-cache privacy change probes; not actual production bucket state or customer exposure evidence.",
+  "sourceCommit": "9187cace1b3c77ce0e55af96f5dbd8aa37e5ed8f"
+}

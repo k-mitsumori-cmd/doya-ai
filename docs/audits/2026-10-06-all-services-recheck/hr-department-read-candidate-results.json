@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-08T19:11:52.525Z",
+  "expected": 8,
+  "passed": 8,
+  "cases": [
+    {
+      "name": "Empty organization and ordinary tree retain legacy fields and private cache",
+      "passed": true,
+      "durationMs": 15
+    },
+    {
+      "name": "Actual candidate GET returns every row at depth5000",
+      "passed": true,
+      "durationMs": 77
+    },
+    {
+      "name": "Actual candidate GET returns every row at depth20000",
+      "passed": true,
+      "durationMs": 277
+    },
+    {
+      "name": "Legacy orphans and cycles remain reachable in both forest and flat records",
+      "passed": true,
+      "durationMs": 6
+    },
+    {
+      "name": "Unauthenticated requests never query departments",
+      "passed": true,
+      "durationMs": 6
+    },
+    {
+      "name": "Expected organization mismatch rejects before department query",
+      "passed": true,
+      "durationMs": 5
+    },
+    {
+      "name": "Database error is generic and private",
+      "passed": true,
+      "durationMs": 5
+    },
+    {
+      "name": "Duplicate corrupt identifiers fail closed instead of losing records",
+      "passed": true,
+      "durationMs": 4
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/api/hr/departments/route.ts": "dbf62d9d4d6f853ba53c6233f663e3524778df68827ab3fd71f5ad26164b47f8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-hierarchy.ts": "8215b8edd56e57c441686eb363a63be6d7c9f4a8a9c10462a187e90b98ef7281",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-read-candidate.cjs": "9d6b7cb6d5e94f76784d8eb77dd887972969789cbf377707d87fc08a70dcca95"
+  },
+  "scope": "Actual candidate GET with synthetic scoped ORM and native Response JSON parsing. No root integration, actual Next/DB/browser or production proof. Pagination/transport bounds and all three consumers remain required."
+}

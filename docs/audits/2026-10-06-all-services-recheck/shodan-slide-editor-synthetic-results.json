@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-10-06T23:57:27.375090+00:00",
+  "checks": {
+    "editorMounted": {
+      "cases": 34,
+      "scope": "Actual editor, AppLayout, guard, controller, DTO, bounded transport and PDF pipeline under StrictMode; synthetic HTTP/image decode/jsPDF/session only. No paid provider, customer DB write, private production or real file save."
+    },
+    "pdfPipeline": {
+      "passed": 24,
+      "results": [
+        "PDF creates all 14 pages with bounded credentials-free image reads",
+        "PDF rejects missing without saving and cleans deadlines",
+        "PDF rejects http-error without saving and cleans deadlines",
+        "PDF rejects header-large without saving and cleans deadlines",
+        "PDF rejects stream-large without saving and cleans deadlines",
+        "PDF rejects aggregate-large without saving and cleans deadlines",
+        "PDF rejects bad-magic without saving and cleans deadlines",
+        "PDF rejects empty without saving and cleans deadlines",
+        "PDF rejects zero-pixels without saving and cleans deadlines",
+        "PDF rejects huge-pixels without saving and cleans deadlines",
+        "PDF rejects fetch-error without saving and cleans deadlines",
+        "PDF rejects reader-error without saving and cleans deadlines",
+        "PDF rejects decode-error without saving and cleans deadlines",
+        "PDF refuses more than 50 slides before IO",
+        "PDF cancels fetch-hold without late save",
+        "PDF times out fetch-hold and disposes work",
+        "PDF cancels stream-hold without late save",
+        "PDF times out stream-hold and disposes work",
+        "PDF cancels reader-hold without late save",
+        "PDF times out reader-hold and disposes work",
+        "PDF cancels decode-hold without late save",
+        "PDF times out decode-hold and disposes work",
+        "overall PDF deadline aborts stalled image stream",
+        "PDF scope departure is rechecked after image decode"
+      ]
+    },
+    "regenerateApi": {
+      "passed": 26,
+      "results": [
+        "regenerate rejects malformed version null before lease/provider",
+        "regenerate rejects malformed version \"bad\" before lease/provider",
+        "regenerate rejects malformed version 1 before lease/provider",
+        "regenerate rejects malformed version {} before lease/provider",
+        "regenerate rejects malformed version \"2026-10-07T00:00:00Z\" before lease/provider",
+        "modern overlong instruction is rejected intact before provider",
+        "version stale fails after lease before provider",
+        "version changed-after-lease fails after lease before provider",
+        "regenerate bad-slides has truthful sanitized failure",
+        "regenerate missing has truthful sanitized failure",
+        "regenerate deleted-after-lease has truthful sanitized failure",
+        "regenerate lease-busy has truthful sanitized failure",
+        "regenerate provider-error has truthful sanitized failure",
+        "regenerate profile-error has truthful sanitized failure",
+        "regenerate fresh-read-error has truthful sanitized failure",
+        "regenerate read-error has truthful sanitized failure",
+        "regenerate billing-error has truthful sanitized failure",
+        "regenerate auth-error has truthful sanitized failure",
+        "regenerate save-conflict has truthful sanitized failure",
+        "regenerate sign-error has truthful sanitized failure",
+        "invalid index -1 never invokes provider",
+        "invalid index 2 never invokes provider",
+        "invalid index 1.5 never invokes provider",
+        "invalid index \"1\" never invokes provider",
+        "missing image slot is generated with exact preparation/index/opaque acknowledgement",
+        "legacy omitted version remains supported"
+      ]
+    },
+    "atomicSave": {
+      "passed": 9,
+      "results": [
+        "different slide writes both survive",
+        "same slide stale write rejected",
+        "changed structure rejects generated image",
+        "missing or transferred parent rejects before writes",
+        "invalid slot -1",
+        "invalid slot 2",
+        "invalid slot 0.5",
+        "one conflicting batch slot prevents every batch write",
+        "missing image slot fills aligned placeholders without replacing another image"
+      ]
+    },
+    "detailMounted": {
+      "cases": 35,
+      "scope": "Actual page/layout/guard/controller/DTO/bounded transport under StrictMode; synthetic HTTP and session only. No providers, DB writes, emails or private production verification."
+    }
+  },
+  "scope": "Synthetic-only actual components/API/validators/PDF helper; not authenticated production or actual download persistence."
+}

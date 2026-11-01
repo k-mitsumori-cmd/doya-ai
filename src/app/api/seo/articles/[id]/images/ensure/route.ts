@@ -7,6 +7,7 @@ import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern }
 import { requireSeoImageAccess } from '@/lib/seo-image-access'
 import { reserveSeoToolCalls, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 import { claimSeoImageLease, releaseSeoImageLease, SeoImageGenerationInProgressError } from '@/lib/seo-image-lease'
+import { claimSeoAutoImageAttempt, seoImageEnsureTrigger } from '@/lib/seo-image-auto-attempt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 最大14枚を順次生成するため
@@ -56,10 +57,11 @@ function applyDiagramTemplate(rawTemplate: string, vars: Record<string, string>)
  * 1クリックで「バナー(4枚候補) + 図解(最大10)」を生成（既存があれば不足分だけ生成）
  * - LIGHT以上、または初回ログイン後1時間のお試しで利用可
  */
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const access = await requireSeoImageAccess()
     if (!access.ok) return access.response
+    const trigger = seoImageEnsureTrigger(await req.json().catch(() => null))
     await ensureSeoSchema()
     const userId = access.userId
 
@@ -80,6 +82,10 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     }
     if (!article.finalMarkdown) {
       return NextResponse.json({ success: false, error: '本文がありません（先に記事生成を完了してください）' }, { status: 400 })
+    }
+    // 記事を開いたときの自動の画像づくりは1記事1回だけ。失敗しても作り直さない（作り直しはボタンから）。
+    if (trigger === 'auto' && !(await claimSeoAutoImageAttempt(articleId))) {
+      return NextResponse.json({ success: true, skipped: true, code: 'SEO_AUTO_IMAGES_ALREADY_ATTEMPTED', images: article.images || [] })
     }
 
     await ensureSeoStorage()

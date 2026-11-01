@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
   const userId = await resolveUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-  const ctx = await getMensetsuContext(orgSlugFrom(req))
-  const memberships = await listMemberships()
+  // 組織の解決と所属一覧は互いに依存しないので同時に読む（どちらも userId で絞る）
+  const [ctx, memberships] = await Promise.all([getMensetsuContext(orgSlugFrom(req)), listMemberships()])
 
   if (!ctx) return NextResponse.json({ current: null, memberships })
 
@@ -56,6 +56,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '氏名の形式が正しくありません' }, { status: 400 })
   }
   const memberName = typeof body.memberName === 'string' ? body.memberName.trim().slice(0, 80) || undefined : undefined
-  const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName)
-  return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
+  try {
+    const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName)
+    return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
+  } catch (e) {
+    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
+    throw e
+  }
 }

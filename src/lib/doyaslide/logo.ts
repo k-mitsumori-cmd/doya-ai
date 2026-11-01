@@ -97,6 +97,17 @@ export async function fetchBuffer(url: string): Promise<Buffer> {
     throw new Error('不正なURLです')
   }
   if (u.protocol !== 'https:') throw new Error('httpsのURLのみ許可されています')
+  // ドヤスライドのバケットのファイルは、公開URLを取りに行かずサービス権限で読む。
+  // バケットを非公開にしても、ロゴ合成・書き出し・修正の参照画像が動き続けるようにするため（SEC-062）。
+  const { doyaslidePathFromUrl } = await import('./file-urls')
+  const ownPath = doyaslidePathFromUrl(url)
+  if (ownPath) {
+    const { downloadDoyaslideObject } = await import('./storage')
+    const object = await downloadDoyaslideObject(ownPath)
+    if (!object || !object.contentType.startsWith('image/')) throw new Error('画像取得失敗')
+    if (object.buffer.length > 8 * 1024 * 1024) throw new Error('画像が大きすぎます')
+    return object.buffer
+  }
   if (!SUPABASE_HOST || u.host !== SUPABASE_HOST) {
     throw new Error('許可されていないホストです')
   }

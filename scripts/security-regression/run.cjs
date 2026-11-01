@@ -1,6 +1,64 @@
+for (const file of ['verify-zod-schema-contracts.cjs', 'verify-openai-sdk-transport.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-vercel-config-zod.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-hr-department-operation.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-hr-department-input.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-hr-org-chart-visibility.cjs', 'verify-hr-org-chart-paged-client.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-hr-department-private-cache.cjs', 'verify-org-chart-kintai-private-cache.cjs', 'verify-banner-history-image-cache.cjs', 'verify-seo-auto-read.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-seo-creation-receipt.cjs', 'verify-seo-creation-recovery-api.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+const personalizedDashboardCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-personalized-dashboard-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personalizedDashboardCache.status !== 0) process.exit(personalizedDashboardCache.status || 1);
+const hrAdditionalGetCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-additional-get-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrAdditionalGetCache.status !== 0) process.exit(hrAdditionalGetCache.status || 1);
+const seoTemplateScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-seo-template-actor-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoTemplateScope.error || seoTemplateScope.status !== 0) process.exit(seoTemplateScope.status || 1);
+const bannerScopeChecks = ['verify-banner-limit-modal-scope-mounted.cjs','verify-banner-legacy-actor-mounted.cjs'];
+for (const file of bannerScopeChecks) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname,file)], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
+const roleChecks = ['verify-membership-known-roles.cjs', 'verify-membership-invitation-roles.cjs'];
+for (const file of roleChecks) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
+const operationLease = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-operation-lease.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (operationLease.status !== 0) process.exit(operationLease.status || 1);
+const textApplyMounted = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-apply-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textApplyMounted.error || textApplyMounted.status !== 0) { console.error('Banner text apply mounted regression failed'); process.exit(1); }
+const textResult = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-result.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textResult.error || textResult.status !== 0) { console.error('Banner text result regression failed'); process.exit(1); }
+const textBody = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-body.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textBody.error || textBody.status !== 0) { console.error('Banner text body regression failed'); process.exit(1); }
+const textRecoveryMounted = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textRecoveryMounted.error || textRecoveryMounted.status !== 0) { console.error('Banner text recovery mounted regression failed'); process.exit(1); }
+const textRouteProvider = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-route-provider.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textRouteProvider.error || textRouteProvider.status !== 0) { console.error('Banner text route provider regression failed'); process.exit(1); }
+const textAnswer = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-answer.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textAnswer.error || textAnswer.status !== 0) { console.error('Banner text answer regression failed'); process.exit(1); }
+const bannerCreate = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-create-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerCreate.error || bannerCreate.status !== 0) { console.error('Banner create mounted regression failed'); process.exit(1); }
+const refineRecovery = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-refine-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (refineRecovery.error || refineRecovery.status !== 0) { console.error('Banner refine recovery regression failed'); process.exit(1); }
+const refineInput = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-refine-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (refineInput.error || refineInput.status !== 0) { console.error('Banner refine input regression failed'); process.exit(1); }
+const bannerChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-chat-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerChat.error || bannerChat.status !== 0) { console.error('Banner chat mounted regression failed'); process.exit(1); }
+const crmClient = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-client.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (crmClient.error || crmClient.status !== 0) { console.error('SFA CRM client regression failed'); process.exit(1); }
+const crmRecords = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-record-mutation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (crmRecords.error || crmRecords.status !== 0) { console.error('SFA CRM record regression failed'); process.exit(1); }
+for (const script of ['verify-aio-domain-brand-fallback.cjs','verify-aio-quick-start-hook-mounted.cjs','verify-aio-quick-start-view-mounted.cjs','verify-aio-quick-start-prompt-limit.cjs', 'verify-aio-prompts-mutation.cjs', 'verify-aio-prompts-mounted.cjs']) {
+  const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('AIO prompts regression failed:', script); process.exit(1); }
+}
+for (const script of ['verify-shodan-detail-mounted.cjs', 'verify-shodan-detail-response.cjs', 'verify-shodan-slide-editor-mounted.cjs', 'verify-shodan-slide-regenerate-contract.cjs', 'verify-shodan-list-mounted.cjs', 'verify-shodan-list-response.cjs']) {
+  const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Shodan detail regression failed:', script); process.exit(1); }
+}
+for (const file of ['verify-text-llm-budget.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+const slideDeck = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-shodan-slide-deck-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (slideDeck.error || slideDeck.status !== 0) { console.error('Shodan slide deck regression failed'); process.exit(1); }
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-for (const script of ['verify-trial-eligibility-client.cjs', 'verify-trial-eligibility-mounted.cjs']) {
+for (const script of ['verify-auth-registration.cjs', 'verify-registration-classification.cjs', 'verify-subscription-mutation-client.cjs', 'verify-subscription-management-mounted.cjs', 'verify-subscription-status-client.cjs', 'verify-cancel-notice-mounted.cjs', 'verify-billing-plan-resync-mounted.cjs', 'verify-billing-response-client.cjs', 'verify-checkout-button-mounted.cjs', 'verify-stripe-success-sync-mounted.cjs', 'verify-google-analytics-purchase.cjs', 'verify-google-analytics-services.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}
+for (const script of ['verify-trial-eligibility-client.cjs', 'verify-trial-eligibility-mounted.cjs', 'verify-trial-paid-plan.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }
@@ -356,6 +414,10 @@ if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');
   process.exit(1);
 }
+for (const script of ['verify-quote-workspace-context.cjs', 'verify-quote-workspace-mounted.cjs', 'verify-quote-sidebar-mounted.cjs', 'verify-quote-response-shape.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}
 const quoteWriteRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-quote-write-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (quoteWriteRecovery.error || quoteWriteRecovery.status !== 0) {
   console.error('Security regression failed: verify-quote-write-recovery.cjs');
@@ -465,6 +527,13 @@ const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'v
 if (hrEmployeeAdmission.error || hrEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-admission.cjs');
   process.exit(1);
+}
+for (const script of ['verify-hr-employee-number.cjs', 'verify-hr-employee-number-ui.cjs', 'verify-hr-csv-body.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) {
+    console.error('Security regression failed: ' + script);
+    process.exit(1);
+  }
 }
 const promaneWorkspaceAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-workspace-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (promaneWorkspaceAdmission.error || promaneWorkspaceAdmission.status !== 0) {
@@ -876,6 +945,14 @@ if (doyaslideBatchAccounting.error || doyaslideBatchAccounting.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-batch-accounting.cjs');
   process.exit(1);
 }
+const doyaslideOperationWorker = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-operation-worker.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideOperationWorker.error || doyaslideOperationWorker.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-operation-worker.cjs'); process.exit(1);
+}
+for (const verifier of ['verify-doyaslide-operation-recovery-mounted.cjs', 'verify-doyaslide-operation-editor-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
 const serviceInputTypes = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-input-types.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (serviceInputTypes.error || serviceInputTypes.status !== 0) {
   console.error('Security regression failed: verify-service-input-types.cjs');
@@ -961,11 +1038,48 @@ if (sfaDealTasksUi.error || sfaDealTasksUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-deal-tasks-ui.cjs');
   process.exit(1);
 }
+const sfaClientLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-client-lifecycle.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaClientLifecycle.error || sfaClientLifecycle.status !== 0) {
+  console.error('Security regression failed: verify-sfa-client-lifecycle.cjs');
+  process.exit(1);
+}
+const sfaTaskVersions = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-task-versions.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaTaskVersions.error || sfaTaskVersions.status !== 0) {
+  console.error('Security regression failed: verify-sfa-task-versions.cjs');
+  process.exit(1);
+}
+const sfaCreationReceipts = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-creation-receipts.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaCreationReceipts.error || sfaCreationReceipts.status !== 0) {
+  console.error('Security regression failed: verify-sfa-creation-receipts.cjs');
+  process.exit(1);
+}
+const sfaMutationAuthority = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-mutation-authority.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaMutationAuthority.error || sfaMutationAuthority.status !== 0) {
+  console.error('Security regression failed: verify-sfa-mutation-authority.cjs');
+  process.exit(1);
+}
+const sfaInputPreservation = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-input-preservation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaInputPreservation.error || sfaInputPreservation.status !== 0) {
+  console.error('Security regression failed: verify-sfa-input-preservation.cjs');
+  process.exit(1);
+}
 const sfaTaskCreate = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-task-create.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
   console.error('Security regression failed: verify-sfa-task-create.cjs');
   process.exit(1);
 }
+const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const mitsuboshiJapaneseFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-japanese-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiJapaneseFont.error || mitsuboshiJapaneseFont.status !== 0) { console.error('Security regression failed: Mitsuboshi Japanese font'); process.exit(1); }
+const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
+const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaTeamClient.error || sfaTeamClient.status !== 0) { console.error('Security regression failed: SFA team settings'); process.exit(1); }
+const sfaRecordAccessMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-access-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaRecordAccessMounted.error || sfaRecordAccessMounted.status !== 0) { console.error('Security regression failed: SFA record access settings'); process.exit(1); }
+const sfaCsvLink = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-csv-link-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaCsvLink.error || sfaCsvLink.status !== 0) { console.error('Security regression failed: SFA CSV link'); process.exit(1); }
 const sfaExportAll = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-export-all.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaExportAll.error || sfaExportAll.status !== 0) {
   console.error('Security regression failed: verify-sfa-export-all.cjs');
@@ -1118,7 +1232,7 @@ if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');
   process.exit(1);
 }
-for (const file of ['verify-quote-ai-input.cjs', 'verify-quote-document-actor.cjs', 'verify-quote-product-admission.cjs', 'verify-mensetsu-token-provider.cjs', 'verify-service-client-deadlines.cjs', 'verify-doyalist-collection-budget.cjs', 'verify-doyalist-provider-json.cjs', 'verify-doyaslide-style-preview.cjs', 'verify-seo-image-purge.cjs', 'verify-seo-durable-storage.cjs', 'verify-seo-image-admission.cjs', 'verify-swipe-test-admission.cjs', 'verify-guide-image-access.cjs', 'verify-seo-tool-admission.cjs', 'verify-seo-error-sanitization.cjs', 'verify-seo-template-admin.cjs', 'verify-promane-feedback-delivery.cjs', 'verify-service-error-sanitization.cjs', 'verify-hr-error-sanitization.cjs', 'verify-doyalist-error-sanitization.cjs', 'verify-adimage-image-budget.cjs', 'verify-hr-usage-error.cjs', 'verify-doyalist-layout-plan.cjs', 'verify-doyalist-pricing-status.cjs', 'verify-kintai-usage-error.cjs', 'verify-service-plan-fallback.cjs', 'verify-doyaslide-load-errors.cjs', 'verify-cunning-load-errors.cjs', 'verify-aishodan-stats-all.cjs', 'verify-promane-invitation-ui.cjs', 'verify-promane-invitation-pages.cjs', 'verify-mensetsu-compare-ui.cjs', 'verify-mensetsu-compare-pages.cjs', 'verify-adimage-concept-pages.cjs', 'verify-doyalist-history-ui.cjs', 'verify-doyalist-approach-pages.cjs', 'verify-cunning-profile-pages.cjs', 'verify-aishodan-list-pages.cjs', 'verify-kintai-request-pagination.cjs', 'verify-kintai-employee-pages.cjs', 'verify-shodan-preparation-pages.cjs', 'verify-shodan-quota-atomic.cjs', 'verify-shodan-owner-plan.cjs', 'verify-shodan-profile-budget.cjs', 'verify-shodan-slide-lease.cjs', 'verify-sfa-lead-update.cjs', 'verify-dependency-floor.cjs', 'verify-auth-adimage.cjs', 'verify-safe-fetch.cjs', 'verify-doyalist-export-all.cjs', 'verify-doyalist-scraper.cjs', 'verify-doyaslide-scrape.cjs', 'verify-seo-reference.cjs', 'verify-safe-browser.cjs', 'verify-banner-safe-url.cjs', 'verify-banner-thumb-access.cjs', 'verify-banner-history-retention.cjs', 'verify-banner-history-pagination.cjs', 'verify-banner-history-access.cjs', 'verify-banner-legacy-history.cjs', 'verify-banner-daily-stats.cjs', 'verify-banner-account-cache.cjs', 'notification-security.cjs', 'verify-data-integrity.cjs', 'verify-billing-integrity.cjs', 'verify-related-records.cjs', 'verify-admin-billing-integrity.cjs', 'verify-prompt-migration-auth.cjs', 'verify-retired-db-sync.cjs', 'verify-retired-slide-api.cjs', 'verify-seo-schema-readiness.cjs', 'verify-owner-boundaries.cjs', 'verify-banner-quota.cjs', 'verify-service-limit-ui.cjs', 'verify-promane-write-access.cjs', 'verify-kintai-employee-atomic.cjs', 'verify-kintai-toggle.cjs', 'verify-kintai-disabled-clock.cjs', 'verify-kintai-disabled-access.cjs', 'verify-kintai-disabled-pages.cjs', 'verify-sfa-elapsed.cjs', 'verify-sfa-activity-order.cjs', 'verify-quote-list-pagination.cjs', 'verify-quote-issuer-load.cjs', 'verify-quote-confirm-response.cjs', 'verify-quote-status-transition.cjs', 'verify-quote-atomic-save.cjs', 'verify-quote-money.cjs', 'verify-quote-pdf-ui.cjs', 'verify-quote-provenance.cjs', 'verify-quote-create-atomic.cjs', 'verify-quote-text-limits.cjs', 'verify-sfa-task-delete.cjs', 'verify-sfa-task-input.cjs', 'verify-sfa-task-update.cjs', 'verify-sfa-create-stage.cjs', 'verify-sfa-convert.cjs', 'verify-hr-finalized.cjs', 'verify-hr-evaluation-read.cjs', 'verify-hr-evaluation-list.cjs', 'verify-hr-evaluation-related-reads.cjs', 'verify-hr-evaluation-ai.cjs', 'verify-hr-evaluation-write.cjs', 'verify-hr-rating-fields.cjs', 'verify-hr-ai-save-first.cjs', 'verify-hr-form-locks.cjs', 'verify-hr-evaluation-create-access.cjs', 'verify-doyalist-collect-preservation.cjs', 'verify-interview-autosave.cjs', 'verify-interview-save-conflict.cjs', 'verify-interview-title-save.cjs', 'verify-sfa-task-pagination.cjs', 'verify-hr-one-on-one-roundtrip.cjs', 'verify-hr-one-on-one-input.cjs', 'verify-hr-one-on-one-summary-flow.cjs', 'verify-hr-one-on-one-access.cjs', 'verify-hr-one-on-one-related.cjs', 'verify-hr-one-on-one-create-private.cjs', 'verify-hr-one-on-one-pagination.cjs', 'verify-hr-one-on-one-list-ui.cjs', 'verify-hr-one-on-one-date.cjs', 'verify-hr-one-on-one-navigation.cjs', 'verify-cancellation-partial.cjs', 'verify-stripe-discovery.cjs', 'verify-trial-failure.cjs', 'verify-subscription-resume.cjs', 'verify-subscription-status.cjs', 'verify-seo-content-owner.cjs', 'verify-seo-memo-outline.cjs', 'verify-seo-export-owner.cjs', 'verify-seo-check-owner.cjs', 'verify-seo-check-persistence.cjs', 'verify-seo-generation-owner.cjs', 'verify-seo-images-owner.cjs', 'verify-seo-batch-results.cjs', 'verify-seo-storage-collision.cjs', 'verify-seo-image-read.cjs', 'verify-seo-storage-boundary.cjs', 'verify-seo-editor-save.cjs', 'verify-seo-editor-navigation.cjs', 'verify-seo-article-access.cjs', 'verify-seo-job-restart.cjs', 'verify-seo-candidates.cjs', 'verify-seo-job-vibe-owner.cjs', 'verify-seo-job-controls.cjs', 'verify-seo-legacy-guest-generation.cjs', 'verify-seo-pipeline-stop.cjs', 'verify-seo-job-ui.cjs', 'verify-seo-job-cancel-ui.cjs', 'verify-seo-job-response.cjs', 'verify-seo-list-read.cjs', 'verify-evaluation-lifecycle.cjs', 'verify-mensetsu-session-pages.cjs', 'verify-mensetsu-turn-order.cjs', 'verify-aishodan-end-once.cjs', 'verify-aishodan-token-state.cjs', 'verify-mensetsu-turn-metadata.cjs', 'verify-shodan-slide-save.cjs', 'verify-shodan-proposal-save.cjs', 'verify-shodan-slide-completeness.cjs', 'verify-shodan-pdf-action.cjs', 'verify-persona-image-owner.cjs', 'verify-persona-plan-cta.cjs', 'verify-aio-plan-cta.cjs', 'verify-adimage-response-owner.cjs', 'verify-doyaslide-revert.cjs', 'verify-promane-time-project.cjs', 'verify-promane-rate-snapshot.cjs', 'verify-promane-timesheet-query.cjs', 'verify-promane-time-input.cjs', 'verify-promane-expense-input.cjs', 'verify-promane-numeric-fields.cjs', 'verify-promane-project-dates.cjs', 'verify-promane-project-text.cjs', 'verify-promane-project-quota.cjs', 'verify-promane-invite-admission.cjs', 'verify-promane-project-update-atomic.cjs', 'verify-promane-task-update-atomic.cjs', 'verify-promane-task-mutations-atomic.cjs', 'verify-promane-project-repair.cjs', 'verify-promane-report-values.cjs', 'verify-kintai-correction-atomic.cjs', 'verify-kintai-request-read.cjs', 'verify-kintai-request-actor-atomic.cjs', 'verify-kintai-request-create-actor.cjs', 'verify-kintai-work-intervals.cjs', 'verify-kintai-clock-atomic.cjs', 'verify-kintai-clock-input.cjs', 'verify-kintai-clock-order.cjs', 'verify-kintai-read-only.cjs', 'verify-kintai-leave-approval.cjs', 'verify-kintai-leave-cancel.cjs', 'verify-aio-member-mutation-atomic.cjs', 'verify-aio-scan-delete-actor.cjs', 'verify-aio-missing-measurements.cjs', 'verify-aio-cron-scheduling.cjs', 'verify-aio-quota.cjs', 'verify-aio-scan-history.cjs', 'verify-cunning-transcribe-gate.cjs', 'verify-cunning-allowance.cjs', 'verify-cunning-cumulative-ui.cjs', 'verify-cunning-final-audio.cjs', 'verify-cunning-final-audio-retry.cjs', 'verify-cunning-report-complete.cjs', 'verify-cunning-report-recovery.cjs', 'verify-cunning-revision.cjs', 'verify-cunning-report-freshness.cjs', 'verify-cunning-history.cjs', 'verify-cunning-history-list.cjs', 'verify-adimage-export.cjs', 'verify-sfa-summary.cjs', 'verify-adimage-quota-reasons.cjs', 'verify-persona-account-storage.cjs', 'verify-persona-restore-images.cjs', 'verify-persona-history-images.cjs', 'verify-persona-history-delete.cjs', 'verify-persona-image-access.cjs', 'verify-persona-scene-retry.cjs', 'verify-persona-safe-url.cjs', 'verify-persona-image-entitlements.cjs', 'verify-persona-image-storage.cjs', 'verify-persona-image-timeouts.cjs', 'verify-persona-banner-size.cjs', 'verify-persona-plan-limits.cjs', 'verify-persona-project-history.cjs', 'verify-persona-live-access.cjs', 'verify-persona-result-schema.cjs', 'verify-persona-display-data.cjs', 'verify-persona-image-purge.cjs', 'verify-cunning-session-input.cjs', 'verify-cunning-session-delete.cjs', 'verify-cunning-usage-interval.cjs', 'verify-cunning-recording-api.cjs', 'verify-cunning-audio-protocol.cjs', 'verify-cunning-final-answer.cjs', 'verify-cunning-legacy-limit-actions.cjs', 'verify-cunning-answer-language.cjs', 'verify-cunning-live-view.cjs', 'verify-cunning-live-history.cjs', 'verify-cunning-recording-client.cjs', 'verify-cunning-audio-window-client.cjs']) {
+for (const file of ['verify-quote-ai-input.cjs', 'verify-quote-document-actor.cjs', 'verify-quote-document-mounted.cjs', 'verify-quote-document-response.cjs', 'verify-quote-product-admission.cjs', 'verify-quote-issuer-input.cjs', 'verify-quote-settings-mounted.cjs', 'verify-org-members-mounted.cjs', 'verify-org-team-members-mounted.cjs', 'verify-org-team-contracts.cjs', 'verify-org-member-contracts.cjs', 'verify-org-member-invite-input.cjs', 'verify-mensetsu-token-provider.cjs', 'verify-service-client-deadlines.cjs', 'verify-org-settings-mounted.cjs', 'verify-shodan-new-mounted.cjs', 'verify-shodan-research-response.cjs', 'verify-org-profile-version.cjs', 'verify-org-client-responses.cjs', 'verify-org-client-route-contracts.cjs', 'verify-org-client-write-callbacks.cjs', 'verify-doyalist-collection-budget.cjs', 'verify-doyalist-provider-json.cjs', 'verify-doyaslide-style-preview.cjs', 'verify-seo-image-purge.cjs', 'verify-seo-durable-storage.cjs', 'verify-seo-image-admission.cjs', 'verify-swipe-test-admission.cjs', 'verify-guide-image-access.cjs', 'verify-seo-tool-admission.cjs', 'verify-seo-error-sanitization.cjs', 'verify-seo-template-admin.cjs', 'verify-promane-feedback-delivery.cjs', 'verify-service-error-sanitization.cjs', 'verify-hr-error-sanitization.cjs', 'verify-doyalist-error-sanitization.cjs', 'verify-adimage-image-budget.cjs', 'verify-adimage-operation-http.cjs', 'verify-adimage-transaction-retry.cjs', 'verify-adimage-analysis-input.cjs', 'verify-adimage-analysis-result.cjs', 'verify-adimage-analysis-provider-output.cjs', 'verify-adimage-analysis-tool-mounted.cjs', 'verify-adimage-feedback-output.cjs', 'verify-adimage-feedback-http.cjs', 'verify-adimage-feedback-client.cjs', 'verify-adimage-aux-actor-mounted.cjs', 'verify-adimage-operation-recovery-mounted.cjs', 'verify-adimage-operation-tool-mounted.cjs', 'verify-adimage-auth-expiry-mounted.cjs', 'verify-adimage-logo-lifecycle.cjs', 'verify-adimage-logo-tool-mounted.cjs', 'verify-organization-layout-mounted.cjs', 'verify-slide-cunning-layout-mounted.cjs', 'verify-slide-cunning-usage-cache.cjs', 'verify-slide-wizard-usage-mounted.cjs', 'verify-cunning-start-mounted.cjs', 'verify-cunning-lists-mounted.cjs', 'verify-cunning-company-mounted.cjs', 'verify-service-popup-guard-mounted.cjs', 'verify-aio-brand-profile-input.cjs', 'verify-aio-brand-profile-form-mounted.cjs', 'verify-hr-usage-error.cjs', 'verify-doyalist-tool-api.cjs', 'verify-doyalist-tool-mounted.cjs', 'verify-doyalist-pricing-status.cjs', 'verify-kintai-usage-error.cjs', 'verify-service-plan-fallback.cjs', 'verify-doyaslide-load-errors.cjs', 'verify-cunning-load-errors.cjs', 'verify-aishodan-stats-all.cjs', 'verify-promane-invitation-ui.cjs', 'verify-promane-invitation-pages.cjs', 'verify-mensetsu-compare-ui.cjs', 'verify-mensetsu-compare-pages.cjs', 'verify-adimage-concept-pages.cjs', 'verify-doyalist-history-ui.cjs', 'verify-doyalist-approach-pages.cjs', 'verify-cunning-profile-pages.cjs', 'verify-aishodan-list-pages.cjs', 'verify-kintai-request-pagination.cjs', 'verify-kintai-employee-pages.cjs', 'verify-shodan-preparation-pages.cjs', 'verify-shodan-quota-atomic.cjs', 'verify-shodan-ai-quota-refund.cjs', 'verify-shodan-owner-plan.cjs', 'verify-shodan-profile-budget.cjs', 'verify-shodan-slide-lease.cjs', 'verify-sfa-lead-update.cjs', 'verify-dependency-floor.cjs', 'verify-auth-adimage.cjs', 'verify-safe-fetch.cjs', 'verify-doyalist-export-all.cjs', 'verify-doyalist-scraper.cjs', 'verify-doyaslide-scrape.cjs', 'verify-seo-reference.cjs', 'verify-safe-browser.cjs', 'verify-banner-safe-url.cjs', 'verify-banner-thumb-access.cjs', 'verify-banner-history-retention.cjs', 'verify-banner-history-pagination.cjs', 'verify-banner-history-access.cjs', 'verify-banner-legacy-history.cjs', 'verify-banner-daily-stats.cjs', 'verify-banner-account-cache.cjs', 'notification-security.cjs', 'verify-data-integrity.cjs', 'verify-billing-integrity.cjs', 'verify-related-records.cjs', 'verify-admin-billing-integrity.cjs', 'verify-prompt-migration-auth.cjs', 'verify-retired-db-sync.cjs', 'verify-retired-slide-api.cjs', 'verify-seo-schema-readiness.cjs', 'verify-owner-boundaries.cjs', 'verify-banner-quota.cjs', 'verify-banner-quota-client.cjs', 'verify-banner-plan-stats-mounted.cjs', 'verify-sidebar-usage-mounted.cjs', 'verify-seo-sidebar-mounted.cjs', 'verify-banner-sidebar-refresh.cjs', 'verify-banner-quota-response.cjs', 'verify-service-limit-ui.cjs', 'verify-service-limit-provider-mounted.cjs', 'verify-service-limit-error-body.cjs', 'verify-promane-write-access.cjs', 'verify-kintai-employee-atomic.cjs', 'verify-kintai-toggle.cjs', 'verify-kintai-disabled-clock.cjs', 'verify-kintai-disabled-access.cjs', 'verify-kintai-disabled-pages.cjs', 'verify-sfa-elapsed.cjs', 'verify-sfa-activity-order.cjs', 'verify-quote-list-pagination.cjs', 'verify-quote-issuer-load.cjs', 'verify-quote-confirm-response.cjs', 'verify-quote-status-transition.cjs', 'verify-quote-atomic-save.cjs', 'verify-quote-money.cjs', 'verify-quote-pdf-ui.cjs', 'verify-quote-provenance.cjs', 'verify-quote-create-atomic.cjs', 'verify-quote-text-limits.cjs', 'verify-sfa-task-delete.cjs', 'verify-sfa-task-input.cjs', 'verify-sfa-task-update.cjs', 'verify-sfa-create-stage.cjs', 'verify-sfa-convert.cjs', 'verify-hr-finalized.cjs', 'verify-hr-evaluation-read.cjs', 'verify-hr-evaluation-list.cjs', 'verify-hr-evaluation-related-reads.cjs', 'verify-hr-evaluation-ai.cjs', 'verify-hr-evaluation-write.cjs', 'verify-hr-rating-fields.cjs', 'verify-hr-ai-save-first.cjs', 'verify-hr-form-locks.cjs', 'verify-hr-evaluation-create-access.cjs', 'verify-doyalist-collect-preservation.cjs', 'verify-interview-autosave.cjs', 'verify-interview-save-conflict.cjs', 'verify-interview-title-save.cjs', 'verify-sfa-task-pagination.cjs', 'verify-hr-one-on-one-roundtrip.cjs', 'verify-hr-one-on-one-input.cjs', 'verify-hr-one-on-one-summary-flow.cjs', 'verify-hr-one-on-one-access.cjs', 'verify-hr-one-on-one-related.cjs', 'verify-hr-one-on-one-create-private.cjs', 'verify-hr-one-on-one-pagination.cjs', 'verify-hr-one-on-one-list-ui.cjs', 'verify-hr-one-on-one-date.cjs', 'verify-hr-one-on-one-navigation.cjs', 'verify-cancellation-partial.cjs', 'verify-stripe-discovery.cjs', 'verify-trial-failure.cjs', 'verify-subscription-resume.cjs', 'verify-subscription-status.cjs', 'verify-seo-content-owner.cjs', 'verify-seo-memo-outline.cjs', 'verify-seo-export-owner.cjs', 'verify-seo-check-owner.cjs', 'verify-seo-check-persistence.cjs', 'verify-seo-generation-owner.cjs', 'verify-seo-images-owner.cjs', 'verify-seo-batch-results.cjs', 'verify-seo-storage-collision.cjs', 'verify-seo-image-read.cjs', 'verify-seo-storage-boundary.cjs', 'verify-seo-editor-save.cjs', 'verify-seo-editor-navigation.cjs', 'verify-seo-article-access.cjs', 'verify-seo-job-restart.cjs', 'verify-seo-candidates.cjs', 'verify-seo-job-vibe-owner.cjs', 'verify-seo-job-controls.cjs', 'verify-seo-legacy-guest-generation.cjs', 'verify-seo-pipeline-stop.cjs', 'verify-seo-job-ui.cjs', 'verify-seo-job-cancel-ui.cjs', 'verify-seo-job-response.cjs', 'verify-seo-list-read.cjs', 'verify-evaluation-lifecycle.cjs', 'verify-mensetsu-session-pages.cjs', 'verify-mensetsu-turn-order.cjs', 'verify-aishodan-end-once.cjs', 'verify-aishodan-token-state.cjs', 'verify-mensetsu-turn-metadata.cjs', 'verify-shodan-slide-save.cjs', 'verify-shodan-proposal-save.cjs', 'verify-shodan-slide-completeness.cjs', 'verify-shodan-pdf-action.cjs', 'verify-persona-image-owner.cjs', 'verify-aio-plan-cta.cjs', 'verify-adimage-response-owner.cjs', 'verify-doyaslide-revert.cjs', 'verify-promane-time-project.cjs', 'verify-promane-rate-snapshot.cjs', 'verify-promane-timesheet-query.cjs', 'verify-promane-time-input.cjs', 'verify-promane-expense-input.cjs', 'verify-promane-numeric-fields.cjs', 'verify-promane-project-dates.cjs', 'verify-promane-project-text.cjs', 'verify-promane-project-quota.cjs', 'verify-promane-invite-admission.cjs', 'verify-promane-project-update-atomic.cjs', 'verify-promane-task-update-atomic.cjs', 'verify-promane-task-mutations-atomic.cjs', 'verify-promane-project-repair.cjs', 'verify-promane-report-values.cjs', 'verify-kintai-correction-atomic.cjs', 'verify-kintai-request-read.cjs', 'verify-kintai-request-actor-atomic.cjs', 'verify-kintai-request-create-actor.cjs', 'verify-kintai-work-intervals.cjs', 'verify-kintai-clock-atomic.cjs', 'verify-kintai-clock-input.cjs', 'verify-kintai-clock-order.cjs', 'verify-kintai-read-only.cjs', 'verify-kintai-leave-approval.cjs', 'verify-kintai-leave-cancel.cjs', 'verify-aio-member-mutation-atomic.cjs', 'verify-aio-scan-delete-actor.cjs', 'verify-aio-missing-measurements.cjs', 'verify-aio-cron-scheduling.cjs', 'verify-aio-quota.cjs', 'verify-aio-scan-history.cjs', 'verify-cunning-transcribe-gate.cjs', 'verify-cunning-allowance.cjs', 'verify-cunning-cumulative-ui.cjs', 'verify-cunning-final-audio.cjs', 'verify-cunning-final-audio-retry.cjs', 'verify-cunning-report-complete.cjs', 'verify-cunning-report-recovery.cjs', 'verify-cunning-revision.cjs', 'verify-cunning-report-freshness.cjs', 'verify-cunning-history.cjs', 'verify-cunning-history-list.cjs', 'verify-adimage-export.cjs', 'verify-export-private-cache.cjs', 'verify-sfa-summary.cjs', 'verify-adimage-quota-reasons.cjs', 'verify-persona-account-storage.cjs', 'verify-persona-restore-images.cjs', 'verify-persona-history-images.cjs', 'verify-persona-history-delete.cjs', 'verify-persona-image-access.cjs', 'verify-persona-scene-retry.cjs', 'verify-persona-safe-url.cjs', 'verify-persona-image-entitlements.cjs', 'verify-persona-image-storage.cjs', 'verify-persona-image-timeouts.cjs', 'verify-persona-banner-size.cjs', 'verify-persona-plan-limits.cjs', 'verify-persona-project-history.cjs', 'verify-persona-live-access.cjs', 'verify-persona-result-schema.cjs', 'verify-persona-display-data.cjs', 'verify-persona-usage-mounted.cjs', 'verify-persona-sidebar-refresh.cjs', 'verify-persona-image-purge.cjs', 'verify-cunning-session-input.cjs', 'verify-cunning-session-delete.cjs', 'verify-cunning-usage-interval.cjs', 'verify-cunning-recording-api.cjs', 'verify-cunning-audio-protocol.cjs', 'verify-cunning-final-answer.cjs', 'verify-cunning-legacy-limit-actions.cjs', 'verify-cunning-answer-language.cjs', 'verify-cunning-live-view.cjs', 'verify-cunning-live-history.cjs', 'verify-cunning-recording-client.cjs', 'verify-cunning-audio-window-client.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) {
     console.error(`Security regression failed: ${file}`);
@@ -1265,3 +1379,160 @@ if (bannerProModels.error || bannerProModels.status !== 0) {
   console.error('Security regression failed: verify-banner-pro-models.cjs');
   process.exit(1);
 }
+
+for (const verifier of ['verify-doyalist-collect-client.cjs', 'verify-doyalist-collect-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
+
+const doyalistSearchConsistency = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-search-consistency.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyalistSearchConsistency.error || doyalistSearchConsistency.status !== 0) {
+  console.error('Security regression failed: verify-doyalist-search-consistency.cjs'); process.exit(1);
+}
+
+for (const verifier of ['verify-sfa-deal-mutations.cjs', 'verify-sfa-deal-client.cjs', 'verify-sfa-admission-retry.cjs', 'verify-sfa-lead-conversion.cjs', 'verify-sfa-lead-conversion-client.cjs', 'verify-sfa-lead-crud.cjs', 'verify-sfa-lead-crud-client.cjs', 'verify-sfa-score-result.cjs', 'verify-sfa-score-operation.cjs', 'verify-sfa-score-client.cjs', 'verify-sfa-score-quota-guidance.cjs', 'verify-sfa-next-action-result.cjs', 'verify-sfa-next-action-operation.cjs', 'verify-sfa-next-action-client.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
+for (const file of ['verify-ui-next-preview.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-account-company-scope.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-cost-image-fallback.cjs', 'verify-cost-image-auto.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-cost-adimage-ocr.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+// 原価対策: ペルソナ画像の自動生成は肖像1枚だけ／SEO記事の自動の画像づくりは1記事1回だけ。
+for (const file of ['verify-persona-image-cost.cjs', 'verify-seo-image-auto-once.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-cunning-beta-hidden.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-doya-power-ledger.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+// ドヤパワーの旗（DOYA_POWER_ROLLOUT）: off なら台帳の表を読まない・API とページは 404・部品は出さない。preview は許可した人だけ
+for (const file of ['verify-doya-power-flag.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-annual-report-scope.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const root = require('node:path').resolve(__dirname, '../..'); const r = require('node:child_process').spawnSync(require('node:path').join(root, 'node_modules/.bin/tsx'), ['--test', 'src/lib/annual-report/report.test.ts'], {cwd:root,stdio:'inherit',timeout:120000}); if(r.error || r.status!==0) { console.error('Security regression failed: src/lib/annual-report/report.test.ts'); process.exit(r.status || 1); } }
+for (const file of ['verify-shell-doya-power.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-doya-power-spec.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-doya-power-costs.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-doya-power-charge-routes.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-doya-power-voice.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-expense-account-company.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-agent-orchestration.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+const guidePopups = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-guide-popups-flag.cjs')], { stdio: 'inherit', timeout: 90000 });
+if (guidePopups.error || guidePopups.status !== 0) { console.error('Guide popups flag regression failed'); process.exit(1); }
+for (const file of ['verify-new-pricing-flag-off.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-doyaslide-quote-handoff.cjs', 'verify-doyaslide-stale-recovery.cjs', 'verify-one-button.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-company-roles-kintai-employee-delete.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-shodan-research-sites.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+const supportChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-support-chat.cjs')], { stdio: 'inherit', timeout: 90000 });
+if (supportChat.error || supportChat.status !== 0) { console.error('Support chat regression failed'); process.exit(1); }
+for (const file of ['verify-shodan-research-sites.cjs', 'verify-system-watch-quote-slide.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-shodan-research-sites.cjs', 'verify-system-watch-quote-slide.cjs', 'verify-llm-deadline.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-runtime-alert-warning-kind.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Runtime alert warning kind regression failed: '+file); process.exit(r.status || 1); } }
+for (const file of ['verify-departments-flag.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:90000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+
+for (const file of ['verify-audit-input-cache.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Audit input/cache regression failed:', file); process.exit(r.status || 1); } }
+
+const hrExport = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-employee-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrExport.error || hrExport.status !== 0) { console.error('HR employee export regression failed'); process.exit(hrExport.status || 1); }
+
+const hrPrivateJson = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-api-private-json.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrPrivateJson.error || hrPrivateJson.status !== 0) { console.error('HR private JSON regression failed'); process.exit(hrPrivateJson.status || 1); }
+
+const hrDuration = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-duration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrDuration.error || hrDuration.status !== 0) { console.error('HR one-on-one duration regression failed'); process.exit(hrDuration.status || 1); }
+
+const hrItems = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-one-on-one-items.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrItems.error || hrItems.status !== 0) { console.error('HR one-on-one items regression failed'); process.exit(hrItems.status || 1); }
+
+const hrSummary = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-persisted-summary-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrSummary.error || hrSummary.status !== 0) { console.error('HR persisted summary regression failed'); process.exit(hrSummary.status || 1); }
+
+const watchBudget = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-system-watch-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (watchBudget.error || watchBudget.status !== 0) { console.error('System watch budget regression failed'); process.exit(watchBudget.status || 1); }
+
+const devStateShell = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-dev-state-shell.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (devStateShell.error || devStateShell.status !== 0) { console.error('Dev state shell regression failed'); process.exit(devStateShell.status || 1); }
+
+const incomeRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (incomeRouteCache.error || incomeRouteCache.status !== 0) { console.error('Income route cache regression failed'); process.exit(incomeRouteCache.status || 1); }
+
+const expenseRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-expense-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (expenseRouteCache.error || expenseRouteCache.status !== 0) { console.error('Expense route cache regression failed'); process.exit(expenseRouteCache.status || 1); }
+
+const promaneRouteCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-promane-route-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneRouteCache.error || promaneRouteCache.status !== 0) { console.error('Promane route cache regression failed'); process.exit(promaneRouteCache.status || 1); }
+
+const promaneReadonlyUi = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-readonly-ui.cjs")], { stdio: "inherit", timeout: 60000 });
+if (promaneReadonlyUi.error || promaneReadonlyUi.status !== 0) { console.error("Promane readonly UI regression failed"); process.exit(promaneReadonlyUi.status || 1); }
+
+// Keep writable creation/recovery coverage alongside the readonly UI regression.
+for (const name of ["verify-promane-timesheet-creation-mounted.cjs", "verify-promane-time-note-boundary-mounted.cjs", "verify-promane-client-creation-view-mounted.cjs", "verify-promane-expense-creation-view-mounted.cjs", "verify-promane-timesheet-member-draft.cjs"]) {
+  const writableView = spawnSync(process.execPath, [path.join(__dirname, name)], { stdio: "inherit", timeout: 60000 });
+  if (writableView.error || writableView.status !== 0) { console.error("Promane writable view regression failed: " + name); process.exit(writableView.status || 1); }
+}
+
+const promaneHistoricalLabor = spawnSync(process.execPath, [path.join(__dirname, "verify-promane-historical-labor.cjs")], { stdio: "inherit", timeout: 60000 });
+if (promaneHistoricalLabor.error || promaneHistoricalLabor.status !== 0) { console.error("Promane historical labor regression failed"); process.exit(promaneHistoricalLabor.status || 1); }
+const doyalistCorporateXml = spawnSync(process.execPath, [path.join(__dirname, "verify-doyalist-corporate-xml.cjs")], { stdio: "inherit", timeout: 60000 });
+if (doyalistCorporateXml.error || doyalistCorporateXml.status !== 0) { console.error("Doyalist corporate XML regression failed"); process.exit(doyalistCorporateXml.status || 1); }
+
+const tenjikaiActorScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-tenjikai-actor-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiActorScope.error || tenjikaiActorScope.status !== 0) process.exit(tenjikaiActorScope.status || 1);
+
+const tenjikaiCsvExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-tenjikai-csv-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiCsvExport.error || tenjikaiCsvExport.status !== 0) process.exit(tenjikaiCsvExport.status || 1);
+
+const tenjikaiExportScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-tenjikai-export-scope-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiExportScope.error || tenjikaiExportScope.status !== 0) process.exit(tenjikaiExportScope.status || 1);
+
+const tenjikaiBatchScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-tenjikai-batch-scope-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiBatchScope.error || tenjikaiBatchScope.status !== 0) process.exit(tenjikaiBatchScope.status || 1);
+
+const tenjikaiLocalRestore = spawnSync(process.execPath, ['--import', 'tsx', '--test', 'src/lib/tenjikai/local-store.test.ts'], { stdio: 'inherit', timeout: 60000 });
+if (tenjikaiLocalRestore.error || tenjikaiLocalRestore.status !== 0) process.exit(tenjikaiLocalRestore.status || 1);
+
+const interviewWordpressExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-wordpress-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewWordpressExport.error || interviewWordpressExport.status !== 0) process.exit(interviewWordpressExport.status || 1);
+
+const interviewTextExports = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-text-exports.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTextExports.error || interviewTextExports.status !== 0) process.exit(interviewTextExports.status || 1);
+
+const spreadsheetXmlCharacters = spawnSync(process.execPath, [path.join(__dirname, 'verify-spreadsheet-xml-characters.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (spreadsheetXmlCharacters.error || spreadsheetXmlCharacters.status !== 0) process.exit(spreadsheetXmlCharacters.status || 1);
+
+const asklinkCopyRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-asklink-copy-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (asklinkCopyRecovery.error || asklinkCopyRecovery.status !== 0) process.exit(asklinkCopyRecovery.status || 1);
+
+const personaOutputRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-persona-output-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personaOutputRecovery.error || personaOutputRecovery.status !== 0) process.exit(personaOutputRecovery.status || 1);
+
+const seoHtmlTitle = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-html-title.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.status || 1);
+
+const shanaiDrawingIds = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-docx-drawing-ids.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanaiDrawingIds.status || 1);
+const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-upload-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
+const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-new-validation-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
+const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
+const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
+
+const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);
+
+const homeTimeHydration = spawnSync(process.execPath, [path.join(__dirname, 'verify-home-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (homeTimeHydration.error || homeTimeHydration.status !== 0) process.exit(homeTimeHydration.status || 1);
+
+const popupSiteStats = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-site-stats-request-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (popupSiteStats.error || popupSiteStats.status !== 0) process.exit(popupSiteStats.status || 1);
+
+const popupInstallTime = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-install-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (popupInstallTime.error || popupInstallTime.status !== 0) process.exit(popupInstallTime.status || 1);
+
+const minimatchPreprocessing = spawnSync(process.execPath, [path.join(__dirname, 'verify-minimatch-preprocessing-bounds.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (minimatchPreprocessing.error || minimatchPreprocessing.status !== 0) process.exit(minimatchPreprocessing.status || 1);
+
+const kintaiAttendanceExportVisibility = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-attendance-export-visibility.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiAttendanceExportVisibility.status !== 0) process.exit(kintaiAttendanceExportVisibility.status || 1);
+
+const kintaiDepartmentExportAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-export-access.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiDepartmentExportAccess.error || kintaiDepartmentExportAccess.status !== 0) process.exit(kintaiDepartmentExportAccess.status || 1);

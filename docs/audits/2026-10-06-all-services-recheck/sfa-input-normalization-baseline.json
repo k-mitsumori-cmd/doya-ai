@@ -1,0 +1,18 @@
+{
+  "status": "confirmed-open",
+  "task": {
+    "submittedTitleLength": 201,
+    "savedTitleLength": 200,
+    "httpStatus": 200
+  },
+  "activity": {
+    "submittedSubjectLength": 201,
+    "savedSubjectLength": 200,
+    "submittedBodyLength": 4001,
+    "savedBodyLength": 4000,
+    "invalidTypeSavedAs": "note",
+    "invalidDateReplacedWithServerTime": true,
+    "httpStatus": 200
+  },
+  "scope": "Actual task/activity POST routes with synthetic Prisma/auth only. Confirms silent loss/reinterpretation of input against U09 criterion; does not prove any customer submitted these inputs. No real DB, provider or production write."
+}

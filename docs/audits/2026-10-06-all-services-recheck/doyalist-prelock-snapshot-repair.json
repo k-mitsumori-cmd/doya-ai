@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-08T05:02:09.725561+00:00",
+  "status": "fixed-locally-api27-helper19-focused-preservation-search-types-passed-final124-pending",
+  "finding": "ABA change/restore before receipt admission accepted stale project snapshot in collection route; actual private PostgreSQL baseline committed wrong-criteria company.",
+  "baseline": "doyalist-prelock-snapshot-postgres-results.json",
+  "stoppedGate": "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-53913968-e598-4de2-810b-228c9c5211fe",
+  "stoppedSession": 97022,
+  "stoppedExitCode": 143,
+  "stoppedChildrenConfirmedAbsent": [
+    85542,
+    87298,
+    87308,
+    89097
+  ],
+  "repair": "Pass actual provider snapshot into locked begin admission. Validate snapshot hash as well as current locked project against durable receipt before provider calls. Keep ready receipt to allow explicit recovery/resume; no provider calls or company writes on mismatch.",
+  "currentProofs": [
+    "doyalist-operation-route-postgres-results.json",
+    "doyalist-extraction-helper-postgres-results.json"
+  ],
+  "sourceHashes": {
+    "src/lib/doyalist/extraction-operation.ts": "64f0a24a33d7fd88aee92ee3c8f05cb8a407f302816dc37e59924586ab41b889",
+    "src/app/api/doyalist/collect/route.ts": "73c3caa33e112bb28103379056a84febbbb71c0c48628e3a1340018a4d10e854"
+  },
+  "nextGate": "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-9007720e-7ceb-43e3-a3c5-4e2e985c1307",
+  "boundaries": [
+    "No production/customer DB/provider write",
+    "Previous stopped gate is not passing evidence",
+    "Full17services2074criteria remains incomplete"
+  ],
+  "typecheck": {
+    "session": 72336,
+    "exitCode": 0,
+    "log": "/tmp/doya-stale-snapshot-types.log"
+  }
+}

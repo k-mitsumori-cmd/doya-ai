@@ -31,6 +31,14 @@ export function CompletionModal({
     setDontShowAgain(defaultDontShowAgain)
   }, [open, defaultDontShowAgain])
 
+  // Esc で閉じる（UX 点検 FIX-PLAN 18）
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   return (
     <AnimatePresence>
       {open && (
@@ -49,6 +57,9 @@ export function CompletionModal({
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: reduce ? 0 : 0.22, ease: 'easeOut' }}
             className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seo-completion-title"
           >
             {/* Header: 白基調で読みやすく */}
             <div className="relative p-6 sm:p-8 bg-white border-b border-gray-100">
@@ -71,7 +82,7 @@ export function CompletionModal({
                     <CheckCircle2 className="w-7 h-7 text-emerald-700" />
                   </div>
                   <div>
-                    <p className="text-2xl sm:text-3xl font-black leading-tight text-gray-900">完成！</p>
+                    <p id="seo-completion-title" className="text-2xl sm:text-3xl font-black leading-tight text-gray-900">完成しました</p>
                     <p className="mt-1 text-gray-800 font-black text-sm sm:text-base leading-snug break-words">{title}</p>
                     {subtitle && <p className="mt-2 text-gray-500 text-xs sm:text-sm font-bold">{subtitle}</p>}
                   </div>

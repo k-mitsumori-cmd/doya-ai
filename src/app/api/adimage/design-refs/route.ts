@@ -38,14 +38,23 @@ const INDUSTRY_HINTS: Array<{ match: RegExp; industries: string[] }> = [
 ]
 
 export async function GET(req: NextRequest) {
+  const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
   const base = await getIdentity(req)
   const auth = requireUser(base)
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401, headers })
   const where = ownerWhere(base)
-  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
+  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400, headers })
 
   const brandId = new URL(req.url).searchParams.get('brandId') || ''
 
+  const rows = await prisma.bannerTemplate.findMany({
+    where: { isActive: true, imageUrl: { not: null } },
+    select: { templateId: true, industry: true, category: true, imageUrl: true, previewUrl: true, isFeatured: true, sortOrder: true },
+    orderBy: [{ sortOrder: 'asc' }, { templateId: 'asc' }],
+    take: 500,
+  })
+
+  // テンプレート取得を待った後で、現在の所有者と業種を確認する。
   // 業種が分かれば優先的に寄せる。分からなくても候補は返す（空の画面にしない）
   let hintIndustries: string[] = []
   if (brandId) {
@@ -60,13 +69,6 @@ export async function GET(req: NextRequest) {
       hintIndustries = Array.from(new Set(hintIndustries))
     }
   }
-
-  const rows = await prisma.bannerTemplate.findMany({
-    where: { isActive: true, imageUrl: { not: null } },
-    select: { templateId: true, industry: true, category: true, imageUrl: true, previewUrl: true, isFeatured: true, sortOrder: true },
-    orderBy: [{ sortOrder: 'asc' }, { templateId: 'asc' }],
-    take: 500,
-  })
 
   // 業種が合うものを前に、それ以外を後ろに。全部返して画面側で絞らせる
   const matched = rows.filter((r) => hintIndustries.includes(r.industry))
@@ -83,5 +85,5 @@ export async function GET(req: NextRequest) {
       imageUrl: r.previewUrl || r.imageUrl,
       matched: hintIndustries.includes(r.industry),
     })),
-  })
+  }, { headers })
 }

@@ -1,0 +1,126 @@
+{
+  "status": "confirmed-open",
+  "cases": 17,
+  "results": [
+    {
+      "collection": "accounts",
+      "field": "name",
+      "submittedLength": 201,
+      "savedLength": 200,
+      "status": 200
+    },
+    {
+      "collection": "accounts",
+      "field": "industry",
+      "submittedLength": 81,
+      "savedLength": 80,
+      "status": 200
+    },
+    {
+      "collection": "accounts",
+      "field": "prefecture",
+      "submittedLength": 41,
+      "savedLength": 40,
+      "status": 200
+    },
+    {
+      "collection": "accounts",
+      "field": "url",
+      "submittedLength": 301,
+      "savedLength": 300,
+      "status": 200
+    },
+    {
+      "collection": "accounts",
+      "field": "note",
+      "submittedLength": 2001,
+      "savedLength": 2000,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "name",
+      "submittedLength": 81,
+      "savedLength": 80,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "title",
+      "submittedLength": 81,
+      "savedLength": 80,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "department",
+      "submittedLength": 81,
+      "savedLength": 80,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "email",
+      "submittedLength": 201,
+      "savedLength": 200,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "phone",
+      "submittedLength": 41,
+      "savedLength": 40,
+      "status": 200
+    },
+    {
+      "collection": "contacts",
+      "field": "note",
+      "submittedLength": 2001,
+      "savedLength": 2000,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "name",
+      "submittedLength": 201,
+      "savedLength": 200,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "corporateNumber",
+      "submittedLength": 21,
+      "savedLength": 20,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "contactName",
+      "submittedLength": 81,
+      "savedLength": 80,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "email",
+      "submittedLength": 201,
+      "savedLength": 200,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "phone",
+      "submittedLength": 41,
+      "savedLength": 40,
+      "status": 200
+    },
+    {
+      "collection": "leads",
+      "field": "note",
+      "submittedLength": 2001,
+      "savedLength": 2000,
+      "status": 200
+    }
+  ],
+  "scope": "Actual SFA collection POST routes and format helper, synthetic auth/Prisma/admission. Input truncation proven; quota behavior and real DB/user submissions unproven. No real customer/provider writes."
+}

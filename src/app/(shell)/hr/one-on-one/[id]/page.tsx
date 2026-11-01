@@ -1,0 +1,142 @@
+'use client'
+import { PageTitle } from '@/components/hr/ui-next'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import OneOnOneForm from '@/components/hr/OneOnOneForm'
+
+interface OneOnOneData {
+  id: string
+  employeeId: string
+  employeeName: string
+  date: string | null
+  duration: number | null
+  agenda: unknown
+  managerNote?: string | null
+  sharedNote: string | null
+  actionItems: unknown
+  aiSummary?: string | null
+  canViewManagerNotes: boolean
+  status: string
+}
+
+function localInputDate(value: string): string | undefined {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export default function OneOnOneDetailPage() {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { router } = useHrPageLifetime()
+  const params = useParams()
+  const id = params?.id as string
+
+  const [record, setRecord] = useState<OneOnOneData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    let active = true
+    setLoading(true)
+    setError(null)
+    setRecord(null)
+    async function fetchRecord() {
+      try {
+        const res = await fetch(`/api/hr/one-on-one/${id}`)
+        if (!res.ok) throw new Error(res.status === 404 ? 'この1on1の記録は見つかりませんでした。一覧から選び直してください。' : '1on1の記録を読み込めませんでした。時間をおいて再読み込みしてください。')
+        const data = await res.json()
+        const nextRecord = data.oneOnOne ?? data.record ?? data
+        if (nextRecord?.id !== id) throw new Error('1on1の記録を確かめられませんでした。時間をおいて再読み込みしてください。')
+        if (active) setRecord(nextRecord)
+      } catch (e: any) {
+        // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。ここで新しい名前を参照しない
+        const message = typeof e?.message === 'string' ? e.message : ''
+        if (active) setError(/[\u3040-\u30ff\u3400-\u9fff]/.test(message) && !/[A-Za-z]{4,}/.test(message) ? message : '1on1の記録を読み込めませんでした。時間をおいて再読み込みしてください。')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    fetchRecord()
+    return () => { active = false }
+  }, [id, fetch])
+
+  const handleSave = async (payload: any) => {
+    if (payload.recordId && payload.recordId !== id) throw new Error('表示中の記録が切り替わりました。再読み込みしてください。')
+    const res = await fetch(`/api/hr/one-on-one/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error('1on1の記録を保存できませんでした。時間をおいて、もう一度お試しください。')
+    const data = await res.json()
+    const savedRecord = data.oneOnOne ?? data.record ?? data
+    if (savedRecord?.id !== id) throw new Error('保存結果を確認できませんでした。再読み込みして内容を確認してください。')
+    setRecord(previous => previous?.id === id ? { ...previous, ...savedRecord } : previous)
+  }
+
+  if (loading || (record !== null && record.id !== id)) {
+    return (
+      <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-40 bg-slate-200 rounded" />
+          <div className="h-32 bg-slate-100 rounded-2xl" />
+          <div className="h-48 bg-slate-100 rounded-2xl" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !record) {
+    return (
+      <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+        <div className="text-center py-20 text-slate-400">
+          <span className="material-symbols-outlined text-5xl mb-3 block">error</span>
+          <p className="text-lg font-medium">{error || '1on1データが見つかりません'}</p>
+          <button onClick={() => router.back()} className="mt-4 text-sm font-semibold text-sky-600 hover:text-sky-700">
+            戻る
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        {/* Back */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors"
+        >
+          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          戻る
+        </button>
+
+        <PageTitle className="text-3xl font-black text-slate-900 mb-6">1on1詳細</PageTitle>
+
+        <OneOnOneForm
+          key={record.id}
+          recordId={record.id}
+          canViewManagerNotes={record.canViewManagerNotes === true}
+          employeeId={record.employeeId}
+          employeeName={record.employeeName}
+          initialDate={record.date ? localInputDate(record.date) : undefined}
+          initialDuration={record.duration}
+          initialAgenda={record.agenda}
+          initialManagerNote={record.managerNote}
+          initialSharedNote={record.sharedNote}
+          initialActionItems={record.actionItems}
+          initialAiSummary={record.canViewManagerNotes === true ? record.aiSummary : null}
+          readOnly={record.status === 'COMPLETED'}
+          onSave={handleSave}
+        />
+      </motion.div>
+    </div>
+  )
+}

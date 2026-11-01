@@ -17,7 +17,7 @@ function setup(){const values=new Map([[H,JSON.stringify([b,a])],[L,JSON.stringi
 for(const where of ['last','history']){
  const {values,storage}=setup();const remove=storage.removeItem;storage.removeItem=k=>{if(k===(where==='last'?L:H))throw Error('denied');remove(k)};assert.throws(()=>clearPersonaRecords(storage));assert.equal(values.has(H),true);assert.equal(values.has(L),where==='last');console.log('PASS clear-all',where,'failure propagates');
 }
-const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/persona/Tool.tsx'),'utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect;
+const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/(shell)/persona/Tool.tsx'),'utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect;
 function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect'&&n.arguments[0]?.getText(ast).includes('const historyChanged'))effect=n.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
 const code=ts.transpileModule('('+effect+');',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 for(const scenario of ['history-delete','last-delete','all-clear','other-account','other-record','malformed']){

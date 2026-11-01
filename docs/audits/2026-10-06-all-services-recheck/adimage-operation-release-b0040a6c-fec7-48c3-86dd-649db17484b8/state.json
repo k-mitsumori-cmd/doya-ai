@@ -1,0 +1,39 @@
+{
+  "startedAt": "2026-10-07T10:14:45.143149+00:00",
+  "pid": 91668,
+  "head": "1f91455121b5c69d66d5a436af40199e52aff994",
+  "sourceFiles": 2759,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:14:46.984545+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:14:48.781291+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:14:50.918863+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:19:23.916498+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:19:25.840826+00:00"
+    }
+  ],
+  "changedSources": [
+    "scripts/security-regression/verify-adimage-operation-tool-mounted.cjs",
+    "src/app/adimage/Tool.tsx"
+  ],
+  "endedAt": "2026-10-07T10:19:26.438396+00:00"
+}
