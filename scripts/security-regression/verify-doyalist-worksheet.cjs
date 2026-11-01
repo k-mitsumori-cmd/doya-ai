@@ -103,7 +103,7 @@ const route = load('src/app/api/doyalist/export/route.ts', {
     approachRows = []
     const before = reads
     const response = await route.GET(new Request('https://local.test/api/doyalist/export?projectId=p&format=excel'))
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     const pausedReads = reads - before
     assert(pausedReads < 20, `paused XLSX paginated ${pausedReads} times`)
     assert(pausedReads >= 2)
@@ -113,6 +113,7 @@ const route = load('src/app/api/doyalist/export/route.ts', {
       assert.equal(book.worksheets[0].getCell(`B${i+2}`).value, companyRows[i].name)
       assert.equal(book.worksheets[0].getCell(`K${i+2}`).value, companyRows[i].description)
     }
+    console.log(JSON.stringify({ kind: 'doyalist-xlsx-backpressure', pausedMs: 1000, pausedPageReads: pausedReads, companyRows: 10000, allNamesAndDescriptionsMatched: true }))
   })
   await check('XLSX cancellation stops pagination for response and request aborts', async () => {
     for (const kind of ['reader', 'request']) {

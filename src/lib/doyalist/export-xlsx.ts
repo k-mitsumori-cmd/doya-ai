@@ -40,10 +40,21 @@ function row(values: unknown[], number: number): string {
     `<c r="${String.fromCharCode(65 + column)}${number}" t="inlineStr"><is><t xml:space="preserve">${text(value)}</t></is></c>`).join('')}</row>`
 }
 
-async function* worksheet(headers: string[], values: AsyncIterable<unknown[]>, widths: number[]): AsyncGenerator<Buffer> {
+async function* worksheet(headers: string[], values: AsyncIterable<unknown[]>, widths: number[], waitForCapacity: () => Promise<void>): AsyncGenerator<Buffer> {
   yield Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="${sheetNamespace}"><cols>${widths.map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`).join('')}</cols><sheetData>${row(headers, 1)}`)
   let number = 1
-  for await (const value of values) yield Buffer.from(row(value, ++number))
+  const iterator = values[Symbol.asyncIterator]()
+  try {
+    while (true) {
+      await waitForCapacity()
+      const next = await iterator.next()
+      if (next.done) break
+      await waitForCapacity()
+      yield Buffer.from(row(next.value, ++number))
+    }
+  } finally {
+    await iterator.return?.()
+  }
   yield Buffer.from('</sheetData></worksheet>')
 }
 
@@ -69,9 +80,23 @@ async function* approachValues(projectId: string, firstPage: DoyalistExportFirst
 export function createDoyalistXlsxStream(projectName: string, projectId: string, firstPage: DoyalistExportFirstPage, signal?: AbortSignal): PassThrough {
   const archive = archiver('zip', { zlib: { level: 6 } })
   const output = new PassThrough()
+  // Archiver can buffer a compressed entry even when its output is paused.
+  // Check the actual HTTP destination before pulling another database row.
+  const waitForCapacity = async () => {
+    if (output.destroyed) throw new Error('Export cancelled')
+    if (!output.writableNeedDrain) return
+    await new Promise<void>((resolve, reject) => {
+      const cleanup = () => { output.off('drain', ready); output.off('close', closed); output.off('error', closed) }
+      const ready = () => { cleanup(); resolve() }
+      const closed = () => { cleanup(); reject(new Error('Export cancelled')) }
+      output.once('drain', ready); output.once('close', closed); output.once('error', closed)
+      if (output.destroyed) closed()
+      else if (!output.writableNeedDrain) ready()
+    })
+  }
   const inputs = [
-    Readable.from(worksheet(companyHeaders, companyValues(projectId, firstPage), [18, 30, 22, 40, 14, 20, 16, 18, 14, 36, 50, 20, 16]), { objectMode: false, highWaterMark: 16384 }),
-    Readable.from(worksheet(approachHeaders, approachValues(projectId, firstPage), [30, 30, 16, 40, 60, 18, 28]), { objectMode: false, highWaterMark: 16384 }),
+    Readable.from(worksheet(companyHeaders, companyValues(projectId, firstPage), [18, 30, 22, 40, 14, 20, 16, 18, 14, 36, 50, 20, 16], waitForCapacity), { objectMode: false, highWaterMark: 16384 }),
+    Readable.from(worksheet(approachHeaders, approachValues(projectId, firstPage), [30, 30, 16, 40, 60, 18, 28], waitForCapacity), { objectMode: false, highWaterMark: 16384 }),
   ]
   const stopInputs = () => { archive.abort(); for (const input of inputs) input.destroy() }
   const fail = () => { stopInputs(); output.destroy(new Error('Doyalist export failed')) }
