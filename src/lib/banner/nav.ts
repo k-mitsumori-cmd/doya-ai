@@ -9,7 +9,7 @@ import type { ShellNavItem } from '@/components/shell/nav'
 export const BANNER_DASHBOARD_BASE = '/banner/dashboard'
 
 export const BANNER_NAV: ShellNavItem[] = [
-  { label: 'つくる', href: BANNER_DASHBOARD_BASE + '/create', icon: 'PlusCircle' },
+  { label: 'ゼロから作る', href: BANNER_DASHBOARD_BASE + '/create', icon: 'PlusCircle' },
   { label: '履歴', href: BANNER_DASHBOARD_BASE + '/history', icon: 'History' },
   { label: 'ブランド', href: BANNER_DASHBOARD_BASE + '/brand', icon: 'Palette' },
   { label: 'プラン', href: BANNER_DASHBOARD_BASE + '/plan', icon: 'CreditCard' },
