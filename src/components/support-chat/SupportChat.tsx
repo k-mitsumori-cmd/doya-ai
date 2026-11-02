@@ -79,6 +79,7 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const fabRef = useRef<HTMLButtonElement>(null)
+  const ticketRequestRef = useRef(0)
 
   useEffect(() => { setDraft(readDraft(draftKey)); setDraftRestored(true) }, [draftKey])
   useEffect(() => { if (draftRestored) writeDraft(draftKey, draft) }, [draftKey, draft, draftRestored])
@@ -108,19 +109,23 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   }, [])
 
   const openTicket = useCallback(async (no: string) => {
+    const request = ++ticketRequestRef.current
     setError(null)
     setBusy(true)
+    setTicket(null)
+    setFollowUp('')
     setView('ticket')
     try {
       const res = await fetch(`/api/support-chat/tickets/${encodeURIComponent(no)}`)
       const data = await res.json().catch(() => ({}))
+      if (request !== ticketRequestRef.current) return
       if (!res.ok) { setError(typeof data?.error === 'string' ? data.error : 'お問い合わせを開けませんでした。'); setTicket(null); return }
       setTicket(data.ticket)
       void loadTickets()
     } catch {
-      setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
+      if (request === ticketRequestRef.current) setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
     } finally {
-      setBusy(false)
+      if (request === ticketRequestRef.current) setBusy(false)
     }
   }, [loadTickets])
 
@@ -134,6 +139,7 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   const sendFollowUp = useCallback(async () => {
     const text = followUp.trim()
     if (!text || busy || !ticket) return
+    const request = ticketRequestRef.current
     setBusy(true)
     setError(null)
     try {
@@ -141,13 +147,14 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }),
       })
       const data = await res.json().catch(() => ({}))
+      if (request !== ticketRequestRef.current) return
       if (!res.ok) { setError(typeof data?.error === 'string' ? data.error : '送れませんでした。'); return }
       setFollowUp('')
       if (data.ticket) setTicket(data.ticket)
     } catch {
-      setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
+      if (request === ticketRequestRef.current) setError('通信がうまくいきませんでした。つながってから、もう一度お試しください。')
     } finally {
-      setBusy(false)
+      if (request === ticketRequestRef.current) setBusy(false)
     }
   }, [busy, followUp, ticket])
 
@@ -251,7 +258,7 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
       >
         <header className={styles.head}>
           {backTo ? (
-            <button type="button" className={styles.back} onClick={() => { setError(null); setView(backTo); if (backTo === 'tickets') void loadTickets() }} aria-label="戻る"><UiIcon name="back" size={18} /></button>
+            <button type="button" className={styles.back} onClick={() => { setError(null); if (view === 'ticket') { ticketRequestRef.current += 1; setBusy(false); setTicket(null); setFollowUp('') } setView(backTo); if (backTo === 'tickets') void loadTickets() }} aria-label="戻る"><UiIcon name="back" size={18} /></button>
           ) : (
             <img src="/character/hello-256.webp" alt="" width={44} height={44} className={styles.kun} />
           )}
