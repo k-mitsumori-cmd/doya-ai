@@ -135,6 +135,8 @@ const csvRequest = csvText => new Request('http://localhost/api/hr/employees/imp
         form: { lastName: '山田', firstName: '太郎' },
         photoFile: new Blob(['photo']),
         FormData,
+        isDirectUploadEnabled: async () => false,
+        directUpload: async () => { throw new Error('direct upload is off in tests') },
         setSaving() {}, setLimitNotice() {}, setSubmitted() {},
         router: { push: path => destinations.push(path) },
         toast: { success() {}, error() {} },

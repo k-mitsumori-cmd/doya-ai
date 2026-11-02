@@ -230,6 +230,13 @@ async function postHandler(request: NextRequest) {
       subColor,
     } = body
 
+    // 縮小済みの画像のみ受ける（本文の上限に近い巨大な画像を外部APIへ流さない）
+    for (const img of [logoBase64, personBase64]) {
+      if (img !== undefined && (typeof img !== 'string' || img.length > 2 * 1024 * 1024)) {
+        return NextResponse.json({ error: '画像が大きすぎます。別の画像をお試しください。' }, { status: 413 })
+      }
+    }
+
     if (!mainTitle.trim()) {
       return NextResponse.json({ error: 'メインタイトルは必須です' }, { status: 400 })
     }

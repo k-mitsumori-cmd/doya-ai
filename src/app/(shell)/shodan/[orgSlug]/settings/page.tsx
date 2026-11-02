@@ -9,6 +9,8 @@ import { requestOrgJson, OrgResponseError, orgErrorMessage } from '@/lib/org-cli
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 import { Skeleton } from '@/components/ds'
+import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 
 type Profile = {
   companyName: string; url: string; description: string; valueProp: string
@@ -148,11 +150,20 @@ export default function ShodanSettingsPage() {
     if (!ticket) return
     setUploadingLogo(true); setOperationError('')
     try {
-      const fd = new FormData(); fd.append('file', file)
-      const { res, data: d } = await requestOrgJson('shodan', '/api/shodan/company-profile/logo', orgSlug, { method: 'POST', body: fd, signal: ticket.signal })
-      if (!ticket.current()) return
-      if (!res.ok) throw new ShodanApiError(orgErrorMessage(d, res.status, true), res.status)
-      if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, res.status)
+      let d: any
+      if (await isDirectUploadEnabled()) {
+        const logoApi = '/api/shodan/company-profile/logo'
+        const org = `?org=${encodeURIComponent(orgSlug)}`
+        d = await directUpload({ file, fileName: file.name, issueUrl: `${logoApi}/upload-url${org}`, confirmUrl: `${logoApi}${org}`, signal: ticket.signal })
+        if (!ticket.current()) return
+      } else {
+        const fd = new FormData(); fd.append('file', file)
+        const { res, data } = await requestOrgJson('shodan', '/api/shodan/company-profile/logo', orgSlug, { method: 'POST', body: fd, signal: ticket.signal })
+        if (!ticket.current()) return
+        if (!res.ok) throw new ShodanApiError(orgErrorMessage(data, res.status, true), res.status)
+        d = data
+      }
+      if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, 200)
       revision.current++; draft.current = { ...draft.current, logoPath: d.path }; setLogoPath(d.path); setLogoUrl(d.url)
       setNotice('ロゴを読み込みました。設定を保存すると反映されます。')
     } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(err.message) ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
