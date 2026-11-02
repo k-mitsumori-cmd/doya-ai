@@ -20,7 +20,7 @@ import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_HOME, buildDepartmentGroups, buildProductGroups, productShellTools, type ShellTool } from './tools'
+import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, buildDepartmentGroups, buildProductGroups, productShellTools, type ShellTool } from './tools'
 import { departmentOfTool, getDepartment, type DepartmentId } from '@/lib/departments'
 import { PRODUCTS, PRODUCT_COOKIE, getProduct, productForPath, productsOfTool, type ProductId } from '@/lib/products'
 import ProductSwitcher from './ProductSwitcher'
@@ -504,7 +504,19 @@ export default function AppShell({ children, userName, initialRecent, department
               <ToolGroupsNav key={product} groups={otherGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} label="ほかの製品のツール" />
             </>
           ) : (
-            <ToolGroupsNav groups={toolGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} />
+            <>
+              {/* 部署のまとまり（開閉つき）は旗 DEPARTMENTS_ROLLOUT が on のときだけ。off なら今までの区分のまま（2026-11-02 本人の指示「旗の裏に入れてから」） */}
+              {deptOn ? (
+                <ToolGroupsNav groups={toolGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} />
+              ) : SHELL_GROUPS.map((group) => (
+                <div key={group.stage} className={styles.group}>
+                  <p className={styles.groupLabel}>{group.label}</p>
+                  {group.tools.map((tool) => (
+                    <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+                  ))}
+                </div>
+              ))}
+            </>
           )}
         </div>
         {/* 新しい見た目では、左下はどの画面でも同じもの（登録会社・ドヤパワー・アカウント・ログアウト）だけにする。
