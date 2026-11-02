@@ -64,6 +64,8 @@ model User {
 
   // NextAuth関連
   accounts Account[]
+  gmailConnection GmailConnection?
+  gmailSendLogs   GmailSendLog[]
   sessions Session[]
 
   // サービス別のプラン・使用状況（1対多）
@@ -6290,4 +6292,41 @@ model SupportMessage {
 
   @@index([ticketId, createdAt])
   @@map("support_message")
+}
+
+// ============================================
+// Gmail 連携（利用者自身の Gmail から送信。gmail.send のみ）
+// ============================================
+model GmailConnection {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  email           String
+  refreshTokenEnc String    @db.Text // AES-256-GCM（鍵は環境変数 GMAIL_TOKEN_ENC_KEY）
+  scope           String?
+  status          String    @default("ACTIVE") // ACTIVE | REVOKED
+  connectedAt     DateTime  @default(now())
+  revokedAt       DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("gmail_connection")
+}
+
+// 送信の記録。本文は残さない
+model GmailSendLog {
+  id        String   @id @default(cuid())
+  userId    String
+  toEmail   String
+  subject   String
+  source    String?
+  status    String // PENDING | SUCCESS | FAILED
+  error     String?
+  messageId String?
+  sentAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@map("gmail_send_log")
 }
