@@ -12,7 +12,7 @@ import { ArrowRight, Briefcase, Calculator, Check, ChevronDown, ListChecks, Laye
 
 /* ---------- 共通のフック ---------- */
 
-function useReducedMotion() {
+export function useReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
     const m = matchMedia("(prefers-reduced-motion: reduce)");
@@ -25,7 +25,7 @@ function useReducedMotion() {
 }
 
 /** 画面に入ったら一度だけ true。 */
-function useInView<T extends HTMLElement>(threshold = 0.25) {
+export function useInView<T extends HTMLElement>(threshold = 0.25) {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -47,7 +47,7 @@ function useInView<T extends HTMLElement>(threshold = 0.25) {
 }
 
 /** 要素がスクロールのどこまで進んだか（0〜1）。requestAnimationFrame で間引く。 */
-function useScrollProgress<T extends HTMLElement>() {
+export function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [p, setP] = useState(0);
   useEffect(() => {
@@ -75,7 +75,7 @@ function useScrollProgress<T extends HTMLElement>() {
 }
 
 /** 登場は、短い浮き上がりと薄い色から濃い色への変化だけ（一度きり）。 */
-function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+export function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const { ref, inView } = useInView<HTMLDivElement>(0.15);
   return (
     <div ref={ref} className={`u-reveal ${inView ? "is-in" : ""} ${className}`} style={{ "--d": `${delay}ms` } as CSSProperties}>
@@ -180,8 +180,8 @@ const PLAN: { dept: DeptId; tool: string; text: string }[] = [
   { dept: "sales", tool: "商談準備", text: "商談の資料と質問をそろえる" },
 ];
 
-const MARK = "/renewal-lp/brand/doya-buddy-mark-small.svg";
-const LOGO = "/renewal-lp/brand/doya-buddy-logo-horizontal-light.svg";
+export const MARK = "/renewal-lp/brand/doya-buddy-mark-small.svg";
+export const LOGO = "/renewal-lp/brand/doya-buddy-logo-horizontal-light.svg";
 
 /* ---------- ヘッダー ---------- */
 
@@ -647,7 +647,7 @@ function FinalCta() {
   );
 }
 
-function Footer() {
+export function Footer() {
   return (
     <footer className="u-footer">
       <div className="u-wrap u-footer-inner">
@@ -670,7 +670,7 @@ function Footer() {
   );
 }
 
-function MobileCta() {
+export function MobileCta() {
   const [show, setShow] = useState(false);
   useEffect(() => {
     let raf = 0;

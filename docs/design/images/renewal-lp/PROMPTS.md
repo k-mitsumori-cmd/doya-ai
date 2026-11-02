@@ -152,3 +152,30 @@ Composition: the LEFT 55 percent of the frame is calm and uncluttered: a pale wa
 Save the file and then list the raw4/ folder.
 
 ```
+
+## products/*.webp（5製品の LP のファーストビュー、2026-11-02、Codex 内蔵生成・定額、モデル gpt-6-astra）
+
+共通の指示（NAME は sales / marketing / hr / budget / management）。参照画像は desk-hero.png。
+
+```
+Use your built-in image generation tool (not any API key, not a script, no network calls) to generate 1 image and save it as a PNG file named raw/NAME.png (LANDSCAPE 3:2, 1536x1024).
+
+This is the full-bleed hero scene for one product page of "ドヤバディ", a Japanese AI buddy that does office work. The mascot is the polar bear "Doya-kun". Draw Doya-kun exactly like the attached reference ref-desk-hero.png (same character, same face, same outfit): white fluffy polar bear, round ears, wide blue visor goggles (blue frame, cyan rim, dark navy lens; the eyes are only glowing cyan shapes inside the lens), small black nose, a small confident smug smile, white hoodie with a blue </> symbol on the chest. Keep his bold thick navy comic outlines and flat colors. Also copy the background painting style of ref-desk-hero.png exactly: painted background art in the manner of modern Japanese animated films, warm cream and pale wood, soft peach window light, brand blue #0066ff only on a few small things, tiny yellow touches. It must look like the same series of pictures as ref-desk-hero.png, in a different corner of the same small company office.
+
+NO neon, NO glowing lines, NO grid, NO holograms, NO floating panels, NO sci-fi space, NO city skyline, NO glossy blobs, NO sparkles. No gradients on the walls other than natural light falloff.
+
+Composition: the LEFT 55 percent of the frame is calm and uncluttered: a pale warm wall with soft window light and gentle shadow, nothing busy, bright and low contrast, because a dark headline will be placed there. On the RIGHT side: the scene below, with Doya-kun in front, full body, about 55 percent of the frame height. ABSOLUTELY NO text, letters, numerals, words, logos or watermarks anywhere (the </> symbol on the hoodie is allowed); every paper, screen, chart and board shows only blank areas or simple shapes (checkmarks, bars, circles). No film grain.
+
+Save the file and then list the raw/ folder.
+
+Scene:
+
+```
+
+製品ごとの場面:
+
+- sales: In a small meeting corner, Doya-kun stands beside a small round table and holds up a neat stack of business cards in one paw and a closed proposal folder in the other, looking ready for a sales meeting. On the table: a laptop, two mugs and a small plant. On the wall behind: a simple wall calendar with a few yellow sticky notes and a small whiteboard with a hand-drawn arrow going from a circle to a bigger circle (a pipeline), no text.
+- marketing: Doya-kun stands in front of a wide pinboard of marketing work: printed banner drafts, an article layout page, a poster sketch and a megaphone-shaped paper craft pinned up, all with blank or abstract shapes only. He holds one printed banner up proudly with one paw. A desk with a laptop, colored pens and a mug is beside him.
+- hr: In a quiet interview room, Doya-kun stands beside two wooden chairs and a small table, holding a clipboard with an evaluation sheet of checkmark boxes in one paw. On the table: a pitcher of water, two glasses, a small plant. On the wall: a framed window, a corkboard with a few blank staff photo cards and a simple wall clock. Friendly and welcoming, not corporate.
+- budget: Doya-kun stands beside a big wall chart drawn on a board: pairs of tall bars in two colors (plan in pale blue, actual in strong blue) for each month, with a thin line connecting the tops, no numerals or labels. He points at one pair of bars with one paw and holds a small calculator in the other. A desk with a ledger book, a calculator, a mug and a small plant is next to him.
+- management: Doya-kun stands confidently at the head of a long wooden table in a sunny executive corner, holding a tablet in one paw with a few checkmark rows, the other paw open toward the wall. On the wall behind him: four neat paper boards in a row, each with a different simple pictogram made of plain shapes (a megaphone, a briefcase, three people, a calculator) and a few yellow sticky notes with checkmarks. A large window with soft morning light, a plant, a mug on the table.

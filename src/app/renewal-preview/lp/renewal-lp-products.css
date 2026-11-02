@@ -1,0 +1,185 @@
+/* 5製品の LP の見本（2026-11-02）。renewal-lp-v3.css の上に重ねる。.u-product の内側だけに効く。
+   色は renewal-lp-v3.css の変数（--bg --card --raised --line --ink --ink2 --muted --accent）から取る。
+   配色を替えるときは、下の [data-theme="dark"] のように変数だけを差し替える（?theme=dark で確かめられる）。 */
+
+/* ---------- 暗い配色（変数だけを差し替える） ---------- */
+.u-product[data-theme="dark"] {
+  --bg: #15130f;
+  --card: #1d1a15;
+  --raised: #26221b;
+  --line: rgba(247, 244, 238, 0.12);
+  --ink: #f4f0e8;
+  --ink2: #c4bbad;
+  --muted: #9a9183;
+  --accent: #3b8cff;
+  --accent-text: #6aa6ff;
+  --accent-soft: rgba(59, 140, 255, 0.14);
+}
+.u-product[data-theme="dark"] .u-nav {
+  background: rgba(21, 19, 15, 0.96);
+}
+.u-product[data-theme="dark"] .u-logo img {
+  filter: brightness(0) invert(0.95);
+}
+/* 絵は朝の明るい場面のまま。広い画面では、文字が乗る部分だけ明るい配色に戻す */
+@media (min-width: 768px) {
+  .u-product[data-theme="dark"] .u-hero {
+    --ink: #1f1b16;
+    --ink2: #5e554a;
+    --muted: #6b6258;
+    --accent-text: #0055d9;
+  }
+}
+
+/* ---------- ファーストビューの製品名 ---------- */
+.u-prod-kicker {
+  margin-bottom: 16px !important;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-text);
+  animation: u-rise 0.5s var(--ease) both;
+}
+
+/* ---------- 使えるツール（罫線の表） ---------- */
+.u-tool-list {
+  margin-top: 48px !important;
+}
+.u-tool-list > li {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.u-tool-list > li:last-child {
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line);
+}
+.u-tool {
+  display: grid;
+  grid-template-columns: 4fr 7fr 1fr;
+  align-items: start;
+  gap: 32px;
+  padding: 24px 0;
+}
+.u-tool-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.u-tool-name h3 {
+  font-size: 20px;
+  line-height: 1.4;
+}
+.u-soon {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.u-tool-body p {
+  color: var(--ink2);
+}
+.u-tool-body small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.u-tool-go {
+  text-align: right;
+}
+.u-tool-go a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.u-tool-go a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---------- 5つの製品の一覧 ---------- */
+.u-prod-list {
+  margin-top: 48px !important;
+}
+.u-prod-list > li {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.u-prod-list > li:last-child {
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line);
+}
+.u-prod-row {
+  display: grid;
+  grid-template-columns: 4fr 6fr 3fr;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+  transition: background-color 0.16s var(--ease);
+}
+.u-prod-row:hover {
+  background: var(--card);
+}
+.u-prod-name {
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.4;
+}
+.u-prod-one {
+  color: var(--ink2);
+}
+.u-prod-go {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 13px;
+  color: var(--muted);
+}
+.u-prod-row:hover .u-prod-go {
+  color: var(--accent-text);
+}
+.u-prod-row.is-here .u-prod-name {
+  color: var(--accent-text);
+}
+
+/* 料金のカードの見出しは長いので、文字を少し小さくする */
+.u-product .u-price h3 {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .u-prod-kicker {
+    margin-bottom: 8px !important;
+  }
+  .u-tool-list,
+  .u-prod-list {
+    margin-top: 32px !important;
+  }
+  .u-tool {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 20px 0;
+  }
+  .u-tool-go {
+    text-align: left;
+  }
+  .u-prod-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    padding: 16px 0;
+  }
+  .u-prod-one {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 14px;
+  }
+  .u-prod-go {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+}
