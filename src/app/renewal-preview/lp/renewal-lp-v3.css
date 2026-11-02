@@ -256,6 +256,14 @@
   object-fit: cover;
   object-position: 62% 50%;
 }
+.u-hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 50%;
+}
 .u-hero-inner {
   width: min(1120px, 100%);
   margin: 0 auto;
@@ -962,7 +970,8 @@
     height: 340px;
     inset: auto;
   }
-  .u-hero-bg img {
+  .u-hero-bg img,
+  .u-hero-video {
     object-position: 74% 50%;
   }
   .u-hero-inner {

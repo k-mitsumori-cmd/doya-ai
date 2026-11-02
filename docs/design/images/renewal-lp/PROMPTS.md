@@ -179,3 +179,11 @@ Scene:
 - hr: In a quiet interview room, Doya-kun stands beside two wooden chairs and a small table, holding a clipboard with an evaluation sheet of checkmark boxes in one paw. On the table: a pitcher of water, two glasses, a small plant. On the wall: a framed window, a corkboard with a few blank staff photo cards and a simple wall clock. Friendly and welcoming, not corporate.
 - budget: Doya-kun stands beside a big wall chart drawn on a board: pairs of tall bars in two colors (plan in pale blue, actual in strong blue) for each month, with a thin line connecting the tops, no numerals or labels. He points at one pair of bars with one paw and holds a small calculator in the other. A desk with a ledger book, a calculator, a mug and a small plant is next to him.
 - management: Doya-kun stands confidently at the head of a long wooden table in a sunny executive corner, holding a tablet in one paw with a few checkmark rows, the other paw open toward the wall. On the wall behind him: four neat paper boards in a row, each with a different simple pictogram made of plain shapes (a megaphone, a briefcase, three people, a calculator) and a few yellow sticky notes with checkmarks. A large window with soft morning light, a plant, a mug on the table.
+
+## video/desk-hero.mp4（トップ LP v3 のファーストビューの背景動画、2026-11-02）
+
+本人の承認（2026-11-02「背景を動画にするか → 進めてOK」）。MiniMax H3、2K、10秒、1本、見込み $1.34（$0.13/秒×10秒＋入力画像 $0.04）。最初の1コマは `public/renewal-lp/desk-hero.webp`。1600px 幅・音なしに軽くして使う。作り直しはしていない。
+
+```
+Very calm, subtle motion in a bright morning office painted in an anime-film style. The camera stays almost still with a barely noticeable slow push-in. Soft sunlight patterns and plant shadows slide gently across the wall and wooden floor, the leaves of the plants sway slightly. The polar bear mascot keeps his pose with a gentle breathing motion, blinks softly and gives one small proud nod while holding up the sticky note; the sticky notes on the board flutter very slightly. No sudden movement, no new objects, no text, no glow effects. Smooth, quiet, loopable motion.
+```

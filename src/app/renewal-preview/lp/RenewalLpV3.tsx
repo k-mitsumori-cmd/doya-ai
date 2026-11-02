@@ -234,6 +234,15 @@ function Nav() {
   );
 }
 
+/* ---------- ファーストビューの背景動画（2026-11-02 本人の承認、MiniMax H3 の 2K・10秒を軽くしたもの） ----------
+   絵と同じ構図を静かに動かす。一度だけ流して、最後の1コマで止める（繰り返しの切れ目を作らない）。
+   動きを減らす設定の人には出さず、絵のままにする。 */
+function HeroVideo() {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  return <video className="u-hero-video" src="/renewal-lp/video/desk-hero.mp4" poster="/renewal-lp/desk-hero.webp" autoPlay muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} />;
+}
+
 /* ---------- ファーストビュー（机の前のドヤくんの絵） ---------- */
 
 function Hero({ toolCount, pricing }: { toolCount: number; pricing: Pricing }) {
@@ -241,6 +250,7 @@ function Hero({ toolCount, pricing }: { toolCount: number; pricing: Pricing }) {
     <header className="u-hero">
       <div className="u-hero-bg">
         <Image src="/renewal-lp/desk-hero.webp" alt="朝の事務所で、付箋の貼られたボードの前に立つドヤくん" fill priority sizes="100vw" />
+        <HeroVideo />
       </div>
       <div className="u-hero-inner">
         <h1 className="u-hero-title">
