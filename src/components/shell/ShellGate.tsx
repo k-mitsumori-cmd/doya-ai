@@ -85,7 +85,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
       <DoyaPowerFetchWatcher />
       <ShellLowPowerNotice handledByNotice={Boolean(guide && shown && userKey)} />
       {/* 右下のサポートチャット。旗が出すと決めた人が、枠を開いているときだけ */}
-      {supportChat && shown ? <SupportChat /> : null}
+      {supportChat && shown ? <SupportChat actorKey={userKey} /> : null}
       </DoyaPowerFxProvider>
       {/* 表示の速さを測る（外には送らない。UI 品質 S-45） */}
       {signedIn ? <ShellVitals /> : null}

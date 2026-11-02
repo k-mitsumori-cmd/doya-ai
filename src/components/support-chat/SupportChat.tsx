@@ -22,14 +22,16 @@ type TicketDetail = { ticketNo: string; category: SupportCategory; status: strin
 const STATUS_LABEL: Record<string, string> = { open: '受付済み', in_progress: '対応中', waiting_user: '運営から返信あり', closed: '完了' }
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-const DRAFT_KEY = 'doya:support-chat:draft'
+const DRAFT_KEY_PREFIX = 'doya:support-chat:draft:v2:'
 const MAX_ERRORS = 5
 
-function readDraft(): string {
-  try { return sessionStorage.getItem(DRAFT_KEY) ?? '' } catch { return '' }
+function readDraft(key: string | null): string {
+  if (!key) return ''
+  try { return sessionStorage.getItem(key) ?? '' } catch { return '' }
 }
-function writeDraft(v: string) {
-  try { if (v) sessionStorage.setItem(DRAFT_KEY, v); else sessionStorage.removeItem(DRAFT_KEY) } catch { /* 保存できなくても動かす */ }
+function writeDraft(key: string | null, v: string) {
+  if (!key) return
+  try { if (v) sessionStorage.setItem(key, v); else sessionStorage.removeItem(key) } catch { /* 保存できなくても動かす */ }
 }
 
 /** 直近のエラーを集める（不具合の再現の情報。中身はサーバーで伏せ字をかける） */
@@ -46,7 +48,12 @@ function useRecentErrors() {
   return ref
 }
 
-export default function SupportChat() {
+export default function SupportChat({ actorKey }: { actorKey?: string }) {
+  const draftKey = actorKey ? DRAFT_KEY_PREFIX + encodeURIComponent(actorKey) : null
+  return <SupportChatSession key={actorKey ? 'actor:' + actorKey : 'anonymous'} draftKey={draftKey} />
+}
+
+function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   const pathname = usePathname() || '/'
   const toolId = useMemo(() => toolIdForPath(pathname), [pathname])
   const toolName = toolNameOf(toolId)
@@ -57,6 +64,7 @@ export default function SupportChat() {
   const [view, setView] = useState<View>('chat')
   const [messages, setMessages] = useState<Msg[]>([])
   const [draft, setDraft] = useState('')
+  const [draftRestored, setDraftRestored] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [category, setCategory] = useState<SupportCategory>('howto')
@@ -72,8 +80,8 @@ export default function SupportChat() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const fabRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => { setDraft(readDraft()) }, [])
-  useEffect(() => { writeDraft(draft) }, [draft])
+  useEffect(() => { setDraft(readDraft(draftKey)); setDraftRestored(true) }, [draftKey])
+  useEffect(() => { if (draftRestored) writeDraft(draftKey, draft) }, [draftKey, draft, draftRestored])
 
   // 開いたら入力欄へ。閉じたらボタンへフォーカスを戻す。Esc で閉じる
   useEffect(() => {
