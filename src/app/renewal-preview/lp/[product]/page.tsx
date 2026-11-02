@@ -19,7 +19,7 @@ export function generateStaticParams() {
   return PRODUCT_ORDER.map((product) => ({ product }));
 }
 
-type Props = { params: Promise<{ product: string }> | { product: string }; searchParams?: Promise<{ theme?: string }> | { theme?: string } };
+type Props = { params: Promise<{ product: string }>; searchParams?: Promise<{ theme?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { product } = await params;
