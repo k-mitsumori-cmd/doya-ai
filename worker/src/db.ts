@@ -20,13 +20,17 @@ let pool: pg.Pool | null = null
 
 /**
  * 本番は DATABASE_CA_CERT（Supabase の「Database」設定からダウンロードしたルート証明書の PEM）で
- * サーバー証明書を検証する。未設定のときは暗号化だけで接続し、警告を出す。
+ * サーバー証明書を検証する。未設定のときは起動を止める（証明書を検証しない接続は
+ * 開発用に MEDIA_ALLOW_INSECURE_DB=1 を明示したときだけ許す）。
  */
 function sslOptions(): pg.ConnectionConfig['ssl'] {
   const ca = process.env.DATABASE_CA_CERT?.trim()
   if (ca) return { rejectUnauthorized: true, ca }
-  console.warn('警告: DATABASE_CA_CERT が未設定のため、DB のサーバー証明書を検証していません')
-  return { rejectUnauthorized: false }
+  if (process.env.MEDIA_ALLOW_INSECURE_DB === '1') {
+    console.warn('警告: MEDIA_ALLOW_INSECURE_DB=1 のため、DB のサーバー証明書を検証していません（開発用）')
+    return { rejectUnauthorized: false }
+  }
+  throw new Error('DATABASE_CA_CERT が未設定です。DB のサーバー証明書を検証できないため起動しません')
 }
 
 export function getPool(): pg.Pool {
