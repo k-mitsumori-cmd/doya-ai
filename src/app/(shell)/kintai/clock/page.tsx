@@ -2,9 +2,10 @@
 
 import { Pencil, RotateCcw } from 'lucide-react'
 import { PageTitle } from '@/components/kintai/ui-next'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
+import { calculateClockDisplayMinutes } from '@/lib/kintai/clock-display'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { Skeleton } from '@/components/ds'
@@ -43,6 +44,13 @@ export default function ClockPage() {
   const { isActive } = access
   const { status, records, loading, loadError, hasLoaded, acting, message, showSuccess, unknown, canResume, fetchRecords, handleClock: submitClock, resume } = useKintaiClock(access)
   const [now, setNow] = useState(new Date())
+  const calendarDay = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+  const lastCalendarDay = useRef(calendarDay)
+  useEffect(() => {
+    if (lastCalendarDay.current === calendarDay || loading || acting || access.ready === false) return
+    lastCalendarDay.current = calendarDay
+    void fetchRecords()
+  }, [calendarDay, loading, acting, access.ready, fetchRecords])
   const [confirmClockOut, setConfirmClockOut] = useState(false)
   const [hoverClockIn, setHoverClockIn] = useState(false)
   const identity = JSON.stringify([access.actorId || '', access.organizationId || ''])
@@ -83,19 +91,18 @@ export default function ClockPage() {
   const timeStr = now.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })
   const monthDay = `${jstNow.getMonth() + 1}月${jstNow.getDate()}日（${WEEKDAYS[jstNow.getDay()]}）`
 
-  const breakMinutes = calcBreakMinutes(records)
-  const workMinutes = calcWorkMinutes(records, breakMinutes)
+  const { breakMinutes, workMinutes } = calculateClockDisplayMinutes(records, now)
 
   // Time-based greeting
   const greeting = hour < 12 ? 'おはようございます！' : hour < 18 ? 'お疲れさまです！' : 'お疲れさまです！'
 
   // Real-time working duration (recalculated every second via `now`)
-  const liveWorkMinutes = status === 'working' ? calcLiveWorkMinutes(records, breakMinutes, now) : workMinutes
+  const liveWorkMinutes = workMinutes
   const liveHours = Math.floor(liveWorkMinutes / 60)
   const liveMins = liveWorkMinutes % 60
 
   // Live break duration
-  const liveBreakMinutes = status === 'on_break' ? calcLiveBreakMinutes(records) : breakMinutes
+  const liveBreakMinutes = breakMinutes
   const liveBreakH = Math.floor(liveBreakMinutes / 60)
   const liveBreakM = liveBreakMinutes % 60
 
@@ -584,42 +591,4 @@ function timelineTextColor(type: string) {
     case 'break_end': return 'text-blue-600'
     default: return 'text-slate-500'
   }
-}
-
-function calcBreakMinutes(records: any[]) {
-  let total = 0
-  const starts = records.filter((r) => r.type === 'break_start')
-  const ends = records.filter((r) => r.type === 'break_end')
-  for (let i = 0; i < Math.min(starts.length, ends.length); i++) {
-    total += Math.round((new Date(ends[i].timestamp).getTime() - new Date(starts[i].timestamp).getTime()) / 60000)
-  }
-  return total
-}
-
-function calcLiveBreakMinutes(records: any[]) {
-  // Calculate break minutes including the current ongoing break
-  let total = 0
-  const starts = records.filter((r) => r.type === 'break_start')
-  const ends = records.filter((r) => r.type === 'break_end')
-  for (let i = 0; i < starts.length; i++) {
-    const endTime = i < ends.length ? new Date(ends[i].timestamp) : new Date()
-    total += Math.round((endTime.getTime() - new Date(starts[i].timestamp).getTime()) / 60000)
-  }
-  return total
-}
-
-function calcWorkMinutes(records: any[], breakMins: number) {
-  const clockIn = records.find((r) => r.type === 'clock_in')
-  const clockOut = records.find((r) => r.type === 'clock_out')
-  if (!clockIn) return 0
-  const end = clockOut ? new Date(clockOut.timestamp) : new Date()
-  return Math.max(0, Math.round((end.getTime() - new Date(clockIn.timestamp).getTime()) / 60000) - breakMins)
-}
-
-function calcLiveWorkMinutes(records: any[], breakMins: number, now: Date) {
-  const clockIn = records.find((r) => r.type === 'clock_in')
-  if (!clockIn) return 0
-  const clockOut = records.find((r) => r.type === 'clock_out')
-  const end = clockOut ? new Date(clockOut.timestamp) : now
-  return Math.max(0, Math.round((end.getTime() - new Date(clockIn.timestamp).getTime()) / 60000) - breakMins)
 }
