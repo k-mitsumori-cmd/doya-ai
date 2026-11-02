@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
@@ -229,6 +230,14 @@ async function postHandler(request: NextRequest) {
       mainColor,
       subColor,
     } = body
+
+    // 縮小済みの画像のみ受ける（本文の上限に近い巨大な画像を外部APIへ流さない）。
+    // 画面が縮小するのは旗 on のときだけなので、上限も旗 on のときだけ効かせる（旗 off は今までどおり）
+    for (const img of directUploadRollout() ? [logoBase64, personBase64] : []) {
+      if (img !== undefined && (typeof img !== 'string' || img.length > 2 * 1024 * 1024)) {
+        return NextResponse.json({ error: '画像が大きすぎます。別の画像をお試しください。' }, { status: 413 })
+      }
+    }
 
     if (!mainTitle.trim()) {
       return NextResponse.json({ error: 'メインタイトルは必須です' }, { status: 400 })
