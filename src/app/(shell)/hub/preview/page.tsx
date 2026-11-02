@@ -1,5 +1,5 @@
 // 開発用プレビュー: 製品の切り替えと製品のホームを表示する（ログイン・DB不要）
-// ⚠️ 本番では 404。画面確認・デザイン調整のためだけに使う。数字は見本（画面の上に「見本の数字」と出す）
+// ⚠️ 本番（VERCEL_ENV=production）では 404。Vercel のプレビューと手元では開ける。画面確認・デザイン調整のためだけに使う。数字は見本（画面の上に「見本の数字」と出す）
 // 例: /hub/preview?p=sales ・ /hub/preview?p=budget
 import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
@@ -32,7 +32,7 @@ const SAMPLE: Record<ProductId, HubMetric[]> = {
 }
 
 export default async function HubPreviewPage(props: { searchParams?: Promise<{ p?: string }> }) {
-  if (process.env.NODE_ENV === 'production') notFound()
+  if (process.env.VERCEL_ENV === 'production') notFound()
   const id = parseProductId((await props.searchParams)?.p) ?? 'sales'
   return (
     <AppShell userName="サンプル" agentTasks products={{ enabled: true, start: id, selfDefault: null }}>
