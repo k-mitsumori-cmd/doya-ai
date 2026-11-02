@@ -80,13 +80,26 @@ function feedbackFixture({ fail = false } = {}) {
     const alerts = []
     const route = load('src/app/api/cron/spend-report/route.ts', {
       'next/server': { NextResponse: { json } },
-      '@/lib/cost/daily-report': { sendDailyCostReport: async () => { throw Error('private spend detail') } },
+      '@/lib/cost/daily-report': { sendDailyCostReport: async () => { throw Error('new report must stay behind DAILY_COST_REPORT') } },
+      '@/lib/spend-report': { sendSpendReport: async () => { throw Error('private spend detail') } },
       '@/lib/notifications': { sendErrorNotification: async (details) => { alerts.push(details) } },
     }, { process: { env: { CRON_SECRET: 'secret' } } })
     const response = await route.GET(request('spend-report'))
     assert.equal(response.status, 500)
     assert(!JSON.stringify(response.body).includes('private spend detail'))
     assert.equal(alerts.length, 1)
+  })
+  await check('spend report sends the new cost report only when DAILY_COST_REPORT is on', async () => {
+    const sent = []
+    const route = load('src/app/api/cron/spend-report/route.ts', {
+      'next/server': { NextResponse: { json } },
+      '@/lib/cost/daily-report': { sendDailyCostReport: async () => { sent.push('new') } },
+      '@/lib/spend-report': { sendSpendReport: async () => { sent.push('old') } },
+      '@/lib/notifications': { sendErrorNotification: async () => {} },
+    }, { process: { env: { CRON_SECRET: 'secret', DAILY_COST_REPORT: 'on' } } })
+    const response = await route.GET(request('spend-report'))
+    assert.equal(response.status, 200)
+    assert.deepEqual(sent, ['new'])
   })
   await check('AIO scan hides per-organization and top-level private errors', async () => {
     const organization = { id: 'org-1', slug: 'brand', members: [{ userId: 'user-1' }], scans: [] }
