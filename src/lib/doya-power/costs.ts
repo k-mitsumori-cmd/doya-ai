@@ -5,6 +5,9 @@
 // ⚠️ ボタンの札（src/components/shell/power.tsx の ShellCostBadge）は、この表だけから引く。数をほかに書かない。
 // ⚠️ ここは表示の数だけ。実際に台帳から減らす処理は、台帳の表が本番DBに入ってから、この表を使って作る。
 // 0 の操作（勤怠・プロマネ・収入・支出）は、札を出さない。
+// 重い処理（大きなファイル・動画・保管・Gmail）の量は heavy-costs.ts が原価から計算する（単価は src/lib/cost/unit-prices.ts）。
+
+import { HEAVY_POWER_COSTS } from './heavy-costs'
 
 /** 音声（AI商談・AI面接）の1分あたりの量。1分5（2026-10-23 ユーザー決定。仮の表の中で確定）。standard は原価の低い側（3）、high は高い側（5） */
 export const VOICE_COST_PER_MINUTE = { standard: 3, high: 5 } as const
@@ -37,6 +40,14 @@ export const DOYA_POWER_COSTS = {
   'aio.scan.question': 10,
   /** 経営ホームのエージェントの作戦づくり 1回（2026-10-25 ユーザー決定。src/lib/agent-orchestration の段階2で使う） */
   'agent.plan': 5,
+  /** 大きなファイルのアップロード 1GB ごと（保管1か月＋配信1回を含む）。原価から計算 */
+  'upload.gb': HEAVY_POWER_COSTS['upload.gb'],
+  /** 保管の延長 1GB・1か月ごと。原価から計算 */
+  'storage.gb.month': HEAVY_POWER_COSTS['storage.gb.month'],
+  /** 動画の処理（専用ワーカー）1GB ごと。原価から計算 */
+  'video.process.gb': HEAVY_POWER_COSTS['video.process.gb'],
+  /** Gmail の送信 1通（方針で決めた値） */
+  'gmail.send': HEAVY_POWER_COSTS['gmail.send'],
   /** 勤怠・プロマネ・収入・支出は減らない */
   'kintai': 0,
   'promane': 0,

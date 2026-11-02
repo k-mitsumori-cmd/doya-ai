@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendDailyCostReport } from '@/lib/cost/daily-report'
 import { sendSpendReport } from '@/lib/spend-report'
 import { sendErrorNotification } from '@/lib/notifications'
 
@@ -15,7 +16,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    await sendSpendReport()
+    // 新しいコストと売上のレポートは、旗 DAILY_COST_REPORT=on のときだけ。
+    // off（未設定）なら今までのレポートのまま（2026-11-02 統括。旗の裏に入れてから出す方針）
+    if (process.env.DAILY_COST_REPORT === 'on') await sendDailyCostReport()
+    else await sendSpendReport()
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Cron] spend-report error:')

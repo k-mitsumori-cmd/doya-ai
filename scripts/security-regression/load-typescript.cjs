@@ -16,6 +16,9 @@ lazyReal('@/lib/direct-upload/flag',()=>load('src/lib/direct-upload/flag.ts'));
 DEFAULT_MOCKS['@/lib/direct-upload/stage']={IMAGE_UPLOAD_MAX:10*1024*1024,readStagedImage:async()=>({ok:false,status:404,error:'直接アップロードは有効になっていません'}),removeStaged:async()=>{}};
 DEFAULT_MOCKS['@/lib/direct-upload/mode-client']={isDirectUploadEnabled:async()=>false};
 DEFAULT_MOCKS['@/lib/direct-upload/client']={directUpload:async()=>{throw new Error('direct upload is off in tests')}};
+// ドヤパワーの重い処理の量（heavy-costs.ts）は原価の単価（src/lib/cost/unit-prices.ts）から計算する。costs.ts が取り込むので本物をそのまま使う（2026-10-31）
+lazyReal('@/lib/cost/unit-prices',()=>load('src/lib/cost/unit-prices.ts'));
+lazyReal('./heavy-costs',()=>load('src/lib/doya-power/heavy-costs.ts'));
 lazyReal('@/lib/hr/employee-number',()=>load('src/lib/hr/employee-number.ts'));
 lazyReal('@/lib/adimage/score-max',()=>load('src/lib/adimage/score-max.ts'));
 lazyReal('./score-max',()=>DEFAULT_MOCKS['@/lib/adimage/score-max']);

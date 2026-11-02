@@ -42,7 +42,7 @@ const envOf=(rollout)=>{const e={UI_NEXT_ROLLOUT:'all',UI_PREVIEW_EMAILS:ALLOWED
 function loadCore(){
   const runner=loadTs('src/lib/agent-orchestration/runner.ts');
   const recipes=loadTs('src/lib/agent-orchestration/recipes.ts');
-  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts')});
+  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts',{'./heavy-costs':loadTs('src/lib/doya-power/heavy-costs.ts',{'@/lib/cost/unit-prices':loadTs('src/lib/cost/unit-prices.ts')})})});
   const execute=loadTs('src/lib/agent-orchestration/execute.ts',{'./runner':runner,'./recipes':recipes,'./tools':tools});
   return {runner,recipes,tools,execute};
 }
@@ -188,7 +188,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
   function loadPlanRoute(env,email,log,readers){
     const core=loadCore();
     const types=loadTs('src/lib/agent-orchestration/types.ts');
-    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts'),'./runner':core.runner,'./types':types});
+    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts',{'./heavy-costs':loadTs('src/lib/doya-power/heavy-costs.ts',{'@/lib/cost/unit-prices':loadTs('src/lib/cost/unit-prices.ts')})}),'./runner':core.runner,'./types':types});
     const sources=loadTs('src/lib/agent-orchestration/sources.ts');
     const fallback={company:async()=>{log.push('read:company');return 'サンプル株式会社'},toolOrgs:async()=>{log.push('read:tools');return {shodan:true,quote:false}},power:async()=>{log.push('read:power');return {enabled:true,remaining:120,nextRecoveryAt:null}}};
     return loadTs('src/app/api/agent/plan/route.ts',{
