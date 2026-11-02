@@ -13,7 +13,7 @@ import { PRODUCTS, PRODUCT_ORDER, type Product } from "./products";
 
 export type Theme = "light" | "dark";
 
-type Plan = { proPrice: string; freeStart: number; freeDaily: number };
+type Plan = { proPrice: string; proPriceJa: string; freeStart: number; freeDaily: number };
 
 const base = "/renewal-preview/lp";
 
@@ -99,7 +99,7 @@ function Hero({ product, plan }: { product: Product; plan: Plan }) {
         </div>
         <p className="u-hero-facts">
           <span>無料で始められます</span>
-          <span>プロ1つ（月{plan.proPrice}）で5つの製品が全部使えます</span>
+          <span>プロ1つ（月{plan.proPriceJa}）で5つの製品が全部使えます</span>
         </p>
       </div>
     </header>
@@ -360,7 +360,7 @@ function Pricing({ plan }: { plan: Plan }) {
 
 function faqFor(product: Product, plan: Plan) {
   return [
-    { q: "製品ごとに契約が要りますか", a: `要りません。プロ1つ（月${plan.proPrice}）で、5つの製品が全部使えます。` },
+    { q: "製品ごとに契約が要りますか", a: `要りません。プロ1つ（月${plan.proPriceJa}）で、5つの製品が全部使えます。` },
     { q: "無料で何ができますか", a: `最初にドヤパワーを${plan.freeStart}受け取れて、試せます。ドヤパワーは毎日${plan.freeDaily}ずつ回復します（上限${plan.freeStart}）。Google アカウントで登録できます。` },
     { q: `${product.name}の担当でなくても、ほかの製品のツールを使えますか`, a: "使えます。製品は、見える順番を分けるものです。担当でない製品のツールも、すべてのツールの一覧から開けます。" },
     { q: "ドヤくんは、勝手に外へ送ったり公開したりしますか", a: "しません。メールの送信や公開など、外に出る操作は、人が確かめてから進めます。" },
@@ -409,7 +409,7 @@ function FinalCta({ product, plan }: { product: Product; plan: Plan }) {
             ドヤくんに書いてみてください
           </h2>
           <p>
-            無料で始められます。プロ1つ（月{plan.proPrice}）で、{product.name}を含む5つの製品が全部使えます。
+            無料で始められます。プロ1つ（月{plan.proPriceJa}）で、{product.name}を含む5つの製品が全部使えます。
           </p>
         </div>
         <Link href="/auth/signin" className="u-btn u-btn-lg">

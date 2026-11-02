@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Noto_Sans_JP, Zen_Maru_Gothic } from "next/font/google";
-import { UNIFIED_PRO_PRICE_LABEL } from "@/lib/unified-plan";
+import { UNIFIED_PRO_PRICE, UNIFIED_PRO_PRICE_LABEL } from "@/lib/unified-plan";
 import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP } from "@/lib/doya-power/rules";
 import { ProductLp, type Theme } from "../ProductLp";
 import { PRODUCTS, PRODUCT_ORDER, isProductId } from "../products";
@@ -37,7 +37,7 @@ export default async function ProductLpPreview({ params, searchParams }: Props) 
   const theme: Theme = sp.theme === "dark" ? "dark" : "light";
   return (
     <div className={`${body.variable} ${display.variable}`}>
-      <ProductLp product={PRODUCTS[product]} theme={theme} plan={{ proPrice: UNIFIED_PRO_PRICE_LABEL, freeStart: DAILY_RECOVERY_CAP, freeDaily: DAILY_RECOVERY_AMOUNT }} />
+      <ProductLp product={PRODUCTS[product]} theme={theme} plan={{ proPrice: UNIFIED_PRO_PRICE_LABEL, proPriceJa: `${UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}円`, freeStart: DAILY_RECOVERY_CAP, freeDaily: DAILY_RECOVERY_AMOUNT }} />
     </div>
   );
 }
