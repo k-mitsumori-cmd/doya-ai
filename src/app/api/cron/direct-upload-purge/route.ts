@@ -1,6 +1,7 @@
 import { purgeStaleMultipart, multipartEnabled } from '@/lib/direct-upload/multipart'
 import { purgeStaleStaged } from '@/lib/direct-upload/stage'
 import { runStoredFileMaintenance } from '@/lib/direct-upload/stored-files'
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,9 @@ export async function GET(request: Request) {
   } catch {
     /* 一時置き場の掃除に失敗しても、小分け送信の片づけは続ける */
   }
-  // 保存期限の付け外し・7日前の予告メール・期限切れの削除
+  // 保存期限の付け外し・7日前の予告メール・期限切れの削除。
+  // 表 stored_file はどちらかの旗が on のときだけ使う。両方 off なら読まずに抜ける（本番に表がまだ無くても毎日 503 にしない）
+  if (!directUploadRollout() && !multipartEnabled()) return Response.json({ ok: true, staged, stored: null, skipped: 'flags off' })
   let stored: Awaited<ReturnType<typeof runStoredFileMaintenance>> | null = null
   try {
     stored = await runStoredFileMaintenance()
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
   if (!multipartEnabled()) return Response.json({ ok: true, staged, stored, multipart: 'disabled' })
   try {
     const r = await purgeStaleMultipart()
-    return Response.json({ ok: r.failed === 0 && stored.failed === 0, staged, stored, ...r }, { status: r.failed ? 503 : 200 })
+    return Response.json({ ok: r.failed === 0 && stored?.failed === 0, staged, stored, ...r }, { status: r.failed ? 503 : 200 })
   } catch {
     return Response.json({ error: 'cleanup unavailable' }, { status: 503 })
   }

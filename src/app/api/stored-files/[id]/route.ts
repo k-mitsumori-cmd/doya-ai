@@ -3,6 +3,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { directUploadRollout } from '@/lib/direct-upload/flag'
+import { multipartEnabled } from '@/lib/direct-upload/multipart'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { deleteStoredFile } from '@/lib/direct-upload/stored-files'
@@ -10,6 +12,8 @@ import { deleteStoredFile } from '@/lib/direct-upload/stored-files'
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  // 表 stored_file はどちらかの旗が on のときだけ使う。両方 off なら開かない
+  if (!directUploadRollout() && !multipartEnabled()) return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
   const session = await getServerSession(authOptions)
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
