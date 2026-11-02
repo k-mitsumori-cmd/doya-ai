@@ -5,7 +5,7 @@ import { isKintaiClockAcknowledgement, parseKintaiClockRead, type KintaiClockRec
 import { userErrorMessage } from './user-error'
 
 type Access = { isActive: boolean | null; ready?: boolean; actorId?: string; organizationId?: string | null }
-type Unconfirmed = { epoch: number; type: string; before: Set<string>; expected?: KintaiClockRecord }
+type Unconfirmed = { epoch: number; type: string; before: Set<string>; originDate: string; expected?: KintaiClockRecord }
 const UNKNOWN = '打刻結果を確認できません。再打刻せず、現在の状態を読み直してください。'
 export function useKintaiClock(access: Access) {
   const identity = JSON.stringify([access.actorId || '', access.organizationId || ''])
@@ -55,8 +55,31 @@ export function useKintaiClock(access: Access) {
       setSnapshot({ identity: context.current.identity, records: data.activeShiftRecords, status: data.clockStatus })
       setLoadError(false); setLastReadOk(true)
       const operation = pending.current
-      if (operation?.epoch === epoch && [...data.records, ...data.activeShiftRecords].some(record => record.type === operation.type && !operation.before.has(record.id) && (!operation.expected || record.id === operation.expected.id && record.employeeId === operation.expected.employeeId && record.timestamp === operation.expected.timestamp))) {
-        pending.current = null; setUnknown(false); setMessage({ type: 'success', text: '保存済みの打刻を確認しました' })
+      if (operation?.epoch === epoch) {
+        const matches = (record: KintaiClockRecord) => record.type === operation.type && !operation.before.has(record.id) && (!operation.expected || record.id === operation.expected.id && record.employeeId === operation.expected.employeeId && record.timestamp === operation.expected.timestamp)
+        let confirmed = [...data.records, ...data.activeShiftRecords].some(matches)
+        const receiptDate = operation.expected
+          ? new Date(operation.expected.timestamp).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+          : operation.originDate
+        // A closed shift before midnight is absent from the following day's read.
+        // Read its receipt day once, while keeping the displayed snapshot on today.
+        if (!confirmed && receiptDate !== date) {
+          try {
+            const receiptRes = await fetch(`/api/kintai/clock?date=${receiptDate}`, { signal: controller.signal })
+            const receiptValue: unknown = await receiptRes.json()
+            if (!valid() || pending.current !== operation) return null
+            if (receiptRes.ok) {
+              const receipt = parseKintaiClockRead(receiptValue, receiptDate)
+              confirmed = [...receipt.records, ...receipt.activeShiftRecords].some(matches)
+            }
+          } catch {
+            // A failed receipt lookup must not erase a successful current-day read.
+          }
+        }
+        if (!valid() || pending.current !== operation) return null
+        if (confirmed) {
+          pending.current = null; setUnknown(false); setMessage({ type: 'success', text: '保存済みの打刻を確認しました' })
+        }
       }
       return data
     } catch {
@@ -89,11 +112,12 @@ export function useKintaiClock(access: Access) {
       || write.current?.epoch === epoch || pending.current?.epoch === epoch || observed.current?.epoch !== epoch || loading || loadError) return
     const ticket = { epoch }; write.current = ticket
     const before = new Set(observed.current.ids)
+    const originDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
     setActing(true); setMessage(null); setShowSuccess(false)
     if (successTimer.current) clearTimeout(successTimer.current)
     const reconcile = async () => {
       if (!current(epoch)) return
-      pending.current = { epoch, type, before }; setUnknown(true); setMessage({ type: 'error', text: UNKNOWN })
+      pending.current = { epoch, type, before, originDate }; setUnknown(true); setMessage({ type: 'error', text: UNKNOWN })
       await fetchRecords()
     }
     try {
@@ -107,11 +131,12 @@ export function useKintaiClock(access: Access) {
       }
       if (!res.ok || !isKintaiClockAcknowledgement(data, type)) { await reconcile(); return }
       // A valid write receipt must also be visible in the authenticated readback.
-      const operation = { epoch, type, before, expected: data.record }
+      const operation = { epoch, type, before, originDate, expected: data.record }
       pending.current = operation
       await fetchRecords()
       if (!current(epoch)) return
       if (pending.current === operation) { setUnknown(true); setMessage({ type: 'error', text: UNKNOWN }); return }
+      if (new Date(data.record.timestamp).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }) !== new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) return
       setMessage({ type: 'success', text: `${CLOCK_TYPE_LABELS[type] || type}しました` }); setShowSuccess(true)
       successTimer.current = setTimeout(() => { if (current(epoch)) setShowSuccess(false) }, 3000)
     } catch { await reconcile() }

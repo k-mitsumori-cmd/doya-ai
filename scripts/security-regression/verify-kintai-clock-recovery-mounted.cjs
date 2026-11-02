@@ -11,13 +11,14 @@ const read=(rows=[],date=day)=>({records:rows.filter(r=>!r||!Number.isFinite(Dat
 const shiftFixture=compiled('src/lib/kintai/shift-records.ts',n=>{throw Error(n)});
 const results=[];async function test(name,fn){try{await fn();results.push({name,passed:true});console.log('PASS Kintai clock recovery: '+name)}catch(e){results.push({name,passed:false,error:e.message});console.error('FAIL Kintai clock recovery: '+name+': '+e.message)}}
 async function mounted(kind,strict){
- clockTime=['open-page-midnight','midnight-open-shift','midnight-held-post','report-midnight','report-midnight-initial-error'].includes(kind)?Date.parse(day+'T23:59:50+09:00'):kind==='jst-midnight-carry'?Date.parse(day+'T00:00:20+09:00'):now;
+ const midnightOut=kind.startsWith('midnight-out-');
+ clockTime=midnightOut||['open-page-midnight','midnight-open-shift','midnight-held-post','report-midnight','report-midnight-initial-error'].includes(kind)?Date.parse(day+'T23:59:50+09:00'):kind==='jst-midnight-carry'?Date.parse(day+'T00:00:20+09:00'):now;
  const dom=new JSDOM('<!doctype html><div id="root"></div>',{url:'http://synthetic.invalid/kintai/clock?token=PRIVATE#hash'}),prior=new Map(),timers=[];
  for(const[k,v]of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})){prior.set(k,Object.getOwnPropertyDescriptor(global,k));Object.defineProperty(global,k,{value:v,writable:true,configurable:true})}
- let root,access={isActive:kind!=='inactive',ready:kind!=='ready-delay',actorId:'actorA',organizationId:'orgA'},posts=0,getCount=0,postRelease,postResolve,oldReadResolve,failedRead=false,accepted=false,postMode=kind,holdReads=false,heldReads=[],reportRequests=[],reportMode=kind==='report-pending'?202:kind==='report-success'?200:kind==='report-malformed'?200:503;
+ let root,access={isActive:kind!=='inactive',ready:kind!=='ready-delay',actorId:'actorA',organizationId:'orgA'},posts=0,getCount=0,postRelease,postResolve,oldReadResolve,receiptReadResolve,failedRead=false,accepted=false,postMode=kind,holdReads=false,heldReads=[],reportRequests=[],reportMode=kind==='report-pending'?202:kind==='report-success'?200:kind==='report-malformed'?200:503;
  const initialType=kind==='normal-out'||kind==='normal-break-start'||kind==='jst-midnight-carry'?'working':kind==='normal-break-end'?'on_break':'empty';
  const displayRows=kind==='display-multiple-closed'?[record('clock_in',1,1,-3600000),record('break_start',2,1,-3577000),record('break_end',3,1,-3537000),record('clock_out',4,1,-3495000),record('clock_in',5,1,-600000),record('clock_out',6,1,-556000)]:kind==='display-second-live'?[record('clock_in',1,1,-10800000),record('clock_out',2,1,-7200000),record('clock_in',3,1,-1800000)]:kind==='display-on-break'?[record('clock_in',1,1,-7200000),record('break_start',2,1,-3600000)]:null;
- const initial=kind==='midnight-open-shift'?[record('clock_in',1,1,-10800000),record('clock_out',2,1,-7200000),record('clock_in',3,1,-3600000)]:displayRows|| (kind==='open-page-midnight'?[record('clock_in',1,1,-3600000),record('clock_out',2,1,-600000)]:initialType==='working'?[record()]:initialType==='on_break'?[record(),record('break_start',2,1,-30000)]:[]);
+ const initial=midnightOut?[record('clock_in',1,1,-3600000)]:kind==='midnight-open-shift'?[record('clock_in',1,1,-10800000),record('clock_out',2,1,-7200000),record('clock_in',3,1,-3600000)]:displayRows|| (kind==='open-page-midnight'?[record('clock_in',1,1,-3600000),record('clock_out',2,1,-600000)]:initialType==='working'?[record()]:initialType==='on_break'?[record(),record('break_start',2,1,-30000)]:[]);
  let rows=initial.slice(),currentRows=()=>access.actorId==='actorB'?[]:rows;
  const requests=[];
  async function fetch(url,opts={}){
@@ -25,6 +26,7 @@ async function mounted(kind,strict){
   assert(String(url).startsWith('/api/kintai/clock'));const actor=access.actorId;requests.push({actor,method:opts.method||'GET',url:String(url)});
   if(opts.method==='POST'){
    posts++;const type=JSON.parse(opts.body).type,ack=record(type,initial.length+1,1,0);
+   if(midnightOut){postRelease=()=>{rows=[...initial,ack];if(kind==='midnight-out-other-id')rows[1]={...ack,id:record('clock_out',9).id};if(kind==='midnight-out-other-employee')rows=[{...initial[0],employeeId:record('clock_in',1,2).employeeId},{...ack,employeeId:record('clock_out',2,2).employeeId}];if(kind==='midnight-out-other-time')rows[1]={...ack,timestamp:new Date(Date.parse(ack.timestamp)+1000).toISOString()};if(kind==='midnight-out-lost')postResolve(Promise.reject(Error('synthetic lost receipt')));else postResolve(new Response(JSON.stringify(kind==='midnight-out-malformed'?{}:{record:ack}),{status:200}))};return new Promise(resolve=>{postResolve=resolve})}
    if(['duplicate','unmount','actor-change','actor-return','midnight-held-post'].includes(postMode)){postRelease=()=>{rows=[...initial,ack];postResolve(new Response(JSON.stringify({record:ack}),{status:200}))};return new Promise(resolve=>{postResolve=resolve})}
    if(postMode==='network')throw Error('synthetic network');
    if(postMode==='definitive400')return new Response(JSON.stringify({error:'合成の入力エラー'}),{status:400});
@@ -54,7 +56,8 @@ async function mounted(kind,strict){
   if(failedRead)return new Response('{}',{status:503});
   const requestedDay=new URL(url,'http://synthetic.invalid').searchParams.get('date');
   let data=read(kind==='open-page-midnight'&&requestedDay!==day?[]:currentRows(),requestedDay);
-  if(kind==='midnight-open-shift')data=read(shiftFixture.recordsWithCarryover(currentRows(),new Date(requestedDay+'T00:00:00+09:00')),requestedDay);
+  if(midnightOut&&posts&&requestedDay===day&&new Date(clockTime).toLocaleDateString('sv-SE',{timeZone:'Asia/Tokyo'})!==day){if(kind==='midnight-out-receipt-fails')return new Response('{}',{status:503});if(kind==='midnight-out-receipt-malformed')return new Response('{}',{status:200});if(['midnight-out-actor-change','midnight-out-unmount'].includes(kind))return new Promise(resolve=>{receiptReadResolve=()=>resolve(new Response(JSON.stringify(read(shiftFixture.recordsWithCarryover(rows,new Date(requestedDay+'T00:00:00+09:00')),requestedDay)),{status:200}))})}
+  if(midnightOut||kind==='midnight-open-shift')data=read(shiftFixture.recordsWithCarryover(currentRows(),new Date(requestedDay+'T00:00:00+09:00')),requestedDay);
   if(kind==='bad-initial')data={};
   if(kind==='null-row')data=read([null]);
   if(kind==='wrong-date')data.date='2000-01-01';
@@ -70,6 +73,23 @@ async function mounted(kind,strict){
  const click=async name=>{const b=button(name);assert(b,'Missing button '+name);assert(!b.disabled,'Disabled '+name);await React.act(async()=>{b.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}))})};
  try{
   const Page=load(page).default,{createRoot}=dep('react-dom/client');root=createRoot(document.getElementById('root'));const render=()=>root.render(strict?React.createElement(React.StrictMode,{},React.createElement(Page)):React.createElement(Page));await React.act(async()=>render());
+  if(midnightOut){
+   await click('退勤する');await click('退勤する');assert.equal(posts,1);const before=getCount;clockTime+=30000;
+   await React.act(async()=>new Promise(resolve=>setTimeout(resolve,1100)));assert.equal(getCount,before);
+   await React.act(async()=>postRelease());
+   const nextDay=new Date(clockTime).toLocaleDateString('sv-SE',{timeZone:'Asia/Tokyo'});
+   assert(requests.filter(x=>x.method==='GET').slice(before).some(x=>x.url.endsWith('date='+nextDay)));
+   assert(requests.filter(x=>x.method==='GET').slice(before).some(x=>x.url.endsWith('date='+day)));
+   if(['midnight-out-actor-change','midnight-out-unmount'].includes(kind)){
+    assert(receiptReadResolve);if(kind==='midnight-out-unmount'){await React.act(async()=>root.unmount());root=null}else{access={...access,actorId:'actorB',organizationId:'orgB'};await React.act(async()=>render())}
+    const priorRequests=requests.length;await React.act(async()=>receiptReadResolve());assert.equal(requests.length,priorRequests);assert(!text().includes('保存済みの打刻を確認しました'));assert(!text().includes('退勤しました'));assert.equal(posts,1);return;
+   }
+   if(['midnight-out-receipt-fails','midnight-out-receipt-malformed','midnight-out-other-id','midnight-out-other-employee','midnight-out-other-time'].includes(kind)){
+    assert(text().includes('打刻結果を確認できませんでした'));assert(!text().includes('退勤しました'));assert(!button('最新の状態を確認して打刻を再開').disabled);
+    await click('最新の状態を確認して打刻を再開');assert(text().includes('まだ出勤していません'));assert(!text().includes('打刻結果を確認できませんでした'));assert.equal(posts,1);return;
+   }
+   assert(text().includes('保存済みの打刻を確認しました'));assert(text().includes('まだ出勤していません'));assert(!text().includes('打刻結果を確認できませんでした'));assert(!text().includes('退勤しました'));assert.equal(posts,1);return;
+  }
   if(kind==='midnight-open-shift'){
    assert(text().includes('勤務中 — 2時間0分'));const readsBefore=getCount;clockTime+=30000;
    await React.act(async()=>new Promise(resolve=>setTimeout(resolve,1100)));
@@ -158,7 +178,7 @@ async function mounted(kind,strict){
  for(let i=0;i<invalid.length;i++)await test('GET parser rejects '+i,()=>assert.throws(()=>parser.parseKintaiClockRead(invalid[i],day)));
  await test('GET parser accepts actual-shaped current and carryover',()=>{assert.equal(parser.parseKintaiClockRead(read([record()]),day).clockStatus,'working');const prior=record('clock_in',9,1,-86400000);assert.equal(parser.parseKintaiClockRead({...read(),activeShiftRecords:[prior],clockStatus:'working'},day).clockStatus,'working')});
  await test('ACK rejects normalized invalid calendar date',()=>assert.equal(parser.isKintaiClockAcknowledgement({record:{...record(),timestamp:'2026-02-30T07:00:00.000Z'}},'clock_in'),false));
- const kinds=['normal-in', 'normal-out', 'normal-break-start', 'normal-break-end', 'missing', 'invalid-json', 'null', 'array', 'wrong-type', 'wrong-id', 'wrong-time', 'error-mixed', 'http500', 'network', 'persisted500', 'persisted-malformed', 'read-fails', 'unknown-recheck', 'explicit-resume', 'definitive400', 'bad-initial', 'null-row', 'wrong-date', 'duplicate', 'unmount', 'actor-change', 'actor-return', 'ack-read-fails', 'valid-ack-unconfirmed', 'ack-different-record', 'ack-other-employee', 'ack-time-mismatch', 'ready-delay', 'ready-frozen', 'stale-read', 'inactive', 'jst-midnight-carry', 'report-unknown', 'report-preserve', 'report-pending', 'report-success', 'report-malformed', 'report-initial-error', 'report-actor-reset', 'open-page-midnight', 'display-multiple-closed', 'display-second-live', 'display-on-break', 'midnight-open-shift', 'midnight-held-post', 'report-midnight', 'report-midnight-initial-error'];
+ const kinds=['normal-in', 'normal-out', 'normal-break-start', 'normal-break-end', 'missing', 'invalid-json', 'null', 'array', 'wrong-type', 'wrong-id', 'wrong-time', 'error-mixed', 'http500', 'network', 'persisted500', 'persisted-malformed', 'read-fails', 'unknown-recheck', 'explicit-resume', 'definitive400', 'bad-initial', 'null-row', 'wrong-date', 'duplicate', 'unmount', 'actor-change', 'actor-return', 'ack-read-fails', 'valid-ack-unconfirmed', 'ack-different-record', 'ack-other-employee', 'ack-time-mismatch', 'ready-delay', 'ready-frozen', 'stale-read', 'inactive', 'jst-midnight-carry', 'report-unknown', 'report-preserve', 'report-pending', 'report-success', 'report-malformed', 'report-initial-error', 'report-actor-reset', 'open-page-midnight', 'display-multiple-closed', 'display-second-live', 'display-on-break', 'midnight-open-shift', 'midnight-held-post', 'report-midnight', 'report-midnight-initial-error', 'midnight-out-valid', 'midnight-out-malformed', 'midnight-out-lost', 'midnight-out-receipt-fails', 'midnight-out-receipt-malformed', 'midnight-out-other-id', 'midnight-out-other-employee', 'midnight-out-other-time', 'midnight-out-actor-change', 'midnight-out-unmount'];
  for(const strict of [false,true])for(const kind of kinds)await test(kind+(strict?' StrictMode':' normal'),()=>mounted(kind,strict));
- const out={checkedAt:new Date().toISOString(),passed:results.filter(x=>x.passed).length,failed:results.filter(x=>!x.passed).length,cases:results,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(source(f)).digest('hex')])),scope:'Actual repository clock page/shared display/canonical attendance plus current hook/parser/form in normal and StrictMode. 116 parser and mounted scenarios expected including midnight carry, held POST and report draft/ID preservation, not unique product features. Offline synthetic HTTP/DOM; not native/browser/provider/production proof.'};if(process.env.DOYA_KINTAI_CLOCK_RESULT)fs.writeFileSync(process.env.DOYA_KINTAI_CLOCK_RESULT,JSON.stringify(out,null,2)+'\n');console.log(JSON.stringify({passed:out.passed,failed:out.failed}));if(out.failed)process.exitCode=1;
+ const out={checkedAt:new Date().toISOString(),passed:results.filter(x=>x.passed).length,failed:results.filter(x=>!x.passed).length,cases:results,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(source(f)).digest('hex')])),scope:'Actual repository clock page/shared display/canonical attendance plus current hook/parser/form in normal and StrictMode. 136 parser and mounted scenarios expected including midnight carry, held POST and report draft/ID preservation, not unique product features. Offline synthetic HTTP/DOM; not native/browser/provider/production proof.'};if(process.env.DOYA_KINTAI_CLOCK_RESULT)fs.writeFileSync(process.env.DOYA_KINTAI_CLOCK_RESULT,JSON.stringify(out,null,2)+'\n');console.log(JSON.stringify({passed:out.passed,failed:out.failed}));if(out.failed)process.exitCode=1;
 })().catch(e=>{console.error(e.stack);process.exitCode=1});
