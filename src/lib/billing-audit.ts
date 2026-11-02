@@ -60,7 +60,17 @@ export type BillingAudit = {
   tierDrift: Array<{ userId: string; email: string | null; stripeTier: string; dbPlan: string; subscriptionIds: string[] }>
   unmappedPlans: AuditSubscription[]
   /** User.plan は有料なのにサービス別の行が揃っていない（INV-2 違反）。障害#5 の再発検知 */
-  serviceDrift: Array<{ email: string | null; userPlan: string; expected: string; broken: string[] }>
+  serviceDrift: Array<{
+    email: string | null
+    userPlan: string
+    expected: string
+    /** missing と wrong を合わせたもの（旧形式の互換） */
+    broken: string[]
+    /** 行そのものが無いサービス。権利は User.plan で判定するため、行が無くても無料には落ちない */
+    missing: string[]
+    /** 行はあるが値が期待と違うサービス（例 seo=FREE）。行を読むツールでは無料扱いになりうる */
+    wrong: Array<{ serviceId: string; plan: string }>
+  }>
   /** Stripe に生きた契約が無いのに DB が有料のまま（＝過剰付与・解約の反映漏れ） */
   overGranted: Array<{ email: string | null; plan: string }>
   duplicates: Array<{ email: string; subs: AuditSubscription[] }>
@@ -71,6 +81,27 @@ export type BillingAudit = {
 }
 
 const PLAN_RANK: Record<string, number> = { FREE: 0, GUEST: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
+
+/**
+ * サービス別の行を「行が無い」と「値が違う」に分ける（INV-2 の点検）。
+ * 行が無いのは、ALL_SERVICE_IDS に新しいサービスを足したあと、既存の有料の人に行を補っていないときに起きる
+ * （2026-10 に asklink・popup・tenjikai・shanai・income・expense を足したときの取りこぼし）。
+ * 権利は User.plan と行の上位で決まるので、行が無いだけでは無料に落ちない。値が違う行は、行を読むツールで無料扱いになりうる。
+ */
+export function classifyServicePlanDrift(
+  rowsOfUser: Map<string, string>,
+  expected: string,
+  serviceIds: readonly string[],
+): { missing: string[]; wrong: Array<{ serviceId: string; plan: string }> } {
+  const missing: string[] = []
+  const wrong: Array<{ serviceId: string; plan: string }> = []
+  for (const serviceId of serviceIds) {
+    const plan = rowsOfUser.get(serviceId)
+    if (plan === undefined) missing.push(serviceId)
+    else if (plan !== expected) wrong.push({ serviceId, plan })
+  }
+  return { missing, wrong }
+}
 
 function jstDate(d: Date): string {
   return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -318,9 +349,12 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       checkedUsers.add(dbUser.id)
       const expected = dbUser.plan === 'BUNDLE' ? 'PRO' : dbUser.plan
       const rowsOfUser = byUser.get(dbUser.id) || new Map<string, string>()
-      const broken = ALL_SERVICE_IDS.filter((sid) => (rowsOfUser.get(sid) ?? 'MISSING') !== expected)
-      if (broken.length > 0 && !manualGrantEmails.has(String(sub.email || '').toLowerCase())) {
-        serviceDrift.push({ email: sub.email, userPlan: dbUser.plan, expected, broken: [...broken] })
+      const { missing, wrong } = classifyServicePlanDrift(rowsOfUser, expected, ALL_SERVICE_IDS)
+      if ((missing.length > 0 || wrong.length > 0) && !manualGrantEmails.has(String(sub.email || '').toLowerCase())) {
+        serviceDrift.push({
+          email: sub.email, userPlan: dbUser.plan, expected,
+          broken: [...wrong.map((w) => w.serviceId), ...missing], missing, wrong,
+        })
       }
     }
   }
@@ -460,7 +494,14 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     lines.push('')
     lines.push(`*【要対応】有料なのにサービス別プランが揃っていない方: ${audit.serviceDrift.length}名*`)
     for (const d of audit.serviceDrift) {
-      lines.push(`・${d.email || '不明'} ｜ User.plan=${d.userPlan}（期待 ${d.expected}）｜ 未反映: ${d.broken.join(', ')}`)
+      const parts = [
+        d.wrong.length ? `値違い: ${d.wrong.map((w) => `${w.serviceId}=${w.plan}`).join(', ')}` : '',
+        d.missing.length ? `行なし: ${d.missing.join(', ')}` : '',
+      ].filter(Boolean)
+      lines.push(`・${d.email || '不明'} ｜ User.plan=${d.userPlan}（期待 ${d.expected}）｜ ${parts.join(' ｜ ')}`)
+    }
+    if (audit.serviceDrift.every((d) => d.wrong.length === 0)) {
+      lines.push('・行が無いだけで、値の違う行はありません。権利は User.plan で判定するため、ツールが無料扱いになることはありません。')
     }
     lines.push('・対処: 本人に料金ページの「課金状態を確認してプランを反映する」を押してもらうか、運営で全サービス行を反映してください。')
   }

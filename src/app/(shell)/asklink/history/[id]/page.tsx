@@ -20,7 +20,7 @@ export default function AskLinkRunPage() {
   // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（0 は通信の失敗）
   const [errStatus, setErrStatus] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
-  const queue = useBannerQueue(setRun)
+  const queue = useBannerQueue(setRun, run?.id)
 
   useEffect(() => {
     let alive = true
@@ -93,7 +93,7 @@ export default function AskLinkRunPage() {
               </div>
             )
           )}
-          <RunResult run={run} onChange={setRun} bannerBusy={queue.busy} onGenerateBanner={(kind) => void queue.generate(run.id, [kind])} />
+          <RunResult key={run.id} run={run} onChange={setRun} bannerBusy={queue.busy} onGenerateBanner={(kind) => void queue.generate(run.id, [kind])} />
         </>
       )}
     </div>
