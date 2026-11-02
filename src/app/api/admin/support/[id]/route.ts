@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -46,11 +47,11 @@ async function load(id: string) {
 }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  if (!(await admin())) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  if (!(await admin())) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
   const { id } = 'then' in ctx.params ? await ctx.params : ctx.params
   const ticket = await load(id)
-  if (!ticket) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  return NextResponse.json({ ticket })
+  if (!ticket) return privateApiJson({ error: '見つかりません' }, { status: 404 })
+  return privateApiJson({ ticket })
 }
 
 export async function POST(req: NextRequest, ctx: Ctx) {

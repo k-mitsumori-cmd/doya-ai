@@ -1,5 +1,6 @@
 'use client'
 
+import { downscaleToDataUrl } from '@/lib/image-downscale'
 import { templateImageUrl } from '@/lib/banner-template-storage'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
@@ -15,7 +16,8 @@ import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import Image from 'next/image'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
+import { ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
+import BannerModeChooser from '@/components/banner/BannerModeChooser'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { galleryTheme, GalleryCategoryHeading, GalleryGenreTabs, GalleryMoreTile, GalleryPlanTabs, GallerySkeleton, GalleryTemplateCard } from '@/components/banner/BannerTemplateGallery'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -369,9 +371,10 @@ function BannerTestPageInner() {
     const file = e.target.files?.[0]
     if (file) {
       setLogoFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => setLogoPreview(reader.result as string)
-      reader.readAsDataURL(file)
+      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
+      downscaleToDataUrl(file, 512)
+        .then(url => setLogoPreview(url))
+        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
     }
   }, [])
   
@@ -379,9 +382,10 @@ function BannerTestPageInner() {
     const file = e.target.files?.[0]
     if (file) {
       setPersonFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => setPersonPreview(reader.result as string)
-      reader.readAsDataURL(file)
+      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
+      downscaleToDataUrl(file, 1024)
+        .then(url => setPersonPreview(url))
+        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
     }
   }, [])
 
@@ -2953,10 +2957,10 @@ function BannerTestPageInner() {
   return (
     <>
       <div className={nextStyles.heroWrap}>
+        <BannerModeChooser current="template" />
         <ToolHero
           title="好きな見本を選んで、文字を入れるだけ。"
-          lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。見本が合わなければ、ゼロからもつくれます。"
-          action={<Button href="/banner/dashboard/create" variant="secondary" icon="PlusCircle">ゼロからつくる</Button>}
+          lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。"
           tool="banner"
           artAlt=""
         />

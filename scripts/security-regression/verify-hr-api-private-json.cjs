@@ -29,6 +29,7 @@ function route(name, { fail = false, context = null, invitation = null, members 
     if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) continue;
     const module = statement.moduleSpecifier.text;
     if (module === '@/lib/private-api-response') continue; // Load the real response helper.
+    if (module === '@/lib/direct-upload/flag') { mocks[module] = { directUploadRollout: () => false, isDirectConfirm: () => false }; continue; } // 旗 off（これまでの経路）
     const names = statement.importClause?.namedBindings;
     mocks[module] = {};
     if (names && ts.isNamedImports(names)) for (const element of names.elements) {
