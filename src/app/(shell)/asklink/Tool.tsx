@@ -9,6 +9,7 @@ import { Link2, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
+import { BANNER_SPECS } from '@/lib/asklink/types'
 import { ToolHero } from '@/components/ds'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
@@ -67,8 +68,12 @@ export default function AskLinkTool() {
   const [errStatus, setErrStatus] = useState<number | null>(null)
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
   const [run, setRun] = useState<RunDto | null>(null)
-  const queue = useBannerQueue(setRun)
+  const queue = useBannerQueue(setRun, run?.id)
   const [doneShown, setDoneShown] = useState(false)
+
+  const bannersReady = Boolean(run && BANNER_SPECS.every((spec) =>
+    run.banners.some((banner) => banner.kind === spec.kind && banner.status === 'done' && Boolean(banner.url))
+  ))
 
   // 入力の誤り（400）を、どの欄の誤りかとして支援技術に伝える
   const urlInvalid = Boolean(error) && errStatus === 400 && !needManual
@@ -77,6 +82,7 @@ export default function AskLinkTool() {
   const create = async () => {
     if (loading) return
     setLoading(true)
+    setDoneShown(false)
     setError(null)
     setErrStatus(null)
     setLimit(null)
@@ -244,7 +250,7 @@ export default function AskLinkTool() {
 
       {run && (
         <div className="mt-8">
-          {doneShown && !queue.busy && (
+          {doneShown && !queue.pending && queue.errorStatus === null && bannersReady && (
             <div className="mb-4">
               <DoneBanner
                 title="質問リンクとバナーができました。下のボタンでコピーして、ポップアップに貼ってください。"
@@ -253,10 +259,12 @@ export default function AskLinkTool() {
               />
             </div>
           )}
-          {queue.busy && (
+          {queue.pending && (
             <p className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50 p-3 text-sm font-bold text-[#0066ff]">
               <Loader2 className="h-4 w-4 animate-spin" />
-              バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。
+              {queue.busy
+                ? <>バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。</>
+                : 'バナー画像の作成を待っています。前の画像の処理が終わり次第、作成します。リンクは先にお使いいただけます。'}
             </p>
           )}
           {(
