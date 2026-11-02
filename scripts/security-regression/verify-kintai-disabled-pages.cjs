@@ -30,7 +30,16 @@ const mocks = {
   '@/lib/kintai/use-escape': { useEscapeToClose: () => {} },
 }
 
-function page(file) {
+// Render the real extracted clock hook during SSR; effects remain unexecuted here.
+const loadTs = require('./load-typescript.cjs').load
+mocks['@/lib/kintai/use-clock'] = loadTs('src/lib/kintai/use-clock.ts', {
+  react: React,
+  './types': mocks['@/lib/kintai/types'],
+  './clock-response': loadTs('src/lib/kintai/clock-response.ts'),
+  './user-error': mocks['@/lib/kintai/user-error'],
+}, { setTimeout, clearTimeout, AbortController })
+
+function moduleOf(file) {
   const source = fs.readFileSync(path.join(root, file), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
@@ -41,8 +50,14 @@ function page(file) {
     if (name in mocks) return mocks[name]
     throw Error(`Unmocked import: ${name}`)
   }, Date, URL, console, setTimeout, clearTimeout }, { filename: file })
-  return exports.default
+  return exports
 }
+function page(file) { return moduleOf(file).default }
+
+mocks['@/lib/error-report-input'] = loadTs('src/lib/error-report-input.ts')
+mocks['@/lib/pricing'] = { SUPPORT_CONTACT_URL: 'https://support.synthetic.invalid/contact' }
+mocks['@/components/ds/kun-src'] = loadTs('src/components/ds/kun-src.ts')
+mocks['@/components/common/ErrorReportForm'] = moduleOf('src/components/common/ErrorReportForm.tsx')
 
 const requests = page('src/app/(shell)/kintai/requests/page.tsx')
 const newRequest = page('src/app/(shell)/kintai/requests/new/page.tsx')

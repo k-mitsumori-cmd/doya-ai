@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { ErrorNotice } from '@/components/ds/feedback'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function DoyaSlideError({
   error,
@@ -19,6 +20,7 @@ export default function DoyaSlideError({
         <Link href="/doyaslide/projects" className="text-[#0066ff] hover:underline">プロジェクト一覧へ戻る</Link>
         <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:underline">お問い合わせ</a>
       </div>
+      <ErrorReportForm errorType="500" />
     </div>
   )
 }
