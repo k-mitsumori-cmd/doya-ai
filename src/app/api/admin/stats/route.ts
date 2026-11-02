@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { summarizeRegisteredPlans } from '@/lib/admin-registered-plan-stats'
 import { serviceLabelOf } from '@/lib/attribution'
 import { jstDayRange, jstMonthRange, jstDateKey } from '@/lib/jst'
 
@@ -34,15 +35,8 @@ export async function GET(request: NextRequest) {
 
     // ユーザー統計
 
-    const totalUsers = await prisma.user.count()
-
-    // PRO/BUSINESS/ENTERPRISEユーザー
-
-    const proUsers = await prisma.user.count({
-      where: {
-        plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] }
-      }
-    })
+    const planRows = await prisma.user.groupBy({ by: ['plan'], _count: { _all: true } })
+    const { totalUsers, paidPlanUsers: proUsers, registeredPlanTiers } = summarizeRegisteredPlans(planRows)
 
     // Stripe連携ユーザー
 
@@ -115,8 +109,8 @@ export async function GET(request: NextRequest) {
 
       const queryServiceId = serviceId === 'writing' ? 'seo' : serviceId
 
-      let serviceUsers = 0
-      let serviceProUsers = 0
+      let serviceUsers: number | null = null
+      let serviceProUsers: number | null = null
       let serviceGenerations = 0
       let serviceTodayGenerations = 0
       let serviceLastMonthGenerations = 0
@@ -126,10 +120,12 @@ export async function GET(request: NextRequest) {
       const usesGeneration = ['banner', 'writing'].includes(serviceId)
 
       if (usesGeneration) {
-        serviceUsers = await prisma.userServiceSubscription.count({ where: { serviceId: queryServiceId } })
-        serviceProUsers = await prisma.userServiceSubscription.count({
-          where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
+        const servicePlanRows = await prisma.userServiceSubscription.groupBy({
+          by: ['plan'], where: { serviceId: queryServiceId }, _count: { _all: true },
         })
+        const servicePlans = summarizeRegisteredPlans(servicePlanRows)
+        serviceUsers = servicePlans.totalUsers
+        serviceProUsers = servicePlans.paidPlanUsers
         serviceGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId } })
         serviceTodayGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart, lt: todayEnd } } })
         serviceLastMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
@@ -185,6 +181,7 @@ export async function GET(request: NextRequest) {
         icon: label.icon,
         gradient: label.gradient,
         users: serviceUsers,
+        userCountLabel: usesGeneration ? '個別プラン登録者' : ['hr', 'kintai'].includes(serviceId) ? '従業員' : 'ユーザー',
         proUsers: serviceProUsers,
         generations: serviceGenerations,
         todayGenerations: serviceTodayGenerations,
@@ -237,6 +234,7 @@ export async function GET(request: NextRequest) {
       // 基本統計
       totalUsers,
       premiumUsers: proUsers,
+      registeredPlanTiers,
       enterpriseUsers: stripeUsers,
       freeUsers,
 

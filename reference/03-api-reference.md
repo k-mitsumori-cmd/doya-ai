@@ -70,7 +70,7 @@ const id = p.id
 ### ユーザー・統計
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET | `/api/admin/stats` | DBのユーザー・生成・サービス別統計。旧 `monthlyRevenue` / `mrr` と未按分のサービス別 `revenue` は `null`。財務指標は下記の専用APIを使用 |
+| GET | `/api/admin/stats` | DBの登録・生成・サービス別統計。`registeredPlanTiers` は共通分類5段階、`premiumUsers` は有料プラン登録数で支払済み人数ではない。サービス人数の未集計は `null`、ラベルは `userCountLabel`。旧 `monthlyRevenue` / `mrr` と未按分のサービス別 `revenue` は `null`。読取失敗はprivate/no-storeの503。財務指標は下記の専用APIを使用 |
 | GET | `/api/admin/billing/stats` | 管理者Cookie認証後、`period=month\|quarter\|year`（既定month）のJST暦期間の入金・返金と、取得時点のMRR・顧客数・ARPUを返す。`refresh=1`でキャッシュを無効化。private/no-store。未認証401、期間不正400、取得・集計不能503 |
 | GET/PATCH/DELETE | `/api/admin/users` | ユーザー管理 (プラン変更, 使用回数管理, 削除) |
 | GET | `/api/admin/users/export` | ユーザーデータ CSV/JSON エクスポート |
@@ -104,7 +104,7 @@ const id = p.id
 | `/admin/login` | 管理者ログイン (Turnstile CAPTCHA対応) |
 | `/admin/users` | ユーザー管理 (プラン編集, Stripe情報, 使用回数リセット) |
 | `/admin/analytics` | 分析 (生成数推移, サービス別統計) |
-| `/admin/billing` | 請求 (月間売上, MRR, ユーザー内訳) |
+| `/admin/billing` | 対象期間の入金・返金・返金控除後入金、取得時点のMRR/ARPU・対象契約/顧客数、集計CSV。登録プラン数とは区別 |
 | `/admin/settings` | 設定 (管理者アカウント管理) |
 | `/admin/templates` | テンプレート管理 |
 | `/admin/admins` | 管理者ユーザー管理 |

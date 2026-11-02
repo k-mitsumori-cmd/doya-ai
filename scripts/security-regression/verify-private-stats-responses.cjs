@@ -14,7 +14,8 @@ function admin(mode) {
       if (mode === 'auth-error') throw new Error('PRIVATE_AUTH_ERROR')
       return { valid: mode === 'data-error' }
     } },
-    '@/lib/prisma': { prisma: { user: { count: async () => { throw new Error('PRIVATE_DATABASE_ERROR') } } } },
+    '@/lib/prisma': { prisma: { user: { groupBy: async () => { throw new Error('PRIVATE_DATABASE_ERROR') } } } },
+    '@/lib/admin-registered-plan-stats': load('src/lib/admin-registered-plan-stats.ts', { '@/lib/plan-utils': load('src/lib/plan-utils.ts') }),
     '@/lib/attribution': { serviceLabelOf: () => 'service' },
     '@/lib/jst': load('src/lib/jst.ts'),
   })

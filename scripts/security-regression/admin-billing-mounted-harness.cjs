@@ -2,7 +2,7 @@ process.env.NODE_ENV = 'development';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const repo = path.resolve(__dirname, '../..'), dep = name => require(path.join(repo, 'node_modules', name));
 const React = dep('react'), ts = dep('typescript'), { JSDOM } = dep('jsdom');
-const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts'];
+const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx'];
 async function scenario(strict, kind) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://synthetic.invalid/admin/billing' }), prior = new Map(), requests = [], navigation = [], timers = new Map(), downloads = [], blobs = new Map(), revoked = [];
   let root, timerId = 0;
@@ -42,11 +42,11 @@ async function scenario(strict, kind) {
       const range = adminBillingPeriodRange(period, new Date('2026-11-15T00:00:00.000Z')), amount = { month: 100, quarter: 200, year: 300 }[period];
       return { version: 1, currency: 'jpy', timeZone: 'Asia/Tokyo', period, label: range.label, since: range.since.toISOString(), until: range.until.toISOString(), updatedAt: '2026-11-15T00:00:00.000Z', paidInvoiceCount: 1, paidTotal: amount, refundTotal: 20, pendingRefundCount: 0, pendingRefundTotal: 0, netRevenue: amount - 20, mrr: 1000, activeSubscriptions: 2, mrrSubscriptions: 2, activeCustomers: 1, arpu: 1000, trialingSubscriptions: 1, discountPolicy: { subtractRecurringDiscounts: true, subtractOneTimeDiscounts: false }, ...extra };
     };
-    const dashboard = kind.startsWith('dashboard-');
-    const Page = load(dashboard ? 'src/app/admin/page.tsx' : 'src/app/admin/billing/page.tsx').default;
+    const dashboard = kind.startsWith('dashboard-'), analytics = kind.startsWith('analytics-');
+    const Page = load(dashboard ? 'src/app/admin/page.tsx' : analytics ? 'src/app/admin/analytics/page.tsx' : 'src/app/admin/billing/page.tsx').default;
     root = dep('react-dom/client').createRoot(document.getElementById('root'));
     await React.act(async () => root.render(React.createElement(strict ? React.StrictMode : React.Fragment, {}, React.createElement(Page))));
-    assert.equal(requests.length, (strict ? 2 : 1) * (dashboard ? 2 : 1)); if (!dashboard) assert(document.querySelector('[role="status"][aria-label="売上・課金データを読み込み中"]'));
+    assert.equal(requests.length, (strict ? 2 : 1) * (dashboard ? 2 : 1)); if (!dashboard && !analytics) assert(document.querySelector('[role="status"][aria-label="売上・課金データを読み込み中"]'));
     const flush = async fn => React.act(async () => { fn?.(); for (let i = 0; i < 12; i++) await Promise.resolve() });
     const reply = async (rows = [...requests], status = 200, data) => flush(() => rows.forEach(row => row.resolve(new Response(JSON.stringify(data ?? fixture(new URL(row.url, 'https://synthetic.invalid').searchParams.get('period'))), { status }))));
     const button = name => { const value = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === name); assert(value, name); return value };
@@ -57,10 +57,31 @@ async function scenario(strict, kind) {
     const error = () => { assert(alert()); assert(!body().includes('PRIVATE_')); assert(!document.querySelector('[role="status"]')); assert(button('再取得する')); assert(!body().includes('返金控除後の入金')) };
     const fireDeadline = () => flush(() => { const active = [...timers].filter(([, x]) => x.ms === 30000); assert.equal(active.length, 1); const [id, t] = active[0]; timers.delete(id); t.fn() });
     const initial = [...requests];
-    if (dashboard) {
+    if (analytics) {
+      const stats = { totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
+      await reply(initial, 200, stats);
+      assert(body().includes('有料プラン登録')); assert(body().includes('登録比率 47.1%')); assert(!body().includes('有料会員')); assert(!body().includes('CVR'));
+      for (const label of ['有料プラン登録', '総ユーザー', '本日生成']) {
+        const node = [...document.querySelectorAll('p')].find(e => e.textContent === label); assert(node, label);
+        assert.equal(node.parentElement.querySelectorAll('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right').length, 0);
+      }
+      assert(requests.every(x => x.url === '/api/admin/stats'));
+    } else if (dashboard) {
       const db = initial.filter(x => x.url === '/api/admin/stats'), financial = initial.filter(x => x.url.startsWith('/api/admin/billing/stats?'));
       assert.equal(db.length, strict ? 2 : 1); assert.equal(financial.length, db.length);
       const stats = { totalUsers: 9, premiumUsers: 2, enterpriseUsers: 3, freeUsers: 7, totalGenerations: 45, todayGenerations: 4, monthGenerations: 10, lastMonthGenerations: 10, generationGrowth: 0, avgGenerationsPerUser: 5, monthlyRevenue: 99999999, mrr: 99999999, conversionRate: 22.2, services: [{ id: 'banner', name: '合成サービス', icon: '', gradient: '', users: 5, proUsers: 1, generations: 8, todayGenerations: 2, revenue: null, growth: 0 }], chartData: Array(12).fill(2), recentUsers: 1, recentGenerations: [], adminLoginAttempts: 0, lastUpdated: '2026-11-15T00:00:00.000Z' };
+      if (kind.startsWith('dashboard-registration-')) {
+        const grouped = load('src/lib/admin-registered-plan-stats.ts').summarizeRegisteredPlans([
+          { plan: 'GUEST', _count: { _all: 5 } }, { plan: 'FREE', _count: { _all: 3 } }, { plan: 'NOT_PRO', _count: { _all: 10 } },
+          { plan: 'LIGHT', _count: { _all: 5 } }, { plan: 'BUNDLE', _count: { _all: 8 } }, { plan: 'ENTERPRISE', _count: { _all: 3 } },
+        ]);
+        Object.assign(stats, { totalUsers: grouped.totalUsers, premiumUsers: grouped.paidPlanUsers, freeUsers: grouped.otherPlanUsers, registeredPlanTiers: grouped.registeredPlanTiers, conversionRate: 47.1 });
+        if (kind === 'dashboard-registration-unknown') stats.services = [
+          { ...stats.services[0], users: 0, proUsers: 0, userCountLabel: '個別プラン登録者' },
+          { ...stats.services[0], id: 'interview', name: '合成面談', users: null, proUsers: null, userCountLabel: 'ユーザー' },
+          { ...stats.services[0], id: 'hr', name: '合成HR', users: 7, proUsers: null, userCountLabel: '従業員' },
+        ];
+      }
       if (kind === 'dashboard-counts-error') {
         await flush(() => db.forEach(x => x.reject(Error('Synthetic counts failure')))); await reply(financial);
         assert(body().includes('MRR（税抜の月額換算）：¥1,000')); assert(body().includes('返金控除後入金：¥80'));
@@ -72,6 +93,18 @@ async function scenario(strict, kind) {
           if (kind === 'dashboard-refresh-error') {
             const count = requests.length; await click('入金・契約指標を再取得'); assert.equal(requests.length, count + 1); assert(requests.at(-1).url.endsWith('refresh=1')); await reply([requests.at(-1)], 503); assert(alert().textContent.includes('前回取得したデータ')); assert(body().includes('¥80')); assert(body().includes('合成サービス')); await click('入金・契約指標を再取得'); await reply([requests.at(-1)]); assert(!alert());
           }
+        }
+      }
+      if (kind.startsWith('dashboard-registration-')) {
+        const tiers = Object.fromEntries([...document.querySelectorAll('dt')].map(e => [e.textContent, e.nextElementSibling.textContent]));
+        assert.deepEqual(tiers, { 'ゲスト相当': '5人', '無料相当': '13人', 'ライト': '5人', 'プロ': '8人', 'エンタープライズ': '3人' });
+        assert(body().includes('登録比率 47.1%')); assert(body().includes('合計しないでください')); assert(body().includes('未認識の値は無料相当に含まれます'));
+        const labels = [...document.querySelectorAll('p')].filter(e => e.textContent === '有料プラン登録'); assert(labels.length >= 1);
+        assert.equal(labels[0].parentElement.querySelectorAll('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right').length, 0);
+        if (kind === 'dashboard-registration-unknown') {
+          const value = (name, label) => { const heading = [...document.querySelectorAll('h3')].find(e => e.textContent === name); assert(heading, name); const card = heading.closest('.overflow-hidden'); const p = [...card.querySelectorAll('p')].find(e => e.textContent === label); assert(p, label); return p.previousElementSibling.textContent };
+          assert.equal(value('合成サービス', '個別の有料プラン登録'), '0'); assert.equal(value('合成面談', '個別の有料プラン登録'), '未集計');
+          assert.equal(value('合成面談', 'ユーザー'), '未集計'); assert.equal(value('合成HR', '従業員'), '7'); assert.equal(value('合成HR', '個別の有料プラン登録'), '未集計');
         }
       }
       assert(!body().includes('99,999,999')); assert(!body().includes('9999.9万')); assert(!body().includes('月間売上'));
@@ -114,7 +147,7 @@ async function scenario(strict, kind) {
         await flush(() => { for (const [id, t] of timers) if (t.ms === 1000) { timers.delete(id); t.fn() } }); assert.deepEqual(revoked, [downloads[0].href]);
       }
     } else throw Error('Unknown scenario ' + kind);
-    assert(requests.every(x => (x.url.startsWith('/api/admin/billing/stats?period=') || dashboard && x.url === '/api/admin/stats') && x.options.credentials === 'include' && (x.url === '/api/admin/stats' || x.options.cache === 'no-store') && !x.options.method));
+    assert(requests.every(x => (x.url.startsWith('/api/admin/billing/stats?period=') || (dashboard || analytics) && x.url === '/api/admin/stats') && x.options.credentials === 'include' && (x.url === '/api/admin/stats' || x.options.cache === 'no-store') && !x.options.method));
     return { kind, strict, observed: true, requests: requests.length };
   } finally {
     if (root) await React.act(async () => root.unmount()); dom.window.close();
@@ -124,7 +157,7 @@ async function scenario(strict, kind) {
 async function run(kinds, prefix, resultEnv) {
   const cases = [];
   for (const strict of [false, true]) for (const kind of kinds) { cases.push(await scenario(strict, kind)); console.log(prefix + kind + ' ' + (strict ? 'StrictMode' : 'normal')) }
-  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
+  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: prefix === 'PASS Admin registered plan UI: ' ? 'Actual Dashboard and Analytics pages, actual common plan labels and grouped-count helper under React normal/StrictMode with synthetic deferred GET. Five registered tiers, paid ratio without growth arrows, known zero versus unknown service counts. No native paint, actual SQL or production acceptance.' : 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
   if (process.env[resultEnv]) fs.writeFileSync(process.env[resultEnv], JSON.stringify(result, null, 2) + '\n'); console.log(JSON.stringify({ passed: cases.length, failed: 0 }));
 }
 module.exports = { run, scenario };
