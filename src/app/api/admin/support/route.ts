@@ -1,9 +1,10 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // GET /api/admin/support?status=open — サポートチャットの受付の一覧（管理者だけ）
 // ⚠️ 利用者の生の声とメールアドレスを返す。管理者認証の valid を必ず見る。
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
@@ -12,7 +13,7 @@ import { SUPPORT_CATEGORY_LABEL, type SupportCategory } from '@/lib/support-chat
 
 export async function GET(req: NextRequest) {
   const { valid } = await verifyAdminSession((await cookies()).get(COOKIE_NAME)?.value || null)
-  if (!valid) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  if (!valid) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
 
   const status = new URL(req.url).searchParams.get('status')
   try {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.supportTicket.groupBy({ by: ['status'], _count: { _all: true } }),
     ])
-    return NextResponse.json({
+    return privateApiJson({
       ready: true,
       counts: Object.fromEntries(TICKET_STATUSES.map((s) => [s, counts.find((c) => c.status === s)?._count._all ?? 0])),
       tickets: rows.map((t) => ({
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (e) {
     // 表を本番に流す前は、受付は ServiceFeedback（ご意見の一覧）に残っている
-    if (isMissingTable(e)) return NextResponse.json({ ready: false, counts: {}, tickets: [] })
+    if (isMissingTable(e)) return privateApiJson({ ready: false, counts: {}, tickets: [] })
     throw e
   }
 }
