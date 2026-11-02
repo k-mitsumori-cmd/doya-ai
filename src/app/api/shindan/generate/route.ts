@@ -1427,7 +1427,8 @@ export async function POST(req: NextRequest) {
         await prisma.userServiceSubscription.upsert({
           where: { userId_serviceId: { userId: user.id, serviceId: 'shindan' } },
           update: { dailyUsage: needsReset ? 1 : { increment: 1 }, lastUsageReset: needsReset ? todayJST : undefined },
-          create: { userId: user.id, serviceId: 'shindan', plan: 'FREE', dailyUsage: 1, lastUsageReset: todayJST },
+          // 行の plan は User.plan と揃える（INV-2）。固定の FREE で作ると有料の人の行がずれる
+          create: { userId: user.id, serviceId: 'shindan', plan: user.plan === 'BUNDLE' ? 'PRO' : (user.plan || 'FREE'), dailyUsage: 1, lastUsageReset: todayJST },
         })
       }
     }

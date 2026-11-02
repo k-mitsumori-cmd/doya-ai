@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { higherPlan } from '@/lib/plan-utils'
 import { checkMovieUsage, getGuestIdFromRequest, MOVIE_GUEST_COOKIE } from '@/lib/movie/access'
 import { getTemplateById } from '@/lib/movie/templates'
 import { v4 as uuidv4 } from 'uuid'
@@ -67,9 +68,11 @@ export async function POST(req: NextRequest) {
     const guestId = getGuestIdFromRequest(req) ?? uuidv4()
 
     let userId: string | null = null
+    let accountPlan = 'FREE'
     if (session?.user?.email) {
-      const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
+      const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true, plan: true } })
       userId = user?.id ?? null
+      accountPlan = user?.plan ?? 'FREE'
     }
 
     const usage = await checkMovieUsage(userId, guestId)
@@ -90,7 +93,8 @@ export async function POST(req: NextRequest) {
           const subscription = await prisma.userServiceSubscription.findUnique({
             where: { userId_serviceId: { userId, serviceId: 'movie' } },
           })
-          currentPlan = subscription?.plan ?? 'FREE'
+          // 契約の基準は User.plan（INV-1）。古い行や行が無くても有料の権利を失わせない
+          currentPlan = higherPlan(subscription?.plan, accountPlan)
         }
         if (!isProPlan(currentPlan)) {
           return NextResponse.json(

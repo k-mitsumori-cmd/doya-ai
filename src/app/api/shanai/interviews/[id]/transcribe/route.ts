@@ -14,79 +14,70 @@ import { isCuid } from '@/lib/shanai/types'
 import { transcribeExistingJob, transcribeFromUrl, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { authorizeTranscriptSubmission, rememberTranscriptJob, completeTranscriptAttempt, failTranscriptAttempt, RECORDING_CHANGED, SUBMISSION_UNCERTAIN, ShanaiRecordingChangedError, type TranscriptContext } from '@/lib/shanai/transcription-attempt'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 const WAIT_MS = 4 * 60 * 1000
-
-async function saveResult(id: string, result: Awaited<ReturnType<typeof transcribeExistingJob>>) {
-  const segments = result.segments.map((s) => ({ start: s.start, end: s.end, speaker: s.speaker, text: s.text }))
-  await prisma.shanaiInterview.update({
-    where: { id },
-    data: { transcriptStatus: 'done', transcriptSegments: segments, transcriptError: null, status: 'FACTS' },
-  })
-}
-
-function isTimeout(e: unknown) {
-  return e instanceof Error && e.message.includes('タイムアウト')
-}
 
 export async function POST(_req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params
   const userId = await getShanaiUserId()
   if (!userId) return unauthorized()
   if (!isCuid(id)) return notFound()
-
-  const interview = await prisma.shanaiInterview.findFirst({ where: ownInterview(userId, id) })
-  if (!interview) return notFound()
-  if (interview.mode !== 'voice') return json({ error: 'このインタビューはアンケートで作成しています。' }, 400)
-  if (!interview.audioPath || !interview.audioSize || !interview.audioMime) return json({ error: '先に録音ファイルをアップロードしてください。' }, 400)
-  if (interview.transcriptStatus === 'done') return json({ success: true, interview: await interviewDetailDto(id, userId) })
-
+  let context: TranscriptContext | undefined
   try {
-    // 送信済みのジョブがあれば、その完了を待つだけ（二重に課金しない）
-    if (interview.transcriptStatus === 'processing' && interview.transcriptJobId) {
-      const result = await transcribeExistingJob(interview.transcriptJobId, WAIT_MS)
-      await saveResult(id, result)
-      return json({ success: true, interview: await interviewDetailDto(id, userId) })
+    const interview = await prisma.shanaiInterview.findFirst({ where: ownInterview(userId, id) })
+    if (!interview) return notFound()
+    if (interview.mode !== 'voice') return json({ error: 'このインタビューはアンケートで作成しています。' }, 400)
+    if (!interview.audioPath || !interview.audioSize || !interview.audioMime) return json({ error: '先に録音ファイルをアップロードしてください。' }, 400)
+    if (interview.transcriptStatus === 'done') return json({ success: true, interview: await interviewDetailDto(id, userId) })
+
+    // 完了待ち・準備中・送信結果不明の処理は、長さの再計測や新規送信をしない。
+    let reserved = await reserveTranscript(userId, id, { audioPath: interview.audioPath, durationSec: null })
+    if (!reserved.ok && reserved.needsDuration) {
+      let seconds: number
+      try { seconds = await inspectInterviewMediaDuration(interview.audioPath, interview.audioSize) }
+      catch { return json({ error: '録音の長さを確認できませんでした。mp3・m4a・wav などの形式で保存し直してお試しください。' }, 422) }
+      if (seconds > MAX_AUDIO_SECONDS) return json({ error: `録音は${MAX_AUDIO_SECONDS / 60}分までです。長い場合は分けて別のインタビューにしてください。` }, 400)
+      reserved = await reserveTranscript(userId, id, { audioPath: interview.audioPath, durationSec: seconds })
     }
-
-    // ⚠️ 長さは保存された中身から測る（ブラウザの申告を信用しない）。長い録音ほど費用がかかる
-    let seconds: number
-    try {
-      seconds = await inspectInterviewMediaDuration(interview.audioPath, interview.audioSize)
-    } catch {
-      return json({ error: '録音の長さを確認できませんでした。mp3・m4a・wav などの形式で保存し直してお試しください。' }, 422)
+    if (!reserved.ok) {
+      if (reserved.pending) return json({ success: true, pending: true })
+      if (reserved.quota) return quotaExceeded(reserved.quota)
+      return json({ error: reserved.reason || '文字起こしを開始できません。', ...(reserved.uncertain ? { code: 'TRANSCRIPT_SUBMISSION_UNCERTAIN' } : {}) }, reserved.uncertain || reserved.changed ? 409 : 400)
     }
-    if (seconds > MAX_AUDIO_SECONDS) return json({ error: `録音は${MAX_AUDIO_SECONDS / 60}分までです。長い場合は分けて別のインタビューにしてください。` }, 400)
-
-    const reserved = await reserveTranscript(userId, id)
-    if (!reserved.ok) return reserved.quota ? quotaExceeded(reserved.quota) : json({ error: reserved.reason }, 400)
-    await prisma.shanaiInterview.update({ where: { id }, data: { audioDurationSec: seconds } })
-
-    const result = await transcribeFromUrl({
-      storagePath: interview.audioPath,
-      mimeType: interview.audioMime,
-      fileSize: interview.audioSize,
-      language: 'ja',
-      maxWaitMs: WAIT_MS,
-      onJobSubmitted: async (jobId) => {
-        await prisma.shanaiInterview.update({ where: { id }, data: { transcriptJobId: jobId } })
-      },
-    })
-    await saveResult(id, result)
-    void recordServiceUsage({ userId, serviceId: 'shanai', action: '録音を文字起こし', summary: `${Math.ceil(seconds / 60)}分`, metadata: { seconds } })
+    if (reserved.action === 'done') return json({ success: true, interview: await interviewDetailDto(id, userId) })
+    const owned = reserved.context
+    context = owned
+    let jobId = reserved.jobId
+    const result = reserved.action === 'poll'
+      ? await transcribeExistingJob(jobId!, WAIT_MS)
+      : await transcribeFromUrl({
+        storagePath: interview.audioPath, mimeType: interview.audioMime, fileSize: interview.audioSize,
+        language: 'ja', maxWaitMs: WAIT_MS,
+        onBeforeSubmit: () => authorizeTranscriptSubmission(owned),
+        onJobSubmitted: async received => { await rememberTranscriptJob(owned, received); jobId = received },
+      })
+    const segments = result.segments.map(s => ({ start: s.start, end: s.end, speaker: s.speaker, text: s.text }))
+    const completed = await completeTranscriptAttempt(owned, jobId, segments)
+    if (completed === 'stale') return json({ error: RECORDING_CHANGED }, 409)
+    if (reserved.action === 'submit') {
+      void recordServiceUsage({ userId, serviceId: 'shanai', action: '録音を文字起こし', summary: `${Math.ceil(owned.durationSec / 60)}分`, metadata: { seconds: owned.durationSec } })
+    }
     return json({ success: true, interview: await interviewDetailDto(id, userId) })
   } catch (e) {
-    if (isTimeout(e)) return json({ success: true, pending: true })
+    if (e instanceof ShanaiRecordingChangedError) return json({ error: RECORDING_CHANGED }, 409)
     const terminal = e instanceof InterviewTranscriptionTerminalError
     console.error('[shanai/transcribe] failed', (e as Error)?.name)
     const message = terminal ? (e as Error).message : '文字起こしに失敗しました。時間をおいてもう一度お試しください。'
-    // ⚠️ 送信済みのジョブがある一時的な失敗（通信エラー等）は processing のまま残す。
-    //    次の呼び出しでそのジョブの完了を待つだけにし、同じ録音を二重に送らない
-    const current = await prisma.shanaiInterview.findUnique({ where: { id }, select: { transcriptJobId: true } }).catch(() => null)
-    if (!terminal && current?.transcriptJobId) return json({ success: true, pending: true })
-    await prisma.shanaiInterview.update({ where: { id }, data: { transcriptStatus: 'failed', transcriptError: message, transcriptJobId: null } }).catch(() => {})
+    if (context) {
+      // DBが一時的に使えなくても、POST許可済みの記録は消さず、次回の二重送信を防ぐ。
+      const outcome = await failTranscriptAttempt(context, terminal, message).catch(() => 'uncertain' as const)
+      if (outcome === 'stale') return json({ error: RECORDING_CHANGED }, 409)
+      if (outcome === 'pending') return json({ success: true, pending: true })
+      if (outcome === 'uncertain') return json({ error: SUBMISSION_UNCERTAIN, code: 'TRANSCRIPT_SUBMISSION_UNCERTAIN' }, 409)
+    }
     return json({ error: message }, terminal ? 422 : 500)
   }
 }

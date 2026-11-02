@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, notFound, ownInterview, unauthorized } from '@/lib/shanai/access'
 import { interviewDetailDto } from '@/lib/shanai/dto'
 import { getInterviewDetail } from '@/lib/shanai/interviews-read'
-import { removeFiles } from '@/lib/shanai/storage'
+import { enqueueShanaiInterviewStoragePurge, lockShanaiStorage } from '@/lib/shanai/storage-purge'
 import { clip, isCuid, oneOf } from '@/lib/shanai/types'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -66,12 +66,16 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const userId = await getShanaiUserId()
     if (!userId) return unauthorized()
     if (!isCuid(id)) return notFound()
-    const row = await prisma.shanaiInterview.findFirst({ where: ownInterview(userId, id), include: { photos: { select: { storagePath: true } } } })
-    if (!row) return notFound()
-    await prisma.shanaiInterview.delete({ where: { id: row.id } })
-    // 録音・写真は個人の情報なので、行と一緒にストレージからも消す
-    await removeFiles([row.audioPath || '', ...row.photos.map((p) => p.storagePath)])
-    return json({ success: true })
+    const deleted = await prisma.$transaction(async tx => {
+      await lockShanaiStorage(tx, id)
+      const row = await tx.shanaiInterview.findFirst({ where: ownInterview(userId, id), select: { id: true, userId: true } })
+      if (!row) return false
+      await enqueueShanaiInterviewStoragePurge(tx, row)
+      await tx.shanaiInterview.delete({ where: { id: row.id } })
+      return true
+    })
+    if (!deleted) return notFound()
+    return json({ success: true, fileCleanupPending: true })
   } catch (e) {
     console.error('[shanai/interview][DELETE] failed', (e as Error)?.name)
     return json({ error: '削除に失敗しました。' }, 500)

@@ -59,7 +59,7 @@ export async function transcribeFromUrl(opts: {
   fileSize: number
   language?: string
   maxWaitMs?: number
-  onBeforeSubmit?: () => void
+  onBeforeSubmit?: () => void | Promise<void>
   onJobSubmitted?: (jobId: string) => Promise<void>
 }): Promise<TranscriptionResult> {
   const { storagePath, fileSize } = opts
@@ -72,7 +72,7 @@ export async function transcribeFromUrl(opts: {
   console.log(`[interview] 文字起こし開始: ${sizeMB}MB, mime=${opts.mimeType}`)
 
   // 1. AssemblyAI にジョブ送信
-  opts.onBeforeSubmit?.()
+  await opts.onBeforeSubmit?.()
   const transcriptId = await submitJob(fileUrl, opts.language, apiKey)
   await opts.onJobSubmitted?.(transcriptId)
   console.log('[interview] AssemblyAI ジョブ送信完了')

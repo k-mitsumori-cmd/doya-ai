@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import { useExpenseQuery } from '@/components/expense/api'
@@ -40,8 +41,17 @@ export default function DashboardPage() {
   const base = `/expense/${orgSlug}`
   const ym = currentYm()
   // 新しい見た目（キービジュアル・数字の動き・割合の円）は、許可した人だけに出す（チェックリスト §5.1）
-  const { canManage } = useExpenseOrg()
+  const { canManage, loadingStartedAt } = useExpenseOrg()
   const summary = useExpenseQuery<Summary>('/api/expense/summary', orgSlug)
+  const firstSummaryLoad = useRef(true)
+  useEffect(() => {
+    if (!summary.loading) firstSummaryLoad.current = false
+  }, [summary.loading])
+  // 権限確認と最初の集計を、1回の読み込みとして300ms待つ。
+  // 後から再試行する場合は、通常どおり新しく300ms待つ。
+  const loadingDelayMs = firstSummaryLoad.current && loadingStartedAt !== undefined
+    ? Math.max(0, 300 - (Date.now() - loadingStartedAt))
+    : 300
   const thisM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${ym}`, orgSlug)
   const nextM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${addMonths(ym, 1)}`, orgSlug)
 
@@ -51,7 +61,7 @@ export default function DashboardPage() {
     .filter((s) => s.status !== 'paid' && s.status !== 'skipped' && s.plannedPayDate >= today && s.plannedPayDate <= limit)
     .sort((a, b) => a.plannedPayDate.localeCompare(b.plannedPayDate))
 
-  if (summary.loading && !summary.data) return <PageBody><Loading kpi /></PageBody>
+  if (summary.loading && !summary.data) return <PageBody><Loading kpi delayMs={loadingDelayMs} /></PageBody>
   if (summary.error || !summary.data) return <PageBody><ErrorBox forbidden={summary.forbidden} onRetry={summary.reload} /></PageBody>
   const s = summary.data
   const todo = s.actionItems.length + s.contractAlerts.length

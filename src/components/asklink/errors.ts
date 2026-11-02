@@ -37,7 +37,10 @@ export function asklinkErrorCopy(status: number, action: Action): AskLinkErrorCo
   if (status === 401) return { what: 'ログインの有効期限が切れました。', how: 'ログインし直してから、もう一度お試しください。', signin: true }
   if (status === 403) return { what: 'この操作をする権限がありません。', how: '必要なときは、管理者に権限の付与を依頼してください。' }
   if (status === 404) return { what: 'この結果は見つかりませんでした。', how: '削除されたか、別のアカウントで作成された結果です。「これまでの結果」から選び直してください。' }
-  if (status === 409) return { what: 'このバナーはいま作成中です。', how: '1〜2分ほど待ってから、ページを開き直してください。' }
+  if (status === 409) {
+    if (action === 'save') return { what: '同時に更新されたため、保存できませんでした。', how: '入力内容は残しています。少し待ってから、もう一度保存してください。' }
+    return { what: 'このバナーはいま作成中です。', how: '1〜2分ほど待ってから、ページを開き直してください。' }
+  }
   if (status === 429) {
     if (action === 'banner') return { what: 'このバナーを作り直せる回数の上限に達しました。', how: '別の結果で作るか、新しく作成してください。' }
     if (action === 'switch') return { what: 'この結果で作り直せる回数の上限に達しました。', how: 'URLを入れて、新しく作成してください。' }

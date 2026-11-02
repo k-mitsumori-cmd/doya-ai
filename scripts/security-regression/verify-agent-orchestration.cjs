@@ -171,9 +171,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const watched=await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),WATCH_USER);
     assert.equal(watched.label.prefix,'【自動点検】');
     assert.equal(watched.label.apply('お見積り',200),'【自動点検】お見積り');
-    for(const bad of ['', 'x', token.slice(0,-1)+'0', crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
+    for(const bad of ['', 'x', token.slice(0,-1)+(token.endsWith('0')?'1':'0'), crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
       const d=await rs.toolDepsFor(watchReq(bad?{'x-doya-system-watch':bad}:{}),WATCH_USER);
-      assert.equal(d.label,undefined,'wrong or missing signal must not label: '+bad);
+      assert.equal(d.label,undefined,'wrong or missing system-watch signal must not label');
     }
     // 正しい値でも、ほかの利用者・ログインの分からないリクエストには付けない
     assert.equal((await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),'someone-else')).label,undefined);
@@ -391,12 +391,12 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     g=await loadGate(envOf('preview'),ALLOWED,[]).agentGate({store:false});
     assert.equal(g.userId,'u_1');
     // 記録の API は、どれも入口（agentGate）を最初に通る。表（prismaRunRepo）や本文はそのあと
-    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/summary/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
       const src=read(f);
       const gate=src.indexOf('agentGate({ store: true })');
       assert.ok(gate>0,f);
       // 本文を読む呼び出し（readOperationalJson を直接、または会社名だけを読む companyNameFrom）も、入口のあと
-      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','prismaRunRepo,','createRun(','latestOpenRun(','agentTaskCounts(','runStoredTask(']){
         const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
       }
     }

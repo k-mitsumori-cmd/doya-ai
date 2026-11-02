@@ -34,6 +34,11 @@ const SHARED_SKIP_PREFIXES = [
   '/robots',
   '/sitemap',
   '/site.webmanifest',
+  // 旗 all のときのロゴ・マニフェスト・OGP（ドヤバディ）。別ドメインでも書き換えずに返す
+  '/brand/',
+  '/site-buddy.webmanifest',
+  '/ogp/',
+  '/ogp-buddy/',
 ]
 
 function shouldSkip(pathname: string): boolean {

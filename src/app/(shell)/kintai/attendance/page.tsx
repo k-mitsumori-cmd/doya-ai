@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { hasMinRole } from '@/lib/kintai/access-client'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -25,7 +26,8 @@ function countWorkingDays(year: number, month: number): number {
 }
 
 export default function AttendancePage() {
-  const { isActive } = useKintaiAccess()
+  const { isActive, ready, role } = useKintaiAccess()
+  const canExport = ready === true && isActive === true && typeof role === 'string' && hasMinRole(role, 'hr_admin')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [data, setData] = useState<any[]>([])
@@ -102,13 +104,13 @@ export default function AttendancePage() {
               <p className="text-xs text-slate-500">勤怠データの確認と修正申請</p>
             </div>
           </div>
-          <a
+          {canExport && <a
             href={`/api/kintai/attendance/export?year=${year}&month=${month}&format=csv`}
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors bg-white"
           >
             <span className="material-symbols-outlined text-base">download</span>
             CSV
-          </a>
+          </a>}
         </div>
 
         {/* ===== Month Navigation (Google Calendar style) ===== */}
@@ -122,7 +124,7 @@ export default function AttendancePage() {
             className="text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-300 cursor-pointer appearance-auto"
           >
             {Array.from({ length: 24 }, (_, i) => {
-              const d = new Date(); d.setMonth(d.getMonth() - 12 + i);
+              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 12 + i);
               const y = d.getFullYear(); const m = d.getMonth() + 1;
               return <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年{m}月</option>
             })}

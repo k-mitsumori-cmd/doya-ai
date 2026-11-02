@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
-function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFailsOnce = false } = {}) {
+function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFailsOnce = false, serviceDrift = [] } = {}) {
   const posts = []
   const delivered = new Set()
   const reportKeys = []
@@ -10,7 +10,7 @@ function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFails
   const timestamp = Date.parse(now || '2026-10-01T00:00:00Z')
   class FixedDate extends Date { static now() { return timestamp } }
   const audit = { webhookOk: true, subscriptions: [], newInWindow: [], mismatched: [], tierDrift: [],
-    unmappedPlans: [], serviceDrift: [], overGranted: [], duplicates: [] }
+    unmappedPlans: [], serviceDrift, overGranted: [], duplicates: [] }
   const route = load('src/app/api/cron/billing-audit/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status || 200 }) } },
     '@/lib/billing-audit': {
@@ -47,6 +47,21 @@ function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFails
     assert.equal(f.alerts.length, 1)
     assert(!JSON.stringify(response.body).includes('private monthly failure'))
     assert(!JSON.stringify(f.alerts).includes('private monthly failure'))
+  })
+  await check('service rows that are only missing raise a warning, wrong plans stay critical', async () => {
+    const missingOnly = { email: 'a@example.invalid', userPlan: 'PRO', expected: 'PRO', broken: ['popup'], missing: ['popup'], wrong: [] }
+    const wrong = { email: 'b@example.invalid', userPlan: 'PRO', expected: 'PRO', broken: ['seo'], missing: [], wrong: [{ serviceId: 'seo', plan: 'FREE' }] }
+    const f = fixture({ serviceDrift: [missingOnly, wrong] })
+    assert.equal((await f.route.GET(f.request())).status, 200)
+    const critical = f.alerts.filter((a) => a.dedupKey === 'billing-service-plan-drift')
+    const warn = f.alerts.filter((a) => a.dedupKey === 'billing-service-plan-missing-rows')
+    assert.equal(critical.length, 1); assert.equal(critical[0].level, 'critical')
+    assert(critical[0].title.includes('1 名')); assert(critical[0].detail.includes('seo=FREE'))
+    assert.equal(warn.length, 1); assert.equal(warn[0].level, 'warn')
+    assert(warn[0].detail.includes('行なし: popup'))
+    const onlyMissing = fixture({ serviceDrift: [missingOnly] })
+    await onlyMissing.route.GET(onlyMissing.request())
+    assert.equal(onlyMissing.alerts.filter((a) => a.level === 'critical').length, 0)
   })
   await check('weekly calculation failure sends no partial daily report', async () => {
     const f = fixture({ now: '2026-10-05T00:00:00Z', weeklyFails: true })

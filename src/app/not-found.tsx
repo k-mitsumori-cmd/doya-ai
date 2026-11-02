@@ -10,6 +10,7 @@ import tokens from '@/components/ds/tokens.module.css'
 import { Button, EmptyState } from '@/components/ds'
 import DoyaLogo from '@/components/brand/DoyaLogo'
 import { ServicePopupHide } from '@/components/ServicePopupGuard'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 // タブの題も 404 にする。ページが notFound() を呼んだときは、そのページの題ではなく、ここの題が使われる
 // （/home/roles が 404 なのに「メンバーと権限」と出ていた。2026-10-26 統括の指摘）
@@ -39,6 +40,7 @@ export default function NotFound() {
           <Link href="/pricing" className="text-[var(--blue)] hover:underline">料金プラン</Link>
           <Link href="/auth/signin" className="text-[var(--blue)] hover:underline">ログイン</Link>
         </nav>
+        <ErrorReportForm errorType="404" />
       </div>
     </main>
   )

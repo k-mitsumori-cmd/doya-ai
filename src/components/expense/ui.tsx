@@ -11,12 +11,13 @@ import { ROLE_RANK, SCHEDULE_STATUS_LABEL, type ExpenseRole } from '@/lib/expens
 export interface OrgState {
   orgSlug: string
   role: ExpenseRole | null
+  loadingStartedAt?: number
 }
 export const OrgContext = createContext<OrgState>({ orgSlug: '', role: null })
 export function useExpenseOrg() {
-  const { orgSlug, role } = useContext(OrgContext)
+  const { orgSlug, role, loadingStartedAt } = useContext(OrgContext)
   const can = (min: ExpenseRole) => !!role && ROLE_RANK[role] >= ROLE_RANK[min]
-  return { orgSlug, role, base: `/expense/${orgSlug}`, canManage: can('manager'), canAdmin: can('admin') }
+  return { orgSlug, role, loadingStartedAt, base: `/expense/${orgSlug}`, canManage: can('manager'), canAdmin: can('admin') }
 }
 
 // ---------- 整形 ----------
@@ -156,8 +157,8 @@ export function Check({ checked, onChange, label, hint, disabled }: { checked: b
 }
 
 /** 読込中: ds の Skeleton（300ms 未満なら出さない） */
-export const Loading = ({ rows = 3 }: { label?: string; rows?: number; kpi?: boolean }) => (
-  <Card><DsSkeleton lines={rows + 1} height={18} /></Card>
+export const Loading = ({ rows = 3, delayMs = 300 }: { label?: string; rows?: number; kpi?: boolean; delayMs?: number }) => (
+  <Card><DsSkeleton lines={rows + 1} height={18} delayMs={delayMs} /></Card>
 )
 
 type EmptyKind = 'zero' | 'error' | 'forbidden'

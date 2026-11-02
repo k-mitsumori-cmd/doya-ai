@@ -34,6 +34,7 @@ function fixture(route, mode) {
     '@/lib/doyaslide/storage': { uploadExportFile: async () => ({ url: 'https://example.invalid/synthetic-private-export.pdf' }) },
     '@/lib/doyaslide/errors': { errorSuffix: () => '' },
     '@/lib/fetch-timeout': { raceTimeout: async (_label, _ms, promise) => promise },
+    '@/lib/doyalist/export-xlsx': { createDoyalistXlsxStream: unused },
     '@/lib/doyalist/export-stream': {
       encodeDoyalistExport: async function* (value) { for await (const chunk of value) yield Buffer.from(chunk); },
       iterateDoyalistCsv: async function* () { yield 'name\nSynthetic list\n'; },

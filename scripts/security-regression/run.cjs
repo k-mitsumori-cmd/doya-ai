@@ -1,4 +1,4 @@
-for (const file of ['verify-zod-schema-contracts.cjs', 'verify-openai-sdk-transport.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-kintai-clock-display.cjs', 'verify-kintai-clock-recovery-mounted.cjs', 'verify-asklink-history-recovery-mounted.cjs', 'verify-feedback-prompt-ack-mounted.cjs', 'verify-error-report-recovery.cjs', 'verify-root-font-ready-hydration.cjs', 'verify-asklink-audience-response-mounted.cjs', 'verify-asklink-parent-queue-mounted.cjs', 'verify-asklink-banner-ack-mounted.cjs', 'verify-asklink-edit-response-order-mounted.cjs', 'verify-asklink-save-recovery-mounted.cjs', 'verify-expense-loading-continuity-mounted.cjs', 'verify-zod-schema-contracts.cjs', 'verify-openai-sdk-transport.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-vercel-config-zod.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-hr-department-operation.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-hr-department-input.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
@@ -1070,6 +1070,8 @@ if (sfaTaskCreate.error || sfaTaskCreate.status !== 0) {
 }
 const mitsuboshiLocalFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-local-font.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mitsuboshiLocalFont.error || mitsuboshiLocalFont.status !== 0) { console.error('Security regression failed: Mitsuboshi local font'); process.exit(1); }
+const mitsuboshiJapaneseFont = spawnSync(process.execPath, [path.join(__dirname, 'verify-mitsuboshi-japanese-font.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mitsuboshiJapaneseFont.error || mitsuboshiJapaneseFont.status !== 0) { console.error('Security regression failed: Mitsuboshi Japanese font'); process.exit(1); }
 const sfaRecordScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-record-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaRecordScope.error || sfaRecordScope.status !== 0) { console.error('Security regression failed: SFA record scope'); process.exit(1); }
 const sfaTeamClient = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-team-client.cjs')], { stdio: 'inherit', timeout: 60000 });
@@ -1410,7 +1412,7 @@ for (const file of ['verify-doya-power-costs.cjs']) { const r = require('node:ch
 for (const file of ['verify-doya-power-charge-routes.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-doya-power-voice.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-expense-account-company.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
-for (const file of ['verify-agent-orchestration.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
+for (const file of ['verify-agent-orchestration.cjs', 'verify-shell-task-count-recovery-mounted.cjs', 'verify-shell-task-count-session-mounted.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 const guidePopups = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-guide-popups-flag.cjs')], { stdio: 'inherit', timeout: 90000 });
 if (guidePopups.error || guidePopups.status !== 0) { console.error('Guide popups flag regression failed'); process.exit(1); }
 for (const file of ['verify-new-pricing-flag-off.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
@@ -1419,6 +1421,7 @@ for (const file of ['verify-company-roles-kintai-employee-delete.cjs']) { const 
 for (const file of ['verify-shodan-research-sites.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 const supportChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-support-chat.cjs')], { stdio: 'inherit', timeout: 90000 });
 if (supportChat.error || supportChat.status !== 0) { console.error('Support chat regression failed'); process.exit(1); }
+for (const file of ['verify-support-privacy-client-mounted.cjs', 'verify-support-privacy-get-routes.cjs', 'verify-support-ticket-order-mounted.cjs', 'verify-admin-support-selection-mounted.cjs', 'verify-admin-support-get-private.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Support privacy regression failed:', file); process.exit(r.status || 1); } }
 for (const file of ['verify-shodan-research-sites.cjs', 'verify-system-watch-quote-slide.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 for (const file of ['verify-shodan-research-sites.cjs', 'verify-system-watch-quote-slide.cjs', 'verify-llm-deadline.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Security regression failed:', file); process.exit(r.status || 1); } }
 for (const file of ['verify-runtime-alert-warning-kind.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) { console.error('Runtime alert warning kind regression failed: '+file); process.exit(r.status || 1); } }
@@ -1505,6 +1508,14 @@ if (seoHtmlTitle.error || seoHtmlTitle.status !== 0) process.exit(seoHtmlTitle.s
 
 const shanaiDrawingIds = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-docx-drawing-ids.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiDrawingIds.error || shanaiDrawingIds.status !== 0) process.exit(shanaiDrawingIds.status || 1);
+const shanaiUploadRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-upload-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiUploadRecovery.error || shanaiUploadRecovery.status !== 0) process.exit(shanaiUploadRecovery.status || 1);
+const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-new-validation-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
+const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
+const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
 const annualRenderer = spawnSync(process.execPath, [path.join(__dirname, 'verify-annual-renderer.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (annualRenderer.error || annualRenderer.status !== 0) process.exit(annualRenderer.status || 1);
@@ -1517,3 +1528,12 @@ if (popupSiteStats.error || popupSiteStats.status !== 0) process.exit(popupSiteS
 
 const popupInstallTime = spawnSync(process.execPath, [path.join(__dirname, 'verify-popup-install-time-hydration.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (popupInstallTime.error || popupInstallTime.status !== 0) process.exit(popupInstallTime.status || 1);
+
+const minimatchPreprocessing = spawnSync(process.execPath, [path.join(__dirname, 'verify-minimatch-preprocessing-bounds.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (minimatchPreprocessing.error || minimatchPreprocessing.status !== 0) process.exit(minimatchPreprocessing.status || 1);
+
+const kintaiAttendanceExportVisibility = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-attendance-export-visibility.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiAttendanceExportVisibility.status !== 0) process.exit(kintaiAttendanceExportVisibility.status || 1);
+
+const kintaiDepartmentExportAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-export-access.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiDepartmentExportAccess.error || kintaiDepartmentExportAccess.status !== 0) process.exit(kintaiDepartmentExportAccess.status || 1);

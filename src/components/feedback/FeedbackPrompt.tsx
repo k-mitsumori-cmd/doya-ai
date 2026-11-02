@@ -11,7 +11,7 @@
 //    無視してそのまま使い続けられるようにする。
 // ⚠️ 絵文字は使わない（ブランド規約）。アイコンは Material Symbols。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface PromptState {
   show: boolean
@@ -27,6 +27,18 @@ export default function FeedbackPrompt({ serviceId }: { serviceId: string }) {
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
   const [closed, setClosed] = useState(false)
+  const [sendError, setSendError] = useState('')
+  const submitting = useRef(false)
+  const mounted = useRef(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!serviceId) return
@@ -78,30 +90,41 @@ export default function FeedbackPrompt({ serviceId }: { serviceId: string }) {
 
   const post = useCallback(async (payload: Record<string, unknown>) => {
     try {
-      await fetch('/api/feedback', {
+      return await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
     } catch {
-      /* 失敗しても画面は閉じる。ここで引き止めない */
+      return null
     }
   }, [])
 
   const submit = useCallback(async () => {
-    if (!state || !text.trim()) return
+    if (!state || !text.trim() || submitting.current) return
+    submitting.current = true
     setSending(true)
-    await post({
+    setSendError('')
+    const response = await post({
       action: 'submit',
       serviceId: state.serviceId,
       text: text.trim(),
       rating,
       usageCount: state.usageCount,
     })
+    const acknowledgement = await response?.json().catch(() => null)
+    submitting.current = false
+    if (!mounted.current) return
     setSending(false)
+    if (!response?.ok || acknowledgement?.ok !== true || typeof acknowledgement?.id !== 'string' || !acknowledgement.id.trim()) {
+      setSendError(response?.status === 401
+        ? 'ログインの有効期限が切れました。入力内容をコピーし、ログインし直してください。'
+        : '送信完了を確認できませんでした。入力内容は残っています。再送すると重複して届く場合があります。')
+      return
+    }
     setDone(true)
     // お礼を少し見せてから閉じる
-    setTimeout(() => setClosed(true), 2600)
+    closeTimer.current = setTimeout(() => setClosed(true), 2600)
   }, [post, rating, state, text])
 
   const later = useCallback(() => {
@@ -148,6 +171,7 @@ export default function FeedbackPrompt({ serviceId }: { serviceId: string }) {
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
+                  disabled={sending}
                   onClick={() => setRating(rating === n ? null : n)}
                   className={`h-8 w-8 rounded-lg border text-sm font-semibold transition ${
                     rating === n
@@ -163,11 +187,14 @@ export default function FeedbackPrompt({ serviceId }: { serviceId: string }) {
 
           <textarea
             value={text}
+            disabled={sending}
             onChange={(e) => setText(e.target.value)}
             rows={4}
             placeholder="使いにくかったところ、あったらいいと思った機能など"
             className="mt-3 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
           />
+
+          {sendError && <p role="alert" className="mt-2 text-xs leading-relaxed text-red-700">{sendError}</p>}
 
           <button
             onClick={submit}
