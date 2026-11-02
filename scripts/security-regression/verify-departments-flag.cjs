@@ -66,6 +66,18 @@ check('Product hubs flag: off reads no session and changes nothing on screen', (
   assert.match(read('src/app/(shell)/home/page.tsx'), /productStrip=\{productsOn \? <ProductStrip \/> : null\}/)
 })
 
+check('Product preview pages: 404 in production, open only on Vercel preview and locally', () => {
+  // NODE_ENV は Vercel のプレビューでも production なので、本番の判定は VERCEL_ENV で行う（2026-11-02）
+  const dir = 'src/app/(shell)/hub/preview'
+  const pages = fs.readdirSync(path.join(root, dir), { recursive: true }).filter((f) => String(f).endsWith('page.tsx'))
+  assert.ok(pages.length >= 1)
+  for (const f of pages) {
+    const src = read(path.join(dir, String(f)))
+    const body = src.slice(src.indexOf('export default'))
+    assert.match(body, /^export default (?:async )?function \w+\([^)]*\) \{\n  if \(process\.env\.VERCEL_ENV === 'production'\) notFound\(\)/, f + ' must 404 first in production')
+  }
+})
+
 check('Departments choice API: flag first, cookie only, HttpOnly, no DB writes', () => {
   const api = read('src/app/api/account/departments/route.ts')
   for (const m of ['GET', 'PUT']) {
