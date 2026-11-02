@@ -17,13 +17,13 @@ check('Support chat flag: off reads no session; routes 404 first; the shell moun
   assert.ok(flag.indexOf("if (rollout === 'off') return false") < flag.indexOf('getServerSession('), 'off must return before reading the session')
   for (const f of ['src/app/api/support-chat/ask/route.ts', 'src/app/api/support-chat/ticket/route.ts', 'src/app/api/support-chat/tickets/route.ts', 'src/app/api/support-chat/tickets/[ticketNo]/route.ts']) {
     const src = read(f)
-    const gate = src.indexOf('if (!(await isSupportChatEnabled())) return NextResponse.json')
+    const gate = src.search(/if \(!\(await isSupportChatEnabled\(\)\)\) return (?:NextResponse\.json|privateApiJson)/)
     assert.ok(gate > 0, f + ' must check the flag')
     const session = Math.min(...['getServerSession(authOptions)', 'supportUserId()'].map((k) => { const i = src.indexOf(k, src.indexOf('export async function')); return i < 0 ? Infinity : i }))
     assert.ok(gate < session, f + ' must check the flag before reading the session')
     // GET と POST の両方があるファイルは、どちらも旗を見る
     const handlers = (src.match(/export async function (GET|POST)/g) || []).length
-    const gates = (src.match(/if \(!\(await isSupportChatEnabled\(\)\)\) return NextResponse\.json/g) || []).length
+    const gates = (src.match(/if \(!\(await isSupportChatEnabled\(\)\)\) return (?:NextResponse\.json|privateApiJson)/g) || []).length
     assert.equal(gates, handlers, f + ' every handler must check the flag')
   }
   // 本人の受付は userId でしぼる（他人の受付番号では読めない・書けない）
@@ -39,7 +39,7 @@ check('Support chat flag: off reads no session; routes 404 first; the shell moun
   assert.match(layout, /const supportChat = signedIn \? await isSupportChatEnabled\(\) : false/)
   const gate = read('src/components/shell/ShellGate.tsx')
   assert.match(gate, /supportChat = false/)
-  assert.match(gate, /\{supportChat && shown \? <SupportChat \/> : null\}/)
+  assert.match(gate, /\{supportChat && shown \? <SupportChat actorKey=\{userKey\} \/> : null\}/)
 })
 
 check('Support chat: no Doya Power, billing or direct paid AI; Slack only through the shared sender', () => {
