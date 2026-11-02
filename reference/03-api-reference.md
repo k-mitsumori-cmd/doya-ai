@@ -70,7 +70,8 @@ const id = p.id
 ### ユーザー・統計
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET | `/api/admin/stats` | KPI統計 (ユーザー数, 生成数, 収益, サービス別統計) |
+| GET | `/api/admin/stats` | DBのユーザー・生成・サービス別統計。旧 `monthlyRevenue` / `mrr` と未按分のサービス別 `revenue` は `null`。財務指標は下記の専用APIを使用 |
+| GET | `/api/admin/billing/stats` | 管理者Cookie認証後、`period=month\|quarter\|year`（既定month）のJST暦期間の入金・返金と、取得時点のMRR・顧客数・ARPUを返す。`refresh=1`でキャッシュを無効化。private/no-store。未認証401、期間不正400、取得・集計不能503 |
 | GET/PATCH/DELETE | `/api/admin/users` | ユーザー管理 (プラン変更, 使用回数管理, 削除) |
 | GET | `/api/admin/users/export` | ユーザーデータ CSV/JSON エクスポート |
 

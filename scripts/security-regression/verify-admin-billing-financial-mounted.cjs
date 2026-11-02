@@ -1,0 +1,2 @@
+const { run } = require('./admin-billing-mounted-harness.cjs');
+run(['quarter', 'year', 'switch-late-success', 'switch-late-error', 'switch-late-401', 'period-error-clears-old', 'wrong-period', 'invalid-math', 'null-arpu', 'negative-net', 'timeout', 'late-401-after-timeout', 'body-timeout', 'unmount-late-401', 'refresh-401-clears-private', 'csv-success', 'csv-failure'], 'PASS Admin billing financial: ', 'DOYA_ADMIN_BILLING_FINANCIAL_RESULT').catch(error => { console.error(error.stack); process.exitCode = 1 });
