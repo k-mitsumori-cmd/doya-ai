@@ -1,0 +1,40 @@
+/* ドヤバナーAI「作り方は2つ」の入口。色・角丸は共通の ds の値（--blue など）を使う。 */
+.wrap { display: grid; gap: 12px; margin-bottom: 16px; }
+.heading { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.5; color: var(--ink, #101633); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.card {
+  display: grid; gap: 12px; align-content: start;
+  padding: 16px; border-radius: var(--r, 22px);
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #e3e8f4);
+  color: var(--ink, #101633); text-decoration: none;
+  transition: border-color 160ms var(--ease, ease), box-shadow 160ms var(--ease, ease), transform 160ms var(--ease, ease);
+}
+.card:hover { border-color: var(--blue, #0066ff); box-shadow: var(--shadow, 0 8px 24px rgba(10, 15, 60, 0.08)); transform: translateY(-1px); }
+.card:focus-visible { outline: 3px solid var(--blue, #0066ff); outline-offset: 2px; }
+.card[data-current='true'] {
+  border: 2px solid var(--blue, #0066ff);
+  padding: 15px;
+  background: linear-gradient(180deg, var(--blue-soft, #e8f0ff), var(--paper, #fff) 70%);
+}
+.top { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; }
+.head { display: grid; gap: 4px; min-width: 0; }
+.title { font-size: 18px; font-weight: 800; line-height: 1.4; }
+.summary { font-size: 14px; line-height: 1.6; color: var(--sub, #4a5375); }
+.rows { margin: 0; display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 8px; font-size: 13px; line-height: 1.6; }
+.row dt { font-weight: 700; color: var(--muted, #7a83a3); }
+.row dd { margin: 0; color: var(--ink, #101633); }
+.state { font-size: 13px; font-weight: 700; color: var(--blue-deep, #0047d6); }
+.card[data-current='true'] .state { color: var(--sub, #4a5375); }
+.note { margin: 0; font-size: 13px; line-height: 1.6; color: var(--sub, #4a5375); }
+
+@media (max-width: 767px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .heading { font-size: 15px; }
+  .row { grid-template-columns: 6.5em minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+  .card:hover { transform: none; }
+}

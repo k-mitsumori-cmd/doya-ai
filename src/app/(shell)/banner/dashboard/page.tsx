@@ -15,7 +15,8 @@ import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import Image from 'next/image'
 import ShellLoading from '@/components/shell/ShellLoading'
-import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
+import { ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
+import BannerModeChooser from '@/components/banner/BannerModeChooser'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { galleryTheme, GalleryCategoryHeading, GalleryGenreTabs, GalleryMoreTile, GalleryPlanTabs, GallerySkeleton, GalleryTemplateCard } from '@/components/banner/BannerTemplateGallery'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -2953,10 +2954,10 @@ function BannerTestPageInner() {
   return (
     <>
       <div className={nextStyles.heroWrap}>
+        <BannerModeChooser current="template" />
         <ToolHero
           title="好きな見本を選んで、文字を入れるだけ。"
-          lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。見本が合わなければ、ゼロからもつくれます。"
-          action={<Button href="/banner/dashboard/create" variant="secondary" icon="PlusCircle">ゼロからつくる</Button>}
+          lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。"
           tool="banner"
           artAlt=""
         />
