@@ -168,6 +168,7 @@ async function research(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<str
     points: points.length ? points : ['サイトから読み取れた情報は多くありませんでした。'],
     href: slug ? `/shodan/${encodeURIComponent(slug)}/p/${encodeURIComponent(id)}` : '/shodan',
     hrefLabel: '商談準備で提案資料まで作る',
+    detail: { kind: 'company', name },
     handoff: { companyName: name },
   }
 }
@@ -223,6 +224,7 @@ async function quote(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<string
     points: items.slice(0, 4).map((i) => `${i.itemName}　${i.qty}${i.unit} × ${man(i.unitPrice)}`),
     href: `/quote/documents/${encodeURIComponent(id)}`,
     hrefLabel: '見積書を確かめる',
+    detail: { kind: 'quote', count: items.length, subtotal, rows: items.slice(0, 12).map((i) => ({ name: i.itemName.slice(0, 80), qty: i.qty, unit: i.unit, unitPrice: i.unitPrice })) },
   }
 }
 
@@ -271,6 +273,7 @@ async function slides(a: SalesPrepAnswers, deps: ToolDeps, resume?: Record<strin
     points: heads.slice(0, 5).map((h, i) => `${i + 1}. ${h}`),
     href: `/doyaslide/${encodeURIComponent(projectId)}`,
     hrefLabel: 'スライドの画像を作る',
+    ...(heads.length ? { detail: { kind: 'slides' as const, heads: heads.slice(0, 20).map((h) => h.slice(0, 120)) } } : {}),
   }
 }
 
