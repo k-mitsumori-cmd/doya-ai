@@ -1,6 +1,9 @@
 // ドヤマーケ ナーチャリングに「動画紹介メール」を末尾へ追加する。
 //
-//   node scripts/drip/append-video-steps.mjs --file <entries.json> [--dry-run] [--out <dir>]
+//   node scripts/drip/append-video-steps.mjs --file <entries.json> --sequence <id> [--dry-run] [--out <dir>]
+//   node scripts/drip/append-video-steps.mjs --file <entries.json> --rerender   （追加済みの通を原稿どおりに作り直す・配信設定は変えない）
+//
+// --sequence は必須（配信中=LIVE_SEQUENCE_ID、確認待ちの下書き=DRAFT_SEQUENCE_ID）。2026-10-07 時点、本人の指示で配信中への追加は保留。
 //
 // - entries.json は配列。書式は scripts/drip/content/video-library-2026-10.json と video-email.mjs のコメントを参照
 // - key が同じテンプレート（name = "ナーチャリング動画:<key>"）が既にあれば飛ばす（二重追加しない）
@@ -16,7 +19,8 @@ import { fileURLToPath } from 'node:url'
 import { PrismaClient } from '@prisma/client'
 import { renderVideoEmail, renderText } from './video-email.mjs'
 
-export const SEQUENCE_ID = 'cmqzy0xxm000de8ppbx2vd6bk' // ドヤマーケ ナーチャリング
+export const LIVE_SEQUENCE_ID = 'cmqzy0xxm000de8ppbx2vd6bk' // 配信中のナーチャリング（12通）
+export const DRAFT_SEQUENCE_ID = 'cmuxat7bl0001f53w7441045s' // 動画31通（status draft＝送られない）
 const TEMPLATE_PREFIX = 'ナーチャリング動画:'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -53,10 +57,25 @@ async function main() {
     console.log(`preview: ${entries.length} 件を ${outDir} に書き出しました`)
   }
   if (dryRun) return
+  const rerender = process.argv.includes('--rerender')
+  const SEQUENCE_ID = arg('--sequence')
+  if (!rerender && !SEQUENCE_ID) throw new Error('--sequence を指定してください（配信中に足すか、下書きに足すかを明示する）')
 
   loadEnv()
   const prisma = new PrismaClient()
   try {
+    if (rerender) {
+      let n = 0
+      for (const e of entries) {
+        const r = await prisma.dripTemplate.updateMany({
+          where: { name: TEMPLATE_PREFIX + e.key },
+          data: { subject: e.subject, bodyHtml: renderVideoEmail(e), bodyText: renderText(e) },
+        })
+        n += r.count
+      }
+      console.log(`作り直し: ${n} 通`)
+      return
+    }
     const seq = await prisma.dripSequence.findUnique({
       where: { id: SEQUENCE_ID },
       include: { steps: { orderBy: { sortOrder: 'asc' }, include: { template: { select: { name: true } } } } },
@@ -93,7 +112,7 @@ async function main() {
             dayOffset,
             sendTime,
             templateId: t.id,
-            label: `メール${sortOrder + 1} ${e.title || e.subject.replace(/^【ドヤマーケ】/, '')}`.slice(0, 120),
+            label: `メール${sortOrder + 1} ${e.title || e.subject.replace(/^【ドヤ(マーケ|AI)】/, '')}`.slice(0, 120),
           },
         })
       })
