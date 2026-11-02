@@ -42,10 +42,12 @@ export default function BillingPage() {
   const [data, setData] = useState<BillingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchData = async (showToast = false) => {
     try {
       setIsRefreshing(true)
+      setError(null)
       const response = await fetch('/api/admin/stats', {
         credentials: 'include',
       })
@@ -66,6 +68,7 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error('Billing fetch error:')
+      setError('データの取得に失敗しました。再取得してください。')
       toast.error('データの取得に失敗しました')
     } finally {
       setIsRefreshing(false)
@@ -84,13 +87,29 @@ export default function BillingPage() {
     return `¥${value.toLocaleString()}`
   }
 
-  if (isLoading || !data) {
+  if (isLoading || (!data && !error)) {
     return (
       <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
-        <div className="relative w-16 h-16">
+        <div role="status" aria-label="売上・課金データを読み込み中" className="relative w-16 h-16">
           <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
           <div className="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
         </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
+        <h1 className="text-2xl font-bold text-white mb-4">売上・課金管理</h1>
+        <p role="alert" className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={() => fetchData()}
+          disabled={isRefreshing}
+          className="min-h-11 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50"
+        >
+          再取得する
+        </button>
       </div>
     )
   }
@@ -113,6 +132,11 @@ export default function BillingPage() {
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
       <Toaster position="top-right" />
+      {error && (
+        <p role="alert" className="text-red-400 mb-4">
+          {error} 前回取得したデータを表示しています。
+        </p>
+      )}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

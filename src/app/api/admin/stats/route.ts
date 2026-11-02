@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { serviceLabelOf } from '@/lib/attribution'
+import { jstDayRange, jstMonthRange, jstDateKey } from '@/lib/jst'
 
 // cookies() を使用するため、静的最適化を無効化（ビルド時SSGで落ちるのを防ぐ）
 export const dynamic = 'force-dynamic'
@@ -21,128 +22,79 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401, headers: privateHeaders })
     }
 
-    // 今日の開始時刻（UTC）
+    // すべての期間を同じ時刻・日本時間の半開区間で集計する。
     const now = new Date()
-    const todayStart = new Date(now)
-    todayStart.setUTCHours(0, 0, 0, 0)
+    const { start: todayStart, end: todayEnd } = jstDayRange(now)
+    const { start: monthStart, end: monthEnd } = jstMonthRange(now)
+    const { start: lastMonthStart } = jstMonthRange(monthStart.getTime() - 1)
+    const lastMonthEnd = monthStart
+    const dayOfMonth = Number(jstDateKey(now)!.slice(-2))
 
-    // 今月の開始時刻
-    const monthStart = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1)
-
-    // 先月の開始・終了
-    const lastMonthStart = new Date(monthStart)
-    lastMonthStart.setMonth(lastMonthStart.getMonth() - 1)
-    const lastMonthEnd = new Date(monthStart)
-    lastMonthEnd.setMilliseconds(-1)
-
-    // 各統計を個別に取得（エラーハンドリング付き）
-    let totalUsers = 0
-    let proUsers = 0
-    let stripeUsers = 0
-    let totalGenerations = 0
-    let todayGenerations = 0
-    let monthGenerations = 0
-    let lastMonthGenerations = 0
-    let recentUsers = 0
-    let recentGenerations: any[] = []
-    let adminLoginAttempts = 0
+    // 集計に失敗した場合は外側で失敗を返し、0件として表示しない。
 
     // ユーザー統計
-    try {
-      totalUsers = await prisma.user.count()
-    } catch (e) {
-      console.log('User count failed:', e)
-    }
+
+    const totalUsers = await prisma.user.count()
 
     // PRO/BUSINESS/ENTERPRISEユーザー
-    try {
-      proUsers = await prisma.user.count({ 
-        where: { 
-          plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] }
-        } 
-      })
-    } catch (e) {
-      console.log('Pro user count failed:', e)
-    }
+
+    const proUsers = await prisma.user.count({
+      where: {
+        plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] }
+      }
+    })
 
     // Stripe連携ユーザー
-    try {
-      stripeUsers = await prisma.user.count({ 
-        where: { stripeSubscriptionId: { not: null } } 
-      })
-    } catch (e) {
-      console.log('Stripe user count failed:', e)
-    }
+
+    const stripeUsers = await prisma.user.count({
+      where: { stripeSubscriptionId: { not: null } }
+    })
 
     // 今週の新規ユーザー
-    try {
-      recentUsers = await prisma.user.count({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-      })
-    } catch (e) {
-      console.log('Recent user count failed:', e)
-    }
+
+    const recentUsers = await prisma.user.count({
+      where: { createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+    })
 
     // 生成統計
-    try {
-      totalGenerations = await prisma.generation.count()
-    } catch (e) {
-      console.log('Generation count failed:', e)
-    }
 
-    try {
-      todayGenerations = await prisma.generation.count({
-        where: { createdAt: { gte: todayStart } },
-      })
-    } catch (e) {
-      console.log('Today generation count failed:', e)
-    }
+    const totalGenerations = await prisma.generation.count()
 
-    try {
-      monthGenerations = await prisma.generation.count({
-        where: { createdAt: { gte: monthStart } },
-      })
-    } catch (e) {
-      console.log('Month generation count failed:', e)
-    }
+    const todayGenerations = await prisma.generation.count({
+      where: { createdAt: { gte: todayStart, lt: todayEnd } },
+    })
 
-    try {
-      lastMonthGenerations = await prisma.generation.count({
-        where: {
-          createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        },
-      })
-    } catch (e) {
-      console.log('Last month generation count failed:', e)
-    }
+    const monthGenerations = await prisma.generation.count({
+      where: { createdAt: { gte: monthStart, lt: monthEnd } },
+    })
+
+    const lastMonthGenerations = await prisma.generation.count({
+      where: {
+        createdAt: { gte: lastMonthStart, lt: lastMonthEnd },
+      },
+    })
 
     // 最近の生成（24時間）
-    try {
-      recentGenerations = await prisma.generation.findMany({
-        where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-        // output はバナーだと巨大な dataURL。一覧では絶対に取らない
-        select: {
-          id: true,
-          serviceId: true,
-          metadata: true,
-          createdAt: true,
-          user: { select: { name: true, email: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      })
-    } catch (e) {
-      console.log('Recent generations failed:', e)
-    }
+
+    const recentGenerations = await prisma.generation.findMany({
+      where: { createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+      // output はバナーだと巨大な dataURL。一覧では絶対に取らない
+      select: {
+        id: true,
+        serviceId: true,
+        metadata: true,
+        createdAt: true,
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    })
 
     // 管理者ログイン試行
-    try {
-      adminLoginAttempts = await prisma.adminLoginAttempt.count({
-        where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-      })
-    } catch (e) {
-      console.log('Admin login attempt count failed:', e)
-    }
+
+    const adminLoginAttempts = await prisma.adminLoginAttempt.count({
+      where: { createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+    })
 
     // サービス別統計
     const serviceStats: any[] = []
@@ -160,126 +112,113 @@ export async function GET(request: NextRequest) {
     }
 
     for (const serviceId of serviceIds) {
-      try {
-        const queryServiceId = serviceId === 'writing' ? 'seo' : serviceId
-        const safe = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
-          try { return await fn() } catch { return fallback }
-        }
 
-        let serviceUsers = 0
-        let serviceProUsers = 0
-        let serviceGenerations = 0
-        let serviceTodayGenerations = 0
-        let serviceLastMonthGenerations = 0
-        let serviceMonthGenerations = 0
+      const queryServiceId = serviceId === 'writing' ? 'seo' : serviceId
+
+      let serviceUsers = 0
+      let serviceProUsers = 0
+      let serviceGenerations = 0
+      let serviceTodayGenerations = 0
+      let serviceLastMonthGenerations = 0
+      let serviceMonthGenerations = 0
 
         // サービス別の集計（Generationテーブルを使うサービスとモデル特化サービスを分岐）
-        const usesGeneration = ['banner', 'writing'].includes(serviceId)
+      const usesGeneration = ['banner', 'writing'].includes(serviceId)
 
-        if (usesGeneration) {
-          serviceUsers = await safe(() => prisma.userServiceSubscription.count({ where: { serviceId: queryServiceId } }), 0)
-          serviceProUsers = await safe(() => prisma.userServiceSubscription.count({
-            where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
-          }), 0)
-          serviceGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId } }), 0)
-          serviceTodayGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: monthStart } } }), 0)
-        } else if (serviceId === 'interview') {
-          serviceGenerations = await safe(() => prisma.interviewProject.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        } else if (serviceId === 'copy') {
-          serviceGenerations = await safe(() => prisma.copyProject.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        } else if (serviceId === 'lp') {
-          serviceGenerations = await safe(() => prisma.lpProject.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        } else if (serviceId === 'voice') {
-          serviceGenerations = await safe(() => prisma.voiceProject.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        } else if (serviceId === 'movie') {
-          serviceGenerations = await safe(() => prisma.movieProject.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        } else if (serviceId === 'hr') {
-          serviceUsers = await safe(() => prisma.hrEmployee.count(), 0)
-          serviceGenerations = await safe(() => prisma.hrOrganization.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.hrEmployee.count({ where: { createdAt: { gte: todayStart } } }), 0)
-        } else if (serviceId === 'kintai') {
-          serviceUsers = await safe(() => prisma.kintaiEmployee.count(), 0)
-          serviceGenerations = await safe(() => prisma.kintaiClockRecord.count(), 0)
-          serviceTodayGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: todayStart } } }), 0)
-          serviceMonthGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: monthStart } } }), 0)
-          serviceLastMonthGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
-        }
+      if (usesGeneration) {
+        serviceUsers = await prisma.userServiceSubscription.count({ where: { serviceId: queryServiceId } })
+        serviceProUsers = await prisma.userServiceSubscription.count({
+          where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
+        })
+        serviceGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId } })
+        serviceTodayGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceLastMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+        serviceMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: monthStart, lt: monthEnd } } })
+      } else if (serviceId === 'interview') {
+        serviceGenerations = await prisma.interviewProject.count()
+        serviceTodayGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      } else if (serviceId === 'copy') {
+        serviceGenerations = await prisma.copyProject.count()
+        serviceTodayGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      } else if (serviceId === 'lp') {
+        serviceGenerations = await prisma.lpProject.count()
+        serviceTodayGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      } else if (serviceId === 'voice') {
+        serviceGenerations = await prisma.voiceProject.count()
+        serviceTodayGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      } else if (serviceId === 'movie') {
+        serviceGenerations = await prisma.movieProject.count()
+        serviceTodayGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      } else if (serviceId === 'hr') {
+        serviceUsers = await prisma.hrEmployee.count()
+        serviceGenerations = await prisma.hrOrganization.count()
+        serviceTodayGenerations = await prisma.hrEmployee.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+      } else if (serviceId === 'kintai') {
+        serviceUsers = await prisma.kintaiEmployee.count()
+        serviceGenerations = await prisma.kintaiClockRecord.count()
+        serviceTodayGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: todayStart, lt: todayEnd } } })
+        serviceMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: monthStart, lt: monthEnd } } })
+        serviceLastMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: lastMonthStart, lt: lastMonthEnd } } })
+      }
 
         // 成長率
-        const dayOfMonth = new Date().getDate()
-        const growth = serviceLastMonthGenerations === 0
-          ? (serviceMonthGenerations > 0 ? 100 : 0)
-          : (serviceMonthGenerations === 0 && dayOfMonth <= 3)
-            ? 0
-            : ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
+      const growth = serviceLastMonthGenerations === 0
+        ? (serviceMonthGenerations > 0 ? 100 : 0)
+        : (serviceMonthGenerations === 0 && dayOfMonth <= 3)
+          ? 0
+          : ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
 
-        const label = serviceLabels[serviceId]
-        serviceStats.push({
-          id: serviceId,
-          name: label.name,
-          icon: label.icon,
-          gradient: label.gradient,
-          users: serviceUsers,
-          proUsers: serviceProUsers,
-          generations: serviceGenerations,
-          todayGenerations: serviceTodayGenerations,
-          revenue: 0,
-          growth: parseFloat(growth.toFixed(1)),
-        })
-      } catch (e) {
-        console.log(`Service stats failed for ${serviceId}:`, e)
-      }
+      const label = serviceLabels[serviceId]
+      serviceStats.push({
+        id: serviceId,
+        name: label.name,
+        icon: label.icon,
+        gradient: label.gradient,
+        users: serviceUsers,
+        proUsers: serviceProUsers,
+        generations: serviceGenerations,
+        todayGenerations: serviceTodayGenerations,
+        revenue: 0,
+        growth: parseFloat(growth.toFixed(1)),
+      })
+
     }
 
     // 時系列データ（過去12時間の生成数）
     const hourlyData: number[] = []
-    try {
-      for (let i = 11; i >= 0; i--) {
-        const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
-        hourStart.setMinutes(0, 0, 0)
-        const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
-        
-        const count = await prisma.generation.count({
-          where: {
-            createdAt: { gte: hourStart, lt: hourEnd },
-          },
-        })
-        hourlyData.push(count)
-      }
-    } catch (e) {
-      console.log('Hourly data failed:', e)
-      // フォールバック: 0埋め
-      for (let i = 0; i < 12; i++) hourlyData.push(0)
+
+    for (let i = 11; i >= 0; i--) {
+      const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
+      hourStart.setUTCMinutes(0, 0, 0)
+      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
+
+      const count = await prisma.generation.count({
+        where: {
+          createdAt: { gte: hourStart, lt: hourEnd },
+        },
+      })
+      hourlyData.push(count)
     }
 
     // 無料ユーザー数
     const freeUsers = Math.max(0, totalUsers - proUsers)
 
     // コンバージョン率
-    const conversionRate = totalUsers > 0 
+    const conversionRate = totalUsers > 0
       ? parseFloat(((proUsers / totalUsers) * 100).toFixed(1))
       : 0
 
     // 生成数の前月比（月初で当月データがほぼ無い場合は誤解を招くため0扱い）
-    const now2 = new Date()
-    const dayOfMonth = now2.getDate()
     const generationGrowth = lastMonthGenerations === 0
       ? (monthGenerations > 0 ? 100 : 0)
       : (monthGenerations === 0 && dayOfMonth <= 3)
@@ -305,7 +244,7 @@ export async function GET(request: NextRequest) {
       premiumUsers: proUsers,
       enterpriseUsers: stripeUsers,
       freeUsers,
-      
+
       // 生成統計
       totalGenerations,
       todayGenerations,
@@ -313,20 +252,20 @@ export async function GET(request: NextRequest) {
       lastMonthGenerations,
       generationGrowth,
       avgGenerationsPerUser,
-      
+
       // 収益統計
       monthlyRevenue,
       mrr: monthlyRevenue,
-      
+
       // KPI
       conversionRate,
-      
+
       // サービス別
       services: serviceStats,
-      
+
       // 時系列（過去12時間）
       chartData: hourlyData,
-      
+
       // 最近のアクティビティ
       recentUsers,
       recentGenerations: recentGenerations.map((g: any) => ({
@@ -343,18 +282,18 @@ export async function GET(request: NextRequest) {
               : `${serviceLabelOf(g.serviceId)}を利用`,
         createdAt: g.createdAt,
       })),
-      
+
       // セキュリティ
       adminLoginAttempts,
-      
+
       // メタ情報
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: now.toISOString(),
     }, { headers: privateHeaders })
   } catch (error) {
     console.error('Admin stats error:')
     return NextResponse.json(
       { error: '統計データの取得に失敗しました' },
-      { status: 500, headers: privateHeaders }
+      { status: 503, headers: privateHeaders }
     )
   }
 }
