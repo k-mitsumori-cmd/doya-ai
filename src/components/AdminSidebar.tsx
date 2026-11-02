@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { AdminDailyStats } from '@/components/AdminDailyStats'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
@@ -284,23 +285,7 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="mt-8 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-transparent border border-violet-500/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-bold text-white/60">本日の統計</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-lg font-bold text-white">431</p>
-              <p className="text-[10px] text-white/40">生成数</p>
-            </div>
-            <div>
-              <p className="text-lg font-bold text-emerald-400">+12</p>
-              <p className="text-[10px] text-white/40">新規ユーザー</p>
-            </div>
-          </div>
-        </div>
+        <AdminDailyStats />
       </nav>
 
       {/* Footer */}
