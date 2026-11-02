@@ -95,10 +95,12 @@ function routeFiles(dir) {
   })
 
   await check('shell menu, command palette, recent tools and all-tools list omit cunning', async () => {
-    const tools = load('src/components/shell/tools.ts', { '@/lib/services': services, '@/lib/departments': load('src/lib/departments.ts') })
+    const tools = load('src/components/shell/tools.ts', { '@/lib/services': services, '@/lib/departments': load('src/lib/departments.ts'), '@/lib/products': load('src/lib/products.ts') })
     assert.ok(!tools.ALL_SHELL_TOOLS.some((t) => t.id === 'cunning'))
     // 部署の表にも cunning を入れない（ベータで隠しているツールは、どの部署の入口にも出さない）
     assert.ok(!load('src/lib/departments.ts').DEPARTMENTS.some((d) => d.toolIds.includes('cunning')))
+    // 部門ごとの製品（src/lib/products.ts）にも入れない
+    assert.ok(!load('src/lib/products.ts').PRODUCTS.some((p) => p.toolIds.includes('cunning')))
     // 部署ごとのメニュー（旗 DEPARTMENTS_ROLLOUT）でも cunning は出さない（公開されているツールだけから組む）
     for (const primary of [[], ['sales']]) assert.ok(!tools.buildDepartmentGroups(primary).flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
     assert.ok(!tools.SHELL_GROUPS.flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
