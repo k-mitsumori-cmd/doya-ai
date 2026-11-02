@@ -6,9 +6,9 @@
 // ⚠️ 画面（src/components/home-agent/）は、この型だけを見て作る。中の実装（tools.ts など）を直接呼ばない。
 //    画面で使ってよい関数は view.ts の todoViewOf・todoCounts と、runner.ts の runAgentTasks・progressOf だけ。
 // ⚠️ 形を変えるときは AGENT_CONTRACT_VERSION を上げ、両方の側に知らせる。
-import type { AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentStates, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
+import type { AgentDraftDetail, AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentStates, AgentTaskResult, AgentTaskState, AgentTaskStatus } from './runner'
 
-export type { AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus }
+export type { AgentDraftDetail, AgentFailureAction, AgentFailureKind, AgentPowerUse, AgentTaskResult, AgentTaskState, AgentTaskStatus }
 
 export const AGENT_CONTRACT_VERSION = 2 as const
 
@@ -198,7 +198,8 @@ export interface AgentDraftView {
   points: string[]
   /** 各ツールの画面で下書きを開くリンク */
   href: string
-  hrefLabel: string
+  hrefLabel: string  /** できた物の中身（無いときは points だけを出す） */
+  detail?: AgentDraftDetail
 }
 
 /** 1つの ToDo の札に出すもの（view.ts の todoViewOf が runner の状態から作る） */

@@ -14,6 +14,8 @@ import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { isGuidePopupsEnabled } from '@/lib/notice/flag'
 import { isDepartmentsEnabled } from '@/lib/departments/flag'
 import { DEPARTMENTS_COOKIE, parseDepartmentsCookie } from '@/lib/departments'
+import { isProductHubsEnabled } from '@/lib/products/flag'
+import { PRODUCT_COOKIE, PRODUCT_DEFAULT_COOKIE, parseProductId, productOfDepartment, resolveStartProduct } from '@/lib/products'
 import { isSupportChatEnabled } from '@/lib/support-chat/flag'
 import { isOneButtonEnabled } from '@/lib/one-button/flag'
 import { doyaPowerCharger } from '@/lib/doya-power/charge'
@@ -41,6 +43,18 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // 部署ごとの入口（DEPARTMENTS_ROLLOUT）。off ならセッションを読まずに false。on のときだけ、主の部署を cookie から読む
   const departmentsOn = signedIn ? await isDepartmentsEnabled() : false
   const departments = departmentsOn ? { enabled: true, primary: parseDepartmentsCookie((await cookies()).get(DEPARTMENTS_COOKIE)?.value) } : undefined
+  // 部門ごとの製品（PRODUCT_HUBS_ROLLOUT。docs/design/buddy-products-2026-11-01.md）。off ならセッションも cookie も読まず、今のメニューのまま。
+  // on のときは部署の入口より先に使う。最初の製品は「本人が既定にした製品 → 最後に開いた製品 → 部署の入口で選んでいた部署 → 経営管理」
+  const productsOn = signedIn ? await isProductHubsEnabled() : false
+  const products = productsOn
+    ? await (async () => {
+        const jar = await cookies()
+        const selfDefault = parseProductId(jar.get(PRODUCT_DEFAULT_COOKIE)?.value)
+        const formerDept = parseDepartmentsCookie(jar.get(DEPARTMENTS_COOKIE)?.value)[0]
+        const last = parseProductId(jar.get(PRODUCT_COOKIE)?.value) ?? (formerDept ? productOfDepartment(formerDept) : null)
+        return { enabled: true, start: resolveStartProduct({ selfDefault, last }), selfDefault }
+      })()
+    : undefined
   // 左下の「登録会社」（UI 品質 B-1）。失敗しても枠は出す
   const [company, toolHrefs] = signedIn
     ? await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
@@ -58,7 +72,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const userId = (session?.user as { id?: string } | undefined)?.id
   const doyaPowerFx = doyaPower && userId ? (await loadDoyaPowerFxForUser(userId).catch(() => null))?.fx ?? undefined : undefined
   return (
-    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments} agentTasks={agentTasks} navGroups={navGroups}>
+    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups}>
       {children}
     </ShellGate>
   )

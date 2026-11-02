@@ -14,6 +14,8 @@ async function scenario(strict,kind){
   if(n.endsWith('.module.css'))return {__esModule:true,default:new Proxy({},{get:(_,k)=>String(k)})};
   if(n==='./tools')return {ALL_SHELL_TOOLS:[]};
   if(n==='@/app/(shell)/home/intents')return {HOME_INTENT_GROUPS:[]};
+  if(n==='@/lib/products')return {PRODUCTS:[],PRODUCT_COOKIE:'synthetic-product',getProduct:()=>({id:'management',name:'Synthetic',en:'Synthetic',home:'/home',icon:'Home',hint:''}),productForPath:(_,c)=>c,productsOfTool:()=>[]};
+  if(n==='./ProductSwitcher')return {__esModule:true,default:()=>null};
   if(n.startsWith('./')||n.startsWith('@/')||n==='next/navigation'||n==='next-auth/react')return {};
   throw Error('Unexpected import '+n);
  }

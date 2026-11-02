@@ -22,7 +22,7 @@ export function todoViewOf(task: Pick<AgentPlanTask, 'id' | 'stages'>, st: Agent
   }
   if (st.status === 'done' && st.result) {
     const r = st.result
-    return { ...base, status: 'done', draft: { summary: r.summary, points: r.points, href: r.href, hrefLabel: r.hrefLabel } }
+    return { ...base, status: 'done', draft: { summary: r.summary, points: r.points, href: r.href, hrefLabel: r.hrefLabel, ...(r.detail ? { detail: r.detail } : {}) } }
   }
   return {
     ...base,
