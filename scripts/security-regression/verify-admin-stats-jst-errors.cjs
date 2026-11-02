@@ -14,6 +14,7 @@ async function observe(instant,failAt=0,authorized=true){
  const response=await exports.GET(new next.NextRequest('https://synthetic.invalid/api/admin/stats')),body=await response.json();assert.match(response.headers.get('cache-control'),/private.*no-store/);assert.equal(response.headers.get('vary'),'Cookie');assert(!JSON.stringify([body,logs]).includes(secret));
  if(!authorized){assert.equal(response.status,401);assert.equal(queries.length,0);return {name:'denied-before-data',observed:true}}
  if(failAt){assert.equal(response.status,503);assert.deepEqual(Object.keys(body),['error']);assert.equal(queries.length,failAt);assert.equal(logs.length,1);return {name:'query-failure-'+failAt,model:queries.at(-1).model,operation:queries.at(-1).operation,status:503,noSuccessData:true}}
+ assert.equal(body.monthlyRevenue,null);assert.equal(body.mrr,null);assert.equal(body.financialMetricsEndpoint,'/api/admin/billing/stats');assert(body.services.every(x=>x.revenue===null));
  assert.equal(response.status,200);assert.equal(logs.length,0);assert.equal(body.services.length,9);assert.equal(body.chartData.length,12);assert.equal(body.lastUpdated,instant);
  const ms=new RealDate(instant).getTime(),shift=new RealDate(ms+9*3600000),y=shift.getUTCFullYear(),m=shift.getUTCMonth(),d=shift.getUTCDate();
  const startDay=new RealDate(Date.UTC(y,m,d)-9*3600000),endDay=new RealDate(+startDay+86400000),startMonth=new RealDate(Date.UTC(y,m,1)-9*3600000),endMonth=new RealDate(Date.UTC(y,m+1,1)-9*3600000),startLastMonth=new RealDate(Date.UTC(y,m-1,1)-9*3600000);

@@ -23,6 +23,7 @@ import {
   Target,
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import { useAdminBilling } from '@/lib/use-admin-billing'
 
 interface ServiceStats {
   id: string
@@ -33,7 +34,7 @@ interface ServiceStats {
   proUsers: number
   generations: number
   todayGenerations: number
-  revenue: number
+  revenue: number | null
   growth: number
 }
 
@@ -51,10 +52,6 @@ interface Stats {
   lastMonthGenerations: number
   generationGrowth: number
   avgGenerationsPerUser: number
-  
-  // 収益統計
-  monthlyRevenue: number
-  mrr: number
   
   // KPI
   conversionRate: number
@@ -97,6 +94,7 @@ const itemVariants = {
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const billing = useAdminBilling('month')
   const [stats, setStats] = useState<Stats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -138,12 +136,7 @@ export default function AdminDashboard() {
     fetchStats()
   }, [])
 
-  const formatCurrency = (value: number) => {
-    if (value >= 10000) {
-      return `¥${(value / 10000).toFixed(1)}万`
-    }
-    return `¥${value.toLocaleString()}`
-  }
+  const formatCurrency = (value: number) => `¥${value.toLocaleString('ja-JP', { maximumFractionDigits: 2 })}`
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -196,8 +189,8 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => fetchStats(true)}
-              disabled={isRefreshing}
+              onClick={() => { void fetchStats(true); billing.refresh() }}
+              disabled={isRefreshing || billing.isRefreshing}
               className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -213,6 +206,21 @@ export default function AdminDashboard() {
             <p className="text-red-400">{error}</p>
           </motion.div>
         )}
+
+        <section aria-label="入金・契約指標" className="mb-6 rounded-xl border border-white/10 bg-[#1F1F1F] p-4">
+          {billing.error && <p role="alert" className="mb-3 text-sm text-red-300">{billing.error}{billing.data ? ' 前回取得したデータを表示しています。' : ''}</p>}
+          {billing.isLoading && <p role="status" className="text-sm text-white/70">入金・契約指標を取得しています。</p>}
+          {billing.data && <div className="space-y-2 text-sm text-white/70">
+            <p>{billing.data.label}の返金控除後入金：{formatCurrency(billing.data.netRevenue)}。ドヤAIの定期契約に紐づくJPYが対象です。単発購入・他事業は含みません。</p>
+            <p>取得時点のMRR（税抜の月額換算）：{formatCurrency(billing.data.mrr)}。期間内の入金額とは異なります。</p>
+            <p>取得基準：{new Date(billing.data.updatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）。サービス別の売上は按分していません。</p>
+          </div>}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={billing.refresh} disabled={billing.isRefreshing}
+              className="min-h-11 whitespace-nowrap rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50">入金・契約指標を再取得</button>
+            <Link href="/admin/billing" className="inline-flex min-h-11 items-center px-3 py-2 text-sm underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">割引・返金の内訳を見る</Link>
+          </div>
+        </section>
 
         {stats && (
           <>
@@ -247,13 +255,13 @@ export default function AdminDashboard() {
                   trendUp: stats.generationGrowth > 0
                 },
                 { 
-                  label: '月間売上', 
-                  value: formatCurrency(stats.monthlyRevenue), 
-                  subValue: 'MRR',
-                  icon: DollarSign, 
+                  label: '当月の返金控除後入金',
+                  value: billing.data ? formatCurrency(billing.data.netRevenue) : billing.error ? '取得失敗' : '取得中',
+                  subValue: '定期契約・JPY',
+                  icon: DollarSign,
                   gradient: 'from-violet-500 to-fuchsia-500',
-                  trend: stats.mrr > 0 ? 100 : null,
-                  trendUp: stats.mrr > 0
+                  trend: null,
+                  trendUp: false
                 },
               ].map((kpi, index) => (
                 <motion.div
@@ -419,8 +427,8 @@ export default function AdminDashboard() {
                             <p className="text-[10px] text-white/40">総生成数</p>
                           </div>
                           <div>
-                            <p className="text-lg font-bold text-emerald-400">{formatCurrency(service.revenue)}</p>
-                            <p className="text-[10px] text-white/40">売上</p>
+                            <p className="text-lg font-bold text-emerald-400">{service.revenue === null ? '未按分' : formatCurrency(service.revenue)}</p>
+                            <p className="text-[10px] text-white/40">売上（セット契約は未按分）</p>
                           </div>
                         </div>
 

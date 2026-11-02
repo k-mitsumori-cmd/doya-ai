@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
         proUsers: serviceProUsers,
         generations: serviceGenerations,
         todayGenerations: serviceTodayGenerations,
-        revenue: 0,
+        revenue: null,
         growth: parseFloat(growth.toFixed(1)),
       })
 
@@ -230,13 +230,8 @@ export async function GET(request: NextRequest) {
       ? parseFloat((totalGenerations / totalUsers).toFixed(1))
       : 0
 
-    // 月間売上計算 — 料金は src/lib/pricing.ts と同期
-    const { SEO_PRICING } = await import('@/lib/pricing')
-    const COMPLETE_PACK_PRO_PRICE = SEO_PRICING.plans.find(p => p.id === 'seo-pro')?.price || 9980
-    const COMPLETE_PACK_ENTERPRISE_PRICE = SEO_PRICING.plans.find(p => p.id === 'seo-enterprise')?.price || 49800
-    // PRO会員（Stripe未連携）とEnterprise会員（Stripe連携）を分けて計算
-    const proOnlyUsers = Math.max(0, proUsers - stripeUsers)
-    const monthlyRevenue = (proOnlyUsers * COMPLETE_PACK_PRO_PRICE) + (stripeUsers * COMPLETE_PACK_ENTERPRISE_PRICE)
+    // 登録プランやStripe IDの有無は価格・入金額ではない。
+    // 財務指標は独立した認証済みAPIで取得し、DB統計をStripe障害で止めない。
 
     return NextResponse.json({
       // 基本統計
@@ -254,8 +249,9 @@ export async function GET(request: NextRequest) {
       avgGenerationsPerUser,
 
       // 収益統計
-      monthlyRevenue,
-      mrr: monthlyRevenue,
+      monthlyRevenue: null,
+      mrr: null,
+      financialMetricsEndpoint: '/api/admin/billing/stats',
 
       // KPI
       conversionRate,

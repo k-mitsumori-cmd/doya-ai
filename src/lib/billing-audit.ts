@@ -1,3 +1,4 @@
+import type Stripe from 'stripe'
 /**
  * 課金監査（Stripe を正として毎日突き合わせる）
  *
@@ -115,11 +116,11 @@ function jstDateTime(d: Date): string {
  * 段階別の価格（新しい料金の人数の明細）の段階の表。一覧では付かない（expand は4段まで）ので、価格ごとに1回だけ取りに行く。
  * 段階別の価格が無ければ（今の契約だけなら）Stripe を呼ばない
  */
-async function loadTiersByPrice(subs: any[]): Promise<Map<string, TierLike[]>> {
+async function loadTiersByPrice(subs: any[], reader: Pick<BillingRevenueReader, 'prices'> = stripe): Promise<Map<string, TierLike[]>> {
   const tiersByPrice = new Map<string, TierLike[]>()
   for (const priceId of new Set(subs.flatMap((s) => tieredPriceIdsMissingTiers(s.items?.data ?? [])))) {
     try {
-      const p: any = await stripe.prices.retrieve(priceId, { expand: ['tiers'] })
+      const p: any = await reader.prices.retrieve(priceId, { expand: ['tiers'] })
       if (Array.isArray(p?.tiers)) tiersByPrice.set(priceId, p.tiers)
     } catch {
       console.error('[billing-audit] could not read price tiers')
@@ -129,15 +130,15 @@ async function loadTiersByPrice(subs: any[]): Promise<Map<string, TierLike[]>> {
 }
 
 /** Stripe の全サブスクリプションをページングして取得 */
-async function listAllSubscriptions(): Promise<any[]> {
+async function listAllSubscriptions(reader: Pick<BillingRevenueReader, 'subscriptions'> = stripe, expandCustomer = true): Promise<any[]> {
   const out: any[] = []
   let startingAfter: string | undefined
   const cursors = new Set<string>()
   while (true) {
-    const res: any = await stripe.subscriptions.list({
+    const res: any = await reader.subscriptions.list({
       status: 'all',
       limit: 100,
-      expand: ['data.customer'],
+      expand: expandCustomer ? ['data.customer'] : [],
       ...(startingAfter ? { starting_after: startingAfter } : {}),
     })
     out.push(...res.data)
@@ -566,13 +567,44 @@ function jstMonthRange(now = new Date()): { since: Date; until: Date; label: str
   return { since, until, label: `${prev.getUTCFullYear()}年${prev.getUTCMonth() + 1}月` }
 }
 
+/** 読取専用のStripeクライアント。既存の定期レポートは従来のクライアントを既定で使う。 */
+export type BillingRevenueReader = {
+  subscriptions: { list: (params: Stripe.SubscriptionListParams, options?: Stripe.RequestOptions) => Promise<Stripe.ApiList<Stripe.Subscription>> }
+  invoices: { list: (params: Stripe.InvoiceListParams, options?: Stripe.RequestOptions) => Promise<Stripe.ApiList<Stripe.Invoice>> }
+  refunds: { list: (params: Stripe.RefundListParams, options?: Stripe.RequestOptions) => Promise<Stripe.ApiList<Stripe.Refund>> }
+  charges: { retrieve: (id: string, params?: Stripe.ChargeRetrieveParams, options?: Stripe.RequestOptions) => Promise<Stripe.Charge> }
+  paymentIntents: { retrieve: (id: string, params?: Stripe.PaymentIntentRetrieveParams, options?: Stripe.RequestOptions) => Promise<Stripe.PaymentIntent> }
+  prices: { retrieve: (id: string, params?: Stripe.PriceRetrieveParams, options?: Stripe.RequestOptions) => Promise<Stripe.Price> }
+}
+
+function addYenTotal(total: number, amount: number): number {
+  const next = total + amount
+  if (!Number.isSafeInteger(next) || next < 0) throw new Error('Monthly revenue total is invalid')
+  return next
+}
+
+export interface BillingRevenueRange {
+  since: Date
+  until: Date
+  label: string
+}
+
 export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenue> {
-  const { since, until, label } = jstMonthRange(now)
+  return runRevenueForRange(jstMonthRange(now))
+}
+
+/** 指定した日本時間の期間の入金と返金。通知・契約更新は行わない。 */
+export async function runRevenueForRange(range: BillingRevenueRange, options: { reader?: BillingRevenueReader; includeUpcoming?: boolean } = {}): Promise<MonthlyRevenue> {
+  const reader = options.reader ?? stripe
+  const { since, until, label } = range
+  if (!Number.isFinite(since.getTime()) || !Number.isFinite(until.getTime()) || since >= until || !label.trim()) {
+    throw new Error('Invalid billing revenue period')
+  }
   const sinceSeconds = Math.floor(since.getTime() / 1000)
   const untilSeconds = Math.floor(until.getTime() / 1000)
 
   // Stripeアカウントは他アプリと共有。請求書を集計する前にDoya契約を確定する。
-  const all = (await listAllSubscriptions()).filter((s) => isDoyaSubscription(s))
+  const all = (await listAllSubscriptions(reader, options.includeUpcoming !== false)).filter((s) => isDoyaSubscription(s))
   const doyaSubscriptionIds = new Set(all.map((s) => s.id))
 
   // 請求書の作成月と入金月は異なりうる。前月より前に作成された請求書も
@@ -582,7 +614,7 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   let startingAfter: string | undefined
   const cursors = new Set<string>()
   while (true) {
-    const res: any = await stripe.invoices.list({
+    const res: any = await reader.invoices.list({
       status: 'paid',
       created: { lt: untilSeconds },
       limit: 100,
@@ -590,7 +622,9 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
     })
     for (const invoice of res.data) {
       const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
-      if (!subscriptionId || !doyaSubscriptionIds.has(subscriptionId) || invoice.status !== 'paid' || (invoice.amount_paid || 0) <= 0) continue
+      if (!subscriptionId || !doyaSubscriptionIds.has(subscriptionId) || invoice.status !== 'paid') continue
+      if (!Number.isSafeInteger(invoice.amount_paid) || invoice.amount_paid < 0) throw new Error('Monthly invoice amount is invalid')
+      if (invoice.amount_paid === 0) continue
       const paidAt = invoice.status_transitions?.paid_at
       if (!Number.isSafeInteger(paidAt) || paidAt <= 0) throw new Error(`Monthly invoice payment timestamp is missing: ${invoice.id}`)
       if (invoice.currency !== 'jpy') throw new Error(`Monthly invoice currency is not JPY: ${invoice.id}`)
@@ -603,7 +637,7 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
     cursors.add(next)
     startingAfter = next
   }
-  const paidTotal = paid.reduce((sum, i) => sum + (i.amount_paid || 0), 0)
+  const paidTotal = paid.reduce((sum, i) => addYenTotal(sum, i.amount_paid), 0)
 
   // 請求書の post_payment_credit_notes_amount は累計であり、残高クレジットや
   // Stripe外の調整も含む。返金作成月の Refund を請求書へ紐付けて別途集計する。
@@ -613,7 +647,7 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   startingAfter = undefined
   cursors.clear()
   while (true) {
-    const res: any = await stripe.refunds.list({
+    const res: any = await reader.refunds.list({
       created: { gte: sinceSeconds, lt: untilSeconds },
       limit: 100,
       expand: ['data.charge', 'data.payment_intent'],
@@ -622,9 +656,9 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
     for (const refund of res.data) {
       if (refund.currency !== 'jpy') continue
       let charge = refund.charge
-      if (typeof charge === 'string') charge = await stripe.charges.retrieve(charge)
+      if (typeof charge === 'string') charge = await reader.charges.retrieve(charge)
       let paymentIntent = refund.payment_intent
-      if (!charge?.invoice && typeof paymentIntent === 'string') paymentIntent = await stripe.paymentIntents.retrieve(paymentIntent)
+      if (!charge?.invoice && typeof paymentIntent === 'string') paymentIntent = await reader.paymentIntents.retrieve(paymentIntent)
       const invoice = charge?.invoice || paymentIntent?.invoice
       const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id
       if (!invoiceId) {
@@ -633,10 +667,10 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
       }
       if (!doyaInvoiceIds.has(invoiceId)) continue
       if (!Number.isSafeInteger(refund.amount) || refund.amount <= 0) throw new Error(`Monthly refund amount is invalid: ${refund.id}`)
-      if (refund.status === 'succeeded') refundTotal += refund.amount
+      if (refund.status === 'succeeded') refundTotal = addYenTotal(refundTotal, refund.amount)
       else if (refund.status === 'pending' || refund.status === 'requires_action') {
         pendingRefundCount++
-        pendingRefundTotal += refund.amount
+        pendingRefundTotal = addYenTotal(pendingRefundTotal, refund.amount)
       } else if (refund.status !== 'failed' && refund.status !== 'canceled') {
         throw new Error(`Monthly refund status is unknown: ${refund.id}`)
       }
@@ -660,8 +694,8 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   ).length
 
   // トライアル中の方がいつ売上になるか（見込みの根拠）
-  const trialing = live.filter((s) => s.status === 'trialing')
-  const upcomingTiers = await loadTiersByPrice(trialing)
+  const trialing = options.includeUpcoming === false ? [] : live.filter((s) => s.status === 'trialing')
+  const upcomingTiers = await loadTiersByPrice(trialing, reader)
   const upcoming = trialing
     .map((s) => ({
       email: (typeof s.customer === 'object' ? (s.customer?.email as string | undefined) : null) || null,
