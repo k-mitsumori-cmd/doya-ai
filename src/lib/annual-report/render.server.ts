@@ -6,12 +6,11 @@
 // 台紙は横長が public/annual-report/frame.webp（1200×630）、縦長が frame-tall.webp（1080×1350）。無いときは、無地の枠で出す。
 // 台紙の右下にドヤくんがいるので、台紙があるときは、その場所を空けて文字を置く（framedTree）。
 // フォントは assets/fonts の Noto Sans JP（shanai のサムネと同じ）。
-// ⚠️ resvg-js はネイティブの .node を持ち、webpack で束ねるとビルドが落ちる。next.config.js の serverExternalPackages に
-//    入っていないため、実行時に createRequire で読む（webpack は追わない）。読めないとき（同梱されていない等）は sharp で PNG にする。
+// ⚠️ resvg-js のネイティブ .node は serverExternalPackages でバンドルから除外する。
+//    実行時に読み込み、読めないとき（同梱されていない等）は sharp で PNG にする。
 import fs from 'node:fs'
 import path from 'node:path'
 import satori from 'satori'
-import { createRequire } from 'node:module'
 import { IMAGE_SIZES, formatYen, type AnnualReport, type ImageSize } from './report'
 
 export const FRAME_PATH = path.join('public', 'annual-report', 'frame.webp')
@@ -287,13 +286,12 @@ export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root?:
       { name: 'Noto Sans JP', data: f.bold, weight: 700, style: 'normal' },
     ],
   })
-  return svgToPng(svg, width, root ?? process.cwd())
+  return svgToPng(svg, width)
 }
 
-async function svgToPng(svg: string, width: number, root: string): Promise<Buffer> {
+async function svgToPng(svg: string, width: number): Promise<Buffer> {
   try {
-    const load = createRequire(path.join(root, 'package.json'))
-    const { Resvg } = load('@resvg/resvg-js') as typeof import('@resvg/resvg-js')
+    const { Resvg } = await import('@resvg/resvg-js')
     return Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng())
   } catch {
     const sharp = (await import('sharp')).default

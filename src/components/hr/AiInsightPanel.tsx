@@ -76,7 +76,7 @@ export default function AiInsightPanel({
         ) : (
           <>
             <div className="flex gap-3">
-              <div className="flex-1 text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
+              <div className="flex-1 min-w-0 break-words text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
                 {content}
               </div>
               {content && (

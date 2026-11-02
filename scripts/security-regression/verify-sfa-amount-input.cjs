@@ -31,7 +31,7 @@ const create = load('src/app/api/sfa/deals/route.ts', {
   '@/lib/service-usage': { recordServiceUsage: async () => {} },
 }).POST;
 const updatePrisma = { sfaDeal: {
-  findUnique: async () => ({ id: 'deal-1', organizationId: 'org-1', isActive: true }),
+  findUnique: async () => ({ id: 'deal-1', organizationId: 'org-1', assigneeMemberId: 'member-1', isActive: true }),
   update: async ({ data }) => { updateWrites++; return { id: 'deal-1', ...data }; },
 } };
 const update = load('src/app/api/sfa/deals/[id]/route.ts', { ...common, ...dealDeps(updatePrisma), '@/lib/prisma': { prisma: updatePrisma } }).PATCH;

@@ -1,4 +1,5 @@
 import RuntimeErrorReporter from '@/components/RuntimeErrorReporter';
+import MaterialSymbolsReady from '@/components/MaterialSymbolsReady';
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
@@ -13,6 +14,7 @@ import LogoutToastListener from '@/components/LogoutToastListener'
 import StripeSuccessSync from '@/components/StripeSuccessSync'
 import ServicePopupGuard from '@/components/ServicePopupGuard'
 import { getRunningServices } from '@/lib/services'
+import { isBrandRenamed } from '@/lib/brand'
 
 // 開発中のベータ版（一覧から外したツール）も、ツールの画面としてポップアップを出さない
 const ACTIVE_SERVICE_PATHS = getRunningServices().map(service => service.href)
@@ -76,17 +78,27 @@ export const metadata: Metadata = {
     },
   },
   
-  // アイコン
-  icons: {
-    // App Router のアイコンの画像ファイル（src/app の icon と apple-icon。ロゴ案A。正本は docs/design/images/brand/PROMPTS.md）
-    icon: [{ url: '/icon.png', type: 'image/png' }],
-    shortcut: [{ url: '/icon.png', type: 'image/png' }],
-    apple: [{ url: '/apple-icon.png', type: 'image/png' }],
-  },
-  
-  // マニフェスト
-  manifest: '/site.webmanifest',
-  
+  // アイコン（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のときだけ、ドヤバディの新ロゴ。旗が off の間は今のアイコンのまま）
+  // ファイル規約の icon.png / apple-icon.png は旗で出し分けられないため、public/brand/ に移して、ここで明示する。
+  icons: isBrandRenamed()
+    ? {
+        icon: [
+          { url: '/brand/doya-buddy/favicon/favicon.ico', sizes: 'any' },
+          { url: '/brand/doya-buddy/favicon/favicon.svg', type: 'image/svg+xml' },
+          { url: '/brand/doya-buddy/favicon/favicon-32.png', sizes: '32x32', type: 'image/png' },
+        ],
+        shortcut: [{ url: '/brand/doya-buddy/favicon/favicon.ico' }],
+        apple: [{ url: '/brand/doya-buddy/icon/doya-buddy-icon-180.png', sizes: '180x180', type: 'image/png' }],
+      }
+    : {
+        icon: [{ url: '/brand/doya-ai-icon.png', type: 'image/png' }],
+        shortcut: [{ url: '/brand/doya-ai-icon.png', type: 'image/png' }],
+        apple: [{ url: '/brand/doya-ai-apple-icon.png', type: 'image/png' }],
+      },
+
+  // マニフェスト（旗が all のときは、名前とアイコンを新ロゴにしたもの）
+  manifest: isBrandRenamed() ? '/site-buddy.webmanifest' : '/site.webmanifest',
+
   // 認証
   verification: {
     // google: 'your-google-verification-code',
@@ -118,7 +130,7 @@ export default function RootLayout({
   const webSiteSchema = generateWebSiteSchema()
 
   return (
-    <html lang="ja">
+    <html lang="ja" data-scroll-behavior="smooth">
       <head>
         {/* Google Tag Manager */}
         <GoogleTagManager />
@@ -149,31 +161,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {/* Material Symbols フォント読み込み検知 — 読み込み前のテキスト表示防止 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                if (!document.fonts || !document.fonts.check) {
-                  document.body.classList.add('fonts-loaded');
-                  return;
-                }
-                function check() {
-                  if (document.fonts.check('1em "Material Symbols Outlined"')) {
-                    document.body.classList.add('fonts-loaded');
-                  } else {
-                    requestAnimationFrame(check);
-                  }
-                }
-                if (document.readyState === 'complete') {
-                  check();
-                } else {
-                  window.addEventListener('load', check);
-                }
-              })();
-            `,
-          }}
-        />
+        <MaterialSymbolsReady />
         {/* Google Tag Manager (noscript) */}
         <GoogleTagManagerNoScript />
         <Providers>

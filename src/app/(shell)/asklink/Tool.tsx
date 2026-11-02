@@ -2,17 +2,21 @@
 
 // ドヤAI質問リンク 作成画面（ログイン後）
 // 流れ: URL → 抽出＋質問リンク2本（数秒〜十数秒）→ バナー3枚を1枚ずつ（1枚1〜2分）
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Link2, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
+import { BANNER_SPECS } from '@/lib/asklink/types'
 import { ToolHero } from '@/components/ds'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
 const HERO_ART = '/ui-renewal/keyart/asklink.webp'
@@ -52,16 +56,24 @@ function Guide() {
 
 export default function AskLinkTool() {
   const [url, setUrl] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)
+  const oneButton = useOneButton()
+  const formRef = useRef<HTMLFormElement>(null)
   const [error, setError] = useState<string | null>(null)
   // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（0 は通信の失敗）
   const [errStatus, setErrStatus] = useState<number | null>(null)
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
   const [run, setRun] = useState<RunDto | null>(null)
-  const queue = useBannerQueue(setRun)
+  const queue = useBannerQueue(setRun, run?.id)
   const [doneShown, setDoneShown] = useState(false)
+
+  const bannersReady = Boolean(run && BANNER_SPECS.every((spec) =>
+    run.banners.some((banner) => banner.kind === spec.kind && banner.status === 'done' && Boolean(banner.url))
+  ))
 
   // 入力の誤り（400）を、どの欄の誤りかとして支援技術に伝える
   const urlInvalid = Boolean(error) && errStatus === 400 && !needManual
@@ -70,6 +82,7 @@ export default function AskLinkTool() {
   const create = async () => {
     if (loading) return
     setLoading(true)
+    setDoneShown(false)
     setError(null)
     setErrStatus(null)
     setLimit(null)
@@ -112,6 +125,20 @@ export default function AskLinkTool() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+      {oneButton ? (
+        <div className="mb-6">
+          <OneButtonBar
+            eyebrow="ドヤAI質問リンク"
+            cta={loading ? 'リンクとバナーを作っています。このままお待ちください' : '自社サイトの URL を入れたら、押してください'}
+            label="作成する"
+            scope="入れた URL から、ChatGPT に質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
+            onRun={() => formRef.current?.requestSubmit()}
+            disabled={loading || !url.trim() || (needManual && manualText.trim().length < 20)}
+            disabledReason={needManual && url.trim() ? 'サイトの文章を20文字以上入れると押せます。' : '自社サイトの URL を入れると押せます。'}
+            running={loading}
+          />
+        </div>
+      ) : null}
       <div className="mb-6">
           <ToolHero
             title={<>サイトのURLから、<wbr />「AIに聞く」リンクを</>}
@@ -122,6 +149,7 @@ export default function AskLinkTool() {
         </div>
 
       <form
+        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           void create()
@@ -222,7 +250,7 @@ export default function AskLinkTool() {
 
       {run && (
         <div className="mt-8">
-          {doneShown && !queue.busy && (
+          {doneShown && !queue.pending && queue.errorStatus === null && bannersReady && (
             <div className="mb-4">
               <DoneBanner
                 title="質問リンクとバナーができました。下のボタンでコピーして、ポップアップに貼ってください。"
@@ -231,10 +259,12 @@ export default function AskLinkTool() {
               />
             </div>
           )}
-          {queue.busy && (
+          {queue.pending && (
             <p className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50 p-3 text-sm font-bold text-[#0066ff]">
               <Loader2 className="h-4 w-4 animate-spin" />
-              バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。
+              {queue.busy
+                ? <>バナー画像を作成しています（{run.banners.findIndex((b) => b.kind === queue.busy) + 1}/{run.banners.length}）。リンクは先にお使いいただけます。</>
+                : 'バナー画像の作成を待っています。前の画像の処理が終わり次第、作成します。リンクは先にお使いいただけます。'}
             </p>
           )}
           {(
@@ -245,6 +275,7 @@ export default function AskLinkTool() {
             )
           )}
           <RunResult
+            key={run.id}
             run={run}
             onChange={setRun}
             bannerBusy={queue.busy}

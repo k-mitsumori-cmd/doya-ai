@@ -1,5 +1,6 @@
 /* 共通シェル — クリア（トークンは src/components/ds/tokens.module.css） */
 .shell {
+  --shell-mobile-bottom-inset: 0px;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
@@ -73,6 +74,65 @@
 .navItem:hover { background: var(--bg); color: var(--ink); }
 .navItem[aria-current='page'] { background: var(--blue-soft); color: var(--blue); }
 
+/* ツールのまとまり（ドヤマーケAI など）。見出しを押すと開く・畳む */
+.deptBlock { margin-top: 2px; }
+.deptToggle {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 44px; padding: 0 10px 0 12px; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); text-align: left;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.deptToggle:hover { background: var(--bg); }
+.deptToggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* 畳んだまとまりに今のページがあるときは、見出しを青くする（どこにいるかを見失わない） */
+.deptToggle[data-active='true'] { color: var(--blue); }
+.deptIcon {
+  flex: none; width: 28px; height: 28px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-soft); color: var(--blue);
+}
+.deptCount { margin-left: auto; flex: none; font-size: 11px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.deptChevron { flex: none; color: var(--muted); transition: transform 0.22s var(--ease); }
+.deptChevron[data-open='false'] { transform: rotate(-90deg); }
+/* 高さを 0 から中身の高さまでなめらかに動かす（grid の行で。高さの数字を決め打ちしない） */
+.deptBody {
+  display: grid; grid-template-rows: 1fr;
+  transition: grid-template-rows 0.24s var(--ease), opacity 0.2s var(--ease), visibility 0s linear 0s;
+}
+.deptBody[data-open='false'] {
+  grid-template-rows: 0fr; opacity: 0; visibility: hidden;
+  transition: grid-template-rows 0.24s var(--ease), opacity 0.16s var(--ease), visibility 0s linear 0.24s;
+}
+.deptInner { min-height: 0; overflow: hidden; padding-left: 14px; }
+.deptInner .navItem { min-height: 38px; }
+
+/* 「動いているタスク」（ドヤくんに任せた ToDo の件数） */
+.tasksRow { min-height: 48px; margin-top: 2px; }
+.tasksIcon {
+  position: relative; flex: none; width: 32px; height: 32px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-soft); color: var(--blue);
+}
+.tasksPulse {
+  position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 99px;
+  background: #00b46e; box-shadow: 0 0 0 2px var(--paper);
+}
+.tasksPulse::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; background: #00b46e;
+  animation: shell-pulse 1.6s var(--ease) infinite;
+}
+@keyframes shell-pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2.6); opacity: 0; } }
+.tasksText { display: grid; min-width: 0; gap: 2px; }
+.tasksMeta { display: flex; flex-wrap: nowrap; gap: 4px; min-height: 18px; align-items: center; overflow: hidden; }
+.tasksChip {
+  flex: none; padding: 0 7px; border-radius: 999px; line-height: 18px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.tasksChip[data-kind='running'] { background: #e3f8ee; color: #00804e; }
+.tasksChip[data-kind='done'] { background: var(--blue-soft); color: var(--blue); }
+.tasksChip[data-kind='failed'] { background: #ffe8ef; color: #c8104f; }
+.tasksNone { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .navLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .beta {
@@ -105,6 +165,13 @@
 
 /* ログアウトは button なので、リンクと見た目をそろえる */
 .logout { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+/* 「お知らせ」の件数（1日1つの決まりで止めた知らせの数） */
+.noticeRow:disabled { cursor: default; opacity: .55; }
+.noticeRow:disabled:hover { background: transparent; color: inherit; }
+.noticeIcon { position: relative; display: inline-flex; flex: none; }
+/* 細いメニュー（768〜1279px）では件数の文字が隠れるので、鈴の右上に点を出す */
+.noticeDot { display: none; position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; border-radius: 99px; background: var(--blue); box-shadow: 0 0 0 2px var(--paper); }
+.noticeCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 8px; padding: 0 6px; border-radius: 99px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; }
 
 .main { min-width: 0; }
 
@@ -164,6 +231,14 @@
   .sidebar { padding: 16px 10px 12px; }
   .sideHead { justify-content: center; padding: 0 0 12px; }
   .navLabel, .beta, .newTag, .groupLabel, .userLine, .usage { display: none; }
+  /* アイコンだけの幅では畳まない（まとまりの見出しは出さず、全部のアイコンを出す） */
+  .deptToggle { display: none; }
+  .deptBody[data-open='false'] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+  .deptInner { padding-left: 0; }
+  .deptBlock + .deptBlock { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .tasksText { display: none; }
+  .tasksRow { min-height: 44px; }
+  .noticeDot { display: block; }
   .search { justify-content: center; padding: 0; }
   .navItem { justify-content: center; padding: 0; }
   .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -199,7 +274,8 @@
   }
   .scrim[data-open='true'] { opacity: 1; pointer-events: auto; }
 
-  .main { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .shell { --shell-mobile-bottom-inset: calc(68px + env(safe-area-inset-bottom)); }
+  .main { padding-bottom: var(--shell-mobile-bottom-inset); }
 
   .tabbar {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -221,7 +297,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar, .scrim, .navItem { transition: none; }
+  .sidebar, .scrim, .navItem, .deptChevron, .deptToggle, .deptBody, .deptBody[data-open='false'] { transition: none; }
+  .tasksPulse::after { animation: none; }
 }
 
 /* 移っている間の細い線（UI 品質 C-3）。前のページはそのまま見せる */

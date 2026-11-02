@@ -15,12 +15,15 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
   const [role, setRole] = useState<Role | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
+  const [loadingStartedAt, setLoadingStartedAt] = useState(() => Date.now())
 
   useEffect(() => {
     let alive = true
+    setLoadingStartedAt(Date.now())
     setState('loading')
     fetch(`/api/expense/usage?org=${encodeURIComponent(orgSlug)}`, { cache: 'no-store' })
       .then(async (r) => {
+        if (!alive) return
         if (r.status === 401) {
           router.replace('/expense')
           return
@@ -51,7 +54,7 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
         {state === 'loading' && <Loading />}
         {state === 'denied' && <ErrorBox forbidden />}
         {state === 'error' && <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />}
-        {state === 'ok' && <OrgContext.Provider value={{ orgSlug, role }}>{children}</OrgContext.Provider>}
+        {state === 'ok' && <OrgContext.Provider value={{ orgSlug, role, loadingStartedAt }}>{children}</OrgContext.Provider>}
       </ToolFrame>
     </>
   )

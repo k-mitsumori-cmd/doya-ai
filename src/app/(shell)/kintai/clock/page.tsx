@@ -2,16 +2,15 @@
 
 import { Pencil, RotateCcw } from 'lucide-react'
 import { PageTitle } from '@/components/kintai/ui-next'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { Skeleton } from '@/components/ds'
 import { useEscapeToClose } from '@/lib/kintai/use-escape'
-import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
-
-type ClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
+import { useKintaiClock } from '@/lib/kintai/use-clock'
+import ErrorReportForm, { ErrorContactFooter } from '@/components/common/ErrorReportForm'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -40,85 +39,31 @@ const TIMELINE_CHAR: Record<string, string> = {
 }
 
 export default function ClockPage() {
-  const { isActive } = useKintaiAccess()
+  const access = useKintaiAccess()
+  const { isActive } = access
+  const { status, records, loading, loadError, hasLoaded, acting, message, showSuccess, unknown, canResume, fetchRecords, handleClock: submitClock, resume } = useKintaiClock(access)
   const [now, setNow] = useState(new Date())
-  const [status, setStatus] = useState<ClockStatus>('not_clocked_in')
-  const [records, setRecords] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(false)
-  // 打刻のあとの読み直しでは画面を骨組みに戻さない（成功の表示を消さない）。最初の読み込みのときだけ骨組みを出す
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const [acting, setActing] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [showSuccess, setShowSuccess] = useState(false)
   const [confirmClockOut, setConfirmClockOut] = useState(false)
   const [hoverClockIn, setHoverClockIn] = useState(false)
-  const messageTimerRef = useRef<NodeJS.Timeout | null>(null)
-
+  const identity = JSON.stringify([access.actorId || '', access.organizationId || ''])
+  const [retryIdentity, setRetryIdentity] = useState<string | null>(null)
+  const [reportIdentity, setReportIdentity] = useState<string | null>(null)
+  const reportEnabled = reportIdentity === identity && (unknown || loadError)
+  useEffect(() => {
+    if (loading || acting) return
+    if (!unknown && !loadError) { setRetryIdentity(null); setReportIdentity(null); return }
+    if (retryIdentity === identity) setReportIdentity(identity)
+  }, [identity, retryIdentity, unknown, loadError, loading, acting])
+  const retryClockRead = () => { setRetryIdentity(identity); void fetchRecords() }
+  // Keep the real form mounted during later reads, preserving both draft and report ID.
+  const recoveryContact = reportEnabled
+    ? <div className="w-full" key={identity}><ErrorReportForm errorType="unknown" /></div>
+    : <ErrorContactFooter />
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
-
-  const fetchRecords = useCallback(async () => {
-    setLoading(true)
-    try {
-      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
-      const res = await fetch(`/api/kintai/clock?date=${today}`)
-      const data = await res.json()
-      if (!res.ok || !Array.isArray(data.records) || !Array.isArray(data.activeShiftRecords) ||
-        !['not_clocked_in', 'working', 'on_break', 'clocked_out'].includes(data.clockStatus)) {
-        throw new Error('打刻状態を確認できません')
-      }
-      setRecords(data.activeShiftRecords || data.records || [])
-      setStatus(data.clockStatus || 'not_clocked_in')
-      setLoadError(false)
-    } catch {
-      setLoadError(true)
-    } finally {
-      setLoading(false)
-      setHasLoaded(true)
-    }
-  }, [])
-
-  useEffect(() => { fetchRecords() }, [fetchRecords])
-
-  // Auto-dismiss message after 3 seconds
-  useEffect(() => {
-    if (message) {
-      if (messageTimerRef.current) clearTimeout(messageTimerRef.current)
-      messageTimerRef.current = setTimeout(() => setMessage(null), 3000)
-    }
-    return () => {
-      if (messageTimerRef.current) clearTimeout(messageTimerRef.current)
-    }
-  }, [message])
-
-  const handleClock = async (type: string) => {
-    setActing(true)
-    setMessage(null)
-    setConfirmClockOut(false)
-    try {
-      const res = await fetch('/api/kintai/clock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setMessage({ type: 'error', text: userErrorMessage(data?.error, '打刻できませんでした。状態を確かめて、もう一度お試しください。') })
-        return
-      }
-      setMessage({ type: 'success', text: `${CLOCK_TYPE_LABELS[type] || type}しました` })
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
-      await fetchRecords()
-    } catch {
-      setMessage({ type: 'error', text: KINTAI_NETWORK_ERROR })
-    } finally {
-      setActing(false)
-    }
-  }
+  const handleClock = (type: string) => { setConfirmClockOut(false); void submitClock(type) }
 
   const handleClockOutClick = () => {
     setConfirmClockOut(true)
@@ -215,7 +160,7 @@ export default function ClockPage() {
     </div>
   }
 
-  if (loading && !hasLoaded) {
+  if (loading && !hasLoaded && !loadError && !reportEnabled) {
     return (
       <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-4" aria-busy="true" aria-label="打刻の状態を読み込み中">
         <Skeleton lines={2} height={40} />
@@ -224,11 +169,23 @@ export default function ClockPage() {
     )
   }
 
+  if (unknown) {
+    return <div role="alert" aria-busy={loading || acting} className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-lg font-bold text-slate-800">打刻結果を確認できませんでした</p>
+      <p className="text-sm text-slate-600">再打刻せず、現在の状態を読み直してください。保存済みの打刻が見つかると通常画面へ戻ります。</p>
+      <button type="button" disabled={loading || acting} onClick={retryClockRead} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white disabled:opacity-50">状態を再確認</button>
+      <button type="button" disabled={!canResume} onClick={() => void resume()} className="min-h-11 text-sm font-semibold underline disabled:opacity-50">最新の状態を確認して打刻を再開</button>
+      <p className="text-xs text-slate-600">打刻の再開でも状態を読み直します。打刻は自動送信しません。</p>
+      {recoveryContact}
+    </div>
+  }
+
   if (loadError) {
     return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-lg font-bold text-slate-800">打刻状態を確認できませんでした</p>
       <p className="text-sm text-slate-600">打刻を再送せず、現在の状態を読み直してください。</p>
-      <button type="button" onClick={fetchRecords} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600">状態を再確認</button>
+      <button type="button" disabled={loading || acting} onClick={retryClockRead} className="rounded-xl bg-brand-500 px-5 py-3 font-bold text-white hover:bg-brand-600 disabled:opacity-50">状態を再確認</button>
+      {recoveryContact}
     </div>
   }
 

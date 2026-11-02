@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import type { SfaContext } from './types'
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import { SfaMutationError } from './mutation-authority'
 import { createSfaOnce, SfaReceiptRaceError } from './creation-receipt'
 
@@ -38,7 +39,8 @@ export function leadImportInput(value: unknown) {
   return { body, data, skippedRows }
 }
 const batchKey = (c: SfaContext, id: string) => 'sfa-lead-import:v1:' + createHash('sha256').update(JSON.stringify([c.userId, c.organizationId, id])).digest('hex')
-export async function findLeadImport(tx: Prisma.TransactionClient, c: SfaContext, id: string): Promise<SfaLeadImportResult | null> {
+export async function findLeadImport(tx: Prisma.TransactionClient, scope: SfaRecordScope, id: string): Promise<SfaLeadImportResult | null> {
+  const c = scope.actor
   const saved = await tx.systemSetting.findUnique({ where: { key: batchKey(c, id) }, select: { value: true } })
   if (!saved || saved.value.length > 100000) return null
   let record: unknown
@@ -47,14 +49,15 @@ export async function findLeadImport(tx: Prisma.TransactionClient, c: SfaContext
   const r = record as Row
   if (r.version !== 1 || r.userId !== c.userId || r.organizationId !== c.organizationId || !Array.isArray(r.ids) || !r.ids.length || r.ids.length > 500 || !r.ids.every(v => typeof v === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(v)) || new Set(r.ids).size !== r.ids.length
     || !Array.isArray(r.skippedRows) || r.skippedRows.length + r.ids.length > 500 || new Set(r.skippedRows).size !== r.skippedRows.length || !r.skippedRows.every(v => Number.isInteger(v) && v > 0 && v <= (r.ids as unknown[]).length + (r.skippedRows as unknown[]).length)) return null
-  const count = await tx.sfaLead.count({ where: { id: { in: r.ids as string[] }, organizationId: c.organizationId, isActive: true } })
+  const count = await tx.sfaLead.count({ where: sfaRecordWhere(scope, 'lead', false, { id: { in: r.ids as string[] } }) })
   return count === r.ids.length ? { id, imported: count, skipped: r.skippedRows.length, skippedRows: r.skippedRows as number[] } : null
 }
 
 /** The result marker, lead rows and replay receipt share one Serializable transaction. */
-export async function createLeadImport(tx: Prisma.TransactionClient, c: SfaContext, operationId: string | undefined, input: ReturnType<typeof leadImportInput>) {
+export async function createLeadImport(tx: Prisma.TransactionClient, scope: SfaRecordScope, operationId: string | undefined, input: ReturnType<typeof leadImportInput>) {
+  const c = scope.actor
   return createSfaOnce(tx, c, 'lead-import', operationId, { rows: input.data, skippedRows: input.skippedRows },
-    id => findLeadImport(tx, c, id), async () => {
+    id => findLeadImport(tx, scope, id), async () => {
       const id = operationId || randomUUID(), ids = input.data.map(() => randomUUID())
       const rows = input.data.map((row, index) => ({ ...row, id: ids[index], organizationId: c.organizationId, assigneeMemberId: c.memberId }))
       const created = await tx.sfaLead.createMany({ data: rows })

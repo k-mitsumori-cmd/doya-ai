@@ -1,11 +1,15 @@
-> ⚠️ **2026-08-17: 以下7サービスのAPIは提供終了しており、全ハンドラが410を返す。**
-> `/api/movie/*` `/api/voice/*` `/api/tenkai/*` `/api/copy/*`
-> `/api/interviewx/*` `/api/lp/*` `/api/adsim/*` `/api/adbanner/*`
-> 本書に現役APIとして残っている記述は古い。正本は `src/lib/services.ts` の
-> `HIDDEN_SERVICE_IDS` と各ルートの `SERVICE_RETIRED` ガード。
-> ⚠️ `/api/interviewx`（廃止）と `/api/interview`（現役のドヤインタビュー）は別物。
+> 提供終了の判定は `src/lib/services.ts` の `RETIRED_SERVICE_IDS`、実APIの停止は
+> 各ルートの `SERVICE_RETIRED` ガードを参照してください。本書には旧APIの宣言も残しています。
+> 提供終了ハンドラは410を返します。宣言がないメソッドまで利用可能になるわけではありません。
+> `/api/interviewx`（提供終了）と `/api/interview`（現役のドヤインタビュー）は別の経路です。
 
-# 03. API リファレンス (全エンドポイント一覧)
+# 03. API リファレンス（主要APIの索引）
+
+> 2026-10-29 ソース照合: この索引は全APIの網羅表ではありません。現行の
+> `src/app/api` は687のrouteファイル・991のHTTPメソッドexportを持ち、うち5ファイルは
+> `export {}`のみです。本表のメソッド欄はルートの宣言に合わせていますが、認証・権限・
+> 入出力・実行成功を保証するものではありません。`*`付きの行は複数経路の分類です。
+> HTTP処理を持たない経路と現行ファイルがない旧記載は、末尾の表へ分けました。
 
 ## 共通仕様
 
@@ -42,11 +46,17 @@ const id = p.id
 
 ---
 
+## 利用者によるエラー報告
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/api/feedback/error-report` | 404・エラー画面から任意で送信。未ログイン可。同一Origin・JSON最大16KiB・入力上限・共有IP日次上限を検証し、報告IDと送信者スコープで二重通知を防止。通知成功の受領時だけsuccess=true。処理中202、内容変更409、上限429、不明503。preview/localでは通知・DB書込前に503。 |
+
 ## 認証 API
 
 | メソッド | パス | 説明 |
 |---------|------|------|
-| * | `/api/auth/[...nextauth]` | NextAuth.js (Google OAuth) |
+| GET/POST | `/api/auth/[...nextauth]` | NextAuth.js (Google OAuth) |
 
 ## 管理画面 API (20+エンドポイント)
 
@@ -62,7 +72,7 @@ const id = p.id
 |---------|------|------|
 | GET | `/api/admin/stats` | KPI統計 (ユーザー数, 生成数, 収益, サービス別統計) |
 | GET/PATCH/DELETE | `/api/admin/users` | ユーザー管理 (プラン変更, 使用回数管理, 削除) |
-| POST | `/api/admin/users/export` | ユーザーデータ CSV/JSON エクスポート |
+| GET | `/api/admin/users/export` | ユーザーデータ CSV/JSON エクスポート |
 
 ### 管理者ユーザー
 | メソッド | パス | 説明 |
@@ -73,19 +83,18 @@ const id = p.id
 ### テンプレート・画像
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET/PUT | `/api/admin/templates` | テンプレート管理 |
-| POST | `/api/admin/templates/generate-batch` | テンプレート一括生成 |
+| GET/POST | `/api/admin/templates/generate-batch` | テンプレート一括生成 |
 | GET/POST | `/api/admin/doyamana/categories` | ドヤマナカテゴリ CRUD |
-| GET/PATCH/DELETE | `/api/admin/doyamana/categories/[id]` | カテゴリ個別操作 |
-| GET/POST | `/api/admin/doyamana/images` | ドヤマナ画像 CRUD |
-| GET/PATCH/DELETE | `/api/admin/doyamana/images/[id]` | 画像個別操作 |
+| GET/PUT/DELETE | `/api/admin/doyamana/categories/[id]` | カテゴリ個別操作 |
+| GET/POST/PATCH | `/api/admin/doyamana/images` | ドヤマナ画像 CRUD |
+| GET/PUT/DELETE | `/api/admin/doyamana/images/[id]` | 画像個別操作 |
 
 ### Stripe・マイグレーション
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET/POST | `/api/admin/stripe` | Stripe同期・サブスクリプション管理 |
 | POST | `/api/admin/migrate` | データマイグレーション |
-| POST | `/api/admin/migrate-banner-prompts` | バナープロンプトマイグレーション |
+| GET/POST | `/api/admin/migrate-banner-prompts` | バナープロンプトマイグレーション |
 
 ### 管理画面ページ一覧 (`/admin/*`)
 | パス | 説明 |
@@ -110,13 +119,13 @@ const id = p.id
 | メソッド | パス | 説明 |
 |---------|------|------|
 | POST | `/api/stripe/checkout` | Checkout Session 作成 (subscription / payment) |
-| POST | `/api/stripe/portal` | カスタマーポータルセッション |
+| GET/POST | `/api/stripe/portal` | カスタマーポータルセッション |
 | GET | `/api/stripe/portal/redirect` | ポータルリダイレクト |
 | POST | `/api/stripe/webhook` | Webhook 受信 (署名検証 → UserServiceSubscription更新) |
 | POST | `/api/stripe/subscription/cancel` | サブスクリプション解約 |
 | POST | `/api/stripe/subscription/resume` | 解約取消 |
 | GET | `/api/stripe/subscription/status` | サブスクリプション状態確認 |
-| GET | `/api/stripe/sync` | Stripe同期 |
+| POST | `/api/stripe/sync` | Stripe同期 |
 | POST | `/api/stripe/sync/latest` | 最新情報手動同期 |
 
 ### Stripe PlanId → ServiceId マッピング
@@ -132,13 +141,13 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 
 | メソッド | パス | 説明 |
 |---------|------|------|
-| POST | `/api/banner/generate` | バナー生成 (Gemini 3 Pro Image) |
+| GET/POST | `/api/banner/generate` | バナー生成 (Gemini 3 Pro Image) |
 | POST | `/api/banner/from-url` | URLからバナー自動生成 |
-| POST | `/api/banner/refine` | リファイン |
-| POST | `/api/banner/chat` | チャット・リファイン |
-| POST | `/api/banner/copy` | コピー提案 |
+| GET/POST/DELETE | `/api/banner/refine` | リファイン |
+| GET/POST/DELETE | `/api/banner/chat` | チャット・リファイン |
+| GET/POST/DELETE | `/api/banner/copy` | コピー提案 |
 | GET | `/api/banner/gallery` | ギャラリー |
-| GET | `/api/banner/history` | 生成履歴 |
+| GET/DELETE | `/api/banner/history` | 生成履歴 |
 | GET | `/api/banner/history/image` | 履歴画像取得 |
 | GET | `/api/banner/history/thumb` | 履歴サムネイル |
 | GET | `/api/banner/image` | 画像取得 |
@@ -154,25 +163,23 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 ### 記事 CRUD
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET/POST | `/api/seo/articles` | 記事一覧・作成 |
-| GET/PUT/DELETE | `/api/seo/articles/[id]` | 記事詳細・更新・削除 |
+| GET/POST/PATCH | `/api/seo/articles` | 記事一覧・作成 |
+| GET/DELETE | `/api/seo/articles/[id]` | 記事詳細・削除 |
 
 ### 記事生成・編集
 | メソッド | パス | 説明 |
 |---------|------|------|
 | POST | `/api/seo/articles/[id]/outline` | アウトライン生成 |
 | POST | `/api/seo/articles/[id]/content` | セクション生成 (SSE) |
-| POST | `/api/seo/articles/[id]/audit` | 記事監査 |
 | POST | `/api/seo/articles/[id]/autofix` | 自動修正 |
 | POST | `/api/seo/articles/[id]/chat-edit` | チャット編集 |
 | POST | `/api/seo/articles/[id]/vibe-edit` | バイブ編集 |
 | POST | `/api/seo/articles/[id]/check` | チェック |
 | POST | `/api/seo/articles/[id]/competitor-analysis` | 競合分析 |
 | POST | `/api/seo/articles/[id]/research` | リサーチ |
-| GET | `/api/seo/articles/[id]/candidates` | 候補一覧 |
+| GET/POST/DELETE | `/api/seo/articles/[id]/candidates` | 候補一覧 |
 | POST | `/api/seo/articles/[id]/link-check` | リンクチェック |
-| GET/PUT | `/api/seo/articles/[id]/memo` | メモ |
-| GET/PUT | `/api/seo/articles/[id]/meta` | メタ情報 |
+| POST | `/api/seo/articles/[id]/memo` | メモ |
 | POST | `/api/seo/articles/[id]/generate-note` | ノート生成 |
 
 ### 画像
@@ -183,7 +190,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 | POST | `/api/seo/articles/[id]/images/diagram` | 図解生成 |
 | POST | `/api/seo/articles/[id]/images/ensure` | 画像確保 |
 | POST | `/api/seo/articles/[id]/images/suggest` | 画像提案 |
-| GET/DELETE | `/api/seo/images/[id]` | 画像取得・削除 |
+| GET | `/api/seo/images/[id]` | 画像取得 |
 | POST | `/api/seo/images/[id]/regenerate` | 画像再生成 |
 
 ### エクスポート
@@ -209,11 +216,11 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 ### セクション・参考URL
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET/PUT | `/api/seo/sections/[id]` | セクション取得・更新 |
+| PUT | `/api/seo/sections/[id]` | セクション更新 |
 | POST | `/api/seo/sections/[id]/cv` | セクションCV |
 | POST | `/api/seo/sections/[id]/regenerate` | セクション再生成 |
 | POST | `/api/seo/sections/[id]/seo` | セクションSEO |
-| GET | `/api/seo/reference/meta` | 参考URLメタ取得 |
+| POST | `/api/seo/reference/meta` | 参考URLメタ取得 |
 | POST | `/api/seo/reference/parse` | 参考URL解析 |
 
 ### その他SEO
@@ -221,13 +228,8 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 |---------|------|------|
 | POST | `/api/seo/title-suggestions` | タイトル提案 |
 | GET | `/api/seo/entitlements` | 利用権限確認 |
-| POST | `/api/seo/predict` | 予測 |
-| GET | `/api/seo/preview` | プレビュー |
-| GET/POST | `/api/seo/compare/candidates` | 比較候補 |
-| GET/POST | `/api/seo/knowledge` | ナレッジ一覧 |
-| GET/PUT/DELETE | `/api/seo/knowledge/[id]` | ナレッジ個別 |
-| POST | `/api/seo/migrate-prompts` | プロンプトマイグレーション |
-| * | `/api/seo/test/*` | テスト用 (banners, generate, thumbnails, image 等) |
+| POST | `/api/seo/compare/candidates` | 比較候補 |
+| GET/POST | `/api/seo/migrate-prompts` | プロンプトマイグレーション |
 
 ## インタビュー API (25+)
 
@@ -238,7 +240,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 |---------|------|------|
 | GET/POST | `/api/interview/projects` | プロジェクト一覧・作成 |
 | GET/PUT/DELETE | `/api/interview/projects/[id]` | プロジェクト CRUD |
-| GET | `/api/interview/projects/[id]/thumbnail` | サムネイル取得 |
+| GET/POST | `/api/interview/projects/[id]/thumbnail` | サムネイル取得 |
 
 ### 素材・文字起こし
 | メソッド | パス | 説明 |
@@ -252,7 +254,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 ### 記事生成・編集
 | メソッド | パス | 説明 |
 |---------|------|------|
-| POST | `/api/interview/articles/generate` | AI記事生成 (SSE) |
+| GET/POST/DELETE | `/api/interview/articles/generate` | AI記事生成 (SSE) |
 | GET/PUT | `/api/interview/articles/[id]` | 記事取得・保存 |
 | POST | `/api/interview/articles/[id]/proofread` | 校正・校閲 |
 | POST | `/api/interview/articles/[id]/suggest-titles` | タイトル提案 |
@@ -264,7 +266,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET/POST | `/api/interview/recipes` | レシピ一覧・作成 |
-| PUT/DELETE | `/api/interview/recipes/[id]` | レシピ編集・削除 |
+| GET/PUT/DELETE | `/api/interview/recipes/[id]` | レシピ編集・削除 |
 | POST | `/api/interview/recipes/generate` | レシピ自動生成 |
 
 ### その他
@@ -282,7 +284,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 |---------|------|------|
 | POST | `/api/persona/generate` | ペルソナ生成 |
 | POST | `/api/persona/portrait` | ポートレート画像 |
-| POST | `/api/persona/banner` | バナー画像 |
+| GET/POST | `/api/persona/banner` | バナー画像 |
 
 ## Swipe API (8+)
 
@@ -293,10 +295,10 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 | POST | `/api/swipe/start` | セッション開始 |
 | POST | `/api/swipe/generate` | 記事生成 |
 | POST | `/api/swipe/log` | ログ保存 |
-| POST | `/api/swipe/celebration-images` | お祝い画像 |
+| GET | `/api/swipe/celebration-images` | お祝い画像 |
 | GET | `/api/swipe/question-images` | 質問画像取得 |
 | POST | `/api/swipe/question-images/generate` | 質問画像生成 |
-| DELETE | `/api/swipe/question-images/clear` | 質問画像クリア |
+| POST | `/api/swipe/question-images/clear` | 質問画像クリア |
 | * | `/api/swipe/test/*` | テスト用 (finalize, question, start) |
 
 ## ロゴ API (1)
@@ -362,26 +364,26 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 ### その他
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET/PUT/DELETE | `/api/tenkai/outputs/[outputId]` | 出力管理 |
-| GET | `/api/tenkai/outputs/[outputId]/export` | 出力エクスポート |
+| PUT/DELETE | `/api/tenkai/outputs/[outputId]` | 出力管理 |
+| POST | `/api/tenkai/outputs/[outputId]/export` | 出力エクスポート |
 | GET/POST | `/api/tenkai/brand-voices` | ブランドボイス一覧・作成 |
 | GET/PUT/DELETE | `/api/tenkai/brand-voices/[id]` | ブランドボイス CRUD |
 | GET/POST | `/api/tenkai/templates` | テンプレート一覧・作成 |
 | GET/PUT/DELETE | `/api/tenkai/templates/[id]` | テンプレート CRUD |
-| GET | `/api/tenkai/account` | アカウント情報 |
-| POST | `/api/tenkai/api-key` | APIキー管理 |
+| DELETE | `/api/tenkai/account` | 旧アカウント削除（提供終了） |
+| GET/POST | `/api/tenkai/api-key` | APIキー管理 |
 | GET | `/api/tenkai/usage` | 使用状況 |
 | GET | `/api/tenkai/health` | ヘルスチェック |
-| POST | `/api/tenkai/export` | エクスポート |
+| GET | `/api/tenkai/export` | エクスポート |
 
 ## オープニングAI API (5)
 
 | メソッド | パス | 説明 |
 |---------|------|------|
 | POST | `/api/opening/analyze` | Webサイト解析 (URL→カラー・コンテンツ抽出) |
-| GET/POST | `/api/opening/projects` | プロジェクト一覧・作成 |
-| GET/PUT/DELETE | `/api/opening/projects/[id]` | プロジェクト CRUD |
-| GET | `/api/opening/animations/[id]` | アニメーション取得 |
+| GET | `/api/opening/projects` | 旧プロジェクト一覧（提供終了） |
+| GET/DELETE | `/api/opening/projects/[id]` | 旧プロジェクト詳細・削除（提供終了） |
+| GET/PUT | `/api/opening/animations/[id]` | 旧アニメーション取得・更新（提供終了） |
 | POST | `/api/opening/animations/[id]/export` | アニメーションエクスポート |
 | GET | `/api/opening/usage` | 使用状況確認 |
 
@@ -420,5 +422,20 @@ Authorization: Bearer ${CRON_SECRET}
 |---------|------|------|
 | GET | `/api/health` | ヘルスチェック |
 | POST | `/api/generate` | 汎用生成 |
-| POST | `/api/guide` | ガイド生成 |
 | POST | `/api/guide/image` | ガイド画像生成 |
+
+## HTTPハンドラがない経路・旧記載
+
+以下は利用可能なAPIとして扱いません。将来の実装予定を確定する一覧でもありません。
+
+| パス | 旧説明 | 現行ソースの状態 |
+|---|---|---|
+| `/api/admin/templates` | テンプレート管理 | 現行のrouteファイルなし（旧記載） |
+| `/api/seo/articles/[id]/audit` | 記事監査 | 現行のrouteファイルなし（旧記載） |
+| `/api/seo/articles/[id]/meta` | メタ情報 | HTTPハンドラなし（export {}のみ） |
+| `/api/seo/predict` | 予測 | HTTPハンドラなし（export {}のみ） |
+| `/api/seo/preview` | プレビュー | HTTPハンドラなし（export {}のみ） |
+| `/api/seo/knowledge` | ナレッジ一覧 | HTTPハンドラなし（export {}のみ） |
+| `/api/seo/knowledge/[id]` | ナレッジ個別 | HTTPハンドラなし（export {}のみ） |
+| `/api/guide` | ガイド生成 | 現行のrouteファイルなし（旧記載） |
+| `/api/seo/test/*` | テスト用の旧分類 | 現行の配下routeファイルなし |

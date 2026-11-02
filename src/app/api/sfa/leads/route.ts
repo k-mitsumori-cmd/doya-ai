@@ -3,13 +3,14 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
+import { withSfaRecordRead, lockSfaRecordScope } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
 import { bigIntToNumber } from '@/lib/sfa/format'
-import { leadInput } from '@/lib/sfa/lead-mutation'
+import { leadInput, redactLeadRelation } from '@/lib/sfa/lead-mutation'
 import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
-import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { withSfaAdmission } from '@/lib/sfa/limits'
 import type { LeadStatus } from '@/lib/sfa/types'
 
@@ -23,6 +24,7 @@ const LEAD_STATUSES: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified',
 
 // GET /api/sfa/leads — リード一覧（status/q フィルタ）
 export async function GET(req: NextRequest) {
+  try {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
@@ -49,12 +51,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const where: Prisma.SfaLeadWhereInput = {
-    organizationId: ctx.organizationId,
-    isActive: true,
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  const where = sfaRecordWhere(scope, 'lead', false, {
     ...(status ? { status } : {}),
     ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
-  }
+  })
   const afterCursor: Prisma.SfaLeadWhereInput | null = cursor
     ? cursor.score === null
       ? { score: null, OR: [
@@ -70,22 +71,30 @@ export async function GET(req: NextRequest) {
     : null
   const pageWhere: Prisma.SfaLeadWhereInput = afterCursor ? { AND: [where, afterCursor] } : where
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaLead.findMany({
+    tx.sfaLead.findMany({
       where: pageWhere,
       orderBy: [{ score: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }, { id: 'desc' }],
       take: 201,
     }),
-    prisma.sfaLead.count({ where }),
+    tx.sfaLead.count({ where }),
   ])
   const leads = rows.slice(0, 200)
+  const accountIds = [...new Set(leads.map(lead => lead.convertedAccountId).filter((id): id is string => Boolean(id)))]
+  const accounts = accountIds.length ? await tx.sfaAccount.findMany({
+    where: sfaRecordWhere(scope, 'account', false, { id: { in: accountIds } }), select: { id: true },
+  }) : []
+  const readableAccounts = new Set(accounts.map(account => account.id))
+  const safeLeads = leads.map(lead => ({ ...lead, convertedAccountId: lead.convertedAccountId && readableAccounts.has(lead.convertedAccountId) ? lead.convertedAccountId : null }))
   const last = leads[leads.length - 1]
   return json({
-    leads: bigIntToNumber(leads),
+    leads: bigIntToNumber(safeLeads),
     totalCount,
     nextCursor: rows.length > 200 && last
       ? Buffer.from(JSON.stringify({ score: last.score, updatedAt: last.updatedAt.toISOString(), id: last.id })).toString('base64url')
       : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
+  })
+  } catch (error) { return leadError(error) }
 }
 
 // POST /api/sfa/leads — authority, business row and durable receipt commit together.
@@ -96,9 +105,9 @@ export async function POST(req: NextRequest) {
     const { body, data } = leadInput(await req.json().catch(() => null), true)
     const operationId = sfaOperationId(body.operationId)
     const result = await withSfaAdmission(ctx.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, ctx)
+      const scope = await lockSfaRecordScope(tx, ctx)
       return createSfaOnce(tx, ctx, 'lead', operationId, data,
-        id => tx.sfaLead.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }),
+        async id => redactLeadRelation(tx, scope, await tx.sfaLead.findFirst({ where: sfaRecordWhere(scope, 'lead', false, { id }) })),
         () => tx.sfaLead.create({ data: { ...data, name: data.name!, organizationId: ctx.organizationId, assigneeMemberId: ctx.memberId, status: 'new' } }),
         { retrySerializableRace: true })
     })
@@ -114,9 +123,8 @@ async function recoverLead(req: NextRequest, ctx: NonNullable<Awaited<ReturnType
     const operations = new URL(req.url).searchParams.getAll('operationId')
     if (operations.length !== 1) throw new SfaMutationError(400, '操作情報を指定してください。')
     const operationId = sfaOperationId(operations[0])!
-    const result = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, ctx)
-      const find = (id: string) => tx.sfaLead.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } })
+    const result = await withSfaRecordRead(ctx, async (tx, scope) => {
+      const find = async (id: string) => redactLeadRelation(tx, scope, await tx.sfaLead.findFirst({ where: sfaRecordWhere(scope, 'lead', false, { id }) }))
       return cancel ? cancelSfaCreation(tx, ctx, 'lead', operationId, find) : recoverSfaCreation(tx, ctx, 'lead', operationId, find)
     })
     return json(bigIntToNumber({ state: result.state, lead: result.row }))

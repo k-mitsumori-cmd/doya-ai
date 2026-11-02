@@ -3,11 +3,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead, lockSfaRecordScope } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
-import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
-import { leadId, leadInput, lockLead, assertLeadVersion, nextLeadVersion } from '@/lib/sfa/lead-mutation'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { leadId, leadInput, lockLead, redactLeadRelation, assertLeadVersion, nextLeadVersion } from '@/lib/sfa/lead-mutation'
 import { dealVersion } from '@/lib/sfa/deal-mutation'
 import { withSfaAdmission } from '@/lib/sfa/limits'
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!c) return json({ error: 'ログインが必要です' }, 401)
   try {
     const id = leadId((await ctx.params).id)
-    const lead = await prisma.$transaction(async tx => { await lockSfaMutationActor(tx, c); return lockLead(tx, c, id, false) })
+    const lead = await withSfaRecordRead(c, async (tx, scope) => redactLeadRelation(tx, scope, await lockLead(tx, scope, id, false)))
     return json({ state: lead ? 'found' : 'missing', lead })
   } catch (error) { return fail(error) }
 }
@@ -32,8 +33,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const id = leadId((await ctx.params).id)
     const { data, expectedUpdatedAt } = leadInput(await req.json().catch(() => null))
     const result = await withSfaAdmission(c.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, c)
-      const lead = await lockLead(tx, c, id)
+      const scope = await lockSfaRecordScope(tx, c)
+      const lead = await lockLead(tx, scope, id)
       if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
       assertLeadVersion(expectedUpdatedAt, lead.updatedAt)
       if (data.status === 'converted' && lead.status !== 'converted') throw new SfaMutationError(400, '転換済への変更は「取引先に転換」から行ってください。')
@@ -45,7 +46,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         }, data: { ...data, updatedAt: nextLeadVersion(lead.updatedAt) },
       })
       if (changed.count !== 1) throw new SfaMutationError(409, 'リードの状態が変わっています。一覧を確認してください。')
-      return tx.sfaLead.findFirstOrThrow({ where: { id, organizationId: c.organizationId, isActive: true } })
+      return redactLeadRelation(tx, scope, await tx.sfaLead.findFirstOrThrow({ where: sfaRecordWhere(scope, 'lead', true, { id }) }))
     })
     if (result.limit) throw new Error('Unexpected lead admission limit')
     return json({ lead: result.created })
@@ -60,8 +61,8 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     if (versions.length !== 1) throw new SfaMutationError(400, '更新日時を確認できません。画面を再読み込みしてから操作してください。')
     const expected = dealVersion(versions.length ? versions[0] : undefined)
     const result = await withSfaAdmission(c.organizationId, {}, async tx => {
-      await lockSfaMutationActor(tx, c)
-      const lead = await lockLead(tx, c, id)
+      const scope = await lockSfaRecordScope(tx, c)
+      const lead = await lockLead(tx, scope, id)
       if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
       assertLeadVersion(expected, lead.updatedAt)
       await tx.sfaLead.update({ where: { id }, data: { isActive: false, updatedAt: nextLeadVersion(lead.updatedAt) } })

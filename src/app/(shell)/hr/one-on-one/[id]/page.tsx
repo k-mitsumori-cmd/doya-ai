@@ -12,12 +12,13 @@ interface OneOnOneData {
   id: string
   employeeId: string
   employeeName: string
-  date: string
-  duration: number
-  agenda: any[]
-  managerNote: string
-  sharedNote: string
-  actionItems: any[]
+  date: string | null
+  duration: number | null
+  agenda: unknown
+  managerNote?: string | null
+  sharedNote: string | null
+  actionItems: unknown
+  aiSummary?: string | null
   canViewManagerNotes: boolean
   status: string
 }
@@ -63,7 +64,7 @@ export default function OneOnOneDetailPage() {
     }
     fetchRecord()
     return () => { active = false }
-  }, [id])
+  }, [id, fetch])
 
   const handleSave = async (payload: any) => {
     if (payload.recordId && payload.recordId !== id) throw new Error('表示中の記録が切り替わりました。再読み込みしてください。')
@@ -131,6 +132,7 @@ export default function OneOnOneDetailPage() {
           initialManagerNote={record.managerNote}
           initialSharedNote={record.sharedNote}
           initialActionItems={record.actionItems}
+          initialAiSummary={record.canViewManagerNotes === true ? record.aiSummary : null}
           readOnly={record.status === 'COMPLETED'}
           onSave={handleSave}
         />

@@ -23,9 +23,9 @@ export async function GET() {
     )
     const todayEnd = new Date(todayStart.getTime() + 86400000)
 
-    // Month boundaries in JST (converted to UTC for DB queries)
-    const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - jstOffset)
-    const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1) - jstOffset)
+    // attendance.date is SQL DATE; clock timestamps above still use JST instants.
+    const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1))
+    const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1))
 
     const [recentRecords, monthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({

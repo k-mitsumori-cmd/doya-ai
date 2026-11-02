@@ -54,7 +54,10 @@ const nextConfig = {
     //    実行時にはそのパスは存在しないため、下の
     //    outputFileTracingIncludes でファイルを同梱しても解決しない。
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js'],
+  // Satori の HarfBuzz は実行時に隣接する WASM を読むため、Node の配置を保つ。
+  // OpenAI は Node の API ルートだけで使用する。SDK 全体を webpack の解析対象にせず、
+  // 実行時の native require と配布 trace で扱い、コンパイル時のメモリを抑える。
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js', 'satori', 'openai', '@resvg/resvg-js'],
 
   // ⚠️ 画面が増えて、Vercel のビルドがコンパイルの途中でメモリ不足（SIGKILL）で止まった（2026-10-24）。
   // webpack のメモリの使い方を抑える（ビルドが少し遅くなる代わりに、ピークのメモリが下がる）。
@@ -92,6 +95,9 @@ const nextConfig = {
       '/api/shanai/interviews/[id]/transcribe': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
       '/api/shanai/interviews/[id]/thumbnail': ['./assets/fonts/*.ttf'],
       '/api/shanai/interviews/[id]/export': ['./assets/fonts/*.ttf'],
+      '/api/shanai/interviews/*/thumbnail': ['./assets/fonts/*.ttf', './node_modules/harfbuzzjs/*.wasm'],
+      '/api/shanai/interviews/*/export': ['./assets/fonts/*.ttf', './node_modules/harfbuzzjs/*.wasm'],
+      '/api/annual-report/image': ['./assets/fonts/*.ttf', './public/annual-report/frame*.webp', './node_modules/harfbuzzjs/*.wasm'],
       // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
       //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
       //    banner/from-url はページから色を取るだけで文字を描画しないため不要。
@@ -136,8 +142,20 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack(config) {
-    // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
+    // Webpackの大きなディスクキャッシュによるメモリ不足を避けるため、必要なら無効にする。
+    // buildスクリプトとCIは同じ3GB上限・キャッシュ無効の条件でコンパイルする。
     if (process.env.DOYA_BUILD_NO_WEBPACK_CACHE === '1') config.cache = false
+    // サービス名の切り替え（ドヤAI → ドヤバディ）。旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT=all のビルドのときだけ、
+    // 画面の文言・AI の指示文・メール・title などの「ドヤAI」を、ビルドのときに置き換える（scripts/brand/rename-loader.cjs）。
+    // 旗が off のビルドでは何も足さない（今のとおり）。
+    if ((process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT || '').trim().toLowerCase() === 'all') {
+      config.module.rules.unshift({
+        test: /\.(ts|tsx|js|jsx|mjs|cjs)$/,
+        enforce: 'pre',
+        include: [require('path').join(__dirname, 'src'), require('path').join(__dirname, 'seo')],
+        use: [{ loader: require('path').join(__dirname, 'scripts/brand/rename-loader.cjs') }],
+      })
+    }
     return config
   },
   
@@ -243,6 +261,8 @@ const nextConfig = {
       // カンタンマーケAI（/kantan）は提供終了。後継のドヤ記事作成（/seo）へ集約。
       // ⚠️ 2026-08-17 に正式な提供終了としたので 308（恒久）にする。
       //    307のままだと旧URLがインデックスに残り続ける。
+      // 2026-10-31 サービス名を「ドヤバディ」に改めたので、前の名前（ドヤ部下）のお知らせの URL を新しい URL へ恒久転送する。
+      { source: '/news/rename-doya-buka', destination: '/news/rename-doya-buddy', permanent: true },
       { source: '/kantan', destination: '/seo', permanent: true },
       { source: '/kantan/:path*', destination: '/seo', permanent: true },
       // 旧スライド（Gemini→Googleスライド型）は廃止し、ドヤスライド（/doyaslide）に統一

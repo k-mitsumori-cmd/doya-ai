@@ -1,6 +1,8 @@
 import type { Prisma, SfaAccount, SfaContact } from '@prisma/client'
 import type { SfaContext } from './types'
-import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from './mutation-authority'
+import { SfaMutationError } from './mutation-authority'
+import { lockSfaRecordScope } from './record-authority'
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from './creation-receipt'
 import { withSfaAdmission, checkSfaQuota, type SfaQuotaExceeded } from './limits'
 import { dealVersion } from './deal-mutation'
@@ -45,7 +47,8 @@ export function crmRecordId(value: unknown): string {
   if (typeof value !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(value)) throw new SfaMutationError(400, 'データの指定が正しくありません。')
   return value
 }
-export async function lockCrmRecord(tx: Prisma.TransactionClient, c: SfaContext, kind: Kind, id: string, write = true) {
+export async function lockCrmRecord(tx: Prisma.TransactionClient, scope: SfaRecordScope, kind: Kind, id: string, write = true) {
+  const c = scope.actor
   crmRecordId(id)
   const rows = kind === 'account' ? write
     ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_accounts WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
@@ -53,15 +56,24 @@ export async function lockCrmRecord(tx: Prisma.TransactionClient, c: SfaContext,
     : write ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_contacts WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
       : await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_contacts WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR SHARE`
   if (!rows.some(row => row.id === id)) return null
-  return kind === 'account' ? tx.sfaAccount.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } })
-    : tx.sfaContact.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } })
+  return kind === 'account' ? tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', write, { id }) })
+    : tx.sfaContact.findFirst({ where: sfaRecordWhere(scope, 'contact', write, { id }) })
+}
+/** A visible contact does not grant access to its private parent account's identifier. */
+export async function redactCrmRelation(tx: Prisma.TransactionClient, scope: SfaRecordScope, kind: Kind, row: CrmRecord | null): Promise<CrmRecord | null> {
+  if (kind !== 'contact' || !row || !('accountId' in row) || !row.accountId) return row
+  const account = await tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id: row.accountId }), select: { id: true } })
+  return account ? row : { ...row, accountId: null }
+}
+async function requireReadableAccount(tx: Prisma.TransactionClient, scope: SfaRecordScope, id: string) {
+  if (!await lockCrmRecord(tx, scope, 'account', id, false)) throw new SfaMutationError(404, '取引先が見つかりません。一覧をご確認ください。')
 }
 export async function createCrmRecord(c: SfaContext, kind: Kind, value: unknown) {
   const parsed = kind === 'account' ? crmRecordInput(value, 'account', true) : crmRecordInput(value, 'contact', true)
   const result = await withSfaAdmission(c.organizationId, {}, async tx => {
-    await lockSfaMutationActor(tx, c)
-    return createSfaOnce<CrmRecord>(tx, c, kind, parsed.operationId, parsed.data,
-      id => kind === 'account' ? tx.sfaAccount.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } }) : tx.sfaContact.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } }),
+    const scope = await lockSfaRecordScope(tx, c)
+    const row = await createSfaOnce<CrmRecord>(tx, c, kind, parsed.operationId, parsed.data,
+      id => kind === 'account' ? tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id }) }) : tx.sfaContact.findFirst({ where: sfaRecordWhere(scope, 'contact', false, { id }) }),
       async () => {
         if (kind === 'account') {
           const quota = await checkSfaQuota(tx, c.organizationId, { accounts: 1 })
@@ -70,9 +82,10 @@ export async function createCrmRecord(c: SfaContext, kind: Kind, value: unknown)
           return tx.sfaAccount.create({ data: { ...data, name: data.name!, organizationId: c.organizationId, ownerMemberId: c.memberId } })
         }
         const data = parsed.data as ContactInput
-        if (data.accountId) await lockSfaRelation(tx, c, 'sfaAccount', data.accountId)
-        return tx.sfaContact.create({ data: { ...data, name: data.name!, organizationId: c.organizationId } })
+        if (data.accountId) await requireReadableAccount(tx, scope, data.accountId)
+        return tx.sfaContact.create({ data: { ...data, name: data.name!, organizationId: c.organizationId, ownerMemberId: c.memberId } })
       }, { retrySerializableRace: true })
+    return (await redactCrmRelation(tx, scope, kind, row))!
   })
   if (result.limit) throw new Error('Unexpected record admission limit')
   return result.created
@@ -81,8 +94,8 @@ export async function recoverCrmRecord(c: SfaContext, kind: Kind, operation: unk
   const operationId = sfaOperationId(operation)
   if (!operationId) throw new SfaMutationError(400, '操作情報を指定してください。')
   const result = await withSfaAdmission(c.organizationId, {}, async tx => {
-    await lockSfaMutationActor(tx, c)
-    const find = (id: string) => kind === 'account' ? tx.sfaAccount.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } }) : tx.sfaContact.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } })
+    const scope = await lockSfaRecordScope(tx, c)
+    const find = async (id: string) => redactCrmRelation(tx, scope, kind, kind === 'account' ? await tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id }) }) : await tx.sfaContact.findFirst({ where: sfaRecordWhere(scope, 'contact', false, { id }) }))
     return cancel ? cancelSfaCreation<CrmRecord>(tx, c, kind, operationId, find) : recoverSfaCreation<CrmRecord>(tx, c, kind, operationId, find)
   })
   if (result.limit) throw new Error('Unexpected record recovery limit')
@@ -99,8 +112,8 @@ export async function mutateCrmRecord(c: SfaContext, kind: Kind, id: string, val
   if (!parsed.expectedUpdatedAt) throw new SfaMutationError(400, '更新日時を確認できません。一覧を更新してください。')
   const expectedUpdatedAt = parsed.expectedUpdatedAt
   const result = await withSfaAdmission(c.organizationId, {}, async tx => {
-    await lockSfaMutationActor(tx, c)
-    const row = await lockCrmRecord(tx, c, kind, id)
+    const scope = await lockSfaRecordScope(tx, c)
+    const row = await lockCrmRecord(tx, scope, kind, id)
     if (!row) throw new SfaMutationError(404, 'データが見つかりません。一覧をご確認ください。')
     if (row.updatedAt.getTime() !== expectedUpdatedAt.getTime()) throw new SfaMutationError(409, '他の操作で変更されています。一覧を更新してから再度ご確認ください。')
     if (remove) {
@@ -109,7 +122,7 @@ export async function mutateCrmRecord(c: SfaContext, kind: Kind, id: string, val
       if (deals || contacts) throw new SfaMutationError(409, kind === 'account' ? 'この取引先には担当者または商談が紐づいています。関連先を変更・整理してから削除してください。' : 'この担当者には商談が紐づいています。商談の詳細で「担当者レコードとの紐づけを解除」を選び、保存してから削除してください。')
     } else if (kind === 'contact') {
       const data = parsed.data as ContactInput
-      if (data.accountId) await lockSfaRelation(tx, c, 'sfaAccount', data.accountId)
+      if (data.accountId) await requireReadableAccount(tx, scope, data.accountId)
     }
     const updatedAt = new Date(Math.max(Date.now(), row.updatedAt.getTime() + 1))
     const where = { id, organizationId: c.organizationId, isActive: true, updatedAt: expectedUpdatedAt }
@@ -117,8 +130,9 @@ export async function mutateCrmRecord(c: SfaContext, kind: Kind, id: string, val
       : await tx.sfaContact.updateMany({ where, data: remove ? { isActive: false, updatedAt } : { ...parsed.data as ContactInput, updatedAt } })
     if (changed.count !== 1) throw new SfaMutationError(409, 'データが変更されています。一覧をご確認ください。')
     if (remove) return { ok: true as const, id, updatedAt }
-    return kind === 'account' ? tx.sfaAccount.findFirstOrThrow({ where: { id, organizationId: c.organizationId, isActive: true } })
-      : tx.sfaContact.findFirstOrThrow({ where: { id, organizationId: c.organizationId, isActive: true } })
+    const saved = kind === 'account' ? await tx.sfaAccount.findFirstOrThrow({ where: sfaRecordWhere(scope, 'account', true, { id }) })
+      : await tx.sfaContact.findFirstOrThrow({ where: sfaRecordWhere(scope, 'contact', true, { id }) })
+    return redactCrmRelation(tx, scope, kind, saved)
   })
   if (result.limit) throw new Error('Unexpected record mutation limit')
   return result.created

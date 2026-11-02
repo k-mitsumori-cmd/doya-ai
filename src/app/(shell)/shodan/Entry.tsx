@@ -11,6 +11,12 @@ import {
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { ShodanResearchMock, ShodanHypothesisMock, ShodanProposalMock } from './mocks'
 import { Skeleton } from '@/components/ds'
+import { currentSearchParams, forwardPath } from '@/lib/agent-router/entry'
+
+/** ドヤAIの「頼む」から来たときの行き先（?to=new）と値（doya_*）を、組織の中の画面へ運ぶ */
+function orgPath(slug: string): string {
+  return `/shodan/${encodeURIComponent(slug)}${forwardPath(currentSearchParams(), { new: '/new' })}`
+}
 
 const ROWS: ShowcaseRow[] = [
   {
@@ -49,7 +55,7 @@ export default function ShodanEntryPage() {
       .then((d) => {
         if (!d?.authenticated) { setPhase('guest'); return }
         if (d?.onboarded && d?.memberships?.[0]?.slug) {
-          router.replace(`/shodan/${encodeURIComponent(d.memberships[0].slug)}`)
+          router.replace(orgPath(d.memberships[0].slug))
         } else {
           setPhase('onboard')
         }

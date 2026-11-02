@@ -164,9 +164,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (e instanceof SeoArticleNotFoundError) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
     if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
-    if (e?.name === 'ZodError') {
-      return NextResponse.json({ success: false, error: '入力形式が正しくありません', details: e.errors }, { status: 400 })
-    }
     console.error('[seo articles/[id]/candidates/route.ts] failed')
     return NextResponse.json({ success: false, error: '比較候補を保存できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

@@ -292,14 +292,14 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-8 bg-white rounded-3xl shadow-md p-6 flex items-center gap-4"
+          className="mt-8 bg-white rounded-3xl shadow-md p-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
         >
           <img
             src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
             alt="白くまキャラクター"
             className="w-16 flex-shrink-0"
           />
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="text-base font-bold text-slate-900 mb-1">プラン選びに迷ったら</h3>
             <p className="text-sm text-slate-500">
               従業員数や必要な機能に応じて最適なプランをご案内します。お気軽にお問い合わせください。

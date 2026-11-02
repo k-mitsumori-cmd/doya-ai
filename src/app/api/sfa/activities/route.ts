@@ -3,12 +3,14 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { redactSfaRelations, redactSfaRelation, lockSfaRecordRelation } from '@/lib/sfa/record-relations'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import type { ActivityType } from '@/lib/sfa/types'
 import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
-import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
   NextResponse.json(body, { ...options, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
@@ -24,10 +26,10 @@ export async function GET(req: NextRequest) {
   const rawOperationId = (req.nextUrl || new URL(req.url)).searchParams.get('operationId')
   if (rawOperationId !== null) {
     try {
+      if ((req.nextUrl || new URL(req.url)).searchParams.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が重複しています。')
       const operationId = sfaOperationId(rawOperationId)!
-      const recovery = await prisma.$transaction(async tx => {
-        await lockSfaMutationActor(tx, ctx)
-        return recoverSfaCreation(tx, ctx, 'activity', operationId, id => tx.sfaActivity.findFirst({ where: { id, organizationId: ctx.organizationId } }))
+      const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+        return recoverSfaCreation(tx, ctx, 'activity', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })))
       })
       return json({ state: recovery.state, activity: recovery.row })
     } catch (error) {
@@ -54,11 +56,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const where: Prisma.SfaActivityWhereInput = {
-    organizationId: ctx.organizationId,
+  try {
+  return await withSfaRecordRead(ctx, async (tx, scope) => {
+  if (accountId) await lockSfaRecordRelation(tx, scope, 'account', accountId)
+  if (dealId) await lockSfaRecordRelation(tx, scope, 'deal', dealId)
+  const where = sfaRecordWhere(scope, 'activity', false, {
     ...(accountId ? { accountId } : {}),
     ...(dealId ? { dealId } : {}),
-  }
+  })
   const pageWhere: Prisma.SfaActivityWhereInput = cursor ? {
     AND: [where, { OR: [
       { occurredAt: { lt: cursor.occurredAt } },
@@ -66,19 +71,23 @@ export async function GET(req: NextRequest) {
     ] }],
   } : where
   const [rows, totalCount] = await Promise.all([
-    prisma.sfaActivity.findMany({
+    tx.sfaActivity.findMany({
       where: pageWhere,
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
       take: PAGE_SIZE + 1,
     }),
-    prisma.sfaActivity.count({ where }),
+    tx.sfaActivity.count({ where }),
   ])
-  const activities = rows.slice(0, PAGE_SIZE)
+  const activities = await redactSfaRelations(tx, scope, rows.slice(0, PAGE_SIZE))
   const last = activities[activities.length - 1]
   const nextCursor = rows.length > PAGE_SIZE && last
     ? Buffer.from(JSON.stringify({ occurredAt: last.occurredAt.toISOString(), id: last.id })).toString('base64url')
     : null
   return json({ activities, totalCount, nextCursor }, { headers: { 'Cache-Control': 'no-store' } })
+  })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '活動を取得できませんでした。再度読み込んでください。' }, { status: error instanceof SfaMutationError ? error.status : 503 })
+  }
 }
 
 // POST /api/sfa/activities — 活動を記録（クイック入力）
@@ -132,16 +141,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const operationId = sfaOperationId(body.operationId)
-    const activity = await prisma.$transaction(async (tx) => {
-      await lockSfaMutationActor(tx, ctx)
-      return createSfaOnce(tx, ctx, 'activity', operationId,
+    const activity = await withSfaRecordRead(ctx, async (tx, scope) => {
+      const saved = await createSfaOnce(tx, ctx, 'activity', operationId,
         { type, subject: subject || null, body: bodyText || null, accountId: requestedAccountId,
           dealId: requestedDealId, contactId: requestedContactId, occurredAt: 'occurredAt' in body ? occurredAt.toISOString() : null },
-        id => tx.sfaActivity.findFirst({ where: { id, organizationId: ctx.organizationId } }), async () => {
+        async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })), async () => {
         // Keep a fixed related-row lock order across activity writes.
-        const accountId = requestedAccountId ? await lockSfaRelation(tx, ctx, 'sfaAccount', requestedAccountId) : null
-        const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
-        const contactId = requestedContactId ? await lockSfaRelation(tx, ctx, 'sfaContact', requestedContactId) : null
+        const accountId = requestedAccountId ? await lockSfaRecordRelation(tx, scope, 'account', requestedAccountId) : null
+        const dealId = requestedDealId ? await lockSfaRecordRelation(tx, scope, 'deal', requestedDealId, true) : null
+        const contactId = requestedContactId ? await lockSfaRecordRelation(tx, scope, 'contact', requestedContactId) : null
         const created = await tx.sfaActivity.create({
           data: {
             organizationId: ctx.organizationId,
@@ -169,6 +177,7 @@ export async function POST(req: NextRequest) {
         }
         return created
       })
+      return redactSfaRelation(tx, scope, saved)
     })
 
     return json({ activity })
@@ -185,9 +194,8 @@ export async function DELETE(req: NextRequest) {
     const params = (req.nextUrl || new URL(req.url)).searchParams
     if (params.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
     const operationId = sfaOperationId(params.get('operationId'))!
-    const recovery = await prisma.$transaction(async tx => {
-      await lockSfaMutationActor(tx, ctx)
-      return cancelSfaCreation(tx, ctx, 'activity', operationId, id => tx.sfaActivity.findFirst({ where: { id, organizationId: ctx.organizationId } }))
+    const recovery = await withSfaRecordRead(ctx, async (tx, scope) => {
+      return cancelSfaCreation(tx, ctx, 'activity', operationId, async id => redactSfaRelation(tx, scope, await tx.sfaActivity.findFirst({ where: sfaRecordWhere(scope, 'activity', false, { id }) })))
     })
     return json({ state: recovery.state, activity: recovery.row })
   } catch (error) {

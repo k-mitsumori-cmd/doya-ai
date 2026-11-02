@@ -1,13 +1,15 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import { useExpenseQuery } from '@/components/expense/api'
 import type { ForecastMatrix, Schedule } from '@/components/expense/types'
 import CashBars from '@/components/expense/CashBars'
 import { Button as DsButton, StatTile } from '@/components/ds'
-import { ExpenseHero, MonthDonut, YenCount } from '@/components/expense/next'
+import { ExpenseHero, MonthDonut, PaymentProgress, YenCount } from '@/components/expense/next'
+import { InfoPanel } from '@/components/ds/infographic'
 import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone, useExpenseOrg } from '@/components/expense/ui'
 
 interface ActionItem { kind: string; scheduleId: string; title: string; dueOn: string; amount: number; detail: string }
@@ -39,8 +41,17 @@ export default function DashboardPage() {
   const base = `/expense/${orgSlug}`
   const ym = currentYm()
   // 新しい見た目（キービジュアル・数字の動き・割合の円）は、許可した人だけに出す（チェックリスト §5.1）
-  const { canManage } = useExpenseOrg()
+  const { canManage, loadingStartedAt } = useExpenseOrg()
   const summary = useExpenseQuery<Summary>('/api/expense/summary', orgSlug)
+  const firstSummaryLoad = useRef(true)
+  useEffect(() => {
+    if (!summary.loading) firstSummaryLoad.current = false
+  }, [summary.loading])
+  // 権限確認と最初の集計を、1回の読み込みとして300ms待つ。
+  // 後から再試行する場合は、通常どおり新しく300ms待つ。
+  const loadingDelayMs = firstSummaryLoad.current && loadingStartedAt !== undefined
+    ? Math.max(0, 300 - (Date.now() - loadingStartedAt))
+    : 300
   const thisM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${ym}`, orgSlug)
   const nextM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${addMonths(ym, 1)}`, orgSlug)
 
@@ -50,7 +61,7 @@ export default function DashboardPage() {
     .filter((s) => s.status !== 'paid' && s.status !== 'skipped' && s.plannedPayDate >= today && s.plannedPayDate <= limit)
     .sort((a, b) => a.plannedPayDate.localeCompare(b.plannedPayDate))
 
-  if (summary.loading && !summary.data) return <PageBody><Loading kpi /></PageBody>
+  if (summary.loading && !summary.data) return <PageBody><Loading kpi delayMs={loadingDelayMs} /></PageBody>
   if (summary.error || !summary.data) return <PageBody><ErrorBox forbidden={summary.forbidden} onRetry={summary.reload} /></PageBody>
   const s = summary.data
   const todo = s.actionItems.length + s.contractAlerts.length
@@ -71,6 +82,8 @@ export default function DashboardPage() {
         <Kpi count={true} label="固定費（月額）" value={s.kpi.fixedMonthly} sub="有効な契約の月額換算" />
         <Kpi count={true} label="SaaS 合計" value={s.kpi.saasMonthly} sub={`${s.kpi.saasCount} サービス`} />
       </div>
+
+      {s.kpi.thisMonthCount > 0 && <div className="mt-4"><PaymentProgress kpi={s.kpi} /></div>}
 
       <Card className="mt-4">
         <h2 className="mb-3 flex items-center gap-2 text-[18px] font-bold text-[var(--ink)]">
@@ -101,16 +114,17 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      <Card className="mt-4">
-        <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">12か月の出金（カテゴリ別）</h2>
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mt-4">
+        <InfoPanel title="12か月の出金（カテゴリ別）" meta="確定と見込み">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="min-w-0"><CashBars cash={s.cash} /></div>
             <div className="min-w-0">
-              <p className="mb-2 text-[13px] font-medium text-[var(--sub)]">今月の内訳</p>
+              <p className="mb-2 text-[14px] font-bold text-[var(--ink)]">今月の内訳</p>
               <MonthDonut cash={s.cash} month={s.month} />
             </div>
           </div>
-      </Card>
+        </InfoPanel>
+      </div>
 
       <Card className="mt-4">
         <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">今後14日の支払</h2>

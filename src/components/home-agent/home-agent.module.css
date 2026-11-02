@@ -1,37 +1,69 @@
 /* 経営ホーム「ドヤくんに頼む」（見本 v3）。色は src/components/ds/tokens.module.css（枠の .ds の中で使う）
-   左にドヤくん、右に中身（860px 以下は上下）。動きは意味のある所だけ。prefers-reduced-motion では止める */
+   2026-10-29 本人の指示で、左の大きなクマの列をやめた。どの状態でも、クマは見出しの右の小さな絵、中身は横いっぱい1列。
+   動きは意味のある所だけ。prefers-reduced-motion では止める */
 .stage {
-  position: relative; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; align-items: start;
-  margin: 0 0 16px; padding: 20px; border-radius: 20px; border: 1px solid var(--line);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--blue-soft) 60%, var(--paper)) 0%, var(--paper) 100%);
-  box-shadow: var(--shadow); overflow: hidden; min-height: 520px;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start;
+  /* 角丸の式（内 = 外 − すき間）: 外 24px − 余白 16px = 中の面 8px。背景は平ら、縁は1pxで全周、影は弱く */
+  --stage-r: 24px; --stage-pad: 16px; --inner-r: calc(var(--stage-r) - var(--stage-pad));
+  margin: 0 0 16px; padding: var(--stage-pad); border-radius: var(--stage-r); border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(16, 22, 51, .04); overflow: hidden; min-height: 0;
 }
 /* 読み上げ用の見出し。共通の見出しの決まり（ds の :is(h1, h2…) の text-wrap: balance）が折り返しを戻すので、ここだけは必ず1行にする。
    1px の幅で折り返すと、目に見えないのに「1文字だけの行」として点検に引っかかるため */
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap !important; text-wrap: nowrap !important; }
 .beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
 .beamTrack { fill: none; stroke: var(--line); stroke-width: 2; }
-.beamFlow { fill: none; stroke: url(#ha-beam); stroke: var(--cyan); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 48 600; animation: beam 1.4s linear infinite; }
-@keyframes beam { from { stroke-dashoffset: 648; } to { stroke-dashoffset: 0; } }
+.beamFlow { fill: none; stroke: url(#ha-beam); stroke: var(--cyan); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 80 600; animation: beam 1.4s linear infinite; }
+@keyframes beam { from { stroke-dashoffset: 680; } to { stroke-dashoffset: 0; } }
+.beamEnd { fill: var(--cyan); }
 
-/* 見出し（今日は、何をしますか？）。左右の列をまたいで、いちばん上に大きく出す */
-.head { grid-column: 1 / -1; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 4px 0 4px; }
+/* 見出し（今日は、何をしますか？）と、その右の小さなクマ。どの状態でも出す（2026-10-29 本人の指示） */
+.head { display: grid; gap: 6px; padding: 0; }
 .headGreeting { margin: 0; font-size: 13px; font-weight: 700; color: var(--sub); letter-spacing: .04em; }
-.headCompany { display: flex; justify-content: center; }
-.headTitle { margin: 0; font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; color: var(--ink); text-wrap: balance; }
-.hero { position: sticky; top: 16px; z-index: 2; display: grid; justify-items: center; gap: 10px; }
-.kun { position: relative; width: 220px; aspect-ratio: 1; }
+.headCompany { display: flex; }
+.headRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.headText { min-width: 0; display: grid; gap: 4px; }
+.headTitle { animation: headIn .7s var(--ease) both; margin: 0; font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; color: var(--ink); background: linear-gradient(90deg, var(--ink), #5b6690); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-wrap: balance; word-break: auto-phrase; line-break: strict; overflow-wrap: anywhere; }
+.kun { position: relative; flex: none; width: 96px; aspect-ratio: 1; animation: kunIn .5s var(--ease) both; }
+/* 見出しは、1語ずつではなく、全体がふわっと1回だけ出る */
+@keyframes headIn { from { opacity: 0; transform: translateY(12px); } }
+@keyframes kunIn { from { opacity: 0; transform: translateY(6px); } }
+/* できたとき、小さく2回はずむ（1回だけ）。位置だけ動かす */
+/* 入力の画面は、この段を画面の主役にする。上下の余白を大きく取り、ゆったり縦に並べる */
+.stage[data-scene='input'] { padding: clamp(36px, 7vh, 72px) clamp(16px, 2.4vw, 32px) 48px; gap: 28px; }
+/* 2026-10-29 本人の指示: 入力欄を画面の真ん中に大きく置き、画面の主役にする（ChatGPT や Gemini の最初の画面のように）。
+   見出しは大きく、その下に一言、入力欄は幅 760〜880px・最低5行・文字は大きめ。部署・よく使う操作・前回の作戦は、その下 */
+.stage[data-scene='input'] .headRow { flex-direction: column; justify-content: center; gap: 4px; text-align: center; }
+.stage[data-scene='input'] .headText { justify-items: center; gap: 10px; }
+.stage[data-scene='input'] .kun { order: -1; width: 88px; margin: 0; }
+.stage[data-scene='input'] .head:not([data-compact='true']) .kun { width: 88px; margin: 0; }
+.stage[data-scene='input'] .headGreeting, .stage[data-scene='input'] .headCompany { justify-content: center; text-align: center; }
+.heroNote { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+.heroSub { margin: 0; max-width: 40em; font-size: clamp(15px, 1.5vw, 18px); font-weight: 600; line-height: 1.7; color: var(--sub); text-wrap: balance; word-break: auto-phrase; line-break: strict; }
+.stage[data-scene='input'] .panel > .sceneIn > .card:first-child { width: 100%; max-width: 1100px; margin-inline: auto; background: transparent; border: 0; box-shadow: none; padding: 0; }
+.stage[data-scene='input'] .panel > .sceneIn > .card:first-child .chips, .stage[data-scene='input'] .panel > .sceneIn > .card:first-child .chipsLabel { justify-content: center; text-align: center; }
+.stage[data-scene='input'] .headTitle { font-size: clamp(34px, 5.6vw, 64px); line-height: 1.2; letter-spacing: -.02em; }
+/* 長い言葉（18文字以上）は、少し小さくして、スマホでも2行ほどに収める（1文字だけの行を出さない） */
+.stage[data-scene='input'] .headTitle[data-long='true'] { font-size: clamp(24px, 4vw, 44px); }
+.stage[data-scene='input'] .chipsLabel { margin-top: 8px; }
+.stage[data-scene='done'] .kun { animation: kunCheer .8s var(--ease) both; }
+@keyframes kunCheer { 0% { transform: translateY(0); } 25% { transform: translateY(-10px); } 50% { transform: translateY(0); } 70% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
+.head[data-compact='true'] .kun { width: 72px; }
+/* 入力の画面の 3D のクマ（720×600。左右に約2割の余白がある）は、余白を詰めて大きく見せる */
+.head:not([data-compact='true']) .kun { width: 132px; aspect-ratio: auto; margin: -12px -22px 0 0; }
+.head:not([data-compact='true']) .pose { position: static; height: auto; }
 .pose { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: scale(.97); transition: opacity .35s var(--ease), transform .35s var(--ease); }
 .pose[data-on='true'] { opacity: 1; transform: none; }
 .halo { position: absolute; inset: 12%; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--blue) 16%, transparent), transparent 70%); opacity: 0; transition: opacity .5s; }
 .stage[data-scene='analyze'] .halo { opacity: 1; animation: breathe 2.4s ease-in-out infinite; }
 @keyframes breathe { 50% { transform: scale(1.06); opacity: .7; } }
-.say { margin: 0; max-width: 240px; padding: 8px 14px; border-radius: 14px; background: var(--paper); border: 1px solid var(--line); font-size: 14px; font-weight: 700; text-align: center; box-shadow: var(--shadow); text-wrap: pretty; }
+.say { margin: 0; font-size: 13px; font-weight: 700; color: var(--sub); text-wrap: pretty; }
 .panel { position: relative; z-index: 2; min-width: 0; display: grid; gap: 12px; word-break: auto-phrase; }
 
 .sceneIn { display: grid; gap: 12px; animation: sceneIn .45s var(--ease); }
 @keyframes sceneIn { from { opacity: 0; transform: translateY(6px); } }
-.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; box-shadow: var(--shadow); min-width: 0; display: grid; gap: 8px; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--inner-r); padding: 18px; box-shadow: 0 1px 2px rgba(16, 22, 51, .04); min-width: 0; display: grid; gap: 8px; }
 .eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--blue); }
 .title { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.4; text-wrap: balance; color: var(--ink); }
 .lead { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
@@ -43,14 +75,35 @@
 .link { font-size: 13px; font-weight: 700; color: var(--blue); }
 .accent { color: var(--blue); }
 
-.textarea, .input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.6; transition: border-color .2s, box-shadow .2s; }
+.textarea, .input { width: 100%; padding: 12px 14px; border-radius: var(--inner-r); border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.6; transition: border-color .2s, box-shadow .2s; }
+/* 入力欄: 最低4行の高さで、書くと自動で伸びる。枠は虹色（青を主役に、紫・ピンク・オレンジ・水色）のグラデーションがゆっくり回る（1周10秒）。
+   本人の指定（2026-10-29）で、入力欄の枠だけに使う。ほかの背景は平らのまま。中の背景は白。入力欄に入ると、枠の外にやわらかい光が出る。動きを減らす設定では回さない */
+.aura { position: relative; isolation: isolate; border-radius: calc(var(--inner-r) + 4px); padding: 4px; }
+/* 枠の虹色は、transform の回転だけで回す（描き直しが要らず、GPU で動く）。大きな正方形のグラデーションを回し、枠の形でくり抜く */
+.auraRing { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; }
+.auraRing::before { content: ''; position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(#0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); animation: haTurn 5s linear infinite; will-change: transform; }
+@keyframes haTurn { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* 入力欄に入ると、枠の外にやわらかい光が出る（光は止めた色のにじみ。回さないので軽い） */
+.aura::after { content: ''; position: absolute; inset: -12px; z-index: -2; border-radius: calc(var(--inner-r) + 16px); background: conic-gradient(from 200deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(30px); opacity: .28; transition: opacity .45s var(--ease); pointer-events: none; }
+.aura:focus-within::after { opacity: .65; }
+.aura .textarea { position: relative; display: block; border: 0; border-radius: var(--inner-r); background: var(--paper); box-shadow: none; resize: none; overflow: hidden; }
+.aura .textarea:focus-visible { box-shadow: none; }
 .textarea { resize: vertical; min-height: 84px; }
+.aura .textarea { min-height: 360px; padding: 24px 28px; font-size: 20px; line-height: 1.7; }
 .textarea:focus-visible, .input:focus-visible { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .chip:hover { border-color: var(--blue); color: var(--blue); }
+/* 部署の「よく使う操作」のリンク（セールス以外。押す場所の高さは 44px 以上） */
+.chipLink { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 0 16px; font-size: 14px; font-weight: 700; text-decoration: none; }
+.chipLink:hover { border-color: var(--blue); color: var(--blue); }
+.chipLink:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--blue); color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform .15s var(--ease), box-shadow .2s; box-shadow: 0 4px 14px color-mix(in srgb, var(--blue) 24%, transparent); }
 .btn:hover { transform: translateY(-1px); }
+/* 「ドヤAIに頼む」は、押せるとき、入力欄の枠と同じ虹色の小さなにじみが付く */
+.btnAi { position: relative; isolation: isolate; }
+.btnAi:not(:disabled)::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: conic-gradient(from 210deg, #0066ff, #7a5cff, #ff4fa3, #ff9a3c, #00d4ff, #0066ff); filter: blur(9px); opacity: .5; }
+.btnAi:not(:disabled) { box-shadow: none; }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: none; }
 .ghost { background: transparent; color: var(--blue); border: 1px solid var(--line); box-shadow: none; }
 .btn:focus-visible, .chip:focus-visible, .option:focus-within, .ask:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
@@ -58,7 +111,7 @@
 .cost svg { width: 12px; height: 12px; }
 
 /* 続きを進める */
-.resume { display: grid; gap: 12px; width: 100%; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); color: var(--ink); box-shadow: var(--shadow); justify-items: start; }
+.resume { display: grid; gap: 12px; width: 100%; padding: 14px 16px; border-radius: var(--inner-r); border: 1px solid var(--line); background: var(--paper); color: var(--ink); box-shadow: var(--shadow); justify-items: start; }
 .resumeHead { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; }
 .resumeList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; }
 .resumeList li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--blue-soft) 55%, var(--paper)); font-size: 14px; }
@@ -78,9 +131,12 @@
 
 /* 分析（Animated List・Wide Research） */
 .sources { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
-.src, .run, .todo { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); }
-.src { animation: listIn .4s var(--ease) both; }
-@keyframes listIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+.src, .run, .todo { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--inner-r); border: 1px solid var(--line); background: var(--paper); }
+/* 材料と ToDo は、1件ずつ順に、左から右へ24pxほどスライドして出る（70ms ずつずらす）。動きは位置と透明度だけ */
+.src, .todo { animation: listIn .5s var(--ease) both; animation-delay: calc(var(--k, 0) * 70ms + 120ms); }
+@keyframes listIn { from { opacity: 0; transform: translateX(-24px); } }
+/* その日の2回目以降は、短く（ずらさない） */
+.stage[data-motion='short'] .src, .stage[data-motion='short'] .todo { animation-duration: .2s; animation-delay: 0s; }
 .src[data-status='read'] { border-color: color-mix(in srgb, var(--ok-ink) 35%, var(--line)); }
 .sicon, .ticon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue-deep); }
 .sicon svg, .ticon svg { width: 16px; height: 16px; }
@@ -108,7 +164,7 @@
 .gap dd { margin: 0; font-size: 22px; font-weight: 800; }
 .gap dd small { font-size: 13px; font-weight: 700; color: var(--sub); margin-left: 2px; }
 .tree { display: grid; gap: 12px; }
-.pillar { display: grid; gap: 4px; padding: 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); box-shadow: var(--shadow); }
+.pillar { display: grid; gap: 4px; padding: 14px; border-radius: var(--inner-r); border: 1px solid var(--line); background: var(--paper); box-shadow: 0 1px 2px rgba(16, 22, 51, .04); }
 .pillarHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
 .pillarHead h3 { margin: 0; font-size: 16px; font-weight: 800; }
 .todos { list-style: none; margin: 8px 0 0 4px; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 6px; }
@@ -141,17 +197,15 @@
 @keyframes edgeFlow { from { background-position: 0 200%, 0 0; } to { background-position: 0 -100%, 0 0; } }
 .run[data-status='failed'] { border-color: color-mix(in srgb, var(--bad-ink) 40%, var(--line)); }
 .run[data-status='failed'] .rstate { color: var(--bad-ink); }
-.memory { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--r); background: var(--blue-soft); font-size: 13px; color: var(--ink); justify-items: start; }
+.memory { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--inner-r); background: var(--blue-soft); font-size: 13px; color: var(--ink); justify-items: start; }
 .memory b { font-size: 14px; }
 
 @media (max-width: 860px) {
-  .stage { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 12px; min-height: 0; }
-  .hero { position: static; grid-template-columns: 88px minmax(0, 1fr); justify-items: start; align-items: center; order: 2; }
-  /* スマホでは、見出し → 入力 → 前回の続き の順に先に出し、ドヤくんはその下にする */
-  .head { order: 0; }
-  .panel { order: 1; }
-  .kun { width: 88px; }
-  .say { max-width: none; text-align: left; }
+  .stage { padding: 16px; gap: 12px; }
+  .headRow { gap: 12px; }
+  .kun { width: 72px; }
+  .head[data-compact='true'] .kun { width: 60px; }
+  .head:not([data-compact='true']) .kun { width: 96px; margin: -8px -16px -6px 0; }
   .resumeHead { grid-template-columns: 40px minmax(0, 1fr); }
   .resume .ring { width: 40px; height: 40px; }
   .resume .btn { width: 100%; }
@@ -169,6 +223,7 @@
   .gap dd { font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .kun { animation: none; }
   .stage *, .stage *::before, .stage *::after { animation: none !important; transition: none !important; }
 }
 
@@ -176,7 +231,7 @@
 .chipsLabel { margin: 4px 0 -2px; font-size: 12px; font-weight: 700; color: var(--sub); }
 .chip[aria-pressed='true'] { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-deep); }
 .shortcuts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.shortcut { display: grid; gap: 2px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.45; transition: border-color .2s, transform .2s var(--ease); }
+.shortcut { display: grid; gap: 2px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--inner-r); background: var(--paper); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.45; transition: border-color .2s, transform .2s var(--ease); }
 .shortcut:hover { border-color: var(--blue); transform: translateY(-1px); }
 .shortcut:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .shortcut .muted { font-size: 11px; }
@@ -188,7 +243,9 @@
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
   .exampleChips::-webkit-scrollbar { display: none; }
   .exampleChips .chip { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
-  /* 入力欄は2行の高さにする（続きのカードを最初の画面に入れるため。下の端を引けば広げられる） */
-  .textarea { min-height: 0; height: 76px; }
+    /* 入力欄は最低4行（本人の指定）。続きのカードは4行ぶん下がる */
+  .aura .textarea { min-height: 280px; padding: 16px 18px; font-size: 18px; }
+  .stage[data-scene='input'] { padding: 28px 16px 32px; }
+  .stage[data-scene='input'] .kun, .stage[data-scene='input'] .head:not([data-compact='true']) .kun { width: 72px; }
 }
 @media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }

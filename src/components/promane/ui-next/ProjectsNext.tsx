@@ -7,7 +7,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button, Card, EmptyState, StatTile } from '@/components/ds'
-import { DivergingBars } from '@/components/ds/charts'
+import ProjectProfitBars from './ProjectProfitBars'
 import { formatCurrency, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
 import { manYen, PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
 
@@ -25,7 +25,8 @@ type Row = {
   assignees: string[]
 }
 
-export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRevenue, avgProfitRate }: {
+export default function ProjectsNext({ canWrite, workspaceSlug, rows, activeCount, totalRevenue, avgProfitRate }: {
+  canWrite: boolean
   workspaceSlug: string
   rows: Row[]
   activeCount: number
@@ -45,16 +46,16 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
           <h2 className="text-xl font-bold text-slate-900">プロジェクト一覧</h2>
           <p className="mt-1 text-sm text-slate-600">案件ごとの予算・進み具合・利益率を並べます。</p>
         </div>
-        <Button href={newHref} icon="Plus">新規プロジェクト</Button>
+        {canWrite && <Button href={newHref} icon="Plus">新規プロジェクト</Button>}
       </div>
 
       {rows.length === 0 ? (
         <Card>
           <EmptyState
             title="まだプロジェクトはありません"
-            description="顧客・予算・期間を入れてプロジェクトをつくると、ここで収支と進み具合を比べられます。"
+            description={canWrite ? "顧客・予算・期間を入れてプロジェクトをつくると、ここで収支と進み具合を比べられます。" : "登録されたプロジェクトの収支と進み具合をここで確認できます。"}
             art={PROMANE_UI_NEXT_ART.empty}
-            action={<Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button>}
+            action={canWrite ? <Button href={newHref} icon="Plus">最初のプロジェクトをつくる</Button> : undefined}
           />
         </Card>
       ) : (
@@ -68,15 +69,7 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
 
           {rateBars.length > 0 ? (
             <Card title="案件ごとの利益率" meta={rated.length > rateBars.length ? `上位${rateBars.length}件／${rated.length}件` : `${rated.length}件`}>
-              <DivergingBars
-                label="案件ごとの利益率"
-                negativeLabel="赤字"
-                positiveLabel="黒字"
-                positiveTone="good"
-                negativeTone="negative"
-                format={(n) => `${n}%`}
-                data={rateBars}
-              />
+              <ProjectProfitBars data={rateBars} />
             </Card>
           ) : null}
 

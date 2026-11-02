@@ -13,7 +13,7 @@ const proofread = z.object({
     reason: text,
     severity: text,
   })).max(100).default([]),
-  checks: z.record(z.boolean()).default({}),
+  checks: z.record(z.string(), z.boolean()).default({}),
 })
 
 const factCheck = z.object({

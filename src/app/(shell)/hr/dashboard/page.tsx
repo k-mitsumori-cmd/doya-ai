@@ -1,6 +1,7 @@
 'use client'
 import { PageTitle } from '@/components/hr/ui-next'
 import { Button, EmptyState, StatTile, ToolHero } from '@/components/ds'
+import { HeadcountInfo, HeadcountInfoLoading } from '@/components/hr/HrInfographics'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import HrLoadError, { HrStatusError } from '@/components/hr/HrLoadError'
 
@@ -17,6 +18,8 @@ interface DashboardStats {
   activeEvaluations: number
   monthlyOneOnOnes: number
   orgName: string
+  /** 部署ごとの在籍人数（インフォグラフィック。無ければ空） */
+  departmentHeadcount?: { name: string; count: number }[]
 }
 
 interface RecentOneOnOne {
@@ -147,6 +150,7 @@ export default function HrDashboardPage() {
           activeEvaluations: data.activeEvaluations,
           monthlyOneOnOnes: data.monthlyOneOnOnes,
           orgName: data.orgName,
+          departmentHeadcount: Array.isArray(data.departmentHeadcount) ? data.departmentHeadcount : [],
         })
         setRecentOneOnOnes(data.recentOneOnOnes)
         setEvaluationPeriods(data.evaluationPeriods)
@@ -208,6 +212,13 @@ export default function HrDashboardPage() {
             />
           ))}
         </div>
+
+      {/* 部署ごとの人数（インフォグラフィック。2026-10-27） */}
+      {loading ? (
+        <div className="mb-8"><HeadcountInfoLoading /></div>
+      ) : stats.employeeCount > 0 ? (
+        <div className="mb-8"><HeadcountInfo rows={stats.departmentHeadcount ?? []} total={stats.employeeCount} /></div>
+      ) : null}
 
       {/* Setup Guide — shown when no employees */}
       {!loading && stats.employeeCount === 0 && (

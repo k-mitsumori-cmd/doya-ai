@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 import { Button, EmptyState } from '@/components/ds'
+import styles from './OrgChart.module.css'
 
 interface OrgEmployee {
   id: string
@@ -41,10 +42,10 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
   return (
     <div className="flex flex-col items-center">
       {/* Department Card */}
-      <motion.div
-        initial={still ? false : { opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl border-2 border-sky-200 shadow-sm w-[min(260px,calc(100vw-5rem))] min-w-[200px] overflow-hidden"
+      {/* 部署のカード。上の段から順に、線が伸びたあとで跳ねて出る（CSS。動きを減らす設定では出さない。2026-10-27） */}
+      <div
+        className={`${styles.card} bg-white rounded-2xl w-[min(248px,calc(100vw-5rem))] min-w-[200px] overflow-hidden`}
+        style={{ '--lv': level } as CSSProperties}
       >
         {/* Department Header */}
         <button
@@ -71,9 +72,9 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 text-lg break-words [text-wrap:balance]">{dept.name}</p>
+              <p className={`font-bold text-slate-900 ${dept.name.length >= 8 ? 'text-[14px]' : 'text-[16px]'} leading-snug [word-break:auto-phrase] [overflow-wrap:anywhere] [text-wrap:balance]`}>{dept.name}</p>
               {dept.head && (
-                <p className="text-base font-bold text-slate-500 truncate">
+                <p className="text-[14px] font-bold text-slate-600 truncate">
                   {dept.head.lastName} {dept.head.firstName}
                   {dept.head.position && ` (${dept.head.position})`}
                 </p>
@@ -132,40 +133,45 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
 
-      {/* Children Departments */}
+      {/* 下の部署。親から下りる線 → 横の線 → 子へ下りる線 の順に伸びる（線は子ごとに半分ずつ持つので、数が変わってもずれない） */}
       {expanded && dept.children.length > 0 && (
-        <div className="mt-4">
-          {/* Connector line down */}
-          <div className="flex justify-center">
-            <div className="w-0.5 h-6 bg-sky-200" />
-          </div>
-
-          {/* Horizontal line */}
-          {dept.children.length > 1 && (
-            <div className="flex justify-center">
-              <div className="h-0.5 bg-sky-200" style={{ width: `${Math.min(dept.children.length * 240, 960)}px` }} />
-            </div>
-          )}
-
-          {/* Child nodes */}
-          <div className="flex flex-wrap justify-center gap-6">
-            {dept.children.map((child) => (
-              <div key={child.id} className="flex flex-col items-center">
-                {/* Connector line down to child */}
-                <div className="w-0.5 h-4 bg-sky-200" />
-                <DepartmentNode dept={child} level={level + 1} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <ul className={styles.children} style={{ '--lv': level } as CSSProperties}>
+          {dept.children.map((child) => (
+            <li key={child.id} className={styles.child} style={{ '--lv': level + 1 } as CSSProperties}>
+              <span className={styles.drop} aria-hidden />
+              <DepartmentNode dept={child} level={level + 1} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
 }
 
 export default function OrgChartView({ departments, orgName, unassignedEmployees = [] }: OrgChartViewProps) {
+  // 組織図が画面より広いときの見せ方（2026-10-27）
+  // - 少しだけ広い（70% まで縮めれば入る）ときは、全体を縮めて横に送らずに見られるようにする
+  // - それでも入らないときは縮めず、はじめに一番上（会社名）が真ん中に来る位置まで横に送る
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const innerRef = useRef<HTMLDivElement | null>(null)
+  const [zoom, setZoom] = useState(1)
+  useEffect(() => {
+    const fit = () => {
+      const el = scrollRef.current, inner = innerRef.current
+      if (!el || !inner) return
+      const cur = Number(getComputedStyle(inner).zoom) || 1
+      const natural = inner.getBoundingClientRect().width / cur
+      const ratio = el.clientWidth / natural
+      const next = ratio >= 1 ? 1 : ratio >= 0.7 ? Math.floor(ratio * 100) / 100 : 1
+      setZoom((z) => (Math.abs(z - next) < 0.01 ? z : next))
+      if (next === 1 && el.scrollWidth > el.clientWidth) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [departments.length])
   if (departments.length === 0 && unassignedEmployees.length === 0) {
     // 新しい見た目: 空の状態は絵＋次にやること1つ
     return (
@@ -204,16 +210,16 @@ export default function OrgChartView({ departments, orgName, unassignedEmployees
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-flex flex-col items-center min-w-full py-8 px-4">
+    <div ref={scrollRef} className="overflow-x-auto">
+      <div ref={innerRef} className="inline-flex flex-col items-center min-w-full py-8 px-4" style={zoom < 1 ? { zoom } : undefined}>
         {/* Org Name */}
         {orgName && (
           <div className="mb-6">
-            <div className="max-w-[calc(100vw-5rem)] px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-sky-500/20">
+            <div className={`${styles.root} max-w-[calc(100vw-5rem)] px-6 py-3 text-white rounded-2xl`}>
               <p className="font-black text-xl sm:text-2xl text-center break-words [text-wrap:balance]">{orgName}</p>
             </div>
             <div className="flex justify-center">
-              <div className="w-0.5 h-6 bg-sky-200" />
+              <div className={styles.rootDrop} />
             </div>
           </div>
         )}

@@ -15,6 +15,8 @@ import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import LoadingProgress from '@/components/LoadingProgress'
 import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { Button, EmptyState, FirstSteps, Skeleton, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, fetchAishodanJson, type AishodanFailure } from '@/components/aishodan/failure'
@@ -95,6 +97,7 @@ export default function AishodanTool() {
 
   const [url, setUrl] = useState('')
   const [importing, setImporting] = useState(false)
+  const oneButton = useOneButton()
   const [importResult, setImportResult] = useState<string | null>(null)
   const [importIssue, setImportIssue] = useState<{ message: string; upgradeUrl?: string; failure?: AishodanFailure } | null>(null)
 
@@ -453,6 +456,18 @@ export default function AishodanTool() {
       />
       {/* 新しい見た目では、ページの見出しの帯の代わりに ToolHero（組織の切り替えは枠の ToolFrame にある） */}
       <div className="mx-auto grid max-w-5xl gap-4 px-4 pt-4 sm:pt-6">
+          {oneButton ? (
+            <OneButtonBar
+              eyebrow="ドヤAI商談"
+              cta={importing ? '商材を読み取っています。このままお待ちください' : '自社サービスの URL を入れたら、押してください'}
+              label="取り込む"
+              scope="入れた URL のサイトを読み、商材のナレッジと既定の商談シナリオを作ります。"
+              onRun={() => void importProduct()}
+              disabled={importing || !url.trim()}
+              disabledReason="自社サービスの URL を入れると押せます。"
+              running={importing}
+            />
+          ) : null}
           <ToolHero
             title="AIが一次商談を進め、適合度まで残す。"
             lead="自社サービスのURLを取り込むと、AIが商材を覚えて商談のシナリオを作ります。発行したURLを送るだけで、相手はログインせずに商談を始められます。"

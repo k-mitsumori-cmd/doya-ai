@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import {
@@ -47,6 +47,7 @@ type SeoSection = {
 }
 
 type SeoJob = {
+  activityState?: 'executing' | 'waiting' | 'needs-review' | null
   supersededAt?: string | null
   id: string
   status: string
@@ -255,6 +256,8 @@ function useTypewriter(text: string, opts?: { cps?: number; maxChars?: number })
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
+  const searchParams = useSearchParams()
+  const automaticActionsAllowed = searchParams.get('auto') !== '0'
   const router = useRouter()
   const [job, setJob] = useState<SeoJob | null>(null)
   const [loading, setLoading] = useState(true)
@@ -396,7 +399,7 @@ export default function SeoJobPage() {
       NaN
     if (!Number.isFinite(startMs)) return
 
-    const isTerminal = j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
+    const isTerminal = j.status === 'done' || j.status === 'error' || j.status === 'cancelled' || j.status === 'paused' || j.activityState === 'needs-review'
     const endMs =
       isTerminal
         ? ((j.updatedAt ? Date.parse(String(j.updatedAt)) : NaN) || Date.now())
@@ -410,7 +413,7 @@ export default function SeoJobPage() {
       setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
     }, 1000)
     return () => clearInterval(t)
-  }, [job?.status, job?.startedAt, job?.createdAt, job?.updatedAt])
+  }, [job?.status, job?.activityState, job?.startedAt, job?.createdAt, job?.updatedAt])
 
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
@@ -639,7 +642,7 @@ export default function SeoJobPage() {
   // NOTE: ブラウザは非表示タブでタイマーを間引くので、周期を長めにして“継続的に叩く機会”を作る
   useEffect(() => {
     const isTerminal = !!job?.supersededAt || job?.status === 'paused' || job?.status === 'done' || job?.status === 'error' || job?.status === 'cancelled'
-    if (!job || isTerminal) return
+    if (!automaticActionsAllowed || !job || isTerminal || job.activityState === 'needs-review') return
 
     let disposed = false
     let timer: any = null
@@ -648,6 +651,7 @@ export default function SeoJobPage() {
       if (disposed) return
       // 連打は busy で弾く
       await advanceOnce()
+      if (disposed) return
       const visible = typeof document !== 'undefined' ? document.visibilityState !== 'hidden' : true
       const nextMs = visible ? 2000 : 9000
       timer = setTimeout(tick, nextMs)
@@ -658,7 +662,7 @@ export default function SeoJobPage() {
       disposed = true
       if (timer) clearTimeout(timer)
     }
-  }, [job?.id, job?.status, job?.supersededAt, advanceOnce])
+  }, [automaticActionsAllowed, job, advanceOnce])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
@@ -674,7 +678,7 @@ export default function SeoJobPage() {
       pushLog({
         at: now,
         kind: 'status',
-        title: `状態が「${JOB_STATUS_LABELS[job.status] || job.status}」になりました`,
+        title: `状態が「${job.activityState === 'waiting' ? '待機中' : JOB_STATUS_LABELS[job.status] || job.status}」になりました`,
       })
     }
     logPrevStatusRef.current = job.status
@@ -825,15 +829,6 @@ export default function SeoJobPage() {
 
   // 旧: stepHistory（ステップ変化のみ）は廃止し、activityLogへ統合
 
-  // 自動で工程を進め続ける（UIで停止/再開は提供しない）
-  useEffect(() => {
-    if (!job || job.supersededAt || job.status === 'paused') return
-    if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') return
-    const t = setTimeout(() => {
-      advanceOnce()
-    }, 700)
-    return () => clearTimeout(t)
-  }, [job?.status, job?.step, job?.progress, advanceOnce, job])
 
   if (loading) {
     // 新しい見た目では枠を残し、本文の場所だけを骨組みにする（UX 点検 FIX-PLAN 13）
@@ -860,22 +855,22 @@ export default function SeoJobPage() {
     )
   }
 
-  if (job.supersededAt || ['paused', 'cancelled', 'error'].includes(job.status)) {
+  if (job.supersededAt || ['paused', 'cancelled', 'error'].includes(job.status) || (job.activityState === 'needs-review' && !busy)) {
     const replaced = !!job.supersededAt
     const cancelled = job.status === 'cancelled'
     const failed = job.status === 'error'
     return (
       <main className="flex justify-center py-10">
         <section className="w-full max-w-xl rounded-2xl bg-white p-8 shadow-sm" aria-labelledby="job-stopped-title">
-          <h1 id="job-stopped-title" className="text-xl font-bold text-slate-900">
-            {replaced ? '新しい生成に置き換えられました' : cancelled ? '生成をキャンセルしました' : failed ? '生成を停止しました' : '生成を一時停止しています'}
-          </h1>
+          <h2 id="job-stopped-title" className="text-xl font-bold text-slate-900">
+            {replaced ? '新しい生成に置き換えられました' : cancelled ? '生成をキャンセルしました' : failed ? '生成を停止しました' : job.status === 'paused' ? '生成を一時停止しています' : '生成は実行されていません'}
+          </h2>
           <p className="mt-3 text-slate-600">
             {replaced ? 'この生成は終わっています。記事の画面で、新しい生成の様子を確かめてください。' : cancelled ? '途中の成果物は記事画面で確認できます。' : '再開すると、途中の状態から生成を続けます。'}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            {!replaced && !cancelled && <button disabled={busy} onClick={() => void advanceOnce()} className="rounded-lg bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy ? '再開しています…' : '生成を再開する'}</button>}
-            <Link href={`/seo/articles/${encodeURIComponent(job.articleId)}`} prefetch={false} className="rounded-lg border px-5 py-3 font-bold text-blue-700">記事画面で状況を確認する</Link>
+            {job.status !== 'done' && <>{!replaced && !cancelled && <button disabled={busy} onClick={() => void advanceOnce()} className="rounded-lg bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy ? '再開しています…' : automaticActionsAllowed ? '生成を再開する' : '1工程だけ進める'}</button>}</>}
+            <Link href={`/seo/articles/${encodeURIComponent(job.articleId)}${automaticActionsAllowed ? '' : '?auto=0'}`} prefetch={false} className="rounded-lg border px-5 py-3 font-bold text-blue-700">記事画面で状況を確認する</Link>
           </div>
           {(actionError || (failed && job.error)) && <p role="alert" className="mt-4 text-red-700">{actionError || JOB_STOPPED_MESSAGE}</p>}
         </section>
@@ -883,7 +878,7 @@ export default function SeoJobPage() {
     )
   }
 
-  const isRunning = job.status === 'running'
+  const isRunning = busy || (job.activityState === undefined ? job.status === 'running' : job.activityState === 'executing')
   const isDone = job.status === 'done'
   const isPaused = job.status === 'paused'
   const isError = job.status === 'error'
@@ -894,7 +889,7 @@ export default function SeoJobPage() {
   const progressPct = clamp(Number(job.progress || 0), 0, 100)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
   const articleIdSafe = String(job.articleId || job.article?.id || '').trim()
-  const articleHref = articleIdSafe ? `/seo/articles/${articleIdSafe}` : ''
+  const articleHref = articleIdSafe ? `/seo/articles/${articleIdSafe}${automaticActionsAllowed ? '' : '?auto=0'}` : ''
   const goToArticle = () => {
     if (!articleHref) {
       setActionError('記事IDが取得できませんでした。少し待って再読み込みしてください。')
@@ -938,7 +933,7 @@ export default function SeoJobPage() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-100 text-gray-600 text-xs font-black mb-4 shadow-sm">
             <Sparkles className="w-4 h-4" />
-            AI記事生成中
+            記事の生成状況
           </div>
 
           {/* 進捗（%とゲージを最上段に） */}
@@ -969,9 +964,9 @@ export default function SeoJobPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
             {job.article.title}
-          </h1>
+          </h2>
           <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
@@ -1086,7 +1081,7 @@ export default function SeoJobPage() {
                               {s.headingPath || `セクション ${s.index + 1}`}
                             </p>
                             <p className="text-[10px] text-gray-500 mt-1 font-bold">
-                              {SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
+                              {s.status === 'generating' && !isRunning ? '未完了' : SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
                             </p>
                           </div>
                         </div>
@@ -1099,7 +1094,7 @@ export default function SeoJobPage() {
           )}
 
           {/* “できていく”演出（上部に配置） */}
-          {!isDone && !isError && (
+          {isRunning && !isDone && !isError && (
             <div className="mt-6 max-w-5xl mx-auto">
               <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 overflow-hidden">
                 <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-700 text-white flex items-center justify-between gap-3">
@@ -1959,7 +1954,7 @@ export default function SeoJobPage() {
                         <div className="min-w-0 text-left">
                           <p className="text-xs font-black text-gray-900 truncate">{heading}</p>
                           <p className="mt-0.5 text-[10px] font-bold text-gray-500">
-                            {content ? `${Math.min(99999, content.length).toLocaleString()}文字` : '本文生成中…'}
+                            {content ? `${Math.min(99999, content.length).toLocaleString()}文字` : isRunning ? '本文生成中…' : '本文はまだありません'}
                         </p>
                       </div>
                         <div className="flex-shrink-0 text-gray-400">

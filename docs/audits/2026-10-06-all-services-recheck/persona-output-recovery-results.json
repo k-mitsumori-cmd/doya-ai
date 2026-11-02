@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-31T11:22:30.903Z",
+  "passed": 18,
+  "cases": [
+    "clipboard rejection preserves exact text without false success",
+    "clipboard success clears manual fallback",
+    "late clipboard result cannot affect a different persona",
+    "newer clipboard attempt wins over late success",
+    "old success timeout cannot clear a newer success",
+    "PNG blob download preserves bytes and capture options and cleanup",
+    "PNG capture failure reports retry near export controls",
+    "PNG encoding throw also reports retry and cleans up",
+    "PNG null blob reports retry without a download URL",
+    "PNG anchor failure still removes anchor and revokes URL",
+    "persona switch during PNG encoding suppresses stale download",
+    "PDF save rejection reports the PDF action and cleans up",
+    "PDF pagination success control preserves all slices",
+    "stale export cleans the original element and downloads nothing",
+    "busy guard does not start duplicate export work",
+    "actual copy row mounts exact readonly selected fallback and recovers",
+    "actual export controls mount failure alert and clear it on retry",
+    "switching persona clears old copy and export notices"
+  ],
+  "sourceHashes": {
+    "src/app/(shell)/persona/Tool.tsx": "402705167bab4ce4925c24e162d4057e3d095fb8154e7be5b946fdf678135770",
+    "src/components/persona/PersonaOutputRecovery.tsx": "6865ab832c499c841d12be5cc19cb619bd11a7cd37858f0ddfccf03a5cb63239"
+  },
+  "scope": "Actual AST-extracted Tool callbacks and minimal affected JSX fragments plus actual recovery components mounted in React/jsdom. Synthetic clipboard/canvas/PDF only. No native rendering, real clipboard permissions, full Tool/auth/history/AI generation or customer storage verification."
+}

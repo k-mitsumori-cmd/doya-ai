@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { CalendarDays, FilePlus2, History, ListChecks } from 'lucide-react'
 import { Badge, Button, ErrorNotice, Skeleton, StatTile, ToolHero } from '@/components/ds'
 import { CountUp, Stagger, StaggerItem } from '@/components/ds/motion'
+import { MonthWorkInfo } from './KintaiInfographics'
 import styles from './kintai-next.module.css'
 
 export type KintaiClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
@@ -69,7 +70,7 @@ export default function KintaiDashboardNext({ name, status, now, summary, isActi
     <div className={styles.page}>
       <ToolHero
         art={sc.art}
-        title={<span className={styles.heroTitle}>{greeting}、<span className={styles.name}>{name}さん</span></span>}
+        title={<span className={styles.heroTitle}><span style={{ whiteSpace: 'nowrap' }}>{greeting}、</span><wbr /><span className={styles.name}>{name}さん</span></span>}
         lead={
           <span className={styles.heroMeta}>
             <span className={styles.date}>{dateStr}</span>
@@ -93,6 +94,8 @@ export default function KintaiDashboardNext({ name, status, now, summary, isActi
           <StaggerItem index={3}><StatTile icon="CalendarClock" label="遅刻" value={<CountUp value={summary.totalLateCount} />} unit="回" muted={summary.totalLateCount === 0} /></StaggerItem>
         </Stagger>
       </section>
+
+      <MonthWorkInfo summary={summary} now={now} />
 
       <section aria-labelledby="kintai-actions">
         <h3 id="kintai-actions" className={styles.sectionTitle}>よく使う操作</h3>

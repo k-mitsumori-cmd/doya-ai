@@ -1,3 +1,4 @@
+const {matches,exact}=require('./sfa-query-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const authority = load('src/lib/sfa/mutation-authority.ts');
@@ -12,26 +13,28 @@ const definitions = {
 function fixture(options = {}) {
   const state = {
     actor: { id: 'member', userId: 'user', organizationId: 'org', status: 'ACTIVE', role: 'member', ...options.actor },
-    task: { id: 'task', title: '元の作業', organizationId: options.foreignTask ? 'foreign' : 'org', status: 'open', dueDate: null, completedAt: null, updatedAt: new Date('2026-10-01T00:00:00.000Z') },
-    relation: { id: 'related', organizationId: 'org', isActive: true, ...options.relation },
+    task: { id: 'task', title: '元の作業',assigneeMemberId:'member', organizationId: options.foreignTask ? 'foreign' : 'org', status: 'open', dueDate: null, completedAt: null, updatedAt: new Date('2026-10-01T00:00:00.000Z') },
+    relation: { id: 'related', organizationId: 'org', isActive: true, ownerMemberId:'member',assigneeMemberId:'member', ...options.relation },
     createdTasks: [], activities: [], updates: 0, deletes: 0, queries: [], membershipReads: 0, transactions: 0,
   };
   let inTransaction = false, locks = new Set(), queue = Promise.resolve();
   const assertActor = () => { assert.ok(inTransaction); assert.ok(state.membershipReads > 0); assert.ok(locks.has('sfa_members')); };
-  const relation = name => ({ findFirst: async ({ where }) => {
+  const relation = name => ({ findMany:async({where})=>{assertActor();assert.ok(locks.has(name));return matches(state.relation,where)?[state.relation]:[];}, findFirst: async ({ where }) => {
     assertActor(); assert.ok(locks.has(name));
-    assert.equal(where.organizationId, ctx.organizationId); assert.equal(where.isActive, true);
-    const row = state.relation; return row.id === where.id && row.organizationId === where.organizationId && row.isActive ? { id: row.id } : null;
+    assert.equal(exact(where,'organizationId'), ctx.organizationId); assert.equal(exact(where,'isActive'), true);
+    const row = state.relation; return matches(row,where)?row:null;
   } });
   const tx = {
     $queryRaw: async (strings, ...values) => {
       assert.ok(inTransaction); const sql = strings.join('?'), table = sql.match(/FROM (sfa_\w+)/)?.[1];
       assert.ok(table); assert.ok(values.includes('org'));
       if (table === 'sfa_members') { assert.match(sql, /FOR SHARE/); assert.ok(values.includes('member')); assert.ok(values.includes('user')); }
-      else { assertActor(); assert.match(sql, table === 'sfa_deals' || table === 'sfa_tasks' ? /FOR UPDATE/ : /FOR SHARE/); }
+      else if(table==='sfa_organizations') { assert.equal(locks.size,0); assert.match(sql,/FOR SHARE/); }
+      else { assertActor(); assert.match(sql, table === 'sfa_tasks' || table === 'sfa_deals' && state.operation === 'activity-create' ? /FOR UPDATE/ : /FOR SHARE/); }
       if (options.failLock) throw Error('synthetic-secret-provider-detail');
       locks.add(table); state.queries.push({ table, sql });
       if (options.emptyLock || options.emptyTable === table) return [];
+      if (table === 'sfa_organizations') return [{id:'org'}];
       if (table === 'sfa_members') return !options.removed && state.actor.userId === 'user' && state.actor.organizationId === 'org' ? [{ id: 'member' }] : [];
       if (table === 'sfa_tasks') return state.task && state.task.organizationId === 'org' ? [{ id: 'task' }] : [];
       return state.relation.id === values[0] && state.relation.organizationId === 'org' ? [{ id: state.relation.id }] : [];
@@ -41,12 +44,13 @@ function fixture(options = {}) {
       assert.equal(where.id, ctx.memberId); assert.equal(where.userId, ctx.userId); assert.equal(where.organizationId, ctx.organizationId); assert.equal(where.status, 'ACTIVE');
       assert.deepEqual(Array.from(where.role.in), ['owner', 'admin', 'manager', 'member']);
       const row = state.actor;
-      return !options.removed && row.id === where.id && row.userId === where.userId && row.organizationId === where.organizationId && row.status === where.status && where.role.in.includes(row.role) ? { id: row.id } : null;
+      return !options.removed && row.id === where.id && row.userId === where.userId && row.organizationId === where.organizationId && row.status === where.status && where.role.in.includes(row.role) ? { id: row.id,role:row.role } : null;
     } },
-    sfaAccount: relation('sfa_accounts'), sfaContact: relation('sfa_contacts'),
+    sfaTeamMember:{findMany:async()=>[]},sfaAccount: relation('sfa_accounts'), sfaContact: relation('sfa_contacts'),
     sfaDeal: { ...relation('sfa_deals'), updateMany: async () => { assertActor(); assert.ok(locks.has('sfa_deals')); if (options.failActivityUpdate) throw Error('synthetic-secret-provider-detail'); return { count: 1 }; } },
     sfaTask: {
       findUnique: async () => { assertActor(); assert.ok(locks.has('sfa_tasks')); return state.task; },
+      findFirst:async({where})=>{assertActor();assert.ok(locks.has('sfa_tasks'));return state.task&&matches(state.task,where)?state.task:null;},
       create: async ({ data }) => { assertActor(); state.createdTasks.push(data); return { id: 'new-task', ...data }; },
       update: async ({ data }) => { assertActor(); assert.ok(locks.has('sfa_tasks')); state.updates++; return state.task = { ...state.task, ...data }; },
       delete: async () => { assertActor(); assert.ok(locks.has('sfa_tasks')); state.deletes++; const row = state.task; state.task = null; return row; },
@@ -60,10 +64,11 @@ function fixture(options = {}) {
       try { return await fn(tx); } catch (e) { Object.assign(state, snapshot); throw e; } finally { inTransaction = false; }
     }); queue = running.catch(() => {}); return running;
   } };
-  const mocks = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/sfa/mutation-authority': authority, '@/lib/sfa/creation-receipt': receipts,
+  const mocks = { ...require('./sfa-deal-test-deps.cjs').dealDeps(prisma,{authority}), 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/sfa/mutation-authority': authority, '@/lib/sfa/creation-receipt': receipts,
     '@/lib/sfa/access': { getSfaContext: async () => options.noSession ? null : ({ ...ctx }), orgSlugFrom: () => 'alpha' } };
   const routes = Object.fromEntries(Object.entries(definitions).map(([name, [file]]) => [name, load(file, mocks)]));
   return { state, invoke: (name, body) => {
+    state.operation=name;
     const [, method, defaults] = definitions[name];
     return routes[name][method]({ json: async () => body || defaults, nextUrl: new URL('https://example.test/api') }, { params: Promise.resolve({ id: 'task' }) }).then(response => {
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
@@ -79,11 +84,11 @@ function fixture(options = {}) {
       await check(name + ' denies fresh ' + change, async () => {
         const f = fixture(options), response = await f.invoke(name);
         assert.equal(response.status, 403); assert.equal(f.state.createdTasks.length + f.state.activities.length + f.state.updates + f.state.deletes, 0);
-        assert.ok(f.state.membershipReads <= 1); assert.equal(f.state.queries.length, 1);
+        assert.ok(f.state.membershipReads <= 1); assert.equal(f.state.queries.length, 2);
       });
     }
     for (const role of ['member', 'manager', 'admin', 'owner']) await check(name + ' allows fresh ' + role, async () => {
-      const f = fixture({ actor: { role } }); assert.equal((await f.invoke(name)).status, 200); assert.equal(f.state.membershipReads, 1);
+      const f = fixture({ actor: { role } }); assert.equal((await f.invoke(name)).status, 200); assert.equal(f.state.membershipReads, 2);
     });
     await check(name + ' rejects an empty membership lock before later snapshot', async () => {
       const f = fixture({ emptyLock: true }); assert.equal((await f.invoke(name)).status, 403); assert.equal(f.state.membershipReads, 0);
@@ -96,16 +101,16 @@ function fixture(options = {}) {
     });
   }
   for (const field of ['accountId', 'dealId', 'contactId']) for (const [name, relation] of Object.entries({ foreign: { organizationId: 'foreign' }, inactive: { isActive: false }, missing: { id: 'missing' } })) await check('activity fresh ' + field + ' ' + name, async () => {
-    const f = fixture({ relation }); assert.equal((await f.invoke('activity-create', { subject: '活動', [field]: 'related' })).status, 400); assert.equal(f.state.activities.length, 0);
+    const f = fixture({ relation }); assert.equal((await f.invoke('activity-create', { subject: '活動', [field]: 'related' })).status, 404); assert.equal(f.state.activities.length, 0);
   });
   for (const relation of [{ organizationId: 'foreign' }, { isActive: false }, { id: 'missing' }]) await check('task fresh relation rejected ' + JSON.stringify(relation), async () => {
-    const f = fixture({ relation }); assert.equal((await f.invoke('task-create', { title: '作業', dealId: 'related' })).status, 400); assert.equal(f.state.createdTasks.length, 0);
+    const f = fixture({ relation }); assert.equal((await f.invoke('task-create', { title: '作業', dealId: 'related' })).status, 404); assert.equal(f.state.createdTasks.length, 0);
   });
   for (const name of ['task-update', 'task-delete']) await check(name + ' foreign row denied under lock', async () => {
     const f = fixture({ foreignTask: true }); assert.equal((await f.invoke(name)).status, 404); assert.equal(f.state.updates + f.state.deletes, 0);
   });
   for (const [name, field, table] of [['task-create', 'dealId', 'sfa_deals'], ['activity-create', 'accountId', 'sfa_accounts'], ['activity-create', 'dealId', 'sfa_deals'], ['activity-create', 'contactId', 'sfa_contacts']]) await check(name + ' rejects empty ' + table + ' lock', async () => {
-    const f = fixture({ emptyTable: table }); assert.equal((await f.invoke(name, { title: '作業', subject: '活動', [field]: 'related' })).status, 400);
+    const f = fixture({ emptyTable: table }); assert.equal((await f.invoke(name, { title: '作業', subject: '活動', [field]: 'related' })).status, 404);
     assert.equal(f.state.createdTasks.length + f.state.activities.length, 0);
   });
   for (const name of ['task-update', 'task-delete']) await check(name + ' rejects empty task lock before later row snapshot', async () => {
@@ -113,7 +118,7 @@ function fixture(options = {}) {
   });
   await check('activity related locks ordered and held before creation', async () => {
     const f = fixture(); assert.equal((await f.invoke('activity-create', { subject: '活動', accountId: 'related', dealId: 'related', contactId: 'related' })).status, 200);
-    assert.deepEqual(f.state.queries.map(q => q.table), ['sfa_members', 'sfa_accounts', 'sfa_deals', 'sfa_contacts']);
+    assert.deepEqual(f.state.queries.map(q => q.table), ['sfa_organizations', 'sfa_members', 'sfa_accounts', 'sfa_deals', 'sfa_contacts']);
   });
   await check('activity failed deal update rolls back created activity', async () => {
     const f = fixture({ failActivityUpdate: true }); assert.equal((await f.invoke('activity-create', { subject: '活動', dealId: 'related' })).status, 500); assert.equal(f.state.activities.length, 0);

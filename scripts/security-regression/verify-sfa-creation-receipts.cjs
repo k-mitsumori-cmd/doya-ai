@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const {withSfaAuthority}=require('./sfa-authority-fixture.cjs');
+const {matches,exact}=require('./sfa-query-fixture.cjs');
 const crypto = require('node:crypto');
 const { load } = require('./load-typescript.cjs');
 const authority = load('src/lib/sfa/mutation-authority.ts');
@@ -8,14 +10,14 @@ function fixture() {
   let ctx = { userId: 'user-a', memberId: 'member-a', organizationId: 'org-a' }, active = true, queue = Promise.resolve();
   const state = { receipts: new Map(), tasks: new Map(), activities: new Map(), creates: 0, receiptWrites: 0, failReceipt: false, lockOrder: [] };
   const tx = {
-    $queryRaw: async () => { state.lockOrder.push('actor'); return [{ id: ctx.memberId }]; },
+    $queryRaw: async (strings) => { const org=strings.join('').includes('sfa_organizations'); state.lockOrder.push(org?'organization':'actor'); return [{ id: org?ctx.organizationId:ctx.memberId }]; },
     $executeRaw: async (strings, ...values) => { assert.match(strings.join('?'), /pg_advisory_xact_lock/); assert.equal(values.length, 1); assert.match(values[0], /^sfa-create:v1:[a-f0-9]{64}$/); state.lockOrder.push('receipt'); return 1; },
-    sfaMember: { findFirst: async () => active ? { id: ctx.memberId } : null },
+    sfaMember: { findFirst: async () => active ? { id: ctx.memberId, role: 'member' } : null },
     systemSetting: { findUnique: async ({ where }) => state.receipts.get(where.key) || null,
       create: async ({ data }) => { if (state.failReceipt) throw Error('secret database detail'); assert.ok(!state.receipts.has(data.key)); state.receiptWrites++; state.receipts.set(data.key, { value: data.value }); return data; } },
   };
   for (const [model, map] of [['sfaTask', state.tasks], ['sfaActivity', state.activities]]) tx[model] = {
-    findFirst: async ({ where }) => { const r = map.get(where.id); return r?.organizationId === where.organizationId ? r : null; },
+    findFirst: async ({ where }) => { const r = map.get(exact(where,'id')); return r && matches(r,where) ? r : null; },
     create: async ({ data }) => { if (state.beforeCreate) await state.beforeCreate(); state.creates++; const row = { id: `row-${state.creates}`, ...data }; map.set(row.id, row); return row; },
   };
   const prisma = { $transaction: fn => {
@@ -29,7 +31,7 @@ function fixture() {
   } };
   const mocks = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/sfa/mutation-authority': authority,
     '@/lib/sfa/creation-receipt': receipts, '@/lib/sfa/access': { getSfaContext: async () => ctx && ({ ...ctx }), orgSlugFrom: () => 'alpha' } };
-  const routes = { task: load('src/app/api/sfa/tasks/route.ts', mocks), activity: load('src/app/api/sfa/activities/route.ts', mocks) };
+  const routes = { task: load('src/app/api/sfa/tasks/route.ts', withSfaAuthority(mocks)), activity: load('src/app/api/sfa/activities/route.ts', withSfaAuthority(mocks)) };
   return { state, scope: patch => { ctx = ctx && { ...ctx, ...patch }; }, revoke: () => { active = false; }, logout: () => { ctx = null; },
     post: (kind, body) => routes[kind].POST({ json: async () => body }),
     cancel: (kind, op = uuid) => routes[kind].DELETE({ url: 'https://example.test/api?operationId=' + encodeURIComponent(op) }),
@@ -86,7 +88,7 @@ function fixture() {
       const f = fixture(), responses = await Promise.all(Array.from({ length: 20 }, () => f.post(kind, body)));
       assert.ok(responses.every(r => r.status === 200)); const ids = await Promise.all(responses.map(async r => (await r.json())[kind].id));
       assert.equal(new Set(ids).size,1); assert.equal(f.state.creates,1); assert.equal(f.state.receiptWrites,1);
-      assert.equal(f.state.lockOrder.slice(0,2).join(','),'actor,receipt');
+      assert.equal(f.state.lockOrder.slice(0,3).join(','),'organization,actor,receipt');
     });
     await check(kind + ' canonical equivalent input and uppercase UUID replay', async () => {
       const f=fixture(); assert.equal((await f.post(kind,body)).status,200);

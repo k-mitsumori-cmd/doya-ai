@@ -5,6 +5,8 @@
 // ============================================
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { Button, EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { ShellIcon } from '@/components/shell/icons'
@@ -18,6 +20,7 @@ import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mense
 import LoadingProgress from '@/components/LoadingProgress'
 import { ShellCostBadge } from '@/components/shell/power'
 import { confirmDialog } from '@/components/ds/dialog'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 interface Org {
   id: string
@@ -82,6 +85,7 @@ export default function MensetsuTool() {
   const [loading, setLoading] = useState(true)
   const [orgName, setOrgName] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const oneButton = useOneButton()
   const [error, setError] = useState<string | null>(null)
   const [templateUpgrade, setTemplateUpgrade] = useState<{ message: string; url: string } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -131,6 +135,8 @@ export default function MensetsuTool() {
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
   const [candidateName, setCandidateName] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), j = read('job'), c = read('candidate'); if (u) setCompanyUrl(u); if (j) setJobTitle(j); if (c) setCandidateName(c) })
   /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
@@ -524,6 +530,20 @@ export default function MensetsuTool() {
         tips={['就職差別につながる質問は、作る時点で外します', '全員に同じ主な質問をする「構造化面接」の方式です', '作ったあとで質問は自由に直せます']}
       />
       <div className="mx-auto max-w-[1100px]">
+        {oneButton && org ? (
+          <div className="mb-5">
+            <OneButtonBar
+              eyebrow="ドヤ面接官"
+              cta={busy === 'generate' ? '質問セットを作っています。このままお待ちください' : '下の欄に職種を入れたら、押してください'}
+              label="質問セットを生成"
+              scope="職種に合わせて、質問と評価軸を作ります。30秒ほどかかります。面接URLの発行は、そのあとの操作です。"
+              onRun={() => void generate()}
+              disabled={busy === 'generate' || !jobTitle.trim()}
+              disabledReason="下の欄に職種を入れると押せます。"
+              running={busy === 'generate'}
+            />
+          </div>
+        ) : null}
         <ToolHero
             art="/hr/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
             title={<>AIが一次面接をして、<wbr />評価まで残す</>}

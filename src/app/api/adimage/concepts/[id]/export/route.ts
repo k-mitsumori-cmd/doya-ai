@@ -6,6 +6,7 @@ export const maxDuration = 300
 // そのまま入稿できる状態で渡すのが目的なので、フォルダ名とファイル名に媒体・配置・実寸を入れる。
 import archiver from 'archiver'
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { downloadBuffer } from '@/lib/adimage/storage'
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   try {
     return await exportConcept(req, ctxParam)
   } catch {
-    return NextResponse.json({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    return privateApiJson({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
 }
 
@@ -26,24 +27,24 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
+  if (!auth.ok) return privateApiJson({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
-  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
+  if (!where) return privateApiJson({ error: '利用者を識別できませんでした' }, { status: 400 })
 
   const concept = await prisma.adImageConcept.findFirst({
     where: { id: p.id, campaign: { ...where, brand: where } },
     include: { creatives: true, campaign: { select: { brand: { select: { name: true } } } } },
   })
-  if (!concept) return NextResponse.json({ error: 'コンセプトが見つかりません' }, { status: 404 })
+  if (!concept) return privateApiJson({ error: 'コンセプトが見つかりません' }, { status: 404 })
   if (concept.creatives.length === 0) {
-    return NextResponse.json({ error: 'ダウンロードできる画像がありません' }, { status: 400 })
+    return privateApiJson({ error: 'ダウンロードできる画像がありません' }, { status: 400 })
   }
 
   const unchanged = async () => {
     const current = await prisma.adImageConcept.findFirst({ where: { id: p.id, campaign: { ...where, brand: where } }, include: { creatives: true } })
     return current && current.campaignId === concept.campaignId && current.generation === concept.generation && current.creatives.length === concept.creatives.length && concept.creatives.every(row => current.creatives.some(saved => saved.id === row.id && saved.imagePath === row.imagePath))
   }
-  const changed = () => NextResponse.json({ error: 'ダウンロード対象が変更されています。履歴を再読み込みしてください。' }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+  const changed = () => privateApiJson({ error: 'ダウンロード対象が変更されています。履歴を再読み込みしてください。' }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 
   // 画像を先に全部取ってから固める（ストリーム途中で失敗すると壊れたZIPが届く）
   const files: Array<{ name: string; buf: Buffer }> = []
@@ -78,7 +79,7 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
   }
   const allowPartial = new URL(req.url).searchParams.get('partial') === '1'
   if (missing.length > 0 && (!allowPartial || files.length === 0)) {
-    return NextResponse.json({
+    return privateApiJson({
       error: `${concept.creatives.length}枚中${missing.length}枚を取得できませんでした。再試行してください。`,
       code: 'EXPORT_IMAGES_UNAVAILABLE',
       totalCount: concept.creatives.length,

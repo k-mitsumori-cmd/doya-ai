@@ -16,6 +16,8 @@ import { CountUp } from './motion'
 export { default as tokens } from './tokens.module.css'
 // 使い方・生成中・完了・エラーの表示（UI 品質 S-16・S-18・S-19・S-20）
 export { FirstSteps, GenerationProgress, DoneBanner, ErrorNotice } from './feedback'
+export { DoyaKun, kunSrc, type KunPose, type KunAct } from './kun'
+import { DoyaKun, useEmptyKun } from './kun'
 // 確認・削除・お知らせのダイアログ（window.confirm / alert の代わり。FIX-PLAN 18）
 export { ConfirmDialog, confirmDialog, alertDialog } from './dialog'
 // 次にやること帯（T1）と手順の札（T2）。展示会の型（docs/audits/2026-10-24-ux-clarity/TENJIKAI-PATTERNS.md）
@@ -98,15 +100,7 @@ export function Button(props: ButtonBase & (
 }
 
 /* ---- EmptyState（空・エラー・権限なし） ---- */
-// ⚠️ 絵は既存の public/empty/*.svg（src/components/EmptyState.tsx と同じ組）を使う。種類も揃える。
-const ART: Record<EmptyStateKind, string> = {
-  'not-generated': '/empty/not-generated.svg',
-  zero: '/empty/zero.svg',
-  'no-results': '/empty/no-results.svg',
-  error: '/empty/error.svg',
-  forbidden: '/empty/forbidden.svg',
-  preparing: '/empty/preparing.svg',
-}
+// 絵は、種類に合った本物のドヤくん（ds/kun の EMPTY_KUN）。ツール固有の絵（art）があればそれを使う。
 
 export function EmptyState({ kind = 'zero', title, description, action, art }: {
   kind?: EmptyStateKind
@@ -117,10 +111,16 @@ export function EmptyState({ kind = 'zero', title, description, action, art }: {
   /** ツール固有の空状態の画像（public/<svc>/empty-*.webp）。無ければ共通の絵 */
   art?: string
 }) {
+  const kun = useEmptyKun(kind)
   return (
     <div className={styles.empty} role={kind === 'error' ? 'alert' : undefined}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={art ?? ART[kind]} alt="" className={styles.emptyArt} width={240} height={192} />
+      {/* ツール固有の絵（art）があればそれを。無ければ、種類に合った本物のドヤくん（線のさし絵は使わない） */}
+      {art ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={art} alt="" className={styles.emptyArt} width={240} height={192} />
+      ) : (
+        <DoyaKun pose={kun.pose} act={kun.act} size={150} />
+      )}
       <p className={styles.emptyTitle}>{title}</p>
       {description ? <p className={styles.emptyText}>{description}</p> : null}
       {action ? <div className={styles.emptyAction}>{action}</div> : null}

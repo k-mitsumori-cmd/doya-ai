@@ -2,7 +2,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
+import { HR_EMPLOYEE_NUMBER_CONFLICT, isEmployeeNumberConflict } from '@/lib/hr/employee-number'
 import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const url = req.nextUrl
@@ -29,10 +31,10 @@ export async function GET(req: NextRequest) {
     const page = Number(url.searchParams.get('page') || '1')
     const requestedPageSize = Number(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))
     if (!Number.isInteger(page) || page < 1 || page > 1000000 || !Number.isInteger(requestedPageSize) || requestedPageSize < 1) {
-      return NextResponse.json({ error: 'ページ番号・件数が不正です' }, { status: 400 })
+      return privateApiJson({ error: 'ページ番号・件数が不正です' }, { status: 400 })
     }
     if (!['name', 'hireDate', 'department'].includes(sort)) {
-      return NextResponse.json({ error: '並び替えの指定が不正です' }, { status: 400 })
+      return privateApiJson({ error: '並び替えの指定が不正です' }, { status: 400 })
     }
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
     const nameOrder: Prisma.HrEmployeeOrderByWithRelationInput[] = [
@@ -76,7 +78,7 @@ export async function GET(req: NextRequest) {
       prisma.hrEmployee.count({ where }),
     ])
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       items,
       total,
@@ -86,7 +88,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[hr/employees] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '従業員の一覧を読み込めませんでした。時間をおいて再読み込みしてください。' },
       { status: 500 }
     )
@@ -97,19 +99,27 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!(session?.user as any)?.id) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    for (const field of ['lastName', 'firstName']) {
+      if (typeof body[field] !== 'string' || !body[field].trim()) {
+        return privateApiJson({ error: '姓と名は空でない文字列で入力してください。' }, { status: 400 })
+      }
+    }
     const {
       employeeNumber,
       lastName,
@@ -130,7 +140,7 @@ export async function POST(req: NextRequest) {
     } = body
 
     if (!lastName || !firstName) {
-      return NextResponse.json({ error: '姓と名が入っていません。両方を入力して、もう一度お試しください。' }, { status: 400 })
+      return privateApiJson({ error: '姓と名が入っていません。両方を入力して、もう一度お試しください。' }, { status: 400 })
     }
 
     if (departmentId) {
@@ -138,7 +148,7 @@ export async function POST(req: NextRequest) {
         where: { id: departmentId, organizationId: ctx.organizationId },
       })
       if (!dept) {
-        return NextResponse.json({ error: 'この部署は見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
+        return privateApiJson({ error: 'この部署は見つかりませんでした。一覧から選び直してください。' }, { status: 400 })
       }
     }
 
@@ -184,7 +194,7 @@ export async function POST(req: NextRequest) {
     })
     if (!admission.allowed) {
       const canUpgrade = !['PRO', 'BUNDLE', 'ENTERPRISE'].includes(admission.plan.toUpperCase())
-      return NextResponse.json({
+      return privateApiJson({
         error: employeeLimitMessage(admission.plan, admission.limit),
         code: 'HR_ORG_EMPLOYEE_LIMIT',
         canManageBilling: ctx.role === 'OWNER',
@@ -200,10 +210,11 @@ export async function POST(req: NextRequest) {
       metadata: { organizationId: ctx.organizationId },
     })
 
-    return NextResponse.json({ success: true, employee })
+    return privateApiJson({ success: true, employee })
   } catch (e: any) {
+    if (isEmployeeNumberConflict(e)) return privateApiJson(HR_EMPLOYEE_NUMBER_CONFLICT, { status: 409 })
     console.error('[hr/employees][POST]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '従業員の登録に失敗しました' },
       { status: 500 }
     )

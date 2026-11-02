@@ -149,7 +149,10 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const inputRef = useRef<HTMLInputElement>(null)
   const cancelled = useRef(false)
 
-  useEffect(() => () => void (cancelled.current = true), [])
+  useEffect(() => {
+    cancelled.current = false
+    return () => { cancelled.current = true }
+  }, [])
 
   const upload = async (file: File) => {
     setError(null)
@@ -171,6 +174,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
     try {
       for (let i = 0; i < 6 && !cancelled.current; i++) {
         const d = await api<{ pending?: boolean; interview?: Detail }>(`/api/shanai/interviews/${data.id}/transcribe`, { method: 'POST' })
+        if (cancelled.current) return
         if (!d.pending && d.interview) {
           onChange(d.interview)
           return
@@ -189,8 +193,12 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const segs = data.audio.segments
   return (
     <Card>
-      <SectionTitle step="ステップ1" title="録音" desc="mp3・m4a・wav・mp4 などの録音ファイルをアップロードしてください（90分・1GBまで）。" />
-      <input ref={inputRef} type="file" accept="audio/*,video/mp4,video/quicktime" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+      <SectionTitle step="ステップ1" title="録音" kun={{ pose: 'mic', act: 'idle' }} desc="mp3・m4a・wav・mp4 などの録音ファイルをアップロードしてください（90分・1GBまで）。" />
+      <input ref={inputRef} type="file" accept="audio/*,video/mp4,video/quicktime" className="hidden" onChange={(e) => {
+        const file = e.currentTarget.files?.[0]
+        e.currentTarget.value = ''
+        if (file) void upload(file)
+      }} />
       <div className="flex flex-wrap items-center gap-2">
         <Button variant={data.audio.uploaded ? 'secondary' : 'primary'} onClick={() => inputRef.current?.click()} disabled={progress !== null || busy}>
           <Upload className="h-4 w-4" aria-hidden="true" />
@@ -199,7 +207,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
         {data.audio.uploaded && data.audio.status !== 'done' && (
           <Button onClick={transcribe} loading={busy}>
             <Mic className="h-4 w-4" />
-            文字起こしする
+            {data.audio.status === 'uncertain' ? '送信状況を確認する' : '文字起こしする'}
           </Button>
         )}
         {progress !== null && <span className="text-xs font-black text-[var(--sub)]" role="status">アップロード中 {progress}%</span>}
@@ -212,8 +220,11 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
       {busy && <ProgressSteps steps={['録音の長さを確認しています', '文字起こしサービスに送っています', '話者を分けて文字にしています']} current={transcribeStep} note="30分の録音で数分かかります。" />}
       {data.audio.status === 'failed' && data.audio.error && !error && (
         <div className="mt-3">
-          <ErrorNotice what="文字起こしができませんでした。" how="録音ファイルの形式（mp3・m4a・wav など）を確かめて、もう一度「文字起こしする」を押してください。続くときは、録音を差し替えてください。" />
+          <ErrorNotice what="文字起こしができませんでした。" how={data.audio.error} />
         </div>
+      )}
+      {data.audio.status === 'uncertain' && !error && (
+        <div className="mt-3"><ErrorNotice what="文字起こしの送信状況を確認できません。" how={data.audio.error || '重複処理を避けるため再送を停止しています。時間をおいて再確認し、続く場合はお問い合わせください。'} /></div>
       )}
       {error && (
         <div className="mt-3">
@@ -332,7 +343,7 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
   const check = data.survey.check
   return (
     <Card>
-      <SectionTitle step="ステップ1" title="アンケート" desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
+      <SectionTitle step="ステップ1" title="アンケート" kun={{ pose: 'survey', act: 'idle' }} desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
       <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--bg)] p-2">
         <code className="min-w-0 flex-1 truncate px-2 text-xs font-bold text-[var(--sub)]">{shareUrl}</code>
         <button type="button" onClick={copy} className={`min-h-11 whitespace-nowrap ${FOCUS} focus-visible:ring-offset-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-[var(--ok-bg)]' : 'bg-[var(--blue)] hover:bg-[var(--blue-deep)]'}`}>
@@ -427,7 +438,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
     setFailure(e)
   }
 
-  const upload = async (files: FileList) => {
+  const upload = async (files: File[]) => {
     setError(null)
     for (const file of Array.from(files)) {
       setUploading(file.name)
@@ -462,8 +473,13 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
 
   return (
     <Card>
-      <SectionTitle step="ステップ2" title="写真" desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => e.target.files && upload(e.target.files)} />
+      <SectionTitle step="ステップ2" title="写真" kun={{ pose: 'camera', act: 'idle' }} desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => {
+        // value を空にすると FileList も空になるため、選んだ写真を先に控える。
+        const files = Array.from(e.currentTarget.files || [])
+        e.currentTarget.value = ''
+        if (files.length) void upload(files)
+      }} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {data.photos.map((p) => (
           <div key={p.id} className={`overflow-hidden rounded-[var(--r-sm)] border ${p.usage === 'thumbnail' ? 'border-[var(--blue)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)]'}`}>
@@ -589,6 +605,7 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
   return (
     <Card>
       <SectionTitle
+        kun={{ pose: 'ponder', act: 'think' }}
         step="ステップ3"
         title="記事に使う事実"
         desc="録音・回答・会社プロフィールから、記事の材料になる事実を原文つきで抜き出します。記事にしてよいものにチェックを入れてください。文の言い回しは直せますが、原文は変えられません。"
@@ -719,7 +736,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
 
   return (
     <Card>
-      <SectionTitle step="ステップ4" title="記事" desc="チェックを入れた事実だけを使って記事を書きます。会社の事実は、ご本人の仕事とつなげて紹介します。" />
+      <SectionTitle step="ステップ4" title="記事" kun={{ pose: article ? 'success' : 'write', act: article ? 'cheer' : 'work' }} desc="チェックを入れた事実だけを使って記事を書きます。会社の事実は、ご本人の仕事とつなげて紹介します。" />
       <div className="flex flex-wrap items-center gap-2">
         <ConfirmDialog
           open={confirmRegen}

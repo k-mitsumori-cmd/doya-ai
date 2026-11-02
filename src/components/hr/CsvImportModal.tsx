@@ -2,6 +2,7 @@
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import Link from 'next/link'
@@ -58,6 +59,8 @@ export default function CsvImportModal({
   const [fileName, setFileName] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => { setPortalTarget(document.body) }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId(), textareaId = useId()
@@ -163,7 +166,8 @@ export default function CsvImportModal({
     }
   }
 
-  return (
+  // A transformed page ancestor must not trap this dialog below the shell navigation.
+  return portalTarget ? createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -335,17 +339,17 @@ export default function CsvImportModal({
             </div>
 
             {!result && (
-              <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4 flex justify-end gap-2 rounded-b-3xl">
+              <div className="sticky bottom-0 bg-white border-t border-slate-100 px-4 sm:px-6 py-4 flex justify-end gap-2 rounded-b-3xl">
                 <button
                   onClick={handleClose}
-                  className={`px-5 py-2.5 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all${tap}`}
+                  className={`shrink-0 whitespace-nowrap px-3 sm:px-5 py-2.5 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all${tap}`}
                 >
                   キャンセル
                 </button>
                 <button
                   onClick={handleImport}
                   disabled={importing}
-                  className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-all disabled:opacity-50${tap}`}
+                  className={`flex items-center gap-2 whitespace-nowrap px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-all disabled:opacity-50${tap}`}
                 >
                   <span className="material-symbols-outlined text-lg">{importing ? 'hourglass_top' : 'upload'}</span>
                   {importing ? 'インポート中...' : 'インポート実行'}
@@ -355,6 +359,7 @@ export default function CsvImportModal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
-  )
+    </AnimatePresence>,
+    portalTarget
+  ) : null
 }

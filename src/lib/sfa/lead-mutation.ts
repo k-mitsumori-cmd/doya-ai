@@ -1,5 +1,5 @@
-import type { Prisma } from '@prisma/client'
-import type { SfaContext } from './types'
+import type { Prisma, SfaLead } from '@prisma/client'
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import { dealVersion } from './deal-mutation'
 import { SfaMutationError } from './mutation-authority'
 
@@ -44,14 +44,21 @@ export function leadId(id: string) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) throw new SfaMutationError(400, 'リードの指定が正しくありません。')
   return id
 }
-export async function lockLead(tx: Prisma.TransactionClient, c: SfaContext, id: string, write = true) {
+export async function lockLead(tx: Prisma.TransactionClient, scope: SfaRecordScope, id: string, write = true) {
+  const c = scope.actor
   leadId(id)
   const rows = write ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_leads WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
     : await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_leads WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR SHARE`
   if (!rows.some(row => row.id === id)) return null
-  return tx.sfaLead.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } })
+  return tx.sfaLead.findFirst({ where: sfaRecordWhere(scope, 'lead', write, { id }) })
 }
 export function assertLeadVersion(expected: Date | undefined, actual: Date) {
   if (expected && expected.getTime() !== actual.getTime()) throw new SfaMutationError(409, 'リードが別の操作で更新されています。一覧を確認してから操作してください。')
 }
 export const nextLeadVersion = (before: Date) => new Date(Math.max(Date.now(), before.getTime() + 1))
+
+export async function redactLeadRelation(tx: Prisma.TransactionClient, scope: SfaRecordScope, lead: SfaLead | null): Promise<SfaLead | null> {
+  if (!lead?.convertedAccountId) return lead
+  const account = await tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id: lead.convertedAccountId }), select: { id: true } })
+  return account ? lead : { ...lead, convertedAccountId: null }
+}

@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import type { SfaContext } from './types'
-import { lockSfaMutationActor, SfaMutationError } from './mutation-authority'
+import { SfaMutationError } from './mutation-authority'
+import { lockSfaRecordScope } from './record-authority'
+import type { SfaRecordScope } from './record-policy'
 import { sfaOperationId, SfaReceiptRaceError } from './creation-receipt'
 import { withSfaAdmission } from './limits'
 import { leadId, lockLead, assertLeadVersion, nextLeadVersion } from './lead-mutation'
@@ -59,7 +61,7 @@ async function transaction<T>(c: SfaContext, work: (tx: Prisma.TransactionClient
   if (result.limit) throw new Error('Unexpected score resource limit')
   return result.created
 }
-async function observe(tx: Prisma.TransactionClient, c: SfaContext, key: string, r: Receipt | null): Promise<ScoreOperationState> {
+async function observe(tx: Prisma.TransactionClient, scope: SfaRecordScope, key: string, r: Receipt | null): Promise<ScoreOperationState> {
   if (!r) return { state: 'missing', score: null }
   if (r.phase === 'pending' && new Date(r.expiresAt!).getTime() <= Date.now()) {
     await releaseSfaAiUsage(r.reservationId!, tx)
@@ -67,18 +69,18 @@ async function observe(tx: Prisma.TransactionClient, c: SfaContext, key: string,
   }
   if (r.phase !== 'complete') return { state: r.phase === 'pending' ? 'pending' : r.phase, score: null }
   // Recovery exposes the saved attempt only while the owned business row is still active.
-  const lead = await lockLead(tx, c, r.leadId, false)
+  const lead = await lockLead(tx, scope, r.leadId, false)
   return lead ? { state: 'found', score: r.result! } : { state: 'unavailable', score: null }
 }
 export async function claimLeadScore(c: SfaContext, input: ReturnType<typeof scoreOperationInput>) {
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, input.leadId, input.operationId), receipt = await locked(tx, key, input.leadId, input.operationId)
     if (receipt) {
       if (receipt.phase !== 'cancelled' && receipt.expectedUpdatedAt !== input.expectedUpdatedAt) throw new SfaMutationError(409, '同じAI操作の入力が変わっています。保存結果をご確認ください。')
-      return { outcome: await observe(tx, c, key, receipt) }
+      return { outcome: await observe(tx, scope, key, receipt) }
     }
-    const lead = await lockLead(tx, c, input.leadId, false)
+    const lead = await lockLead(tx, scope, input.leadId)
     if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
     if (typeof lead.name !== 'string' || !lead.name.trim() || lead.name.length > 10000) throw new SfaMutationError(409, 'リード名を確認できません。リード名を修正してから実行してください。')
     assertLeadVersion(new Date(input.expectedUpdatedAt), lead.updatedAt)
@@ -94,23 +96,23 @@ export async function recoverLeadScore(c: SfaContext, lead: string, operation: s
   leadId(lead); const operationId = sfaOperationId(operation)
   if (!operationId) throw new SfaMutationError(400, '操作情報を指定してください。')
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, lead, operationId), receipt = await locked(tx, key, lead, operationId)
     if (!receipt && cancel) {
       await save(tx, key, { version: 1, phase: 'cancelled', leadId: lead, operationId }, false)
       return { state: 'cancelled' as const, score: null }
     }
     // A claimed provider request cannot be cancelled by closing the browser.
-    return observe(tx, c, key, receipt)
+    return observe(tx, scope, key, receipt)
   })
 }
 export async function settleLeadScore(c: SfaContext, input: ReturnType<typeof scoreOperationInput>, reservationId: string, value: unknown): Promise<SavedLeadScore> {
   const result = parseLeadScoreResult(value)
   return transaction(c, async tx => {
-    await lockSfaMutationActor(tx, c)
+    const scope = await lockSfaRecordScope(tx, c)
     const key = keyFor(c, input.leadId, input.operationId), r = await locked(tx, key, input.leadId, input.operationId)
     if (!r || r.phase !== 'pending' || r.reservationId !== reservationId || r.expectedUpdatedAt !== input.expectedUpdatedAt || new Date(r.expiresAt!).getTime() <= Date.now()) throw new SfaMutationError(409, 'このAI操作は完了できません。保存結果をご確認ください。')
-    const lead = await lockLead(tx, c, input.leadId)
+    const lead = await lockLead(tx, scope, input.leadId)
     if (!lead) throw new SfaMutationError(409, 'リードが変更されています。一覧をご確認ください。')
     assertLeadVersion(new Date(input.expectedUpdatedAt), lead.updatedAt)
     const updatedAt = nextLeadVersion(lead.updatedAt)

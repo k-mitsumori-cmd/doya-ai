@@ -101,7 +101,7 @@ AI API 呼出し (Gemini / OpenAI)
 ブラウザ → PUT Supabase Storage (直接アップロード)
               │ (Vercel 4.5MB制限をバイパス)
               ▼
-ブラウザ → POST /api/interview/materials/[id]/confirm
+ブラウザ → POST /api/interview/materials/confirm
               │
               ▼
 サーバー → AssemblyAI (URL渡しで文字起こし)

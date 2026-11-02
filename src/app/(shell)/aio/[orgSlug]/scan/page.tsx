@@ -9,6 +9,8 @@ import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
 import { sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 import { ToolHero } from '@/components/ds'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 const EXAMPLES = ['https://doya-ai.surisuta.jp', 'https://example.co.jp']
 
@@ -23,6 +25,7 @@ export default function AioScanPage() {
     onSignIn: () => startGoogleSignIn(`/aio/${encodeURIComponent(orgSlug)}/scan`),
   })
   const busy = !!flow.view?.busy
+  const oneButton = useOneButton()
   const start = async () => {
     if (flow.disabled) return
     if (!url.trim()) { toast.error('URLを入力してください'); return }
@@ -31,6 +34,20 @@ export default function AioScanPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {oneButton ? (
+        <div className="mb-5">
+          <OneButtonBar
+            eyebrow="ドヤAIO"
+            cta={busy ? '調査の準備をしています。このままお待ちください' : '調べたいサービスの URL を入れたら、押してください'}
+            label="調査を開始"
+            scope="入れた URL からサービス名と監視する質問を判定し、ChatGPT や Gemini での今の見え方を診断します。"
+            onRun={() => void start()}
+            disabled={flow.disabled}
+            disabledReason="準備ができるまで、少し待ってください。"
+            running={busy}
+          />
+        </div>
+      ) : null}
       <div className="mb-5">
           {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く */}
           <ToolHero

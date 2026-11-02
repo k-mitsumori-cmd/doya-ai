@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 // ============================================
 // ドヤ収入管理: 認証・組織スコープ（全APIの入口）
 // ============================================
@@ -6,7 +7,6 @@
 import crypto from 'crypto'
 import { getServerSession } from 'next-auth'
 import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -105,19 +105,19 @@ export async function getIncomeContext(req?: NextRequest): Promise<IncomeContext
 }
 
 export function unauthorized() {
-  return NextResponse.json({ error: 'ログインしてください' }, { status: 401 })
+  return privateApiJson({ error: 'ログインしてください' }, { status: 401 })
 }
 
 export function forbidden(message = 'この操作の権限がありません') {
-  return NextResponse.json({ error: message }, { status: 403 })
+  return privateApiJson({ error: message }, { status: 403 })
 }
 
 export function badRequest(message: string) {
-  return NextResponse.json({ error: message }, { status: 400 })
+  return privateApiJson({ error: message }, { status: 400 })
 }
 
 export function notFound(message = '見つかりません') {
-  return NextResponse.json({ error: message }, { status: 404 })
+  return privateApiJson({ error: message }, { status: 404 })
 }
 
 /** 業務エラー（入力・状態の不整合）。API で 400 として返す */
@@ -128,14 +128,14 @@ export class IncomeError extends Error {
 }
 
 export function errorResponse(error: unknown) {
-  if (error instanceof IncomeError) return NextResponse.json({ error: error.message }, { status: error.status })
+  if (error instanceof IncomeError) return privateApiJson({ error: error.message }, { status: error.status })
   // Serializable の競合（同時操作）。やり直せば通る
-  if ((error as { code?: string })?.code === 'P2034') return NextResponse.json({ error: '同時に別の操作が行われました。もう一度お試しください。' }, { status: 409 })
+  if ((error as { code?: string })?.code === 'P2034') return privateApiJson({ error: '同時に別の操作が行われました。もう一度お試しください。' }, { status: 409 })
   // 一意制約の違反。確定のやり直し（INC-F03）でも解消しなかった場合など。中身の重複か同時操作のどちらか
-  if ((error as { code?: string })?.code === 'P2002') return NextResponse.json({ error: '同じ内容がすでに登録されているか、同時に別の操作が行われました。画面を更新してから、もう一度お試しください。' }, { status: 409 })
+  if ((error as { code?: string })?.code === 'P2002') return privateApiJson({ error: '同じ内容がすでに登録されているか、同時に別の操作が行われました。画面を更新してから、もう一度お試しください。' }, { status: 409 })
   // ⚠️ 例外の中身（message/stack）はログに出さない（個人情報・取引先名が混ざりうる。verify-api-error-log-privacy）
   console.error('[income] unexpected error', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
-  return NextResponse.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
+  return privateApiJson({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
 }
 
 export async function audit(

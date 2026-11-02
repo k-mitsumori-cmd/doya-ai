@@ -1,13 +1,13 @@
 {
-  "checkedAt": "2026-10-07T20:55:56.651Z",
+  "checkedAt": "2026-10-31T11:22:52.088Z",
   "sameFrameSubmits": 2,
   "serverActionRequests": 1,
   "totalRecordedMinutesIfBothAccepted": 60,
   "refreshes": 1,
   "successToasts": 1,
   "sourceHashes": {
-    "src/components/promane/timesheet-view.tsx": "e145961ba588b884ba966706629b5b3b1293cfca2ccae3f66604b62e64b786fd",
-    "src/lib/promane/use-time-entry-creation.ts": "3263d754ad306c3167a47267f2f6a25999a5901c7973560b623bbb21585d8f34",
+    "src/components/promane/timesheet-view.tsx": "e1e7efd8704cac3012e0e29ee5f3074f40baad0542d483a4f2d415eff60f7bc7",
+    "src/lib/promane/use-time-entry-creation.ts": "15e3ddbf8c12d7c4a900fc9a55b9b5c369a9ba18584b9093aa80447dc95dbb89",
     "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
   },
   "noteBoundaryChecks": [

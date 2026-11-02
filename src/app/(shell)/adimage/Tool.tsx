@@ -19,6 +19,8 @@ import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type Re
 import AdImageLp from './Lp'
 import ExportDownload from '@/components/adimage/ExportDownload'
 import { notifyError } from '@/lib/ui/notify'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 /** 日本語の文だけを画面に出す（「Failed to fetch」などの英語は決まった文にする） */
 function jaError(e: unknown, fallback: string): string {
@@ -29,6 +31,7 @@ import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
 import { ShellCostBadge, useDoyaPowerRetry } from '@/components/shell/power'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 interface PlacementRow {
   key: string
@@ -72,6 +75,8 @@ type Step = 'input' | 'concepts' | 'result'
 const REFS_PAGE_SIZE = 30
 
 export default function AdImageTool() {
+  // 旗 ONE_BUTTON_ROLLOUT（フックは早い return より前に呼ぶ）
+  const oneButton = useOneButton()
   const { data: session, status: authStatus } = useSession()
   // 新しい見た目（チェックリスト §5.1）のときだけ、共通の ToolHero・中身の領域だけの生成中表示を使う
   const actor = (session?.user as { id?: string } | undefined)?.id || ''
@@ -89,6 +94,8 @@ export default function AdImageTool() {
    */
   const [url, setUrl] = useState('')
   const [appeal, setAppeal] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), a = read('appeal'); if (u) setUrl(u); if (a) setAppeal(a) })
   const [analyzing, setAnalyzing] = useState(false)
   const [useManualText, setUseManualText] = useState(false)
   const [manualText, setManualText] = useState('')
@@ -528,6 +535,13 @@ export default function AdImageTool() {
     return { key: 'empty', state: 'empty', onClick: () => jump('adimage-url', true) }
   })()
 
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す（段階で中身が変わる）
+  const oneButtonAnalyze = step === 'input'
+  const oneButtonBusy = analyzing || generating
+  const oneButtonDisabled = oneButtonAnalyze
+    ? analyzing || logoBusy || generating || refining || scoring || operation.blocked || !url.trim()
+    : operation.blocked || analyzing || logoBusy || generating || refining || scoring || chosen.length === 0 || !copy.headline || !copy.cta
+
   return (
     <div className="bg-slate-50 pb-24">
       {/* 新しい見た目では、全画面の読み込みを出さず、中身の領域に段階と残り時間を出す（下の main の先頭。UI 品質 C-2・S-18） */}
@@ -542,6 +556,24 @@ export default function AdImageTool() {
         </div>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        {oneButton ? (
+          <OneButtonBar
+            eyebrow="ドヤ広告画像"
+            cta={oneButtonAnalyze
+              ? (analyzing ? '広告のコピーを作っています。このままお待ちください' : 'サービスのURLを入れたら、押してください')
+              : (generating ? '広告画像を作っています。このままお待ちください' : '使うコピーと配置を選んだら、押してください')}
+            label={oneButtonAnalyze
+              ? (analyzing ? '読み取り中...' : '広告コピーを作る')
+              : (generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置${variations > 1 ? ` × ${variations}パターン = ${chosen.length * variations}枚` : ''}）`)}
+            scope={oneButtonAnalyze
+              ? 'URLのページを読み取り、広告のコピー案を作ります。画像はまだ作りません。'
+              : '選んだ配置ごとに、入稿サイズの広告画像を作ります。作った画像は下に並びます。'}
+            onRun={oneButtonAnalyze ? () => void analyze() : () => void generate()}
+            disabled={oneButtonDisabled}
+            disabledReason={oneButtonAnalyze ? 'サービスのURLを入れると押せます。' : 'コピーと配置を選ぶと押せます。'}
+            running={oneButtonBusy}
+          />
+        ) : null}
         <ToolNextStep tool="adimage" view={nextStep} />
         <AdImageProgressNext kind={analyzing ? 'analyzing' : generating ? 'generating' : refining ? 'refining' : null} />
         {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind.startsWith('logo-') ? 'ロゴ保存の結果確認' : operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">

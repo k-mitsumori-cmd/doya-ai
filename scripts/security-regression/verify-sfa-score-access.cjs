@@ -9,11 +9,11 @@ async function run(body, lead) {
 }
 
 (async () => {
-  const active = { id: 'lead', organizationId: 'org', isActive: true, name: 'Company', raw: null, status: 'new', note: null, source: 'manual' };
+  const active = { id: 'lead', organizationId: 'org', assigneeMemberId: 'member', isActive: true, name: 'Company', raw: null, status: 'new', note: null, source: 'manual' };
   for (const body of [null, [], {}, { leadId: 1 }, { leadId: {} }, { leadId: '  ' }]) {
     assert.deepEqual(await run(body, active), { status: 400, aiCalls: 0, writes: 0 });
   }
-  for (const lead of [null, { ...active, isActive: false }, { ...active, organizationId: 'foreign' }]) {
+  for (const lead of [null, { ...active, isActive: false }, { ...active, organizationId: 'foreign' }, { ...active, assigneeMemberId: 'other-assignee' }]) {
     assert.deepEqual(await run({ leadId: 'lead' }, lead), { status: 404, aiCalls: 0, writes: 0 });
   }
   assert.deepEqual(await run({ leadId: 'lead' }, active), { status: 200, aiCalls: 1, writes: 1 });

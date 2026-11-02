@@ -1,8 +1,12 @@
 # 11. 課金仕様（Stripe）— 正本
 
+> 経営ホームの表示補足（2026-10-31）: 契約期間の終了を表すISO時刻は、`Asia/Tokyo` の年月日として表示する。初回のサーバー描画とブラウザ描画で同じ日付になるよう、表示のタイムゾーンを明示する。
+
 > **この文書が課金の正本（single source of truth）です。**
 > 課金に触れる変更は、コードを書く前にこの文書を読み、変更後にこの文書を更新すること。
 > 05-auth-payments.md の「決済 (Stripe)」節は概説であり、内容が食い違う場合は**この文書が優先**します。
+
+> 社内インタビュー事実抽出の補足（2026-11-01）: 記事枠の判定と既存の5回上限による予約を、入力snapshotの取得と同じトランザクションで行う。LLMは予約commit後に開始する。抽出失敗・保存競合時のfactRuns消費は従来どおりで、Stripe料金・プラン判定・課金台帳の扱いは変えない。
 
 ---
 
@@ -359,7 +363,8 @@ HTTP成功に加え、`ok === true`、契約有無の真偽値、矛盾しない
 | **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / `GUEST` / ユーザー未登録。手動付与リストの登録有無にかかわらず報告する。契約の `metadata.userId` を優先し、IDのない旧契約だけ顧客メールで照合する | `<!channel>` + `notifyAlert(critical)` |
 | **契約とDBの階層不一致** | 同一利用者の有効契約の最上位階層と `User.plan` が異なる。手動付与リストの利用者でもDBが契約より下位なら報告する。意図的な上位付与だけ除外する | `<!channel>` + `notifyAlert(critical)` |
 | **契約プラン不明** | Doya契約として識別できる有効契約で、価格・メタデータからプランIDを解決できない。階層照合はできないため独立して報告する | `<!channel>` + `notifyAlert(critical)` |
-| **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（値違い or 行が無い＝INV-2 違反） | `<!channel>` + `notifyAlert(critical)`。dedupKey `billing-service-plan-drift`／12時間クールダウンなので1日1通に集約される |
+| **サービス別プランのズレ（値違い）** | `User.plan` は有料なのに、`ALL_SERVICE_IDS` のどれかの行の値が期待と違う（例 `seo=FREE`。INV-2 違反） | `<!channel>` + `notifyAlert(critical)`。dedupKey `billing-service-plan-drift`／12時間クールダウン |
+| **サービス別プランの行なし** | 値の違う行は無く、行が無いサービスだけがある。`ALL_SERVICE_IDS` に新サービスを足したあと、既存の有料の人に行を補っていないと起きる（2026-10 に6サービスを足したときの取りこぼし）。権利は `User.plan` との上位で決まるので無料には落ちない | `notifyAlert(warn)`。dedupKey `billing-service-plan-missing-rows`。補い方は変更時チェックリストの `ALL_SERVICE_IDS` の項 |
 | **過剰付与** | Stripe に生きた契約が無いのに DB が有料のまま（解約の反映漏れ／手動付与） | Slack レポートのみ（運営の手動付与で誤検知しうるため critical にしない） |
 | **二重契約** | 同一利用者に生きた契約が2本以上。Stripe顧客やメールが分かれていても `metadata.userId` で集約する | 同上 |
 | **Webhook 異常** | 期待URLが未登録 / `enabled` でない / 必須イベント未購読 | 同上（AI修復手順つき） |
@@ -474,6 +479,7 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 - [ ] 契約検索に**サービス名の接頭辞を使っていない**か（INV-5）
 - [ ] 顧客特定が**メール横断**になっているか（INV-6）
 - [ ] `User.plan` を書き換えたら **`ALL_SERVICE_IDS` 全件も**更新しているか（INV-2）
+- [ ] **`ALL_SERVICE_IDS` にサービスを足したら**、本番で `npx tsx scripts/backfill-new-service-subscriptions.ts --service=all`（読み取りだけ）を流し、出たサービスごとに `--service=<id>` → `--service=<id> --apply --expected-missing=<数>` で既存の有料の人に行を補う（本番 DB への書き込みなので本人の承認を取る）。補わないと日次監査が「行なし」を出す（2026-10-30）
 - [ ] 反映処理が **4経路すべてで同じ結果**になるか（§4.1）
 - [ ] 失敗を `catch` で握り潰していないか（**必ず `console.error` かアラート**を出す）
 - [ ] `npx tsc --noEmit` と `npx next build` が通るか（自動テストは無い）

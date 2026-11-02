@@ -11,10 +11,16 @@ import ImageGenModal from './ImageGenModal'
 import EmptyState from './EmptyState'
 import BoothSizeInput from './BoothSizeInput'
 import { CountUp, Modal, PageHeader } from './ui'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestImages, useImageQuota, type ImageGenFailure } from './useImageGen'
 import { nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
+import { cropImageToAspect, toReferencePng } from '@/lib/tenjikai/image-fit'
+import type { BoothDesignKit } from '@/lib/tenjikai/design-kit'
+import DesignKitStudio from './DesignKitStudio'
 import { batchSummary, runPanelBatch, type BatchFace } from '@/lib/tenjikai/batch'
+import DoyaWorking from '@/components/shell/DoyaWorking'
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
@@ -62,7 +68,17 @@ interface StudioProps {
   setPanelImages: (f: (m: Images) => Images) => void
   /** 小間の横と奥行を変える（3D と面の数・大きさが変わる）。作った面の画像は外す */
   onResize?: (widthM: number, depthM: number) => void
+  /** ブースのデザインの決まり（仕様 4 章）と、確定したか。確定するまで、画像は作れない */
+  kit: BoothDesignKit
+  kitConfirmed: boolean
+  /** 文字を含まない昔の画像の目印。その画像の上には、見出しを重ねて出す */
+  legacySig?: Record<string, string>
+  onKitChange: (kit: BoothDesignKit) => void
+  onKitConfirm: () => void
+  onKitReopen: () => void
 }
+
+const KIT_NEEDED_MESSAGE = '先に、上の「ブースのデザインの決まり」を確定してください。確定した決まりで、すべての面を同じに作ります。'
 
 const VIEW_LABEL = { '3d': '3D', iso: '等角模型', plan: '平面図' } as const
 
@@ -84,25 +100,58 @@ function extOf(dataUrl: string) {
   return m ? (m[1] === 'svg+xml' ? 'svg' : m[1] === 'jpeg' ? 'jpg' : m[1]) : 'png'
 }
 
-async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Images) {
+function graphicCsvCell(value: string): string {
+  const safe = /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(value) ? `'${value}` : value
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
+async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Images, signal?: AbortSignal) {
+  if (signal?.aborted) return
   const safe = (t: string) => t.replace(/[\\/:*?"<>|\s]+/g, '_')
   const rows = [
     ['番号', '面', '幅(mm)', '高さ(mm)', '床からの高さ(mm)', '素材', '見出し', '画像ファイル'],
     ...panels.map((p, i) => [String(i + 1), p.name, String(p.widthMm), String(p.heightMm), String(p.baseMm), p.material, p.headline, images[p.id] ? `${String(i + 1).padStart(2, '0')}_${safe(p.name)}.${extOf(images[p.id])}` : '（未作成）']),
   ]
-  const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\r\n')
+  const csv = rows.map((r) => r.map(graphicCsvCell).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
   download(`ブース案${plan.variant}_グラフィック割付.csv`, url)
-  setTimeout(() => URL.revokeObjectURL(url), 2000)
+  let revokeTimer: ReturnType<typeof setTimeout> | undefined
+  let revoked = false
+  const releaseUrl = () => {
+    if (revoked) return
+    revoked = true
+    if (revokeTimer !== undefined) clearTimeout(revokeTimer)
+    signal?.removeEventListener('abort', releaseUrl)
+    URL.revokeObjectURL(url)
+  }
+  signal?.addEventListener('abort', releaseUrl, { once: true })
+  revokeTimer = setTimeout(releaseUrl, 2000)
+  if (signal?.aborted) releaseUrl()
   for (const [i, p] of panels.entries()) {
     const img = images[p.id]
     if (!img) continue
-    await new Promise((r) => setTimeout(r, 250)) // まとめて保存するとブラウザーに止められるため、少し間をあける
+    if (signal?.aborted) return
+    // 保存の間隔をあけ、画面が外れたときは待機も保存も止める。
+    const ready = await new Promise<boolean>((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      let settled = false
+      const finish = () => {
+        if (settled) return
+        settled = true
+        if (timer !== undefined) clearTimeout(timer)
+        signal?.removeEventListener('abort', finish)
+        resolve(!signal?.aborted)
+      }
+      signal?.addEventListener('abort', finish, { once: true })
+      timer = setTimeout(finish, 250)
+      if (signal?.aborted) finish()
+    })
+    if (!ready || signal?.aborted) return
     download(`${String(i + 1).padStart(2, '0')}_${safe(p.name)}.${extOf(img)}`, img)
   }
 }
 
-export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize }: StudioProps) {
+export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize, kit, kitConfirmed, legacySig, onKitChange, onKitConfirm, onKitReopen }: StudioProps) {
   const [view, setView] = useState<'3d' | 'iso' | 'plan'>('3d')
   const [selectedId, setSelectedId] = useState<string>()
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
@@ -125,7 +174,25 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   const threeRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
+  const operationScope = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const scope = new AbortController()
+    operationScope.current = scope
+    return () => {
+      scope.abort()
+      if (operationScope.current === scope) operationScope.current = null
+    }
+  }, [])
+  const runExport = () => {
+    const scope = operationScope.current
+    if (!scope || scope.signal.aborted) return
+    void exportPack(plan, panels, panelImages, scope.signal)
+  }
 
+
+  // 見本（マスター）: 背面壁の中央の画像
+  const heroPanel = panels.find((p) => p.layout === 'hero')
+  const heroImage = heroPanel ? panelImages[heroPanel.id] : undefined
   const missing = panels.filter((p) => !panelImages[p.id])
   const madeCount = panels.length - missing.length
   const allMade = panels.length > 0 && missing.length === 0
@@ -145,15 +212,36 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   // 押したら、確認の画面（画面の真ん中）のまま「作り始めました」と面ごとの進み具合・失敗の理由を出す（2026-10-26 ユーザーの指摘）。
   // ⚠️ 前は確認の画面を閉じて 3D へ移っていたため、進み具合や「準備中」の知らせが画面の外に出て、作っているのか分からなかった
   const runBatch = async (targets: GraphicPanel[] = missing) => {
-    if (targets.length === 0) return
+    const scope = operationScope.current
+    if (!scope || scope.signal.aborted || targets.length === 0) return
     setBatchOpen(true)
     setView('3d')
     setStopReason(undefined)
+    // 見本（マスター）を先に作り、残りの面は、見本を参照して作る（仕様 5 章）。すでに見本があれば、それを参照にする
+    const ordered = [...targets].sort((a, b) => Number(b.layout === 'hero') - Number(a.layout === 'hero'))
+    const heroNow = panels.find((p) => p.layout === 'hero')
+    let masterRef: string | undefined = heroNow && panelImages[heroNow.id] ? await toReferencePng(panelImages[heroNow.id]) : undefined
+    if (scope.signal.aborted) return
     const stop = await runPanelBatch(
-      targets,
-      (p) => requestImages({ prompt: buildPanelPrompt(p, analysis), aspectRatio: nearestRatio(p.widthMm, p.heightMm), kind: 'graphic_panel' }),
+      ordered,
+      async (p) => {
+        const r = await requestImages({
+          prompt: buildPanelPrompt(p, analysis, kit, { hasReference: !!masterRef && p.layout !== 'hero' }),
+          aspectRatio: nearestRatio(p.widthMm, p.heightMm),
+          kind: 'graphic_panel',
+          referencePng: p.layout !== 'hero' ? masterRef : undefined,
+        }, scope.signal)
+        if (scope.signal.aborted || !r.ok || !r.images[0]) return r
+        // 面の実寸の縦横比に切り出して保存する（3D の面に、切れずに貼るため。仕様 6 章）
+        const fitted = await cropImageToAspect(r.images[0], p.widthMm / p.heightMm)
+        if (scope.signal.aborted) return r
+        if (p.layout === 'hero') masterRef = await toReferencePng(fitted)
+        return { ok: true as const, images: [fitted] }
+      },
       { onUpdate: setFaces, onImage: (p, img) => setPanelImages((m) => ({ ...m, [p.id]: img })) },
+      scope.signal,
     )
+    if (scope.signal.aborted) return
     setStopReason(stop)
     void refresh()
   }
@@ -162,30 +250,58 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const notEnough = quota?.enabled && quota.remaining !== null && quota.remaining < missing.length
   // サーバーが画像の生成を止めている（TENJIKAI_IMAGEGEN_ENABLED が未設定）。押す前から分かるように出す
   const disabled = isImageGenDisabled(quota)
+  // 決まりを確定するまでは、画像を作らせない（面ごとに色や形がばらばらになるのを防ぐ。2026-10-29）
+  const kitBlocked = !kitConfirmed
+  const blocked = disabled || kitBlocked
   const failedPanels = panels.filter((p) => !panelImages[p.id] && faces.some((f) => f.id === p.id && (f.status === 'failed' || f.status === 'skipped')))
   const sizeChanged = sizeDraft.w !== plan.widthM || sizeDraft.d !== plan.depthM
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、上の帯を「これ1つで全部進む」形にする（ドヤくん＋大きなボタン1つ）
+  const oneButton = useOneButton()
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
-      <PageHeader title="ブース設計" desc="出展の目的と小間の位置から、3つの設営案を作りました。3Dはドラッグで回せます。面の画像を作ると、3Dの壁面に貼られます。" />
+      {oneButton ? (
+        <OneButtonBar
+          eyebrow="ブース設計"
+          cta={allMade ? 'すべての面ができました。書き出して、印刷会社に渡せます' : running ? '面の画像を作っています。このままお待ちください' : 'ブースの形と大きさが決まったら、押してください'}
+          label={allMade ? '書き出す' : running ? `進み具合を見る（${summary.finished}/${summary.total}面）` : `面の画像をまとめて作る（${missing.length}面）`}
+          scope={allMade
+            ? '3Dの完成図・割付表・面の画像を、まとめて書き出します。'
+            : `まだ画像の無い${missing.length}面を、1面ずつ作ります。できた面から3Dの壁に貼られます。${left ? `（${left}）` : ''}`}
+          onRun={allMade ? runExport : running ? () => setBatchOpen(true) : () => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }}
+          disabled={!allMade && !running && blocked}
+          disabledReason={kitBlocked && !disabled ? KIT_NEEDED_MESSAGE : IMAGEGEN_DISABLED_MESSAGE}
+          running={running}
+          // 作っている間に押すと、進み具合の画面を開く（新しく作り始めはしない）
+          clickableWhileRunning
+          progress={running ? { done: summary.finished, total: summary.total } : undefined}
+          pose={allMade ? 'success' : undefined}
+          extra={!allMade && !running ? <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} /> : undefined}
+        />
+      ) : (
+        <PageHeader title="ブース設計" desc="出展の目的と小間の位置から、3つの設営案を作りました。3Dはドラッグで回せます。面の画像を作ると、3Dの壁面に貼られます。" />
+      )}
 
       <FlowSteps steps={FLOW} current={step} label="ブース設計の進め方" />
 
-      {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品） */}
-      <NextStepBar
-        state={allMade ? 'done' : running ? 'working' : disabled || summary.failed > 0 ? 'error' : 'empty'}
+      {/* ブースのデザインの決まり。先に決める（確定するまで、画像は作れない） */}
+      <DesignKitStudio kit={kit} confirmed={kitConfirmed} onChange={onKitChange} onConfirm={onKitConfirm} onReopen={onKitReopen} madeCount={madeCount} />
+
+      {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品）。上の帯（ONE_BUTTON）が出ているときは、同じボタンが二重になるので出さない */}
+      {oneButton ? null : <NextStepBar
+        state={allMade ? 'done' : running ? 'working' : blocked || summary.failed > 0 ? 'error' : 'empty'}
         text={
           allMade
             ? 'すべての面に画像を貼りました。書き出して、印刷会社に渡せます。'
             : running
               ? `面の画像を作っています（${summary.finished}/${summary.total}面）。できた面から3Dに貼られます。`
-              : disabled
-                ? IMAGEGEN_DISABLED_MESSAGE
+              : blocked
+                ? (kitBlocked && !disabled ? KIT_NEEDED_MESSAGE : IMAGEGEN_DISABLED_MESSAGE)
                 : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`
         }
         sub={left && !allMade ? left : undefined}
         action={allMade ? (
-          <NextStepAction onClick={() => void exportPack(plan, panels, panelImages)} iconNode={<Download className="h-4 w-4" aria-hidden />}>
+          <NextStepAction onClick={runExport} iconNode={<Download className="h-4 w-4" aria-hidden />}>
             書き出す
           </NextStepAction>
         ) : running ? (
@@ -199,7 +315,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
           </NextStepAction>
         )}
-      />
+      />}
 
       {/* 確認の画面を閉じたあとも、作れなかった面があれば知らせる */}
       {!running && !batchOpen && summary.failed > 0 && (
@@ -265,7 +381,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <div className={clsx('aspect-[4/3] min-h-[280px] w-full', view !== '3d' && 'p-3')}>
             {view === '3d' ? (
               // 3D は入りのアニメーションで傾けない（傾いたまま倍率を測ると崩れるため）
-              <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
+              <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} legacySig={legacySig} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={`${variant}-${view}`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full w-full">
@@ -332,7 +448,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <h2 className="text-[18px] font-bold text-ink">書き出す</h2>
           <p className="text-[14px] leading-relaxed text-[var(--sub)]">グラフィックの割付表（CSV）と、作った面の画像を保存します。印刷会社への入稿の相談に使えます。</p>
           <div>
-            <button disabled={madeCount === 0} onClick={() => void exportPack(plan, panels, panelImages)} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
+            <button disabled={madeCount === 0} onClick={runExport} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
               <Download className="h-4 w-4" /> 割付表と画像を保存（{madeCount}面）
             </button>
             {madeCount === 0 && <p className="mt-1 text-[12px] text-[var(--muted)]">面の画像を作ると、保存できます。</p>}
@@ -347,11 +463,12 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             {disabled && (
               <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>
             )}
+            {kitBlocked && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{KIT_NEEDED_MESSAGE}</p>}
             {left && <p className="text-[13px] text-[var(--sub)]">{left}</p>}
             {notEnough && <p className="rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">きょう作れる残りが足りません。作れる面まで作り、残りは明日作れます。</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setBatchOpen(false)} className="min-h-[44px] rounded-xl px-4 text-sm font-bold text-gray-500 hover:bg-gray-100">キャンセル</button>
-              <button type="button" disabled={disabled || missing.length === 0} onClick={() => void runBatch()} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+              <button type="button" disabled={blocked || missing.length === 0} onClick={() => void runBatch()} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
                 <ImagePlus className="h-4 w-4" /> 作りはじめる
               </button>
             </div>
@@ -368,6 +485,16 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
               </p>
               {running && <p className="mt-1 text-[13px] text-[var(--sub)]">1面ずつ作ります。この画面を閉じても、作り続けます。</p>}
             </div>
+            {/* ドヤくんが壁を塗る待ち画面。塗る高さは、終わった面の割合（2026-10-29 ユーザー「待ち時間にも遊び心を」） */}
+            <DoyaWorking
+              compact
+              title={running ? 'ドヤくんが面の画像を作っています' : summary.failed === 0 ? 'すべての面ができました' : '作れた面だけ、できました'}
+              caption={running ? 'できた面から、3Dの壁面に貼られます。' : undefined}
+              steps={running ? ['ブースの決まりの色で、1面ずつ塗っています', '面どうしの色と形をそろえています', '見出しの場所を空けています'] : undefined}
+              colors={{ primary: kit.palette.primary, secondary: kit.palette.dark, accent: kit.palette.accent }}
+              progress={summary.total ? summary.finished / summary.total : 0}
+              done={!running && summary.failed === 0}
+            />
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="面の画像の進み具合" aria-valuemin={0} aria-valuemax={summary.total} aria-valuenow={summary.finished}>
               <div className="h-full rounded-full bg-doya-500 transition-[width] duration-300" style={{ width: `${summary.total ? (summary.finished / summary.total) * 100 : 0}%` }} />
             </div>
@@ -412,9 +539,16 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           onClose={() => setPanelTarget(null)}
           kind="graphic_panel"
           title={`${panelTarget.name}の画像を作る`}
-          prompt={buildPanelPrompt(panelTarget, analysis)}
+          colors={{ primary: kit.palette.primary, secondary: kit.palette.dark, accent: kit.palette.accent }}
+          blockedReason={kitBlocked ? KIT_NEEDED_MESSAGE : undefined}
+          prompt={buildPanelPrompt(panelTarget, analysis, kit, { hasReference: panelTarget.layout !== 'hero' && !!heroImage })}
           aspectRatio={nearestRatio(panelTarget.widthMm, panelTarget.heightMm)}
-          onResult={(imgs) => imgs[0] && setPanelImages((m) => ({ ...m, [panelTarget.id]: imgs[0] }))}
+          getReference={panelTarget.layout !== 'hero' && heroImage ? () => toReferencePng(heroImage) : undefined}
+          onResult={async (imgs) => {
+            if (!imgs[0]) return
+            const fitted = await cropImageToAspect(imgs[0], panelTarget.widthMm / panelTarget.heightMm)
+            setPanelImages((m) => ({ ...m, [panelTarget.id]: fitted }))
+          }}
         />
       )}
     </div>

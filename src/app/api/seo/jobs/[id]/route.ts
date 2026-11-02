@@ -1,15 +1,16 @@
-import { publicSeoJob } from '@seo/lib/job-response'
-import { NextRequest, NextResponse } from 'next/server'
+import { publicSeoJob, seoArticleActivity } from '@seo/lib/job-response'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { privateApiJson } from '@/lib/private-api-response'
 
 export const runtime = 'nodejs'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    if (!owner) return privateApiJson({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
     const id = (await ctx.params).id
     const job = await prisma.seoJob.findFirst({
@@ -21,7 +22,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     })
     if (!job) {
       console.log('[seo job get] job not found in DB', { jobId: id })
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+      return privateApiJson({ success: false, error: 'not found' }, { status: 404 })
     }
     // リサーチ実況用：直近の要約/抽出結果（SeoReference）を返す
     // NOTE: extractedTextは巨大なので返さない
@@ -45,11 +46,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       references = []
     }
 
-    const jobWithRefs = { ...job, references }
-    return NextResponse.json({ success: true, job: publicSeoJob(jobWithRefs) })
+    const jobWithRefs = { ...job, references, activityState: seoArticleActivity(job.article.status, job.article.updatedAt, job) }
+    return privateApiJson({ success: true, job: publicSeoJob(jobWithRefs) })
   } catch (e: any) {
     console.error('[seo job get] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { success: false, error: 'ジョブを取得できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )

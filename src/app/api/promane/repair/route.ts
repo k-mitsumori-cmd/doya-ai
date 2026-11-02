@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -35,11 +36,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
     const workspaceSlug = req.nextUrl.searchParams.get('workspaceSlug')
     if (!workspaceSlug) {
-      return NextResponse.json({ error: 'workspaceSlug は必須です' }, { status: 400 })
+      return privateApiJson({ error: 'workspaceSlug は必須です' }, { status: 400 })
     }
 
     const result = await retryRepairTransaction(() => prisma.$transaction(async tx => {
@@ -107,11 +108,11 @@ export async function POST(req: NextRequest) {
       }
       return { status: 200 as const, details, totalFixed: Object.values(details).reduce((sum, count) => sum + count, 0) }
     }, { isolationLevel: 'Serializable', timeout: 20_000 }))
-    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
-    return NextResponse.json({ success: true, totalFixed: result.totalFixed, details: result.details })
+    if (result.status !== 200) return privateApiJson({ error: result.error }, { status: result.status })
+    return privateApiJson({ success: true, totalFixed: result.totalFixed, details: result.details })
   } catch (e: any) {
     console.error('[promane/repair]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'データ修復に失敗しました' },
       { status: 500 }
     )

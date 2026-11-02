@@ -33,7 +33,51 @@ jobs:
       - name: Install PostgreSQL for isolated operation regression
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql
+          sudo apt-get install -y --no-install-recommends postgresql poppler-utils
+
+      - name: Native PDF and image dependencies (synthetic input, no providers)
+        run: npx tsx --test scripts/regression/native-pdf-image.test.ts
+
+      - name: Satori SVG escaping and production image renderers (synthetic input)
+        run: npx tsx --test scripts/regression/native-satori.test.ts
+
+      - name: Save synthetic Satori image evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-satori-${{ github.sha }}
+          path: /tmp/doya-native-satori-audit/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: SEO list activity and pagination (private Unix socket, no providers)
+        run: python3 scripts/regression/seo-list-postgres.py
+
+      - name: Expense initial loading continuity and retry guards (offline)
+        run: |
+          node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
+          DOYA_TEST_STRICT=1 node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
+
+      - name: AskLink concurrent question edits (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-asklink-edit-postgres.py
+
+      - name: Shanai storage deletion and concurrent registration (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-shanai-storage-postgres.py
+
+      - name: Shanai transcription ownership and submission recovery (private Unix socket, no providers)
+        run: python3 scripts/security-regression/verify-shanai-transcription-postgres.py
+
+      - name: Shanai fact generation and confirmed edits (private SQL and mounted UI, no providers)
+        run: python3 scripts/security-regression/verify-shanai-facts-postgres.py
+
+      - name: Save synthetic native PDF evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-pdf-${{ github.sha }}
+          path: /tmp/doya-native-pdf-audit/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: New service existing paid user backfill (private Unix socket, no external providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/new-service-backfill-private-postgres-supervise.py

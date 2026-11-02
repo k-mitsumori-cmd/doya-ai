@@ -4,7 +4,8 @@
 // ⚠️ すべての API はここを通し、organizationId を条件に入れて読み書きする（IDOR 対策）。
 // ⚠️ 明示された組織で認可できないとき、別の所属組織に切り替えない。
 import { getServerSession } from 'next-auth'
-import { NextResponse, type NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { privateApiJson, privateApiResponse } from '@/lib/private-api-response'
 import type { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -110,19 +111,19 @@ export async function withExpense(
 ): Promise<Response> {
   try {
     const slug = orgSlugFrom(req)
-    if (!slug) return NextResponse.json({ error: '組織が指定されていません' }, { status: 400 })
+    if (!slug) return privateApiJson({ error: '組織が指定されていません' }, { status: 400 })
     const userId = await resolveUserId()
-    if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    if (!userId) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
     const ctx = await getExpenseContext(slug)
-    if (!ctx) return NextResponse.json({ error: 'この組織にアクセスできません' }, { status: 403 })
-    if (!hasMinRole(ctx.role, minRole)) return NextResponse.json({ error: 'この操作を行う権限がありません' }, { status: 403 })
-    return await handler(ctx)
+    if (!ctx) return privateApiJson({ error: 'この組織にアクセスできません' }, { status: 403 })
+    if (!hasMinRole(ctx.role, minRole)) return privateApiJson({ error: 'この操作を行う権限がありません' }, { status: 403 })
+    return privateApiResponse(await handler(ctx))
   } catch (e) {
-    if (e instanceof ExpenseHttpError) return NextResponse.json({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: e.status })
+    if (e instanceof ExpenseHttpError) return privateApiJson({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: e.status })
     // 為替レート未設定（plan.ts の FxRateMissingError）は利用者が直せる理由なので、そのまま伝える
-    if ((e as Error)?.name === 'FxRateMissingError') return NextResponse.json({ error: (e as Error).message, code: 'FX_RATE_MISSING' }, { status: 400 })
+    if ((e as Error)?.name === 'FxRateMissingError') return privateApiJson({ error: (e as Error).message, code: 'FX_RATE_MISSING' }, { status: 400 })
     console.error('[expense] request failed', req.nextUrl?.pathname, (e as Error)?.name)
-    return NextResponse.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
+    return privateApiJson({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
 

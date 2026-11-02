@@ -8,6 +8,13 @@ import { startGoogleSignIn } from '@/lib/use-navigation-submission'
 import tokens from '@/components/ds/tokens.module.css'
 import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
 import { EntryNext } from '@/components/expense/next'
+import { currentSearchParams, forwardPath } from '@/lib/agent-router/entry'
+
+/** ドヤAIの「頼む」から来たときの行き先と値を、組織の中の画面へ運ぶ（組織を作った直後も含む） */
+function orgPath(slug: string): string {
+  const allow = { 'new-contract': '/contracts/new' }
+  return `/expense/${encodeURIComponent(slug)}${forwardPath(currentSearchParams(), allow)}`
+}
 
 /**
  * known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない
@@ -27,7 +34,7 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const slug = d?.organization?.slug || d?.memberships?.[0]?.slug
-        if (slug) router.replace(`/expense/${slug}`)
+        if (slug) router.replace(orgPath(slug))
         else setChecking(false)
       })
       .catch(() => setChecking(false))
@@ -49,7 +56,7 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
       }
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || '始められませんでした。時間をおいて、もう一度お試しください。')
-      router.replace(`/expense/${d.organization.slug}`)
+      router.replace(orgPath(d.organization.slug))
     } catch (e) {
       toast.error((e as Error).message)
       setBusy(false)
@@ -71,7 +78,7 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
       }
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || '作成に失敗しました')
-      router.replace(`/expense/${d.organization.slug}`)
+      router.replace(orgPath(d.organization.slug))
     } catch (e) {
       toast.error((e as Error).message)
       setBusy(false)

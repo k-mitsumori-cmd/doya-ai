@@ -1,0 +1,175 @@
+/*
+ * 作っている間の待ち画面（DoyaWorking）
+ * ⚠️ 色はトークン（--blue など）と、渡された塗りの色（--w-primary など）だけ。動きは位置・大きさ・濃さだけ
+ * ⚠️ 高さは先に取る（stage の大きさは固定。読み込みでずれない）
+ */
+.root {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  padding: 20px 16px;
+  border-radius: var(--r, 22px);
+  background:
+    radial-gradient(70% 90% at 50% 0%, var(--blue-soft, #e8f0ff), transparent 70%),
+    var(--paper, #fff);
+  border: 1px solid var(--blue-line, #d7e5ff);
+}
+
+.stage {
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 4 / 3;
+}
+
+/* ---- 塗る壁 ---- */
+.panel {
+  position: absolute;
+  right: 4%;
+  top: 6%;
+  width: 40%;
+  height: 86%;
+  border-radius: 10px;
+  border: 2px solid var(--line-strong, #c6cde0);
+  background: #fff;
+  box-shadow: 0 14px 30px -16px rgba(10, 15, 60, 0.35);
+  overflow: hidden;
+}
+.paint {
+  position: absolute;
+  inset: 0;
+  transition: clip-path 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* 繰り返す動き: 上から下へ塗り、少し止めてから、薄れて最初に戻る */
+.root[data-mode='loop'][data-state='working'] .paint {
+  animation: dw-paint 5.6s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+@keyframes dw-paint {
+  0% { clip-path: inset(0 0 100% 0); opacity: 1; }
+  70% { clip-path: inset(0 0 0% 0); opacity: 1; }
+  90% { clip-path: inset(0 0 0% 0); opacity: 1; }
+  100% { clip-path: inset(0 0 0% 0); opacity: 0; }
+}
+
+/* ローラー: 壁と同じ高さの箱ごと動かす（transform のパーセントは箱の高さなので、塗る面の先頭に付いて下がる） */
+.roller {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rollerBar {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  top: -9px;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--w-primary), color-mix(in srgb, var(--w-primary) 70%, #000));
+  box-shadow: 0 4px 10px -4px rgba(10, 15, 60, 0.5);
+}
+.drop {
+  position: absolute;
+  top: 4px;
+  width: 6px;
+  height: 8px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: var(--w-primary);
+  opacity: 0;
+}
+.drop:nth-child(2) { left: 22%; }
+.drop:nth-child(3) { left: 48%; }
+.drop:nth-child(4) { left: 74%; }
+.root[data-state='working'] .drop { animation: dw-drop 1.8s ease-in infinite; }
+.root[data-state='working'] .drop:nth-child(3) { animation-delay: 0.6s; }
+.root[data-state='working'] .drop:nth-child(4) { animation-delay: 1.2s; }
+@keyframes dw-drop {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  20% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(46px) scale(1); }
+}
+.root[data-mode='loop'][data-state='working'] .roller {
+  animation: dw-roll 5.6s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+}
+@keyframes dw-roll {
+  0% { transform: translateY(0); opacity: 1; }
+  70% { transform: translateY(100%); opacity: 1; }
+  80% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+/* 作り終わったら、ローラーは消す */
+.root[data-state='done'] .roller { opacity: 0; transition: opacity 0.3s; }
+.root[data-state='done'] .paint { clip-path: inset(0 0 0 0); }
+
+.spark {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--yellow, #ffd400);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+}
+.spark:nth-of-type(1) { right: 2%; top: 2%; }
+.spark:nth-of-type(2) { right: 40%; top: 26%; width: 7px; height: 7px; }
+.root[data-state='working'] .spark { animation: dw-spark 2.4s ease-in-out infinite; }
+.root[data-state='working'] .spark:nth-of-type(2) { animation-delay: 1.1s; }
+.root[data-state='done'] .spark { animation: dw-spark-done 1.2s ease-out 2; }
+@keyframes dw-spark { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(0); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@keyframes dw-spark-done { 0% { opacity: 0; transform: scale(0.3); } 40% { opacity: 1; transform: scale(1.3) rotate(30deg); } 100% { opacity: 0; transform: scale(1) rotate(60deg); } }
+
+/* ---- ドヤくん ---- */
+.bear {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 56%;
+  aspect-ratio: 1;
+  transform-origin: 50% 100%;
+}
+/* 3枚の重ね先（DoyaKun の幅は px で決まるので、箱いっぱいに広げ直す） */
+.bear > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.bear > span > span {
+  width: 100%;
+  animation: none;
+}
+.bearB, .bearDone { opacity: 0; }
+/* ローラーを上げ下げするように、2枚を入れ替える（位置と濃さだけ） */
+.root[data-state='working'] .bear { animation: dw-bob 1.4s ease-in-out infinite; }
+.root[data-state='working'] .bearA { animation: dw-swap-a 1.4s steps(1, end) infinite; }
+.root[data-state='working'] .bearB { animation: dw-swap-b 1.4s steps(1, end) infinite; }
+@keyframes dw-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3%) rotate(-1.5deg); } }
+@keyframes dw-swap-a { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes dw-swap-b { 0% { opacity: 0; } 50% { opacity: 1; } }
+.root[data-state='done'] .bearA, .root[data-state='done'] .bearB { opacity: 0; }
+.root[data-state='done'] .bearDone { opacity: 1; }
+.root[data-state='done'] .bear { animation: dw-hop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1; }
+@keyframes dw-hop { 0% { transform: translateY(0) scale(1, 1); } 35% { transform: translateY(-9%) scale(0.98, 1.03); } 100% { transform: none; } }
+
+/* ---- 文字 ---- */
+.text { display: grid; gap: 4px; justify-items: center; text-align: center; max-width: 34em; }
+.title { margin: 0; font-size: 17px; line-height: 1.5; font-weight: 800; color: var(--ink, #101633); }
+.caption { margin: 0; font-size: 14px; line-height: 1.6; font-weight: 600; color: var(--sub, #4a5375); }
+/* 一言は2行ぶんの高さを先に取る（入れ替わっても下が動かない） */
+.step { margin: 4px 0 0; min-height: 3em; font-size: 14px; line-height: 1.5; font-weight: 700; color: var(--blue-deep, #0047d6); animation: dw-step 0.5s ease-out both; }
+@keyframes dw-step { from { opacity: 0.2; } to { opacity: 1; } }
+
+.compact { padding: 12px; gap: 10px; }
+.compact .stage { width: min(100%, 300px); }
+.compact .title { font-size: 15px; }
+
+@media (max-width: 480px) {
+  .root { padding: 16px 12px; }
+  .title { font-size: 16px; }
+}
+
+/* 動きを減らす設定: 動かさず、塗り終わった形で止める */
+@media (prefers-reduced-motion: reduce) {
+  .root .paint, .root .roller, .root .bear, .root .bearA, .root .bearB, .root .drop, .root .spark, .root .step { animation: none !important; transition: none !important; }
+  .root[data-mode='loop'] .paint { clip-path: inset(0 0 0 0); opacity: 1; }
+  .root[data-mode='loop'] .roller { opacity: 0; }
+  .root[data-state='working'] .bearA { opacity: 1; }
+  .root[data-state='working'] .bearB { opacity: 0; }
+}

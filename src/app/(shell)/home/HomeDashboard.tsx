@@ -14,6 +14,7 @@ import { SHELL_GROUPS } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
+import { DEPARTMENTS, orderDepartments, departmentOfPath, type DepartmentId } from '@/lib/departments'
 import { todayItems } from './today'
 import { SETUP_HIDE_COOKIE } from './cookies'
 import { CountUp } from '@/components/ds/motion'
@@ -42,7 +43,33 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
-function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
+/**
+ * 部署の切り替え（旗 DEPARTMENTS_ROLLOUT が on のときだけ）。URL の ?dept= で持つ（新しいページは増やさない）。
+ * 並びは「すべて」→ 主の部署 → ほかの部署。選ぶと、よく使う操作・数字をたずねる・ドヤくんの例がその部署の分だけになる。
+ */
+function DepartmentSwitcher({ primary, dept }: { primary: DepartmentId[]; dept: DepartmentId | null }) {
+  const items: { id: DepartmentId | null; label: string; href: string }[] = [
+    { id: null, label: 'すべて', href: '/home' },
+    ...orderDepartments(primary).map((id) => ({ id, label: DEPARTMENTS.find((d) => d.id === id)?.short ?? id, href: `/home?dept=${id}` })),
+  ]
+  return (
+    <nav className={styles.deptSwitch} aria-label="部署の切り替え">
+      {items.map((it) => (
+        <Link key={it.id ?? 'all'} href={it.href} replace scroll={false} prefetch={false} className={styles.deptChip} aria-current={it.id === dept ? 'page' : undefined}>
+          {it.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+function AgentPanel({ summary, greeting, dept = null }: { summary: HomeSummary; greeting: string; dept?: DepartmentId | null }) {
+  // 部署を選んだときは、その部署のツールへ行く操作だけにする（dept が null なら今のまま全部）
+  const intentGroups = dept
+    ? HOME_INTENT_GROUPS.map((g) => ({ ...g, intents: g.intents.filter((i) => departmentOfPath(i.href) === dept) })).filter((g) => g.intents.length > 0)
+    : HOME_INTENT_GROUPS
+  // 「数字をたずねる」は売上・支出・残業・パイプラインなど会社全体の数字。部署を選んだときは、お金を扱う「管理」だけに残す
+  const showSuggestions = !dept || dept === 'admin'
   // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const toHref = useToolHref()
   const router = useRouter()
@@ -110,7 +137,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
       </form>
       {opening ? <p className={styles.opening} role="status">「{opening}」の画面を開いています</p> : null}
       <div className={styles.intents}>
-        {HOME_INTENT_GROUPS.map((g) => (
+        {intentGroups.map((g) => (
           <div key={g.label} className={styles.intentGroup}>
             <p className={styles.intentLabel}>{g.label}</p>
             <div className={styles.chips}>
@@ -120,6 +147,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
             </div>
           </div>
         ))}
+        {showSuggestions ? (
         <div className={styles.intentGroup}>
           <p className={styles.intentLabel}>数字をたずねる</p>
           <div className={styles.chips}>
@@ -128,6 +156,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
             ))}
           </div>
         </div>
+        ) : null}
       </div>
 
       {run ? (
@@ -232,7 +261,7 @@ function CompanySetupNote({ initiallyHidden, doyaPower }: { initiallyHidden: boo
 }
 
 function TodayCard({ summary }: { summary: HomeSummary }) {
-  const items = todayItems(summary)
+  const items = todayItems(summary, new Date(summary.generatedAt).getTime())
   return (
     <section className={styles.today} aria-labelledby="home-today">
       <h2 id="home-today" className={styles.todayTitle}>今日やること</h2>
@@ -303,8 +332,8 @@ function jstDateKey(iso: string | Date) {
   return `${j.getUTCFullYear()}-${String(j.getUTCMonth() + 1).padStart(2, '0')}-${String(j.getUTCDate()).padStart(2, '0')}`
 }
 
-function MiniCalendar({ events }: { events: HomeEvent[] }) {
-  const today = jstDateKey(new Date())
+function MiniCalendar({ events, generatedAt }: { events: HomeEvent[]; generatedAt: string }) {
+  const today = jstDateKey(generatedAt)
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState(today)
   const [y0, m0] = today.split('-').map(Number)
@@ -416,7 +445,7 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null }: {
+export default function HomeDashboard({ initial, setupHidden = false, powerCard = null, doyaPower = false, agentStage = null, departments }: {
   initial: HomeSummary
   setupHidden?: boolean
   /** ドヤパワーの欄（旗の内側だけ。page.tsx が旗を見て作って渡す。渡されなければ何も出さない） */
@@ -425,6 +454,8 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
   agentStage?: ReactNode
   /** ドヤパワーの旗が出すと決めた人か（page.tsx が isDoyaPowerEnabled() で決めて渡す。会社の登録の案内の文に使う） */
   doyaPower?: boolean
+  /** 部署の切り替え（旗 DEPARTMENTS_ROLLOUT が on のときだけ page.tsx が渡す。渡されなければ今のホームのまま） */
+  departments?: { primary: DepartmentId[]; dept: DepartmentId | null }
 }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
@@ -446,25 +477,28 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
 
   const s = summary
   const c = s.contract
+  // 初回描画はサーバーとブラウザで同じ集計時刻・日本時間を使う。
+  // 実行環境の時計やタイムゾーンで挨拶・時点・日付が変わると hydration が失敗する。
   const greeting = (() => {
-    const h = new Date().getHours()
+    const h = (new Date(s.generatedAt).getUTCHours() + 9) % 24
     return h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'おつかれさまです'
   })()
-  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })
   // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
   const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
   const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
-  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : null
+  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }) : null
 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
+      {departments ? <DepartmentSwitcher primary={departments.primary} dept={departments.dept} /> : null}
       {isValidElement<{ greeting?: string; company?: ReactNode }>(agentStage)
         ? cloneElement(agentStage, { greeting: `${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`, company: <ShellCompanyTag /> })
         : agentStage}
       {/* 新しい経営ホーム（旗 AGENT_ORCHESTRATION_ROLLOUT）が出ているときは、旧の「今日は、何をしますか？」を出さない（入力欄を1つにする。2026-10-26 メインの指摘）。
           旗が off の人は今までどおり */}
-      {agentStage ? null : <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />}
+      {agentStage ? null : <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} dept={departments?.dept ?? null} />}
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} doyaPower={doyaPower} />
 
@@ -513,7 +547,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
       <div className={styles.gridWide}>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>カレンダー</h2><span className={styles.badge}>仮</span></div>
-          <MiniCalendar events={s.events} />
+          <MiniCalendar events={s.events} generatedAt={s.generatedAt} />
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>

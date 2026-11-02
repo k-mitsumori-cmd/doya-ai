@@ -12,6 +12,8 @@ import { jstDateKey } from '@/lib/sfa/task-date'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Button, Card, EmptyState, ErrorNotice, FirstSteps, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { CheckCircle2, Circle, Kanban, Building2, Users, ChevronRight, TrendingUp } from 'lucide-react'
 
 type Task = SfaClientTask
@@ -33,6 +35,7 @@ function yenValue(amount: string): number | string {
 function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   const mutations = useSfaClientMutations(orgSlug, () => { loadTasks(); setRetry(n => n + 1) })
   const ready = mutations.allowed
+  const oneButton = useOneButton()
   const base = `/sfa/${orgSlug}`
   const [summary, setSummary] = useState<SfaSummary | null>(null)
   const [summaryError, setSummaryError] = useState('')
@@ -147,10 +150,20 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   return (
     <div className="mx-auto grid max-w-5xl gap-6 p-4 sm:p-6">
       <MutationRecovery mutations={mutations} />
+      {oneButton && (
+        <OneButtonBar
+          eyebrow="営業管理"
+          cta="今日の商談を進めるなら、押してください"
+          label="商談パイプラインを開く"
+          scope="商談の一覧を、段階ごとのカンバンで開きます。カードを動かして、案件の進み具合を更新できます。"
+          href={`${base}/deals`}
+        />
+      )}
       <ToolHero
         title="今日の営業状況を、ひと目で。"
         lead={doya.message}
-        action={<Button href={`${base}/deals`} icon="Kanban">商談パイプラインを開く</Button>}
+        // 帯（これ1つで全部進む）が同じボタンを出すときは、ここには出さない（同じボタンが2つ並ばないように）
+        action={oneButton ? undefined : <Button href={`${base}/deals`} icon="Kanban">商談パイプラインを開く</Button>}
         tool="sfa"
         artAlt=""
       />

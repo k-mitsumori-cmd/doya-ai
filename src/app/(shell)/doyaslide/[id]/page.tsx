@@ -13,6 +13,8 @@ import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperatio
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { Skeleton } from '@/components/ds'
 import { confirmDialog } from '@/components/ds/dialog'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 
 interface Slide {
   id: string
@@ -97,8 +99,7 @@ function aspectClass(a: string) {
   return 'aspect-[3/2]'
 }
 
-const GEN_MESSAGES = ['もくもく描いてるよ…', 'いい感じ…！🎨', '色を塗ってる…', 'ドヤれる仕上がりに…✨', 'あと少し…！']
-// 新しい見た目では、文の中の絵文字を外す（UI 品質。絵文字をアイコン・飾りに使わない）
+// 生成中の一言。丁寧な言い方で、絵文字は使わない（2026-10-29 に、くだけた言い方と絵文字の古い版を外した）
 const GEN_MESSAGES_NEXT = ['もくもく描いています…', 'いい感じです…', '色を塗っています…', 'ドヤれる仕上がりに…', 'あと少しです…']
 
 function EditorInner() {
@@ -117,6 +118,8 @@ function EditorInner() {
   const [projectReadError, setProjectReadError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [structuring, setStructuring] = useState(false)
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、上に「これ1つで全部進む」帯を出す（ドヤくん＋大きなボタン1つ）
+  const oneButton = useOneButton()
   const [structureNotice, setStructureNotice] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
   const [savingLogoConfig, setSavingLogoConfig] = useState(false)
@@ -433,7 +436,7 @@ function EditorInner() {
   // 生成中の楽しいメッセージ回し
   useEffect(() => {
     if (!generating) return
-    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES.length), 1500)
+    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES_NEXT.length), 1500)
     return () => clearInterval(t)
   }, [generating])
 
@@ -675,7 +678,7 @@ function EditorInner() {
               <span className="material-symbols-outlined text-lg">check_circle</span>
               全スライド完成
             </span>
-          ) : (
+          ) : oneButton ? null : (
             <button
               onClick={runGenerate}
               disabled={generating || busySlide !== null || total === 0 || operation.blocked}
@@ -690,10 +693,39 @@ function EditorInner() {
         </div>
       </div>
 
-      {total === 0 && (
+      {oneButton ? (
+        <div className="mb-4">
+          <OneButtonBar
+            eyebrow="ドヤスライド"
+            cta={total === 0
+              ? (structuring ? '構成を作っています。このままお待ちください' : 'テーマと設定が決まったら、押してください')
+              : allDone ? '全部のスライドができました。書き出して使えます'
+              : generating ? 'スライドの絵を作っています。このままお待ちください'
+              : '構成を確かめたら、押してください'}
+            label={total === 0
+              ? (structuring ? '構成を作っています' : '構成とスライドをまとめて作る')
+              : allDone ? (exporting === 'pdf' ? '書き出しています' : 'PDF で書き出す')
+              : generating ? `作っています（${doneCount}/${total}枚）`
+              : `残り${remainingSlides}枚をまとめて作る`}
+            scope={total === 0
+              ? 'AIが章立てと本文を作り、続けて全スライドの絵を作ります。'
+              : allDone ? '全スライドを1つの PDF にします。ZIP は、上のボタンから書き出せます。'
+              : 'まだ絵の無いスライドを、まとめて作ります。できたものから下に並びます。'}
+            onRun={total === 0 ? () => void retryStructure() : allDone ? () => void exportAs('pdf') : () => void runGenerate()}
+            disabled={total === 0 ? structuring : allDone ? exporting !== null : (generating || busySlide !== null || operation.blocked)}
+            running={total === 0 ? structuring : generating}
+            progress={generating && total > 0 ? { done: doneCount, total } : undefined}
+            pose={allDone ? 'success' : undefined}
+          />
+        </div>
+      ) : null}
+
+      {total === 0 && (!oneButton || structureNotice || project.status === 'structuring') && (
         <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
           <p className="font-black text-slate-800">スライドの構成がまだありません</p>
           <p className="mt-1 text-sm text-slate-600">作成中に処理が止まった場合も、このプロジェクトで再試行できます。</p>
+          {/* 上の帯（ONE_BUTTON）が出ているときは、同じ「構成を作る」ボタンを二重に出さない */}
+          {oneButton ? null : (
           <button
             onClick={retryStructure}
             disabled={structuring}
@@ -701,6 +733,7 @@ function EditorInner() {
           >
             {structuring ? '構成を生成中...' : '構成作成を再試行'}
           </button>
+          )}
           {structureNotice && <div role="alert" className="mt-3 text-sm text-amber-900"><p>{structureNotice}</p><Link href={SUPPORT_CONTACT_URL} className="font-bold underline">お問い合わせ</Link></div>}
           {project.status === 'structuring' && (
             <button onClick={() => reload()} className="ml-3 text-sm font-bold text-blue-700 underline">状態を更新</button>

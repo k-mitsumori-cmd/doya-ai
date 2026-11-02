@@ -1,9 +1,12 @@
 'use client'
 
+import RecordAccessSettings from '@/components/sfa/RecordAccessSettings'
+
 import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
+import { fetchAllSfaAccounts } from '@/lib/sfa/client'
+import { SfaCsvExportLink } from '@/components/sfa/SfaCsvExportLink'
 import { sfaJson, sfaValidRows, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
@@ -536,7 +539,9 @@ export default function SfaDealsPage() {
     const epoch = detailEpoch.current, revision = editDraft.current.revision
     setSaving(true)
     const row = await mutations.mutateDeal(detail, {
-      name: form.name, amount: form.amount || '0', accountId: form.accountId, contactName: form.contactName,
+      name: form.name, amount: form.amount || '0',
+      // An unreadable parent is redacted to null. Preserve the stored link unless the visible selection changes.
+      ...(form.accountId !== (detail.accountId || '') ? { accountId: form.accountId } : {}), contactName: form.contactName,
       startDate: form.startDate, expectedCloseDate: form.expectedCloseDate, probability: form.probability, note: form.note, ...(form.detachContact ? { contactId: null } : {}),
     })
     if (!mutations.active()) return
@@ -605,9 +610,9 @@ export default function SfaDealsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className="min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
+          <SfaCsvExportLink orgSlug={orgSlug} type="deals" className="min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]">
             <Download className="h-5 w-5" aria-hidden />CSVを書き出す
-          </a>
+          </SfaCsvExportLink>
           <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2">
             <Plus className="h-5 w-5" aria-hidden />商談を追加
           </button>
@@ -910,6 +915,7 @@ export default function SfaDealsPage() {
               </button>
             </div>
 
+            <div className="mb-4"><RecordAccessSettings orgSlug={orgSlug} kind="deal" id={detail.id} onChanged={() => { setDetail(null); load(); loadTasks() }} /></div>
             {/* プロパティ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div className="sm:col-span-2">

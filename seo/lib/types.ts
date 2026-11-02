@@ -96,7 +96,7 @@ export const SeoOutlineSchema = z.object({
           if (Array.isArray(v)) return {}
           if (typeof v !== 'object') return {}
           return v
-        }, z.record(z.array(z.string().min(1))))
+        }, z.record(z.string(), z.array(z.string().min(1))))
         .optional()
         .default({}), // h3 -> h4[]
     })

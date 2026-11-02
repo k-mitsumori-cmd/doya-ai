@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:23:54.422Z",
+  "checkedAt": "2026-10-31T11:24:26.258Z",
   "passed": 27,
   "cases": [
     "account strict types, fields, operation UUID and required version",
@@ -31,11 +31,11 @@
     "account actual HTTP quota and owner guidance remain private"
   ],
   "sourceHashes": {
-    "src/lib/sfa/crm-record-mutation.ts": "a6700a5dc57b51430d68726a256dde9c12b45cb6206d8372468a8f1aca51894a",
-    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96",
-    "src/lib/sfa/crm-record-http.ts": "8df2e8f1d55737b2e6df114f2f305370f5ca7e2bcc1ff32c85b1e006f321cd68",
-    "src/app/api/sfa/accounts/route.ts": "ffaf5ad4487b1bf45868ff5870b757f8be756e93bdd4c70df18f077fe0cbca15",
-    "src/app/api/sfa/contacts/route.ts": "23c2e7690ff1577162ff7c45392e640cfe929bd4ff32a0f04f4b1d005b310bde",
+    "src/lib/sfa/crm-record-mutation.ts": "7df88c5bfc2070d78046f45b61d8263404e01fb465cb5564764b45ce7af893a9",
+    "src/lib/sfa/creation-receipt.ts": "b6f2e72bc05947f347c848dff21be65d00ff55d06444e586071a291d1f8b80b5",
+    "src/lib/sfa/crm-record-http.ts": "07f82b66b2ebcc9ea9f1cd078478847be30e8b18a2cdbed962881bc0cca4b2d6",
+    "src/app/api/sfa/accounts/route.ts": "37a4ee99bd41d21132a3d0671fa4f20f5367f182c72468985e4cc123135a18bc",
+    "src/app/api/sfa/contacts/route.ts": "be5e1cedeb16c98c4bae0906252f078c1de5d0fb3c2edc88c4cbc30c973d009f",
     "src/app/api/sfa/accounts/[id]/route.ts": "62d3027357df83aa59b34fc7b523e615f7708318af1b7f11ac5cb0ab37377504",
     "src/app/api/sfa/contacts/[id]/route.ts": "862a4f3e4322f255a8f71ffa427a95a2697fa478f38664136ed23e69d078c2ac"
   },

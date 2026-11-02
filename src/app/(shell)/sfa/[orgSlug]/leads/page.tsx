@@ -1,5 +1,7 @@
 'use client'
 
+import RecordAccessSettings from '@/components/sfa/RecordAccessSettings'
+
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -169,10 +171,10 @@ export default function SfaLeadsPage() {
 
   const doImport = async () => {
     if (!mutations.active() || mutations.creationBlocked('import')) return
+    setFormError(''); setImportResult('')
     let rows: ReturnType<typeof parseLeadCsv>
     try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(error.message) ? error.message : 'CSVを確認してください。'); return }
     const revision = importDraft.current.revision
-    setFormError(''); setImportResult('')
     const result = await mutations.create('import', 'lead-import:create', { source: 'csv', rows })
     if (!result || !mutations.active() || typeof result !== 'object' || !('id' in result) || typeof result.id !== 'string' || !isSfaClientLeadImport(result, result.id, rows.length)) return
     setImportResult(`${result.imported}件を取り込みました。${result.skipped}件スキップ${result.skipped ? `（ヘッダを除くデータ位置: ${result.skippedRows.join('、')}。企業名のない行は取り込んでいません）` : ''}。`)
@@ -243,8 +245,8 @@ export default function SfaLeadsPage() {
       {importOpen && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
           <p className="text-sm font-black text-slate-700 mb-1">CSV取込（ドヤリストの出力形式に対応）</p>
-          <p className="text-[11px] font-bold text-slate-400 mb-2">1行目にヘッダ（例: <code>name,corporateNumber,prefecture,url,phone,representative</code>）。日本語ヘッダ（企業名/法人番号/都道府県/URL/電話番号/代表者）も可。</p>
-          <textarea aria-label="取込CSV" value={csv} onChange={(e) => setCsv(e.target.value)} rows={6} placeholder={'name,prefecture,url\n株式会社サンプル,東京都,https://example.com'} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs" />
+          <p className="text-sm font-medium text-slate-600 mb-2">1行目に列名を入力します（例: <code>企業名,法人番号,都道府県,URL,電話番号,代表者</code>）。英語の列名にも対応しています。</p>
+          <textarea aria-label="取込CSV" value={csv} onChange={(e) => setCsv(e.target.value)} rows={6} placeholder={'企業名,都道府県,URL\n株式会社サンプル,東京都,https://example.com'} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs" />
           <button onClick={doImport} disabled={!ready || mutations.creationBlocked('import')} className="mt-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{importing ? '取込中…' : '取り込む'}</button>
         </div>
       )}
@@ -309,6 +311,7 @@ export default function SfaLeadsPage() {
                   </div>
                 </div>
               </div>
+              <div className="mt-3"><RecordAccessSettings orgSlug={orgSlug} kind="lead" id={l.id} onChanged={() => load(filter, q)} /></div>
             </div>
           ))
         )}

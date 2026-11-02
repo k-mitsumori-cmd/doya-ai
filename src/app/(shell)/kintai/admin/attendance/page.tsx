@@ -1,10 +1,14 @@
 'use client'
 
 import { Skeleton } from '@/components/ds'
+import { TEAM_TODAY_H, TEAM_TODAY_H_SM, TeamTodayInfo } from '@/components/kintai/KintaiInfographics'
+import { InfoPanelLoading } from '@/components/ds/infographic'
 import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { hasMinRole } from '@/lib/kintai/access-client'
 
 const NON_WORKING_STATUSES = new Set(['absent', 'holiday', 'paid_leave', 'special_leave'])
 
@@ -16,6 +20,8 @@ function getStatusInfo(att: any): { label: string; color: string; bgColor: strin
 }
 
 export default function AdminAttendancePage() {
+  const { isActive, ready, role } = useKintaiAccess()
+  const canExport = ready === true && isActive === true && typeof role === 'string' && hasMinRole(role, 'hr_admin')
   const [date, setDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }))
   const [employees, setEmployees] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
@@ -105,16 +111,16 @@ export default function AdminAttendancePage() {
     <>
 
       <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Header（375px では見出しの下にボタンを回す。見出しとボタンが重ならないように。2026-10-27） */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <PageTitle className="text-2xl font-black text-slate-800">部署勤怠管理</PageTitle>
               <p className="text-sm font-bold text-slate-500">チームの出勤状況をチェック</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {canExport && <div className="flex items-center gap-2">
             <a
               href={`/api/kintai/attendance/export?year=${date.split('-')[0]}&month=${date.split('-')[1]}&format=csv`}
               className="px-4 py-2.5 bg-green-600 text-white font-bold text-sm rounded-full hover:bg-green-700 transition-all shadow-md flex items-center gap-1.5"
@@ -129,7 +135,7 @@ export default function AdminAttendancePage() {
               <span className="material-symbols-outlined text-lg">table_chart</span>
               Excel
             </a>
-          </div>
+          </div>}
         </div>
 
         {/* Date navigation */}
@@ -163,6 +169,9 @@ export default function AdminAttendancePage() {
             <button onClick={() => setDepartmentsRetryCount(count => count + 1)} className="ml-3 font-bold underline hover:text-red-950">再試行</button>
           </div>
         )}
+
+        {/* 出勤の状況（インフォグラフィック。2026-10-27） */}
+        {loading ? <InfoPanelLoading title="出勤の状況" height={TEAM_TODAY_H} mobileHeight={TEAM_TODAY_H_SM} /> : !loadError && <TeamTodayInfo stats={stats} dateLabel={dateLabel} />}
 
         {/* Summary stats with bears */}
         {!loading && filtered.length > 0 && (

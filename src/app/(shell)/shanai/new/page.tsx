@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardList, Mic } from 'lucide-react'
 import { ActionError, api, Button, Card, describeError, Field, inputCls, SectionTitle, PageTitle } from '@/components/shanai/ui'
 import { PURPOSE_LABELS, TONE_LABELS, type ShanaiPurpose, type ShanaiTone } from '@/lib/shanai/types'
+import { DoyaKun } from '@/components/ds/kun'
 
 interface Source {
   id: string
@@ -26,8 +27,16 @@ export default function ShanaiNewPage() {
   const [, setError] = useState<string | null>(null)
   // 新しい見た目: 入力の誤りは欄の下に（aria-describedby でつなぐ）、送信の失敗は ErrorNotice で出す
   const [nameMissing, setNameMissing] = useState(false)
+  const [nameValidationAttempt, setNameValidationAttempt] = useState(0)
   const [failure, setFailure] = useState<unknown>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!nameMissing) return
+    // エラーを描画してから、固定ヘッダーに隠れない位置へ移す。
+    nameRef.current?.focus({ preventScroll: true })
+    nameRef.current?.scrollIntoView({ block: 'center', inline: 'nearest' })
+  }, [nameMissing, nameValidationAttempt])
 
   useEffect(() => {
     api<{ company: { sources: Source[] } | null }>('/api/shanai/company')
@@ -41,7 +50,8 @@ export default function ShanaiNewPage() {
     if (!form.intervieweeName.trim()) {
       setError('社員のお名前を入力してください。')
       setNameMissing(true)
-      nameRef.current?.focus()
+      // 空欄のまま押し直した場合も、描画後に入力欄へ戻す。
+      setNameValidationAttempt((attempt) => attempt + 1)
       return
     }
     setSaving(true)
@@ -68,8 +78,8 @@ export default function ShanaiNewPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {(
             [
-              { key: 'voice', icon: Mic, title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
-              { key: 'survey', icon: ClipboardList, title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
+              { key: 'voice', icon: Mic, pose: 'mic', title: '録音から作る', desc: '社内インタビューの録音をアップロードします。AIが文字起こしして記事にします。' },
+              { key: 'survey', icon: ClipboardList, pose: 'survey', title: 'アンケートから作る', desc: '社員にアンケートのURLを送り、書いてもらいます。15問・最低文字数つきです。' },
             ] as const
           ).map((m) => (
             <button
@@ -79,9 +89,15 @@ export default function ShanaiNewPage() {
               aria-pressed={mode === m.key}
               className={`min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 rounded-[var(--r)] border p-4 text-left transition-colors ${mode === m.key ? 'border-[var(--blue)] bg-[var(--blue-soft)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)] bg-[var(--paper)] hover:border-[var(--blue-line)]'}`}
             >
-              <m.icon aria-hidden="true" className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
-              <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
+              <span className="flex items-start gap-3">
+                <span className="min-w-0 flex-1">
+                  <m.icon aria-hidden="true" className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
+                  <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
+                  <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
+                </span>
+                {/* 選び方ごとのドヤくん。選んだほうは小さく跳ねる（act を変えるだけ。key は変えず、登場の動きを繰り返さない） */}
+                <DoyaKun key={m.key} pose={m.pose} act={mode === m.key ? 'cheer' : 'idle'} size={64} />
+              </span>
             </button>
           ))}
         </div>

@@ -1,7 +1,8 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/income/access'
 import { parseClient } from '@/lib/income/clients'
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { contracts: true, invoices: true } } },
     })
-    return NextResponse.json({ clients })
+    return privateApiJson({ clients })
   })
 }
 
@@ -24,6 +25,6 @@ export async function POST(req: NextRequest) {
     const data = parseClient(await readJson(req))
     const client = await prisma.incomeClient.create({ data: { ...data, organizationId: ctx.organizationId } })
     await audit(prisma, ctx, 'client.create', 'client', client.id)
-    return NextResponse.json({ client }, { status: 201 })
+    return privateApiJson({ client }, { status: 201 })
   })
 }

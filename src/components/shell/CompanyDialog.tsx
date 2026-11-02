@@ -5,11 +5,13 @@
 // 会社名とサイトの URL（業種は任意）。各ツールの組織の名前を候補として出し、押すだけで会社名に入る。
 // 保存したら router.refresh() で、左下・ホーム・見出しの帯の名前を読み直す。
 // ⚠️ 保存するのは本人の会社だけ（/api/account/company）。各ツールの組織の名前は変えない。
+// 旗 DEPARTMENTS_ROLLOUT が on の人には「主に使う部署」も出す（/api/account/departments。off なら 404 で、欄ごと出さない）。
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import styles from './CompanyDialog.module.css'
 
+type Dept = { id: string; name: string; short: string }
 type Loaded = { company: { name: string; websiteUrl: string | null; industry: string | null } | null; candidates: string[] }
 
 export default function CompanyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -22,6 +24,8 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
   const [industry, setIndustry] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [depts, setDepts] = useState<Dept[] | null>(null)
+  const [primary, setPrimary] = useState<string[]>([])
 
   useEffect(() => {
     const d = ref.current
@@ -47,6 +51,17 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
         setIndustry(data.company?.industry ?? '')
       })
       .catch(() => { if (alive) { setError('会社情報を読み込めませんでした'); setLoaded({ company: null, candidates: [] }) } })
+    // 部署の欄は、読めたときだけ出す（旗が off なら 404。失敗しても会社の登録はそのまま使える）
+    setDepts(null)
+    fetch('/api/account/departments', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!alive || !r.ok) return
+        const j = await r.json().catch(() => null)
+        if (!alive || !Array.isArray(j?.departments)) return
+        setDepts(j.departments as Dept[])
+        setPrimary(Array.isArray(j.primary) ? j.primary : [])
+      })
+      .catch(() => {})
     return () => { alive = false }
   }, [open])
 
@@ -61,6 +76,14 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) { setError(typeof j.error === 'string' ? j.error : '保存できませんでした'); return }
+      if (depts) {
+        const d = await fetch('/api/account/departments', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ departments: primary }),
+        }).catch(() => null)
+        if (!d?.ok) { setError('会社情報は保存しました。部署の選択は保存できませんでした。もう一度お試しください'); return }
+      }
       onClose()
       router.refresh()
     } catch {
@@ -105,6 +128,26 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
           <span className={styles.label}>業種 <span className={styles.optional}>任意</span></span>
           <input className={styles.input} value={industry} onChange={(e) => setIndustry(e.target.value)} maxLength={50} placeholder="例: 広告・マーケティング" />
         </label>
+
+        {depts ? (
+          <fieldset className={styles.depts}>
+            <legend className={styles.label}>主に使う部署 <span className={styles.optional}>複数を選べます</span></legend>
+            <p className={styles.hint}>選んだ部署のツールを、左のメニューと経営ホームの先頭に出します。ほかの部署のツールも使えます。</p>
+            <div className={styles.chips}>
+              {depts.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  className={styles.chip}
+                  aria-pressed={primary.includes(d.id)}
+                  onClick={() => setPrimary((p) => (p.includes(d.id) ? p.filter((x) => x !== d.id) : [...p, d.id]))}
+                >
+                  {d.name}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
 
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
         <div className={styles.actions}>

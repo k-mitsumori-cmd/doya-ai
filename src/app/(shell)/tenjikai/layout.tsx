@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth'
 import TenjikaiApp from '@/components/tenjikai/TenjikaiApp'
 import TenjikaiShellFrame from '@/components/tenjikai/TenjikaiShellFrame'
 import TenjikaiLp from './Lp'
+import { OneButtonProvider } from '@/components/one-button/context'
+import { oneButtonRollout } from '@/lib/one-button/flag'
 import '@/components/tenjikai/ds-tokens.css'
 import './tenjikai.css'
 
@@ -40,10 +42,12 @@ export default async function TenjikaiLayout({ children }: { children: React.Rea
     )
   }
   // 開発中の画面確認（ログインしていない next dev）だけ、今までの画面（独自のサイドバー）で出す
+  // 枠（ShellGate）を通らないので、「これ1つで全部進む」帯の旗は、ここで環境変数から渡す（next dev でだけ通る道）
   return (
-    <>
+    // 開発の道（ログインしていない next dev）では、だれのメールか分からないので、旗が all のときだけ出す（preview では出さない）
+    <OneButtonProvider value={oneButtonRollout() === 'all'}>
       <TenjikaiApp userId={userId} />
       {children}
-    </>
+    </OneButtonProvider>
   )
 }

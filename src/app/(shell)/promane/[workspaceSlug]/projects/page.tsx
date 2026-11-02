@@ -1,3 +1,4 @@
+import { canWritePromaneWorkspace } from '@/lib/promane/ui-permissions';
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
@@ -61,5 +62,5 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
   const avgProfitRate = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
 
   // 新しい見た目（UI 品質の直し）。偽のときは下の今までの画面のまま（チェックリスト §5.1）
-  return <ProjectsNext workspaceSlug={workspaceSlug} rows={projectStats} activeCount={activeCount} totalRevenue={totalRevenue} avgProfitRate={avgProfitRate} />;
+  return <ProjectsNext canWrite={canWritePromaneWorkspace(workspace.members[0]?.role)} workspaceSlug={workspaceSlug} rows={projectStats} activeCount={activeCount} totalRevenue={totalRevenue} avgProfitRate={avgProfitRate} />;
 }

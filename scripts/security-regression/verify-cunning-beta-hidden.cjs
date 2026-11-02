@@ -95,8 +95,12 @@ function routeFiles(dir) {
   })
 
   await check('shell menu, command palette, recent tools and all-tools list omit cunning', async () => {
-    const tools = load('src/components/shell/tools.ts', { '@/lib/services': services })
+    const tools = load('src/components/shell/tools.ts', { '@/lib/services': services, '@/lib/departments': load('src/lib/departments.ts') })
     assert.ok(!tools.ALL_SHELL_TOOLS.some((t) => t.id === 'cunning'))
+    // 部署の表にも cunning を入れない（ベータで隠しているツールは、どの部署の入口にも出さない）
+    assert.ok(!load('src/lib/departments.ts').DEPARTMENTS.some((d) => d.toolIds.includes('cunning')))
+    // 部署ごとのメニュー（旗 DEPARTMENTS_ROLLOUT）でも cunning は出さない（公開されているツールだけから組む）
+    for (const primary of [[], ['sales']]) assert.ok(!tools.buildDepartmentGroups(primary).flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
     assert.ok(!tools.SHELL_GROUPS.flatMap((g) => g.tools).some((t) => t.id === 'cunning'))
     // 許可した人が開いたときのパンくずの名前だけは引ける
     assert.equal(tools.findShellTool('cunning').name, 'ドヤカンニング')
@@ -127,7 +131,7 @@ function routeFiles(dir) {
       assert.ok(body.length > 100, file)
       assert.ok(!body.includes('/cunning') && !body.includes('ドヤカンニング'), file)
     }
-    const sitemap = load('src/app/sitemap.ts', { '@/lib/services': services, '@/lib/seo': seo, next: {} })
+    const sitemap = load('src/app/sitemap.ts', { '@/lib/services': services, '@/lib/seo': seo, '@/lib/brand': { isBrandRenamed: () => false }, '@/lib/brand/rename-news': { RENAME_NEWS_PATH: '/news/rename-doya-buddy' }, next: {} })
     const urls = sitemap.default().map((e) => e.url)
     assert.ok(urls.length > 10)
     assert.ok(!urls.some((u) => u.includes('/cunning')))

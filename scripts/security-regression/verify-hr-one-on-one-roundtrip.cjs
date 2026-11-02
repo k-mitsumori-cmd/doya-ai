@@ -1,4 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
+const privateResponse=require('./load-typescript.cjs').load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}});
 const read=f=>fs.readFileSync(f,'utf8');
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function load(f,deps){const exports={};vm.runInNewContext(compile(read(f)),{exports,Date,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exports;}
@@ -7,6 +8,8 @@ function callback(f,name){const s=read(f),a=ts.createSourceFile('x.tsx',s,ts.Scr
 let row={id:'one',organizationId:'o',employeeId:'employee',scheduledAt:new Date('2026-09-21T01:00:00Z'),conductedAt:null,duration:30,agenda:[],managerNotes:null,employeeNotes:null,privateNotes:null,aiActionItems:[],aiInsights:[],employee:{firstName:'太郎',lastName:'架空'},manager:{firstName:'花子',lastName:'合成'}},patchData,display={id:'one'},aiResult,modelCalls=0,usage=0;
 const errors=[],statuses=[];
 const deps={'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'u'}})},'@/lib/auth':{authOptions:{}},'@/lib/hr/one-on-one-access':{canAccessOneOnOne:async()=>true,getOneOnOneViewer:async()=>({employeeId:null}),canViewManagerNotes:()=>true,filterOneOnOneFields:r=>({...r,canViewManagerNotes:true})},'@/lib/hr/access':{getHrContext:async()=>({organizationId:'o'})},'@/lib/prisma':{prisma:{hrOneOnOne:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?row:null,update:async({where,data})=>{if(where.id!==row.id)throw Error('wrong id');patchData=data;row={...row,...data};return row}}}},'@seo/lib/gemini':{GEMINI_TEXT_MODEL_DEFAULT:'synthetic',geminiGenerateText:async()=>{modelCalls++;return '合成要約'}},'@/lib/hr/prompts':load('src/lib/hr/prompts.ts',{}),'@/lib/hr/billing':{reserveAiUsage:async()=>{usage++;return{granted:true,reservation:{organizationId:'o',resetAt:new Date()}}},releaseAiUsage:async()=>{usage--}}};
+deps['@/lib/private-api-response']=privateResponse;
+deps['@/lib/hr/one-on-one-items']=require('./load-typescript.cjs').load('src/lib/hr/one-on-one-items.ts');
 const api=load('src/app/api/hr/one-on-one/[id]/route.ts',deps),ai=load('src/app/api/hr/one-on-one/[id]/ai-summary/route.ts',deps),ctx={params:Promise.resolve({id:'one'})};
 const fetch=async(url,o)=>{const req={json:async()=>JSON.parse(o.body)};const res=await(url.endsWith('/ai-summary')?ai.POST(req,ctx):api.PATCH(req,ctx));statuses.push({url,status:res.status});return res;};
 const pageSave=vm.runInNewContext(callback('src/app/(shell)/hr/one-on-one/[id]/page.tsx','handleSave'),{id:'one',fetch,setRecord:x=>display=typeof x==='function'?x(display):x});
@@ -24,6 +27,20 @@ result('summary after saving nonempty notes',statuses.at(-1).status===200,{statu
 await api.PATCH({json:async()=>({managerNotes:'APIで保存した議事録'})},ctx);
 await vm.runInNewContext(callback('src/components/hr/OneOnOneForm.tsx','handleAiSummary'),state)();
 result('supported API note control permits summary',statuses.at(-1).status===200&&modelCalls===2,{status:statuses.at(-1).status,modelCalls,usage,aiResult});
+row.duration=null;state.duration=null;
+await state.handleSave();
+result('unset duration saves unrelated fields without sending null or inventing minutes',statuses.at(-1).status===200&&row.duration===null&&!Object.hasOwn(patchData,'duration'),{status:statuses.at(-1).status,storedDuration:row.duration});
+state.duration=120;
+await state.handleSave();
+result('valid custom duration survives actual form and PATCH roundtrip',statuses.at(-1).status===200&&row.duration===120,{status:statuses.at(-1).status,storedDuration:row.duration});
+state.agenda=[{id:'initial',topic:'  ',category:'BUSINESS'},{id:'real',topic:'  Keep agenda  ',category:'BUSINESS'},{id:'category',topic:'',category:'CAREER'},{id:'extended',topic:'',category:'BUSINESS',customNote:'Keep legacy metadata'}];
+state.actionItems=[{id:'initial',content:'',assignee:'',dueDate:'',done:false},{id:'spaces',content:' \n ',assignee:' ',dueDate:'',done:false},{id:'real',content:'  Keep action  ',assignee:'',dueDate:'',done:false},{id:'assignee',content:'',assignee:'person',dueDate:'',done:false},{id:'due',content:'',assignee:'',dueDate:'2026-10-29',done:false},{id:'done',content:'',assignee:'',dueDate:'',done:true},{id:'extended',content:'',assignee:'',dueDate:'',done:false,customNote:'Keep legacy metadata'}];
+await state.handleSave();
+result('pristine initial agenda rows are omitted while partial and extended records survive',statuses.at(-1).status===200&&JSON.stringify(row.agenda)===JSON.stringify(state.agenda.slice(1)),{status:statuses.at(-1).status,ids:row.agenda.map(x=>x.id)});
+result('pristine action rows are omitted while descriptions, assignees, dates, done and metadata survive',statuses.at(-1).status===200&&JSON.stringify(row.aiActionItems)===JSON.stringify(state.actionItems.slice(2)),{status:statuses.at(-1).status,ids:row.aiActionItems.map(x=>x.id)});
+state.agenda=[{id:'empty',topic:'',category:'BUSINESS'}];state.actionItems=[{id:'empty',content:'',assignee:'',dueDate:'',done:false}];
+await state.handleSave();
+result('untouched form saves empty arrays instead of phantom work items',statuses.at(-1).status===200&&row.agenda.length===0&&row.aiActionItems.length===0,{status:statuses.at(-1).status,agenda:row.agenda.length,actions:row.aiActionItems.length});
 const output={scope:'Actual form/page callbacks, PATCH, GET, AI route and prompt builder; synthetic auth/DB/model/billing. No browser or production changes.',savedFields,saveStatus:statuses[0].status,uiErrors:errors,results};
 if(results.some(r=>r.outcome!=='PASS'))process.exitCode=1;console.log(JSON.stringify(output,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -18,17 +19,17 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
     if (!user?.id) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
+      return privateApiJson({ error: 'ログイン状態か所属する組織を確かめて、もう一度お試しください。' }, { status: 401 })
     }
 
     // 組織の契約は OWNER のユーザーに紐づく。別メンバーの顧客ポータルを開かない。
     if (ctx.role !== HrMemberRole.OWNER || ctx.userId !== user.id) {
-      return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
+      return privateApiJson({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
     }
 
     // 保存済み顧客IDだけでは本人性を証明できない。共通ポータルと同じ検証を通す。
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!dbUser?.email) {
-      return NextResponse.json({ error: 'ユーザー情報を確認できませんでした。' }, { status: 404 })
+      return privateApiJson({ error: 'ユーザー情報を確認できませんでした。' }, { status: 404 })
     }
     const customerId = await resolveBillingCustomerId({
       userId: dbUser.id,
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       stripeCustomerId: dbUser.stripeCustomerId,
     })
     if (!customerId) {
-      return NextResponse.json({ error: '本人の契約情報を確認できませんでした。時間をおいて再試行してください。' }, { status: 409 })
+      return privateApiJson({ error: '本人の契約情報を確認できませんでした。時間をおいて再試行してください。' }, { status: 409 })
     }
 
     const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
@@ -65,13 +66,13 @@ export async function POST(req: NextRequest) {
       target: 'billing',
     }).catch(() => {})
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       url: portalSession.url,
     })
   } catch (e: any) {
     console.error('[hr/billing/portal] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '契約の管理画面を開けませんでした。時間をおいて、もう一度お試しください。' },
       { status: 500 }
     )

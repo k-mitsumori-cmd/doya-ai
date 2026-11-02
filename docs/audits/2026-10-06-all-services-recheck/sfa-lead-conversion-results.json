@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:28:07.480Z",
+  "checkedAt": "2026-10-31T11:24:38.872Z",
   "passed": 15,
   "results": [
     "Fresh membership authority rejects POST, GET and DELETE without writes",
@@ -19,9 +19,9 @@
     "Receipts bind to lead ID; different lead cannot read the created pair"
   ],
   "sourceHashes": {
-    "src/app/api/sfa/leads/[id]/convert/route.ts": "061ada7ae29b919ff17c3f92863e8b5c55b3010732b3f10c43ee73e66799103c",
-    "src/lib/sfa/lead-conversion.ts": "588b0ff9ae95cc20ec96b6abdacc0250fc232693fb998e1d43c8be1e4fae34d4",
-    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96"
+    "src/app/api/sfa/leads/[id]/convert/route.ts": "c20563ecfe285268b8e7815a8276b259f073f69c551a695ddaf5b7f1a6e9ce5f",
+    "src/lib/sfa/lead-conversion.ts": "e0125d16c86e34adccbb7cfe69569baeb4802f10c4d144b963d7cd4664178ca7",
+    "src/lib/sfa/creation-receipt.ts": "b6f2e72bc05947f347c848dff21be65d00ff55d06444e586071a291d1f8b80b5"
   },
   "scope": "Actual route and conversion/receipt/stage/authority/admission helpers with synthetic rollback Prisma. Sequential scenarios only; no real PostgreSQL concurrency or mounted UI verification, no customer/provider writes."
 }

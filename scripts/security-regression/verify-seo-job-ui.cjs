@@ -7,7 +7,7 @@ await check('superseded job never sends action',async()=>{const f=fixture({super
 await check('manual resume succeeds before advance',async()=>{const f=fixture({status:'paused'});await f.run();assert.ok(f.calls[0].endsWith('/resume'));assert.ok(f.calls[1].endsWith('/advance'))});
 await check('failed resume does not advance and shows error',async()=>{const f=fixture({status:'paused'},409);await f.run();assert.equal(f.calls.length,1);assert.equal(f.state.error,'生成を再開できませんでした。もう一度お試しください。');assert.equal(f.state.busy,false)});
 await check('network rejection displays error and unlocks UI',async()=>{const f=fixture({status:'running'},200,true);await f.run();assert.equal(f.state.error,'生成を進められませんでした。通信を確かめて、もう一度お試しください。');assert.equal(f.state.busy,false)});
-await check('automatic loops explicitly exclude paused and replaced jobs',()=>{assert.ok(source.includes("const isTerminal = !!job?.supersededAt || job?.status === 'paused'"));assert.ok(source.includes("if (!job || job.supersededAt || job.status === 'paused') return"))});
+await check('automatic loops explicitly exclude paused and replaced jobs',()=>{assert.ok(source.includes("const isTerminal = !!job?.supersededAt || job?.status === 'paused'"));assert.ok(source.includes("if (!automaticActionsAllowed || !job || isTerminal || job.activityState === 'needs-review') return"))});
 await check('replacement view supplies article navigation without resume',()=>{assert.ok(source.includes('新しい生成に置き換えられました'));assert.ok(source.includes('!replaced && !cancelled && <button'));assert.ok(source.includes('encodeURIComponent(job.articleId)'))});
 console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

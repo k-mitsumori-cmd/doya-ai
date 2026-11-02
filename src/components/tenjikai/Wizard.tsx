@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Globe } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -8,6 +8,9 @@ import { GOAL_LABEL, POSITION_LABEL, VENUES, boothSize, isValidBoothMeter, man, 
 import BoothSizeInput from './BoothSizeInput'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } }
 const item = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } } }
@@ -37,24 +40,43 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
     return withBoothSize(initial, r(w), r(d))
   })
   const [sizeOk, setSizeOk] = useState(true)
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), n = read('name'), d = read('date', 'date'); if (u || n || d) setF((p) => ({ ...p, serviceUrl: u || p.serviceUrl, eventName: n || p.eventName, eventStart: d || p.eventStart })) })
   const onSizeValid = useCallback((ok: boolean) => setSizeOk(ok), [])
   // 読み込みが終わる前に押されると、ブラウザーがフォームをそのまま送ってページが読み直される。終わるまで押せないようにする
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
   const set = <K extends keyof ProjectInput>(k: K, v: ProjectInput[K]) => setF((p) => ({ ...p, [k]: v }))
   const size = boothSize(f)
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、上に「これ1つで全部進む」帯を出す。帯のボタンは下の入力のフォームを送る
+  const oneButton = useOneButton()
+  const formRef = useRef<HTMLFormElement>(null)
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1fr_1.15fr] lg:py-12">
+      {oneButton ? (
+        <div className="lg:col-span-2">
+          <OneButtonBar
+            eyebrow="新しい出展プロジェクト"
+            cta="下の条件を入れたら、押してください"
+            label="展示会の準備を一括作成"
+            scope={`ブースの3D完成図・面ごとの割付・制作物とノベルティの数量・予算・業者の候補・締切を、${f.days}日間の会期と小間の大きさから一度に作ります。`}
+            onRun={() => formRef.current?.requestSubmit()}
+            disabled={!hydrated || !sizeOk}
+            disabledReason={!sizeOk ? '小間の大きさを、1〜30m の 0.5m 刻みで入れてください。' : '読み込んでいます。'}
+          />
+        </div>
+      ) : null}
       {/* 見出しは入りのアニメーションを付けない（F-12。最初の薄い色のまま止まって見えるのを防ぐ） */}
       <div className="flex flex-col gap-5 lg:pt-6">
-        <h1 className="flex flex-col font-display text-[28px] leading-[1.25] text-ink md:text-4xl xl:text-5xl">
+        {/* ページの h1 は枠（ToolFrame）の「ドヤ展示会」。ここは h2 にする（h1 を1つにする。2026-10-26 統括の本番の確認） */}
+        <h2 className="m-0 flex flex-col font-display text-[28px] leading-[1.25] text-ink md:text-4xl xl:text-5xl">
           <span className="whitespace-nowrap">URLひとつで、</span>
           <span className="whitespace-nowrap">
             <span className="text-doya-500">展示会の準備</span>を
           </span>
           <span className="whitespace-nowrap">まるごと。</span>
-        </h1>
+        </h2>
         <p className="max-w-md text-[15px] leading-relaxed text-[var(--sub)]">
           条件を入れると、ブースの3D完成予想図ができます。面の画像を作って3Dで確かめ、割付表と一緒に書き出せます。
         </p>
@@ -72,6 +94,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
       </div>
 
       <motion.form
+        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           if (!sizeOk) return

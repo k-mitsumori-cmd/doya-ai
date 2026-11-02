@@ -9,10 +9,13 @@ import { includedPersonaImages, personaSceneIntent } from '@/lib/persona/image-e
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
 import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
+import { PersonaCopyFallback, PersonaExportFailure, type PersonaManualCopy } from '@/components/persona/PersonaOutputRecovery'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import ShellLoading from '@/components/shell/ShellLoading'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { EmptyState, FirstSteps, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -51,6 +54,7 @@ import {
 } from 'lucide-react'
 import { ShellCostBadge } from '@/components/shell/power'
 import { personaUserMessage } from '@/components/persona/user-message'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 
 // ムード → 色
@@ -260,8 +264,11 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
   const [additionalInfo, setAdditionalInfo] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'), s = read('service'); if (u) setUrl(u); if (s) setServiceName(s) })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
+  const oneButton = useOneButton()
   const [error, setError] = useState('')
   const [errorAction, setErrorAction] = useState<'generate' | 'modify' | null>(null)
   const [quotaNotice, setQuotaNotice] = useState<'text' | 'image' | null>(null)
@@ -282,6 +289,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     currentRecordId.current = null
     currentServerRecord.current = false
     setAccessWarning('')
+    setCopied(null)
+    setCopyFallback(null)
+    setExportError('')
+    copyAttempt.current += 1
     setErrorAction(null)
     setQuotaNotice(null)
     imageAttempts.current = {}
@@ -297,6 +308,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [portraitImage, setPortraitImage] = useState<string | null>(null)
   const [portraitLoading, setPortraitLoading] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+  const [copyFallback, setCopyFallback] = useState<PersonaManualCopy | null>(null)
+  const copyAttempt = useRef(0)
   const [portraitError, setPortraitError] = useState('')
   const [modificationInput, setModificationInput] = useState('')
   const [modifying, setModifying] = useState(false)
@@ -304,6 +317,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [sceneErrors, setSceneErrors] = useState<Record<string, string>>({})
   const [sceneLoading, setSceneLoading] = useState<Record<string, boolean>>({})
   const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const [loadingPhase, setLoadingPhase] = useState(0)
   const [candidateIdx, setCandidateIdx] = useState(0)
   const portraitAutoTriggered = useRef(false)
@@ -742,10 +756,20 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     }
   }
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(id)
-    setTimeout(() => setCopied(null), 2000)
+  const copyToClipboard = async (text: string, id: string) => {
+    const target = currentPersona.current
+    const attempt = ++copyAttempt.current
+    const isCurrent = () => alive.current && currentPersona.current === target && copyAttempt.current === attempt
+    setCopied(null)
+    try {
+      await navigator.clipboard.writeText(text)
+      if (!isCurrent()) return
+      setCopyFallback(null)
+      setCopied(id)
+      setTimeout(() => { if (isCurrent()) setCopied(null) }, 2000)
+    } catch {
+      if (isCurrent()) setCopyFallback({ id, text })
+    }
   }
 
   const downloadImage = (dataUrl: string, filename: string) => {
@@ -758,11 +782,13 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   // PDF / PNG エクスポート
   const handleExport = async (format: 'pdf' | 'png') => {
     if (!resumeRef.current || exporting) return
+    const el = resumeRef.current
+    const target = currentPersona.current
     setExporting(true)
+    setExportError('')
 
     try {
       const html2canvas = (await import('html2canvas')).default
-      const el = resumeRef.current
 
       // エクスポート中はUI要素を非表示
       el.classList.add('exporting')
@@ -782,12 +808,27 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
       // エクスポートクラスを除去
       el.classList.remove('exporting')
+      if (!alive.current || currentPersona.current !== target) return
 
       if (format === 'png') {
-        const dataUrl = canvas.toDataURL('image/png')
-        downloadImage(dataUrl, `persona-${persona?.name || 'export'}.png`)
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNG encoding failed')), 'image/png')
+        })
+        if (!alive.current || currentPersona.current !== target) return
+        const link = document.createElement('a')
+        const downloadUrl = URL.createObjectURL(blob)
+        try {
+          link.href = downloadUrl
+          link.download = `persona-${persona?.name || 'export'}.png`
+          document.body.appendChild(link)
+          link.click()
+        } finally {
+          link.remove()
+          setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+        }
       } else {
         const { jsPDF } = await import('jspdf')
+        if (!alive.current || currentPersona.current !== target) return
 
         const pdfWidthMm = 210  // A4 mm
         const pdfHeightMm = 297 // A4 mm
@@ -828,10 +869,14 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       }
     } catch (e) {
       console.error('Export error:')
+      if (alive.current && currentPersona.current === target) {
+        const label = format === 'png' ? 'PNG' : 'PDF'
+        setExportError(`${label}を書き出せませんでした。もう一度「${label}書き出し」を押してください。`)
+      }
     } finally {
       // 念のためクラスも除去
-      resumeRef.current?.classList.remove('exporting')
-      setExporting(false)
+      el.classList.remove('exporting')
+      if (alive.current) setExporting(false)
     }
   }
 
@@ -916,6 +961,20 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   return (
     <div className="">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        {oneButton ? (
+          <div className="mb-6">
+            <OneButtonBar
+              eyebrow="ドヤペルソナAI"
+              cta={loading ? 'ペルソナを作っています。このままお待ちください' : 'サイトの URL を入れたら、押してください'}
+              label="ペルソナを生成"
+              scope="入れた URL のサイトを読み、人物像と似顔絵を1分ほどで作ります。"
+              onRun={handleGenerate}
+              disabled={loading || !url.trim()}
+              disabledReason="サイトの URL を入れると押せます。"
+              running={loading}
+            />
+          </div>
+        ) : null}
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
@@ -1250,23 +1309,26 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
             {persona && (
               <div className="space-y-0">
                 {/* エクスポートボタン */}
-                <div className="max-w-4xl mx-auto mb-3 flex justify-end gap-2">
-                  <button
-                    onClick={() => handleExport('png')}
-                    disabled={exporting}
-                    className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2 shadow-sm"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                    {exporting ? '書き出し中...' : 'PNG書き出し'}
-                  </button>
-                  <button
-                    onClick={() => handleExport('pdf')}
-                    disabled={exporting}
-                    className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-bold hover:bg-brand-400 disabled:opacity-50 flex items-center gap-2 shadow-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    {exporting ? '書き出し中...' : 'PDF書き出し'}
-                  </button>
+                <div className="max-w-4xl mx-auto mb-3">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => handleExport('png')}
+                      disabled={exporting}
+                      className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      {exporting ? '書き出し中...' : 'PNG書き出し'}
+                    </button>
+                    <button
+                      onClick={() => handleExport('pdf')}
+                      disabled={exporting}
+                      className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-bold hover:bg-brand-400 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      {exporting ? '書き出し中...' : 'PDF書き出し'}
+                    </button>
+                  </div>
+                  {exportError ? <PersonaExportFailure message={exportError} /> : null}
                 </div>
 
                 <div ref={resumeRef}>
@@ -2096,16 +2158,20 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
                           </h4>
                           <div className="space-y-1.5">
                             {generatedData.summary.catchphrases.map((cp, i) => (
-                              <div key={i} className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-brand-50 to-brand-100 rounded-lg border border-brand-50">
-                                <span className="text-brand-400 font-bold text-xs">{i + 1}.</span>
-                                <span className="text-sm font-medium text-gray-800 flex-1">{cp}</span>
-                                <button
-                                  onClick={() => copyToClipboard(cp, `summary-cp-${i}`)}
-                                  className="p-1 hover:bg-brand-50 rounded text-gray-400 hover:text-brand-500 transition-colors export-hide"
-                                  title="コピー"
-                                >
-                                  {copied === `summary-cp-${i}` ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Clipboard className="w-3.5 h-3.5" />}
-                                </button>
+                              <div key={i}>
+                                <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-brand-50 to-brand-100 rounded-lg border border-brand-50">
+                                  <span className="text-brand-400 font-bold text-xs">{i + 1}.</span>
+                                  <span className="text-sm font-medium text-gray-800 flex-1">{cp}</span>
+                                  <button
+                                    onClick={() => copyToClipboard(cp, `summary-cp-${i}`)}
+                                    className="p-1 hover:bg-brand-50 rounded text-gray-400 hover:text-brand-500 transition-colors export-hide"
+                                    title="コピー"
+                                    aria-label={copied === `summary-cp-${i}` ? 'コピーしました' : 'キャッチコピーをコピー'}
+                                  >
+                                    {copied === `summary-cp-${i}` ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Clipboard className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                                {copyFallback?.id === `summary-cp-${i}` ? <PersonaCopyFallback value={copyFallback} /> : null}
                               </div>
                             ))}
                           </div>

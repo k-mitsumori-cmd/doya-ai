@@ -61,6 +61,14 @@ const detailInput = f => [...f.container.querySelectorAll('input')].find(i => i.
     let one, two; await f.act(() => { const change = props(control).onChange; one = change({ target: { value: 'other-stage' } }); two = change({ target: { value: 'other-stage' } }); }); assert.equal(f.writes.length, 1); assert.equal(control.value, 'stage'); assert.equal(f.writes[0].body.expectedUpdatedAt, makeDeal('deal-a').updatedAt);
     await f.act(() => { hold.resolve(); }); await f.act(() => Promise.all([one, two])); assert.equal(control.value, 'stage'); assert.ok(!f.notices.some(n => n.kind === 'success'));
   });
+  await check('Untouched redacted account is omitted from detail edit instead of unlinking stored parent', async f => {
+    await f.openDetail(); const input = detailInput(f); await f.act(() => props(input).onChange({ target: { value: 'Changed visible name' } }));
+    f.reply(r => {
+      assert.equal(r.body.name, 'Changed visible name'); assert.equal(Object.hasOwn(r.body, 'accountId'), false);
+      return Response.json({ deal: { ...makeDeal('deal-a'), ...r.body, amount: Number(r.body.amount), accountId: null, contactName: r.body.contactName || null, note: r.body.note || null, startDate: null, expectedCloseDate: null, probability: Number(r.body.probability), updatedAt: '2026-10-07T00:00:00.001Z' } });
+    });
+    await f.act(() => props(f.button('保存する')).onClick()); assert.equal(f.writes.length, 1); assert.equal(window.sessionStorage.length, 0); assert(f.notices.some(n => n.kind === 'success'));
+  });
   const sources = ['src/app/(shell)/sfa/[orgSlug]/deals/page.tsx', 'src/lib/sfa/use-client-mutations.ts', 'src/lib/sfa/client-response.ts', 'src/components/sfa/MutationRecovery.tsx', 'scripts/security-regression/sfa-client-fixture.cjs'];
   fs.writeFileSync('docs/audits/2026-10-06-all-services-recheck/sfa-deal-client-results.json', JSON.stringify({ checkedAt: new Date().toISOString(), passed: cases.length, cases, sourceHashes: Object.fromEntries(sources.map(p => [p, crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')])), scope: 'Actual deal page, shared mutation/recovery/session guard and bounded transport mounted in StrictMode. Synthetic browser DOM/navigation/auth/API; not real Next routing/private production/customer writes.' }, null, 2) + '\n');
 })().catch(e => { console.error(e); process.exitCode = 1; });

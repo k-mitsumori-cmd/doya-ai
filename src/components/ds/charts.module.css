@@ -2,27 +2,42 @@
 .figure { margin: 0; }
 .svg { display: block; width: 100%; height: auto; overflow: visible; }
 .grid { stroke: var(--line); stroke-width: 1; }
-.axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.axis { font-size: 12px; font-weight: 600; fill: var(--sub); font-variant-numeric: tabular-nums; }
 .point { fill: var(--paper); stroke-width: 2; }
+/* 最新の点の輪。最初は見えない大きさ・透明から始まらず、広がりながら薄くなる（止まっても線と点は見える） */
+.pulse { fill: none; stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: ds-pulse 1400ms ease-out 1200ms 2; }
+@keyframes ds-pulse { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 0; transform: scale(3.2); } }
 /* ⚠️ 面は最初から見える。動かすのは位置だけ（F-12） */
 .fadeIn { animation: ds-chart-fade 700ms ease-out both; animation-delay: 250ms; }
 @keyframes ds-chart-fade { from { transform: translateY(4px); } to { transform: none; } }
 
-.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 12px; color: var(--sub); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--sub); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legendLine { width: 16px; height: 3px; border-radius: 2px; background: var(--blue); display: inline-block; }
 .legendDash { width: 16px; height: 0; border-top: 3px dashed var(--blue-deep); display: inline-block; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
 .bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.barHead { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
-.barValue { color: var(--sub); font-variant-numeric: tabular-nums; }
-.barTrack { height: 8px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.barHead { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--ink); }
+.barValue { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.barTrack { height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; box-shadow: inset 0 1px 2px rgba(16, 22, 51, 0.06); }
 .barFill {
+  position: relative; overflow: hidden;
   height: 100%; width: var(--w); border-radius: 999px;
-  background: linear-gradient(90deg, var(--blue), var(--blue-deep));
+  background: linear-gradient(90deg, var(--sky), var(--blue) 55%, var(--blue-deep));
   transform-origin: left center;
 }
+/* 伸びたあとに、光が1回だけ左から右へ走る（隠れる位置から始まるので、止まる環境でも何も隠さない） */
+.barFill::after {
+  content: ''; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-120%);
+}
+.bars[data-seen='true'] .barFill::after {
+  animation: ds-shine 900ms ease-out 1 both;
+  animation-delay: calc(var(--i, 0) * 70ms + 650ms);
+}
+@keyframes ds-shine { to { transform: translateX(320%); } }
 /* 棒を縮めて隠すのは、スクリプトが動いたあとだけ。伸び終わるはずの時間が過ぎたら、止まっていても出す（F-12） */
 .bars[data-armed='true'] .barFill { transform: scaleX(0); }
 .bars[data-done='true'] .barFill { transform: none !important; animation: none !important; }
@@ -34,15 +49,29 @@
 
 .ring { position: relative; display: inline-grid; place-items: center; }
 .ring svg { width: 100%; height: 100%; }
-.ringTrack { fill: none; stroke: var(--bg); stroke-width: 10; }
+.ringTrack { fill: none; stroke: var(--blue-soft); stroke-width: 10; }
 .ringValue { fill: none; stroke: var(--blue); stroke-width: 10; stroke-linecap: round; }
 .ringCenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .donut { margin: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: relative; }
 /* 中央の文字（合計など）は輪の中に重ねる */
-.donutChart { position: relative; flex: none; }
+.donutChart { position: relative; flex: none; isolation: isolate; }
 .donutChart svg { display: block; }
+/* 円は少し回りながら大きくなって出る（位置と回転だけを動かし、止まっても見える。2026-10-27） */
+.donutSpin { transform-origin: 50% 50%; animation: ds-donut-spin 1100ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes ds-donut-spin { from { transform: rotate(-60deg) scale(0.88); } to { transform: none; } }
+/* 円の見える範囲（mask の線）。箱（donutChart）の data-* で動かす */
+.donutSweep { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.donutChart[data-armed='true'] .donutSweep { stroke-dashoffset: 1; }
+.donutChart[data-seen='true'] .donutSweep { animation: ds-sweep 1100ms cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+.donutChart[data-done='true'] .donutSweep { stroke-dashoffset: 0 !important; animation: none !important; }
+@keyframes ds-sweep { to { stroke-dashoffset: 0; } }
+.donutChart::after {
+  content: ''; position: absolute; inset: 18%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--blue-soft), transparent 70%);
+  z-index: -1;
+}
 .donutCenter { position: absolute; inset: 22%; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: 14px; line-height: 1.25; color: var(--ink); font-variant-numeric: tabular-nums; }
 .donutEmpty { font-size: 12px; font-weight: 600; color: var(--muted); }
 /* 狭い画面で凡例が下に回るときは、輪と凡例を中央に寄せる */
@@ -74,13 +103,21 @@
 .colGroup { position: relative; display: flex; gap: 3px; padding: 0 18%; min-width: 0; }
 .colSlot { position: relative; flex: 1; min-width: 0; }
 .colGrow { position: absolute; inset: 0; }
-.colSeg { position: absolute; left: 0; right: 0; border-radius: 4px 4px 2px 2px; }
-.colValue { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 16px; }
+.colSeg { position: absolute; left: 0; right: 0; border-radius: 6px 6px 2px 2px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.colValue { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 16px; }
+/* 棒が伸びたあと、上の数字が少し跳ねて出る（位置だけ動かす） */
+.colPlot[data-seen='true'] .colValue { animation: ds-value-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--i, 0) * 50ms + 450ms); }
+@keyframes ds-value-pop { from { transform: translate(-50%, 8px) scale(0.85); } to { transform: translate(-50%, 0); } }
 @container (max-width: 480px) { .colPlot[data-dense='true'] .colValue { display: none; } }
 .colLabels { display: grid; margin-top: 6px; }
 .colLabels span { font-size: 11px; color: var(--muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 1px; }
 /* 9本以上の狭い画面では「12月」が「1…」にならないよう、文字を少し小さくして省略記号を出さない */
 @media (max-width: 560px) { .colLabels[data-dense='true'] span { font-size: 10px; text-overflow: clip; padding: 0; letter-spacing: -0.04em; } }
+/* 本数が多いとき（日ごとの31本など）は、狭い画面で数本おきだけ出す。文字は隣の列にはみ出してよい */
+@media (max-width: 560px) {
+  .colLabels[data-step='true'] span { visibility: hidden; overflow: visible; }
+  .colLabels[data-step='true'] span[data-keep='true'] { visibility: visible; }
+}
 .colPlot[data-armed='true'] .colGrow { transform: scaleY(0); }
 .colPlot[data-seen='true'] .colGrow { animation: ds-col-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: calc(var(--i, 0) * 50ms); }
 .colPlot[data-done='true'] .colGrow { transform: none !important; animation: none !important; }
@@ -115,6 +152,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fadeIn { animation: none; }
+  .donutSweep, .donutChart[data-armed='true'] .donutSweep, .donutChart[data-seen='true'] .donutSweep { stroke-dashoffset: 0; animation: none; }
+  .donutSpin, .pulse, .bars[data-seen='true'] .barFill::after, .colPlot[data-seen='true'] .colValue { animation: none; }
+  .barFill::after { display: none; }
   .barFill, .bars[data-seen='true'] .barFill, .bars[data-armed='true'] .barFill { transform: none; animation: none; }
   .colGrow, .colPlot[data-seen='true'] .colGrow, .colPlot[data-armed='true'] .colGrow { transform: none; animation: none; }
   .stackTrack, .bars[data-seen='true'] .stackTrack, .bars[data-armed='true'] .stackTrack { transform: none; animation: none; }

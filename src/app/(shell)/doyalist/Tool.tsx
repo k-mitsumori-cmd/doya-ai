@@ -18,6 +18,9 @@ import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt, ToolNextStep, type NextStepView } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
 import { Check, Circle, X } from 'lucide-react'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 export interface Company {
   id?: string
@@ -109,6 +112,8 @@ export default function DoyalistTool({ preview }: { preview?: DoyalistToolPrevie
 }
 
 function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number; preview?: DoyalistToolPreview }) {
+  // 旗 ONE_BUTTON_ROLLOUT（フックは早い return より前に呼ぶ）
+  const oneButton = useOneButton()
   const { data: session, status } = useSession()
   // 新しい見た目（UI 品質の直し。チェックリスト §5.1）
   const [industry, setIndustry] = useState('IT・ソフトウェア')
@@ -116,6 +121,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
   const [prefecture, setPrefecture] = useState('')
   const [size, setSize] = useState('指定なし')
   const [keywords, setKeywords] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const k = read('keywords'), p = read('prefecture'); if (k) setKeywords(k); if (p) setPrefecture(p) })
   const [countInput, setCountInput] = useState('100')
   useEffect(() => {
     const defaults = readDoyalistPreferences()
@@ -506,6 +513,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
     )
   }
 
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す
+
   return (
     <div className="p-4 lg:p-8 text-slate-800">
       <Toaster position="top-center" />
@@ -513,6 +522,18 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
       <div className="max-w-7xl mx-auto pb-20">
         {/* ===== Page Header ===== */}
         <div className="mb-6 space-y-4">
+            {oneButton ? (
+              <OneButtonBar
+                eyebrow="ドヤリスト"
+                cta={generating ? '企業を抽出しています。このままお待ちください' : '業界・エリア・件数を選んだら、押してください'}
+                label={generating ? '抽出中...' : 'リストを抽出する'}
+                scope="選んだ条件に合う企業を、国の法人データから抽出します。CSV・Excelの書き出しは、抽出のあとにできます。"
+                onRun={handleGenerate}
+                disabled={cannotRun}
+                disabledReason={extractionIntent ? '前の抽出操作の確認が先です。下の案内を確認してください。' : '業界・エリア・件数（1〜10,000）を選ぶと押せます。'}
+                running={generating}
+              />
+            ) : null}
             {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」を書く（UI 品質 H-3・S-57・S-58） */}
             <ToolHero
               title={<>条件を選ぶだけで、<wbr />実在する企業の<wbr />営業リストに</>}

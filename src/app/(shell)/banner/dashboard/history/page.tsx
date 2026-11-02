@@ -146,7 +146,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
     const timeout = window.setTimeout(() => controller.abort(), 15_000)
     try {
       // 履歴表示は軽量化（サムネ）で取得
-      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}&thumb=1`, { signal: controller.signal })
+      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}&thumb=1`, { signal: controller.signal, cache: 'no-store' })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '画像の取得に失敗しました')
       const banners = Array.isArray(data?.banners) ? data.banners : []
@@ -203,7 +203,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
         const controller = new AbortController()
         timeout = window.setTimeout(() => controller.abort(), 15_000)
         // まず一覧（画像なし + 最初の3枚だけthumb URL）を高速取得
-        const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal })
+        const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal, cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           // 有料プラン限定チェック
@@ -270,7 +270,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       const timeout = window.setTimeout(() => controller.abort(), 15_000)
       let res: Response
       let data: any
-      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal }); data = await res.json() }
+      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal, cache: 'no-store' }); data = await res.json() }
       finally { window.clearTimeout(timeout) }
       if (!res.ok || !Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string') || data.nextCursor === nextCursor) throw new Error(data?.error || '古い履歴を読み込めませんでした')
       const page: HistoryItem[] = data.items.map((item: any) => ({
@@ -650,7 +650,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                           {banner ? (
                             <img
                               src={banner}
-                              alt={`Banner ${i + 1}`}
+                              alt={`保存済みバナー ${i + 1}`}
                                 loading="lazy"
                                 decoding="async"
                               className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
@@ -694,6 +694,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
                             {banner ? (
                               <>
                                 <button
+                                  aria-label={`保存済みバナー ${i + 1} をダウンロード`}
                                   onClick={() => {
                                     const id = item.bannerIds?.[i]
                                     if (!id) {

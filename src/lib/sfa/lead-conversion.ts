@@ -1,5 +1,6 @@
+import { redactSfaRelation } from './record-relations'
 import type { Prisma, SfaLead } from '@prisma/client'
-import type { SfaContext } from './types'
+import { sfaRecordWhere, type SfaRecordScope } from './record-policy'
 import { parseSfaAmount } from './amount'
 import { dealVersion } from './deal-mutation'
 import { SfaMutationError } from './mutation-authority'
@@ -48,19 +49,20 @@ export function conversionValues(lead: SfaLead, text: Partial<Record<Field, stri
   values.dealName = text.dealName || (suggestedName.length <= 200 ? suggestedName : values.accountName)
   return values as Record<Field, string | null> & { accountName: string; dealName: string }
 }
-export async function lockConversionLead(tx: Prisma.TransactionClient, c: SfaContext, id: string) {
+export async function lockConversionLead(tx: Prisma.TransactionClient, scope: SfaRecordScope, id: string) {
+  const c = scope.actor
   const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_leads WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
   if (!rows.some(row => row.id === id)) return null
-  return tx.sfaLead.findFirst({ where: { id, organizationId: c.organizationId, isActive: true } })
+  return tx.sfaLead.findFirst({ where: sfaRecordWhere(scope, 'lead', true, { id }) })
 }
 
 /** Receipt stores the exact created deal, and recovery verifies its original lead/account pair. */
-export async function findConversion(tx: Prisma.TransactionClient, c: SfaContext, leadId: string, dealId: string) {
-  const lead = await tx.sfaLead.findFirst({ where: { id: leadId, organizationId: c.organizationId, isActive: true, status: 'converted' } })
+export async function findConversion(tx: Prisma.TransactionClient, scope: SfaRecordScope, leadId: string, dealId: string) {
+  const lead = await tx.sfaLead.findFirst({ where: sfaRecordWhere(scope, 'lead', false, { id: leadId, status: 'converted' }) })
   if (!lead?.convertedAccountId) return null
   const [account, deal] = await Promise.all([
-    tx.sfaAccount.findFirst({ where: { id: lead.convertedAccountId, organizationId: c.organizationId, isActive: true } }),
-    tx.sfaDeal.findFirst({ where: { id: dealId, accountId: lead.convertedAccountId, organizationId: c.organizationId, isActive: true } }),
+    tx.sfaAccount.findFirst({ where: sfaRecordWhere(scope, 'account', false, { id: lead.convertedAccountId }) }),
+    tx.sfaDeal.findFirst({ where: sfaRecordWhere(scope, 'deal', false, { id: dealId, accountId: lead.convertedAccountId }) }),
   ])
-  return account && deal ? { id: deal.id, leadId, account, deal } : null
+  return account && deal ? { id: deal.id, leadId, account, deal: (await redactSfaRelation(tx, scope, deal))! } : null
 }

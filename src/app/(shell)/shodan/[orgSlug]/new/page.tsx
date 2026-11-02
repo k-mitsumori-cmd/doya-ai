@@ -10,6 +10,9 @@ import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { readOrgProfile } from '@/lib/org-profile-view'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 type Phase = 'input' | 'researching' | 'reveal'
 
@@ -47,6 +50,7 @@ export default function ShodanNewPage() {
   const orgSlug = String(params.orgSlug)
   const router = useRouter()
   const guard = useOrgSettingsGuard(orgSlug)
+  const oneButton = useOneButton()
   const [owner, setOwner] = useState(guard.identity)
   const [unknown, setUnknown] = useState(false)
   const [operationError, setOperationError] = useState('')
@@ -55,6 +59,8 @@ export default function ShodanNewPage() {
   const attempt = useRef<'idle' | 'pending' | 'unknown' | 'confirmed' | 'limited'>('idle')
   const draft = useRef('')
   const [url, setUrl] = useState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) { draft.current = u; setUrl(u) } })
   const [phase, setPhase] = useState<Phase>('input')
   const [tick, setTick] = useState(0)
   const [research, setResearch] = useState<CompanyResearch | null>(null)
@@ -146,6 +152,18 @@ export default function ShodanNewPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
+      {oneButton && phase !== 'reveal' && (
+        <OneButtonBar
+          eyebrow="商談準備"
+          cta={phase === 'researching' ? '企業を調べています。このままお待ちください' : '商談先のURLを入れたら、押してください'}
+          label={retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
+          scope="企業サイトなどを調べ、課題の仮説と提案資料までまとめてつくります。30秒から2分ほどかかります。"
+          onRun={run}
+          disabled={unknown || Boolean(limitMessage) || !url.trim()}
+          disabledReason={unknown ? '作成結果が不明のため、新規作成を止めています。一覧で結果を確認してください。' : limitMessage ? '今月の上限に達しています。' : '商談先のURLを入れると押せます。'}
+          running={phase === 'researching'}
+        />
+      )}
       <PageHeader icon="rocket_launch" mood="point" title="新規 商談準備" subtitle="商談先企業のURLを入れるだけ。調査→課題仮説→提案資料まで自動で作成します。" />
 
       {operationError && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><p>{operationError}</p>{unknown && <Link className="mt-2 inline-block font-bold underline" href={`/shodan/${encodeURIComponent(orgSlug)}`}>商談準備一覧で作成結果を確認する</Link>}</div>}
@@ -176,7 +194,10 @@ export default function ShodanNewPage() {
               </div>
             )}
             <motion.button data-testid="shodan-create" type="button" disabled={unknown || Boolean(limitMessage)} onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+              // 帯（これ1つで全部進む）があるときは、同じ働きのこのボタンを控えめな見た目にする（大きな主なボタンを2つ並べない）
+              className={oneButton
+                ? 'mt-4 w-full py-2.5 rounded-xl border border-brand-300 bg-white text-brand-700 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                : 'mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-lg shadow-lg shadow-brand-400/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none'}>
               {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : retryable ? 'もう一度調べる' : 'この企業の商談準備をつくる'}
             </motion.button>
             <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">{unknown ? '作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。' : limitMessage ? '利用枠について、上の案内をご確認ください。' : '企業調査の完了まで30秒〜2分ほど。結果を待つ間はタブを開いたままお待ちください。'}</p>

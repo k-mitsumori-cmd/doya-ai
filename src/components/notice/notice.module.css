@@ -128,6 +128,29 @@
   .actions .plain { flex-basis: 100%; order: -1; min-height: 40px; }
   /* 下のタブ（約 68px）の上に出す */
   .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  /* 知らせ（ようこそ・新しい機能・提案など）は、スマホでは下のタブの上に小さく浮かべる。
+     画面の下半分を覆って、入力欄や中身を隠さないため（2026-10-26 統括の本番の確認）。
+     暗い幕は出さず、後ろの画面はそのまま触れる。高さは画面の 42% までにし、長いときは中で送る。× でいつでも閉じられる。
+     ページを離れる確認（alertdialog）は今までどおり下からのシートにする */
+  .scrim[data-variant='notice'] { display: none; }
+  .sheet[data-variant='notice'] {
+    left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); border-radius: 18px; border-bottom: 1px solid var(--n-line);
+    padding: 12px 14px; gap: 8px; max-height: min(42vh, 360px); overflow-y: auto; overscroll-behavior: contain; touch-action: auto;
+    transform: translateY(12px); opacity: 0; transition: transform .28s var(--n-ease), opacity .2s var(--n-ease);
+  }
+  .sheet[data-variant='notice'][data-open='true'] { transform: none; opacity: 1; }
+  .sheet[data-variant='notice'] .handle { display: none; }
+  .sheet[data-variant='notice'] .head { grid-template-columns: minmax(0, 1fr) 32px; }
+  .sheet[data-variant='notice'] .kun { display: none; }
+  .sheet[data-variant='notice'] .title { font-size: 15px; }
+  .sheet[data-variant='notice'] .body, .sheet[data-variant='notice'] .points li { font-size: 13px; }
+  .sheet[data-variant='notice'] .actions .btn { min-height: 40px; }
+  /* メニュー（左から出る一覧）を開いている間は、知らせを隠す。印は AppShell が html に付ける */
+  :global(html[data-shell-menu='open']) .sheet[data-variant='notice'] { visibility: hidden; pointer-events: none; }
+  /* 「これ1つで全部進む」帯がある画面では、ヒントと新機能の知らせを、題とボタンだけの小さな形にする。
+     本文まで出すと、帯の大きなボタンに重なるため（2026-10-27 round15 の本番の確認）。印は OneButtonBar が html に付ける。
+     エラーと承認待ちは、読まないと困るので、今までどおり全部を出す */
+  :global(html[data-one-button='on']) .sheet[data-variant='notice']:is([data-kind='hint'], [data-kind='feature']) :is(.body, .points, .check, .never) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-26T12:23:37.174Z",
+  "checkedAt": "2026-10-31T11:22:36.246Z",
   "expected": 9,
   "passed": 9,
   "cases": [
@@ -47,9 +47,9 @@
     }
   ],
   "sourceHashes": {
-    "src/app/api/hr/dashboard/route.ts": "7940ca80654fc6d32c098d8e5831745725e889e46628705b2f9b4c0003e86a8f",
-    "src/app/api/kintai/dashboard/route.ts": "9385a7a9beb32fa973cad7347d97394d930e1f72f2218d204a708ff21fe99b64",
-    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
+    "src/app/api/hr/dashboard/route.ts": "de5c225b29680322d0f0e75b9e75f49a2791b12c580deea7941545c79341d98a",
+    "src/app/api/kintai/dashboard/route.ts": "fa588e0667a47a213ea2192aa5d8e897ed75cb3bd86207fb2904b80c04bafd10",
+    "src/lib/private-api-response.ts": "29edd0d0ef89197cb2f040efc4d1a326992a1640990f5ba39838ad60fb7ef2e0"
   },
   "scope": "Actual HR/Kintai dashboard GET handlers with synthetic context, permission helpers and database read boundaries. Successful body includes synthetic private organization/employee; denied/failure makes zero DB calls. No actual customer, browser cache, production or DB writes; no leak demonstrated."
 }

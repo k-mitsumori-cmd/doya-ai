@@ -171,9 +171,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const watched=await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),WATCH_USER);
     assert.equal(watched.label.prefix,'【自動点検】');
     assert.equal(watched.label.apply('お見積り',200),'【自動点検】お見積り');
-    for(const bad of ['', 'x', token.slice(0,-1)+'0', crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
+    for(const bad of ['', 'x', token.slice(0,-1)+(token.endsWith('0')?'1':'0'), crypto.createHmac('sha256',WATCH_SECRET).update('doya-system-watch:v1').digest('hex')]){
       const d=await rs.toolDepsFor(watchReq(bad?{'x-doya-system-watch':bad}:{}),WATCH_USER);
-      assert.equal(d.label,undefined,'wrong or missing signal must not label: '+bad);
+      assert.equal(d.label,undefined,'wrong or missing system-watch signal must not label');
     }
     // 正しい値でも、ほかの利用者・ログインの分からないリクエストには付けない
     assert.equal((await rs.toolDepsFor(watchReq({'x-doya-system-watch':token}),'someone-else')).label,undefined);
@@ -266,9 +266,11 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     const dash=read('src/app/(shell)/home/HomeDashboard.tsx');
     assert.match(dash,/\{agentStage \? null : <AgentPanel /);
     assert.match(dash,/cloneElement\(agentStage, \{ greeting:/,'the greeting moves into the new home');
-    // 見出しは「今日は、何をしますか？」の1つだけ。新しい欄の「どんなゴールを目指しますか？」は出さない
+    // 見出しは1つだけ。言葉はサーバーが選んだもの（headlines.ts、2026-10-30 から開くたびに変わる）。新しい欄の「どんなゴールを目指しますか？」は出さない
     const agent=read('src/components/home-agent/HomeAgent.tsx');
-    assert.match(agent,/<h1 id="home-agent-title" className=\{styles\.headTitle\}>今日は、何をしますか？<\/h1>/);
+    assert.equal((agent.match(/<h1 /g)||[]).length,1,'one heading');
+    assert.match(agent,/<h1 id="home-agent-title" className=\{styles\.headTitle\}[^\n]*\}>\{headlineText\}<\/h1>/);
+    assert.doesNotMatch(read('src/components/home-agent/headlines.ts'),/どんなゴールを目指しますか/);
     assert.doesNotMatch(agent,/どんなゴールを目指しますか/);
     assert.match(agent,/aria-labelledby="home-agent-title"/);
     // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
@@ -292,6 +294,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         'next-auth':{getServerSession:async()=>({user:{id:'u_1',email,name:'テスト'}})},
         '@/lib/auth':{authOptions:{}},
         '@/lib/home/summary':{getHomeSummary:async()=>({})},
+        '@/components/home-agent/headlines':{japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？',brandRenamedFlag:()=>false},
         'next/headers':{cookies:async()=>({get:()=>undefined})},
         './cookies':{SETUP_HIDE_COOKIE:'x'},
         '@/lib/doya-power/flag':{isDoyaPowerEnabled:async()=>false},
@@ -300,6 +303,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         './HomeDashboard':{__esModule:true,default:HomeDashboard},
         '@/lib/agent-orchestration/flag':loadFlag(env,email,log),
         '@/components/home-agent/HomeAgent':{__esModule:true,default:HomeAgent},
+        // 部署ごとの入口（DEPARTMENTS_ROLLOUT）は、このテストでは off（ホームは今のまま）として通す。旗そのものは verify-departments-flag.cjs が見る
+        '@/lib/departments/flag':{isDepartmentsEnabled:async()=>false},
+        '@/lib/departments':{DEPARTMENTS_COOKIE:'doya_departments',parseDepartmentsCookie:()=>[],parseDeptQuery:()=>null},
       },env);
       const el=await page.default();
       assert.equal(el.type,HomeDashboard);
@@ -335,10 +341,11 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         '@/components/shell/AppShell':{__esModule:true,default:()=>null},
         '@/components/agent-orchestration/AgentOrchestrator':{__esModule:true,default:()=>null},
         '@/components/home-agent/HomeAgent':{__esModule:true,default:()=>null},
+        '@/components/home-agent/headlines':{headlineCandidates:()=>[],japanHour:()=>9,pickHeadline:()=>'今日は、何を一緒にやりますか？',brandRenamedFlag:()=>false},
         '@/lib/agent-orchestration/flag':loadFlag(envOf('all'),ALLOWED),
         '@/lib/agent-orchestration/recipes':loadCore().recipes,
       },{NODE_ENV:'production',AGENT_ORCHESTRATION_ROLLOUT:'all'});
-      await assert.rejects(()=>Promise.resolve().then(()=>page.default()),/NEXT_NOT_FOUND/,f);
+      await assert.rejects(()=>Promise.resolve().then(()=>page.default({searchParams:Promise.resolve({})})),/NEXT_NOT_FOUND/,f);
       assert.equal(notFound,1,f);
     }
     // 見本の結果で動かすのは、見本の画面だけ（経営ホームの本物は API で動かす）
@@ -384,12 +391,12 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     g=await loadGate(envOf('preview'),ALLOWED,[]).agentGate({store:false});
     assert.equal(g.userId,'u_1');
     // 記録の API は、どれも入口（agentGate）を最初に通る。表（prismaRunRepo）や本文はそのあと
-    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/summary/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
       const src=read(f);
       const gate=src.indexOf('agentGate({ store: true })');
       assert.ok(gate>0,f);
       // 本文を読む呼び出し（readOperationalJson を直接、または会社名だけを読む companyNameFrom）も、入口のあと
-      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','prismaRunRepo,','createRun(','latestOpenRun(','agentTaskCounts(','runStoredTask(']){
         const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
       }
     }

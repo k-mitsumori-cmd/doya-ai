@@ -27,7 +27,7 @@ function loadPageModule(moduleFile){
  if(n.startsWith('@/')){const source='src/'+n.slice(2);return loadPageModule(fs.existsSync(source+'.tsx')?source+'.tsx':source+'.ts')}
  if(n.startsWith('./')){const source=path.posix.join(path.posix.dirname(moduleFile),n);return loadPageModule(fs.existsSync(source+'.tsx')?source+'.tsx':source+'.ts')}
  throw Error('Unmocked '+n)
- },fetch,Date,console,Headers,Request,AbortController,TextDecoder,Uint8Array,Response,URL,FormData:dom.window.FormData,FileReader:dom.window.FileReader,window:dom.window,document:dom.window.document,setTimeout,clearTimeout},{filename:moduleFile});return output
+ },fetch,Date,Error,console,Headers,Request,AbortController,TextDecoder,Uint8Array,Response,URL,FormData:dom.window.FormData,FileReader:dom.window.FileReader,window:dom.window,document:dom.window.document,setTimeout,clearTimeout},{filename:moduleFile});return output
 }
 const exportsObj=loadPageModule(file),Scope=loadPageModule('src/components/hr/HrOrganizationScope.tsx').default
 const container=document.createElement('div');document.body.append(container);const root=createRoot(container),Page=exportsObj.default

@@ -269,11 +269,12 @@
 }
 .label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-bottom: 6px;
+  /* 入力の名前は濃く太く（2026-10-27 ユーザー「入力するときのフォントが細い」） */
+  font-size: 14px;
   line-height: 1.5;
-  font-weight: 500;
-  color: var(--sub);
+  font-weight: 700;
+  color: var(--ink);
 }
 .hint {
   display: block;
@@ -293,23 +294,40 @@
 .input {
   display: block;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   padding: 10px 14px;
-  border: 1px solid var(--line-strong);
+  border: 1.5px solid var(--line-strong);
   border-radius: var(--r-sm);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  /* 入れた字は 600 の太さ・16px（iPhone で拡大されない大きさ）。2026-10-27 ユーザー「フォントが細い」 */
+  font-size: 16px;
+  font-weight: 600;
   line-height: 1.5;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 .input::placeholder {
   color: var(--muted);
+  font-weight: 500;
+}
+.input:hover:not(:disabled) {
+  border-color: var(--blue-line);
 }
 .input:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--blue);
+  box-shadow: 0 0 0 4px var(--blue-soft);
+}
+/* 金額・数の入力は、太く大きく、桁がそろう数字で出す */
+.input[inputmode='numeric'],
+.input[inputmode='decimal'],
+.input[type='number'],
+.inputAmount {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 .input:disabled {
   background: var(--bg);
@@ -328,7 +346,7 @@ textarea.input {
   gap: 12px;
   min-height: 44px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink);
   cursor: pointer;
 }
@@ -410,12 +428,30 @@ textarea.input {
 
 /* ---------- 概要タイル ---------- */
 .stat {
-  background: var(--paper);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--blue-soft), transparent 55%),
+    var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--r);
   box-shadow: var(--shadow);
   padding: 16px;
   min-width: 0;
+}
+/* 上の帯のグラデーション（インフォグラフィックの見せ方。2026-10-27） */
+.stat::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue), var(--sky));
+}
+.toneOk::before {
+  background: linear-gradient(90deg, var(--ok-ink), var(--good));
+}
+.toneBad::before {
+  background: linear-gradient(90deg, var(--bad-ink), var(--pink));
 }
 @media (min-width: 481px) {
   .stat {
@@ -423,16 +459,16 @@ textarea.input {
   }
 }
 .statLabel {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--sub);
 }
 .statValue {
   margin-top: 8px;
   font-size: 32px;
   line-height: 1.1;
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   overflow-wrap: anywhere;

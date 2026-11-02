@@ -1,8 +1,9 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { randomUUID } from 'crypto'
 import sharp from 'sharp'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
@@ -28,27 +29,27 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+      return privateApiJson({ error: '認証が必要です' }, { status: 401 })
     }
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const formData = await req.formData()
     const file = formData.get('file')
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'ファイルがありません' }, { status: 400 })
+      return privateApiJson({ error: 'ファイルがありません' }, { status: 400 })
     }
 
     const ext = ALLOWED[file.type]
     if (!ext) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: 'JPG / PNG / WebP のみアップロードできます' },
         { status: 400 }
       )
     }
     if (file.size === 0 || file.size > MAX_SIZE) {
-      return NextResponse.json(
+      return privateApiJson(
         { error: '画像サイズは5MB以下にしてください' },
         { status: 400 }
       )
@@ -65,16 +66,16 @@ export async function POST(req: NextRequest) {
       buffer = await image.rotate().toBuffer()
       if (!buffer.length || buffer.length > MAX_SIZE) throw new Error('Decoded image exceeds limit')
     } catch {
-      return NextResponse.json({ error: '画像を読み込めませんでした。正しいJPG・PNG・WebPを指定してください。' }, { status: 400 })
+      return privateApiJson({ error: '画像を読み込めませんでした。正しいJPG・PNG・WebPを指定してください。' }, { status: 400 })
     }
     // 組織スコープのパス + ランダムUUIDで推測困難に
     const path = `${ctx.organizationId}/${randomUUID()}.${ext}`
     const url = await uploadHrPhoto(buffer, path, file.type)
 
-    return NextResponse.json({ url })
+    return privateApiJson({ url })
   } catch (e: any) {
     console.error('[hr/upload]')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'アップロードに失敗しました' },
       { status: 500 }
     )

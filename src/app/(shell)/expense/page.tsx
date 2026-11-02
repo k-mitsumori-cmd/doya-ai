@@ -6,8 +6,18 @@ import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib
 import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
+import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
 
-export default async function ExpensePage() {
+/** ドヤAIの「頼む」から来たときに、組織の中で開いてよい画面（?to=） */
+const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new' } as const
+
+// Next.js 15 の決まり: searchParams は Promise で受ける（ほかの形を混ぜると、ビルドのあとの型検査で落ちる）
+type ExpensePageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> }
+
+export default async function ExpensePage({ searchParams }: ExpensePageProps) {
+  const sp = (await searchParams) ?? {}
+  // ドヤAIの「頼む」から来たときは、行き先（?to=）と値（doya_*）を組織の中の画面へ運ぶ
+  const next = forwardPath(toSearchParams(sp), EXPENSE_ENTRY_TO)
   const session = await getServerSession(authOptions)
   if (!session?.user) return <ExpenseLp />
   // ⚠️ 新しい見た目（チェックリスト §5.1）のときだけ、組織があればサーバーで直接その組織へ移す
@@ -30,7 +40,7 @@ export default async function ExpensePage() {
     // 判定に失敗したら、今までどおりクライアント（Entry）に任せる
     return <ExpenseEntry />
   }
-  if (slug) redirect(`/expense/${encodeURIComponent(slug)}`)
+  if (slug) redirect(`/expense/${encodeURIComponent(slug)}${next}`)
   // 会社があれば「その会社の名前で始める」を、無ければ会社の登録を案内する（どちらも組織名・氏名の入力は出さない）
   return companyName ? <ExpenseEntry known companyName={companyName} /> : <ExpenseEntry known needsCompany />
 }

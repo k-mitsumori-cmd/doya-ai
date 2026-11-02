@@ -10,6 +10,8 @@ import { CheckCircle2, Clock, Loader2, Mic, PlusCircle, RotateCcw, Sparkles, Upl
 import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
 import { createInterviewProjectRequest, readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { EmptyState, Skeleton, ToolHero, ToolNextStep, type NextStepView } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
@@ -103,6 +105,7 @@ export default function InterviewTool() {
   const { data: session, status: sessionStatus } = useSession()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const oneButton = useOneButton()
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
   const xhrRef = useRef<Map<string, XMLHttpRequest>>(new Map())
   const resolvedActor = String(session?.user?.id || 'guest')
@@ -205,6 +208,12 @@ export default function InterviewTool() {
   }, [uploadsExist])
 
   const recentProjects = projects.slice(0, 6)
+  const activeUploads = Array.from(uploads.values()).filter((u) => u.status !== 'done' && u.status !== 'error')
+  const oneButtonRunning = activeUploads.length > 0 || comparingCount > 0
+  const uploadingOnly = activeUploads.filter((u) => u.status === 'uploading')
+  const oneButtonProgress = uploadingOnly.length > 0
+    ? { done: Math.round(uploadingOnly.reduce((a, u) => a + (u.progress || 0), 0) / uploadingOnly.length), total: 100 }
+    : undefined
 
   // 次にやること帯（新しい見た目だけ。ds/next-step）。作業中の素材 → 失敗した素材 → 一覧 の順に決める
   const pickFile = () => { if (sessionStatus !== 'loading') fileInputRef.current?.click() }
@@ -566,6 +575,19 @@ export default function InterviewTool() {
       initial={false}
       animate="show"
     >
+      {oneButton && (
+        <OneButtonBar
+          eyebrow="インタビュー"
+          cta={oneButtonRunning ? '録音を文字にしています。このままお待ちください' : '録音のファイルを選んだら、あとは待つだけです。押してください'}
+          label="録音・録画のファイルを選ぶ"
+          scope="選んだファイルをアップロードし、話者を分けて文字に起こします。記事の下書きは、文字起こしのあとにプロジェクトの中で作れます。"
+          onRun={pickFile}
+          disabled={sessionStatus === 'loading'}
+          disabledReason="利用情報を確認しています。確認が終わると選べます。"
+          running={oneButtonRunning}
+          progress={oneButtonProgress}
+        />
+      )}
       <>
           <ToolHero
             title={<>取材の音声から、<wbr />記事の下書きまで</>}

@@ -28,6 +28,10 @@ import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
 import { ShellCostBadge } from '@/components/shell/power'
 import { useNotice } from '@/components/notice/NoticeProvider'
+import { useOneButton } from '@/components/one-button/context'
+import { OneButtonBar } from '@/components/one-button/OneButtonBar'
+import { quoteOneButtonStage } from '@/lib/one-button/quote-stage'
+import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -75,6 +79,8 @@ class QuoteLoadError extends Error {
 }
 
 export default function QuoteTool() {
+  // 旗 ONE_BUTTON_ROLLOUT（フックは早い return より前に呼ぶ）
+  const oneButton = useOneButton()
   const { data: session, status: authStatus } = useSession()
   // 新しい見た目（UI 品質の直し））
   const lastActor = useRef('')
@@ -149,6 +155,8 @@ export default function QuoteTool() {
 
   // 商材の取り込み
   const [url, setUrl, urlRef] = useQuoteDraftState('')
+  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
+  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [analyzing, setAnalyzing] = useState(false)
   const [draftProfile, setDraftProfile, draftProfileRef] = useQuoteDraftState<ProductProfile | null>(null)
   const [draftUrl, setDraftUrl, draftUrlRef] = useQuoteDraftState('')
@@ -746,6 +754,40 @@ export default function QuoteTool() {
     )
   }
 
+  // 旗 ONE_BUTTON_ROLLOUT が on の人には、画面のいちばん上に「これ1つで全部進む」帯を出す。
+  // 段階は 解析 → 品目の候補 → 見積書の作成 → 作った見積書を開く（決め方は quote-stage.ts）
+  const oneButtonStage = quoteOneButtonStage({ createdId: createdDocument?.id ?? '', itemCount: items.length, selectedProduct })
+  const oneButtonBar = {
+    analyze: {
+      cta: analyzing ? 'サービスを解析しています。このままお待ちください' : '自社サービスのURLを入れたら、押してください',
+      label: analyzing ? '解析中...' : '解析する',
+      scope: 'URLのページを読み取り、提供形態・課金の軸・公開している価格を取り込みます。見積書はまだ作りません。',
+      onRun: () => void analyze(), href: undefined,
+      disabled: analyzing || !url.trim(), disabledReason: 'サービスのURLを入れると押せます。', running: analyzing,
+    },
+    suggest: {
+      cta: suggesting ? '品目の候補を作っています。このままお待ちください' : '商材を選んだら、押してください',
+      label: suggesting ? '候補を作っています…' : '品目の候補を出す',
+      scope: '選んだ商材と相場から、見積書に載せる品目を出します。見積書はまだ作りません。',
+      onRun: () => void suggest(), href: undefined,
+      disabled: suggesting, disabledReason: undefined, running: suggesting,
+    },
+    create: {
+      cta: creating ? '見積書を作成しています。このままお待ちください' : '品目と金額を確認できたら、押してください',
+      label: creating ? '作成しています…' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : items.length > MAX_QUOTE_ITEMS ? `品目は${MAX_QUOTE_ITEMS}行までです` : '見積書を作成する',
+      scope: '下の品目と税区分から、見積書を1通作ります。PDFの出力は作成後にできます。',
+      onRun: () => void createDocument(), href: undefined,
+      disabled: creating || documentUncertain || documentLimited || items.length > MAX_QUOTE_ITEMS, disabledReason: undefined, running: creating,
+    },
+    open: {
+      cta: '見積書ができました。中身をご確認ください',
+      label: `作った見積書を開く（${createdDocument?.quoteNo ?? ''}）`,
+      scope: '作った見積書の画面を開きます。PDFの出力と送付は、そこからできます。',
+      onRun: undefined, href: createdDocument ? `/quote/documents/${encodeURIComponent(createdDocument.id)}` : undefined,
+      disabled: false, disabledReason: undefined, running: false,
+    },
+  }[oneButtonStage]
+
   return (
     <div className="pb-24">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
@@ -773,11 +815,25 @@ export default function QuoteTool() {
       {/* ⚠️ 新しい見た目では、見出し（h1）と組織の切り替えは枠（ToolFrame）の1か所だけにする（S-31・S-57） */}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        {oneButton ? (
+          <OneButtonBar
+            eyebrow="ドヤ見積"
+            cta={oneButtonBar.cta}
+            label={oneButtonBar.label}
+            scope={oneButtonBar.scope}
+            onRun={oneButtonBar.onRun}
+            href={oneButtonBar.href}
+            disabled={oneButtonBar.disabled}
+            disabledReason={oneButtonBar.disabledReason}
+            running={oneButtonBar.running}
+          />
+        ) : null}
         <>
             <ToolHero
               title="URLを入れるだけで、相場つきの見積書"
               lead={<>サービスのページを読み取り、品目と金額の出所（自社価格・相場・AI推定）をそろえます。<span className="mt-1 block text-sm text-slate-500">発行する組織: {org.name}</span></>}
-              action={<DsButton href="#quote-step-1" icon="Receipt">見積書をつくる</DsButton>}
+              // 帯（これ1つで全部進む）があるときは、ここに2つ目の主なボタンを出さない
+              action={oneButton ? undefined : <DsButton href="#quote-step-1" icon="Receipt">見積書をつくる</DsButton>}
               art={QUOTE_UI_NEXT_ART.hero}
             />
             {docs.length === 0 && (
