@@ -13,7 +13,8 @@ import { authOptions } from '@/lib/auth'
 import { getHomeSummary } from '@/lib/home/summary'
 import { isProductHubsEnabled } from '@/lib/products/flag'
 import { departmentOfProduct, getProduct, parseProductId } from '@/lib/products'
-import { hubMetrics } from '@/lib/products/hub-metrics'
+import { hubMetrics, marketingMetrics } from '@/lib/products/hub-metrics'
+import { getMarketingSummary } from '@/lib/products/marketing-summary'
 import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
 import HomeAgent from '@/components/home-agent/HomeAgent'
 import { brandRenamedFlag, japanHour, pickHeadline } from '@/components/home-agent/headlines'
@@ -41,8 +42,11 @@ export default async function ProductHubPage(ctx: Ctx) {
   if (!userId) redirect(`/auth/signin?callbackUrl=${encodeURIComponent(`/hub/${id}`)}`)
 
   // 数字は経営ホームと同じ集計から選ぶ（読めない欄は state で分かる。ホーム全体は落とさない）
-  const summary = await getHomeSummary(userId).catch(() => null)
-  const metrics = summary ? hubMetrics(id, summary) : []
+  // マーケティングだけは、経営ホームの集計に数字が無いので、別の集計から読む（段3）
+  const summary = id === 'marketing'
+    ? await getMarketingSummary(userId).then(marketingMetrics).catch(() => null)
+    : await getHomeSummary(userId).then((s) => hubMetrics(id, s)).catch(() => null)
+  const metrics = summary ?? []
   // 「ドヤくんに頼む」（旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ）。例と道具を、製品の部署に合わせて絞る
   const agent = await isAgentOrchestrationEnabled()
   const headline = pickHeadline({ renamed: brandRenamedFlag(), hour: japanHour() })

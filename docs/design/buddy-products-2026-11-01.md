@@ -436,6 +436,7 @@ export const PRIMARY_PRODUCT: Record<string, ProductId> = { quote: 'sales', prom
 1. PR-1（段1）: `src/lib/products.ts`・旗・切り替え・サイドバー・`/hub/*` の骨組み。触るファイルは `src/components/shell/*`・`src/app/(shell)/layout.tsx`・`src/app/(shell)/hub/*`（新）・`src/lib/products*`。
 2. PR-2（段2）: schema と SQL（本番には流さない）、`/home/products`、`/home/roles` の列、API 2本（`GET/PUT /api/company/products`、`PUT /api/company/members/[id]/products`）。
 3. PR-3（段3）: 製品のホームの数字と予実の表、ドヤくんの例。
+   - 2026-11-02: まずマーケティングのホームの数字を作った（`src/lib/products/marketing-summary.ts`）。経営ホームの集計にはマーケティングの数字が無いので、別に読む。本人が今月つくったバナー・SEO記事・ペルソナの数と、AI検索で自社に触れた割合（最後に参加した AIO の組織の最新の調べ）の4つ。読むだけで、DB は変えない。
 4. PR-4（段4）: 案内と LP・料金の文言。旗の値を変えるのは、統括で三森さんの OK のあと。
 
 どの PR も下書きで出し、`heavy-slot.sh` を通して `npx tsc --noEmit` と `npx next build` を確かめ、画面は 375px と 1280px の写真で前後を比べます。
