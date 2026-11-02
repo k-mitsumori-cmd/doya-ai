@@ -170,11 +170,32 @@
 .todos { list-style: none; margin: 8px 0 0 4px; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 6px; }
 .todo::before { content: ''; position: absolute; left: -16px; top: 50%; width: 14px; height: 2px; background: var(--line); }
 .todo[data-off='true'] { opacity: .6; }
+/* ToDo は、左にツールの仕事をしているドヤくん（64px）、真ん中にツール名・ToDo・作る物・時間とドヤパワー、右に「任せる」（2026-11-01 本人の指示で、絵を大きくはっきり） */
+.todo { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; padding: 12px 14px; }
+.run { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.tbear { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
+.toolTag { justify-self: start; padding: 1px 8px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); font-size: 11px; font-weight: 800; line-height: 1.7; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 2px; font-size: 12px; color: var(--sub); }
+.costFree { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .todoRight { display: grid; justify-items: end; gap: 4px; }
-.ask { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--blue); cursor: pointer; white-space: nowrap; }
-.ask input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+/* 「ドヤくんに任せる」は押しやすい札にする（44px）。入っているときは青く塗る */
+.ask { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 13px; font-weight: 800; color: var(--sub); cursor: pointer; white-space: nowrap; transition: background-color .15s, border-color .15s, color .15s; }
+.ask[data-on='true'] { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-deep); }
+.ask input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+.ask:has(input:disabled) { cursor: default; }
+/* ゴールの欄: 左に旗を持つドヤくん、点数の下に目盛り */
+.goalHead { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: center; }
+.goalBear { display: block; width: 72px; height: 72px; }
+.goalText { display: grid; gap: 2px; min-width: 0; }
+.meter { display: flex; gap: 4px; height: 10px; margin: 2px 0 2px; border-radius: 999px; overflow: hidden; background: var(--blue-soft); max-width: 420px; }
+.meter i { flex: 1; background: color-mix(in srgb, var(--blue) 14%, var(--blue-soft)); }
+.meter i[data-on='true'], .meter b { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+.meter b { display: block; height: 100%; }
+.totalText { display: grid; gap: 2px; min-width: 0; }
+.totalText b { font-size: 15px; line-height: 1.5; }
+.nowrap { white-space: nowrap; }
 .total { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: var(--r); background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); }
-.sum { display: inline-block; min-width: 3ch; text-align: right; font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; margin: 0 2px; }
+.sum { display: inline-block; min-width: 2ch; text-align: right; font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; margin: 0 2px; }
 
 /* 確かめ */
 .confirm { border-color: var(--blue); }
@@ -206,8 +227,6 @@
   .kun { width: 72px; }
   .head[data-compact='true'] .kun { width: 60px; }
   .head:not([data-compact='true']) .kun { width: 96px; margin: -8px -16px -6px 0; }
-  .resumeHead { grid-template-columns: 40px minmax(0, 1fr); }
-  .resume .ring { width: 40px; height: 40px; }
   .resume .btn { width: 100%; }
   /* スマホでは、動いている札の左の縁を光が上から下へ流れる */
   .run[data-status='running']::after {
@@ -215,10 +234,17 @@
     background: linear-gradient(180deg, transparent 0%, var(--cyan) 45%, var(--blue) 55%, transparent 100%) 0 0 / 100% 200% no-repeat, var(--line);
     -webkit-mask: none; mask: none; animation: edgeFlow 1.6s linear infinite;
   }
-  .src, .run { grid-template-columns: 32px minmax(0, 1fr); }
+  .src { grid-template-columns: 32px minmax(0, 1fr); }
+  .run { grid-template-columns: 44px minmax(0, 1fr); }
   .sstate, .run .rstate { grid-column: 2; }
-  .todo { grid-template-columns: 32px minmax(0, 1fr); }
-  .todoRight { grid-column: 2; justify-items: start; grid-auto-flow: column; gap: 12px; align-items: center; }
+  .todo { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .todoRight { grid-column: 1 / -1; justify-items: stretch; }
+  .ask { justify-content: center; }
+  .todos { margin-left: 0; padding-left: 10px; }
+  .todo::before { left: -12px; width: 10px; }
+  .goalHead { grid-template-columns: 60px minmax(0, 1fr); gap: 12px; }
+  .goalBear { width: 60px; height: 60px; }
+  .total .btn { width: 100%; }
   .gap { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 12px; }
   .gap dd { font-size: 19px; }
 }
@@ -249,3 +275,177 @@
   .stage[data-scene='input'] .kun, .stage[data-scene='input'] .head:not([data-compact='true']) .kun { width: 72px; }
 }
 @media (prefers-reduced-motion: reduce) { .shortcut { transition: none; } }
+
+/* ---------- 確かめ → 飛んでいく → 実行中 → 完成（2026-11-01 本人の指示「ビューン」「ド派手に」「何ができたか分かるように」） ---------- */
+/* 確かめの枠は、下から少し持ち上がって出る */
+.confirmIn { position: relative; overflow: hidden; animation: confirmIn .45s var(--ease) both; }
+@keyframes confirmIn { from { opacity: 0; transform: translateY(18px) scale(.985); } }
+.confirmHead { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; }
+.confirmBear { display: block; width: 96px; height: 96px; object-fit: contain; animation: bob 1.6s var(--ease-io) infinite alternate; }
+@keyframes bob { to { transform: translateY(-4px) rotate(-2deg); } }
+.goList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.goItem { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: var(--inner-r); border: 1px solid var(--line); background: var(--paper); animation: listIn .4s var(--ease) both; animation-delay: calc(var(--k, 0) * 80ms + 80ms); }
+.goItem .cost { font-size: 14px; padding: 4px 10px; }
+.goItem .cost svg { width: 14px; height: 14px; }
+.powerBox { display: grid; gap: 8px; padding: 12px 14px; border-radius: var(--inner-r); background: color-mix(in srgb, var(--blue-soft) 60%, var(--paper)); }
+.powerRow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.powerLabel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--blue-deep); }
+.powerLabel svg { width: 14px; height: 14px; }
+.powerBig { font-size: 28px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.powerBar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--paper); border: 1px solid var(--blue-line); }
+.powerBar i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width .6s var(--ease); }
+.powerBar s { display: block; height: 100%; text-decoration: none; background: repeating-linear-gradient(135deg, var(--yellow) 0 6px, color-mix(in srgb, var(--yellow) 55%, #fff) 6px 12px); animation: drain 1.2s var(--ease-io) infinite alternate; }
+@keyframes drain { to { opacity: .55; } }
+.powerAfter { margin: 0; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.powerAfter b { color: var(--ink); }
+.btnGo { position: relative; overflow: hidden; }
+.btnGo:not(:disabled)::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%); transform: translateX(-100%); animation: shine 2.4s var(--ease-io) infinite; }
+@keyframes shine { 60%, 100% { transform: translateX(100%); } }
+
+/* 押したとき: ToDo の札が右へ流れ、ドヤくんが左から右へ飛んでいく（0.7秒）。全体の読み込みは出さない */
+.confirm[data-launch='true'] .goItem { animation: flyOut .55s cubic-bezier(.6, 0, .9, .4) both; animation-delay: calc(var(--k, 0) * 70ms); }
+.confirm[data-launch='true'] .confirmBear { opacity: 0; }
+@keyframes flyOut { to { opacity: 0; transform: translateX(120%) skewX(-12deg); } }
+.zoom { position: absolute; left: 0; top: 50%; width: 140px; height: 140px; margin-top: -70px; pointer-events: none; z-index: 3; animation: zoomAcross .72s cubic-bezier(.5, 0, .6, 1) both; }
+.zoom img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.zoom i { position: absolute; right: 92%; height: 4px; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--cyan)); }
+.zoom i:nth-of-type(1) { top: 38%; width: 120px; }
+.zoom i:nth-of-type(2) { top: 52%; width: 180px; }
+.zoom i:nth-of-type(3) { top: 66%; width: 90px; }
+@keyframes zoomAcross { from { transform: translateX(-160px) rotate(-6deg); } to { transform: translateX(calc(100cqw + 40px)) rotate(4deg); } }
+.confirmIn { container-type: inline-size; }
+
+/* 実行中: 大きなドヤくん（走る絵・速度の線）、大きな件数、全体のバー、ToDo ごとの段とバー */
+.runHero { position: relative; overflow: hidden; gap: 14px; animation: confirmIn .45s var(--ease) both; background: linear-gradient(180deg, color-mix(in srgb, var(--blue-soft) 70%, var(--paper)), var(--paper) 140px); }
+.runTop { display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.runBearWrap { position: relative; width: 128px; height: 128px; }
+.runBear { position: relative; display: block; width: 128px; height: 128px; object-fit: contain; animation: dash .5s var(--ease-io) infinite alternate; }
+@keyframes dash { from { transform: translate(-2px, 1px) rotate(-1deg); } to { transform: translate(3px, -3px) rotate(1.5deg); } }
+.speed { position: absolute; inset: 0; }
+.speed i { position: absolute; left: -10px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--cyan)); animation: speedLine .7s linear infinite; }
+.speed i:nth-child(1) { top: 30%; width: 46px; }
+.speed i:nth-child(2) { top: 48%; width: 64px; animation-delay: .2s; }
+.speed i:nth-child(3) { top: 64%; width: 40px; animation-delay: .4s; }
+.speed i:nth-child(4) { top: 78%; width: 54px; animation-delay: .1s; }
+@keyframes speedLine { from { transform: translateX(30px); opacity: 0; } 30% { opacity: 1; } to { transform: translateX(-40px); opacity: 0; } }
+.runCount, .finaleCount { display: grid; justify-items: end; line-height: 1; font-variant-numeric: tabular-nums; }
+.runCount b, .finaleCount b { font-size: 56px; font-weight: 800; color: var(--blue); letter-spacing: -.02em; }
+.runCount small, .finaleCount small { margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--sub); }
+.pop { display: inline-block; animation: pop .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } }
+.bigBar { position: relative; height: 22px; border-radius: 999px; background: var(--blue-soft); overflow: hidden; }
+.bigBar i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width .8s var(--ease); overflow: hidden; }
+.bigBar i::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .28) 0 10px, transparent 10px 20px); background-size: 28px 28px; animation: stripes .8s linear infinite; }
+@keyframes stripes { to { background-position: 28px 0; } }
+.bigBar span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 800; color: var(--blue-deep); font-variant-numeric: tabular-nums; }
+.run { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 14px; transition: background-color .4s, border-color .4s; animation: listIn .45s var(--ease) both; animation-delay: calc(var(--k, 0) * 90ms); }
+.runIcon { position: relative; width: 56px; height: 56px; }
+.run[data-status='running'] .runIcon img { animation: work .9s var(--ease-io) infinite alternate; transform-origin: 50% 90%; }
+@keyframes work { from { transform: rotate(-4deg); } to { transform: rotate(4deg) translateY(-2px); } }
+.run[data-status='waiting'] .runIcon img { filter: grayscale(.6); opacity: .7; }
+.run[data-status='done'] { background: color-mix(in srgb, var(--ok-bg) 70%, var(--paper)); border-color: color-mix(in srgb, var(--ok-ink) 35%, var(--line)); }
+.doneBadge { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ok-ink); color: #fff; box-shadow: 0 0 0 3px var(--paper); animation: pop .55s cubic-bezier(.3, 1.8, .5, 1) both; }
+.doneBadge .check { width: 14px; height: 14px; }
+.stageText { font-size: 13px; color: var(--sub); animation: blurIn .35s var(--ease) both; }
+.steps { display: flex; gap: 4px; margin-top: 2px; }
+.steps i { width: 18px; height: 6px; border-radius: 999px; background: var(--line); transition: background-color .3s; }
+.steps i[data-on='true'] { background: var(--blue); }
+.run[data-status='done'] .steps i { background: var(--ok-ink); }
+.tbar { height: 6px; border-radius: 999px; background: var(--blue-soft); overflow: hidden; margin-top: 4px; }
+.tbar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width .7s var(--ease); }
+.run[data-status='done'] .tbar i { background: var(--ok-ink); }
+.run[data-status='running'] .rstate { color: var(--blue); }
+.run[data-status='running'] .rstate::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); animation: blink 1s var(--ease-io) infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.run[data-status='done'] .rstate { animation: pop .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+
+/* 完成: 紙吹雪（カードの中だけ・1回）→ まとめの見出し → できた物のカード */
+.finale { position: relative; overflow: hidden; gap: 14px; border-color: color-mix(in srgb, var(--ok-ink) 30%, var(--line)); }
+.finaleHead { position: relative; z-index: 1; display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 16px; align-items: center; animation: confirmIn .5s var(--ease) both; }
+.finaleBear { display: block; width: 120px; height: 120px; object-fit: contain; animation: hop .7s cubic-bezier(.3, 1.6, .5, 1) 2 both; }
+@keyframes hop { 40% { transform: translateY(-12px) rotate(-3deg); } }
+.finaleTitle { font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; line-height: 1.3; color: var(--ink); }
+.finaleList { font-size: 14px; font-weight: 700; color: var(--sub); line-height: 1.6; }
+.finaleCount b { color: var(--ok-ink); }
+.finaleFail { font-size: 13px; font-weight: 700; color: var(--bad-ink); line-height: 1.6; }
+.workGrid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.confetti { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.confetti i { position: absolute; top: -12px; left: calc(var(--c) * 3.5% + 1%); width: 8px; height: 12px; border-radius: 2px; background: var(--blue); opacity: 0; animation: fall 1.8s cubic-bezier(.3, .4, .6, 1) both; animation-delay: var(--d, 0ms); }
+.confetti i:nth-child(4n+1) { background: var(--cyan); }
+.confetti i:nth-child(4n+2) { background: var(--yellow); width: 6px; height: 6px; border-radius: 50%; }
+.confetti i:nth-child(4n+3) { background: var(--pink); }
+@keyframes fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(340px) rotate(540deg); } }
+
+@media (max-width: 860px) {
+  .confirmHead { grid-template-columns: 72px minmax(0, 1fr); }
+  .confirmBear { width: 72px; height: 72px; }
+  .goItem { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; padding: 10px; }
+  .goItem img { width: 44px; height: 44px; }
+  .powerBig { font-size: 24px; }
+  .runTop { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; }
+  .runBearWrap, .runBear { width: 84px; height: 84px; }
+  .runCount { grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 6px; }
+  .runCount b { font-size: 44px; }
+  .run { grid-template-columns: 48px minmax(0, 1fr); }
+  .runIcon, .runIcon img { width: 48px; height: 48px; }
+  .run .rstate { grid-column: 2; }
+  .finaleHead { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; }
+  .finaleBear { width: 84px; height: 84px; }
+  .finaleCount { grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 6px; }
+  .finaleCount b { font-size: 40px; }
+  .workGrid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- 入力の例（部署ごと・クマの絵つき）、前回の作戦、よく使う操作（2026-11-01 本人の指示「アイコンを入れて見やすく」） ---------- */
+.examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.example { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 14px 4px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color .15s, background-color .15s, transform .15s var(--ease); text-align: left; }
+.example img { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--blue-soft); object-fit: contain; }
+.example:hover { border-color: var(--blue); transform: translateY(-1px); }
+.example[aria-pressed='true'] { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-deep); }
+.example:focus-visible, .exampleMore:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.bundle { padding: 1px 8px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 11px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.exampleMore { min-height: 44px; padding: 0 16px; border: 1px dashed var(--blue-line); border-radius: 999px; background: transparent; color: var(--blue); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+
+.resume { position: relative; overflow: hidden; gap: 12px; border-radius: 16px; padding: 16px 18px; }
+.resume[data-done='true'] { border-color: color-mix(in srgb, var(--ok-ink) 35%, var(--line)); background: linear-gradient(120deg, color-mix(in srgb, var(--ok-bg) 70%, var(--paper)), var(--paper) 60%); }
+.resumeHead { grid-template-columns: 60px minmax(0, 1fr) 88px; gap: 14px; }
+.resumeEyebrow { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--blue); }
+.resume[data-done='true'] .resumeEyebrow { color: var(--ok-ink); }
+.resumeBear { display: block; width: 88px; height: 88px; object-fit: contain; }
+.ringWrap { position: relative; display: grid; place-items: center; width: 60px; height: 60px; }
+.ring { position: absolute; inset: 0; width: 60px; height: 60px; }
+.ringText { position: relative; font-size: 17px; font-weight: 800; color: var(--blue-deep); font-variant-numeric: tabular-nums; }
+.ringText small { font-size: 11px; color: var(--muted); }
+.ringText[data-done='true'] { color: var(--ok-ink); }
+.ringText .check { width: 26px; height: 26px; }
+.madeChips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.madeChips li { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 3px 4px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--ink); }
+
+.shortcuts { gap: 10px; }
+.shortcut { position: relative; grid-template-columns: 44px minmax(0, 1fr) 20px; align-items: center; gap: 10px; min-height: 72px; padding: 10px 12px 10px 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(16, 22, 51, .04); }
+.shortcut::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 4px 4px 0; background: var(--tone, var(--blue)); }
+.shortcut[data-tone='marketing'] { --tone: var(--pink); }
+.shortcut[data-tone='sales'] { --tone: var(--blue); }
+.shortcut[data-tone='hr'] { --tone: var(--good); }
+.shortcut[data-tone='admin'] { --tone: var(--yellow); }
+.shortcut:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.shortcutBear { width: 44px; height: 44px; }
+.shortcutText { display: grid; gap: 1px; min-width: 0; }
+.shortcutText b { font-size: 14px; line-height: 1.4; }
+.shortcutDept { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--sub); }
+.shortcutDept::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tone, var(--blue)); }
+.shortcutArrow { color: var(--muted); transition: transform .2s var(--ease), color .2s; }
+.shortcut:hover .shortcutArrow { color: var(--blue); transform: translateX(3px); }
+
+@media (max-width: 860px) {
+  .resumeHead { grid-template-columns: 60px minmax(0, 1fr); }
+  .resumeBear { display: none; }
+}
+@media (max-width: 600px) {
+  .examples { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; padding: 2px 24px 4px 4px; scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .examples::-webkit-scrollbar { display: none; }
+  .example, .exampleMore { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+  .shortcut { min-height: 64px; }
+}
+@media (prefers-reduced-motion: reduce) { .example, .shortcut, .shortcutArrow { transition: none; } }

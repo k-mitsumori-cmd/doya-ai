@@ -58,3 +58,8 @@
   .row { grid-template-columns: minmax(0, 1fr) auto; }
   .when { grid-column: 1 / -1; }
 }
+
+/* 経営ホームの欄の見出し: 左にドヤくん（電池）、右に見出しと一言（2026-11-01 本人の指示） */
+.homeHead { justify-content: flex-start; align-items: center; flex-wrap: nowrap; }
+.homeBear { display: block; flex: none; width: 56px; height: 56px; object-fit: contain; }
+.homeLead { display: block; margin-top: 2px; font-size: 13px; color: var(--sub); line-height: 1.6; }

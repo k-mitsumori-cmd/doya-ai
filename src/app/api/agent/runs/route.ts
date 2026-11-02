@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 // ============================================
 // POST /api/agent/runs — 作戦を保存して、実行を作る（「続きを進める」のため）
+// GET  /api/agent/runs — 「ドヤくんが進めた仕事」の一覧（本人の実行を新しい順に。90日・100件まで）
 // ============================================
 // 設計: docs/architecture/agent-orchestration/DESIGN.md §8。型: AgentRunCreateRequest / AgentRunResponse
 // - 答えをサーバーで確かめ、材料を読み、作戦を作り直してから保存する（画面から届いた作戦は使わない）。
@@ -13,10 +14,21 @@ import { findRecipe, parseSalesPrepAnswers } from '@/lib/agent-orchestration/rec
 import { planFromRecipe } from '@/lib/agent-orchestration/plan'
 import { readSources } from '@/lib/agent-orchestration/sources'
 import { realSourceReaders } from '@/lib/agent-orchestration/sources.server'
-import { createRun } from '@/lib/agent-orchestration/runs'
+import { createRun, recentRuns } from '@/lib/agent-orchestration/runs'
 import { prismaRunRepo } from '@/lib/agent-orchestration/runs.prisma'
 import { AgentTaskError } from '@/lib/agent-orchestration/runner'
 import { readOperationalJson } from '@/lib/operational-json'
+
+export async function GET() {
+  const gate = await agentGate({ store: true })
+  if ('response' in gate) return gate.response
+  try {
+    return NextResponse.json({ runs: await recentRuns(prismaRunRepo, gate.userId, { days: 90, limit: 100 }) }, { headers: NO_STORE })
+  } catch {
+    console.error('[agent/runs] list failed')
+    return NextResponse.json({ error: '進めた仕事を読めませんでした。時間をおいて、もう一度お試しください。' }, { status: 503, headers: NO_STORE })
+  }
+}
 
 export async function POST(req: NextRequest) {
   const gate = await agentGate({ store: true })
