@@ -2,7 +2,7 @@
 
 // ドヤAI質問リンク 結果画面（4-4）。作成直後と履歴の詳細で共用する
 // ⚠️ 編集中の機械チェックは表示用。保存する値はサーバーで作り直す（PATCH /api/asklink/runs/[id]）
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   AlertTriangle, Check, Code2, Copy, Download, ExternalLink, ImageIcon, Loader2, Pencil, RefreshCw,
 } from 'lucide-react'
@@ -166,6 +166,7 @@ function LinkCard({
           {editing ? (
             <input
               value={buttonLabel}
+              readOnly={saving}
               onChange={(e) => setButtonLabel(e.target.value)}
               className="mt-1 w-64 rounded-lg border border-slate-300 px-2 py-1 text-base font-black text-slate-900 min-h-11 max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]"
               aria-label="ボタン名"
@@ -180,7 +181,7 @@ function LinkCard({
       <textarea
         id={selectId}
         value={editing ? question : view.question}
-        readOnly={!editing}
+        readOnly={!editing || saving}
         onChange={(e) => setQuestion(e.target.value)}
         rows={editing ? 9 : 6}
         className={`mt-3 w-full resize-y rounded-xl border p-3 text-sm leading-relaxed text-slate-700 ${editing ? 'border-[#0066ff] bg-white' : 'border-slate-200 bg-slate-50'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]`}
@@ -219,6 +220,7 @@ function LinkCard({
             </button>
             <button
               type="button"
+              disabled={saving}
               onClick={() => {
                 setEditing(false)
                 setQuestion(link.question)
@@ -392,10 +394,38 @@ function BannerCard({
 
 export interface RunResultProps {
   run: RunDto
-  onChange: (run: RunDto) => void
+  onChange: Dispatch<SetStateAction<RunDto | null>>
   /** 生成中のバナー（親が順番に回す） */
   bannerBusy: string | null
   onGenerateBanner: (kind: string) => void
+}
+
+// 切り替えが更新する3項目を確かめる。配列だけでも、欠けた要素は描画を壊す。
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function isReturnedLink(value: unknown): value is AskLink {
+  if (!value || typeof value !== 'object') return false
+  const link = value as Partial<AskLink>
+  const keys: AskLink['key'][] = ['understand', 'prepare', 'choose', 'reassure', 'pages']
+  const check = link.check
+  return keys.includes(link.key as AskLink['key']) &&
+    typeof link.title === 'string' && typeof link.buttonLabel === 'string' &&
+    typeof link.question === 'string' && typeof link.url === 'string' &&
+    typeof link.needsReview === 'boolean' && Boolean(check &&
+      typeof check.ok === 'boolean' && isStringArray(check.issues) &&
+      typeof check.chars === 'number' && Number.isFinite(check.chars) && check.chars >= 0 &&
+      typeof check.urlLength === 'number' && Number.isFinite(check.urlLength) && check.urlLength >= 0 &&
+      isStringArray(check.unknownUrls))
+}
+
+function isReturnedBannerCopy(value: unknown): boolean {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const copy = value as Record<string, unknown>
+  return typeof copy.headline === 'string' && typeof copy.sub === 'string' &&
+    isStringArray(copy.bubbles) && copy.bubbles.length === 3
 }
 
 export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner }: RunResultProps) {
@@ -418,7 +448,18 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw statusError(data?.error || '切り替えに失敗しました。', res.status)
-      onChange(data.run)
+      const returned = data?.run
+      if (!returned || returned.id !== run.id || returned.audience !== audience ||
+          !Array.isArray(returned.links) || returned.links.length !== 2 ||
+          !returned.links.every(isReturnedLink) || new Set(returned.links.map((link: AskLink) => link.key)).size !== 2 ||
+          !isReturnedBannerCopy(returned.bannerCopy)) {
+        throw statusError('切り替え結果を確認できませんでした。', 0)
+      }
+      onChange((current) => {
+        if (!current || current.id !== run.id) return current
+        // 切り替えが更新した質問文・判定・文言だけを反映する。遅い応答で別結果や画像を戻さない。
+        return { ...current, audience: returned.audience, links: returned.links, bannerCopy: returned.bannerCopy }
+      })
     } catch (e) {
       setError((e as Error).message)
       setErrInfo({ status: statusOf(e), action: 'switch' })
@@ -430,19 +471,31 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
   const saveLink = async (key: string, buttonLabel: string, question: string) => {
     setError(null)
     setErrInfo(null)
-    const res = await fetch(`/api/asklink/runs/${run.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      setError(data?.error || '保存に失敗しました。')
-      setErrInfo({ status: res.status, action: 'save' })
+    try {
+      const res = await fetch(`/api/asklink/runs/${run.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links: [{ key, buttonLabel, question }] }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw statusError(data?.error || '保存に失敗しました。', res.status)
+      // HTTP 200だけでは、保存した結果を受け取れたとは判断しない。
+      if (!data?.run || data.run.id !== run.id || !Array.isArray(data.run.links)) {
+        throw statusError('保存した結果を確認できませんでした。', 0)
+      }
+      const savedLink = (data.run.links as AskLink[]).find((link) => link?.key === key)
+      if (!savedLink) throw statusError('保存した質問文を確認できませんでした。', 0)
+      // 遅い応答の配列全体で、別のカードの保存済み内容や下書きを戻さない。
+      onChange((current) => {
+        if (!current || current.id !== run.id) return current
+        return { ...current, links: current.links.map((link) => link.key === key ? savedLink : link) }
+      })
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      setErrInfo({ status: statusOf(e), action: 'save' })
       return false
     }
-    onChange(data.run)
-    return true
   }
 
   const found: { label: string; url: string | null }[] = [
