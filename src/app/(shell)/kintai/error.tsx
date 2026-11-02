@@ -1,4 +1,5 @@
 'use client'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function KintaiError({
   error,
@@ -33,6 +34,7 @@ export default function KintaiError({
           トップへ戻る
         </a>
       </div>
+      <ErrorReportForm errorType="500" />
     </div>
   )
 }

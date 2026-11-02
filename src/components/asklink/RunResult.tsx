@@ -400,6 +400,34 @@ export interface RunResultProps {
   onGenerateBanner: (kind: string) => void
 }
 
+// 切り替えが更新する3項目を確かめる。配列だけでも、欠けた要素は描画を壊す。
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function isReturnedLink(value: unknown): value is AskLink {
+  if (!value || typeof value !== 'object') return false
+  const link = value as Partial<AskLink>
+  const keys: AskLink['key'][] = ['understand', 'prepare', 'choose', 'reassure', 'pages']
+  const check = link.check
+  return keys.includes(link.key as AskLink['key']) &&
+    typeof link.title === 'string' && typeof link.buttonLabel === 'string' &&
+    typeof link.question === 'string' && typeof link.url === 'string' &&
+    typeof link.needsReview === 'boolean' && Boolean(check &&
+      typeof check.ok === 'boolean' && isStringArray(check.issues) &&
+      typeof check.chars === 'number' && Number.isFinite(check.chars) && check.chars >= 0 &&
+      typeof check.urlLength === 'number' && Number.isFinite(check.urlLength) && check.urlLength >= 0 &&
+      isStringArray(check.unknownUrls))
+}
+
+function isReturnedBannerCopy(value: unknown): boolean {
+  if (value === null) return true
+  if (!value || typeof value !== 'object') return false
+  const copy = value as Record<string, unknown>
+  return typeof copy.headline === 'string' && typeof copy.sub === 'string' &&
+    isStringArray(copy.bubbles) && copy.bubbles.length === 3
+}
+
 export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner }: RunResultProps) {
   const [switching, setSwitching] = useState(false)
   const [, setError] = useState<string | null>(null)
@@ -420,7 +448,18 @@ export default function RunResult({ run, onChange, bannerBusy, onGenerateBanner 
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw statusError(data?.error || '切り替えに失敗しました。', res.status)
-      onChange(data.run)
+      const returned = data?.run
+      if (!returned || returned.id !== run.id || returned.audience !== audience ||
+          !Array.isArray(returned.links) || returned.links.length !== 2 ||
+          !returned.links.every(isReturnedLink) || new Set(returned.links.map((link: AskLink) => link.key)).size !== 2 ||
+          !isReturnedBannerCopy(returned.bannerCopy)) {
+        throw statusError('切り替え結果を確認できませんでした。', 0)
+      }
+      onChange((current) => {
+        if (!current || current.id !== run.id) return current
+        // 切り替えが更新した質問文・判定・文言だけを反映する。遅い応答で別結果や画像を戻さない。
+        return { ...current, audience: returned.audience, links: returned.links, bannerCopy: returned.bannerCopy }
+      })
     } catch (e) {
       setError((e as Error).message)
       setErrInfo({ status: statusOf(e), action: 'switch' })

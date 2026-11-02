@@ -8,24 +8,19 @@ import Image from 'next/image'
 import { Button, EmptyState, Skeleton } from '@/components/ds'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
 import { statusError, statusOf } from '@/components/asklink/errors'
-
-interface RunRow {
-  id: string
-  sourceUrl: string
-  audience: string
-  name: string
-  bannersDone: number
-  createdAt: string
-}
+import ErrorReportForm, { ErrorContactFooter } from '@/components/common/ErrorReportForm'
+import { parseAskLinkHistory, type AskLinkHistoryRow } from '@/lib/asklink/history-response'
+import type { ErrorReportType } from '@/lib/error-report-input'
 
 export default function AskLinkHistoryPage() {
-  const [runs, setRuns] = useState<RunRow[]>([])
+  const [runs, setRuns] = useState<AskLinkHistoryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（0 は通信の失敗）
   const [errStatus, setErrStatus] = useState(0)
   // 「やり直す」で読み込み直す（ページ全体は開き直さない）
   const [reloadKey, setReloadKey] = useState(0)
+  const [reportType, setReportType] = useState<ErrorReportType | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -45,12 +40,20 @@ export default function AskLinkHistoryPage() {
         }
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw statusError(data?.error || '読み込みに失敗しました。', res.status)
-        if (alive) setRuns(data.runs || [])
+        const rows = parseAskLinkHistory(data)
+        if (alive) {
+          setRuns(rows)
+          setReportType(null)
+        }
       })
       .catch((e) => {
         if (!alive) return
         setError((e as Error).message)
-        setErrStatus(statusOf(e))
+        const status = statusOf(e)
+        setErrStatus(status)
+        if (reloadKey > 0 && status !== 403 && status !== 429 && status !== 402) {
+          setReportType(previous => previous ?? (status === 404 ? '404' : status === 408 ? 'timeout' : status >= 500 ? '500' : 'unknown'))
+        }
       })
       .finally(() => alive && setLoading(false))
     return () => {
@@ -71,7 +74,10 @@ export default function AskLinkHistoryPage() {
           {[1, 2, 3].map((i) => <div key={i} className="min-h-[76px] rounded-2xl bg-white p-4 ring-1 ring-slate-200"><Skeleton lines={2} delayMs={0} /></div>)}
         </div>
       ) : error ? (
-        <AskLinkErrorNotice status={errStatus} action="load" callbackUrl="/asklink/history" onRetry={() => setReloadKey((k) => k + 1)} retryLabel="読み込み直す" />
+        <>
+          <AskLinkErrorNotice status={errStatus} action="load" callbackUrl="/asklink/history" onRetry={() => setReloadKey((k) => k + 1)} retryLabel="読み込み直す" />
+          {!reportType && <ErrorContactFooter />}
+        </>
       ) : runs.length === 0 && !loading ? (
         <div className="rounded-2xl bg-white ring-1 ring-slate-200">
           <EmptyState
@@ -121,6 +127,7 @@ export default function AskLinkHistoryPage() {
           ))}
         </ul>
       )}
+      {reportType && <ErrorReportForm errorType={reportType} />}
     </div>
   )
 }

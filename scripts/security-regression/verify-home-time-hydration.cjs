@@ -34,6 +34,8 @@ function component(clock) {
     '@/components/shell/ShellCompanyCard': { CompanyRegisterButton: leaf, ShellCompanyTag: () => React.createElement('span', null, 'Synthetic company') },
     '@/components/shell/company-context': { useAccountCompany: () => ({ source: 'company', name: 'Synthetic company' }) },
     '@/components/shell/ui-next-context': { useToolHref: () => x => x }, './home.module.css': css,
+    // ToDo のドヤくんの絵（#77 で足した。絵そのものは時刻に関係しないので葉にする）
+    '@/components/home-agent/WorkCards': { TodoBear: leaf },
   };
   const file = path.join(root, 'src/app/(shell)/home/HomeDashboard.tsx');
   const source = fs.readFileSync(process.env.DOYA_HOME_TIME_BASELINE || file, 'utf8');

@@ -42,7 +42,7 @@ const envOf=(rollout)=>{const e={UI_NEXT_ROLLOUT:'all',UI_PREVIEW_EMAILS:ALLOWED
 function loadCore(){
   const runner=loadTs('src/lib/agent-orchestration/runner.ts');
   const recipes=loadTs('src/lib/agent-orchestration/recipes.ts');
-  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts')});
+  const tools=loadTs('src/lib/agent-orchestration/tools.ts',{'./runner':runner,'./recipes':recipes,'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts',{'./heavy-costs':loadTs('src/lib/doya-power/heavy-costs.ts',{'@/lib/cost/unit-prices':loadTs('src/lib/cost/unit-prices.ts')})})});
   const execute=loadTs('src/lib/agent-orchestration/execute.ts',{'./runner':runner,'./recipes':recipes,'./tools':tools});
   return {runner,recipes,tools,execute};
 }
@@ -188,7 +188,7 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
   function loadPlanRoute(env,email,log,readers){
     const core=loadCore();
     const types=loadTs('src/lib/agent-orchestration/types.ts');
-    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts'),'./runner':core.runner,'./types':types});
+    const plan=loadTs('src/lib/agent-orchestration/plan.ts',{'@/lib/doya-power/costs':loadTs('src/lib/doya-power/costs.ts',{'./heavy-costs':loadTs('src/lib/doya-power/heavy-costs.ts',{'@/lib/cost/unit-prices':loadTs('src/lib/cost/unit-prices.ts')})}),'./runner':core.runner,'./types':types});
     const sources=loadTs('src/lib/agent-orchestration/sources.ts');
     const fallback={company:async()=>{log.push('read:company');return 'サンプル株式会社'},toolOrgs:async()=>{log.push('read:tools');return {shodan:true,quote:false}},power:async()=>{log.push('read:power');return {enabled:true,remaining:120,nextRecoveryAt:null}}};
     return loadTs('src/app/api/agent/plan/route.ts',{
@@ -276,7 +276,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     // スマホでは、例のボタンを1行にして横に流し、前回の続きのカードを最初の画面に入れる
     const css=read('src/components/home-agent/home-agent.module.css');
     assert.match(css,/@media \(max-width: 600px\) \{\s*\n\s*\.exampleChips \{ flex-wrap: nowrap; overflow-x: auto;/);
-    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/className=\{`\$\{styles\.chips\} \$\{styles\.exampleChips\}`\}/);
+    // 例は 2026-11-01（#77）から、ToDo のドヤくんの絵つきのカード（styles.examples）。初めは EXAMPLES_FIRST 件だけ出し、残りは「ほかの例」で開く
+    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/<div className=\{styles\.examples\}>/);
+    assert.match(read('src/components/home-agent/HomeAgent.tsx'),/examples\.slice\(0, EXAMPLES_FIRST\)/);
   });
   await check('Agent orchestration: the home page shows the agent only behind the flag (off: nothing, and the session is not read for it)',async()=>{
     const src=read(HOME);
@@ -306,6 +308,9 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
         // 部署ごとの入口（DEPARTMENTS_ROLLOUT）は、このテストでは off（ホームは今のまま）として通す。旗そのものは verify-departments-flag.cjs が見る
         '@/lib/departments/flag':{isDepartmentsEnabled:async()=>false},
         '@/lib/departments':{DEPARTMENTS_COOKIE:'doya_departments',parseDepartmentsCookie:()=>[],parseDeptQuery:()=>null},
+        // 部門ごとの製品（PRODUCT_HUBS_ROLLOUT）も、このテストでは off として通す。旗そのものは src/lib/products.test.ts が見る
+        '@/lib/products/flag':{isProductHubsEnabled:async()=>false},
+        '../hub/ProductStrip':{__esModule:true,default:()=>null},
       },env);
       const el=await page.default();
       assert.equal(el.type,HomeDashboard);
@@ -391,12 +396,12 @@ const taskReq=(body)=>new nextServer.NextRequest('https://doya-ai.example.invali
     g=await loadGate(envOf('preview'),ALLOWED,[]).agentGate({store:false});
     assert.equal(g.userId,'u_1');
     // 記録の API は、どれも入口（agentGate）を最初に通る。表（prismaRunRepo）や本文はそのあと
-    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
+    for(const f of ['src/app/api/agent/runs/route.ts','src/app/api/agent/runs/active/route.ts','src/app/api/agent/runs/summary/route.ts','src/app/api/agent/runs/[id]/tasks/[taskId]/route.ts']){
       const src=read(f);
       const gate=src.indexOf('agentGate({ store: true })');
       assert.ok(gate>0,f);
       // 本文を読む呼び出し（readOperationalJson を直接、または会社名だけを読む companyNameFrom）も、入口のあと
-      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','createRun(','latestOpenRun(','runStoredTask(']){
+      for(const later of [f.includes('[taskId]')?'await companyNameFrom(req)':'readOperationalJson(req','prismaRunRepo.','prismaRunRepo,','createRun(','latestOpenRun(','agentTaskCounts(','runStoredTask(']){
         const i=src.indexOf(later); if(i>0) assert.ok(i>gate,f+' '+later);
       }
     }

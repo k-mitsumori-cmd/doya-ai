@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { directUploadRollout } from '@/lib/direct-upload/flag'
 
 export const SeoToneSchema = z.enum(['丁寧', 'フランク', 'ビジネス', '専門的'])
 
@@ -18,7 +19,9 @@ export type SeoLlmoOptions = z.infer<typeof SeoLlmoOptionsSchema>
 // 参考画像の型
 export const SeoReferenceImageSchema = z.object({
   name: z.string(),
-  dataUrl: z.string(), // Base64 data URL
+  // Base64 data URL。Vercel の本文上限（約4.5MB）に収めるため、1枚 約1MB・合計 約2.6MB（Base64 文字数で 1.4M / 3.5M）まで。
+  // 上限は旗 DIRECT_UPLOAD_ROLLOUT が on のときだけ（off は今までどおり）
+  dataUrl: z.string().refine(s => !directUploadRollout() || s.length <= 1_400_000, '参考画像が大きすぎます（1枚1MBまで）'),
 })
 
 export const SeoCreateArticleInputSchema = z.object({
@@ -33,7 +36,12 @@ export const SeoCreateArticleInputSchema = z.object({
   llmoOptions: SeoLlmoOptionsSchema.optional(),
   // 新機能：依頼テキストと参考画像
   requestText: z.string().max(50000).optional().nullable(),
-  referenceImages: z.array(SeoReferenceImageSchema).max(5).optional().nullable(),
+  referenceImages: z
+    .array(SeoReferenceImageSchema)
+    .max(5)
+    .refine(a => !directUploadRollout() || a.reduce((n, i) => n + i.dataUrl.length, 0) <= 3_500_000, '参考画像の合計が大きすぎます')
+    .optional()
+    .nullable(),
   // 比較記事（調査型）
   mode: z.enum(['standard', 'comparison_research']).optional().default('standard'),
   comparisonConfig: z.any().optional().nullable(),

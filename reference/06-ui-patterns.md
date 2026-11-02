@@ -2283,6 +2283,13 @@ export async function sendErrorNotification(data: {
 
 ### 17.2 ユーザー向けエラー報告フォーム（必須仕様）
 
+共通部品は `components/common/ErrorReportForm.tsx`、受信は `/api/feedback/error-report`。
+共通・サービス別の9つの `error/global-error/not-found` に組み込む。送信時に入力を固定し、応答不明後の確認は同じ報告ID・内容で行う。
+`SystemSetting` には鍵付きハッシュで分離した送信者スコープ・報告ID・内容digest・送信状態・開始時刻だけを保存し、本文や生IPを保存しない。
+通知結果が不明なら同じ報告を再通知せず、入力と報告IDを残してお問い合わせへ案内する。停止した送信は2分後から結果不明として扱う。
+URLの検索条件・個別ID・例外本文を通知に含めない。送信情報をフォームで明示し、利用者の自由入力はSlackのplain_textへ渡す。
+これは各サービス内のAPI再試行失敗画面、メンテナンス画面、認証エラーの全箇所への組込・実通知の検証完了を意味しない。仕様全体の完成判定は別途行う。
+
 **全サービス共通ルール**: 404 やエラーが発生してリトライしても解消しない場合、ユーザーがエラー内容を報告できるフォームを必ず表示する。報告内容は Slack に通知される。
 
 #### 表示条件
@@ -2815,6 +2822,14 @@ src/
 │   └── {service}/           ← サービス固有ロジック
 └── ...
 ```
+
+---
+
+## Material Symbolsの準備と初期描画
+
+- ルートの `MaterialSymbolsReady` は、初回描画後のeffectでフォント準備を確認し、既存の `fonts-loaded` クラスを付ける。サーバーHTMLと初回クライアント描画のbody属性を揃える。
+- 読み込み完了前は従来のCSSで文字表示を隠す。FontFaceSet未対応時の表示、window load待ち、フォント準備待ちの判定を維持する。effectの終了時は所有するフレームとloadリスナーを取り消す。
+- `verify-root-font-ready-hydration.cjs` は実RootLayoutと準備コンポーネントをSSR→hydrateする通常/StrictModeの12条件。周囲の認証・分析UIとフォントの時計は合成で、実Nextブラウザと本番の確認は別に行う。
 
 ---
 

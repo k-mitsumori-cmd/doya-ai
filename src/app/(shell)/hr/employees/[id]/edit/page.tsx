@@ -11,6 +11,8 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { hrUserMessage } from '@/lib/hr/user-message'
 
 import Link from 'next/link'
+import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 
 interface Department {
   id: string
@@ -203,16 +205,33 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
       // 新しい写真があれば先にアップロードしてURLを取得
       let finalPhotoUrl = photoUrl
       if (photoFile) {
-        const fd = new FormData()
-        fd.append('file', photoFile)
-        const up = await fetch('/api/hr/upload', { method: 'POST', body: fd })
-        if (!isCurrent()) return
-        if (!up.ok) {
-          const ed = await up.json().catch(() => ({}))
-          throw new Error(hrUserMessage(ed.error, '写真を保存できませんでした。画像を確かめて、もう一度お試しください。'))
+        if (await isDirectUploadEnabled()) {
+          let up: any
+          try {
+            up = await directUpload({
+              file: photoFile,
+              fileName: photoFile.name,
+              issueUrl: '/api/hr/upload-url',
+              confirmUrl: '/api/hr/upload',
+            })
+          } catch (e: any) {
+            if (!isCurrent()) return
+            throw new Error(hrUserMessage(e?.message, '写真を保存できませんでした。画像を確かめて、もう一度お試しください。'))
+          }
+          if (!isCurrent()) return
+          finalPhotoUrl = up.url
+        } else {
+          const fd = new FormData()
+          fd.append('file', photoFile)
+          const up = await fetch('/api/hr/upload', { method: 'POST', body: fd })
+          if (!isCurrent()) return
+          if (!up.ok) {
+            const ed = await up.json().catch(() => ({}))
+            throw new Error(hrUserMessage(ed.error, '写真を保存できませんでした。画像を確かめて、もう一度お試しください。'))
+          }
+          finalPhotoUrl = (await up.json()).url
+          if (!isCurrent()) return
         }
-        finalPhotoUrl = (await up.json()).url
-        if (!isCurrent()) return
       }
 
       if (!isCurrent()) return

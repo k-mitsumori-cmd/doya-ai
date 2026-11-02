@@ -211,6 +211,16 @@ export async function postToSlackBlocks(text: string, blocks: unknown[], signal?
   await postSlackPayload({ text, blocks }, signal, meta)
 }
 
+/** User-triggered report only. Plain-text blocks prevent mentions/markup from user input. */
+export async function sendErrorReportNotification(input: import('./error-report-input').ErrorReportInput, userId?: string): Promise<void> {
+  const sections = [
+    `エラー報告が届きました\n報告ID: ${input.reportId}\nエラー種別: ${input.errorType}\n画面: ${input.errorUrl}\nユーザー: ${userId || '未ログイン'}\n日時: ${new Date().toISOString()}`,
+    `何をしていたか:\n${input.userDescription || '記入なし'}`,
+    `改善してほしい点:\n${input.userSuggestion || '記入なし'}`,
+  ]
+  await postToSlackBlocks('エラー報告が届きました', sections.map(text => ({ type: 'section', text: { type: 'plain_text', text, emoji: false } })), AbortSignal.timeout(8000), { app: 'ドヤAI', kind: 'error', severity: 'action' })
+}
+
 // ========================================
 // イベント通知（ログイン・課金・解約等）
 // ========================================

@@ -7,7 +7,7 @@
 // ⚠️ 表（support_ticket）を本番に流す前は ready: false。受付は「改善点・要望」（serviceId support）に残っている。
 // 設計: docs/architecture/support-chat/SUPPORT-CHAT-2026-10-26.md
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type Status = 'open' | 'in_progress' | 'waiting_user' | 'closed'
 const STATUS_LABEL: Record<Status, string> = { open: '未対応', in_progress: '対応中', waiting_user: 'お返事待ち', closed: '完了' }
@@ -55,33 +55,52 @@ export default function AdminSupportPage() {
   const [closeAfter, setCloseAfter] = useState(false)
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState('')
+  const detailRequestRef = useRef(0)
+  const selectedTicketRef = useRef<string | null>(null)
+  const openedLinkRef = useRef(false)
+  const listRequestRef = useRef(0)
 
   const load = useCallback(async () => {
+    const request = ++listRequestRef.current
     setLoading(true)
     setError('')
     try {
       const r = await fetch(`/api/admin/support${status ? `?status=${status}` : ''}`)
       const data = await r.json()
+      if (request !== listRequestRef.current) return
       if (!r.ok) throw new Error(data?.error || '読み込めませんでした')
       setRows(data.tickets)
       setCounts(data.counts)
       setReady(data.ready)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '読み込めませんでした')
+      if (request === listRequestRef.current) setError(e instanceof Error ? e.message : '読み込めませんでした')
     } finally {
-      setLoading(false)
+      if (request === listRequestRef.current) setLoading(false)
     }
   }, [status])
 
   useEffect(() => { void load() }, [load])
 
   const open = useCallback(async (id: string) => {
+    const sameTicket = selectedTicketRef.current === id
+    if (sameTicket && sending) return
+    selectedTicketRef.current = id
+    const request = ++detailRequestRef.current
     setNotice('')
-    const r = await fetch(`/api/admin/support/${id}`)
-    const data = await r.json().catch(() => ({}))
-    if (r.ok) setDetail(data.ticket)
-    else setError(data?.error || '開けませんでした')
-  }, [])
+    setError('')
+    setDetail(null)
+    if (!sameTicket) { setReply(''); setCloseAfter(false) }
+    setSending(false)
+    try {
+      const r = await fetch(`/api/admin/support/${id}`)
+      const data = await r.json().catch(() => ({}))
+      if (request !== detailRequestRef.current) return
+      if (r.ok) setDetail(data.ticket)
+      else setError(data?.error || '開けませんでした')
+    } catch {
+      if (request === detailRequestRef.current) setError('開けませんでした')
+    }
+  }, [sending])
 
   // Slack のリンク（?ticket=受付番号）から来たときは、その受付を開く
   useEffect(() => {
@@ -92,29 +111,31 @@ export default function AdminSupportPage() {
   useEffect(() => {
     const no = new URLSearchParams(window.location.search).get('ticket')
     const hit = no ? rows.find((r) => r.ticketNo === no) : null
-    if (hit && !detail) void open(hit.id)
+    if (hit && !detail && !openedLinkRef.current) { openedLinkRef.current = true; void open(hit.id) }
   }, [rows, detail, open])
 
   const post = useCallback(async (body: Record<string, unknown>) => {
     if (!detail) return
+    const request = detailRequestRef.current
     setSending(true)
     setNotice('')
     try {
       const r = await fetch(`/api/admin/support/${detail.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await r.json()
+      if (request !== detailRequestRef.current) return
       if (!r.ok) throw new Error(data?.error || '保存できませんでした')
       setDetail(data.ticket)
       if (body.reply) {
-        setReply('')
+        setReply((current) => current === body.reply ? '' : current)
         setNotice(data.mail === 'sent' ? '返信を保存し、メールで送りました。' : data.mail === 'failed' ? '返信を保存しました。メールは送れませんでした（お客さまは画面で読めます）。' : '返信を保存しました（メールは送っていません）。')
       } else {
         setNotice('状態を変えました。')
       }
       void load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存できませんでした')
+      if (request === detailRequestRef.current) setError(e instanceof Error ? e.message : '保存できませんでした')
     } finally {
-      setSending(false)
+      if (request === detailRequestRef.current) setSending(false)
     }
   }, [detail, load])
 

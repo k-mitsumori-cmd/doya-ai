@@ -12,6 +12,7 @@
 // 仕様: docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md §2・§8（U-1〜U-4）
 import type { ShellIconName } from './icons'
 import { DEPARTMENTS, getDepartment, orderDepartments, type DepartmentId } from '@/lib/departments'
+import { PRODUCTS, getProduct, type ProductId } from '@/lib/products'
 import { BETA_HIDDEN_SERVICE_IDS, getActiveServices, getServiceById, UNLISTED_SERVICE_IDS, type Service } from '@/lib/services'
 
 export type ShellStage = 'sell' | 'collect' | 'hire' | 'operate' | 'other'
@@ -147,6 +148,36 @@ export function buildDepartmentGroups(primary: DepartmentId[]): DepartmentShellG
   const covered = new Set(DEPARTMENTS.flatMap((d) => d.toolIds))
   const rest = TOOLS.filter((t) => !covered.has(t.id))
   if (rest.length) groups.push({ department: null, label: 'その他', tools: rest, primary: true })
+  return groups.filter((g) => g.tools.length > 0)
+}
+
+/** 製品のツール（旗 PRODUCT_HUBS_ROLLOUT が on のとき）。並びは製品の表の順。表の正本は src/lib/products.ts */
+export function productShellTools(id: ProductId): ShellTool[] {
+  const byId = new Map(TOOLS.map((t) => [t.id, t]))
+  return getProduct(id).toolIds.map((tid) => byId.get(tid)).filter((t): t is ShellTool => Boolean(t))
+}
+
+export interface ProductShellGroup {
+  product: ProductId | null
+  label: string
+  tools: ShellTool[]
+}
+
+/**
+ * 「ほかの製品のツール」に並べる組（今の製品を除く）。
+ * ⚠️ どの製品にも入っていないツール（新しく services.ts に足したもの）は、最後の「その他」にまとめる。メニューから消さない。
+ */
+export function buildProductGroups(exclude: ProductId): ProductShellGroup[] {
+  const own = new Set(productShellTools(exclude).map((t) => t.id))
+  const groups: ProductShellGroup[] = PRODUCTS.filter((p) => p.id !== exclude).map((p) => ({
+    product: p.id,
+    label: p.name,
+    // 今の製品にもあるツール（見積もり・プロマネ）は、上の「ツール」に出ているので、ここでは重ねない
+    tools: productShellTools(p.id).filter((t) => !own.has(t.id)),
+  }))
+  const covered = new Set(PRODUCTS.flatMap((p) => p.toolIds))
+  const rest = TOOLS.filter((t) => !covered.has(t.id))
+  if (rest.length) groups.push({ product: null, label: 'その他', tools: rest })
   return groups.filter((g) => g.tools.length > 0)
 }
 

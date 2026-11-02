@@ -1,0 +1,271 @@
+<title>ドヤバディの5つの製品</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@500;700&display=swap">
+<style>
+/* 設計の要点を1枚に: 上に結論、5つの製品の帯、画面の見本、3案の比較、表のつながり、段階、決めてほしいこと */
+:root {
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --ink: #141a2b;
+  --muted: #5b6478;
+  --line: #dde3ee;
+  --brand: #0066ff;
+  --brand-soft: #e6efff;
+  --new: #0a8f5b;
+  --new-soft: #e3f5ec;
+  --mk: #ff1e72; --sl: #0066ff; --hr: #c79a00; --bd: #00a5c8; --mg: #3c4660;
+  --f-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --f-num: "Inter", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1220; --surface: #171c2d; --ink: #e8ecf6; --muted: #9aa3b8; --line: #2a3248;
+  --brand: #5b9bff; --brand-soft: #1b2a4a; --new: #4fd19b; --new-soft: #133126;
+  --mk: #ff6a9f; --sl: #5b9bff; --hr: #e8c34a; --bd: #4fd3ef; --mg: #aab4cc; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1220; --surface: #171c2d; --ink: #e8ecf6; --muted: #9aa3b8; --line: #2a3248;
+  --brand: #5b9bff; --brand-soft: #1b2a4a; --new: #4fd19b; --new-soft: #133126;
+  --mk: #ff6a9f; --sl: #5b9bff; --hr: #e8c34a; --bd: #4fd3ef; --mg: #aab4cc; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.75;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 64px }
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px }
+h1 { font-size: clamp(24px, 4vw, 34px); font-weight: 900; line-height: 1.35; margin: 0; text-wrap: balance }
+h2 { font-size: 20px; font-weight: 700; margin: 0 0 14px; text-wrap: balance }
+p { margin: 0 }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--brand); font-weight: 700 }
+.lead { color: var(--muted); max-width: 62ch; margin-top: 10px }
+.sum { display: grid; gap: 8px; margin-top: 18px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px }
+.sum li { margin-left: 1.1em }
+.sum ul { margin: 0; padding: 0; display: grid; gap: 6px }
+
+/* 5つの製品 */
+.products { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px }
+.prod { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0 }
+.prod b { font-size: 16px }
+.prod .who { font-size: 12px; color: var(--muted) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line) }
+.chip.shared { border-style: dashed; border-color: var(--c) }
+.note { font-size: 13px; color: var(--muted); margin-top: 10px }
+
+/* 画面の見本 */
+.mock { display: grid; grid-template-columns: 230px 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface) }
+.side { border-right: 1px solid var(--line); padding: 14px; display: grid; gap: 4px; align-content: start; font-size: 14px }
+.switch { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand-soft); margin-bottom: 8px; position: relative }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 13px; flex: none }
+.switch small { display: block; font-size: 11px; color: var(--muted); line-height: 1.2 }
+.switch strong { display: block; line-height: 1.3 }
+.caret { margin-left: auto; color: var(--brand) }
+.side .lbl { font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-top: 10px }
+.side .it { padding: 5px 8px; border-radius: 6px }
+.side .it.on { background: var(--brand-soft); color: var(--brand); font-weight: 700 }
+.main { padding: 18px 20px; display: grid; gap: 14px; align-content: start; min-width: 0 }
+.main .h { font-weight: 700; font-size: 17px }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+.kpi { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px }
+.kpi span { font-size: 12px; color: var(--muted); display: block }
+.kpi em { font-style: normal; font-family: var(--f-num); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums }
+.ask { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; color: var(--muted); font-size: 14px }
+.menu { position: absolute; left: 0; top: calc(100% + 6px); width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(20,26,43,.15); padding: 6px; z-index: 2; display: grid; gap: 2px }
+.menu div { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 6px; font-size: 13px }
+.menu div.cur { background: var(--brand-soft) }
+.dot { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none }
+.menu .cnt { margin-left: auto; color: var(--muted); font-family: var(--f-num); font-size: 12px }
+.menu .def { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; color: var(--brand); font-weight: 700 }
+.mockwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start }
+.mockwrap ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: 14px }
+.menuspace { height: 250px }
+
+/* 比較の表 */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface) }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top }
+thead th { font-size: 13px; color: var(--muted); font-weight: 500 }
+th.rec, td.rec { background: var(--brand-soft) }
+.pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--brand); color: #fff; margin-left: 6px; vertical-align: 2px }
+tbody th { font-weight: 500; color: var(--muted); white-space: nowrap }
+
+/* 表のつながり */
+.er { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.tb { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; min-width: 0 }
+.tb b { font-family: var(--f-num); font-size: 13px; display: block; word-break: break-all }
+.tb .k { color: var(--muted); font-size: 12px; display: block; margin-top: 4px }
+.tb.new { border: 2px solid var(--new); background: var(--new-soft) }
+.tb.keep { border-style: solid }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 4px; margin-bottom: 4px }
+.tag.n { background: var(--new); color: var(--surface) }
+.tag.s { background: var(--line); color: var(--ink) }
+.col h3 { font-size: 13px; color: var(--muted); font-weight: 500; margin: 0 0 8px }
+.col { display: grid; gap: 8px; align-content: start }
+
+/* 段階 */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; align-content: start }
+.step .n { font-family: var(--f-num); font-weight: 700; color: var(--brand) }
+.step .db { font-size: 12px; color: var(--muted) }
+.step.opt { border-style: dashed }
+
+.ask-list { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding-block: 16px; padding-right: 18px }
+footer { font-size: 13px; color: var(--muted) }
+
+@media (max-width: 760px) {
+  .mockwrap { grid-template-columns: 1fr }
+  .mock { grid-template-columns: 1fr }
+  .side { border-right: 0; border-bottom: 1px solid var(--line) }
+  .kpis { grid-template-columns: 1fr 1fr }
+  .er { grid-template-columns: 1fr }
+  .menu { width: 100% }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">設計の要点 / 2026-11-01</p>
+    <h1>ドヤバディを、部門ごとの5つの製品に分ける</h1>
+    <p class="lead">契約と料金（無料とプロ 月9,980円）、ツールの中身と URL は変えません。左上の切り替えで製品を選ぶと、サイドバーとホームがその部門の分だけになります。</p>
+    <div class="sum">
+      <ul>
+        <li>製品は5つです。セールス・マーケティング・人事・予実管理・経営管理。</li>
+        <li>おすすめは A案「見せ方だけ分ける」です。旗で三森さんだけに先に出し、すぐ戻せます。</li>
+        <li>経営管理のホームは、今の経営ホームです。社長と管理者は、ここから全部を見渡せます。</li>
+        <li>DB は課金の表を変えません。足すのは「会社が使う製品」と「メンバーの担当と既定の製品」の2つの表です。</li>
+      </ul>
+    </div>
+  </header>
+
+  <section>
+    <h2>5つの製品と、入るツール</h2>
+    <div class="products">
+      <div class="prod" style="--c: var(--mk)"><b>マーケティング</b><span class="who">マーケの担当者</span>
+        <div class="chips"><span class="chip">AIO</span><span class="chip">記事作成</span><span class="chip">バナー</span><span class="chip">広告画像</span><span class="chip">ペルソナ</span><span class="chip">インタビュー</span><span class="chip">AI質問リンク</span><span class="chip">ポップアップ</span><span class="chip">展示会</span></div></div>
+      <div class="prod" style="--c: var(--sl)"><b>セールス</b><span class="who">営業の担当者</span>
+        <div class="chips"><span class="chip">営業管理</span><span class="chip">商談準備</span><span class="chip">AI商談</span><span class="chip">リスト</span><span class="chip">スライド</span><span class="chip shared">見積もり</span></div></div>
+      <div class="prod" style="--c: var(--hr)"><b>人事</b><span class="who">人事・総務の担当者</span>
+        <div class="chips"><span class="chip">HR</span><span class="chip">面接官</span><span class="chip">社内インタビュー</span><span class="chip">勤怠</span></div></div>
+      <div class="prod" style="--c: var(--bd)"><b>予実管理</b><span class="who">経理の担当者</span>
+        <div class="chips"><span class="chip">収入管理</span><span class="chip">支出管理</span><span class="chip shared">見積もり</span><span class="chip shared">プロマネ</span><span class="chip">月ごとの予と実</span></div></div>
+      <div class="prod" style="--c: var(--mg)"><b>経営管理</b><span class="who">社長・管理者</span>
+        <div class="chips"><span class="chip">経営ホーム</span><span class="chip">進めた仕事</span><span class="chip shared">プロマネ</span><span class="chip">メンバーと権限</span><span class="chip">ドヤパワー</span><span class="chip">全製品の数字</span></div></div>
+    </div>
+    <p class="note">点線の枠は、2つの製品に入るツールです。ツールの実体と URL は1つのままです。正式名は「ドヤバディ セールス」のように書きます。ツールの名前は変えません。</p>
+  </section>
+
+  <section>
+    <h2>画面の見本（パソコン）</h2>
+    <div class="mockwrap">
+      <div>
+        <div class="mock">
+          <div class="side">
+            <div class="switch">
+              <span class="logo">D</span>
+              <span><small>ドヤバディ</small><strong>セールス</strong></span>
+              <span class="caret" aria-hidden="true">▾</span>
+              <div class="menu" aria-label="製品の切り替えの見本">
+                <div style="--c: var(--mg)"><span class="dot"></span>経営管理<span class="cnt">全体</span></div>
+                <div class="cur" style="--c: var(--sl)"><span class="dot"></span>セールス<span class="cnt">6</span></div>
+                <div style="--c: var(--mk)"><span class="dot"></span>マーケティング<span class="cnt">9</span></div>
+                <div style="--c: var(--hr)"><span class="dot"></span>人事<span class="cnt">4</span></div>
+                <div style="--c: var(--bd)"><span class="dot"></span>予実管理<span class="cnt">4</span></div>
+                <div class="def">この製品を既定にする</div>
+              </div>
+            </div>
+            <div class="menuspace" aria-hidden="true"></div>
+            <span class="it on">ホーム</span>
+            <span class="it">動いているタスク</span>
+            <span class="lbl">ツール</span>
+            <span class="it">営業管理</span><span class="it">商談準備</span><span class="it">AI商談</span><span class="it">リスト</span><span class="it">スライド</span><span class="it">見積もり</span>
+            <span class="lbl">共通</span>
+            <span class="it">すべてのツール</span><span class="it">設定</span>
+          </div>
+          <div class="main">
+            <span class="h">セールスのホーム（/hub/sales）</span>
+            <div class="kpis">
+              <div class="kpi"><span>今月の商談</span><em>—</em></div>
+              <div class="kpi"><span>見積の金額</span><em>—</em></div>
+              <div class="kpi"><span>受注の見込み</span><em>—</em></div>
+            </div>
+            <div class="ask">ドヤくんに頼む（例: 来週の商談の準備をまとめて進めたい）</div>
+            <div class="ask">判断が要ること・動いているタスク（セールスのツールの分だけ）</div>
+            <div class="ask">ツールのカードと、最近つくったもの</div>
+          </div>
+        </div>
+        <p class="note">数字は各ツールの API から読みます。見本では「—」にしています。作り物の数字は出しません。</p>
+      </div>
+      <ul>
+        <li>切り替えはサイドバーのいちばん上です。スマホでは、上の帯の製品名を押すと、下からシートで出ます。</li>
+        <li>製品のホームは <code>/hub/&lt;id&gt;</code> です。経営管理だけは今の <code>/home</code> を使います。</li>
+        <li>ほかの製品のツールも「すべてのツール」と ⌘K から開けます。隠しません。</li>
+        <li>最初に開く製品: 本人が選んだもの → 管理者が決めたもの → 最後に開いたもの → 社長・管理者は経営管理。</li>
+        <li>ツールの中のメニューは変えません。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>3つの案</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th class="rec">A案 見せ方だけ分ける<span class="pill">おすすめ</span></th><th>B案 URL も分ける</th><th>C案 製品ごとに別のサイト</th></tr></thead>
+        <tbody>
+          <tr><th>中身</th><td class="rec">切り替えで、サイドバーとホームが変わる。URL は今のまま</td><td><code>/sales/sfa</code> のように URL の頭に製品を付ける</td><td><code>sales.doya-ai…</code> のように入口と LP を分ける</td></tr>
+          <tr><th>今のリンク</th><td class="rec">そのまま開ける</td><td>転送が要る</td><td>転送とログインの共有が要る</td></tr>
+          <tr><th>2つの製品に入るツール</th><td class="rec">URL は1つのまま</td><td>URL が2つになる</td><td>サイトが2つに分かれる</td></tr>
+          <tr><th>課金・データ</th><td class="rec">変えない</td><td>変えない</td><td>ログインの作業が要る</td></tr>
+          <tr><th>作る量</th><td class="rec">小さい</td><td>中くらい</td><td>大きい</td></tr>
+          <tr><th>戻しやすさ</th><td class="rec">旗を off にすれば戻る</td><td>戻すと URL がまた変わる</td><td>戻しにくい</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">A案は HubSpot と同じ形です。HubSpot は Hub を別のサイトにせず、1つの画面のサイドバーの区分として並べ、既定のホームで担当者の入口を変えています。</p>
+  </section>
+
+  <section>
+    <h2>表のつながり（ER 図の要約）</h2>
+    <div class="er">
+      <div class="col">
+        <h3>課金（変えない）</h3>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>users</b><span class="k">plan（料金の判定はここだけ）</span></div>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>user_service_subscriptions</b><span class="k">serviceId ＝ ツールの id</span></div>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>account_company_billing・doya_power_*</b><span class="k">人数の控えとドヤパワー</span></div>
+      </div>
+      <div class="col">
+        <h3>会社と役割（今のまま）</h3>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>account_companies</b><span class="k">1人1社。持ち主</span></div>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>account_company_members</b><span class="k">role: admin・manager・billing・member・guest</span></div>
+        <div class="tb keep"><span class="tag s">今のまま</span><b>account_company_role_settings</b><span class="k">policy（JSON）。担当の外を隠す設定を、あとで足せる</span></div>
+      </div>
+      <div class="col">
+        <h3>製品（足す）</h3>
+        <div class="tb new"><span class="tag n">新</span><b>account_company_products</b><span class="k">companyId・productId・enabled・sortOrder。行が無い製品は「使う」</span></div>
+        <div class="tb new"><span class="tag n">作り替え</span><b>account_company_member_products</b><span class="k">companyId・userId・products（担当）・defaultProduct（既定）。本番にまだ無い部署の表を作り替える</span></div>
+        <div class="tb keep"><span class="tag s">コード</span><b>src/lib/products.ts</b><span class="k">製品とツールの対応。DB には持たない</span></div>
+      </div>
+    </div>
+    <p class="note">ツールの id は課金の serviceId と同じです。製品とツールのつなぎ目はコードの表だけなので、課金の表には触りません。</p>
+  </section>
+
+  <section>
+    <h2>進め方</h2>
+    <div class="steps">
+      <div class="step"><span class="n">段1</span><b>切り替えとホームの骨組み</b><span>製品の表・旗・左上の切り替え・サイドバー・製品のホーム</span><span class="db">DB は変えない。旗が off なら今のまま</span></div>
+      <div class="step"><span class="n">段2</span><b>設定</b><span>会社が使う製品・メンバーの担当と既定の製品</span><span class="db">表を2つ足す。本番への反映は三森さんの OK のあと</span></div>
+      <div class="step"><span class="n">段3</span><b>中身</b><span>製品ごとの数字・予実の月の表・ドヤくんの例</span><span class="db">DB は変えない</span></div>
+      <div class="step"><span class="n">段4</span><b>全員に出す</b><span>三森さんだけ → 全員。初めの1回だけ案内を出す。LP に「プロ1つで5つの製品」</span><span class="db">DB は変えない</span></div>
+      <div class="step opt"><span class="n">段5（任意）</span><b>予算の入力・担当の外を隠す</b><span>サービスの中身を足すので、三森さんが決めたときだけ</span><span class="db">表を足す</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>三森さんに決めてほしいこと</h2>
+    <ol class="ask-list">
+      <li>A案（見せ方だけ分ける）で進めてよいか。</li>
+      <li>製品は、セールス・マーケティング・人事・予実管理・経営管理の5つでよいか。</li>
+      <li>見積もりとプロマネを、2つの製品に入れてよいか。</li>
+      <li>予算の入力（段5）を作るか。作らない場合、予実管理は「売上と支払いの予定」と「実績」を比べる形になります。</li>
+      <li>担当でない製品も、隠さずに「すべてのツール」から開けるままにしてよいか。</li>
+    </ol>
+  </section>
+
+  <footer>設計書の全文: docs/design/buddy-products-2026-11-01.md（ブランチ claude/buddy-department-hubs-58c640）</footer>
+</div>

@@ -88,7 +88,7 @@ export default function QuoteDocumentPage() {
 
   return (
     <div className="pb-24">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-[60px] md:top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <Link href="/quote" className={`inline-flex min-h-11 items-center rounded ${FOCUS} text-xs text-slate-500 hover:underline font-semibold`}>← 見積もり一覧</Link>

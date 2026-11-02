@@ -154,6 +154,12 @@ export async function createRun(repo: RunRepo, input: { userId: string; recipeId
   return runViewOf(got!.run, got!.tasks)
 }
 
+/** 「ドヤくんが進めた仕事」の一覧: 本人の実行を新しい順に（days 日まで・limit 件まで） */
+export async function recentRuns(repo: RunRepo, userId: string, opts: { days: number; limit: number }, now: Date = new Date()): Promise<AgentRunView[]> {
+  const rows = await repo.listRuns(userId, new Date(now.getTime() - opts.days * 86400_000), opts.limit)
+  return rows.map((r) => runViewOf(r.run, r.tasks, now))
+}
+
 /** 「続きを進める」: 最後の実行のうち、終わっていない ToDo が残っているもの。無ければ null */
 export async function latestOpenRun(repo: RunRepo, userId: string, now: Date = new Date()): Promise<AgentRunView | null> {
   const rows = await repo.listRuns(userId, new Date(now.getTime() - RESUME_WITHIN_MS), 5)

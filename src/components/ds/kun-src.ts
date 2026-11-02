@@ -15,6 +15,8 @@ const HAS_256 = new Set<string>([
   'kpi-sales', 'kpi-incoming', 'kpi-spend', 'kpi-deals', 'kpi-hiring',
   'paint-a', 'paint-b', 'paint-done',
   'tool-banner', 'tool-adimage', 'tool-persona', 'tool-asklink', 'tool-popup', 'tool-tenjikai', 'tool-aishodan', 'tool-doyalist', 'tool-promane', 'tool-shanai', 'tool-income',
+  // 2026-11-01 に足した絵（経営ホームの ToDo の流れ。256px 版あり）
+  'run',
 ])
 
 /** 表示の大きさに合わせて 256px と 512px を切り替える srcSet。256px 版が無いポーズ・3D のクマは undefined */

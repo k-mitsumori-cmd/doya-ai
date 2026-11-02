@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Button } from '@/components/promane/ui/button'
 import { FeedbackButton } from '@/components/promane/feedback-button'
 import { Bug, Home, RotateCcw } from 'lucide-react'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function PromaneError({
   error,
@@ -58,6 +59,7 @@ export default function PromaneError({
             <Bug size={16} aria-hidden className="inline-block -mt-0.5 mr-1" />不具合を報告する
           </FeedbackButton>
         </div>
+        <ErrorReportForm errorType="500" />
       </div>
     </div>
   )

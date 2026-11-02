@@ -1,4 +1,5 @@
 import RuntimeErrorReporter from '@/components/RuntimeErrorReporter';
+import MaterialSymbolsReady from '@/components/MaterialSymbolsReady';
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
@@ -160,31 +161,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {/* Material Symbols フォント読み込み検知 — 読み込み前のテキスト表示防止 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                if (!document.fonts || !document.fonts.check) {
-                  document.body.classList.add('fonts-loaded');
-                  return;
-                }
-                function check() {
-                  if (document.fonts.check('1em "Material Symbols Outlined"')) {
-                    document.body.classList.add('fonts-loaded');
-                  } else {
-                    requestAnimationFrame(check);
-                  }
-                }
-                if (document.readyState === 'complete') {
-                  check();
-                } else {
-                  window.addEventListener('load', check);
-                }
-              })();
-            `,
-          }}
-        />
+        <MaterialSymbolsReady />
         {/* Google Tag Manager (noscript) */}
         <GoogleTagManagerNoScript />
         <Providers>
