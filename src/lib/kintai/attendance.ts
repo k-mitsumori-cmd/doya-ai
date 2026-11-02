@@ -1,7 +1,7 @@
 import type { KintaiClockRecord, KintaiWorkRule } from '@prisma/client'
 
 export function calculateDailyAttendance(
-  records: KintaiClockRecord[],
+  records: Array<Pick<KintaiClockRecord, 'type' | 'timestamp'> & Partial<Pick<KintaiClockRecord, 'id' | 'createdAt'>>>,
   workRule: KintaiWorkRule | null,
   date: Date
 ): {
