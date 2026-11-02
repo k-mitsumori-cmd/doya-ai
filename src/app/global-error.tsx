@@ -6,6 +6,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { reportBrowserError } from '@/components/RuntimeErrorReporter'
+import ErrorReportForm from '@/components/common/ErrorReportForm'
 
 export default function GlobalError({
   error,
@@ -47,6 +48,7 @@ export default function GlobalError({
             {error?.digest ? (
               <p style={{ marginTop: 24, fontSize: 12, color: '#9ca3af' }}>エラーID: {error.digest}</p>
             ) : null}
+            <ErrorReportForm errorType="500" />
           </div>
         </main>
       </body>
