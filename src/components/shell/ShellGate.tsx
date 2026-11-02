@@ -65,11 +65,11 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
 }) {
   const pathname = usePathname()
   const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
+  const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const framed = shown
-    ? <AppShell userName={userName} initialRecent={initialRecent} departments={departments} agentTasks={agentTasks} navGroups={navGroups}>{children}</AppShell>
+    ? <AppShell actorKey={userKey} userName={userName} initialRecent={initialRecent} departments={departments} agentTasks={agentTasks} navGroups={navGroups}>{children}</AppShell>
     : <>{children}</>
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
-  const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const inner = guide && shown && userKey
     ? <NoticeProvider userKey={userKey}>{framed}<ShellNotices /><HandoffSuggest /><PowerOutNotices /></NoticeProvider>
     : framed
