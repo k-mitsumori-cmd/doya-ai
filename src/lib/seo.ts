@@ -291,7 +291,7 @@ export function generateOrganizationSchema() {
     alternateName: SITE_ALTERNATE_NAMES,
     url: SITE_CONFIG.url,
     // 旗が all のときは新ロゴのアイコン（正方形 512px）。off の間は従来の値のまま
-    logo: isBrandRenamed() ? `${baseUrl}/brand/doya-buddy/icon/doya-buddy-icon-512.png` : `${baseUrl}/logo.png`,
+    logo: isBrandRenamed() ? `${baseUrl}/brand/doya-buddy/icon/doya-buddy-icon-512.png` : `${baseUrl}/icon-512x512.png`,
     description: SITE_CONFIG.description,
     parentOrganization: {
       '@type': 'Organization',

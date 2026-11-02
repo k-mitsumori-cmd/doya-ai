@@ -184,9 +184,9 @@ function SignInContent() {
         {/* RIGHT: form */}
         <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12 flex flex-col min-h-[70vh] lg:min-h-0">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-black text-slate-400 tracking-widest uppercase">Sign in</p>
-              <h1 className="mt-2 text-2xl font-black text-slate-900">おかえりなさい</h1>
+              <h1 className="mt-2 text-2xl font-black text-slate-900 [word-break:auto-phrase]">おかえり<wbr />なさい</h1>
               {/* 375px で「す」だけが次の行に落ちないよう、文節で折り返す（2026-10-23） */}
               <p className="mt-2 text-sm text-slate-600 font-bold [text-wrap:balance] [word-break:auto-phrase]">Googleアカウントで<wbr />簡単にログインできます</p>
             </div>
