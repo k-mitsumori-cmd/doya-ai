@@ -65,7 +65,7 @@ check('Product hubs flag: off reads no session and changes nothing on screen', (
   // 経営ホームの製品の帯も旗の内側だけ
   assert.match(read('src/app/(shell)/home/page.tsx'), /productStrip=\{productsOn \? <ProductStrip \/> : null\}/)
   // 動いているタスクを製品で絞るのは旗の内側だけ（画面は productsOn のときだけ製品を渡し、API は旗を見てから絞る）
-  assert.match(shell, /<AgentTasksRow pathname=\{pathname\} onNavigate=\{navigate\} product=\{productsOn \? product : null\} \/>/)
+  assert.match(shell, /<AgentTasksRow key=\{actorKey \|\| 'anonymous'\} pathname=\{pathname\} onNavigate=\{navigate\} product=\{productsOn \? product : null\} \/>/)
   assert.match(read('src/app/api/agent/runs/summary/route.ts'), /const product = asked && \(await isProductHubsEnabled\(\)\) \? asked : null/)
 })
 

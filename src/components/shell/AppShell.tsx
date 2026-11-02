@@ -263,13 +263,26 @@ function AgentTasksRow({ pathname, onNavigate, product = null }: { pathname: str
   const [counts, setCounts] = useState<TaskCounts | null>(null)
   const [off, setOff] = useState(false)
   const running = counts?.running ?? 0
+  const readNumber = useRef(0)
+  const readController = useRef<AbortController | null>(null)
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; readController.current?.abort() }
+  }, [])
   const load = useCallback(async () => {
+    const request = ++readNumber.current
+    readController.current?.abort()
+    const controller = new AbortController(); readController.current = controller
+    const valid = () => mounted.current && request === readNumber.current && !controller.signal.aborted
     try {
       // 製品の旗の内側では、今の製品のツールの分だけを数える（経営管理は全部）
-      const res = await fetch(product ? `/api/agent/runs/summary?product=${product}` : '/api/agent/runs/summary', { cache: 'no-store' })
-      if (res.status === 404) { setOff(true); return }
+      const res = await fetch(product ? `/api/agent/runs/summary?product=${product}` : '/api/agent/runs/summary', { cache: 'no-store', signal: controller.signal })
+      if (!valid()) return
+      if (res.status === 404) { setCounts(null); setOff(true); return }
       if (!res.ok) return
       const j = await res.json()
+      if (!valid()) return
       if (typeof j?.running === 'number') setCounts({ running: j.running, waiting: j.waiting ?? 0, done: j.done ?? 0, failed: j.failed ?? 0 })
     } catch { /* 数えられなくてもリンクは使える */ }
   }, [product])
@@ -320,7 +333,7 @@ function AgentTasksRow({ pathname, onNavigate, product = null }: { pathname: str
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups }: {
+export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups, actorKey }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
@@ -331,6 +344,8 @@ export default function AppShell({ children, userName, initialRecent, department
   products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean; canEditSelf?: boolean; locked?: boolean }
   /** 「動いているタスク」を出すか（旗 AGENT_ORCHESTRATION_ROLLOUT。サーバーが決める） */
   agentTasks?: boolean
+  /** 件数と通信を利用者ごとに分離する。表示やAPIの認可には使わない。 */
+  actorKey?: string
   /** まとまりの開閉（cookie。押したものだけ） */
   navGroups?: Record<string, boolean>
 }) {
@@ -483,7 +498,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
         <div className={styles.navScroll}>
           <NavItem tool={productsOn ? productHome : SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
-          {agentTasks ? <AgentTasksRow pathname={pathname} onNavigate={navigate} product={productsOn ? product : null} /> : null}
+          {agentTasks ? <AgentTasksRow key={actorKey || 'anonymous'} pathname={pathname} onNavigate={navigate} product={productsOn ? product : null} /> : null}
           {recentTools.length ? (
             <div className={styles.group}>
               <p className={styles.groupLabel}>最近使ったツール</p>

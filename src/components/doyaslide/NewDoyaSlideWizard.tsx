@@ -27,6 +27,8 @@ import {
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
+import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { ShellCostBadge } from '@/components/shell/power'
 import { useOneButton } from '@/components/one-button/context'
@@ -441,10 +443,27 @@ export default function NewDoyaSlideWizard() {
       }
       if (saved.status === 'structuring' || saved.status === 'generating') throw new WizardResultError('作成済みプロジェクトは処理中です。プロジェクトを開いて状態をご確認ください。')
       if (logoFile) {
-        const fd = new FormData(); fd.append('file', logoFile); fd.append('projectId', projectId)
-        const { res: logoRes, data: logoData } = await readWizardResponse('/api/doyaslide/assets/logo', { method: 'POST', body: fd })
+        let logoData: any = null
+        let logoOk = false
+        if (await isDirectUploadEnabled()) {
+          try {
+            logoData = await directUpload({
+              file: logoFile, fileName: logoFile.name,
+              issueUrl: '/api/doyaslide/assets/logo/upload-url', confirmUrl: '/api/doyaslide/assets/logo',
+              confirmBody: { projectId },
+            })
+            logoOk = true
+          } catch (e: any) {
+            if (!mountedRef.current) return
+            throw new WizardResultError(e?.message || 'ロゴを保存できませんでした。入力内容を保持しました。再試行してください。')
+          }
+        } else {
+          const fd = new FormData(); fd.append('file', logoFile); fd.append('projectId', projectId)
+          const { res: logoRes, data: legacyData } = await readWizardResponse('/api/doyaslide/assets/logo', { method: 'POST', body: fd })
+          logoData = legacyData; logoOk = logoRes.ok
+        }
         if (!mountedRef.current) return
-        if (!logoRes.ok || typeof logoData?.url !== 'string' || !logoData.url.trim()) throw new WizardResultError('ロゴを保存できませんでした。入力内容を保持しました。再試行してください。')
+        if (!logoOk || typeof logoData?.url !== 'string' || !logoData.url.trim()) throw new WizardResultError('ロゴを保存できませんでした。入力内容を保持しました。再試行してください。')
         const logoUrl = new URL(logoData.url)
         if (logoUrl.protocol !== 'https:' || logoUrl.username || logoUrl.password) throw new WizardResultError('ロゴの保存結果を確認できませんでした。')
         const confirmedLogo = await readWizardResponse(`/api/doyaslide/projects/${projectId}`, { cache: 'no-store' }, 30000)

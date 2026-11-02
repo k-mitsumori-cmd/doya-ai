@@ -13,6 +13,8 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useId, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
+import { directUpload } from '@/lib/direct-upload/client'
+import { isDirectUploadEnabled } from '@/lib/direct-upload/mode-client'
 
 interface Department {
   id: string
@@ -129,11 +131,21 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
 
       if (photoFile) {
         try {
-          const formData = new FormData()
-          formData.append('file', photoFile)
-          const uploadRes = await fetch('/api/hr/upload', { method: 'POST', body: formData })
-          if (!uploadRes.ok) throw new Error('写真のアップロードに失敗しました')
-          const uploadData = await uploadRes.json()
+          let uploadData: any
+          if (await isDirectUploadEnabled()) {
+            uploadData = await directUpload({
+              file: photoFile,
+              fileName: photoFile.name,
+              issueUrl: '/api/hr/upload-url',
+              confirmUrl: '/api/hr/upload',
+            })
+          } else {
+            const formData = new FormData()
+            formData.append('file', photoFile)
+            const uploadRes = await fetch('/api/hr/upload', { method: 'POST', body: formData })
+            if (!uploadRes.ok) throw new Error('写真のアップロードに失敗しました')
+            uploadData = await uploadRes.json()
+          }
           if (typeof uploadData.url !== 'string' || !uploadData.url) throw new Error('写真のURLを確認できません')
           const attachRes = await fetch(`/api/hr/employees/${encodeURIComponent(employeeId)}`, {
             method: 'PATCH',

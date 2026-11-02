@@ -21,6 +21,7 @@ import { Button, ToolHero } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { UiIcon, type UiIconName } from '@/components/icons'
+import BannerModeChooser from '@/components/banner/BannerModeChooser'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
@@ -1668,7 +1669,7 @@ function BannerDashboardWorkspace() {
         {/* UI崩れ対策：左カラム固定幅だと日本語が1文字改行しやすいので、元の比率（右=固定）に戻す */}
         {oneButton && (
           <OneButtonBar
-            eyebrow="バナー作成"
+            eyebrow="ゼロから作る"
             cta={isGenerating ? 'バナーをつくっています。このままお待ちください' : '用途とキーワードを入れたら、押してください'}
             label="プロ品質バナーを生成する"
             scope="入力した内容から、バナーを3案つくります。つくったあとの手直しは、下の結果から行えます。"
@@ -1679,11 +1680,11 @@ function BannerDashboardWorkspace() {
             progress={{ done: Math.round(progress), total: 100 }}
           />
         )}
+        <BannerModeChooser current="scratch" />
         <div className={nextStyles.createHero}>
             <ToolHero
               title="入力するだけで、プロ品質のバナーを3案。"
               lead="用途・業種・伝えたい言葉を入れると、AIがクリックされやすい構成でバナーをつくります。迷ったら「サンプル入力」から試せます。"
-              action={<Button href="/banner/dashboard" variant="secondary" icon="LayoutTemplate">見本から選ぶ</Button>}
               tool="banner"
             />
           </div>
