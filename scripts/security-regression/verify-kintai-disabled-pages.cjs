@@ -39,6 +39,11 @@ mocks['@/lib/kintai/use-clock'] = loadTs('src/lib/kintai/use-clock.ts', {
   './user-error': mocks['@/lib/kintai/user-error'],
 }, { setTimeout, clearTimeout, AbortController })
 
+mocks['@/lib/kintai/clock-display'] = loadTs('src/lib/kintai/clock-display.ts', {
+  './attendance': loadTs('src/lib/kintai/attendance.ts'),
+  './shift-records': loadTs('src/lib/kintai/shift-records.ts'),
+})
+
 function moduleOf(file) {
   const source = fs.readFileSync(path.join(root, file), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: {

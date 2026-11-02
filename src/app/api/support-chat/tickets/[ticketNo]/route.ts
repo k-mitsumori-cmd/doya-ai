@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -18,18 +19,19 @@ type Ctx = { params: Promise<{ ticketNo: string }> }
 
 async function ticketNoOf(ctx: Ctx): Promise<string | null> {
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
-  const no = decodeURIComponent(p.ticketNo || '')
+  let no: string
+  try { no = decodeURIComponent(p.ticketNo || '') } catch { return null }
   return /^DY-\d{6}-[2-9A-HJ-NP-Z]{4}$/.test(no) ? no : null
 }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  if (!(await isSupportChatEnabled())) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!(await isSupportChatEnabled())) return privateApiJson({ error: 'Not found' }, { status: 404 })
   const userId = await supportUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
   const no = await ticketNoOf(ctx)
   const ticket = no ? await readMyTicket(userId, no) : null
-  if (!ticket) return NextResponse.json({ error: 'お問い合わせが見つかりません' }, { status: 404 })
-  return NextResponse.json({ ticket })
+  if (!ticket) return privateApiJson({ error: 'お問い合わせが見つかりません' }, { status: 404 })
+  return privateApiJson({ ticket })
 }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
