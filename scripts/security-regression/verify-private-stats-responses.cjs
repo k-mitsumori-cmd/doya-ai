@@ -14,8 +14,9 @@ function admin(mode) {
       if (mode === 'auth-error') throw new Error('PRIVATE_AUTH_ERROR')
       return { valid: mode === 'data-error' }
     } },
-    '@/lib/prisma': { prisma: {} },
+    '@/lib/prisma': { prisma: { user: { count: async () => { throw new Error('PRIVATE_DATABASE_ERROR') } } } },
     '@/lib/attribution': { serviceLabelOf: () => 'service' },
+    '@/lib/jst': load('src/lib/jst.ts'),
   })
 }
 
@@ -40,7 +41,7 @@ function banner(mode, subPlan = 'FREE', accountPlan = 'PRO') {
 ;(async () => {
   for (const mode of ['unauthorized', 'auth-error', 'data-error']) {
     const result = await admin(mode).GET(new Request('https://example.test/api/admin/stats'))
-    assert.equal(result.status, mode === 'unauthorized' ? 401 : 500)
+    assert.equal(result.status, mode === 'unauthorized' ? 401 : 503)
     assertPrivate(result)
     assert.equal(JSON.stringify(await result.json()).includes('PRIVATE_'), false)
   }
