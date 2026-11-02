@@ -195,7 +195,7 @@ export const PRODUCTS: Record<ProductId, Product> = {
       { id: "home", href: "/home", name: "経営ホーム", desc: "ゴールと ToDo から、完成までの流れを見ます。全部の製品の動きを1か所で確かめられます。" },
       { id: "work", href: "/home/work", name: "ドヤくんが進めた仕事", desc: "ドヤくんが進めた仕事を一覧で見て、あとから確かめられます。" },
       { id: "promane", name: "プロマネ", desc: "案件の進み具合、収支、人件費を一元管理します。", shared: "予実管理にも入っています" },
-      { id: "roles", href: "/home/roles", name: "会社とメンバーと権限", desc: "メンバーを招待し、役割を決めます。製品ごとの担当も、ここで決めます。" },
+      { id: "roles", href: "/home/roles", name: "会社とメンバーと権限", desc: "メンバーを招待し、役割を決めます。会社で使う製品と、メンバーごとの担当の製品も決められます。" },
       { id: "power", href: "/home", name: "ドヤパワー", desc: "ドヤくんやツールが動いた量を、会社全体で確かめます。" },
     ],
     story: {

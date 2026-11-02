@@ -183,3 +183,9 @@
     align-self: center;
   }
 }
+
+/* 日本語の行末に1〜2文字だけ残さない（375px で製品の一言とプランの文に出ていた） */
+.u-product .u-prod-one,
+.u-product .u-plan-row b {
+  text-wrap: balance;
+}
