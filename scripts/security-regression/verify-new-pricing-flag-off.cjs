@@ -152,7 +152,7 @@ async function assertUnchanged(env, label) {
     let opts = null
     const missions = load('src/lib/missions/load.server.ts', {
       '@/lib/prisma': { prisma: new Proxy({}, { get: () => new Proxy({}, { get: () => async () => null }) }) },
-      './jst': load('src/lib/missions/jst.ts'),
+      './jst': load('src/lib/missions/jst.ts', { '../jst': load('src/lib/jst.ts') }),
       './view': { buildMissionsView: (_input, _now, o) => { opts = o; return { ok: true } } },
       '@/lib/pricing-v2/rollout': loadModules({}).rollout,
     }, { process: { env: {} } })
