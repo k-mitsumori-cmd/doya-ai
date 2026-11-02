@@ -24,8 +24,9 @@ interface ServiceStats {
   icon: string
   generations: number
   todayGenerations: number
-  users: number
-  proUsers: number
+  users: number | null
+  userCountLabel?: string
+  proUsers: number | null
   growth: number
 }
 
@@ -96,9 +97,9 @@ export default function AnalyticsPage() {
 
   const statsData = [
     { label: '総生成数', value: data.totalGenerations.toLocaleString(), change: `${data.generationGrowth >= 0 ? '+' : ''}${data.generationGrowth.toFixed(1)}%`, up: data.generationGrowth >= 0, icon: FileText },
-    { label: '本日生成', value: data.todayGenerations.toLocaleString(), change: '実績', up: true, icon: Zap },
-    { label: '総ユーザー', value: data.totalUsers.toLocaleString(), change: `CVR ${data.conversionRate}%`, up: true, icon: Users },
-    { label: '有料会員', value: data.premiumUsers.toLocaleString(), change: `${data.conversionRate}%`, up: true, icon: TrendingUp },
+    { label: '本日生成', value: data.todayGenerations.toLocaleString(), change: '実績', up: true, neutral: true, icon: Zap },
+    { label: '総ユーザー', value: data.totalUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: Users },
+    { label: '有料プラン登録', value: data.premiumUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: TrendingUp },
   ]
 
   const maxChartValue = Math.max(...(data.chartData || [1]), 1)
@@ -155,8 +156,8 @@ export default function AnalyticsPage() {
                 <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
                   <stat.icon className="w-5 h-5 text-violet-400" />
                 </div>
-                <span className={`flex items-center gap-1 text-sm font-medium ${stat.up ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {stat.up ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                <span className={`flex items-center gap-1 text-sm font-medium ${stat.neutral ? 'text-white/70' : stat.up ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {!stat.neutral && (stat.up ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />)}
                   {stat.change}
                 </span>
               </div>

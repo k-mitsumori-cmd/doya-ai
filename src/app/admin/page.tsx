@@ -24,14 +24,16 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { useAdminBilling } from '@/lib/use-admin-billing'
+import { planLabel } from '@/lib/plan-utils'
 
 interface ServiceStats {
   id: string
   name: string
   icon: string
   gradient: string
-  users: number
-  proUsers: number
+  users: number | null
+  userCountLabel?: string
+  proUsers: number | null
   generations: number
   todayGenerations: number
   revenue: number | null
@@ -41,6 +43,7 @@ interface ServiceStats {
 interface Stats {
   // 基本統計
   totalUsers: number
+  registeredPlanTiers?: Record<'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE', number>
   premiumUsers: number
   enterpriseUsers: number
   freeUsers: number
@@ -237,13 +240,13 @@ export default function AdminDashboard() {
                   trendUp: true
                 },
                 { 
-                  label: 'プロ会員', 
+                  label: '有料プラン登録',
                   value: stats.premiumUsers.toString(), 
-                  subValue: `CVR ${stats.conversionRate}%`,
+                  subValue: `登録比率 ${stats.conversionRate}%`,
                   icon: Crown, 
                   gradient: 'from-amber-500 to-orange-500',
-                  trend: stats.conversionRate > 0 ? stats.conversionRate : null,
-                  trendUp: stats.conversionRate > 0
+                  trend: null,
+                  trendUp: false
                 },
                 { 
                   label: '本日の生成', 
@@ -333,14 +336,15 @@ export default function AdminDashboard() {
 
               {/* Active Users / User Breakdown */}
               <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
-                <h2 className="font-bold text-lg text-white mb-4">ユーザー内訳</h2>
+                <h2 className="font-bold text-lg text-white mb-4">登録状況</h2>
+                <p className="mb-4 text-sm text-white/70">プラン登録には手動付与を含みます。Stripe ID登録は他の登録数と重複するため、合計しないでください。支払済みの人数は表していません。</p>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                         <Crown className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-sm text-white">有料会員</span>
+                      <span className="text-sm text-white">有料プラン登録</span>
                     </div>
                     <span className="font-bold text-amber-400">{stats.premiumUsers}</span>
                   </div>
@@ -349,7 +353,7 @@ export default function AdminDashboard() {
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
                         <Zap className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-sm text-white">Stripe連携</span>
+                      <span className="text-sm text-white">Stripe ID登録</span>
                     </div>
                     <span className="font-bold text-violet-400">{stats.enterpriseUsers}</span>
                   </div>
@@ -358,11 +362,22 @@ export default function AdminDashboard() {
                       <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
                         <Users className="w-4 h-4 text-white/60" />
                       </div>
-                      <span className="text-sm text-white">無料ユーザー</span>
+                      <span className="text-sm text-white">その他の登録</span>
                     </div>
                     <span className="font-bold text-white/60">{stats.freeUsers}</span>
                   </div>
                 </div>
+
+                {stats.registeredPlanTiers && <div className="mt-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-white">登録プランの内訳</h3>
+                  <dl className="grid grid-cols-2 gap-3 text-sm text-white/70">
+                    {(['GUEST', 'FREE', 'LIGHT', 'PRO', 'ENTERPRISE'] as const).map(tier => <div key={tier}>
+                      <dt>{planLabel(tier)}{tier === 'GUEST' || tier === 'FREE' ? '相当' : ''}</dt>
+                      <dd className="font-semibold text-white">{stats.registeredPlanTiers![tier]}人</dd>
+                    </div>)}
+                  </dl>
+                  <p className="text-xs text-white/70">共通のプラン分類で集計しています。未認識の値は無料相当に含まれます。支払済みの人数は表していません。</p>
+                </div>}
 
                 <div className="mt-6">
                   <Link 
@@ -378,6 +393,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Service Cards */}
+            <p className="mb-4 text-sm text-white/70">サービスごとのプラン登録数を表示します。共通プランによる利用権や実際の利用者数とは異なります。未集計の人数は0人に置き換えていません。</p>
             {stats.services && stats.services.length > 0 && (
               <motion.div variants={itemVariants} className="mb-8">
                 <div className="flex items-center justify-between mb-4">
@@ -415,12 +431,12 @@ export default function AdminDashboard() {
                       <div className="p-4">
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <p className="text-lg font-bold text-white">{service.users}</p>
-                            <p className="text-[10px] text-white/40">ユーザー</p>
+                            <p className="text-lg font-bold text-white">{service.users ?? '未集計'}</p>
+                            <p className="text-[10px] text-white/40">{service.userCountLabel || 'ユーザー'}</p>
                           </div>
                           <div>
-                            <p className="text-lg font-bold text-amber-400">{service.proUsers}</p>
-                            <p className="text-[10px] text-white/40">有料</p>
+                            <p className="text-lg font-bold text-amber-400">{service.proUsers ?? '未集計'}</p>
+                            <p className="text-[10px] text-white/40">個別の有料プラン登録</p>
                           </div>
                           <div>
                             <p className="text-lg font-bold text-white">{service.generations.toLocaleString()}</p>
