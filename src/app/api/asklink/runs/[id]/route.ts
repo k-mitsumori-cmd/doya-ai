@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getAskLinkUserId, isRunId, ownRun } from '@/lib/asklink/access'
 import { RUN_SELECT, toRunDto } from '@/lib/asklink/dto'
@@ -37,20 +38,31 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (!userId) return privateApiJson({ error: 'ログインが必要です。' }, { status: 401 })
   const id = await resolve(ctx)
   if (!isRunId(id)) return privateApiJson({ error: '見つかりません。' }, { status: 404 })
-  const run = await prisma.askLinkRun.findFirst({ where: ownRun(userId, id), select: { id: true, links: true, allowedUrls: true } })
-  if (!run || !Array.isArray(run.links)) return privateApiJson({ error: '見つかりません。' }, { status: 404 })
-
+  const initial = await prisma.askLinkRun.findFirst({ where: ownRun(userId, id), select: { id: true, links: true, allowedUrls: true } })
+  if (!initial || !Array.isArray(initial.links)) return privateApiJson({ error: '見つかりません。' }, { status: 404 })
   const body = await req.json().catch(() => ({}))
   const edits: { key?: string; buttonLabel?: string; question?: string }[] = Array.isArray(body?.links) ? body.links : []
-  const current = run.links as unknown as AskLink[]
-  const allowedUrls = (run.allowedUrls as string[]) || []
-  const next = current.map((l) => {
-    const e = edits.find((x) => x?.key === l.key)
-    if (!e) return l
-    const question = typeof e.question === 'string' ? e.question.slice(0, 2000) : l.question
-    const buttonLabel = typeof e.buttonLabel === 'string' ? e.buttonLabel.slice(0, 60) : l.buttonLabel
-    return buildLink(l.key, l.title, buttonLabel, question, allowedUrls)
-  })
-  const saved = await prisma.askLinkRun.update({ where: { id: run.id }, data: { links: next as any }, select: RUN_SELECT })
-  return privateApiJson({ run: await toRunDto(saved) })
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const run = attempt === 0 ? initial : await prisma.askLinkRun.findFirst({ where: ownRun(userId, id), select: { id: true, links: true, allowedUrls: true } })
+    if (!run || !Array.isArray(run.links)) return privateApiJson({ error: '見つかりません。' }, { status: 404 })
+    const current = run.links as unknown as AskLink[]
+    const allowedUrls = (run.allowedUrls as string[]) || []
+    const next = current.map((l) => {
+      const e = edits.find((x) => x?.key === l.key)
+      if (!e) return l
+      const question = typeof e.question === 'string' ? e.question.slice(0, 2000) : l.question
+      const buttonLabel = typeof e.buttonLabel === 'string' ? e.buttonLabel.slice(0, 60) : l.buttonLabel
+      return buildLink(l.key, l.title, buttonLabel, question, allowedUrls)
+    })
+    // 読んだ配列から変わっていない場合だけ更新する。競合時は最新へ編集を適用し直す。
+    const claimed = await prisma.askLinkRun.updateMany({
+      where: { ...ownRun(userId, id), links: { equals: run.links as Prisma.InputJsonValue } },
+      data: { links: next as any },
+    })
+    if (claimed.count === 0) continue
+    const saved = await prisma.askLinkRun.findFirst({ where: ownRun(userId, id), select: RUN_SELECT })
+    if (!saved) return privateApiJson({ error: '見つかりません。' }, { status: 404 })
+    return privateApiJson({ run: await toRunDto(saved) })
+  }
+  return privateApiJson({ error: '同時に更新されたため、保存できませんでした。もう一度お試しください。' }, { status: 409 })
 }
