@@ -9,6 +9,7 @@
 import { prisma } from '@/lib/prisma'
 import { jstStartOfMonthUtc } from '@/lib/usage-summary'
 import { ROLE_HIERARCHY as AIO_ROLES } from '@/lib/aio/types'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 import type { HomeToolState } from '@/lib/home/summary'
 
 export interface MarketingCount {
@@ -62,14 +63,17 @@ async function loadPersona(userId: string, monthStart: Date) {
   return { thisMonth, total }
 }
 
-// AIO: 最後に参加した組織（aio/access.ts の既定と同じ）。組織が無ければ null
+// AIO: 最後に参加した組織（aio/access.ts の getAioContext と同じ）。組織が無い・会社の役割の上限で見られないなら null
 async function loadAio(userId: string, monthStart: Date) {
   const membership = await prisma.aioMember.findFirst({
     where: { userId, status: 'ACTIVE', role: { in: Object.keys(AIO_ROLES) } },
     orderBy: { createdAt: 'desc' },
-    select: { organizationId: true },
+    select: { organizationId: true, role: true },
   })
   if (!membership) return null
+  // 会社の役割の旗の内側では、会社の役割の上限を当てる（ツールの画面で見られない人には、ここでも出さない）
+  const role = await ceilToolRole({ tool: 'aio', userId, organizationId: membership.organizationId, toolRole: membership.role })
+  if (!role) return null
   const [latest, scansThisMonth] = await Promise.all([
     prisma.aioScan.findFirst({
       where: { organizationId: membership.organizationId, status: 'done' },

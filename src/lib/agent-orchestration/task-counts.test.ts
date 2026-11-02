@@ -31,3 +31,14 @@ test('取り消した実行は数えない', () => {
   const c = countAgentTasks([{ run: { status: 'canceled' }, tasks: [task('running', { startedAt: ago(1000) }), task('waiting')] }], now)
   assert.deepEqual(c, { running: 0, waiting: 0, done: 0, failed: 0 })
 })
+
+test('製品で絞る: 操作のツールがその製品に入るものだけ。経営管理と絞らないときは全部', () => {
+  const t = (action: string) => ({ ...task('running', { startedAt: ago(60_000) }), action })
+  const rows = [{ run: { status: 'running' }, tasks: [t('shodan.research'), t('quote.draft'), t('slide.structure'), t('unknown.action')] }]
+  assert.equal(countAgentTasks(rows, now).running, 4)
+  assert.equal(countAgentTasks(rows, now, 'management').running, 4)
+  assert.equal(countAgentTasks(rows, now, 'sales').running, 3)
+  // 見積は予実管理にも入る
+  assert.equal(countAgentTasks(rows, now, 'budget').running, 1)
+  assert.equal(countAgentTasks(rows, now, 'hr').running, 0)
+})

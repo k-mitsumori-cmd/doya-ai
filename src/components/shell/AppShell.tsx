@@ -259,19 +259,20 @@ const TASKS_POLL_MS = 15_000
  * - 記録の表を使っていない（AGENT_RUNS_STORE が db でない）ときは、件数を出さずにリンクだけにする。
  * ⚠️ 行の高さは件数の有無で変えない（読み込みのあとに下のメニューがずれないように）。
  */
-function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {
+function AgentTasksRow({ pathname, onNavigate, product = null }: { pathname: string; onNavigate: (href: string) => void; product?: ProductId | null }) {
   const [counts, setCounts] = useState<TaskCounts | null>(null)
   const [off, setOff] = useState(false)
   const running = counts?.running ?? 0
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/agent/runs/summary', { cache: 'no-store' })
+      // 製品の旗の内側では、今の製品のツールの分だけを数える（経営管理は全部）
+      const res = await fetch(product ? `/api/agent/runs/summary?product=${product}` : '/api/agent/runs/summary', { cache: 'no-store' })
       if (res.status === 404) { setOff(true); return }
       if (!res.ok) return
       const j = await res.json()
       if (typeof j?.running === 'number') setCounts({ running: j.running, waiting: j.waiting ?? 0, done: j.done ?? 0, failed: j.failed ?? 0 })
     } catch { /* 数えられなくてもリンクは使える */ }
-  }, [])
+  }, [product])
   // ページを移るたびに数え直す（経営ホームで任せた直後に、ほかのツールへ移っても増えた数が出る）
   useEffect(() => { if (!off) void load() }, [pathname, load, off])
   useEffect(() => {
@@ -482,7 +483,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
         <div className={styles.navScroll}>
           <NavItem tool={productsOn ? productHome : SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
-          {agentTasks ? <AgentTasksRow pathname={pathname} onNavigate={navigate} /> : null}
+          {agentTasks ? <AgentTasksRow pathname={pathname} onNavigate={navigate} product={productsOn ? product : null} /> : null}
           {recentTools.length ? (
             <div className={styles.group}>
               <p className={styles.groupLabel}>最近使ったツール</p>
