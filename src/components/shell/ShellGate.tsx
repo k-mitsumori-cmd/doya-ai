@@ -13,6 +13,7 @@ import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
 import AppShell from './AppShell'
 import type { DepartmentId } from '@/lib/departments'
+import type { ProductId } from '@/lib/products'
 import { shouldShowShell } from './registry'
 import { ShellToolHrefsContext } from './ui-next-context'
 import ShellVitals from './ShellVitals'
@@ -30,7 +31,7 @@ import PowerOutNotices from '@/components/notice/PowerOutNotices'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, agentTasks = false, navGroups, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, products, agentTasks = false, navGroups, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
@@ -52,6 +53,8 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   initialRecent?: string[]
   /** 部署ごとの入口（サーバーの isDepartmentsEnabled() が真のときだけ layout が渡す。渡されなければ今のメニューのまま） */
   departments?: { enabled: boolean; primary: DepartmentId[] }
+  /** 部門ごとの製品（サーバーの isProductHubsEnabled() が真のときだけ layout が渡す。部署の入口より先に使う） */
+  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean; canEditSelf?: boolean; locked?: boolean }
   /** 左のメニューに「動いているタスク」を出すか（サーバーの isAgentOrchestrationEnabled() で決めて渡す） */
   agentTasks?: boolean
   /** 左のメニューのまとまりの開閉（cookie から読んで渡す。src/lib/shell/nav-groups.ts） */
@@ -66,7 +69,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   const pathname = usePathname()
   const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
   const framed = shown
-    ? <AppShell userName={userName} initialRecent={initialRecent} departments={departments} agentTasks={agentTasks} navGroups={navGroups}>{children}</AppShell>
+    ? <AppShell userName={userName} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups}>{children}</AppShell>
     : <>{children}</>
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''

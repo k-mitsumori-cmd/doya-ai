@@ -35,8 +35,47 @@ check('Departments flag: the shell layout passes departments only from the serve
   assert.match(shell, /\{deptOn \? \(\s*<ToolGroupsNav/)
   assert.match(shell, /\) : SHELL_GROUPS\.map\(\(group\) =>/)
   const page = read('src/app/(shell)/home/page.tsx')
-  assert.match(page, /const departmentsOn = await isDepartmentsEnabled\(\)/)
+  // 部門ごとの製品（PRODUCT_HUBS_ROLLOUT）が on のときは、部署の切り替えを読まない（製品のホームへのリンクに替わる。docs/design/buddy-products-2026-11-01.md）
+  assert.match(page, /const productsOn = await isProductHubsEnabled\(\)/)
+  assert.match(page, /const departmentsOn = !productsOn && \(await isDepartmentsEnabled\(\)\)/)
   assert.match(page, /departmentsOn\s*\n?\s*\? \{/)
+})
+
+// 部門ごとの製品（PRODUCT_HUBS_ROLLOUT。docs/design/buddy-products-2026-11-01.md）が off のときは、画面を今のまま（2026-11-02 統括の確認）
+check('Product hubs flag: off reads no session and changes nothing on screen', () => {
+  const flag = read('src/lib/products/flag.ts')
+  assert.ok(flag.lastIndexOf("if (rollout === 'off') return false") > 0)
+  assert.ok(flag.lastIndexOf("if (rollout === 'off') return false") < flag.indexOf('getServerSession('), 'off must return before reading the session')
+  assert.match(flag, /process\.env\.PRODUCT_HUBS_ROLLOUT/)
+  const layout = read('src/app/(shell)/layout.tsx')
+  assert.match(layout, /const productsOn = signedIn \? await isProductHubsEnabled\(\) : false/)
+  assert.match(layout, /const products = productsOn\s*\n\s*\? await/)
+  const shell = read('src/components/shell/AppShell.tsx')
+  assert.match(shell, /const productsOn = Boolean\(products\?\.enabled\)/)
+  // 切り替えは旗の内側だけ。off なら今のロゴと、部署の旗の分岐（off なら SHELL_GROUPS）のまま
+  for (const m of shell.matchAll(/<ProductSwitcher /g)) {
+    assert.match(shell.slice(m.index - 40, m.index), /\{productsOn \? \(\s*$/, 'ProductSwitcher must be inside {productsOn ? (')
+  }
+  assert.match(shell, /\) : \(\s*<>\s*\{\/\*[^]*?\*\/\}\s*\{deptOn \? \(/, 'with products off, the menu falls back to the departments flag branch')
+  assert.match(shell, /<NavItem tool=\{productsOn \? productHome : SHELL_HOME\}/)
+  assert.match(shell, /withDepartments=\{deptOn && !productsOn\} withProducts=\{productsOn\}/)
+  // 製品のホームは旗を先に見る（off なら 404・/home へ）
+  assert.match(read('src/app/(shell)/hub/[product]/page.tsx'), /if \(!\(await isProductHubsEnabled\(\)\)\) notFound\(\)/)
+  assert.match(read('src/app/(shell)/hub/page.tsx'), /if \(!\(await isProductHubsEnabled\(\)\)\) redirect\('\/home'\)/)
+  // 経営ホームの製品の帯も旗の内側だけ
+  assert.match(read('src/app/(shell)/home/page.tsx'), /productStrip=\{productsOn \? <ProductStrip \/> : null\}/)
+})
+
+check('Product preview pages: 404 in production, open only on Vercel preview and locally', () => {
+  // NODE_ENV は Vercel のプレビューでも production なので、本番の判定は VERCEL_ENV で行う（2026-11-02）
+  const dir = 'src/app/(shell)/hub/preview'
+  const pages = fs.readdirSync(path.join(root, dir), { recursive: true }).filter((f) => String(f).endsWith('page.tsx'))
+  assert.ok(pages.length >= 1)
+  for (const f of pages) {
+    const src = read(path.join(dir, String(f)))
+    const body = src.slice(src.indexOf('export default'))
+    assert.match(body, /^export default (?:async )?function \w+\([^)]*\) \{\n  if \(process\.env\.VERCEL_ENV === 'production'\) notFound\(\)/, f + ' must 404 first in production')
+  }
 })
 
 check('Departments choice API: flag first, cookie only, HttpOnly, no DB writes', () => {

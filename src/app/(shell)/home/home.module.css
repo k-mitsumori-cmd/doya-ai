@@ -312,3 +312,63 @@
 .deptChip[aria-current='page'] { background: var(--blue); border-color: var(--blue); color: #fff; }
 .deptChip:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .deptChip { transition: none; } }
+
+/* ---------- 今日やること・勤怠/人と組織/ご契約・すべてのツール（2026-11-01 本人の指示「アイコンを入れて見やすく」） ---------- */
+/* 大事な所（今日やること）は、少し強い影と青い縁で目に入るようにする */
+.today { position: relative; display: grid; gap: 12px; border-color: var(--blue-line); box-shadow: var(--shadow); }
+.todayHead { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.todayBear { display: block; width: 72px; height: 72px; object-fit: contain; }
+.todayHeadText { display: grid; gap: 2px; min-width: 0; }
+.todayTitle { margin: 0; font-size: 18px; }
+.todayLead { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.6; }
+.todayCount { margin: 0; display: grid; justify-items: end; line-height: 1; font-variant-numeric: tabular-nums; }
+.todayCount b { font-size: 44px; font-weight: 800; color: var(--blue); }
+.todayCount small { font-size: 13px; font-weight: 700; color: var(--sub); margin-top: 2px; }
+.todayCount em { margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--pink) 14%, var(--paper)); color: var(--pink); font-size: 12px; font-style: normal; font-weight: 800; }
+.todayList { gap: 8px; }
+.todayItem { display: grid; grid-template-columns: 24px 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); transition: border-color .2s, transform .2s var(--ease), box-shadow .2s; }
+.todayList li:first-child .todayItem { border-top: 1px solid var(--line); }
+.todayItem:hover { border-color: var(--blue); transform: translateY(-1px); box-shadow: var(--shadow); color: var(--ink); }
+.todayItem[data-urgent='true'] { border-color: color-mix(in srgb, var(--pink) 40%, var(--line)); }
+.todayNo { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--blue-soft); color: var(--blue-deep); font-size: 12px; font-weight: 800; }
+.todayItem[data-urgent='true'] .todayNo { background: var(--pink); color: #fff; }
+.todayLabel { min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.5; }
+.todayUrgent { margin-right: 6px; padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--pink) 14%, var(--paper)); color: var(--pink); font-size: 11px; font-style: normal; font-weight: 800; }
+.todayGo { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); font-size: 13px; font-weight: 800; }
+.todayItem:hover .todayGo { background: var(--blue); color: #fff; }
+
+.mini { display: grid; gap: 10px; align-content: start; }
+.miniHead { display: flex; align-items: center; gap: 10px; }
+.miniHead h2 { margin: 0; font-size: 15px; font-weight: 800; }
+.miniBear { display: block; width: 56px; height: 56px; object-fit: contain; flex: none; }
+.miniValue { margin: 0; display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+.miniValue b { font-size: 36px; font-weight: 800; color: var(--ink); line-height: 1.1; }
+.miniValue small { font-size: 14px; font-weight: 700; color: var(--sub); }
+.miniEmpty { margin: 0; font-size: 14px; font-weight: 700; color: var(--sub); line-height: 1.6; }
+.miniSub { font-size: 13px; color: var(--sub); line-height: 1.6; }
+.miniGo { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); font-size: 13px; font-weight: 800; text-decoration: none; }
+.miniGo:hover { background: var(--blue); color: #fff; }
+
+.toolGroups > div { --tone: var(--blue); }
+.toolGroups > div[data-tone='marketing'] { --tone: var(--pink); }
+.toolGroups > div[data-tone='hr'] { --tone: var(--good); }
+.toolGroups > div[data-tone='admin'] { --tone: var(--yellow); }
+.toolGroupHead { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid color-mix(in srgb, var(--tone) 45%, transparent); font-size: 14px; font-weight: 800; color: var(--ink); }
+.toolGroupHead img { width: 32px; height: 32px; object-fit: contain; }
+.toolGroupHead small { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tools { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.tool { position: relative; padding: 8px 12px 8px 8px; min-height: 64px; }
+.tool:hover { transform: translateY(-1px); }
+.toolText small { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }
+.tool .beta { position: absolute; top: 6px; right: 8px; margin: 0; background: transparent; border: 1px solid var(--line); color: var(--muted); }
+
+@media (max-width: 767px) {
+  .todayHead { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; }
+  .todayBear { width: 56px; height: 56px; }
+  .todayCount b { font-size: 36px; }
+  .todayItem { grid-template-columns: 22px 36px minmax(0, 1fr); padding: 10px; }
+  .todayItem img { width: 36px; height: 36px; }
+  .todayGo { grid-column: 3; justify-self: start; min-height: 32px; }
+  .tools { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .todayItem, .tool { transition: none; } }

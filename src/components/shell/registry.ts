@@ -41,6 +41,8 @@ export interface ShellUsage {
 
 export const SHELL_SERVICES: ShellService[] = [
   { id: 'home', basePath: '/home' },
+  // 製品のホーム（/hub/sales など。旗 PRODUCT_HUBS_ROLLOUT の内側だけ。off ならページが 404 を返す）
+  { id: 'hub', basePath: '/hub' },
   { id: 'income', basePath: '/income' },
   { id: 'expense', basePath: '/expense' },
   { id: 'popup', basePath: '/popup', usage: { service: 'popup', refreshEvent: 'popup:generated' } },
@@ -99,6 +101,7 @@ const INVITE = /^\/[a-z]+\/invite(\/|$)/
  */
 const OUTSIDE_SHELL_SIGNED_IN: RegExp[] = [
   /^\/home\/preview(\/|$)/,
+  /^\/hub\/preview(\/|$)/,
   // 応募者が開く面接の画面と、社員が開く回答の画面（guest-path.ts は下の階層だけを見るので、入口もここで外す）
   /^\/mensetsu\/live(\/|$)/,
   /^\/shanai\/answer(\/|$)/,

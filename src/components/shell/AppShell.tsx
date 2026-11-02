@@ -20,8 +20,10 @@ import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, buildDepartmentGroups, type DepartmentShellGroup, type ShellTool } from './tools'
+import { ALL_SHELL_TOOLS, SHELL_HOME, SHELL_GROUPS, buildDepartmentGroups, buildProductGroups, productShellTools, type ShellTool } from './tools'
 import { departmentOfTool, getDepartment, type DepartmentId } from '@/lib/departments'
+import { PRODUCTS, PRODUCT_COOKIE, getProduct, productForPath, productsOfTool, type ProductId } from '@/lib/products'
+import ProductSwitcher from './ProductSwitcher'
 import { useToolHref } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
@@ -89,7 +91,12 @@ const INTENT_ITEMS: (PaletteItem & { words: string })[] = HOME_INTENT_GROUPS.fla
   key: `intent:${i.label}`, name: i.label, hint: g.label, href: i.href, intent: true, words: `${i.label} ${i.keywords.join(' ')}`.toLowerCase(),
 })))
 
-function CommandPalette({ open, onClose, withIntents, withDepartments = false }: { open: boolean; onClose: () => void; withIntents: boolean; withDepartments?: boolean }) {
+/** 製品のホーム（旗 PRODUCT_HUBS_ROLLOUT が on のとき、⌘K で製品の名前からも開ける） */
+const PRODUCT_ITEMS: (PaletteItem & { words: string })[] = PRODUCTS.map((p) => ({
+  key: `product:${p.id}`, name: `${p.name}のホーム`, hint: p.hint, href: p.home, icon: p.icon, words: `${p.name} ${p.en} ${p.id}`.toLowerCase(),
+}))
+
+function CommandPalette({ open, onClose, withIntents, withDepartments = false, withProducts = false }: { open: boolean; onClose: () => void; withIntents: boolean; withDepartments?: boolean; withProducts?: boolean }) {
   const router = useRouter()
   const toHref = useToolHref()
   const [q, setQ] = useState('')
@@ -107,12 +114,15 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false }:
       const d = getDepartment(id)
       return ` ${d.name} ${d.short}`
     }
-    const tools = TOOL_ITEMS.filter((t) => `${t.name} ${t.hint} ${t.key}${deptWords(t.key)}`.toLowerCase().includes(k))
-    if (!withIntents) return tools
+    // 製品の旗が on のときは、製品の名前（「セールス」「予実管理」など）でも、製品のホームとツールを探せる
+    const productWords = (key: string) => (withProducts ? productsOfTool(key).map((id) => ` ${getProduct(id).name} ${getProduct(id).en}`).join('') : '')
+    const tools = TOOL_ITEMS.filter((t) => `${t.name} ${t.hint} ${t.key}${deptWords(t.key)}${productWords(t.key)}`.toLowerCase().includes(k))
+    const products = withProducts ? PRODUCT_ITEMS.filter((p) => p.words.includes(k)) : []
+    if (!withIntents) return [...products, ...tools]
     const compact = k.replace(/\s+/g, '')
     const intents = INTENT_ITEMS.filter((i) => i.words.includes(k) || i.words.replace(/\s+/g, '').includes(compact) || i.words.split(' ').some((w) => w && compact.includes(w)))
-    return [...intents, ...tools]
-  }, [q, withIntents, withDepartments])
+    return [...products, ...intents, ...tools]
+  }, [q, withIntents, withDepartments, withProducts])
 
   useEffect(() => {
     if (!open) return
@@ -158,7 +168,7 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false }:
             return (
               <li key={t.key} role="option" aria-selected={i === index}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
-                  <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : <ToolBearIcon id={t.key} icon={t.icon ?? 'LayoutGrid'} size={28} iconSize={16} />}</span>
+                  <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : t.key.startsWith('product:') ? <ShellIcon name={t.icon ?? 'LayoutGrid'} size={16} strokeWidth={2} /> : <ToolBearIcon id={t.key} icon={t.icon ?? 'LayoutGrid'} size={28} iconSize={16} />}</span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
@@ -171,8 +181,11 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false }:
   )
 }
 
-/** まとまりの見出しのアイコン（部署の id → lucide の名前） */
-const GROUP_ICONS: Record<string, ShellIconName> = { marketing: 'Megaphone', sales: 'Briefcase', hr: 'Users', admin: 'Wallet', other: 'LayoutGrid' }
+/** まとまりの見出しのアイコン（部署・製品の id → lucide の名前） */
+const GROUP_ICONS: Record<string, ShellIconName> = { marketing: 'Megaphone', sales: 'Briefcase', hr: 'Users', admin: 'Wallet', budget: 'Wallet', management: 'LayoutDashboard', other: 'LayoutGrid' }
+
+/** 開閉できるまとまり（部署の入口・製品の「ほかの製品のツール」で同じ部品を使う） */
+interface NavGroup { key: string; label: string; tools: ShellTool[] }
 
 /**
  * ツールのまとまり（ドヤマーケAI・ドヤセールスAI・ドヤ人事AI・ドヤ管理AI。経営ホームの部署のタブと同じ分け方）。
@@ -181,8 +194,10 @@ const GROUP_ICONS: Record<string, ShellIconName> = { marketing: 'Megaphone', sal
  * - 主の部署（旗 DEPARTMENTS_ROLLOUT。経営ホームで選んだもの）があれば先に並べる。並びの決まりは buildDepartmentGroups。
  * - 768〜1279px のアイコンだけのサイドバーでは、畳まずに全部のアイコンを出す（CSS）。
  */
-function ToolGroupsNav({ groups, pathname, onNavigate, prefetch, initialOpen }: {
-  groups: DepartmentShellGroup[]
+function ToolGroupsNav({ groups, pathname, onNavigate, prefetch, initialOpen, label = 'ツール' }: {
+  groups: NavGroup[]
+  /** まとまりの上の見出し */
+  label?: string
   pathname: string
   onNavigate: (href: string) => void
   prefetch?: boolean
@@ -190,7 +205,7 @@ function ToolGroupsNav({ groups, pathname, onNavigate, prefetch, initialOpen }: 
 }) {
   const [explicit, setExplicit] = useState<Record<string, boolean>>(() => initialOpen ?? {})
   const activeGroup = groups.find((g) => g.tools.some((t) => isActive(pathname, t)))
-  const activeId = activeGroup ? activeGroup.department ?? 'other' : null
+  const activeId = activeGroup ? activeGroup.key : null
   // 畳んだまとまりのツールへ移ったら、そのまとまりを開く（今のページの項目を隠さない）
   useEffect(() => {
     if (!activeId) return
@@ -206,16 +221,16 @@ function ToolGroupsNav({ groups, pathname, onNavigate, prefetch, initialOpen }: 
   })
   return (
     <div className={styles.group}>
-      <p className={styles.groupLabel}>ツール</p>
+      <p className={styles.groupLabel}>{label}</p>
       {groups.map((g) => {
-        const id = g.department ?? 'other'
+        const id = g.key
         const open = explicit[id] ?? id === activeId
         const bodyId = `shell-group-${id}`
         const hasActive = id === activeId
         return (
           <div key={id} className={styles.deptBlock}>
             <button type="button" className={styles.deptToggle} aria-expanded={open} aria-controls={bodyId} data-active={hasActive && !open ? 'true' : undefined} onClick={() => toggle(id, open)}>
-              <span className={styles.deptIcon}><ShellIcon name={GROUP_ICONS[id]} size={16} strokeWidth={2} /></span>
+              <span className={styles.deptIcon}><ShellIcon name={GROUP_ICONS[id] ?? 'LayoutGrid'} size={16} strokeWidth={2} /></span>
               <span className={styles.navLabel}>{g.label}</span>
               <span className={styles.deptCount} aria-label={`${g.tools.length}個のツール`}>{g.tools.length}</span>
               <ChevronDown size={16} aria-hidden className={styles.deptChevron} data-open={open} />
@@ -304,13 +319,15 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent, departments, agentTasks = false, navGroups }: {
+export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
   initialRecent?: string[]
   /** 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されなければ今のメニューのまま */
   departments?: { enabled: boolean; primary: DepartmentId[] }
+  /** 部門ごとの製品（旗 PRODUCT_HUBS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されたときは部署の入口より先に使う */
+  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean; canEditSelf?: boolean; locked?: boolean }
   /** 「動いているタスク」を出すか（旗 AGENT_ORCHESTRATION_ROLLOUT。サーバーが決める） */
   agentTasks?: boolean
   /** まとまりの開閉（cookie。押したものだけ） */
@@ -321,7 +338,25 @@ export default function AppShell({ children, userName, initialRecent, department
   const toHref = useToolHref()
   const deptOn = Boolean(departments?.enabled)
   // ツールは部署のまとまり（ドヤマーケAI など）で並べる。主の部署は旗が on のときだけ使う（off なら既定の順）
-  const toolGroups = useMemo(() => buildDepartmentGroups(deptOn ? departments?.primary ?? [] : []).map((g) => ({ ...g, primary: true })), [deptOn, departments?.primary])
+  const toolGroups = useMemo<NavGroup[]>(() => buildDepartmentGroups(deptOn ? departments?.primary ?? [] : []).map((g) => ({ key: g.department ?? 'other', label: g.label, tools: g.tools })), [deptOn, departments?.primary])
+  // 部門ごとの製品（docs/design/buddy-products-2026-11-01.md）。今の製品は、パスから決める（ツールが今の製品に入っていれば今のまま）
+  const productsOn = Boolean(products?.enabled)
+  const [product, setProduct] = useState<ProductId>(() => productForPath(pathname, products?.start ?? 'management'))
+  useEffect(() => {
+    if (!productsOn) return
+    setProduct((cur) => productForPath(pathname, cur))
+  }, [pathname, productsOn])
+  // 最後に開いた製品を覚える（次にログインしたとき、既定の製品が無ければここから開く）
+  useEffect(() => {
+    if (!productsOn) return
+    try { document.cookie = `${PRODUCT_COOKIE}=${product}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax` } catch { /* 覚えられなくても動く */ }
+  }, [product, productsOn])
+  const productHome = useMemo<ShellTool>(() => {
+    const p = getProduct(product)
+    return { id: `hub-${p.id}`, name: p.id === 'management' ? '経営ホーム' : 'ホーム', href: p.home, icon: p.icon, hint: p.hint, stage: 'other' }
+  }, [product])
+  const ownTools = useMemo(() => (productsOn ? productShellTools(product) : []), [product, productsOn])
+  const otherGroups = useMemo<NavGroup[]>(() => (productsOn ? buildProductGroups(product).map((g) => ({ key: g.product ?? 'other', label: g.label, tools: g.tools })) : []), [product, productsOn])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
   // 1日1つの決まりで止めた知らせ（新機能・「〜でできること」）。あるときだけ、左下に「お知らせ」を出す
@@ -409,9 +444,13 @@ export default function AppShell({ children, userName, initialRecent, department
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
           <Menu size={20} />
         </button>
+        {productsOn ? (
+          <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} canEditSelf={products?.canEditSelf} locked={products?.locked} onSelect={setProduct} variant="topbar" />
+        ) : (
         <Link href={SHELL_HOME.href} className={styles.brand}>
           <DoyaLogoMark size={28} className={styles.brandMark} />{brandName()}
         </Link>
+        )}
         {/* ドヤパワーの残り（旗が出すと決め、残りの値があるときだけ。無ければ何も描かない） */}
         <ShellPowerMeter variant="topbar" />
         <button type="button" className={styles.iconButton} onClick={() => setPalette(true)} aria-label="ツールを探す">
@@ -423,10 +462,14 @@ export default function AppShell({ children, userName, initialRecent, department
 
       <nav className={styles.sidebar} data-open={open} aria-label="ツール一覧">
         <div className={styles.sideHead}>
+          {productsOn ? (
+            <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} canEditSelf={products?.canEditSelf} locked={products?.locked} onSelect={(id) => { setProduct(id); close() }} variant="sidebar" labelClassName={styles.navLabel} />
+          ) : (
           <Link href={SHELL_HOME.href} className={styles.brand} onClick={close}>
             <DoyaLogoMark size={28} className={styles.brandMark} />
             <span className={styles.navLabel}>{brandName()}</span>
           </Link>
+          )}
           <button type="button" className={`${styles.iconButton} ${styles.closeButton}`} onClick={close} aria-label="メニューを閉じる">
             <X size={18} />
           </button>
@@ -438,7 +481,7 @@ export default function AppShell({ children, userName, initialRecent, department
         </button>
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
         <div className={styles.navScroll}>
-          <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          <NavItem tool={productsOn ? productHome : SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {agentTasks ? <AgentTasksRow pathname={pathname} onNavigate={navigate} /> : null}
           {recentTools.length ? (
             <div className={styles.group}>
@@ -448,17 +491,33 @@ export default function AppShell({ children, userName, initialRecent, department
               ))}
             </div>
           ) : null}
-          {/* 部署のまとまり（開閉つき）は旗 DEPARTMENTS_ROLLOUT が on のときだけ。off なら今までの区分のまま（2026-11-02 本人の指示「旗の裏に入れてから」） */}
-          {deptOn ? (
-            <ToolGroupsNav groups={toolGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} />
-          ) : SHELL_GROUPS.map((group) => (
-            <div key={group.stage} className={styles.group}>
-              <p className={styles.groupLabel}>{group.label}</p>
-              {group.tools.map((tool) => (
-                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          {productsOn ? (
+            <>
+              {/* 今の製品のツール（畳まずに並べる）。経営管理は、全部の製品を下のまとまりから開く */}
+              {ownTools.length ? (
+                <div className={styles.group}>
+                  <p className={styles.groupLabel}>{getProduct(product).name}のツール</p>
+                  {ownTools.map((tool) => <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />)}
+                </div>
+              ) : null}
+              {/* ほかの製品のツールも開ける（2026-11-01 の決定「担当でない製品のツールも開けるまま」）。今いるツールのまとまりだけ開く */}
+              <ToolGroupsNav key={product} groups={otherGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} label="ほかの製品のツール" />
+            </>
+          ) : (
+            <>
+              {/* 部署のまとまり（開閉つき）は旗 DEPARTMENTS_ROLLOUT が on のときだけ。off なら今までの区分のまま（2026-11-02 本人の指示「旗の裏に入れてから」） */}
+              {deptOn ? (
+                <ToolGroupsNav groups={toolGroups} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} initialOpen={navGroups} />
+              ) : SHELL_GROUPS.map((group) => (
+                <div key={group.stage} className={styles.group}>
+                  <p className={styles.groupLabel}>{group.label}</p>
+                  {group.tools.map((tool) => (
+                    <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+                  ))}
+                </div>
               ))}
-            </div>
-          ))}
+            </>
+          )}
         </div>
         {/* 新しい見た目では、左下はどの画面でも同じもの（登録会社・ドヤパワー・アカウント・ログアウト）だけにする。
             ツールごとの「作った数 / 残り」は、ツールの見出しの帯（ToolFrame）に出す（2026-10-24 ユーザーの指摘「ツールを押すごとに変わるのは分かりにくい」） */}
@@ -496,11 +555,11 @@ export default function AppShell({ children, userName, initialRecent, department
       </main>
 
       <nav className={styles.tabbar} aria-label="よく使うツール">
-        {[SHELL_HOME, ...tabTools].map((t) => {
+        {[productsOn ? productHome : SHELL_HOME, ...tabTools].map((t) => {
           return (
             <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
               <ToolBearIcon id={t.id} icon={t.icon} size={26} iconSize={20} />
-              <span>{t.id === 'home' ? 'ホーム' : t.name}</span>
+              <span>{t.id === 'home' || t.id.startsWith('hub-') ? 'ホーム' : t.name}</span>
             </Link>
           )
         })}
@@ -514,7 +573,7 @@ export default function AppShell({ children, userName, initialRecent, department
           </button>
       </nav>
 
-      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn && !productsOn} withProducts={productsOn} />
     </div>
     </ShellUsageProvider>
     </InShellContext.Provider>
