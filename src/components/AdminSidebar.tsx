@@ -36,6 +36,7 @@ const mainNavItems = [
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
   { icon: Shield, label: '管理者アカウント', href: '/admin/admins', badge: null },
   { icon: Shield, label: '2要素認証', href: '/admin/2fa', badge: null },
+  { icon: ScrollText, label: 'メディアジョブ', href: '/admin/media-jobs', badge: null },
   { icon: Settings, label: '設定', href: '/admin/settings', badge: null },
 ]
 

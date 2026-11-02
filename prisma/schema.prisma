@@ -85,6 +85,7 @@ model User {
 
   // ドヤインタビューAI
   interviewProjects InterviewProject[]
+  mediaJobs         MediaJob[]
   interviewRecipes  InterviewRecipe[]
 
   // ドヤ戦略AI
@@ -6290,4 +6291,64 @@ model SupportMessage {
 
   @@index([ticketId, createdAt])
   @@map("support_message")
+}
+
+// ============================================
+// メディア処理ジョブ（重い動画・音声処理を Cloud Run の専用ワーカーに任せる）
+// 仕様: reference/12-media-worker.md / ワーカー本体: worker/
+// ============================================
+
+model MediaJob {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // extract_audio | thumbnail | preview_720p | process_all | transcribe（src/lib/media-jobs/kinds.ts）
+  kind String
+
+  // queued | running | succeeded | failed | canceled
+  status String @default("queued")
+
+  // 入力（Supabase Storage のバケット名とパス）
+  inputBucket String
+  inputPath   String
+
+  // 種類ごとの追加指定（例: { format: "mp3" } / { atSeconds: 12 }）
+  params Json?
+
+  // 呼び出し元の識別（例: "interview:material:xxxx"）。画面への紐づけ用
+  source    String?
+  // 同じ依頼の二重登録を防ぐ鍵（任意）
+  dedupeKey String? @unique
+
+  // 結果: outputs = [{ name, bucket, path, contentType, size }]、result = 動画の長さなどの情報
+  outputs Json?
+  result  Json?
+
+  // 進み具合
+  progress Int     @default(0) // 0-100
+  stage    String? // 例: 入力を確認中 / 変換中 / 保存中
+
+  // 失敗と再試行
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  runAfter    DateTime @default(now()) // この時刻まで実行しない（再試行の待ち）
+  error       String?  @db.Text
+
+  // ロック（同じジョブの二重実行を防ぐ）
+  lockedBy     String?
+  heartbeatAt  DateTime?
+  dispatchedAt DateTime? // Cloud Run を最後に起動した時刻
+  // 失敗を Slack に知らせた時刻（二重に通知しない）
+  failureNotifiedAt DateTime?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status, runAfter])
+  @@index([userId, createdAt])
+  @@map("media_job")
 }

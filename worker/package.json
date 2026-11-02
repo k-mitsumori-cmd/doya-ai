@@ -1,0 +1,23 @@
+{
+  "name": "doya-media-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ドヤ部下の重いメディア処理(動画の変換・音声の抜き出し・サムネイル)を受け持つ Cloud Run Jobs 用ワーカー",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
