@@ -22,6 +22,12 @@ export interface AgentPowerUse {
   refunded: number
 }
 
+/** できた物の中身（ツールごとの形）。保存した下書きの値から作る（作り物を入れない） */
+export type AgentDraftDetail =
+  | { kind: 'company'; name: string }
+  | { kind: 'quote'; rows: { name: string; qty: number; unit: string; unitPrice: number }[]; count: number; subtotal: number }
+  | { kind: 'slides'; heads: string[] }
+
 export interface AgentTaskResult {
   /** 結果の一文（30〜45字ほど） */
   summary: string
@@ -30,6 +36,8 @@ export interface AgentTaskResult {
   /** 各ツールの画面で結果を開くリンク */
   href: string
   hrefLabel: string
+  /** できた物の中身（完成の画面のカードに出す。会社名・見積の品目・スライドの見出し）。古い記録には無い */
+  detail?: AgentDraftDetail
   /** 次の作業に渡す材料（ペルソナの要約など）。画面には出さない */
   handoff?: Record<string, string>
   /** このタスクで減ったドヤパワー（ドヤパワーを使わない人は 0） */

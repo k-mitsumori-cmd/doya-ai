@@ -4,6 +4,10 @@ import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
 import type { HomeSummary } from '@/lib/home/summary'
 import HomeDashboard from '../HomeDashboard'
+import HomeAgent from '@/components/home-agent/HomeAgent'
+import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
+import { GRANT_KINDS } from '@/lib/doya-power/rules'
+import { doyaPowerSampleAllowed } from '@/lib/doya-power/flag'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,11 +58,20 @@ function sample(): HomeSummary {
   }
 }
 
-export default function HomePreviewPage() {
+// ?empty=1 で、勤怠の打刻なし・社員なしの空の状態を見る
+export default async function HomePreviewPage({ searchParams }: { searchParams?: Promise<{ empty?: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound()
+  const q = (await searchParams) ?? {}
+  const s = sample()
+  if (q.empty === '1') {
+    s.attendance = { ...s.attendance, workHoursThisMonth: 0, overtimeHoursThisMonth: 0, pendingRequests: 0 } as typeof s.attendance
+    s.people = { state: 'empty', href: '/hr/dashboard', activeEmployees: 0, departments: 0 } as typeof s.people
+  }
+  // ドヤパワーの欄と「ドヤくんに頼む」も、見本の値で出す（本物は page.tsx が旗を見て渡す）。ドヤパワーの欄は見本の旗が開いているときだけ出す
+  const power = { remaining: 5778, limit: 8000, byKind: Object.fromEntries(GRANT_KINDS.map((k, i) => [k, i === 0 ? 5778 : 0])) as never, nextRecoveryAt: null, nextExpiry: null, history: [] }
   return (
     <AppShell userName="サンプル">
-      <HomeDashboard initial={sample()} />
+      <HomeDashboard initial={s} powerCard={doyaPowerSampleAllowed() ? <DoyaPowerHomeCard view={power} /> : undefined} agentStage={<HomeAgent executor="sample" />} />
     </AppShell>
   )
 }

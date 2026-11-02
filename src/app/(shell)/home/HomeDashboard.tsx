@@ -7,11 +7,10 @@ import { useRouter } from 'next/navigation'
 import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, Send, StopCircle, CheckCircle2, Loader2, RefreshCw, TrendingUp, Wallet, FileText, FolderKanban,
-  Clock, Users, CreditCard, AlertTriangle, ChevronLeft, ChevronRight, X,
+  AlertTriangle, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { SHELL_GROUPS } from '@/components/shell/tools'
-import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
 import { DEPARTMENTS, orderDepartments, departmentOfPath, type DepartmentId } from '@/lib/departments'
@@ -22,6 +21,7 @@ import { AreaChart, Bars } from '@/components/ds/charts'
 import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
 import { useAccountCompany } from '@/components/shell/company-context'
 import { useToolHref } from '@/components/shell/ui-next-context'
+import { TodoBear } from '@/components/home-agent/WorkCards'
 import styles from './home.module.css'
 import type { ReactNode } from 'react'
 
@@ -262,24 +262,82 @@ function CompanySetupNote({ initiallyHidden, doyaPower }: { initiallyHidden: boo
 
 function TodayCard({ summary }: { summary: HomeSummary }) {
   const items = todayItems(summary, new Date(summary.generatedAt).getTime())
+  const urgent = items.filter((i) => i.urgent).length
   return (
     <section className={styles.today} aria-labelledby="home-today">
-      <h2 id="home-today" className={styles.todayTitle}>今日やること</h2>
+      <div className={styles.todayHead}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={items.length ? '/character/todo-256.webp' : '/character/thumbsup-256.webp'} width={72} height={72} alt="" aria-hidden className={styles.todayBear} decoding="async" />
+        <div className={styles.todayHeadText}>
+          <h2 id="home-today" className={styles.todayTitle}>今日やること</h2>
+          <p className={styles.todayLead}>
+            {items.length ? <>まず「{items[0].label.replace(/^(今日|明日): /, '')}」から手を付けましょう。</> : '今日、急いで手を付けるものはありません。'}
+          </p>
+        </div>
+        <p className={styles.todayCount} aria-label={`${items.length}件${urgent ? `、うち急ぎ${urgent}件` : ''}`}>
+          <b>{items.length}</b><small>件</small>
+          {urgent ? <em>急ぎ {urgent}</em> : null}
+        </p>
+      </div>
       {items.length ? (
-        <ul className={styles.todayList}>
-          {items.map((i) => (
+        <ol className={styles.todayList}>
+          {items.map((i, n) => (
             <li key={i.key}>
               <Link href={i.href} className={styles.todayItem} data-urgent={i.urgent ? 'true' : undefined}>
-                <span className={styles.todayDot} aria-hidden />
-                <span>{i.label}</span>
-                <span className={styles.todayGo} aria-hidden>開く</span>
+                <span className={styles.todayNo} aria-hidden>{n + 1}</span>
+                <TodoBear tool={i.tool} size={40} />
+                <span className={styles.todayLabel}>{i.urgent ? <em className={styles.todayUrgent}>急ぎ</em> : null}{i.label}</span>
+                <span className={styles.todayGo} aria-hidden>開く<ArrowRight size={15} /></span>
               </Link>
             </li>
           ))}
-        </ul>
-      ) : (
-        <p className={styles.todayEmpty}>今日、急いで手を付けるものはありません。</p>
+        </ol>
+      ) : null}
+    </section>
+  )
+}
+
+/** 部門の色と絵（すべてのツール・よく使う操作でそろえる） */
+const GROUP_TONE: Record<string, { tone: string; bear: string }> = {
+  'マーケティング': { tone: 'marketing', bear: 'lead-marketing' },
+  '営業（セールス）': { tone: 'sales', bear: 'lead-sales' },
+  '採用・人材管理': { tone: 'hr', bear: 'lead-hr' },
+  '経理・バックオフィス': { tone: 'admin', bear: 'lead-admin' },
+}
+/** すべてのツールの一覧に出す、切れない短い説明（共通の tools.ts の hint は長いものがあり、ここでは途中で切れていた） */
+const SHORT_HINT: Record<string, string> = {
+  sfa: '商談とタスクを管理', shodan: '相手の会社を調べる', aishodan: '商談の記録と要約', cunning: '会議の答えをその場で',
+  doyalist: '営業リストを作る', doyaslide: '提案スライドを作る', aio: 'AI検索での見え方', seo: 'SEO記事を書く',
+  banner: 'バナーを作る', adimage: '広告画像をまとめて作る', persona: 'お客さまの人物像', interview: '取材から記事を作る',
+  asklink: '「AIに聞く」リンク', popup: 'サイトのポップアップ', tenjikai: '展示会の準備', hr: '社員・評価・1on1',
+  mensetsu: '面接の準備と記録', shanai: '社員インタビュー記事', kintai: '打刻・残業・申請', quote: '見積書を作る',
+  promane: '案件の工数と収支', income: '請求書と入金', expense: '支払いの予定',
+}
+
+/** 勤怠・人と組織・ご契約の小さなカード。大事な数字を大きく、0件のときは次の一手を出す */
+function MiniStat({ title, bear, value, unit, sub, empty, href, cta }: {
+  title: string
+  bear: string
+  value: string | null
+  unit?: string
+  sub?: ReactNode
+  /** 数字の代わりに出す一文（まだ使っていない・0件のとき） */
+  empty?: string
+  href: string
+  cta: string
+}) {
+  return (
+    <section className={`${styles.card} ${styles.mini}`}>
+      <div className={styles.miniHead}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/character/${bear}-256.webp`} width={56} height={56} alt="" aria-hidden className={styles.miniBear} decoding="async" />
+        <h2>{title}</h2>
+      </div>
+      {empty ? <p className={styles.miniEmpty}>{empty}</p> : (
+        <p className={styles.miniValue}><b>{value}</b>{unit ? <small>{unit}</small> : null}</p>
       )}
+      {sub ? <div className={styles.miniSub}>{sub}</div> : null}
+      <SmartLink href={href} className={styles.miniGo}>{cta}<ArrowRight size={15} /></SmartLink>
     </section>
   )
 }
@@ -568,54 +626,52 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
       </div>
 
       <div className={styles.gridThree}>
-        <section className={styles.card}>
-          <div className={styles.cardHead}><h2><Clock size={16} /> 勤怠</h2><span className={styles.cardMeta}>{s.attendance.state === 'ready' ? (s.attendance.scope === 'org' ? '全社' : 'あなた') : ''}</span></div>
-          {s.attendance.state === 'ready' ? (
-            <dl className={styles.stats}>
-              <div><dt>今月の労働時間</dt><dd>{s.attendance.workHoursThisMonth}時間</dd></div>
-              <div><dt>残業</dt><dd>{s.attendance.overtimeHoursThisMonth}時間</dd></div>
-              <div><dt>承認待ち</dt><dd>{s.attendance.pendingRequests}件</dd></div>
-            </dl>
-          ) : <EmptyCard text="打刻と残業をここでまとめます。" href="/kintai" cta="勤怠をはじめる" />}
-        </section>
-        <section className={styles.card}>
-          <div className={styles.cardHead}><h2><Users size={16} /> 人と組織</h2></div>
-          {s.people.state === 'ready' ? (
-            <dl className={styles.stats}>
-              <div><dt>在籍者</dt><dd>{s.people.activeEmployees}名</dd></div>
-              <div><dt>部署</dt><dd>{s.people.departments}</dd></div>
-            </dl>
-          ) : <EmptyCard text="社員・部署・評価をここでまとめます。" href="/hr" cta="人事をはじめる" />}
-        </section>
-        <section className={styles.card}>
-          <div className={styles.cardHead}><h2><CreditCard size={16} /> ご契約</h2></div>
-          <dl className={styles.stats}>
-            <div><dt>プラン</dt><dd>{c.label}</dd></div>
-            <div><dt>状態</dt><dd>{c.cancelAtPeriodEnd ? '期間終了で解約予定' : c.paid ? '契約中' : '無料'}</dd></div>
-            {periodEnd ? <div><dt>{c.cancelAtPeriodEnd ? '利用できる期限' : '次回更新日'}</dt><dd>{periodEnd}</dd></div> : null}
-          </dl>
-          <SmartLink href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} className={styles.cardLink}>
-            {c.paid ? '契約内容・お支払い方法を確認' : '料金プランを見る'}
-          </SmartLink>
-        </section>
+        {s.attendance.state === 'ready' ? (
+          <MiniStat title={`勤怠（${s.attendance.scope === 'org' ? '全社' : 'あなた'}）`} bear="clock"
+            value={String(s.attendance.workHoursThisMonth)} unit="時間"
+            empty={s.attendance.workHoursThisMonth === 0 && s.attendance.pendingRequests === 0 ? '今月は、まだ打刻がありません。' : undefined}
+            sub={s.attendance.workHoursThisMonth > 0 || s.attendance.pendingRequests > 0 ? <>今月の労働時間 ・ 残業 {s.attendance.overtimeHoursThisMonth}時間 ・ 承認待ち {s.attendance.pendingRequests}件</> : undefined}
+            href={s.attendance.pendingRequests > 0 && s.attendance.scope === 'org' ? '/kintai/approvals' : '/kintai/dashboard'}
+            cta={s.attendance.pendingRequests > 0 && s.attendance.scope === 'org' ? '承認待ちを見る' : s.attendance.workHoursThisMonth === 0 ? 'ドヤ勤怠で打刻する' : 'ドヤ勤怠を開く'} />
+        ) : (
+          <MiniStat title="勤怠" bear="clock" value={null} empty="打刻と残業を、ここでまとめて見られます。" href="/kintai" cta="ドヤ勤怠をはじめる" />
+        )}
+        {s.people.state === 'ready' && s.people.activeEmployees > 0 ? (
+          <MiniStat title="人と組織" bear="lead-hr" value={String(s.people.activeEmployees)} unit="名"
+            sub={<>在籍者 ・ 部署 {s.people.departments}</>} href={s.people.href} cta="ドヤHRを開く" />
+        ) : (
+          <MiniStat title="人と組織" bear="lead-hr" value={null} empty="まだ社員が登録されていません。" href="/hr/employees/new" cta="社員を登録する" />
+        )}
+        <MiniStat title="ご契約" bear="thumbsup" value={c.label} 
+          sub={<>{c.cancelAtPeriodEnd ? '期間終了で解約予定' : c.paid ? '契約中' : '無料'}{periodEnd ? ` ・ ${c.cancelAtPeriodEnd ? '利用できる期限' : '次回更新日'} ${periodEnd}` : ''}</>}
+          href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} cta={c.paid ? '契約とお支払いを確かめる' : '料金プランを見る'} />
       </div>
 
       <section className={styles.card}>
         <div className={styles.cardHead}><h2>すべてのツール</h2></div>
         <div className={styles.toolGroups}>
-          {SHELL_GROUPS.map((g) => (
-            <div key={g.label}>
-              <p className={styles.toolGroupLabel}>{g.label}</p>
-              <div className={styles.tools}>
-                {g.tools.map((t) => (
-                  <Link key={t.id} href={t.href} className={styles.tool}>
-                    <span className={styles.toolIcon}><ShellIcon name={t.icon} size={18} /></span>
-                    <span className={styles.toolText}><b>{t.name}{t.beta ? <em className={styles.beta}>開発中</em> : null}</b><small>{t.hint}</small></span>
-                  </Link>
-                ))}
+          {SHELL_GROUPS.map((g) => {
+            const tone = GROUP_TONE[g.label]
+            return (
+              <div key={g.label} data-tone={tone?.tone}>
+                <p className={styles.toolGroupHead}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {tone ? <img src={`/character/${tone.bear}-256.webp`} width={32} height={32} alt="" aria-hidden decoding="async" /> : null}
+                  <span>{g.label}</span>
+                  <small>{g.tools.length}個</small>
+                </p>
+                <div className={styles.tools}>
+                  {g.tools.map((t) => (
+                    <Link key={t.id} href={t.href} className={styles.tool}>
+                      <TodoBear tool={t.id} size={44} />
+                      <span className={styles.toolText}><b>{t.name}</b><small>{SHORT_HINT[t.id] ?? t.hint}</small></span>
+                      {t.beta ? <em className={styles.beta}>開発中</em> : null}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
     </div>
