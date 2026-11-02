@@ -51,13 +51,14 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const products = productsOn
     ? await (async () => {
         const jar = await cookies()
-        const selfDefault = parseProductId(jar.get(PRODUCT_DEFAULT_COOKIE)?.value)
         const formerDept = parseDepartmentsCookie(jar.get(DEPARTMENTS_COOKIE)?.value)[0]
         const last = parseProductId(jar.get(PRODUCT_COOKIE)?.value) ?? (formerDept ? productOfDepartment(formerDept) : null)
-        // 段2: 会社が使う製品と、管理者が決めた担当・既定（会社の役割の旗も on のときだけ表を読む。読めなければ決まりは無いものとする）
+        // 段2: 会社が使う製品と、担当・既定（本人が決めた値が先、無ければ管理者の値）。会社の役割の旗も on のときだけ表を読む。読めなければ決まりは無いものとする
         const mine = await getMemberProducts((session?.user as { id?: string } | undefined)?.id ?? '', session?.user?.email ?? null)
-        const start = resolveStartProduct({ selfDefault, adminDefault: mine.adminDefault, last, isAdmin: mine.all, assigned: mine.assigned })
-        return { enabled: true, start, selfDefault, order: orderProductsForSwitcher(mine), canManage: mine.canManage }
+        // 管理者が「本人に変えさせない」にした人は、切り替えの一覧で選んだ既定（cookie）も使わない
+        const selfDefault = mine.locked ? null : parseProductId(jar.get(PRODUCT_DEFAULT_COOKIE)?.value)
+        const start = resolveStartProduct({ selfDefault, adminDefault: mine.defaultProduct, last, isAdmin: mine.all, assigned: mine.assigned })
+        return { enabled: true, start, selfDefault, order: orderProductsForSwitcher(mine), canManage: mine.canManage, canEditSelf: mine.canEditSelf, locked: mine.locked }
       })()
     : undefined
   // 左下の「登録会社」（UI 品質 B-1）。失敗しても枠は出す

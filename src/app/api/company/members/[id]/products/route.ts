@@ -1,6 +1,6 @@
 // ============================================
 // メンバーの担当の製品と既定の製品 PUT /api/company/members/[id]/products
-// body: { products: ProductId[], defaultProduct: ProductId | null }
+// body: { products: ProductId[], defaultProduct: ProductId | null, locked?: boolean }（locked = 本人に変えさせない）
 // ============================================
 // 設計: docs/design/buddy-products-2026-11-01.md §5.2
 // ⚠️ 旗 PRODUCT_HUBS_ROLLOUT と COMPANY_ROLES_ROLLOUT の内側。管理者以上だけ。id は account_company_members の id、持ち主は 'owner'。
@@ -30,6 +30,6 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       } as const
       return json({ code: d.code, error: messages[d.code] }, d.status)
     }
-    return json({ ok: true, products: d.products, defaultProduct: d.defaultProduct })
+    return json({ ok: true, products: d.products, defaultProduct: d.defaultProduct, ...(d.locked === undefined ? {} : { locked: d.locked }) })
   })
 }

@@ -24,12 +24,16 @@ import styles from './ProductSwitcher.module.css'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
 
-export default function ProductSwitcher({ current, selfDefault, order, canManage = false, onSelect, variant, labelClassName }: {
+export default function ProductSwitcher({ current, selfDefault, order, canManage = false, canEditSelf = false, locked = false, onSelect, variant, labelClassName }: {
   current: ProductId
   /** 並び（段2。担当を先に、会社が使っていない製品は others へ）。無ければ決まった並びで全部 */
   order?: { main: ProductId[]; others: ProductId[] }
   /** 管理者以上なら、使う製品の設定（/home/products）への案内を出す */
   canManage?: boolean
+  /** 自分の担当の画面（/home/my-products）へ案内するか（段2の表を読めて、ロックされていない人） */
+  canEditSelf?: boolean
+  /** 管理者が「本人に変えさせない」にした人。「既定にする」を出さない */
+  locked?: boolean
   /** 本人が既定にした製品（無ければ null） */
   selfDefault: ProductId | null
   /** 一覧から製品を選んだとき（ホームへ移る前に、枠の側で今の製品を変える） */
@@ -144,10 +148,13 @@ export default function ProductSwitcher({ current, selfDefault, order, canManage
           </>
         ) : null}
         <div className={styles.foot}>
-          {def === current
-            ? <p className={styles.footNote}>ログインしたあと、{product.name}を最初に開きます</p>
-            : <button type="button" className={styles.defButton} onClick={makeDefault}>{product.name}を既定にする</button>}
+          {locked
+            ? <p className={styles.footNote}>最初に開く製品は、管理者が決めています</p>
+            : def === current
+              ? <p className={styles.footNote}>ログインしたあと、{product.name}を最初に開きます</p>
+              : <button type="button" className={styles.defButton} onClick={makeDefault}>{product.name}を既定にする</button>}
           <p className={styles.footHint}>ほかの製品のツールも開けます</p>
+          {canEditSelf ? <Link href="/home/my-products" className={styles.manage} onClick={() => setOpen(false)} prefetch={false}>自分の担当を決める</Link> : null}
           {canManage ? <Link href="/home/products" className={styles.manage} onClick={() => setOpen(false)} prefetch={false}>使う製品と担当を設定する</Link> : null}
         </div>
       </div>

@@ -51,18 +51,34 @@
 .chip[data-on='true'] { background: var(--blue); border-color: var(--blue); color: #fff; }
 .chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
 .chips:disabled .chip { opacity: 0.6; cursor: wait; }
+/* 会社で使っていない製品（選べるが薄く） */
+.chip[data-dim='true']:not([data-on='true']) { border-style: dashed; color: var(--muted); }
+.chip[data-dim='true'][data-on='true'] { opacity: 0.7; }
+.chipNote { margin-left: 6px; font-size: 11px; font-weight: 600; }
+/* 管理者の画面の「本人が変えています」と「本人に変えさせない」 */
+.selfChanged { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--sub); }
+.lockPick { grid-column: 2 / -1; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; font-weight: 700; color: var(--sub); cursor: pointer; }
+.lockPick input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+.reset {
+  justify-self: start; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+  color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.reset:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.reset:disabled { opacity: 0.6; cursor: wait; }
 
 .defaultPick { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 700; }
 .defaultPick select {
   min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
   color: var(--ink); font: inherit; font-size: 14px; font-weight: 500;
 }
+.card > .defaultPick { max-width: 360px; }
 .defaultPick select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 900px) {
   .member { grid-template-columns: minmax(0, 1fr); }
+  .lockPick { grid-column: auto; }
 }
 @media (max-width: 767px) {
   .page { padding: 20px 16px 48px; }

@@ -9,15 +9,15 @@ export const dynamic = 'force-dynamic'
 export default function ProductSettingsPreviewPage() {
   if (process.env.NODE_ENV === 'production') notFound()
   return (
-    <AppShell userName="サンプル" products={{ enabled: true, start: 'management', selfDefault: null, order: { main: ['management', 'sales', 'marketing', 'budget'], others: ['hr'] }, canManage: true }}>
+    <AppShell userName="サンプル" products={{ enabled: true, start: 'management', selfDefault: null, order: { main: ['management', 'sales', 'marketing', 'budget'], others: ['hr'] }, canManage: true, canEditSelf: true }}>
       <p style={{ margin: 0, padding: '8px 16px', background: '#fff7d6', color: '#7a5b00', fontSize: 13, fontWeight: 700 }}>開発用の見本です。人と値は見本で、実際のデータではありません。</p>
       <ProductSettings
         initial={{
           enabled: ['management', 'sales', 'marketing', 'budget'],
           members: [
-            { memberId: 'owner', email: 'owner@example.com', name: '見本 太郎', role: 'owner', isSelf: true, products: [], defaultProduct: null },
-            { memberId: 'm1', email: 'sales@example.com', name: '見本 花子', role: 'member', isSelf: false, products: ['sales'], defaultProduct: 'sales' },
-            { memberId: 'm2', email: 'keiri@example.com', name: null, role: 'billing', isSelf: false, products: ['budget', 'management'], defaultProduct: 'budget' },
+            { memberId: 'owner', email: 'owner@example.com', name: '見本 太郎', role: 'owner', isSelf: true, products: [], defaultProduct: null, locked: false, selfChanged: false },
+            { memberId: 'm1', email: 'sales@example.com', name: '見本 花子', role: 'member', isSelf: false, products: ['sales'], defaultProduct: 'sales', locked: false, selfChanged: true },
+            { memberId: 'm2', email: 'keiri@example.com', name: null, role: 'billing', isSelf: false, products: ['budget', 'management'], defaultProduct: 'budget', locked: true, selfChanged: false },
           ],
         }}
       />

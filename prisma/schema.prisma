@@ -6121,17 +6121,22 @@ model AccountCompanyProduct {
   @@map("account_company_products")
 }
 
-// メンバーの担当の製品と、既定で開く製品（管理者が決める）。持ち主も行を持てる（companyId と userId で持つ）
-// 本人が切り替えの一覧で選んだ既定は cookie（doya_product_default）に残し、こちらより先に使う
+// メンバーの担当の製品と、既定で開く製品。持ち主も行を持てる（companyId と userId で持つ）
+// products / defaultProduct は管理者が決めた値。self* は本人が「自分の担当」の画面で決めた値で、selfSet のときは本人の値を先に使う。
+// locked（管理者が「本人に変えさせない」）のときは、本人の値も cookie（doya_product_default）の既定も使わない
 model AccountCompanyMemberProduct {
-  id             String   @id @default(cuid())
-  companyId      String
-  userId         String
-  products       String[]
-  defaultProduct String?
-  updatedBy      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  companyId          String
+  userId             String
+  products           String[]
+  defaultProduct     String?
+  selfProducts       String[] @default([])
+  selfDefaultProduct String?
+  selfSet            Boolean  @default(false)
+  locked             Boolean  @default(false)
+  updatedBy          String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@unique([companyId, userId])
   @@map("account_company_member_products")

@@ -2,7 +2,8 @@
 // ============================================
 // 使う製品と担当（/home/products）の画面
 // ============================================
-// 上: 会社で使う製品（スイッチ）。下: メンバーごとの担当の製品（複数）と、最初に開く製品（1つ）。
+// 上: 会社で使う製品（スイッチ）。下: メンバーごとの担当の製品（複数）と、最初に開く製品（1つ）と、「本人に変えさせない」。
+// - 本人も「自分の担当」（/home/my-products）で変えられる。本人が変えた人には「本人が変えています」と出す（2026-11-02）。
 // - 変えたらその場で保存する（PUT）。失敗したら元に戻し、何が起きたかと直し方を出す。
 // - 製品は見え方だけ。ツールの権限は変えない（画面にもそう書く）。
 // 設計: docs/design/buddy-products-2026-11-01.md §5
@@ -49,17 +50,18 @@ export default function ProductSettings({ initial }: { initial: { enabled: Produ
     }
   }
 
-  const saveMember = async (m: MemberProductsRow, products: ProductId[], defaultProduct: ProductId | null) => {
+  const saveMember = async (m: MemberProductsRow, products: ProductId[], defaultProduct: ProductId | null, locked = m.locked) => {
     // 担当から外した製品が既定なら、既定も外す（既定は担当の中から選ぶ）
     const def = defaultProduct && products.length > 0 && !products.includes(defaultProduct) ? null : defaultProduct
     const prev = members
-    setMembers((list) => list.map((x) => (x.memberId === m.memberId ? { ...x, products, defaultProduct: def } : x)))
+    setMembers((list) => list.map((x) => (x.memberId === m.memberId ? { ...x, products, defaultProduct: def, locked } : x)))
     setBusy(`m:${m.memberId}`)
-    const r = await put(`/api/company/members/${encodeURIComponent(m.memberId)}/products`, { products, defaultProduct: def })
+    const r = await put(`/api/company/members/${encodeURIComponent(m.memberId)}/products`, { products, defaultProduct: def, locked })
     setBusy(null)
     if (r.ok) {
-      setMembers((list) => list.map((x) => (x.memberId === m.memberId ? { ...x, products: r.data.products, defaultProduct: r.data.defaultProduct } : x)))
-      setNote({ kind: 'ok', text: `${m.name ?? m.email}さんの担当を保存しました。` })
+      setMembers((list) => list.map((x) => (x.memberId === m.memberId ? { ...x, products: r.data.products, defaultProduct: r.data.defaultProduct, locked: Boolean(r.data.locked) } : x)))
+      const who = `${m.name ?? m.email}さん`
+      setNote({ kind: 'ok', text: locked !== m.locked ? (locked ? `${who}が担当を変えられないようにしました。` : `${who}が担当を変えられるようにしました。`) : `${who}の担当を保存しました。` })
     } else {
       setMembers(prev)
       setNote({ kind: 'error', text: r.data?.error ?? '保存できませんでした。時間をおいて、もう一度お試しください。' })
@@ -109,7 +111,7 @@ export default function ProductSettings({ initial }: { initial: { enabled: Produ
 
       <section className={styles.card} aria-labelledby="ps-members">
         <h2 id="ps-members" className={styles.cardTitle}>メンバーの担当と、最初に開く製品</h2>
-        <p className={styles.cardLead}>担当の製品は、切り替えの一覧で上に並びます。オーナーと管理者は、担当に関係なく全部の製品を見ます。本人が「既定にする」で選んだ製品は、ここで決めた製品より先に使います。</p>
+        <p className={styles.cardLead}>担当の製品は、切り替えの一覧で上に並びます。オーナーと管理者は、担当に関係なく全部の製品を見ます。本人も「自分の担当」で変えられます。本人が変えたときは本人の値を使い、ここで決めた値は初期値になります。「本人に変えさせない」にすると、ここで決めた値だけを使います。</p>
         {members.length === 0 ? <p className={styles.empty}>参加しているメンバーがまだいません。招待した人は、参加したあとに決められます。</p> : (
           <ul className={styles.members}>
             {members.map((m) => {
@@ -118,7 +120,7 @@ export default function ProductSettings({ initial }: { initial: { enabled: Produ
               return (
                 <li key={m.memberId} className={styles.member}>
                   <div className={styles.who}>
-                    <b>{m.name ?? m.email}{m.isSelf ? <span className={styles.self}>あなた</span> : null}</b>
+                    <b>{m.name ?? m.email}{m.isSelf ? <span className={styles.self}>あなた</span> : null}{m.selfChanged && !m.locked ? <span className={styles.selfChanged}>本人が変えています</span> : null}</b>
                     <small>{m.name ? `${m.email}・` : ''}{roleLabel(m.role)}{seesAll(m.role) ? '（全部の製品を見ます）' : ''}</small>
                   </div>
                   <fieldset className={styles.chips} disabled={disabled}>
@@ -150,6 +152,18 @@ export default function ProductSettings({ initial }: { initial: { enabled: Produ
                       {choices.map((id) => <option key={id} value={id}>{getProduct(id).name}</option>)}
                     </select>
                   </label>
+                  {m.isSelf ? null : (
+                    <label className={styles.lockPick}>
+                      <input
+                        id={`ps-${m.memberId}-lock`}
+                        type="checkbox"
+                        checked={m.locked}
+                        disabled={disabled}
+                        onChange={() => void saveMember(m, m.products, m.defaultProduct, !m.locked)}
+                      />
+                      本人に変えさせない
+                    </label>
+                  )}
                 </li>
               )
             })}

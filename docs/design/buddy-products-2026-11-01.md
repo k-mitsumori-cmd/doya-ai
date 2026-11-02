@@ -226,6 +226,19 @@ B案は「URL を見ればどの製品か分かる」良さがあります。た
 - 既定の製品は1つです。担当の製品の中から選びます。
 - 社長と管理者は、担当に関係なく全部の製品を見ます（今の部署の決まりと同じ）。
 
+> **2026-11-01 実装で変えた点**: 画面は役割の画面（`/home/roles`）ではなく、製品の設定の画面（`/home/products`）の下半分にしました。
+
+#### 5.2.1 本人が自分の担当を決める（2026-11-02 の決定。三森さんの指示）
+
+- 画面: 「自分の担当」（`/home/my-products`）。会社の人なら誰でも開けます。切り替えの一覧の下の「自分の担当を決める」から入ります。
+- 本人は、担当の製品をチップで選び、最初に開く製品を1つ選びます。
+- 管理者が決めた担当があるときは、それを初期値にします。本人が変えたら、本人の値を先に使います。「管理者が決めた担当に戻す」で戻せます。
+- 管理者は、メンバーごとに「本人に変えさせない」を選べます（`/home/products`）。このときは管理者の値だけを使い、本人の画面は見るだけになります。切り替えの一覧の「既定にする」も出さず、cookie の既定も使いません。
+- 本人が変えた人には、管理者の画面で「本人が変えています」と出します。管理者が値を変えても、本人の値は消しません（ロックを外せば、また本人の値を使います）。
+- 会社で使っていない製品は、本人の選択肢では薄く出します（選べます。ツールも開けます）。
+- 本人が最初に開く製品を決めたときは、cookie（`doya_product_default`）も同じ値にそろえます。cookie が表より先に使われるためです。
+- 表は増やしません。`account_company_member_products` に本人の値の列（`selfProducts`・`selfDefaultProduct`・`selfSet`）とロックの列（`locked`）を足しました。`selfSet` は「本人が担当を空にした」と「まだ決めていない」を分けるためにあります。
+
 ### 5.3 部門の担当者の権限
 
 - 「何ができるか」は、今の会社の役割（owner・admin・manager・billing・member・guest）と、各ツールの役割のままです。製品では変えません。
@@ -287,9 +300,12 @@ erDiagram
     string id PK
     string companyId FK
     string userId
-    string_array products "担当の製品"
-    string defaultProduct "既定で開く製品（任意）"
-    string defaultSetBy "self | admin"
+    string_array products "担当の製品（管理者が決めた値）"
+    string defaultProduct "既定で開く製品（管理者が決めた値。任意）"
+    string_array selfProducts "本人が決めた担当（2026-11-02）"
+    string selfDefaultProduct "本人が決めた既定（任意）"
+    boolean selfSet "本人が決めたか"
+    boolean locked "本人に変えさせない"
     string updatedBy
   }
 ```
@@ -307,7 +323,8 @@ erDiagram
 4. 段5（任意）の予算の表 `budget_plan_lines`（companyId・月・区分・金額）は、三森さんが予算の入力を作ると決めたときだけ足します。
 
 > **2026-11-01 実装で変えた点（段2）**: 部署の表（`account_company_member_departments`）は作り替えず、残したまま新しい表 `account_company_member_products` を足しました。部署の表を使う権限の画面とテストを変えずに済むためです。部署の表は、段4で製品を全員に出したあとに片付けます（本番に流していなければ、流さずに schema から消す）。
-> - 並び順の列（`sortOrder`）と、既定を誰が決めたかの列（`defaultSetBy`）は作りませんでした。並びは製品の表の順で足り、本人の既定は cookie に残すためです。
+> - 並び順の列（`sortOrder`）と、既定を誰が決めたかの列（`defaultSetBy`）は作りませんでした。並びは製品の表の順で足りるためです。
+> - 2026-11-02: 本人も担当を決められるようにしたため、本人の値の列と「本人に変えさせない」の列を足しました（§5.2.1）。表は増やしていません。
 > - 表は `account_companies` に外部キーを張りません（部署の表と同じ形）。会社を消したときの片付けは、会社の削除の処理で行います（段4までに足す）。
 > - 製品の設定の変更は、役割の変更の記録（`account_company_role_events`）に書きません。製品は見え方だけで、権限を変えないためです。
 
@@ -336,6 +353,10 @@ CREATE TABLE IF NOT EXISTS "account_company_member_products" (
     "userId" TEXT NOT NULL,
     "products" TEXT[],
     "defaultProduct" TEXT,
+    "selfProducts" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "selfDefaultProduct" TEXT,
+    "selfSet" BOOLEAN NOT NULL DEFAULT false,
+    "locked" BOOLEAN NOT NULL DEFAULT false,
     "updatedBy" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -343,7 +364,11 @@ CREATE TABLE IF NOT EXISTS "account_company_member_products" (
     CONSTRAINT "account_company_member_products_values_check"
         CHECK ("products" <@ ARRAY['marketing', 'sales', 'hr', 'budget', 'management']::TEXT[]),
     CONSTRAINT "account_company_member_products_default_check"
-        CHECK ("defaultProduct" IS NULL OR "defaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
+        CHECK ("defaultProduct" IS NULL OR "defaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management')),
+    CONSTRAINT "account_company_member_products_self_values_check"
+        CHECK ("selfProducts" <@ ARRAY['marketing', 'sales', 'hr', 'budget', 'management']::TEXT[]),
+    CONSTRAINT "account_company_member_products_self_default_check"
+        CHECK ("selfDefaultProduct" IS NULL OR "selfDefaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "account_company_member_products_companyId_userId_key"
     ON "account_company_member_products" ("companyId", "userId");
