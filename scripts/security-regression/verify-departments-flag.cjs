@@ -31,6 +31,9 @@ check('Departments flag: the shell layout passes departments only from the serve
   // 主の部署は旗が on のときだけ使う（off なら既定の順のまとまり）
   assert.match(shell, /buildDepartmentGroups\(deptOn \? departments\?\.primary \?\? \[\] : \[\]\)/)
   assert.match(shell, /<ToolGroupsNav groups=\{toolGroups\}/)
+  // 旗が off なら、今までの区分（SHELL_GROUPS）のまま。部署のまとまりは旗の裏だけ
+  assert.match(shell, /\{deptOn \? \(\s*<ToolGroupsNav/)
+  assert.match(shell, /\) : SHELL_GROUPS\.map\(\(group\) =>/)
   const page = read('src/app/(shell)/home/page.tsx')
   assert.match(page, /const departmentsOn = await isDepartmentsEnabled\(\)/)
   assert.match(page, /departmentsOn\s*\n?\s*\? \{/)
