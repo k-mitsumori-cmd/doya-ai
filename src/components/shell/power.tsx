@@ -58,7 +58,7 @@ export function ShellPowerMeter({ className, href = '/home/doya-power', variant 
   return (
     <Link
       href={href}
-      className={`${styles.meter} ${variant === 'sidebar' ? styles.sidebarMeter : ''} ${className ?? ''}`}
+      className={`${styles.meter} ${variant === 'sidebar' ? styles.sidebarMeter : styles.topbarMeter} ${className ?? ''}`}
       data-low={low ? 'true' : undefined}
       aria-label={`ドヤパワーの残り ${fmt(value)}（上限 ${fmt(max)}）${low ? '。残りわずかです' : ''}。内訳と履歴を見る`}
       title={`ドヤパワーの残り ${fmt(value)} / 上限 ${fmt(max)}`}

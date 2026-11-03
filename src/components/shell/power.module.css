@@ -11,6 +11,9 @@
 .num { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: right; }
 .track { display: block; width: 40px; height: 4px; border-radius: 999px; background: rgba(0, 71, 214, 0.15); overflow: hidden; }
 .fill { display: block; height: 100%; border-radius: 999px; background: currentColor; }
+/* スマホの上の帯では棒を出さない（製品名の幅を空ける）。360px 未満では稲妻だけにする */
+.topbarMeter .track { display: none; }
+@media (max-width: 359px) { .topbarMeter .num { display: none; } }
 /* 左のメニューの上では、検索の下に1行で出す */
 .sidebarMeter { align-self: flex-start; margin: 4px 12px 0; }
 /* 768〜1279px のアイコンだけのサイドバーでは、数字と棒を隠して稲妻だけにする */

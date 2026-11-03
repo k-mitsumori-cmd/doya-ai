@@ -36,10 +36,10 @@ export default function StoredFilesPage() {
   if (status === 'loading') return null
   if (status === 'unauthenticated') {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mx-auto max-w-3xl px-4 py-10">
         <p className="text-sm text-slate-700">保存しているファイルの確認にはログインが必要です。</p>
         <Link href="/auth/signin?callbackUrl=/settings/files" className="mt-4 inline-block rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white">ログインする</Link>
-      </main>
+      </div>
     )
   }
 
@@ -59,7 +59,7 @@ export default function StoredFilesPage() {
   const pct = data ? Math.min(100, Math.round((data.usedBytes / data.plan.quotaBytes) * 100)) : 0
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-xl font-black text-slate-900">保存しているファイル</h1>
       {data && (
         <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -118,6 +118,6 @@ export default function StoredFilesPage() {
       <p className="mt-8 text-xs text-slate-500">
         <Link href="/media/upload" className="underline">動画・音声を取り込む</Link>
       </p>
-    </main>
+    </div>
   )
 }

@@ -43,6 +43,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'home', basePath: '/home' },
   // 製品のホーム（/hub/sales など。旗 PRODUCT_HUBS_ROLLOUT の内側だけ。off ならページが 404 を返す）
   { id: 'hub', basePath: '/hub' },
+  // アカウントの設定（/settings/files など）。ツールではないので、左のメニューには出さない
+  { id: 'settings', basePath: '/settings' },
   { id: 'income', basePath: '/income' },
   { id: 'expense', basePath: '/expense' },
   { id: 'popup', basePath: '/popup', usage: { service: 'popup', refreshEvent: 'popup:generated' } },

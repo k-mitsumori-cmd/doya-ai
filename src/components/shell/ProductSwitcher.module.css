@@ -17,8 +17,9 @@
 .chevron { margin-left: auto; flex: none; color: var(--sub); transition: transform 0.2s var(--ease); }
 .chevron[data-open='true'] { transform: rotate(180deg); }
 
-/* 上の帯（スマホ）では幅を取りすぎない */
+/* 上の帯（スマホ）では幅を取りすぎない。製品名（いちばん長い「マーケティング」）を切らないよう、ロゴは出さない */
 .wrap[data-variant='topbar'] { flex: 0 1 auto; }
+.wrap[data-variant='topbar'] .mark { display: none; }
 .wrap[data-variant='topbar'] .trigger { min-height: 44px; padding-right: 6px; }
 .wrap[data-variant='topbar'] .product { font-size: 15px; }
 
