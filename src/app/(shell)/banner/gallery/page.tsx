@@ -243,12 +243,21 @@ export default function BannerGalleryPage() {
   }
 
   const fetchFullImage = async (id: string): Promise<string> => {
-    const res = await fetch(`/api/banner/image?id=${encodeURIComponent(id)}`)
-    const json = await res.json()
-    if (!res.ok) throw new Error(json?.error || '画像の取得に失敗しました')
-    const image = String(json?.image || '')
-    if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
-    return image
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
+    try {
+      const res = await fetch(`/api/banner/image?id=${encodeURIComponent(id)}`, { signal: controller.signal })
+      const json = await res.json()
+      if (!res.ok) throw new Error(typeof json?.error === 'string' ? json.error : '画像の取得に失敗しました')
+      const image = typeof json?.image === 'string' ? json.image : ''
+      if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
+      return image
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('画像の取得がタイムアウトしました。通信状況をご確認のうえ、再試行してください。')
+      throw error
+    } finally {
+      window.clearTimeout(timeout)
+    }
   }
 
   useEffect(() => {
