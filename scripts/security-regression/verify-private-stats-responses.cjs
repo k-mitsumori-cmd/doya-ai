@@ -19,6 +19,7 @@ function admin(mode) {
     '@/lib/services': load('src/lib/services.ts', { './unified-plan': load('src/lib/unified-plan.ts') }),
     '@/lib/attribution': { serviceLabelOf: () => 'service' },
     '@/lib/jst': load('src/lib/jst.ts'),
+    '@/lib/admin-stat-comparison': load('src/lib/admin-stat-comparison.ts'),
   })
 }
 

@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { summarizeRegisteredPlans } from '@/lib/admin-registered-plan-stats'
 import { getServiceById, RETIRED_SERVICE_IDS } from '@/lib/services'
 import { serviceLabelOf } from '@/lib/attribution'
-import { jstDayRange, jstMonthRange, jstDateKey } from '@/lib/jst'
+import { jstDayRange, jstMonthRange } from '@/lib/jst'
+import { compareAdminMonthlyCounts } from '@/lib/admin-stat-comparison'
 
 // cookies() を使用するため、静的最適化を無効化（ビルド時SSGで落ちるのを防ぐ）
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,6 @@ export async function GET(request: NextRequest) {
     const { start: monthStart, end: monthEnd } = jstMonthRange(now)
     const { start: lastMonthStart } = jstMonthRange(monthStart.getTime() - 1)
     const lastMonthEnd = monthStart
-    const dayOfMonth = Number(jstDateKey(now)!.slice(-2))
 
     // 集計に失敗した場合は外側で失敗を返し、0件として表示しない。
 
@@ -168,12 +168,11 @@ export async function GET(request: NextRequest) {
         serviceLastMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: lastMonthStart, lt: lastMonthEnd } } })
       }
 
-        // 成長率
-      const growth = serviceLastMonthGenerations === 0
-        ? (serviceMonthGenerations > 0 ? 100 : 0)
-        : (serviceMonthGenerations === 0 && dayOfMonth <= 3)
-          ? 0
-          : ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
+      // HRの月次組織・従業員比較は未集計。0件として比較しない。
+      const comparison = compareAdminMonthlyCounts(
+        serviceId === 'hr' ? null : serviceMonthGenerations,
+        serviceId === 'hr' ? null : serviceLastMonthGenerations,
+      )
 
       const label = serviceLabels[serviceId]
       serviceStats.push({
@@ -189,7 +188,8 @@ export async function GET(request: NextRequest) {
         generations: serviceGenerations,
         todayGenerations: serviceTodayGenerations,
         revenue: null,
-        growth: parseFloat(growth.toFixed(1)),
+        growth: comparison.percent,
+        growthStatus: comparison.status,
       })
 
     }
@@ -218,12 +218,8 @@ export async function GET(request: NextRequest) {
       ? parseFloat(((proUsers / totalUsers) * 100).toFixed(1))
       : 0
 
-    // 生成数の前月比（月初で当月データがほぼ無い場合は誤解を招くため0扱い）
-    const generationGrowth = lastMonthGenerations === 0
-      ? (monthGenerations > 0 ? 100 : 0)
-      : (monthGenerations === 0 && dayOfMonth <= 3)
-        ? 0  // 月初3日以内かつ当月0件は「計測中」扱い（-100%を出さない）
-        : parseFloat((((monthGenerations - lastMonthGenerations) / lastMonthGenerations) * 100).toFixed(1))
+    // 当月累計対前月全体。前月0件は百分率を定義できない。
+    const generationComparison = compareAdminMonthlyCounts(monthGenerations, lastMonthGenerations)
 
     // 平均生成数/ユーザー
     const avgGenerationsPerUser = totalUsers > 0
@@ -246,7 +242,8 @@ export async function GET(request: NextRequest) {
       todayGenerations,
       monthGenerations,
       lastMonthGenerations,
-      generationGrowth,
+      generationGrowth: generationComparison.percent,
+      generationGrowthStatus: generationComparison.status,
       avgGenerationsPerUser,
 
       // 収益統計
