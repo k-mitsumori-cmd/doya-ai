@@ -15,8 +15,8 @@ export async function GET() {
     }
 
     const now = new Date()
-    const { start, end } = jstDayRange(now)
-    const createdAt = { gte: start, lt: end }
+    const { start } = jstDayRange(now)
+    const createdAt = { gte: start, lt: now }
     // Generation includes USAGE rows and generated content. This counts records,
     // not generated outputs, anonymous uses, or metadata.count units.
     const [recordedActivities, newUsers] = await Promise.all([

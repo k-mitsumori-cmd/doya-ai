@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
 
     // すべての期間を同じ時刻・日本時間の半開区間で集計する。
     const now = new Date()
-    const { start: todayStart, end: todayEnd } = jstDayRange(now)
-    const { start: monthStart, end: monthEnd } = jstMonthRange(now)
+    const { start: todayStart } = jstDayRange(now)
+    const { start: monthStart } = jstMonthRange(now)
     const { start: lastMonthStart } = jstMonthRange(monthStart.getTime() - 1)
     const lastMonthEnd = monthStart
     const recentDayWindow = { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000), lt: now }
@@ -57,11 +57,11 @@ export async function GET(request: NextRequest) {
     const totalGenerations = await prisma.generation.count()
 
     const todayGenerations = await prisma.generation.count({
-      where: { createdAt: { gte: todayStart, lt: todayEnd } },
+      where: { createdAt: { gte: todayStart, lt: now } },
     })
 
     const monthGenerations = await prisma.generation.count({
-      where: { createdAt: { gte: monthStart, lt: monthEnd } },
+      where: { createdAt: { gte: monthStart, lt: now } },
     })
 
     const lastMonthGenerations = await prisma.generation.count({
@@ -130,43 +130,43 @@ export async function GET(request: NextRequest) {
         serviceUsers = servicePlans.totalUsers
         serviceProUsers = servicePlans.paidPlanUsers
         serviceGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId } })
-        serviceTodayGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceTodayGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
-        serviceMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceMonthGenerations = await prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: monthStart, lt: now } } })
       } else if (serviceId === 'interview') {
         serviceGenerations = await prisma.interviewProject.count()
-        serviceTodayGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.interviewProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
       } else if (serviceId === 'copy') {
         serviceGenerations = await prisma.copyProject.count()
-        serviceTodayGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.copyProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
       } else if (serviceId === 'lp') {
         serviceGenerations = await prisma.lpProject.count()
-        serviceTodayGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.lpProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
       } else if (serviceId === 'voice') {
         serviceGenerations = await prisma.voiceProject.count()
-        serviceTodayGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.voiceProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
       } else if (serviceId === 'movie') {
         serviceGenerations = await prisma.movieProject.count()
-        serviceTodayGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.movieProject.count({ where: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } } })
       } else if (serviceId === 'hr') {
         serviceUsers = await prisma.hrEmployee.count()
         serviceGenerations = await prisma.hrOrganization.count()
-        serviceTodayGenerations = await prisma.hrEmployee.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } })
+        serviceTodayGenerations = await prisma.hrEmployee.count({ where: { createdAt: { gte: todayStart, lt: now } } })
       } else if (serviceId === 'kintai') {
         serviceUsers = await prisma.kintaiEmployee.count()
         serviceGenerations = await prisma.kintaiClockRecord.count()
-        serviceTodayGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: todayStart, lt: todayEnd } } })
-        serviceMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: monthStart, lt: monthEnd } } })
+        serviceTodayGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: todayStart, lt: now } } })
+        serviceMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: monthStart, lt: now } } })
         serviceLastMonthGenerations = await prisma.kintaiClockRecord.count({ where: { timestamp: { gte: lastMonthStart, lt: lastMonthEnd } } })
       }
 
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
 
       const count = await prisma.generation.count({
         where: {
-          createdAt: { gte: hourStart, lt: hourEnd },
+          createdAt: { gte: hourStart, lt: new Date(Math.min(hourEnd.getTime(), now.getTime())) },
         },
       })
       hourlyData.push(count)
