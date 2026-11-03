@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { adminComparisonLabel, type AdminComparisonStatus } from '@/lib/admin-stat-comparison'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -15,8 +16,6 @@ import {
   AlertTriangle,
   Image,
   ExternalLink,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
   ChevronRight,
   Calendar,
@@ -39,7 +38,8 @@ interface ServiceStats {
   generations: number
   todayGenerations: number
   revenue: number | null
-  growth: number
+  growth: number | null
+  growthStatus: AdminComparisonStatus
 }
 
 interface Stats {
@@ -55,7 +55,8 @@ interface Stats {
   todayGenerations: number
   monthGenerations: number
   lastMonthGenerations: number
-  generationGrowth: number
+  generationGrowth: number | null
+  generationGrowthStatus: AdminComparisonStatus
   avgGenerationsPerUser: number
   
   // KPI
@@ -256,8 +257,8 @@ export default function AdminDashboard() {
                   subValue: `総計 ${stats.totalGenerations.toLocaleString()}`,
                   icon: Zap, 
                   gradient: 'from-emerald-500 to-green-500',
-                  trend: stats.generationGrowth !== 0 ? stats.generationGrowth : null,
-                  trendUp: stats.generationGrowth > 0
+                  trend: null,
+                  trendUp: (stats.generationGrowth ?? 0) > 0
                 },
                 { 
                   label: '当月の返金控除後入金',
@@ -280,12 +281,6 @@ export default function AdminDashboard() {
                   <p className="text-2xl font-bold text-white mb-1">{kpi.value}</p>
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-white/40">{kpi.label}</p>
-                    {kpi.trend !== null && (
-                      <div className={`flex items-center gap-0.5 text-xs font-medium ${kpi.trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {kpi.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {typeof kpi.trend === 'number' ? kpi.trend.toFixed(1) : kpi.trend}%
-                      </div>
-                    )}
                   </div>
                   <p className="text-[10px] text-white/30 mt-1">{kpi.subValue}</p>
                 </motion.div>
@@ -451,10 +446,9 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                          <span className="text-[10px] text-white/50">前月比</span>
-                          <div className={`flex items-center gap-1 text-xs ${service.growth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {service.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                            <span className="font-bold">{service.growth >= 0 ? '+' : ''}{service.growth}%</span>
+                          <span className="text-[10px] text-white/50">今月累計 / 前月全体</span>
+                          <div className="text-xs text-white/70">
+                            <span className="font-bold">{adminComparisonLabel(service.growth, service.growthStatus)}</span>
                           </div>
                         </div>
                       </div>

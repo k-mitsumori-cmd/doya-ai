@@ -1,0 +1,1 @@
+const {run}=require('./admin-billing-mounted-harness.cjs');run(['dashboard','analytics'].flatMap(p=>['zero','unmeasured','negative','equal','positive'].map(s=>p+'-comparison-'+s)),'PASS Admin monthly comparison: ','DOYA_ADMIN_COMPARISON_MOUNTED_RESULT').catch(e=>{console.error(e.stack);process.exitCode=1});

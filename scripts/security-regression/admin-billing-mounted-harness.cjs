@@ -2,7 +2,7 @@ process.env.NODE_ENV = 'development';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const repo = path.resolve(__dirname, '../..'), dep = name => require(path.join(repo, 'node_modules', name));
 const React = dep('react'), ts = dep('typescript'), { JSDOM } = dep('jsdom');
-const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx'];
+const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx','src/lib/use-admin-analytics.ts','src/lib/admin-analytics-contract.ts', 'src/lib/admin-stat-comparison.ts'];
 async function scenario(strict, kind) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://synthetic.invalid/admin/billing' }), prior = new Map(), requests = [], navigation = [], timers = new Map(), downloads = [], blobs = new Map(), revoked = [];
   let root, timerId = 0;
@@ -33,7 +33,7 @@ async function scenario(strict, kind) {
           if (name.startsWith('@/')) return load('src/' + name.slice(2) + '.ts');
           if (name.startsWith('./')) return load(path.join(path.dirname(filename), name + '.ts'));
           throw Error('Unexpected module ' + name);
-        }, console, Date, Promise, AbortController, Blob, URL: SafeURL, document: dom.window.document,
+        }, console, Date, Promise, AbortController, AbortSignal, Blob, URL: SafeURL, document: dom.window.document,
         fetch: fakeFetch, setTimeout: timer, clearTimeout: id => timers.delete(id),
       }, { filename }); return exports;
     }
@@ -57,8 +57,22 @@ async function scenario(strict, kind) {
     const error = () => { assert(alert()); assert(!body().includes('PRIVATE_')); assert(!document.querySelector('[role="status"]')); assert(button('再取得する')); assert(!body().includes('返金控除後の入金')) };
     const fireDeadline = () => flush(() => { const active = [...timers].filter(([, x]) => x.ms === 30000); assert.equal(active.length, 1); const [id, t] = active[0]; timers.delete(id); t.fn() });
     const initial = [...requests];
-    if (analytics) {
-      const stats = { totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
+    if(kind.includes('-comparison-')) {
+      const which=kind.split('-comparison-')[1];
+      const [percent,status,expected]=({zero:[null,'no-baseline','比較不可（前月0件）'],unmeasured:[null,'not-measured','未集計'],negative:[-100,'comparable','-100.0%'],equal:[0,'comparable','0.0%'],positive:[50,'comparable','+50.0%']})[which];
+      const stats={totalUsers:9,premiumUsers:2,enterpriseUsers:0,freeUsers:7,totalGenerations:45,todayGenerations:4,monthGenerations:which==='zero'?3:which==='negative'?0:which==='positive'?3:4,lastMonthGenerations:which==='zero'?0:which==='positive'?2:4,generationGrowth:which==='unmeasured'?0:percent,generationGrowthStatus:which==='unmeasured'?'comparable':status,avgGenerationsPerUser:5,conversionRate:22.2,services:[{id:'banner',name:'合成サービス',icon:'',gradient:'',users:5,proUsers:1,generations:8,todayGenerations:2,revenue:null,growth:percent,growthStatus:status}],chartData:Array(12).fill(2),recentUsers:1,recentGenerations:[],adminLoginAttempts:0,lastUpdated:'2026-11-15T00:00:00.000Z'};
+      await reply(initial.filter(x=>x.url==='/api/admin/stats'),200,stats);
+      if(dashboard) await reply(initial.filter(x=>x.url.startsWith('/api/admin/billing/stats?')));
+      assert(body().includes(expected),kind+' expected '+expected);
+      assert(!body().includes('NaN'));assert(!body().includes('Infinity'));
+      assert(!document.querySelector('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right'));
+      if(analytics){assert(body().includes('今月の生成数（途中累計）'));assert(body().includes('先月の生成数（月全体）'));assert(body().includes('今月累計 / 前月全体（日本時間）'))}
+      else assert(body().includes('今月累計 / 前月全体'));
+      if(percent===null) assert(!body().includes('100%'));
+    } else if (analytics) {
+      if(kind==='analytics-registration-labels') {
+
+      const stats = { totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowthStatus: 'comparable', generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
       await reply(initial, 200, stats);
       assert(body().includes('有料プラン登録')); assert(body().includes('登録比率 47.1%')); assert(!body().includes('有料会員')); assert(!body().includes('CVR'));
       for (const label of ['有料プラン登録', '総ユーザー', '本日生成']) {
@@ -66,10 +80,47 @@ async function scenario(strict, kind) {
         assert.equal(node.parentElement.querySelectorAll('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right').length, 0);
       }
       assert(requests.every(x => x.url === '/api/admin/stats'));
+
+      } else {
+
+      const stats={totalUsers:34,premiumUsers:16,conversionRate:47.1,totalGenerations:10,todayGenerations:2,monthGenerations:4,lastMonthGenerations:5,generationGrowthStatus:'comparable',generationGrowth:-20,services:[],chartData:Array(12).fill(0)};
+      const failure=()=>{assert(alert());assert(body().includes('利用統計'));assert(!document.querySelector('.animate-spin'));assert(button('再取得する'));assert(!body().includes('PRIVATE_'));};
+      const recover=async()=>{await click('再取得する');await reply([requests.at(-1)],200,stats);assert(!alert());assert(body().includes('有料プラン登録'));};
+      if(['analytics-http503','analytics-network','analytics-json-malformed','analytics-invalid-shape'].includes(kind)) {
+        if(kind==='analytics-network') await flush(()=>initial.forEach(x=>x.reject(Error('PRIVATE_NETWORK_ERROR'))));
+        else if(kind==='analytics-json-malformed') await flush(()=>initial.forEach(x=>x.resolve(new Response('PRIVATE_BAD_JSON',{status:200}))));
+        else await reply(initial,kind==='analytics-http503'?503:200,kind==='analytics-invalid-shape'?{...stats,totalGenerations:'PRIVATE_BAD_COUNT'}:{error:'PRIVATE_HTTP_ERROR'});
+        failure();await recover();
+      } else if(['analytics-timeout','analytics-body-timeout','analytics-timeout-late401'].includes(kind)) {
+        if(kind==='analytics-body-timeout')await flush(()=>initial.forEach(x=>x.resolve({ok:true,status:200,json:()=>new Promise(()=>{})})));
+        await fireDeadline();failure();assert(initial.every(x=>x.options.signal.aborted));
+        if(kind==='analytics-timeout-late401'){await reply(initial,401,{error:"SYNTHETIC_UNAUTHORIZED"});assert.deepEqual(navigation,[]);failure();}
+        await recover();
+      } else if(kind==='analytics-unauthorized') {
+        await reply(initial,401,{error:"SYNTHETIC_UNAUTHORIZED"});assert.deepEqual(navigation,['/admin/login']);failure();assert(!body().includes('有料プラン登録'));
+      } else if(kind==='analytics-unmount-late401') {
+        await React.act(async()=>root.unmount());root=null;await reply(initial,401,{error:"SYNTHETIC_UNAUTHORIZED"});assert.deepEqual(navigation,[]);assert(initial.every(x=>x.options.signal.aborted));assert.equal(timers.size,0);
+      } else if(kind==='analytics-replace-late401'||kind==='analytics-replace-latesuccess') {
+        await flush(()=>root.render(React.createElement(strict?React.StrictMode:React.Fragment,{},React.createElement(Page,{key:'new-mount'}))));
+        const replacement=requests.slice(initial.length);assert.equal(replacement.length,strict?2:1);await reply(replacement,200,{...stats,totalGenerations:444});const latest=body();assert(latest.includes('444'));
+        await reply(initial,kind==='analytics-replace-late401'?401:200,stats);assert.equal(body(),latest);assert.deepEqual(navigation,[]);assert(initial.every(x=>x.options.signal.aborted));
+      } else if(kind==='analytics-zero-success') {
+        await reply(initial,200,{...stats,totalUsers:0,premiumUsers:0,conversionRate:0,totalGenerations:0,todayGenerations:0,monthGenerations:0,lastMonthGenerations:0,generationGrowthStatus:'no-baseline',generationGrowth:null});assert(!alert());assert(body().includes('登録比率 0%'));assert(!document.querySelector('.animate-spin'));
+      } else if(kind==='analytics-null-service') {
+        await reply(initial,200,{...stats,services:[{id:'interview',name:'SYNTHETIC',icon:'',generations:0,todayGenerations:0,users:null,proUsers:null,growthStatus:'no-baseline',growth:null}]});assert(!alert());assert(body().includes('SYNTHETIC'));
+      } else {
+        await reply(initial,200,stats);assert(!alert());const before=requests.length;await click('更新');assert.equal(requests.length,before+1);assert(button('更新').disabled);
+        if(kind==='analytics-refresh-failure'){await reply([requests.at(-1)],503,{error:"SYNTHETIC_HTTP_ERROR"});failure();assert(body().includes('前回取得したデータ'));assert(body().includes('登録比率 47.1%'));await recover();}
+        else if(kind==='analytics-refresh401-clears'){await reply([requests.at(-1)],401,{error:"SYNTHETIC_UNAUTHORIZED"});assert.deepEqual(navigation,['/admin/login']);failure();assert(!body().includes('登録比率 47.1%'));assert(!body().includes('有料プラン登録'));}
+        else {assert.equal(kind,'analytics-refresh-pending-disabled');await reply([requests.at(-1)],200,stats);assert(!button('更新').disabled);}
+      }
+      assert(requests.every(x=>x.url==='/api/admin/stats'&&x.options.credentials==='include'&&x.options.cache==='no-store'&&x.options.signal instanceof AbortSignal));
+
+      }
     } else if (dashboard) {
       const db = initial.filter(x => x.url === '/api/admin/stats'), financial = initial.filter(x => x.url.startsWith('/api/admin/billing/stats?'));
       assert.equal(db.length, strict ? 2 : 1); assert.equal(financial.length, db.length);
-      const stats = { totalUsers: 9, premiumUsers: 2, enterpriseUsers: 3, freeUsers: 7, totalGenerations: 45, todayGenerations: 4, monthGenerations: 10, lastMonthGenerations: 10, generationGrowth: 0, avgGenerationsPerUser: 5, monthlyRevenue: 99999999, mrr: 99999999, conversionRate: 22.2, services: [{ id: 'banner', name: '合成サービス', icon: '', gradient: '', users: 5, proUsers: 1, generations: 8, todayGenerations: 2, revenue: null, growth: 0 }], chartData: Array(12).fill(2), recentUsers: 1, recentGenerations: [], adminLoginAttempts: 0, lastUpdated: '2026-11-15T00:00:00.000Z' };
+      const stats = { totalUsers: 9, premiumUsers: 2, enterpriseUsers: 3, freeUsers: 7, totalGenerations: 45, todayGenerations: 4, monthGenerations: 10, lastMonthGenerations: 10, generationGrowthStatus: 'comparable', generationGrowth: 0, avgGenerationsPerUser: 5, monthlyRevenue: 99999999, mrr: 99999999, conversionRate: 22.2, services: [{ id: 'banner', name: '合成サービス', icon: '', gradient: '', users: 5, proUsers: 1, generations: 8, todayGenerations: 2, revenue: null, growthStatus: 'comparable', growth: 0 }], chartData: Array(12).fill(2), recentUsers: 1, recentGenerations: [], adminLoginAttempts: 0, lastUpdated: '2026-11-15T00:00:00.000Z' };
       if (kind.startsWith('dashboard-registration-')) {
         const grouped = load('src/lib/admin-registered-plan-stats.ts').summarizeRegisteredPlans([
           { plan: 'GUEST', _count: { _all: 5 } }, { plan: 'FREE', _count: { _all: 3 } }, { plan: 'NOT_PRO', _count: { _all: 10 } },
@@ -157,7 +208,7 @@ async function scenario(strict, kind) {
 async function run(kinds, prefix, resultEnv) {
   const cases = [];
   for (const strict of [false, true]) for (const kind of kinds) { cases.push(await scenario(strict, kind)); console.log(prefix + kind + ' ' + (strict ? 'StrictMode' : 'normal')) }
-  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: prefix === 'PASS Admin registered plan UI: ' ? 'Actual Dashboard and Analytics pages, actual common plan labels and grouped-count helper under React normal/StrictMode with synthetic deferred GET. Five registered tiers, paid ratio without growth arrows, known zero versus unknown service counts. No native paint, actual SQL or production acceptance.' : 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
+  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: prefix === 'PASS Admin analytics recovery: ' ? 'Actual Analytics page with current request hook and response validator mounted in normal/StrictMode; synthetic HTTP/body/timers,30s deadline, retry/stale warning,401 clearing and stale/unmount isolation. Not native or production acceptance.' : prefix === 'PASS Admin registered plan UI: ' ? 'Actual Dashboard and Analytics pages, actual common plan labels and grouped-count helper under React normal/StrictMode with synthetic deferred GET. Five registered tiers, paid ratio without growth arrows, known zero versus unknown service counts. No native paint, actual SQL or production acceptance.' : 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
   if (process.env[resultEnv]) fs.writeFileSync(process.env[resultEnv], JSON.stringify(result, null, 2) + '\n'); console.log(JSON.stringify({ passed: cases.length, failed: 0 }));
 }
 module.exports = { run, scenario };

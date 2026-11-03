@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { adminComparisonLabel } from '@/lib/admin-stat-comparison'
+import { useAdminAnalytics } from '@/lib/use-admin-analytics'
 import { motion } from 'framer-motion'
 import {
   BarChart3,
@@ -16,75 +17,12 @@ import {
   ArrowDownRight,
   Zap,
 } from 'lucide-react'
-import toast, { Toaster } from 'react-hot-toast'
-
-interface ServiceStats {
-  id: string
-  name: string
-  icon: string
-  generations: number
-  todayGenerations: number
-  users: number | null
-  userCountLabel?: string
-  proUsers: number | null
-  growth: number
-}
-
-interface AnalyticsData {
-  totalGenerations: number
-  todayGenerations: number
-  monthGenerations: number
-  lastMonthGenerations: number
-  generationGrowth: number
-  totalUsers: number
-  premiumUsers: number
-  conversionRate: number
-  services: ServiceStats[]
-  chartData: number[]
-}
+import { Toaster } from 'react-hot-toast'
 
 export default function AnalyticsPage() {
-  const router = useRouter()
+  const { data, error, isLoading, isRefreshing, refresh } = useAdminAnalytics()
   const [period, setPeriod] = useState('week')
-  const [data, setData] = useState<AnalyticsData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const fetchData = async (showToast = false) => {
-    try {
-      setIsRefreshing(true)
-      const response = await fetch('/api/admin/stats', {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/admin/login')
-          return
-        }
-        throw new Error('データの取得に失敗しました')
-      }
-
-      const result = await response.json()
-      setData(result)
-      
-      if (showToast) {
-        toast.success('データを更新しました', { icon: '🔄' })
-      }
-    } catch (error) {
-      console.error('Analytics fetch error:')
-      toast.error('データの取得に失敗しました')
-    } finally {
-      setIsRefreshing(false)
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
         <div className="relative w-16 h-16">
@@ -95,8 +33,17 @@ export default function AnalyticsPage() {
     )
   }
 
+  if (!data) return (
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto">
+      <div role="alert" className="p-4 bg-white/5 rounded-xl text-white">
+        <p>{error || '利用統計を取得できませんでした。'}</p>
+        <button type="button" onClick={refresh} className="min-h-11 px-4 py-2 text-sm underline focus-visible:outline focus-visible:outline-2">再取得する</button>
+      </div>
+    </div>
+  )
+
   const statsData = [
-    { label: '総生成数', value: data.totalGenerations.toLocaleString(), change: `${data.generationGrowth >= 0 ? '+' : ''}${data.generationGrowth.toFixed(1)}%`, up: data.generationGrowth >= 0, icon: FileText },
+    { label: '総生成数', value: data.totalGenerations.toLocaleString(), change: '累計', up: true, neutral: true, icon: FileText },
     { label: '本日生成', value: data.todayGenerations.toLocaleString(), change: '実績', up: true, neutral: true, icon: Zap },
     { label: '総ユーザー', value: data.totalUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: Users },
     { label: '有料プラン登録', value: data.premiumUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: TrendingUp },
@@ -119,6 +66,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="flex gap-3">
             <select
+              aria-label="表示期間"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500"
@@ -132,7 +80,7 @@ export default function AnalyticsPage() {
               エクスポート
             </button>
             <button 
-              onClick={() => fetchData(true)}
+              onClick={refresh}
               disabled={isRefreshing}
               className="px-4 py-2 bg-violet-500 hover:bg-violet-600 rounded-lg text-sm text-white flex items-center gap-2 transition-colors disabled:opacity-50"
             >
@@ -141,6 +89,11 @@ export default function AnalyticsPage() {
             </button>
           </div>
         </div>
+
+        {error && <div role="alert" className="p-4 mb-6 bg-white/5 rounded-xl text-white">
+          <p>前回取得したデータを表示しています。{error}</p>
+          <button type="button" onClick={refresh} disabled={isRefreshing} className="min-h-11 px-4 py-2 text-sm underline disabled:opacity-50 focus-visible:outline focus-visible:outline-2">再取得する</button>
+        </div>}
 
         {/* 統計カード */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -235,8 +188,8 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="flex items-center justify-between mt-1 text-xs text-white/40">
                       <span>今日: {service.todayGenerations}回</span>
-                      <span className={service.growth >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                        {service.growth >= 0 ? '+' : ''}{service.growth}%
+                      <span className="text-white/70">
+                        {adminComparisonLabel(service.growth, service.growthStatus)}
                       </span>
                     </div>
                   </div>
@@ -255,17 +208,17 @@ export default function AnalyticsPage() {
           <div className="grid sm:grid-cols-3 gap-6">
             <div className="text-center p-4 bg-white/5 rounded-xl">
               <p className="text-3xl font-bold text-white">{data.monthGenerations.toLocaleString()}</p>
-              <p className="text-sm text-white/40 mt-1">今月の生成数</p>
+              <p className="text-sm text-white/40 mt-1">今月の生成数（途中累計）</p>
             </div>
             <div className="text-center p-4 bg-white/5 rounded-xl">
               <p className="text-3xl font-bold text-white/60">{data.lastMonthGenerations.toLocaleString()}</p>
-              <p className="text-sm text-white/40 mt-1">先月の生成数</p>
+              <p className="text-sm text-white/40 mt-1">先月の生成数（月全体）</p>
             </div>
             <div className="text-center p-4 bg-white/5 rounded-xl">
-              <p className={`text-3xl font-bold ${data.generationGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {data.generationGrowth >= 0 ? '+' : ''}{data.generationGrowth.toFixed(1)}%
+              <p className="text-xl font-bold text-white/70">
+                {adminComparisonLabel(data.generationGrowth, data.generationGrowthStatus)}
               </p>
-              <p className="text-sm text-white/40 mt-1">前月比成長率</p>
+              <p className="text-sm text-white/40 mt-1">今月累計 / 前月全体（日本時間）</p>
             </div>
           </div>
         </div>
