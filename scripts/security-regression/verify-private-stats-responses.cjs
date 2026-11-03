@@ -16,6 +16,7 @@ function admin(mode) {
     } },
     '@/lib/prisma': { prisma: { user: { groupBy: async () => { throw new Error('PRIVATE_DATABASE_ERROR') } } } },
     '@/lib/admin-registered-plan-stats': load('src/lib/admin-registered-plan-stats.ts', { '@/lib/plan-utils': load('src/lib/plan-utils.ts') }),
+    '@/lib/services': load('src/lib/services.ts', { './unified-plan': load('src/lib/unified-plan.ts') }),
     '@/lib/attribution': { serviceLabelOf: () => 'service' },
     '@/lib/jst': load('src/lib/jst.ts'),
   })

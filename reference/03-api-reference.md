@@ -70,7 +70,7 @@ const id = p.id
 ### ユーザー・統計
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET | `/api/admin/stats` | DBの登録・生成・サービス別統計。`registeredPlanTiers` は共通分類5段階、`premiumUsers` は有料プラン登録数で支払済み人数ではない。サービス人数の未集計は `null`、ラベルは `userCountLabel`。旧 `monthlyRevenue` / `mrr` と未按分のサービス別 `revenue` は `null`。読取失敗はprivate/no-storeの503。財務指標は下記の専用APIを使用 |
+| GET | `/api/admin/stats` | DBの登録・生成・サービス別統計。`registeredPlanTiers` は共通分類5段階、`premiumUsers` は有料プラン登録数で支払済み人数ではない。`recentUsers` は集計時点の7日前以上・集計時点未満の人数。サービス人数の未集計は `null`、ラベルは `userCountLabel`。`dashboardHref` はサービス正本の画面URLで、提供終了・不明なら `null`。`isRetired` は提供終了の判定。旧 `monthlyRevenue` / `mrr` と未按分のサービス別 `revenue` は `null`。読取失敗はprivate/no-storeの503。財務指標は下記の専用APIを使用 |
 | GET | `/api/admin/billing/stats` | 管理者Cookie認証後、`period=month\|quarter\|year`（既定month）のJST暦期間の入金・返金と、取得時点のMRR・顧客数・ARPUを返す。`refresh=1`でキャッシュを無効化。private/no-store。未認証401、期間不正400、取得・集計不能503 |
 | GET/PATCH/DELETE | `/api/admin/users` | ユーザー管理 (プラン変更, 使用回数管理, 削除) |
 | GET | `/api/admin/users/export` | ユーザーデータ CSV/JSON エクスポート |

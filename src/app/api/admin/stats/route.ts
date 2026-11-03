@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { summarizeRegisteredPlans } from '@/lib/admin-registered-plan-stats'
+import { getServiceById, RETIRED_SERVICE_IDS } from '@/lib/services'
 import { serviceLabelOf } from '@/lib/attribution'
 import { jstDayRange, jstMonthRange, jstDateKey } from '@/lib/jst'
 
@@ -44,10 +45,10 @@ export async function GET(request: NextRequest) {
       where: { stripeSubscriptionId: { not: null } }
     })
 
-    // 今週の新規ユーザー
+    // 過去7日の新規登録（集計時点までの半開区間）
 
     const recentUsers = await prisma.user.count({
-      where: { createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+      where: { createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), lt: now } },
     })
 
     // 生成統計
@@ -177,6 +178,8 @@ export async function GET(request: NextRequest) {
       const label = serviceLabels[serviceId]
       serviceStats.push({
         id: serviceId,
+        dashboardHref: RETIRED_SERVICE_IDS.has(queryServiceId) ? null : getServiceById(queryServiceId)?.dashboardHref ?? null,
+        isRetired: RETIRED_SERVICE_IDS.has(queryServiceId),
         name: label.name,
         icon: label.icon,
         gradient: label.gradient,
