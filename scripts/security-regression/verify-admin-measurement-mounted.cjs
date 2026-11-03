@@ -1,0 +1,1 @@
+require('./admin-billing-mounted-harness.cjs').run(['analytics-measurement-units','dashboard-measurement-units'],'PASS Admin measurement UI: ','DOYA_ADMIN_MEASUREMENT_RESULT').catch(e=>{console.error(e.stack);process.exitCode=1});

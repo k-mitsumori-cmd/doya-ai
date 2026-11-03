@@ -2,7 +2,9 @@
 
 import AdminAnalyticsPeriod from '@/components/AdminAnalyticsPeriod'
 import { adminComparisonLabel } from '@/lib/admin-stat-comparison'
-import { adminHourlyChartTimes } from '@/lib/admin-hourly-chart'
+import AdminHourlyChart from '@/components/AdminHourlyChart'
+import AdminLegacyMeasurementCoverage from '@/components/AdminLegacyMeasurementCoverage'
+import { adminLegacyServiceMeasurement } from '@/lib/admin-stats-measurement'
 import { useAdminAnalytics } from '@/lib/use-admin-analytics'
 import { motion } from 'framer-motion'
 import {
@@ -43,14 +45,12 @@ export default function AnalyticsPage() {
   )
 
   const statsData = [
-    { label: '総生成数', value: data.totalGenerations.toLocaleString(), change: '累計', up: true, neutral: true, icon: FileText },
-    { label: '本日生成', value: data.todayGenerations.toLocaleString(), change: '実績', up: true, neutral: true, icon: Zap },
+    { label: '累計の保存記録', value: data.totalGenerations.toLocaleString(), change: '累計', up: true, neutral: true, icon: FileText },
+    { label: '本日の保存記録', value: data.todayGenerations.toLocaleString(), change: '実績', up: true, neutral: true, icon: Zap },
     { label: '総ユーザー', value: data.totalUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: Users },
     { label: '有料プラン登録', value: data.premiumUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: TrendingUp },
   ]
 
-  const chartHours = adminHourlyChartTimes(data.lastUpdated)
-  const maxChartValue = Math.max(...(data.chartData || [1]), 1)
 
   return (
     <div className="w-full min-w-0 p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
@@ -111,71 +111,36 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0 gap-6">
-          {/* 時間別生成数グラフ */}
-          <div className="min-w-0 bg-white/[0.02] backdrop-blur rounded-xl p-6 border border-white/5">
-            <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <BarChart3 aria-hidden="true" className="w-5 h-5 text-violet-400" />
-              時間別生成数（過去12時間・日本時間）
-            </h2>
-            <p className="text-sm text-white/70 mb-4">取得基準：<time dateTime={data.lastUpdated}>{new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', dateStyle: 'medium', timeStyle: 'medium', hourCycle: 'h23' }).format(new Date(data.lastUpdated))}</time>（日本時間）。最後の区間は取得時点までの集計です。</p>
-            <div role="region" aria-label="時間別グラフ（日本時間）" tabIndex={0} className="overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
-              <ol className="flex items-end gap-2 h-48 min-w-[36rem]" aria-label="時間別の件数">
-                {data.chartData.map((value, index) => {
-                  const bucket = chartHours[index]
-                  const description = `${bucket.date} ${bucket.label} 日本時間：${value}件${bucket.partial ? '（取得時点まで）' : ''}`
-                  return (
-                    <li key={bucket.since} aria-label={description} className="flex-1 min-w-0 h-full flex flex-col items-center gap-2">
-                      <span className="text-xs text-white/70">{value}件</span>
-                      <div className="flex-1 min-h-0 w-full flex items-end" aria-hidden="true">
-                        <div className={`w-full rounded-t-lg ${index === 11 ? 'bg-violet-500' : 'bg-white/20'}`} style={{ height: `${(value / maxChartValue) * 100}%` }} />
-                      </div>
-                      <time dateTime={bucket.since} title={description} className="text-xs text-white/70">{bucket.label}</time>
-                    </li>
-                  )
-                })}
-              </ol>
-            </div>
-            <p className="text-xs text-white/70 mt-2">横にスクロールすると全12区間を確認できます。日付は各時刻の説明で確認できます。</p>
-          </div>
+        <AdminLegacyMeasurementCoverage legacyIds={data.services.map(service => service.id)} />
 
-          {/* サービス別パフォーマンス */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0 gap-6">
+          <AdminHourlyChart lastUpdated={data.lastUpdated} values={data.chartData} />
+
+          {/* サービス別の登録・保存件数 */}
           <div className="bg-white/[0.02] backdrop-blur rounded-xl p-6 border border-white/5">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-violet-400" />
-              サービス別パフォーマンス
+              サービス別の登録・保存件数
             </h2>
             <div className="space-y-4">
-              {(data.services || []).map((service) => {
-                const maxGen = Math.max(...data.services.map(s => s.generations), 1)
-                const percentage = (service.generations / maxGen) * 100
+              {(data.services || []).map(service => {
+                const measurement = adminLegacyServiceMeasurement(service.id)
                 return (
-                  <div key={service.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{service.icon}</span>
-                        <span className="text-sm text-white font-medium">{service.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm text-white font-bold">{service.generations.toLocaleString()}</span>
-                        <span className="text-xs text-white/40 ml-1">回</span>
-                      </div>
+                  <section key={service.id} aria-label={`${service.name}の件数`} className="min-w-0 rounded-xl border border-white/10 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-white">{service.name}</h3>
+                      {measurement?.isRetired && <span className="text-xs text-white/70">提供終了</span>}
                     </div>
-                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ duration: 0.5 }}
-                        className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between mt-1 text-xs text-white/40">
-                      <span>今日: {service.todayGenerations}回</span>
-                      <span className="text-white/70">
-                        {adminComparisonLabel(service.growth, service.growthStatus)}
-                      </span>
-                    </div>
-                  </div>
+                    {measurement ? <>
+                      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                        <div><dt className="text-white/70">{measurement.total.label}（累計）</dt><dd className="mt-2 font-semibold text-white">{service.generations.toLocaleString()}{measurement.total.unit}</dd></div>
+                        <div><dt className="text-white/70">{measurement.today.label}（本日）</dt><dd className="mt-2 font-semibold text-white">{service.todayGenerations.toLocaleString()}{measurement.today.unit}</dd></div>
+                      </dl>
+                      <p className="mt-3 text-xs text-white/70">{measurement.total.note}</p>
+                      {measurement.total.category !== measurement.today.category && <p className="mt-2 text-xs text-white/70">本日：{measurement.today.note}</p>}
+                      <p className="mt-3 text-xs text-white/70">月次比較（今月累計 / 前月全体）：{adminComparisonLabel(service.growth, service.growthStatus)}</p>
+                    </> : <p className="mt-3 text-sm text-white/70">集計定義を確認できません。</p>}
+                  </section>
                 )
               })}
             </div>
@@ -191,11 +156,11 @@ export default function AnalyticsPage() {
           <div className="grid sm:grid-cols-3 gap-6">
             <div className="text-center p-4 bg-white/5 rounded-xl">
               <p className="text-3xl font-bold text-white">{data.monthGenerations.toLocaleString()}</p>
-              <p className="text-sm text-white/40 mt-1">今月の生成数（途中累計）</p>
+              <p className="text-sm text-white/40 mt-1">今月の保存記録（途中累計）</p>
             </div>
             <div className="text-center p-4 bg-white/5 rounded-xl">
               <p className="text-3xl font-bold text-white/60">{data.lastMonthGenerations.toLocaleString()}</p>
-              <p className="text-sm text-white/40 mt-1">先月の生成数（月全体）</p>
+              <p className="text-sm text-white/40 mt-1">先月の保存記録（月全体）</p>
             </div>
             <div className="text-center p-4 bg-white/5 rounded-xl">
               <p className="text-xl font-bold text-white/70">

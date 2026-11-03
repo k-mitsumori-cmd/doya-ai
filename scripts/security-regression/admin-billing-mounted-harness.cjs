@@ -1,8 +1,9 @@
 process.env.NODE_ENV = 'development';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const repo = path.resolve(__dirname, '../..'), dep = name => require(path.join(repo, 'node_modules', name));
+const sourcePath = name => path.join(repo, name);
 const React = dep('react'), ts = dep('typescript'), { JSDOM } = dep('jsdom');
-const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx','src/lib/use-admin-analytics.ts','src/lib/admin-analytics-contract.ts', 'src/lib/admin-stat-comparison.ts', 'src/lib/admin-hourly-chart.ts'];
+const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx','src/lib/use-admin-analytics.ts','src/lib/admin-analytics-contract.ts', 'src/lib/admin-stat-comparison.ts', 'src/lib/admin-hourly-chart.ts', 'src/lib/admin-dashboard-contract.ts','src/lib/use-admin-dashboard.ts', 'src/components/AdminHourlyChart.tsx','src/components/AdminLegacyMeasurementCoverage.tsx','src/lib/admin-stats-measurement.ts','src/lib/services.ts','src/lib/unified-plan.ts'];
 async function scenario(strict, kind) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://synthetic.invalid/admin/billing' }), prior = new Map(), requests = [], navigation = [], timers = new Map(), downloads = [], blobs = new Map(), revoked = [];
   let root, timerId = 0;
@@ -22,8 +23,8 @@ async function scenario(strict, kind) {
       filename = path.normalize(filename); if (modules.has(filename)) return modules.get(filename);
       assert(sources.includes(filename), 'unexpected real source: ' + filename);
       const exports = {}; modules.set(filename, exports);
-      vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(repo, filename), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, {
-        exports, require: name => {
+      vm.runInNewContext(ts.transpileModule(fs.readFileSync(sourcePath(filename), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, {
+        exports, process: {env:{}}, require: name => {
           if (['react', 'react/jsx-runtime'].includes(name)) return dep(name);
           if (name === 'lucide-react') return dep(name);
           if (name === 'next/link') return { __esModule: true, default: ({ children, ...rest }) => React.createElement('a', rest, children) };
@@ -32,7 +33,7 @@ async function scenario(strict, kind) {
           if (name === 'next/navigation') return { useRouter: () => router };
           // Period report has its own HTTP/CSV/StrictMode suite. These scenarios isolate the retained legacy stats reader.
           if (name === '@/components/AdminAnalyticsPeriod') return { __esModule: true, default: () => null };
-          if (name.startsWith('@/')) return load('src/' + name.slice(2) + '.ts');
+          if (name.startsWith('@/')) {const stem='src/'+name.slice(2),file=[stem+'.ts',stem+'.tsx'].find(x=>sources.includes(x));assert(file,name);return load(file);}
           if (name.startsWith('./')) return load(path.join(path.dirname(filename), name + '.ts'));
           throw Error('Unexpected module ' + name);
         }, console, Date, Promise, AbortController, AbortSignal, Blob, URL: SafeURL, document: dom.window.document,
@@ -43,6 +44,23 @@ async function scenario(strict, kind) {
     const fixture = (period = 'month', extra = {}) => {
       const range = adminBillingPeriodRange(period, new Date('2026-11-15T00:00:00.000Z')), amount = { month: 100, quarter: 200, year: 300 }[period];
       return { version: 1, currency: 'jpy', timeZone: 'Asia/Tokyo', period, label: range.label, since: range.since.toISOString(), until: range.until.toISOString(), updatedAt: '2026-11-15T00:00:00.000Z', paidInvoiceCount: 1, paidTotal: amount, refundTotal: 20, pendingRefundCount: 0, pendingRefundTotal: 0, netRevenue: amount - 20, mrr: 1000, activeSubscriptions: 2, mrrSubscriptions: 2, activeCustomers: 1, arpu: 1000, trialingSubscriptions: 1, discountPolicy: { subtractRecurringDiscounts: true, subtractOneTimeDiscounts: false }, ...extra };
+    };
+    const measurementServices = () => [
+      ...['banner','writing','interview','copy','lp','voice','movie'].map((id,i)=>({id,name:'UNIT-'+id,icon:'',gradient:'',users:i<2?5:null,userCountLabel:'ユーザー',proUsers:i<2?1:null,generations:(i+1)*10,todayGenerations:(i+1)*2,growth:0,growthStatus:'comparable',revenue:null})),
+      {id:'hr',name:'UNIT-hr',icon:'',gradient:'',users:12,proUsers:null,generations:7,todayGenerations:11,growth:null,growthStatus:'not-measured',revenue:null},
+      {id:'kintai',name:'UNIT-kintai',icon:'',gradient:'',users:15,proUsers:null,generations:13,todayGenerations:17,growth:0,growthStatus:'comparable',revenue:null},
+      {id:'unknown-external',name:'UNIT-unknown',icon:'',gradient:'',users:null,proUsers:null,generations:9999,todayGenerations:9999,growth:null,growthStatus:'not-measured',revenue:null},
+    ];
+    const verifyMeasurementPage = analyticsPage => {
+      const coverage=document.querySelector('[aria-label="サービス別統計の対象"]');assert(coverage);assert(coverage.textContent.includes('23サービスのうち、5サービス'));assert(coverage.textContent.includes('提供終了済みの4サービス'));assert.equal(coverage.querySelectorAll('ul li').length,18);assert([...coverage.querySelectorAll('ul li')].every(x=>x.textContent.endsWith('：未集計')));
+      const graph=document.querySelector('[aria-label="時間別グラフ（日本時間）"]');assert(graph);assert.deepEqual([...graph.querySelectorAll('li time')].map(x=>x.textContent),Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0')+':00'));assert.equal(graph.parentElement.querySelector('p time').getAttribute('datetime'),'2026-11-03T03:00:00.000Z');
+      const card = id => analyticsPage ? document.querySelector('[aria-label="UNIT-'+id+'の件数"]') : [...document.querySelectorAll('h3')].find(x=>x.textContent==='UNIT-'+id)?.closest('.overflow-hidden');
+      const value = (id,label) => {const c=card(id);assert(c,id);const l=[...c.querySelectorAll(analyticsPage?'dt':'p')].find(x=>x.textContent===label);assert(l,label);return (analyticsPage?l.nextElementSibling:l.previousElementSibling).textContent.trim()};
+      if(analyticsPage){assert.equal(value('hr','組織登録（累計）'),'7件');assert.equal(value('hr','従業員登録（本日）'),'11件');assert.equal(value('interview','保存プロジェクト（累計）'),'30件');assert.equal(value('kintai','打刻記録（累計）'),'13件');assert.equal(value('writing','利用・生成記録（累計）'),'20件')}
+      else{assert.equal(value('hr','組織登録'),'7件');assert(card('hr').textContent.includes('従業員登録（本日）：11件'));assert.equal(value('hr','従業員登録'),'12件');assert.equal(value('interview','保存プロジェクト'),'30件');assert.equal(value('kintai','打刻記録'),'13件');assert.equal(value('writing','利用・生成記録'),'20件')}
+      for(const id of ['copy','lp','voice','movie'])assert(card(id).textContent.includes('提供終了'));
+      const unknown=card('unknown');assert(unknown);assert(unknown.textContent.includes('集計定義'));assert(!unknown.textContent.includes('9999'));
+      assert(!body().includes('総生成数'));assert(!body().includes('本日生成'));
     };
     const dashboard = kind.startsWith('dashboard-'), analytics = kind.startsWith('analytics-');
     const Page = load(dashboard ? 'src/app/admin/page.tsx' : analytics ? 'src/app/admin/analytics/page.tsx' : 'src/app/admin/billing/page.tsx').default;
@@ -59,7 +77,41 @@ async function scenario(strict, kind) {
     const error = () => { assert(alert()); assert(!body().includes('PRIVATE_')); assert(!document.querySelector('[role="status"]')); assert(button('再取得する')); assert(!body().includes('返金控除後の入金')) };
     const fireDeadline = () => flush(() => { const active = [...timers].filter(([, x]) => x.ms === 30000); assert.equal(active.length, 1); const [id, t] = active[0]; timers.delete(id); t.fn() });
     const initial = [...requests];
-    if(kind.includes('-comparison-')) {
+    if(kind.startsWith('dashboard-request-')) {
+      const db=initial.filter(x=>x.url==='/api/admin/stats');await reply(initial.filter(x=>x.url.startsWith('/api/admin/billing/stats?')));
+      const stats={lastUpdated:'2026-11-03T03:00:00.000Z',totalUsers:34,premiumUsers:16,enterpriseUsers:3,freeUsers:18,recentUsers:1,recentGenerations:[],adminLoginAttempts:0,conversionRate:47.1,totalGenerations:10,todayGenerations:2,monthGenerations:4,lastMonthGenerations:5,generationGrowthStatus:'comparable',generationGrowth:-20,services:[],chartData:Array(12).fill(0)};
+      const failed=()=>{assert(alert());assert(body().includes('ダッシュボード統計'));assert(button('統計を再取得する'));assert(!body().includes('PRIVATE_'));assert(!body().includes('SYNTHETIC_BAD_COUNT'));assert(body().includes('返金控除後入金：¥80'));};
+      const recover=async()=>{await click('統計を再取得する');await reply([requests.at(-1)],200,stats);assert(!alert());assert(body().includes('登録比率 47.1%'));};
+      const invalid={count:{...stats,totalUsers:'SYNTHETIC_BAD_COUNT'},services:{...stats,services:{length:1}},activities:{...stats,recentGenerations:{length:1}},date:{...stats,recentGenerations:[{id:'s',userName:'s',service:'banner',action:'s',createdAt:'bad-date'}]},tiers:{...stats,registeredPlanTiers:{GUEST:34}},negative:{...stats,adminLoginAttempts:-1}};
+      const defect=kind.slice('dashboard-request-'.length);
+      if(defect in invalid){await reply(db,200,invalid[defect]);failed();await recover();}
+      else if(['http503','network','json-malformed'].includes(defect)){
+        if(defect==='network')await flush(()=>db.forEach(x=>x.reject(Error('PRIVATE_NETWORK_ERROR'))));
+        else if(defect==='json-malformed')await flush(()=>db.forEach(x=>x.resolve(new Response('PRIVATE_BAD_JSON',{status:200}))));
+        else await reply(db,503,{error:'PRIVATE_HTTP_ERROR'});
+        failed();await recover();
+      } else if(['timeout','body-timeout','timeout-late401'].includes(defect)){
+        if(defect==='body-timeout')await flush(()=>db.forEach(x=>x.resolve({ok:true,status:200,json:()=>new Promise(()=>{})})));
+        await fireDeadline();failed();assert(db.every(x=>x.options.signal.aborted));
+        if(defect==='timeout-late401'){await reply(db,401,{error:'PRIVATE_STALE_ERROR'});assert.deepEqual(navigation,[]);failed();}
+        await recover();
+      }else if(defect==='unmount-late401'){
+        await React.act(async()=>root.unmount());root=null;await reply(db,401,{error:'PRIVATE_STALE_ERROR'});assert.deepEqual(navigation,[]);assert(db.every(x=>x.options.signal.aborted));assert.equal(timers.size,0);
+      }else if(['replace-late401','replace-latesuccess'].includes(defect)){
+        await flush(()=>root.render(React.createElement(strict?React.StrictMode:React.Fragment,{},React.createElement(Page,{key:'replacement'}))));
+        const next=requests.slice(initial.length);await reply(next.filter(x=>x.url.startsWith('/api/admin/billing/stats?')));await reply(next.filter(x=>x.url==='/api/admin/stats'),200,{...stats,totalGenerations:444});const latest=body();assert(latest.includes('444'));
+        await reply(db,defect==='replace-late401'?401:200,stats);assert.equal(body(),latest);assert.deepEqual(navigation,[]);assert(db.every(x=>x.options.signal.aborted));
+      }else{
+        await reply(db,200,stats);
+        // Successful state has no error retry; the header refresh owns both independent readers.
+        const before=requests.length;await click('更新');const fresh=requests.slice(before);await reply(fresh.filter(x=>x.url.startsWith('/api/admin/billing/stats?')));
+        const current=fresh.filter(x=>x.url==='/api/admin/stats');assert.equal(current.length,1);assert(button('更新').disabled);
+        if(defect==='refresh-failure'){await reply(current,503,{error:'PRIVATE_HTTP_ERROR'});failed();assert(body().includes('前回取得したデータ'));assert(body().includes('登録比率 47.1%'));await recover();}
+        else if(defect==='refresh401-clears'){await reply(current,401,{error:'PRIVATE_UNAUTHORIZED'});assert.deepEqual(navigation,['/admin/login']);failed();assert(!body().includes('登録比率 47.1%'));}
+        else{assert.equal(defect,'refresh-pending');await reply(current,200,stats);assert(!button('更新').disabled);}
+      }
+      assert(requests.filter(x=>x.url==='/api/admin/stats').every(x=>x.options.credentials==='include'&&x.options.cache==='no-store'&&x.options.signal instanceof AbortSignal));
+    } else if(kind.includes('-comparison-')) {
       const which=kind.split('-comparison-')[1];
       const [percent,status,expected]=({zero:[null,'no-baseline','比較不可（前月0件）'],unmeasured:[null,'not-measured','未集計'],negative:[-100,'comparable','-100.0%'],equal:[0,'comparable','0.0%'],positive:[50,'comparable','+50.0%']})[which];
       const stats={totalUsers:9,premiumUsers:2,enterpriseUsers:0,freeUsers:7,totalGenerations:45,todayGenerations:4,monthGenerations:which==='zero'?3:which==='negative'?0:which==='positive'?3:4,lastMonthGenerations:which==='zero'?0:which==='positive'?2:4,generationGrowth:which==='unmeasured'?0:percent,generationGrowthStatus:which==='unmeasured'?'comparable':status,avgGenerationsPerUser:5,conversionRate:22.2,services:[{id:'banner',name:'合成サービス',icon:'',gradient:'',users:5,proUsers:1,generations:8,todayGenerations:2,revenue:null,growth:percent,growthStatus:status}],chartData:Array(12).fill(2),recentUsers:1,recentGenerations:[],adminLoginAttempts:0,lastUpdated:'2026-11-15T00:00:00.000Z'};
@@ -68,16 +120,19 @@ async function scenario(strict, kind) {
       assert(body().includes(expected),kind+' expected '+expected);
       assert(!body().includes('NaN'));assert(!body().includes('Infinity'));
       assert(!document.querySelector('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right'));
-      if(analytics){assert(body().includes('今月の生成数（途中累計）'));assert(body().includes('先月の生成数（月全体）'));assert(body().includes('今月累計 / 前月全体（日本時間）'))}
+      if(analytics){assert(body().includes('今月の保存記録（途中累計）'));assert(body().includes('先月の保存記録（月全体）'));assert(body().includes('今月累計 / 前月全体（日本時間）'))}
       else assert(body().includes('今月累計 / 前月全体'));
       if(percent===null) assert(!body().includes('100%'));
     } else if (analytics) {
-      if(kind==='analytics-registration-labels') {
+      if(kind==='analytics-measurement-units') {
+        const stats={lastUpdated:'2026-11-03T03:00:00.000Z',totalUsers:34,premiumUsers:16,conversionRate:47.1,totalGenerations:10,todayGenerations:2,monthGenerations:4,lastMonthGenerations:5,generationGrowthStatus:'comparable',generationGrowth:-20,services:measurementServices(),chartData:Array(12).fill(0)};
+        await reply(initial,200,stats);verifyMeasurementPage(true);
+      } else if(kind==='analytics-registration-labels') {
 
       const stats = { lastUpdated: '2026-11-03T03:00:00.000Z', totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowthStatus: 'comparable', generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
       await reply(initial, 200, stats);
       assert(body().includes('有料プラン登録')); assert(body().includes('登録比率 47.1%')); assert(!body().includes('有料会員')); assert(!body().includes('CVR'));
-      for (const label of ['有料プラン登録', '総ユーザー', '本日生成']) {
+      for (const label of ['有料プラン登録', '総ユーザー', '本日の保存記録']) {
         const node = [...document.querySelectorAll('p')].find(e => e.textContent === label); assert(node, label);
         assert.equal(node.parentElement.querySelectorAll('svg.lucide-arrow-up-right,svg.lucide-arrow-down-right').length, 0);
       }
@@ -123,6 +178,7 @@ async function scenario(strict, kind) {
       const db = initial.filter(x => x.url === '/api/admin/stats'), financial = initial.filter(x => x.url.startsWith('/api/admin/billing/stats?'));
       assert.equal(db.length, strict ? 2 : 1); assert.equal(financial.length, db.length);
       const stats = { totalUsers: 9, premiumUsers: 2, enterpriseUsers: 3, freeUsers: 7, totalGenerations: 45, todayGenerations: 4, monthGenerations: 10, lastMonthGenerations: 10, generationGrowthStatus: 'comparable', generationGrowth: 0, avgGenerationsPerUser: 5, monthlyRevenue: 99999999, mrr: 99999999, conversionRate: 22.2, services: [{ id: 'banner', name: '合成サービス', icon: '', gradient: '', users: 5, proUsers: 1, generations: 8, todayGenerations: 2, revenue: null, growthStatus: 'comparable', growth: 0 }], chartData: Array(12).fill(2), recentUsers: 1, recentGenerations: [], adminLoginAttempts: 0, lastUpdated: '2026-11-15T00:00:00.000Z' };
+      if(kind==='dashboard-measurement-units')Object.assign(stats,{lastUpdated:'2026-11-03T03:00:00.000Z',services:measurementServices(),chartData:Array(12).fill(0)});
       if (kind.startsWith('dashboard-registration-')) {
         const grouped = load('src/lib/admin-registered-plan-stats.ts').summarizeRegisteredPlans([
           { plan: 'GUEST', _count: { _all: 5 } }, { plan: 'FREE', _count: { _all: 3 } }, { plan: 'NOT_PRO', _count: { _all: 10 } },
@@ -139,12 +195,12 @@ async function scenario(strict, kind) {
         await flush(() => db.forEach(x => x.reject(Error('Synthetic counts failure')))); await reply(financial);
         assert(body().includes('MRR（税抜の月額換算）：¥1,000')); assert(body().includes('返金控除後入金：¥80'));
       } else {
-        await reply(db, 200, stats); assert(body().includes('ダッシュボード')); assert(body().includes('合成サービス')); assert(body().includes('未按分'));
+        await reply(db, 200, stats); assert(body().includes('ダッシュボード')); assert(body().includes(kind==='dashboard-measurement-units'?'UNIT-banner':'合成サービス'));  assert(body().includes('未按分'));
         if (kind === 'dashboard-finance-error') { await reply(financial, 503); assert(alert().textContent.includes('売上・課金データ')); assert(body().includes('取得失敗')); assert(!body().includes('¥0')) }
         else {
           await reply(financial); assert(body().includes('返金控除後入金：¥80')); assert(body().includes('MRR（税抜の月額換算）：¥1,000'));
           if (kind === 'dashboard-refresh-error') {
-            const count = requests.length; await click('入金・契約指標を再取得'); assert.equal(requests.length, count + 1); assert(requests.at(-1).url.endsWith('refresh=1')); await reply([requests.at(-1)], 503); assert(alert().textContent.includes('前回取得したデータ')); assert(body().includes('¥80')); assert(body().includes('合成サービス')); await click('入金・契約指標を再取得'); await reply([requests.at(-1)]); assert(!alert());
+            const count = requests.length; await click('入金・契約指標を再取得'); assert.equal(requests.length, count + 1); assert(requests.at(-1).url.endsWith('refresh=1')); await reply([requests.at(-1)], 503); assert(alert().textContent.includes('前回取得したデータ')); assert(body().includes('¥80')); assert(body().includes(kind==='dashboard-measurement-units'?'UNIT-banner':'合成サービス'));  await click('入金・契約指標を再取得'); await reply([requests.at(-1)]); assert(!alert());
           }
         }
       }
@@ -157,9 +213,10 @@ async function scenario(strict, kind) {
         if (kind === 'dashboard-registration-unknown') {
           const value = (name, label) => { const heading = [...document.querySelectorAll('h3')].find(e => e.textContent === name); assert(heading, name); const card = heading.closest('.overflow-hidden'); const p = [...card.querySelectorAll('p')].find(e => e.textContent === label); assert(p, label); return p.previousElementSibling.textContent };
           assert.equal(value('合成サービス', '個別の有料プラン登録'), '0'); assert.equal(value('合成面談', '個別の有料プラン登録'), '未集計');
-          assert.equal(value('合成面談', 'ユーザー'), '未集計'); assert.equal(value('合成HR', '従業員'), '7'); assert.equal(value('合成HR', '個別の有料プラン登録'), '未集計');
+          assert.equal(value('合成面談', 'ユーザー'), '未集計'); assert.equal(value('合成HR', '従業員登録'), '7件'); assert.equal(value('合成HR', '個別の有料プラン登録'), '未集計');
         }
       }
+      if(kind==='dashboard-measurement-units')verifyMeasurementPage(false);
       assert(!body().includes('99,999,999')); assert(!body().includes('9999.9万')); assert(!body().includes('月間売上'));
     } else if (['http502', 'http503', 'network'].includes(kind)) {
       if (kind === 'network') await flush(() => initial.forEach(x => x.reject(Error('PRIVATE_NETWORK_ERROR')))); else await reply(initial, kind === 'http502' ? 502 : 503);
@@ -210,7 +267,7 @@ async function scenario(strict, kind) {
 async function run(kinds, prefix, resultEnv) {
   const cases = [];
   for (const strict of [false, true]) for (const kind of kinds) { cases.push(await scenario(strict, kind)); console.log(prefix + kind + ' ' + (strict ? 'StrictMode' : 'normal')) }
-  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: prefix === 'PASS Admin analytics recovery: ' ? 'Actual Analytics legacy section with current stats request hook and response validator mounted in normal/StrictMode; period report isolated as null and verified by its separate suite; synthetic HTTP/body/timers,30s deadline, retry/stale warning,401 clearing and stale/unmount isolation. Not native or production acceptance.' : prefix === 'PASS Admin registered plan UI: ' ? 'Actual Dashboard and Analytics legacy section (period report isolated as null), actual common plan labels and grouped-count helper under React normal/StrictMode with synthetic deferred GET. Five registered tiers, paid ratio without growth arrows, known zero versus unknown service counts. No native paint, actual SQL or production acceptance.' : 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
+  const result = { checkedAt: new Date().toISOString(), cases, passed: cases.length, failed: 0, sourceHashes: Object.fromEntries(sources.map(name => [name, crypto.createHash('sha256').update(fs.readFileSync(sourcePath(name))).digest('hex')])), productionRequests: 0, stripeCalls: 0, productionWrites: 0, scope: prefix === 'PASS Dashboard request: ' ? 'Actual product Dashboard, actual stats request hook and DTO validator mounted normal/StrictMode; synthetic HTTP/JSON/timers,30s deadline, retry/stale snapshot,401 clearing, late response/unmount isolation and independent billing response. No native or production acceptance.' : prefix === 'PASS Admin measurement UI: ' ? 'Actual product Dashboard and Analytics legacy section mounted normal/StrictMode with synthetic API snapshots; period report isolated as null. Explicit service count units, coverage/retired/unknown handling and shared hourly snapshot parent wiring. No native SQL or production acceptance.' : prefix === 'PASS Admin analytics recovery: ' ? 'Actual Analytics legacy section with current stats request hook and response validator mounted in normal/StrictMode; period report isolated as null and verified by its separate suite; synthetic HTTP/body/timers,30s deadline, retry/stale warning,401 clearing and stale/unmount isolation. Not native or production acceptance.' : prefix === 'PASS Admin registered plan UI: ' ? 'Actual Dashboard and Analytics legacy section (period report isolated as null), actual common plan labels and grouped-count helper under React normal/StrictMode with synthetic deferred GET. Five registered tiers, paid ratio without growth arrows, known zero versus unknown service counts. No native paint, actual SQL or production acceptance.' : 'Actual billing page, request hook, DTO validation, JST period and CSV modules mounted under React normal/StrictMode. Synthetic deferred HTTP/JSON and controlled request deadlines with real AbortController; no native paint/production/admin or provider acceptance.' };
   if (process.env[resultEnv]) fs.writeFileSync(process.env[resultEnv], JSON.stringify(result, null, 2) + '\n'); console.log(JSON.stringify({ passed: cases.length, failed: 0 }));
 }
 module.exports = { run, scenario };
