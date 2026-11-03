@@ -1,8 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { adminComparisonLabel, type AdminComparisonStatus } from '@/lib/admin-stat-comparison'
+import { adminComparisonLabel } from '@/lib/admin-stat-comparison'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -21,69 +19,13 @@ import {
   Calendar,
   Target,
 } from 'lucide-react'
-import toast, { Toaster } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast'
+import { useAdminDashboard } from '@/lib/use-admin-dashboard'
 import { useAdminBilling } from '@/lib/use-admin-billing'
+import AdminHourlyChart from '@/components/AdminHourlyChart'
+import AdminLegacyMeasurementCoverage from '@/components/AdminLegacyMeasurementCoverage'
+import { adminLegacyServiceMeasurement } from '@/lib/admin-stats-measurement'
 import { planLabel } from '@/lib/plan-utils'
-
-interface ServiceStats {
-  dashboardHref?: string | null
-  isRetired?: boolean
-  id: string
-  name: string
-  icon: string
-  gradient: string
-  users: number | null
-  userCountLabel?: string
-  proUsers: number | null
-  generations: number
-  todayGenerations: number
-  revenue: number | null
-  growth: number | null
-  growthStatus: AdminComparisonStatus
-}
-
-interface Stats {
-  // 基本統計
-  totalUsers: number
-  registeredPlanTiers?: Record<'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE', number>
-  premiumUsers: number
-  enterpriseUsers: number
-  freeUsers: number
-  
-  // 生成統計
-  totalGenerations: number
-  todayGenerations: number
-  monthGenerations: number
-  lastMonthGenerations: number
-  generationGrowth: number | null
-  generationGrowthStatus: AdminComparisonStatus
-  avgGenerationsPerUser: number
-  
-  // KPI
-  conversionRate: number
-  
-  // サービス別
-  services: ServiceStats[]
-  
-  // 時系列
-  chartData: number[]
-  
-  // 最近のアクティビティ
-  recentUsers: number
-  recentGenerations: Array<{
-    id: string
-    userName: string
-    service: string
-    action: string
-    createdAt: string
-  }>
-  
-  // セキュリティ
-  adminLoginAttempts: number
-  
-  // メタ情報
-  lastUpdated: string
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -99,48 +41,8 @@ const itemVariants = {
 }
 
 export default function AdminDashboard() {
-  const router = useRouter()
   const billing = useAdminBilling('month')
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchStats = async (showToast = false) => {
-    try {
-      setIsRefreshing(true)
-      setError(null)
-      
-      const response = await fetch('/api/admin/stats', {
-        credentials: 'include',
-      })
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/admin/login')
-          return
-        }
-        throw new Error('統計データの取得に失敗しました')
-      }
-      
-      const data = await response.json()
-      setStats(data)
-      
-      if (showToast) {
-        toast.success('データを更新しました', { icon: '🔄' })
-      }
-    } catch (err) {
-      console.error('Stats load error:')
-      setError(err instanceof Error ? err.message : '統計データの取得中にエラーが発生しました')
-    } finally {
-      setIsRefreshing(false)
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchStats()
-  }, [])
+  const { data: stats, isLoading, isRefreshing, error, refresh } = useAdminDashboard()
 
   const formatCurrency = (value: number) => `¥${value.toLocaleString('ja-JP', { maximumFractionDigits: 2 })}`
 
@@ -165,7 +67,7 @@ export default function AdminDashboard() {
             <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
             <div className="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
           </div>
-          <p className="text-white/50">ダッシュボードを読み込み中...</p>
+          <p role="status" className="text-white/50">ダッシュボードを読み込み中...</p>
         </div>
       </div>
     )
@@ -175,7 +77,7 @@ export default function AdminDashboard() {
   const activeUsers = stats?.recentGenerations?.length || 0
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white p-6">
+    <div className="min-w-0 w-full min-h-screen bg-[#0A0A0F] text-white p-6">
       <Toaster position="top-right" />
       
       <motion.div 
@@ -195,7 +97,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => { void fetchStats(true); billing.refresh() }}
+              onClick={() => { refresh(); billing.refresh() }}
               disabled={isRefreshing || billing.isRefreshing}
               className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
             >
@@ -207,9 +109,10 @@ export default function AdminDashboard() {
 
         {/* Error Alert */}
         {error && (
-          <motion.div variants={itemVariants} className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3">
+          <motion.div role="alert" variants={itemVariants} className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <p className="text-red-400">{error}</p>
+            <div><p className="text-red-400">{stats ? '前回取得したデータを表示しています。' : ''}{error}</p>
+            <button type="button" onClick={refresh} disabled={isRefreshing} className="min-h-11 px-3 py-2 text-sm underline disabled:opacity-50 focus-visible:outline focus-visible:outline-2">統計を再取得する</button></div>
           </motion.div>
         )}
 
@@ -252,7 +155,7 @@ export default function AdminDashboard() {
                   trendUp: false
                 },
                 { 
-                  label: '本日の生成', 
+                  label: '本日の保存記録',
                   value: stats.todayGenerations.toLocaleString(), 
                   subValue: `総計 ${stats.totalGenerations.toLocaleString()}`,
                   icon: Zap, 
@@ -288,48 +191,8 @@ export default function AdminDashboard() {
             </motion.div>
 
             {/* Chart + Active Users Grid */}
-            <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              {/* Chart */}
-              <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="font-bold text-lg text-white">生成数の推移</h2>
-                    <p className="text-xs text-white/40">過去12時間（実データ）</p>
-                  </div>
-                </div>
-                
-                {/* Bar Chart */}
-                <div className="h-48 flex items-end gap-2">
-                  {(stats.chartData || []).map((value, index) => {
-                    const maxValue = Math.max(...(stats.chartData || [1]), 1)
-                    const height = maxValue > 0 ? (value / maxValue) * 100 : 0
-                    const isLast = index === (stats.chartData?.length || 0) - 1
-                    return (
-                      <motion.div
-                        key={index}
-                        initial={{ height: 0 }}
-                        animate={{ height: `${Math.max(height, 2)}%` }}
-                        transition={{ delay: index * 0.05, duration: 0.5 }}
-                        className={`flex-1 rounded-t-lg ${
-                          isLast 
-                            ? 'bg-gradient-to-t from-violet-500 to-fuchsia-500' 
-                            : 'bg-white/10 hover:bg-white/20'
-                        } transition-colors relative group cursor-pointer min-h-[4px]`}
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {value}件
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] text-white/30">
-                  {Array.from({ length: 6 }).map((_, i) => {
-                    const hour = new Date(Date.now() - (11 - i * 2) * 60 * 60 * 1000).getHours()
-                    return <span key={i}>{hour}:00</span>
-                  })}
-                </div>
-              </motion.div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 min-w-0 gap-6 mb-8">
+              <AdminHourlyChart className="lg:col-span-2" lastUpdated={stats.lastUpdated} values={stats.chartData} />
 
               {/* Active Users / User Breakdown */}
               <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
@@ -390,18 +253,22 @@ export default function AdminDashboard() {
             </div>
 
             {/* Service Cards */}
-            <p className="mb-4 text-sm text-white/70">サービスごとのプラン登録数を表示します。共通プランによる利用権や実際の利用者数とは異なります。未集計の人数は0人に置き換えていません。</p>
+            <AdminLegacyMeasurementCoverage legacyIds={stats.services?.map(service => service.id) ?? []} />
             {stats.services && stats.services.length > 0 && (
               <motion.div variants={itemVariants} className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-lg text-white flex items-center gap-2">
                     <Target className="w-5 h-5 text-violet-400" />
-                    サービス別パフォーマンス
+                    サービス別の登録・保存件数
                   </h2>
                 </div>
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {stats.services.map((service) => (
+                  {stats.services.map((service) => {
+                    const measurement = adminLegacyServiceMeasurement(service.id)
+                    const retired = service.isRetired === true || measurement?.isRetired === true
+                    const dashboardHref = retired ? null : service.dashboardHref
+                    return (
                     <motion.div
                       key={service.id}
                       whileHover={{ y: -4 }}
@@ -415,35 +282,37 @@ export default function AdminDashboard() {
                               <h3 className="text-base font-bold text-white">{service.name}</h3>
                               <p className="text-white/70 text-xs flex items-center gap-1">
                                 <Zap className="w-3 h-3" />
-                                今日 {service.todayGenerations} 生成
+                                {measurement ? `${measurement.today.label}（本日）：${service.todayGenerations}${measurement.today.unit}` : '集計定義を確認できません。'}
                               </p>
                             </div>
                           </div>
-                          {service.dashboardHref ? <Link href={service.dashboardHref} aria-label={`${service.name}を開く`} className="min-h-11 min-w-11 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                          {dashboardHref ? <Link href={dashboardHref} aria-label={`${service.name}を開く`} className="min-h-11 min-w-11 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
                             <ExternalLink className="w-4 h-4 text-white" />
-                          </Link> : service.isRetired ? <span className="text-xs text-white/70">提供終了</span> : null}
+                          </Link> : retired ? <span className="text-xs text-white/70">提供終了</span> : null}
                         </div>
                       </div>
 
                       <div className="p-4">
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <p className="text-lg font-bold text-white">{service.users ?? '未集計'}</p>
-                            <p className="text-[10px] text-white/40">{service.userCountLabel || 'ユーザー'}</p>
+                            <p className="text-lg font-bold text-white">{service.users === null || !measurement?.users ? '未集計' : `${service.users}${measurement.users.unit}`}</p>
+                            <p className="text-[10px] text-white/40">{measurement?.users?.label || service.userCountLabel || 'ユーザー'}</p>
                           </div>
                           <div>
                             <p className="text-lg font-bold text-amber-400">{service.proUsers ?? '未集計'}</p>
                             <p className="text-[10px] text-white/40">個別の有料プラン登録</p>
                           </div>
                           <div>
-                            <p className="text-lg font-bold text-white">{service.generations.toLocaleString()}</p>
-                            <p className="text-[10px] text-white/40">総生成数</p>
+                            <p className="text-lg font-bold text-white">{measurement ? `${service.generations.toLocaleString()}${measurement.total.unit}` : '集計定義未確認'}</p>
+                            <p className="text-[10px] text-white/40">{measurement?.total.label || '集計定義未確認'}</p>
                           </div>
                           <div>
                             <p className="text-lg font-bold text-emerald-400">{service.revenue === null ? '未按分' : formatCurrency(service.revenue)}</p>
                             <p className="text-[10px] text-white/40">売上（セット契約は未按分）</p>
                           </div>
                         </div>
+
+                        {measurement && <p className="mb-3 text-xs text-white/70">{measurement.total.note}</p>}
 
                         <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                           <span className="text-[10px] text-white/50">今月累計 / 前月全体</span>
@@ -453,7 +322,8 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                    )
+                  })}
                 </div>
               </motion.div>
             )}
