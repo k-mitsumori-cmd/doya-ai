@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const { start: monthStart, end: monthEnd } = jstMonthRange(now)
     const { start: lastMonthStart } = jstMonthRange(monthStart.getTime() - 1)
     const lastMonthEnd = monthStart
+    const recentDayWindow = { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000), lt: now }
 
     // 集計に失敗した場合は外側で失敗を返し、0件として表示しない。
 
@@ -72,11 +73,12 @@ export async function GET(request: NextRequest) {
     // 最近の生成（24時間）
 
     const recentGenerations = await prisma.generation.findMany({
-      where: { createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+      where: { createdAt: recentDayWindow },
       // output はバナーだと巨大な dataURL。一覧では絶対に取らない
       select: {
         id: true,
         serviceId: true,
+        outputType: true,
         metadata: true,
         createdAt: true,
         user: { select: { name: true, email: true } },
@@ -88,7 +90,7 @@ export async function GET(request: NextRequest) {
     // 管理者ログイン試行
 
     const adminLoginAttempts = await prisma.adminLoginAttempt.count({
-      where: { createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+      where: { createdAt: recentDayWindow },
     })
 
     // サービス別統計
@@ -262,20 +264,23 @@ export async function GET(request: NextRequest) {
 
       // 最近のアクティビティ
       recentUsers,
-      recentGenerations: recentGenerations.map((g: any) => ({
-        id: g.id,
-        userName: g.user?.name || g.user?.email || '匿名',
-        service: g.serviceId || 'unknown',
-        // 利用ログには metadata.action が入っている（service-usage.ts 経由）。
-        // 無い場合はサービス名で代替する
-        action:
-          (g.metadata && typeof g.metadata === 'object' && (g.metadata as any).action)
-            ? `${serviceLabelOf(g.serviceId)}：${(g.metadata as any).action}`
-            : g.serviceId === 'banner'
+      recentGenerations: recentGenerations.map((g: any) => {
+        const recordedAction = g.metadata && typeof g.metadata === 'object' && typeof g.metadata.action === 'string'
+          ? g.metadata.action
+          : null
+        return {
+          id: g.id,
+          userName: g.user?.name || g.user?.email || '匿名',
+          service: g.serviceId || 'unknown',
+          // 明示された操作を優先し、利用ログや不明な出力種別を画像生成と推測しない。
+          action: recordedAction?.trim()
+            ? `${serviceLabelOf(g.serviceId)}：${recordedAction}`
+            : g.serviceId === 'banner' && g.outputType === 'IMAGE'
               ? 'バナーを生成'
               : `${serviceLabelOf(g.serviceId)}を利用`,
-        createdAt: g.createdAt,
-      })),
+          createdAt: g.createdAt,
+        }
+      }),
 
       // セキュリティ
       adminLoginAttempts,
