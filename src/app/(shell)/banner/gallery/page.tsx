@@ -6,20 +6,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, Download } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
-
-type GalleryItem = {
-  id: string
-  thumbUrl: string
-  createdAt: string
-  category: string
-  purpose: string
-  size: string
-  keyword: string
-  pattern: string
-  creator: string
-  creatorImage: string | null
-  lqip: string
-}
+import { parseGalleryPage, parseGalleryCache, type GalleryItem } from '@/lib/banner-gallery-contract'
 
 /** 日本語の文だけを画面に出す（英語・内部の言葉は決まった文にする） */
 function jaMessage(msg: unknown, fallback: string): string {
@@ -34,10 +21,11 @@ function readGalleryCache(): { items: GalleryItem[]; cursor: string | null; ts: 
   try {
     const raw = sessionStorage.getItem(GALLERY_CACHE_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed?.items)) return null
-    return { items: parsed.items, cursor: parsed.cursor || null, ts: parsed.ts || 0 }
+    const parsed = parseGalleryCache(JSON.parse(raw), Date.now())
+    if (!parsed) sessionStorage.removeItem(GALLERY_CACHE_KEY)
+    return parsed
   } catch {
+    try { sessionStorage.removeItem(GALLERY_CACHE_KEY) } catch { /* storage may be unavailable */ }
     return null
   }
 }
@@ -246,8 +234,9 @@ export default function BannerGalleryPage() {
       const res = await fetch(`/api/banner/gallery?${qs.toString()}`, { signal: controller.signal })
       const json = await res.json()
       if (!res.ok) throw new Error(typeof json?.error === 'string' ? json.error : 'ギャラリーの取得に失敗しました')
-      if (!json || !Array.isArray(json.items) || !(json.nextCursor === null || typeof json.nextCursor === 'string')) throw new Error('ギャラリーの応答を確認できませんでした。再試行してください。')
-      return json as { items: GalleryItem[]; nextCursor: string | null }
+      const data = parseGalleryPage(json)
+      if (!data) throw new Error('ギャラリーの応答を確認できませんでした。再試行してください。')
+      return data
     } finally {
       window.clearTimeout(timeout)
     }

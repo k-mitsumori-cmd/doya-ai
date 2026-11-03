@@ -1,0 +1,26 @@
+const fs=require('node:fs'),path=require('node:path'),repo=path.resolve(__dirname,'../..'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const ts=require(repo+'/node_modules/typescript');
+let source=fs.readFileSync(repo+'/src/lib/banner-gallery-contract.ts','utf8'),exportsForTest={};
+vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exportsForTest});
+const {parseGalleryPage:page,parseGalleryCache:cache}=exportsForTest,cases=[],now=1793718000000;
+const row={id:'synthetic-one',thumbUrl:'/api/banner/thumb?id=synthetic-one',createdAt:'2026-11-03T03:00:00.000Z',category:'synthetic',purpose:'test',size:'x',keyword:'VISIBLE',pattern:'',creator:'anonymous',creatorImage:null,lqip:''};
+function check(name,fn){try{fn();cases.push(name)}catch(error){error.scenario=name;throw error}}
+check('empty public page is valid',()=>assert(page({items:[],nextCursor:null})));
+check('full public row remains intact and input is not mutated',()=>{const input={items:[{...row,extra:{hidden:true}}],nextCursor:null},before=JSON.stringify(input),out=page(input);assert(out);assert.equal(out.items[0].keyword,'VISIBLE');assert.equal(out.items[0].createdAt,row.createdAt);assert.equal(JSON.stringify(input),before);assert.notEqual(out.items,input.items);assert.notEqual(out.items[0],input.items[0]);assert(!Object.hasOwn(out.items[0],'extra'))});
+check('continuation cursor identifies last distinct row',()=>assert(page({items:[row,{...row,id:'synthetic-two'}],nextCursor:'synthetic-two'})));
+for(const [name,value]of [['null',null],['array',[]],['missing items',{}],['items object',{items:{},nextCursor:null}],['null row',{items:[null],nextCursor:null}],['scalar row',{items:[1],nextCursor:null}]])check('reject '+name,()=>assert.equal(page(value),null));
+for(const [field,value]of [['id',''],['id',7],['thumbUrl',''],['thumbUrl',{}],['keyword',{}],['category',[]],['purpose',null],['size',12],['pattern',null],['creator',{}],['creatorImage',7],['lqip',null],['createdAt','not-a-date'],['createdAt','2026-02-30T03:00:00.000Z'],['createdAt','2026-11-03T12:00:00.000+09:00']])check('reject invalid '+field+' '+JSON.stringify(value),()=>assert.equal(page({items:[{...row,[field]:value}],nextCursor:null}),null));
+check('missing display field is rejected',()=>{const value={...row};delete value.keyword;assert.equal(page({items:[value],nextCursor:null}),null)});
+check('duplicate row identity is rejected',()=>assert.equal(page({items:[row,{...row}],nextCursor:null}),null));
+for(const cursor of [undefined,0,{},'','foreign'])check('reject cursor '+JSON.stringify(cursor),()=>assert.equal(page({items:[row],nextCursor:cursor}),null));
+check('empty page cannot advertise continuation',()=>assert.equal(page({items:[],nextCursor:row.id}),null));
+check('profile image string and empty optional display values remain supported',()=>assert(page({items:[{...row,creatorImage:'https://synthetic.invalid/avatar.png',category:'',purpose:'',size:'',keyword:'',creator:'',pattern:'',lqip:''}],nextCursor:null})));
+check('fresh cache is normalized',()=>assert(cache({items:[row],cursor:null,ts:now},now)));
+check('expired cache remains readable for existing refresh policy',()=>assert(cache({items:[row],cursor:null,ts:0},now)));
+for(const tsValue of [undefined,'123',-1,NaN,Infinity,1.5,now+1])check('reject cache timestamp '+String(tsValue),()=>assert.equal(cache({items:[row],cursor:null,ts:tsValue},now),null));
+check('invalid cache row cannot bypass parser',()=>assert.equal(cache({items:[null],cursor:null,ts:now},now),null));
+check('invalid cache cursor cannot bypass parser',()=>assert.equal(cache({items:[row],cursor:{},ts:now},now),null));
+check('invalid current clock rejects cache',()=>assert.equal(cache({items:[row],cursor:null,ts:now},NaN),null));
+check('cache continuation remains usable',()=>assert(cache({items:[row],cursor:row.id,ts:now-1},now)));
+const out={checkedAt:new Date().toISOString(),passed:cases.length,failed:0,cases,sourceHash:crypto.createHash('sha256').update(source).digest('hex'),productionRequests:0,providerCalls:0,scope:'Actual pure DTO/cache parser in test root; independent valid and malformed envelopes, rows, timestamps and cursors. No native/full-product or publication acceptance.'};
+if(process.env.DOYA_BANNER_GALLERY_CONTRACT_RESULT)fs.writeFileSync(process.env.DOYA_BANNER_GALLERY_CONTRACT_RESULT,JSON.stringify(out,null,2)+'\n');for(const name of cases)console.log('PASS Banner gallery DTO contract: '+name);console.log(JSON.stringify({passed:cases.length,failed:0}));
