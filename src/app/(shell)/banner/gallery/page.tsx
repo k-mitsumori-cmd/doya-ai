@@ -52,52 +52,89 @@ function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
 
 // サムネイル画像コンポーネント（高速表示 + LQIP + ローディング体験最適化）
 // index: 上から順に読み込むための優先度制御に使用
-function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string; lqip?: string; index?: number }) {
+function GalleryThumb(props: { src: string; alt: string; lqip?: string; index?: number }) {
+  return <GalleryThumbImage key={props.src} {...props} />
+}
+
+function GalleryThumbImage({ src, alt, lqip, index = 0 }: { src: string; alt: string; lqip?: string; index?: number }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
-  const [retryCount, setRetryCount] = useState(0)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const imgRef = React.useRef<HTMLImageElement>(null)
-
-  // 上から順に読み込むため、indexに応じてディレイを入れる
-  // 最初の3件（1行目）は即座に、以降は行ごとに少しずつ遅延
+  const lifecycle = React.useRef({
+    alive: false, started: false, retries: 0,
+    staggerTimer: null as ReturnType<typeof setTimeout> | null,
+    retryTimer: null as ReturnType<typeof setTimeout> | null,
+  })
   const staggerMs = index < 3 ? 0 : Math.floor(index / 3) * 80
 
-  // IntersectionObserverで画面に入ったら読み込み開始（パフォーマンス向上）
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          if (staggerMs > 0) {
-            const t = setTimeout(() => setStatus('loading'), staggerMs)
-            observer.disconnect()
-            return () => clearTimeout(t)
-          }
-          setStatus('loading')
-          observer.disconnect()
-        }
-      },
-      { rootMargin: '200px' } // 少し早めに読み込み開始
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
+    const state = lifecycle.current
+    state.alive = true
+    return () => {
+      state.alive = false
+      if (state.staggerTimer !== null) clearTimeout(state.staggerTimer)
+      if (state.retryTimer !== null) clearTimeout(state.retryTimer)
+      state.staggerTimer = null
+      state.retryTimer = null
+    }
   }, [])
 
-  // リトライ機能
-  const handleError = () => {
-    if (retryCount < 3) {
-      // 少し待ってリトライ
-      setTimeout(() => {
-        setRetryCount((c) => c + 1)
-        if (imgRef.current) {
-          imgRef.current.src = `${src}${src.includes('?') ? '&' : '?'}retry=${retryCount + 1}`
-        }
-      }, 1000 * (retryCount + 1))
-    } else {
-      setStatus('error')
+  useEffect(() => {
+    const el = containerRef.current
+    const state = lifecycle.current
+    if (!el || state.started) return
+    let disposed = false
+    const observer = new IntersectionObserver((entries) => {
+      if (disposed || !state.alive || !entries[0]?.isIntersecting || state.started || state.staggerTimer !== null) return
+      observer.disconnect()
+      const begin = () => {
+        if (disposed || !state.alive || state.started) return
+        state.staggerTimer = null
+        state.started = true
+        setStatus('loading')
+      }
+      if (staggerMs > 0) state.staggerTimer = setTimeout(begin, staggerMs)
+      else begin()
+    }, { rootMargin: '200px' })
+    observer.observe(el)
+    return () => {
+      disposed = true
+      observer.disconnect()
+      if (state.staggerTimer !== null) clearTimeout(state.staggerTimer)
+      state.staggerTimer = null
     }
+  }, [staggerMs])
+
+  const handleError = () => {
+    const state = lifecycle.current
+    if (!state.alive || state.retryTimer !== null) return
+    if (state.retries >= 3) {
+      setStatus('error')
+      return
+    }
+    const attempt = state.retries + 1
+    const timer = setTimeout(() => {
+      if (!state.alive || state.retryTimer !== timer || !imgRef.current) return
+      state.retryTimer = null
+      state.retries = attempt
+      setStatus('loading')
+      try {
+        const url = new URL(src, window.location.href)
+        if (url.protocol === 'http:' || url.protocol === 'https:') url.searchParams.set('retry', String(attempt))
+        imgRef.current.src = url.href
+      } catch {
+        imgRef.current.src = src
+      }
+    }, 1000 * attempt)
+    state.retryTimer = timer
+  }
+
+  const handleLoad = () => {
+    const state = lifecycle.current
+    if (!state.alive) return
+    if (state.retryTimer !== null) clearTimeout(state.retryTimer)
+    state.retryTimer = null
+    setStatus('loaded')
   }
 
   // シマーアニメーションのスタイル
@@ -165,7 +202,7 @@ function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string;
           alt={alt}
           decoding="async"
           fetchPriority={index < 3 ? 'high' : 'auto'}
-          onLoad={() => setStatus('loaded')}
+          onLoad={handleLoad}
           onError={handleError}
           className={`w-full h-full object-cover transition-opacity duration-300 ${
             status === 'loaded' ? 'opacity-100' : 'opacity-0'
