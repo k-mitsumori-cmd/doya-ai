@@ -2,7 +2,7 @@ process.env.NODE_ENV = 'development';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const repo = path.resolve(__dirname, '../..'), dep = name => require(path.join(repo, 'node_modules', name));
 const React = dep('react'), ts = dep('typescript'), { JSDOM } = dep('jsdom');
-const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx','src/lib/use-admin-analytics.ts','src/lib/admin-analytics-contract.ts', 'src/lib/admin-stat-comparison.ts'];
+const sources = ['src/app/admin/billing/page.tsx', 'src/app/admin/page.tsx', 'src/lib/use-admin-billing.ts', 'src/lib/admin-billing-contract.ts', 'src/lib/admin-billing-period.ts', 'src/lib/admin-billing-csv.ts', 'src/lib/jst.ts', 'src/lib/plan-utils.ts', 'src/lib/admin-registered-plan-stats.ts', 'src/app/admin/analytics/page.tsx','src/lib/use-admin-analytics.ts','src/lib/admin-analytics-contract.ts', 'src/lib/admin-stat-comparison.ts', 'src/lib/admin-hourly-chart.ts'];
 async function scenario(strict, kind) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://synthetic.invalid/admin/billing' }), prior = new Map(), requests = [], navigation = [], timers = new Map(), downloads = [], blobs = new Map(), revoked = [];
   let root, timerId = 0;
@@ -74,7 +74,7 @@ async function scenario(strict, kind) {
     } else if (analytics) {
       if(kind==='analytics-registration-labels') {
 
-      const stats = { totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowthStatus: 'comparable', generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
+      const stats = { lastUpdated: '2026-11-03T03:00:00.000Z', totalUsers: 34, premiumUsers: 16, conversionRate: 47.1, totalGenerations: 10, todayGenerations: 2, monthGenerations: 4, lastMonthGenerations: 5, generationGrowthStatus: 'comparable', generationGrowth: -20, services: [], chartData: Array(12).fill(0) };
       await reply(initial, 200, stats);
       assert(body().includes('有料プラン登録')); assert(body().includes('登録比率 47.1%')); assert(!body().includes('有料会員')); assert(!body().includes('CVR'));
       for (const label of ['有料プラン登録', '総ユーザー', '本日生成']) {
@@ -85,7 +85,7 @@ async function scenario(strict, kind) {
 
       } else {
 
-      const stats={totalUsers:34,premiumUsers:16,conversionRate:47.1,totalGenerations:10,todayGenerations:2,monthGenerations:4,lastMonthGenerations:5,generationGrowthStatus:'comparable',generationGrowth:-20,services:[],chartData:Array(12).fill(0)};
+      const stats={lastUpdated:'2026-11-03T03:00:00.000Z',totalUsers:34,premiumUsers:16,conversionRate:47.1,totalGenerations:10,todayGenerations:2,monthGenerations:4,lastMonthGenerations:5,generationGrowthStatus:'comparable',generationGrowth:-20,services:[],chartData:Array(12).fill(0)};
       const failure=()=>{assert(alert());assert(body().includes('利用統計'));assert(!document.querySelector('.animate-spin'));assert(button('再取得する'));assert(!body().includes('PRIVATE_'));};
       const recover=async()=>{await click('再取得する');await reply([requests.at(-1)],200,stats);assert(!alert());assert(body().includes('有料プラン登録'));};
       if(['analytics-http503','analytics-network','analytics-json-malformed','analytics-invalid-shape'].includes(kind)) {

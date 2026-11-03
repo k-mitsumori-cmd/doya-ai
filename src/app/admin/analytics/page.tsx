@@ -2,6 +2,7 @@
 
 import AdminAnalyticsPeriod from '@/components/AdminAnalyticsPeriod'
 import { adminComparisonLabel } from '@/lib/admin-stat-comparison'
+import { adminHourlyChartTimes } from '@/lib/admin-hourly-chart'
 import { useAdminAnalytics } from '@/lib/use-admin-analytics'
 import { motion } from 'framer-motion'
 import {
@@ -48,10 +49,11 @@ export default function AnalyticsPage() {
     { label: '有料プラン登録', value: data.premiumUsers.toLocaleString(), change: `登録比率 ${data.conversionRate}%`, up: true, neutral: true, icon: TrendingUp },
   ]
 
+  const chartHours = adminHourlyChartTimes(data.lastUpdated)
   const maxChartValue = Math.max(...(data.chartData || [1]), 1)
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
+    <div className="w-full min-w-0 p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
       <Toaster position="top-right" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -109,40 +111,32 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0 gap-6">
           {/* 時間別生成数グラフ */}
-          <div className="bg-white/[0.02] backdrop-blur rounded-xl p-6 border border-white/5">
-            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-violet-400" />
-              時間別生成数（過去12時間）
+          <div className="min-w-0 bg-white/[0.02] backdrop-blur rounded-xl p-6 border border-white/5">
+            <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+              <BarChart3 aria-hidden="true" className="w-5 h-5 text-violet-400" />
+              時間別生成数（過去12時間・日本時間）
             </h2>
-            <div className="flex items-end gap-2 h-48">
-              {(data.chartData || []).map((value, index) => {
-                const height = maxChartValue > 0 ? (value / maxChartValue) * 100 : 0
-                const isLast = index === (data.chartData?.length || 0) - 1
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.max(height, 2)}%` }}
-                      transition={{ delay: index * 0.05, duration: 0.5 }}
-                      className={`w-full rounded-t-lg ${
-                        isLast 
-                          ? 'bg-gradient-to-t from-violet-500 to-fuchsia-500' 
-                          : 'bg-white/10 hover:bg-white/20'
-                      } transition-colors relative group cursor-pointer min-h-[4px]`}
-                    >
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {value}件
+            <p className="text-sm text-white/70 mb-4">取得基準：<time dateTime={data.lastUpdated}>{new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', dateStyle: 'medium', timeStyle: 'medium', hourCycle: 'h23' }).format(new Date(data.lastUpdated))}</time>（日本時間）。最後の区間は取得時点までの集計です。</p>
+            <div role="region" aria-label="時間別グラフ（日本時間）" tabIndex={0} className="overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
+              <ol className="flex items-end gap-2 h-48 min-w-[36rem]" aria-label="時間別の件数">
+                {data.chartData.map((value, index) => {
+                  const bucket = chartHours[index]
+                  const description = `${bucket.date} ${bucket.label} 日本時間：${value}件${bucket.partial ? '（取得時点まで）' : ''}`
+                  return (
+                    <li key={bucket.since} aria-label={description} className="flex-1 min-w-0 h-full flex flex-col items-center gap-2">
+                      <span className="text-xs text-white/70">{value}件</span>
+                      <div className="flex-1 min-h-0 w-full flex items-end" aria-hidden="true">
+                        <div className={`w-full rounded-t-lg ${index === 11 ? 'bg-violet-500' : 'bg-white/20'}`} style={{ height: `${(value / maxChartValue) * 100}%` }} />
                       </div>
-                    </motion.div>
-                    <span className="text-[10px] text-white/30">
-                      {new Date(Date.now() - (11 - index) * 60 * 60 * 1000).getHours()}:00
-                    </span>
-                  </div>
-                )
-              })}
+                      <time dateTime={bucket.since} title={description} className="text-xs text-white/70">{bucket.label}</time>
+                    </li>
+                  )
+                })}
+              </ol>
             </div>
+            <p className="text-xs text-white/70 mt-2">横にスクロールすると全12区間を確認できます。日付は各時刻の説明で確認できます。</p>
           </div>
 
           {/* サービス別パフォーマンス */}

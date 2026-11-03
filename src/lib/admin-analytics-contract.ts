@@ -14,6 +14,7 @@ export interface AnalyticsServiceStats {
 }
 
 export interface AdminAnalyticsData {
+  lastUpdated: string
   totalGenerations: number
   todayGenerations: number
   monthGenerations: number
@@ -38,6 +39,7 @@ const optionalCount = (value: unknown): value is number | null => value === null
 /** 取得失敗・形式不正を実績0件に置き換えず、画面に必要な集計値を検証する。 */
 export function isAdminAnalyticsData(value: unknown): value is AdminAnalyticsData {
   if (!record(value)) return false
+  if (typeof value.lastUpdated !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.lastUpdated) || !Number.isFinite(Date.parse(value.lastUpdated)) || new Date(value.lastUpdated).toISOString() !== value.lastUpdated) return false
   for (const key of ['totalGenerations', 'todayGenerations', 'monthGenerations', 'lastMonthGenerations', 'totalUsers', 'premiumUsers']) {
     if (!count(value[key])) return false
   }
