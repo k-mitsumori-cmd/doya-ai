@@ -2524,6 +2524,12 @@ Error: Page not found
 
 サービスカードのリンクはIDからURLを組み立てず、APIが返す `dashboardHref` を使用する。APIは集計用の `writing` を `seo` に対応させ、`services.ts` の `dashboardHref` と `RETIRED_SERVICE_IDS` を参照する。記事は `/seo`、インタビューは `/interview`。サイドバーの記事リンクも `/seo` を使用する。カードの操作領域は44×44px以上とし、サービス名を含む読み上げ名とキーボードフォーカスを付ける。
 
+#### 管理画面のマーケティング表示
+
+`ServicePopupGuard` が対象とするHubSpotのCTAは、`/admin` とその配下で常に非表示にする。管理者認証は一般のNextAuthとは独立しているため、通常セッションの状態に依存させない。`/administrator` など別のURLは管理画面の範囲に含めない。
+
+既存のCTAコンテナだけをCSSで対象にし、CAPTCHA・課金モーダル・サポートの表示を維持する。サーバー描画の初期表示、クライアント遷移、遅れて挿入されたCTAでも同じ条件を適用する。公開の紹介ページへ移動した後は、従来の表示条件へ戻す。
+
 #### ユーザー管理
 
 | 機能 | 詳細 |
