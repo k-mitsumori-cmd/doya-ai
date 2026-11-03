@@ -1,6 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const repo=path.resolve(__dirname,'../..'),out=__dirname,ts=require(repo+'/node_modules/typescript'),next=require(repo+'/node_modules/next/server');
 const {load}=require('./load-typescript.cjs');const registered=load('src/lib/admin-registered-plan-stats.ts',{'@/lib/plan-utils':load('src/lib/plan-utils.ts')});
+const services=load('src/lib/services.ts',{'./unified-plan':load('src/lib/unified-plan.ts')});
 const file=path.join(repo,'src/app/api/admin/stats/route.ts'),source=fs.readFileSync(file,'utf8'),jstSource=fs.readFileSync(repo+'/src/lib/jst.ts','utf8');
 const compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
 const code=compile(source),jstCode=compile(jstSource),secret='SYNTHETIC_DB_SECRET_MUST_NOT_LEAK';
@@ -10,7 +11,7 @@ async function observe(instant,failAt=0,authorized=true){
  const matches=(w,x)=>!w||(!w.gte||x>=w.gte)&&(!w.lt||x<w.lt)&&(!w.lte||x<=w.lte);
  const prisma=new Proxy({}, {get:(_,model)=>new Proxy({}, {get:(_,operation)=>async args=>{queries.push({model,operation,args});if(queries.length===failAt)throw Error(secret);if(operation==='findMany'||operation==='groupBy')return [];if(model==='generation'&&!args?.where?.serviceId)return fixtures.filter(x=>matches(args?.where?.createdAt,x)).length;return 0;}})});
  const jst={};vm.runInNewContext(jstCode,{exports:jst,Date:Clock});const exports={};vm.runInNewContext(code,{exports,Date:Clock,console:{error:(...a)=>logs.push(a.join(' ')),log:(...a)=>logs.push(a.join(' '))},require:n=>{
- if(n==='next/server')return next;if(n==='next/headers')return {cookies:async()=>({get:()=>({value:'synthetic-admin'})})};if(n==='@/lib/admin-auth')return {COOKIE_NAME:'synthetic-admin',verifyAdminSession:async()=>({valid:authorized})};if(n==='@/lib/prisma')return {prisma};if(n==='@/lib/admin-registered-plan-stats')return registered;if(n==='@/lib/attribution')return {serviceLabelOf:s=>s};if(n==='@/lib/jst')return jst;if(n==='@/lib/pricing')return {SEO_PRICING:{plans:[{id:'seo-pro',price:9980},{id:'seo-enterprise',price:49800}]}};throw Error('Unexpected import '+n);
+ if(n==='next/server')return next;if(n==='next/headers')return {cookies:async()=>({get:()=>({value:'synthetic-admin'})})};if(n==='@/lib/admin-auth')return {COOKIE_NAME:'synthetic-admin',verifyAdminSession:async()=>({valid:authorized})};if(n==='@/lib/prisma')return {prisma};if(n==='@/lib/admin-registered-plan-stats')return registered;if(n==='@/lib/services')return services;if(n==='@/lib/attribution')return {serviceLabelOf:s=>s};if(n==='@/lib/jst')return jst;if(n==='@/lib/pricing')return {SEO_PRICING:{plans:[{id:'seo-pro',price:9980},{id:'seo-enterprise',price:49800}]}};throw Error('Unexpected import '+n);
  }});
  const response=await exports.GET(new next.NextRequest('https://synthetic.invalid/api/admin/stats')),body=await response.json();assert.match(response.headers.get('cache-control'),/private.*no-store/);assert.equal(response.headers.get('vary'),'Cookie');assert(!JSON.stringify([body,logs]).includes(secret));
  if(!authorized){assert.equal(response.status,401);assert.equal(queries.length,0);return {name:'denied-before-data',observed:true}}

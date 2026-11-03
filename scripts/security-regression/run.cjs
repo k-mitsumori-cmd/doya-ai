@@ -1538,7 +1538,7 @@ if (kintaiAttendanceExportVisibility.status !== 0) process.exit(kintaiAttendance
 const kintaiDepartmentExportAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-export-access.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiDepartmentExportAccess.error || kintaiDepartmentExportAccess.status !== 0) process.exit(kintaiDepartmentExportAccess.status || 1);
 
-for (const file of ['verify-admin-stats-jst-errors.cjs', 'verify-admin-billing-recovery-mounted.cjs', 'verify-admin-billing-financial-mounted.cjs', 'verify-admin-billing-dashboard-mounted.cjs', 'verify-admin-billing-period-cash.cjs', 'verify-admin-contract-mrr.cjs', 'verify-admin-contract-mrr-reader.cjs', 'verify-admin-billing-data-api.cjs', 'verify-admin-registered-plan-stats.cjs', 'verify-admin-registered-plan-mounted.cjs']) {
+for (const file of ['verify-admin-stats-jst-errors.cjs', 'verify-admin-billing-recovery-mounted.cjs', 'verify-admin-billing-financial-mounted.cjs', 'verify-admin-billing-dashboard-mounted.cjs', 'verify-admin-billing-period-cash.cjs', 'verify-admin-contract-mrr.cjs', 'verify-admin-contract-mrr-reader.cjs', 'verify-admin-billing-data-api.cjs', 'verify-admin-registered-plan-stats.cjs', 'verify-admin-registered-plan-mounted.cjs', 'verify-admin-service-navigation.cjs', 'verify-admin-recent-registration-window.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) process.exit(result.status || 1);
 }

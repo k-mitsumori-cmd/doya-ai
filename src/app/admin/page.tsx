@@ -27,6 +27,8 @@ import { useAdminBilling } from '@/lib/use-admin-billing'
 import { planLabel } from '@/lib/plan-utils'
 
 interface ServiceStats {
+  dashboardHref?: string | null
+  isRetired?: boolean
   id: string
   name: string
   icon: string
@@ -233,10 +235,10 @@ export default function AdminDashboard() {
                 { 
                   label: '総ユーザー', 
                   value: stats.totalUsers.toLocaleString(), 
-                  subValue: `+${stats.recentUsers} 今週`,
+                  subValue: `過去7日 +${stats.recentUsers}人`,
                   icon: Users, 
                   gradient: 'from-blue-500 to-cyan-500',
-                  trend: stats.recentUsers > 0 ? stats.recentUsers : null,
+                  trend: null,
                   trendUp: true
                 },
                 { 
@@ -422,9 +424,9 @@ export default function AdminDashboard() {
                               </p>
                             </div>
                           </div>
-                          <Link href={`/${service.id}/dashboard`} className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                          {service.dashboardHref ? <Link href={service.dashboardHref} aria-label={`${service.name}を開く`} className="min-h-11 min-w-11 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
                             <ExternalLink className="w-4 h-4 text-white" />
-                          </Link>
+                          </Link> : service.isRetired ? <span className="text-xs text-white/70">提供終了</span> : null}
                         </div>
                       </div>
 
