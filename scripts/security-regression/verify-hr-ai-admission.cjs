@@ -1,3 +1,4 @@
+const {loadHrBilling}=require('./load-hr-billing.cjs')
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 
@@ -30,7 +31,7 @@ const prisma = {
     },
   },
 }
-const { hrJstMonthStart, reserveAiUsage, releaseAiUsage } = load('src/lib/hr/billing.ts', {
+const { hrJstMonthStart, reserveAiUsage, releaseAiUsage } = loadHrBilling( {
   '@/lib/prisma': { prisma },
 })
 

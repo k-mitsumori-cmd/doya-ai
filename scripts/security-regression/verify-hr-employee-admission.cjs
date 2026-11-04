@@ -1,3 +1,4 @@
+const {loadHrBilling}=require('./load-hr-billing.cjs')
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 const fs = require('node:fs')
@@ -15,7 +16,7 @@ const csvRequest = csvText => new Request('http://localhost/api/hr/employees/imp
       user: { findUnique: async () => ({ plan: 'FREE' }) },
       hrEmployee: { count: async ({ where }) => { assert.equal(where.status, 'ACTIVE'); return 5 } },
     }
-    const billing = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: { $transaction: fn => fn(tx) } } })
+    const billing = loadHrBilling( { '@/lib/prisma': { prisma: { $transaction: fn => fn(tx) } } })
     const result = await billing.createWithinEmployeeLimit('o', async () => { writes++; return 'created' })
     assert.equal(result.allowed, false)
     assert.equal(result.limit, 5)
