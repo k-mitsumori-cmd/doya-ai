@@ -1,3 +1,8 @@
+// Team seat recovery: synthetic provider/session boundaries; no live payments.
+for (const file of ['verify-pricing-seat-reconciliation.cjs', 'verify-pricing-team-manage-mounted.cjs']) {
+  const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) process.exit(result.status || 1);
+}
 const hrBillingReadRegressionFiles = ["verify-hr-billing-read-contract.cjs", "verify-hr-billing-plan-quota.cjs", "verify-hr-billing-usage-parser.cjs", "verify-hr-billing-page-responses.cjs", "verify-hr-billing-page-reactivation.cjs", "verify-hr-billing-page-pending.cjs", "verify-hr-billing-page-timeout-retry.cjs", "verify-hr-billing-page-scope-switch.cjs"];
 for (const file of hrBillingReadRegressionFiles) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 }); if (result.error || result.status !== 0) process.exit(result.status || 1); }
 { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-gallery-download-deadline.cjs')], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
