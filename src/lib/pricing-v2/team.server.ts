@@ -9,12 +9,15 @@
 // ⚠️ 会社を操作できるのは持ち主（account_companies.userId）だけ。body の companyId は信じない。
 // 計算の決まりは team.ts（テストあり）。
 import { prisma } from '@/lib/prisma'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import { stripe, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
 import { LEGACY_PRO_MONTHLY_POINTS, teamMonthlyPoints } from './plans'
 import { newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from './prices'
-import { findSeatItem, isSeatCacheFresh, seatsUsed, type MemberLike } from './team'
+import { findSeatItem, isSeatCacheFresh, memberLimit, seatsUsed, type MemberLike } from './team'
+import { subscriberKind } from './view'
+import { seatCacheRevision, saveSeatCacheAtRevision, withSeatMonthlyGrantInTransaction } from './seat-operation'
 
 /** 新しい表を使ってよいか（旗が off でなく、新しい料金の価格がそろっている）。人を問わない入口の判定。人ごとは teamTablesAllowedFor */
 export function teamTablesAllowed(): boolean {
@@ -51,12 +54,12 @@ async function readTeamSubscriptionFromStripe(owner: { id: string; email: string
 }
 
 /** 控えを書き直す（無ければ作る）。チームの契約が無くなっていれば消す */
-async function writeSeatCache(companyId: string, t: TeamSubscription | null, now = new Date()) {
+export async function writeTeamSeatCache(companyId: string, t: TeamSubscription | null, db: Pick<PrismaClient, 'accountCompanyBilling'>, now = new Date()) {
   if (!t) {
-    await prisma.accountCompanyBilling.deleteMany({ where: { companyId } })
+    await db.accountCompanyBilling.deleteMany({ where: { companyId } })
     return
   }
-  await prisma.accountCompanyBilling.upsert({
+  await db.accountCompanyBilling.upsert({
     where: { companyId },
     create: { companyId, stripeSubscriptionId: t.subscriptionId, seats: t.seats, billingInterval: t.interval, checkedAt: now },
     update: { stripeSubscriptionId: t.subscriptionId, seats: t.seats, billingInterval: t.interval, checkedAt: now },
@@ -77,26 +80,53 @@ async function ownerOfCompany(companyId: string) {
  * 持ち主が旗の対象でない・価格が未設定なら、表を読まずに null。
  * Stripe を読めないときは、古い控えの人数で続ける（控えも無ければ null）。
  */
-export async function teamSeatsForCompany(companyId: string, opts: { refresh?: boolean } = {}): Promise<number | null> {
+export async function teamSeatsForCompany(companyId: string, opts: { refresh?: boolean; strict?: boolean } = {}): Promise<number | null> {
   if (!teamTablesAllowed()) return null
   const owner = await ownerOfCompany(companyId)
   if (!owner || !teamTablesAllowedFor(owner.email)) return null
-  const now = new Date()
-  const cached = await prisma.accountCompanyBilling.findUnique({ where: { companyId } })
-  if (cached && !opts.refresh && isSeatCacheFresh(cached.checkedAt, now)) return cached.seats
-  // DB の上でチームでない人（据え置き・無料）は、Stripe を読みに行かない
-  if (!owner.stripePriceId || !newPricingPriceIds().has(owner.stripePriceId)) {
-    if (cached) await writeSeatCache(companyId, null, now)
-    return null
-  }
   try {
+    const revision = await seatCacheRevision(companyId)
+    const now = new Date()
+    const cached = await prisma.accountCompanyBilling.findUnique({ where: { companyId } })
+    if (cached && !opts.refresh && isSeatCacheFresh(cached.checkedAt, now)) return cached.seats
+    // Legacy/free owners never cause a Stripe lookup. Cache deletion is fenced
+    // too, so an old refresh cannot erase a newly completed seat operation.
+    if (!owner.stripePriceId || !newPricingPriceIds().has(owner.stripePriceId)) {
+      if (cached) await saveSeatCacheAtRevision(companyId, revision, tx => writeTeamSeatCache(companyId, null, tx, now))
+      return null
+    }
     const t = await readTeamSubscriptionFromStripe(owner, companyId)
-    await writeSeatCache(companyId, t, now)
+    await saveSeatCacheAtRevision(companyId, revision, tx => writeTeamSeatCache(companyId, t, tx, now))
     return t?.seats ?? null
-  } catch {
+  } catch (error) {
+    // Display/generation may retain the documented cached fallback. Admissions
+    // request strict refresh and never proceed on an uncertain Stripe result.
+    if (opts.strict) throw error
     console.error('[team] could not read the team subscription; using the cached seats')
+    const cached = await prisma.accountCompanyBilling.findUnique({ where: { companyId } })
     return cached?.seats ?? null
   }
+}
+
+/** Call only inside withSeatAdmission. No network work in this callback: the
+ * caller strictly refreshes before acquiring the lock, then re-reads this cache
+ * and the owner here. A concurrent seat operation blocks the admission.
+ */
+export async function teamMembershipCapacity(companyId: string, db: Pick<PrismaClient, 'accountCompany' | 'accountCompanyBilling'>) {
+  const company = await db.accountCompany.findUnique({
+    where: { id: companyId },
+    select: { userId: true, user: { select: { email: true, plan: true, stripePriceId: true } } },
+  })
+  if (!company || !teamTablesAllowedFor(company.user?.email)) throw new Error('Membership capacity unavailable')
+  const owner = company.user
+  const kind = subscriberKind({ plan: owner?.plan, stripePriceId: owner?.stripePriceId, newPriceIds: newPricingPriceIds() })
+  let seats: number | null = null
+  if (kind === 'team') {
+    const cached = await db.accountCompanyBilling.findUnique({ where: { companyId } })
+    if (!cached || !isSeatCacheFresh(cached.checkedAt, new Date()) || !Number.isInteger(cached.seats) || cached.seats < 1 || cached.seats > 49) throw new Error('Fresh team seats unavailable')
+    seats = cached.seats
+  }
+  return { kind, limit: memberLimit(kind, seats), ownerUserId: company.userId, ownerEmail: owner?.email ?? null }
 }
 
 /**
@@ -117,6 +147,29 @@ export async function newPricingMonthlyGrant(companyId: string): Promise<number 
     console.error('[team] could not decide the monthly grant; using the current amount')
     return null
   }
+}
+
+/** Final monthly amount, inside the ledger's Serializable transaction. The
+ * earlier Stripe/cache read is only preparation; it cannot authorize an amount
+ * after another request has changed the purchased seats.
+ */
+export async function newPricingMonthlyGrantInTransaction(companyId: string, tx: Prisma.TransactionClient): Promise<number | null | false> {
+  if (newPricingRollout() === 'off') return null
+  const company = await tx.accountCompany.findUnique({
+    where: { id: companyId },
+    select: { user: { select: { email: true, plan: true, stripePriceId: true } } },
+  })
+  const owner = company?.user
+  if (!owner || !isNewPricingEnabledFor(owner.email)) return null
+  if (!isPaidPlan(owner.plan)) return false
+  if (!owner.stripePriceId || !newPricingPriceIds().has(owner.stripePriceId)) return LEGACY_PRO_MONTHLY_POINTS
+  if (!teamTablesAllowed()) return null
+  return withSeatMonthlyGrantInTransaction(companyId, tx, async () => {
+    const cached = await tx.accountCompanyBilling.findUnique({ where: { companyId } })
+    // Preserve the documented cached/legacy fallback during a Stripe outage,
+    // but never grant from it while a durable seat mutation is unresolved.
+    return cached ? teamMonthlyPoints(cached.seats) ?? LEGACY_PRO_MONTHLY_POINTS : LEGACY_PRO_MONTHLY_POINTS
+  })
 }
 
 /** 会社の席を取っている人数（持ち主＋招待中＋参加） */
@@ -169,6 +222,6 @@ export async function readOwnerTeamSubscription(ctx: NonNullable<Awaited<ReturnT
 }
 
 /** Stripe の人数を変えたあと、控えを書き直す */
-export async function saveSeatCache(companyId: string, t: TeamSubscription | null) {
-  await writeSeatCache(companyId, t)
+export async function saveSeatCache(companyId: string, t: TeamSubscription | null, revision: number) {
+  await saveSeatCacheAtRevision(companyId, revision, tx => writeTeamSeatCache(companyId, t, tx))
 }

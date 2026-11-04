@@ -7,6 +7,7 @@
 // - 会社の決め方（セッションの本人の会社だけ）は呼ぶ側の責任。ユーザーから引くときは balanceForUser を使う
 // ⚠️ DB の外（有料の API など）は呼ばない。db は Prisma のクライアント（テストでは memory-db）を渡す
 import { isPaidPlan } from '@/lib/unified-plan'
+import type { Prisma } from '@prisma/client'
 import {
   RECOVERY_POOL_KINDS,
   BONUS_KINDS,
@@ -88,6 +89,10 @@ export type LedgerOptions = {
    * 対象でない・分からないときは null（今までの量を使う）。index.ts が src/lib/pricing-v2/team.server.ts の newPricingMonthlyGrant をつなぐ
    */
   newPricingMonthlyGrantFor?: (companyId: string) => Promise<number | null>
+  /** Re-read the amount while holding the company's seat coordination guard in
+   * this ledger transaction. false defers a new grant while seats are uncertain.
+   */
+  newPricingMonthlyGrantInTransactionFor?: (companyId: string, tx: Prisma.TransactionClient) => Promise<number | null | false>
 }
 
 class RetryableError extends Error {}
@@ -257,7 +262,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
    * - purchase: 期限は 6 か月以内に必ず収める（指定が無ければ 6 か月後）
    * 同じ sourceKey は1回だけ（2回目は duplicated）
    */
-  async function grant(companyId: string, kind: GrantKind, amount: number, expiresAt: Date | null = null, opts: GrantOptions = {}): Promise<GrantResult> {
+  async function grant(companyId: string, kind: GrantKind, amount: number, expiresAt: Date | null = null, opts: GrantOptions = {}, amountInTransaction?: (tx: Prisma.TransactionClient) => Promise<number | false>): Promise<GrantResult> {
     if (!validId(companyId) || !isGrantKind(kind) || !isValidAmount(amount)) return { ok: false, reason: 'invalid' }
     if (opts.sourceKey !== undefined && !validId(opts.sourceKey)) return { ok: false, reason: 'invalid' }
     if (expiresAt !== null && (!(expiresAt instanceof Date) || Number.isNaN(expiresAt.getTime()))) return { ok: false, reason: 'invalid' }
@@ -274,10 +279,12 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         }
       }
       if (opts.inTransaction && !(await opts.inTransaction(tx))) return { ok: false, reason: 'precondition' }
+      const resolvedAmount = amountInTransaction ? await amountInTransaction(tx) : amount
+      if (resolvedAmount === false || !isValidAmount(resolvedAmount)) return { ok: false, reason: 'precondition' }
       // はじめの付与（starter）を付ける回は、その日の回復を足さない（ちょうど 100 から始める）
       const grants = await settle(tx, account, now, kind === 'starter' ? true : paid)
 
-      let granted = amount
+      let granted = resolvedAmount
       let expires: Date | null = expiresAt
       if (kind === 'monthly') {
         const max = monthlyGrantExpiresAt(now)
@@ -319,13 +326,17 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
 
   /** プランに合わせた毎月の付与（無料は付けない。チームは人数から、据え置きの PRO は決まった量）。月に1回だけ */
   async function grantMonthlyForPlan(companyId: string, plan: string | null | undefined): Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }> {
-    let amount = monthlyGrantForPlan(plan, isPaidPlan)
+    const defaultAmount = monthlyGrantForPlan(plan, isPaidPlan)
+    let amount = defaultAmount
     if (amount <= 0) return { ok: true, granted: 0, skipped: 'free_plan' }
     if (options.newPricingMonthlyGrantFor) {
       const v = await options.newPricingMonthlyGrantFor(companyId)
       if (typeof v === 'number' && v > 0) amount = v
     }
-    return grant(companyId, 'monthly', amount, null)
+    return grant(companyId, 'monthly', amount, null, {}, options.newPricingMonthlyGrantInTransactionFor ? async tx => {
+      const current = await options.newPricingMonthlyGrantInTransactionFor!(companyId, tx)
+      return current === null ? defaultAmount : current
+    } : undefined)
   }
 
   /** 残り・種類ごとの内訳・次の回復の時刻。会社が無ければ null */
