@@ -1,3 +1,7 @@
+// React.act needs the development runtime, including when npm build sets
+// NODE_ENV=production in the parent. This dedicated test process is synthetic.
+process.env.NODE_ENV = 'development';
+const reportFailure = console.error.bind(console);
 const { root: seatRepo, seatSourcePath, evidenceDir } = require('./seat-regression-support.cjs');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const repo=seatRepo,dep=n=>require(repo+'/node_modules/'+n),ts=dep('typescript'),React=dep('react'),{JSDOM}=dep('jsdom');
@@ -56,8 +60,11 @@ async function scenario(name,options,work){
   assert(calls.every(c=>c.url.startsWith('/api/pricing/')));
   return{name,requests:calls.length,posts:calls.filter(c=>c.method==='POST').length,uuidCalls,strict:Boolean(options.strict),renderErrors:errors.length};
  }finally{
-  if(root)await React.act(async()=>{root.unmount();await flush()});console.error=oldError;
-  for(const[k,descriptor]of prior){if(descriptor)Object.defineProperty(global,k,descriptor);else delete global[k]}dom.window.close();
+  try { if(root)await React.act(async()=>{root.unmount();await flush()}); }
+  finally {
+   console.error=oldError;
+   for(const[k,descriptor]of prior){if(descriptor)Object.defineProperty(global,k,descriptor);else delete global[k]}dom.window.close();
+  }
  }
 }
 (async()=>{
@@ -96,4 +103,4 @@ async function scenario(name,options,work){
  results.push(await scenario('strict-mode-does-not-create-or-resume-a-payment',{pending:pending('resume'),strict:true},async x=>{assert(x.text().includes('変更を確認中'));assert(x.calls.every(c=>c.method==='GET'));assert.equal(x.uuid(),0)}));
  results.push(await scenario('logout-removes-prior-owner-data-and-controls',{},async x=>{await x.render('owner-a','unauthenticated');assert(x.text().includes('ログインして'));assert(!x.button('人数を変える'));assert(!x.text().includes('今の人数 5人'))}));
  const files=[file,'src/lib/pricing-v2/seat-operation-view.ts'];fs.writeFileSync(evidenceDir+'/team-manage-mounted-result.json',JSON.stringify({checkedAt:new Date().toISOString(),count:results.length,results,actualReactDomAndCandidateComponent:true,actualSharedBillingResponseHelper:true,sessionFetchAndConfirmSynthetic:true,manualTimerWitnessDelayMs:35000,realNetworkRequests:0,realPayments:0,nativeBrowserVisualQa:false,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(seatSourcePath(f))).digest('hex')])),sharedReadHelperSha256:crypto.createHash('sha256').update(fs.readFileSync(repo+'/src/lib/billing-response-client.ts')).digest('hex')},null,2)+'\n');console.log(JSON.stringify({passed:results.length,realNetworkRequests:0,realPayments:0}));
-})().catch(e=>{console.error(e);process.exitCode=1});
+})().catch(e=>{reportFailure(e);process.exitCode=1});
