@@ -1,8 +1,9 @@
+const {loadHrBilling}=require('./load-hr-billing.cjs')
 const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-const billing = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: {} } })
+const billing = loadHrBilling( { '@/lib/prisma': { prisma: {} } })
 
 ;(async () => {
   for (const [name, now, start, end] of [

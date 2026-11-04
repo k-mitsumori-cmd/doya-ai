@@ -4,23 +4,13 @@ import { billingRedirectUrl } from '@/lib/billing-response-client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
+import { readHrBillingInfo, type HrBillingInfo } from '@/lib/hr/billing-read-client'
+import { isPaidPlan } from '@/lib/unified-plan'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { alertDialog } from '@/components/ds/dialog'
 import { hrUserMessage } from '@/lib/hr/user-message'
-
-interface BillingInfo {
-  plan: string
-  planLabel: string
-  employeeCount: number
-  employeeLimit: number
-  memberCount: number
-  memberLimit: number
-  aiUsageCount: number
-  aiUsageLimit: number
-  canManageBilling: boolean
-}
 
 // 現在プラン表示用の最小定義（プラン一覧UIは UnifiedPricingPlans に統一）
 const PLAN_DISPLAY: Record<string, { name: string; color: string }> = {
@@ -88,29 +78,33 @@ function UsageBar({ label, used, limit, icon, color, canUpgrade = true }: {
 export default function BillingPage() {
   const organizationScope = useHrOrganizationRequest()
   const { request: fetch } = organizationScope
-  const [billing, setBilling] = useState<BillingInfo | null>(null)
+  const [billing, setBilling] = useState<HrBillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [readAttempt, setReadAttempt] = useState(0)
 
   useEffect(() => {
+    if (!organizationScope.isCurrent()) return
+    let active = true
+    const controller = new AbortController()
+    const current = () => active && organizationScope.isCurrent()
+    setLoading(true)
+    setLoadError(false)
+    setBilling(null)
     async function fetchBilling() {
       try {
-        const res = await fetch('/api/hr/usage')
-        if (res.ok) {
-          const data = await res.json()
-          setBilling(data)
-        } else {
-          setLoadError(true)
-        }
+        const data = await readHrBillingInfo(fetch, organizationScope.organizationId, controller.signal)
+        if (current()) setBilling(data)
       } catch {
-        setLoadError(true)
+        if (current()) setLoadError(true)
       } finally {
-        setLoading(false)
+        if (current()) setLoading(false)
       }
     }
-    fetchBilling()
-  }, [])
+    void fetchBilling()
+    return () => { active = false; controller.abort() }
+  }, [fetch, organizationScope, readAttempt])
 
   const handlePortal = async () => {
     setPortalLoading(true)
@@ -156,7 +150,7 @@ export default function BillingPage() {
         <div role="alert" className="rounded-2xl bg-white p-8 shadow-md">
           <PageTitle className="text-xl font-bold text-slate-900">組織のプランを確認できませんでした</PageTitle>
           <p className="mt-2 text-sm text-slate-600">しばらくしてから再読み込みしてください。</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white">再読み込みする</button>
+          <button type="button" onClick={() => setReadAttempt(attempt => attempt + 1)} className="mt-5 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white">再読み込みする</button>
         </div>
       </div>
     )
@@ -164,7 +158,7 @@ export default function BillingPage() {
 
   const planKey = String(billing.plan).toLowerCase()
   const currentPlan = PLAN_DISPLAY[planKey] || PLAN_DISPLAY.free
-  const isPaid = planKey !== 'free'
+  const isPaid = isPaidPlan(billing.plan)
 
   return (
     <div className="p-6 lg:p-10 max-w-5xl mx-auto">

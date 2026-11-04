@@ -1,3 +1,4 @@
+import { hrPlanTier } from '@/lib/hr/plan-tier'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 
@@ -15,17 +16,15 @@ export interface PlanLimits {
 
 /**
  * プランごとの制限値を返す
- * FREE:5名/3AI/2メンバー, STARTER:30/30/5, PRO:100/100AI/-1, ENTERPRISE:-1/500AI/-1
+ * FREE:5名/3AI/2メンバー, LIGHT:30/30/5, PRO:100/100AI/-1, ENTERPRISE:-1/500AI/-1
  * ⚠️ AI の月次上限は src/lib/plan-limit.ts の HR_AI_MONTHLY_LIMITS と同じ値にする（有料でも無制限にしない）。
  */
 export function getOrgPlanLimits(plan: string): PlanLimits {
-  switch (plan.toUpperCase()) {
+  switch (hrPlanTier(plan) ?? 'FREE') {
     case 'ENTERPRISE':
       return { maxEmployees: -1, maxAiUsage: 500, maxMembers: -1 }
     case 'PRO':
-    case 'BUNDLE':
       return { maxEmployees: 100, maxAiUsage: 100, maxMembers: -1 }
-    case 'STARTER':
     case 'LIGHT':
       return { maxEmployees: 30, maxAiUsage: 30, maxMembers: 5 }
     case 'FREE':
@@ -82,7 +81,7 @@ export async function createWithinEmployeeLimit<T>(
 
 export function employeeLimitMessage(plan: string, limit: number): string {
   const base = `従業員数の上限（${limit}名）に達しています。`
-  return ['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+  return ['PRO', 'ENTERPRISE'].includes(hrPlanTier(plan) ?? 'FREE')
     ? `${base}追加が必要な場合はお問い合わせください。`
     : `${base}プランを変更すると上限を増やせます。`
 }
@@ -153,7 +152,7 @@ export async function reserveAiUsageInTransaction(tx: Prisma.TransactionClient, 
     const plan = await getOrgPlan(organizationId, tx)
     const limit = getOrgPlanLimits(plan).maxAiUsage
     if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0 && current >= limit) {
-      const paid = ['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+      const paid = ['PRO', 'ENTERPRISE'].includes(hrPlanTier(plan) ?? 'FREE')
       return {
         granted: false as const,
         error: paid
