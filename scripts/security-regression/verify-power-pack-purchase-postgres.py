@@ -24,6 +24,8 @@ try:
  from importlib.util import spec_from_file_location,module_from_spec
  spec=spec_from_file_location('private_power_pack_schema',root/'scripts/security-regression/private-power-pack-schema.py');module=module_from_spec(spec);spec.loader.exec_module(module)
  module.prepare_cash_schema(root,pg,socket,folder,env)
+ with (output/'billing-acl.log').open('w') as log:
+  subprocess.run([node,str(root/'scripts/security-regression/verify-billing-private-acl.cjs'),str(private),str(root/'node_modules/@prisma/client')],cwd=root,env={**env,'DOYA_PRIVATE_POSTGRES_BIN':str(pg),'DOYA_POWER_RECOVERY_NATIVE_RESULT':str(output/'billing-acl-result.json')},stdout=log,stderr=subprocess.STDOUT,check=True,timeout=60)
  with (output/'cash-access.log').open('w') as log:
   subprocess.run([node,str(root/'scripts/security-regression/verify-power-pack-cash-access.cjs'),str(private)],cwd=root,env={**env,'DOYA_CASH_ACCESS_RESULT':str(output/'cash-access-result.json')},stdout=log,stderr=subprocess.STDOUT,check=True,timeout=60)
  with (output/'native.log').open('w') as log:
