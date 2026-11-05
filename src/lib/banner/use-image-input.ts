@@ -11,6 +11,9 @@ export type BannerImageInputValue = {
 }
 
 type InputOwner = {
+  key: string
+  convert: (file: File, maxDimension: number) => Promise<string>
+  errorMessage: (error: unknown) => string
   initialValue: BannerImageInputValue
   active: boolean
   job: object | null
@@ -32,7 +35,7 @@ export function useBannerImageInput(scope: string, maxDimension: number, options
   const errorMessage = options.errorMessage || defaultReadError
   const owner = useMemo<InputOwner>(() => {
     const initialValue = emptyValue()
-    return { initialValue, active: false, job: null, value: initialValue }
+    return { key, convert, errorMessage, initialValue, active: false, job: null, value: initialValue }
   }, [key, convert, errorMessage])
   const committedOwner = useRef<InputOwner | null>(null)
   const [rendered, setRendered] = useState(() => ({ owner, value: owner.initialValue }))
@@ -63,14 +66,16 @@ export function useBannerImageInput(scope: string, maxDimension: number, options
     owner.job = job
     publish({ file, preview: null, pending: true, error: null })
     try {
-      const preview = await convert(file, maxDimension)
+      const convertInput = owner.convert
+      const preview = await convertInput(file, maxDimension)
       if (!current() || owner.job !== job) return
       owner.job = null
       publish({ file, preview, pending: false, error: null })
     } catch (error) {
       if (!current() || owner.job !== job) return
       owner.job = null
-      publish({ file: null, preview: null, pending: false, error: errorMessage(error) || defaultReadError() })
+      const formatError = owner.errorMessage
+      publish({ file: null, preview: null, pending: false, error: formatError(error) || defaultReadError() })
     }
   }
 
