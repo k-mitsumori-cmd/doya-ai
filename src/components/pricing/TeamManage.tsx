@@ -1,4 +1,5 @@
 'use client'
+import { powerPackReturnMessage, powerPackThanksPoints } from '@/lib/pricing-v2/power-pack-return'
 // ============================================
 // チームの管理（人数・メンバー・ドヤパワーの追加購入）。新しい料金ページ（PricingV2）の中だけ
 // ============================================
@@ -296,9 +297,10 @@ export function PowerPackReturn({ sessionId, canceled }: { sessionId: string | n
     let alive = true
     void call('/api/pricing/power-pack/confirm', { method: 'POST', body: JSON.stringify({ sessionId }) }).then((r) => {
       if (!alive) return
-      setMessage(r.ok ? `ドヤパワーを ${Number(r.data.points).toLocaleString('ja-JP')} 足しました。` : (r.data.error ?? 'ドヤパワーを付けられたか確認できませんでした。'))
+      setMessage(r.ok ? (powerPackReturnMessage(r.data) ?? 'ドヤパワーを付けられたか確認できませんでした。重ねて買わずに、画面を読み込み直してください。') : (r.data.error ?? 'ドヤパワーを付けられたか確認できませんでした。'))
       // お礼は、サーバーが支払いを確かめて付けたときに、その決済で1回だけ
-      if (r.ok && Number(r.data.points) > 0 && claimThanksOnce(`pack:${sessionId}`, thanksStorage())) setThanks({ kind: 'pack', points: Number(r.data.points) })
+      const thanksPoints = r.ok ? powerPackThanksPoints(r.data) : null
+      if (thanksPoints !== null && claimThanksOnce(`pack:${sessionId}`, thanksStorage())) setThanks({ kind: 'pack', points: thanksPoints })
       // 戻り先の URL から決済の ID を消す（読み込み直しで同じ確認を繰り返さない。繰り返しても1回しか付かない）
       window.history.replaceState(null, '', '/pricing')
     }).catch(() => { if (alive) setMessage('ドヤパワーを付けられたか確認できませんでした。重ねて買わずに、画面を読み込み直してください。') })

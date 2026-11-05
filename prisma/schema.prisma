@@ -5957,6 +5957,7 @@ model AccountCompany {
 
   // ドヤパワーの台帳（Prisma の上だけの関連。account_companies の列は増えない）
   doyaPowerAccount DoyaPowerAccount?
+  powerPackPurchases PowerPackPurchase[]
 
   // 新しい料金（組織単位）のメンバーと、買った人数の控え（Prisma の上だけの関連。account_companies の列は増えない）
   members AccountCompanyMember[]
@@ -6150,6 +6151,7 @@ model DoyaPowerGrant {
   createdAt DateTime         @default(now())
 
   @@unique([accountId, sourceKey])
+  @@index([sourceKey])
   @@index([accountId, expiresAt])
   @@index([accountId, kind, grantedAt])
   @@map("doya_power_grants")
@@ -6344,4 +6346,22 @@ model StoredFile {
   @@index([userId])
   @@index([expiresAt])
   @@map("stored_file")
+}
+
+// Immutable cash-purchase binding and cancellation intent; may precede its point grant.
+model PowerPackPurchase {
+  id           String           @id @default(cuid())
+  companyId    String
+  company      AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sourceKey    String           @unique
+  amount       Int
+  cancelTarget Int              @default(0)
+  cashAmount Int?
+  cashRefunded Int?
+  paymentIntentId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([companyId, createdAt])
+  @@map("power_pack_purchases")
 }

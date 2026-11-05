@@ -19,7 +19,7 @@ import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-
 import { enqueueStripeWebhookNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 import Stripe from 'stripe'
-import { fulfillPowerPackSession, POWER_PACK_KIND, reportPowerPackFailure, reportPowerPackRefundIssue, revokePowerPackForCharge } from '@/lib/pricing-v2/power-pack.server'
+import { fulfillPowerPackSession, POWER_PACK_KIND, reportPowerPackFailure, reportPowerPackRefundIssue, revokePowerPackForCharge, powerPackRefundAttention } from '@/lib/pricing-v2/power-pack.server'
 
 // ========================================
 // Stripe Webhook Handler
@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
     }
     receiptToken = receipt.token
     let notification: EventNotification | null = null
-    switch (event.type) {
+    // This installed SDK predates the refund.failed event type. The signature-verified
+    // payload still carries the runtime string; each branch validates its object.
+    switch (event.type as string) {
       // ========================================
       // Checkout完了
       // ========================================
@@ -131,6 +133,15 @@ export async function POST(request: NextRequest) {
       // ========================================
       case 'charge.refunded': {
         await handleChargeRefunded(event.data.object as Stripe.Charge)
+        break
+      }
+
+      // Refund status can require intervention even after charge.refunded.
+      // Persist the notice before acknowledging; delivery failures stay pending.
+      case 'refund.created':
+      case 'refund.updated':
+      case 'refund.failed': {
+        notification = await powerPackRefundAttention(event.data.object as Stripe.Refund)
         break
       }
 

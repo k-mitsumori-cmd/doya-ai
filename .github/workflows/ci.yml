@@ -72,6 +72,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Power pack administrator recovery (private SQL and real local JWT, synthetic Stripe)
+        env:
+          DOYA_POWER_RECOVERY_EVIDENCE_DIR: /tmp/doya-power-recovery-evidence
+        run: python3 scripts/security-regression/verify-power-pack-purchase-postgres.py
+
+      - name: Save private power pack recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: power-pack-recovery-${{ github.sha }}
+          path: /tmp/doya-power-recovery-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Power pack refund attention (private SQL outbox, synthetic notification transport)
+        env:
+          DOYA_POWER_RECOVERY_EVIDENCE_DIR: /tmp/doya-power-refund-attention-evidence
+        run: python3 scripts/security-regression/verify-power-pack-refund-attention-postgres.py
+
+      - name: Save private refund attention evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: power-pack-refund-attention-${{ github.sha }}
+          path: /tmp/doya-power-refund-attention-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: AskLink concurrent question edits (private Unix socket, no providers)
         run: python3 scripts/security-regression/verify-asklink-edit-postgres.py
 

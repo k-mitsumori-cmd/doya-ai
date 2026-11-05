@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const sessionId = typeof body?.sessionId === 'string' ? body.sessionId.trim() : ''
     if (!/^cs_(test|live)_[A-Za-z0-9]{10,200}$/.test(sessionId)) return NextResponse.json({ error: '決済を確かめられませんでした。' }, { status: 400, headers: NO_STORE })
     const r = await fulfillPowerPackSession(sessionId, userId)
-    if (r.ok) return NextResponse.json({ ok: true, points: r.points, duplicated: r.duplicated }, { headers: NO_STORE })
+    if (r.ok) return NextResponse.json({ ok: true, points: r.points, refundedPoints: r.refundedPoints ?? 0, duplicated: r.duplicated }, { headers: NO_STORE })
     const status = r.reason === 'not_paid' ? 409 : r.reason === 'ledger_off' ? 503 : 404
     const error = r.reason === 'not_paid'
       ? 'お支払いの確認がまだ終わっていません。少し待ってから画面を読み込み直してください。'
