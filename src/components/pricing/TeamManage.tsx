@@ -12,6 +12,8 @@ import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/sea
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
 import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
+import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
+import PaymentThanks from './PaymentThanks'
 import base from './PricingNext.module.css'
 import styles from './PricingV2.module.css'
 
@@ -70,6 +72,7 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
   const [email, setEmail] = useState('')
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [thanks, setThanks] = useState<PaymentThanksView | null>(null)
   const emailId = useId()
   const disposed = useRef(false), loadVersion = useRef(0), mutating = useRef(false)
   const controllers = useRef(new Set<AbortController>())
@@ -134,6 +137,8 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
       const response = await request('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: requested, expectedSeats: from, operationKey }) })
       if (disposed.current) return
       setMessage(response.ok ? '人数変更の結果を確認しました。' : managedError(response.data, '人数変更の結果を確認できませんでした。'))
+      // お礼は、人数を増やした請求が通った今回の操作だけ（やり直しの応答 replayed では出さない）
+      if (response.ok && up && !response.data.replayed && claimThanksOnce(`seats:${operationKey}`, thanksStorage())) setThanks({ kind: 'seats', added: requested - from, seats: requested })
       await reload()
     } catch {
       if (!disposed.current) { setMessage('人数変更の結果を確認できませんでした。状態を再確認してください。'); await reload() }
@@ -285,18 +290,26 @@ export function PowerPackBuy() {
 /** 追加購入の決済の直後（/pricing?power_pack=done&cs=...）に、ドヤパワーを付ける */
 export function PowerPackReturn({ sessionId, canceled }: { sessionId: string | null; canceled: boolean }) {
   const [message, setMessage] = useState<string | null>(canceled ? '追加購入はキャンセルされました。' : sessionId ? 'お支払いを確かめています…' : null)
+  const [thanks, setThanks] = useState<PaymentThanksView | null>(null)
   useEffect(() => {
     if (!sessionId) return
     let alive = true
     void call('/api/pricing/power-pack/confirm', { method: 'POST', body: JSON.stringify({ sessionId }) }).then((r) => {
       if (!alive) return
       setMessage(r.ok ? `ドヤパワーを ${Number(r.data.points).toLocaleString('ja-JP')} 足しました。` : (r.data.error ?? 'ドヤパワーを付けられたか確認できませんでした。'))
+      // お礼は、サーバーが支払いを確かめて付けたときに、その決済で1回だけ
+      if (r.ok && Number(r.data.points) > 0 && claimThanksOnce(`pack:${sessionId}`, thanksStorage())) setThanks({ kind: 'pack', points: Number(r.data.points) })
       // 戻り先の URL から決済の ID を消す（読み込み直しで同じ確認を繰り返さない。繰り返しても1回しか付かない）
       window.history.replaceState(null, '', '/pricing')
     }).catch(() => { if (alive) setMessage('ドヤパワーを付けられたか確認できませんでした。重ねて買わずに、画面を読み込み直してください。') })
     return () => { alive = false }
   }, [sessionId])
-  return message ? <p className={base.notice} role="status">{message}</p> : null
+  return (
+    <>
+      {message ? <p className={base.notice} role="status">{message}</p> : null}
+      <PaymentThanks view={thanks} onClose={() => setThanks(null)} />
+    </>
+  )
 }
 
 type BillingData = {
