@@ -98,7 +98,7 @@ export default function PaymentThanks({ view, onClose }: { view: PaymentThanksVi
       </div>
       <button ref={closeRef} type="button" data-payment-thanks-focus className={styles.close} aria-label="閉じる" onClick={onClose}><X size={22} aria-hidden /></button>
       <div className={styles.stage} onClick={(e) => e.stopPropagation()}>
-        <img src="/character/jump-512.webp" alt="" width={220} height={220} className={styles.art} />
+        <img src="/ui-renewal/mascots/growth-president.webp" alt="" width={220} height={220} className={styles.art} />
         <p className={styles.eyebrow}>{copy.eyebrow}</p>
         {copy.amount ? <Amount {...copy.amount} /> : null}
         <h2 className={copy.amount ? styles.headline : styles.headlineLarge}>{copy.headline}</h2>
