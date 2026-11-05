@@ -2519,7 +2519,7 @@ function BannerDashboardWorkspace() {
                               <h3 className="text-white font-black text-sm tracking-tight">作成が終わりました</h3>
                             </div>
                             <p className="text-slate-400 text-[11px] leading-relaxed">
-                              A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
+                              バナーを{generatedBanners.length}枚生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
                             </p>
                           </div>
                         </div>
