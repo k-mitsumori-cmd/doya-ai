@@ -33,6 +33,8 @@ export interface ChatOp {
   openLabels: [string, string]
   /** 依頼から読み取る・聞き返す欄。この並びで画面に入れる */
   fields: AgentField[]
+  /** 選ぶ欄（画面で選ぶものは、1字ずつ入れる動きにしない） */
+  pickKeys: string[]
   /** 決まった値 */
   fixed: ChatFixed[]
   /** 欄ごとの作業の一覧の言葉 */

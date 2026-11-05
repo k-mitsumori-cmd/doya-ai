@@ -9,8 +9,11 @@ import type { AgentFormSnapshot } from '@/lib/agent-chat/types'
 export type SubmitResult = { ok: true; href: string } | { ok: false; error: string }
 
 export interface AgentFormHandler {
-  /** 欄に値を入れる（欄の名前は操作の定義の key）。入れられない欄は false */
-  fill(key: string, value: string): boolean | Promise<boolean>
+  /**
+   * 欄に値を入れる（欄の名前は操作の定義の key）。入れられない欄は false。
+   * 1字ずつ入れる動きのために、同じ欄に途中の値を続けて渡してよい（画面の小計・売上予定のプレビューは、そのたびに今の処理で変わる）。
+   */
+  setValue(key: string, value: string): boolean | Promise<boolean>
   /** 今の欄の値（確認カードに出す。税の計算も画面の今の処理の結果） */
   snapshot(): AgentFormSnapshot
   /** 画面の本物の送信処理（ボタンと同じ）。成功・失敗の結果を返す */
@@ -57,14 +60,4 @@ export function waitForAgentForm(formKey: string, timeoutMs = 10_000): Promise<A
     const timer = window.setTimeout(() => finish(null), timeoutMs)
     check()
   })
-}
-
-/** 欄を一瞬だけ目立たせる（data-agent-field の付いた要素。動きを減らす設定のときは何もしない） */
-export function pulseAgentField(key: string): void {
-  if (typeof document === 'undefined') return
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-  const el = document.querySelector<HTMLElement>(`[data-agent-field="${CSS.escape(key)}"]`)
-  if (!el) return
-  el.setAttribute('data-agent-active', '')
-  window.setTimeout(() => el.removeAttribute('data-agent-active'), 700)
 }

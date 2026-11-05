@@ -7,7 +7,9 @@
 //   - 足りない値を聞くのは、AI を呼ばずに画面の中だけで行う。
 import { normalizeValue } from '@/lib/agent-router/prefill'
 import type { AgentField } from '@/lib/agent-router/types'
+import { yenCandidates } from './ground'
 import { buildSteps, confirmRows, doneView } from './ops'
+import { yenText } from './today'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp, ConfirmRow, NextAction, StepView } from './types'
 
 export type Phase = 'idle' | 'reading' | 'asking' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
@@ -20,6 +22,12 @@ export interface ChatState {
   missing: AgentField[]
   steps: StepView[]
   say: string
+  /** 聞き返しに答えた言葉（会話に出す。値が飛ぶ元になる） */
+  answers: string[]
+  /** 確認カードを出した時の、画面の今の値（金額の直しの計算に使う） */
+  snap: AgentFormSnapshot | null
+  /** 確認カードの前に出すひと言（金額を直したあとなど） */
+  notice: string | null
   /** 聞き返しの入力が合わなかったときの案内 */
   askError: string | null
   confirm: { title: string; submitLabel: string; rows: ConfirmRow[]; note: string } | null
@@ -35,7 +43,9 @@ export type ChatEvent =
   | { t: 'reply'; res: ChatApiResponse | null }
   | { t: 'answer'; value: string }
   | { t: 'step'; id: string; status: 'run' | 'done' }
-  | { t: 'ready'; snap: AgentFormSnapshot }
+  | { t: 'ready'; snap: AgentFormSnapshot; message?: string }
+  /** 確認カードの前後で、金額を直す依頼（「税込みだった」・新しい金額）。画面の今の値から計算する。AI は呼ばない */
+  | { t: 'adjust'; text: string }
   | { t: 'run-failed'; error: string }
   | { t: 'approve' }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
@@ -46,10 +56,11 @@ export type ChatEvent =
 export type ChatEffect =
   | { k: 'api'; text: string }
   | { k: 'run'; op: ChatOp; values: Record<string, string> }
+  | { k: 'amend'; amount: number; message: string }
   | { k: 'submit' }
 
 export const INITIAL_STATE: ChatState = {
-  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', askError: null, confirm: null, done: null, error: null, guide: null,
+  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, guide: null,
 }
 
 const READ_FAILED = '依頼を読めませんでした。時間をおいて、もう一度お試しください。'
@@ -87,7 +98,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const field = state.missing[0]
       const v = normalizeValue(field.type, ev.value)
       if (!v) return { state: { ...state, askError: `${field.label}の形が合いません。もう一度入れてください。` }, effects: [] }
-      return advance({ ...state, values: { ...state.values, [field.key]: v }, missing: state.missing.slice(1) })
+      return advance({ ...state, answers: [...state.answers, ev.value.trim()], values: { ...state.values, [field.key]: v }, missing: state.missing.slice(1) })
     }
     case 'step': {
       if (state.phase !== 'working') return { state, effects: [] }
@@ -97,7 +108,21 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       if (state.phase !== 'working' || !state.op) return { state, effects: [] }
       const c = confirmRows(state.op, ev.snap)
       const steps = setStep(state.steps.map((s) => (s.id === 'confirm' ? s : { ...s, status: 'done' as const })), 'confirm', 'run')
-      return { state: { ...state, phase: 'confirm', steps, confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
+      return { state: { ...state, phase: 'confirm', steps, snap: ev.snap, notice: ev.message ?? null, confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
+    }
+    case 'adjust': {
+      // ⚠️ 直せるのは確認カードを出している間だけ。直したあとも、保存の指示は返さない（もう一度 確認カードで押してもらう）
+      if (state.phase !== 'confirm' || !state.op || !state.snap) return { state, effects: [] }
+      const sub = Number(state.snap.subtotal)
+      const text = ev.text.normalize('NFKC')
+      const typed = [...yenCandidates(text)][0]
+      const inclusive = /税込/.test(text)
+      const base = typed ?? sub
+      if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
+      const amount = inclusive ? Math.round(base / 1.1) : base
+      if (!inclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
+      const message = inclusive ? `税込みの ${yenText(base)} を、税抜の ${yenText(amount)} に直しました。` : `税抜の ${yenText(amount)} に直しました。`
+      return { state: { ...state, phase: 'working', notice: null, answers: [...state.answers, ev.text.trim()] }, effects: [{ k: 'amend', amount, message }] }
     }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }

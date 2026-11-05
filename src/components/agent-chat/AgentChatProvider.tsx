@@ -9,16 +9,19 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
-import { jstTodayYmd } from '@/lib/agent-chat/today'
+import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
 import { getAgentForm, waitForAgentForm } from './form-bus'
-import { nextFrames, paceMs, sleep } from './motion'
+import { blurField, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
   state: ChatState
   open: boolean
   setOpen: (v: boolean) => void
+  /** スマホの見せ方（会話・両方・画面）。切り替えても処理は止めない */
+  view: 'both' | 'chat' | 'tool'
+  setView: (v: 'both' | 'chat' | 'tool') => void
   dispatch: (ev: ChatEvent) => void
   /** 経営ホームなど、ほかの場所から依頼の結果（API の返事）を渡して会話を始める */
   begin: (text: string, res: ChatApiResponse) => void
@@ -34,6 +37,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const router = useRouter()
   const [state, setState] = useState<ChatState>(INITIAL_STATE)
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<'both' | 'chat' | 'tool'>('both')
   const stateRef = useRef(state)
   // 会話をやり直したとき、前の実行役が続きを進めないようにする番号
   const runId = useRef(0)
@@ -41,34 +45,75 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
 
   const runOp = useCallback(async (op: ChatOp, values: Record<string, string>, id: number) => {
-    const d = (ev: ChatEvent) => { if (runId.current !== id) throw ABORTED; dispatchRef.current(ev) }
-    const pace = async () => { await sleep(paceMs()); if (runId.current !== id) throw ABORTED }
+    const alive = () => runId.current === id
+    const d = (ev: ChatEvent) => { if (!alive()) throw ABORTED; dispatchRef.current(ev) }
+    const wait = async (ms: number) => { await sleep(ms); if (!alive()) throw ABORTED }
     try {
-      d({ t: 'step', id: 'open-tool', status: 'run' }); await pace(); d({ t: 'step', id: 'open-tool', status: 'done' })
+      d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
       if (window.location.pathname !== op.path) router.push(op.path)
       const form = await waitForAgentForm(op.formKey)
-      if (runId.current !== id) throw ABORTED
+      if (!alive()) throw ABORTED
       if (!form) { d({ t: 'run-failed', error: `${op.label}の画面を開けませんでした。もう一度お試しください。` }); return }
-      d({ t: 'step', id: 'open-form', status: 'done' })
-      const todo: { stepId: string; key: string; value: string }[] = [
-        ...resolveFixed(op, jstTodayYmd()).map((f) => ({ stepId: `fixed:${f.key}`, key: f.key, value: f.value })),
-        ...op.fields.map((f) => ({ stepId: `fill:${f.key}`, key: f.key, value: values[f.key] ?? '' })).filter((x) => x.value),
+      await wait(240); d({ t: 'step', id: 'open-form', status: 'done' })
+      // 決まった値 → 欄（依頼から読んだ値）の順。欄ごとに、スクロール → 光らせる → 値が飛ぶ → 入れる、を実際の setValue に合わせて進める
+      const todo: { stepId: string; key: string; value: string; label: string; fixed: boolean }[] = [
+        ...resolveFixed(op, jstTodayYmd()).map((f) => ({ stepId: `fixed:${f.key}`, key: f.key, value: f.value, label: f.value, fixed: true })),
+        ...op.fields.map((f) => ({ stepId: `fill:${f.key}`, key: f.key, value: values[f.key] ?? '', label: f.type === 'yen' ? yenText(values[f.key]) : (values[f.key] ?? ''), fixed: false })).filter((x) => x.value),
       ]
       for (const t of todo) {
         d({ t: 'step', id: t.stepId, status: 'run' })
-        const ok = await form.fill(t.key, t.value)
+        await focusField(t.key)
+        if (!alive()) throw ABORTED
+        let ok = true
+        if (t.fixed) {
+          ok = await form.setValue(t.key, t.value)
+          await wait(90)
+        } else {
+          await fly(t.label, t.key)
+          if (!alive()) throw ABORTED
+          if (op.pickKeys.includes(t.key)) ok = await form.setValue(t.key, t.value)
+          else {
+            await typeInto(t.value, (v) => { void form.setValue(t.key, v) }, alive)
+            if (!alive()) throw ABORTED
+            ok = await form.setValue(t.key, t.value)
+          }
+          await wait(180)
+        }
+        blurField(t.key)
         if (!ok) { d({ t: 'run-failed', error: '画面に値を入れられませんでした。画面を開き直して、もう一度お試しください。' }); return }
-        await pace()
         d({ t: 'step', id: t.stepId, status: 'done' })
       }
+      cursorOff()
       await nextFrames(3)
-      if (runId.current !== id) throw ABORTED
+      if (!alive()) throw ABORTED
       d({ t: 'ready', snap: form.snapshot() })
     } catch (e) {
+      clearStage()
       if (e !== ABORTED) dispatchRef.current({ t: 'run-failed', error: '画面の操作を進められませんでした。' })
     }
   }, [router])
+
+  /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
+  const amend = useCallback(async (amount: number, message: string, id: number) => {
+    const alive = () => runId.current === id
+    const op = stateRef.current.op
+    const form = op ? getAgentForm(op.formKey) : undefined
+    if (!op || !form) { if (alive()) dispatchRef.current({ t: 'run-failed', error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
+    try {
+      await focusField('amount')
+      await form.setValue('amount', '')
+      await typeInto(String(amount), (v) => { void form.setValue('amount', v) }, alive)
+      await form.setValue('amount', String(amount))
+      await sleep(160)
+      blurField('amount'); cursorOff()
+      await nextFrames(3)
+      if (alive()) dispatchRef.current({ t: 'ready', snap: form.snapshot(), message })
+    } catch {
+      clearStage()
+      if (alive()) dispatchRef.current({ t: 'run-failed', error: '金額を直せませんでした。' })
+    }
+  }, [])
 
   const runEffect = useCallback((eff: ChatEffect) => {
     const id = runId.current
@@ -83,6 +128,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       })()
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
+    } else if (eff.k === 'amend') {
+      void amend(eff.amount, eff.message, id)
     } else {
       void (async () => {
         const op = stateRef.current.op
@@ -96,7 +143,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error })
       })()
     }
-  }, [runOp])
+  }, [runOp, amend])
 
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
@@ -117,7 +164,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
     dispatch({ t: 'reply', res: normalizeReply(res) })
   }, [dispatch])
 
-  const api = useMemo<AgentChatApi>(() => ({ state, open, setOpen, dispatch, begin }), [state, open, dispatch, begin])
+  const api = useMemo<AgentChatApi>(() => ({ state, open, setOpen, view, setView, dispatch, begin }), [state, open, view, dispatch, begin])
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>
 }
 

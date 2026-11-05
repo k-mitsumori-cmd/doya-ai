@@ -2,7 +2,7 @@
 // ============================================
 // ツールのフォームが、会話から操作されるために使うフック
 // ============================================
-// 使い方: useAgentForm('income.contract.new', { fill, snapshot, submit, ready })
+// 使い方: useAgentForm('income.contract.new', { setValue, snapshot, submit, ready })
 // ⚠️ 旗が off のとき（AgentDock が無いとき）は、register しても誰も呼ばないので、画面は今のまま動く。
 import { useEffect, useRef } from 'react'
 import { registerAgentForm, type AgentFormHandler } from './form-bus'
@@ -12,7 +12,7 @@ export function useAgentForm(formKey: string, handler: AgentFormHandler): void {
   const ref = useRef(handler)
   ref.current = handler
   useEffect(() => registerAgentForm(formKey, {
-    fill: (k, v) => ref.current.fill(k, v),
+    setValue: (k, v) => ref.current.setValue(k, v),
     snapshot: () => ref.current.snapshot(),
     submit: () => ref.current.submit(),
     ready: () => ref.current.ready(),

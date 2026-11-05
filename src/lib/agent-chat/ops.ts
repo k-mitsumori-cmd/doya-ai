@@ -22,6 +22,7 @@ export const INCOME_SALE_ADD: ChatOp = {
     { key: 'client', label: '取引先', type: 'text', required: true, hint: '売上の相手の会社名。依頼の文に書かれているときだけ', ask: '取引先はどちらですか？' },
     { key: 'title', label: '契約名', type: 'text', required: true, hint: '何の売上か（例: Web 制作費）。依頼の文に書かれているときだけ', ask: '何の売上ですか？ 契約名に入れます。' },
   ],
+  pickKeys: ['client'],
   fixed: [
     { key: 'type', value: 'one_time', label: '種類を「単発」にする' },
     { key: 'status', value: 'active', label: '状態を「有効」にする' },

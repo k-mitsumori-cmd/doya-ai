@@ -136,7 +136,7 @@ test('決まり: 確認ボタンを押すまで、保存の指示（submit）は
   // 2回押しても2回目は何も返さない
   assert.deepEqual(reduce(sub.state, { t: 'approve' }).effects, [])
   // どの場面の入口（reply・answer・step・retry）からも submit は出ない
-  const all: ChatEvent[] = [{ t: 'ask', text: 'x' }, { t: 'reply', res: opReply({}) }, { t: 'answer', value: '1' }, { t: 'step', id: 'open-tool', status: 'done' }, { t: 'retry' }, { t: 'ready', snap: SNAP }, { t: 'reset' }]
+  const all: ChatEvent[] = [{ t: 'ask', text: 'x' }, { t: 'reply', res: opReply({}) }, { t: 'answer', value: '1' }, { t: 'step', id: 'open-tool', status: 'done' }, { t: 'retry' }, { t: 'ready', snap: SNAP }, { t: 'adjust', text: '税込みだった' }, { t: 'reset' }]
   for (const ev of all) assert.ok(!reduce(start.state, ev).effects.some((e) => e.k === 'submit'), ev.t)
 })
 
@@ -175,4 +175,40 @@ test('会話: 画面を開けなかった・AI が読めなかった・操作で
   assert.deepEqual(guided.effects, [{ k: 'api', text: 'x' }]) // ask の分だけ。返事のあとに増えない
   // 読んでいる最中の2つ目の依頼は受け付けない
   assert.deepEqual(reduce(run([{ t: 'ask', text: 'x' }]).state, { t: 'ask', text: 'y' }).effects, [])
+})
+
+test('金額の直し: 確認カードのときだけ。税込みは画面の今の値から計算し、直したあとも保存の指示は返さない', () => {
+  const confirm = run([
+    { t: 'ask', text: 'x' }, { t: 'reply', res: opReply({ amount: '1100000', client: 'A', title: 'B' }, []) },
+    { t: 'ready', snap: { ...SNAP, subtotal: '1100000', tax: '110000', total: '1210000' } },
+  ]).state
+  assert.equal(confirm.snap?.subtotal, '1100000')
+  // 税込みだった → 税抜 1,000,000
+  const a = reduce(confirm, { t: 'adjust', text: '税込みだった' })
+  assert.deepEqual(a.effects, [{ k: 'amend', amount: 1_000_000, message: '税込みの ¥1,100,000 を、税抜の ¥1,000,000 に直しました。' }])
+  assert.equal(a.state.phase, 'working')
+  assert.ok(!a.effects.some((e) => e.k === 'submit'))
+  // 直している間は、押しても保存しない
+  assert.deepEqual(reduce(a.state, { t: 'approve' }).effects, [])
+  // 直し終わると、確認カードに戻り、ひと言を出す
+  const back = reduce(a.state, { t: 'ready', snap: { ...SNAP, subtotal: '1000000' }, message: 'm' })
+  assert.equal(back.state.phase, 'confirm')
+  assert.equal(back.state.notice, 'm')
+  assert.deepEqual(back.effects, [])
+  // 新しい金額・税込みの金額
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '120万円にして' }).effects, [{ k: 'amend', amount: 1_200_000, message: '税抜の ¥1,200,000 に直しました。' }])
+  assert.equal((reduce(confirm, { t: 'adjust', text: '税込み220万円だった' }).effects[0] as { amount: number }).amount, 2_000_000)
+  // 読み取れない直しは、画面を動かさずに案内する
+  const none = reduce(confirm, { t: 'adjust', text: 'やっぱり変えたい' })
+  assert.deepEqual(none.effects, [])
+  assert.equal(none.state.phase, 'confirm')
+  assert.ok(none.state.notice)
+  // 確認カードのとき以外は何もしない
+  assert.deepEqual(reduce(INITIAL_STATE, { t: 'adjust', text: '税込みだった' }).effects, [])
+  assert.equal(reduce(a.state, { t: 'adjust', text: '税込みだった' }).state, a.state)
+})
+
+test('会話: 答えた言葉は会話に残る（値が飛ぶ元になる）', () => {
+  const asked = run([{ t: 'ask', text: 'x' }, { t: 'reply', res: opReply({ amount: '1000000' }) }, { t: 'answer', value: ' 株式会社サンプル ' }]).state
+  assert.deepEqual(asked.answers, ['株式会社サンプル'])
 })

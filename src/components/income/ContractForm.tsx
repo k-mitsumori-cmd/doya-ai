@@ -1,9 +1,8 @@
 'use client'
 
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
-import { pulseAgentField } from '@/components/agent-chat/form-bus'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
@@ -187,15 +186,22 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
   // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の INCOME_SALE_ADD ----
   const totals = safeTotals(rows)
+  const agentTitle = useRef('')
   useAgentForm('income.contract.new', {
     ready: () => !initial && clientsLoaded,
-    fill: (key, value) => {
+    setValue: (key, value) => {
       if (initial) return false
-      pulseAgentField(key)
       switch (key) {
         case 'type': case 'status': setF((x) => ({ ...x, [key]: value })); return true
         case 'start': setF((x) => ({ ...x, startDate: value })); return true
-        case 'title': setF((x) => ({ ...x, title: value })); setRows((r) => r.map((row, i) => (i === 0 && !row.name.trim() ? { ...row, name: value } : row))); return true
+        case 'title': {
+          // 1字ずつ入れられても、明細の1行目の名前は契約名に追いつかせる（本人が自分で直した名前には触らない）
+          const prev = agentTitle.current
+          agentTitle.current = value
+          setF((x) => ({ ...x, title: value }))
+          setRows((r) => r.map((row, i) => (i === 0 && (!row.name.trim() || row.name === prev) ? { ...row, name: value } : row)))
+          return true
+        }
         case 'amount': setRows((r) => r.map((row, i) => (i === 0 ? { ...row, quantity: '1', unitPrice: value } : row))); return true
         case 'client': {
           // 取引先は、同じ名前が登録済みならそれを選ぶ。無ければ、その場で新しく登録する欄に名前を入れる
@@ -299,7 +305,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       </Card>
 
       <Card title="請求内容（1回の請求あたり・税抜）">
-        <div data-agent-field="amount"><LineItemsEditor rows={rows} onChange={setRows} hint="1つの契約では税率をそろえてください（税率が違う場合は契約を分けます）。" /></div>
+        <LineItemsEditor rows={rows} onChange={setRows} hint="1つの契約では税率をそろえてください（税率が違う場合は契約を分けます）。" />
       </Card>
 
       <Card title="売上予定のプレビュー（先頭6件）">
