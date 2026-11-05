@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -9,46 +9,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { isPaidTier, tierFrom } from '@/lib/plan-utils'
-
-interface ServiceSubscription {
-  id: string
-  serviceId: string
-  plan: string
-  dailyUsage: number
-  monthlyUsage: number
-  lastUsageReset: string
-  hasStripe: boolean
-}
-
-interface StripeInfo {
-  status: string
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  cancelAtPeriodEnd: boolean
-  canceledAt: string | null
-  created: string
-  amount: number
-  interval: string
-}
-
-interface User {
-  id: string
-  name: string | null
-  email: string | null
-  image: string | null
-  plan: string
-  role: string
-  createdAt: string
-  updatedAt: string
-  stripeCustomerId: string | null
-  stripeSubscriptionId: string | null
-  stripeInfo: StripeInfo | null
-  totalGenerations: number
-  bannerQuota: { used: number; limit: number; remaining: number | null }
-  seoQuota: { used: number; limit: number; remaining: number | null }
-  serviceSubscriptions: ServiceSubscription[]
-  services: string[]
-}
+import { readAdminUsers, AdminUsersReadError, type AdminUser as User } from '@/lib/admin/users-read-client'
 
 // プラン定義は src/lib/admin/plans.ts と src/lib/pricing.ts で一元管理
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -80,6 +41,9 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [planFilter, setPlanFilter] = useState<string>('all')
   const [isLoading, setIsLoading] = useState(true)
+  const [readError, setReadError] = useState<string | null>(null)
+  const usersRead = useRef<AbortController | null>(null)
+  const usersReadVersion = useRef(0)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -89,37 +53,48 @@ export default function AdminUsersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<User | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
-  const fetchUsers = async () => {
+  const cancelUsersRead = useCallback(() => {
+    usersReadVersion.current++
+    usersRead.current?.abort()
+  }, [])
+
+  const fetchUsers = useCallback(async () => {
+    cancelUsersRead()
+    const version = usersReadVersion.current
+    const controller = new AbortController()
+    usersRead.current = controller
+    setIsLoading(true)
+    setReadError(null)
     try {
-      setIsLoading(true)
-      const response = await fetch('/api/admin/users', {
-        credentials: 'include',
-      })
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/admin/login')
-          return
-        }
-        throw new Error('ユーザー一覧の取得に失敗しました')
-      }
-      
-      const data = await response.json()
+      const data = await readAdminUsers(controller.signal)
+      if (controller.signal.aborted || version !== usersReadVersion.current) return
       setUsers(data)
-      setEditingUser(previous => previous ? data.find((user: User) => user.id === previous.id) ?? null : null)
+      setEditingUser(previous => previous ? data.find(user => user.id === previous.id) ?? null : null)
     } catch (error) {
-      console.error('Users fetch error:')
-      toast.error('ユーザー一覧の取得に失敗しました')
+      if (controller.signal.aborted || version !== usersReadVersion.current) return
+      if (error instanceof AdminUsersReadError && error.reason === 'unauthorized') {
+        setUsers([])
+        setEditingUser(null)
+        setSelectedUsers([])
+        setReadError('管理者ログインの有効期限が切れました。再度ログインしてください。')
+        router.push('/admin/login')
+      } else {
+        setReadError('ユーザー一覧を読み込めませんでした。通信を確認し、もう一度お試しください。')
+      }
     } finally {
-      setIsLoading(false)
+      if (version === usersReadVersion.current && !controller.signal.aborted) {
+        usersRead.current = null
+        setIsLoading(false)
+      }
     }
-  }
+  }, [router, cancelUsersRead])
 
   useEffect(() => {
     const userId = new URLSearchParams(window.location.search).get('userId')
     if (userId) setSearchQuery(userId)
-    fetchUsers()
-  }, [])
+    void fetchUsers()
+    return cancelUsersRead
+  }, [fetchUsers, cancelUsersRead])
 
   // エクスポートメニューを閉じる（外部クリック）
   useEffect(() => {
@@ -287,10 +262,25 @@ export default function AdminUsersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
-          <div className="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-[#181818] p-6 text-white" role="status" aria-label="ユーザー一覧を読み込み中">
+        <div className="mx-auto max-w-7xl space-y-4 motion-safe:animate-pulse" aria-hidden="true">
+          <div className="h-8 w-48 rounded-lg bg-white/10" />
+          {[0, 1, 2].map(row => <div key={row} className="h-16 rounded-lg bg-white/5" />)}
+        </div>
+        <span className="sr-only">ユーザー一覧を読み込んでいます。</span>
+      </div>
+    )
+  }
+
+  if (readError) {
+    return (
+      <div className="min-h-screen bg-[#181818] p-6 text-white">
+        <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-white/10 bg-[#1F1F1F] p-6">
+          <h1 className="text-xl font-bold">ユーザー一覧を確認できませんでした</h1>
+          <p role="alert" className="text-base text-white/80">{readError}</p>
+          <button type="button" onClick={() => void fetchUsers()} className="rounded-lg bg-white px-3 py-2 text-base font-semibold text-black transition-colors duration-300 hover:bg-white/80 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+            もう一度読み込む
+          </button>
         </div>
       </div>
     )
