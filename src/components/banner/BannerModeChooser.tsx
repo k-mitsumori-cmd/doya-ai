@@ -32,7 +32,7 @@ const MODES: {
     summary: '見本を使わず、AIが新しいデザインを考えます。',
     rows: [
       { label: '入れるもの', text: '用途・業種・サイズ・キーワード' },
-      { label: 'できる物', text: '見本にとらわれない、新しいデザインの3案' },
+      { label: 'できる物', text: '見本にとらわれない、新しいデザイン' },
       { label: '向いている人', text: '目的は決まっていて、見た目のお手本は無い人' },
     ],
   },
@@ -44,7 +44,7 @@ const MODES: {
     summary: '気に入った見本を1つ選び、文字だけを入れ替えます。',
     rows: [
       { label: '入れるもの', text: '見本を1つ選び、バナーに入れる文字' },
-      { label: 'できる物', text: '選んだ見本と同じ雰囲気の3案' },
+      { label: 'できる物', text: '選んだ見本と同じ雰囲気のバナー' },
       { label: '向いている人', text: '「この感じにしたい」という見本がある人' },
     ],
   },
@@ -85,7 +85,7 @@ export default function BannerModeChooser({ current }: { current: BannerMode }) 
           )
         })}
       </div>
-      <p className={styles.note}>どちらも、1回で3案ができます。今月の枚数の枠は共通です。</p>
+      <p className={styles.note}>生成枚数は各画面で選べます。今月の枚数の枠は共通です。</p>
     </section>
   )
 }

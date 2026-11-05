@@ -529,7 +529,7 @@ const GENERATION_PHASES = [
 
 // 生成中に表示するTips
 const GENERATION_TIPS = [
-  { icon: 'idea', text: 'A/B/Cの3案を比較して、最もパフォーマンスの良いバナーを選びましょう' },
+  { icon: 'idea', text: '生成したバナーを比較して、最もパフォーマンスの良いものを選びましょう' },
   { icon: 'target', text: 'CTAボタンの色や文言を変えると、クリック率が大きく変わります' },
   { icon: 'chart', text: '同じキーワードでも、訴求タイプによって反応が異なります' },
   { icon: 'energy', text: '緊急性のある文言は、即座のアクションを促します' },
@@ -1672,7 +1672,7 @@ function BannerDashboardWorkspace() {
             eyebrow="ゼロから作る"
             cta={isGenerating ? 'バナーをつくっています。このままお待ちください' : '用途とキーワードを入れたら、押してください'}
             label="プロ品質バナーを生成する"
-            scope="入力した内容から、バナーを3案つくります。つくったあとの手直しは、下の結果から行えます。"
+            scope={`入力した内容から、バナーを${generateCount}枚つくります。つくったあとの手直しは、下の結果から行えます。`}
             onRun={handleGenerate}
             disabled={isGenerating || quota.checking || !canGenerate}
             disabledReason="用途とキーワードを入れると押せます。"
@@ -1683,7 +1683,7 @@ function BannerDashboardWorkspace() {
         <BannerModeChooser current="scratch" />
         <div className={nextStyles.createHero}>
             <ToolHero
-              title="入力するだけで、プロ品質のバナーを3案。"
+              title={`入力するだけで、プロ品質のバナーを${generateCount}枚。`}
               lead="用途・業種・伝えたい言葉を入れると、AIがクリックされやすい構成でバナーをつくります。迷ったら「サンプル入力」から試せます。"
               tool="banner"
             />
@@ -2519,7 +2519,7 @@ function BannerDashboardWorkspace() {
                               <h3 className="text-white font-black text-sm tracking-tight">作成が終わりました</h3>
                             </div>
                             <p className="text-slate-400 text-[11px] leading-relaxed">
-                              A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
+                              バナーを{generatedBanners.length}枚生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
                             </p>
                           </div>
                         </div>
