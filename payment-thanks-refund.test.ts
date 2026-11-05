@@ -13,7 +13,7 @@ const cases:[string,unknown,number|null][]=[
 ]
 for(const [name,value,expected] of cases)test('payment thanks: '+name,()=>assert.equal(powerPackThanksPoints(value),expected))
 test('refund messages explain the entitlement instead of thanking a new purchase',()=>{
- assert.match(powerPackReturnMessage(cases[3][1])!,/全額返金済み/)
- assert.match(powerPackReturnMessage(cases[4][1])!,/返金分を除いた/)
+ assert.match(powerPackReturnMessage(cases[3][1])!,/全額分の返金処理/)
+ assert.match(powerPackReturnMessage(cases[4][1])!,/返金処理分を除いた/)
  assert.match(powerPackReturnMessage(cases[2][1])!,/反映済み/)
 })

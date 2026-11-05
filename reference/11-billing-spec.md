@@ -687,7 +687,7 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - メンバー: `account_company_members`。持ち主は1人目、招待中と参加を数える。入れる上限はチーム＝買った人数、フリー＝3人、据え置き＝1人。
 - ドヤパワー: チームの会社の毎月の量は人数から（`teamMonthlyGrantFor`）。参加したメンバーは参加した会社のドヤパワーを使う。人数を増やした月は、増えた分をその月に1回だけ足す。
 - 追加購入: `/api/pricing/power-pack`（一回払い）。Webhook の `checkout.session.completed` で `mode=payment`・`metadata.kind=power_pack` を契約の処理より前で分ける。戻り先に `success=true&session_id=` を付けない（StripeSuccessSync と取り違えない）。
-- 追加購入の返金: Webhook の `charge.refunded` で、決済から Checkout を引き、`metadata.kind=power_pack` のときだけ減らす。定期契約の返金では何もしない。Stripe の Webhook の送信先に `charge.refunded` を足すまで動かない（2026-11-05 時点で未登録）。
+- 追加購入の返金: Webhook の `charge.refunded` で、決済から Checkout を引き、`metadata.kind=power_pack` のときだけ減らす。定期契約の返金では何もしない。Stripe の Webhook の送信先に `charge.refunded` を足すまで動かない（2026-11-05 時点で未登録）。 返金失敗・キャンセル・要対応の状態は `refund.created`・`refund.updated`・`refund.failed` から購入を照合し、運営通知を永続キューへ保存する。状態通知だけで現金やポイントは変更しない。銀行側の返金完了と、Stripeに返金処理が記録されていることを区別する。公開・追加移行・購読変更の実施状況は `POWER-PACK-REFUND-RECOVERY.md` を参照。
 - 日次監査の MRR は、全部の明細の合計で計算する（段階別の価格は、価格ごとに1回だけ段階の表を取る）。
 - 各ツールの料金ページ（`UnifiedPricingPlans`）と旧 HR の申し込みは、旗が on の、まだ契約していない人には今のプランを売らない（ボタンは「料金プランを見る」、API は 410）。
 

@@ -1561,3 +1561,5 @@ if (adminContractPrice.error || adminContractPrice.status !== 0) process.exit(ad
 
 // Original purchase recovery uses real server validation with synthetic Stripe/auth.
 { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-power-pack-purchase-replay.cjs')], {stdio:'inherit',timeout:60000}); if (result.error || result.status !== 0) process.exit(result.status || 1); }
+
+{ const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-power-pack-refund-attention.cjs')], {stdio:'inherit',timeout:60000}); if (result.error || result.status !== 0) process.exit(result.status || 1); }

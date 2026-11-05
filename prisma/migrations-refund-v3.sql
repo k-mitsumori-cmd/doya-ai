@@ -1,4 +1,6 @@
 -- Prepared only. Not applied to production. Verify target and apply approved statements individually.
+-- Table creation and client-access protections commit together.
+BEGIN;
 CREATE TABLE "power_pack_purchases" (
  "id" TEXT NOT NULL PRIMARY KEY,
  "companyId" TEXT NOT NULL REFERENCES "account_companies"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -16,4 +18,11 @@ CREATE TABLE "power_pack_purchases" (
  CONSTRAINT "power_pack_purchases_cash_refund_check" CHECK ("cashRefunded" IS NULL OR ("cashAmount" IS NOT NULL AND "cashRefunded" >= 0 AND "cashRefunded" <= "cashAmount"))
 );
 CREATE INDEX "power_pack_purchases_companyId_createdAt_idx" ON "power_pack_purchases"("companyId", "createdAt");
+
+-- Backend Prisma uses the privileged connection; no direct client policies are granted.
+ALTER TABLE "power_pack_purchases" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "power_pack_purchases" FROM PUBLIC, anon, authenticated;
+COMMIT;
+
+-- This index must run outside the table transaction.
 CREATE INDEX CONCURRENTLY IF NOT EXISTS "doya_power_grants_sourceKey_idx" ON "doya_power_grants"("sourceKey");

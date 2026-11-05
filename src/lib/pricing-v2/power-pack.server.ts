@@ -7,6 +7,7 @@
 // ⚠️ 決済の直後の戻り先に success=true&session_id= を付けない（ルートレイアウトの StripeSuccessSync が、契約の同期と取り違える）。
 // ⚠️ 買った分の有効期限は6か月以内（台帳の clampPurchaseExpiresAt。前払式支払手段の扱いを避けるため。法務の確認が要る）。
 import type Stripe from 'stripe'
+import type { EventNotification } from '@/lib/notifications'
 import { prisma } from '@/lib/prisma'
 import { stripe, createCheckoutSession } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
@@ -178,4 +179,34 @@ export async function reportPowerPackRefundIssue(sessionId: string, issue: { rea
     detail: '返金された追加購入のドヤパワーを、全部は減らせませんでした。Stripe の返金と台帳を確かめ、残りの扱いを決めてください。自動では、ほかの付与から減らしません。',
     extra: { 決済: sessionId, ...(issue.reason ? { 理由: issue.reason } : {}), ...(issue.uncollected ? { 減らせなかった量: String(issue.uncollected) } : {}) },
   }).catch(() => false)
+}
+
+/** Refund attention changes no cash/point balances; the webhook stores this notice in its durable outbox. */
+export async function powerPackRefundAttention(refund: Stripe.Refund): Promise<EventNotification | null> {
+  const labels: Record<string, string> = { failed: '失敗', canceled: 'キャンセル', requires_action: '追加対応が必要' }
+  const status = refund.status ?? ''
+  const label = labels[status]
+  if (!label) return null
+  const chargeId = typeof refund.charge === 'string' ? refund.charge : refund.charge?.id
+  if (!chargeId) return null
+  if (!/^[A-Za-z0-9_]{1,200}$/.test(chargeId) || !/^[A-Za-z0-9_]{1,200}$/.test(refund.id)) throw new Error('Invalid refund attention identity')
+  const charge = await stripe.charges.retrieve(chargeId)
+  if (charge.id !== chargeId) throw new Error('Refund attention charge identity mismatch')
+  const paymentIntent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+  if (!paymentIntent) return null
+  const sessions = await stripe.checkout.sessions.list({ payment_intent: paymentIntent, limit: 1 })
+  const session = sessions.data[0]
+  const md = session?.metadata ?? {}
+  if (!session || session.mode !== 'payment' || md.app !== 'doya-ai' || md.kind !== POWER_PACK_KIND) return null
+  const verified = await verifyPowerPackSession(session, undefined, false)
+  const sessionIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
+  const refundIntent = typeof refund.payment_intent === 'string' ? refund.payment_intent : refund.payment_intent?.id
+  const matches = verified.ok && sessionIntent === paymentIntent && (!refundIntent || refundIntent === paymentIntent)
+    && charge.currency === 'jpy' && refund.currency === 'jpy' && charge.amount === session.amount_total
+    && Number.isSafeInteger(refund.amount) && refund.amount > 0 && refund.amount <= charge.amount
+  return {
+    type: 'refund_attention',
+    ...(matches && verified.ok ? { userId: verified.userId } : {}),
+    details: `追加購入の返金状態：${label}。決済ID：${session.id}、返金ID：${refund.id}。${matches ? 'Stripeで元の返金を確認し、お客様への対応を判断してください。' : '購入情報との照合ができませんでした。Stripeで元の決済と返金を確認してください。'}`,
+  }
 }

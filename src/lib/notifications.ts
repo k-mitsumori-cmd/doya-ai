@@ -239,6 +239,7 @@ type EventType =
   | 'cancellation'
   | 'cancellation_incomplete'
   | 'payment_failed'
+  | 'refund_attention'
 
 /** 種類と重さ。絵文字は使わない。人を呼ぶ（@channel）かは CHANNEL_PING で決める。 */
 const EVENT_META: Record<EventType, Pick<SlackMeta, 'kind' | 'severity'>> = {
@@ -250,6 +251,7 @@ const EVENT_META: Record<EventType, Pick<SlackMeta, 'kind' | 'severity'>> = {
   cancellation: { kind: 'billing', severity: 'action' },
   cancellation_incomplete: { kind: 'billing', severity: 'urgent' },
   payment_failed: { kind: 'billing', severity: 'urgent' },
+  refund_attention: { kind: 'billing', severity: 'urgent' },
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
@@ -261,6 +263,7 @@ const EVENT_LABEL: Record<EventType, string> = {
   cancellation: '解約',
   cancellation_incomplete: '解約処理に失敗しました（課金継続の可能性）',
   payment_failed: '支払いに失敗しました・決済状況の確認が必要です',
+  refund_attention: '追加購入の返金に対応が必要です',
 }
 
 /**
@@ -283,6 +286,7 @@ const CHANNEL_PING: Record<EventType, boolean> = {
   cancellation: true,
   cancellation_incomplete: true,
   payment_failed: true,
+  refund_attention: true,
 }
 
 export type EventNotification = {

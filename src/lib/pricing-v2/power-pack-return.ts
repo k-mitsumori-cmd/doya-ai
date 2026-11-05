@@ -5,8 +5,8 @@ export function powerPackReturnMessage(value: unknown): string | null {
   const points = data.points
   const refunded = data.refundedPoints === undefined ? 0 : data.refundedPoints
   if (data.ok !== true || typeof data.duplicated !== 'boolean' || typeof points !== 'number' || typeof refunded !== 'number' || !Number.isSafeInteger(points) || !Number.isSafeInteger(refunded) || points < 0 || refunded < 0 || !Number.isSafeInteger(points + refunded) || points + refunded <= 0) return null
-  if (refunded > 0 && points === 0) return 'この追加購入は全額返金済みです。ドヤパワーは付きません。'
-  if (refunded > 0) return `返金分を除いたドヤパワー ${points.toLocaleString('ja-JP')} を確認しました。`
+  if (refunded > 0 && points === 0) return 'この追加購入は、全額分の返金処理が記録されています。ドヤパワーは付きません。'
+  if (refunded > 0) return `返金処理分を除いたドヤパワー ${points.toLocaleString('ja-JP')} を確認しました。`
   if (data.duplicated) return `この追加購入のドヤパワー ${points.toLocaleString('ja-JP')} は反映済みです。`
   return `ドヤパワーを ${points.toLocaleString('ja-JP')} 足しました。`
 }

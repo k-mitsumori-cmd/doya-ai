@@ -1,0 +1,20 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'../..'),privateEnv=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));assert(privateEnv.DATABASE_URL.includes('?host=/tmp/doya-power-recovery-'));
+const {PrismaClient}=require(root+'/node_modules/@prisma/client'),db=new PrismaClient({datasources:{db:{url:privateEnv.DATABASE_URL}}}),cases=[];
+async function check(name,fn){await fn();cases.push(name);console.log('PASS Cash access: '+name)}
+const denied=e=>e&&e.code==='P2010'&&e.meta?.code==='42501';
+(async()=>{try{
+ const version=(await db.$queryRawUnsafe('SHOW server_version_num'))[0].server_version_num;const privileges=['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER',...(Number(version)>=170000?['MAINTAIN']:[])];
+ await db.user.create({data:{id:'cash_access_owner',email:'cash-access@example.invalid',plan:'PRO'}});
+ await db.accountCompany.create({data:{id:'cash_access_company',userId:'cash_access_owner',name:'Synthetic cash access'}});
+ await db.powerPackPurchase.create({data:{id:'cash_access_purchase',companyId:'cash_access_company',sourceKey:'purchase:cash_access_fixture',amount:1000,cancelTarget:0,cashAmount:6578,cashRefunded:0,paymentIntentId:'pi_cash_access_fixture'}});
+ await check('migration enables RLS without client policies',async()=>{const state=await db.$queryRawUnsafe(`SELECT c.relrowsecurity AS enabled,(SELECT count(*)::int FROM pg_policy p WHERE p.polrelid=c.oid) AS policies FROM pg_class c WHERE c.oid='public.power_pack_purchases'::regclass`);assert.equal(state[0].enabled,true);assert.equal(state[0].policies,0)});
+ for(const role of ['anon','authenticated']){
+  await check(role+' has no table operation privilege',async()=>{for(const privilege of privileges){const rows=await db.$queryRawUnsafe('SELECT has_table_privilege($1,$2,$3) AS allowed',role,'public.power_pack_purchases',privilege);assert.equal(rows[0].allowed,false)}});
+  const operations={select:'SELECT count(*) FROM power_pack_purchases',insert:`INSERT INTO power_pack_purchases (id,"companyId","sourceKey",amount,"updatedAt") VALUES ('forbidden_${role}','cash_access_company','forbidden_${role}',1000,now())`,update:`UPDATE power_pack_purchases SET "cancelTarget"=1000`,delete:'DELETE FROM power_pack_purchases',truncate:'TRUNCATE power_pack_purchases'};
+  for(const[name,sql]of Object.entries(operations))await check(role+' cannot '+name+' cash records',async()=>{await assert.rejects(db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL ROLE '+role);return name==='select'?tx.$queryRawUnsafe(sql):tx.$executeRawUnsafe(sql)}),denied)});
+  await check(role+' still sees no rows if a future grant restores SELECT',async()=>{await assert.rejects(db.$transaction(async tx=>{await tx.$executeRawUnsafe('GRANT SELECT ON power_pack_purchases TO '+role);await tx.$executeRawUnsafe('SET LOCAL ROLE '+role);const rows=await tx.$queryRawUnsafe('SELECT count(*)::int AS n FROM power_pack_purchases');assert.equal(rows[0].n,0);throw Error('SYNTHETIC_ACL_TEST_ROLLBACK')}),e=>e.message==='SYNTHETIC_ACL_TEST_ROLLBACK')});
+ }
+ await check('privileged backend retains its original row and can update it',async()=>{const row=await db.powerPackPurchase.update({where:{id:'cash_access_purchase'},data:{cancelTarget:500}});assert.equal(row.cancelTarget,500);assert.equal(await db.powerPackPurchase.count({where:{companyId:'cash_access_company'}}),1)});
+ const migration=fs.readFileSync(root+'/prisma/migrations-refund-v3.sql');fs.writeFileSync(process.env.DOYA_CASH_ACCESS_RESULT,JSON.stringify({count:cases.length,cases,actualCandidateMigration:true,simulatedSupabaseDefaultClientGrants:true,anonymousAndAuthenticatedRolesExercised:true,rlsAndGrantLayersVerified:true,migrationSha256:crypto.createHash('sha256').update(migration).digest('hex'),productionWrites:0},null,2)+'\n');console.log(JSON.stringify({passed:cases.length}));
+ }finally{await db.$disconnect()}})().catch(e=>{console.error(e);process.exitCode=1});
