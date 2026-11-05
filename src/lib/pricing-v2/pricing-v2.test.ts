@@ -216,6 +216,18 @@ test('据え置きの人は、旗が on でも今の契約の中でプランを�
   assert.deepEqual(decideLegacyPlanCheckout({ enabled: true, kind: 'legacy' }), { ok: true })
 })
 
+// ---------- 追加購入の返金で減らす量 ----------
+import { pointsToRevoke } from './power-pack-refund'
+
+test('返金の累計に見合う量を出す。全額はすべて、一部は切り捨て', () => {
+  assert.equal(pointsToRevoke(1000, 6578, 6578), 1000)
+  assert.equal(pointsToRevoke(2000, 13156, 13156), 2000)
+  assert.equal(pointsToRevoke(1000, 3289, 6578), 500)
+  assert.equal(pointsToRevoke(1000, 1, 6578), 0)
+  assert.equal(pointsToRevoke(1000, 0, 6578), 0)
+  assert.equal(pointsToRevoke(1000, 6578, 0), 0)
+})
+
 // ---------- 決済のあとのお礼 ----------
 import { claimThanksOnce, paymentThanksCopy } from './payment-thanks'
 

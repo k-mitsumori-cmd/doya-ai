@@ -19,7 +19,7 @@ import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-
 import { enqueueStripeWebhookNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 import Stripe from 'stripe'
-import { fulfillPowerPackSession, POWER_PACK_KIND, reportPowerPackFailure } from '@/lib/pricing-v2/power-pack.server'
+import { fulfillPowerPackSession, POWER_PACK_KIND, reportPowerPackFailure, reportPowerPackRefundIssue, revokePowerPackForCharge } from '@/lib/pricing-v2/power-pack.server'
 
 // ========================================
 // Stripe Webhook Handler
@@ -123,6 +123,14 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         notification = await handlePaymentFailed(invoice)
+        break
+      }
+
+      // ========================================
+      // 返金（ドヤパワーの追加購入だけ、付けた分を減らす）
+      // ========================================
+      case 'charge.refunded': {
+        await handleChargeRefunded(event.data.object as Stripe.Charge)
         break
       }
 
@@ -238,6 +246,17 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
   }
 
   return null
+}
+
+// 一時的な失敗（DB・Stripe につながらない）は例外のまま返し、Stripe の再送でやり直す。
+// 直せない失敗と、使い済みで減らせなかった分は、運営に知らせて 200 で終える（追加購入の付与と同じ考え方）
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+  const r = await revokePowerPackForCharge(charge)
+  if (!r.handled) return
+  const issue = !r.ok ? { reason: r.reason } : r.uncollected > 0 ? { uncollected: r.uncollected } : null
+  if (issue && !(await reportPowerPackRefundIssue(r.sessionId, issue))) {
+    throw new Error(`[Webhook] power pack refund issue could not be reported for session ${r.sessionId}`)
+  }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<EventNotification | null> {

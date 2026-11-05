@@ -44,5 +44,6 @@ export function historyLabel(e: Pick<HistoryEntry, 'type' | 'action' | 'kind' | 
   if (e.type === 'consume') return `${actionLabel(e.action)}${watch}`
   if (e.type === 'refund') return `${actionLabel(e.action)}${watch}（失敗したので戻した分）`
   if (e.type === 'expire') return '期限切れ'
+  if (e.type === 'revoke') return '返金で取り消した分'
   return (e.kind && (KIND_LABELS as Record<string, string>)[e.kind]) || '付与'
 }

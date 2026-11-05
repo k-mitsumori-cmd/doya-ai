@@ -6160,7 +6160,7 @@ model DoyaPowerTransaction {
   id           String           @id @default(cuid())
   accountId    String
   account      DoyaPowerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  type         String // consume | refund | grant | expire
+  type         String // consume | refund | grant | expire | revoke（追加購入の返金）
   amount       Int // 増は正、減は負
   balanceAfter Int
   operationId  String?          @unique // consume だけ。同じ操作で二重に減らさない
