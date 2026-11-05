@@ -2,7 +2,7 @@
 // ============================================
 // ドヤパワーが足りない・少ない・0のときの知らせと、「100からスタート」のようこそ（知らせのシートで出す）
 // ============================================
-// 分担（2026-10-26）: 何を出すか（文・行き先）は新料金の powerOutView()・STARTER_WELCOME。ここは出し方だけ。
+// 分担（2026-10-26）: 何を出すか（文・行き先）は新料金の powerOutView()・starterWelcomeFor()。ここは出し方だけ。
 // - 足りない（402。DOYA_POWER_INSUFFICIENT_EVENT）… 毎回出す。エラーと同じ扱い（作業中でも出し、知らせの量が「エラーだけ」でも出す）
 // - 0（empty）… 1日1回。エラーと同じ扱い
 // - 2割未満（low）… 月1回。ヒント
@@ -17,7 +17,7 @@ import { ShellPowerContext } from '@/components/shell/power'
 import { powerOutView, type PowerOutView } from '@/lib/pricing-v2/power-out'
 import { isLowPower, upsellFrequencyKey } from '@/lib/pricing-v2/upsell'
 // starter-welcome.ts は node: を使わないので、画面から読める（新料金の 3404707b で starter.ts から移った）
-import { STARTER_WELCOME } from '@/lib/pricing-v2/starter-welcome'
+import { starterWelcomeFor } from '@/lib/pricing-v2/starter-welcome'
 import type { Notice, NoticeAction } from '@/lib/notice/queue'
 import { useNotice } from './NoticeProvider'
 
@@ -68,8 +68,9 @@ export default function PowerOutNotices() {
   // 100からスタートのようこそ（最初の100を受け取った人に1回だけ）
   useEffect(() => {
     if (!enabled || !info?.starter) return
-    push({ id: 'starter-welcome:v1', kind: 'hint', once: true, pose: 'jump', eyebrow: 'ドヤパワー', title: STARTER_WELCOME.title, body: STARTER_WELCOME.body,
-      primary: { label: STARTER_WELCOME.action.label, href: STARTER_WELCOME.action.href } })
+    const welcome = starterWelcomeFor(info.kind)
+    push({ id: 'starter-welcome:v1', kind: 'hint', once: true, pose: 'jump', eyebrow: 'ドヤパワー', title: welcome.title, body: welcome.body,
+      primary: { label: welcome.action.label, href: welcome.action.href } })
   }, [enabled, info, push])
 
   return null
