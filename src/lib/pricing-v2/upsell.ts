@@ -48,7 +48,7 @@ export interface UpsellInput {
 export const CONTACT_HREF = ENTERPRISE_CONTACT_MAILTO
 const yen = (n: number) => `¥${n.toLocaleString('ja-JP')}`
 /** 追加購入の1パックの言い方 */
-export const PACK_LABEL = `${POWER_PACK.points.toLocaleString('ja-JP')}で${yen(POWER_PACK.price)}（税込 ${yen(withTax(POWER_PACK.price))}）・6か月使えます`
+export const PACK_LABEL = `${POWER_PACK.points.toLocaleString('ja-JP')}で${yen(POWER_PACK.price)}（税抜。税込 ${yen(withTax(POWER_PACK.price))}）・6か月使えます`
 
 function title(trigger: UpsellTrigger, required?: number): string {
   if (trigger === 'insufficient') return required ? `この操作には、ドヤパワーが ${required.toLocaleString('ja-JP')} 要ります` : 'ドヤパワーが足りません'
@@ -89,7 +89,7 @@ export function decideUpsell(i: UpsellInput): UpsellView {
   // 据え置き
   return {
     title: t,
-    body: '今のご契約（月 9,980円）のまま、ドヤパワーだけを追加できます。',
+    body: '今のご契約（月 9,980円・税込）のまま、ドヤパワーだけを追加できます。',
     primary: pack,
     secondary: [{
       kind: 'link',

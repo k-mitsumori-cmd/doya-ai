@@ -267,7 +267,7 @@ export function PowerPackBuy() {
     <div id="power-pack" className={styles.packBox}>
       <div>
         <p className={styles.manageHead}>ドヤパワーを追加で買う</p>
-        <p className={styles.manageSub}>{POWER_PACK.points.toLocaleString('ja-JP')}ごとに {yen(POWER_PACK.price)}（税込 {yen(withTax(POWER_PACK.price))}）。買った分は6か月使えます。</p>
+        <p className={styles.manageSub}>{POWER_PACK.points.toLocaleString('ja-JP')}ごとに {yen(POWER_PACK.price)}（税抜。税込 {yen(withTax(POWER_PACK.price))}）。買った分は6か月使えます。</p>
       </div>
       <div className={styles.packRow}>
         <div className={styles.stepper}>

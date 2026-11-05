@@ -47,7 +47,7 @@ test('off: はじめの付与（最初の100）は付けない', () => {
   assert.deepEqual(decideStarter({ ledgerAllowed: true, tablesAllowed: false, hasCompany: true, isOwner: true, email: 'a@example.com', verified: true, claimed: false }), { ok: false, reason: 'flag_off' })
 })
 
-test('チームの初月無料は既定で付けない（付けるかはユーザーの決定）', () => {
+test('チームの初月無料は付けない（2026-11-05 本人の決定）', () => {
   assert.equal(TEAM_TRIAL_DAYS, 0)
 })
 

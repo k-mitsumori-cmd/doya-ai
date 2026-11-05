@@ -73,13 +73,15 @@ function loadCheckout(trialMod, user, captured) {
   })
 }
 
-function loadEligibility(trialMod, user, captured) {
+function loadEligibility(trialMod, user, captured, opts = {}) {
   return load('src/app/api/stripe/trial-eligibility/route.ts', {
     'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => ({ user: { email: EMAIL } }) },
+    'next-auth': { getServerSession: async () => (opts.guest ? null : { user: { email: EMAIL } }) },
     '@/lib/auth': {},
     '@/lib/prisma': { prisma: { user: { findUnique: async q => { captured.select = q.select; return user } } } },
     '@/lib/trial': trialMod,
+    '@/lib/pricing-v2/rollout': { isNewPricingEnabledFor: () => opts.newPricing === true },
+    '@/lib/pricing-v2/plans': { TEAM_TRIAL_DAYS: 0 },
   })
 }
 
@@ -175,6 +177,23 @@ async function postCheckout(api) {
       assert.equal(calls.length > 0, c.stripeCalled)
     })
   }
+
+  // ---- 新しい料金の対象の人には、初月無料の表示を出さない（チームに付けないため）----
+  for (const guest of [false, true]) {
+    await check(`eligibility display: new pricing on, ${guest ? 'guest' : 'signed-in'} is not eligible`, async () => {
+      const { mod, calls } = loadTrial('new')
+      const captured = {}
+      const res = await loadEligibility(mod, dbUser('FREE', []), captured, { newPricing: true, guest }).GET()
+      assert.equal(res.status, 200)
+      assert.equal((await res.json()).eligible, false)
+      assert.equal(calls.length, 0)
+    })
+  }
+  await check('eligibility display: new pricing off, guest stays eligible', async () => {
+    const { mod } = loadTrial('new')
+    const res = await loadEligibility(mod, null, {}, { newPricing: false, guest: true }).GET()
+    assert.equal((await res.json()).eligible, true)
+  })
 
   // ---- 両ルートが同じ select を使う ----
   await check('checkout and trial-eligibility share TRIAL_USER_SELECT', async () => {

@@ -1,9 +1,9 @@
 # 新しい料金（組織単位）— 本番DBに足す表の SQL の案（2026-10-25）
 
-- ブランチ: `claude/doya-new-pricing-dd27ff`。main には入れていない
+- コードは main に入っている（旗 `NEW_PRICING_ROLLOUT` は未設定＝off。2026-11-05 時点）
 - 仕様: `docs/architecture/management-agent/PRICING-NEW-2026-10-25.md`（§10）
 - **⚠️ この SQL はまだ流していない。** 流すのは統括が、ユーザーの承認を取ったあと（`doya-db-push` スキルの手順に合わせる）。
-- 既存の表は変えない。新しい表を3つ作り、索引を付けるだけ。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
+- 新しい表を3つ作り、索引を付ける。既存の表で変えるのは、`doya_power_grants` の種類の制約に `starter` を足すことだけ（下の「既存の表の変更」）。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
 - 下の SQL は `npx prisma migrate diff --from-schema-datamodel <origin/main 5d876e59 の schema> --to-schema-datamodel prisma/schema.prisma --script` の出力と同じ表・列・索引（2026-10-25 に出して一致を確認）。外部キーを CREATE TABLE の中にまとめ、CHECK 制約と `IF NOT EXISTS` を足した。
 
 ## 足す表
@@ -13,6 +13,10 @@
 | `account_company_members` | 会社のメンバー（招待中・参加・外れた）。会社の持ち主は行を持たず、1人目として数える | `src/lib/pricing-v2/team.server.ts`（招待・参加・外す） |
 | `doya_power_starter_claims` | はじめの付与（最初の100）を受け取った記録。ユーザーとメールの SHA-256 で1回だけ。外部キーなし（会社や利用者を消しても残す） | `src/lib/pricing-v2/starter.server.ts` |
 | `account_company_billing` | 買った人数の控え。正は Stripe の契約の数量。`User.plan` は書かない（課金の反映の経路ではない） | `/api/pricing/seats`（人数の変更）と、1日たった控えの読み直し |
+
+## 既存の表の変更（2026-11-05 追記）
+
+`doya_power_grants` は 2026-10-23 に本番DBへ入っている（運用ノートの承認待ち一覧の記録。実物は流す前に確認の SQL で確かめる）。当時の種類の制約には `starter` がない。`DOYA-POWER-MIGRATION.md` の `CREATE TABLE IF NOT EXISTS` を直しても、既にある表には効かない。下の `ALTER TABLE` を流さないと、最初の100の付与が制約で失敗し、会社に100が付かない（失敗はログに出るだけで、画面は止まらない）。
 
 ## 流す前の前提
 
@@ -88,6 +92,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "account_company_members_companyId_email_key" 
 CREATE UNIQUE INDEX IF NOT EXISTS "account_company_billing_companyId_key" ON "account_company_billing"("companyId");
 CREATE INDEX IF NOT EXISTS "account_company_billing_stripeSubscriptionId_idx" ON "account_company_billing"("stripeSubscriptionId");
 
+-- ドヤパワーの台帳の種類に starter（最初の100）を足す。今ある行はそのまま通る
+ALTER TABLE "doya_power_grants" DROP CONSTRAINT IF EXISTS "doya_power_grants_kind_check";
+ALTER TABLE "doya_power_grants" ADD CONSTRAINT "doya_power_grants_kind_check"
+    CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase', 'starter'));
+
 COMMIT;
 ```
 
@@ -98,6 +107,7 @@ SELECT to_regclass('public.account_company_members'), to_regclass('public.accoun
 SELECT count(*) FROM "account_company_members";  -- 0
 SELECT count(*) FROM "account_company_billing";  -- 0
 SELECT count(*) FROM "doya_power_starter_claims";  -- 0
+SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'doya_power_grants_kind_check';  -- starter を含む
 ```
 
 ## 元に戻す（旗が off で、行が無いときだけ）
@@ -107,6 +117,10 @@ BEGIN;
 DROP TABLE IF EXISTS "doya_power_starter_claims";
 DROP TABLE IF EXISTS "account_company_billing";
 DROP TABLE IF EXISTS "account_company_members";
+-- kind が starter の行が無いことを確かめてから戻す
+ALTER TABLE "doya_power_grants" DROP CONSTRAINT IF EXISTS "doya_power_grants_kind_check";
+ALTER TABLE "doya_power_grants" ADD CONSTRAINT "doya_power_grants_kind_check"
+    CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase'));
 COMMIT;
 ```
 

@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
+import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
+import { TEAM_TRIAL_DAYS } from '@/lib/pricing-v2/plans'
 
 // GET /api/stripe/trial-eligibility
 // 「初月無料」訴求の表示出し分け用。未ログイン訪問者は将来の新規顧客なので eligible:true。
@@ -14,6 +16,11 @@ import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
+    // 新しい料金の対象の人には、初月無料のプランがない（チームに付けない。2026-11-05 本人の決定。今のプロの新しい申し込みは止まる）。
+    // 全ツールの「初月無料」の表示は、この応答で決まる。旗が off（と preview の対象でない人）は今までどおり
+    if (TEAM_TRIAL_DAYS <= 0 && isNewPricingEnabledFor(session?.user?.email ?? null)) {
+      return NextResponse.json({ eligible: false }, { headers: { 'Cache-Control': 'no-store' } })
+    }
     if (!session?.user?.email) {
       return NextResponse.json({ eligible: true }, { headers: { 'Cache-Control': 'no-store' } })
     }
