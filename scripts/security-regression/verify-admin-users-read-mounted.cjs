@@ -1,0 +1,50 @@
+// This test process needs React.act even when invoked by the production build.
+process.env.NODE_ENV = 'development';
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const repo=path.resolve(__dirname,'../..'),dep=n=>require(repo+'/node_modules/'+n),React=dep('react'),{JSDOM}=dep('jsdom'),ts=dep('typescript');
+const file='src/app/admin/users/page.tsx',readerFile='src/lib/admin/users-read-client.ts',source=fs.readFileSync(process.env.DOYA_ADMIN_USERS_BASELINE||path.join(repo,file),'utf8'),results=[];
+const flush=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r))};
+const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
+const user=(id='synthetic-user')=>({id,name:'検証利用者',email:'fixture@example.invalid',image:null,plan:'FREE',role:'USER',createdAt:'2026-11-01T00:00:00.000Z',updatedAt:'2026-11-01T00:00:00.000Z',stripeCustomerId:null,stripeSubscriptionId:null,stripeInfo:null,totalGenerations:0,bannerQuota:{used:0,limit:15,remaining:15},seoQuota:{used:0,limit:15,remaining:15},serviceSubscriptions:[],services:[]});
+async function scenario(name,options,work){
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://synthetic.invalid/admin/users'}),prior=new Map(),calls=[],timers=new Map(),errors=[],nav=[],toasts=[];let root,tid=0,clock=0,mounted=true;
+ for(const[k,v]of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})){prior.set(k,Object.getOwnPropertyDescriptor(global,k));Object.defineProperty(global,k,{value:v,writable:true,configurable:true})}
+ const actualError=console.error;console.error=(...a)=>{errors.push(a.map(String).join(' '));actualError(...a)};
+ const router={push:p=>nav.push(p)};
+ const fetcher=async(url,init={})=>{assert.equal(url,'/api/admin/users');assert.equal(init.method||'GET','GET');calls.push({url,method:init.method||'GET',signal:init.signal,credentials:init.credentials,cache:init.cache});return options.fetch?options.fetch(calls.length,init):Response.json(options.data??[])};
+ const motion=new Proxy({},{get:(_,tag)=>React.forwardRef(({children,...props},ref)=>React.createElement(tag,{ref,...Object.fromEntries(Object.entries(props).filter(([k])=>!['initial','animate','exit','variants','transition','whileHover','whileTap','layout'].includes(k)))},children))});
+ const modules=new Map();function load(name){if(modules.has(name))return modules.get(name);const exports={};modules.set(name,exports);const bytes=name===file?source:fs.readFileSync(path.join(repo,name),'utf8');const requireMock=n=>{if(n==='react')return React;if(n==='react/jsx-runtime')return dep(n);if(n==='next/navigation')return{useRouter:()=>router};if(n==='framer-motion')return{motion,AnimatePresence:({children})=>React.createElement(React.Fragment,null,children)};if(n==='lucide-react')return new Proxy({},{get:()=>()=>null});if(n==='react-hot-toast')return{__esModule:true,default:{error:m=>toasts.push(m),success:m=>toasts.push(m)},Toaster:()=>null};if(n==='@/lib/plan-utils')return load('src/lib/plan-utils.ts');if(n==='@/lib/admin/users-read-client')return load(readerFile);throw Error('UNMOCKED '+n)};
+ vm.runInNewContext(ts.transpileModule(bytes,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:requireMock,console,window:dom.window,document:dom.window.document,fetch:fetcher,URLSearchParams,Set,Map,Date,Error,Promise,AbortController,setTimeout:(cb,ms)=>{const id=++tid;timers.set(id,{cb,due:clock+ms,ms});return id},clearTimeout:id=>timers.delete(id)},{filename:name});return exports}
+ const text=()=>document.body.textContent;
+ const click=async label=>{const target=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()===label);assert(target,'missing button '+label);await React.act(async()=>{target.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));await flush()})};
+ const advance=async ms=>{await React.act(async()=>{clock+=ms;for(const[id,t]of [...timers])if(t.due<=clock){timers.delete(id);t.cb()}await flush()})};
+ const unmount=async()=>{if(mounted){await React.act(async()=>{root.unmount();await flush()});mounted=false}};
+ try{
+  root=dep('react-dom/client').createRoot(document.getElementById('root'));await React.act(async()=>{root.render(React.createElement(options.strict?React.StrictMode:React.Fragment,null,React.createElement(load(file).default)));await flush()});
+  await work({dom,calls,timers,nav,toasts,text,click,advance,unmount,settle:async fn=>React.act(async()=>{fn();await flush()}),parse:load(readerFile).isAdminUserList,user});
+  assert.equal(errors.length,0,name+': React errors');assert(calls.every(c=>c.method==='GET'));results.push({name,syntheticRequests:calls.length,realNetworkRequests:0,renderErrors:errors.length});console.log('PASS admin users read: '+name);
+ }finally{try{await unmount();assert.equal(timers.size,0,name+': leaked timers')}finally{console.error=actualError;for(const[k,v]of prior){if(v)Object.defineProperty(global,k,v);else delete global[k]}dom.window.close()}}
+}
+(async()=>{
+ await scenario('valid-empty-list-is-success',{},async x=>{assert(x.text().includes('ユーザー管理'));assert(!document.querySelector('[role="alert"]'))});
+ await scenario('valid-record-renders-controls',{data:[user()]},async x=>{assert(x.text().includes('検証利用者'));assert(x.calls.every(c=>c.cache==='no-store'&&c.credentials==='include'&&c.signal))});
+ for(const phase of ['http','body']){
+  await scenario('stalled-'+phase+'-expires-at35s-and-manual-retry',{fetch:n=>n>1?Response.json([user()]):phase==='http'?new Promise(()=>{}):{ok:true,status:200,json:()=>new Promise(()=>{})}},async x=>{assert(document.querySelector('[role="status"]'));await x.advance(34999);assert(document.querySelector('[role="status"]'));await x.advance(1);assert(document.querySelector('[role="alert"]'));assert(!x.text().includes('ユーザー管理'));assert(x.calls[0].signal.aborted);await x.click('もう一度読み込む');assert(x.text().includes('検証利用者'));assert.equal(x.calls.length,2)});
+ }
+ for(const [name,response] of [['http503',()=>Response.json({error:'secret server detail'},{status:503})],['invalid-json',()=>new Response('{')],['object-not-list',()=>Response.json({users:[]})],['bad-record',()=>Response.json([{id:'bad'}])],['bad-quota',()=>Response.json([{...user(),bannerQuota:{used:0,limit:15,remaining:99}}])],['duplicate-identity',()=>Response.json([user(),user()])]]){
+  await scenario(name+'-is-visible-error',{fetch:()=>response()},async x=>{assert(document.querySelector('[role="alert"]'));assert(!x.text().includes('ユーザー管理'));assert(!x.text().includes('secret server detail'));assert.equal(x.calls.length,1)});
+ }
+ await scenario('401-routes-to-admin-login-without-consuming-body',{fetch:()=>({ok:false,status:401,json:()=>{throw Error('401 body must not be consumed')}})},async x=>{assert.deepEqual(x.nav,['/admin/login']);assert(document.querySelector('[role="alert"]'))});
+ {
+  const late=deferred();await scenario('late-http-result-after-timeout-does-not-overwrite-retry',{fetch:n=>n===1?late.promise:Response.json([user('fresh')])},async x=>{await x.advance(35000);await x.click('もう一度読み込む');await x.settle(()=>late.resolve(Response.json([{...user('old'),name:'古い応答'}])));assert(x.text().includes('検証利用者'));assert(!x.text().includes('古い応答'))});
+ }
+ {
+  const late=deferred();await scenario('late-body-after-timeout-does-not-overwrite-retry',{fetch:n=>n===1?{ok:true,status:200,json:()=>late.promise}:Response.json([user()])},async x=>{await x.advance(35000);await x.click('もう一度読み込む');await x.settle(()=>late.resolve([{...user('old'),name:'古い本文'}]));assert(!x.text().includes('古い本文'));assert(x.text().includes('検証利用者'))});
+ }
+ {
+  const late=deferred();await scenario('strict-mode-aborts-first-read-and-ignores-old401',{strict:true,fetch:n=>n===1?late.promise:Response.json([user()])},async x=>{assert.equal(x.calls.length,2);assert(x.calls[0].signal.aborted);await x.settle(()=>late.resolve(new Response('',{status:401})));assert.equal(x.nav.length,0);assert(x.text().includes('検証利用者'))});
+ }
+ await scenario('unmount-cancels-unresponsive-read-and-clears-deadline',{fetch:()=>new Promise(()=>{})},async x=>{await x.unmount();assert(x.calls[0].signal.aborted);assert.equal(x.timers.size,0)});
+ await scenario('parser-covers-nested-service-and-stripe-contract',{},async x=>{const full={...user(),stripeInfo:{status:'active',interval:'year',amount:9800,currentPeriodStart:'2026-11-01T00:00:00.000Z',currentPeriodEnd:'2027-11-01T00:00:00.000Z',created:'2026-11-01T00:00:00.000Z',cancelAtPeriodEnd:false,canceledAt:null},serviceSubscriptions:[{id:'service',serviceId:'banner',plan:'FREE',dailyUsage:0,monthlyUsage:0,lastUsageReset:'2026-11-01T00:00:00.000Z',hasStripe:false}]};assert(x.parse([full]));for(const mutate of [v=>v.email={},v=>v.services=[1],v=>v.createdAt='invalid',v=>v.totalGenerations=-1,v=>v.stripeInfo.amount='9800',v=>v.stripeInfo.cancelAtPeriodEnd='false',v=>v.stripeInfo.canceledAt='invalid',v=>v.serviceSubscriptions[0].dailyUsage=-1,v=>v.serviceSubscriptions[0].hasStripe=1]){const bad=structuredClone(full);mutate(bad);assert(!x.parse([bad]))}assert(x.parse([{...user(),bannerQuota:{used:50,limit:-1,remaining:null}}]))});
+ const out={checkedAt:new Date().toISOString(),count:results.length,results,actualPageAndReaderMounted:true,syntheticNetworkAndTimers:true,deadlineMs:35000,realNetworkRequests:0,realAdministratorLogin:false,sourceHashes:Object.fromEntries([file,readerFile].map(n=>[n,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,n))).digest('hex')]))};if(process.env.DOYA_ADMIN_USERS_READ_RESULT)fs.writeFileSync(process.env.DOYA_ADMIN_USERS_READ_RESULT,JSON.stringify(out,null,2)+'\n');console.log(JSON.stringify({adminUsersReadCases:results.length,realNetworkRequests:0}));
+})().catch(e=>{console.error(e);process.exitCode=1});
