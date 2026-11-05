@@ -1,22 +1,20 @@
 // ============================================
-// 依頼を読んで、ツールと操作を選ぶ AI（Claude Opus 5.5）
+// 依頼を読んで、ツールと操作を選ぶ AI（Claude Haiku 5.5）
 // ============================================
-// 2026-10-28 本人の指示「判定は強いモデル、軽い所は軽いモデル」。どのツールのどの操作かを選ぶのは判断なので Opus 5.5 にする。
+// 2026-11-06 本人の決定「Opus は使いすぎ。一番安いモデルで」。チャットとエージェントの費用を下げるため Haiku 5.5 にする（旧: 2026-10-28 の Opus 5.5）。
 // ⚠️ モデル ID と使い方は claude-api スキルの資料で確かめた（2026-10-28）:
-//    - claude-opus-5-5（日付の付かない ID）。入力 $4 / 出力 $20（100万トークンあたり）。キャッシュの読み出しは $0.20。
+//    - claude-haiku-5-5（日付の付かない ID）。入力 $0.10 / 出力 $0.50（100万トークンあたり、10万トークン以下のとき）。
 //    - thinking は止められない（disabled や budget_tokens は 400）。深さは effort で決める。分類と読み取りなので low。
 //    - temperature などを送ると 400。前置き（prefill）も 400。JSON は構造化出力（output_config.format）で受け取る。
 //    - 安全の判定で断られたら（stop_reason: refusal）、「どれにも合わない」にする（画面は行き止まりにしない）。
 // ⚠️ 1回の費用（2026-10-29 統括の監査 中3 で直した）:
-//    ふだん: 一覧と決まりの文 約3,000〜3,600トークン（$4/100万）＋出力と思考 約300〜600トークン（$20/100万）→ 約 $0.02〜0.027（約3〜4円）。
-//    最大: 入力 約4,500トークン＋出力の上限 2,000トークン（max_tokens）→ 約 $0.058（約8.7円）。全体の上限はこの最大で決める（route.ts）。
-//    一覧が 4,096 トークンに届かないと、キャッシュは効かない見込み。軽いモデル（Haiku 5.5）にすると約 $0.0006（約0.1円）。
+//    Haiku 5.5: 入力 約4,500トークン＋出力の上限 2,000トークンで、最大 約 $0.0015（約0.2円）。
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { RouterReply, ROUTER_SYSTEM_PROMPT, catalogText, requestText, type AgentPlanOption } from './router'
 import type { AgentAction } from './types'
 
-export const AGENT_ROUTER_MODEL_DEFAULT = 'claude-opus-5-5'
+export const AGENT_ROUTER_MODEL_DEFAULT = 'claude-haiku-5-5'
 const TIMEOUT_MS = 25_000
 /** 分類と短い値の読み取りだけなので小さめ（思考の分も含む） */
 const MAX_TOKENS = 2000

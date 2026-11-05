@@ -31,8 +31,8 @@ function limitOf(raw: string | undefined, fallback: number): number {
 /** 1人あたり1日の回数（既定 30） */
 const userDailyLimit = () => limitOf(process.env.AGENT_ROUTER_USER_DAILY, 30)
 /**
- * 全体で1日に AI を使う回数（既定 300）。1回は最大 約 $0.058（約8.7円）なので、最大で1日 約 $17（約2,600円）。
- * ふだんは1回 約3〜4円で、1日 約900〜1,200円。増やすときは AGENT_ROUTER_AI_DAILY で（1,000 なら最大 約8,700円/日）。
+ * 全体で1日に AI を使う回数（既定 300）。Haiku 5.5 で1回は最大 約0.2円なので、最大で1日 約60円。
+ * 増やすときは AGENT_ROUTER_AI_DAILY で（1,000 なら最大 約200円/日）。
  */
 const aiDailyLimit = () => limitOf(process.env.AGENT_ROUTER_AI_DAILY, 300)
 
