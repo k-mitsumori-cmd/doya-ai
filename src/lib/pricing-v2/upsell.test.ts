@@ -181,7 +181,7 @@ test('知らせの中身: 追加購入が準備中なら出さず、押せるも
 // ---------- 画面から読むファイルは node: を使わない（2026-10-26 UI リニューアルの依頼） ----------
 import { readFileSync } from 'node:fs'
 import { STARTER_WELCOME as WELCOME_FROM_STARTER, STARTER_POWER as POWER_FROM_STARTER } from './starter'
-import { STARTER_WELCOME, STARTER_POWER as POWER_FROM_WELCOME } from './starter-welcome'
+import { STARTER_WELCOME, STARTER_WELCOME_PAID, starterWelcomeFor, STARTER_POWER as POWER_FROM_WELCOME } from './starter-welcome'
 
 test('ようこその知らせの文と量は starter-welcome.ts にあり、node: を使わない。starter.ts からも同じ値が読める', () => {
   const src = readFileSync(new URL('./starter-welcome.ts', import.meta.url), 'utf8')
@@ -189,4 +189,12 @@ test('ようこその知らせの文と量は starter-welcome.ts にあり、nod
   assert.equal(WELCOME_FROM_STARTER, STARTER_WELCOME)
   assert.equal(POWER_FROM_STARTER, POWER_FROM_WELCOME)
   assert.equal(STARTER_WELCOME.action.href, '/home/doya-power')
+})
+
+test('ようこその知らせは、有料の人に毎日の回復を案内しない', () => {
+  assert.equal(starterWelcomeFor('free'), STARTER_WELCOME)
+  assert.equal(starterWelcomeFor('team'), STARTER_WELCOME_PAID)
+  assert.equal(starterWelcomeFor('legacy'), STARTER_WELCOME_PAID)
+  assert.match(STARTER_WELCOME.body, /毎日10ずつ回復/)
+  assert.doesNotMatch(`${STARTER_WELCOME_PAID.title}${STARTER_WELCOME_PAID.body}`, /回復|スタート/)
 })
