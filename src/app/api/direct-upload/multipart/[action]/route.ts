@@ -6,7 +6,8 @@
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// 完了（complete）は、大きなファイルほど S3 側のつなぎ合わせに時間がかかるため長めにする
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'

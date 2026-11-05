@@ -247,3 +247,22 @@ npm run dev
 | `Invalid value undefined for datasource` | `DATABASE_URL` が正しく設定されているか確認。`.env.local` が `doya-ai` ディレクトリに存在するか確認 |
 | `バナーが生成されませんでした` | `GOOGLE_GENAI_API_KEY` が正しく設定されているか確認。APIキーが有効か確認 (Google AI Studio) |
 | 環境変数が読み込まれない | `.env.local` が `doya-ai` ルートに存在するか確認。ローカルサーバーを再起動 |
+
+---
+
+## 大型アップロード（動画・音声の S3 互換マルチパート）
+
+`src/lib/direct-upload/multipart.ts`。旗が true になるまで API は 503 で閉じている。
+
+| 環境変数 | 必須 | 既定値 | 内容 |
+|---|---|---|---|
+| `DIRECT_UPLOAD_MULTIPART_ENABLED` | 旗 | なし（閉） | `true` のときだけ API が開く。変えたら再デプロイ |
+| `SUPABASE_S3_ENDPOINT` | 必須 | なし | `https://<プロジェクトref>.supabase.co/storage/v1/s3` |
+| `SUPABASE_S3_REGION` | 必須 | なし（2026-11-05 に既定値を廃止） | プロジェクトのリージョン。ドヤAI は `us-east-1`。違うと署名エラー |
+| `SUPABASE_S3_ACCESS_KEY_ID` | 必須 | なし | Supabase の S3 接続の Access key ID |
+| `SUPABASE_S3_SECRET_ACCESS_KEY` | 必須 | なし | 同 Secret access key（発行時に1度しか表示されない） |
+| `DIRECT_UPLOAD_MULTIPART_BUCKET` | 任意 | `direct-uploads` | 保存先バケット（非公開で作る） |
+| `DIRECT_UPLOAD_MULTIPART_MAX_BYTES` | 任意 | 20GB | 1ファイルの上限。バケット側の上限と小さい方が効く |
+| `DIRECT_UPLOAD_MULTIPART_MAX_ACTIVE_BYTES` | 任意 | 40GB | 1人が同時に送信中にできる申告サイズの合計 |
+
+検査: `npm run test:upload`（偽の S3 サーバーで 100MB の小分け送信・再開・権限を確かめる。本番には触れない）。
