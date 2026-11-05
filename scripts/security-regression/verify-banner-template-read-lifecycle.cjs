@@ -1,0 +1,69 @@
+process.env.NODE_ENV='development';
+const fs=require('node:fs'),cp=require('node:child_process'),vm=require('node:vm'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict'),os=require('node:os');
+const args=process.argv.slice(2),option=name=>{const i=args.indexOf(name);return i<0?null:args[i+1]};
+const repo=path.resolve(option('--repo-root')||path.join(__dirname,'../..')),ts=require(repo+'/node_modules/typescript'),{JSDOM}=require(repo+'/node_modules/jsdom');
+const sourceFile='src/app/(shell)/banner/dashboard/page.tsx',ref=option('--ref'),candidate=option('--candidate-root')||(ref?null:repo),output=option('--output')||path.join(process.env.DOYA_BANNER_TEMPLATE_EVIDENCE_DIR||fs.mkdtempSync(path.join(os.tmpdir(),'doya-banner-template-read-')),'result.json');assert(!fs.existsSync(output));fs.mkdirSync(path.dirname(output),{recursive:true});
+const source=candidate?fs.readFileSync(path.join(candidate,sourceFile),'utf8'):cp.execFileSync('git',['show',ref+':'+sourceFile],{cwd:repo,encoding:'utf8',maxBuffer:4*1024*1024});
+const sf=ts.createSourceFile(sourceFile,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),vars=new Map(),effects=[];
+function visit(node){if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name))vars.set(node.name.text,node);if(ts.isCallExpression(node)&&node.expression.getText(sf)==='useEffect'&&node.arguments[0]?.getText(sf).includes('const CACHE_EXPIRY'))effects.push(node);ts.forEachChild(node,visit)}visit(sf);assert.equal(effects.length,1);
+const effect=effects[0].getText(sf),remaining='const '+vars.get('fetchRemainingTemplates').getText(sf)+';',globals=[],locals=[];
+for(const key of ['CACHE_KEY','INITIAL_FETCH_LIMIT','INITIAL_VISIBLE_COUNT','categoryMapping']){
+ const node=vars.get(key);let parent=node.parent,inFunction=false;
+ while(parent){if(ts.isFunctionDeclaration(parent)||ts.isFunctionExpression(parent)||ts.isArrowFunction(parent)){inFunction=true;break}parent=parent.parent}
+ (inFunction?locals:globals).push('const '+node.getText(sf)+';');
+}
+const loaderBodies=vars.get('fetchRemainingTemplates').getStart(sf)<effects[0].getStart(sf)?remaining+'\n'+effect+';':effect+';\n'+remaining;
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://audit.invalid/'});global.window=dom.window;global.document=dom.window.document;Object.defineProperty(global,'navigator',{value:dom.window.navigator,configurable:true});global.IS_REACT_ACT_ENVIRONMENT=true;
+const React=require(repo+'/node_modules/react'),{createRoot}=require(repo+'/node_modules/react-dom/client'),{act}=React;
+const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
+const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
+const templates=(n,prefix='item')=>Array.from({length:n},(_,i)=>({id:prefix+'-'+i,industry:'IT',prompt:'synthetic prompt '.repeat(8),imageUrl:null}));
+const response=data=>({ok:true,status:200,json:async()=>data});
+let helperBinding=null;
+function environment(handler,cache){
+ const trace={mounted:false,requests:[],stateWrites:[],errors:[],cacheWrites:[],snapshot:null,read:null},timers=new Map(),storage=new Map(),epoch=Date.now();let now=0,next=0;
+ if(cache)storage.set('banner_templates_cache_v9',JSON.stringify({data:{templates:templates(30)},timestamp:epoch}));
+ const setTimeout=(callback,ms)=>{const id=++next;timers.set(id,{at:now+Number(ms||0),callback});return id},clearTimeout=id=>timers.delete(id);
+ const api=async(url,options={})=>{assert(String(url).startsWith('/api/banner/test/templates?'),'Unexpected transport');const request={url:String(url),offset:Number(new URL(String(url),'https://audit.invalid').searchParams.get('offset')||0),mountedAtCall:trace.mounted,signal:options.signal||null};trace.requests.push(request);return handler(request,trace)};
+ const useState=(name,initial)=>{const[value,set]=React.useState(initial);return[value,next=>{trace.stateWrites.push({name,mountedAtCall:trace.mounted});set(next)}]};
+ const scopePrelude=vars.has('templateReadRef')?'const '+vars.get('templateReadRef').getText(sf)+';':'';
+ const context={React,useEffect:React.useEffect,useCallback:React.useCallback,useRef:React.useRef,useState,trace,fetch:api,setTimeout,clearTimeout,AbortController,DOMException,Promise,
+  Date:class extends Date{static now(){return epoch+now}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>{trace.cacheWrites.push({mountedAtCall:trace.mounted});storage.set(k,v)},removeItem:k=>storage.delete(k)},
+  toast:{error:m=>trace.errors.push(String(m))},console:{log(){},warn(){},error(){}},module:{exports:{}},exports:{}};
+ if(candidate){const helperPath=path.join(candidate,'src/lib/banner/template-read-lifetime.ts');if(fs.existsSync(helperPath)){const helperSource=fs.readFileSync(helperPath,'utf8'),hash=crypto.createHash('sha256').update(helperSource).digest('hex');if(helperBinding)assert.equal(helperBinding,hash);helperBinding=hash;const helperContext={...context,module:{exports:{}},exports:{}};helperContext.exports=helperContext.module.exports;vm.runInNewContext(ts.transpileModule(helperSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,helperContext);Object.assign(context,helperContext.module.exports)}}
+ const code=`${globals.join('\n')}
+ module.exports=function Harness(){
+ const [templates,setTemplates]=useState('templates',[]);
+ const [isFetchingAll,setIsFetchingAll]=useState('isFetchingAll',false);
+ const [isLoadingTemplates,setIsLoadingTemplates]=useState('isLoadingTemplates',true);
+ const [,setVisibleCounts]=useState('visibleCounts',{});const [,setSelectedTemplate]=useState('selectedTemplate',null);
+ const [hasMoreFromApi,setHasMoreFromApi]=useState('hasMoreFromApi',false);const [fetchProgress,setFetchProgress]=useState('fetchProgress',0);const [templateFetchError,setTemplateFetchError]=useState('templateFetchError',false);
+ const templateOffsetRef=useRef(0);${scopePrelude}
+ useEffect(()=>{trace.mounted=true;return()=>{trace.mounted=false}},[]);
+ ${locals.join('\n')}
+ const preloadHeroImage=useCallback(()=>{},[]);
+ ${loaderBodies}
+ trace.read=fetchRemainingTemplates;trace.snapshot={templates,isFetchingAll,isLoadingTemplates,hasMoreFromApi,fetchProgress,templateFetchError,offset:templateOffsetRef.current};
+ return React.createElement('output',null,templates.map(t=>t.id).join(','));
+ }`;
+ const js=ts.transpileModule(code,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(js,context);const node=document.createElement('div');document.body.appendChild(node);const root=createRoot(node);
+ return{trace,async mount(strict=false){await act(async()=>{root.render(strict?React.createElement(React.StrictMode,null,React.createElement(context.module.exports)):React.createElement(context.module.exports));await flush()})},async settle(){await act(flush)},async unmount(){await act(async()=>{root.unmount();await flush()});node.remove()},async tick(ms){const end=now+ms;let turns=0;while(true){const item=[...timers].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!item)break;assert(++turns<1000);now=item[1].at;timers.delete(item[0]);await act(async()=>{item[1].callback();await flush()})}now=end;await act(flush)}};
+}
+(async()=>{
+ const checks=[];
+ {const h=environment(async()=>response({templates:[]}),true);await h.mount();await h.unmount();await h.tick(600);const late=h.trace.requests.filter(r=>!r.mountedAtCall).length;checks.push({name:'cached background timer is canceled on unmount',passed:late===0,lateRequests:late});}
+ {let calls=0;const h=environment(async()=>{if(++calls===1)throw new Error('synthetic read failure');return response({templates:templates(1,'recovered')})});await h.mount();await h.tick(600);checks.push({name:'successful initial retry does not report failure',passed:h.trace.snapshot.templates.length===1&&h.trace.errors.length===0,templateCount:h.trace.snapshot.templates.length,errorToasts:h.trace.errors.length});await h.unmount();}
+ {const first=deferred(),h=environment(()=>first.promise);await h.mount();await h.unmount();first.resolve(response({templates:templates(30,'late')}));await h.settle();await h.tick(600);const late=h.trace.requests.filter(r=>!r.mountedAtCall).length,writes=h.trace.stateWrites.filter(r=>!r.mountedAtCall).length;checks.push({name:'late initial response cannot publish or schedule after unmount',passed:late===0&&writes===0,lateRequests:late,lateStateWrites:writes});}
+ {const requests=[],h=environment(req=>{const d=deferred();requests.push(d);return d.promise},true);await h.mount();await act(async()=>{void h.trace.read(30);await flush()});await h.tick(600);checks.push({name:'scheduled and manual background loads are mutually exclusive',passed:requests.length===1,parallelRequests:requests.length});for(const d of requests)d.resolve(response({templates:[]}));await h.settle();await h.unmount();}
+ {const bodies=[],h=environment(async()=>{const d=deferred();bodies.push(d);return {ok:true,status:200,json:()=>d.promise}},true);await h.mount();await h.tick(600);await h.unmount();bodies[0].resolve({templates:templates(100,'late-batch')});await h.settle();const late=h.trace.requests.filter(r=>!r.mountedAtCall).length,writes=h.trace.stateWrites.filter(r=>!r.mountedAtCall).length;checks.push({name:'late background body cannot continue pagination or publish after unmount',passed:late===0&&writes===0,lateRequests:late,lateStateWrites:writes});for(const d of bodies)d.resolve({templates:[]});await h.settle();}
+ {const requests=[],h=environment(()=>{const d=deferred();requests.push(d);return d.promise});await h.mount(true);assert.equal(requests.length,2);requests[1].resolve(response({templates:templates(1,'new')}));await h.settle();requests[0].resolve(response({templates:templates(1,'old')}));await h.settle();const id=h.trace.snapshot.templates[0]?.id;checks.push({name:'StrictMode old setup response cannot replace current setup',passed:id==='new-0',finalTemplateId:id});await h.unmount();}
+ {const h=environment(async req=>response({templates:req.offset===0?templates(30):req.offset===30?[templates(1)[0],...templates(99,'batch')]:templates(2,'last')}));await h.mount();await h.tick(600);const current=h.trace.snapshot;checks.push({name:'normal pagination retains all unique templates and completes',passed:current.templates.length===131&&current.offset===132&&current.fetchProgress===100&&!current.isFetchingAll&&!current.hasMoreFromApi&&!current.isLoadingTemplates&&h.trace.errors.length===0,uniqueTemplates:current.templates.length,offset:current.offset,fetchProgress:current.fetchProgress});await h.unmount();}
+ {let failed=false;const h=environment(async req=>{if(req.offset===130&&!failed){failed=true;throw new Error('synthetic page failure')}return response({templates:req.offset===0?templates(30):req.offset===30?templates(100,'batch'):templates(2,'last')})});await h.mount();await h.tick(600);const stopped=h.trace.snapshot;await act(async()=>{void h.trace.read(stopped.offset);await flush()});const recovered=h.trace.snapshot;checks.push({name:'failed background page resumes at last confirmed offset',passed:stopped.offset===130&&stopped.templateFetchError&&stopped.hasMoreFromApi&&recovered.templates.length===132&&!recovered.templateFetchError&&!recovered.hasMoreFromApi,failedOffset:stopped.offset,finalTemplates:recovered.templates.length});await h.unmount();}
+ {const h=environment(async()=>{throw new Error('synthetic unavailable')});await h.mount();await h.tick(2000);checks.push({name:'exhausted initial retries end loading with one error',passed:h.trace.requests.length===3&&!h.trace.snapshot.isLoadingTemplates&&h.trace.errors.length===1,attempts:h.trace.requests.length,errorToasts:h.trace.errors.length});await h.unmount();}
+ {const h=environment(async()=>{throw new Error('synthetic unavailable')});await h.mount();await h.unmount();await h.tick(2000);const late=h.trace.requests.filter(r=>!r.mountedAtCall).length,writes=h.trace.stateWrites.filter(r=>!r.mountedAtCall).length;checks.push({name:'unmount cancels pending initial retry wait',passed:h.trace.requests.length===1&&late===0&&writes===0,attempts:h.trace.requests.length,lateRequests:late,lateStateWrites:writes});}
+ {const h=environment(async()=>response({templates:templates(1)}));await h.mount();await h.unmount();checks.push({name:'all catalog requests carry a scope signal aborted on unmount',passed:h.trace.requests.every(r=>r.signal?.aborted===true),requestSignals:h.trace.requests.filter(r=>r.signal).length});}
+ const baseline=args.includes('--expect-defects'),allPassed=checks.every(r=>r.passed),defects=checks.filter(r=>!r.passed).length,sourceHash=crypto.createHash('sha256').update(source).digest('hex');
+ if(candidate)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(candidate,sourceFile))).digest('hex'),sourceHash);
+ const report={checkedAt:new Date().toISOString(),sourceRef:candidate?null:ref,candidateRoot:candidate||null,sourceFile,sourceSha256:sourceHash,sourceBindings:{[sourceFile]:sourceHash,...(helperBinding?{'src/lib/banner/template-read-lifetime.ts':helperBinding}:{})},realReact18EffectsAndState:true,reactLifecycleMode:'development',actualPageBootstrapEffectAndBackgroundCallbackExtractedWithoutBodyRewriting:true,fullPageRendered:false,syntheticTransportAndClock:true,checks,allRequirementsMet:allPassed,defectsObserved:defects,baselineExpected:baseline,networkRequests:0,productionWrites:0,scope:'Actual source effect/callback bodies in a focused real-React lifecycle harness; other page UI/hooks, actual browser and real API are not exercised.'};
+ fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report));if(baseline?defects<5:!allPassed)process.exitCode=1;dom.window.close();
+})().catch(e=>{console.error(e.stack);process.exitCode=1});

@@ -382,7 +382,18 @@ jobs:
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
 
       - name: Security and incident regression tests (offline)
+        env:
+          DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence
         run: npm run test:security
+
+      - name: Save synthetic banner template read lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banner-template-read-${{ github.sha }}
+          path: /tmp/doya-banner-template-read-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: DoyaSlide preview deadlines and recovery (offline)
         run: |
