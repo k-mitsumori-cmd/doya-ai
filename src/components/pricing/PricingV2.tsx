@@ -6,7 +6,7 @@
 // - 金額・付与のポイント・人数の段階は src/lib/pricing-v2/plans.ts だけから読む。ここに数を書かない
 // - 減る量は src/lib/doya-power/costs.ts だけから読む
 // - 今の契約者（据え置き）には、今のプランを出し、新しい料金の申し込みボタンは出さない（view='legacy'）
-// - 「初月無料」は TrialCallout の部品だけで出す（月払いで、まだ有料でない人だけ）
+// - チームに初月無料は付けない（2026-11-05 本人の決定。TEAM_TRIAL_DAYS = 0）。付けるときも TrialCallout の部品だけで出す
 // 見た目は PricingNext と同じ（PricingNext.module.css を使い、足りない所だけ PricingV2.module.css）。
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -105,6 +105,9 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           <p className={styles.legacyBody}>
             {`会社のメンバーで使いたいときは、チームに移ることもできます。ただし、チームに移ったあとは、今の料金（月${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）に戻すことはできません。まずはご相談ください。`}
           </p>
+          <p className={styles.legacyBody}>
+            解約してご契約が終わったあとにもう一度申し込むときも、新しい料金になります。
+          </p>
           <a href={ENTERPRISE_CONTACT_MAILTO} className={styles.legacyLink}>チームに移る相談をする</a>
         </section>
       ) : null}
@@ -201,7 +204,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           <ul className={base.planList}>
             <li>全{toolCount}ツールのプロ機能を、会社のみんなで使えます</li>
             <li>使い残したドヤパワーは、翌月まで繰り越せます</li>
-            <li>11人目からは1人 {yen(TEAM_SEAT_TIERS[1]!.unitMonthly)} に下がります</li>
+            <li>11人目からは1人 {yen(TEAM_SEAT_TIERS[1]!.unitMonthly)}（税抜。税込 {yen(withTax(TEAM_SEAT_TIERS[1]!.unitMonthly))}）に下がります</li>
           </ul>
           <div className={`${base.planAction} ${styles.teamAction}`}>
             {view === 'legacy' ? <span className={base.current}>今のご契約のままお使いください</span>
@@ -244,7 +247,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           <ul className={styles.rules}>
             <li><p className={styles.ruleTitle}>失敗したときは減りません</p><p>生成に失敗したら、使った分を自動で戻します。</p></li>
             <li><p className={styles.ruleTitle}>使い残しは翌月まで</p><p>毎月の分のうち使わなかった分は、翌月の終わりまで使えます。</p></li>
-            <li><p className={styles.ruleTitle}>足りないときは追加できます</p><p>{POWER_PACK.points.toLocaleString('ja-JP')}ごとに {yen(POWER_PACK.price)}（税抜）。買った分は{PURCHASE_MAX_MONTHS}か月使えます。</p></li>
+            <li><p className={styles.ruleTitle}>足りないときは追加できます</p><p>{POWER_PACK.points.toLocaleString('ja-JP')}ごとに {yen(POWER_PACK.price)}（税抜。税込 {yen(withTax(POWER_PACK.price))}）。買った分は{PURCHASE_MAX_MONTHS}か月使えます。</p></li>
           </ul>
         </div>
       </section>
@@ -254,11 +257,11 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
         <div className={base.faq}>
           <details>
             <summary>今プロプランを契約しています。料金は変わりますか</summary>
-            <p>変わりません。今のご契約（月{yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）は、そのままの料金でお使いいただけます。新しい料金は、これから新しく契約する方が対象です。</p>
+            <p>変わりません。今のご契約（月{yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}・税込）は、そのままの料金でお使いいただけます。新しい料金は、これから新しく契約する方が対象です。解約してご契約が終わったあとにもう一度申し込むときは、新しい料金になります。</p>
           </details>
           <details>
             <summary>人数はどう数えますか</summary>
-            <p>ドヤAIを使う会社のメンバーの人数です。申し込みのときに人数を選び、あとから増やせます。増やした分は、その月の残りの日数で計算します。</p>
+            <p>ドヤAIを使う会社のメンバーの人数です。申し込みのときに人数を選び、あとから増やせます。増やした分は、次の請求日までの日割りで計算します。人数を減らしたときの返金はありません。</p>
           </details>
           <details>
             <summary>{FREE_MAX_MEMBERS}人以下の会社でもチームを申し込めますか</summary>
