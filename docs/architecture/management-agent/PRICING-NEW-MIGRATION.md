@@ -92,6 +92,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "account_company_members_companyId_email_key" 
 CREATE UNIQUE INDEX IF NOT EXISTS "account_company_billing_companyId_key" ON "account_company_billing"("companyId");
 CREATE INDEX IF NOT EXISTS "account_company_billing_stripeSubscriptionId_idx" ON "account_company_billing"("stripeSubscriptionId");
 
+-- public の表はすべて RLS を有効にする決まり（2026-10-28。docs/security/2026-10-28-audit-fixes/enable-public-table-rls.sql）。新しい3表も同じにする
+ALTER TABLE "account_company_members" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "account_company_billing" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "doya_power_starter_claims" ENABLE ROW LEVEL SECURITY;
+
 -- ドヤパワーの台帳の種類に starter（最初の100）を足す。今ある行はそのまま通る
 ALTER TABLE "doya_power_grants" DROP CONSTRAINT IF EXISTS "doya_power_grants_kind_check";
 ALTER TABLE "doya_power_grants" ADD CONSTRAINT "doya_power_grants_kind_check"
@@ -107,6 +112,7 @@ SELECT to_regclass('public.account_company_members'), to_regclass('public.accoun
 SELECT count(*) FROM "account_company_members";  -- 0
 SELECT count(*) FROM "account_company_billing";  -- 0
 SELECT count(*) FROM "doya_power_starter_claims";  -- 0
+SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('account_company_members', 'account_company_billing', 'doya_power_starter_claims');  -- 3行とも true
 SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'doya_power_grants_kind_check';  -- starter を含む
 ```
 
