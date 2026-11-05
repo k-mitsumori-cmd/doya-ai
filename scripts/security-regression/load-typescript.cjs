@@ -55,4 +55,5 @@ DEFAULT_MOCKS['@/components/one-button/context']={useOneButton:()=>false,OneButt
 DEFAULT_MOCKS['@/components/one-button/OneButtonBar']={OneButtonBar:()=>null};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
 lazyReal('@/lib/hr/one-on-one-items',()=>load('src/lib/hr/one-on-one-items.ts'));
+lazyReal('@/lib/admin/contract-price',()=>load('src/lib/admin/contract-price.ts',{'@/lib/pricing-v2/amount':load('src/lib/pricing-v2/amount.ts')}));
 module.exports={load,check,results,DEFAULT_MOCKS};
