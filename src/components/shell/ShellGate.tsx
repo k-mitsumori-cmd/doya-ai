@@ -28,10 +28,12 @@ import ShellNotices from '@/components/notice/ShellNotices'
 import HandoffSuggest from '@/components/notice/HandoffSuggest'
 import SupportChat from '@/components/support-chat/SupportChat'
 import PowerOutNotices from '@/components/notice/PowerOutNotices'
+import AgentChatProvider from '@/components/agent-chat/AgentChatProvider'
+import AgentDock from '@/components/agent-chat/AgentDock'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, products, agentTasks = false, navGroups, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, products, agentTasks = false, agentChat = false, navGroups, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
@@ -57,6 +59,8 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null }
   /** 左のメニューに「動いているタスク」を出すか（サーバーの isAgentOrchestrationEnabled() で決めて渡す） */
   agentTasks?: boolean
+  /** 右下の「ドヤAIに頼む」の会話の欄を出すか（サーバーの isAgentChatEnabled() で決めて渡す。旗 AGENT_CHAT_ROLLOUT） */
+  agentChat?: boolean
   /** 左のメニューのまとまりの開閉（cookie から読んで渡す。src/lib/shell/nav-groups.ts） */
   navGroups?: Record<string, boolean>
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
@@ -83,7 +87,8 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
       <DoyaPowerContext.Provider value={doyaPower}>
       <ShellPowerProvider value={doyaPower ? doyaPowerState : null}>
       <DoyaPowerFxProvider fx={doyaPower ? doyaPowerFx : undefined}>
-      {inner}
+      {/* チャットで仕事を進める欄。旗が出すと決めた人が、枠を開いているときだけ（それ以外は今のまま） */}
+      {agentChat && shown ? <AgentChatProvider>{inner}<AgentDock /></AgentChatProvider> : inner}
       {/* 「ドヤパワーが足りない」（402）の知らせ。旗が出すと決めた人だけ動く */}
       <DoyaPowerFetchWatcher />
       <ShellLowPowerNotice handledByNotice={Boolean(guide && shown && userKey)} />
