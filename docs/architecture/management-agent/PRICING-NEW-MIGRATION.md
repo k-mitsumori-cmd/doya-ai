@@ -2,8 +2,8 @@
 
 - コードは main に入っている（旗 `NEW_PRICING_ROLLOUT` は未設定＝off。2026-11-05 時点）
 - 仕様: `docs/architecture/management-agent/PRICING-NEW-2026-10-25.md`（§10）
-- **⚠️ この SQL はまだ流していない。** 流すのは統括が、ユーザーの承認を取ったあと（`doya-db-push` スキルの手順に合わせる）。
-- 新しい表を3つ作り、索引を付ける。既存の表で変えるのは、`doya_power_grants` の種類の制約に `starter` を足すことだけ（下の「既存の表の変更」）。外部キーは新しい表の側に付く（`account_companies` の列は増えない）。
+- **2026-11-05 に、統括が本人の直接の承認を得て、本番DBへ14文を流した**（3表、索引8つ、RLS 3つ）。流したあとの確認で、行は0件、RLS は3表とも true。
+- 新しい表を3つ作り、索引を付け、RLS を有効にする。既存の表は変えない。
 - 下の SQL は `npx prisma migrate diff --from-schema-datamodel <origin/main 5d876e59 の schema> --to-schema-datamodel prisma/schema.prisma --script` の出力と同じ表・列・索引（2026-10-25 に出して一致を確認）。外部キーを CREATE TABLE の中にまとめ、CHECK 制約と `IF NOT EXISTS` を足した。
 
 ## 足す表
@@ -14,14 +14,20 @@
 | `doya_power_starter_claims` | はじめの付与（最初の100）を受け取った記録。ユーザーとメールの SHA-256 で1回だけ。外部キーなし（会社や利用者を消しても残す） | `src/lib/pricing-v2/starter.server.ts` |
 | `account_company_billing` | 買った人数の控え。正は Stripe の契約の数量。`User.plan` は書かない（課金の反映の経路ではない） | `/api/pricing/seats`（人数の変更）と、1日たった控えの読み直し |
 
-## 既存の表の変更（2026-11-05 追記）
+## `doya_power_grants` の種類の制約（2026-11-05 追記）
 
-`doya_power_grants` は 2026-10-23 に本番DBへ入っている（運用ノートの承認待ち一覧の記録。実物は流す前に確認の SQL で確かめる）。当時の種類の制約には `starter` がない。`DOYA-POWER-MIGRATION.md` の `CREATE TABLE IF NOT EXISTS` を直しても、既にある表には効かない。下の `ALTER TABLE` を流さないと、最初の100の付与が制約で失敗し、会社に100が付かない（失敗はログに出るだけで、画面は止まらない）。
+本番の `doya_power_grants` には、`doya_power_grants_kind_check` がもともと無い（統括が本番で確認）。`DOYA-POWER-MIGRATION.md` の SQL には書いてあるが、本番の表とは違う。
+
+そのため、最初に案に入れていた制約の2文（DROP と ADD）は流していない。入れると、既存の表に新しく制約を作る変更になるため。本人が14文を選んだ。制約が無いので、`starter` の行は今のままで入る。
+
+コードが書く値は、次の6種類に収まっている（2026-11-05 にコードで確認）: `monthly` `daily_recovery` `bonus` `mission` `purchase` `starter`。書く場所は `src/lib/doya-power/ledger.ts` の2か所だけで、`grant()` は `isGrantKind()` で値を確かめる。
+
+制約を入れるかどうかは、本人が決める（未決）。
 
 ## 流す前の前提
 
 1. **`account_companies` の表が本番DBにあること。** 外部キーの先。`SELECT to_regclass('public.account_companies');` が null でないことを先に見る。
-2. **旗は off のまま流す。** `NEW_PRICING_ROLLOUT`（off / preview / all。既定 off）。off のあいだは、この2つの表を読む・書くコードが動かない。表を足すのと旗を変えるのは別の日にできる。
+2. **旗は off のまま流す。** `NEW_PRICING_ROLLOUT`（off / preview / all。既定 off）。off のあいだは、この3つの表を読む・書くコードが動かない。表を足すのと旗を変えるのは別の日にできる。
 3. **旗を preview / all にする前に、必ず流す。** 表が無いまま旗を on にすると、人数の変更・メンバーの数え方・チームのドヤパワーの付与が失敗する（チームの Checkout と料金ページの表示は、表が無くても動く）。
 4. ドヤパワーをチームに付けるには、ドヤパワーの台帳の表（`DOYA-POWER-MIGRATION.md`）も要る。こちらは `DOYA_POWER_ROLLOUT` の旗で別に止まっている。
 
@@ -97,11 +103,6 @@ ALTER TABLE "account_company_members" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "account_company_billing" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "doya_power_starter_claims" ENABLE ROW LEVEL SECURITY;
 
--- ドヤパワーの台帳の種類に starter（最初の100）を足す。今ある行はそのまま通る
-ALTER TABLE "doya_power_grants" DROP CONSTRAINT IF EXISTS "doya_power_grants_kind_check";
-ALTER TABLE "doya_power_grants" ADD CONSTRAINT "doya_power_grants_kind_check"
-    CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase', 'starter'));
-
 COMMIT;
 ```
 
@@ -113,7 +114,6 @@ SELECT count(*) FROM "account_company_members";  -- 0
 SELECT count(*) FROM "account_company_billing";  -- 0
 SELECT count(*) FROM "doya_power_starter_claims";  -- 0
 SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('account_company_members', 'account_company_billing', 'doya_power_starter_claims');  -- 3行とも true
-SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'doya_power_grants_kind_check';  -- starter を含む
 ```
 
 ## 元に戻す（旗が off で、行が無いときだけ）
@@ -123,10 +123,6 @@ BEGIN;
 DROP TABLE IF EXISTS "doya_power_starter_claims";
 DROP TABLE IF EXISTS "account_company_billing";
 DROP TABLE IF EXISTS "account_company_members";
--- kind が starter の行が無いことを確かめてから戻す
-ALTER TABLE "doya_power_grants" DROP CONSTRAINT IF EXISTS "doya_power_grants_kind_check";
-ALTER TABLE "doya_power_grants" ADD CONSTRAINT "doya_power_grants_kind_check"
-    CHECK ("kind" IN ('monthly', 'daily_recovery', 'bonus', 'mission', 'purchase'));
 COMMIT;
 ```
 
