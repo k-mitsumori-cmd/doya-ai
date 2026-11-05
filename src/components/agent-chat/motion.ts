@@ -64,8 +64,14 @@ function dockSeen(): boolean {
 export async function fly(text: string, key: string): Promise<void> {
   const from = sourceEl()
   const to = fieldEl(key)
-  if (reducedMotion() || !dockSeen() || !isSeen(to) || !from) return
-  const a = from.getBoundingClientRect(), b = to!.getBoundingClientRect()
+  if (reducedMotion() || !dockSeen() || !isSeen(to)) return
+  // 飛び出す元は、会話の中の依頼の吹き出し。会話を下まで読み進めて吹き出しが見えていないときは、会話の欄の上端から出す
+  const body = document.querySelector('#agent-dock-panel [data-agent-body]')
+  const br = body?.getBoundingClientRect()
+  let a: DOMRect | null = from ? from.getBoundingClientRect() : null
+  if (br && (!a || a.bottom < br.top + 8 || a.top > br.bottom - 8)) a = new DOMRect(br.left + br.width / 2 - 40, br.top + 12, 80, 24)
+  if (!a) return
+  const b = to!.getBoundingClientRect()
   const f = document.createElement('div')
   f.textContent = text
   Object.assign(f.style, {
@@ -132,9 +138,10 @@ export async function focusField(key: string): Promise<boolean> {
   const r = el.getBoundingClientRect()
   const mid = (80 + visibleBottom()) / 2
   const delta = r.top + r.height / 2 - mid
-  if (Math.abs(delta) > 8) window.scrollBy({ top: delta, behavior: reducedMotion() ? 'auto' : 'smooth' })
+  // すぐに動かす（なめらかなスクロールは、止まるまで欄が見えず、飛ぶ値とカーソルが出せない。見せる動きは、値が欄へ飛ぶほうで行う）
+  if (Math.abs(delta) > 8) window.scrollBy({ top: delta, behavior: 'instant' as ScrollBehavior })
   el.setAttribute('data-agent-active', '')
-  await sleep(220)
+  await sleep(120)
   showTag(el)
   cursorTo(el)
   return true

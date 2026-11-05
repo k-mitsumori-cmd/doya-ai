@@ -89,7 +89,7 @@ export default function AgentDock() {
             </button>
           ))}
         </div>
-        <div className={styles.body} ref={bodyRef} aria-live="polite">
+        <div className={styles.body} ref={bodyRef} data-agent-body="" aria-live="polite">
           {state.phase === 'idle' && (
             <p className={styles.hint}>やりたいことを書いてください。例: 今月の売上100万円追加して</p>
           )}

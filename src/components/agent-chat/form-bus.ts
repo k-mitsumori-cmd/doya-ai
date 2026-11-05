@@ -39,7 +39,7 @@ export function getAgentForm(formKey: string): AgentFormHandler | undefined {
 }
 
 /** フォームが現れて、入力できる状態になるまで待つ（時間切れは null） */
-export function waitForAgentForm(formKey: string, timeoutMs = 10_000): Promise<AgentFormHandler | null> {
+export function waitForAgentForm(formKey: string, timeoutMs = 20_000): Promise<AgentFormHandler | null> {
   return new Promise((resolve) => {
     let done = false
     const finish = (h: AgentFormHandler | null) => {
