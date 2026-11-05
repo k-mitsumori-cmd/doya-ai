@@ -226,6 +226,19 @@ B案は「URL を見ればどの製品か分かる」良さがあります。た
 - 既定の製品は1つです。担当の製品の中から選びます。
 - 社長と管理者は、担当に関係なく全部の製品を見ます（今の部署の決まりと同じ）。
 
+> **2026-11-01 実装で変えた点**: 画面は役割の画面（`/home/roles`）ではなく、製品の設定の画面（`/home/products`）の下半分にしました。
+
+#### 5.2.1 本人が自分の担当を決める（2026-11-02 の決定。三森さんの指示）
+
+- 画面: 「自分の担当」（`/home/my-products`）。会社の人なら誰でも開けます。切り替えの一覧の下の「自分の担当を決める」から入ります。
+- 本人は、担当の製品をチップで選び、最初に開く製品を1つ選びます。
+- 管理者が決めた担当があるときは、それを初期値にします。本人が変えたら、本人の値を先に使います。「管理者が決めた担当に戻す」で戻せます。
+- 管理者は、メンバーごとに「本人に変えさせない」を選べます（`/home/products`）。このときは管理者の値だけを使い、本人の画面は見るだけになります。切り替えの一覧の「既定にする」も出さず、cookie の既定も使いません。
+- 本人が変えた人には、管理者の画面で「本人が変えています」と出します。管理者が値を変えても、本人の値は消しません（ロックを外せば、また本人の値を使います）。
+- 会社で使っていない製品は、本人の選択肢では薄く出します（選べます。ツールも開けます）。
+- 本人が最初に開く製品を決めたときは、cookie（`doya_product_default`）も同じ値にそろえます。cookie が表より先に使われるためです。
+- 表は増やしません。`account_company_member_products` に本人の値の列（`selfProducts`・`selfDefaultProduct`・`selfSet`）とロックの列（`locked`）を足しました。`selfSet` は「本人が担当を空にした」と「まだ決めていない」を分けるためにあります。
+
 ### 5.3 部門の担当者の権限
 
 - 「何ができるか」は、今の会社の役割（owner・admin・manager・billing・member・guest）と、各ツールの役割のままです。製品では変えません。
@@ -287,9 +300,12 @@ erDiagram
     string id PK
     string companyId FK
     string userId
-    string_array products "担当の製品"
-    string defaultProduct "既定で開く製品（任意）"
-    string defaultSetBy "self | admin"
+    string_array products "担当の製品（管理者が決めた値）"
+    string defaultProduct "既定で開く製品（管理者が決めた値。任意）"
+    string_array selfProducts "本人が決めた担当（2026-11-02）"
+    string selfDefaultProduct "本人が決めた既定（任意）"
+    boolean selfSet "本人が決めたか"
+    boolean locked "本人に変えさせない"
     string updatedBy
   }
 ```
@@ -305,6 +321,71 @@ erDiagram
    - もし部署の表が本番にすでにあったら、表は残し、`defaultProduct` と `defaultSetBy` の列を足し、値の CHECK を5つに広げる SQL に替えます。部署の id は `admin` → `budget` と読み替えます。
 3. 会社に入っていない個人の利用者は、cookie（`doya_product`・`doya_product_default`）だけで持ちます。`users` の表には列を足しません。
 4. 段5（任意）の予算の表 `budget_plan_lines`（companyId・月・区分・金額）は、三森さんが予算の入力を作ると決めたときだけ足します。
+
+> **2026-11-01 実装で変えた点（段2）**: 部署の表（`account_company_member_departments`）は作り替えず、残したまま新しい表 `account_company_member_products` を足しました。部署の表を使う権限の画面とテストを変えずに済むためです。部署の表は、段4で製品を全員に出したあとに片付けます（本番に流していなければ、流さずに schema から消す）。
+> - 並び順の列（`sortOrder`）と、既定を誰が決めたかの列（`defaultSetBy`）は作りませんでした。並びは製品の表の順で足りるためです。
+> - 2026-11-02: 本人も担当を決められるようにしたため、本人の値の列と「本人に変えさせない」の列を足しました（§5.2.1）。表は増やしていません。
+> - 表は `account_companies` に外部キーを張りません（部署の表と同じ形）。会社を消したときの片付けは、会社の削除の処理で行います（段4までに足す）。
+> - 製品の設定の変更は、役割の変更の記録（`account_company_role_events`）に書きません。製品は見え方だけで、権限を変えないためです。
+
+### 6.4 本番に流す SQL（段2。三森さんの OK のあと、統括が `apply-sql.cjs` で流す）
+
+```sql
+-- 部門ごとの製品の設定（docs/design/buddy-products-2026-11-01.md §5・§6）。既存の表には触らない
+CREATE TABLE IF NOT EXISTS "account_company_products" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "updatedBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "account_company_products_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "account_company_products_product_check"
+        CHECK ("productId" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "account_company_products_companyId_productId_key"
+    ON "account_company_products" ("companyId", "productId");
+
+CREATE TABLE IF NOT EXISTS "account_company_member_products" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "products" TEXT[],
+    "defaultProduct" TEXT,
+    "selfProducts" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "selfDefaultProduct" TEXT,
+    "selfSet" BOOLEAN NOT NULL DEFAULT false,
+    "locked" BOOLEAN NOT NULL DEFAULT false,
+    "updatedBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "account_company_member_products_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "account_company_member_products_values_check"
+        CHECK ("products" <@ ARRAY['marketing', 'sales', 'hr', 'budget', 'management']::TEXT[]),
+    CONSTRAINT "account_company_member_products_default_check"
+        CHECK ("defaultProduct" IS NULL OR "defaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management')),
+    CONSTRAINT "account_company_member_products_self_values_check"
+        CHECK ("selfProducts" <@ ARRAY['marketing', 'sales', 'hr', 'budget', 'management']::TEXT[]),
+    CONSTRAINT "account_company_member_products_self_default_check"
+        CHECK ("selfDefaultProduct" IS NULL OR "selfDefaultProduct" IN ('marketing', 'sales', 'hr', 'budget', 'management'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "account_company_member_products_companyId_userId_key"
+    ON "account_company_member_products" ("companyId", "userId");
+
+-- 2026-10-28 の決まりに合わせて RLS を有効にする（アプリの接続は RLS を通り抜けるので、読み書きは変わらない）
+ALTER TABLE "account_company_products" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "account_company_member_products" ENABLE ROW LEVEL SECURITY;
+```
+
+戻すときの SQL（表を消す。旗が off なら読まないので、消さなくても動きます）:
+
+```sql
+DROP TABLE IF EXISTS "account_company_member_products";
+DROP TABLE IF EXISTS "account_company_products";
+```
+
+- 前提: 会社の役割の旗（`COMPANY_ROLES_ROLLOUT`）が off でないこと。段2の画面と表は、会社の役割の仕組み（`/api/company/*`）の中で動くためです。会社の役割の表（ROLES §8.2）と、新しい料金の会社のメンバーの表（PRICING-NEW-MIGRATION.md）が本番に無いあいだは、段2の画面は 404 のままで、段1の画面だけが動きます。
 
 ### 6.3 コードの表（DB ではない）
 
@@ -358,6 +439,41 @@ export const PRIMARY_PRODUCT: Record<string, ProductId> = { quote: 'sales', prom
 4. PR-4（段4）: 案内と LP・料金の文言。旗の値を変えるのは、統括で三森さんの OK のあと。
 
 どの PR も下書きで出し、`heavy-slot.sh` を通して `npx tsc --noEmit` と `npx next build` を確かめ、画面は 375px と 1280px の写真で前後を比べます。
+
+### 7.4 本番に出す日の手順（2026-11-02 作成。三森さんが統括で OK するときに見る1ページ）
+
+どの手順も、三森さんが統括のセッションで直接 OK を出してから行います。main への push は、そのまま本番のデプロイになります。
+
+**0. 前日まで（本番に触らない）**
+- #80・#81 の GitHub の build と check が通っていることを確かめる。
+- 三森さんが Vercel にログインしたブラウザで、プレビューの見本ページを見る（`/hub/preview`・`/hub/preview/my-products`・`/hub/preview/settings`）。見本ページは本番では 404 です。
+- 統括で、本番 DB に会社の役割の表（ROLES §8.2）と新しい料金の会社のメンバーの表があるかを確かめる。無ければ、段2の画面は 404 のままです（段1だけが動きます）。
+
+**1. PR を入れる順番（旗は off のまま）**
+1. #80（段1）を main に merge する。Vercel の本番のデプロイが Ready になるのを待つ（いまは25分ほど）。
+2. 本番で、今までと画面が変わらないことを確かめる。左のメニューが今の区分のまま、`/hub/sales` と `/hub/preview` が 404、`/home` に製品の帯が出ない、の3つです。
+3. #81（段2）の差分が段2の分だけになったことを確かめてから merge する。同じように Ready を待ち、画面が変わらないことを確かめる。
+
+旗が off のあいだは、セッションも段2の表も読みません。この2つの merge だけでは、利用者の画面は変わりません（回帰チェック `verify-departments-flag` で確かめています）。
+
+**2. 表を足す（§6.4 の SQL）**
+1. 統括が `apply-sql.cjs` で §6.4 の SQL を流す。新しい表を2つ足すだけで、既存の表には触りません。
+2. 流したあと、表が2つあり、列（`selfProducts`・`selfDefaultProduct`・`selfSet`・`locked`）がそろっていることを確かめる。
+
+**3. 旗を切り替える順番**
+1. `UI_PREVIEW_EMAILS` に三森さんのメールが入っていることを確かめる。
+2. `PRODUCT_HUBS_ROLLOUT=preview` を本番に足し、空のコミットを push して再デプロイする（環境変数は再デプロイするまで効きません）。
+3. 三森さんのアカウントで、次を確かめる。
+   - ログインしたあと、経営管理（`/home`）が開く。左上の切り替えで5つの製品を行き来できる。
+   - `/hub/sales`・`/hub/budget`・`/hub/hr` に、作り物ではない数字か「まだデータがありません」が出る。
+   - 会社の役割の旗も on なら、`/home/products` で使う製品のスイッチ、`/home/my-products` で自分の担当を保存できる。
+   - 375px と 1280px の写真を撮り、見本と比べる。
+4. 全員に出す（`all`）のは段4です。案内の文と LP・料金の文言を入れてから、別の日に OK をもらって行います。
+
+**4. 戻し方**
+- 画面を戻す: `PRODUCT_HUBS_ROLLOUT` を消すか `off` にして、空のコミットで再デプロイする。今のサイドバーと経営ホームに戻ります。
+- 表は消さなくても動きます（旗が off なら読みません）。消すときは §6.4 の戻す SQL を流します。
+- コードの不具合で戻すときは、merge のコミットを `git revert -m 1 <コミット>` で打ち消して push する（force push はしない）。#81 を先に、#80 をあとに戻します。
 
 ---
 
