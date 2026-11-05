@@ -26,6 +26,7 @@ import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
+import { useBannerImageInput } from '@/lib/banner/use-image-input'
 import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
 import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import { ShellCostBadge } from '@/components/shell/power'
@@ -843,6 +844,76 @@ function jaMessage(msg: unknown, fallback: string): string {
   return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 
+const readFileAsDataUrl = async (file: File): Promise<string> => {
+    const maxBytes = 6 * 1024 * 1024 // 6MB
+    if (file.size > maxBytes) throw new Error('画像が大きすぎます（6MB以内）')
+    if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+const optimizeImageDataUrl = async (
+    dataUrl: string,
+    opts: { maxSide: number; mime: 'image/jpeg' | 'image/png'; quality?: number }
+  ): Promise<string> => {
+    if (typeof document === 'undefined') return dataUrl
+    if (!String(dataUrl || '').startsWith('data:image/')) return dataUrl
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image()
+        el.onload = () => resolve(el)
+        el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+        el.src = dataUrl
+      })
+      const w = img.naturalWidth || img.width
+      const h = img.naturalHeight || img.height
+      if (!w || !h) return dataUrl
+
+      const maxSide = Math.max(64, Math.floor(opts.maxSide))
+      const scale = Math.min(1, maxSide / Math.max(w, h))
+      const outW = Math.max(1, Math.round(w * scale))
+      const outH = Math.max(1, Math.round(h * scale))
+
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
+      if (!ctx) return dataUrl
+      ctx.drawImage(img, 0, 0, outW, outH)
+
+      const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
+      const out = canvas.toDataURL(opts.mime, quality)
+
+      // 極端に大きい場合はそのまま返す（環境依存の失敗回避）
+      return out && out.length > 200 ? out : dataUrl
+    } catch {
+      return dataUrl
+    }
+  }
+
+const readAndOptimizeImage = async (file: File, kind: 'logo' | 'person'): Promise<string> => {
+    const raw = await readFileAsDataUrl(file)
+    if (kind === 'logo') {
+      // ロゴは小さく（透過の可能性があるためPNG寄せ）
+      return await optimizeImageDataUrl(raw, { maxSide: 512, mime: 'image/png' })
+    }
+    // 人物写真は軽量化（JPEG）
+    return await optimizeImageDataUrl(raw, { maxSide: 1024, mime: 'image/jpeg', quality: 0.8 })
+  }
+
+const LOGO_IMAGE_INPUT_OPTIONS = {
+  convert: (file: File) => readAndOptimizeImage(file, 'logo'),
+  errorMessage: (error: unknown) => jaMessage((error as { message?: unknown } | null)?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'),
+}
+const PERSON_IMAGE_INPUT_OPTIONS = {
+  convert: (file: File) => readAndOptimizeImage(file, 'person'),
+  errorMessage: (error: unknown) => jaMessage((error as { message?: unknown } | null)?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'),
+}
+
 export default function BannerDashboard() {
   const { data: session } = useSession()
   return <BannerDashboardWorkspace key={String(session?.user?.id || 'guest')} />
@@ -924,10 +995,14 @@ function BannerDashboardWorkspace() {
   const [colorDraft, setColorDraft] = useState('#3d80ff')
 
   // ロゴ/人物（任意・アップロード画像をAIに渡して反映）
-  const [logoImage, setLogoImage] = useState<string | null>(null)
-  const [logoFileName, setLogoFileName] = useState('')
-  const [personImages, setPersonImages] = useState<string[]>([])
-  const [personFileNames, setPersonFileNames] = useState<string[]>([])
+  const imageInputScope = JSON.stringify([sessionStatus, session?.user?.id, session?.user?.email])
+  const logoInput = useBannerImageInput(imageInputScope, 512, LOGO_IMAGE_INPUT_OPTIONS)
+  const personInput = useBannerImageInput(imageInputScope, 1024, PERSON_IMAGE_INPUT_OPTIONS)
+  const logoImage = logoInput.preview
+  const logoFileName = logoInput.file?.name || ''
+  const personImages = personInput.preview ? [personInput.preview] : []
+  const personFileNames = personInput.file ? [personInput.file.name] : []
+  const imageInputBlocked = logoInput.pending || personInput.pending || Boolean(logoInput.error || personInput.error)
 
   // 生成枚数（デフォルト3 / プラン別の1回上限まで）
   const [generateCount, setGenerateCount] = useState<number>(3)
@@ -935,98 +1010,15 @@ function BannerDashboardWorkspace() {
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
   const quota = useBannerQuota(setLimitModal)
 
-  const readFileAsDataUrl = async (file: File): Promise<string> => {
-    const maxBytes = 6 * 1024 * 1024 // 6MB
-    if (file.size > maxBytes) throw new Error('画像が大きすぎます（6MB以内）')
-    if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(String(reader.result || ''))
-      reader.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-      reader.readAsDataURL(file)
-    })
-  }
+  
 
-  const optimizeImageDataUrl = async (
-    dataUrl: string,
-    opts: { maxSide: number; mime: 'image/jpeg' | 'image/png'; quality?: number }
-  ): Promise<string> => {
-    if (typeof document === 'undefined') return dataUrl
-    if (!String(dataUrl || '').startsWith('data:image/')) return dataUrl
-    try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const el = new Image()
-        el.onload = () => resolve(el)
-        el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-        el.src = dataUrl
-      })
-      const w = img.naturalWidth || img.width
-      const h = img.naturalHeight || img.height
-      if (!w || !h) return dataUrl
+  
 
-      const maxSide = Math.max(64, Math.floor(opts.maxSide))
-      const scale = Math.min(1, maxSide / Math.max(w, h))
-      const outW = Math.max(1, Math.round(w * scale))
-      const outH = Math.max(1, Math.round(h * scale))
-
-      const canvas = document.createElement('canvas')
-      canvas.width = outW
-      canvas.height = outH
-      const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
-      if (!ctx) return dataUrl
-      ctx.drawImage(img, 0, 0, outW, outH)
-
-      const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
-      const out = canvas.toDataURL(opts.mime, quality)
-
-      // 極端に大きい場合はそのまま返す（環境依存の失敗回避）
-      return out && out.length > 200 ? out : dataUrl
-    } catch {
-      return dataUrl
-    }
-  }
-
-  const readAndOptimizeImage = async (file: File, kind: 'logo' | 'person'): Promise<string> => {
-    const raw = await readFileAsDataUrl(file)
-    if (kind === 'logo') {
-      // ロゴは小さく（透過の可能性があるためPNG寄せ）
-      return await optimizeImageDataUrl(raw, { maxSide: 512, mime: 'image/png' })
-    }
-    // 人物写真は軽量化（JPEG）
-    return await optimizeImageDataUrl(raw, { maxSide: 1024, mime: 'image/jpeg', quality: 0.8 })
-  }
-
-  // 人物写真は「1名（1枚）」のみ対応
-  const MAX_PERSON_IMAGES = 1
-
-  const addPersonSlot = () => {
-    if (personImages.length >= MAX_PERSON_IMAGES) {
-      toast.error(`人物写真は最大${MAX_PERSON_IMAGES}人までです`)
-      return
-    }
-    // 互換: 旧UIの名残。現在は単一アップロードUIのため、枠は追加しない。
-    setPersonImages((prev) => (prev.length > 0 ? prev : ['']))
-    setPersonFileNames((prev) => (prev.length > 0 ? prev : ['']))
-  }
-
-  const removePersonSlot = (idx: number) => {
-    // 単一のみ
-    if (idx !== 0) return
-    setPersonImages([])
-    setPersonFileNames([])
-  }
+  
 
   const setPersonFileAt = async (idx: number, file: File | null) => {
-    if (!file) return
-    try {
-      const url = await readAndOptimizeImage(file, 'person')
-      // 単一のみ（idxは0固定）
-      setPersonImages([url])
-      setPersonFileNames([file.name])
-      toast.success('人物写真を設定しました')
-    } catch (e: any) {
-      toast.error(jaMessage(e?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'))
-    }
+    if (idx !== 0 || !file || !operations.active()) return
+    await personInput.select(file)
   }
 
   const safeReadJson = async (res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> => {
@@ -1118,7 +1110,7 @@ function BannerDashboardWorkspace() {
     parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
   )
-  const canGenerate = operations.allowed && !isGenerating && !isRefining && category && keyword.trim() && (isGuest ? remainingCount > 0 : true) && isValidCustomSize
+  const canGenerate = operations.allowed && !imageInputBlocked && !isGenerating && !isRefining && category && keyword.trim() && (isGuest ? remainingCount > 0 : true) && isValidCustomSize
 
   const sizeInfo = useMemo(() => {
     const [wStr, hStr] = effectiveSize.split('x')
@@ -1317,6 +1309,14 @@ function BannerDashboardWorkspace() {
 
   const handleGenerate = async () => {
     if (!canGenerate) return
+    const logoSelection = logoInput.read()
+    const personSelection = personInput.read()
+    if (!logoSelection || !personSelection) return
+    if (logoSelection.pending || personSelection.pending || logoSelection.error || personSelection.error) {
+      toast.error('画像の読み込み状態を確認してください。')
+      return
+    }
+    const selectedPersonImages = personSelection.preview ? [personSelection.preview] : []
     const operation = operations.begin()
     if (!operation) return
     const startedAt = Date.now()
@@ -1324,6 +1324,10 @@ function BannerDashboardWorkspace() {
     try {
       setError('')
       if (!(await quota.check(generateCount)) || !operation.current()) return
+      if (logoInput.read() !== logoSelection || personInput.read() !== personSelection) {
+        toast.error('画像の選択が変わりました。内容を確認して、もう一度生成してください。')
+        return
+      }
       setIsGenerating(true)
       // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
       // 新しい結果が返ってきたタイミングで上書きする
@@ -1354,14 +1358,14 @@ function BannerDashboardWorkspace() {
           purpose,
           count: generateCount,
           imageDescription: imageDescription.trim() || undefined,
-          logoImage: logoImage || undefined,
-          personImages: personImages
+          logoImage: logoSelection.preview || undefined,
+          personImages: selectedPersonImages
             .map((x) => String(x || '').trim())
             .filter((x) => x.startsWith('data:'))
             .slice(0, 1),
           // 後方互換（念のため）
           personImage:
-            personImages
+            selectedPersonImages
               .map((x) => String(x || '').trim())
               .find((x) => x.startsWith('data:')) || undefined,
           brandColors: useCustomColors
@@ -2231,14 +2235,14 @@ function BannerDashboardWorkspace() {
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-black text-slate-700">ロゴ</p>
-                      {logoImage && (
+                      {(logoInput.file || logoInput.pending || logoInput.error) && (
                         <button
                           type="button"
                           onClick={() => {
-                            setLogoImage(null)
-                            setLogoFileName('')
-                            toast('ロゴを解除しました')
-                          }}
+                              if (!logoInput.read()) return
+                              logoInput.clear()
+                              toast('ロゴを解除しました')
+                            }}
                           className="text-xs font-black text-slate-500 hover:text-slate-900"
                         >
                           解除
@@ -2260,22 +2264,16 @@ function BannerDashboardWorkspace() {
                             type="file"
                             accept="image/*"
                             className="sr-only"
-                            onChange={async (e) => {
-                              const f = e.target.files?.[0]
-                              e.target.value = ''
-                              if (!f) return
-                              try {
-                                const url = await readAndOptimizeImage(f, 'logo')
-                                setLogoImage(url)
-                                setLogoFileName(f.name)
-                                toast.success('ロゴを設定しました')
-                              } catch (err: any) {
-                                toast.error(jaMessage(err?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'))
-                              }
+                            onChange={(e) => {
+                              const file = e.currentTarget.files?.[0]
+                              e.currentTarget.value = ''
+                              if (file && operations.active()) void logoInput.select(file)
                             }}
                           />
                           アップロード
                         </label>
+                          {logoInput.pending && <p role="status" className="mt-2 text-sm">画像を読み込んでいます。</p>}
+                          {logoInput.error && <p role="alert" className="mt-2 text-sm">{logoInput.error}</p>}
                       </div>
                     </div>
                   </div>
@@ -2284,14 +2282,14 @@ function BannerDashboardWorkspace() {
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-black text-slate-700">人物写真</p>
-                      {personImages[0] && (
+                      {(personInput.file || personInput.pending || personInput.error) && (
                         <button
                           type="button"
                           onClick={() => {
-                            setPersonImages([])
-                            setPersonFileNames([])
-                            toast('人物写真を解除しました')
-                          }}
+                              if (!personInput.read()) return
+                              personInput.clear()
+                              toast('人物写真を解除しました')
+                            }}
                           className="text-xs font-black text-slate-500 hover:text-slate-900"
                         >
                           解除
@@ -2321,6 +2319,8 @@ function BannerDashboardWorkspace() {
                           />
                           {personImages[0] ? '変更' : 'アップロード'}
                         </span>
+                          {personInput.pending && <p role="status" className="mt-2 text-sm">画像を読み込んでいます。</p>}
+                          {personInput.error && <p role="alert" className="mt-2 text-sm">{personInput.error}</p>}
                       </div>
                     </div>
                     <p className="mt-2 text-[10px] text-slate-500 font-bold">

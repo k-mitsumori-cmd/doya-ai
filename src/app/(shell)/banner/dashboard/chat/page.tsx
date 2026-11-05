@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
+import { useBannerImageInput } from '@/lib/banner/use-image-input'
 import { useBannerTextRecovery } from '@/lib/banner/use-text-recovery'
 import BannerTextRecovery from '@/components/banner/BannerTextRecovery'
 import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
@@ -155,6 +156,15 @@ function jaMessage(msg: unknown, fallback: string): string {
   return s && /[ぁ-んァ-ヶ一-龠]/.test(s) ? s : fallback
 }
 
+const LOGO_IMAGE_INPUT_OPTIONS = {
+  convert: (file: File) => readAndOptimizeImage(file, 'logo'),
+  errorMessage: (error: unknown) => jaMessage((error as { message?: unknown } | null)?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'),
+}
+const PERSON_IMAGE_INPUT_OPTIONS = {
+  convert: (file: File) => readAndOptimizeImage(file, 'person'),
+  errorMessage: (error: unknown) => jaMessage((error as { message?: unknown } | null)?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'),
+}
+
 export default function BannerChatPage() {
   const { data: session } = useSession()
   const actor = String(session?.user?.id || '')
@@ -168,10 +178,14 @@ function BannerChatWorkspace() {
   const refineRecovery = useBannerRefineRecovery(status, String(session?.user?.id || ''))
   const textRecovery = useBannerTextRecovery(status, String(session?.user?.id || ''), 'chat')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [logoImage, setLogoImage] = useState<string | null>(null)
-  const [logoFileName, setLogoFileName] = useState('')
-  const [personImages, setPersonImages] = useState<string[]>([])
-  const [personFileNames, setPersonFileNames] = useState<string[]>([])
+  const imageInputScope = JSON.stringify([status, session?.user?.id, session?.user?.email])
+  const logoInput = useBannerImageInput(imageInputScope, 512, LOGO_IMAGE_INPUT_OPTIONS)
+  const personInput = useBannerImageInput(imageInputScope, 1024, PERSON_IMAGE_INPUT_OPTIONS)
+  const logoImage = logoInput.preview
+  const logoFileName = logoInput.file?.name || ''
+  const personImages = personInput.preview ? [personInput.preview] : []
+  const personFileNames = personInput.file ? [personInput.file.name] : []
+  const imageInputBlocked = logoInput.pending || personInput.pending || Boolean(logoInput.error || personInput.error)
   const [generateCount, setGenerateCount] = useState<number>(3)
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
@@ -186,8 +200,6 @@ function BannerChatWorkspace() {
   const inputRevision = useRef(0)
   const renderedInputRevision = inputRevision.current
   const changeInput = (value: string) => { inputRevision.current++; setInput(value) }
-  const logoRevision = useRef(0)
-  const personRevision = useRef(0)
   const [suggestedInputs, setSuggestedInputs] = useState<string[]>([
     '用途はSNS広告（Instagram）です。サイズは1080×1080でお願いします。',
     'キャッチコピーは「初回20%OFF」にします。CTAは「今すぐチェック」でお願いします。',
@@ -322,11 +334,23 @@ function BannerChatWorkspace() {
 
   const handleGenerate = async () => {
     if (!proposedSpec || isThinking || isGenerating || isRefining) return
+    const logoSelection = logoInput.read()
+    const personSelection = personInput.read()
+    if (!logoSelection || !personSelection) return
+    if (logoSelection.pending || personSelection.pending || logoSelection.error || personSelection.error) {
+      toast.error('画像の読み込み状態を確認してください。')
+      return
+    }
+    const selectedPersonImages = personSelection.preview ? [personSelection.preview] : []
     const operation = operations.begin()
     if (!operation) return
     setIsGenerating(true)
     try {
       if (!(await quota.check(generateCount)) || !operation.current()) return
+      if (logoInput.read() !== logoSelection || personInput.read() !== personSelection) {
+        toast.error('画像の選択が変わりました。内容を確認して、もう一度生成してください。')
+        return
+      }
       const res = await fetch('/api/banner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -339,14 +363,14 @@ function BannerChatWorkspace() {
           count: generateCount,
           imageDescription: proposedSpec.imageDescription,
           brandColors: proposedSpec.brandColors,
-          logoImage: logoImage || undefined,
-          personImages: personImages
+          logoImage: logoSelection.preview || undefined,
+          personImages: selectedPersonImages
             .map((x) => String(x || '').trim())
             .filter((x) => x.startsWith('data:'))
             .slice(0, 1),
           // 後方互換（念のため）
           personImage:
-            personImages
+            selectedPersonImages
               .map((x) => String(x || '').trim())
               .find((x) => x.startsWith('data:')) || undefined,
         }),
@@ -720,15 +744,14 @@ function BannerChatWorkspace() {
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-black text-slate-700">ロゴ</p>
-                              {logoImage && (
+                              {(logoInput.file || logoInput.pending || logoInput.error) && (
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    logoRevision.current++
-                                    setLogoImage(null)
-                                    setLogoFileName('')
-                                    toast('ロゴを解除しました')
-                                  }}
+                              if (!logoInput.read()) return
+                              logoInput.clear()
+                              toast('ロゴを解除しました')
+                            }}
                                   className="text-xs font-black text-slate-500 hover:text-slate-900"
                                 >
                                   解除
@@ -750,25 +773,16 @@ function BannerChatWorkspace() {
                                     type="file"
                                     accept="image/*"
                                     className="sr-only"
-                                    onChange={async (e) => {
-                                      const f = e.target.files?.[0]
-                                      e.target.value = ''
-                                      if (!f || !operations.active()) return
-                                      const revision = ++logoRevision.current
-                                      try {
-                                        const url = await readAndOptimizeImage(f, 'logo')
-                                        if (!operations.active() || logoRevision.current !== revision) return
-                                        setLogoImage(url)
-                                        setLogoFileName(f.name)
-                                        toast.success('ロゴを設定しました')
-                                      } catch (err: any) {
-                                        if (!operations.active() || logoRevision.current !== revision) return
-                                        toast.error(jaMessage(err?.message, 'ロゴを読み込めませんでした。別の画像でお試しください。'))
-                                      }
-                                    }}
+                                    onChange={(e) => {
+                              const file = e.currentTarget.files?.[0]
+                              e.currentTarget.value = ''
+                              if (file && operations.active()) void logoInput.select(file)
+                            }}
                                   />
                                   アップロード
                                 </label>
+                          {logoInput.pending && <p role="status" className="mt-2 text-sm">画像を読み込んでいます。</p>}
+                          {logoInput.error && <p role="alert" className="mt-2 text-sm">{logoInput.error}</p>}
                               </div>
                             </div>
                           </div>
@@ -776,15 +790,14 @@ function BannerChatWorkspace() {
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-black text-slate-700">人物写真</p>
-                              {personImages[0] && (
+                              {(personInput.file || personInput.pending || personInput.error) && (
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    personRevision.current++
-                                    setPersonImages([])
-                                    setPersonFileNames([])
-                                    toast('人物写真を解除しました')
-                                  }}
+                              if (!personInput.read()) return
+                              personInput.clear()
+                              toast('人物写真を解除しました')
+                            }}
                                   className="text-xs font-black text-slate-500 hover:text-slate-900"
                                 >
                                   解除
@@ -808,25 +821,16 @@ function BannerChatWorkspace() {
                                     type="file"
                                     accept="image/*"
                                     className="absolute inset-0 opacity-0 cursor-pointer"
-                                    onChange={async (e) => {
-                                      const f = e.currentTarget.files?.[0] || null
-                                      e.currentTarget.value = ''
-                                      if (!f || !operations.active()) return
-                                      const revision = ++personRevision.current
-                                      try {
-                                        const url = await readAndOptimizeImage(f, 'person')
-                                        if (!operations.active() || personRevision.current !== revision) return
-                                        setPersonImages([url])
-                                        setPersonFileNames([f.name])
-                                        toast.success('人物写真を設定しました')
-                                      } catch (err: any) {
-                                        if (!operations.active() || personRevision.current !== revision) return
-                                        toast.error(jaMessage(err?.message, '人物写真を読み込めませんでした。別の画像でお試しください。'))
-                                      }
-                                    }}
+                                    onChange={(e) => {
+                              const file = e.currentTarget.files?.[0]
+                              e.currentTarget.value = ''
+                              if (file && operations.active()) void personInput.select(file)
+                            }}
                                   />
                                   {personImages[0] ? '変更' : 'アップロード'}
                                 </span>
+                          {personInput.pending && <p role="status" className="mt-2 text-sm">画像を読み込んでいます。</p>}
+                          {personInput.error && <p role="alert" className="mt-2 text-sm">{personInput.error}</p>}
                               </div>
                             </div>
                             <p className="mt-2 text-[10px] text-slate-500 font-bold">
@@ -874,7 +878,7 @@ function BannerChatWorkspace() {
 
                       <button
                         onClick={handleGenerate}
-                        disabled={!operations.allowed || isThinking || isGenerating || isRefining || quota.checking}
+                        disabled={(!operations.allowed || isThinking || isGenerating || isRefining || quota.checking) || imageInputBlocked}
                         className="w-full px-6 py-5 rounded-2xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                       >
                         <Sparkles className="w-5 h-5" />
