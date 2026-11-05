@@ -27,7 +27,12 @@ const SAMPLE: Record<ProductId, HubMetric[]> = {
     { key: 'overtime', label: '今月の残業', value: '38.5時間', sub: '働いた時間 2,110時間', href: '/kintai/dashboard', state: 'ready' },
     { key: 'requests', label: '承認待ちの申請', value: '3件', href: '/kintai/dashboard', state: 'ready' },
   ],
-  marketing: [],
+  marketing: [
+    { key: 'banner', label: '今月つくったバナー', value: '12枚', sub: 'これまで 1,340枚', href: '/banner', state: 'ready' },
+    { key: 'seo', label: '今月つくったSEO記事', value: '3本', sub: '書き上がった記事 2本・これまで 40本', href: '/seo', state: 'ready' },
+    { key: 'aio', label: 'AI検索で自社に触れた割合', value: '42%', sub: '11月2日の調べ・追っている会社の中で 18%', href: '/aio', state: 'ready' },
+    { key: 'persona', label: '今月つくったペルソナ', value: '0件', href: '/persona', state: 'empty' },
+  ],
   management: [],
 }
 

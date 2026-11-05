@@ -64,6 +64,21 @@ check('Product hubs flag: off reads no session and changes nothing on screen', (
   assert.match(read('src/app/(shell)/hub/page.tsx'), /if \(!\(await isProductHubsEnabled\(\)\)\) redirect\('\/home'\)/)
   // 経営ホームの製品の帯も旗の内側だけ
   assert.match(read('src/app/(shell)/home/page.tsx'), /productStrip=\{productsOn \? <ProductStrip \/> : null\}/)
+  // 動いているタスクを製品で絞るのは旗の内側だけ（画面は productsOn のときだけ製品を渡し、API は旗を見てから絞る）
+  assert.match(shell, /<AgentTasksRow key=\{actorKey \|\| 'anonymous'\} pathname=\{pathname\} onNavigate=\{navigate\} product=\{productsOn \? product : null\} \/>/)
+  assert.match(read('src/app/api/agent/runs/summary/route.ts'), /const product = asked && \(await isProductHubsEnabled\(\)\) \? asked : null/)
+})
+
+check('Product preview pages: 404 in production, open only on Vercel preview and locally', () => {
+  // NODE_ENV は Vercel のプレビューでも production なので、本番の判定は VERCEL_ENV で行う（2026-11-02）
+  const dir = 'src/app/(shell)/hub/preview'
+  const pages = fs.readdirSync(path.join(root, dir), { recursive: true }).filter((f) => String(f).endsWith('page.tsx'))
+  assert.ok(pages.length >= 1)
+  for (const f of pages) {
+    const src = read(path.join(dir, String(f)))
+    const body = src.slice(src.indexOf('export default'))
+    assert.match(body, /^export default (?:async )?function \w+\([^)]*\) \{\n  if \(process\.env\.VERCEL_ENV === 'production'\) notFound\(\)/, f + ' must 404 first in production')
+  }
 })
 
 check('Departments choice API: flag first, cookie only, HttpOnly, no DB writes', () => {

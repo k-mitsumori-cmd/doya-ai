@@ -259,7 +259,7 @@ const TASKS_POLL_MS = 15_000
  * - 記録の表を使っていない（AGENT_RUNS_STORE が db でない）ときは、件数を出さずにリンクだけにする。
  * ⚠️ 行の高さは件数の有無で変えない（読み込みのあとに下のメニューがずれないように）。
  */
-function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {
+function AgentTasksRow({ pathname, onNavigate, product = null }: { pathname: string; onNavigate: (href: string) => void; product?: ProductId | null }) {
   const [counts, setCounts] = useState<TaskCounts | null>(null)
   const [off, setOff] = useState(false)
   const running = counts?.running ?? 0
@@ -276,7 +276,8 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
     const controller = new AbortController(); readController.current = controller
     const valid = () => mounted.current && request === readNumber.current && !controller.signal.aborted
     try {
-      const res = await fetch('/api/agent/runs/summary', { cache: 'no-store', signal: controller.signal })
+      // 製品の旗の内側では、今の製品のツールの分だけを数える（経営管理は全部）
+      const res = await fetch(product ? `/api/agent/runs/summary?product=${product}` : '/api/agent/runs/summary', { cache: 'no-store', signal: controller.signal })
       if (!valid()) return
       if (res.status === 404) { setCounts(null); setOff(true); return }
       if (!res.ok) return
@@ -284,7 +285,7 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
       if (!valid()) return
       if (typeof j?.running === 'number') setCounts({ running: j.running, waiting: j.waiting ?? 0, done: j.done ?? 0, failed: j.failed ?? 0 })
     } catch { /* 数えられなくてもリンクは使える */ }
-  }, [])
+  }, [product])
   // ページを移るたびに数え直す（経営ホームで任せた直後に、ほかのツールへ移っても増えた数が出る）
   useEffect(() => { if (!off) void load() }, [pathname, load, off])
   useEffect(() => {
@@ -340,7 +341,7 @@ export default function AppShell({ children, userName, initialRecent, department
   /** 部署ごとの入口（旗 DEPARTMENTS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されなければ今のメニューのまま */
   departments?: { enabled: boolean; primary: DepartmentId[] }
   /** 部門ごとの製品（旗 PRODUCT_HUBS_ROLLOUT。サーバーが on と決めたときだけ渡される）。渡されたときは部署の入口より先に使う */
-  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null }
+  products?: { enabled: boolean; start: ProductId; selfDefault: ProductId | null; order?: { main: ProductId[]; others: ProductId[] }; canManage?: boolean; canEditSelf?: boolean; locked?: boolean }
   /** 「動いているタスク」を出すか（旗 AGENT_ORCHESTRATION_ROLLOUT。サーバーが決める） */
   agentTasks?: boolean
   /** 件数と通信を利用者ごとに分離する。表示やAPIの認可には使わない。 */
@@ -460,7 +461,7 @@ export default function AppShell({ children, userName, initialRecent, department
           <Menu size={20} />
         </button>
         {productsOn ? (
-          <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} onSelect={setProduct} variant="topbar" />
+          <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} canEditSelf={products?.canEditSelf} locked={products?.locked} onSelect={setProduct} variant="topbar" />
         ) : (
         <Link href={SHELL_HOME.href} className={styles.brand}>
           <DoyaLogoMark size={28} className={styles.brandMark} />{brandName()}
@@ -478,7 +479,7 @@ export default function AppShell({ children, userName, initialRecent, department
       <nav className={styles.sidebar} data-open={open} aria-label="ツール一覧">
         <div className={styles.sideHead}>
           {productsOn ? (
-            <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} onSelect={(id) => { setProduct(id); close() }} variant="sidebar" labelClassName={styles.navLabel} />
+            <ProductSwitcher current={product} selfDefault={products?.selfDefault ?? null} order={products?.order} canManage={products?.canManage} canEditSelf={products?.canEditSelf} locked={products?.locked} onSelect={(id) => { setProduct(id); close() }} variant="sidebar" labelClassName={styles.navLabel} />
           ) : (
           <Link href={SHELL_HOME.href} className={styles.brand} onClick={close}>
             <DoyaLogoMark size={28} className={styles.brandMark} />
@@ -497,7 +498,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {/* 新しい見た目では、ドヤパワーの残りは左下（会社の下）に出す。今の見た目はここ */}
         <div className={styles.navScroll}>
           <NavItem tool={productsOn ? productHome : SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
-          {agentTasks ? <AgentTasksRow key={actorKey || 'anonymous'} pathname={pathname} onNavigate={navigate} /> : null}
+          {agentTasks ? <AgentTasksRow key={actorKey || 'anonymous'} pathname={pathname} onNavigate={navigate} product={productsOn ? product : null} /> : null}
           {recentTools.length ? (
             <div className={styles.group}>
               <p className={styles.groupLabel}>最近使ったツール</p>

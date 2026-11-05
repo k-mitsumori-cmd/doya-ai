@@ -6,6 +6,7 @@
 // ⚠️ 純粋な関数（画面とテストから使う）。集計そのものは src/lib/home/summary.ts。
 import type { HomeSummary, HomeToolState } from '@/lib/home/summary'
 import type { ProductId } from '@/lib/products'
+import type { MarketingSummary } from './marketing-summary'
 
 export interface HubMetric {
   key: string
@@ -27,7 +28,7 @@ export function yen(n: number): string {
 
 const pct = (actual: number, plan: number) => (plan > 0 ? `${Math.round((actual / plan) * 100)}%` : '—')
 
-/** 製品ごとの数字。経営管理（経営ホーム）とマーケティング（集計に数字がまだ無い）は空 */
+/** 製品ごとの数字。経営管理（経営ホーム）は空。マーケティングは marketingMetrics（別の集計）で作る */
 export function hubMetrics(id: ProductId, s: HomeSummary): HubMetric[] {
   if (id === 'sales') {
     return [
@@ -59,4 +60,26 @@ export function hubMetrics(id: ProductId, s: HomeSummary): HubMetric[] {
     ]
   }
   return []
+}
+
+const pctValue = (v: number | null) => (v == null ? '—' : `${Math.round(v)}%`)
+
+/** JST の「M月D日」 */
+function jstDay(iso: string): string {
+  const j = new Date(new Date(iso).getTime() + 9 * 3600_000)
+  return `${j.getUTCMonth() + 1}月${j.getUTCDate()}日`
+}
+
+/** マーケティングのホームの数字（段3。src/lib/products/marketing-summary.ts の集計から） */
+export function marketingMetrics(m: MarketingSummary): HubMetric[] {
+  return [
+    { key: 'banner', label: '今月つくったバナー', value: `${m.banner.thisMonth}枚`, sub: `これまで ${m.banner.total.toLocaleString('ja-JP')}枚`, href: m.banner.href, state: m.banner.state },
+    { key: 'seo', label: '今月つくったSEO記事', value: `${m.seo.thisMonth}本`, sub: `書き上がった記事 ${m.seo.doneThisMonth}本・これまで ${m.seo.total.toLocaleString('ja-JP')}本`, href: m.seo.href, state: m.seo.state },
+    {
+      key: 'aio', label: 'AI検索で自社に触れた割合', value: pctValue(m.aio.awarenessPct),
+      sub: m.aio.scannedAt ? `${jstDay(m.aio.scannedAt)}の調べ・追っている会社の中で ${pctValue(m.aio.shareOfVoice)}` : undefined,
+      href: m.aio.href, state: m.aio.state,
+    },
+    { key: 'persona', label: '今月つくったペルソナ', value: `${m.persona.thisMonth}件`, sub: `これまで ${m.persona.total.toLocaleString('ja-JP')}件`, href: m.persona.href, state: m.persona.state },
+  ]
 }
