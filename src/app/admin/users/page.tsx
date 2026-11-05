@@ -10,6 +10,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast'
 import { isPaidTier, tierFrom } from '@/lib/plan-utils'
 import { readAdminUsers, AdminUsersReadError, type AdminUser as User } from '@/lib/admin/users-read-client'
+import { formatAdminContractPrice } from '@/lib/admin/contract-price'
 
 // プラン定義は src/lib/admin/plans.ts と src/lib/pricing.ts で一元管理
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -845,7 +846,7 @@ export default function AdminUsersPage() {
 
                     {/* 契約情報 */}
                     {editingUser.stripeInfo && (
-                      <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-4">
                         <div className="p-3 bg-white/5 rounded-lg">
                           <div className="flex items-center gap-1 text-white/40 text-xs mb-1">
                             <Calendar className="w-3 h-3" />
@@ -864,11 +865,12 @@ export default function AdminUsersPage() {
                             {new Date(editingUser.stripeInfo.currentPeriodEnd).toLocaleDateString('ja-JP')}
                           </p>
                         </div>
-                        <div className="p-3 bg-white/5 rounded-lg">
-                          <div className="text-white/40 text-xs mb-1">月額料金</div>
-                          <p className="text-sm font-medium text-white">
-                            ¥{(editingUser.stripeInfo.amount / 100).toLocaleString()}/{editingUser.stripeInfo.interval === 'month' ? '月' : '年'}
+                        <div className="min-w-0 p-3 bg-white/5 rounded-lg">
+                          <div className="text-white/40 text-xs mb-1">契約料金（割引前）</div>
+                          <p className="break-words text-sm font-medium text-white">
+                            {formatAdminContractPrice(editingUser.stripeInfo.priceSummary)}
                           </p>
+                          <p className="mt-1 text-xs text-white/60">実際の請求額は、税や割引により異なる場合があります。</p>
                         </div>
                         <div className="p-3 bg-white/5 rounded-lg">
                           <div className="text-white/40 text-xs mb-1">ステータス</div>

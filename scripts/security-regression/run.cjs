@@ -1555,3 +1555,6 @@ for (const file of ['verify-admin-stats-jst-errors.cjs', 'verify-admin-billing-r
 
 const adminUsersRead = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-users-read-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminUsersRead.error || adminUsersRead.status !== 0) process.exit(adminUsersRead.status || 1);
+
+const adminContractPrice = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-contract-price.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminContractPrice.error || adminContractPrice.status !== 0) process.exit(adminContractPrice.status || 1);

@@ -9,6 +9,7 @@ import { getSeoMonthlyLimitByUserPlan, shouldResetDailyUsage, shouldResetMonthly
 import { getSeoArticleMonthlyUsageForUsers } from '@/lib/seo-article-admission'
 import { higherPlan } from '@/lib/plan-utils'
 import Stripe from 'stripe'
+import { summarizeAdminContractPrice } from '@/lib/admin/contract-price'
 
 // cookies() を使用するため、静的最適化を無効化
 export const dynamic = 'force-dynamic'
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     await Promise.all(
       usersWithStripe.map(async (user: any) => {
         try {
-          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, { expand: ['items.data.price.tiers'] })
           stripeInfoMap[user.id] = {
             status: subscription.status,
             currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
             canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
             created: new Date(subscription.created * 1000).toISOString(),
             amount: subscription.items.data[0]?.price?.unit_amount || 0,
+            priceSummary: summarizeAdminContractPrice(subscription),
             interval: subscription.items.data[0]?.price?.recurring?.interval || 'month',
           }
         } catch (e) {
