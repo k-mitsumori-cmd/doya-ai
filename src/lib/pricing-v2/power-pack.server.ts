@@ -129,7 +129,7 @@ export async function reportPowerPackFailure(sessionId: string, reason: string):
     title: 'ドヤパワーの追加購入を付けられませんでした（支払いは済んでいる可能性があります）',
     level: 'critical',
     kind: 'billing',
-    detail: '支払い済みの追加購入に、ドヤパワーを付けられませんでした。Stripe の決済と台帳を確かめ、/api/admin/doya-power/adjust（管理者の認証とドヤパワーの旗だけで動く。新しい料金の旗を off に戻していても使える。requestId には決済の ID を使う）で付けるか、返金してください。ドヤパワーの旗も off なら、返金してください。',
+    detail: '支払い済みの追加購入を反映できませんでした。元の決済IDと会社IDを確認し、/api/admin/doya-power/purchase/replay で再処理してください（管理者認証と台帳の再開が必要です）。返金履歴も再確認し、同じ購入から返金分を除いて反映します。量を指定した調整付与で、返金済みのポイントを戻さないでください。',
     extra: { 決済: sessionId, 理由: reason },
   }).catch(() => false)
 }
