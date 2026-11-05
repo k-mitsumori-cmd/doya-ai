@@ -16,3 +16,18 @@ export const STARTER_WELCOME = {
   body: 'AIで作るときに使うポイントです。使った分は、毎日10ずつ回復します（たまる上限は100）。',
   action: { label: 'ドヤパワーを見る', href: '/home/doya-power' },
 } as const
+
+/**
+ * 有料の人（チーム・据え置き）に出す文。有料の人に毎日の回復は無く、最初の100は期限なし（ledger.ts）。
+ * すでに残りがある人もいるので「100 からスタート」とは書かない。
+ */
+export const STARTER_WELCOME_PAID = {
+  title: 'ドヤパワーを 100 お付けしました',
+  body: 'AIで作るときに使うポイントです。毎月の分とあわせてお使いいただけます。この 100 に期限はありません。',
+  action: STARTER_WELCOME.action,
+} as const
+
+/** 契約の区分に合う、ようこその知らせの文 */
+export function starterWelcomeFor(kind: 'free' | 'team' | 'legacy') {
+  return kind === 'free' ? STARTER_WELCOME : STARTER_WELCOME_PAID
+}
