@@ -5,7 +5,10 @@
 // ⚠️ 判定（持ち主か・人数の上限・据え置き）はすべてサーバー（/api/pricing/*）。ここは出すだけ。
 // ⚠️ 人数を増やすと、その場で日割りを請求する。押す前に必ず確かめの文を出す（ConfirmDialog）。
 // ⚠️ 招待のメールは送らない。招待のリンクを出し、持ち主が相手に渡す。
-import { useCallback, useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { BillingResponseError, readBillingResponse } from '@/lib/billing-response-client'
+import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/seat-operation-view'
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
 import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
@@ -22,117 +25,221 @@ async function call(path: string, init?: RequestInit): Promise<{ ok: boolean; st
   return { ok: r.ok, status: r.status, data }
 }
 
-/** 人数とメンバー（チームの持ち主だけ） */
+function managedError(data: Record<string, unknown>, fallback: string): string {
+  return typeof data.error === 'string' && data.error.length > 0 ? data.error : fallback
+}
+function managedMembers(raw: unknown): Member[] | null {
+  if (!Array.isArray(raw)) return null
+  const ids = new Set<string>(), result: Member[] = []
+  for (const value of raw) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+    const member = value as Record<string, unknown>
+    if (typeof member.id !== 'string' || !member.id || ids.has(member.id) || typeof member.email !== 'string' || typeof member.role !== 'string' || !['active', 'invited'].includes(String(member.status))) return null
+    ids.add(member.id)
+    result.push({ id: member.id, email: member.email, role: member.role, status: member.status as string })
+  }
+  return result
+}
+
+/** Session-keyed child resets immediately on logout/account switch. Old dialogs
+ * and responses cannot submit or display the previous owner's operation.
+ */
 export function TeamManage() {
+  const { data: session, status } = useSession()
+  const actor = (session?.user as { id?: unknown } | undefined)?.id
+  if (status !== 'authenticated' || typeof actor !== 'string' || !actor) return (
+    <section id="manage" className={styles.manage} aria-labelledby="manage-title">
+      <h2 id="manage-title" className={base.sectionTitle}>チームの管理</h2>
+      <p className={styles.manageSub} role="status">{status === 'loading' ? 'ログイン状態を確認しています…' : 'ログインして契約情報をご確認ください。'}</p>
+    </section>
+  )
+  return <OwnerTeamManage key={actor} actorId={actor} />
+}
+
+function OwnerTeamManage({ actorId }: { actorId: string }) {
   const [seats, setSeats] = useState<number | null>(null)
   const [used, setUsed] = useState<number | null>(null)
-  const [draft, setDraft] = useState<number>(1)
+  const [draft, setDraft] = useState(1)
+  const [pending, setPending] = useState<PendingSeatChange | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [membersFailed, setMembersFailed] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const emailId = useId()
+  const disposed = useRef(false), loadVersion = useRef(0), mutating = useRef(false)
+  const controllers = useRef(new Set<AbortController>())
+  const request = useCallback(async (path: string, init: RequestInit = {}) => {
+    if (disposed.current) throw new BillingResponseError(true)
+    const controller = new AbortController()
+    controllers.current.add(controller)
+    const headers = new Headers(init.headers)
+    headers.set('Content-Type', 'application/json')
+    headers.set('X-Doya-Owner', actorId)
+    try { return await readBillingResponse(path, { ...init, headers }, controller.signal) }
+    finally { controllers.current.delete(controller) }
+  }, [actorId])
 
   const reload = useCallback(async () => {
-    const [s, m] = await Promise.all([call('/api/pricing/seats'), call('/api/pricing/members')])
-    if (s.ok) { setSeats(s.data.seats); setUsed(s.data.used); setDraft(s.data.seats); setLoadFailed(false) } else { setLoadFailed(true); setMessage(s.data.error ?? '人数を読み込めませんでした。') }
-    if (m.ok) setMembers(m.data.members ?? [])
-  }, [])
-  useEffect(() => { void reload() }, [reload])
-
-  const changeSeats = async () => {
-    if (seats === null || draft === seats || busy) return
-    const up = draft > seats
-    const ok = await confirmDialog({
-      title: `人数を${draft}人に${up ? '増やします' : '減らします'}`,
-      message: up
-        ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(draft - seats) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
-        : '減らした分の返金はありません。人数はすぐに減ります。',
-      confirmLabel: up ? '増やして請求する' : '減らす',
-    })
-    if (!ok) return
-    setBusy(true); setMessage(null)
+    if (disposed.current) return
+    const version = ++loadVersion.current
+    setLoading(true)
     try {
-      // 確かめの画面の1回ごとに操作 ID を作る（同じ操作の二重送信は Stripe で1回にまとまる）
+      const [s, m] = await Promise.allSettled([request('/api/pricing/seats'), request('/api/pricing/members')])
+      if (disposed.current || version !== loadVersion.current) return
+      const view = s.status === 'fulfilled' && s.value.ok ? parseTeamSeatsView(s.value.data) : null
+      if (view?.kind === 'ready') {
+        setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
+      } else if (view?.kind === 'pending') {
+        setSeats(null); setUsed(null); setDraft(view.pending.requested); setPending(view.pending); setLoadFailed(false)
+      } else {
+        setSeats(null); setUsed(null); setLoadFailed(true)
+        setMessage(s.status === 'fulfilled' ? managedError(s.value.data, '人数を読み込めませんでした。状態を再確認してください。') : '人数を読み込めませんでした。状態を再確認してください。')
+      }
+      const list = m.status === 'fulfilled' && m.value.ok ? managedMembers(m.value.data.members) : null
+      setMembers(list ?? []); setMembersFailed(list === null)
+      if (list === null && view) setMessage('メンバー情報を読み込めませんでした。状態を再確認してください。')
+    } finally { if (!disposed.current && version === loadVersion.current) setLoading(false) }
+  }, [request])
+  useEffect(() => {
+    disposed.current = false
+    const requests = controllers.current
+    void reload()
+    return () => { disposed.current = true; for (const controller of requests) controller.abort(); requests.clear() }
+  }, [reload])
+
+  const beginAction = () => {
+    if (disposed.current || mutating.current) return false
+    mutating.current = true; setBusy(true); setMessage(null)
+    return true
+  }
+  const endAction = () => { mutating.current = false; if (!disposed.current) setBusy(false) }
+  const changeSeats = async () => {
+    if (seats === null || draft === seats || pending || loading || loadFailed || !beginAction()) return
+    const from = seats, requested = draft, up = requested > from
+    try {
+      const approved = await confirmDialog({
+        title: `人数を${requested}人に${up ? '増やします' : '減らします'}`,
+        message: up
+          ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(requested - from) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
+          : '減らした分の返金はありません。人数はすぐに減ります。',
+        confirmLabel: up ? '増やして請求する' : '減らす',
+      })
+      if (!approved || disposed.current) return
       const operationKey = crypto.randomUUID().replace(/-/g, '')
-      const r = await call('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: draft, operationKey }) })
-      setMessage(r.ok ? `人数を${r.data.seats}人にしました。` : (r.data.error ?? '人数を変えられたか確認できませんでした。'))
+      const response = await request('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: requested, expectedSeats: from, operationKey }) })
+      if (disposed.current) return
+      setMessage(response.ok ? '人数変更の結果を確認しました。' : managedError(response.data, '人数変更の結果を確認できませんでした。'))
       await reload()
     } catch {
-      setMessage('人数を変えられたか確認できませんでした。画面を読み込み直して、今の人数をご確認ください。')
-    } finally { setBusy(false) }
+      if (!disposed.current) { setMessage('人数変更の結果を確認できませんでした。状態を再確認してください。'); await reload() }
+    } finally { endAction() }
   }
-
-  const invite = async () => {
-    if (busy || !email.trim()) return
-    setBusy(true); setMessage(null); setInviteUrl(null); setCopied(false)
+  const recover = async () => {
+    if (!pending || pending.action === 'wait' || loading || !beginAction()) return
+    const original = pending
     try {
-      const r = await call('/api/pricing/members', { method: 'POST', body: JSON.stringify({ email }) })
-      if (r.ok) { setInviteUrl(r.data.inviteUrl); setEmail(''); await reload() } else setMessage(r.data.error ?? '招待できませんでした。')
-    } catch { setMessage('招待できませんでした。時間をおいて再度お試しください。') } finally { setBusy(false) }
-  }
-
-  const remove = async (m: Member) => {
-    const ok = await confirmDialog({ title: `${m.email} を外します`, message: '外した方は、この会社のドヤパワーを使えなくなります。あとから招待し直せます。', confirmLabel: '外す', tone: 'danger' })
-    if (!ok) return
-    setBusy(true); setMessage(null)
-    try {
-      const r = await call(`/api/pricing/members?id=${encodeURIComponent(m.id)}`, { method: 'DELETE' })
-      if (!r.ok) setMessage(r.data.error ?? '外せませんでした。')
+      if (original.action === 'resume') {
+        const approved = await confirmDialog({
+          title: `${original.requested}人への変更を再開します`,
+          message: '元の人数変更を再開します。前回の処理が完了していれば重複の請求は行いません。まだ処理されていない場合は、日割り請求が発生することがあります。減らした分の返金はありません。',
+          confirmLabel: '元の変更を再開する',
+        })
+        if (!approved || disposed.current) return
+      }
+      if (disposed.current) return
+      const response = await request('/api/pricing/seats', { method: 'POST', body: JSON.stringify({ seats: original.requested, operationKey: original.operationKey, mode: original.action === 'check' ? 'check' : 'resume' }) })
+      if (disposed.current) return
+      setMessage(response.ok ? '元の人数変更の結果を確認しました。' : managedError(response.data, '変更結果を確認できませんでした。状態を再確認してください。'))
       await reload()
-    } catch { setMessage('外せませんでした。時間をおいて再度お試しください。') } finally { setBusy(false) }
+    } catch {
+      if (!disposed.current) { setMessage('変更結果を確認できませんでした。状態を再確認してください。'); await reload() }
+    } finally { endAction() }
   }
-
+  const invite = async () => {
+    if (pending || loading || loadFailed || membersFailed || !email.trim() || !beginAction()) return
+    setInviteUrl(null); setCopied(false)
+    try {
+      const response = await request('/api/pricing/members', { method: 'POST', body: JSON.stringify({ email }) })
+      if (disposed.current) return
+      if (response.ok && typeof response.data.inviteUrl === 'string' && response.data.inviteUrl.startsWith('https://')) {
+        setInviteUrl(response.data.inviteUrl); setEmail(''); await reload()
+      } else setMessage(managedError(response.data, '招待の結果を確認できませんでした。状態を再確認してください。'))
+    } catch { if (!disposed.current) setMessage('招待の結果を確認できませんでした。状態を再確認してください。') }
+    finally { endAction() }
+  }
+  const remove = async (member: Member) => {
+    if (!beginAction()) return
+    try {
+      const approved = await confirmDialog({ title: `${member.email} を外します`, message: '外した方は、この会社のドヤパワーを使えなくなります。あとから招待し直せます。', confirmLabel: '外す', tone: 'danger' })
+      if (!approved || disposed.current) return
+      const response = await request(`/api/pricing/members?id=${encodeURIComponent(member.id)}`, { method: 'DELETE' })
+      if (disposed.current) return
+      if (!response.ok) setMessage(managedError(response.data, '外せませんでした。'))
+      await reload()
+    } catch { if (!disposed.current) setMessage('削除の結果を確認できませんでした。状態を再確認してください。') }
+    finally { endAction() }
+  }
   const minSeats = Math.max(1, used ?? 1)
+  const copyInvite = async () => {
+    try {
+      if (!inviteUrl || !navigator.clipboard) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(inviteUrl)
+      if (!disposed.current) setCopied(true)
+    } catch { if (!disposed.current) setMessage('コピーできませんでした。リンク欄を選択してコピーしてください。') }
+  }
   const diff = seats !== null ? (teamMonthly(draft) ?? 0) - (teamMonthly(seats) ?? 0) : 0
-
+  const editingBlocked = busy || loading || loadFailed || pending !== null || seats === null
   return (
-    <section id="manage" className={styles.manage} aria-labelledby="manage-title">
+    <section id="manage" className={styles.manage} aria-labelledby="manage-title" aria-busy={loading || busy}>
       <h2 id="manage-title" className={base.sectionTitle}>チームの管理</h2>
       <div className={styles.manageGrid}>
         <div className={styles.manageCard}>
           <p className={styles.manageHead}>人数</p>
-          <p className={styles.manageSub}>{seats === null ? (loadFailed ? '人数を読み込めませんでした。' : '読み込んでいます…') : `今の人数 ${seats}人・使っている人数 ${used ?? '—'}人（持ち主と招待中を含む）`}</p>
-          <div className={styles.stepper}>
-            <button type="button" className={styles.stepBtn} aria-label="1人減らす" onClick={() => setDraft((d) => Math.max(minSeats, d - 1))} disabled={busy || seats === null || draft <= minSeats}><Minus size={18} /></button>
-            <span className={styles.seatValue}><span className={styles.seatNum}>{draft}</span><span>人</span></span>
-            <button type="button" className={styles.stepBtn} aria-label="1人増やす" onClick={() => setDraft((d) => Math.min(49, d + 1))} disabled={busy || seats === null || draft >= 49}><Plus size={18} /></button>
-          </div>
-          <p className={styles.manageSub}>
-            {seats !== null && draft !== seats ? `月額（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）` : '50人以上は個別にお見積りします。'}
-          </p>
-          <button type="button" className={base.primary} onClick={changeSeats} disabled={busy || seats === null || draft === seats}>人数を変える</button>
+          {pending ? (
+            <div className={base.notice}>
+              <p className={styles.manageSub} role="status">{pending.previousSeats === null ? `${pending.requested}人への変更を確認中です。` : `${pending.previousSeats}人から${pending.requested}人への変更を確認中です。`}</p>
+              <p className={styles.manageSub}>{pending.action === 'wait' ? '処理が続いています。少し待ってから状態を再確認してください。' : pending.action === 'check' ? '追加の請求は行わず、元の変更結果を確認します。確認できない場合は保留を維持します。' : '元の変更を再開できます。新しい人数変更やメンバーの追加は、確認完了後に再開できます。'}</p>
+              {pending.action !== 'wait' ? <button type="button" className={base.primary} onClick={recover} disabled={busy || loading}>{pending.action === 'check' ? '元の変更結果を確認する' : '元の変更を再開する'}</button> : null}
+            </div>
+          ) : (
+            <>
+              <p className={styles.manageSub}>{seats === null ? (loadFailed ? '人数を読み込めませんでした。' : '読み込んでいます…') : `今の人数 ${seats}人・使っている人数 ${used ?? '—'}人（持ち主と招待中を含む）`}</p>
+              <div className={styles.stepper}>
+                <button type="button" className={styles.stepBtn} aria-label="1人減らす" onClick={() => setDraft(d => Math.max(minSeats, d - 1))} disabled={editingBlocked || draft <= minSeats}><Minus size={18} /></button>
+                <span className={styles.seatValue}><span className={styles.seatNum}>{seats === null ? '—' : draft}</span><span>人</span></span>
+                <button type="button" className={styles.stepBtn} aria-label="1人増やす" onClick={() => setDraft(d => Math.min(49, d + 1))} disabled={editingBlocked || draft >= 49}><Plus size={18} /></button>
+              </div>
+              <p className={styles.manageSub}>{seats !== null && draft !== seats ? `月額（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）` : '50人以上は個別にお見積りします。'}</p>
+              <button type="button" className={base.primary} onClick={changeSeats} disabled={editingBlocked || draft === seats}>人数を変える</button>
+            </>
+          )}
+          <div className={base.planAction}><button type="button" className={base.secondary} onClick={() => { void reload() }} disabled={busy || loading}>状態を再確認する</button></div>
         </div>
-
         <div className={styles.manageCard}>
           <p className={styles.manageHead}>メンバー</p>
           <label htmlFor={emailId} className={styles.manageSub}>招待する方のメールアドレス</label>
           <div className={styles.inviteRow}>
-            <input id={emailId} type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className={styles.textInput} placeholder="name@example.com" />
-            <button type="button" className={base.secondary} onClick={invite} disabled={busy || !email.trim()}>招待する</button>
+            <input id={emailId} type="email" inputMode="email" autoComplete="off" value={email} onChange={event => setEmail(event.target.value)} className={styles.textInput} placeholder="name@example.com" disabled={busy || pending !== null || loading || loadFailed || membersFailed} />
+            <button type="button" className={base.secondary} onClick={invite} disabled={busy || pending !== null || loading || loadFailed || membersFailed || !email.trim()}>招待する</button>
           </div>
-          {inviteUrl ? (
-            <div className={styles.inviteUrl}>
-              <p className={styles.manageSub}>このリンクを、招待した方に渡してください（メールは送っていません）。</p>
-              <div className={styles.inviteRow}>
-                <input readOnly value={inviteUrl} className={styles.textInput} aria-label="招待のリンク" onFocus={(e) => e.currentTarget.select()} />
-                <button type="button" className={base.secondary} onClick={() => { void navigator.clipboard?.writeText(inviteUrl).then(() => setCopied(true)) }}>
-                  {copied ? <><Check size={16} />写しました</> : <><Copy size={16} />写す</>}
-                </button>
-              </div>
+          {inviteUrl ? <div className={styles.inviteUrl}>
+            <p className={styles.manageSub}>このリンクを、招待した方に渡してください（メールは送っていません）。</p>
+            <div className={styles.inviteRow}>
+              <input readOnly value={inviteUrl} className={styles.textInput} aria-label="招待のリンク" onFocus={event => event.currentTarget.select()} />
+              <button type="button" className={base.secondary} onClick={() => { void copyInvite() }}>{copied ? <><Check size={16} />写しました</> : <><Copy size={16} />写す</>}</button>
             </div>
-          ) : null}
+          </div> : null}
           <ul className={styles.memberList}>
-            {members.length === 0 ? <li className={styles.manageSub}>まだメンバーはいません。</li> : members.map((m) => (
-              <li key={m.id}>
-                <span className={styles.memberEmail}>{m.email}</span>
-                <span className={styles.memberStatus}>{m.status === 'active' ? '参加' : '招待中'}</span>
-                <button type="button" className={styles.linkBtn} onClick={() => remove(m)} disabled={busy}>外す</button>
-              </li>
-            ))}
+            {loading ? <li className={styles.manageSub}>読み込んでいます…</li> : membersFailed ? <li className={styles.manageSub}>メンバー情報を読み込めませんでした。</li> : members.length === 0 ? <li className={styles.manageSub}>まだメンバーはいません。</li> : members.map(member => <li key={member.id}>
+              <span className={styles.memberEmail}>{member.email}</span>
+              <span className={styles.memberStatus}>{member.status === 'active' ? '参加' : '招待中'}</span>
+              <button type="button" className={styles.linkBtn} onClick={() => { void remove(member) }} disabled={busy || loading}>外す</button>
+            </li>)}
           </ul>
         </div>
       </div>

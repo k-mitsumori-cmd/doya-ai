@@ -58,6 +58,20 @@ jobs:
           node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
           DOYA_TEST_STRICT=1 node scripts/security-regression/verify-expense-loading-continuity-mounted.cjs
 
+      - name: Team seats, admissions and paid-result recovery (private Unix socket, synthetic Stripe)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-seat-regression-evidence
+        run: python3 scripts/security-regression/verify-pricing-seat-postgres.py
+
+      - name: Save synthetic team-seat recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: team-seat-recovery-${{ github.sha }}
+          path: /tmp/doya-seat-regression-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: AskLink concurrent question edits (private Unix socket, no providers)
         run: python3 scripts/security-regression/verify-asklink-edit-postgres.py
 
