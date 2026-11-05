@@ -16,6 +16,7 @@ export interface StripeInfo {
   canceledAt: string | null
   created: string
   amount: number
+  priceSummary?: unknown
   interval: string
 }
 
