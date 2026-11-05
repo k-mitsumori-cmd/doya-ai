@@ -38,7 +38,7 @@ async function scenario(strict,kind){
   if(n==='@/lib/brand')return {brandName:()=> 'Synthetic'};
   if(n==='@/components/brand/DoyaLogo')return {DoyaLogoMark:none};
   if(n==='./heading-guard')return {demoteExtraH1:()=>{}};
-  if(['./ShellCompanyCard','./ShellVitals','@/components/notice/ShellNotices','@/components/notice/HandoffSuggest','@/components/support-chat/SupportChat','@/components/notice/PowerOutNotices'].includes(n))return {__esModule:true,default:none};
+  if(['./ShellCompanyCard','./ShellVitals','@/components/notice/ShellNotices','@/components/notice/HandoffSuggest','@/components/support-chat/SupportChat','@/components/notice/PowerOutNotices','@/components/agent-chat/AgentChatProvider','@/components/agent-chat/AgentDock'].includes(n))return {__esModule:true,default:none};
   if(n==='@/lib/departments')return {};
   if(n==='@/lib/products')return {PRODUCTS:[],PRODUCT_COOKIE:'synthetic-product',getProduct:()=>({id:'management',name:'Synthetic',en:'Synthetic',home:'/home',icon:'Home',hint:''}),productForPath:(_,c)=>c,productsOfTool:()=>[]};
   if(n==='./ProductSwitcher')return {__esModule:true,default:()=>null};
