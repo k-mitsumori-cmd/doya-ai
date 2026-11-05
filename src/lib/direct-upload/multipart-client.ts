@@ -10,7 +10,8 @@ const API = '/api/direct-upload/multipart'
 const STORE_KEY = 'doya-multipart-v1'
 const FILE_CONCURRENCY = 2
 const PART_CONCURRENCY = 3
-const PART_RETRIES = 3
+// スマホで回線が切り替わる・画面が消えるなどの一時的な失敗に耐えるため、少し多めに粘る
+const PART_RETRIES = 5
 /** サーバーの既定の上限（DIRECT_UPLOAD_MULTIPART_MAX_BYTES で変えた場合も、サーバーが正しい上限で断る） */
 const MAX_FILE_BYTES = 20 * 1024 ** 3
 
@@ -32,6 +33,18 @@ export type QueueItem = {
 }
 
 type Persisted = Record<string, { id: string; savedAt: number }>
+
+/** 種類が空で渡ってくるファイル（mkv など）は、拡張子から補う。サーバーは video/・audio/ だけを受け付ける */
+const EXT_MIME: Record<string, string> = {
+  mp4: 'video/mp4', m4v: 'video/x-m4v', mov: 'video/quicktime', mkv: 'video/x-matroska', webm: 'video/webm',
+  avi: 'video/x-msvideo', mpg: 'video/mpeg', mpeg: 'video/mpeg', '3gp': 'video/3gpp', ts: 'video/mp2t',
+  mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', aac: 'audio/aac', ogg: 'audio/ogg', flac: 'audio/flac', opus: 'audio/ogg',
+}
+export function mimeOf(f: { name: string; type: string }): string {
+  if (f.type) return f.type
+  const ext = (f.name.split('.').pop() || '').toLowerCase()
+  return EXT_MIME[ext] || ''
+}
 
 function fingerprint(f: File) {
   return `${f.name}:${f.size}:${f.lastModified}`
@@ -115,11 +128,18 @@ export class MultipartQueue {
 
   /** 中止して、サーバー側の途中のデータも捨てる */
   async cancel(key: string) {
-    const id = readStore()[fingerprint(this.items.find(i => i.key === key)!.file)]?.id
+    const target = this.items.find(i => i.key === key)
+    if (!target) return
+    const fp = fingerprint(target.file)
+    const id = readStore()[fp]?.id
     this.controllers.get(key)?.abort()
     this.items = this.items.filter(i => i.key !== key)
     this.emit()
-    if (id) await api('abort', { id }).catch(() => {})
+    if (id) {
+      // 中止に成功したときだけ、続きから送るための記録を消す（失敗したら、あとで取り消せるよう残す）
+      const ok = await api('abort', { id }).then(() => true, () => false)
+      if (ok) { const store = readStore(); delete store[fp]; writeStore(store) }
+    }
   }
 
   private pump() {
@@ -156,7 +176,7 @@ export class MultipartQueue {
       if (found) {
         id = found
       } else {
-        const s = await api('start', { fileName: item.file.name, mimeType: item.file.type, fileSize: item.file.size }, ctl.signal)
+        const s = await api('start', { fileName: item.file.name, mimeType: mimeOf(item.file), fileSize: item.file.size }, ctl.signal)
         id = s.id as string
         partSize = s.partSize; total = s.totalParts
         uploaded = new Map()
@@ -203,7 +223,7 @@ export class MultipartQueue {
             } catch (e) {
               inFlight.delete(n)
               if (ctl.signal.aborted || attempt >= PART_RETRIES) throw e
-              await new Promise(r => setTimeout(r, attempt * 2000))
+              await new Promise(r => setTimeout(r, Math.min(attempt * 2000, 10000)))
             }
           }
           inFlight.delete(n)

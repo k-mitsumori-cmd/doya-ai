@@ -56,6 +56,10 @@ export type RefundResult =
   | { ok: true; operationId: string; amount: number; duplicated: boolean }
   | { ok: false; reason: 'invalid' | 'not_found' }
 
+export type RevokeResult =
+  | { ok: true; revoked: number; totalRevoked: number; uncollected: number; balance: number }
+  | { ok: false; reason: 'invalid' | 'not_found' }
+
 export type GrantResult =
   | { ok: true; grantId: string; granted: number; balance: number; duplicated: boolean }
   | { ok: false; reason: 'invalid' | 'company_not_found' | 'monthly_bonus_cap' | 'recovery_cap' | 'precondition' }
@@ -324,6 +328,40 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
+  /**
+   * 付与の鍵（sourceKey）で付与を探し、取り消しの累計が target になるまで、その付与の残りから減らす。
+   * target は累計なので、同じ返金の知らせが何度届いても二重に減らない。ほかの付与からは減らさない。
+   * 使い済みなどで減らせない分は uncollected で返す（減らし方は運営が決める）。
+   */
+  async function revokeGrant(companyId: string, sourceKey: string, target: number, opts: { note?: string } = {}): Promise<RevokeResult> {
+    if (!validId(companyId) || !validId(sourceKey) || !Number.isInteger(target) || target < 0) return { ok: false, reason: 'invalid' }
+    const paid = await paidOf(companyId)
+    return run(async (tx, now): Promise<RevokeResult> => {
+      const account = await findAccount(tx, companyId, false)
+      if (!account) return { ok: false, reason: 'not_found' }
+      const found: GrantRow | null = await tx.doyaPowerGrant.findUnique({ where: { accountId_sourceKey: { accountId: account.id, sourceKey } } })
+      if (!found) return { ok: false, reason: 'not_found' }
+      const grants = await settle(tx, account, now, paid)
+      const past: { amount: number }[] = await tx.doyaPowerTransaction.findMany({ where: { accountId: account.id, grantId: found.id, type: 'revoke' }, select: { amount: true } })
+      const already = past.reduce((s, r) => s - r.amount, 0)
+      const need = Math.max(0, target - already)
+      const live = grants.find((g) => g.id === found.id)
+      const take = Math.min(need, live?.remaining ?? 0)
+      if (take > 0 && live) {
+        const r = await tx.doyaPowerGrant.updateMany({ where: { id: live.id, remaining: live.remaining }, data: { remaining: live.remaining - take } })
+        if (r.count !== 1) throw new RetryableError('grant changed while revoking')
+        live.remaining -= take
+      }
+      const balance = await writeBalance(tx, account, grants.filter((g) => g.remaining > 0), now)
+      if (take > 0) {
+        await tx.doyaPowerTransaction.create({
+          data: { accountId: account.id, type: 'revoke', amount: -take, balanceAfter: balance, grantId: found.id, note: opts.note ?? 'revoke' },
+        })
+      }
+      return { ok: true, revoked: take, totalRevoked: already + take, uncollected: need - take, balance }
+    })
+  }
+
   /** プランに合わせた毎月の付与（無料は付けない。チームは人数から、据え置きの PRO は決まった量）。月に1回だけ */
   async function grantMonthlyForPlan(companyId: string, plan: string | null | undefined): Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }> {
     const defaultAmount = monthlyGrantForPlan(plan, isPaidPlan)
@@ -479,7 +517,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
           // 自動点検（system-watch の B1）の消費と、その戻し。消費の note の watch:1 で見分ける
           return {
             at: r.createdAt,
-            type: r.type === 'consume' || r.type === 'refund' || r.type === 'grant' || r.type === 'expire' ? r.type : 'grant',
+            type: r.type === 'consume' || r.type === 'refund' || r.type === 'grant' || r.type === 'expire' || r.type === 'revoke' ? r.type : 'grant',
             amount: r.amount,
             balanceAfter: r.balanceAfter,
             action: op ? op.split(':')[0] || null : null,
@@ -490,13 +528,13 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
     })
   }
 
-  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, operationInfo, recentConsume, history }
+  return { consume, refund, grant, revokeGrant, grantMonthlyForPlan, balance, balanceForUser, operationStatus, operationInfo, recentConsume, history }
 }
 
 /** 増えた・減った記録の1行（経営ホームの履歴に出す） */
 export type HistoryEntry = {
   at: Date
-  type: 'consume' | 'refund' | 'grant' | 'expire'
+  type: 'consume' | 'refund' | 'grant' | 'expire' | 'revoke'
   /** 増は正、減は負 */
   amount: number
   balanceAfter: number

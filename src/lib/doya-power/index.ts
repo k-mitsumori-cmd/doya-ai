@@ -25,6 +25,7 @@ export const doyaPower = createGatedLedger(() => prisma as unknown as LedgerDb, 
 export const consume = doyaPower.consume
 export const refund = doyaPower.refund
 export const grant = doyaPower.grant
+export const revokeGrant = doyaPower.revokeGrant
 export const grantMonthlyForPlan = doyaPower.grantMonthlyForPlan
 export const balance = doyaPower.balance
 export const balanceForUser = doyaPower.balanceForUser
@@ -36,4 +37,4 @@ export const history = doyaPower.history
 export * from './rules'
 export { DoyaPowerDisabledError } from './gate'
 export { isDoyaPowerEnabled, doyaPowerRollout } from './flag'
-export type { BalanceResult, ConsumeResult, GrantResult, RefundResult } from './ledger'
+export type { BalanceResult, ConsumeResult, GrantResult, RefundResult, RevokeResult } from './ledger'

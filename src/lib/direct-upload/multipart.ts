@@ -50,14 +50,21 @@ function s3(): S3Client {
   const endpoint = process.env.SUPABASE_S3_ENDPOINT
   const accessKeyId = process.env.SUPABASE_S3_ACCESS_KEY_ID
   const secretAccessKey = process.env.SUPABASE_S3_SECRET_ACCESS_KEY
-  if (!endpoint || !accessKeyId || !secretAccessKey) {
-    throw new Error('S3未設定: SUPABASE_S3_ENDPOINT / SUPABASE_S3_ACCESS_KEY_ID / SUPABASE_S3_SECRET_ACCESS_KEY')
+  // リージョンは Supabase プロジェクトの実際のリージョンと一致させる（署名に含まれ、違うと全部の要求が署名エラーになる）。
+  // 既定値を持たせると誤った値で黙って動かなくなるため、必ず明示する（ドヤAI は us-east-1）
+  const region = process.env.SUPABASE_S3_REGION
+  if (!endpoint || !accessKeyId || !secretAccessKey || !region) {
+    throw new Error('S3未設定: SUPABASE_S3_ENDPOINT / SUPABASE_S3_REGION / SUPABASE_S3_ACCESS_KEY_ID / SUPABASE_S3_SECRET_ACCESS_KEY')
   }
   _s3 = new S3Client({
     endpoint,
-    region: process.env.SUPABASE_S3_REGION || 'ap-northeast-1',
+    region,
     forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
+    // 既定（WHEN_SUPPORTED）だと、署名付きURLに「空の本文の CRC32」（x-amz-checksum-crc32=AAAAAA==）が埋め込まれ、
+    // ブラウザが送る本文と合わずに S3 が拒否する。チェックサムは必須の操作だけに付ける。
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   })
   return _s3
 }

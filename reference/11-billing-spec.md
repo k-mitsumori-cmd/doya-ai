@@ -670,6 +670,7 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 | **INV-15** | 今の価格（`STRIPE_PRICE_BANNER_PRO_MONTHLY` など）を Stripe で消さない・アーカイブしない。ポータルのプラン変更の候補（`collectRealPriceIds()`）に新しい価格を足さない | 今の契約の更新・判定が壊れる／据え置きの人がポータルから新しい価格へ移れてしまう |
 | **INV-16** | 買った人数の正は Stripe の契約の数量。`account_company_billing` は読み取りの控え（1日で読み直す）で、`User.plan` を書かない。人数の変更は `/api/pricing/seats` だけが Stripe の数量を変える | 控えを正として扱うと、Stripe と人数がずれる／課金の反映の経路が5本目になる |
 | **INV-17** | 追加購入（一回払い）の付与は、決済の ID（`purchase:<cs_...>`）で1回だけ。付ける前に、支払い済み・本人・明細の価格と数を Stripe で確かめる。Webhook で付けられないときは例外にして再送させる | 二重に付く／払ったのに付かない |
+| **INV-18** | 追加購入の返金では、返金の累計に見合う量を、その購入の付与からだけ減らす（`revokeGrant`。鍵は `purchase:<cs_...>`）。ほかの付与からは減らさない。使い済みで減らせない分は Slack（課金の異常）に知らせ、運営が決める | 返金したのにポイントが残る。自動でほかの付与を削ると、お客様の分を誤って減らす |
 
 ### 15.2 仕組み
 
@@ -686,6 +687,7 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - メンバー: `account_company_members`。持ち主は1人目、招待中と参加を数える。入れる上限はチーム＝買った人数、フリー＝3人、据え置き＝1人。
 - ドヤパワー: チームの会社の毎月の量は人数から（`teamMonthlyGrantFor`）。参加したメンバーは参加した会社のドヤパワーを使う。人数を増やした月は、増えた分をその月に1回だけ足す。
 - 追加購入: `/api/pricing/power-pack`（一回払い）。Webhook の `checkout.session.completed` で `mode=payment`・`metadata.kind=power_pack` を契約の処理より前で分ける。戻り先に `success=true&session_id=` を付けない（StripeSuccessSync と取り違えない）。
+- 追加購入の返金: Webhook の `charge.refunded` で、決済から Checkout を引き、`metadata.kind=power_pack` のときだけ減らす。定期契約の返金では何もしない。Stripe の Webhook の送信先に `charge.refunded` を足すまで動かない（2026-11-05 時点で未登録）。
 - 日次監査の MRR は、全部の明細の合計で計算する（段階別の価格は、価格ごとに1回だけ段階の表を取る）。
 - 各ツールの料金ページ（`UnifiedPricingPlans`）と旧 HR の申し込みは、旗が on の、まだ契約していない人には今のプランを売らない（ボタンは「料金プランを見る」、API は 410）。
 

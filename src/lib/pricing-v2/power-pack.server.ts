@@ -15,6 +15,7 @@ import { POWER_PACK, withTax } from './plans'
 import { sendEventNotification } from '@/lib/notifications'
 import { notifyAlert } from '@/lib/alert'
 import { powerPackPriceId, POWER_PACK_MAX_PER_ORDER } from './prices'
+import { pointsToRevoke } from './power-pack-refund'
 
 export const POWER_PACK_KIND = 'power_pack'
 
@@ -101,5 +102,45 @@ export async function reportPowerPackFailure(sessionId: string, reason: string):
     kind: 'billing',
     detail: '支払い済みの追加購入に、ドヤパワーを付けられませんでした。Stripe の決済と台帳を確かめ、/api/admin/doya-power/adjust（管理者の認証とドヤパワーの旗だけで動く。新しい料金の旗を off に戻していても使える。requestId には決済の ID を使う）で付けるか、返金してください。ドヤパワーの旗も off なら、返金してください。',
     extra: { 決済: sessionId, 理由: reason },
+  }).catch(() => false)
+}
+
+export type PackRefundResult =
+  | { handled: false }
+  | { handled: true; ok: true; sessionId: string; revoked: number; uncollected: number }
+  | { handled: true; ok: false; sessionId: string; reason: 'mismatch' | 'ledger_off' | 'not_found' | 'invalid' }
+
+/**
+ * 返金された決済が追加購入なら、返金の累計に見合うドヤパワーをその購入の分から減らす（Webhook の charge.refunded）。
+ * 追加購入でない返金は何もしない。量は累計で渡すので、知らせが重なっても二重に減らない。
+ */
+export async function revokePowerPackForCharge(charge: Stripe.Charge): Promise<PackRefundResult> {
+  const paymentIntent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+  if (!paymentIntent) return { handled: false }
+  const sessions = await stripe.checkout.sessions.list({ payment_intent: paymentIntent, limit: 1 })
+  const session = sessions.data[0]
+  const md = session?.metadata ?? {}
+  if (!session || session.mode !== 'payment' || md.app !== 'doya-ai' || md.kind !== POWER_PACK_KIND) return { handled: false }
+  const packs = Number(md.packs)
+  if (!md.companyId || !isValidPackCount(packs)) return { handled: true, ok: false, sessionId: session.id, reason: 'mismatch' }
+  if (!doyaPowerLedgerAllowed()) return { handled: true, ok: false, sessionId: session.id, reason: 'ledger_off' }
+  const target = pointsToRevoke(packs * POWER_PACK.points, charge.amount_refunded, charge.amount)
+  const { revokeGrant } = await import('@/lib/doya-power')
+  const r = await revokeGrant(md.companyId, `purchase:${session.id}`, target, { note: `stripe-refund:${charge.id}` })
+  if (!r.ok) return { handled: true, ok: false, sessionId: session.id, reason: r.reason }
+  return { handled: true, ok: true, sessionId: session.id, revoked: r.revoked, uncollected: r.uncollected }
+}
+
+/**
+ * 返金のあとに減らせなかった分を、運営に知らせる。知らせられたら true。
+ * reason は処理の失敗の理由。使い済みで減らせなかったときは uncollected に量を渡す。
+ */
+export async function reportPowerPackRefundIssue(sessionId: string, issue: { reason?: string; uncollected?: number }): Promise<boolean> {
+  return notifyAlert({
+    title: 'ドヤパワーの追加購入の返金で、減らせなかった分があります',
+    level: 'critical',
+    kind: 'billing',
+    detail: '返金された追加購入のドヤパワーを、全部は減らせませんでした。Stripe の返金と台帳を確かめ、残りの扱いを決めてください。自動では、ほかの付与から減らしません。',
+    extra: { 決済: sessionId, ...(issue.reason ? { 理由: issue.reason } : {}), ...(issue.uncollected ? { 減らせなかった量: String(issue.uncollected) } : {}) },
   }).catch(() => false)
 }

@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS "doya_power_transactions" (
     CONSTRAINT "doya_power_transactions_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "doya_power_transactions_accountId_fkey" FOREIGN KEY ("accountId")
         REFERENCES "doya_power_accounts"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "doya_power_transactions_type_check" CHECK ("type" IN ('consume', 'refund', 'grant', 'expire'))
+    CONSTRAINT "doya_power_transactions_type_check" CHECK ("type" IN ('consume', 'refund', 'grant', 'expire', 'revoke'))
 );
 
 -- 索引（unique は二重に減らさない・戻しは1回だけ・二重に付与しない、の要）

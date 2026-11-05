@@ -215,3 +215,40 @@ test('旗が on の人には、今のプラン（9,980円）を新しく売ら�
 test('据え置きの人は、旗が on でも今の契約の中でプランを変えられる（旧ライト → プロ など）', () => {
   assert.deepEqual(decideLegacyPlanCheckout({ enabled: true, kind: 'legacy' }), { ok: true })
 })
+
+// ---------- 追加購入の返金で減らす量 ----------
+import { pointsToRevoke } from './power-pack-refund'
+
+test('返金の累計に見合う量を出す。全額はすべて、一部は切り捨て', () => {
+  assert.equal(pointsToRevoke(1000, 6578, 6578), 1000)
+  assert.equal(pointsToRevoke(2000, 13156, 13156), 2000)
+  assert.equal(pointsToRevoke(1000, 3289, 6578), 500)
+  assert.equal(pointsToRevoke(1000, 1, 6578), 0)
+  assert.equal(pointsToRevoke(1000, 0, 6578), 0)
+  assert.equal(pointsToRevoke(1000, 6578, 0), 0)
+})
+
+// ---------- 決済のあとのお礼 ----------
+import { claimThanksOnce, paymentThanksCopy } from './payment-thanks'
+
+test('お礼は同じ決済で1回だけ。別の決済はまた出る', () => {
+  const m = new Map<string, string>()
+  const storage = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } }
+  assert.equal(claimThanksOnce('pack:cs_1', storage), true)
+  assert.equal(claimThanksOnce('pack:cs_1', storage), false)
+  assert.equal(claimThanksOnce('pack:cs_2', storage), true)
+})
+
+test('お礼の印を保存できないときも、お礼は出す', () => {
+  assert.equal(claimThanksOnce('pack:cs_1', null), true)
+  const broken = { getItem: () => { throw new Error('blocked') }, setItem: () => {} }
+  assert.equal(claimThanksOnce('pack:cs_1', broken), true)
+})
+
+test('お礼の文面に、買った量と増えた人数が出る', () => {
+  assert.equal(paymentThanksCopy({ kind: 'pack', points: 1000 }).headline, 'ドヤパワーを 1,000 足しました')
+  const seats = paymentThanksCopy({ kind: 'seats', added: 2, seats: 5 })
+  assert.equal(seats.amount?.value, 2)
+  assert.equal(seats.headline, 'チームを 5 人にしました')
+  assert.equal(paymentThanksCopy({ kind: 'plan' }).amount, null)
+})

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import { paidTierFromSyncResult } from '@/lib/plan-utils'
 import { BillingResponseError, readBillingResponse, waitForBillingClientTask } from '@/lib/billing-response-client'
+import { claimThanksOnce, thanksStorage } from '@/lib/pricing-v2/payment-thanks'
 
 /**
  * Stripe決済からの戻り（?success=true&session_id=cs_...）を**どのサービスの戻り先でも**検知し、
@@ -112,7 +113,8 @@ function StripeSuccessSyncInner() {
       setFailure(null)
       toast.dismiss(toastId)
       if (target.mode === 'checkout' && exact) {
-        setModal({ actor, contextKey, tier })
+        // お礼は、支払いが未完了でなく、その決済でまだ出していないときだけ（読み込み直しで再び出さない）
+        if (data.paymentStatus !== 'unpaid' && claimThanksOnce(`checkout:${target.sessionId}`, thanksStorage())) setModal({ actor, contextKey, tier })
         if (first && exact) {
           try {
             window.dispatchEvent(new CustomEvent('doya:checkout-verified', { detail: {

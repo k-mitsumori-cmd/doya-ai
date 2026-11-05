@@ -42,6 +42,7 @@ async function scenario(name,options,work){
    if(n==='lucide-react')return{Minus:()=>null,Plus:()=>null,Copy:()=>null,Check:()=>null};
    if(n==='@/components/ds')return{confirmDialog:async data=>{dialogs.push(data);return confirm?confirm.promise:true}};
    if(n.endsWith('.module.css'))return{__esModule:true,default:classes};
+   if(n==='./PaymentThanks')return{__esModule:true,default:()=>null};
    if(n.startsWith('@/'))return load('src/'+n.slice(2)+'.ts');
    if(n.startsWith('.'))return load(path.posix.normalize(path.posix.join(path.posix.dirname(name),n))+'.ts');
    throw Error('UNEXPECTED_CLIENT_DEPENDENCY '+n);
