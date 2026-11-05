@@ -384,7 +384,17 @@ jobs:
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence
+          DOYA_BANNER_IMAGE_INPUT_EVIDENCE_DIR: /tmp/doya-banner-image-input-evidence
         run: npm run test:security
+
+      - name: Save synthetic banner image input evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banner-image-input-${{ github.sha }}
+          path: /tmp/doya-banner-image-input-evidence
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Save synthetic banner template read lifecycle evidence
         if: always()
