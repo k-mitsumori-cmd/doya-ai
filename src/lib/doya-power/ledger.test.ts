@@ -294,3 +294,52 @@ test('付与と同じトランザクションの確かめ（inTransaction）: fa
   assert.equal(again.ok && again.duplicated, true)
   assert.equal(called, 1)
 })
+
+// ---------- 返金の取り消し（追加購入の返金。Webhook の charge.refunded） ----------
+test('revokeGrant は累計で減らすので、同じ返金が重なっても二重に減らない', async () => {
+  const { ledger } = setup()
+  await ledger.grant('co_alice', 'purchase', 1000, null, { sourceKey: 'purchase:cs_1' })
+  // 無料の会社なので、毎日の回復の 10 は残る
+  const first = await ledger.revokeGrant('co_alice', 'purchase:cs_1', 1000)
+  assert.deepEqual(first.ok && [first.revoked, first.totalRevoked, first.uncollected, first.balance], [1000, 1000, 0, 10])
+  const again = await ledger.revokeGrant('co_alice', 'purchase:cs_1', 1000)
+  assert.deepEqual(again.ok && [again.revoked, again.totalRevoked, again.uncollected], [0, 1000, 0])
+})
+
+test('revokeGrant は一部の返金のあと、増えた累計の分だけ減らす', async () => {
+  const { ledger } = setup()
+  await ledger.grant('co_alice', 'purchase', 1000, null, { sourceKey: 'purchase:cs_1' })
+  await ledger.revokeGrant('co_alice', 'purchase:cs_1', 300)
+  const r = await ledger.revokeGrant('co_alice', 'purchase:cs_1', 500)
+  assert.deepEqual(r.ok && [r.revoked, r.totalRevoked, r.balance], [200, 500, 510])
+})
+
+test('revokeGrant は使い済みの分を減らせず、ほかの付与からも減らさない', async () => {
+  const { ledger } = setup()
+  await ledger.grant('co_alice', 'monthly', 500)
+  await ledger.grant('co_alice', 'purchase', 1000, null, { sourceKey: 'purchase:cs_1' })
+  // 残りが 100 になるまで使う（買った分も使い切りに近づく）
+  const before = await ledger.balance('co_alice')
+  await ledger.consume('co_alice', before!.total - 100, 'op:1')
+  const r = await ledger.revokeGrant('co_alice', 'purchase:cs_1', 1000)
+  assert.ok(r.ok)
+  const after = await ledger.balance('co_alice')
+  assert.equal(r.revoked + r.uncollected, 1000)
+  assert.ok(r.uncollected > 0)
+  assert.equal(after!.total, 100 - r.revoked)
+})
+
+test('revokeGrant は見つからない付与を not_found で返す', async () => {
+  const { ledger } = setup()
+  assert.deepEqual(await ledger.revokeGrant('co_alice', 'purchase:none', 1000), { ok: false, reason: 'not_found' })
+})
+
+test('返金で取り消した行は、履歴に取り消しとして出る', async () => {
+  const { ledger } = setup()
+  await ledger.grant('co_alice', 'purchase', 1000, null, { sourceKey: 'purchase:cs_1' })
+  await ledger.revokeGrant('co_alice', 'purchase:cs_1', 1000)
+  const rows = await ledger.history('co_alice')
+  const row = rows.find((e) => e.type === 'revoke')
+  assert.equal(row?.amount, -1000)
+  assert.equal(row?.balanceAfter, 10)
+})
