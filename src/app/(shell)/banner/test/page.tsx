@@ -1,6 +1,6 @@
 'use client'
 
-import { downscaleToDataUrl } from '@/lib/image-downscale'
+import { useBannerImageInput } from '@/lib/banner/use-image-input'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
@@ -153,10 +153,13 @@ function BannerTestPageInner() {
   const [customWidth, setCustomWidth] = useState(1024)
   const [customHeight, setCustomHeight] = useState(1024)
   const [generateCount, setGenerateCount] = useState(3)
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
-  const [personFile, setPersonFile] = useState<File | null>(null)
-  const [personPreview, setPersonPreview] = useState<string | null>(null)
+  const imageInputScope = JSON.stringify([sessionStatus, session?.user?.id, session?.user?.email])
+  const logoInput = useBannerImageInput(imageInputScope, 512)
+  const personInput = useBannerImageInput(imageInputScope, 1024)
+  const { file: logoFile, preview: logoPreview } = logoInput
+  const { file: personFile, preview: personPreview } = personInput
+  const imageInputBlocked = logoInput.pending || personInput.pending || Boolean(logoInput.error || personInput.error)
+  
   
   // カスタムプロンプト（エンタープライズ限定）
   const [customPrompt, setCustomPrompt] = useState('')
@@ -267,28 +270,18 @@ function BannerTestPageInner() {
   const monthlyLimit = quota.usage?.limit ?? -1
   const isOverMonthlyLimit = monthlyLimit >= 0 && (quota.usage?.used ?? 0) >= monthlyLimit
 
-  // ファイルアップロードハンドラ
-  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // ファイル選択は入力ごとに管理し、同じファイルも再選択できるようにする。
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setLogoFile(file)
-      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
-      downscaleToDataUrl(file, 512)
-        .then(url => setLogoPreview(url))
-        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
-    }
-  }, [])
-  
-  const handlePersonUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.currentTarget.value = ''
+    if (file) void logoInput.select(file)
+  }
+
+  const handlePersonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setPersonFile(file)
-      // 4.5MB の本文制限に当たらないよう、送る前に縮小する（ロゴ512px・人物1024px）
-      downscaleToDataUrl(file, 1024)
-        .then(url => setPersonPreview(url))
-        .catch(() => alert('画像を読み込めませんでした。別の画像をお試しください。'))
-    }
-  }, [])
+    e.currentTarget.value = ''
+    if (file) void personInput.select(file)
+  }
 
   const scrollRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
@@ -777,6 +770,14 @@ function BannerTestPageInner() {
       return
     }
 
+    const logoSelection = logoInput.read()
+    const personSelection = personInput.read()
+    if (!logoSelection || !personSelection) return
+    if (logoSelection.pending || personSelection.pending || logoSelection.error || personSelection.error) {
+      toast.error('画像の読み込み状態を確認してください。')
+      return
+    }
+
     const operation = operations.begin()
     if (!operation) return
     if (completionTimer.current !== null) clearTimeout(completionTimer.current)
@@ -788,6 +789,10 @@ function BannerTestPageInner() {
     operation.signal.addEventListener('abort', stopMessages, { once: true })
     try {
       if (!(await quota.check(generateCount)) || !operation.current()) return
+      if (logoInput.read() !== logoSelection || personInput.read() !== personSelection) {
+        toast.error('画像の選択が変わりました。内容を確認して、もう一度生成してください。')
+        return
+      }
       setIsGenerating(true)
       setGeneratedBanners([])
       setGenerationProgress(0)
@@ -825,8 +830,8 @@ function BannerTestPageInner() {
           basePrompt: selectedTemplate.prompt,
           templateImageUrl: selectedTemplate.imageUrl, // 元の画像URLを渡してスタイル参照
           templateDisplayTitle: selectedTemplate.displayTitle || selectedTemplate.name,
-          logoBase64: logoPreview || undefined,
-          personBase64: personPreview || undefined,
+          logoBase64: logoSelection.preview || undefined,
+          personBase64: personSelection.preview || undefined,
           // エンタープライズ限定：カスタムプロンプト
           customPrompt: currentPlan === 'ENTERPRISE' && customPrompt.trim() ? customPrompt.trim() : undefined,
         }),
@@ -1693,6 +1698,11 @@ function BannerTestPageInner() {
                               </span>
                               <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                             </label>
+                            {logoInput.pending && <p role="status" className="text-sm">画像を読み込んでいます。</p>}
+                            {logoInput.error && <p role="alert" className="text-sm">{logoInput.error}</p>}
+                            {(logoFile || logoInput.pending || logoInput.error) && (
+                              <button type="button" onClick={logoInput.clear} className="text-sm underline focus-visible:outline focus-visible:outline-2">画像を外す</button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1717,6 +1727,11 @@ function BannerTestPageInner() {
                               </span>
                               <input type="file" accept="image/*" onChange={handlePersonUpload} className="hidden" />
                             </label>
+                            {personInput.pending && <p role="status" className="text-sm">画像を読み込んでいます。</p>}
+                            {personInput.error && <p role="alert" className="text-sm">{personInput.error}</p>}
+                            {(personFile || personInput.pending || personInput.error) && (
+                              <button type="button" onClick={personInput.clear} className="text-sm underline focus-visible:outline focus-visible:outline-2">画像を外す</button>
+                            )}
                           </div>
                         </div>
                         <p className="text-[8px] sm:text-[10px] text-gray-500 mt-2">※ 人物写真は1名（1枚）のみ対応です</p>
@@ -1861,7 +1876,7 @@ function BannerTestPageInner() {
                   ) : (
                     <button
                       onClick={handleGenerate}
-                      disabled={!serviceName.trim() || quota.checking}
+                      disabled={!serviceName.trim() || quota.checking || imageInputBlocked}
                       className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
                       <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
