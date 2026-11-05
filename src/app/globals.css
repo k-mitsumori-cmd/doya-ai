@@ -551,3 +551,6 @@
   100% { transform: scale(1); }
 }
 .quick-action-bounce:active { animation: kintaiQuickActionBounce 0.2s ease-out; }
+
+/* ドヤAIが入力している欄を光らせる（src/components/agent-chat/motion.ts の focusField が印を付ける） */
+[data-agent-active] { outline: 3px solid #0066ff; outline-offset: 2px; border-radius: 14px; box-shadow: 0 0 0 7px #e8f0ff; transition: box-shadow .14s ease; }

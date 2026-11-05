@@ -78,7 +78,6 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .nextBtn small { color: #0047d6; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
 /* 画面の側の欄。値を入れている間、光らせる（フォームの data-agent-field。見本の .fld.on .ctl::after と同じ見た目） */
-:global([data-agent-active]) { outline: 3px solid #0066ff; outline-offset: 2px; border-radius: 14px; box-shadow: 0 0 0 7px #e8f0ff; transition: box-shadow .14s ease; }
 
 /* スマホ（767px 以下）。下のタブバーの上に、固定の高さで置く。高さは --agent-dock-h（会話・両方・画面で切り替え。AgentDock が設定） */
 @media (max-width: 767px) {
