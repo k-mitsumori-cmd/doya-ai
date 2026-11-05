@@ -1010,11 +1010,11 @@ function BannerDashboardWorkspace() {
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
   const quota = useBannerQuota(setLimitModal)
 
-  
 
-  
 
-  
+
+
+
 
   const setPersonFileAt = async (idx: number, file: File | null) => {
     if (idx !== 0 || !file || !operations.active()) return
