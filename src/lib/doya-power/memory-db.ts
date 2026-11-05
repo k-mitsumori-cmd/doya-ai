@@ -11,6 +11,7 @@ const MODELS: Record<string, string[][]> = {
   doyaPowerAccount: [['id'], ['companyId']],
   doyaPowerGrant: [['id'], ['accountId', 'sourceKey']],
   doyaPowerTransaction: [['id'], ['operationId'], ['refundOf']],
+  powerPackPurchase: [['id'], ['sourceKey']],
 }
 
 function matchValue(v: any, cond: any): boolean {
@@ -88,6 +89,8 @@ export function createMemoryDb(options: { now?: () => Date } = {}) {
         const t = now()
         const row: Row = { id: `${name}_${++seq}`, createdAt: t, ...(name === 'doyaPowerTransaction' || name === 'doyaPowerGrant' ? {} : { updatedAt: t }), ...clone(args.data) }
         for (const k of ['operationId', 'refundOf', 'grantId', 'allocations', 'note', 'sourceKey', 'expiresAt']) if (name === 'doyaPowerTransaction' || name === 'doyaPowerGrant') row[k] ??= null
+        if (name === 'powerPackPurchase') row.cancelTarget ??= 0
+        if (name === 'powerPackPurchase') for (const key of ['cashAmount', 'cashRefunded', 'paymentIntentId']) row[key] ??= null
         checkUnique(name, row)
         m.rows.push(row)
         return clone(row)

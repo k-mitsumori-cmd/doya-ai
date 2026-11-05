@@ -57,11 +57,11 @@ export type RefundResult =
   | { ok: false; reason: 'invalid' | 'not_found' }
 
 export type RevokeResult =
-  | { ok: true; revoked: number; totalRevoked: number; uncollected: number; balance: number }
+  | { ok: true; revoked: number; totalRevoked: number; uncollected: number; balance: number; pendingGrant?: boolean }
   | { ok: false; reason: 'invalid' | 'not_found' }
 
 export type GrantResult =
-  | { ok: true; grantId: string; granted: number; balance: number; duplicated: boolean }
+  | { ok: true; grantId: string; granted: number; balance: number; duplicated: boolean; cashRefundTarget?: number }
   | { ok: false; reason: 'invalid' | 'company_not_found' | 'monthly_bonus_cap' | 'recovery_cap' | 'precondition' }
 
 export type BalanceResult = {
@@ -76,6 +76,8 @@ export type BalanceResult = {
 
 export type GrantOptions = {
   sourceKey?: string
+  /** Bind an immutable cash-purchase identity, even before points are granted. */
+  trackPurchase?: boolean
   note?: string
   /**
    * 付与と同じトランザクションの中で、先に行う確かめと記録（例: はじめの付与の受け取りの記録。src/lib/pricing-v2/starter.server.ts）。
@@ -151,7 +153,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
   }
 
   /** 期限切れを 0 にし、毎日の回復を足す。整えたあとの付与を返す */
-  async function settle(tx: any, account: AccountRow, now: Date, paid = false): Promise<GrantRow[]> {
+  async function settle(tx: any, account: AccountRow, now: Date, paid = false, skipCashSource?: string): Promise<GrantRow[]> {
     let grants = await liveGrants(tx, account.id)
     let running = usableTotal(grants, now)
     for (const g of grants) {
@@ -183,7 +185,17 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
       await tx.doyaPowerAccount.update({ where: { id: account.id }, data: { lastRecoveryDay: today } })
       account.lastRecoveryDay = today
     }
-    return grants
+    const purchaseGrants = grants.filter(grant => grant.kind === 'purchase' && grant.sourceKey && grant.sourceKey !== skipCashSource)
+    const sourceKeys = [...new Set(purchaseGrants.map(grant => grant.sourceKey as string))]
+    if (sourceKeys.length) {
+      const purchases: PurchaseRow[] = await tx.powerPackPurchase.findMany({ where: { sourceKey: { in: sourceKeys } } })
+      for (const purchase of purchases) {
+        const origin = purchaseGrants.find(grant => grant.sourceKey === purchase.sourceKey)
+        if (!origin || purchase.companyId !== account.companyId || purchase.amount !== origin.amount || !isValidAmount(purchase.amount) || !Number.isSafeInteger(purchase.cancelTarget) || purchase.cancelTarget < 0 || purchase.cancelTarget > purchase.amount) throw new Error('Cash purchase settlement binding unavailable')
+        if (purchase.cancelTarget > 0) await applyPurchaseCancellation(tx, account, purchase, origin, grants, now, 'cash-refund:settlement')
+      }
+    }
+    return grants.filter(grant => grant.remaining > 0)
   }
 
   /** 会社の残りから amount を減らす。同じ operationId では1回だけ。足りなければ減らさずに拒む */
@@ -252,10 +264,58 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
         await tx.doyaPowerGrant.updateMany({ where: { id: a.grantId, accountId: account.id }, data: { remaining: { increment: a.amount } } })
       }
       const grants = await settle(tx, account, now, paid)
+      for (const grantId of new Set(allocations.map(allocation => allocation.grantId))) {
+        const origin: GrantRow | null = await tx.doyaPowerGrant.findUnique({ where: { id: grantId } })
+        if (!origin || origin.accountId !== account.id) throw new Error('Refund allocation grant is unavailable')
+        if (origin.kind === 'purchase' && origin.sourceKey) {
+          const purchase = await purchaseFor(tx, account, origin.sourceKey, origin.amount, false)
+          if (purchase === false) throw new Error('Refund purchase binding changed')
+          if (purchase) await applyPurchaseCancellation(tx, account, purchase, origin, grants, now, 'cash-refund:returned-allocation')
+        }
+      }
       const total = await writeBalance(tx, account, grants, now)
       await tx.doyaPowerTransaction.updateMany({ where: { refundOf: operationId }, data: { balanceAfter: total } })
       return { ok: true, operationId, amount, duplicated: false }
     })
+  }
+
+  type PurchaseRow = { id: string; companyId: string; sourceKey: string; amount: number; cancelTarget: number }
+
+  async function purchaseFor(tx: any, account: AccountRow, sourceKey: string, amount: number, create: boolean): Promise<PurchaseRow | null | false> {
+    const row: PurchaseRow | null = await tx.powerPackPurchase.findUnique({ where: { sourceKey } })
+    if (row) {
+      if (row.companyId !== account.companyId || row.amount !== amount) return false
+      if (!isValidAmount(row.amount) || !Number.isSafeInteger(row.cancelTarget) || row.cancelTarget < 0 || row.cancelTarget > row.amount) throw new Error('Invalid persisted purchase cancellation')
+      if (create) {
+        const historical: GrantRow[] = await tx.doyaPowerGrant.findMany({ where: { kind: 'purchase', sourceKey } })
+        if (historical.some(grant => grant.accountId !== account.id || grant.amount !== amount) || historical.length > 1) return false
+      }
+      return row
+    }
+    if (!create) return null
+    // Historical grants must not allow the same cash purchase to be claimed by another company.
+    const historical: GrantRow[] = await tx.doyaPowerGrant.findMany({ where: { kind: 'purchase', sourceKey } })
+    if (historical.some(grant => grant.accountId !== account.id || grant.amount !== amount) || historical.length > 1) return false
+    return tx.powerPackPurchase.create({ data: { companyId: account.companyId, sourceKey, amount, cancelTarget: 0 } })
+  }
+
+  async function applyPurchaseCancellation(tx: any, account: AccountRow, purchase: PurchaseRow, found: GrantRow, grants: GrantRow[], now: Date, note: string): Promise<RevokeResult> {
+    if (found.kind !== 'purchase' || found.accountId !== account.id || purchase.companyId !== account.companyId || found.sourceKey !== purchase.sourceKey || found.amount !== purchase.amount) throw new Error('Purchase grant binding changed')
+    const past: { amount: number }[] = await tx.doyaPowerTransaction.findMany({ where: { accountId: account.id, grantId: found.id, type: 'revoke' }, select: { amount: true } })
+    if (past.some(row => !Number.isSafeInteger(row.amount) || row.amount > 0)) throw new Error('Invalid cancellation history')
+    const already = past.reduce((sum, row) => sum - row.amount, 0)
+    if (!Number.isSafeInteger(already) || already > purchase.amount) throw new Error('Invalid cancellation total')
+    const need = Math.max(0, purchase.cancelTarget - already)
+    const live = grants.find(grant => grant.id === found.id)
+    const take = Math.min(need, live?.remaining ?? 0)
+    if (take > 0 && live) {
+      const changed = await tx.doyaPowerGrant.updateMany({ where: { id: live.id, accountId: account.id, remaining: live.remaining }, data: { remaining: live.remaining - take } })
+      if (changed.count !== 1) throw new RetryableError('purchase changed while cancelling')
+      live.remaining -= take
+    }
+    const balance = await writeBalance(tx, account, grants.filter(grant => grant.remaining > 0), now)
+    if (take > 0) await tx.doyaPowerTransaction.create({ data: { accountId: account.id, type: 'revoke', amount: -take, balanceAfter: balance, grantId: found.id, note } })
+    return { ok: true, revoked: take, totalRevoked: already + take, uncollected: need - take, balance }
   }
 
   /**
@@ -269,15 +329,24 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
   async function grant(companyId: string, kind: GrantKind, amount: number, expiresAt: Date | null = null, opts: GrantOptions = {}, amountInTransaction?: (tx: Prisma.TransactionClient) => Promise<number | false>): Promise<GrantResult> {
     if (!validId(companyId) || !isGrantKind(kind) || !isValidAmount(amount)) return { ok: false, reason: 'invalid' }
     if (opts.sourceKey !== undefined && !validId(opts.sourceKey)) return { ok: false, reason: 'invalid' }
+    if (opts.trackPurchase && (kind !== 'purchase' || !opts.sourceKey || amountInTransaction)) return { ok: false, reason: 'invalid' }
     if (expiresAt !== null && (!(expiresAt instanceof Date) || Number.isNaN(expiresAt.getTime()))) return { ok: false, reason: 'invalid' }
     const paid = await paidOf(companyId)
     return run(async (tx, now): Promise<GrantResult> => {
       const account = await findAccount(tx, companyId, true)
       if (!account) return { ok: false, reason: 'company_not_found' }
       const sourceKey = opts.sourceKey ?? (kind === 'monthly' ? `monthly:${jstMonthKey(now)}` : null)
+      const purchase = kind === 'purchase' && sourceKey ? await purchaseFor(tx, account, sourceKey, amount, Boolean(opts.trackPurchase)) : null
+      if (purchase === false) return { ok: false, reason: 'precondition' }
       if (sourceKey) {
         const dup = await tx.doyaPowerGrant.findUnique({ where: { accountId_sourceKey: { accountId: account.id, sourceKey } } })
         if (dup) {
+          if (purchase) {
+            const grants = await settle(tx, account, now, paid, sourceKey)
+            const cancelled = await applyPurchaseCancellation(tx, account, purchase, dup, grants, now, 'cash-refund:duplicate-fulfillment')
+            if (!cancelled.ok) throw new Error('Purchase cancellation unavailable')
+            return { ok: true, grantId: dup.id, granted: dup.amount, balance: cancelled.balance, duplicated: true, cashRefundTarget: purchase.cancelTarget }
+          }
           const grants = await liveGrants(tx, account.id)
           return { ok: true, grantId: dup.id, granted: dup.amount, balance: usableTotal(grants, now), duplicated: true }
         }
@@ -285,6 +354,7 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
       if (opts.inTransaction && !(await opts.inTransaction(tx))) return { ok: false, reason: 'precondition' }
       const resolvedAmount = amountInTransaction ? await amountInTransaction(tx) : amount
       if (resolvedAmount === false || !isValidAmount(resolvedAmount)) return { ok: false, reason: 'precondition' }
+      if (purchase && resolvedAmount !== purchase.amount) return { ok: false, reason: 'precondition' }
       // はじめの付与（starter）を付ける回は、その日の回復を足さない（ちょうど 100 から始める）
       const grants = await settle(tx, account, now, kind === 'starter' ? true : paid)
 
@@ -324,6 +394,11 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
       await tx.doyaPowerTransaction.create({
         data: { accountId: account.id, type: 'grant', amount: granted, balanceAfter: total, grantId: g.id, note: opts.note ?? kind },
       })
+      if (purchase) {
+        const cancelled = await applyPurchaseCancellation(tx, account, purchase, g, grants, now, 'cash-refund:fulfillment')
+        if (!cancelled.ok) throw new Error('Purchase cancellation unavailable')
+        return { ok: true, grantId: g.id, granted, balance: cancelled.balance, duplicated: false, cashRefundTarget: purchase.cancelTarget }
+      }
       return { ok: true, grantId: g.id, granted, balance: total, duplicated: false }
     })
   }
@@ -333,32 +408,31 @@ export function createDoyaPowerLedger(db: LedgerDb, options: LedgerOptions = {})
    * target は累計なので、同じ返金の知らせが何度届いても二重に減らない。ほかの付与からは減らさない。
    * 使い済みなどで減らせない分は uncollected で返す（減らし方は運営が決める）。
    */
-  async function revokeGrant(companyId: string, sourceKey: string, target: number, opts: { note?: string } = {}): Promise<RevokeResult> {
-    if (!validId(companyId) || !validId(sourceKey) || !Number.isInteger(target) || target < 0) return { ok: false, reason: 'invalid' }
+  async function revokeGrant(companyId: string, sourceKey: string, target: number, opts: { note?: string; expectedAmount?: number } = {}): Promise<RevokeResult> {
+    if (!validId(companyId) || !validId(sourceKey) || !Number.isSafeInteger(target) || target < 0 || (opts.expectedAmount !== undefined && !isValidAmount(opts.expectedAmount))) return { ok: false, reason: 'invalid' }
     const paid = await paidOf(companyId)
     return run(async (tx, now): Promise<RevokeResult> => {
-      const account = await findAccount(tx, companyId, false)
+      const account = await findAccount(tx, companyId, opts.expectedAmount !== undefined)
       if (!account) return { ok: false, reason: 'not_found' }
       const found: GrantRow | null = await tx.doyaPowerGrant.findUnique({ where: { accountId_sourceKey: { accountId: account.id, sourceKey } } })
-      if (!found) return { ok: false, reason: 'not_found' }
-      const grants = await settle(tx, account, now, paid)
-      const past: { amount: number }[] = await tx.doyaPowerTransaction.findMany({ where: { accountId: account.id, grantId: found.id, type: 'revoke' }, select: { amount: true } })
-      const already = past.reduce((s, r) => s - r.amount, 0)
-      const need = Math.max(0, target - already)
-      const live = grants.find((g) => g.id === found.id)
-      const take = Math.min(need, live?.remaining ?? 0)
-      if (take > 0 && live) {
-        const r = await tx.doyaPowerGrant.updateMany({ where: { id: live.id, remaining: live.remaining }, data: { remaining: live.remaining - take } })
-        if (r.count !== 1) throw new RetryableError('grant changed while revoking')
-        live.remaining -= take
+      if (found && found.kind !== 'purchase') return { ok: false, reason: 'invalid' }
+      const amount = opts.expectedAmount ?? found?.amount
+      if (amount === undefined) return { ok: false, reason: 'not_found' }
+      if (!isValidAmount(amount) || target > amount || (found && found.amount !== amount)) return { ok: false, reason: 'invalid' }
+      const purchase = await purchaseFor(tx, account, sourceKey, amount, true)
+      if (!purchase) return { ok: false, reason: 'invalid' }
+      const cumulative = Math.max(purchase.cancelTarget, target)
+      if (cumulative !== purchase.cancelTarget) {
+        const changed = await tx.powerPackPurchase.updateMany({ where: { id: purchase.id, companyId: account.companyId, cancelTarget: purchase.cancelTarget }, data: { cancelTarget: cumulative } })
+        if (changed.count !== 1) throw new RetryableError('purchase cancellation target changed')
+        purchase.cancelTarget = cumulative
       }
-      const balance = await writeBalance(tx, account, grants.filter((g) => g.remaining > 0), now)
-      if (take > 0) {
-        await tx.doyaPowerTransaction.create({
-          data: { accountId: account.id, type: 'revoke', amount: -take, balanceAfter: balance, grantId: found.id, note: opts.note ?? 'revoke' },
-        })
+      const grants = await settle(tx, account, now, paid, sourceKey)
+      if (!found) {
+        const balance = await writeBalance(tx, account, grants, now)
+        return { ok: true, revoked: 0, totalRevoked: 0, uncollected: 0, balance, pendingGrant: true }
       }
-      return { ok: true, revoked: take, totalRevoked: already + take, uncollected: need - take, balance }
+      return applyPurchaseCancellation(tx, account, purchase, found, grants, now, opts.note ?? 'revoke')
     })
   }
 

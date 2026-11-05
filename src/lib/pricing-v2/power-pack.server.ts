@@ -15,7 +15,7 @@ import { POWER_PACK, withTax } from './plans'
 import { sendEventNotification } from '@/lib/notifications'
 import { notifyAlert } from '@/lib/alert'
 import { powerPackPriceId, POWER_PACK_MAX_PER_ORDER } from './prices'
-import { pointsToRevoke } from './power-pack-refund'
+import { recordPowerPackReceipt } from './power-pack-receipt'
 
 export const POWER_PACK_KIND = 'power_pack'
 
@@ -55,18 +55,17 @@ export async function createPowerPackCheckout(input: { userId: string; email: st
 }
 
 export type FulfillResult =
-  | { ok: true; points: number; duplicated: boolean }
+  | { ok: true; points: number; duplicated: boolean; refundedPoints?: number }
   | { ok: false; reason: 'not_power_pack' | 'not_paid' | 'mismatch' | 'ledger_off' | 'grant_failed' }
 
 /**
  * 支払いが済んだ追加購入に、ドヤパワーを付ける（同じ決済には1回だけ）。
  * expectUserId を渡したときは、決済の持ち主がその人であることも確かめる（決済の直後の経路）。
  */
-export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Checkout.Session, expectUserId?: string): Promise<FulfillResult> {
-  const session = typeof sessionOrId === 'string' ? await stripe.checkout.sessions.retrieve(sessionOrId) : sessionOrId
+async function verifyPowerPackSession(session: Stripe.Checkout.Session, expectUserId: string | undefined, requirePaid: boolean): Promise<{ ok: true; userId: string; packs: number } | { ok: false; reason: 'not_power_pack' | 'not_paid' | 'mismatch' }> {
   const md = session.metadata ?? {}
   if (session.mode !== 'payment' || md.app !== 'doya-ai' || md.kind !== POWER_PACK_KIND) return { ok: false, reason: 'not_power_pack' }
-  if (session.payment_status !== 'paid') return { ok: false, reason: 'not_paid' }
+  if (requirePaid && session.payment_status !== 'paid') return { ok: false, reason: 'not_paid' }
   const userId = md.userId || session.client_reference_id || ''
   const packs = Number(md.packs)
   if (!userId || !md.companyId || !isValidPackCount(packs) || (expectUserId && expectUserId !== userId)) return { ok: false, reason: 'mismatch' }
@@ -80,15 +79,45 @@ export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Check
   if (!priceId || qty !== packs || items.data.length !== 1) return { ok: false, reason: 'mismatch' }
   // 支払いの額が、税込の単価 × パックの数と同じであること（割引・価格の設定の誤りで、少ない額のままポイントが付かないように）
   if (session.currency !== 'jpy' || session.amount_total !== packs * withTax(POWER_PACK.price)) return { ok: false, reason: 'mismatch' }
+  return { ok: true, userId, packs }
+}
+
+/** A paid Checkout can already be refunded. Read the authoritative charge before (re)fulfillment. */
+async function currentCashRefund(session: Stripe.Checkout.Session, paymentIntentId: string): Promise<{ ok: true; refunded: number } | { ok: false }> {
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge'] })
+  if (intent.id !== paymentIntentId) return { ok: false }
+  if (!intent.latest_charge) throw new Error('Paid purchase charge is not available yet')
+  const expectedChargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge.id
+  const charge = typeof intent.latest_charge === 'string' ? await stripe.charges.retrieve(intent.latest_charge) : intent.latest_charge
+  if (!expectedChargeId || charge.id !== expectedChargeId) return { ok: false }
+  const chargeIntent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+  if (chargeIntent !== paymentIntentId || charge.paid !== true || charge.currency !== 'jpy' || charge.amount !== session.amount_total || !Number.isSafeInteger(charge.amount_refunded) || charge.amount_refunded < 0 || charge.amount_refunded > charge.amount) return { ok: false }
+  return { ok: true, refunded: charge.amount_refunded }
+}
+
+export async function fulfillPowerPackSession(sessionOrId: string | Stripe.Checkout.Session, expectUserId?: string): Promise<FulfillResult> {
+  const session = typeof sessionOrId === 'string' ? await stripe.checkout.sessions.retrieve(sessionOrId) : sessionOrId
+  const verified = await verifyPowerPackSession(session, expectUserId, true)
+  if (!verified.ok) return verified
+  const { userId, packs } = verified
+  const md = session.metadata ?? {}
+  const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
+  if (!paymentIntentId || typeof session.amount_total !== 'number') return { ok: false, reason: 'mismatch' }
+  const cash = await currentCashRefund(session, paymentIntentId)
+  if (!cash.ok) return { ok: false, reason: 'mismatch' }
+  const purchase = await recordPowerPackReceipt(prisma, { companyId: md.companyId, sourceKey: `purchase:${session.id}`, amount: packs * POWER_PACK.points, cashAmount: session.amount_total, cashRefunded: cash.refunded, paymentIntentId })
+  if (!purchase.ok) return { ok: false, reason: 'mismatch' }
   if (!doyaPowerLedgerAllowed()) return { ok: false, reason: 'ledger_off' }
   const { grant } = await import('@/lib/doya-power')
-  const r = await grant(md.companyId, 'purchase', packs * POWER_PACK.points, null, { sourceKey: `purchase:${session.id}`, note: 'power-pack' })
+  const r = await grant(md.companyId, 'purchase', packs * POWER_PACK.points, null, { sourceKey: `purchase:${session.id}`, note: 'power-pack', trackPurchase: true })
   if (!r.ok) return { ok: false, reason: 'grant_failed' }
   // 運営への知らせは、初めて付けたときだけ（2つの経路のどちらか一方。メールは伏せ字で出る）
-  if (!r.duplicated) {
+  const refundedPoints = r.cashRefundTarget ?? 0
+  if (!Number.isSafeInteger(refundedPoints) || refundedPoints < 0 || refundedPoints > r.granted) return { ok: false, reason: 'grant_failed' }
+  if (!r.duplicated && refundedPoints === 0) {
     void sendEventNotification({ type: 'payment', userId, userEmail: session.customer_details?.email ?? session.customer_email ?? null, details: `ドヤパワーの追加購入（${(packs * POWER_PACK.points).toLocaleString('ja-JP')}）` })
   }
-  return { ok: true, points: r.granted, duplicated: r.duplicated }
+  return { ok: true, points: r.granted - refundedPoints, refundedPoints, duplicated: r.duplicated }
 }
 
 /**
@@ -107,7 +136,7 @@ export async function reportPowerPackFailure(sessionId: string, reason: string):
 
 export type PackRefundResult =
   | { handled: false }
-  | { handled: true; ok: true; sessionId: string; revoked: number; uncollected: number }
+  | { handled: true; ok: true; sessionId: string; revoked: number; uncollected: number; pendingGrant?: boolean; pendingLedger?: boolean }
   | { handled: true; ok: false; sessionId: string; reason: 'mismatch' | 'ledger_off' | 'not_found' | 'invalid' }
 
 /**
@@ -121,14 +150,20 @@ export async function revokePowerPackForCharge(charge: Stripe.Charge): Promise<P
   const session = sessions.data[0]
   const md = session?.metadata ?? {}
   if (!session || session.mode !== 'payment' || md.app !== 'doya-ai' || md.kind !== POWER_PACK_KIND) return { handled: false }
-  const packs = Number(md.packs)
-  if (!md.companyId || !isValidPackCount(packs)) return { handled: true, ok: false, sessionId: session.id, reason: 'mismatch' }
-  if (!doyaPowerLedgerAllowed()) return { handled: true, ok: false, sessionId: session.id, reason: 'ledger_off' }
-  const target = pointsToRevoke(packs * POWER_PACK.points, charge.amount_refunded, charge.amount)
+  const verified = await verifyPowerPackSession(session, undefined, false)
+  if (!verified.ok) return { handled: true, ok: false, sessionId: session.id, reason: 'mismatch' }
+  const { packs } = verified
+  const sessionIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
+  if (sessionIntent !== paymentIntent || charge.currency !== 'jpy' || charge.amount !== session.amount_total || !Number.isSafeInteger(charge.amount_refunded) || charge.amount_refunded < 0 || charge.amount_refunded > charge.amount) return { handled: true, ok: false, sessionId: session.id, reason: 'mismatch' }
+  const purchase = await recordPowerPackReceipt(prisma, { companyId: md.companyId, sourceKey: `purchase:${session.id}`, amount: packs * POWER_PACK.points, cashAmount: charge.amount, cashRefunded: charge.amount_refunded, paymentIntentId: paymentIntent })
+  if (!purchase.ok) return { handled: true, ok: false, sessionId: session.id, reason: 'mismatch' }
+  // The verified cash fact is durable. Do not touch point tables while their ledger is off.
+  if (!doyaPowerLedgerAllowed()) return { handled: true, ok: true, sessionId: session.id, revoked: 0, uncollected: 0, pendingLedger: true }
+  const target = purchase.receipt.cancelTarget
   const { revokeGrant } = await import('@/lib/doya-power')
-  const r = await revokeGrant(md.companyId, `purchase:${session.id}`, target, { note: `stripe-refund:${charge.id}` })
+  const r = await revokeGrant(md.companyId, `purchase:${session.id}`, target, { note: `stripe-refund:${charge.id}`, expectedAmount: packs * POWER_PACK.points })
   if (!r.ok) return { handled: true, ok: false, sessionId: session.id, reason: r.reason }
-  return { handled: true, ok: true, sessionId: session.id, revoked: r.revoked, uncollected: r.uncollected }
+  return { handled: true, ok: true, sessionId: session.id, revoked: r.revoked, uncollected: r.uncollected, ...(r.pendingGrant ? { pendingGrant: true } : {}) }
 }
 
 /**
