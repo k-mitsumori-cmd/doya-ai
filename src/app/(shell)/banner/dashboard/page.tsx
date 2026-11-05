@@ -1,5 +1,7 @@
 'use client'
 
+import { createBannerTemplateReadScope, type BannerTemplateReadScope } from '@/lib/banner/template-read-lifetime'
+
 import { downscaleToDataUrl } from '@/lib/image-downscale'
 import { templateImageUrl } from '@/lib/banner-template-storage'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
@@ -146,6 +148,55 @@ export default function BannerTestPage() {
       <BannerTestPageInner key={actor} />
     </Suspense>
   )
+}
+
+// DB業種名から表示カテゴリへの固定対応。取得処理の再実行条件にはしない。
+const categoryMapping: { [key: string]: string } = {
+  // 旧プロンプトの industry 値
+  'ビジネス / ブランディング': 'ビジネス',
+  'UX / デザイン / テクノロジー': 'IT・テクノロジー',
+  'Web / IT / スクール / 教育': 'IT・テクノロジー',
+  '人物写真 / ポートレート': '採用',
+  '季節感 / イベント': 'イベント',
+  'セール / キャンペーン': 'イベント',
+  'EC・小売業のデジタルマーケティング戦略': 'EC',
+  'カジュアル / 親しみやすい': 'EC',
+  'にぎやか / ポップ': 'EC',
+  '高級感 / きれいめ': '美容・ファッション',
+  'かわいい / ポップ': '美容・ファッション',
+  'ナチュラル / 爽やか': '美容・ファッション',
+  // 実際のDB industry 値
+  'ビジネス・SaaS': 'ビジネス',
+  'business': 'ビジネス',
+  'marketing': 'ビジネス',
+  'IT・テクノロジー': 'IT・テクノロジー',
+  'it': 'IT・テクノロジー',
+  '転職・採用・人材': '採用',
+  'イベント・メディア': 'イベント',
+  '食品': '食品・飲料',
+  '飲料': '食品・飲料',
+  '美容・コスメ': '美容・ファッション',
+  'ファッション・アパレル': '美容・ファッション',
+  '住宅・不動産': '不動産・旅行',
+  '旅行・観光': '不動産・旅行',
+  '教育・学習・セミナー': '教育',
+  '医療・ヘルスケア': '医療・金融',
+  '金融・保険': '医療・金融',
+  'EC・セール': 'EC',
+  // 2026-08-23 投入分（テンプレート画像刷新v2）の industry 値。
+  // ⚠️ ここに無いと categoryOrder に載らず「その他」扱いで最下部に落ちる。
+  '飲料・食品': '食品・飲料',
+  '健康・フィットネス': 'スポーツ・趣味',
+  'IT・SaaS': 'ビジネス',
+  '教育・セミナー': '教育',
+  '採用・転職': '採用',
+  '不動産・住宅': '不動産・旅行',
+  '暮らし・ペット': 'ライフスタイル',
+  // 新ジャンル（thumbnail-gallery.net参考）
+  'スポーツ・フィットネス': 'スポーツ・趣味',
+  'エンタメ・趣味': 'スポーツ・趣味',
+  'ペット・動物': 'ライフスタイル',
+  'ライフスタイル・暮らし': 'ライフスタイル',
 }
 
 function BannerTestPageInner() {
@@ -419,6 +470,7 @@ function BannerTestPageInner() {
   const [templateFetchError, setTemplateFetchError] = useState(false)
   const [fetchProgress, setFetchProgress] = useState(0) // 0〜100
   const templateOffsetRef = useRef(0)
+  const templateReadRef = useRef<BannerTemplateReadScope | null>(null)
 
   // サムネイル用URL（WebP + リサイズ、1x ディスプレイ用）
   // ⚠️ URLの組み立ては templateImageUrl に一本化している。Storage の画像は
@@ -528,53 +580,7 @@ function BannerTestPageInner() {
   }, [])
 
   // カテゴリマッピング（要求に合わせて明確化）
-  const categoryMapping: { [key: string]: string } = {
-    // 旧プロンプトの industry 値
-    'ビジネス / ブランディング': 'ビジネス',
-    'UX / デザイン / テクノロジー': 'IT・テクノロジー',
-    'Web / IT / スクール / 教育': 'IT・テクノロジー',
-    '人物写真 / ポートレート': '採用',
-    '季節感 / イベント': 'イベント',
-    'セール / キャンペーン': 'イベント',
-    'EC・小売業のデジタルマーケティング戦略': 'EC',
-    'カジュアル / 親しみやすい': 'EC',
-    'にぎやか / ポップ': 'EC',
-    '高級感 / きれいめ': '美容・ファッション',
-    'かわいい / ポップ': '美容・ファッション',
-    'ナチュラル / 爽やか': '美容・ファッション',
-    // 実際のDB industry 値
-    'ビジネス・SaaS': 'ビジネス',
-    'business': 'ビジネス',
-    'marketing': 'ビジネス',
-    'IT・テクノロジー': 'IT・テクノロジー',
-    'it': 'IT・テクノロジー',
-    '転職・採用・人材': '採用',
-    'イベント・メディア': 'イベント',
-    '食品': '食品・飲料',
-    '飲料': '食品・飲料',
-    '美容・コスメ': '美容・ファッション',
-    'ファッション・アパレル': '美容・ファッション',
-    '住宅・不動産': '不動産・旅行',
-    '旅行・観光': '不動産・旅行',
-    '教育・学習・セミナー': '教育',
-    '医療・ヘルスケア': '医療・金融',
-    '金融・保険': '医療・金融',
-    'EC・セール': 'EC',
-    // 2026-08-23 投入分（テンプレート画像刷新v2）の industry 値。
-    // ⚠️ ここに無いと categoryOrder に載らず「その他」扱いで最下部に落ちる。
-    '飲料・食品': '食品・飲料',
-    '健康・フィットネス': 'スポーツ・趣味',
-    'IT・SaaS': 'ビジネス',
-    '教育・セミナー': '教育',
-    '採用・転職': '採用',
-    '不動産・住宅': '不動産・旅行',
-    '暮らし・ペット': 'ライフスタイル',
-    // 新ジャンル（thumbnail-gallery.net参考）
-    'スポーツ・フィットネス': 'スポーツ・趣味',
-    'エンタメ・趣味': 'スポーツ・趣味',
-    'ペット・動物': 'ライフスタイル',
-    'ライフスタイル・暮らし': 'ライフスタイル',
-  }
+
 
   // ヒーロー画像のプリロード（hi=w=1280 を最優先で先行取得 → 段階2で差し替え時にキャッシュヒット）
   const preloadHeroImage = useCallback((imageUrl: string | null | undefined) => {
@@ -629,11 +635,69 @@ function BannerTestPageInner() {
     }
   }, [selectedBanner?.imageUrl, selectedTemplate?.imageUrl, heroUrl])
 
+  // 残りの全テンプレートをバックグラウンドで取得
+  const fetchRemainingTemplates = useCallback(async (startOffset: number, scope: BannerTemplateReadScope | null = templateReadRef.current) => {
+    if (!scope || !scope.acquireBackground()) return
+    setIsFetchingAll(true)
+    setTemplateFetchError(false)
+    setFetchProgress(0)
+    const BATCH_SIZE = 100
+    let offset = startOffset
+    let hasMore = true
+    let failed = false
+    // dbTotalCountが分からない場合の推定総数（進捗バー用）
+    const estimatedTotal = 350
+    try {
+      while (hasMore && scope.current()) {
+        const res = await fetch(`/api/banner/test/templates?limit=${BATCH_SIZE}&offset=${offset}`, { signal: scope.signal })
+        if (!scope.current()) return
+        if (!res.ok) throw new Error(`テンプレートの追加取得に失敗しました (${res.status})`)
+        const data = await res.json()
+        if (!scope.current()) return
+        if (!Array.isArray(data.templates)) throw new Error('テンプレートの応答が正しくありません')
+        if (data.templates.length > 0) {
+          setTemplates(prev => {
+            if (!scope.current()) return prev
+            const existingIds = new Set(prev.map(t => t.id))
+            const newOnes = data.templates.filter((t: BannerTemplate) => !existingIds.has(t.id))
+            return newOnes.length > 0 ? [...prev, ...newOnes] : prev
+          })
+          offset += data.templates.length
+          hasMore = data.templates.length >= BATCH_SIZE
+          const total = data.dbTotalCount || estimatedTotal
+          setFetchProgress(Math.min(Math.round((offset / total) * 100), 95))
+          console.log(`[Templates] Background fetch: +${data.templates.length} (offset: ${offset})`)
+        } else {
+          hasMore = false
+        }
+      }
+      if (!scope.current()) return
+      setFetchProgress(100)
+    } catch (e) {
+      if (!scope.current()) return
+      failed = true
+      console.error('[Templates] Background fetch failed:')
+    } finally {
+      scope.releaseBackground()
+      if (scope.current()) {
+        setHasMoreFromApi(failed)
+        setTemplateFetchError(failed)
+        setIsFetchingAll(false)
+        templateOffsetRef.current = offset
+        if (!failed) console.log(`[Templates] All templates loaded (total offset: ${offset})`)
+      }
+    }
+  }, [])
+
+
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
+    const scope = createBannerTemplateReadScope()
+    templateReadRef.current = scope
     const CACHE_EXPIRY = 30 * 60 * 1000 // 30分間キャッシュ
     
     const fetchTemplates = async () => {
+      if (!scope.current()) return
       const startTime = Date.now()
       
       try {
@@ -684,7 +748,7 @@ function BannerTestPageInner() {
               console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms (${data.templates.length} items, hasMore=${hasMore})`)
               // キャッシュが初回30件分だけの場合、残りをバックグラウンドで取得
               if (hasMore) {
-                setTimeout(() => fetchRemainingTemplates(data.templates.length), 500)
+                scope.schedule(() => { void fetchRemainingTemplates(data.templates.length, scope) }, 500)
               }
               return
             }
@@ -699,21 +763,25 @@ function BannerTestPageInner() {
         let lastError: any = null
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          if (!scope.current()) return
           try {
-            const res = await fetch(`/api/banner/test/templates?limit=${INITIAL_FETCH_LIMIT}`)
+            const res = await fetch(`/api/banner/test/templates?limit=${INITIAL_FETCH_LIMIT}`, { signal: scope.signal })
+            if (!scope.current()) return
 
             if (!res.ok) {
               const errorData = await res.json().catch(() => ({}))
+              if (!scope.current()) return
               // DBエラー（503）の場合はリトライ
               if (errorData.dbError && attempt < MAX_RETRIES - 1) {
                 console.warn(`[Templates] DB error on attempt ${attempt + 1}, retrying...`)
-                await new Promise(r => setTimeout(r, (attempt + 1) * 500))
+                if (!(await scope.wait((attempt + 1) * 500))) return
                 continue
               }
               throw new Error(errorData.error || `HTTP error! status: ${res.status}`)
             }
 
             const data = await res.json()
+            if (!scope.current()) return
 
             if (data.templates && Array.isArray(data.templates) && data.templates.length > 0) {
               setTemplates(data.templates)
@@ -757,87 +825,47 @@ function BannerTestPageInner() {
               console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms (hasMore=${apiHasMore})`)
               // 残りのテンプレートをバックグラウンドで取得
               if (apiHasMore) {
-                setTimeout(() => fetchRemainingTemplates(data.templates.length), 500)
+                scope.schedule(() => { void fetchRemainingTemplates(data.templates.length, scope) }, 500)
               }
-              break // 成功したらループを抜ける
+              return // 成功後に以前の失敗を通知しない
             } else {
               console.warn('[Templates] Empty templates array received')
               if (attempt < MAX_RETRIES - 1) {
-                await new Promise(r => setTimeout(r, (attempt + 1) * 500))
+                if (!(await scope.wait((attempt + 1) * 500))) return
                 continue
               }
               toast.error('テンプレートが見つかりませんでした')
+              return
             }
           } catch (fetchErr: any) {
+            if (!scope.current()) return
             lastError = fetchErr
             if (attempt < MAX_RETRIES - 1) {
               console.warn(`[Templates] Fetch error on attempt ${attempt + 1}, retrying...`)
-              await new Promise(r => setTimeout(r, (attempt + 1) * 500))
+              if (!(await scope.wait((attempt + 1) * 500))) return
               continue
             }
           }
         }
 
-        if (lastError && templates.length === 0) {
+        if (lastError) {
           console.error('Failed to fetch templates after retries:')
           toast.error('テンプレートの取得に失敗しました。ページを再読み込みしてください。')
         }
       } catch (err: any) {
+        if (!scope.current()) return
         console.error('Failed to fetch templates:')
         toast.error('テンプレートの取得に失敗しました')
       } finally {
-        setIsLoadingTemplates(false)
+        if (scope.current()) setIsLoadingTemplates(false)
       }
     }
-    fetchTemplates()
-  }, [])
-
-  // 残りの全テンプレートをバックグラウンドで取得
-  const fetchRemainingTemplates = useCallback(async (startOffset: number) => {
-    if (isFetchingAll) return
-    setIsFetchingAll(true)
-    setTemplateFetchError(false)
-    setFetchProgress(0)
-    const BATCH_SIZE = 100
-    let offset = startOffset
-    let hasMore = true
-    let failed = false
-    // dbTotalCountが分からない場合の推定総数（進捗バー用）
-    const estimatedTotal = 350
-    try {
-      while (hasMore) {
-        const res = await fetch(`/api/banner/test/templates?limit=${BATCH_SIZE}&offset=${offset}`)
-        if (!res.ok) throw new Error(`テンプレートの追加取得に失敗しました (${res.status})`)
-        const data = await res.json()
-        if (!Array.isArray(data.templates)) throw new Error('テンプレートの応答が正しくありません')
-        if (data.templates.length > 0) {
-          setTemplates(prev => {
-            const existingIds = new Set(prev.map(t => t.id))
-            const newOnes = data.templates.filter((t: BannerTemplate) => !existingIds.has(t.id))
-            return newOnes.length > 0 ? [...prev, ...newOnes] : prev
-          })
-          offset += data.templates.length
-          hasMore = data.templates.length >= BATCH_SIZE
-          const total = data.dbTotalCount || estimatedTotal
-          setFetchProgress(Math.min(Math.round((offset / total) * 100), 95))
-          console.log(`[Templates] Background fetch: +${data.templates.length} (offset: ${offset})`)
-        } else {
-          hasMore = false
-        }
-      }
-      setFetchProgress(100)
-    } catch (e) {
-      failed = true
-      console.error('[Templates] Background fetch failed:')
-    } finally {
-      setHasMoreFromApi(failed)
-      setTemplateFetchError(failed)
-      setIsFetchingAll(false)
-      templateOffsetRef.current = offset
-      if (!failed) console.log(`[Templates] All templates loaded (total offset: ${offset})`)
+    void fetchTemplates()
+    return () => {
+      scope.cancel()
+      if (templateReadRef.current === scope) templateReadRef.current = null
     }
-  }, [isFetchingAll])
-
+  }, [fetchRemainingTemplates, preloadHeroImage])
 
   // カテゴリごとにテンプレートをグループ化（要求に合わせて整理）
   // 遅延読み込み対応：各カテゴリの表示数を制限

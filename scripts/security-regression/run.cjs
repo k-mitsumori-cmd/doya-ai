@@ -1,3 +1,4 @@
+{ const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-template-read-lifecycle.cjs')], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
 // Team seat recovery: synthetic provider/session boundaries; no live payments.
 for (const file of ['verify-pricing-seat-reconciliation.cjs', 'verify-pricing-team-manage-mounted.cjs']) {
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
