@@ -22,6 +22,7 @@ import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit
 import { CompetitorAnalysisTab } from '@/components/seo/CompetitorAnalysisTab'
 import { confirmDialog } from '@/components/ds/dialog'
 import { Skeleton } from '@/components/ds'
+import { useSeoImageRead, type SeoImageRead } from '@/lib/seo/use-image-read'
 import { seoUserMessage } from '@/components/seo/user-message'
 import {
   Download,
@@ -136,18 +137,20 @@ type Article = {
 type TocItem = { id: string; text: string; level: 2 | 3 }
 
 // 画像カードコンポーネント（サムネ・図解で共通利用）
+function ImageReadError({ onRetry }: { onRetry: () => void }) {
+  return <div role="alert" className="space-y-2 bg-red-50 p-3 text-sm text-red-700">
+    <p>画像を読み込めませんでした。</p>
+    <Button type="button" variant="secondary" size="sm" onClick={onRetry}>画像を読み直す</Button>
+  </div>
+}
+
 function ImageCard({
   img,
   isMediaLocked,
   mediaLockLabel,
   upgradeHref,
   mediaBusy,
-  imgLoaded,
-  imgGenerating,
-  imgRetry,
-  bumpRetry,
-  setImgLoaded,
-  setImgGenerating,
+  imageRead,
   setImageDetail,
   downloadImage,
   copyToClipboard,
@@ -163,12 +166,7 @@ function ImageCard({
   mediaLockLabel: string
   upgradeHref: string
   mediaBusy: boolean
-  imgLoaded: Record<string, boolean>
-  imgGenerating: Record<string, boolean>
-  imgRetry: Record<string, number>
-  bumpRetry: (id: string) => void
-  setImgLoaded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  setImgGenerating: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  imageRead: SeoImageRead
   setImageDetail: (img: SeoImage | null) => void
   downloadImage: (img: SeoImage) => void
   copyToClipboard: (text: string) => void
@@ -179,6 +177,7 @@ function ImageCard({
   entitlements: any
   router: any
 }) {
+  const { imgLoaded, imgGenerating, imgFailed } = imageRead
   return (
     <div className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500">
       <div className="aspect-video relative overflow-hidden bg-gray-50">
@@ -195,27 +194,18 @@ function ImageCard({
           title={isMediaLocked ? '有料プランで解放（クリックで移動）' : 'クリックで拡大表示'}
         >
           <img
-            src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
+            src={imageRead.src(img.id)}
             className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
             alt={img.title || ''}
-            onLoad={(e) => {
-              const el = e.currentTarget
-              if (!el?.naturalWidth || !el?.naturalHeight) {
-                setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-                setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-                setTimeout(() => bumpRetry(img.id), 1200)
-                return
-              }
-              setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
-              setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
-            }}
-            onError={() => {
-              setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-              setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-              setTimeout(() => bumpRetry(img.id), 1200)
-            }}
+            onLoad={(e) => imageRead.onLoad(img.id, e.currentTarget)}
+            onError={(e) => imageRead.onError(img.id, e.currentTarget)}
           />
         </button>
+        {imgFailed[img.id] && !mediaBusy && !isMediaLocked && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50 p-4">
+            <ImageReadError onRetry={() => imageRead.retry(img.id)} />
+          </div>
+        )}
         <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
           <Badge tone={img.kind === 'BANNER' ? 'orange' : 'blue'}>{img.kind === 'BANNER' ? 'サムネイル' : '図解'}</Badge>
         </div>
@@ -241,7 +231,7 @@ function ImageCard({
             </div>
           </div>
         )}
-        {!isMediaLocked && (mediaBusy || !imgLoaded[img.id] || !!imgGenerating[img.id]) && (
+        {!isMediaLocked && (mediaBusy || (!imgFailed[img.id] && (!imgLoaded[img.id] || !!imgGenerating[img.id]))) && (
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
             <motion.div
@@ -608,9 +598,8 @@ function SeoArticleInner() {
   const [addingService, setAddingService] = useState(false)
   const [addServiceError, setAddServiceError] = useState<string | null>(null)
   const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
-  const [imgLoaded, setImgLoaded] = useState<Record<string, boolean>>({})
-  const [imgRetry, setImgRetry] = useState<Record<string, number>>({})
-  const [imgGenerating, setImgGenerating] = useState<Record<string, boolean>>({})
+  const imageRead = useSeoImageRead(id, mediaBusy)
+  const { imgLoaded, imgGenerating, imgFailed, setImgGenerating, setImgLoaded } = imageRead
 
   function sanitizeLegacyBannerPrompt(raw: string): string {
     const s = String(raw || '')
@@ -671,14 +660,7 @@ function SeoArticleInner() {
   const isMediaLocked = mediaLockState !== 'unlocked'
   const mediaLockLabel = mediaLockState === 'loading' ? '権限を確認中…' : '有料プランで解放'
 
-  const bumpRetry = useCallback((id: string) => {
-    setImgRetry((prev) => {
-      const cur = Number(prev[id] || 0)
-      // 無限ループ回避（最大10回）
-      const next = Math.min(10, cur + 1)
-      return next === cur ? prev : { ...prev, [id]: next }
-    })
-  }, [])
+  
 
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
@@ -2047,12 +2029,14 @@ function SeoArticleInner() {
                           {bannerImages.map((img, idx) => {
                             const isSelected = img.id === selectedId
                             const isLoaded = imgLoaded[img.id]
-                            const isGenerating = !isLoaded && (mediaBusy || !!imgGenerating[img.id])
+                            const isGenerating = mediaBusy || (!imgFailed[img.id] && !isLoaded && !!imgGenerating[img.id])
                             return (
-                              <button
-                                key={img.id}
-                                type="button"
-                                onClick={async () => {
+                              <div key={img.id} className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                                  isSelected
+                                    ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg'
+                                    : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
+                                }`}>
+                                <button type="button" onClick={async () => {
                                   if (isMediaLocked) { router.push(upgradeHref); return }
                                   if (isSelected) { setImageDetail(img); return }
                                   try {
@@ -2066,33 +2050,16 @@ function SeoArticleInner() {
                                     setMediaError('サムネイルを選べませんでした。もう一度お試しください。')
                                   }
                                 }}
-                                className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${
-                                  isSelected
-                                    ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg'
-                                    : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
-                                }`}
-                              >
+                                  disabled={!isMediaLocked && Boolean(imgFailed[img.id])}
+                                  className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset">
+
                                 <div className="aspect-video relative bg-gray-50">
                                   <img
-                                    src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
+                                    src={imageRead.src(img.id)}
                                     className="w-full h-full object-cover"
                                     alt={img.title || `候補${idx + 1}`}
-                                    onLoad={(e) => {
-                                      const el = e.currentTarget
-                                      if (!el?.naturalWidth || !el?.naturalHeight) {
-                                        setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-                                        setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-                                        setTimeout(() => bumpRetry(img.id), 1200)
-                                        return
-                                      }
-                                      setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
-                                      setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
-                                    }}
-                                    onError={() => {
-                                      setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-                                      setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-                                      setTimeout(() => bumpRetry(img.id), 1200)
-                                    }}
+                                    onLoad={(e) => imageRead.onLoad(img.id, e.currentTarget)}
+                                    onError={(e) => imageRead.onError(img.id, e.currentTarget)}
                                   />
                                   {isGenerating && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80">
@@ -2117,7 +2084,12 @@ function SeoArticleInner() {
                                     {isSelected ? 'メイン' : `候補${idx + 1}`}
                                   </p>
                                 </div>
-                              </button>
+                              
+                                </button>
+                                {imgFailed[img.id] && !mediaBusy && !isMediaLocked && (
+                                  <ImageReadError onRetry={() => imageRead.retry(img.id)} />
+                                )}
+                              </div>
                             )
                           })}
                         </div>
@@ -2169,12 +2141,12 @@ function SeoArticleInner() {
                               mediaLockLabel={mediaLockLabel}
                               upgradeHref={upgradeHref}
                               mediaBusy={mediaBusy}
-                              imgLoaded={imgLoaded}
-                              imgGenerating={imgGenerating}
-                              imgRetry={imgRetry}
-                              bumpRetry={bumpRetry}
-                              setImgLoaded={setImgLoaded}
-                              setImgGenerating={setImgGenerating}
+                              imageRead={imageRead}
+                              
+                              
+                              
+                              
+                              
                               setImageDetail={setImageDetail}
                               downloadImage={downloadImage}
                               copyToClipboard={copyToClipboard}
