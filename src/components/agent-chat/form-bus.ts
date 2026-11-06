@@ -6,7 +6,12 @@
 // - 保存の手段をここで作らない。submit はフォームが持つ本物の送信処理を呼ぶだけ（成功・失敗はその結果）。
 import type { AgentFormSnapshot } from '@/lib/agent-chat/types'
 
-export type SubmitResult = { ok: true; href: string } | { ok: false; error: string }
+export type SubmitResult = { ok: true; href: string } | { ok: false; error: string; kind?: 'blocked' | 'not-started' | 'other' }
+
+/** 保存の失敗が「権限がない」（サーバーが 403）なら 'blocked'。もう一度やっても同じ失敗になる */
+export function failKindOf(e: unknown): 'blocked' | undefined {
+  return (e as { status?: number } | null)?.status === 403 ? 'blocked' : undefined
+}
 
 export interface AgentFormHandler {
   /**
@@ -25,6 +30,15 @@ export interface AgentFormHandler {
    * ⚠️ 権限の判定は、画面とサーバーが今していること（ロール・API の 403）をそのまま映す。会話専用の判定を作らない。
    */
   blocked?(): string | null
+}
+
+// 会話の確認ボタンから保存しているあいだだけ立てる。フォームは、この間は通知（toast）と画面の移動をしない。
+// 完了は会話が先に出し、そのあと会話が移動する（通知がページ名に重なる、完了の前に読み込みの枠が出る、を避ける）。
+let agentSubmitDepth = 0
+export function isAgentSubmit(): boolean { return agentSubmitDepth > 0 }
+export async function runAgentSubmit<T>(fn: () => Promise<T>): Promise<T> {
+  agentSubmitDepth += 1
+  try { return await fn() } finally { agentSubmitDepth -= 1 }
 }
 
 const forms = new Map<string, AgentFormHandler>()

@@ -48,8 +48,9 @@ export interface ChatOp {
    * 「税込みだった」の直し方。
    * divide: 入れた金額を税込みとみなし、画面の欄を 1.1 で割った税抜に直す（画面に税込みの切り替えが無いとき）
    * flag: 画面の「税込み」の切り替え（taxIncluded）を入れ、金額はそのまま
+   * none: 税の計算が無い操作（案件・勤怠の申請など）。確認カードのあとの直しは、画面の欄で直してもらう
    */
-  taxAdjust: 'divide' | 'flag'
+  taxAdjust: 'divide' | 'flag' | 'none'
   /** すでにこの画面にいるとき、開き直さない（パスの正規表現。例: ^/expense/[^/]+/contracts/new$）。省略すると path と同じかで見る */
   here?: string
   /** 今の案内（agent-router の catalog）にある同じ仕事の id。この操作が置き換える */

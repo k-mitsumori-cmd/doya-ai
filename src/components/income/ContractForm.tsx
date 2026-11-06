@@ -3,6 +3,7 @@
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import { useAgentChat } from '@/components/agent-chat/AgentChatProvider'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
@@ -140,7 +141,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
    * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、登録した契約の画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> => {
+  const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
@@ -169,12 +170,14 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       }
       const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
       markClean()
-      toast('契約を登録しました')
-      router.push(`/income/contracts/${d.id}`)
+      if (!isAgentSubmit()) {
+        toast('契約を登録しました')
+        router.push(`/income/contracts/${d.id}`)
+      }
       return { ok: true, id: d.id }
     } catch (err) {
       setError(errMsg(err))
-      return { ok: false, error: errMsg(err) }
+      return { ok: false, error: errMsg(err), kind: failKindOf(err) }
     } finally {
       setBusy(false)
     }
@@ -228,7 +231,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
     }),
     submit: async () => {
       const r = await save()
-      return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error }
+      return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error, ...(r.ok ? {} : { kind: r.kind }) }
     },
   })
 

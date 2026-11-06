@@ -5,6 +5,7 @@ import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { ProjectForm } from "@/components/promane/project-form";
+import AgentBlocked from "@/components/agent-chat/AgentBlocked";
 
 export default async function NewProjectPage({
   params,
@@ -17,7 +18,7 @@ export default async function NewProjectPage({
   if (!workspace) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
 
   if (!canWritePromaneWorkspace(workspace.members[0]?.role)) {
-    return <div className="p-8"><p>このワークスペースは閲覧のみです。プロジェクトの追加・編集はできません。</p><Link className="underline" href={`/promane/${workspaceSlug}/projects`}>プロジェクト一覧を表示</Link></div>;
+    return <div className="p-8"><AgentBlocked formKey="promane.project.new" reason="このワークスペースは閲覧のみで、案件を作れません。ワークスペースの管理者（オーナー）に、権限の変更を依頼してください。" /><p>このワークスペースは閲覧のみです。プロジェクトの追加・編集はできません。</p><Link className="underline" href={`/promane/${workspaceSlug}/projects`}>プロジェクト一覧を表示</Link></div>;
   }
 
   const clients = await prisma.promaneClient.findMany({

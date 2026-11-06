@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -135,7 +136,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
    * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、onSaved で登録した契約の画面へ移る。失敗したら理由を返す（画面は toast に出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string }> => {
+  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setBusy(true)
     try {
       const common = {
@@ -152,8 +153,11 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
           ...(vendorMode === 'existing' ? { vendorId } : { vendor: draftToPayload(vendor, canManage) }),
         }
         const r = await expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', body))
-        toast.success('契約を登録しました')
-        onSaved(r.contract.id)
+        // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
+        if (!isAgentSubmit()) {
+          toast.success('契約を登録しました')
+          onSaved(r.contract.id)
+        }
         return { ok: true, id: r.contract.id }
       }
       const r = await expenseApi<{ contract: Contract }>(`/api/expense/contracts/${initial!.id}`, orgSlug, jsonInit('PATCH', {
@@ -164,7 +168,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       return { ok: true, id: r.contract.id }
     } catch (e) {
       toast.error((e as Error).message)
-      return { ok: false, error: (e as Error).message }
+      return { ok: false, error: (e as Error).message, kind: failKindOf(e) }
     } finally {
       setBusy(false)
     }
@@ -211,7 +215,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       if (!ready) return { ok: false, error: '必要な項目（名称・金額・取引先）が足りないため、登録できません。' }
       let savedId = ''
       const r = await save()
-      if (!r.ok) return { ok: false, error: r.error }
+      if (!r.ok) return { ok: false, error: r.error, kind: r.kind }
       savedId = r.id
       return { ok: true, href: `/expense/${encodeURIComponent(orgSlug)}/contracts/${savedId}` }
     },

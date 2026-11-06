@@ -34,9 +34,13 @@ export interface ChatState {
   done: { lead: string; made: string; next: NextAction[]; href: string } | null
   /** 失敗の内容（failed のとき） */
   error: string | null
+  /** 失敗の理由の種類。blocked=権限がない / not-started=ツールをまだ始めていない（どちらも、もう一度やっても同じ失敗になる） */
+  errorKind: FailKind
   /** チャットの操作でない答え（guided のとき）。今の案内のまま出す */
   guide: Exclude<ChatApiResponse, { kind: 'op' }> | null
 }
+
+export type FailKind = 'blocked' | 'not-started' | 'other'
 
 export type ChatEvent =
   | { t: 'ask'; text: string }
@@ -46,12 +50,12 @@ export type ChatEvent =
   | { t: 'ready'; snap: AgentFormSnapshot; message?: string }
   /** 確認カードの前後で、金額を直す依頼（「税込みだった」・新しい金額）。画面の今の値から計算する。AI は呼ばない */
   | { t: 'adjust'; text: string }
-  | { t: 'run-failed'; error: string }
+  | { t: 'run-failed'; error: string; kind?: FailKind }
   | { t: 'approve' }
   /** 保存の前に画面の値を読み直したら、確認カードを出した時と違っていた（本人が画面で直した）。保存せず、確認カードを出し直す */
   | { t: 'changed'; snap: AgentFormSnapshot }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
-  | { t: 'submitted'; ok: false; error: string }
+  | { t: 'submitted'; ok: false; error: string; kind?: FailKind }
   | { t: 'retry' }
   | { t: 'reset' }
 
@@ -63,7 +67,7 @@ export type ChatEffect =
   | { k: 'submit' }
 
 export const INITIAL_STATE: ChatState = {
-  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, guide: null,
+  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, errorKind: 'other', guide: null,
 }
 
 const READ_FAILED = '依頼を読めませんでした。時間をおいて、もう一度お試しください。'
@@ -120,6 +124,8 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const typed = [...yenCandidates(text)][0]
       const inclusive = /税込/.test(text)
       const answers = [...state.answers, ev.text.trim()]
+      // 税の計算が無い操作は、チャットでは直さない。画面の欄を直してもらい、保存の前に画面の今の値で確認カードを出し直す
+      if (state.op.taxAdjust === 'none') return { state: { ...state, notice: '内容を直すときは、画面の欄を直してください。直したあと、確認カードのボタンを押すと、確認カードを出し直します。' }, effects: [] }
       if (state.op.taxAdjust === 'flag') {
         // 画面に「税込み」の切り替えがあるツール。金額はそのままで、切り替えを入れる（割り算をしない）
         const base = typed ?? Number(state.snap.amount)
@@ -139,7 +145,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }
-      return { state: { ...state, phase: 'failed', error: ev.error }, effects: [] }
+      return { state: { ...state, phase: 'failed', error: ev.error, errorKind: ev.kind ?? 'other' }, effects: [] }
     }
     case 'approve': {
       // ⚠️ 保存の指示を返すのは、確認カードが出ているときだけ
@@ -154,7 +160,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     }
     case 'submitted': {
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
-      if (!ev.ok) return { state: { ...state, phase: 'failed', error: ev.error }, effects: [] }
+      if (!ev.ok) return { state: { ...state, phase: 'failed', error: ev.error, errorKind: ev.kind ?? 'other' }, effects: [] }
       const d = doneView(state.op, ev.snap, ev.href)
       return {
         state: { ...state, phase: 'done', steps: state.steps.map((s) => ({ ...s, status: 'done' as const })), done: { ...d, href: ev.href }, confirm: null },
@@ -164,8 +170,10 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     case 'retry': {
       // 失敗のあと、画面の値がそのまま残っているので、確認カードに戻す（送信に失敗した場合だけ。読み取り・画面の失敗は最初から）
       if (state.phase !== 'failed') return { state, effects: [] }
-      if (state.confirm) return { state: { ...state, phase: 'confirm', error: null }, effects: [] }
-      if (state.op) return advance({ ...state, steps: buildSteps(state.op), error: null })
+      // 権限がない・ツールを始めていない失敗は、もう一度やっても同じになる。やり直しは受け付けない（画面から始める・管理者に頼む、を案内する）
+      if (state.errorKind !== 'other') return { state, effects: [] }
+      if (state.confirm) return { state: { ...state, phase: 'confirm', error: null, errorKind: 'other' }, effects: [] }
+      if (state.op) return advance({ ...state, steps: buildSteps(state.op), error: null, errorKind: 'other' })
       return { state: INITIAL_STATE, effects: [] }
     }
     case 'reset':

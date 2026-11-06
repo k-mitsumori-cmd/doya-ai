@@ -12,7 +12,7 @@ import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
-import { getAgentForm, waitForAgentForm } from './form-bus'
+import { getAgentForm, runAgentSubmit, waitForAgentForm } from './form-bus'
 import { blurField, clearMarks, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
@@ -56,10 +56,10 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       if (!here) router.push(op.path)
       const form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
-      if (!form) { d({ t: 'run-failed', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。もう一度お試しください。` }); return }
+      if (!form) { d({ t: 'run-failed', kind: 'not-started', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。` }); return }
       // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
       const blocked = form.blocked?.()
-      if (blocked) { d({ t: 'run-failed', error: blocked }); return }
+      if (blocked) { d({ t: 'run-failed', kind: 'blocked', error: blocked }); return }
       await wait(240); d({ t: 'step', id: 'open-form', status: 'done' })
       // 決まった値 → 欄（依頼から読んだ値）の順。欄ごとに、スクロール → 光らせる → 値が飛ぶ → 入れる、を実際の setValue に合わせて進める
       const todo: { stepId: string; key: string; value: string; label: string; fixed: boolean }[] = [
@@ -148,9 +148,11 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         const shown = stateRef.current.snap
         if (shown && JSON.stringify(shown) !== JSON.stringify(snap)) { if (runId.current === id) dispatchRef.current({ t: 'changed', snap }); return }
         let r: Awaited<ReturnType<typeof form.submit>>
-        try { r = await form.submit() } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
+        try { r = await runAgentSubmit(() => form.submit()) } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return
-        dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error })
+        dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error, kind: r.kind })
+        // 完了を出してから、できた物の画面へ移る（フォームは、会話からの保存では自分で移らない）
+        if (r.ok) { const to = r.href; window.setTimeout(() => { if (runId.current === id && window.location.pathname !== to) router.push(to) }, 700) }
       })()
     }
   }, [runOp, amend])

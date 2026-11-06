@@ -54,6 +54,12 @@ export default function AgentDock() {
   const view = chat?.view ?? 'both'
   // 完了のお祝いは、画面の送信が成功を知らせたあと（phase が done になったとき）だけ
   useEffect(() => { if (phase === 'done') celebrate(doneRef.current) }, [phase])
+  // 会話が画面を動かしている間（値を入れる・保存する）は、足元のドヤくんを見えなくして場所だけ取る。画面が切り替わるたびに足元が動いて見えるのを避ける
+  useEffect(() => {
+    const root = document.documentElement
+    if (phase === 'working' || phase === 'submitting') root.setAttribute('data-agent-run', 'true'); else root.removeAttribute('data-agent-run')
+    return () => root.removeAttribute('data-agent-run')
+  }, [phase])
   // 枠の本文の幅（デスクトップ）と下の余白（スマホ）を、会話の欄に合わせる。本文は隠さず、狭めて並べる（AppShell.module.css）
   useEffect(() => {
     const root = document.documentElement
@@ -98,9 +104,11 @@ export default function AgentDock() {
   const confirmActions = state.confirm ? (
     <div className={pinned ? styles.pin : styles.actions}>
       <button type="button" className={styles.primary} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'approve' })}>
-        {state.phase === 'submitting' ? '登録しています…' : state.confirm.submitLabel}
+        {state.phase === 'submitting' ? '保存しています…' : state.confirm.submitLabel}
       </button>
-      <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'adjust', text: '税込みだった' })}>税込みだった</button>
+      {state.op?.taxAdjust !== 'none' && (
+        <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'adjust', text: '税込みだった' })}>税込みだった</button>
+      )}
       <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
     </div>
   ) : null
@@ -176,9 +184,17 @@ export default function AgentDock() {
           {state.phase === 'failed' && (
             <div className={styles.fail} role="alert">
               <p>{state.error}</p>
+              {/* 権限がない・ツールを始めていない失敗は、もう一度やっても同じになる。理由に合った案内を出す */}
+              {state.errorKind === 'blocked' && <p className={styles.note}>画面から行うときも同じ権限が必要です。もう一度やっても、同じ結果になります。</p>}
+              {state.errorKind === 'not-started' && <p className={styles.note}>始めたあとで、もう一度頼めます。</p>}
               <div className={styles.actions}>
-                <button type="button" className={styles.primary} onClick={() => dispatch({ t: 'retry' })}>{state.confirm ? '確認カードに戻る' : 'もう一度やる'}</button>
-                <button type="button" className={styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
+                {state.errorKind === 'not-started' && state.op && (
+                  <button type="button" className={styles.primary} onClick={() => { const to = `/${state.op!.path.split('/')[1].split('?')[0]}`; dispatch({ t: 'reset' }); router.push(to) }}>画面から始める</button>
+                )}
+                {state.errorKind === 'other' && (
+                  <button type="button" className={styles.primary} onClick={() => dispatch({ t: 'retry' })}>{state.confirm ? '確認カードに戻る' : 'もう一度やる'}</button>
+                )}
+                <button type="button" className={state.errorKind === 'blocked' ? styles.primary : styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
               </div>
             </div>
           )}

@@ -67,3 +67,20 @@ test('権限などで操作できないフォームは、blocked の理由を返
   assert.equal((await bus.waitForAgentForm('t.free', 500))?.blocked, undefined)
   off2()
 })
+
+test('会話から保存しているあいだだけ、フォームは通知と画面の移動をしない（isAgentSubmit）。失敗しても元に戻る。403 は権限がない失敗', async () => {
+  const { bus } = await load()
+  assert.equal(bus.isAgentSubmit(), false)
+  let seen: boolean[] = []
+  await bus.runAgentSubmit(async () => { seen.push(bus.isAgentSubmit()); await new Promise((r) => setTimeout(r, 10)); seen.push(bus.isAgentSubmit()) })
+  assert.deepEqual(seen, [true, true])
+  assert.equal(bus.isAgentSubmit(), false)
+  await assert.rejects(bus.runAgentSubmit(async () => { throw new Error('x') }))
+  assert.equal(bus.isAgentSubmit(), false, '失敗のあとも、立てたままにしない')
+  // 入れ子でも、外側が終わるまで立つ
+  await bus.runAgentSubmit(async () => { await bus.runAgentSubmit(async () => {}); assert.equal(bus.isAgentSubmit(), true) })
+  assert.equal(bus.failKindOf({ status: 403 }), 'blocked')
+  assert.equal(bus.failKindOf({ status: 500 }), undefined)
+  assert.equal(bus.failKindOf(new Error('x')), undefined)
+  assert.equal(bus.failKindOf(null), undefined)
+})

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { decideAgentChat, agentChatRollout } from './flag'
 import { jstTodayYmd, monthLabelOf, yenText } from './today'
 import { groundValues, yenCandidates } from './ground'
-import { CHAT_OPS, EXPENSE_ADD, INCOME_INVOICE_DRAFT, INCOME_SALE_ADD, buildSteps, confirmRows, doneView, leadText, resolveFixed, chatOpByKey } from './ops'
+import { CHAT_OPS, EXPENSE_ADD, INCOME_INVOICE_DRAFT, INCOME_SALE_ADD, KINTAI_LEAVE_REQUEST, PROMANE_PROJECT_ADD, buildSteps, confirmRows, doneView, leadText, resolveFixed, chatOpByKey } from './ops'
 import { chatResponse, chatActions } from './handle'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from './turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from './types'
@@ -225,7 +225,7 @@ const toConfirm = (op: ChatOp, values: Record<string, string>, snap: AgentFormSn
   run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }, { t: 'ready', snap }]).state
 
 test('段階2の操作の定義: 保存は確認カードの対象で、確定・送付・削除は入れない。日付や種類は AI に読ませない', () => {
-  assert.deepEqual(CHAT_OPS.map((o) => o.key), ['income.sale.add', 'income.invoice.draft', 'expense.contract.add'])
+  assert.deepEqual(CHAT_OPS.map((o) => o.key), ['income.sale.add', 'income.invoice.draft', 'expense.contract.add', 'promane.project.add', 'kintai.request.leave'])
   assert.equal(new Set(CHAT_OPS.map((o) => o.key)).size, CHAT_OPS.length)
   for (const { op } of STAGE2) {
     assert.equal(op.risk, 'write')
@@ -361,4 +361,121 @@ test('段階2の表示: 確認カードは画面の値をそのまま読み、�
   assert.match(ed.lead, /「Notion ビジネスプラン」の支出を登録しました/)
   assert.equal(ed.next.find((n) => n.id === 'forecast')?.href, '/expense/acme/forecast')
   assert.match(leadText(EXPENSE_ADD, { amount: '5000' }), /¥5,000 の支出を登録します/)
+})
+
+// ======== 段階3: 案件の作成・休暇の申請、失敗の種類 ========
+const PRJ_SNAP: AgentFormSnapshot = { name: 'Web サイト制作', client: '', status: '下書き', billing: '一括', amount: '2000000', start: '', end: '' }
+const LEAVE_SNAP: AgentFormSnapshot = { typeLabel: '休暇', leaveLabel: '有給休暇', start: '2026-11-10', end: '2026-11-11', reason: '私用のため' }
+const STAGE3: { op: ChatOp; values: Record<string, string>; snap: AgentFormSnapshot }[] = [
+  { op: PROMANE_PROJECT_ADD, values: { name: 'Web サイト制作', amount: '2000000' }, snap: PRJ_SNAP },
+  { op: KINTAI_LEAVE_REQUEST, values: { start: '2026-11-10', end: '2026-11-11', reason: '私用のため' }, snap: LEAVE_SNAP },
+]
+
+test('段階3の操作の定義: 保存は確認カードの対象。承認・確定・送信は入れない。画面の初期値は AI に読ませない', () => {
+  for (const { op } of STAGE3) {
+    assert.equal(op.risk, 'write')
+    assert.ok(op.fields.every((f) => f.required), `${op.key}: 読み取る欄は、画面が必須にしているものだけ`)
+    assert.ok(!op.fields.some((f) => ['status', 'billing', 'billingType', 'leaveType', 'type', 'client', 'clientId'].includes(f.key)), `${op.key}: 種類・状態・顧客は AI に読ませない`)
+    assert.ok(!/承認する|確定|送信|削除/.test(op.submitLabel + op.confirmTitle), op.key)
+    assert.equal(op.taxAdjust, 'none')
+    assert.equal(buildSteps(op).at(-1)?.id, 'confirm')
+  }
+  assert.deepEqual(KINTAI_LEAVE_REQUEST.fixed.map((f) => [f.key, f.value]), [['type', 'leave'], ['leaveType', 'paid']])
+  assert.match(KINTAI_LEAVE_REQUEST.description, /承認はしない/)
+  const ids = chatActions().map((a) => a.id)
+  assert.ok(ids.includes('promane.project.add') && ids.includes('kintai.request.leave'))
+  assert.equal(new Set(ids).size, ids.length)
+})
+
+test('段階3: API の返事は、依頼の文で確かめた値だけを残す（作り話の案件名・文に無い理由は捨てる）', () => {
+  const prj = chatResponse({ kind: 'action', actionId: 'promane.project.add', values: { name: '作り話プロジェクト', amount: '2000000' }, missing: [], reason: '' }, 'Web サイト制作 契約金額200万円で案件を作って')
+  assert.ok(prj.kind === 'op')
+  if (prj.kind === 'op') { assert.deepEqual(prj.values, { amount: '2000000' }); assert.deepEqual(prj.missing.map((f) => f.key), ['name']) }
+  const lv = chatResponse({ kind: 'action', actionId: 'kintai.request.leave', values: { start: '2026-11-10', end: '2026-11-11', reason: '家族の用事のため' }, missing: [], reason: '' }, '11月10日から11月11日まで有給休暇を申請して')
+  assert.ok(lv.kind === 'op')
+  if (lv.kind === 'op') { assert.deepEqual(lv.values, { start: '2026-11-10', end: '2026-11-11' }); assert.deepEqual(lv.missing.map((f) => f.key), ['reason']) }
+  // 日付の言葉が無い依頼では、日付を読まない（聞き返す）
+  const nod = chatResponse({ kind: 'action', actionId: 'kintai.request.leave', values: { start: '2026-11-10', end: '2026-11-11', reason: '私用のため' }, missing: [], reason: '' }, '私用のため有給休暇を申請して')
+  assert.ok(nod.kind === 'op' && !('start' in nod.values) && nod.missing.map((f) => f.key).join() === 'start,end')
+})
+
+test('段階3の決まり: 確認の前に保存しない・確認で1件だけ・失敗で完了を出さない・直しても保存しない', () => {
+  for (const { op, values, snap } of STAGE3) {
+    const working = run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }]).state
+    assert.equal(working.phase, 'working', op.key)
+    assert.equal(reduce(working, { t: 'approve' }).effects.length, 0)
+    const all: ChatEvent[] = [{ t: 'ask', text: 'x' }, { t: 'reply', res: opRes(op, {}) }, { t: 'answer', value: '1' }, { t: 'step', id: 'open-tool', status: 'done' }, { t: 'retry' }, { t: 'ready', snap }, { t: 'adjust', text: '税込みだった' }, { t: 'changed', snap }, { t: 'submitted', ok: true, snap, href: '/x' }, { t: 'reset' }]
+    for (const ev of all) assert.ok(!reduce(working, ev).effects.some((e) => e.k === 'submit'), `${op.key}: ${ev.t}`)
+    const confirm = toConfirm(op, values, snap)
+    assert.equal(confirm.phase, 'confirm')
+    // 確認カードでの直しは、画面の欄で直してもらう。保存の指示も、画面を動かす指示も返さない
+    const adj = reduce(confirm, { t: 'adjust', text: '税込みだった' })
+    assert.deepEqual(adj.effects, [])
+    assert.ok(adj.state.notice)
+    const first = reduce(confirm, { t: 'approve' })
+    assert.deepEqual(first.effects, [{ k: 'submit' }])
+    assert.deepEqual(reduce(first.state, { t: 'approve' }).effects, [])
+    const done = reduce(first.state, { t: 'submitted', ok: true, snap, href: '/x/y/abc' })
+    assert.equal(done.state.phase, 'done')
+    assert.deepEqual(reduce(done.state, { t: 'approve' }).effects, [])
+    const failed = reduce(first.state, { t: 'submitted', ok: false, error: '申請できませんでした。' })
+    assert.equal(failed.state.phase, 'failed')
+    assert.equal(failed.state.done, null)
+    // 確認カードのあとに画面が変わっていたら、保存せずに確認カードを出し直す
+    const changed = reduce(first.state, { t: 'changed', snap: { ...snap, reason: '別の理由', name: '別の案件' } })
+    assert.equal(changed.state.phase, 'confirm')
+    assert.deepEqual(changed.effects, [])
+  }
+})
+
+test('段階3の表示: 確認カードは画面の値をそのまま読み、承認・タスク・請求はまだ、を正しく書く', () => {
+  const pc = confirmRows(PROMANE_PROJECT_ADD, PRJ_SNAP)
+  assert.equal(pc.rows.find((r) => r.big)?.value, '¥2,000,000')
+  assert.equal(pc.rows.find((r) => r.label === '顧客')?.value, 'なし')
+  assert.ok(!pc.rows.some((r) => r.label === '開始日'))
+  assert.equal(confirmRows(PROMANE_PROJECT_ADD, { ...PRJ_SNAP, start: '2026-12-01' }).rows.find((r) => r.label === '開始日')?.value, '2026-12-01')
+  assert.match(pc.note, /画面の初期値/)
+  const lc = confirmRows(KINTAI_LEAVE_REQUEST, LEAVE_SNAP)
+  assert.equal(lc.rows.find((r) => r.big)?.value, '2026-11-10 から 2026-11-11（2日間）')
+  assert.equal(confirmRows(KINTAI_LEAVE_REQUEST, { ...LEAVE_SNAP, end: '2026-11-09' }).rows.find((r) => r.big)?.value, '2026-11-10 から 2026-11-09')
+  assert.match(lc.note, /承認はされません/)
+  const pd = doneView(PROMANE_PROJECT_ADD, PRJ_SNAP, '/promane/acme/projects/p1')
+  assert.match(pd.lead, /案件を作りました/)
+  assert.match(pd.lead, /タスクや請求は、まだ作っていません/)
+  assert.equal(pd.next.find((n) => n.id === 'project-list')?.href, '/promane/acme/projects')
+  const ld = doneView(KINTAI_LEAVE_REQUEST, LEAVE_SNAP, '/kintai/requests')
+  assert.match(ld.lead, /承認は、管理者が行います/)
+  assert.match(leadText(KINTAI_LEAVE_REQUEST, { start: '2026-11-10', end: '2026-11-11' }), /2026-11-10 から 2026-11-11 の有給休暇/)
+  assert.match(leadText(PROMANE_PROJECT_ADD, { name: 'Web' }), /「Web」の案件/)
+})
+
+test('失敗の種類: 権限がない・ツールを始めていない失敗は、もう一度やっても同じになるので、やり直しを受け付けない', () => {
+  for (const { op, values, snap } of [...STAGE2, ...STAGE3]) {
+    const working = run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }]).state
+    for (const kind of ['blocked', 'not-started'] as const) {
+      const f = reduce(working, { t: 'run-failed', error: '理由', kind })
+      assert.equal(f.state.phase, 'failed', `${op.key}/${kind}`)
+      assert.equal(f.state.errorKind, kind)
+      // やり直し（もう一度やる）は何も起こさない。同じ失敗を繰り返さない
+      const r = reduce(f.state, { t: 'retry' })
+      assert.equal(r.state, f.state)
+      assert.deepEqual(r.effects, [])
+    }
+    // 理由の種類が付かない失敗は、今までどおりやり直せる
+    const other = reduce(working, { t: 'run-failed', error: '画面に値を入れられませんでした。' })
+    assert.equal(other.state.errorKind, 'other')
+    assert.equal(reduce(other.state, { t: 'retry' }).state.phase, 'working')
+    // 保存のときのサーバーの 403（権限がない）は、確認カードに戻らない
+    const submitting = reduce(toConfirm(op, values, snap), { t: 'approve' }).state
+    const denied = reduce(submitting, { t: 'submitted', ok: false, error: '権限がありません。', kind: 'blocked' })
+    assert.equal(denied.state.phase, 'failed')
+    assert.equal(denied.state.errorKind, 'blocked')
+    assert.equal(reduce(denied.state, { t: 'retry' }).state, denied.state)
+    assert.equal(denied.state.done, null)
+    // やめる、は使える。次の依頼のときは、種類を持ち越さない
+    assert.equal(reduce(denied.state, { t: 'reset' }).state.errorKind, 'other')
+    // 保存の失敗（種類なし）は、今までどおり確認カードに戻れる
+    const plain = reduce(submitting, { t: 'submitted', ok: false, error: '通信に失敗しました。' })
+    assert.equal(reduce(plain.state, { t: 'retry' }).state.phase, 'confirm')
+  }
 })

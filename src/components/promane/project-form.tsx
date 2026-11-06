@@ -17,6 +17,18 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { AlertCircle } from "lucide-react";
 import { userErrorMessage } from '@/lib/promane/user-error'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
+
+/** 欄（uncontrolled）に値を入れる。React の入力イベントを通すため、元の setter を使う */
+function setDomValue(id: string, value: string): boolean {
+  const el = document.getElementById(id) as HTMLInputElement | null
+  const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  if (!el || !set) return false
+  set.call(el, value)
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+  return true
+}
 
 type Client = { id: string; name: string };
 type ProjectData = {
@@ -57,36 +69,45 @@ export function ProjectForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operation.scopeKey]);
 
-  function finish(result: Awaited<ReturnType<typeof operation.save>>) {
-    if (!result) return;
+  function finish(result: Awaited<ReturnType<typeof operation.save>>): SubmitResult | null {
+    if (!result) return null;
     if (result.state === 'rejected') {
-      if (result.code === 'LIMIT') showServiceLimit('/api/promane/projects', 403, result);
+      // 会話からの保存では、プランの上限の案内は会話に出す（画面の上限の案内は出さない）
+      if (result.code === 'LIMIT' && !isAgentSubmit()) showServiceLimit('/api/promane/projects', 403, result);
       setError(result.error);
-      return;
+      return { ok: false, error: result.error };
     }
     if (result.state === 'saved' || result.state === 'superseded') {
+      // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
+      if (isAgentSubmit()) return { ok: true, href: `/promane/${result.workspaceSlug || workspaceSlug}/projects/${result.entry.id}` };
       toast.success(result.state === 'superseded' ? '保存後に別の編集がありました。最新版を表示します' : project ? 'プロジェクトを更新しました' : 'プロジェクトを作成しました', {
         icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
       });
       router.push(`/promane/${result.workspaceSlug || workspaceSlug}/projects/${result.entry.id}`);
       router.refresh();
+      return { ok: true, href: `/promane/${result.workspaceSlug || workspaceSlug}/projects/${result.entry.id}` };
     }
+    return null;
   }
   const [billingType, setBillingType] = useState(project?.billingType || "fixed");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting.current || operation.status !== 'ready') return;
-    setError(null);
+    await runSubmit(new FormData(e.currentTarget));
+  }
 
-    const form = new FormData(e.currentTarget);
+  /** 保存の処理はここ1つだけ。画面のボタンも、会話（AgentDock）の確認ボタンも通る。結果を返す（画面は setError に出す） */
+  async function runSubmit(form: FormData): Promise<SubmitResult> {
+    const fail = (error: string): SubmitResult => ({ ok: false, error });
+    if (submitting.current || operation.status !== 'ready') return fail('いま保存できる状態ではありません。しばらくして、もう一度お試しください。');
+    setError(null);
 
     // クライアント側 事前バリデーション
     const name = (form.get("name") as string)?.trim();
     if (!name) {
       setError("案件名を入力してください");
-      return;
+      return fail("案件名を入力してください");
     }
     let contractAmount: number;
     let estimatedHours: number | undefined;
@@ -98,14 +119,14 @@ export function ProjectForm({
       estimatedHours = hours === '' ? undefined : parsePromaneIntegerInput(hours, "見積工数");
       monthlyAmount = billingType === "monthly" ? parsePromaneIntegerInput(form.get("monthlyAmount"), "月額") : undefined;
       hourlyRate = billingType === "hourly" ? parsePromaneIntegerInput(form.get("hourlyRate"), "時給") : undefined;
-    } catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "入力値を確認してください")); return; }
+    } catch (error) { const m = userErrorMessage(error instanceof Error ? error.message : null, "入力値を確認してください"); setError(m); return fail(m); }
     const startDate = (form.get("startDate") as string) || undefined;
     const endDate = (form.get("endDate") as string) || undefined;
     try {
       const start = startDate ? parsePromaneWorkDate(startDate) : null;
       const end = endDate ? parsePromaneWorkDate(endDate) : null;
       if (start && end && end < start) throw new Error("納期は開始日以降を指定してください");
-    } catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "日付を確認してください")); return; }
+    } catch (error) { const m = userErrorMessage(error instanceof Error ? error.message : null, "日付を確認してください"); setError(m); return fail(m); }
 
     const data = {
       name,
@@ -123,7 +144,7 @@ export function ProjectForm({
     };
 
     try { validatePromaneProjectText(data) }
-    catch (error) { setError(userErrorMessage(error instanceof Error ? error.message : null, "入力を確認してください")); return; }
+    catch (error) { const m = userErrorMessage(error instanceof Error ? error.message : null, "入力を確認してください"); setError(m); return fail(m); }
 
     submitting.current = true;
     try {
@@ -143,11 +164,45 @@ export function ProjectForm({
           estimatedHours: data.estimatedHours ?? null, startDate: data.startDate ?? null,
           endDate: data.endDate ?? null, tags: data.tags ?? null,
         });
-      finish(result);
+      return finish(result) ?? fail('保存の結果を確認できませんでした。案件の一覧で、作られたかを確かめてください。');
     } catch (error) {
-      setError(userErrorMessage(error instanceof Error ? error.message : null, '保存状態を確認してください'));
+      const raw = error instanceof Error ? error.message : null;
+      const m = userErrorMessage(raw, '保存状態を確認してください');
+      setError(m);
+      // 閲覧専用など、権限がないための失敗は、もう一度やっても同じになる
+      return { ok: false, error: m, kind: raw && /閲覧専用|のみ実行できます/.test(raw) ? 'blocked' : undefined };
     } finally { submitting.current = false; }
   }
+
+  // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の PROMANE_PROJECT_ADD ----
+  const formRef = useRef<HTMLFormElement>(null);
+  const read = () => (formRef.current ? new FormData(formRef.current) : new FormData());
+  useAgentForm('promane.project.new', {
+    ready: () => !project && Boolean(formRef.current) && operation.status === 'ready',
+    setValue: (key, value) => {
+      if (project) return false;
+      if (key === 'name') return setDomValue('name', value);
+      if (key === 'amount') return setDomValue('contractAmount', value);
+      return false;
+    },
+    snapshot: () => {
+      const f = read();
+      const clientId = String(f.get('clientId') ?? '');
+      return {
+        name: String(f.get('name') ?? '').trim(),
+        client: clients.find((c) => c.id === clientId)?.name ?? '',
+        status: PROJECT_STATUS_LABELS[String(f.get('status') ?? 'draft')] ?? '',
+        billing: BILLING_TYPE_LABELS[billingType] ?? '',
+        amount: String(f.get('contractAmount') ?? '').trim(),
+        start: String(f.get('startDate') ?? ''),
+        end: String(f.get('endDate') ?? ''),
+      };
+    },
+    submit: async () => {
+      if (!formRef.current) return { ok: false, error: '案件の画面が閉じられました。もう一度、依頼から始めてください。' };
+      return runSubmit(read());
+    },
+  });
 
   const formatDate = (d: Date | null) => d ? new Date(d).toISOString().split("T")[0] : "";
 
@@ -170,11 +225,11 @@ export function ProjectForm({
             }}>未完了の送信を取り消す</Button>
           </div>}
         </div>}
-        <form key={operation.scopeKey} onSubmit={handleSubmit} className="space-y-4">
+        <form key={operation.scopeKey} ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <fieldset disabled={operation.status !== 'ready'} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">案件名 *</Label>
-            <Input id="name" name="name" defaultValue={project?.name} required />
+            <Input id="name" name="name" data-agent-field="name" defaultValue={project?.name} required />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -228,7 +283,7 @@ export function ProjectForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="contractAmount">契約金額（円）</Label>
-              <Input id="contractAmount" name="contractAmount" type="number" min="0" max="2147483647" step="1" defaultValue={project?.contractAmount || ""} />
+              <Input id="contractAmount" name="contractAmount" data-agent-field="amount" type="number" min="0" max="2147483647" step="1" defaultValue={project?.contractAmount || ""} />
             </div>
           </div>
 

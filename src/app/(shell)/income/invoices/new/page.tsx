@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { todayJst } from '@/lib/income/dates'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import {
   Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, safeTotals, toast, useResource,
   useUnsavedGuard, type LineRow,
@@ -66,7 +67,7 @@ export default function NewInvoicePage() {
    * 下書きを保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、できた下書きの画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string }> => {
+  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
@@ -84,13 +85,16 @@ export default function NewInvoicePage() {
         },
       })
       markClean()
-      toast('請求書の下書きを保存しました')
-      router.push(`/income/invoices/${d.invoice.id}`)
+      // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
+      if (!isAgentSubmit()) {
+        toast('請求書の下書きを保存しました')
+        router.push(`/income/invoices/${d.invoice.id}`)
+      }
       return { ok: true, id: d.invoice.id }
     } catch (er) {
       setError(errMsg(er))
       setBusy(false)
-      return { ok: false, error: errMsg(er) }
+      return { ok: false, error: errMsg(er), kind: failKindOf(er) }
     }
   }
 
@@ -138,7 +142,7 @@ export default function NewInvoicePage() {
     }),
     submit: async () => {
       const r = await save()
-      return r.ok ? { ok: true, href: `/income/invoices/${r.id}` } : { ok: false, error: r.error }
+      return r.ok ? { ok: true, href: `/income/invoices/${r.id}` } : { ok: false, error: r.error, kind: r.kind }
     },
   })
 
