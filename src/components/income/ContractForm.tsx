@@ -227,6 +227,8 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       }
     },
     snapshot: () => ({
+      _amountLineCount: String(rows.length),
+      _amountTaxRate: rows.length === 1 ? String(rows[0].taxRate) : '',
       client: f.clientId === NEW_CLIENT ? newClientName.trim() : (clients.find((c) => c.id === f.clientId)?.name ?? ''),
       title: f.title.trim(),
       start: f.startDate,

@@ -17,7 +17,7 @@ const fromRoot = (name) => require(path.join(root, 'node_modules', name));
 const CONTROLLED = {
   link: "import React from 'react';export default ({href,children,...p})=>React.createElement('a',{href,...p},children);",
   navigation: 'export const useRouter=()=>({push(){},replace(){},refresh(){}});export const usePathname=()=>window.location.pathname;export const useSearchParams=()=>new URLSearchParams(window.location.search);',
-  motion: 'const tick=()=>new Promise(r=>setImmediate(r));export const blurField=()=>{};export const clearMarks=()=>{};export const clearStage=()=>{};export const cursorOff=()=>{};export const fly=async()=>{await tick()};export const focusField=async()=>{await tick()};export const nextFrames=async()=>{await tick();await tick()};export const paceMs=()=>0;export const sleep=async()=>{await tick()};export const typeInto=async(v,set,alive)=>{if(alive())set(v)};',
+  motion: 'const tick=()=>new Promise(r=>setImmediate(r));export const blurField=()=>{};export const clearMarks=()=>{};export const clearStage=()=>{};export const cursorOff=()=>{};export const fly=async()=>{await tick()};export const focusField=async()=>{globalThis.__focusHook?.();await tick()};export const nextFrames=async()=>{await tick();await tick()};export const paceMs=()=>0;export const sleep=async()=>{await tick()};export const typeInto=async(v,set,alive)=>{if(alive())set(v)};',
 };
 
 async function build() {
@@ -260,6 +260,73 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
     assert.ok(shown > 0 && shown < 100000);
     await approve();
     assert.equal(posts.length, 1); assert.equal(posts[0].items[0].unitPrice, shown);
+  });
+
+  // #137 の決まり: 金額の直しは、画面の今の税率で計算し、端数の差を隠さない
+  const adjust = async (text) => { await go({ t: 'adjust', text }); await settle(); };
+  const snapNow = () => ({ ...fx.getAgentForm('income.contract.new').snapshot() });
+  const setRate = async (rate) => {
+    const select = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.textContent === '10%'));
+    assert.ok(select);
+    await act(async () => { Simulate.change(select, { target: { value: String(rate) } }); await frames(); });
+  };
+  const approvedAmount = async (net, rate, total) => {
+    assert.equal(api.state.phase, 'confirm');
+    assert.equal(api.state.snap.subtotal, String(net)); assert.equal(api.state.snap.total, String(total)); assert.equal(posts.length, 0);
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].items[0].unitPrice, net); assert.equal(posts[0].items[0].taxRate, rate); assert.equal(api.state.phase, 'done');
+  };
+  await check('金額の直し: 税率8%で108,000円を100,000円に直す', async () => {
+    await startReal(); await setRate(8); await adjust('税込み108000円だった');
+    assert.match(api.state.notice, /税率8%/); await approvedAmount(100000, 8, 108000);
+  });
+  await check('金額の直し: 税率0%は同じ金額のまま', async () => {
+    await startReal(); await setRate(0); await adjust('税込み100000円だった');
+    assert.equal(api.state.snap.tax, '0'); await approvedAmount(100000, 0, 100000);
+  });
+  await check('金額の直し: 端数の差を保存の前に知らせる', async () => {
+    await startReal(); await adjust('税込み100000円だった');
+    assert.equal(api.state.snap.total, '99999'); assert.match(api.state.notice, /¥1 少なく/); await approvedAmount(90909, 10, 99999);
+  });
+  await check('金額の直し: 手で直した金額を読む。カードの古い金額を使わない', async () => {
+    await startReal(); await edit('amount', '110000'); await adjust('税込みだった');
+    await approvedAmount(100000, 10, 110000);
+  });
+  await check('金額の直し: カードに出ない欄を直していたら、直しのあとの案内で知らせる', async () => {
+    await startReal(); await edit('type', 'recurring'); await adjust('税抜150000円にして');
+    assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /出ていない欄/); assert.equal(posts.length, 0);
+  });
+  await check('金額の直し: 明細が複数なら、どの欄も変えずに止める', async () => {
+    await startReal();
+    const button = [...document.querySelectorAll('button')].find((b) => b.textContent.includes('行を追加'));
+    assert.ok(button);
+    await act(async () => { Simulate.click(button); await frames(); });
+    const before = snapNow();
+    await adjust('税込みだった');
+    assert.equal(api.state.phase, 'failed'); assert.equal(api.state.confirm, null); assert.match(api.state.error, /明細が複数/);
+    assert.deepEqual(snapNow(), before); assert.equal(posts.length, 0);
+  });
+  await check('金額の直し: 別のフォームや別の画面には、何も入れない', async () => {
+    await startReal();
+    const before = snapNow();
+    global.__focusHook = () => window.history.replaceState(null, '', '/income/contracts/another');
+    try { await adjust('税込みだった'); } finally { delete global.__focusHook; }
+    assert.equal(api.state.phase, 'failed'); assert.deepEqual(snapNow(), before); assert.equal(posts.length, 0);
+    const world = { ready: true, blocked: null, snap: { ...SNAP }, draft: { a: 1 }, submits: 0 };
+    const op = fx.CHAT_OPS.find((o) => o.key === fx.INCOME_SALE_ADD.key);
+    await startFake(op);
+    unregister();
+    let calls = 0;
+    unregister = fx.registerAgentForm(op.formKey, { ready: () => true, setValue: () => { calls++; return true; }, snapshot: () => ({ ...world.snap, _amountLineCount: '1', _amountTaxRate: '10' }), draft: () => world.draft, submit: async () => ({ ok: true, href: '/x' }) });
+    await adjust('税込みだった');
+    assert.equal(calls, 0); assert.equal(api.state.phase, 'failed'); assert.equal(api.state.confirm, null);
+  });
+  await check('金額の直し: 途中でやり直したら、どの欄も変えない', async () => {
+    await startReal();
+    const before = snapNow();
+    global.__focusHook = () => api.dispatch({ t: 'reset' });
+    try { await adjust('税込みだった'); } finally { delete global.__focusHook; }
+    assert.equal(api.state.phase, 'idle'); assert.deepEqual(snapNow(), before); assert.equal(posts.length, 0);
   });
 
   unregister();

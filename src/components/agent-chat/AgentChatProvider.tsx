@@ -9,6 +9,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
+import { incomeAmountAmendmentMessage, planIncomeAmountAmendment } from '@/lib/agent-chat/income-amount'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { draftKey, judgeReview, onOpScreen, type ReviewReceipt } from '@/lib/agent-chat/review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
@@ -125,25 +126,48 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   }, [router, review])
 
   /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
-  const amend = useCallback(async (amount: number, message: string, id: number, set?: Record<string, string>) => {
+  const amend = useCallback(async (eff: Extract<ChatEffect, { k: 'amend' | 'amend-flag' }>, id: number) => {
     const alive = () => runId.current === id
     const op = stateRef.current.op
     const form = op ? getAgentForm(op.formKey) : undefined
-    if (!op || !form) { if (alive()) dispatchRef.current({ t: 'run-failed', error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
+    const receipt = reviewed.current
+    const assertContext = () => {
+      if (!alive()) throw ABORTED
+      if (!op || !form || receipt?.form !== form || getAgentForm(op.formKey) !== form || !form.ready() || !onOpScreen(op, window.location.pathname)) {
+        throw new Error('登録の画面が変わりました。依頼から始め直して、内容を確認してください。')
+      }
+    }
     try {
+      assertContext()
+      if (!form) return
+      const before = { ...form.snapshot() }
+      // 確認カードのあとに画面で直した欄があれば、直しのあとの案内で知らせる（確認カードに出ない欄もあるため）
+      const edited = draftKey(form.draft()) !== receipt?.draft
+      const plan = eff.k === 'amend' ? planIncomeAmountAmendment(before, eff.amount, eff.inclusive) : null
+      const amount = plan ? plan.amount : eff.k === 'amend-flag' ? eff.amount : 0
       await focusField('amount')
-      await form.setValue('amount', '')
-      await typeInto(String(amount), (v) => { void form.setValue('amount', v) }, alive)
-      await form.setValue('amount', String(amount))
+      assertContext()
+      if (JSON.stringify(form.snapshot()) !== JSON.stringify(before)) throw new Error('金額を直す前に内容が変わりました。画面を確認して、もう一度依頼してください。')
+      if (!await form.setValue('amount', '')) throw new Error('金額の欄に入力できませんでした。')
+      await typeInto(String(amount), (v) => { assertContext(); void form.setValue('amount', v) }, alive)
+      assertContext()
+      if (!await form.setValue('amount', String(amount))) throw new Error('金額の欄に入力できませんでした。')
       // あわせて入れる欄（例: 税込みの切り替え）。画面の本物の欄に入れる
-      for (const [k, v] of Object.entries(set ?? {})) await form.setValue(k, v)
+      if (eff.k === 'amend-flag') for (const [k, v] of Object.entries(eff.set ?? {})) await form.setValue(k, v)
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
-      if (alive()) dispatchRef.current({ t: 'ready', snap: review(form), message })
-    } catch {
+      assertContext()
+      const snap = review(form)
+      const lead = plan ? incomeAmountAmendmentMessage(plan, snap) : eff.k === 'amend-flag' ? eff.message : ''
+      const message = edited ? `${lead} 画面で直した欄があります。確認カードに出ていない欄も確かめてください。` : lead
+      dispatchRef.current({ t: 'ready', snap, message })
+    } catch (e) {
       clearStage()
-      if (alive()) dispatchRef.current({ t: 'run-failed', error: '金額を直せませんでした。' })
+      if (e !== ABORTED && alive()) {
+        reviewed.current = null
+        dispatchRef.current({ t: 'confirmation-invalid', error: e instanceof Error ? e.message : '金額を直せませんでした。' })
+      }
     }
   }, [review])
 
@@ -162,8 +186,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       chooserRef.current?.(eff.id)
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
-    } else if (eff.k === 'amend') {
-      void amend(eff.amount, eff.message, id, eff.set)
+    } else if (eff.k === 'amend' || eff.k === 'amend-flag') {
+      void amend(eff, id)
     } else {
       void (async () => {
         const op = stateRef.current.op

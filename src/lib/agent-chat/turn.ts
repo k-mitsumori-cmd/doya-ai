@@ -58,8 +58,8 @@ export type ChatEvent =
   | { t: 'changed'; snap: AgentFormSnapshot; hidden?: boolean }
   /** 保存の前に見たら、読み込みや保存の処理が終わっていなかった。保存せず、確認カードに戻す */
   | { t: 'not-ready' }
-  /** 保存の前に見たら、フォームが閉じた・別のフォームになった・別の画面に移っていた。この確認では保存しない。もう一度は、入力からやり直す */
-  | { t: 'confirmation-invalid'; why: 'form' | 'screen' }
+  /** 保存の前や金額の直しの途中で、フォームが閉じた・別のフォームになった・別の画面に移った。この確認では保存しない。もう一度は、入力からやり直す */
+  | { t: 'confirmation-invalid'; why?: 'form' | 'screen'; error?: string }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
   | { t: 'submitted'; ok: false; error: string; kind?: FailKind }
   /** 画面が選択肢を出した（例: ワークスペースが複数ある）。作業を止め、本人の選択を待つ */
@@ -72,8 +72,10 @@ export type ChatEvent =
 export type ChatEffect =
   | { k: 'api'; text: string }
   | { k: 'run'; op: ChatOp; values: Record<string, string> }
-  /** 金額の欄を直す。set は、あわせて入れる欄（例: 税込みの切り替え） */
-  | { k: 'amend'; amount: number; message: string; set?: Record<string, string> }
+  /** 金額の欄を、画面の今の税率で計算して直す（収入の契約・請求書） */
+  | { k: 'amend'; amount: number | null; inclusive: boolean }
+  /** 金額の欄を直し、あわせて欄を入れる（例: 税込みの切り替えがある支出） */
+  | { k: 'amend-flag'; amount: number; message: string; set?: Record<string, string> }
   | { k: 'submit' }
   /** 選んだ id を画面へ渡す（画面が次の画面へ運ぶ） */
   | { k: 'choose'; id: string }
@@ -136,11 +138,15 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       // ⚠️ 直せるのは確認カードを出している間だけ。直したあとも、保存の指示は返さない（もう一度 確認カードで押してもらう）
       if (state.phase !== 'confirm' || !state.op || !state.snap) return { state, effects: [] }
       const text = ev.text.normalize('NFKC')
-      const typed = [...yenCandidates(text)][0]
+      const candidates = [...yenCandidates(text)]
+      const typed = candidates[0]
       const inclusive = /税込/.test(text)
       const answers = [...state.answers, ev.text.trim()]
       // 税の計算が無い操作は、チャットでは直さない。画面の欄を直してもらい、保存の前に画面の今の値で確認カードを出し直す
       if (state.op.taxAdjust === 'none') return { state: { ...state, notice: '内容を直すときは、画面の欄を直してください。直したあと、確認カードのボタンを押すと、確認カードを出し直します。' }, effects: [] }
+      if (candidates.length > 1 || /[-−]\s*\d|\d+\.\d+(?:円|$)/.test(text) || (inclusive && typed == null && /\d/.test(text))) {
+        return { state: { ...state, notice: '金額を1つ、整数の円で指定してください。画面の入力内容は変更していません。' }, effects: [] }
+      }
       if (state.op.taxAdjust === 'flag') {
         // 画面に「税込み」の切り替えがあるツール。金額はそのままで、切り替えを入れる（割り算をしない）
         const base = typed ?? Number(state.snap.amount)
@@ -148,15 +154,11 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
         if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
         if (!inclusive && !exclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
         const message = inclusive ? `${yenText(base)} を税込みとして入れ直しました。` : exclusive ? `${yenText(base)} を税抜として入れ直しました。` : `金額を ${yenText(base)} に直しました。`
-        return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount: base, message, ...(inclusive || exclusive ? { set: { taxIncluded: inclusive ? 'true' : 'false' } } : {}) }] }
+        return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend-flag', amount: base, message, ...(inclusive || exclusive ? { set: { taxIncluded: inclusive ? 'true' : 'false' } } : {}) }] }
       }
-      const sub = Number(state.snap.subtotal)
-      const base = typed ?? sub
-      if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
-      const amount = inclusive ? Math.round(base / 1.1) : base
       if (!inclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
-      const message = inclusive ? `税込みの ${yenText(base)} を、税抜の ${yenText(amount)} に直しました。` : `税抜の ${yenText(amount)} に直しました。`
-      return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount, message }] }
+      // 税率・明細の数・入れていない金額は、実行役が画面の今の値から読む
+      return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount: typed ?? null, inclusive }] }
     }
     case 'choices': {
       // ⚠️ 選択肢を出せるのは、画面を進めている間だけ。選ぶまで、保存にも次の画面にも進まない
@@ -190,8 +192,8 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       return { state: { ...state, phase: 'confirm', notice: '画面の処理が終わっていないので、保存していません。少し待って、もう一度押してください。' }, effects: [] }
     }
     case 'confirmation-invalid': {
-      if (state.phase !== 'submitting') return { state, effects: [] }
-      const error = ev.why === 'screen' ? '別の画面に移ったので、保存していません。' : '登録の画面が閉じたか、開き直されたので、保存していません。'
+      if (state.phase !== 'submitting' && state.phase !== 'working') return { state, effects: [] }
+      const error = ev.error ?? (ev.why === 'screen' ? '別の画面に移ったので、保存していません。' : '登録の画面が閉じたか、開き直されたので、保存していません。')
       return { state: { ...state, phase: 'failed', confirm: null, snap: null, notice: null, error, errorKind: 'other' }, effects: [] }
     }
     case 'submitted': {

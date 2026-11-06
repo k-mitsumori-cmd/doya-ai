@@ -179,15 +179,15 @@ test('会話: 画面を開けなかった・AI が読めなかった・操作で
   assert.deepEqual(reduce(run([{ t: 'ask', text: 'x' }]).state, { t: 'ask', text: 'y' }).effects, [])
 })
 
-test('金額の直し: 確認カードのときだけ。税込みは画面の今の値から計算し、直したあとも保存の指示は返さない', () => {
+test('金額の直し: 確認カードのときだけ。換算は現在の画面へ委ね、保存の指示は返さない', () => {
   const confirm = run([
     { t: 'ask', text: 'x' }, { t: 'reply', res: opReply({ amount: '1100000', client: 'A', title: 'B' }, []) },
     { t: 'ready', snap: { ...SNAP, subtotal: '1100000', tax: '110000', total: '1210000' } },
   ]).state
   assert.equal(confirm.snap?.subtotal, '1100000')
-  // 税込みだった → 税抜 1,000,000
+  // 金額の指定なし: 現在の画面の値と税率で換算する依頼だけ返す
   const a = reduce(confirm, { t: 'adjust', text: '税込みだった' })
-  assert.deepEqual(a.effects, [{ k: 'amend', amount: 1_000_000, message: '税込みの ¥1,100,000 を、税抜の ¥1,000,000 に直しました。' }])
+  assert.deepEqual(a.effects, [{ k: 'amend', amount: null, inclusive: true }])
   assert.equal(a.state.phase, 'working')
   assert.ok(!a.effects.some((e) => e.k === 'submit'))
   // 直している間は、押しても保存しない
@@ -198,8 +198,8 @@ test('金額の直し: 確認カードのときだけ。税込みは画面の今
   assert.equal(back.state.notice, 'm')
   assert.deepEqual(back.effects, [])
   // 新しい金額・税込みの金額
-  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '120万円にして' }).effects, [{ k: 'amend', amount: 1_200_000, message: '税抜の ¥1,200,000 に直しました。' }])
-  assert.equal((reduce(confirm, { t: 'adjust', text: '税込み220万円だった' }).effects[0] as { amount: number }).amount, 2_000_000)
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '120万円にして' }).effects, [{ k: 'amend', amount: 1_200_000, inclusive: false }])
+  assert.equal((reduce(confirm, { t: 'adjust', text: '税込み220万円だった' }).effects[0] as { amount: number }).amount, 2_200_000)
   // 読み取れない直しは、画面を動かさずに案内する
   const none = reduce(confirm, { t: 'adjust', text: 'やっぱり変えたい' })
   assert.deepEqual(none.effects, [])
@@ -335,13 +335,13 @@ test('段階2: 確認カードのあとに画面が変わっていたら、保�
 test('支出の「税込みだった」: 金額は割らず、画面の税込みの切り替えを入れる（請求書は今までどおり税抜に直す）', () => {
   const confirm = toConfirm(EXPENSE_ADD, STAGE2[1].values, EXP_SNAP)
   const a = reduce(confirm, { t: 'adjust', text: '税込みだった' })
-  assert.deepEqual(a.effects, [{ k: 'amend', amount: 5000, message: '¥5,000 を税込みとして入れ直しました。', set: { taxIncluded: 'true' } }])
+  assert.deepEqual(a.effects, [{ k: 'amend-flag', amount: 5000, message: '¥5,000 を税込みとして入れ直しました。', set: { taxIncluded: 'true' } }])
   assert.equal(a.state.phase, 'working')
-  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '税抜だった' }).effects, [{ k: 'amend', amount: 5000, message: '¥5,000 を税抜として入れ直しました。', set: { taxIncluded: 'false' } }])
-  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '6,000円にして' }).effects, [{ k: 'amend', amount: 6000, message: '金額を ¥6,000 に直しました。' }])
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '税抜だった' }).effects, [{ k: 'amend-flag', amount: 5000, message: '¥5,000 を税抜として入れ直しました。', set: { taxIncluded: 'false' } }])
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '6,000円にして' }).effects, [{ k: 'amend-flag', amount: 6000, message: '金額を ¥6,000 に直しました。' }])
   assert.deepEqual(reduce(confirm, { t: 'adjust', text: 'やっぱり変えたい' }).effects, [])
   const inv = toConfirm(INCOME_INVOICE_DRAFT, STAGE2[0].values, INV_SNAP)
-  assert.deepEqual(reduce(inv, { t: 'adjust', text: '税込みだった' }).effects, [{ k: 'amend', amount: 272727, message: '税込みの ¥300,000 を、税抜の ¥272,727 に直しました。' }])
+  assert.deepEqual(reduce(inv, { t: 'adjust', text: '税込みだった' }).effects, [{ k: 'amend', amount: null, inclusive: true }])
 })
 
 test('段階2の表示: 確認カードは画面の値をそのまま読み、下書き・確定と送付はまだ、を正しく書く', () => {
@@ -594,8 +594,8 @@ test('段階4の決まり: 確認の前に保存しない・確認で1件だけ�
 
 test('段階4: 直し方は操作ごとに違う（支出は税込みの切り替え、残業と顧客は画面の欄で直す）', () => {
   const one = toConfirm(EXPENSE_ONEOFF_ADD, STAGE4[2].values, ONE_SNAP)
-  assert.deepEqual(reduce(one, { t: 'adjust', text: '税込みだった' }).effects, [{ k: 'amend', amount: 8000, message: '¥8,000 を税込みとして入れ直しました。', set: { taxIncluded: 'true' } }])
-  assert.deepEqual(reduce(one, { t: 'adjust', text: '9,000円にして' }).effects, [{ k: 'amend', amount: 9000, message: '金額を ¥9,000 に直しました。' }])
+  assert.deepEqual(reduce(one, { t: 'adjust', text: '税込みだった' }).effects, [{ k: 'amend-flag', amount: 8000, message: '¥8,000 を税込みとして入れ直しました。', set: { taxIncluded: 'true' } }])
+  assert.deepEqual(reduce(one, { t: 'adjust', text: '9,000円にして' }).effects, [{ k: 'amend-flag', amount: 9000, message: '金額を ¥9,000 に直しました。' }])
   for (const { op, values, snap } of STAGE4.slice(0, 2)) {
     const adj = reduce(toConfirm(op, values, snap), { t: 'adjust', text: '税込みだった' })
     assert.deepEqual(adj.effects, [], op.key)

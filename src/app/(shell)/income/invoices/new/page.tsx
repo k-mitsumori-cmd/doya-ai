@@ -143,6 +143,8 @@ export default function NewInvoicePage() {
       subtotal: totals ? String(totals.subtotalExclTax) : '',
       tax: totals ? String(totals.taxAmount) : '',
       total: totals ? String(totals.totalInclTax) : '',
+      _amountLineCount: String(rows.length),
+      _amountTaxRate: rows.length === 1 ? String(rows[0].taxRate) : '',
     }),
     draft: () => ({ clientId, newClientName, title, issueDate, dueDate, notes, rows }),
     submit: async () => {
