@@ -14,7 +14,7 @@ const declarations = ast.statements.filter(node => (ts.isClassDeclaration(node) 
 assert.equal(declarations.length, 2, 'Communication declarations must exist exactly once')
 const code = ts.transpileModule(declarations.map(node => node.getText(ast)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
 let reply, calls = 0
-const sandbox = { exports: {}, fetch: async (url, init) => { calls++; assert.equal(url, '/synthetic-income-read'); assert.equal(init.method, 'GET'); assert.equal(init.cache, 'no-store'); return reply() } }
+const sandbox = { exports: {}, fetch: async (url, init) => { calls++; assert.equal(url, '/synthetic-income-read'); assert(['GET', 'get', 'POST', 'PATCH', 'DELETE'].includes(init.method)); assert.equal(init.cache, 'no-store'); return reply() } }
 vm.runInNewContext(code, sandbox, { filename: sourcePath, timeout: 1000 })
 const { fetchJson, ApiError } = sandbox.exports
 const checks = []
@@ -39,6 +39,14 @@ async function rejected(name, status, value, malformed = false) {
   reply = async () => ({ ok: false, status: 403, json: async () => ({ error: 'synthetic denied' }) })
   await assert.rejects(fetchJson('/synthetic-income-read'), e => e instanceof ApiError && e.status === 403 && e.message === 'synthetic denied')
   checks.push('JSON backend error message and status retained')
+  for (const method of ['POST', 'PATCH', 'DELETE']) {
+    reply = async () => ({ ok: true, status: 200, json: async () => { throw Error('synthetic empty write response') } })
+    assert.equal(await fetchJson('/synthetic-income-read', { method }), null)
+    checks.push('existing unreadable successful write response preserved: ' + method)
+  }
+  reply = async () => ({ ok: true, status: 200, json: async () => null })
+  await assert.rejects(fetchJson('/synthetic-income-read', { method: 'get' }), e => e instanceof ApiError && e.status === 200)
+  checks.push('explicit lowercase GET is protected')
   assert.equal(calls, checks.length)
   console.log(JSON.stringify({ marker: 'income-json-response', passed: checks.length, checks, calls, externalNetworkCalls: 0 }))
 })().catch(error => { console.error(error); process.exitCode = 1 })

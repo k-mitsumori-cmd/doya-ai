@@ -93,10 +93,11 @@ export class ApiError extends Error {
 
 export async function fetchJson<T = any>(url: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const hasBody = init.body !== undefined
+  const method = init.method ?? 'GET'
   let res: Response
   try {
     res = await fetch(url, {
-      method: init.method ?? 'GET',
+      method,
       headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
       body: hasBody ? JSON.stringify(init.body) : undefined,
       cache: 'no-store',
@@ -111,9 +112,9 @@ export async function fetchJson<T = any>(url: string, init: { method?: string; b
     // JSON でない応答
   }
   if (!res.ok) throw new ApiError(data?.error || '処理に失敗しました。時間をおいて再度お試しください。', res.status)
-  // income API の成功応答は JSON のオブジェクト。読めない応答を成功として返すと、
+  // 読込APIの成功応答は JSON のオブジェクト。読めない応答を成功として返すと、
   // useResource の未取得を表す null と重なり、エラーも再試行も表示されなくなる。
-  if (data === null || typeof data !== 'object') {
+  if (method.toUpperCase() === 'GET' && (data === null || typeof data !== 'object')) {
     throw new ApiError('応答を読み取れませんでした。時間をおいて再度お試しください。', res.status)
   }
   return data as T
