@@ -31,6 +31,12 @@ export interface ListInterviewsOptions {
 
 export async function listInterviews(userId: string, opts: ListInterviewsOptions = {}, db: InterviewReader = prisma): Promise<InterviewSummary[]> {
   if (!userId) return []
+  if (opts.limit != null && (typeof opts.limit !== 'number' || !Number.isFinite(opts.limit))) {
+    throw new Error('件数は数値で指定してください。')
+  }
+  if (opts.status != null && typeof opts.status !== 'string') {
+    throw new Error('状態の指定が正しくありません。')
+  }
   const take = Math.min(Math.max(Math.floor(opts.limit ?? 200), 1), 200)
   const rows = await db.shanaiInterview.findMany({
     where: { userId, ...(opts.status ? { status: opts.status } : {}) },
