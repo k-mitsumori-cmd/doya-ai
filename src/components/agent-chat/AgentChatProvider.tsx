@@ -11,8 +11,8 @@ import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
-import type { ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
-import { getAgentForm, waitForAgentForm } from './form-bus'
+import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
+import { getAgentForm, waitForAgentForm, type AgentFormHandler } from './form-bus'
 import { blurField, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
@@ -41,6 +41,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const stateRef = useRef(state)
   // 会話をやり直したとき、前の実行役が続きを進めないようにする番号
   const runId = useRef(0)
+  const reviewed = useRef<{ form: AgentFormHandler; snapshot: AgentFormSnapshot } | null>(null)
 
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
 
@@ -87,7 +88,9 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       cursorOff()
       await nextFrames(3)
       if (!alive()) throw ABORTED
-      d({ t: 'ready', snap: form.snapshot() })
+      const snap = { ...form.snapshot() }
+      reviewed.current = { form, snapshot: snap }
+      d({ t: 'ready', snap })
     } catch (e) {
       clearStage()
       if (e !== ABORTED) dispatchRef.current({ t: 'run-failed', error: '画面の操作を進められませんでした。' })
@@ -108,7 +111,11 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
-      if (alive()) dispatchRef.current({ t: 'ready', snap: form.snapshot(), message })
+      if (alive()) {
+        const snap = { ...form.snapshot() }
+        reviewed.current = { form, snapshot: snap }
+        dispatchRef.current({ t: 'ready', snap, message })
+      }
     } catch {
       clearStage()
       if (alive()) dispatchRef.current({ t: 'run-failed', error: '金額を直せませんでした。' })
@@ -136,7 +143,13 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         const form = op ? getAgentForm(op.formKey) : undefined
         if (!form) { if (runId.current === id) dispatchRef.current({ t: 'submitted', ok: false, error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
         // 成功すると画面が移ってフォームが消えるので、確認カードの値はここで読んでおく
-        const snap = form.snapshot()
+        const snap = { ...form.snapshot() }
+        const receipt = reviewed.current
+        if (!receipt || receipt.form !== form || !form.ready() || window.location.pathname !== op?.path || !sameReview(snap, receipt.snapshot) || !sameReview(stateRef.current.snap, receipt.snapshot)) {
+          reviewed.current = null
+          dispatchRef.current({ t: 'confirmation-invalid', error: '登録する画面または内容が変わりました。依頼から始め直して、内容を確認してください。' })
+          return
+        }
         let r: Awaited<ReturnType<typeof form.submit>>
         try { r = await form.submit() } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return
@@ -148,7 +161,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
     // 新しい依頼を受けたとき・やり直したときだけ、前の実行役を止める（受け付けなかった依頼では止めない）
-    if ((ev.t === 'ask' && next !== stateRef.current) || ev.t === 'reset') runId.current += 1
+    if ((ev.t === 'ask' && next !== stateRef.current) || ev.t === 'reset') { runId.current += 1; reviewed.current = null }
     stateRef.current = next
     setState(next)
     effects.forEach(runEffect)
@@ -158,6 +171,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const begin = useCallback((text: string, res: ChatApiResponse) => {
     // 経営ホームがすでに AI を呼んで答えを受け取っているので、ここでは呼ばない。ask のあとに reply を渡す
     runId.current += 1
+    reviewed.current = null
     stateRef.current = { ...INITIAL_STATE, phase: 'reading', text }
     setState(stateRef.current)
     setOpen(true)
@@ -174,4 +188,11 @@ function normalizeReply(res: ChatApiResponse | null): ChatApiResponse | null {
   if (res.kind !== 'op') return res
   const op = chatOpByKey(res.op?.key)
   return op ? { ...res, op } : null
+}
+
+/** Compare the complete local review, including a form-specific payload marker when present. */
+function sameReview(a: AgentFormSnapshot | null, b: AgentFormSnapshot): boolean {
+  if (!a) return false
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && a[key] === b[key])
 }

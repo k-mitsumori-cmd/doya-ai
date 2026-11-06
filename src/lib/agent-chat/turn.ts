@@ -48,6 +48,7 @@ export type ChatEvent =
   | { t: 'adjust'; text: string }
   | { t: 'run-failed'; error: string }
   | { t: 'approve' }
+  | { t: 'confirmation-invalid'; error: string }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
   | { t: 'submitted'; ok: false; error: string }
   | { t: 'retry' }
@@ -132,6 +133,10 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       // ⚠️ 保存の指示を返すのは、確認カードが出ているときだけ
       if (state.phase !== 'confirm') return { state, effects: [] }
       return { state: { ...state, phase: 'submitting', error: null }, effects: [{ k: 'submit' }] }
+    }
+    case 'confirmation-invalid': {
+      if (state.phase !== 'submitting') return { state, effects: [] }
+      return { state: { ...state, phase: 'failed', confirm: null, snap: null, error: ev.error }, effects: [] }
     }
     case 'submitted': {
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
