@@ -1,7 +1,7 @@
 'use strict';
 // 会話の確認カードと保存の間の決まりを、本物の Provider で確かめる（#135 の検証を、全部の操作へ広げたもの）。
 // - 8つの操作は、本物の Provider と、値を持つだけのフォームで動かす。
-// - 収入の契約は、本物のフォームも載せる。通信は作り物で、DB にも外部にも触らない。
+// - 収入の契約と請求書は、本物のフォームも載せる。通信は作り物で、DB にも外部にも触らない。
 // 通らない場面: 実際のブラウザ、ログインと権限の切り替え、実際の保存、通信の結果が分からないあとの再送。
 process.env.NODE_ENV = 'test'; // React の act をこの検証のプロセスの中だけで使う
 const fs = require('node:fs');
@@ -25,7 +25,8 @@ async function build() {
     "export {default as Provider,useAgentChat} from '@/components/agent-chat/AgentChatProvider';",
     "export {registerAgentForm,getAgentForm} from '@/components/agent-chat/form-bus';",
     "export {default as ContractForm} from '@/components/income/ContractForm';",
-    "export {CHAT_OPS,INCOME_SALE_ADD} from '@/lib/agent-chat/ops';",
+    "export {default as NewInvoicePage} from '@/app/(shell)/income/invoices/new/page';",
+    "export {CHAT_OPS,INCOME_SALE_ADD,INCOME_INVOICE_DRAFT} from '@/lib/agent-chat/ops';",
   ].join('');
   await fromRoot('esbuild').build({
     stdin: { contents: entry, resolveDir: root, sourcefile: 'entry.ts', loader: 'ts' },
@@ -77,6 +78,7 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
     if (url === '/api/income/issuer') { gets++; return Response.json({ issuer: null }); }
     if (url === '/api/income/clients') { gets++; return Response.json({ clients: [{ id: 'c1', name: 'Sample A' }] }); }
     if (url === '/api/income/contracts' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ id: 'made' }); }
+    if (url === '/api/income/invoices' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ invoice: { id: 'made-invoice' } }); }
     throw Error('予定外の通信: ' + url);
   };
   const Probe = () => { api = fx.useAgentChat(); return null; };
@@ -327,6 +329,66 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
     global.__focusHook = () => api.dispatch({ t: 'reset' });
     try { await adjust('税込みだった'); } finally { delete global.__focusHook; }
     assert.equal(api.state.phase, 'idle'); assert.deepEqual(snapNow(), before); assert.equal(posts.length, 0);
+  });
+
+  // 請求書は、本物の画面を載せて確かめる
+  const INVOICE = 'income.invoice.new';
+  async function startInvoice() {
+    window.history.replaceState(null, '', '/income/invoices/new');
+    await mount(React.createElement(fx.NewInvoicePage));
+    for (let i = 0; i < 100 && !(fx.getAgentForm(INVOICE) && fx.getAgentForm(INVOICE).ready()); i++) await act(async () => { await frames(1); });
+    const values = { amount: '100000', client: 'Sample A', title: 'Sample' };
+    await act(async () => { api.begin('sample', { kind: 'op', op: fx.INCOME_INVOICE_DRAFT, values, missing: [], say: 'sample' }); await frames(); });
+    await settle();
+    assert.equal(api.state.phase, 'confirm');
+    assert.equal(posts.length, 0);
+  }
+  await check('本物の請求書: 変わっていなければ確認した内容を1件だけ保存する', async () => {
+    await startInvoice(); await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].clientId, 'c1'); assert.equal(posts[0].title, 'Sample'); assert.equal(posts[0].lines[0].unitPrice, 100000); assert.equal(api.state.phase, 'done');
+  });
+  await check('本物の請求書: 件名を手で直したら保存せず、カードを出し直す', async () => {
+    await startInvoice(); await edit('title', 'Changed');
+    await approve();
+    assert.equal(posts.length, 0); assert.equal(api.state.phase, 'confirm'); assert.equal(api.state.snap.title, 'Changed');
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].title, 'Changed');
+  });
+  await check('本物の請求書: カードに出ない備考を直しても、止めて知らせる', async () => {
+    await startInvoice();
+    const shown = JSON.stringify(api.state.snap);
+    await act(async () => { Simulate.change(document.querySelector('form textarea'), { target: { value: 'Changed note' } }); await frames(); });
+    assert.equal(JSON.stringify(fx.getAgentForm(INVOICE).snapshot()), shown);
+    await approve();
+    assert.equal(posts.length, 0); assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /出ていない欄/);
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].notes, 'Changed note');
+  });
+  await check('本物の請求書: 同時の送信も、成功のあとの送信も、1件だけ', async () => {
+    await startInvoice();
+    const form = fx.getAgentForm(INVOICE);
+    let results;
+    await act(async () => { results = await Promise.all([form.submit(), form.submit()]); });
+    assert.equal(posts.length, 1); assert.equal(results.filter((r) => r.ok).length, 1);
+    assert.equal(form.ready(), false);
+    let again;
+    await act(async () => { again = await form.submit(); });
+    assert.equal(again.ok, false); assert.equal(posts.length, 1);
+  });
+  await check('本物の請求書: 画面の保存ボタンのあと、会話からもう1件作らない', async () => {
+    await startInvoice();
+    await act(async () => { Simulate.submit(document.querySelector('form')); await frames(3); });
+    assert.equal(posts.length, 1, '画面の保存ボタンも同じ処理を通る');
+    await approve();
+    assert.equal(posts.length, 1);
+    assert.notEqual(api.state.phase, 'done', '会話の完了は出さない');
+  });
+  await check('本物の請求書: 税率8%で108,000円を100,000円に直す', async () => {
+    await startInvoice(); await setRate(8); await adjust('税込み108000円だった');
+    assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /税率8%/);
+    assert.equal(api.state.snap.subtotal, '100000'); assert.equal(api.state.snap.total, '108000'); assert.equal(posts.length, 0);
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].lines[0].unitPrice, 100000); assert.equal(posts[0].lines[0].taxRate, 8);
   });
 
   unregister();
