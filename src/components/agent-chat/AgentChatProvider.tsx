@@ -155,7 +155,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         if (r.ok) { const to = r.href; window.setTimeout(() => { if (runId.current === id && window.location.pathname !== to) router.push(to) }, 700) }
       })()
     }
-  }, [runOp, amend])
+  }, [runOp, amend, router])
 
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
