@@ -3,6 +3,7 @@
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { useAgentChat } from '@/components/agent-chat/AgentChatProvider'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
@@ -187,6 +188,9 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の INCOME_SALE_ADD ----
   const totals = safeTotals(rows)
   const agentTitle = useRef('')
+  // 会話が画面を進めている間だけ、売上予定の表（単発の売上は1行）が出る分の高さを先に取る（金額を入れた瞬間に、下のカードが押し下げられてずれないように）。ふだんの画面には、空きを作らない
+  const chatPhase = useAgentChat()?.state.phase
+  const agentRun = !initial && (chatPhase === 'working' || chatPhase === 'confirm' || chatPhase === 'submitting')
   useAgentForm('income.contract.new', {
     ready: () => !initial && clientsLoaded,
     setValue: (key, value) => {
@@ -309,6 +313,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       </Card>
 
       <Card title="売上予定のプレビュー（先頭6件）">
+        <div className={agentRun ? s.previewBox : undefined} style={agentRun ? ({ '--rows': 1 } as React.CSSProperties) : undefined}>
         {preview.rows.length > 0 ? (
           <div className={s.tableWrap}>
             <table className={s.table}>
@@ -328,6 +333,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
           </div>
         ) : null}
         {preview.note && <p className={s.sub} style={{ margin: '8px 0 0' }}>{preview.note}</p>}
+        </div>
         {f.status !== 'active' && <p className={s.note} style={{ margin: '12px 0 0' }}>状態が「有効」ではないため、保存しても売上予定は作られません。</p>}
       </Card>
 

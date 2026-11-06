@@ -75,8 +75,11 @@ export function StatTile({ label, value, unit, sub, tone = 'default' }: { label:
     <div className={`${s.stat} ${tone === 'bad' ? s.toneBad : tone === 'ok' ? s.toneOk : ''}`.trim()}>
       <p className={s.statLabel} style={{ margin: 0 }}>{label}</p>
       <p className={s.statValue} style={{ marginBottom: 0 }}>
-        {value}
-        {unit && value !== '—' && <span className={s.statUnit}>{unit}</span>}
+        {/* 数字と単位を1つのかたまりにして、途中で折り返さない（本文の p の text-wrap: pretty が white-space を上書きするため、span で止める） */}
+        <span className={s.statNowrap}>
+          {value}
+          {unit && value !== '—' && <span className={s.statUnit}>{unit}</span>}
+        </span>
       </p>
       {sub && <p className={s.statSub} style={{ marginBottom: 0 }}>{sub}</p>}
     </div>
@@ -106,7 +109,7 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 /** 概要タイル列の形 */
 export function StatsSkeleton({ n = 4 }: { n?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" role="status" aria-label="読み込み中です">
+    <div className={s.statGrid} role="status" aria-label="読み込み中です">
       {Array.from({ length: n }).map((_, i) => (
         <div key={i} className={s.stat} style={{ display: 'grid', gap: 8 }}>
           <Skeleton w="50%" h={14} />

@@ -71,6 +71,12 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .input { flex: 1; min-width: 0; min-height: 46px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid #c6cde0; background: #fff; color: inherit; font: 600 16px/1.4 inherit; }
 .foot { flex: none; display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e3e8f4; background: #fff; }
 .done { display: grid; gap: 10px; }
+/* スマホ: 畳んだ作業の一覧の見出し、会話の下に固定する確認カードのボタン */
+.stepsToggle { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #f4f7fd; color: #101633; font: 700 13px/1 inherit; cursor: pointer; }
+.stepsToggle small { color: #0047d6; font-size: 12px; font-weight: 700; }
+.pin { flex: none; display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #e3e8f4; background: #fff; }
+.pin .primary { flex: 1; padding: 0 12px; }
+.pin .ghost { padding: 0 12px; white-space: nowrap; }
 .donecard { padding: 12px 14px; border-radius: 14px; background: #e6f8ef; color: #0b8a4d; font-size: 13.5px; font-weight: 700; animation: pop .4s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
 .next { display: grid; gap: 6px; }
@@ -85,7 +91,7 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
   .fab { right: auto; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(var(--agent-tab-h, 68px) + 14px + env(safe-area-inset-bottom, 0px)); }
   .panel {
     left: 0; right: 0; top: auto; width: auto; bottom: calc(var(--agent-tab-h, 68px) + env(safe-area-inset-bottom, 0px));
-    height: var(--agent-dock-h, 46dvh); border-left: 0; border-top: 1px solid #e3e8f4; transform: translateY(110%);
+    height: var(--agent-dock-ph, 46dvh); border-left: 0; border-top: 1px solid #e3e8f4; transform: translateY(110%);
     transition: transform .3s cubic-bezier(.22, 1, .36, 1), height .3s cubic-bezier(.22, 1, .36, 1), visibility 0s linear .3s;
   }
   .panel[data-open='true'] { transform: none; }
@@ -97,6 +103,7 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
   .body { padding: 12px 16px; gap: 10px; }
   /* 「画面」を見ているときは、会話の中身を畳む（処理は止めない。見出しと切り替えだけ残す） */
   .panel[data-view='tool'] .body, .panel[data-view='tool'] .foot { visibility: hidden; }
+  .panel[data-view='tool'] .pin { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fab, .panel, .prog i, .steps li, .hint, .say, .lead, .user, .card, .donecard, .note { transition: none; animation: none; }
