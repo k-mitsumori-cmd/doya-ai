@@ -48,12 +48,12 @@ function useRecentErrors() {
   return ref
 }
 
-export default function SupportChat({ actorKey }: { actorKey?: string }) {
+export default function SupportChat({ actorKey, mobileDocked = false }: { actorKey?: string; mobileDocked?: boolean }) {
   const draftKey = actorKey ? DRAFT_KEY_PREFIX + encodeURIComponent(actorKey) : null
-  return <SupportChatSession key={actorKey ? 'actor:' + actorKey : 'anonymous'} draftKey={draftKey} />
+  return <SupportChatSession key={actorKey ? 'actor:' + actorKey : 'anonymous'} draftKey={draftKey} mobileDocked={mobileDocked} />
 }
 
-function SupportChatSession({ draftKey }: { draftKey: string | null }) {
+function SupportChatSession({ draftKey, mobileDocked }: { draftKey: string | null; mobileDocked: boolean }) {
   const pathname = usePathname() || '/'
   const toolId = useMemo(() => toolIdForPath(pathname), [pathname])
   const toolName = toolNameOf(toolId)
@@ -80,6 +80,7 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const fabRef = useRef<HTMLButtonElement>(null)
   const ticketRequestRef = useRef(0)
+  const close = useCallback(() => { setOpen(false); window.setTimeout(() => fabRef.current?.focus(), 0) }, [])
 
   useEffect(() => { setDraft(readDraft(draftKey)); setDraftRestored(true) }, [draftKey])
   useEffect(() => { if (draftRestored) writeDraft(draftKey, draft) }, [draftKey, draft, draftRestored])
@@ -88,10 +89,10 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   useEffect(() => {
     if (!open) return
     const t = window.setTimeout(() => inputRef.current?.focus(), 60)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
     window.addEventListener('keydown', onKey)
     return () => { window.clearTimeout(t); window.removeEventListener('keydown', onKey) }
-  }, [open, view])
+  }, [open, view, close])
 
   useEffect(() => {
     const el = bodyRef.current
@@ -158,7 +159,6 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
     }
   }, [busy, followUp, ticket])
 
-  const close = useCallback(() => { setOpen(false); window.setTimeout(() => fabRef.current?.focus(), 0) }, [])
 
   const openStaff = useCallback((cat?: SupportCategory | null) => {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text ?? draft
@@ -233,7 +233,7 @@ function SupportChatSession({ draftKey }: { draftKey: string | null }) {
   const backTo: View | null = view === 'staff' || view === 'tickets' ? 'chat' : view === 'ticket' ? 'tickets' : null
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-mobile-docked={mobileDocked}>
       <button
         ref={fabRef}
         type="button"
