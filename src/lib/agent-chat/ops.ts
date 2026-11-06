@@ -170,7 +170,7 @@ export function leadText(op: ChatOp, values: Record<string, string>): string {
   if (op.key === 'income.invoice.draft') return values.amount ? `${yenText(values.amount)} の請求書の下書きを作ります。` : '請求書の下書きを作ります。'
   if (op.key === 'expense.contract.add') return values.amount ? `${yenText(values.amount)} の支出を登録します。` : '支出を登録します。'
   if (op.key === 'promane.project.add') return values.name ? `「${values.name}」の案件を作ります。` : '案件を作ります。'
-  if (op.key === 'kintai.request.leave') return values.start ? `${values.start}${values.end && values.end !== values.start ? ` から ${values.end}` : ''} の有給休暇を申請します。` : '有給休暇を申請します。'
+  if (op.key === 'kintai.request.leave') return values.start ? `${jaDate(values.start)}${values.end && values.end !== values.start ? `から${jaDate(values.end)}` : ''}の有給休暇を申請します。` : '有給休暇を申請します。'
   return `${op.label}。`
 }
 
@@ -238,13 +238,19 @@ export function confirmRows(op: ChatOp, snap: AgentFormSnapshot): { rows: Confir
       rows: [
         { label: '申請の種類', value: snap.typeLabel || '休暇' },
         { label: '休暇の種類', value: snap.leaveLabel || '—' },
-        { label: '期間', value: snap.start && snap.end ? `${snap.start} から ${snap.end}${days ? `（${days}日間）` : ''}` : '—', big: true },
+        { label: '期間', value: snap.start && snap.end ? `${jaDate(snap.start)}から${jaDate(snap.end)}${days ? `（${days}日間）` : ''}` : '—', big: true },
         { label: '理由', value: snap.reason || '未入力' },
       ],
       note: '申請を出すだけで、承認はされません。承認は管理者が行います。特別休暇・欠勤のときは、画面で種類を選び直してください。',
     }
   }
   return { rows: [], note: '' }
+}
+
+/** 2026-11-10 → 2026年11月10日（形が違うときはそのまま） */
+function jaDate(ymd: string | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd ?? '')
+  return m ? `${m[1]}年${Number(m[2])}月${Number(m[3])}日` : (ymd ?? '')
 }
 
 /** 2つの日付（YYYY-MM-DD）の間の日数（両端を含む）。形が違うときや逆のときは 0 */
@@ -305,7 +311,7 @@ export function doneView(op: ChatOp, snap: AgentFormSnapshot, href: string): { l
   }
   if (op.key === 'kintai.request.leave') {
     return {
-      lead: `有給休暇を申請しました。${snap.start && snap.end ? `${snap.start} から ${snap.end} の分です。` : ''}承認は、管理者が行います。`,
+      lead: `有給休暇を申請しました。${snap.start && snap.end ? `${jaDate(snap.start)}から${jaDate(snap.end)}までの分です。` : ''}承認は、管理者が行います。`,
       made: '休暇の申請 1件（承認待ち）',
       next: [
         { id: 'open-requests', label: '申請の一覧を見る', hint: '次のおすすめ', href },
