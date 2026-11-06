@@ -57,8 +57,8 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .rows dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .rows > div[data-big='true'] dd { font-size: 18px; font-weight: 800; }
 .note { background: #fff7d6; color: #7a5b00; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.55; font-weight: 500; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.primary, .ghost { min-height: 44px; padding: 0 18px; border-radius: 999px; font: 800 14px/1 inherit; cursor: pointer; border: 1.5px solid transparent; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.primary, .ghost { min-height: 44px; padding: 0 12px; white-space: nowrap; border-radius: 999px; font: 800 13.5px/1 inherit; cursor: pointer; border: 1.5px solid transparent; }
 .primary { background: #0066ff; color: #fff; }
 .primary:hover:not(:disabled) { background: #0047d6; }
 .ghost { background: #fff; color: #101633; border-color: #c6cde0; }
@@ -75,8 +75,8 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .stepsToggle { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #f4f7fd; color: #101633; font: 700 13px/1 inherit; cursor: pointer; }
 .stepsToggle small { color: #0047d6; font-size: 12px; font-weight: 700; }
 .pin { flex: none; display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #e3e8f4; background: #fff; }
-.pin .primary { flex: 1; padding: 0 12px; }
-.pin .ghost { padding: 0 12px; white-space: nowrap; }
+.pin .primary, .pin .ghost { padding: 0 12px; white-space: nowrap; font-size: 13.5px; }
+.pin .primary { flex: 1; }
 .donecard { padding: 12px 14px; border-radius: 14px; background: #e6f8ef; color: #0b8a4d; font-size: 13.5px; font-weight: 700; animation: pop .4s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
 .next { display: grid; gap: 6px; }
