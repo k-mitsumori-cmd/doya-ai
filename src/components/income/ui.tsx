@@ -111,6 +111,11 @@ export async function fetchJson<T = any>(url: string, init: { method?: string; b
     // JSON でない応答
   }
   if (!res.ok) throw new ApiError(data?.error || '処理に失敗しました。時間をおいて再度お試しください。', res.status)
+  // income API の成功応答は JSON のオブジェクト。読めない応答を成功として返すと、
+  // useResource の未取得を表す null と重なり、エラーも再試行も表示されなくなる。
+  if (data === null || typeof data !== 'object') {
+    throw new ApiError('応答を読み取れませんでした。時間をおいて再度お試しください。', res.status)
+  }
   return data as T
 }
 
