@@ -34,10 +34,12 @@
 .errorText { flex: 1; min-width: 0; }
 .errorWhat { margin: 0; font-size: 14px; font-weight: 700; }
 .errorHow { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink); }
-.retry { flex: none; padding: 8px 14px; border: 1px solid currentColor; border-radius: 999px; background: var(--paper); color: var(--bad-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.retry { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; flex: none; padding: 8px 14px; border: 1px solid currentColor; border-radius: 999px; background: var(--paper); color: var(--bad-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 
 @media (max-width: 767px) {
   .stepList { grid-template-columns: minmax(0, 1fr); }
-  .done, .error { flex-wrap: wrap; }
+  .done { flex-wrap: wrap; }
+  .error { display: grid; grid-template-columns: 18px minmax(0, 1fr); }
+  .error .retry { grid-column: 2; justify-self: start; }
 }
 @media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
