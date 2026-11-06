@@ -5,19 +5,19 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import ClientForm, { type ClientDto } from '@/components/income/ClientForm'
+import ClientForm from '@/components/income/ClientForm'
 import {
   Button, Card, CheckRow, EmptyState, Gate, ListSkeleton, PageHeader, PageShell, fetchJson, s, useResource,
 } from '@/components/income/ui'
 import { describePaymentTerms } from '@/lib/income/dates'
 
-type Row = ClientDto & { _count: { contracts: number; invoices: number } }
+import { readClientListResponse } from '@/components/income/list-response'
 
 export default function ClientsPage() {
   const router = useRouter()
   const [showAll, setShowAll] = useState(false)
   const [creating, setCreating] = useState(false)
-  const res = useResource(() => fetchJson<{ clients: Row[] }>(`/api/income/clients${showAll ? '?all=1' : ''}`).then((d) => d.clients), String(showAll))
+  const res = useResource(() => fetchJson<unknown>(`/api/income/clients${showAll ? '?all=1' : ''}`).then(readClientListResponse), String(showAll))
 
   const empty = !!res.data && res.data.length === 0 && !showAll
   return (

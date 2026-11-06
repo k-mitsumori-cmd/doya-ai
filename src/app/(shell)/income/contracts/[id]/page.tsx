@@ -4,24 +4,17 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import ContractForm, { type ContractDto } from '@/components/income/ContractForm'
+import ContractForm from '@/components/income/ContractForm'
+import { readContractDetailResponse } from '@/components/income/contract-detail-response'
 import {
   Button, Card, ConfirmDialog, ContractStatusBadge, DetailSkeleton, EmptyState, Gate, PageHeader, PageShell, ScheduleStatusBadge,
   errMsg, fetchJson, periodText, s, toast, useResource, ymdW, yen,
 } from '@/components/income/ui'
 
-type Detail = ContractDto & {
-  client: { id: string; name: string }
-  schedules: {
-    id: string; period: string; plannedIssueDate: string; amountExclTax: number; status: string; skipReason: string | null
-    invoiceItem: { invoice: { id: string; invoiceNo: string | null; status: string } } | null
-  }[]
-}
-
 export default function ContractDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const res = useResource(() => fetchJson<{ contract: Detail }>(`/api/income/contracts/${id}`).then((d) => d.contract), id)
+  const res = useResource(() => fetchJson<unknown>(`/api/income/contracts/${id}`).then((d) => readContractDetailResponse(d, id)), id)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

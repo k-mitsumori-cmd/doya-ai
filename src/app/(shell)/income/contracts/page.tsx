@@ -9,16 +9,13 @@ import {
   fetchJson, s, useResource, ymd, yen,
 } from '@/components/income/ui'
 
-type Row = {
-  id: string; title: string; status: string; type: string; amountExclTax: number; billingCycle: string
-  startDate: string; endDate: string | null; client: { id: string; name: string }
-}
+import { readContractListResponse } from '@/components/income/list-response'
 
 const TABS: [string, string][] = [['', 'すべて'], ...CONTRACT_STATUS_ORDER.map((st) => [st, CONTRACT_STATUS_LABEL[st]] as [string, string])]
 
 export default function ContractsPage() {
   const [status, setStatus] = useState('')
-  const res = useResource(() => fetchJson<{ contracts: Row[] }>(`/api/income/contracts${status ? `?status=${status}` : ''}`).then((d) => d.contracts), status)
+  const res = useResource(() => fetchJson<unknown>(`/api/income/contracts${status ? `?status=${status}` : ''}`).then(readContractListResponse), status)
   const empty = !!res.data && res.data.length === 0 && status === ''
 
   return (

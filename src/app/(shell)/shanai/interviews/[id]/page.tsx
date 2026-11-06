@@ -63,12 +63,24 @@ export default function ShanaiInterviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loadFailure, setLoadFailure] = useState<unknown>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [loadedId, setLoadedId] = useState<string | null>(null)
+  const loadVersion = useRef(0)
+  const activeId = useRef<string | null>(null)
 
   const load = useCallback(async () => {
+    if (activeId.current !== id) return
+    const version = ++loadVersion.current
+    setLoadedId(id)
+    setData(null)
+    setLoadError(null)
+    setLoadFailure(null)
+    setConfirmDelete(false)
     try {
       const d = await api<{ interview: Detail }>(`/api/shanai/interviews/${id}`)
+      if (version !== loadVersion.current) return
       setData(d.interview)
     } catch (e) {
+      if (version !== loadVersion.current) return
       const status = (e as any)?.status
       if (status === 401) window.location.href = `/auth/signin?callbackUrl=/shanai/interviews/${id}`
       setLoadError(status === 404 || status === 403 ? 'forbidden' : (e as Error).message)
@@ -77,9 +89,12 @@ export default function ShanaiInterviewPage() {
   }, [id])
 
   useEffect(() => {
+    activeId.current = id
     void load()
-  }, [load])
+    return () => { activeId.current = null; loadVersion.current += 1 }
+  }, [id, load])
 
+  if (loadedId !== id) return <PageSkeleton variant="detail" />
   if (loadError) return loadError === 'forbidden' ? <ForbiddenState /> : <ErrorState message={loadError} error={loadFailure} onRetry={() => void load()} />
   if (!data) return <PageSkeleton variant="detail" />
 

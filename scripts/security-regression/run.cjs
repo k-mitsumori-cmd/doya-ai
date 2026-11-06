@@ -1,6 +1,10 @@
-{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-agent-confirmation-boundary.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-shanai-list-input.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-list-response.cjs')], {stdio:'inherit',timeout:120000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-invoice-detail-response.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-contract-detail-response.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-client-detail-response.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-income-json-response.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-agent-confirmation-boundary.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-seo-image-read-recovery.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-image-decoding.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-related-image-input.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
@@ -1532,6 +1536,8 @@ const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'v
 if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
 const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
+const shanaiDetailReadLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-detail-read-lifecycle.cjs')], { stdio: 'inherit', timeout: 100000 });
+if (shanaiDetailReadLifecycle.error || shanaiDetailReadLifecycle.status !== 0) process.exit(shanaiDetailReadLifecycle.status || 1);
 const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
