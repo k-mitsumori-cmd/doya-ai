@@ -9,16 +9,13 @@ import {
   fetchJson, s, useResource, ymd, yen,
 } from '@/components/income/ui'
 
-type Row = {
-  id: string; invoiceNo: string | null; title: string | null; status: string; issueDate: string; dueDate: string; totalInclTax: number
-  client: { id: string; name: string }; state: { label: string | null; remaining: number; overdue: boolean }
-}
+import { readInvoiceListResponse } from '@/components/income/list-response'
 
 const TABS: [string, string][] = [['', 'すべて'], ...(['draft', 'confirmed', 'sent', 'void'] as const).map((st) => [st, INVOICE_STATUS_LABEL[st]] as [string, string])]
 
 export default function InvoicesPage() {
   const [status, setStatus] = useState('')
-  const res = useResource(() => fetchJson<{ invoices: Row[] }>(`/api/income/invoices${status ? `?status=${status}` : ''}`).then((d) => d.invoices), status)
+  const res = useResource(() => fetchJson<unknown>(`/api/income/invoices${status ? `?status=${status}` : ''}`).then(readInvoiceListResponse), status)
   const empty = !!res.data && res.data.length === 0 && status === ''
 
   return (
