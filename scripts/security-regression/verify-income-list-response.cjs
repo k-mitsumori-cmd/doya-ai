@@ -1,4 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),os=require('node:os'),assert=require('node:assert/strict');
+process.env.NODE_ENV='test'; // Isolated React DOM tests; does not change the build/application parent process.
 const s=path.resolve(process.argv[2]||process.cwd()),evidence=process.argv[3]||null,mode=process.argv[4];
 if(mode==='new'){
 const fs=require('fs'),path=require('path'),cp=require('child_process'),crypto=require('crypto'),assert=require('assert/strict');
