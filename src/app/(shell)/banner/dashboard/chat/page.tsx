@@ -112,34 +112,38 @@ async function optimizeImageDataUrl(
   dataUrl: string,
   opts: { maxSide: number; mime: 'image/jpeg' | 'image/png'; quality?: number }
 ): Promise<string> {
-  if (typeof document === 'undefined') return dataUrl
-  if (!String(dataUrl || '').startsWith('data:image/')) return dataUrl
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image()
-      el.onload = () => resolve(el)
-      el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-      el.src = dataUrl
-    })
-    const w = img.naturalWidth || img.width
-    const h = img.naturalHeight || img.height
-    if (!w || !h) return dataUrl
-    const maxSide = Math.max(64, Math.floor(opts.maxSide))
-    const scale = Math.min(1, maxSide / Math.max(w, h))
-    const outW = Math.max(1, Math.round(w * scale))
-    const outH = Math.max(1, Math.round(h * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = outW
-    canvas.height = outH
-    const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
-    if (!ctx) return dataUrl
-    ctx.drawImage(img, 0, 0, outW, outH)
-    const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
-    const out = canvas.toDataURL(opts.mime, quality)
-    return out && out.length > 200 ? out : dataUrl
-  } catch {
-    return dataUrl
+  if (typeof document === 'undefined') throw new Error('ブラウザで画像を選び直してください')
+  if (!String(dataUrl || '').startsWith('data:image/')) throw new Error('画像の読み込みに失敗しました')
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+    el.src = dataUrl
+  })
+  const w = img.naturalWidth || img.width
+  const h = img.naturalHeight || img.height
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+    throw new Error('画像のサイズを確認できませんでした')
   }
+
+  const maxSide = Math.max(64, Math.floor(opts.maxSide))
+  const scale = Math.min(1, maxSide / Math.max(w, h))
+  const outW = Math.max(1, Math.round(w * scale))
+  const outH = Math.max(1, Math.round(h * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = outW
+  canvas.height = outH
+  const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
+  if (!ctx) throw new Error('画像の変換に失敗しました')
+  ctx.drawImage(img, 0, 0, outW, outH)
+  const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
+  const out = canvas.toDataURL(opts.mime, quality)
+  const prefix = 'data:' + opts.mime + ';base64,'
+  if (!out.startsWith(prefix) || out.length <= prefix.length) {
+    throw new Error('画像の変換に失敗しました')
+  }
+  return out
 }
 
 async function readAndOptimizeImage(file: File, kind: 'logo' | 'person'): Promise<string> {
