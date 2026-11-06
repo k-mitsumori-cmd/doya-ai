@@ -95,7 +95,6 @@ export async function fly(text: string, key: string): Promise<void> {
 
 // ---- カーソルと「ドヤAI」の札 ----
 let cursor: SVGSVGElement | null = null
-let tag: HTMLElement | null = null
 function ensureCursor(): SVGSVGElement {
   if (cursor && document.body.contains(cursor)) return cursor
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -114,22 +113,14 @@ export function cursorTo(el: Element | null): void {
   c.style.transform = `translate(${r.left + Math.min(r.width - 24, 34)}px,${r.top + r.height * 0.55}px)`
 }
 export function cursorOff(): void { if (cursor) cursor.style.opacity = '0' }
-function showTag(el: HTMLElement): void {
-  hideTag()
-  if (reducedMotion()) return
-  const r = el.getBoundingClientRect()
-  const t = document.createElement('div')
-  t.textContent = 'ドヤAI'
-  t.setAttribute('aria-hidden', 'true')
-  Object.assign(t.style, {
-    position: 'fixed', zIndex: '2147483000', left: `${Math.max(8, r.left)}px`, top: `${Math.max(4, r.top - 24)}px`, padding: '0 8px', lineHeight: '18px', borderRadius: '999px',
-    background: '#e8f0ff', color: '#0047d6', fontWeight: '800', fontSize: '11px', pointerEvents: 'none', opacity: '0', transform: 'translateX(-4px)', transition: `opacity .2s, transform .3s ${EASE}`,
-  })
-  document.body.appendChild(t)
-  window.requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'none' })
-  tag = t
+/** 「ドヤAI」の札。見本の .fld.ai .tag と同じく、入れた欄のラベルに残す（見た目は globals.css の [data-agent-filled]。React の描画に触れず、属性だけを付ける） */
+function markFilled(el: HTMLElement): void {
+  el.closest('label')?.setAttribute('data-agent-filled', '')
 }
-function hideTag(): void { tag?.remove(); tag = null }
+/** 札を外す（新しい依頼を始めるとき） */
+export function clearMarks(): void {
+  document.querySelectorAll('[data-agent-filled]').forEach((e) => e.removeAttribute('data-agent-filled'))
+}
 
 /** 欄へスクロールして光らせ、「ドヤAI」の札とカーソルを出す。要素が無ければ false */
 export async function focusField(key: string): Promise<boolean> {
@@ -142,17 +133,16 @@ export async function focusField(key: string): Promise<boolean> {
   if (Math.abs(delta) > 8) window.scrollBy({ top: delta, behavior: 'instant' as ScrollBehavior })
   el.setAttribute('data-agent-active', '')
   await sleep(120)
-  showTag(el)
+  markFilled(el)
   cursorTo(el)
   return true
 }
 export function blurField(key: string): void {
   fieldEl(key)?.removeAttribute('data-agent-active')
-  hideTag()
 }
 export function clearStage(): void {
   document.querySelectorAll('[data-agent-active]').forEach((e) => e.removeAttribute('data-agent-active'))
-  hideTag(); cursorOff()
+  cursorOff()
 }
 
 /** 値を1字ずつ入れる。入れるたびに onValue（画面の setValue）を呼ぶ。動きを減らす設定のときは1回で入れる。途中で止めたいときは alive が false を返す */

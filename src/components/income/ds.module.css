@@ -430,6 +430,7 @@ textarea.input {
 .stat {
   position: relative;
   overflow: hidden;
+  container-type: inline-size;
   background:
     radial-gradient(120% 90% at 100% 0%, var(--blue-soft), transparent 55%),
     var(--paper);
@@ -466,12 +467,13 @@ textarea.input {
 }
 .statValue {
   margin-top: 8px;
-  font-size: 32px;
   line-height: 1.1;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  /* 数字の途中や「円」だけが次の行へ折り返さないようにする。タイルが狭いときは、タイルの幅に合わせて文字を小さくする（32px から 20px まで） */
+  font-size: clamp(20px, 15cqw, 32px);
+  white-space: nowrap;
 }
 .statUnit {
   margin-left: 4px;

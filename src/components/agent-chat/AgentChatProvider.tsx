@@ -13,7 +13,7 @@ import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
 import { getAgentForm, waitForAgentForm } from './form-bus'
-import { blurField, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
+import { blurField, clearMarks, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
   state: ChatState
@@ -49,6 +49,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
     const d = (ev: ChatEvent) => { if (!alive()) throw ABORTED; dispatchRef.current(ev) }
     const wait = async (ms: number) => { await sleep(ms); if (!alive()) throw ABORTED }
     try {
+      clearMarks()
       d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
       if (window.location.pathname !== op.path) router.push(op.path)

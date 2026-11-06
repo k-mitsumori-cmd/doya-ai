@@ -41,7 +41,7 @@ export default function AgentDock() {
   useEffect(() => {
     const root = document.documentElement
     root.style.setProperty('--agent-dock-w', open ? '400px' : '0px')
-    root.style.setProperty('--agent-dock-h', open ? (view === 'tool' ? '104px' : view === 'chat' ? 'calc(100dvh - 60px - var(--agent-tab-h, 68px))' : '52dvh') : '0px')
+    root.style.setProperty('--agent-dock-h', open ? (view === 'tool' ? '56px' : view === 'chat' ? 'calc(100dvh - 60px - var(--agent-tab-h, 68px))' : '46dvh') : '0px')
     return () => { root.style.removeProperty('--agent-dock-w'); root.style.removeProperty('--agent-dock-h') }
   }, [open, view])
   if (!chat || !state) return null
@@ -78,17 +78,18 @@ export default function AgentDock() {
       <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label="ドヤAIに頼む" aria-hidden={!open}>
         <header className={styles.head}>
           <strong>ドヤAI</strong>
+          {/* スマホだけ出す切り替え（会話・両方・画面）。見出しと同じ行に置き、狭い画面の高さを使いすぎない */}
+          <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
+            {([['chat', '会話'], ['both', '両方'], ['tool', '画面']] as const).map(([v, label]) => (
+              <button key={v} type="button" data-on={view === v ? 'true' : 'false'} aria-pressed={view === v} onClick={() => setView(v)}>
+                {label}{v === 'chat' && waiting && view !== 'chat' ? <span className={styles.waitMark} aria-label="返事待ち" /> : null}
+              </button>
+            ))}
+          </div>
           {total > 0 ? <em className={styles.count} aria-label={`作業 ${doneCount} 件 / ${total} 件`}>{doneCount} / {total}</em> : <span className={styles.grow} />}
           <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="会話の欄を閉じる">閉じる</button>
         </header>
         <div className={styles.prog} aria-hidden="true"><i style={{ transform: `scaleX(${total ? doneCount / total : 0})` }} /></div>
-        <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
-          {([['chat', '会話'], ['both', '両方'], ['tool', '画面']] as const).map(([v, label]) => (
-            <button key={v} type="button" data-on={view === v ? 'true' : 'false'} data-wait={v === 'chat' && waiting && view !== 'chat' ? 'true' : 'false'} aria-pressed={view === v} onClick={() => setView(v)}>
-              {label}{v === 'chat' && waiting && view !== 'chat' ? <span className={styles.waitMark}>返事待ち</span> : null}
-            </button>
-          ))}
-        </div>
         <div className={styles.body} ref={bodyRef} data-agent-body="" aria-live="polite">
           {state.phase === 'idle' && (
             <p className={styles.hint}>やりたいことを書いてください。例: 今月の売上100万円追加して</p>
