@@ -1536,6 +1536,8 @@ const shanaiNewValidation = spawnSync(process.execPath, [path.join(__dirname, 'v
 if (shanaiNewValidation.error || shanaiNewValidation.status !== 0) process.exit(shanaiNewValidation.status || 1);
 const shanaiTranscriptUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-transcription-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiTranscriptUi.error || shanaiTranscriptUi.status !== 0) process.exit(shanaiTranscriptUi.status || 1);
+const shanaiDetailReadLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-detail-read-lifecycle.cjs')], { stdio: 'inherit', timeout: 100000 });
+if (shanaiDetailReadLifecycle.error || shanaiDetailReadLifecycle.status !== 0) process.exit(shanaiDetailReadLifecycle.status || 1);
 const shanaiStoragePurge = spawnSync(process.execPath, [path.join(__dirname, 'verify-shanai-storage-purge.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shanaiStoragePurge.error || shanaiStoragePurge.status !== 0) process.exit(shanaiStoragePurge.status || 1);
 
