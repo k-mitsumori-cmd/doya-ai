@@ -11,6 +11,9 @@ export type BannerImageInputValue = {
 }
 
 type InputOwner = {
+  key: string
+  convert: (file: File, maxDimension: number) => Promise<string>
+  errorMessage: (error: unknown) => string
   initialValue: BannerImageInputValue
   active: boolean
   job: object | null
@@ -18,14 +21,22 @@ type InputOwner = {
 }
 
 const emptyValue = (): BannerImageInputValue => ({ file: null, preview: null, pending: false, error: null })
+const defaultReadError = () => '画像を読み込めませんでした。別の画像を選んでください。'
+
+export type BannerImageInputOptions = {
+  convert?: (file: File, maxDimension: number) => Promise<string>
+  errorMessage?: (error: unknown) => string
+}
 
 /** Keep each file, preview and conversion result together within one account and input. */
-export function useBannerImageInput(scope: string, maxDimension: number) {
+export function useBannerImageInput(scope: string, maxDimension: number, options: BannerImageInputOptions = {}) {
   const key = JSON.stringify([scope, maxDimension])
+  const convert = options.convert || downscaleToDataUrl
+  const errorMessage = options.errorMessage || defaultReadError
   const owner = useMemo<InputOwner>(() => {
     const initialValue = emptyValue()
-    return { initialValue, active: false, job: null, value: initialValue }
-  }, [key])
+    return { key, convert, errorMessage, initialValue, active: false, job: null, value: initialValue }
+  }, [key, convert, errorMessage])
   const committedOwner = useRef<InputOwner | null>(null)
   const [rendered, setRendered] = useState(() => ({ owner, value: owner.initialValue }))
   const current = () => committedOwner.current === owner && owner.active
@@ -55,14 +66,16 @@ export function useBannerImageInput(scope: string, maxDimension: number) {
     owner.job = job
     publish({ file, preview: null, pending: true, error: null })
     try {
-      const preview = await downscaleToDataUrl(file, maxDimension)
+      const convertInput = owner.convert
+      const preview = await convertInput(file, maxDimension)
       if (!current() || owner.job !== job) return
       owner.job = null
       publish({ file, preview, pending: false, error: null })
-    } catch {
+    } catch (error) {
       if (!current() || owner.job !== job) return
       owner.job = null
-      publish({ file: null, preview: null, pending: false, error: '画像を読み込めませんでした。別の画像を選んでください。' })
+      const formatError = owner.errorMessage
+      publish({ file: null, preview: null, pending: false, error: formatError(error) || defaultReadError() })
     }
   }
 
