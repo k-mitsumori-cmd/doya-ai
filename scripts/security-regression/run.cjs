@@ -1263,6 +1263,8 @@ for (const file of ['verify-quote-ai-input.cjs', 'verify-quote-document-actor.cj
     process.exit(1);
   }
 }
+const quoteHttpStatus = spawnSync(process.execPath, [path.join(__dirname, 'verify-quote-document-mounted.cjs'), '--group=http-status'], { stdio: 'inherit', timeout: 60000 });
+if (quoteHttpStatus.error || quoteHttpStatus.status !== 0) { console.error('Security regression failed: Quote document HTTP status'); process.exit(1); }
 const cunningReload = spawnSync(process.execPath, [path.join(__dirname, 'verify-cunning-final-answer-reload.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (cunningReload.error || cunningReload.status !== 0) {
   console.error('Security regression failed: verify-cunning-final-answer-reload.cjs');
