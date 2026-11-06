@@ -11,7 +11,9 @@ export function useAgentForm(formKey: string, handler: AgentFormHandler): void {
   // 最新の state を見るため、呼び出しは毎回 ref の最新の関数へ回す（登録は1回だけ）
   const ref = useRef(handler)
   ref.current = handler
-  useEffect(() => registerAgentForm(formKey, {
+  // 登録する物は、この部品が画面にある間は同じ1つにする。確認カードと保存の間で「同じフォームか」を比べるため（開発時の Strict Mode で登録し直されても変わらない）
+  const stable = useRef<AgentFormHandler | null>(null)
+  stable.current ??= {
     setValue: (k, v) => ref.current.setValue(k, v),
     snapshot: () => ref.current.snapshot(),
     draft: () => ref.current.draft(),
@@ -22,5 +24,6 @@ export function useAgentForm(formKey: string, handler: AgentFormHandler): void {
     prepare: () => ref.current.prepare?.(),
     choices: ref.current.choices ? () => ref.current.choices?.() ?? null : undefined,
     choose: ref.current.choose ? (id) => ref.current.choose?.(id) : undefined,
-  }), [formKey])
+  }
+  useEffect(() => registerAgentForm(formKey, stable.current as AgentFormHandler), [formKey])
 }

@@ -24,6 +24,7 @@ async function build() {
   const entry = [
     "export {default as Provider,useAgentChat} from '@/components/agent-chat/AgentChatProvider';",
     "export {registerAgentForm,getAgentForm} from '@/components/agent-chat/form-bus';",
+    "export {useAgentForm} from '@/components/agent-chat/useAgentForm';",
     "export {default as ContractForm} from '@/components/income/ContractForm';",
     "export {default as NewInvoicePage} from '@/app/(shell)/income/invoices/new/page';",
     "export {CHAT_OPS,INCOME_SALE_ADD,INCOME_INVOICE_DRAFT} from '@/lib/agent-chat/ops';",
@@ -329,6 +330,31 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
     global.__focusHook = () => api.dispatch({ t: 'reset' });
     try { await adjust('税込みだった'); } finally { delete global.__focusHook; }
     assert.equal(api.state.phase, 'idle'); assert.deepEqual(snapNow(), before); assert.equal(posts.length, 0);
+  });
+
+  await check('登録し直されても同じフォームとして扱う（Strict Mode。最初から入力できるフォーム）', async () => {
+    const op = fx.CHAT_OPS.find((o) => o.key === 'kintai.request.leave');
+    window.history.replaceState(null, '', SCREENS[op.formKey]);
+    let saves = 0;
+    function Always() {
+      fx.useAgentForm(op.formKey, { ready: () => true, setValue: () => true, snapshot: () => ({ ...SNAP }), draft: () => ({ a: 1 }), submit: async () => { saves++; return { ok: true, href: '/kintai/requests' }; } });
+      return null;
+    }
+    await mount();
+    await act(async () => { reactRoot.render(React.createElement(fx.Provider, null, React.createElement(Probe))); });
+    await act(async () => { reactRoot.unmount(); });
+    reactRoot = createRoot(document.getElementById('root'));
+    // 依頼を先に始め、フォームを待っている間に Strict Mode の部品を出す（登録の瞬間に受け取るのが古い登録にならないこと）
+    const values = Object.fromEntries(op.fields.map((f) => [f.key, sample(f)]));
+    let show = () => {};
+    function Late() { const [on, setOn] = React.useState(false); show = () => setOn(true); return on ? React.createElement(React.StrictMode, null, React.createElement(Always)) : null; }
+    await act(async () => { reactRoot.render(React.createElement(fx.Provider, null, React.createElement(Probe), React.createElement(Late))); await frames(2); });
+    await act(async () => { api.begin('sample', { kind: 'op', op, values, missing: [], say: 'sample' }); await frames(); });
+    await act(async () => { show(); await frames(3); });
+    await settle();
+    assert.equal(api.state.phase, 'confirm');
+    await approve();
+    assert.equal(saves, 1); assert.equal(api.state.phase, 'done');
   });
 
   // 請求書は、本物の画面を載せて確かめる
