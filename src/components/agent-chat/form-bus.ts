@@ -21,6 +21,11 @@ export interface AgentFormHandler {
   setValue(key: string, value: string): boolean | Promise<boolean>
   /** 今の欄の値（確認カードに出す。税の計算も画面の今の処理の結果） */
   snapshot(): AgentFormSnapshot
+  /**
+   * 保存される全部の欄（確認カードに出ない欄も含む）。確認カードを出した時と保存の直前に比べるだけに使い、AI にも確認カードにも渡さない。
+   * 欄が今は無いとき（窓が閉じているなど）は null。
+   */
+  draft(): unknown
   /** 画面の本物の送信処理（ボタンと同じ）。成功・失敗の結果を返す */
   submit(): Promise<SubmitResult>
   /** 入力できる状態か（取引先の一覧を読み終えたなど） */

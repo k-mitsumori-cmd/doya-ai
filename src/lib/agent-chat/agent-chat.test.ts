@@ -8,6 +8,7 @@ import { groundValues, yenCandidates } from './ground'
 import { CHAT_OPS, EXPENSE_ADD, EXPENSE_ONEOFF_ADD, INCOME_INVOICE_DRAFT, INCOME_SALE_ADD, KINTAI_LEAVE_REQUEST, KINTAI_OVERTIME_REQUEST, PROMANE_CLIENT_ADD, PROMANE_PROJECT_ADD, answerProblem, buildSteps, confirmRows, doneView, leadText, resolveFixed, chatOpByKey } from './ops'
 import { chatResponse, chatActions } from './handle'
 import { durationText, parseDuration } from './duration'
+import { createSaveLock, draftKey, judgeReview, onOpScreen } from './review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from './turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from './types'
 
@@ -691,4 +692,75 @@ test('選択肢: 画面が選択肢を出したら止まり、本人が選ぶま
   const ready = reduce(picked.state, { t: 'ready', snap: PRJ_SNAP })
   assert.equal(ready.state.phase, 'confirm')
   assert.deepEqual(reduce(ready.state, { t: 'approve' }).effects, [{ k: 'submit' }])
+})
+
+test('確認と保存の間: 全部の操作で、フォームの画面を正しく判定する（?to= の入口ではなく、運ばれた先で見る）', () => {
+  const screens: Record<string, string> = {
+    [INCOME_SALE_ADD.key]: '/income/contracts/new', [INCOME_INVOICE_DRAFT.key]: '/income/invoices/new',
+    [EXPENSE_ADD.key]: '/expense/org/contracts/new', [PROMANE_PROJECT_ADD.key]: '/promane/ws/projects/new',
+    [KINTAI_LEAVE_REQUEST.key]: '/kintai/requests/new', [KINTAI_OVERTIME_REQUEST.key]: '/kintai/requests/new',
+    [PROMANE_CLIENT_ADD.key]: '/promane/ws/clients', [EXPENSE_ONEOFF_ADD.key]: '/expense/org/payables',
+  }
+  assert.equal(Object.keys(screens).length, CHAT_OPS.length)
+  for (const op of CHAT_OPS) {
+    assert.equal(onOpScreen(op, screens[op.key]), true, op.key)
+    assert.equal(onOpScreen(op, '/somewhere-else'), false, op.key)
+  }
+})
+
+test('確認と保存の間: 差の種類ごとに判定する', () => {
+  const form = {}
+  const base = { receipt: { form, draft: draftKey({ a: 1 }) }, form, onScreen: true, ready: true, blocked: false, shown: { x: '1' }, snap: { x: '1' }, draft: draftKey({ a: 1 }) }
+  assert.equal(judgeReview(base), 'same')
+  assert.equal(judgeReview({ ...base, snap: { x: '2' } }), 'shown')
+  assert.equal(judgeReview({ ...base, draft: draftKey({ a: 2 }) }), 'hidden')
+  assert.equal(judgeReview({ ...base, ready: false }), 'busy')
+  assert.equal(judgeReview({ ...base, blocked: true }), 'blocked')
+  assert.equal(judgeReview({ ...base, form: {} }), 'form')
+  assert.equal(judgeReview({ ...base, form: undefined }), 'form')
+  assert.equal(judgeReview({ ...base, receipt: null }), 'form')
+  assert.equal(judgeReview({ ...base, draft: null }), 'form')
+  assert.equal(judgeReview({ ...base, onScreen: false }), 'screen')
+})
+
+test('確認と保存の間: どの差でも保存の指示を返さない。別のフォームなら、確認カードを消して入力からやり直す', () => {
+  for (const { op, values, snap } of [...STAGE2, ...STAGE3, ...STAGE4]) {
+    const submitting = reduce(toConfirm(op, values, snap), { t: 'approve' }).state
+    const hidden = reduce(submitting, { t: 'changed', snap, hidden: true })
+    assert.equal(hidden.state.phase, 'confirm', op.key)
+    assert.match(hidden.state.notice ?? '', /出ていない欄/)
+    const busy = reduce(submitting, { t: 'not-ready' })
+    assert.equal(busy.state.phase, 'confirm')
+    const invalid = reduce(submitting, { t: 'confirmation-invalid', why: 'form' })
+    assert.equal(invalid.state.phase, 'failed')
+    assert.equal(invalid.state.confirm, null)
+    for (const r of [hidden, busy, invalid]) assert.deepEqual(r.effects, [])
+    const again = reduce(invalid.state, { t: 'retry' })
+    assert.equal(again.state.phase, 'working')
+    assert.ok(!again.effects.some((e) => e.k === 'submit'))
+    // 保存していない場面では効かない
+    const confirm = toConfirm(op, values, snap)
+    assert.equal(reduce(confirm, { t: 'not-ready' }).state, confirm)
+    assert.equal(reduce(confirm, { t: 'confirmation-invalid', why: 'screen' }).state, confirm)
+  }
+})
+
+test('保存の鍵: 同時に1件だけ受け付け、失敗のあとは再び受け付け、成功で閉じたあとは受け付けない', async () => {
+  const lock = createSaveLock()
+  let calls = 0
+  let release = () => {}
+  const held = new Promise<void>((r) => { release = r })
+  const first = lock.run(async () => { calls++; await held; return { ok: true as const } })
+  assert.equal(lock.busy(), true)
+  const second = await lock.run(async () => { calls++; return { ok: true as const } })
+  assert.equal(second.ok, false)
+  release(); await first
+  assert.equal(calls, 1)
+  assert.equal(lock.busy(), false)
+  await assert.rejects(lock.run(async () => { throw new Error('通信の失敗') }))
+  assert.equal(lock.busy(), false)
+  lock.close()
+  assert.equal(lock.busy(), true)
+  assert.equal((await lock.run(async () => { calls++; return { ok: true as const } })).ok, false)
+  assert.equal(calls, 1)
 })

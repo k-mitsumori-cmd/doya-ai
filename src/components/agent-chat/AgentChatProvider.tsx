@@ -10,9 +10,10 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
+import { draftKey, judgeReview, onOpScreen, type ReviewReceipt } from '@/lib/agent-chat/review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
-import type { ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
-import { getAgentForm, runAgentSubmit, waitForAgentForm } from './form-bus'
+import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
+import { getAgentForm, runAgentSubmit, waitForAgentForm, type AgentFormHandler } from './form-bus'
 import { blurField, clearMarks, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
@@ -41,6 +42,13 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const stateRef = useRef(state)
   // 会話をやり直したとき、前の実行役が続きを進めないようにする番号
   const runId = useRef(0)
+  // 確認カードを出した時のフォームと全部の欄。保存の直前に、今の画面と比べる
+  const reviewed = useRef<ReviewReceipt | null>(null)
+  const review = useCallback((form: AgentFormHandler): AgentFormSnapshot => {
+    const snap = { ...form.snapshot() }
+    reviewed.current = { form, draft: draftKey(form.draft()) }
+    return snap
+  }, [])
 
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
   // 選択肢を出して待っているとき、本人が選んだ id を実行役へ渡す口（1つの依頼に1つだけ）
@@ -54,8 +62,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       clearMarks()
       d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
-      const here = op.here ? new RegExp(op.here).test(window.location.pathname) : window.location.pathname === op.path
-      if (!here) router.push(op.path)
+      if (!onOpScreen(op, window.location.pathname)) router.push(op.path)
       let form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
       // 選択肢の画面（ワークスペースが複数ある、など）が出ているときは、AI に決めさせず、本人に選んでもらう。選んだら、その画面へ運んで本物のフォームを待つ
@@ -110,12 +117,12 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       cursorOff()
       await nextFrames(3)
       if (!alive()) throw ABORTED
-      d({ t: 'ready', snap: form.snapshot() })
+      d({ t: 'ready', snap: review(form) })
     } catch (e) {
       clearStage()
       if (e !== ABORTED) dispatchRef.current({ t: 'run-failed', error: '画面の操作を進められませんでした。' })
     }
-  }, [router])
+  }, [router, review])
 
   /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
   const amend = useCallback(async (amount: number, message: string, id: number, set?: Record<string, string>) => {
@@ -133,12 +140,12 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
-      if (alive()) dispatchRef.current({ t: 'ready', snap: form.snapshot(), message })
+      if (alive()) dispatchRef.current({ t: 'ready', snap: review(form), message })
     } catch {
       clearStage()
       if (alive()) dispatchRef.current({ t: 'run-failed', error: '金額を直せませんでした。' })
     }
-  }, [])
+  }, [review])
 
   const runEffect = useCallback((eff: ChatEffect) => {
     const id = runId.current
@@ -161,12 +168,25 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       void (async () => {
         const op = stateRef.current.op
         const form = op ? getAgentForm(op.formKey) : undefined
-        if (!form) { if (runId.current === id) dispatchRef.current({ t: 'submitted', ok: false, error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
+        const onScreen = op ? onOpScreen(op, window.location.pathname) : false
+        if (!form) { if (runId.current === id) dispatchRef.current({ t: 'confirmation-invalid', why: onScreen ? 'form' : 'screen' }); return }
         // 成功すると画面が移ってフォームが消えるので、確認カードの値はここで読んでおく
-        const snap = form.snapshot()
-        // 確認カードを出したあとに、本人が画面の欄を直していたら、保存せずに確認カードを出し直す（確認していない内容を保存しない）
-        const shown = stateRef.current.snap
-        if (shown && JSON.stringify(shown) !== JSON.stringify(snap)) { if (runId.current === id) dispatchRef.current({ t: 'changed', snap }); return }
+        const snap = { ...form.snapshot() }
+        const draft = draftKey(form.draft())
+        const blocked = form.blocked?.() ?? null
+        // 確認カードを出したあとに画面が変わっていたら、保存しない（確認していない内容を保存しない）
+        const verdict = judgeReview({ receipt: reviewed.current, form, onScreen, ready: form.ready(), blocked: Boolean(blocked), shown: stateRef.current.snap, snap, draft })
+        if (verdict !== 'same') {
+          if (runId.current !== id) return
+          if (verdict === 'shown' || verdict === 'hidden') {
+            // 同じフォームの中で本人が直した。今の内容で確認カードを出し直し、本人がもう一度押すのを待つ
+            reviewed.current = { form, draft }
+            dispatchRef.current({ t: 'changed', snap, hidden: verdict === 'hidden' })
+          } else if (verdict === 'busy') dispatchRef.current({ t: 'not-ready' })
+          else if (verdict === 'blocked') dispatchRef.current({ t: 'submitted', ok: false, error: blocked ?? '今の権限では保存できません。', kind: 'blocked' })
+          else { reviewed.current = null; dispatchRef.current({ t: 'confirmation-invalid', why: verdict }) }
+          return
+        }
         let r: Awaited<ReturnType<typeof form.submit>>
         try { r = await runAgentSubmit(() => form.submit()) } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return
@@ -180,7 +200,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
     // 新しい依頼を受けたとき・やり直したときだけ、前の実行役を止める（受け付けなかった依頼では止めない）
-    if ((ev.t === 'ask' && next !== stateRef.current) || ev.t === 'reset') runId.current += 1
+    if ((ev.t === 'ask' && next !== stateRef.current) || ev.t === 'reset') { runId.current += 1; reviewed.current = null }
     stateRef.current = next
     setState(next)
     effects.forEach(runEffect)
@@ -190,6 +210,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const begin = useCallback((text: string, res: ChatApiResponse) => {
     // 経営ホームがすでに AI を呼んで答えを受け取っているので、ここでは呼ばない。ask のあとに reply を渡す
     runId.current += 1
+    reviewed.current = null
     stateRef.current = { ...INITIAL_STATE, phase: 'reading', text }
     setState(stateRef.current)
     setOpen(true)

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import { useAgentChat } from '@/components/agent-chat/AgentChatProvider'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
@@ -71,6 +72,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const [newClientName, setNewClientName] = useState('')
   const [clientsLoaded, setClientsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
@@ -141,7 +143,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
    * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、登録した契約の画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string; kind?: 'blocked' }> => {
+  const saveNow = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
@@ -169,6 +171,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
         return { ok: true, id: initial.id }
       }
       const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
+      saveLock.close()
       markClean()
       if (!isAgentSubmit()) {
         toast('契約を登録しました')
@@ -183,6 +186,8 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
     }
   }
 
+  const save = () => saveLock.run(saveNow)
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     await save()
@@ -195,7 +200,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const chatPhase = useAgentChat()?.state.phase
   const agentRun = !initial && (chatPhase === 'working' || chatPhase === 'confirm' || chatPhase === 'submitting')
   useAgentForm('income.contract.new', {
-    ready: () => !initial && clientsLoaded,
+    ready: () => !initial && clientsLoaded && !saveLock.busy(),
     setValue: (key, value) => {
       if (initial) return false
       switch (key) {
@@ -229,6 +234,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       tax: totals ? String(totals.taxAmount) : '',
       total: totals ? String(totals.totalInclTax) : '',
     }),
+    draft: () => ({ f, rows, newClientName }),
     submit: async () => {
       const r = await save()
       return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error, ...(r.ok ? {} : { kind: r.kind }) }

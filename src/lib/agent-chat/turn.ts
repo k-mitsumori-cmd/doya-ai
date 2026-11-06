@@ -55,7 +55,11 @@ export type ChatEvent =
   | { t: 'run-failed'; error: string; kind?: FailKind }
   | { t: 'approve' }
   /** 保存の前に画面の値を読み直したら、確認カードを出した時と違っていた（本人が画面で直した）。保存せず、確認カードを出し直す */
-  | { t: 'changed'; snap: AgentFormSnapshot }
+  | { t: 'changed'; snap: AgentFormSnapshot; hidden?: boolean }
+  /** 保存の前に見たら、読み込みや保存の処理が終わっていなかった。保存せず、確認カードに戻す */
+  | { t: 'not-ready' }
+  /** 保存の前に見たら、フォームが閉じた・別のフォームになった・別の画面に移っていた。この確認では保存しない。もう一度は、入力からやり直す */
+  | { t: 'confirmation-invalid'; why: 'form' | 'screen' }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
   | { t: 'submitted'; ok: false; error: string; kind?: FailKind }
   /** 画面が選択肢を出した（例: ワークスペースが複数ある）。作業を止め、本人の選択を待つ */
@@ -179,7 +183,16 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       // 保存の前の読み直しで違いが見つかった。保存はまだ走っていない。確認カードを、画面の今の値で出し直す
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
       const c = confirmRows(state.op, ev.snap)
-      return { state: { ...state, phase: 'confirm', snap: ev.snap, notice: '画面の内容が変わったので、保存せずに確認カードを出し直しました。内容を確かめてください。', confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
+      return { state: { ...state, phase: 'confirm', snap: ev.snap, notice: ev.hidden ? '確認カードに出ていない欄が画面で変わったので、保存せずに止めました。画面の内容を確かめてから、もう一度押してください。' : '画面の内容が変わったので、保存せずに確認カードを出し直しました。内容を確かめてください。', confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
+    }
+    case 'not-ready': {
+      if (state.phase !== 'submitting') return { state, effects: [] }
+      return { state: { ...state, phase: 'confirm', notice: '画面の処理が終わっていないので、保存していません。少し待って、もう一度押してください。' }, effects: [] }
+    }
+    case 'confirmation-invalid': {
+      if (state.phase !== 'submitting') return { state, effects: [] }
+      const error = ev.why === 'screen' ? '別の画面に移ったので、保存していません。' : '登録の画面が閉じたか、開き直されたので、保存していません。'
+      return { state: { ...state, phase: 'failed', confirm: null, snap: null, notice: null, error, errorKind: 'other' }, effects: [] }
     }
     case 'submitted': {
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }

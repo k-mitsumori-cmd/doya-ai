@@ -7,6 +7,7 @@ import { todayJst } from '@/lib/income/dates'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import {
   Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, safeTotals, toast, useResource,
   useUnsavedGuard, type LineRow,
@@ -67,7 +68,7 @@ export default function NewInvoicePage() {
    * 下書きを保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、できた下書きの画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
+  const saveNow = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
@@ -84,6 +85,7 @@ export default function NewInvoicePage() {
           title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows),
         },
       })
+      saveLock.close()
       markClean()
       // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
       if (!isAgentSubmit()) {
@@ -98,6 +100,8 @@ export default function NewInvoicePage() {
     }
   }
 
+  const save = () => saveLock.run(saveNow)
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     await save()
@@ -107,7 +111,7 @@ export default function NewInvoicePage() {
   const totals = safeTotals(rows)
   const agentTitle = useRef('')
   useAgentForm('income.invoice.new', {
-    ready: () => Boolean(clientsRes.data) || Boolean(clientsRes.error),
+    ready: () => (Boolean(clientsRes.data) || Boolean(clientsRes.error)) && !saveLock.busy(),
     // 取引先の一覧を見る権限がないときは、画面と同じ理由を出して止まる（API が 403 を返す人は、保存もできない）
     blocked: () => (clientsRes.error?.status === 403 ? '請求書を作る権限がありません。組織の管理者（オーナー）に権限の変更を依頼してください。' : clientsRes.error ? '取引先を読み込めませんでした。ページを開き直して、もう一度お試しください。' : null),
     setValue: (key, value) => {
@@ -140,6 +144,7 @@ export default function NewInvoicePage() {
       tax: totals ? String(totals.taxAmount) : '',
       total: totals ? String(totals.totalInclTax) : '',
     }),
+    draft: () => ({ clientId, newClientName, title, issueDate, dueDate, notes, rows }),
     submit: async () => {
       const r = await save()
       return r.ok ? { ok: true, href: `/income/invoices/${r.id}` } : { ok: false, error: r.error, kind: r.kind }

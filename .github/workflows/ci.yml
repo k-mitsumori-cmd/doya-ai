@@ -387,7 +387,17 @@ jobs:
           DOYA_BANNER_IMAGE_INPUT_EVIDENCE_DIR: /tmp/doya-banner-image-input-evidence
           DOYA_BANNER_RELATED_IMAGE_EVIDENCE_DIR: /tmp/doya-banner-related-image-input-evidence
           DOYA_BANNER_DECODE_EVIDENCE_DIR: /tmp/doya-banner-image-decode-evidence
+          DOYA_AGENT_CONFIRM_EVIDENCE_DIR: /tmp/doya-agent-confirm-evidence
         run: npm run test:security
+
+      - name: Save synthetic agent confirmation boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-confirmation-boundary-${{ github.sha }}
+          path: /tmp/doya-agent-confirm-evidence
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Save synthetic banner image decoding evidence
         if: always()

@@ -9,12 +9,12 @@ import { expenseApi, jsonInit, useBusyAction } from './api'
 import { Btn, Check, Field, Modal, inputCls, todayYmd } from './ui'
 
 /** 会話（AgentDock）が、開いているこの窓の欄を動かすための口。窓が開いている間だけ入る（登録は支払予定の画面が持つ） */
-export type OneOffAgentBridge = MutableRefObject<Pick<AgentFormHandler, 'setValue' | 'snapshot' | 'submit'> | null>
+export type OneOffAgentBridge = MutableRefObject<Pick<AgentFormHandler, 'setValue' | 'snapshot' | 'draft' | 'submit'> & { busy(): boolean } | null>
 
 export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, bridge }: { orgSlug: string; defaultDate: string; onClose: () => void; onSaved: () => void; bridge?: OneOffAgentBridge }) {
   const [f, setF] = useState({ title: '', category: 'other', amount: '', taxRate: '10', taxIncluded: false, payDate: defaultDate || todayYmd(), withholding: false, note: '' })
   // 二度押しで同じ支出が2件できないよう、実行中は次の押下を無視する
-  const { busy, run } = useBusyAction()
+  const { busy, run, isRunning } = useBusyAction()
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 
   /**
@@ -59,6 +59,8 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
         taxIncluded: f.taxIncluded ? 'true' : 'false',
         withholding: f.withholding ? 'true' : 'false',
       }),
+      draft: () => f,
+      busy: isRunning,
       submit: async () => {
         let r: SubmitResult = { ok: false, error: '前の操作が終わっていません。少し待って、もう一度お試しください。' }
         await run('agent', async () => { r = await persist() })

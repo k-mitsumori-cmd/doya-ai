@@ -10,7 +10,7 @@ async function load() {
   const motion = await import('./motion')
   return { bus, motion }
 }
-const handler = (ready: () => boolean) => ({ setValue: () => true, snapshot: () => ({}), submit: async () => ({ ok: true as const, href: '/x' }), ready })
+const handler = (ready: () => boolean) => ({ setValue: () => true, snapshot: () => ({}), draft: () => null, submit: async () => ({ ok: true as const, href: '/x' }), ready })
 
 test('フォームが現れて入力できる状態になるまで待つ。時間切れは null', async () => {
   const { bus } = await load()

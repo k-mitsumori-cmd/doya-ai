@@ -1,7 +1,7 @@
 'use client'
 
 import { PageTitle } from '@/components/kintai/ui-next'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import Link from 'next/link'
@@ -12,6 +12,7 @@ import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import AgentBlocked from '@/components/agent-chat/AgentBlocked'
 import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
 import { parseDuration } from '@/lib/agent-chat/duration'
+import { createSaveLock } from '@/lib/agent-chat/review'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -48,6 +49,7 @@ function NewRequestContent() {
   const [type, setType] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState('')
 
   // clock_fix form
@@ -145,7 +147,7 @@ function NewRequestContent() {
   const handleSubmit = () => { void submitRequest() }
 
   /** 申請の提出。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ） */
-  const submitRequest = async (): Promise<SubmitResult> => {
+  const submitRequestNow = async (): Promise<SubmitResult> => {
     setError('')
     const fail = (message: string, kind?: 'blocked'): SubmitResult => { setError(message); return { ok: false, error: message, kind } }
 
@@ -197,6 +199,7 @@ function NewRequestContent() {
         return fail(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'), res.status === 403 ? 'blocked' : undefined)
       }
 
+      saveLock.close()
       setSubmitted(true)
       // 会話からの申請では、画面の移動は会話が完了を出してから行う
       if (!isAgentSubmit()) setTimeout(() => { router.push('/kintai/requests') }, 2000)
@@ -207,10 +210,11 @@ function NewRequestContent() {
       setSubmitting(false)
     }
   }
+  const submitRequest = () => saveLock.run(submitRequestNow)
 
   // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の KINTAI_LEAVE_REQUEST（休暇）と KINTAI_OVERTIME_REQUEST（残業）----
   useAgentForm('kintai.request.new', {
-    ready: () => true,
+    ready: () => !saveLock.busy(),
     setValue: (key, value) => {
       switch (key) {
         case 'type': if (!REQUEST_TYPES.some((t) => t.key === value)) return false; selectType(value); return true
@@ -241,6 +245,7 @@ function NewRequestContent() {
       minutes: otMinutes,
       reason: reason.trim(),
     }),
+    draft: () => ({ type, reason, fixDate, fixClockType, fixTime, fixRecordId, leaveStart, leaveEnd, leaveType, otDate, otHours, otMinutes, hwDate, hwStart, hwEnd }),
     submit: submitRequest,
   })
 

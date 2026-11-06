@@ -62,9 +62,11 @@ export function ProjectForm({
   const operation = useProjectOperation(workspaceSlug, project?.id ?? null, workspaceId);
   const loading = operation.status === 'saving' || operation.status === 'checking';
   const submitting = useRef(false);
+  // 新規の登録が済んだあと、画面が移るまでの間に同じ内容をもう1件作らない
+  const created = useRef(false);
   const { confirm, ConfirmDialog } = useConfirm();
   useEffect(() => {
-    setError(null); setBillingType(project?.billingType || 'fixed'); submitting.current = false;
+    setError(null); setBillingType(project?.billingType || 'fixed'); submitting.current = false; created.current = false;
     // Reset drafts only when the actor/workspace/project changes, not on a background revision refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operation.scopeKey]);
@@ -78,6 +80,7 @@ export function ProjectForm({
       return { ok: false, error: result.error };
     }
     if (result.state === 'saved' || result.state === 'superseded') {
+      if (!project) created.current = true;
       // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
       if (isAgentSubmit()) return { ok: true, href: `/promane/${result.workspaceSlug || workspaceSlug}/projects/${result.entry.id}` };
       toast.success(result.state === 'superseded' ? '保存後に別の編集がありました。最新版を表示します' : project ? 'プロジェクトを更新しました' : 'プロジェクトを作成しました', {
@@ -100,7 +103,7 @@ export function ProjectForm({
   /** 保存の処理はここ1つだけ。画面のボタンも、会話（AgentDock）の確認ボタンも通る。結果を返す（画面は setError に出す） */
   async function runSubmit(form: FormData): Promise<SubmitResult> {
     const fail = (error: string): SubmitResult => ({ ok: false, error });
-    if (submitting.current || operation.status !== 'ready') return fail('いま保存できる状態ではありません。しばらくして、もう一度お試しください。');
+    if (submitting.current || created.current || operation.status !== 'ready') return fail('いま保存できる状態ではありません。しばらくして、もう一度お試しください。');
     setError(null);
 
     // クライアント側 事前バリデーション
@@ -178,7 +181,7 @@ export function ProjectForm({
   const formRef = useRef<HTMLFormElement>(null);
   const read = () => (formRef.current ? new FormData(formRef.current) : new FormData());
   useAgentForm('promane.project.new', {
-    ready: () => !project && Boolean(formRef.current) && operation.status === 'ready',
+    ready: () => !project && Boolean(formRef.current) && !submitting.current && !created.current && operation.status === 'ready',
     setValue: (key, value) => {
       if (project) return false;
       if (key === 'name') return setDomValue('name', value);
@@ -198,6 +201,7 @@ export function ProjectForm({
         end: String(f.get('endDate') ?? ''),
       };
     },
+    draft: () => (formRef.current ? { billingType, fields: Array.from(read().entries()) } : null),
     submit: async () => {
       if (!formRef.current) return { ok: false, error: '案件の画面が閉じられました。もう一度、依頼から始めてください。' };
       return runSubmit(read());

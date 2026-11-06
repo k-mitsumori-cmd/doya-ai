@@ -12,6 +12,7 @@ export default function AgentBlocked({ formKey, reason }: { formKey: string; rea
     blocked: () => reason,
     setValue: () => false,
     snapshot: () => ({}),
+    draft: () => null,
     submit: async () => ({ ok: false, error: reason }),
   })
   return null

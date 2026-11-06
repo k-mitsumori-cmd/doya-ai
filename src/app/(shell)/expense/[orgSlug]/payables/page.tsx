@@ -78,7 +78,7 @@ function PayablesInner() {
   const agentBridge: OneOffAgentBridge = useRef<OneOffAgentBridge['current']>(null)
   useAgentForm('expense.schedule.new', {
     // 権限の判定が済んでから動かす。担当者（manager）未満は、画面の「単発の支出を追加」ボタンと同じく、操作できない
-    ready: () => role !== null,
+    ready: () => role !== null && !agentBridge.current?.busy(),
     blocked: () => (canManage ? null : '単発の支出の追加には、担当者以上の権限が必要です。組織の管理者に権限の変更を依頼してください。'),
     prepare: async () => {
       setAdding(true)
@@ -86,6 +86,7 @@ function PayablesInner() {
     },
     setValue: (key, value) => agentBridge.current?.setValue(key, value) ?? false,
     snapshot: () => agentBridge.current?.snapshot() ?? {},
+    draft: () => agentBridge.current?.draft() ?? null,
     submit: async () => (agentBridge.current ? agentBridge.current.submit() : { ok: false, error: '単発の支出の画面が閉じられました。もう一度、依頼から始めてください。' }),
   })
   const { ask, dialog } = useConfirm()

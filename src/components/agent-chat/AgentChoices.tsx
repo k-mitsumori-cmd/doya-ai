@@ -19,6 +19,7 @@ export default function AgentChoices({ formKey, prompt, items }: { formKey: stri
     choose: (id) => { const hit = items.find((i) => i.id === id); if (hit) router.push(hit.href) },
     setValue: () => false,
     snapshot: () => ({}),
+    draft: () => null,
     submit: async () => ({ ok: false, error: '先に、ワークスペースを選んでください。' }),
   })
   return null

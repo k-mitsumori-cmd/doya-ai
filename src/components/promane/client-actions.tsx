@@ -98,7 +98,7 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
   // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の PROMANE_CLIENT_ADD ----
   useAgentForm('promane.client.new', {
     // 保存状態が確認できているときだけ入力できる。前の送信の結果が分からない（unknown）ときは、画面の案内を理由にして止まる
-    ready: () => creation.status === 'ready' || creation.status === 'unknown',
+    ready: () => !submission.current && (creation.status === 'ready' || creation.status === 'unknown'),
     blocked: () => (creation.status === 'unknown' ? creation.message || '前の送信の結果を確認できていません。画面の「保存状態を確認」を押してください。' : null),
     prepare: async () => {
       setOpen(true);
@@ -113,6 +113,8 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
       return true;
     },
     snapshot: () => ({ name: draft.name.trim(), contactName: draft.contactName.trim(), email: draft.email.trim(), phone: draft.phone.trim() }),
+    // 窓を閉じたあとは、確認した内容を保存しない
+    draft: () => (open ? draft : null),
     submit: () => createClient(draft),
   });
 

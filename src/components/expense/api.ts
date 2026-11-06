@@ -97,5 +97,7 @@ export function useBusyAction() {
       setBusy(null)
     }
   }, [])
-  return { busy, run }
+  // 表示の更新を待たずに、実行中かを読む口（会話の保存の直前の確認に使う）
+  const isRunning = useCallback(() => running.current, [])
+  return { busy, run, isRunning }
 }

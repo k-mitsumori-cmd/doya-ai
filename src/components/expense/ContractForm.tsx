@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -74,6 +75,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
   const vendors = useExpenseQuery<{ vendors: Vendor[] }>(mode === 'create' ? '/api/expense/vendors' : null, orgSlug)
   const methods = useExpenseQuery<{ paymentMethods: PaymentMethod[] }>('/api/expense/payment-methods', orgSlug)
   const contractor0 = preset === 'contractor'
+  const saveLock = useRef(createSaveLock()).current
 
   const [f, setF] = useState({
     title: initial?.title ?? '',
@@ -136,7 +138,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
    * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、onSaved で登録した契約の画面へ移る。失敗したら理由を返す（画面は toast に出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
+  const saveNow = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setBusy(true)
     try {
       const common = {
@@ -153,6 +155,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
           ...(vendorMode === 'existing' ? { vendorId } : { vendor: draftToPayload(vendor, canManage) }),
         }
         const r = await expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', body))
+        saveLock.close()
         // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
         if (!isAgentSubmit()) {
           toast.success('契約を登録しました')
@@ -173,6 +176,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       setBusy(false)
     }
   }
+  const save = () => saveLock.run(saveNow)
   const submit = async () => { await save() }
 
   const ready = f.title.trim() && f.startDate && (mode === 'edit' || (price.unitPrice !== '' && (vendorMode === 'existing' ? !!vendorId : !!vendor.name.trim())))
@@ -180,7 +184,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
   // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の EXPENSE_ADD ----
   const agentTitle = useRef('')
   useAgentForm('expense.contract.new', {
-    ready: () => mode === 'create' && Boolean(vendors.data || vendors.error),
+    ready: () => mode === 'create' && Boolean(vendors.data || vendors.error) && !saveLock.busy(),
     // 取引先の一覧を見る権限がないときは、画面と同じ理由を出して止まる
     blocked: () => (vendors.forbidden ? '支出の登録には、担当者以上の権限が必要です。組織の管理者に権限の変更を依頼してください。' : vendors.error ? '取引先を読み込めませんでした。ページを開き直して、もう一度お試しください。' : null),
     setValue: (key, value) => {
@@ -210,6 +214,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       taxIncluded: price.taxIncluded ? 'true' : 'false',
       currency: f.currency,
     }),
+    draft: () => ({ f, vendorMode, vendorId, vendor, price, draftYen }),
     submit: async () => {
       // 画面のボタンが押せない状態（必要な項目が足りない）では、会話からも保存しない
       if (!ready) return { ok: false, error: '必要な項目（名称・金額・取引先）が足りないため、登録できません。' }

@@ -1,0 +1,271 @@
+'use strict';
+// 会話の確認カードと保存の間の決まりを、本物の Provider で確かめる（#135 の検証を、全部の操作へ広げたもの）。
+// - 8つの操作は、本物の Provider と、値を持つだけのフォームで動かす。
+// - 収入の契約は、本物のフォームも載せる。通信は作り物で、DB にも外部にも触らない。
+// 通らない場面: 実際のブラウザ、ログインと権限の切り替え、実際の保存、通信の結果が分からないあとの再送。
+process.env.NODE_ENV = 'test'; // React の act をこの検証のプロセスの中だけで使う
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+
+const root = path.resolve(process.argv[2] || path.join(__dirname, '../..'));
+const evidence = process.env.DOYA_AGENT_CONFIRM_EVIDENCE_DIR || null;
+const out = fs.mkdtempSync(path.join(os.tmpdir(), 'doya-agent-confirm-'));
+const fromRoot = (name) => require(path.join(root, 'node_modules', name));
+
+const CONTROLLED = {
+  link: "import React from 'react';export default ({href,children,...p})=>React.createElement('a',{href,...p},children);",
+  navigation: 'export const useRouter=()=>({push(){},replace(){},refresh(){}});export const usePathname=()=>window.location.pathname;export const useSearchParams=()=>new URLSearchParams(window.location.search);',
+  motion: 'const tick=()=>new Promise(r=>setImmediate(r));export const blurField=()=>{};export const clearMarks=()=>{};export const clearStage=()=>{};export const cursorOff=()=>{};export const fly=async()=>{await tick()};export const focusField=async()=>{await tick()};export const nextFrames=async()=>{await tick();await tick()};export const paceMs=()=>0;export const sleep=async()=>{await tick()};export const typeInto=async(v,set,alive)=>{if(alive())set(v)};',
+};
+
+async function build() {
+  const entry = [
+    "export {default as Provider,useAgentChat} from '@/components/agent-chat/AgentChatProvider';",
+    "export {registerAgentForm,getAgentForm} from '@/components/agent-chat/form-bus';",
+    "export {default as ContractForm} from '@/components/income/ContractForm';",
+    "export {CHAT_OPS,INCOME_SALE_ADD} from '@/lib/agent-chat/ops';",
+  ].join('');
+  await fromRoot('esbuild').build({
+    stdin: { contents: entry, resolveDir: root, sourcefile: 'entry.ts', loader: 'ts' },
+    outfile: path.join(out, 'bundle.cjs'),
+    bundle: true, platform: 'node', format: 'cjs', jsx: 'automatic', logLevel: 'silent',
+    banner: { js: `var require = require("node:module").createRequire(${JSON.stringify(path.join(root, 'package.json'))});` },
+    loader: { '.css': 'empty' }, external: ['react', 'react-dom'],
+    nodePaths: [path.join(root, 'node_modules')], tsconfig: path.join(root, 'tsconfig.json'),
+    plugins: [{
+      name: 'controlled',
+      setup(b) {
+        b.onResolve({ filter: /^next\/link$/ }, () => ({ path: 'link', namespace: 'controlled' }));
+        b.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'navigation', namespace: 'controlled' }));
+        b.onResolve({ filter: /^\.\/motion$/ }, () => ({ path: 'motion', namespace: 'controlled' }));
+        b.onLoad({ filter: /.*/, namespace: 'controlled' }, (a) => ({ contents: CONTROLLED[a.path], loader: 'js' }));
+      },
+    }],
+  });
+}
+
+// 各操作のフォームがある画面の例（?to= を持つ操作は、運ばれた先の画面）
+const SCREENS = {
+  'income.contract.new': '/income/contracts/new',
+  'income.invoice.new': '/income/invoices/new',
+  'expense.contract.new': '/expense/sample-org/contracts/new',
+  'promane.project.new': '/promane/sample-ws/projects/new',
+  'kintai.request.new': '/kintai/requests/new',
+  'promane.client.new': '/promane/sample-ws/clients',
+  'expense.schedule.new': '/expense/sample-org/payables',
+};
+const SNAP = { client: 'Sample A', vendor: 'Sample A', name: 'Sample A', title: 'Sample', start: '2026-11-06', end: '2026-11-07', date: '2026-11-06', issue: '2026-11-06', due: '2026-11-30', payDate: '2026-11-06', amount: '100000', subtotal: '100000', tax: '10000', total: '110000', taxIncluded: 'false', taxRate: '10%', withholding: 'false', category: 'SaaS', cycle: '毎月', currency: 'JPY', status: '下書き', billing: '固定', typeLabel: '休暇申請', leaveLabel: '有給休暇', hours: '2', minutes: '', reason: 'Sample', contactName: '', email: '', phone: '' };
+const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-11-06' : 'Sample');
+
+(async () => {
+  await build();
+  const React = fromRoot('react');
+  const { JSDOM } = fromRoot('jsdom');
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
+  Object.assign(global, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true, CustomEvent: dom.window.CustomEvent });
+  const { createRoot } = fromRoot('react-dom/client');
+  const { Simulate } = fromRoot('react-dom/test-utils');
+  const { act } = React;
+  const fx = require(path.join(out, 'bundle.cjs'));
+
+  let api; let reactRoot = null; let unregister = () => {};
+  const posts = [];
+  let gets = 0;
+  global.fetch = async (url, init) => {
+    if (url === '/api/income/issuer') { gets++; return Response.json({ issuer: null }); }
+    if (url === '/api/income/clients') { gets++; return Response.json({ clients: [{ id: 'c1', name: 'Sample A' }] }); }
+    if (url === '/api/income/contracts' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ id: 'made' }); }
+    throw Error('予定外の通信: ' + url);
+  };
+  const Probe = () => { api = fx.useAgentChat(); return null; };
+  const frames = async (n = 2) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
+  const settle = async () => { for (let i = 0; i < 300 && (api.state.phase === 'working' || api.state.phase === 'submitting'); i++) await act(async () => { await frames(1); }); };
+  const go = (ev) => act(async () => { api.dispatch(ev); await frames(); });
+  const approve = async () => { await go({ t: 'approve' }); await settle(); };
+
+  async function mount(child) {
+    unregister(); unregister = () => {};
+    if (reactRoot) await act(async () => reactRoot.unmount());
+    posts.length = 0;
+    reactRoot = createRoot(document.getElementById('root'));
+    await act(async () => { reactRoot.render(React.createElement(fx.Provider, null, React.createElement(Probe), child || null)); });
+    await act(async () => { await frames(3); });
+  }
+  function fake(formKey, world) {
+    return fx.registerAgentForm(formKey, {
+      ready: () => world.ready,
+      blocked: () => world.blocked,
+      setValue: () => true,
+      snapshot: () => ({ ...world.snap }),
+      draft: () => world.draft,
+      submit: async () => { world.submits++; return { ok: true, href: SCREENS[formKey] + '/made' }; },
+    });
+  }
+  async function startFake(op) {
+    window.history.replaceState(null, '', SCREENS[op.formKey]);
+    await mount();
+    const world = { ready: true, blocked: null, snap: { ...SNAP }, draft: { hiddenField: 'A' }, submits: 0 };
+    unregister = fake(op.formKey, world);
+    const values = Object.fromEntries(op.fields.map((f) => [f.key, sample(f)]));
+    await act(async () => { api.begin('sample', { kind: 'op', op, values, missing: [], say: 'sample' }); await frames(); });
+    await settle();
+    assert.equal(api.state.phase, 'confirm', op.key + ' は確認カードまで進む');
+    assert.equal(world.submits, 0, '確認の前に保存しない');
+    return world;
+  }
+
+  const checks = [];
+  const check = async (name, fn) => { await fn(); checks.push(name); };
+
+  assert.equal(fx.CHAT_OPS.length, 8, '操作を足したら、この検証の SCREENS も見直す');
+  for (const op of fx.CHAT_OPS) {
+    await check(`${op.key}: 変わっていなければ1回だけ保存する`, async () => {
+      const w = await startFake(op);
+      await act(async () => { api.dispatch({ t: 'approve' }); api.dispatch({ t: 'approve' }); await frames(); });
+      await settle();
+      assert.equal(w.submits, 1); assert.equal(api.state.phase, 'done');
+    });
+    await check(`${op.key}: カードに出る値が変わったら、出し直して止める`, async () => {
+      const w = await startFake(op);
+      w.snap = { ...w.snap, subtotal: '900000', amount: '900000', title: 'Changed', name: 'Changed', reason: 'Changed' };
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /保存せずに/);
+      assert.equal(api.state.snap.subtotal, '900000');
+      await approve();
+      assert.equal(w.submits, 1, '出し直したカードで本人が押したら保存する');
+    });
+    await check(`${op.key}: カードに出ない欄が変わったら、止めて知らせる`, async () => {
+      const w = await startFake(op);
+      w.draft = { hiddenField: 'B' };
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /出ていない欄/);
+      await approve();
+      assert.equal(w.submits, 1);
+    });
+    await check(`${op.key}: 同じ名前の別のフォームには、前の確認を使わない`, async () => {
+      const w = await startFake(op);
+      unregister();
+      const w2 = { ...w, submits: 0 };
+      unregister = fake(op.formKey, w2);
+      await approve();
+      assert.equal(w.submits + w2.submits, 0); assert.equal(api.state.phase, 'failed'); assert.equal(api.state.confirm, null);
+      await go({ t: 'retry' }); await settle();
+      assert.equal(api.state.phase, 'confirm', 'もう一度は、入力からやり直して確認カードへ');
+      assert.equal(w2.submits, 0);
+    });
+    await check(`${op.key}: フォームが閉じたら保存しない`, async () => {
+      const w = await startFake(op);
+      unregister(); unregister = () => {};
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'failed'); assert.equal(api.state.confirm, null);
+    });
+    await check(`${op.key}: 窓が閉じて全部の欄が無いときは保存しない`, async () => {
+      const w = await startFake(op);
+      w.draft = null;
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'failed');
+    });
+    await check(`${op.key}: 処理が終わっていなければ保存しない`, async () => {
+      const w = await startFake(op);
+      w.ready = false;
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /処理が終わって/);
+      w.ready = true;
+      await approve();
+      assert.equal(w.submits, 1);
+    });
+    await check(`${op.key}: 権限が無くなったら保存しない`, async () => {
+      const w = await startFake(op);
+      w.blocked = '権限がありません';
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'failed'); assert.equal(api.state.errorKind, 'blocked');
+    });
+    await check(`${op.key}: 別の画面に移ったら保存しない`, async () => {
+      const w = await startFake(op);
+      window.history.replaceState(null, '', '/somewhere-else');
+      await approve();
+      assert.equal(w.submits, 0); assert.equal(api.state.phase, 'failed'); assert.match(api.state.error, /別の画面/);
+    });
+  }
+
+  async function startReal() {
+    window.history.replaceState(null, '', '/income/contracts/new');
+    await mount(React.createElement(fx.ContractForm));
+    const values = { amount: '100000', client: 'Sample A', title: 'Sample' };
+    await act(async () => { api.begin('sample', { kind: 'op', op: fx.INCOME_SALE_ADD, values, missing: [], say: 'sample' }); await frames(); });
+    await settle();
+    assert.equal(api.state.phase, 'confirm');
+    assert.equal(posts.length, 0);
+  }
+  const edit = (field, value) => act(async () => { Simulate.change(document.querySelector(`[data-agent-field="${field}"]`), { target: { value } }); await frames(); });
+
+  await check('本物の契約フォーム: 変わっていなければ確認した内容を1件だけ保存する', async () => {
+    await startReal(); await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].type, 'one_time'); assert.equal(posts[0].items[0].unitPrice, 100000); assert.equal(api.state.phase, 'done');
+  });
+  await check('本物の契約フォーム: 手で直したら保存せず、カードを出し直す', async () => {
+    await startReal(); await edit('title', 'Changed');
+    await approve();
+    assert.equal(posts.length, 0); assert.equal(api.state.phase, 'confirm');
+    assert.equal(api.state.snap.title, 'Changed');
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].title, 'Changed');
+  });
+  await check('本物の契約フォーム: 金額が同じまま種類を変えても、止めて知らせる', async () => {
+    await startReal();
+    const total = api.state.snap.total;
+    await edit('type', 'recurring');
+    assert.equal(fx.getAgentForm('income.contract.new').snapshot().total, total);
+    await approve();
+    assert.equal(posts.length, 0); assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /出ていない欄/);
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].type, 'recurring');
+  });
+  await check('本物の契約フォーム: 同時の送信も、成功のあとの送信も、1件だけ', async () => {
+    await startReal();
+    const form = fx.getAgentForm('income.contract.new');
+    let results;
+    await act(async () => { results = await Promise.all([form.submit(), form.submit()]); });
+    assert.equal(posts.length, 1);
+    assert.equal(results.filter((r) => r.ok).length, 1);
+    assert.equal(form.ready(), false, '成功のあとは、画面が移るまで次の保存を受け付けない');
+    let again;
+    await act(async () => { again = await form.submit(); });
+    assert.equal(again.ok, false); assert.equal(posts.length, 1);
+  });
+  await check('本物の契約フォーム: 画面の保存が進んでいる間は、会話からは保存しない', async () => {
+    await startReal();
+    const form = fx.getAgentForm('income.contract.new');
+    let finish;
+    const held = new Promise((r) => { finish = r; });
+    const realFetch = global.fetch;
+    global.fetch = async (url, init) => { if (init && init.method === 'POST') await held; return realFetch(url, init); };
+    let screen;
+    await act(async () => { screen = form.submit(); await frames(); });
+    await approve();
+    assert.equal(api.state.phase, 'confirm'); assert.match(api.state.notice, /処理が終わって/);
+    await act(async () => { finish(); await screen; await frames(); });
+    global.fetch = realFetch;
+    assert.equal(posts.length, 1);
+    await approve();
+    assert.equal(posts.length, 1, '画面で保存が済んだ内容を、会話からもう1件作らない');
+  });
+  await check('本物の契約フォーム: 税込みの直しのあとも、本人が押すまで保存せず、直した値を保存する', async () => {
+    await startReal();
+    await go({ t: 'adjust', text: '税込みだった' }); await settle();
+    assert.equal(api.state.phase, 'confirm'); assert.equal(posts.length, 0);
+    const shown = Number(api.state.snap.subtotal);
+    assert.ok(shown > 0 && shown < 100000);
+    await approve();
+    assert.equal(posts.length, 1); assert.equal(posts[0].items[0].unitPrice, shown);
+  });
+
+  unregister();
+  await act(async () => reactRoot.unmount());
+  dom.window.close();
+  const result = { checkedAt: new Date().toISOString(), passed: checks.length, failed: 0, checks, syntheticContractPosts: 'in-memory only', syntheticGets: gets, scope: 'React/jsdom。実際のブラウザ、ログインと権限の切り替え、実際の保存、通信の結果が分からないあとの再送は含まない。' };
+  if (evidence) { fs.mkdirSync(evidence, { recursive: true }); fs.writeFileSync(path.join(evidence, 'result.json'), JSON.stringify(result, null, 2) + '\n'); }
+  console.log(JSON.stringify({ passed: checks.length }));
+})().catch((e) => { console.error(e.stack); process.exitCode = 1; }).finally(() => { fs.rmSync(out, { recursive: true, force: true }); });
