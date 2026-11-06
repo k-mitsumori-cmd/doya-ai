@@ -1,3 +1,4 @@
+{ const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-agent-confirmation-boundary.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-seo-image-read-recovery.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-image-decoding.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-related-image-input.cjs')], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }

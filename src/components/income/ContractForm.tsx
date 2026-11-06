@@ -69,6 +69,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const [newClientName, setNewClientName] = useState('')
   const [clientsLoaded, setClientsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const saveInFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
@@ -140,12 +141,14 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
    * 成功したら、登録した契約の画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
   const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> => {
+    if (saveInFlight.current) return { ok: false, error: '登録処理が進んでいます。完了するまでお待ちください。' }
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
       setError('入力に誤りがあります。赤字の項目を直してください。')
       return { ok: false, error: firstError }
     }
+    saveInFlight.current = true
     setBusy(true)
     setError(null)
     try {
@@ -175,6 +178,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       setError(errMsg(err))
       return { ok: false, error: errMsg(err) }
     } finally {
+      saveInFlight.current = false
       setBusy(false)
     }
   }
@@ -188,7 +192,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const totals = safeTotals(rows)
   const agentTitle = useRef('')
   useAgentForm('income.contract.new', {
-    ready: () => !initial && clientsLoaded,
+    ready: () => !initial && clientsLoaded && !busy && !saveInFlight.current,
     setValue: (key, value) => {
       if (initial) return false
       switch (key) {
@@ -215,6 +219,8 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       }
     },
     snapshot: () => ({
+      // Local-only marker: include every draft field, not only the confirmation card totals. Never sent to the AI.
+      _reviewPayload: JSON.stringify({ f, rows, newClientName }),
       client: f.clientId === NEW_CLIENT ? newClientName.trim() : (clients.find((c) => c.id === f.clientId)?.name ?? ''),
       title: f.title.trim(),
       start: f.startDate,
