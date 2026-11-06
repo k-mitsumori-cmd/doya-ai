@@ -1,4 +1,6 @@
 'use strict';
+// This isolated mounted fixture needs React's act; never change the parent build environment.
+process.env.NODE_ENV = 'test';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto');
 const candidateRoot=path.resolve(process.argv[2]||process.cwd()),output=process.argv[3]?path.resolve(process.argv[3]):process.env.DOYA_SEO_IMAGE_READ_EVIDENCE_DIR?path.join(process.env.DOYA_SEO_IMAGE_READ_EVIDENCE_DIR,'result.json'):null,modulesRoot=path.resolve(process.argv[4]||candidateRoot);
 const fromModules=(name)=>require(path.join(modulesRoot,'node_modules',name));const ts=fromModules('typescript'),React=fromModules('react'),{JSDOM}=fromModules('jsdom'),{createRoot}=fromModules('react-dom/client'),{renderToString}=fromModules('react-dom/server'),act=React.act;
