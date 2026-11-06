@@ -214,7 +214,10 @@ export default function MensetsuTool() {
         setProfile(null)
       }
     } catch (e) {
-      if (loadVersion.current === version) setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
+      if (loadVersion.current === version) {
+        if (e && typeof e === 'object' && 'status' in e && typeof e.status === 'number') setLoadIssue(loadIssueOf(e.status))
+        setLoadError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
+      }
     } finally {
       if (loadVersion.current === version) setLoading(false)
     }

@@ -5,7 +5,7 @@ type Department = OrgChartNode['department'] & { parentId: string | null; sortOr
 type EmployeeRow = Employee & { departmentId: string | null }
 export type HrOrgChartData = { orgName: string; orgChart: OrgChartNode[]; unassignedEmployees: Employee[]; hierarchyWarning: boolean }
 export class HrOrgChartReadError extends Error {
-  constructor(readonly unauthorized = false, readonly changed = false) { super('HR org chart read failed') }
+  constructor(readonly unauthorized = false, readonly changed = false, readonly status = unauthorized ? 401 : changed ? 409 : 0) { super('HR org chart read failed') }
 }
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 const text = (value: unknown): value is string => typeof value === 'string'
@@ -46,7 +46,8 @@ async function readPage(signal: AbortSignal, cursor: string | null, transport: t
     const response = await transport('/api/hr/org-chart?format=pages' + (cursor === null ? '' : '&cursor=' + encodeURIComponent(cursor)), { method: 'GET', cache: 'no-store', signal: controller.signal })
     if (response.status === 401) throw new HrOrgChartReadError(true)
     if (response.status === 409) throw new HrOrgChartReadError(false, true)
-    if (response.status !== 200 || controller.signal.aborted || !response.body || Number(response.headers.get('content-length')) > 1024 * 1024) throw new Error('HR org chart read failed')
+    if (response.status !== 200) throw new HrOrgChartReadError(false, false, response.status)
+    if (controller.signal.aborted || !response.body || Number(response.headers.get('content-length')) > 1024 * 1024) throw new Error('HR org chart read failed')
     reader = response.body.getReader()
     const chunks: Uint8Array[] = []
     let size = 0

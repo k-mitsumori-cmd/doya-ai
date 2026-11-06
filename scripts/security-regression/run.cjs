@@ -647,6 +647,8 @@ if (sharedMemberMutation.error || sharedMemberMutation.status !== 0) {
   console.error('Security regression failed: verify-shared-member-mutation-atomic.cjs');
   process.exit(1);
 }
+const sharedReadHttpStatus = spawnSync(process.execPath, [path.join(__dirname, 'verify-shared-read-http-status.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sharedReadHttpStatus.error || sharedReadHttpStatus.status !== 0) process.exit(sharedReadHttpStatus.status || 1);
 const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (orgFetch.error || orgFetch.status !== 0) {
   console.error('Security regression failed: verify-org-fetch.cjs');
