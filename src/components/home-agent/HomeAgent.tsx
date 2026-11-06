@@ -30,6 +30,8 @@ import type { ReactNode } from 'react'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from '@/app/(shell)/home/intents'
 import { normalizeValue, stashPrefill, withPrefillKey } from '@/lib/agent-router/prefill'
 import type { AgentField, AgentRouteResponse } from '@/lib/agent-router/types'
+import { useAgentChat } from '@/components/agent-chat/AgentChatProvider'
+import type { ChatApiResponse } from '@/lib/agent-chat/types'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import type { DepartmentId } from '@/lib/departments'
 import { TypewriterTextarea } from './TypewriterTextarea'
@@ -264,6 +266,8 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
   const [headlineText] = useState(headline)
   const toHref = useToolHref()
   const router = useRouter()
+  // 右下の会話の欄（旗 AGENT_CHAT_ROLLOUT が on のときだけ入る。off なら null で、今の動きのまま）
+  const agentChat = useAgentChat()
   // 「ドヤAIに頼む」: AI が依頼を読み、ツールと操作を選ぶ（/api/agent/route）。読んでいる間・画面を開いている間の表示
   const [opening, setOpening] = useState<string | null>(null)
   // 選ばれた操作と、まだ足りない値を1つずつ聞く画面（fill）の状態
@@ -412,16 +416,24 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     if (!t || opening) return
     if (executor !== 'api') { reset(); void ask({ text: t }); return }
     setOpening('ドヤAIが、依頼を読んでいます…'); setError(null); setSuggest(null)
-    let data: AgentRouteResponse | null = null
+    let data: ChatApiResponse | null = null
     try {
-      const res = await fetch('/api/agent/route', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: t }) })
+      // 会話の欄があるときは /api/agent/chat（チャットで進める操作は op で返る。それ以外は /api/agent/route と同じ形）
+      const res = await fetch(agentChat ? '/api/agent/chat' : '/api/agent/route', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: t }) })
       if (res.status === 404) { setOpening(null); reset(); void ask({ text: t }); return }
-      data = res.ok ? ((await res.json()) as AgentRouteResponse) : null
+      data = res.ok ? ((await res.json()) as ChatApiResponse) : null
     } catch {
       data = null
     }
     setOpening(null)
     if (!data) { setError('依頼を読めませんでした。時間をおいて、もう一度お試しください。'); return }
+    if (data.kind === 'op') {
+      // チャットで進める操作は、右下の会話の欄が、画面を動かして確認カードまで進める。ここは入力の欄に戻す
+      agentChat?.begin(t, data)
+      setText('')
+      setScene('none')
+      return
+    }
     if (data.kind === 'action') {
       if (data.missing.length) { setRoute(data); setFillIndex(0); setFillValue(''); setFillError(null); setScene('fill'); return }
       openAction(data.href, data.values, data.action.label)

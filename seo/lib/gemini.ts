@@ -17,12 +17,12 @@ const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-2
 // ============================================================
 // 呼び出しごとの Claude のモデル（2026-10-26 ユーザー承認。経営ホームのエージェントの AI の使い分け）
 // ============================================================
-// 決まった形の下書き（見積の品目の案・スライドの構成）は軽いモデル、作戦づくりは頭を使うモデル。
+// 決まった形の下書き（見積の品目の案・スライドの構成）も作戦づくりも軽いモデル（2026-11-06 本人の決定「エージェントの費用を下げる」。旧: 作戦づくりは Sonnet 5.5）。
 // 呼び出し側が claudeModel を渡したときだけ使う。渡さなければ今までどおり CLAUDE_MODEL_DEFAULT。
 // 2026-10-26 に実 API で生存を確かめた（claude-haiku-5-5・claude-sonnet-5-5 とも 200）。
 // 設計: docs/architecture/agent-orchestration/DESIGN.md §11.9
 export const CLAUDE_MODEL_LIGHT = process.env.SEO_CLAUDE_LIGHT_MODEL || 'claude-haiku-5-5'
-export const CLAUDE_MODEL_PLAN = process.env.SEO_CLAUDE_PLAN_MODEL || 'claude-sonnet-5-5'
+export const CLAUDE_MODEL_PLAN = process.env.SEO_CLAUDE_PLAN_MODEL || 'claude-haiku-5-5'
 
 // ============================================================
 // 出力トークンの上限（2026-10-19 費用削減）

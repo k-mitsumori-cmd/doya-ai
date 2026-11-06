@@ -1,14 +1,15 @@
 'use client'
 
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
 import { buildSchedule } from '@/lib/income/schedule'
 import {
   BILLING_CYCLE_LABEL, CONTRACT_STATUS_LABEL, CONTRACT_STATUS_ORDER, CONTRACT_TYPE_LABEL, ISSUE_TIMING_LABEL, PRORATE_LABEL,
-  Button, Card, CheckRow, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, errMsg, fetchJson, periodText, s, toast,
+  Button, Card, CheckRow, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, errMsg, fetchJson, periodText, s, safeTotals, toast,
   useUnsavedGuard, yen, ymd,
   type LineRow,
 } from './ui'
@@ -134,12 +135,16 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
     }
   }, [f.type, f.startDate, f.endDate, f.autoRenew, f.billingCycle, f.issueTiming, f.prorate, rows])
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  /**
+   * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
+   * 成功したら、登録した契約の画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
+   */
+  const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> => {
     setTried(true)
-    if (Object.values(errors).some(Boolean)) {
+    const firstError = Object.values(errors).find(Boolean)
+    if (firstError) {
       setError('入力に誤りがあります。赤字の項目を直してください。')
-      return
+      return { ok: false, error: firstError }
     }
     setBusy(true)
     setError(null)
@@ -159,25 +164,76 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
         markClean()
         toast('契約を保存しました')
         onSaved?.()
-      } else {
-        const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
-        markClean()
-        toast('契約を登録しました')
-        router.push(`/income/contracts/${d.id}`)
+        return { ok: true, id: initial.id }
       }
+      const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
+      markClean()
+      toast('契約を登録しました')
+      router.push(`/income/contracts/${d.id}`)
+      return { ok: true, id: d.id }
     } catch (err) {
       setError(errMsg(err))
+      return { ok: false, error: errMsg(err) }
     } finally {
       setBusy(false)
     }
   }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await save()
+  }
+
+  // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の INCOME_SALE_ADD ----
+  const totals = safeTotals(rows)
+  const agentTitle = useRef('')
+  useAgentForm('income.contract.new', {
+    ready: () => !initial && clientsLoaded,
+    setValue: (key, value) => {
+      if (initial) return false
+      switch (key) {
+        case 'type': case 'status': setF((x) => ({ ...x, [key]: value })); return true
+        case 'start': setF((x) => ({ ...x, startDate: value })); return true
+        case 'title': {
+          // 1字ずつ入れられても、明細の1行目の名前は契約名に追いつかせる（本人が自分で直した名前には触らない）
+          const prev = agentTitle.current
+          agentTitle.current = value
+          setF((x) => ({ ...x, title: value }))
+          setRows((r) => r.map((row, i) => (i === 0 && (!row.name.trim() || row.name === prev) ? { ...row, name: value } : row)))
+          return true
+        }
+        case 'amount': setRows((r) => r.map((row, i) => (i === 0 ? { ...row, quantity: '1', unitPrice: value } : row))); return true
+        case 'client': {
+          // 取引先は、同じ名前が登録済みならそれを選ぶ。無ければ、その場で新しく登録する欄に名前を入れる
+          const fold = (t: string) => t.normalize('NFKC').replace(/\s+/g, '').toLowerCase()
+          const hit = clients.find((c) => fold(c.name) === fold(value))
+          if (hit) setF((x) => ({ ...x, clientId: hit.id }))
+          else { setF((x) => ({ ...x, clientId: NEW_CLIENT })); setNewClientName(value) }
+          return true
+        }
+        default: return false
+      }
+    },
+    snapshot: () => ({
+      client: f.clientId === NEW_CLIENT ? newClientName.trim() : (clients.find((c) => c.id === f.clientId)?.name ?? ''),
+      title: f.title.trim(),
+      start: f.startDate,
+      subtotal: totals ? String(totals.subtotalExclTax) : '',
+      tax: totals ? String(totals.taxAmount) : '',
+      total: totals ? String(totals.totalInclTax) : '',
+    }),
+    submit: async () => {
+      const r = await save()
+      return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error }
+    },
+  })
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       <Card title="契約の内容">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="取引先（必須）" error={err('clientId')}>
-            <select className={inputCls} value={f.clientId} onChange={set('clientId')} onBlur={touch('clientId')}>
+            <select className={inputCls} data-agent-field="client" value={f.clientId} onChange={set('clientId')} onBlur={touch('clientId')}>
               <option value="">選択してください</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               {!initial && <option value={NEW_CLIENT}>＋ 新しい取引先を登録する</option>}
@@ -189,24 +245,24 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
             </Field>
           )}
           <Field label="契約名（必須）" error={err('title')}>
-            <input className={inputCls} value={f.title} onChange={set('title')} onBlur={touch('title')} maxLength={120} placeholder="例: 保守運用契約" />
+            <input className={inputCls} data-agent-field="title" value={f.title} onChange={set('title')} onBlur={touch('title')} maxLength={120} placeholder="例: 保守運用契約" />
           </Field>
           <Field label="契約番号" hint={initial ? undefined : `空欄のまま登録すると、${noHead}-${todayJst().slice(0, 4)}-0001 のような番号が自動で入ります`}>
             <input className={inputCls} value={f.contractNo} onChange={set('contractNo')} maxLength={60} placeholder={initial ? undefined : '自動で振られます'} />
           </Field>
           <Field label="種類">
-            <select className={inputCls} value={f.type} onChange={set('type')}>
+            <select className={inputCls} data-agent-field="type" value={f.type} onChange={set('type')}>
               {Object.entries(CONTRACT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </Field>
           <Field label="状態" hint="「有効」にすると売上予定が自動で作られます">
-            <select className={inputCls} value={f.status} onChange={set('status')}>
+            <select className={inputCls} data-agent-field="status" value={f.status} onChange={set('status')}>
               {CONTRACT_STATUS_ORDER.map((st) => <option key={st} value={st}>{CONTRACT_STATUS_LABEL[st]}</option>)}
             </select>
           </Field>
           <div className="hidden sm:block" />
           <Field label="開始日（必須）" error={err('startDate')}>
-            <input type="date" className={inputCls} value={f.startDate} onChange={set('startDate')} onBlur={touch('startDate')} />
+            <input type="date" className={inputCls} data-agent-field="start" value={f.startDate} onChange={set('startDate')} onBlur={touch('startDate')} />
           </Field>
           <Field label="終了日" error={err('endDate')} hint={oneTime ? undefined : '空欄は期間の定めなし'}>
             <input type="date" className={inputCls} value={f.endDate} onChange={set('endDate')} onBlur={touch('endDate')} />
