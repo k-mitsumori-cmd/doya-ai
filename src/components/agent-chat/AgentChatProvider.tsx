@@ -52,10 +52,14 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       clearMarks()
       d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
-      if (window.location.pathname !== op.path) router.push(op.path)
+      const here = op.here ? new RegExp(op.here).test(window.location.pathname) : window.location.pathname === op.path
+      if (!here) router.push(op.path)
       const form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
-      if (!form) { d({ t: 'run-failed', error: `${op.label}の画面を開けませんでした。もう一度お試しください。` }); return }
+      if (!form) { d({ t: 'run-failed', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。もう一度お試しください。` }); return }
+      // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
+      const blocked = form.blocked?.()
+      if (blocked) { d({ t: 'run-failed', error: blocked }); return }
       await wait(240); d({ t: 'step', id: 'open-form', status: 'done' })
       // 決まった値 → 欄（依頼から読んだ値）の順。欄ごとに、スクロール → 光らせる → 値が飛ぶ → 入れる、を実際の setValue に合わせて進める
       const todo: { stepId: string; key: string; value: string; label: string; fixed: boolean }[] = [
@@ -96,7 +100,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   }, [router])
 
   /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
-  const amend = useCallback(async (amount: number, message: string, id: number) => {
+  const amend = useCallback(async (amount: number, message: string, id: number, set?: Record<string, string>) => {
     const alive = () => runId.current === id
     const op = stateRef.current.op
     const form = op ? getAgentForm(op.formKey) : undefined
@@ -106,6 +110,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       await form.setValue('amount', '')
       await typeInto(String(amount), (v) => { void form.setValue('amount', v) }, alive)
       await form.setValue('amount', String(amount))
+      // あわせて入れる欄（例: 税込みの切り替え）。画面の本物の欄に入れる
+      for (const [k, v] of Object.entries(set ?? {})) await form.setValue(k, v)
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
@@ -130,7 +136,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
     } else if (eff.k === 'amend') {
-      void amend(eff.amount, eff.message, id)
+      void amend(eff.amount, eff.message, id, eff.set)
     } else {
       void (async () => {
         const op = stateRef.current.op
@@ -138,6 +144,9 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         if (!form) { if (runId.current === id) dispatchRef.current({ t: 'submitted', ok: false, error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
         // 成功すると画面が移ってフォームが消えるので、確認カードの値はここで読んでおく
         const snap = form.snapshot()
+        // 確認カードを出したあとに、本人が画面の欄を直していたら、保存せずに確認カードを出し直す（確認していない内容を保存しない）
+        const shown = stateRef.current.snap
+        if (shown && JSON.stringify(shown) !== JSON.stringify(snap)) { if (runId.current === id) dispatchRef.current({ t: 'changed', snap }); return }
         let r: Awaited<ReturnType<typeof form.submit>>
         try { r = await form.submit() } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return

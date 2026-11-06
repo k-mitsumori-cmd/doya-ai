@@ -16,5 +16,6 @@ export function useAgentForm(formKey: string, handler: AgentFormHandler): void {
     snapshot: () => ref.current.snapshot(),
     submit: () => ref.current.submit(),
     ready: () => ref.current.ready(),
+    blocked: () => ref.current.blocked?.() ?? null,
   }), [formKey])
 }

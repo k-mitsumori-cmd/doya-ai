@@ -42,6 +42,18 @@ export interface ChatOp {
   /** 確認カードの見出し・ボタン */
   confirmTitle: string
   submitLabel: string
+  /** 作業の一覧の最後の行（省略すると「確認して登録する」） */
+  confirmStepLabel?: string
+  /**
+   * 「税込みだった」の直し方。
+   * divide: 入れた金額を税込みとみなし、画面の欄を 1.1 で割った税抜に直す（画面に税込みの切り替えが無いとき）
+   * flag: 画面の「税込み」の切り替え（taxIncluded）を入れ、金額はそのまま
+   */
+  taxAdjust: 'divide' | 'flag'
+  /** すでにこの画面にいるとき、開き直さない（パスの正規表現。例: ^/expense/[^/]+/contracts/new$）。省略すると path と同じかで見る */
+  here?: string
+  /** 今の案内（agent-router の catalog）にある同じ仕事の id。この操作が置き換える */
+  replaces?: string
 }
 
 /** 画面（フォーム）が答える、今の欄の値。数字は桁区切りなしの文字列 */

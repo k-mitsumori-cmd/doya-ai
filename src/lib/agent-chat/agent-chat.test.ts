@@ -5,10 +5,10 @@ import assert from 'node:assert/strict'
 import { decideAgentChat, agentChatRollout } from './flag'
 import { jstTodayYmd, monthLabelOf, yenText } from './today'
 import { groundValues, yenCandidates } from './ground'
-import { INCOME_SALE_ADD, buildSteps, confirmRows, doneView, resolveFixed, chatOpByKey } from './ops'
+import { CHAT_OPS, EXPENSE_ADD, INCOME_INVOICE_DRAFT, INCOME_SALE_ADD, buildSteps, confirmRows, doneView, leadText, resolveFixed, chatOpByKey } from './ops'
 import { chatResponse, chatActions } from './handle'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from './turn'
-import type { ChatApiResponse } from './types'
+import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from './types'
 
 const SNAP = { client: '株式会社サンプル', title: 'Web 制作費', start: '2026-11-05', subtotal: '1000000', tax: '100000', total: '1100000' }
 
@@ -211,4 +211,154 @@ test('金額の直し: 確認カードのときだけ。税込みは画面の今
 test('会話: 答えた言葉は会話に残る（値が飛ぶ元になる）', () => {
   const asked = run([{ t: 'ask', text: 'x' }, { t: 'reply', res: opReply({ amount: '1000000' }) }, { t: 'answer', value: ' 株式会社サンプル ' }]).state
   assert.deepEqual(asked.answers, ['株式会社サンプル'])
+})
+
+// ======== 段階2: 請求書の下書き・支出の登録 ========
+const INV_SNAP: AgentFormSnapshot = { client: '株式会社サンプル', title: '11月分 制作費', issue: '2026-11-06', due: '', subtotal: '300000', tax: '30000', total: '330000' }
+const EXP_SNAP: AgentFormSnapshot = { vendor: 'Notion Labs', title: 'Notion ビジネスプラン', category: 'SaaS', cycle: '毎月', start: '2026-11-06', amount: '5000', taxIncluded: 'false', currency: 'JPY' }
+const STAGE2: { op: ChatOp; values: Record<string, string>; snap: AgentFormSnapshot }[] = [
+  { op: INCOME_INVOICE_DRAFT, values: { amount: '300000', client: '株式会社サンプル', title: '11月分 制作費' }, snap: INV_SNAP },
+  { op: EXPENSE_ADD, values: { amount: '5000', vendor: 'Notion Labs', title: 'Notion ビジネスプラン' }, snap: EXP_SNAP },
+]
+const opRes = (op: ChatOp, values: Record<string, string>): ChatApiResponse => ({ kind: 'op', op, values, missing: op.fields.filter((f) => !values[f.key]), say: '進めます。' })
+const toConfirm = (op: ChatOp, values: Record<string, string>, snap: AgentFormSnapshot) =>
+  run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }, { t: 'ready', snap }]).state
+
+test('段階2の操作の定義: 保存は確認カードの対象で、確定・送付・削除は入れない。日付や種類は AI に読ませない', () => {
+  assert.deepEqual(CHAT_OPS.map((o) => o.key), ['income.sale.add', 'income.invoice.draft', 'expense.contract.add'])
+  assert.equal(new Set(CHAT_OPS.map((o) => o.key)).size, CHAT_OPS.length)
+  for (const { op } of STAGE2) {
+    assert.equal(op.risk, 'write')
+    assert.ok(op.fields.every((f) => f.required), `${op.key}: 読み取る欄は、画面が必須にしているものだけ`)
+    assert.ok(!op.fields.some((f) => ['due', 'issue', 'start', 'type', 'status', 'category', 'cycle'].includes(f.key)), `${op.key}: 日付・種類・カテゴリは AI に読ませない`)
+    assert.ok(!/確定|送付|送信|削除/.test(op.submitLabel + op.confirmTitle), op.key)
+    assert.ok(!/(確定|送付|送信)する/.test(op.description), `${op.key}: 説明に確定・送付をする、と書かない`)
+    assert.equal(buildSteps(op).at(-1)?.id, 'confirm')
+  }
+  assert.equal(buildSteps(INCOME_INVOICE_DRAFT).at(-1)?.label, '確認して下書きを保存する')
+  assert.equal(chatOpByKey('expense.contract.add'), EXPENSE_ADD)
+  // 今の案内の同じ仕事は AI の選択肢から外れ、同じ仕事が2つ並ばない
+  const ids = chatActions().map((a) => a.id)
+  assert.ok(ids.includes('income.invoice.draft') && ids.includes('expense.contract.add'))
+  assert.ok(!ids.includes('income.invoice.create') && !ids.includes('expense.contract.create'))
+  assert.equal(new Set(ids).size, ids.length)
+})
+
+test('段階2: API の返事は、依頼の文で確かめた値だけを残す（作り話の取引先・金額は捨てる）', () => {
+  const inv = chatResponse({ kind: 'action', actionId: 'income.invoice.draft', values: { amount: '300000', client: '作り話商事', title: '11月分 制作費' }, missing: [], reason: '' }, '株式会社サンプルに11月分 制作費30万円の請求書を作って')
+  assert.equal(inv.kind, 'op')
+  if (inv.kind === 'op') {
+    assert.deepEqual(inv.values, { amount: '300000', title: '11月分 制作費' })
+    assert.deepEqual(inv.missing.map((f) => f.key), ['client'])
+    assert.match(inv.say, /¥300,000 の請求書の下書き/)
+  }
+  const exp = chatResponse({ kind: 'action', actionId: 'expense.contract.add', values: { amount: '9999', vendor: 'Notion Labs', title: 'Notion' }, missing: [], reason: '' }, 'Notion Labsに Notion を月5,000円で登録して')
+  assert.equal(exp.kind, 'op')
+  if (exp.kind === 'op') {
+    assert.deepEqual(exp.values, { vendor: 'Notion Labs', title: 'Notion' })
+    assert.deepEqual(exp.missing.map((f) => f.key), ['amount'])
+  }
+  // 日付の言葉があっても、期日・開始日の欄は読まない（欄に無い名前は捨てる）
+  const due = chatResponse({ kind: 'action', actionId: 'income.invoice.draft', values: { amount: '300000', client: '株式会社サンプル', title: '制作費', due: '2026-11-30' }, missing: [], reason: '' }, '株式会社サンプルに制作費30万円の請求書を11月末期日で作って')
+  assert.ok(due.kind === 'op' && !('due' in due.values))
+})
+
+test('段階2の決まり: 確認の前に保存しない（どの場面でも submit は確認カードのときだけ）', () => {
+  for (const { op, values, snap } of STAGE2) {
+    const working = run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }]).state
+    assert.equal(working.phase, 'working', op.key)
+    assert.equal(reduce(working, { t: 'approve' }).effects.length, 0)
+    assert.equal(reduce(working, { t: 'submitted', ok: true, snap, href: '/x' }).state.phase, 'working')
+    const all: ChatEvent[] = [{ t: 'ask', text: 'x' }, { t: 'reply', res: opRes(op, {}) }, { t: 'answer', value: '1' }, { t: 'step', id: 'open-tool', status: 'done' }, { t: 'retry' }, { t: 'ready', snap }, { t: 'adjust', text: '税込みだった' }, { t: 'changed', snap }, { t: 'reset' }]
+    for (const ev of all) assert.ok(!reduce(working, ev).effects.some((e) => e.k === 'submit'), `${op.key}: ${ev.t}`)
+    // 聞き返しの間も保存しない
+    const asking = run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, {}) }]).state
+    assert.equal(asking.phase, 'asking')
+    assert.equal(reduce(asking, { t: 'approve' }).effects.length, 0)
+    // 確認カードで直しても、保存の指示は返さない
+    const confirm = toConfirm(op, values, snap)
+    assert.equal(confirm.phase, 'confirm')
+    assert.ok(!reduce(confirm, { t: 'adjust', text: '税込みだった' }).effects.some((e) => e.k === 'submit'))
+  }
+})
+
+test('段階2の決まり: 確認で押すと保存は1件だけ（2回押しても増えない）', () => {
+  for (const { op, values, snap } of STAGE2) {
+    const confirm = toConfirm(op, values, snap)
+    const first = reduce(confirm, { t: 'approve' })
+    assert.deepEqual(first.effects, [{ k: 'submit' }], op.key)
+    assert.equal(first.state.phase, 'submitting')
+    assert.deepEqual(reduce(first.state, { t: 'approve' }).effects, [])
+    // 成功の知らせが来たあとに押しても、保存しない
+    const done = reduce(first.state, { t: 'submitted', ok: true, snap, href: '/x/contracts/abc' })
+    assert.equal(done.state.phase, 'done')
+    assert.deepEqual(reduce(done.state, { t: 'approve' }).effects, [])
+    // 成功の知らせが二重に来ても、状態は変わらない
+    assert.equal(reduce(done.state, { t: 'submitted', ok: true, snap, href: '/x' }).state, done.state)
+  }
+})
+
+test('段階2の決まり: 失敗したら完了を出さず、内容を出して確認カードに戻れる', () => {
+  for (const { op, values, snap } of STAGE2) {
+    const submitting = reduce(toConfirm(op, values, snap), { t: 'approve' }).state
+    const failed = reduce(submitting, { t: 'submitted', ok: false, error: '権限がありません。管理者に依頼してください。' })
+    assert.equal(failed.state.phase, 'failed', op.key)
+    assert.equal(failed.state.error, '権限がありません。管理者に依頼してください。')
+    assert.equal(failed.state.done, null)
+    assert.ok(failed.state.steps.some((s) => s.status !== 'done'), '失敗では、作業の一覧を全部済みにしない')
+    assert.ok(!failed.effects.some((e) => e.k === 'submit'))
+    const back = reduce(failed.state, { t: 'retry' })
+    assert.equal(back.state.phase, 'confirm')
+    // 権限などで画面を開く前に止まったときも、完了を出さない
+    const working = run([{ t: 'ask', text: '依頼' }, { t: 'reply', res: opRes(op, values) }]).state
+    const blocked = reduce(working, { t: 'run-failed', error: '支出の登録には、担当者以上の権限が必要です。' })
+    assert.equal(blocked.state.phase, 'failed')
+    assert.equal(blocked.state.done, null)
+  }
+})
+
+test('段階2: 確認カードのあとに画面が変わっていたら、保存せずに確認カードを出し直す', () => {
+  const confirm = toConfirm(EXPENSE_ADD, STAGE2[1].values, EXP_SNAP)
+  const submitting = reduce(confirm, { t: 'approve' }).state
+  const changed = reduce(submitting, { t: 'changed', snap: { ...EXP_SNAP, category: '外注費' } })
+  assert.equal(changed.state.phase, 'confirm')
+  assert.deepEqual(changed.effects, [])
+  assert.equal(changed.state.confirm?.rows.find((r) => r.label === 'カテゴリ')?.value, '外注費')
+  assert.match(changed.state.notice ?? '', /保存せずに/)
+  assert.equal(changed.state.done, null)
+  // 確認カードの間・完了のあとには効かない
+  assert.equal(reduce(confirm, { t: 'changed', snap: EXP_SNAP }).state, confirm)
+})
+
+test('支出の「税込みだった」: 金額は割らず、画面の税込みの切り替えを入れる（請求書は今までどおり税抜に直す）', () => {
+  const confirm = toConfirm(EXPENSE_ADD, STAGE2[1].values, EXP_SNAP)
+  const a = reduce(confirm, { t: 'adjust', text: '税込みだった' })
+  assert.deepEqual(a.effects, [{ k: 'amend', amount: 5000, message: '¥5,000 を税込みとして入れ直しました。', set: { taxIncluded: 'true' } }])
+  assert.equal(a.state.phase, 'working')
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '税抜だった' }).effects, [{ k: 'amend', amount: 5000, message: '¥5,000 を税抜として入れ直しました。', set: { taxIncluded: 'false' } }])
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: '6,000円にして' }).effects, [{ k: 'amend', amount: 6000, message: '金額を ¥6,000 に直しました。' }])
+  assert.deepEqual(reduce(confirm, { t: 'adjust', text: 'やっぱり変えたい' }).effects, [])
+  const inv = toConfirm(INCOME_INVOICE_DRAFT, STAGE2[0].values, INV_SNAP)
+  assert.deepEqual(reduce(inv, { t: 'adjust', text: '税込みだった' }).effects, [{ k: 'amend', amount: 272727, message: '税込みの ¥300,000 を、税抜の ¥272,727 に直しました。' }])
+})
+
+test('段階2の表示: 確認カードは画面の値をそのまま読み、下書き・確定と送付はまだ、を正しく書く', () => {
+  const ic = confirmRows(INCOME_INVOICE_DRAFT, INV_SNAP)
+  assert.equal(ic.rows.find((r) => r.big)?.value, '¥300,000')
+  assert.equal(ic.rows.find((r) => r.label === '支払期日')?.value, '取引先の支払条件で決まります')
+  assert.equal(confirmRows(INCOME_INVOICE_DRAFT, { ...INV_SNAP, due: '2026-11-30' }).rows.find((r) => r.label === '支払期日')?.value, '2026-11-30')
+  assert.match(ic.note, /下書きまで/)
+  assert.match(ic.note, /確定と送付はまだ行いません/)
+  const ec = confirmRows(EXPENSE_ADD, EXP_SNAP)
+  assert.equal(ec.rows.find((r) => r.big)?.label, '金額（税抜）')
+  assert.equal(confirmRows(EXPENSE_ADD, { ...EXP_SNAP, taxIncluded: 'true' }).rows.find((r) => r.big)?.label, '金額（税込）')
+  assert.deepEqual(ec.rows.filter((r) => ['カテゴリ', '支払の周期', '開始日'].includes(r.label)).map((r) => r.value), ['SaaS', '毎月', '2026-11-06'])
+  const id = doneView(INCOME_INVOICE_DRAFT, INV_SNAP, '/income/invoices/inv1')
+  assert.match(id.lead, /請求書の下書きを保存しました/)
+  assert.match(id.lead, /確定と送付はまだ行っていません/)
+  assert.equal(id.next[0].href, '/income/invoices/inv1')
+  const ed = doneView(EXPENSE_ADD, EXP_SNAP, '/expense/acme/contracts/c1')
+  assert.match(ed.lead, /「Notion ビジネスプラン」の支出を登録しました/)
+  assert.equal(ed.next.find((n) => n.id === 'forecast')?.href, '/expense/acme/forecast')
+  assert.match(leadText(EXPENSE_ADD, { amount: '5000' }), /¥5,000 の支出を登録します/)
 })

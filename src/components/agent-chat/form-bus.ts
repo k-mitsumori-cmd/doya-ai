@@ -20,6 +20,11 @@ export interface AgentFormHandler {
   submit(): Promise<SubmitResult>
   /** 入力できる状態か（取引先の一覧を読み終えたなど） */
   ready(): boolean
+  /**
+   * 今の人には操作できない理由（権限がないなど。なければ null）。会話は、値を入れる前にこの理由を出して止まる。
+   * ⚠️ 権限の判定は、画面とサーバーが今していること（ロール・API の 403）をそのまま映す。会話専用の判定を作らない。
+   */
+  blocked?(): string | null
 }
 
 const forms = new Map<string, AgentFormHandler>()

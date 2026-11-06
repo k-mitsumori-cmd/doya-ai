@@ -48,6 +48,8 @@ export type ChatEvent =
   | { t: 'adjust'; text: string }
   | { t: 'run-failed'; error: string }
   | { t: 'approve' }
+  /** 保存の前に画面の値を読み直したら、確認カードを出した時と違っていた（本人が画面で直した）。保存せず、確認カードを出し直す */
+  | { t: 'changed'; snap: AgentFormSnapshot }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
   | { t: 'submitted'; ok: false; error: string }
   | { t: 'retry' }
@@ -56,7 +58,8 @@ export type ChatEvent =
 export type ChatEffect =
   | { k: 'api'; text: string }
   | { k: 'run'; op: ChatOp; values: Record<string, string> }
-  | { k: 'amend'; amount: number; message: string }
+  /** 金額の欄を直す。set は、あわせて入れる欄（例: 税込みの切り替え） */
+  | { k: 'amend'; amount: number; message: string; set?: Record<string, string> }
   | { k: 'submit' }
 
 export const INITIAL_STATE: ChatState = {
@@ -113,16 +116,26 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     case 'adjust': {
       // ⚠️ 直せるのは確認カードを出している間だけ。直したあとも、保存の指示は返さない（もう一度 確認カードで押してもらう）
       if (state.phase !== 'confirm' || !state.op || !state.snap) return { state, effects: [] }
-      const sub = Number(state.snap.subtotal)
       const text = ev.text.normalize('NFKC')
       const typed = [...yenCandidates(text)][0]
       const inclusive = /税込/.test(text)
+      const answers = [...state.answers, ev.text.trim()]
+      if (state.op.taxAdjust === 'flag') {
+        // 画面に「税込み」の切り替えがあるツール。金額はそのままで、切り替えを入れる（割り算をしない）
+        const base = typed ?? Number(state.snap.amount)
+        const exclusive = /税抜/.test(text) && !inclusive
+        if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
+        if (!inclusive && !exclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
+        const message = inclusive ? `${yenText(base)} を税込みとして入れ直しました。` : exclusive ? `${yenText(base)} を税抜として入れ直しました。` : `金額を ${yenText(base)} に直しました。`
+        return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount: base, message, ...(inclusive || exclusive ? { set: { taxIncluded: inclusive ? 'true' : 'false' } } : {}) }] }
+      }
+      const sub = Number(state.snap.subtotal)
       const base = typed ?? sub
       if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
       const amount = inclusive ? Math.round(base / 1.1) : base
       if (!inclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
       const message = inclusive ? `税込みの ${yenText(base)} を、税抜の ${yenText(amount)} に直しました。` : `税抜の ${yenText(amount)} に直しました。`
-      return { state: { ...state, phase: 'working', notice: null, answers: [...state.answers, ev.text.trim()] }, effects: [{ k: 'amend', amount, message }] }
+      return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount, message }] }
     }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }
@@ -132,6 +145,12 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       // ⚠️ 保存の指示を返すのは、確認カードが出ているときだけ
       if (state.phase !== 'confirm') return { state, effects: [] }
       return { state: { ...state, phase: 'submitting', error: null }, effects: [{ k: 'submit' }] }
+    }
+    case 'changed': {
+      // 保存の前の読み直しで違いが見つかった。保存はまだ走っていない。確認カードを、画面の今の値で出し直す
+      if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
+      const c = confirmRows(state.op, ev.snap)
+      return { state: { ...state, phase: 'confirm', snap: ev.snap, notice: '画面の内容が変わったので、保存せずに確認カードを出し直しました。内容を確かめてください。', confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
     }
     case 'submitted': {
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }

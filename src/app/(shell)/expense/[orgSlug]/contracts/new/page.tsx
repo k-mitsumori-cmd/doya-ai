@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import ContractForm from '@/components/expense/ContractForm'
+import AgentBlocked from '@/components/agent-chat/AgentBlocked'
 import { ErrorBox, Loading, PageBody, PageHeader, useExpenseOrg } from '@/components/expense/ui'
 
 function Inner() {
@@ -12,7 +13,8 @@ function Inner() {
   const { canManage, base } = useExpenseOrg()
   const router = useRouter()
   const preset = useSearchParams().get('preset') === 'contractor' ? 'contractor' : undefined
-  if (!canManage) return <PageBody><ErrorBox forbidden /></PageBody>
+  // 会話から開かれたときに、理由を伝えて止まる（支出の登録は、担当者以上）
+  if (!canManage) return <PageBody><ErrorBox forbidden /><AgentBlocked formKey="expense.contract.new" reason="支出の登録には、担当者以上の権限が必要です。組織の管理者に権限の変更を依頼してください。" /></PageBody>
   return (
     <PageBody>
       <Link href={`${base}/${preset ? 'contractors' : 'contracts'}`} className="inline-flex min-h-[44px] items-center gap-1 text-[13px] font-medium text-[var(--sub)] hover:text-[var(--ink)]"><ArrowLeft className="h-4 w-4" />戻る</Link>

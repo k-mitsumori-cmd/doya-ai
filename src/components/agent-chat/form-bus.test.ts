@@ -53,3 +53,17 @@ test('1字ずつ入れる: 途中の値を順に渡し、止めると続きを�
   await motion.typeInto('x', (v) => one.push(v), () => true)
   assert.deepEqual(one, ['x'])
 })
+
+test('権限などで操作できないフォームは、blocked の理由を返す（会話は値を入れる前に止まる）', async () => {
+  const { bus } = await load()
+  const reason = '支出の登録には、担当者以上の権限が必要です。'
+  const off = bus.registerAgentForm('t.blocked', { ...handler(() => true), setValue: () => false, blocked: () => reason })
+  const h = await bus.waitForAgentForm('t.blocked', 500)
+  assert.equal(h?.blocked?.(), reason)
+  assert.equal(h?.setValue('amount', '1'), false)
+  off()
+  // blocked を持たないフォームは、今までどおり（理由なし）
+  const off2 = bus.registerAgentForm('t.free', handler(() => true))
+  assert.equal((await bus.waitForAgentForm('t.free', 500))?.blocked, undefined)
+  off2()
+})
