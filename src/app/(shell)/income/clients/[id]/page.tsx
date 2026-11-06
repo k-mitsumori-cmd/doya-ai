@@ -5,21 +5,17 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import ClientForm, { type ClientDto } from '@/components/income/ClientForm'
+import ClientForm from '@/components/income/ClientForm'
+import { readClientDetailResponse } from '@/components/income/client-detail-response'
 import {
   BILLING_CYCLE_LABEL, Button, Card, ConfirmDialog, ContractStatusBadge, DetailSkeleton, EmptyState, ErrorText, Gate, InvoiceStatusBadge, PageHeader, PageShell,
   PaymentStateBadge, errMsg, fetchJson, s, toast, useResource, yen, ymd,
 } from '@/components/income/ui'
 
-type Detail = ClientDto & {
-  contracts: { id: string; title: string; status: string; amountExclTax: number; billingCycle: string; startDate: string; endDate: string | null }[]
-  invoices: { id: string; invoiceNo: string | null; title: string | null; status: string; issueDate: string; totalInclTax: number; state: { label: string | null; remaining: number } }[]
-}
-
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const res = useResource(() => fetchJson<{ client: Detail }>(`/api/income/clients/${id}`).then((d) => d.client), id)
+  const res = useResource(() => fetchJson<unknown>(`/api/income/clients/${id}`).then((d) => readClientDetailResponse(d, id)), id)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
