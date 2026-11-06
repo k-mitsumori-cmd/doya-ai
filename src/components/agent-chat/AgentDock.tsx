@@ -83,7 +83,7 @@ export default function AgentDock() {
     router.push(withPrefillKey(n.href, stashPrefill(n.prefill, storage)))
   }
   const busy = state.phase === 'reading' || state.phase === 'working' || state.phase === 'submitting'
-  const canType = !busy && state.phase !== 'asking'
+  const canType = !busy && state.phase !== 'asking' && state.phase !== 'choosing'
   const sendDraft = () => {
     const t = draft.trim()
     if (!t) return
@@ -93,7 +93,7 @@ export default function AgentDock() {
   }
   const field = state.missing[0]
   // 答えを待っている（聞き返し・確認カード）。スマホで「会話」を見ていないときに、印を出す
-  const waiting = state.phase === 'asking' || state.phase === 'confirm'
+  const waiting = state.phase === 'asking' || state.phase === 'choosing' || state.phase === 'confirm'
   const doneCount = state.steps.filter((x) => x.status === 'done').length
   const total = state.steps.length
   const lastAnswer = state.answers.length - 1
@@ -165,6 +165,20 @@ export default function AgentDock() {
               </div>
               {state.askError ? <p className={styles.err} role="alert">{state.askError}</p> : null}
             </form>
+          )}
+
+          {state.phase === 'choosing' && state.choose && (
+            <div className={styles.ask}>
+              <p className={styles.say}>{state.choose.prompt}</p>
+              <div className={styles.next}>
+                {state.choose.options.map((o) => (
+                  <button key={o.id} type="button" className={styles.nextBtn} onClick={() => dispatch({ t: 'choose', id: o.id })}><span>{o.label}</span></button>
+                ))}
+              </div>
+              <div className={styles.actions}>
+                <button type="button" className={styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
+              </div>
+            </div>
           )}
 
           {state.confirm && (state.phase === 'confirm' || state.phase === 'submitting' || (state.phase === 'failed')) && (

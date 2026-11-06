@@ -9,7 +9,7 @@ import ExpenseEntry from './Entry'
 import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
 
 /** ドヤAIの「頼む」から来たときに、組織の中で開いてよい画面（?to=） */
-const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new' } as const
+const EXPENSE_ENTRY_TO = { 'new-contract': '/contracts/new', 'new-payable': '/payables' } as const
 
 // Next.js 15 の決まり: searchParams は Promise で受ける（ほかの形を混ぜると、ビルドのあとの型検査で落ちる）
 type ExpensePageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> }

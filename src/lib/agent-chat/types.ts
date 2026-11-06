@@ -75,6 +75,9 @@ export interface NextAction {
 
 export interface ConfirmRow { label: string; value: string; big?: boolean }
 
+/** 本人に選んでもらう選択肢（画面が出す。例: 複数あるワークスペース） */
+export interface ChatChoice { id: string; label: string }
+
 /** API が返す形（op は定義の写し） */
 export type ChatOpResponse = {
   kind: 'op'

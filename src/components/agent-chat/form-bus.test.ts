@@ -84,3 +84,43 @@ test('会話から保存しているあいだだけ、フォームは通知と�
   assert.equal(bus.failKindOf(new Error('x')), undefined)
   assert.equal(bus.failKindOf(null), undefined)
 })
+
+test('選択肢の画面から本物のフォームへ運ぶ: accept を渡すと、選択肢の画面の登録は返さず、本物のフォームが現れるまで待つ', async () => {
+  const { bus } = await load()
+  const moved: string[] = []
+  const chooser = {
+    ...handler(() => true),
+    choices: () => ({ prompt: 'どのワークスペースで進めますか？', options: [{ id: 'acme', label: 'アクメ' }, { id: 'beta', label: 'ベータ' }] }),
+    choose: (id: string) => { moved.push(id) },
+  }
+  const off = bus.registerAgentForm('t.choose', chooser)
+  // accept なしなら、選択肢の画面が返る。会話はここで選択肢を読む
+  const first = await bus.waitForAgentForm('t.choose', 500)
+  assert.equal(first?.choices?.()?.options.length, 2)
+  await first?.choose?.('beta')
+  assert.deepEqual(moved, ['beta'])
+  // accept つきでは、選択肢の画面が残っている間は返さない（時間切れは null）
+  assert.equal(await bus.waitForAgentForm('t.choose', 250, (h) => !h.choices?.()), null)
+  // 本物のフォームが同じ名前で登録されると、それが返る
+  const real = handler(() => true)
+  const waiting = bus.waitForAgentForm('t.choose', 1000, (h) => !h.choices?.())
+  setTimeout(() => { bus.registerAgentForm('t.choose', real) }, 120)
+  assert.equal(await waiting, real)
+  // 選択肢の画面の解除は、あとから登録した本物のフォームを消さない
+  off()
+  assert.equal(bus.getAgentForm('t.choose'), real)
+})
+
+test('欄を出す準備（prepare）は、値を入れる前に1回だけ呼ぶ口。持たないフォームは今までどおり', async () => {
+  const { bus } = await load()
+  const log: string[] = []
+  const off = bus.registerAgentForm('t.prepare', { ...handler(() => true), prepare: async () => { log.push('prepare') }, setValue: (k: string) => { log.push(`set:${k}`); return true } })
+  const h = await bus.waitForAgentForm('t.prepare', 500)
+  await h?.prepare?.()
+  h?.setValue('name', 'x')
+  assert.deepEqual(log, ['prepare', 'set:name'])
+  off()
+  const off2 = bus.registerAgentForm('t.noprepare', handler(() => true))
+  assert.equal((await bus.waitForAgentForm('t.noprepare', 500))?.prepare, undefined)
+  off2()
+})

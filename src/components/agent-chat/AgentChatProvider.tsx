@@ -43,6 +43,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const runId = useRef(0)
 
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
+  // 選択肢を出して待っているとき、本人が選んだ id を実行役へ渡す口（1つの依頼に1つだけ）
+  const chooserRef = useRef<((id: string) => void) | null>(null)
 
   const runOp = useCallback(async (op: ChatOp, values: Record<string, string>, id: number) => {
     const alive = () => runId.current === id
@@ -54,12 +56,28 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       d({ t: 'step', id: 'open-form', status: 'run' })
       const here = op.here ? new RegExp(op.here).test(window.location.pathname) : window.location.pathname === op.path
       if (!here) router.push(op.path)
-      const form = await waitForAgentForm(op.formKey)
+      let form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
+      // 選択肢の画面（ワークスペースが複数ある、など）が出ているときは、AI に決めさせず、本人に選んでもらう。選んだら、その画面へ運んで本物のフォームを待つ
+      const offer = form?.choices?.() ?? null
+      if (form && offer && offer.options.length) {
+        const picker = form
+        d({ t: 'choices', prompt: offer.prompt, options: offer.options })
+        const id = await new Promise<string>((resolve) => { chooserRef.current = resolve })
+        chooserRef.current = null
+        if (!alive()) throw ABORTED
+        await picker.choose?.(id)
+        if (!alive()) throw ABORTED
+        form = await waitForAgentForm(op.formKey, 20_000, (h) => !h.choices?.())
+        if (!alive()) throw ABORTED
+      }
       if (!form) { d({ t: 'run-failed', kind: 'not-started', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。` }); return }
       // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
       const blocked = form.blocked?.()
       if (blocked) { d({ t: 'run-failed', kind: 'blocked', error: blocked }); return }
+      // ダイアログを開くなど、欄を出す準備が要る画面は、ここで出す（値は入れない）
+      await form.prepare?.()
+      if (!alive()) throw ABORTED
       await wait(240); d({ t: 'step', id: 'open-form', status: 'done' })
       // 決まった値 → 欄（依頼から読んだ値）の順。欄ごとに、スクロール → 光らせる → 値が飛ぶ → 入れる、を実際の setValue に合わせて進める
       const todo: { stepId: string; key: string; value: string; label: string; fixed: boolean }[] = [
@@ -133,6 +151,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         } catch { res = null }
         if (runId.current === id) dispatchRef.current({ t: 'reply', res: normalizeReply(res) })
       })()
+    } else if (eff.k === 'choose') {
+      chooserRef.current?.(eff.id)
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
     } else if (eff.k === 'amend') {

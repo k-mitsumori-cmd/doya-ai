@@ -11,6 +11,7 @@ import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import AgentBlocked from '@/components/agent-chat/AgentBlocked'
 import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
+import { parseDuration } from '@/lib/agent-chat/duration'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -207,7 +208,7 @@ function NewRequestContent() {
     }
   }
 
-  // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の KINTAI_LEAVE_REQUEST（休暇の申請）----
+  // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の KINTAI_LEAVE_REQUEST（休暇）と KINTAI_OVERTIME_REQUEST（残業）----
   useAgentForm('kintai.request.new', {
     ready: () => true,
     setValue: (key, value) => {
@@ -217,6 +218,16 @@ function NewRequestContent() {
         case 'start': setLeaveStart(value); return true
         case 'end': setLeaveEnd(value); return true
         case 'reason': setReason(value); return true
+        // 残業の対象日（休暇の開始日・終了日とは別の欄）
+        case 'date': setOtDate(value); return true
+        // 残業の時間は「2時間30分」の言い方で受け取り、画面の「時間」「分」に分けて入れる。読めない言い方は入れない（false）
+        case 'duration': {
+          const d = parseDuration(value)
+          if (!d) return false
+          setOtHours(d.hours > 0 ? String(d.hours) : '')
+          setOtMinutes(d.minutes > 0 ? String(d.minutes) : '')
+          return true
+        }
         default: return false
       }
     },
@@ -225,6 +236,9 @@ function NewRequestContent() {
       leaveLabel: ({ paid: '有給休暇', special: '特別休暇', unpaid: '欠勤' } as Record<string, string>)[leaveType] ?? '',
       start: leaveStart,
       end: leaveEnd,
+      date: otDate,
+      hours: otHours,
+      minutes: otMinutes,
       reason: reason.trim(),
     }),
     submit: submitRequest,
@@ -465,12 +479,12 @@ function NewRequestContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
-                  <input type="date" required value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  <input type="date" required data-agent-field="date" value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">時間 <span className="text-red-500">*</span></label>
-                    <input type="number" required min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="number" required min="0" max="24" data-agent-field="duration" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">分</label>

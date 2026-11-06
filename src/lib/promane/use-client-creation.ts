@@ -60,7 +60,9 @@ export function useClientCreation(workspaceSlug: string, workspaceId?: string) {
   const scope = scopeRef.current;
   const [view, setView] = useState<{ key: string; status: Status; message: string }>({ key, status: 'blocked', message: '保存状態を確認しています。' });
   const current = () => scopeRef.current === scope && scope.active;
-  const show = (status: Status, message: string) => { if (current()) setView({ key, status, message }); };
+  // 画面の案内（message）の最新の値。会話（AgentDock）が、保存に失敗した直後に、画面の描き直しを待たずに理由を読むため
+  const lastMessage = useRef('');
+  const show = (status: Status, message: string) => { if (current()) { lastMessage.current = message; setView({ key, status, message }); } };
   function rememberWorkspace(value: unknown) {
     if (!workspaceId) return;
     const slug = value && typeof value === 'object' && 'workspaceSlug' in value ? value.workspaceSlug : null;
@@ -179,5 +181,5 @@ export function useClientCreation(workspaceSlug: string, workspaceId?: string) {
     finally { if (current()) scope.busy = false; }
     return null;
   }
-  return { getWorkspaceSlug: () => scope.workspaceSlug, scopeKey: key, status: view.key === key ? view.status : 'blocked' as Status, message: view.key === key ? view.message : '保存状態を確認しています。', save, recover };
+  return { getWorkspaceSlug: () => scope.workspaceSlug, getMessage: () => lastMessage.current, scopeKey: key, status: view.key === key ? view.status : 'blocked' as Status, message: view.key === key ? view.message : '保存状態を確認しています。', save, recover };
 }

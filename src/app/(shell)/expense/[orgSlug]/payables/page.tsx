@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
@@ -8,7 +8,8 @@ import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import { expenseApi, jsonInit, useBusyAction, useExpenseQuery } from '@/components/expense/api'
 import { StatTile } from '@/components/ds'
 import type { Schedule } from '@/components/expense/types'
-import OneOffModal from '@/components/expense/OneOffModal'
+import OneOffModal, { type OneOffAgentBridge } from '@/components/expense/OneOffModal'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import {
   Badge, Btn, Card, EmptyState, ErrorBox, Field, Loading, MonthSwitcher, PageBody, PageHeader, StatusBadge, TableWrap,
   currentYm, fmtDate, fmtMonthDay, formatYen, inputCls, isYm, tableCls, tbodyCls, tdCls, theadCls, thCls, todayYmd, trCls, useConfirm, useExpenseOrg,
@@ -65,7 +66,7 @@ function RowForm({ s, mode, orgSlug, onDone, onCancel }: { s: Schedule; mode: Ex
 
 function PayablesInner() {
   const { orgSlug } = useParams() as { orgSlug: string }
-  const { canManage } = useExpenseOrg()
+  const { canManage, role } = useExpenseOrg()
   const router = useRouter()
   const sp = useSearchParams()
   const q = sp.get('month')
@@ -73,6 +74,20 @@ function PayablesInner() {
   const { data, error, forbidden, loading, reload } = useExpenseQuery<{ schedules: Schedule[]; totals: { all: number; paid: number; unpaid: number } }>(`/api/expense/schedules?month=${month}`, orgSlug)
   const [open, setOpen] = useState<{ id: string; mode: Mode } | null>(null)
   const [adding, setAdding] = useState(false)
+  // 会話（AgentDock）が、開いた「単発の支出を追加」の窓の欄を動かすための口（窓が開いている間だけ入る）
+  const agentBridge: OneOffAgentBridge = useRef<OneOffAgentBridge['current']>(null)
+  useAgentForm('expense.schedule.new', {
+    // 権限の判定が済んでから動かす。担当者（manager）未満は、画面の「単発の支出を追加」ボタンと同じく、操作できない
+    ready: () => role !== null,
+    blocked: () => (canManage ? null : '単発の支出の追加には、担当者以上の権限が必要です。組織の管理者に権限の変更を依頼してください。'),
+    prepare: async () => {
+      setAdding(true)
+      for (let i = 0; i < 30 && !agentBridge.current; i++) await new Promise<void>((r) => setTimeout(r, 100))
+    },
+    setValue: (key, value) => agentBridge.current?.setValue(key, value) ?? false,
+    snapshot: () => agentBridge.current?.snapshot() ?? {},
+    submit: async () => (agentBridge.current ? agentBridge.current.submit() : { ok: false, error: '単発の支出の画面が閉じられました。もう一度、依頼から始めてください。' }),
+  })
   const { ask, dialog } = useConfirm()
   // 行の操作は1つずつ。実行中は全行の操作ボタンを止め、二度押しで同じ更新が2回走らないようにする
   const { busy, run } = useBusyAction()
@@ -202,7 +217,7 @@ function PayablesInner() {
           </TableWrap>
         )}
       </Card>
-      {adding && <OneOffModal orgSlug={orgSlug} defaultDate={`${month}-${month === currentYm() ? todayYmd().slice(8) : '01'}`} onClose={() => setAdding(false)} onSaved={reload} />}
+      {adding && <OneOffModal orgSlug={orgSlug} defaultDate={`${month}-${month === currentYm() ? todayYmd().slice(8) : '01'}`} onClose={() => setAdding(false)} onSaved={reload} bridge={agentBridge} />}
     {dialog}
     </PageBody>
   )

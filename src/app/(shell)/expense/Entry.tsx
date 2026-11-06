@@ -12,7 +12,7 @@ import { currentSearchParams, forwardPath } from '@/lib/agent-router/entry'
 
 /** ドヤAIの「頼む」から来たときの行き先と値を、組織の中の画面へ運ぶ（組織を作った直後も含む） */
 function orgPath(slug: string): string {
-  const allow = { 'new-contract': '/contracts/new' }
+  const allow = { 'new-contract': '/contracts/new', 'new-payable': '/payables' }
   return `/expense/${encodeURIComponent(slug)}${forwardPath(currentSearchParams(), allow)}`
 }
 

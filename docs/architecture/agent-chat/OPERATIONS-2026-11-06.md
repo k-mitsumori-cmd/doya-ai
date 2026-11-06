@@ -10,7 +10,7 @@
   - 確認が必要: 保存や変更を伴います。既存の保存 API が1回で完結し、外部送信・課金・長時間の生成を伴わないので、確認カードのあとにチャットから保存できます。
   - 未対応: 理由を括弧に書きます。
   - 未確認: コードで確かめられなかった項目です。推測では埋めていません。
-- 「確認が必要」は、チャットで進められる見込みがあるという意味です。実装済みなのは、末尾に「（実装済み）」と付いた3つ（income.sale.add、income.invoice.draft、expense.contract.add）と、本書の段階3で足した操作だけです。
+- 「確認が必要」は、チャットで進められる見込みがあるという意味です。実装済みなのは、末尾に「（実装済み）」と付いた3つ（income.sale.add、income.invoice.draft、expense.contract.add）と、本書の段階3・段階4で足した操作だけです。
 - 本人が例外と認めたのは、通話中の録音、面接本番、AI 商談ルームの3つです。該当の行は「未対応（例外）」にしています。
 - 表は調査の担当が、画面・API・lib のコードから拾いました。行の取りこぼしがありえます。権限の条件は API 内の判定を読んだものです。
 
@@ -36,12 +36,12 @@
 | shodan | 5 | 3 | 9 | 0 | 17 |
 | aishodan | 4 | 7 | 9 | 0 | 20 |
 | doyalist | 5 | 1 | 7 | 0 | 13 |
-| promane | 3 | 6 | 8 | 0 | 17 |
+| promane | 3 | 5 | 9 | 0 | 17 |
 | hr | 6 | 12 | 8 | 0 | 26 |
 | kintai | 6 | 9 | 5 | 0 | 20 |
 | mensetsu | 5 | 7 | 7 | 0 | 19 |
 | cunning | 3 | 4 | 8 | 0 | 15 |
-合計: 可能 100、確認が必要 132、未対応 152、未確認 2（計 386）。段階3で、promane の案件の作成を「未対応（HTTP の保存 API なし）」から「確認が必要（実装済み）」に直した。
+合計: 可能 100、確認が必要 131、未対応 153、未確認 2（計 386）。段階3で、promane の案件の作成を「未対応（HTTP の保存 API なし）」から「確認が必要（実装済み）」に直した。段階4で、promane の経費の追加を「確認が必要」から「未対応（作りが合わない）」に直した。
 
 ### 未対応の理由（153行の内訳）
 
@@ -58,6 +58,7 @@
 | 外部への送信（Slack など） | 1 |
 | 決済 | 1 |
 | 画面に無い経路・保守操作 | 3 |
+| 作りが合わない（案件ごとのタブの中にあり、案件を決める経路が無い。段階4の結果を参照） | 1 |
 | そのほか（外部の文字起こしの課金と長時間） | 1 |
 
 未確認の2行は、adimage の ZIP 書き出し（GET /api/adimage/concepts/[id]/export）と、interview の claim-guest です。
@@ -87,13 +88,43 @@
 
 ### 作り方で決めたこと
 
-- 案件の入口は `/promane?to=new-project` です。ワークスペースが1つのときだけ、新規案件の画面へ運びます。複数あるときは選ぶ画面で止まるため、チャットは約20秒待って「画面から始めてください」と出します（どのワークスペースかを AI に決めさせません）。
+- 案件の入口は `/promane?to=new-project` です。ワークスペースが1つのときだけ、新規案件の画面へ運びます。複数あるときは選ぶ画面で止まります。段階3では、チャットは約20秒待って「画面から始めてください」と出していました。段階4で、会話が選択肢を出して聞く形に変えました（どのワークスペースかを AI に決めさせません）。
 - 案件の顧客・開始日・納期は入れません。確認カードに、入っていない項目を書きます。
 - 休暇は、特別休暇・欠勤・残業・休日出勤・打刻修正を扱いません。同じ画面で、あとから足せます。
 - 日付は AI が「今日の日付」から計算します。依頼の文に日付の言葉があるときだけ残し、確認カードに日付をそのまま出して、本人が確かめます。
 - 申請はサーバーに保存するだけで、メールや通知を送りません（`POST /api/kintai/requests` に送信の処理が無いことを確かめました）。承認はしません。
 - 会話から保存した場合、フォームは通知（toast）と画面の移動をしません。会話が完了を出してから、できた物の画面へ移ります（段階3 B-1）。
 - 権限がない失敗と、ツールを始めていない失敗は、「もう一度やる」を出しません。権限がないときは管理者に頼む案内、ツールを始めていないときは「画面から始める」を出します（段階3 B-2）。
+
+## 段階4の結果（2026-11-06）
+
+| 操作の key | ツール | やること | 保存の経路 | 権限の見え方 | 結果 |
+|---|---|---|---|---|---|
+| `kintai.request.overtime` | kintai | 残業の申請を1件出す（対象日・残業の時間・理由を読む。種類は残業に固定） | `POST /api/kintai/requests`（画面の `submitRequest`。休暇と同じ画面・同じフォーム） | 無効化された従業員は画面が理由を出して止まる。API の 403 は「権限がない」失敗として出す | 実装 |
+| `promane.client.add` | promane | 顧客を1件追加する（会社名が必須。担当者名・メール・電話は依頼に書かれたときだけ） | `POST /api/promane/clients`（画面の `createClient`。送信の記録つきの `useClientCreation.save`） | 閲覧のみのワークスペースは、画面が出す理由（AgentBlocked）で止まる。前の送信の結果が分からない状態は、画面の案内を理由にして止まる | 実装 |
+| `expense.schedule.add` | expense | 単発の支出を支払予定に1件追加する（金額・内容を読む。支払日は日付の言葉があるときだけ） | `POST /api/expense/schedules`（画面の「単発の支出を追加」の窓の `persist`） | manager 未満は、画面のボタンと同じく理由を出して止まる。API の 403 は「権限がない」失敗として出す | 実装 |
+| ワークスペースの選択 | promane | 案件の作成と顧客の追加で、ワークスペースが複数あるとき、会話が選択肢を出して聞く | 保存なし（選んだワークスペースの画面へ移るだけ） | 選択肢は、選択画面が今出している一覧（自分が所属するもの）と同じ | 実装 |
+| 経費の追加 | promane | 案件の経費を1件追加する | `POST /api/promane/expenses` | owner・admin・member | 未対応。作りが合わない（下の理由） |
+
+経費（promane）を入れなかった理由は、次の4つです。コードを読んで確かめました。
+
+- 経費は案件ごとです。`POST /api/promane/expenses` は `projectId` が必須で、そのワークスペースに無い案件は 404 を返します。入口 `/promane?to=` が運べるのはワークスペースまでで、案件は決まりません。
+- 案件を選ぶには案件の一覧が要ります。一覧を返す HTTP の API は無く、サーバー描画の画面（`projects/page.tsx`）だけが読んでいます。会話へ一覧を渡す経路を新しく作ることになり、既存の保存の経路だけを使う決まりから外れます。
+- 経費の欄は、案件の詳細の「経費」タブの中にあります。タブはサーバー側の `defaultValue="gantt"` で決まり、URL では指定できません。経費の追加欄は、「追加」を押して `showForm` が true になってから現れます。
+- 案件を AI に決めさせることはしません。選択肢で本人が選ぶ作りにはできますが、上の2つが先に要ります。
+
+経費を足すなら、先に次の3つを直す必要があります。案件の一覧を返す読み取りの経路、案件の詳細でタブを指定できる口、会話から経費の追加欄を開く口です。今回は、この直しをしていません。
+
+### 段階4で作り方を決めたこと
+
+- 残業の時間は、依頼の文に書かれた言い方（例: 2時間30分）をそのまま読みます。読んだ言い方を `parseDuration`（`src/lib/agent-chat/duration.ts`）で時間と分に分け、画面の「時間」「分」に入れます。90分は1時間30分に繰り上げます。読めない言い方は入れず、聞き返します。
+- 残業の対象日は、依頼に日付の言葉があるときだけ残します。確認カードに日付をそのまま出して、本人が確かめます。
+- 顧客は会社名だけが必須です。担当者名・メール・電話は、依頼の文に書かれているときだけ入れます。住所とメモは入れません。案件への紐づけもしません。
+- 単発の支出は、カテゴリ（その他）・税率（10%）・源泉徴収（対象にしない）を画面の初期値のまま入れ、確認カードに出します。「税込みだった」は画面の税込みの切り替えを入れ、金額は割りません。
+- 単発の支出の窓は、会話が開きます（フォームの `prepare`）。顧客の追加のダイアログも同じです。値は入れず、窓を開くだけです。
+- 作業の一覧には、書かれていない任意の項目の行を出しません。入れていない欄を、済みと見せないためです。
+- ワークスペースの選択は、フォームの `choices` と `choose` で行います。選択画面（`/promane`）が、会話の依頼で来たときだけ登録します。選ぶまで、会話は保存にも次の画面にも進みません。選んだあと、本物のフォームが現れるまで待ちます。
+- 選択肢を出している間は、新しい依頼を受け付けません。「やめる」で止められます。
 
 ---
 
@@ -421,7 +452,7 @@ AI を呼ぶ API の多くはログイン必須で、日次または月次の上
 | 契約の価格を改定する | 整理 | /expense/[orgSlug]/contracts/[id] | POST /api/expense/contracts/[id]/prices | manager 以上 | 確認が必要 |
 | 契約を削除する | 整理 | /expense/[orgSlug]/contracts/[id] | DELETE /api/expense/contracts/[id] | admin 以上 | 未対応（削除） |
 | 契約の一覧・詳細を見る | 確認 | /expense/[orgSlug]/contracts、/expense/[orgSlug]/contracts/[id] | 保存なし（GET /api/expense/contracts） | member 以上 | 可能 |
-| 単発の支出を追加する | 入力 | /expense/[orgSlug]/payables | POST /api/expense/schedules | manager 以上 | 確認が必要 |
+| 単発の支出を追加する | 入力 | /expense/[orgSlug]/payables | POST /api/expense/schedules | manager 以上 | 確認が必要（実装済み: expense.schedule.add） |
 | 支払予定を更新する（請求書受領・支払済み・見送り・金額やメモの修正） | 整理 | /expense/[orgSlug]/payables | PATCH /api/expense/schedules/[id] | manager 以上 | 確認が必要 |
 | 単発の支出を削除する | 整理 | /expense/[orgSlug]/payables | DELETE /api/expense/schedules/[id] | manager 以上 | 未対応（削除） |
 | 取引先（業者）を登録・直す | 入力 | /expense/[orgSlug]/contractors、/expense/[orgSlug]/contractors/[vendorId] | POST /api/expense/vendors、PATCH /api/expense/vendors/[id] | manager 以上 | 確認が必要 |
@@ -596,9 +627,9 @@ AI（スコア・次の一手）は、月の回数が無料20、LIGHT 300、PRO 
 | 案件を削除する | 整理 | /promane/[slug]/projects/[projectId] | Server Action deleteProject | owner・admin・member | 未対応（削除） |
 | タスクを追加・更新・移動する | 入力 | /promane/[slug]/projects/[projectId] | Server Action createTask / updateTask / moveTask | owner・admin・member | 未対応（HTTP の保存 API が無く Server Action のみ） |
 | 工数（作業時間）を記録する | 入力 | /promane/[slug]/timesheet | Server Action createTimeEntry | owner・admin・member | 未対応（HTTP の保存 API が無く Server Action のみ） |
-| 顧客（取引先）を追加する | 入力 | /promane/[slug]/clients | POST /api/promane/clients | owner・admin・member。operationId・workspaceSlug が必要 | 確認が必要 |
+| 顧客（取引先）を追加する | 入力 | /promane/[slug]/clients | POST /api/promane/clients | owner・admin・member。operationId・workspaceSlug が必要 | 確認が必要（実装済み: promane.client.add） |
 | 顧客を削除する | 整理 | /promane/[slug]/clients | DELETE /api/promane/clients?id= | owner・admin・member | 未対応（削除） |
-| 経費を追加する | 入力 | /promane/[slug]/projects/[projectId]（経費タブ） | POST /api/promane/expenses | owner・admin・member。projectId・operationId が必要 | 確認が必要 |
+| 経費を追加する | 入力 | /promane/[slug]/projects/[projectId]（経費タブ） | POST /api/promane/expenses | owner・admin・member。projectId・operationId が必要 | 未対応（作りが合わない。段階4の結果を参照） |
 | メンバーの時給を設定する | 整理 | /promane/[slug]/members | PATCH /api/promane/members/[id]/rate | owner・admin | 確認が必要 |
 | ワークスペース設定を直す | 整理 | /promane/[slug]/settings | PATCH /api/promane/workspaces/[id] | owner・admin。operationId が必要 | 確認が必要 |
 | メンバーを招待する | 入力 | /promane/[slug]/members | POST /api/promane/invite | owner・admin。人数上限（プラン） | 未対応（招待メールを送る） |
@@ -684,7 +715,7 @@ AI（スコア・次の一手）は、月の回数が無料20、LIGHT 300、PRO 
 | 全員の勤怠（日次）を見る | 確認 | /kintai/admin/attendance | 保存なし（GET /api/kintai/attendance/admin?date=） | manager 以上（全員分は hr_admin 以上） | 可能 |
 | 勤怠をCSV・Excelで書き出す | 確認 | /kintai/attendance、/kintai/admin/attendance | 保存なし（GET /api/kintai/attendance/export） | hr_admin 以上 | 可能 |
 | 勤怠を再計算する | 整理 | なし（画面から呼ばれていない） | POST /api/kintai/attendance/recalculate | hr_admin 以上 | 未対応（画面に無い一括の保守操作） |
-| 申請を出す（打刻修正・休暇・残業・休日出勤） | 入力 | /kintai/requests/new | POST /api/kintai/requests | メンバー（employee 以上）。有効な従業員のみ | 確認が必要（有給休暇だけ実装済み） |
+| 申請を出す（打刻修正・休暇・残業・休日出勤） | 入力 | /kintai/requests/new | POST /api/kintai/requests | メンバー（employee 以上）。有効な従業員のみ | 確認が必要（有給休暇・残業は実装済み。打刻修正・休日出勤は未実装） |
 | 自分の申請の一覧を見る | 確認 | /kintai/requests | 保存なし（GET /api/kintai/requests） | メンバー（manager は部署の分、hr_admin 以上は全員の分） | 可能 |
 | 自分の申請を取り下げる | 整理 | /kintai/requests | PATCH /api/kintai/requests/[id] {status:'withdrawn'} | 本人のみ。承認待ちのみ | 確認が必要 |
 | 申請を承認・却下する | 整理 | /kintai/approvals | PATCH /api/kintai/requests/[id] {status:'approved' または 'rejected'} | manager 以上。自分の申請は不可（system_admin のみ可）。manager は自分の部署の分のみ | 確認が必要 |

@@ -15,6 +15,9 @@ import { useConfirm } from "@/components/promane/confirm-dialog";
 import { useClientCreation } from '@/lib/promane/use-client-creation';
 import { parsePromaneClientCreate } from '@/lib/promane/client-input';
 import { userErrorMessage } from '@/lib/promane/user-error'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import AgentBlocked from '@/components/agent-chat/AgentBlocked'
+import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
 
 const emptyClientDraft = () => ({ name: '', contactName: '', email: '', phone: '' });
 
@@ -32,7 +35,8 @@ type ClientItem = {
 type ClientActionsProps = { workspaceSlug: string; workspaceId: string; clients: ClientItem[] };
 
 export function ClientActions({ canWrite, ...props }: ClientActionsProps & { canWrite: boolean }) {
-  return canWrite ? <EditableClientActions {...props} /> : <ClientActionsContent {...props} />;
+  // 閲覧のみのワークスペースでは、会話に理由を伝えて止まる（画面は何も足さない。判定は画面の canWrite のまま）
+  return canWrite ? <EditableClientActions {...props} /> : <><AgentBlocked formKey="promane.client.new" reason="このワークスペースでは閲覧のみのため、顧客を追加できません。オーナーまたは管理者に権限の変更を依頼してください。" /><ClientActionsContent {...props} /></>;
 }
 
 function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientActionsProps) {
@@ -59,22 +63,58 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
     return next;
   }
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (submission.current || creation.status !== 'ready') return;
+  /**
+   * 顧客の追加。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
+   * 会話からの保存では、通知（toast）を出さない。会話が完了を出してから、会話が移る。
+   */
+  async function createClient(inputDraft: ReturnType<typeof emptyClientDraft>): Promise<SubmitResult> {
+    if (submission.current || creation.status !== 'ready') return { ok: false, error: creation.message || '保存の準備ができていません。少し待って、もう一度お試しください。' };
     submission.current = true;
-    const inputDraft = rememberDraft(e.currentTarget);
+    const byAgent = isAgentSubmit();
     try {
       const input = parsePromaneClientCreate(inputDraft);
-      if (!await creation.save(input)) return;
-      toast.success('顧客を追加しました！', { duration: 3000 });
+      if (!await creation.save(input)) {
+        // 画面の案内（保存状態の確認など）。保存が失敗した直後の最新の文を読む
+        return { ok: false, error: creation.getMessage?.() || '顧客を追加できませんでした。画面の案内を確かめてください。' };
+      }
+      if (!byAgent) toast.success('顧客を追加しました！', { duration: 3000 });
       setDraft(emptyClientDraft());
       setOpen(false);
+      const slug = creation.getWorkspaceSlug?.() || workspaceSlug;
       refreshCreated();
+      return { ok: true, href: `/promane/${encodeURIComponent(slug)}/clients` };
     } catch (error) {
-      toast.error(userErrorMessage(error instanceof Error ? error.message : null, '入力内容を確かめて、もう一度お試しください。'), { duration: 6000 });
+      const m = userErrorMessage(error instanceof Error ? error.message : null, '入力内容を確かめて、もう一度お試しください。');
+      if (!byAgent) toast.error(m, { duration: 6000 });
+      return { ok: false, error: m };
     } finally { submission.current = false; }
   }
+
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await createClient(rememberDraft(e.currentTarget));
+  }
+
+  // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の PROMANE_CLIENT_ADD ----
+  useAgentForm('promane.client.new', {
+    // 保存状態が確認できているときだけ入力できる。前の送信の結果が分からない（unknown）ときは、画面の案内を理由にして止まる
+    ready: () => creation.status === 'ready' || creation.status === 'unknown',
+    blocked: () => (creation.status === 'unknown' ? creation.message || '前の送信の結果を確認できていません。画面の「保存状態を確認」を押してください。' : null),
+    prepare: async () => {
+      setOpen(true);
+      for (let i = 0; i < 20; i++) {
+        if (document.querySelector('[data-agent-field="name"]')) return;
+        await new Promise<void>((r) => setTimeout(r, 100));
+      }
+    },
+    setValue: (key, value) => {
+      if (!['name', 'contactName', 'email', 'phone'].includes(key)) return false;
+      setDraft((d) => ({ ...d, [key]: value }));
+      return true;
+    },
+    snapshot: () => ({ name: draft.name.trim(), contactName: draft.contactName.trim(), email: draft.email.trim(), phone: draft.phone.trim() }),
+    submit: () => createClient(draft),
+  });
 
   async function handleDelete(clientId: string, name: string) {
     const ok = await confirm({
@@ -140,24 +180,24 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
               </DialogTitle>
             </DialogHeader>
       {open && recoveryPanel}
-            <form onChange={e => { rememberDraft(e.currentTarget); }} onSubmit={handleCreate} className="space-y-4 mt-2">
+            <form onSubmit={handleCreate} className="space-y-4 mt-2">
               <fieldset disabled={creation.status !== 'ready'} className="space-y-4">
               <div>
                 <Label htmlFor={`${inputId}-name`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">会社名</Label>
-                <Input id={`${inputId}-name`} name="name" defaultValue={draft.name} maxLength={200} required className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="株式会社〇〇" />
+                <Input id={`${inputId}-name`} name="name" data-agent-field="name" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} maxLength={200} required className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="株式会社〇〇" />
               </div>
               <div>
                 <Label htmlFor={`${inputId}-contactName`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">担当者名</Label>
-                <Input id={`${inputId}-contactName`} name="contactName" defaultValue={draft.contactName} className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="田中太郎" />
+                <Input id={`${inputId}-contactName`} name="contactName" data-agent-field="contactName" value={draft.contactName} onChange={(e) => setDraft((d) => ({ ...d, contactName: e.target.value }))} className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="田中太郎" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor={`${inputId}-email`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">メール</Label>
-                  <Input id={`${inputId}-email`} name="email" defaultValue={draft.email} type="email" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
+                  <Input id={`${inputId}-email`} name="email" data-agent-field="email" value={draft.email} onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))} type="email" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
                 <div>
                   <Label htmlFor={`${inputId}-phone`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">電話</Label>
-                  <Input id={`${inputId}-phone`} name="phone" defaultValue={draft.phone} className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
+                  <Input id={`${inputId}-phone`} name="phone" data-agent-field="phone" value={draft.phone} onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))} className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full h-12 rounded-full font-black text-[15px] shadow-md hover:scale-[1.02] active:scale-95 transition-all">

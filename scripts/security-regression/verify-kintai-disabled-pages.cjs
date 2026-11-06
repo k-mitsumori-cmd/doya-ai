@@ -32,6 +32,8 @@ const mocks = {
   '@/components/agent-chat/useAgentForm': { useAgentForm: () => {} },
   '@/components/agent-chat/AgentBlocked': { __esModule: true, default: () => null },
   '@/components/agent-chat/form-bus': { isAgentSubmit: () => false },
+  // 残業の時間の言い方を読む部品。ここでは描画だけを確かめるので、読まない形にする
+  '@/lib/agent-chat/duration': { parseDuration: () => null },
 }
 
 // Render the real extracted clock hook during SSR; effects remain unexecuted here.

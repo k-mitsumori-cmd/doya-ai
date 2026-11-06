@@ -8,11 +8,11 @@
 import { normalizeValue } from '@/lib/agent-router/prefill'
 import type { AgentField } from '@/lib/agent-router/types'
 import { yenCandidates } from './ground'
-import { buildSteps, confirmRows, doneView } from './ops'
+import { answerProblem, buildSteps, confirmRows, doneView } from './ops'
 import { yenText } from './today'
-import type { AgentFormSnapshot, ChatApiResponse, ChatOp, ConfirmRow, NextAction, StepView } from './types'
+import type { AgentFormSnapshot, ChatApiResponse, ChatChoice, ChatOp, ConfirmRow, NextAction, StepView } from './types'
 
-export type Phase = 'idle' | 'reading' | 'asking' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
+export type Phase = 'idle' | 'reading' | 'asking' | 'choosing' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
 
 export interface ChatState {
   phase: Phase
@@ -36,6 +36,8 @@ export interface ChatState {
   error: string | null
   /** 失敗の理由の種類。blocked=権限がない / not-started=ツールをまだ始めていない（どちらも、もう一度やっても同じ失敗になる） */
   errorKind: FailKind
+  /** 選択肢を出して聞いているとき（choosing）。ワークスペースが複数あるときなど、AI に決めさせずに本人が選ぶ */
+  choose: { prompt: string; options: ChatChoice[] } | null
   /** チャットの操作でない答え（guided のとき）。今の案内のまま出す */
   guide: Exclude<ChatApiResponse, { kind: 'op' }> | null
 }
@@ -56,6 +58,10 @@ export type ChatEvent =
   | { t: 'changed'; snap: AgentFormSnapshot }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
   | { t: 'submitted'; ok: false; error: string; kind?: FailKind }
+  /** 画面が選択肢を出した（例: ワークスペースが複数ある）。作業を止め、本人の選択を待つ */
+  | { t: 'choices'; prompt: string; options: ChatChoice[] }
+  /** 本人が選択肢を選んだ */
+  | { t: 'choose'; id: string }
   | { t: 'retry' }
   | { t: 'reset' }
 
@@ -65,9 +71,11 @@ export type ChatEffect =
   /** 金額の欄を直す。set は、あわせて入れる欄（例: 税込みの切り替え） */
   | { k: 'amend'; amount: number; message: string; set?: Record<string, string> }
   | { k: 'submit' }
+  /** 選んだ id を画面へ渡す（画面が次の画面へ運ぶ） */
+  | { k: 'choose'; id: string }
 
 export const INITIAL_STATE: ChatState = {
-  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, errorKind: 'other', guide: null,
+  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, errorKind: 'other', choose: null, guide: null,
 }
 
 const READ_FAILED = '依頼を読めませんでした。時間をおいて、もう一度お試しください。'
@@ -87,7 +95,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
   switch (ev.t) {
     case 'ask': {
       const text = ev.text.trim()
-      if (!text || state.phase === 'reading' || state.phase === 'working' || state.phase === 'submitting') return { state, effects: [] }
+      if (!text || state.phase === 'reading' || state.phase === 'working' || state.phase === 'choosing' || state.phase === 'submitting') return { state, effects: [] }
       return { state: { ...INITIAL_STATE, phase: 'reading', text }, effects: [{ k: 'api', text }] }
     }
     case 'reply': {
@@ -95,7 +103,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const res = ev.res
       if (!res) return { state: { ...state, phase: 'failed', error: READ_FAILED }, effects: [] }
       if (res.kind === 'op') {
-        const next: ChatState = { ...state, op: res.op, values: res.values, missing: res.missing, steps: buildSteps(res.op), say: res.say }
+        const next: ChatState = { ...state, op: res.op, values: res.values, missing: res.missing, steps: buildSteps(res.op, res.values), say: res.say }
         return advance(next)
       }
       return { state: { ...state, phase: 'guided', guide: res }, effects: [] }
@@ -105,6 +113,9 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const field = state.missing[0]
       const v = normalizeValue(field.type, ev.value)
       if (!v) return { state: { ...state, askError: `${field.label}の形が合いません。もう一度入れてください。` }, effects: [] }
+      // 欄の型だけでは確かめられない形（残業の時間の言い方など）
+      const problem = state.op ? answerProblem(state.op, field.key, v) : null
+      if (problem) return { state: { ...state, askError: problem }, effects: [] }
       return advance({ ...state, answers: [...state.answers, ev.value.trim()], values: { ...state.values, [field.key]: v }, missing: state.missing.slice(1) })
     }
     case 'step': {
@@ -143,6 +154,18 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const message = inclusive ? `税込みの ${yenText(base)} を、税抜の ${yenText(amount)} に直しました。` : `税抜の ${yenText(amount)} に直しました。`
       return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount, message }] }
     }
+    case 'choices': {
+      // ⚠️ 選択肢を出せるのは、画面を進めている間だけ。選ぶまで、保存にも次の画面にも進まない
+      if (state.phase !== 'working' || !ev.options.length) return { state, effects: [] }
+      return { state: { ...state, phase: 'choosing', choose: { prompt: ev.prompt, options: ev.options } }, effects: [] }
+    }
+    case 'choose': {
+      if (state.phase !== 'choosing' || !state.choose) return { state, effects: [] }
+      const picked = state.choose.options.find((o) => o.id === ev.id)
+      // 出していない選択肢は受け付けない
+      if (!picked) return { state, effects: [] }
+      return { state: { ...state, phase: 'working', choose: null, answers: [...state.answers, picked.label] }, effects: [{ k: 'choose', id: picked.id }] }
+    }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }
       return { state: { ...state, phase: 'failed', error: ev.error, errorKind: ev.kind ?? 'other' }, effects: [] }
@@ -173,7 +196,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       // 権限がない・ツールを始めていない失敗は、もう一度やっても同じになる。やり直しは受け付けない（画面から始める・管理者に頼む、を案内する）
       if (state.errorKind !== 'other') return { state, effects: [] }
       if (state.confirm) return { state: { ...state, phase: 'confirm', error: null, errorKind: 'other' }, effects: [] }
-      if (state.op) return advance({ ...state, steps: buildSteps(state.op), error: null, errorKind: 'other' })
+      if (state.op) return advance({ ...state, steps: buildSteps(state.op, state.values), error: null, errorKind: 'other', choose: null })
       return { state: INITIAL_STATE, effects: [] }
     }
     case 'reset':

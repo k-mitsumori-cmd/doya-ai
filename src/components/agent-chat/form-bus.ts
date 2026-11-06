@@ -4,7 +4,7 @@
 // 設計: docs/architecture/agent-chat/DESIGN-2026-11-05.md
 // - フォームは、開いている間だけ register する。会話は、同じ画面の欄を動かして値を入れ、本物の送信処理を呼ぶ。
 // - 保存の手段をここで作らない。submit はフォームが持つ本物の送信処理を呼ぶだけ（成功・失敗はその結果）。
-import type { AgentFormSnapshot } from '@/lib/agent-chat/types'
+import type { AgentFormSnapshot, ChatChoice } from '@/lib/agent-chat/types'
 
 export type SubmitResult = { ok: true; href: string } | { ok: false; error: string; kind?: 'blocked' | 'not-started' | 'other' }
 
@@ -30,6 +30,18 @@ export interface AgentFormHandler {
    * ⚠️ 権限の判定は、画面とサーバーが今していること（ロール・API の 403）をそのまま映す。会話専用の判定を作らない。
    */
   blocked?(): string | null
+  /**
+   * 欄を出す（ダイアログを開く、など）。画面を開いたあと・値を入れる前に1回呼ぶ。出し終えたら解決する。
+   * ⚠️ 開くだけで、値は入れない。保存もしない。
+   */
+  prepare?(): void | Promise<void>
+  /**
+   * 本人に選んでもらう選択肢（例: ワークスペースが複数あるときの一覧）。なければ null。
+   * 返すのは、その人が今の権限で見える選択肢だけ（画面が今出している一覧と同じ）。AI に選ばせない。
+   */
+  choices?(): { prompt: string; options: ChatChoice[] } | null
+  /** 選んだ選択肢の画面へ運ぶ（画面の今の移動と同じ）。運んだあと、本物のフォームが同じ名前で登録される */
+  choose?(id: string): void | Promise<void>
 }
 
 // 会話の確認ボタンから保存しているあいだだけ立てる。フォームは、この間は通知（toast）と画面の移動をしない。
@@ -57,8 +69,11 @@ export function getAgentForm(formKey: string): AgentFormHandler | undefined {
   return forms.get(formKey)
 }
 
-/** フォームが現れて、入力できる状態になるまで待つ（時間切れは null） */
-export function waitForAgentForm(formKey: string, timeoutMs = 20_000): Promise<AgentFormHandler | null> {
+/**
+ * フォームが現れて、入力できる状態になるまで待つ（時間切れは null）。
+ * accept を渡すと、それを満たす登録だけを待つ（選択肢の画面から本物のフォームへ運んだあと、まだ残る選択肢の画面の登録を返さないため）。
+ */
+export function waitForAgentForm(formKey: string, timeoutMs = 20_000, accept?: (h: AgentFormHandler) => boolean): Promise<AgentFormHandler | null> {
   return new Promise((resolve) => {
     let done = false
     const finish = (h: AgentFormHandler | null) => {
@@ -71,7 +86,7 @@ export function waitForAgentForm(formKey: string, timeoutMs = 20_000): Promise<A
     }
     const check = () => {
       const h = forms.get(formKey)
-      if (h && h.ready()) finish(h)
+      if (h && h.ready() && (!accept || accept(h))) finish(h)
     }
     listeners.add(check)
     // ready() は登録のあとに変わる（一覧を読み終える）ので、短い間隔でも確かめる
