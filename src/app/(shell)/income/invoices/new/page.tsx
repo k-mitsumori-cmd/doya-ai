@@ -29,6 +29,7 @@ export default function NewInvoicePage() {
   const [notes, setNotes] = useState('')
   const [rows, setRows] = useState<LineRow[]>([emptyLine()])
   const [busy, setBusy] = useState(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
