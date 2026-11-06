@@ -1,10 +1,11 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 // GET  /api/quote/documents — 見積書一覧
 // POST /api/quote/documents — 見積書を作成（品目つき）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
@@ -20,15 +21,15 @@ import { excludeIds, markSystemWatchRecord, systemWatchRecordIds } from '@/lib/s
 
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const cursor = searchParams.get('cursor')
   if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
   const where = { organizationId: ctx.organizationId }
   if (cursor && !await prisma.quoteDocument.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
   const [rows, total] = await Promise.all([
     prisma.quoteDocument.findMany({
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
     prisma.quoteDocument.count({ where }),
   ])
   const documents = rows.slice(0, 200)
-  return NextResponse.json({
+  return privateApiJson({
     documents,
     total,
     nextCursor: rows.length > 200 ? documents[documents.length - 1].id : null,
@@ -89,12 +90,12 @@ function quoteExpiryDate(value: unknown): Date | null {
 
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   let ownerUserId: string | null
   try {
     ownerUserId = await getOrganizationOwnerUserId('quote', ctx.organizationId)
   } catch {
-    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
+    return privateApiJson({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
   }
   const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
         where: { organizationId: ctx.organizationId, createdAt: { gte: since }, ...await watchedIds(prisma) },
       }), since)
   )
-  const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
+  const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => privateApiJson({
     error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
     canManageBilling,
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return NextResponse.json({ error: '入力内容が正しくありません。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '入力内容が正しくありません。見積書は保存されていません。' }, { status: 400 })
   }
   for (const [field, label, max] of [
     ['title', '件名', 200], ['clientCompany', '宛先会社名', 200], ['clientDept', '宛先部署名', 200],
@@ -139,30 +140,30 @@ export async function POST(req: NextRequest) {
     ['paymentTerms', '支払条件', 2000], ['deliveryTerms', '納期', 2000],
   ] as const) {
     if (body[field] != null && (typeof body[field] !== 'string' || body[field].length > max)) {
-      return NextResponse.json({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。見積書は保存されていません。` }, { status: 400 })
+      return privateApiJson({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。見積書は保存されていません。` }, { status: 400 })
     }
   }
   const title = body.title?.trim() || 'お見積り'
   const items: any[] = Array.isArray(body.items) ? body.items : []
   if (body.items != null && !Array.isArray(body.items)) {
-    return NextResponse.json({ error: '明細の形式が正しくありません。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細の形式が正しくありません。見積書は保存されていません。' }, { status: 400 })
   }
   if (items.length > 60) {
-    return NextResponse.json({ error: '明細は60行以内で入力してください。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細は60行以内で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
   if (items.some(i => !i || typeof i !== 'object' || Array.isArray(i) ||
     ([['itemName', 200], ['spec', 1000], ['unit', 12], ['sourceRef', 1000]] as const)
       .some(([field, max]) => i[field] != null && (typeof i[field] !== 'string' || i[field].length > max)))) {
-    return NextResponse.json({ error: '明細の文字項目は指定の文字数内で入力してください。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細の文字項目は指定の文字数内で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
   const expiryDate = body?.expiryDate == null || body.expiryDate === '' ? defaultExpiry() : quoteExpiryDate(body.expiryDate)
   if (!expiryDate) {
-    return NextResponse.json({ error: '有効期限は正しい日付で入力してください。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '有効期限は正しい日付で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
   const validItems = items.filter((i) => i && i.itemName)
   if (validItems.some((i) => quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null ||
     quoteTaxRate(i.taxRate) === null || quoteOptionalRange(i.rangeMin) === undefined || quoteOptionalRange(i.rangeMax) === undefined)) {
-    return NextResponse.json({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
 
   // 商材は自組織のものだけを紐付ける（他組織のIDを渡されても無視する）
@@ -233,21 +234,21 @@ export async function POST(req: NextRequest) {
       break
     } catch (err: any) {
       if (err?.code === 'QUOTE_TOTAL_OUT_OF_RANGE') {
-        return NextResponse.json({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。保存されていません。' }, { status: 400 })
+        return privateApiJson({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。保存されていません。' }, { status: 400 })
       }
       // 採番の衝突か同時作成による直列化競合。最新件数を読み直して再試行する。
       if (err?.code !== 'P2002' && err?.code !== 'P2034') {
-        return NextResponse.json({ error: '見積書を作成できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
+        return privateApiJson({ error: '見積書を作成できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
       }
     }
   }
   if (result?.kind === 'limit') {
     // プラン変更が同時に起きた場合は、古い階層のエラーを返さず再操作を促す。
     const latestQuota = await checkQuota()
-    if (latestQuota.ok) return NextResponse.json({ error: 'プラン情報が更新されました。再読み込みしてからもう一度お試しください。' }, { status: 409 })
+    if (latestQuota.ok) return privateApiJson({ error: 'プラン情報が更新されました。再読み込みしてからもう一度お試しください。' }, { status: 409 })
     return quotaResponse(latestQuota)
   }
-  if (!result) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
+  if (!result) return privateApiJson({ error: '見積書を作成できませんでした' }, { status: 500 })
   const doc = result.doc
   // 作った人を残す（会社の役割の旗の内側だけ。「自分で作った見積を自分で確定しない」の判定に使う。ROLES-2026-10-26.md §3.4）
   await recordAuthor({ tool: 'quote', recordId: doc.id, userId: ctx.userId })
@@ -263,5 +264,5 @@ export async function POST(req: NextRequest) {
     count: items.length,
   })
 
-  return NextResponse.json({ id: doc.id, quoteNo: doc.quoteNo })
+  return privateApiJson({ id: doc.id, quoteNo: doc.quoteNo })
 }

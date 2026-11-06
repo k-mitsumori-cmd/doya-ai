@@ -1,10 +1,11 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 // POST /api/quote/documents/estimate-item — 品目名1件から内訳・数量・単価をAIで埋める
 // ⚠️ 保存はしない。画面の1行に差し込むだけで、確定は人が行う。
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { estimateItem } from '@/lib/quote/analyze'
@@ -14,18 +15,18 @@ import { withDoyaPowerCharge } from '@/lib/doya-power/charge'
 
 async function postHandler(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
     typeof body.itemName !== 'string' ||
     (body.spec != null && typeof body.spec !== 'string') ||
     (body.productId != null && (typeof body.productId !== 'string' || body.productId.length > 128))) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const itemName = body.itemName.trim()
   if (!itemName) {
-    return NextResponse.json({ error: '品目名を入力してください' }, { status: 400 })
+    return privateApiJson({ error: '品目名を入力してください' }, { status: 400 })
   }
 
   // 商材の文脈があれば精度が上がるが、無くても品目名だけで動く
@@ -49,10 +50,10 @@ async function postHandler(req: NextRequest) {
       productName: productName || undefined,
       profile,
     })
-    return NextResponse.json({ item })
+    return privateApiJson({ item })
   } catch (err) {
     console.error('[quote] estimate-item failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '見積もりの生成に失敗しました。時間をおいて再度お試しください。' },
       { status: 502 }
     )

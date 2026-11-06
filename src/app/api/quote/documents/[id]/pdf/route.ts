@@ -1,3 +1,4 @@
+import { privateApiJson, privateApiResponse } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -15,15 +16,15 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function GET(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   let expectedRevision: string
   try {
     const versions = new URL(req.url).searchParams.getAll('expectedRevision')
-    if (versions.length > 1) return NextResponse.json({ error: '見積書の版の指定が正しくありません。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
+    if (versions.length > 1) return privateApiJson({ error: '見積書の版の指定が正しくありません。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
     expectedRevision = quoteExpectedRevision(versions[0])
   } catch (error) {
-    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({ error: error.message }, { status: error.status, headers: { 'Cache-Control': 'private, no-store' } })
+    if (error instanceof QuoteDocumentRevisionError) return privateApiJson({ error: error.message }, { status: error.status, headers: { 'Cache-Control': 'private, no-store' } })
     throw error
   }
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     where: { id: p.id, organizationId: ctx.organizationId },
     include: { lineItems: { orderBy: { ord: 'asc' } } },
   })
-  if (!doc) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
+  if (!doc) return privateApiJson({ error: '見積書が見つかりません' }, { status: 404 })
 
   // 発行元は未設定でもよい。商談中にその場で出したい場面があるため、
   // 埋まっていない項目は印字せず、社名だけ手書き用の空欄としてPDFに出す。
@@ -78,16 +79,16 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     const asciiName = `${doc.quoteNo}.pdf`
     const utf8Name = encodeURIComponent(`お見積書_${doc.clientCompany || doc.title}_${doc.quoteNo}.pdf`)
 
-    return new NextResponse(Buffer.from(pdf), {
+    return privateApiResponse(new NextResponse(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
         'Cache-Control': 'no-store',
       },
-    })
+    }))
   } catch (err) {
-    if (err instanceof QuoteDocumentRevisionError) return NextResponse.json({ error: err.message }, { status: err.status, headers: { 'Cache-Control': 'private, no-store' } })
+    if (err instanceof QuoteDocumentRevisionError) return privateApiJson({ error: err.message }, { status: err.status, headers: { 'Cache-Control': 'private, no-store' } })
     console.error('[quote] pdf failed')
-    return NextResponse.json({ error: 'PDFの生成に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: 'PDFの生成に失敗しました' }, { status: 500 })
   }
 }
