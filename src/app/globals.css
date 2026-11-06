@@ -570,5 +570,7 @@ label[data-agent-filled] > span:first-child::after {
   html [data-support-chat] { right: calc(24px + var(--agent-dock-w, 0px) + env(safe-area-inset-right, 0px)); }
 }
 @media (max-width: 767px) {
-  html [data-support-chat='fab'] { bottom: calc(80px + min(var(--agent-dock-h, 0px), 40dvh) + env(safe-area-inset-bottom, 0px)); }
+  /* 会話の欄の真上に置く（下のタブバー + 欄の高さ + すき間）。「会話」だけを大きく出しているときは、欄が画面いっぱいなので、ボタンは出さない */
+  html[data-agent-dock='both'] [data-support-chat='fab'], html[data-agent-dock='tool'] [data-support-chat='fab'] { bottom: calc(var(--agent-tab-h, 68px) + var(--agent-dock-h, 0px) + 14px + env(safe-area-inset-bottom, 0px)); }
+  html[data-agent-dock='chat'] [data-support-chat='fab'] { display: none; }
 }

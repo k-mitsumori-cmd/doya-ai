@@ -63,7 +63,9 @@ export default function AgentDock() {
     const ph = view === 'tool' ? '56px' : view === 'chat' ? 'calc(100dvh - 60px - var(--agent-tab-h, 68px))' : '46dvh'
     root.style.setProperty('--agent-dock-ph', ph)
     root.style.setProperty('--agent-dock-h', open ? ph : '0px')
-    return () => { root.style.removeProperty('--agent-dock-w'); root.style.removeProperty('--agent-dock-h'); root.style.removeProperty('--agent-dock-ph') }
+    // 開いているときの見せ方（both / chat / tool）。サポートチャットのボタンの位置を決める（globals.css）
+    if (open) root.setAttribute('data-agent-dock', view); else root.removeAttribute('data-agent-dock')
+    return () => { root.style.removeProperty('--agent-dock-w'); root.style.removeProperty('--agent-dock-h'); root.style.removeProperty('--agent-dock-ph'); root.removeAttribute('data-agent-dock') }
   }, [open, view])
   if (!chat || !state) return null
   const { setOpen, setView, dispatch } = chat
