@@ -109,14 +109,16 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 /** 概要タイル列の形 */
 export function StatsSkeleton({ n = 4 }: { n?: number }) {
   return (
-    <div className={s.statGrid} role="status" aria-label="読み込み中です">
-      {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className={s.stat} style={{ display: 'grid', gap: 8 }}>
-          <Skeleton w="50%" h={14} />
-          <Skeleton w="70%" h={32} />
-          <Skeleton w="40%" h={14} />
-        </div>
-      ))}
+    <div className={s.statWrap}>
+      <div className={s.statGrid} role="status" aria-label="読み込み中です">
+        {Array.from({ length: n }).map((_, i) => (
+          <div key={i} className={s.stat} style={{ display: 'grid', gap: 8 }}>
+            <Skeleton w="50%" h={14} />
+            <Skeleton w="70%" h={32} />
+            <Skeleton w="40%" h={14} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
