@@ -9,6 +9,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
+import { incomeAmountAmendmentMessage, planIncomeAmountAmendment } from '@/lib/agent-chat/income-amount'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
@@ -98,27 +99,43 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   }, [router])
 
   /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
-  const amend = useCallback(async (amount: number, message: string, id: number) => {
+  const amend = useCallback(async (amount: number | null, inclusive: boolean, id: number) => {
     const alive = () => runId.current === id
     const op = stateRef.current.op
     const form = op ? getAgentForm(op.formKey) : undefined
-    if (!op || !form) { if (alive()) dispatchRef.current({ t: 'run-failed', error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
+    const receipt = reviewed.current
+    const assertContext = () => {
+      if (!alive()) throw ABORTED
+      if (!op || !form || receipt?.form !== form || getAgentForm(op.formKey) !== form || !form.ready() || window.location.pathname !== op.path) {
+        throw new Error('登録の画面が変わりました。依頼から始め直して、内容を確認してください。')
+      }
+    }
     try {
+      assertContext()
+      if (!form) return
+      const before = { ...form.snapshot() }
+      const plan = planIncomeAmountAmendment(before, amount, inclusive)
       await focusField('amount')
-      await form.setValue('amount', '')
-      await typeInto(String(amount), (v) => { void form.setValue('amount', v) }, alive)
-      await form.setValue('amount', String(amount))
+      assertContext()
+      if (!sameReview(form.snapshot(), before)) throw new Error('金額を直す前に内容が変わりました。画面を確認して、もう一度依頼してください。')
+      if (!await form.setValue('amount', '')) throw new Error('金額の欄に入力できませんでした。')
+      await typeInto(String(plan.amount), (v) => { assertContext(); void form.setValue('amount', v) }, alive)
+      assertContext()
+      if (!await form.setValue('amount', String(plan.amount))) throw new Error('金額の欄に入力できませんでした。')
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
-      if (alive()) {
-        const snap = { ...form.snapshot() }
-        reviewed.current = { form, snapshot: snap }
-        dispatchRef.current({ t: 'ready', snap, message })
-      }
-    } catch {
+      assertContext()
+      const snap = { ...form.snapshot() }
+      const message = incomeAmountAmendmentMessage(plan, snap)
+      reviewed.current = { form, snapshot: snap }
+      dispatchRef.current({ t: 'ready', snap, message })
+    } catch (e) {
       clearStage()
-      if (alive()) dispatchRef.current({ t: 'run-failed', error: '金額を直せませんでした。' })
+      if (e !== ABORTED && alive()) {
+        reviewed.current = null
+        dispatchRef.current({ t: 'confirmation-invalid', error: e instanceof Error ? e.message : '金額を直せませんでした。' })
+      }
     }
   }, [])
 
@@ -136,7 +153,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
     } else if (eff.k === 'amend') {
-      void amend(eff.amount, eff.message, id)
+      void amend(eff.amount, eff.inclusive, id)
     } else {
       void (async () => {
         const op = stateRef.current.op
