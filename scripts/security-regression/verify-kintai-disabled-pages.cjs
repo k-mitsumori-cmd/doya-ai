@@ -28,6 +28,10 @@ const mocks = {
   '@/components/ds/dialog': { confirmDialog: async () => false, alertDialog: async () => {} },
   '@/lib/kintai/user-error': { userErrorMessage: (_raw, fallback) => fallback, KINTAI_NETWORK_ERROR: '通信できませんでした。' },
   '@/lib/kintai/use-escape': { useEscapeToClose: () => {} },
+  // 会話（AgentDock）から操作される口。ここでは描画だけを確かめるので、何もしない形にする
+  '@/components/agent-chat/useAgentForm': { useAgentForm: () => {} },
+  '@/components/agent-chat/AgentBlocked': { __esModule: true, default: () => null },
+  '@/components/agent-chat/form-bus': { isAgentSubmit: () => false },
 }
 
 // Render the real extracted clock hook during SSR; effects remain unexecuted here.
