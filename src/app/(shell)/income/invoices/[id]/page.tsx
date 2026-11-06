@@ -5,24 +5,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Ban, CheckCircle2, Pencil, Printer, Send, Trash2 } from 'lucide-react'
-import InvoiceSheet, { type SheetInvoice } from '@/components/income/InvoiceSheet'
+import InvoiceSheet from '@/components/income/InvoiceSheet'
+import { readInvoiceDetailResponse, type InvoiceDetailDto as Detail } from '@/components/income/invoice-detail-response'
 import {
   Button, Card, ConfirmDialog, DetailSkeleton, emptyLine, ErrorText, Field, Gate, InvoiceStatusBadge, LineItemsEditor, PageHeader, PageShell,
   PaymentStateBadge, errMsg, fetchJson, inputCls, linesToPayload, s, toast, useIncomePermission, useResource, useUnsavedGuard, ymd, yen, type LineRow,
 } from '@/components/income/ui'
-
-type Detail = Omit<SheetInvoice, 'items' | 'client'> & {
-  id: string
-  clientId: string
-  paidAmount: number
-  sentAt: string | null
-  sentTo: string | null
-  client: SheetInvoice['client'] & { id: string; billingEmail: string | null }
-  items: (SheetInvoice['items'][number] & { scheduleId: string | null })[]
-  allocations: { id: string; amount: number; matchedBy: string; payment: { id: string; receivedOn: string; amount: number; payerName: string | null } }[]
-  state: { label: string | null; remaining: number; overdue: boolean }
-}
-type Loaded = { invoice: Detail; issuer: any }
 
 type Dialog = null | 'confirm' | 'send' | 'void' | 'delete'
 
@@ -260,7 +248,7 @@ function InvoiceView({ inv, issuer, reload }: { inv: Detail; issuer: any; reload
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const res = useResource(() => fetchJson<Loaded>(`/api/income/invoices/${id}`), id)
+  const res = useResource(() => fetchJson<unknown>(`/api/income/invoices/${id}`).then((d) => readInvoiceDetailResponse(d, id)), id)
   return (
     <PageShell>
       <Gate res={res} skeleton={<DetailSkeleton cards={2} />} listHref="/income/invoices" listLabel="請求書の一覧">
