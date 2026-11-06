@@ -109,9 +109,17 @@
 .ticket { font-size: 20px; font-weight: 800; letter-spacing: .06em; color: var(--n-ink); }
 .doneTitle { margin: 0; font-size: 17px; font-weight: 800; text-wrap: balance; }
 
+/* 会話の欄が右にあるときも、サポートへの入口と画面を隠さない。
+   768pxでも左端が画面外へ出ないよう、残った幅に合わせる。 */
+@media (min-width: 768px) {
+  .fab, .panel { right: calc(24px + var(--agent-dock-w, 0px) + env(safe-area-inset-right, 0px)); }
+  .panel { max-width: calc(100vw - 48px - var(--agent-dock-w, 0px) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
+}
+
 /* ---- 767px 以下: 下からのシート。ボタンは下のタブ（約68px）の上 ---- */
 @media (max-width: 767px) {
   .fab { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); width: 52px; height: 52px; }
+  .root[data-mobile-docked='true'] .fab { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
   .scrim { display: block; position: fixed; inset: 0; z-index: 87; background: var(--n-scrim); opacity: 0; pointer-events: none; transition: opacity .25s var(--n-ease); }
   .scrim[data-open='true'] { opacity: 1; pointer-events: auto; }
   .panel {

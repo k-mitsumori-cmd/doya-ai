@@ -74,7 +74,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const framed = shown
-    ? <AppShell actorKey={userKey} userName={userName} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups}>{children}</AppShell>
+    ? <AppShell actorKey={userKey} userName={userName} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups} supportChat={supportChat}>{children}</AppShell>
     : <>{children}</>
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const inner = guide && shown && userKey
@@ -93,7 +93,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
       <DoyaPowerFetchWatcher />
       <ShellLowPowerNotice handledByNotice={Boolean(guide && shown && userKey)} />
       {/* 右下のサポートチャット。旗が出すと決めた人が、枠を開いているときだけ */}
-      {supportChat && shown ? <SupportChat actorKey={userKey} /> : null}
+      {supportChat && shown ? <SupportChat actorKey={userKey} mobileDocked /> : null}
       </DoyaPowerFxProvider>
       {/* 表示の速さを測る（外には送らない。UI 品質 S-45） */}
       {signedIn ? <ShellVitals /> : null}

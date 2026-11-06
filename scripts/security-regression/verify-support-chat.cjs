@@ -39,7 +39,7 @@ check('Support chat flag: off reads no session; routes 404 first; the shell moun
   assert.match(layout, /const supportChat = signedIn \? await isSupportChatEnabled\(\) : false/)
   const gate = read('src/components/shell/ShellGate.tsx')
   assert.match(gate, /supportChat = false/)
-  assert.match(gate, /\{supportChat && shown \? <SupportChat actorKey=\{userKey\} \/> : null\}/)
+  assert.match(gate, /\{supportChat && shown \? <SupportChat actorKey=\{userKey\} mobileDocked \/> : null\}/)
 })
 
 check('Support chat: no Doya Power, billing or direct paid AI; Slack only through the shared sender', () => {
