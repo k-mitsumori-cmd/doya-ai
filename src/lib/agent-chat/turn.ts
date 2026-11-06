@@ -9,7 +9,6 @@ import { normalizeValue } from '@/lib/agent-router/prefill'
 import type { AgentField } from '@/lib/agent-router/types'
 import { yenCandidates } from './ground'
 import { buildSteps, confirmRows, doneView } from './ops'
-import { yenText } from './today'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp, ConfirmRow, NextAction, StepView } from './types'
 
 export type Phase = 'idle' | 'reading' | 'asking' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
@@ -57,7 +56,7 @@ export type ChatEvent =
 export type ChatEffect =
   | { k: 'api'; text: string }
   | { k: 'run'; op: ChatOp; values: Record<string, string> }
-  | { k: 'amend'; amount: number; message: string }
+  | { k: 'amend'; amount: number | null; inclusive: boolean }
   | { k: 'submit' }
 
 export const INITIAL_STATE: ChatState = {
@@ -114,16 +113,16 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     case 'adjust': {
       // ⚠️ 直せるのは確認カードを出している間だけ。直したあとも、保存の指示は返さない（もう一度 確認カードで押してもらう）
       if (state.phase !== 'confirm' || !state.op || !state.snap) return { state, effects: [] }
-      const sub = Number(state.snap.subtotal)
       const text = ev.text.normalize('NFKC')
-      const typed = [...yenCandidates(text)][0]
+      const candidates = [...yenCandidates(text)]
+      const typed = candidates[0]
       const inclusive = /税込/.test(text)
-      const base = typed ?? sub
-      if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
-      const amount = inclusive ? Math.round(base / 1.1) : base
+      if (candidates.length > 1 || /[-−]\s*\d|\d+\.\d+(?:円|$)/.test(text) || (inclusive && typed == null && /\d/.test(text))) {
+        return { state: { ...state, notice: '金額を1つ、整数の円で指定してください。画面の入力内容は変更していません。' }, effects: [] }
+      }
       if (!inclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
-      const message = inclusive ? `税込みの ${yenText(base)} を、税抜の ${yenText(amount)} に直しました。` : `税抜の ${yenText(amount)} に直しました。`
-      return { state: { ...state, phase: 'working', notice: null, answers: [...state.answers, ev.text.trim()] }, effects: [{ k: 'amend', amount, message }] }
+      // Tax rate, line count and the untyped amount come from the live form in the executor.
+      return { state: { ...state, phase: 'working', notice: null, answers: [...state.answers, ev.text.trim()] }, effects: [{ k: 'amend', amount: typed ?? null, inclusive }] }
     }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }
@@ -135,7 +134,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       return { state: { ...state, phase: 'submitting', error: null }, effects: [{ k: 'submit' }] }
     }
     case 'confirmation-invalid': {
-      if (state.phase !== 'submitting') return { state, effects: [] }
+      if (state.phase !== 'submitting' && state.phase !== 'working') return { state, effects: [] }
       return { state: { ...state, phase: 'failed', confirm: null, snap: null, error: ev.error }, effects: [] }
     }
     case 'submitted': {
