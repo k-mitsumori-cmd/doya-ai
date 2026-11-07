@@ -24,8 +24,11 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as { id?: string } | undefined)?.id
-    const email = normalizeEmail(session?.user?.email)
-    if (!userId || !email) return json({ error: 'ログインが必要です。' }, 401)
+    if (!userId) return json({ error: 'ログインが必要です。' }, 401)
+    // JWT内の旧メールではなく、現在のアカウントのメールで招待を確認する。
+    const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+    const email = normalizeEmail(account?.email)
+    if (!email) return json({ error: 'この招待は使えません。招待したメールアドレスでログインしているか確かめてください。' }, 404)
     if (!isNewPricingEnabledFor(email) || !teamTablesAllowed()) return json({ error: '見つかりません。' }, 404)
     const body = await req.json().catch(() => null)
     const token = typeof body?.token === 'string' ? body.token.trim() : ''
@@ -40,6 +43,13 @@ export async function POST(req: NextRequest) {
     }
     await teamSeatsForCompany(invite.companyId, { refresh: true, strict: true })
     return await withSeatAdmission(invite.companyId, async tx => {
+      // 会社のガードの後で利用者行も固定し、メール変更と受諾を直列化する。
+      // Userのメールを書き換える処理は通常の行ロックで待つため、確認から
+      // 所属の確定まで古いメールへ戻った状態を持ち越さない。
+      const accounts = await tx.$queryRaw<Array<{ email: string | null }>>`
+        SELECT email FROM "User" WHERE id = ${userId} FOR UPDATE
+      `
+      if (accounts.length !== 1 || normalizeEmail(accounts[0].email) !== email) return json({ error: 'この招待は使えません。' }, 404)
       // Re-read the invitation, expiry, capacity and membership under the same
       // company guard used by invite creation and seat changes.
       const current = await tx.accountCompanyMember.findUnique({
@@ -51,7 +61,7 @@ export async function POST(req: NextRequest) {
       const capacity = await teamMembershipCapacity(current.companyId, tx)
       const members = await tx.accountCompanyMember.findMany({
         where: { companyId: current.companyId, status: { in: ['invited', 'active'] } },
-        select: { email: true, userId: true, status: true, invitedAt: true },
+        select: { id: true, email: true, userId: true, status: true, invitedAt: true },
       })
       // メールが変わった人も、同じ利用者IDでは所属を重ねない。
       // 既存の役割や招待行を勝手に統合・変更せず、現在の所属を使う。
@@ -59,7 +69,13 @@ export async function POST(req: NextRequest) {
         return json({ code: 'ALREADY_MEMBER', error: 'すでにこの会社に参加しています。現在の所属でご利用ください。不要な招待は会社の持ち主に取り消しを依頼してください。' }, 409)
       }
       const used = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members })
-      if (used > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
+      // 招待のメールが既存所属の旧メールと重なっても、別の利用者IDなら
+      // 受諾後に1人増える。予約時の数だけでなく、更新後のIDで数え直す。
+      const acceptedMembers = members.map(member => member.id === current.id
+        ? { ...member, status: 'active', userId }
+        : member)
+      const acceptedUsed = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members: acceptedMembers })
+      if (used > capacity.limit || acceptedUsed > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
       const now = new Date()
       const r = await tx.accountCompanyMember.updateMany({
         where: { id: current.id, companyId: current.companyId, email, status: 'invited', inviteToken: token, invitedAt: { gt: new Date(now.getTime() - INVITE_TTL_DAYS * 86400000), lte: now } },
