@@ -63,6 +63,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       clearMarks()
       d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
+      // 待ちが切れたときに、移動が終わっていないのか、別の画面へ送られたのかを見分けるために控える
+      const startPath = window.location.pathname
       if (!onOpScreen(op, window.location.pathname)) router.push(op.path)
       let form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
@@ -80,8 +82,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         if (!alive()) throw ABORTED
       }
       if (!form) {
-        // 画面まで来ているのに準備が終わらないときは、「ツールを始めていない」とは言わない。保存はしていないことと、次にできることを出す
-        if (onOpScreen(op, window.location.pathname) || getAgentForm(op.formKey)) {
+        // 移動が終わらないとき・画面まで来て準備が終わらないときは、「ツールを始めていない」とは言わない。保存はしていないことと、次にできることを出す
+        if (window.location.pathname === startPath || onOpScreen(op, window.location.pathname) || getAgentForm(op.formKey)) {
           d({ t: 'run-failed', kind: 'other', error: `${op.label}の画面の準備に時間がかかっています。まだ何も保存していません。少し待ってから、もう一度お試しください。` })
           return
         }
