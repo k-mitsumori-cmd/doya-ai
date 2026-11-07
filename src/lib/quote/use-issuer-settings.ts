@@ -5,8 +5,12 @@ import { useSession } from 'next-auth/react'
 import { getSelectedOrg, orgStorageKey } from '@/components/org/OrgSwitcher'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
-import { requestOrgJson, orgErrorMessage } from '@/lib/org-client-response'
+import { requestOrgJson, orgErrorMessage, OrgResponseError } from '@/lib/org-client-response'
 import { QUOTE_ISSUER_FIELDS, normalizeQuoteIssuer, isQuoteIssuerAcknowledgement, type QuoteIssuerInput } from '@/lib/quote/issuer-input'
+
+class QuoteIssuerReadError extends Error {
+  constructor(message: string, readonly status: number) { super(message) }
+}
 
 type Form = Record<string, string>
 export function useQuoteIssuerSettings() {
@@ -35,6 +39,7 @@ export function useQuoteIssuerSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadErrorStatus, setLoadErrorStatus] = useState(0)
   const [message, setMessage] = useState('')
   const changed = useCallback(() => { context.invalidate(); redraw(n => n + 1) }, [context])
   useEffect(() => {
@@ -53,11 +58,11 @@ export function useQuoteIssuerSettings() {
   const load = useCallback(async () => {
     const ticket = context.begin('issuer-read', true, epoch)
     if (!ticket) return
-    setLoading(true); setReady(null); setError(''); setMessage(''); setSaving(false)
+    setLoading(true); setReady(null); setError(''); setLoadErrorStatus(0); setMessage(''); setSaving(false)
     try {
       const orgs = await requestOrgJson('quote', '/api/quote/organizations', selection, { signal: ticket.signal })
       if (!ticket.current()) return
-      if (!orgs.res.ok) throw new Error(orgErrorMessage(orgs.data, orgs.res.status, false))
+      if (!orgs.res.ok) throw new QuoteIssuerReadError(orgErrorMessage(orgs.data, orgs.res.status, false), orgs.res.status)
       const org = parseQuoteOrganizations(orgs.data).current
       if (!org || !context.verifyOrganization(epoch, org.slug)) throw new Error('組織の所属を確認できませんでした')
       if (draftOrganization.current !== null && draftOrganization.current !== org.slug) {
@@ -66,7 +71,7 @@ export function useQuoteIssuerSettings() {
       draftOrganization.current = org.slug
       const { res, data } = await requestOrgJson('quote', '/api/quote/issuer', org.slug, { signal: ticket.signal })
       if (!ticket.current()) return
-      if (!res.ok) throw new Error(orgErrorMessage(data, res.status, false))
+      if (!res.ok) throw new QuoteIssuerReadError(orgErrorMessage(data, res.status, false), res.status)
       if (data.error !== undefined || data.code !== undefined || !Object.prototype.hasOwnProperty.call(data, 'issuer')) throw new Error('発行者情報を確認できませんでした')
       const issuer = data.issuer
       const form: Form = {}
@@ -83,7 +88,10 @@ export function useQuoteIssuerSettings() {
       if (!dirty.current) draft.current = form
       setReady({ epoch, role: org.role, slug: org.slug })
     } catch (e) {
-      if (ticket.current()) setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
+      if (ticket.current()) {
+        setLoadErrorStatus(e instanceof QuoteIssuerReadError || e instanceof OrgResponseError ? e.status : 0)
+        setError(e instanceof Error && /[ぁ-んァ-ヶ一-龠]/.test(e.message) ? e.message : '読み込みに失敗しました')
+      }
     } finally {
       if (ticket.current()) setLoading(false)
       ticket.end()
@@ -125,6 +133,7 @@ export function useQuoteIssuerSettings() {
   return {
     form: draft.current, loading: status === 'loading' || status === 'authenticated' && loading && !loaded,
     loaded, saving, error: status === 'unauthenticated' ? 'ログインして設定をご確認ください。' : error, message, unknown: !!pending.current && !saving,
+    errorStatus: status === 'unauthenticated' ? 401 : loadErrorStatus,
     canEdit: loaded && !!ready && ['owner', 'admin'].includes(ready.role),
     scopeKey: JSON.stringify([actor, ready?.slug, epoch]),
     update: (field: string, value: string) => {
