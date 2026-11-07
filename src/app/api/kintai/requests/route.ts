@@ -7,8 +7,12 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
+import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
 
 class RequestForbidden extends Error {}
+class RequestOnceError extends Error {
+  constructor(readonly status: number, message: string) { super(message) }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -81,6 +85,13 @@ export async function POST(req: NextRequest) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
+    const fail = (status: number, message: string) => new RequestOnceError(status, message)
+    const once: OnceScope = { family: 'kintai-request', organizationId: ctx.organizationId, actorId: ctx.employeeId, operationId: onceOperationId(body, fail), fail }
+    // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
+    if (isOnceResolve(body)) {
+      const resolved = await prisma.$transaction(tx => resolveOnce(tx, once, id => tx.kintaiRequest.findFirst({ where: { id, employeeId: ctx.employeeId }, select: { id: true } })))
+      return NextResponse.json({ once: resolved })
+    }
     const { type, details, reason } = body
     // SEC: タイプ値のホワイトリスト検証
     const ALLOWED_TYPES = ['clock_fix', 'leave', 'overtime', 'holiday_work']
@@ -152,7 +163,11 @@ export async function POST(req: NextRequest) {
       if (!await lockCurrentKintaiActor(tx, ctx)) {
         throw new RequestForbidden('申請を作成する権限がありません')
       }
-      return tx.kintaiRequest.create({
+      // 同じ送信の送り直しは、受け取りの記録を見て、前にできた申請を返す
+      const { entry } = await createOnce(tx, once, body, id => tx.kintaiRequest.findFirst({
+        where: { id, employeeId: ctx.employeeId },
+        include: { employee: { select: { name: true } } },
+      }), () => tx.kintaiRequest.create({
         data: {
           employeeId: ctx.employeeId,
           type,
@@ -161,12 +176,14 @@ export async function POST(req: NextRequest) {
           status: 'pending',
         },
         include: { employee: { select: { name: true } } },
-      })
+      }))
+      return entry
     })
 
     return NextResponse.json({ request }, { status: 201 })
   } catch (e) {
     if (e instanceof RequestForbidden) return NextResponse.json({ error: e.message }, { status: 403 })
+    if (e instanceof RequestOnceError) return NextResponse.json({ error: e.message }, { status: e.status })
     console.error('[kintai/requests POST]')
     return NextResponse.json({ error: '申請の作成に失敗しました' }, { status: 500 })
   }

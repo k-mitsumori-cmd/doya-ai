@@ -2,8 +2,10 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { audit, readJson, withExpense } from '@/lib/expense/access'
+import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
+import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { CATEGORIES } from '@/lib/expense/constants'
 import { addMonthsToYm, firstOfMonth, todayJst, toDbDate, ymOf } from '@/lib/expense/dates'
 import { scheduleDto } from '@/lib/expense/dto'
@@ -41,11 +43,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return withExpense(req, 'manager', async (ctx) => {
     const b = await readJson(req)
+    const fail = (status: number, message: string) => new ExpenseHttpError(status, message)
+    const once: OnceScope = { family: 'expense-schedule', organizationId: ctx.organizationId, actorId: ctx.userId, operationId: onceOperationId(b, fail), fail }
+    const find = (db: Prisma.TransactionClient) => (id: string) => db.expenseSchedule.findFirst({ where: { id, organizationId: ctx.organizationId } })
+    // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
+    if (isOnceResolve(b)) return NextResponse.json({ once: await prisma.$transaction((tx) => resolveOnce(tx, once, find(tx))) })
     const payDate = date(b.payDate, '支払日')!
     const taxRate = oneOf(typeof b.taxRate === 'string' ? Number(b.taxRate) : b.taxRate, [10, 8, 0] as const, '税率', 10)
     const { exclTax, tax } = splitTax(money(b.amount, '金額')!, taxRate, bool(b.taxIncluded))
     const s = settle(exclTax, tax, bool(b.withholding))
-    const row = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+    // 同じ送信の送り直しは、受け取りの記録を見て、前にできた支出を返す
+    const { entry: row } = await retryOnConflict(() => prisma.$transaction((tx) => createOnce(tx, once, b, find(tx), async () => {
       const r = await tx.expenseSchedule.create({
         data: {
           organizationId: ctx.organizationId,
@@ -64,7 +72,7 @@ export async function POST(req: NextRequest) {
       if (s.withholdingAmount > 0) await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'schedule.create', 'schedule', r.id)
       return r
-    }))
+    })))
     return NextResponse.json({ schedule: scheduleDto(row) })
   })
 }

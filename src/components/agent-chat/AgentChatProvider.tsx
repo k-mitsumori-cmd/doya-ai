@@ -79,7 +79,15 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         form = await waitForAgentForm(op.formKey, 20_000, (h) => !h.choices?.())
         if (!alive()) throw ABORTED
       }
-      if (!form) { d({ t: 'run-failed', kind: 'not-started', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。` }); return }
+      if (!form) {
+        // 画面まで来ているのに準備が終わらないときは、「ツールを始めていない」とは言わない。保存はしていないことと、次にできることを出す
+        if (onOpScreen(op, window.location.pathname) || getAgentForm(op.formKey)) {
+          d({ t: 'run-failed', kind: 'other', error: `${op.label}の画面の準備に時間がかかっています。まだ何も保存していません。少し待ってから、もう一度お試しください。` })
+          return
+        }
+        d({ t: 'run-failed', kind: 'not-started', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。` })
+        return
+      }
       // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
       const blocked = form.blocked?.()
       if (blocked) { d({ t: 'run-failed', kind: 'blocked', error: blocked }); return }

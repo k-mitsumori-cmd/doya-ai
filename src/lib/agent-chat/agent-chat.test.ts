@@ -764,3 +764,9 @@ test('保存の鍵: 同時に1件だけ受け付け、失敗のあとは再び�
   assert.equal((await lock.run(async () => { calls++; return { ok: true as const } })).ok, false)
   assert.equal(calls, 1)
 })
+
+test('操作に当たらないとき、AI の理由の文を画面に渡さない（内部の言葉を出さない）', () => {
+  const res = chatResponse({ kind: 'unknown', reason: 'どの操作にも当たらないので unknown にしました', suggestions: [{ label: '売上を見る', href: '/income/revenue' }] } as never, '利益率ってどう計算するの？')
+  assert.equal(res.kind, 'unknown')
+  assert.equal((res as { reason?: string }).reason, '')
+})

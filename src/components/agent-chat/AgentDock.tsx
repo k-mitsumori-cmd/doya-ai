@@ -243,7 +243,7 @@ export default function AgentDock() {
               )}
               {state.guide.kind === 'unknown' && (
                 <>
-                  <p className={styles.say}>{state.guide.reason || 'この依頼に合う操作を、見つけられませんでした。'}</p>
+                  <p className={styles.say}>{state.guide.suggestions.length > 0 ? 'この依頼に合う操作を、チャットでは進められません。近いツールから進められます。' : 'この依頼に合う操作を、チャットでは進められません。'}</p>
                   <div className={styles.next}>
                     {state.guide.suggestions.map((s) => (
                       <button key={s.href} type="button" className={styles.nextBtn} onClick={() => router.push(s.href)}><span>{s.label}</span></button>
