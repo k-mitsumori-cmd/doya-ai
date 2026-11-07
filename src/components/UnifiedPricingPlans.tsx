@@ -56,7 +56,7 @@ export function UnifiedPricingPlans({
   // ⚠️ 未ログインの初回訪問者に出すと「反映？何のこと？」となるので、
   //    ログイン済みかつ無料プランの方にだけ見せる。
   const { data: session, status: authStatus } = useSession()
-  const newPricing = useNewPricing(JSON.stringify([authStatus, session?.user?.id, session?.user?.email]))
+  const newPricing = useNewPricing(JSON.stringify([authStatus, session?.user?.id, session?.user?.email, session?.user?.plan]))
 
   // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
   // セッションはサーバー側で User.plan を読み直してから返される。
@@ -75,7 +75,7 @@ export function UnifiedPricingPlans({
   })
   if (!svc) return null
   // Only an explicit legacy-pricing response may display legacy prices or checkout.
-  // The canonical page resolves existing contracts; PRO alone cannot identify a legacy contract.
+  // The server resolves existing contracts; PRO alone cannot identify a legacy contract.
   if (newPricing !== false) {
     return (
       <section className={className || ''} aria-label="料金とご契約の確認">
