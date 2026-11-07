@@ -1,5 +1,5 @@
 'use client'
-// null means the pricing status is unresolved or unavailable. Never interpret it as legacy pricing.
+// false preserves confirmed legacy/off pricing; true guides new/team users. null is unresolved.
 import { useEffect, useState } from 'react'
 
 const cached = new Map<string, Promise<boolean | null>>()
@@ -12,7 +12,12 @@ function load(identityKey: string): Promise<boolean | null> {
       if (!response.ok) return null
       const data: unknown = await response.json()
       if (!data || typeof data !== 'object' || !('newPricing' in data) || typeof data.newPricing !== 'boolean') return null
-      return data.newPricing
+      const pricingView = 'pricingView' in data ? data.pricingView : undefined
+      // Old off responses remain compatible; raw rollout-on is never a contract verdict.
+      if (!data.newPricing) return pricingView === undefined || pricingView === 'current' ? false : null
+      if (pricingView === 'legacy') return false
+      if (pricingView === 'new' || pricingView === 'team') return true
+      return null
     })
     .catch(() => null)
   cached.set(identityKey, request)
