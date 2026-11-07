@@ -1,10 +1,11 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // GET  /api/quote/invite/[token] — 招待の内容（組織名・権限）
 // POST /api/quote/invite/[token] — 招待を受ける（要ログイン）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { resolveUserId } from '@/lib/quote/access'
 
@@ -38,14 +39,14 @@ async function load(token: string) {
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const m = await load(p.token)
-  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return privateApiJson({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status === 'PENDING' && m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
-    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
 
   // ⚠️ 未ログインでも開ける画面なので、返すのは表示に要る最小限だけ。
   //    招待されたメールアドレスもここでは返さない（総当たりで宛先を探られないように）。
-  return NextResponse.json({
+  return privateApiJson({
     invite: {
       organizationName: m.organization.name,
       roleLabel: ROLE_LABEL[m.role] || m.role,
@@ -57,15 +58,15 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const userId = await resolveUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
 
   const m = await load(p.token)
-  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return privateApiJson({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status !== 'PENDING') {
-    return NextResponse.json({ error: 'この招待は既に使われています' }, { status: 409 })
+    return privateApiJson({ error: 'この招待は既に使われています' }, { status: 409 })
   }
   if (m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
-    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -92,13 +93,13 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       return claimed.count === 1 ? 'accepted' as const : 'unavailable' as const
     })
-    if (result === 'mismatch') return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
-    if (result === 'expired') return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
-    if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
-    if (result === 'already') return NextResponse.json({ ok: true, alreadyMember: true })
-    return NextResponse.json({ ok: true, organizationName: m.organization.name })
+    if (result === 'mismatch') return privateApiJson({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+    if (result === 'expired') return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
+    if (result === 'unavailable') return privateApiJson({ error: 'この招待は既に使用済みです' }, { status: 409 })
+    if (result === 'already') return privateApiJson({ ok: true, alreadyMember: true })
+    return privateApiJson({ ok: true, organizationName: m.organization.name })
   } catch (error) {
-    if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
-    return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
+    if (error instanceof InvitationExpired) return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }
 }

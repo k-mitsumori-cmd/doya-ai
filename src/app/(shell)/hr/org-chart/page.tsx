@@ -37,7 +37,7 @@ export default function OrgChartPage() {
   const scopeKey = JSON.stringify([actor, epoch.current.version])
   const currentScope = useRef({ key: scopeKey, allowed })
   currentScope.current = { key: scopeKey, allowed }
-  const [view, setView] = useState<{ scope: string; data: HrOrgChartData | null; error: boolean; unauthorized: boolean; changed?: boolean; loading: boolean }>({ scope: '', data: null, error: false, unauthorized: false, loading: true })
+  const [view, setView] = useState<{ scope: string; data: HrOrgChartData | null; error: boolean; unauthorized: boolean; changed?: boolean; status?: number; loading: boolean }>({ scope: '', data: null, error: false, unauthorized: false, loading: true })
   const [progress, setProgress] = useState<{ scope: string; loaded: number; total: number } | null>(null)
   const [retryKey, setRetryKey] = useState(0)
   const reduceMotion = useReducedMotion()
@@ -51,7 +51,7 @@ export default function OrgChartPage() {
     void readHrOrgChart(controller.signal, (loaded, total) => { if (current()) setProgress({ scope: scopeKey, loaded, total }) }, organizationScope.request).then(data => {
       if (current()) setView({ scope: scopeKey, data, error: false, unauthorized: false, loading: false })
     }).catch(error => {
-      if (current()) setView({ scope: scopeKey, data: null, error: true, unauthorized: error instanceof HrOrgChartReadError && error.unauthorized, changed: error instanceof HrOrgChartReadError && error.changed, loading: false })
+      if (current()) setView({ scope: scopeKey, data: null, error: true, unauthorized: error instanceof HrOrgChartReadError && error.unauthorized, changed: error instanceof HrOrgChartReadError && error.changed, status: error instanceof HrOrgChartReadError && error.status > 0 ? error.status : undefined, loading: false })
     })
     return () => controller.abort()
   }, [allowed, scopeKey, retryKey])
@@ -101,7 +101,7 @@ export default function OrgChartPage() {
         ) : loadError ? (
           view.changed
             ? <ErrorNotice what="読み込みの途中で組織図が更新されました。" how="違う時点の情報が混ざらないよう、もう一度読み込んでください。" onRetry={retry} retryLabel="再読み込み" />
-            : <HrLoadError subject="組織図" status={view.unauthorized ? 401 : undefined} onRetry={retry} />
+            : <HrLoadError subject="組織図" status={view.unauthorized ? 401 : view.status} onRetry={retry} />
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
             <p className="font-bold text-rose-800">組織図データの取得に失敗しました。</p>

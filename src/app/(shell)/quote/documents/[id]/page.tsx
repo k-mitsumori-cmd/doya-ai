@@ -35,7 +35,7 @@ const SOURCE_STYLE: Record<string, string> = {
 export default function QuoteDocumentPage() {
   const params = useParams<{ id: string }>()
   const id = params?.id
-  const { doc, issuer, loading, saving, unknown, error, message, items, clientCompany, clientPerson,
+  const { doc, issuer, loading, saving, unknown, error, errorStatus, message, items, clientCompany, clientPerson,
     discountType, discountValue, notes, paymentTerms, deliveryTerms, setClientCompany, setClientPerson,
     setDiscountType, setDiscountValue, setNotes, setPaymentTerms, setDeliveryTerms, updateItem,
     save, load, canApprove, pdfUrl, undoLastSave } = useQuoteDocumentDetail(id)
@@ -65,8 +65,8 @@ export default function QuoteDocumentPage() {
   }
   if (!doc) {
     // 新しい見た目: 生の文言は出さず「何が起きたか・どうするか」を出す（S-20）。
-    // ⚠️ 共通の hook は状態コードを返さないので、文言から種類を決める（error-copy.ts）
-    const kind = quoteErrorKind(0, error || '見つかりません')
+    // HTTP状態を優先し、状態が分からない失敗だけ既存の文言判定へ渡す。
+    const kind = quoteErrorKind(errorStatus, errorStatus ? '' : error || '見つかりません')
     const copy = quoteErrorCopy(kind, '見積書')
     return (
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">

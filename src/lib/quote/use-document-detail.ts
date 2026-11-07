@@ -4,8 +4,12 @@ import { useSession } from 'next-auth/react'
 import { getSelectedOrg, orgStorageKey } from '@/components/org/OrgSwitcher'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
-import { requestOrgJson, orgErrorMessage } from '@/lib/org-client-response'
+import { requestOrgJson, orgErrorMessage, OrgResponseError } from '@/lib/org-client-response'
 import { parseQuoteDetailDocument, quoteDraftFromDocument, quoteDocumentDraftMatches, quoteDocumentWrite, isQuoteDocumentWriteAcknowledgement, type QuoteDetailDocument, type QuoteDetailDraft, type QuoteDetailLine } from '@/lib/quote/document-response'
+
+class QuoteDocumentReadError extends Error {
+  constructor(message: string, readonly status: number) { super(message) }
+}
 
 const emptyDraft = (): QuoteDetailDraft => ({ items:[], clientCompany:'', clientPerson:'', discountType:'', discountValue:'', notes:'', paymentTerms:'', deliveryTerms:'' })
 export function useQuoteDocumentDetail(id: string | undefined) {
@@ -38,6 +42,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
   const [loading,setLoading]=useState(true)
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
+  const [loadErrorStatus,setLoadErrorStatus]=useState(0)
   const [message,setMessage]=useState('')
   const changed=useCallback(()=>{context.invalidate();redraw(n=>n+1)},[context])
   useEffect(()=>{
@@ -47,21 +52,21 @@ export function useQuoteDocumentDetail(id: string | undefined) {
     return()=>{window.removeEventListener('quote:organization-changed',changed);window.removeEventListener('storage',storage);context.invalidate()}
   },[context,changed])
   const load=useCallback(async(resumeEditing = false)=>{
-    if (!id||!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {setLoading(false);setError('見積書のURLを確認してください');return}
+    if (!id||!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {setLoading(false);setLoadErrorStatus(0);setError('見積書のURLを確認してください');return}
     const ticket=context.begin('document-read',true,epoch)
     if(!ticket)return
-    setLoading(true);setReady(null);setSaving(false);setError('');setMessage('')
+    setLoading(true);setReady(null);setSaving(false);setLoadErrorStatus(0);setError('');setMessage('')
     try {
       const orgs=await requestOrgJson('quote','/api/quote/organizations',selection,{signal:ticket.signal})
       if(!ticket.current())return
-      if(!orgs.res.ok)throw new Error(orgErrorMessage(orgs.data,orgs.res.status,false))
+      if(!orgs.res.ok)throw new QuoteDocumentReadError(orgErrorMessage(orgs.data,orgs.res.status,false),orgs.res.status)
       const org=parseQuoteOrganizations(orgs.data).current
       if(!org||!context.verifyOrganization(epoch,org.slug))throw new Error('組織の所属を確認できませんでした')
       if(state.current.org!==null&&state.current.org!==org.slug){state.current={doc:null,issuer:null,draft:emptyDraft(),revision:0,dirty:false,org:null};pending.current=null}
       state.current.org=org.slug
       const {res,data}=await requestOrgJson('quote',`/api/quote/documents/${id}`,org.slug,{signal:ticket.signal})
       if(!ticket.current())return
-      if(!res.ok)throw new Error(orgErrorMessage(data,res.status,false))
+      if(!res.ok)throw new QuoteDocumentReadError(orgErrorMessage(data,res.status,false),res.status)
       if(data.error!==undefined||data.code!==undefined)throw new Error('見積書の内容を確認できませんでした')
       const doc=parseQuoteDetailDocument(data.document,id)
       if(data.issuer!==null&&(!data.issuer||typeof data.issuer!=='object'||Array.isArray(data.issuer)||typeof (data.issuer as {companyName?:unknown}).companyName!=='string'))throw new Error('発行者情報を確認できませんでした')
@@ -77,7 +82,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
       if(!state.current.dirty)state.current.draft=quoteDraftFromDocument(doc)
       state.current.dirty=!quoteDocumentDraftMatches(doc,state.current.draft)
       setReady({epoch,slug:org.slug,role:org.role})
-    }catch(e){if(ticket.current())setError(e instanceof Error?e.message:'見積書を取得できませんでした')}
+    }catch(e){if(ticket.current()){setLoadErrorStatus(e instanceof QuoteDocumentReadError || e instanceof OrgResponseError ? e.status : 0);setError(e instanceof Error?e.message:'見積書を取得できませんでした')}}
     finally{if(ticket.current())setLoading(false);ticket.end()}
   },[context,epoch,id,selection])
   useEffect(()=>{void load()},[load])
@@ -137,6 +142,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
     doc:currentDoc,issuer:loaded?state.current.issuer:null,...state.current.draft,
     loading:status==='loading'||status==='authenticated'&&loading&&!loaded,saving,unknown,
     error:status==='unauthenticated'?'ログインして見積書をご確認ください。':error,message,
+    errorStatus:status==='unauthenticated'?401:loadErrorStatus,
     canApprove:loaded&&!!ready&&['owner','admin','manager'].includes(ready.role),pdfUrl,
     hasUnsavedChanges:state.current.dirty,load,save,undoLastSave,
     setClientCompany:(v:string)=>edit('clientCompany',v),setClientPerson:(v:string)=>edit('clientPerson',v),

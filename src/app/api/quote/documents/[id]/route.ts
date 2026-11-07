@@ -1,3 +1,4 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -5,7 +6,7 @@ export const maxDuration = 300
 // GET    /api/quote/documents/[id] — 見積書の詳細
 // PATCH  /api/quote/documents/[id] — 更新（明細まるごと差し替え／確定）
 // DELETE /api/quote/documents/[id] — 削除
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { authorizeCompanyActionForSession, findRecordAuthor } from '@/lib/company-roles/access.server'
@@ -54,66 +55,66 @@ function quoteExpiryDate(value: unknown): Date | null {
 export async function GET(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   // ⚠️ id だけで引かない。必ず organizationId との二重条件にする
   const doc = await prisma.quoteDocument.findFirst({
     where: { id: p.id, organizationId: ctx.organizationId },
     include: { lineItems: { orderBy: { ord: 'asc' } }, product: { select: { id: true, name: true } } },
   })
-  if (!doc) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
+  if (!doc) return privateApiJson({ error: '見積書が見つかりません' }, { status: 404 })
 
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
-  try { return NextResponse.json({ document: await withQuoteDocumentRevision(prisma, doc), issuer }) } catch (e) { if(e instanceof QuoteDocumentRevisionError) return NextResponse.json({error:e.message},{status:e.status}); throw e }
+  try { return privateApiJson({ document: await withQuoteDocumentRevision(prisma, doc), issuer }) } catch (e) { if(e instanceof QuoteDocumentRevisionError) return privateApiJson({error:e.message},{status:e.status}); throw e }
 }
 
 export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
+    return privateApiJson({ error: '更新内容が不正です' }, { status: 400 })
   }
-  if ('title' in body && (typeof body.title !== 'string' || !body.title.trim())) return NextResponse.json({ error: '件名を200文字以内で入力してください。変更は保存されていません。' }, { status: 400 })
+  if ('title' in body && (typeof body.title !== 'string' || !body.title.trim())) return privateApiJson({ error: '件名を200文字以内で入力してください。変更は保存されていません。' }, { status: 400 })
   for (const [field, label, max] of [
     ['title', '件名', 200], ['clientCompany', '宛先会社名', 200], ['clientDept', '宛先部署名', 200],
     ['clientPerson', '宛先担当者名', 200], ['notes', '備考', 2000],
     ['paymentTerms', '支払条件', 2000], ['deliveryTerms', '納期', 2000],
   ] as const) {
     if (body[field] != null && (typeof body[field] !== 'string' || body[field].length > max)) {
-      return NextResponse.json({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。入力内容は保存されていません。` }, { status: 400 })
+      return privateApiJson({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。入力内容は保存されていません。` }, { status: 400 })
     }
   }
   if (body.items != null && !Array.isArray(body.items)) {
-    return NextResponse.json({ error: '明細の形式が正しくありません。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細の形式が正しくありません。変更は保存されていません。' }, { status: 400 })
   }
   if (Array.isArray(body.items) && body.items.length > 60) {
-    return NextResponse.json({ error: '明細は60行以内で入力してください。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細は60行以内で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   if (Array.isArray(body.items) && body.items.some((i: any) =>
     !i || typeof i !== 'object' || Array.isArray(i) ||
     ([['itemName', 200], ['spec', 1000], ['unit', 12], ['sourceRef', 1000]] as const)
       .some(([field, max]) => i[field] != null && (typeof i[field] !== 'string' || i[field].length > max)))) {
-    return NextResponse.json({ error: '明細の文字項目は指定の文字数内で入力してください。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '明細の文字項目は指定の文字数内で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   const expiryDate = 'expiryDate' in body ? quoteExpiryDate(body.expiryDate) : undefined
   if ('expiryDate' in body && !expiryDate) {
-    return NextResponse.json({ error: '有効期限は正しい日付で入力してください。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '有効期限は正しい日付で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   if ('discountValue' in body && quoteInteger(body.discountValue, 0, 0) === null) {
-    return NextResponse.json({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   if ('discountType' in body && body.discountType != null && body.discountType !== '' &&
     body.discountType !== 'rate' && body.discountType !== 'amount') {
-    return NextResponse.json({ error: '値引き方法が正しくありません。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '値引き方法が正しくありません。変更は保存されていません。' }, { status: 400 })
   }
   if (Array.isArray(body.items) && body.items.filter((i: any) => i && i.itemName).some((i: any) =>
     quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null ||
     quoteTaxRate(i.taxRate) === null || quoteOptionalRange(i.rangeMin) === undefined || quoteOptionalRange(i.rangeMax) === undefined
   )) {
-    return NextResponse.json({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。変更は保存されていません。' }, { status: 400 })
+    return privateApiJson({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   try {
     const expectedRevision = quoteExpectedRevision(body.expectedRevision)
@@ -121,18 +122,18 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     // 同時の確定と編集は直列化し、競合時には再確認を求める。
     return await prisma.$transaction(async (tx) => {
       const actor = await lockQuoteDocumentActor(tx,ctx,p.id)
-      if (!actor) return NextResponse.json({ error: '組織へのアクセス権がありません。再読み込みしてください' }, { status: 403 })
+      if (!actor) return privateApiJson({ error: '組織へのアクセス権がありません。再読み込みしてください' }, { status: 403 })
       const existing = await tx.quoteDocument.findFirst({
         where: { id: p.id, organizationId: ctx.organizationId },
         include: { lineItems: {orderBy:{ord:'asc'}} },
       })
-      if (!existing) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
+      if (!existing) return privateApiJson({ error: '見積書が見つかりません' }, { status: 404 })
 
       await assertQuoteDocumentRevision(tx,existing,expectedRevision)
       const effectiveDiscountType = 'discountType' in body ? body.discountType : existing.discountType
       const effectiveDiscountValue = 'discountValue' in body ? quoteInteger(body.discountValue, 0, 0)! : existing.discountValue ?? 0
       if (effectiveDiscountType === 'rate' && effectiveDiscountValue > 100) {
-        return NextResponse.json({ error: '割引率は100%以内で入力してください。変更は保存されていません。' }, { status: 400 })
+        return privateApiJson({ error: '割引率は100%以内で入力してください。変更は保存されていません。' }, { status: 400 })
       }
 
       const data: Record<string, unknown> = {}
@@ -157,16 +158,16 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       if ('status' in body) {
         const next = String(body.status)
         if (!['draft', 'confirmed', 'sent'].includes(next)) {
-          return NextResponse.json({ error: 'ステータスが不正です' }, { status: 400 })
+          return privateApiJson({ error: 'ステータスが不正です' }, { status: 400 })
         }
         if (next !== existing.status && !hasMinRole(actor.role, 'manager')) {
-          return NextResponse.json({ error: '見積書の承認状態を変更する権限がありません' }, { status: 403 })
+          return privateApiJson({ error: '見積書の承認状態を変更する権限がありません' }, { status: 403 })
         }
         if (next === 'sent' && existing.status !== 'confirmed') {
-          return NextResponse.json({ error: '送付済みにする前に見積書を確定してください' }, { status: 409 })
+          return privateApiJson({ error: '送付済みにする前に見積書を確定してください' }, { status: 409 })
         }
         if (next === 'confirmed' && existing.status !== 'draft') {
-          return NextResponse.json({ error: '見積書をいったん下書きに戻してから確定してください' }, { status: 409 })
+          return privateApiJson({ error: '見積書をいったん下書きに戻してから確定してください' }, { status: 409 })
         }
         // 会社の役割の旗の内側: 確定できる役割と「自分で作った見積を自分で確定しない」を、会社の決まりで判定する（ROLES-2026-10-26.md §3.4）
         if (next === 'confirmed') {
@@ -176,11 +177,11 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
           const unknownAuthorBlocked = company.checked && company.mode === 'enforce' && author === null && company.context !== null
             && company.context.role !== 'owner' && company.context.role !== 'admin'
           if (unknownAuthorBlocked) {
-            return NextResponse.json({ error: 'この見積書は作った人の記録が無いため、管理者かオーナーが確定します。' }, { status: 403 })
+            return privateApiJson({ error: 'この見積書は作った人の記録が無いため、管理者かオーナーが確定します。' }, { status: 403 })
           }
           if (!company.allowed) {
             const self = company.checked && !company.decision.ok && company.decision.reason === 'SELF_APPROVAL'
-            return NextResponse.json({ error: self ? 'ご自身で作った見積書は、ほかの方が確定します。マネージャーか管理者に確定を依頼してください。' : '見積書を確定する権限がありません。会社の管理者に依頼してください。' }, { status: 403 })
+            return privateApiJson({ error: self ? 'ご自身で作った見積書は、ほかの方が確定します。マネージャーか管理者に確定を依頼してください。' : '見積書を確定する権限がありません。会社の管理者に依頼してください。' }, { status: 403 })
           }
         }
         if (next !== existing.status) {
@@ -210,7 +211,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         Array.isArray(body?.items) || 'discountType' in body || 'discountValue' in body
       const touchesContent = touchesAmounts || Object.keys(body).some((key) => key !== 'status' && key !== 'expectedRevision')
       if (touchesContent && existing.status !== 'draft' && nextStatus !== 'draft') {
-        return NextResponse.json({ error: '確定済みの見積書は変更できません。いったん下書きに戻してから編集してください。' }, { status: 409 })
+        return privateApiJson({ error: '確定済みの見積書は変更できません。いったん下書きに戻してから編集してください。' }, { status: 409 })
       }
       // --- 明細の差し替え ---
       if (Array.isArray(body?.items)) {
@@ -244,50 +245,50 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         include: { lineItems: { orderBy: { ord: 'asc' } } },
       })
       if (!updated) throw new Error('Saved document unavailable')
-      return NextResponse.json({ document: await advanceQuoteDocumentRevision(tx,updated) })
+      return privateApiJson({ document: await advanceQuoteDocumentRevision(tx,updated) })
     }, { isolationLevel: 'Serializable' })
   } catch (error) {
-    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({error:error.message},{status:error.status})
+    if (error instanceof QuoteDocumentRevisionError) return privateApiJson({error:error.message},{status:error.status})
     if (error && typeof error === 'object' && 'code' in error && error.code === 'QUOTE_TOTAL_OUT_OF_RANGE') {
-      return NextResponse.json({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。変更は保存されていません。' }, { status: 400 })
+      return privateApiJson({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。変更は保存されていません。' }, { status: 400 })
     }
     if (isQuoteDocumentWriteConflict(error)) {
-      return NextResponse.json({ error: '別の操作と更新が重なりました。再読み込みして内容を確認してから保存してください。' }, { status: 409 })
+      return privateApiJson({ error: '別の操作と更新が重なりました。再読み込みして内容を確認してから保存してください。' }, { status: 409 })
     }
-    return NextResponse.json({ error: '見積書を保存できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
+    return privateApiJson({ error: '見積書を保存できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(ctx.role, 'manager')) {
-    return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    return privateApiJson({ error: '権限がありません' }, { status: 403 })
   }
   try {
     const versions = new URL(req.url).searchParams.getAll('expectedRevision')
-    if(versions.length > 1) return NextResponse.json({error:'見積書の版の指定が正しくありません。'},{status:400})
+    if(versions.length > 1) return privateApiJson({error:'見積書の版の指定が正しくありません。'},{status:400})
     const expectedRevision = quoteExpectedRevision(versions[0])
     return await prisma.$transaction(async tx => {
       const actor = await lockQuoteDocumentActor(tx,ctx,p.id)
       if (!actor || !hasMinRole(actor.role, 'manager')) {
-        return NextResponse.json({ error: '見積書を削除する権限がありません。再読み込みしてください' }, { status: 403 })
+        return privateApiJson({ error: '見積書を削除する権限がありません。再読み込みしてください' }, { status: 403 })
       }
       const existing = await tx.quoteDocument.findFirst({where:{id:p.id,organizationId:ctx.organizationId},include:{lineItems:{orderBy:{ord:'asc'}}}})
-      if(!existing) return NextResponse.json({error:'見積書が見つかりません'},{status:404})
+      if(!existing) return privateApiJson({error:'見積書が見つかりません'},{status:404})
       await assertQuoteDocumentRevision(tx,existing,expectedRevision)
       const deleted = await tx.quoteDocument.deleteMany({
         where: { id: p.id, organizationId: ctx.organizationId },
       })
-      if (deleted.count === 0) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
-      return NextResponse.json({ ok: true })
+      if (deleted.count === 0) return privateApiJson({ error: '見積書が見つかりません' }, { status: 404 })
+      return privateApiJson({ ok: true })
     }, { isolationLevel: 'Serializable' })
   } catch (error) {
-    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({error:error.message},{status:error.status})
+    if (error instanceof QuoteDocumentRevisionError) return privateApiJson({error:error.message},{status:error.status})
     if (isQuoteDocumentWriteConflict(error)) {
-      return NextResponse.json({ error: '別の操作と削除が重なりました。再読み込みして状態を確認してください。' }, { status: 409 })
+      return privateApiJson({ error: '別の操作と削除が重なりました。再読み込みして状態を確認してください。' }, { status: 409 })
     }
-    return NextResponse.json({ error: '見積書を削除できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
+    return privateApiJson({ error: '見積書を削除できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
   }
 }
