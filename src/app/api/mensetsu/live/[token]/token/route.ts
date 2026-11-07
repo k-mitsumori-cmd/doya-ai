@@ -13,7 +13,8 @@ export const maxDuration = 300
 //   ブラウザとOpenAIを直結し、サーバは認証と面接指示の組み立てだけを担当する。
 //
 // ⚠️ OPENAI_API_KEY を絶対にクライアントへ返さないこと。返すのは client_secret のみ。
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
 import { ADVANCE_TOOL, buildInterviewerInstructions } from '@/lib/mensetsu/interview'
@@ -29,33 +30,33 @@ const REALTIME_VOICE = process.env.MENSETSU_REALTIME_VOICE || 'alloy'
 export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const s = await loadSessionByToken(p.token)
-  if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+  if (!s) return privateApiJson({ error: '面接が見つかりません' }, { status: 404 })
 
   // 同意していない応募者には発行しない（C1）
   if (!s.consentedAt) {
-    return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+    return privateApiJson({ error: '先に同意が必要です' }, { status: 403 })
   }
   const usable = assertUsable(s)
-  if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
-  if (s.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
+  if (!usable.ok) return privateApiJson({ error: usable.reason }, { status: usable.status })
+  if (s.endedAt) return privateApiJson({ error: 'この面接は既に終了しています。' }, { status: 409 })
   const graceMs = (s.template.durationMin * 60 + 10 * 60) * 1000
   if (s.startedAt && Date.now() - s.startedAt.getTime() > graceMs) {
-    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
+    return privateApiJson({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
   // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 発行した会社の台帳だけを見る。
   // 仮に減らした分数（設定の分数 + 3分）を超えて続けない。戻したあと（終わった・中止した）は続けない。
   // 旗を入れる前に発行した面接（台帳に記録なし）は今までどおり
   const voice = await voiceCharger.allowance('mensetsu', s.organizationId, voiceTokenKey('mensetsu', s.token), s.template.durationMin)
   if (voice === 'closed') {
-    return NextResponse.json({ error: 'この面接は、いまはご利用いただけません。採用ご担当者にお問い合わせください。' }, { status: 409 })
+    return privateApiJson({ error: 'この面接は、いまはご利用いただけません。採用ご担当者にお問い合わせください。' }, { status: 409 })
   }
   if (voice && s.startedAt && Date.now() - s.startedAt.getTime() > voice.minutes * 60 * 1000) {
-    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
+    return privateApiJson({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: '音声面接の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
+    return privateApiJson({ error: '音声面接の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
   }
 
   // --- 発行の上限（未認証で叩ける口なので必須）---
@@ -75,12 +76,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   })
   if (reserved.count === 0) {
     const current = await loadSessionByToken(p.token)
-    if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
-    if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+    if (!current) return privateApiJson({ error: '面接が見つかりません' }, { status: 404 })
+    if (!current.consentedAt) return privateApiJson({ error: '先に同意が必要です' }, { status: 403 })
     const allowed = assertUsable(current)
-    if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
-    if (current.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
-    return NextResponse.json(
+    if (!allowed.ok) return privateApiJson({ error: allowed.reason }, { status: allowed.status })
+    if (current.endedAt) return privateApiJson({ error: 'この面接は既に終了しています。' }, { status: 409 })
+    return privateApiJson(
       { error: '接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。' },
       { status: 429 }
     )
@@ -147,7 +148,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     if (!res.ok) {
       void res.body?.cancel().catch(() => {})
       console.error('[mensetsu] realtime session error', res.status)
-      return NextResponse.json(
+      return privateApiJson(
         { error: '面接セッションを開始できませんでした。時間をおいて再度お試しください。' },
         { status: 502 }
       )
@@ -155,23 +156,23 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     data = await readRealtimeJson(res)
   } catch {
     console.error('[mensetsu] realtime session request failed')
-    return NextResponse.json({ error: '音声面接サーバーに接続できませんでした' }, { status: 502 })
+    return privateApiJson({ error: '音声面接サーバーに接続できませんでした' }, { status: 502 })
   }
 
   // 新形式は { value, expires_at, session } を直接返す（旧形式の client_secret.value ではない）
   const clientSecret = realtimeClientSecret(data)
   if (!clientSecret) {
     console.error('[mensetsu] realtime: client secret missing')
-    return NextResponse.json({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
+    return privateApiJson({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
   }
 
   // 外部API待機中に終了・同意撤回された面接へ資格情報を渡さない。
   let current = await loadSessionByToken(p.token)
-  if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
-  if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+  if (!current) return privateApiJson({ error: '面接が見つかりません' }, { status: 404 })
+  if (!current.consentedAt) return privateApiJson({ error: '先に同意が必要です' }, { status: 403 })
   let allowed = assertUsable(current)
-  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
-  if (current.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
+  if (!allowed.ok) return privateApiJson({ error: allowed.reason }, { status: allowed.status })
+  if (current.endedAt) return privateApiJson({ error: 'この面接は既に終了しています。' }, { status: 409 })
 
   // 発行回数は上の予約で加算済み。並列開始でも開始時刻を上書きしない。
   if (!current.startedAt) {
@@ -187,18 +188,18 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   }
 
   current = await loadSessionByToken(p.token)
-  if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
-  if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+  if (!current) return privateApiJson({ error: '面接が見つかりません' }, { status: 404 })
+  if (!current.consentedAt) return privateApiJson({ error: '先に同意が必要です' }, { status: 403 })
   allowed = assertUsable(current)
-  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+  if (!allowed.ok) return privateApiJson({ error: allowed.reason }, { status: allowed.status })
   if (current.endedAt || current.status !== 'live' || !current.startedAt) {
-    return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
+    return privateApiJson({ error: '面接の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
   }
   if (Date.now() - current.startedAt.getTime() > graceMs) {
-    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
+    return privateApiJson({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
 
-  return NextResponse.json({
+  return privateApiJson({
     clientSecret,
     expiresAt: data?.expires_at ?? null,
     model: REALTIME_MODEL,
