@@ -2,7 +2,7 @@ name: Build
 
 # PR と main への push で、本番と同じ手順のうち「秘密の値が要らない部分」を確かめる。
 # - 既存の CI（ci.yml）は tsc・test:security・lint と DB を使う回帰テストを受け持つ。
-#   ここでは、そこに入っていない tsx のテスト（test:asklink〜test:expense）と next build を受け持つ。
+#   ここでは、そこに入っていない tsx のテスト（npm run build と同じ一式）と next build を受け持つ。
 # - 秘密の値は使わない。ビルドに要る環境変数は、存在しない宛先のダミーにする。
 #   本番の DB・外部 API には接続しない。
 # - main の保護（Branch protection）で、このジョブと ci.yml の check を merge の必須条件にする想定。
@@ -32,6 +32,9 @@ jobs:
       DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/ci_dummy
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-build-only-not-a-secret
+      # 本番で旗に値を入れても、ビルドの中のテストが落ちないことを確かめる（2026-11-08 に AGENT_CHAT_ROLLOUT=preview で本番のビルドが落ちた）
+      AGENT_CHAT_ROLLOUT: preview
+      UI_PREVIEW_EMAILS: ci-preview@example.test
     steps:
       - uses: actions/checkout@v5
 
@@ -46,6 +49,9 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Security regression (flag set)
+        run: npm run test:security
+
       - name: Unit tests (tsx)
         run: |
           npm run test:asklink
@@ -55,6 +61,15 @@ jobs:
           npm run test:shanai
           npm run test:income
           npm run test:expense
+          npm run test:doyapower
+          npm run test:shell
+          npm run test:agent
+          npm run test:slack
+          npm run test:cost
+          npm run test:pricing
+          npm run test:support-chat
+          npm run test:health-check
+          npm run test:roles
 
       - name: Type check
         run: npx tsc --noEmit
