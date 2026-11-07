@@ -134,6 +134,33 @@ const cases = [];
 async function check(name, fn) { await reset(); await fn(); assert(await used() <= state.purchased, name + ': member count exceeds purchased seats'); cases.push(name); console.log('PASS coordinated route SQL: ' + name); }
 (async () => {
   try {
+    for (const email of ['invitee@example.invalid', 'INVITEE@EXAMPLE.INVALID']) {
+      await check('active-account-current-email-reinvite-does-not-reserve-another-seat-' + email, async () => {
+        await raw.accountCompanyMember.create({ data: { id: 'reinvite-existing-account', companyId, email: 'previous@example.invalid', userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+        const before = await raw.accountCompanyMember.count({ where: { companyId } });
+        const response = await member.POST({ json: async () => ({ email, role: 'admin' }) });
+        assert.equal(response.status, 409); assert.equal((await response.json()).code, 'ALREADY_MEMBER');
+        assert.equal(await raw.accountCompanyMember.count({ where: { companyId } }), before);
+        const existing = await raw.accountCompanyMember.findUnique({ where: { id: 'reinvite-existing-account' } });
+        assert.equal(existing.role, 'member'); assert.equal(existing.email, 'previous@example.invalid');
+        assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
+      });
+    }
+    await check('full-capacity-active-account-reinvite-never-suggests-another-seat', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'full-existing-account', companyId, email: 'previous@example.invalid', userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+      state.purchased = 4; await raw.accountCompanyBilling.update({ where: { companyId }, data: { seats: 4 } });
+      const response = await member.POST({ json: async () => ({ email: 'invitee@example.invalid' }) });
+      assert.equal(response.status, 409); assert.equal((await response.json()).code, 'ALREADY_MEMBER');
+      assert.equal(await used(), 4); assert.equal(await raw.accountCompanyMember.count({ where: { companyId } }), 3);
+      assert.equal(state.stripeAttempts, 0);
+    });
+    await check('registered-account-without-active-company-membership-can-be-invited', async () => {
+      const response = await member.POST({ json: async () => ({ email: 'invitee@example.invalid' }) });
+      assert.equal(response.status, 201);
+      const row = await raw.accountCompanyMember.findUnique({ where: { companyId_email: { companyId, email: 'invitee@example.invalid' } } });
+      assert.equal(row.status, 'invited'); assert.equal(row.userId, null);
+      assert.equal(state.stripeAttempts, 0);
+    });
     await check('same-account-old-email-membership-blocks-duplicate-acceptance', async () => {
       await raw.accountCompanyMember.create({ data: { id: 'same-account-old-email', companyId, email: 'previous@example.invalid', userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
       await raw.accountCompanyMember.create({ data: { id: 'same-account-new-invite', companyId, email: 'invitee@example.invalid', role: 'admin', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'same-account-new-token' } });

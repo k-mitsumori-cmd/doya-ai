@@ -83,6 +83,17 @@ export async function POST(req: NextRequest) {
           const ownerEmail = capacity.ownerEmail
           const members = await listMembers(companyId, tx)
           const used = seatsUsed({ ownerUserId: c.ctx.owner.id, ownerEmail, members })
+          const requestedEmail = normalizeEmail(body?.email)
+          const activeUserIds = [...new Set(members.flatMap(member => member.status === 'active' && member.userId ? [member.userId] : []))]
+          // 所属に残る旧メールだけで判定せず、参加済みアカウントの
+          // 現在のメールも確かめる。同じ人への再招待で席を重ねない。
+          if (requestedEmail && requestedEmail !== normalizeEmail(ownerEmail) && activeUserIds.length > 0) {
+            const alreadyActive = await tx.user.findFirst({
+              where: { id: { in: activeUserIds }, email: { equals: requestedEmail, mode: 'insensitive' } },
+              select: { id: true },
+            })
+            if (alreadyActive) return { ok: false as const, status: 409, code: 'ALREADY_MEMBER' as const }
+          }
           const d = decideInvite({ email: body?.email, ownerEmail, members, used, seats: limit })
           if (!d.ok) return d
           const email = normalizeEmail(body?.email)!
