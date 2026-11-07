@@ -49,17 +49,32 @@ export function normalizeEmail(raw: unknown): string | null {
   return e
 }
 
-/** 席を取っている人数（持ち主1人 ＋ 招待中・参加のメンバー。持ち主と同じ人の行は重ねて数えない） */
+/** 持ち主と、有効な所属・招待を人数で数える。同じ利用者IDは1席。
+ * メールが変わって所属行が複数あっても、利用者IDが同じなら重ねない。
+ * IDのない招待はメールで数え、有効な所属と同じメールなら重ねない。
+ * 異なるIDは同じメール表記でも別人。メール不明の行は安全側で各1席。
+ */
 export function seatsUsed(input: { ownerUserId: string; ownerEmail: string | null; members: MemberLike[]; now?: Date }): number {
   const ownerEmail = input.ownerEmail ? normalizeEmail(input.ownerEmail) : null
   const now = input.now ?? new Date()
-  const counted = input.members.filter((m) => {
-    if (!holdsSeat(m, now)) return false
-    if (m.userId && m.userId === input.ownerUserId) return false
-    if (ownerEmail && normalizeEmail(m.email) === ownerEmail) return false
-    return true
-  })
-  return 1 + counted.length
+  const users = new Set<string>()
+  const identifiedEmails = new Set<string>()
+  const invitations = new Set<string>()
+  let unidentified = 0
+  for (const member of input.members) {
+    if (!holdsSeat(member, now)) continue
+    const email = normalizeEmail(member.email)
+    if (member.userId) {
+      if (email) identifiedEmails.add(email)
+      if (member.userId === input.ownerUserId) continue
+      users.add(member.userId)
+    } else if (email) {
+      if (email !== ownerEmail) invitations.add(email)
+    } else {
+      unidentified++
+    }
+  }
+  return 1 + users.size + [...invitations].filter(email => !identifiedEmails.has(email)).length + unidentified
 }
 
 export type InviteDecision =

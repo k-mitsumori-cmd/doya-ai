@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
         where: { companyId: current.companyId, status: { in: ['invited', 'active'] } },
         select: { email: true, userId: true, status: true, invitedAt: true },
       })
+      // メールが変わった人も、同じ利用者IDでは所属を重ねない。
+      // 既存の役割や招待行を勝手に統合・変更せず、現在の所属を使う。
+      if (members.some(member => member.status === 'active' && member.userId === userId)) {
+        return json({ code: 'ALREADY_MEMBER', error: 'すでにこの会社に参加しています。現在の所属でご利用ください。不要な招待は会社の持ち主に取り消しを依頼してください。' }, 409)
+      }
       const used = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members })
       if (used > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
       const now = new Date()
