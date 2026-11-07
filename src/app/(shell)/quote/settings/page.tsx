@@ -31,7 +31,7 @@ const TEXTAREAS = [
 ] as const
 
 export default function QuoteSettingsPage() {
-  const { form, loading, loaded, saving, error, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
+  const { form, loading, loaded, saving, error, errorStatus, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
 
 
   return (
@@ -51,7 +51,7 @@ export default function QuoteSettingsPage() {
         <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
         {error && (() => {
           // 新しい見た目: 読み込み失敗・権限は決まった文言に置き換える（S-20）。入力の直し方（保存の 400）はそのまま見せる
-          const kind = quoteErrorKind(0, error)
+          const kind = quoteErrorKind(errorStatus, errorStatus ? '' : error)
           const copy = loaded && kind === 'failed' ? { what: error, how: '' } : quoteErrorCopy(kind, '発行者情報')
           return <ErrorNotice what={copy.what} how={copy.how || undefined} onRetry={kind === 'forbidden' || kind === 'login' ? undefined : () => void load()} retryLabel="もう一度読み込む" />
         })()}
