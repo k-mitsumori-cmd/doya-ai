@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const mine = await consumeDailyQuota('agent-route-user', quotaSubject(userId), userDailyLimit())
   if (mine === 'limited') {
-    return NextResponse.json({ kind: 'limited', reason: `今日、ドヤAIに頼める回数（${userDailyLimit()}回）に達しました。下のツールから直接進められます。` }, { headers: NO_STORE })
+    return NextResponse.json({ kind: 'limited', reason: `今日、ドヤAIに頼める回数（${userDailyLimit()}回）に達しました。明日また頼めます。今日は、それぞれのツールの画面から直接進められます。` }, { headers: NO_STORE })
   }
   const all = mine === 'unavailable' ? 'unavailable' : await consumeDailyQuota('agent-route-ai', 'all', aiDailyLimit())
   if (all !== 'allowed') return NextResponse.json(fallbackRoute(text), { headers: NO_STORE })

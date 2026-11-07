@@ -8,6 +8,7 @@ import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import { createSaveLock } from '@/lib/agent-chat/review'
+import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
 import {
   Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, safeTotals, toast, useResource,
   useUnsavedGuard, type LineRow,
@@ -79,12 +80,16 @@ export default function NewInvoicePage() {
     setBusy(true)
     setError(null)
     try {
-      const d = await fetchJson<{ invoice: { id: string } }>('/api/income/invoices', {
-        method: 'POST',
-        body: {
-          ...(clientId === NEW_CLIENT ? { newClientName: newClientName.trim() } : { clientId }),
-          title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows),
-        },
+      const body = {
+        ...(clientId === NEW_CLIENT ? { newClientName: newClientName.trim() } : { clientId }),
+        title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows),
+      }
+      // 通信に失敗したあと送り直しても、請求書が2件にならないように番号を付けて送る
+      const d = await submitOnce({
+        scope: 'income-invoice',
+        input: body,
+        send: (operationId) => fetchJson<{ invoice: { id: string } }>('/api/income/invoices', { method: 'POST', body: { ...body, operationId } }),
+        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/invoices', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
       })
       saveLock.close()
       markClean()

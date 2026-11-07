@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
 import { buildSchedule } from '@/lib/income/schedule'
+import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
 import {
   BILLING_CYCLE_LABEL, CONTRACT_STATUS_LABEL, CONTRACT_STATUS_ORDER, CONTRACT_TYPE_LABEL, ISSUE_TIMING_LABEL, PRORATE_LABEL,
   Button, Card, CheckRow, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, errMsg, fetchJson, periodText, s, safeTotals, toast,
@@ -170,7 +171,13 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
         onSaved?.()
         return { ok: true, id: initial.id }
       }
-      const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
+      // 通信に失敗したあと送り直しても、契約が2件にならないように番号を付けて送る
+      const d = await submitOnce({
+        scope: 'income-contract',
+        input: body,
+        send: (operationId) => fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body: { ...body, operationId } }),
+        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/contracts', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
+      })
       saveLock.close()
       markClean()
       if (!isAgentSubmit()) {

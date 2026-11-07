@@ -25,5 +25,7 @@ export function chatResponse(route: AgentRoute & { planId?: string }, text: stri
       return { kind: 'op', op, values, missing: missingFields(op, values), say: leadText(op, values) }
     }
   }
-  return routeResponse(route, text)
+  const res = routeResponse(route, text)
+  // 操作に当たらないときの AI の理由は内部の言葉（unknown など）を含むので、そのまま画面に出さない（文は画面が決まった形で出す）
+  return res.kind === 'unknown' ? { ...res, reason: '' } : res
 }

@@ -13,6 +13,12 @@ import AgentBlocked from '@/components/agent-chat/AgentBlocked'
 import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
 import { parseDuration } from '@/lib/agent-chat/duration'
 import { createSaveLock } from '@/lib/agent-chat/review'
+import { submitOnce, SubmitOnceSavedError, type OnceResolutionState } from '@/lib/submit-once-client'
+
+/** サーバーが答えを返した失敗（status は submitOnce が控えを消すかの判断にも使う） */
+class KintaiPostError extends Error {
+  constructor(readonly status: number, readonly apiError: unknown) { super('kintai request failed') }
+}
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -187,24 +193,35 @@ function NewRequestContent() {
     if (!reason.trim()) { return fail('理由を入力してください') }
     setSubmitting(true)
 
-    try {
+    const post = async (payload: Record<string, unknown>) => {
       const res = await fetch('/api/kintai/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, details, reason }),
+        body: JSON.stringify(payload),
       })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new KintaiPostError(res.status, data?.error)
+      return data
+    }
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        return fail(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'), res.status === 403 ? 'blocked' : undefined)
-      }
+    try {
+      // 通信に失敗したあと送り直しても、申請が2件にならないように番号を付けて送る
+      const body = { type, details, reason }
+      await submitOnce({
+        scope: 'kintai-request',
+        input: body,
+        send: (operationId) => post({ ...body, operationId }),
+        resolve: (operationId) => post({ operationId, onceAction: 'resolve' }).then((d) => d.once.state as OnceResolutionState),
+      })
 
       saveLock.close()
       setSubmitted(true)
       // 会話からの申請では、画面の移動は会話が完了を出してから行う
       if (!isAgentSubmit()) setTimeout(() => { router.push('/kintai/requests') }, 2000)
       return { ok: true, href: '/kintai/requests' }
-    } catch {
+    } catch (e) {
+      if (e instanceof KintaiPostError) return fail(userErrorMessage(e.apiError, '申請できませんでした。入力を確かめて、もう一度お試しください。'), e.status === 403 ? 'blocked' : undefined)
+      if (e instanceof SubmitOnceSavedError) return fail(e.message)
       return fail(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)

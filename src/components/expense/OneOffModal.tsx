@@ -5,6 +5,7 @@ import { useEffect, useState, type MutableRefObject } from 'react'
 import toast from 'react-hot-toast'
 import { failKindOf, isAgentSubmit, type AgentFormHandler, type SubmitResult } from '@/components/agent-chat/form-bus'
 import { CATEGORIES, CATEGORY_LABEL } from '@/lib/expense/constants'
+import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
 import { expenseApi, jsonInit, useBusyAction } from './api'
 import { Btn, Check, Field, Modal, inputCls, todayYmd } from './ui'
 
@@ -26,7 +27,14 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
     if (!f.title.trim() || !f.amount || !f.payDate) return { ok: false, error: '必要な項目（内容・金額・支払日）が足りないため、追加できません。' }
     const byAgent = isAgentSubmit()
     try {
-      await expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...f, amount: Number(f.amount), taxRate: Number(f.taxRate) }))
+      const body = { ...f, amount: Number(f.amount), taxRate: Number(f.taxRate) }
+      // 通信に失敗したあと送り直しても、支出が2件にならないように番号を付けて送る
+      await submitOnce({
+        scope: `expense-schedule:${orgSlug}`,
+        input: body,
+        send: (operationId) => expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...body, operationId })),
+        resolve: (operationId) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/schedules', orgSlug, jsonInit('POST', { operationId, onceAction: 'resolve' })).then((d) => d.once.state),
+      })
       if (!byAgent) toast.success('単発の支出を追加しました')
       onSaved()
       onClose()
