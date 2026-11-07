@@ -22,6 +22,14 @@ export function isLeavingLink(input: {
   return u.pathname !== input.currentPath
 }
 
+/**
+ * 新規や編集の入力の画面か。この画面では、エラー以外の知らせを出さない（入力欄を隠さないように）。
+ * 列に戻すだけなので、別の画面へ移れば、そこで出る。
+ */
+export function isEntryScreen(pathname: string): boolean {
+  return /\/(new|edit)\/?$/.test(pathname)
+}
+
 /** 書きかけと数える入力欄か（検索欄・確認の窓の中・data-notice-ignore の中は数えない） */
 export function countsAsDraft(el: { tagName: string; type?: string; readOnly?: boolean; inDialog: boolean; ignored: boolean; contentEditable?: boolean }): boolean {
   if (el.inDialog || el.ignored || el.readOnly) return false

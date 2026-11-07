@@ -16,7 +16,7 @@ import { useDoyaPowerFx } from '@/components/doya-power/fx-context'
 import { usePrefersReducedMotion } from '@/components/ds/motion'
 import { EMPTY_QUEUE, NOTICE_LEVELS, closeNotice, dropBandNotices, enqueueNotice, noticeDay, openHeldNotice, parseNoticeLevel, pauseNotice, showNextNotice, type Notice, type NoticeAction, type NoticeLevel, type NoticeQueueState } from '@/lib/notice/queue'
 import { addSeen, loadLevelRaw, loadPacedDay, loadSeen, saveLevelRaw, savePacedDay, saveSeen } from '@/lib/notice/seen'
-import { countsAsDraft, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
+import { countsAsDraft, isEntryScreen, isLeavingLink, shouldNotifyFinished } from '@/lib/notice/leave'
 import { addArtifact, loadArtifacts, saveArtifacts, type RecentArtifact } from '@/lib/notice/artifacts'
 import toastStore from 'react-hot-toast'
 import HotToastBridge from './HotToastBridge'
@@ -142,7 +142,9 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
     document.addEventListener('focusin', on); document.addEventListener('focusout', out)
     return () => { document.removeEventListener('focusin', on); document.removeEventListener('focusout', out) }
   }, [])
-  const busy = apiBusy > 0 || typing || holds > 0
+  // ほかの窓（確認の窓・会話の欄）が開いている間も、知らせを重ねない
+  const [overlayOpen, setOverlayOpen] = useState(false)
+  const busy = apiBusy > 0 || typing || holds > 0 || overlayOpen || isEntryScreen(pathname)
   const holdBusy = useCallback(() => { setHolds((h) => h + 1); let done = false; return () => { if (!done) { done = true; setHolds((h) => Math.max(0, h - 1)) } } }, [])
 
   // ---- シート / カード ----
@@ -158,6 +160,19 @@ export default function NoticeProvider({ userKey, children }: { userKey: string;
     return () => clearTimeout(t)
   }, [busy, q.queue.length, q.current])
   const current = q.current
+  // 窓の有無は、知らせが待っている間だけ確かめる（待っていなければ DOM を見に行かない）
+  const noticeWaiting = Boolean(q.current) || q.queue.length > 0
+  useEffect(() => {
+    if (!noticeWaiting) { setOverlayOpen(false); return }
+    // ⚠️ 会話とサポートの欄は、閉じていても隠れた状態で DOM に残る。見えている窓だけを数える（隠れた窓まで数えると、知らせが一切出なくなる）
+    const check = () => setOverlayOpen([...document.querySelectorAll<HTMLElement>('#agent-dock-panel, [role="dialog"]:not([data-variant="notice"]), [role="alertdialog"]')].some((el) => {
+      const style = getComputedStyle(el)
+      return style.visibility !== 'hidden' && style.display !== 'none' && el.getClientRects().length > 0
+    }))
+    check()
+    const t = setInterval(check, 500)
+    return () => clearInterval(t)
+  }, [noticeWaiting])
   // 間引く知らせを出したら、その日はもう出さない（閉じ方に依らない。「あとで」で閉じても、その日の1つに数える）
   useEffect(() => {
     if (!current?.paced) return

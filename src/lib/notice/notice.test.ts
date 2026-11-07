@@ -204,3 +204,9 @@ test('帯がある画面では、hideWithBand の知らせを列から外す。�
   s = showNextNotice(enqueueNotice(EMPTY_QUEUE, intro, none), false)
   assert.equal(dropBandNotices(s, true).current?.id, 'tool-intro:quote')
 })
+
+test('新規と編集の入力の画面を見分ける（知らせで入力欄を隠さない）', async () => {
+  const { isEntryScreen } = await import('./leave')
+  for (const p of ['/income/invoices/new', '/income/contracts/new', '/expense/acme/contracts/new', '/kintai/requests/new', '/promane/acme/projects/new', '/seo/new', '/hr/employees/x/edit', '/copy/new/']) assert.equal(isEntryScreen(p), true, p)
+  for (const p of ['/income', '/income/invoices', '/income/contracts/abc', '/news', '/renew', '/seo/news/new-year', '/home']) assert.equal(isEntryScreen(p), false, p)
+})
