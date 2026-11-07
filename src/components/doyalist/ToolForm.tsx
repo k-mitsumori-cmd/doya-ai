@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
+import GmailSendDialog from '@/components/gmail/GmailSendDialog'
 import { useApproachUsage } from './useApproachUsage'
 import { Check, Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
 import { ErrorNotice } from '@/components/ds'
@@ -71,6 +72,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
   const [tone, setTone] = useState('formal')
   const [generating, setGenerating] = useState(false)
   // 新しい見た目: 必須の欄が空のまま押されたとき、欄の下に理由を出す（aria-describedby でつなぐ）
+  const [gmailOpen, setGmailOpen] = useState(false)
   const [serviceInputError, setServiceInputError] = useState(false)
   const quota = useApproachUsage(type)
   const quotaRef = useRef(quota)
@@ -177,6 +179,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
   return (
     <div className="p-4 lg:p-8">
       <Toaster position="top-center" />
+      <GmailSendDialog open={gmailOpen} onClose={() => setGmailOpen(false)} initialText={result} source="doyalist-email" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* Page Header */}
@@ -319,6 +322,14 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   <div className="bg-slate-50 rounded-xl p-3 max-h-[400px] overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-xs text-slate-700 leading-relaxed font-sans">{result}</pre>
                   </div>
+                  {type === 'email' && (
+                    <button
+                      onClick={() => setGmailOpen(true)}
+                      className="w-full rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                    >
+                      Gmail で送る
+                    </button>
+                  )}
                   <p className="text-[10px] text-slate-400">企業名・担当者名は仮置きです（適宜カスタマイズしてご利用ください）</p>
                 </div>
               )}
