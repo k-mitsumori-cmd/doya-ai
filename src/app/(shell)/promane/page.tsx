@@ -9,13 +9,20 @@ import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
 import { Badge } from '@/components/promane/ui/badge'
 import { CreateWorkspaceButton } from '@/components/promane/create-workspace-button'
+import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
+import AgentChoices from '@/components/agent-chat/AgentChoices'
+
+/** ドヤAIの「頼む」から来たときに、ワークスペースの中で開いてよい画面（?to=）。ワークスペースが1つのときだけ運ぶ */
+const PROMANE_ENTRY_TO = { 'new-project': '/projects/new', 'new-client': '/clients' } as const
+/** 行き先（?to=）ごとに、会話が値を入れるフォームの名前（ワークスペースが複数あるとき、会話がどれで進めるかを聞くため） */
+const PROMANE_ENTRY_FORM: Record<string, string> = { 'new-project': 'promane.project.new', 'new-client': 'promane.client.new' }
 // 新しい見た目では、絵文字をアイコンにしない（UI 品質。チェックリスト §5.1 の内側だけ）
 const ROLE_LABELS_NEXT: Record<string, string> = { owner: 'オーナー', admin: '管理者', member: 'メンバー', guest: 'ゲスト' }
 
 export default async function PromaneEntryPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ select?: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const session = await getServerSession(authOptions)
   // 未ログイン（＝クローラや初見ユーザー）には公開LPを返す。
@@ -62,16 +69,18 @@ export default async function PromaneEntryPage({
 
   const params = await searchParams
   const forceSelect = params?.select === '1'
+  // ドヤAIの「頼む」から来たときは、行き先（?to=）を、選んだワークスペースの中の画面へ運ぶ
+  const next = forwardPath(toSearchParams(params), PROMANE_ENTRY_TO)
 
   // 単一ワークスペース & 招待なし & forceSelect でない → 自動リダイレクト
   if (memberships.length === 1 && pendingInvites.length === 0 && !forceSelect) {
-    redirect(`/promane/${memberships[0].workspace.slug}`)
+    redirect(`/promane/${memberships[0].workspace.slug}${next}`)
   }
 
   // 0個でも招待もなければ自動作成
   if (memberships.length === 0 && pendingInvites.length === 0) {
     const ws = await getOrCreateWorkspace(userId)
-    if (ws) redirect(`/promane/${ws.slug}`)
+    if (ws) redirect(`/promane/${ws.slug}${next}`)
     return (
       <main className="mx-auto max-w-xl p-8 text-center">
         <h1 className="text-xl font-bold">ワークスペースにアクセスできません</h1>
@@ -83,8 +92,17 @@ export default async function PromaneEntryPage({
 
   // 複数 or 招待あり → セレクターUI
   const roleLabels = ROLE_LABELS_NEXT
+  // ドヤAIの「頼む」から来て、行き先が決まっているときは、会話がどのワークスペースで進めるかを聞く（今の一覧と同じ、自分が所属するものだけ）
+  const agentForm = typeof params?.to === 'string' && Object.prototype.hasOwnProperty.call(PROMANE_ENTRY_FORM, params.to) ? PROMANE_ENTRY_FORM[params.to] : null
   return (
     <div data-legacy-backdrop className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-brand-50 p-6">
+      {agentForm && memberships.length > 0 && (
+        <AgentChoices
+          formKey={agentForm}
+          prompt="どのワークスペースで進めますか？"
+          items={memberships.map((m) => ({ id: m.workspace.slug, label: m.workspace.name, href: `/promane/${m.workspace.slug}${next}` }))}
+        />
+      )}
       <div className="max-w-4xl mx-auto pt-6">
         {/* ロゴ（新しい見た目では、枠の見出しの帯がツール名を出すので、大きなロゴは出さない） */}
         <div className="hidden">

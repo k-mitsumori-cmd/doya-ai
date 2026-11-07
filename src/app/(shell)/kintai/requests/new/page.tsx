@@ -1,13 +1,18 @@
 'use client'
 
 import { PageTitle } from '@/components/kintai/ui-next'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import Link from 'next/link'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { Skeleton } from '@/components/ds'
 import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import AgentBlocked from '@/components/agent-chat/AgentBlocked'
+import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
+import { parseDuration } from '@/lib/agent-chat/duration'
+import { createSaveLock } from '@/lib/agent-chat/review'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -20,6 +25,7 @@ export default function NewRequestPage() {
   const { isActive } = useKintaiAccess()
   if (isActive === false) {
     return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
+      <AgentBlocked formKey="kintai.request.new" reason="従業員情報が無効化されているため、新しい申請は出せません。管理者に確認してください。" />
       <PageTitle className="text-xl font-bold text-slate-800">新規申請は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の申請は引き続き確認できます。</p>
       <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#0066ff] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
@@ -43,6 +49,7 @@ function NewRequestContent() {
   const [type, setType] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState('')
 
   // clock_fix form
@@ -137,43 +144,47 @@ function NewRequestContent() {
     return ''
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => { void submitRequest() }
+
+  /** 申請の提出。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ） */
+  const submitRequestNow = async (): Promise<SubmitResult> => {
     setError('')
+    const fail = (message: string, kind?: 'blocked'): SubmitResult => { setError(message); return { ok: false, error: message, kind } }
 
     // 必須フィールドを先に検証
     const details: any = {}
     if (type === 'clock_fix') {
-      if (!fixDate) { setError('対象日を入力してください'); return }
-      if (!fixTime) { setError('修正後時刻を入力してください'); return }
-      if (recordsDate !== fixDate) { setError(recordsError || '打刻を読み込み中です。しばらくお待ちください。'); return }
-      if (matchingRecords.length > 0 && !selectedRecord) { setError('訂正する打刻を選択してください'); return }
+      if (!fixDate) { return fail('対象日を入力してください') }
+      if (!fixTime) { return fail('修正後時刻を入力してください') }
+      if (recordsDate !== fixDate) { return fail(recordsError || '打刻を読み込み中です。しばらくお待ちください。') }
+      if (matchingRecords.length > 0 && !selectedRecord) { return fail('訂正する打刻を選択してください') }
       if (selectedRecord) { details.recordId = selectedRecord.id; details.expectedTimestamp = selectedRecord.timestamp }
       details.date = fixDate
       details.clockType = fixClockType
       details.correctedTime = fixTime
     } else if (type === 'leave') {
-      if (!leaveStart) { setError('開始日を入力してください'); return }
-      if (!leaveEnd) { setError('終了日を入力してください'); return }
+      if (!leaveStart) { return fail('開始日を入力してください') }
+      if (!leaveEnd) { return fail('終了日を入力してください') }
       const days = (new Date(leaveEnd + 'T00:00:00Z').getTime() - new Date(leaveStart + 'T00:00:00Z').getTime()) / 86400000 + 1
-      if (!Number.isFinite(days) || days < 1 || days > 366) { setError('開始日から終了日までを366日以内で指定してください'); return }
+      if (!Number.isFinite(days) || days < 1 || days > 366) { return fail('開始日から終了日までを366日以内で指定してください') }
       details.startDate = leaveStart
       details.endDate = leaveEnd
       details.leaveType = leaveType
     } else if (type === 'overtime') {
-      if (!otDate) { setError('対象日を入力してください'); return }
-      if (!otHours && !otMinutes) { setError('時間または分を入力してください'); return }
+      if (!otDate) { return fail('対象日を入力してください') }
+      if (!otHours && !otMinutes) { return fail('時間または分を入力してください') }
       details.date = otDate
       details.hours = parseInt(otHours || '0')
       details.minutes = parseInt(otMinutes || '0')
     } else if (type === 'holiday_work') {
-      if (!hwDate) { setError('対象日を入力してください'); return }
-      if (!hwStart || !hwEnd) { setError('開始時刻と終了時刻を入力してください'); return }
+      if (!hwDate) { return fail('対象日を入力してください') }
+      if (!hwStart || !hwEnd) { return fail('開始時刻と終了時刻を入力してください') }
       details.date = hwDate
       details.startTime = hwStart
       details.endTime = hwEnd
     }
 
-    if (!reason.trim()) { setError('理由を入力してください'); return }
+    if (!reason.trim()) { return fail('理由を入力してください') }
     setSubmitting(true)
 
     try {
@@ -185,20 +196,58 @@ function NewRequestContent() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setError(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'))
-        return
+        return fail(userErrorMessage(data?.error, '申請できませんでした。入力を確かめて、もう一度お試しください。'), res.status === 403 ? 'blocked' : undefined)
       }
 
+      saveLock.close()
       setSubmitted(true)
-      setTimeout(() => {
-        router.push('/kintai/requests')
-      }, 2000)
+      // 会話からの申請では、画面の移動は会話が完了を出してから行う
+      if (!isAgentSubmit()) setTimeout(() => { router.push('/kintai/requests') }, 2000)
+      return { ok: true, href: '/kintai/requests' }
     } catch {
-      setError(KINTAI_NETWORK_ERROR)
+      return fail(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)
     }
   }
+  const submitRequest = () => saveLock.run(submitRequestNow)
+
+  // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の KINTAI_LEAVE_REQUEST（休暇）と KINTAI_OVERTIME_REQUEST（残業）----
+  useAgentForm('kintai.request.new', {
+    ready: () => !saveLock.busy(),
+    setValue: (key, value) => {
+      switch (key) {
+        case 'type': if (!REQUEST_TYPES.some((t) => t.key === value)) return false; selectType(value); return true
+        case 'leaveType': if (!['paid', 'special', 'unpaid'].includes(value)) return false; setLeaveType(value); return true
+        case 'start': setLeaveStart(value); return true
+        case 'end': setLeaveEnd(value); return true
+        case 'reason': setReason(value); return true
+        // 残業の対象日（休暇の開始日・終了日とは別の欄）
+        case 'date': setOtDate(value); return true
+        // 残業の時間は「2時間30分」の言い方で受け取り、画面の「時間」「分」に分けて入れる。読めない言い方は入れない（false）
+        case 'duration': {
+          const d = parseDuration(value)
+          if (!d) return false
+          setOtHours(d.hours > 0 ? String(d.hours) : '')
+          setOtMinutes(d.minutes > 0 ? String(d.minutes) : '')
+          return true
+        }
+        default: return false
+      }
+    },
+    snapshot: () => ({
+      typeLabel: REQUEST_TYPES.find((t) => t.key === type)?.label ?? '',
+      leaveLabel: ({ paid: '有給休暇', special: '特別休暇', unpaid: '欠勤' } as Record<string, string>)[leaveType] ?? '',
+      start: leaveStart,
+      end: leaveEnd,
+      date: otDate,
+      hours: otHours,
+      minutes: otMinutes,
+      reason: reason.trim(),
+    }),
+    draft: () => ({ type, reason, fixDate, fixClockType, fixTime, fixRecordId, leaveStart, leaveEnd, leaveType, otDate, otHours, otMinutes, hwDate, hwStart, hwEnd }),
+    submit: submitRequest,
+  })
 
   // Success screen
   if (submitted) {
@@ -420,11 +469,11 @@ function NewRequestContent() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">開始日 <span className="text-red-500">*</span></label>
-                    <input type="date" required value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="date" required data-agent-field="start" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">終了日 <span className="text-red-500">*</span></label>
-                    <input type="date" required value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="date" required data-agent-field="end" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                 </div>
               </div>
@@ -435,12 +484,12 @@ function NewRequestContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
-                  <input type="date" required value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  <input type="date" required data-agent-field="date" value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">時間 <span className="text-red-500">*</span></label>
-                    <input type="number" required min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="number" required min="0" max="24" data-agent-field="duration" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">分</label>
@@ -487,6 +536,7 @@ function NewRequestContent() {
                 理由 <span className="text-red-500 text-xs ml-0.5">*必須</span>
               </label>
               <textarea
+                data-agent-field="reason"
                 value={reason}
                 required
                 onChange={(e) => setReason(e.target.value)}

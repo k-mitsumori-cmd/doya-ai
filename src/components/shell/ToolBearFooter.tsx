@@ -54,15 +54,23 @@ export default function ToolBearFooter({ serviceId }: { serviceId: string }) {
   // 押すたびに key を変えて、動きをはじめからもう一度出す
   const [round, setRound] = useState(0)
   // 上の中身（直前の兄弟の要素）の高さが 800ms 変わらなかったら「落ち着いた」とする。遅くても 8 秒で見せる
+  // 読み込みの枠（role=status の「読み込み中です」・aria-busy）が出ている間は、高さが止まって見えても落ち着いたとしない
+  // （枠のあとに本物の中身が入って足元が大きく動くのを、見せる前に済ませるため）
   const [settled, setSettled] = useState(false)
   useEffect(() => {
     const el = ref.current?.previousElementSibling
     if (!el || typeof ResizeObserver === 'undefined') { setSettled(true); return }
-    let t = setTimeout(() => setSettled(true), 800)
-    const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => setSettled(true), 800) })
+    const loading = () => Boolean(el.querySelector('[aria-label="読み込み中です"], [aria-busy="true"]'))
+    let t: ReturnType<typeof setTimeout> | undefined
+    // 画面を移って読み込みの枠が出たら、一度見えなくして場所だけ取り、枠が消えて落ち着いてから見せる
+    const arm = () => { clearTimeout(t); if (loading()) setSettled(false); else t = setTimeout(() => setSettled(true), 800) }
+    arm()
+    const ro = new ResizeObserver(arm)
     ro.observe(el)
+    const mo = new MutationObserver(arm)
+    mo.observe(el, { childList: true, subtree: true })
     const cap = setTimeout(() => setSettled(true), 8000)
-    return () => { ro.disconnect(); clearTimeout(t); clearTimeout(cap) }
+    return () => { ro.disconnect(); mo.disconnect(); clearTimeout(t); clearTimeout(cap) }
   }, [ref, conf])
   if (!conf) return null
   return (

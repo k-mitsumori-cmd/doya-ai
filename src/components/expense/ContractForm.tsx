@@ -1,8 +1,11 @@
 'use client'
 
 // 契約の登録・編集フォーム、単価の入力欄
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -38,13 +41,13 @@ const PRICE_LABEL: Record<string, { unit: string; qty?: string; cap?: string }> 
   variable: { unit: '単価', qty: '予定の数量' },
 }
 
-export function PriceFields({ value, onChange, billingModel, currency, withDate }: { value: PriceDraft; onChange: (v: PriceDraft) => void; billingModel: string; currency: string; withDate?: boolean }) {
+export function PriceFields({ value, onChange, billingModel, currency, withDate, agentField }: { value: PriceDraft; onChange: (v: PriceDraft) => void; billingModel: string; currency: string; withDate?: boolean; /** 会話が金額の欄を光らせる印（新規登録の画面だけ付ける） */ agentField?: boolean }) {
   const L = PRICE_LABEL[billingModel] ?? PRICE_LABEL.fixed
   const set = <K extends keyof PriceDraft>(k: K, v: PriceDraft[K]) => onChange({ ...value, [k]: v })
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {withDate && <Field label="適用開始日"><input type="date" className={inputCls} value={value.effectiveFrom} onChange={(e) => set('effectiveFrom', e.target.value)} /></Field>}
-      <Field label={`${L.unit}（${currency === 'USD' ? 'ドル' : '円'}）`}><input type="number" min={0} step={currency === 'USD' ? '0.01' : '1'} className={inputCls} value={value.unitPrice} onChange={(e) => set('unitPrice', e.target.value)} /></Field>
+      <Field label={`${L.unit}（${currency === 'USD' ? 'ドル' : '円'}）`}><input type="number" min={0} step={currency === 'USD' ? '0.01' : '1'} className={inputCls} data-agent-field={agentField ? 'amount' : undefined} value={value.unitPrice} onChange={(e) => set('unitPrice', e.target.value)} /></Field>
       {L.qty && <Field label={L.qty}><input type="number" min={0} className={inputCls} value={value.quantity} onChange={(e) => set('quantity', e.target.value)} /></Field>}
       {L.cap && <Field label={L.cap}><input type="number" min={0} className={inputCls} value={value.capQuantity} onChange={(e) => set('capQuantity', e.target.value)} /></Field>}
       <Field label="税率">
@@ -72,6 +75,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
   const vendors = useExpenseQuery<{ vendors: Vendor[] }>(mode === 'create' ? '/api/expense/vendors' : null, orgSlug)
   const methods = useExpenseQuery<{ paymentMethods: PaymentMethod[] }>('/api/expense/payment-methods', orgSlug)
   const contractor0 = preset === 'contractor'
+  const saveLock = useRef(createSaveLock()).current
 
   const [f, setF] = useState({
     title: initial?.title ?? '',
@@ -130,7 +134,11 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
     if (v && isContractor) set('withholding', v.withholdingDefault)
   }
 
-  const submit = async () => {
+  /**
+   * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
+   * 成功したら、onSaved で登録した契約の画面へ移る。失敗したら理由を返す（画面は toast に出す）。
+   */
+  const saveNow = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setBusy(true)
     try {
       const common = {
@@ -147,23 +155,76 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
           ...(vendorMode === 'existing' ? { vendorId } : { vendor: draftToPayload(vendor, canManage) }),
         }
         const r = await expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', body))
-        toast.success('契約を登録しました')
-        onSaved(r.contract.id)
-      } else {
-        const r = await expenseApi<{ contract: Contract }>(`/api/expense/contracts/${initial!.id}`, orgSlug, jsonInit('PATCH', {
-          ...common, ...(f.anchorDate ? { anchorDate: f.anchorDate } : {}), paymentMethodId: f.paymentMethodId || null, status: f.status,
-        }))
-        toast.success('保存しました')
-        onSaved(r.contract.id)
+        saveLock.close()
+        // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
+        if (!isAgentSubmit()) {
+          toast.success('契約を登録しました')
+          onSaved(r.contract.id)
+        }
+        return { ok: true, id: r.contract.id }
       }
+      const r = await expenseApi<{ contract: Contract }>(`/api/expense/contracts/${initial!.id}`, orgSlug, jsonInit('PATCH', {
+        ...common, ...(f.anchorDate ? { anchorDate: f.anchorDate } : {}), paymentMethodId: f.paymentMethodId || null, status: f.status,
+      }))
+      toast.success('保存しました')
+      onSaved(r.contract.id)
+      return { ok: true, id: r.contract.id }
     } catch (e) {
       toast.error((e as Error).message)
+      return { ok: false, error: (e as Error).message, kind: failKindOf(e) }
     } finally {
       setBusy(false)
     }
   }
+  const save = () => saveLock.run(saveNow)
+  const submit = async () => { await save() }
 
   const ready = f.title.trim() && f.startDate && (mode === 'edit' || (price.unitPrice !== '' && (vendorMode === 'existing' ? !!vendorId : !!vendor.name.trim())))
+
+  // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の EXPENSE_ADD ----
+  const agentTitle = useRef('')
+  useAgentForm('expense.contract.new', {
+    ready: () => mode === 'create' && Boolean(vendors.data || vendors.error) && !saveLock.busy(),
+    // 取引先の一覧を見る権限がないときは、画面と同じ理由を出して止まる
+    blocked: () => (vendors.forbidden ? '支出の登録には、担当者以上の権限が必要です。組織の管理者に権限の変更を依頼してください。' : vendors.error ? '取引先を読み込めませんでした。ページを開き直して、もう一度お試しください。' : null),
+    setValue: (key, value) => {
+      if (mode !== 'create') return false
+      switch (key) {
+        case 'title': agentTitle.current = value; set('title', value); return true
+        case 'amount': setPrice((p) => ({ ...p, unitPrice: value })); setDraftYen(''); return true
+        case 'taxIncluded': setPrice((p) => ({ ...p, taxIncluded: value === 'true' })); return true
+        case 'vendor': {
+          // 取引先は、同じ名前が登録済みならそれを選ぶ。無ければ、その場で新しく登録する欄に名前を入れる（画面の今の「新しく登録する」と同じ）
+          const fold = (x: string) => x.normalize('NFKC').replace(/\s+/g, '').toLowerCase()
+          const hit = vendors.data?.vendors.find((v) => fold(v.name) === fold(value))
+          if (hit) { setVendorMode('existing'); pickVendor(hit.id) }
+          else { setVendorMode('new'); setVendor((v) => ({ ...v, name: value })) }
+          return true
+        }
+        default: return false
+      }
+    },
+    snapshot: () => ({
+      vendor: vendorMode === 'existing' ? (vendors.data?.vendors.find((v) => v.id === vendorId)?.name ?? '') : vendor.name.trim(),
+      title: f.title.trim(),
+      category: CATEGORY_LABEL[f.category as keyof typeof CATEGORY_LABEL] ?? f.category,
+      cycle: FREQUENCY_LABEL[Number(f.frequencyMonths) as keyof typeof FREQUENCY_LABEL] ?? `${f.frequencyMonths}か月ごと`,
+      start: f.startDate,
+      amount: price.unitPrice,
+      taxIncluded: price.taxIncluded ? 'true' : 'false',
+      currency: f.currency,
+    }),
+    draft: () => ({ f, vendorMode, vendorId, vendor, price, draftYen }),
+    submit: async () => {
+      // 画面のボタンが押せない状態（必要な項目が足りない）では、会話からも保存しない
+      if (!ready) return { ok: false, error: '必要な項目（名称・金額・取引先）が足りないため、登録できません。' }
+      let savedId = ''
+      const r = await save()
+      if (!r.ok) return { ok: false, error: r.error, kind: r.kind }
+      savedId = r.id
+      return { ok: true, href: `/expense/${encodeURIComponent(orgSlug)}/contracts/${savedId}` }
+    },
+  })
 
   return (
     <div className="space-y-4">
@@ -179,7 +240,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
           </div>
           {vendorMode === 'existing' ? (
             <Field label="取引先">
-              <select className={inputCls} value={vendorId} onChange={(e) => pickVendor(e.target.value)}>
+              <select className={inputCls} data-agent-field="vendor" value={vendorId} onChange={(e) => pickVendor(e.target.value)}>
                 <option value="">選んでください</option>
                 {(vendors.data?.vendors ?? []).map((v) => <option key={v.id} value={v.id}>{v.name}{v.kind === 'individual' ? '（個人）' : ''}</option>)}
               </select>
@@ -193,7 +254,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       <Card>
         <h2 className="mb-4 text-[18px] font-bold text-[var(--ink)]">契約の内容</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="名称"><input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder={isContractor ? '例: デザイン業務委託' : '例: Notion ビジネスプラン'} /></Field>
+          <Field label="名称"><input className={inputCls} data-agent-field="title" value={f.title} onChange={(e) => set('title', e.target.value)} placeholder={isContractor ? '例: デザイン業務委託' : '例: Notion ビジネスプラン'} /></Field>
           <Field label="カテゴリ">
             <select className={inputCls} value={f.category} onChange={(e) => set('category', e.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</select>
           </Field>
@@ -261,7 +322,7 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
         <Card>
           <h2 className="mb-1 text-[18px] font-bold text-[var(--ink)]">金額</h2>
           {f.currency === 'USD' && <p className="mb-3 text-[13px] text-[var(--sub)]">ドルで入力してください。円への換算には、設定で登録した為替レートを使います。</p>}
-          <PriceFields value={price} onChange={setPrice} billingModel={f.billingModel} currency={f.currency} />
+          <PriceFields value={price} onChange={setPrice} billingModel={f.billingModel} currency={f.currency} agentField />
         </Card>
       )}
 

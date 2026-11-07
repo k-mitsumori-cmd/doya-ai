@@ -55,7 +55,7 @@ export default function VendorFields({ value, onChange, showBank, hideKind }: { 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="取引先名"><input className={inputCls} value={value.name} onChange={(e) => set('name', e.target.value)} placeholder="例: デザイナーAさん" /></Field>
+        <Field label="取引先名"><input className={inputCls} data-agent-field="vendor" value={value.name} onChange={(e) => set('name', e.target.value)} placeholder="例: デザイナーAさん" /></Field>
         {!hideKind && (
           <Field label="取引先の種類">
             <select className={inputCls} value={value.kind} onChange={(e) => set('kind', e.target.value as VendorDraft['kind'])}>

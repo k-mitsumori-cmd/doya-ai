@@ -11,7 +11,8 @@ import type { ChatApiResponse } from './types'
 
 /** AI に渡す操作の一覧。チャットで進められる操作を先に置き、同じ id の今の案内は外す */
 export function chatActions(): AgentAction[] {
-  const ids = new Set(CHAT_OPS.map((o) => o.key))
+  // 同じ id の今の案内と、この操作が置き換える今の案内（replaces）は外す（同じ仕事が2つ並ばないように）
+  const ids = new Set(CHAT_OPS.flatMap((o) => [o.key, ...(o.replaces ? [o.replaces] : [])]))
   return [...CHAT_OPS.map(opAsAction), ...AGENT_ACTIONS.filter((a) => !ids.has(a.id))]
 }
 

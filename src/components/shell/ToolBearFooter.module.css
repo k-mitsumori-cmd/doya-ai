@@ -20,6 +20,8 @@
 }
 /* 読み込みの間は見えないまま場所だけ取る（ToolBearFooter.tsx の settled） */
 .footer:not([data-settled='true']) { visibility: hidden; }
+/* ドヤAIの会話が画面を動かしている間も、見えなくして場所だけ取る（AgentDock が html に data-agent-run を付ける） */
+:global(html[data-agent-run='true']) .footer { visibility: hidden; }
 .ground {
   position: absolute;
   left: 8%;

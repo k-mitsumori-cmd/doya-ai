@@ -554,3 +554,23 @@
 
 /* ドヤAIが入力している欄を光らせる（src/components/agent-chat/motion.ts の focusField が印を付ける） */
 [data-agent-active] { outline: 3px solid #0066ff; outline-offset: 2px; border-radius: 14px; box-shadow: 0 0 0 7px #e8f0ff; transition: box-shadow .14s ease; }
+
+/* 入れた欄のラベルに残す「ドヤAI」の札（見本 src2.html の .fld.ai .tag と同じ。focusField が label に data-agent-filled を付ける） */
+label[data-agent-filled] > span:first-child::after {
+  content: 'ドヤAI'; display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; vertical-align: middle;
+  background: #e8f0ff; color: #0047d6; font-size: 11px; font-weight: 800; line-height: 18px; white-space: nowrap;
+  animation: agent-tag-in .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes agent-tag-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { label[data-agent-filled] > span:first-child::after { animation: none; } }
+
+/* ドヤAIの会話の欄（AgentDock）が開いているとき、右下のサポートチャットのボタンと画面を、会話の欄に隠れない位置へ動かす。
+   欄の幅・高さは AgentDock が html の --agent-dock-w / --agent-dock-h に入れる（閉じていれば 0 で、位置は今のまま） */
+@media (min-width: 768px) {
+  html [data-support-chat] { right: calc(24px + var(--agent-dock-w, 0px) + env(safe-area-inset-right, 0px)); }
+}
+@media (max-width: 767px) {
+  /* 会話の欄の真上に置く（下のタブバー + 欄の高さ + すき間）。「会話」だけを大きく出しているときは、欄が画面いっぱいなので、ボタンは出さない */
+  html[data-agent-dock='both'] [data-support-chat='fab'], html[data-agent-dock='tool'] [data-support-chat='fab'] { bottom: calc(var(--agent-tab-h, 68px) + var(--agent-dock-h, 0px) + 14px + env(safe-area-inset-bottom, 0px)); }
+  html[data-agent-dock='chat'] [data-support-chat='fab'] { display: none; }
+}

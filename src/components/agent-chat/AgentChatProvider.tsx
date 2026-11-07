@@ -11,10 +11,11 @@ import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
 import { incomeAmountAmendmentMessage, planIncomeAmountAmendment } from '@/lib/agent-chat/income-amount'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
+import { draftKey, judgeReview, onOpScreen, type ReviewReceipt } from '@/lib/agent-chat/review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
-import { getAgentForm, waitForAgentForm, type AgentFormHandler } from './form-bus'
-import { blurField, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
+import { getAgentForm, runAgentSubmit, waitForAgentForm, type AgentFormHandler } from './form-bus'
+import { blurField, clearMarks, clearStage, cursorOff, fly, focusField, nextFrames, paceMs, sleep, typeInto } from './motion'
 
 export interface AgentChatApi {
   state: ChatState
@@ -42,21 +43,49 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const stateRef = useRef(state)
   // 会話をやり直したとき、前の実行役が続きを進めないようにする番号
   const runId = useRef(0)
-  const reviewed = useRef<{ form: AgentFormHandler; snapshot: AgentFormSnapshot } | null>(null)
+  // 確認カードを出した時のフォームと全部の欄。保存の直前に、今の画面と比べる
+  const reviewed = useRef<ReviewReceipt | null>(null)
+  const review = useCallback((form: AgentFormHandler): AgentFormSnapshot => {
+    const snap = { ...form.snapshot() }
+    reviewed.current = { form, draft: draftKey(form.draft()) }
+    return snap
+  }, [])
 
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
+  // 選択肢を出して待っているとき、本人が選んだ id を実行役へ渡す口（1つの依頼に1つだけ）
+  const chooserRef = useRef<((id: string) => void) | null>(null)
 
   const runOp = useCallback(async (op: ChatOp, values: Record<string, string>, id: number) => {
     const alive = () => runId.current === id
     const d = (ev: ChatEvent) => { if (!alive()) throw ABORTED; dispatchRef.current(ev) }
     const wait = async (ms: number) => { await sleep(ms); if (!alive()) throw ABORTED }
     try {
+      clearMarks()
       d({ t: 'step', id: 'open-tool', status: 'run' }); await wait(paceMs()); d({ t: 'step', id: 'open-tool', status: 'done' })
       d({ t: 'step', id: 'open-form', status: 'run' })
-      if (window.location.pathname !== op.path) router.push(op.path)
-      const form = await waitForAgentForm(op.formKey)
+      if (!onOpScreen(op, window.location.pathname)) router.push(op.path)
+      let form = await waitForAgentForm(op.formKey)
       if (!alive()) throw ABORTED
-      if (!form) { d({ t: 'run-failed', error: `${op.label}の画面を開けませんでした。もう一度お試しください。` }); return }
+      // 選択肢の画面（ワークスペースが複数ある、など）が出ているときは、AI に決めさせず、本人に選んでもらう。選んだら、その画面へ運んで本物のフォームを待つ
+      const offer = form?.choices?.() ?? null
+      if (form && offer && offer.options.length) {
+        const picker = form
+        d({ t: 'choices', prompt: offer.prompt, options: offer.options })
+        const id = await new Promise<string>((resolve) => { chooserRef.current = resolve })
+        chooserRef.current = null
+        if (!alive()) throw ABORTED
+        await picker.choose?.(id)
+        if (!alive()) throw ABORTED
+        form = await waitForAgentForm(op.formKey, 20_000, (h) => !h.choices?.())
+        if (!alive()) throw ABORTED
+      }
+      if (!form) { d({ t: 'run-failed', kind: 'not-started', error: `${op.label}の画面を開けませんでした。そのツールをまだ始めていない場合は、先に画面から始めてください。` }); return }
+      // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
+      const blocked = form.blocked?.()
+      if (blocked) { d({ t: 'run-failed', kind: 'blocked', error: blocked }); return }
+      // ダイアログを開くなど、欄を出す準備が要る画面は、ここで出す（値は入れない）
+      await form.prepare?.()
+      if (!alive()) throw ABORTED
       await wait(240); d({ t: 'step', id: 'open-form', status: 'done' })
       // 決まった値 → 欄（依頼から読んだ値）の順。欄ごとに、スクロール → 光らせる → 値が飛ぶ → 入れる、を実際の setValue に合わせて進める
       const todo: { stepId: string; key: string; value: string; label: string; fixed: boolean }[] = [
@@ -89,24 +118,22 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       cursorOff()
       await nextFrames(3)
       if (!alive()) throw ABORTED
-      const snap = { ...form.snapshot() }
-      reviewed.current = { form, snapshot: snap }
-      d({ t: 'ready', snap })
+      d({ t: 'ready', snap: review(form) })
     } catch (e) {
       clearStage()
       if (e !== ABORTED) dispatchRef.current({ t: 'run-failed', error: '画面の操作を進められませんでした。' })
     }
-  }, [router])
+  }, [router, review])
 
   /** 確認カードのあとの金額の直し。画面の欄を、1字ずつ入れ直す（小計・売上予定のプレビューは画面の今の処理で変わる）。AI は呼ばない */
-  const amend = useCallback(async (amount: number | null, inclusive: boolean, id: number) => {
+  const amend = useCallback(async (eff: Extract<ChatEffect, { k: 'amend' | 'amend-flag' }>, id: number) => {
     const alive = () => runId.current === id
     const op = stateRef.current.op
     const form = op ? getAgentForm(op.formKey) : undefined
     const receipt = reviewed.current
     const assertContext = () => {
       if (!alive()) throw ABORTED
-      if (!op || !form || receipt?.form !== form || getAgentForm(op.formKey) !== form || !form.ready() || window.location.pathname !== op.path) {
+      if (!op || !form || receipt?.form !== form || getAgentForm(op.formKey) !== form || !form.ready() || !onOpScreen(op, window.location.pathname)) {
         throw new Error('登録の画面が変わりました。依頼から始め直して、内容を確認してください。')
       }
     }
@@ -114,21 +141,26 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       assertContext()
       if (!form) return
       const before = { ...form.snapshot() }
-      const plan = planIncomeAmountAmendment(before, amount, inclusive)
+      // 確認カードのあとに画面で直した欄があれば、直しのあとの案内で知らせる（確認カードに出ない欄もあるため）
+      const edited = draftKey(form.draft()) !== receipt?.draft
+      const plan = eff.k === 'amend' ? planIncomeAmountAmendment(before, eff.amount, eff.inclusive) : null
+      const amount = plan ? plan.amount : eff.k === 'amend-flag' ? eff.amount : 0
       await focusField('amount')
       assertContext()
-      if (!sameReview(form.snapshot(), before)) throw new Error('金額を直す前に内容が変わりました。画面を確認して、もう一度依頼してください。')
+      if (JSON.stringify(form.snapshot()) !== JSON.stringify(before)) throw new Error('金額を直す前に内容が変わりました。画面を確認して、もう一度依頼してください。')
       if (!await form.setValue('amount', '')) throw new Error('金額の欄に入力できませんでした。')
-      await typeInto(String(plan.amount), (v) => { assertContext(); void form.setValue('amount', v) }, alive)
+      await typeInto(String(amount), (v) => { assertContext(); void form.setValue('amount', v) }, alive)
       assertContext()
-      if (!await form.setValue('amount', String(plan.amount))) throw new Error('金額の欄に入力できませんでした。')
+      if (!await form.setValue('amount', String(amount))) throw new Error('金額の欄に入力できませんでした。')
+      // あわせて入れる欄（例: 税込みの切り替え）。画面の本物の欄に入れる
+      if (eff.k === 'amend-flag') for (const [k, v] of Object.entries(eff.set ?? {})) await form.setValue(k, v)
       await sleep(160)
       blurField('amount'); cursorOff()
       await nextFrames(3)
       assertContext()
-      const snap = { ...form.snapshot() }
-      const message = incomeAmountAmendmentMessage(plan, snap)
-      reviewed.current = { form, snapshot: snap }
+      const snap = review(form)
+      const lead = plan ? incomeAmountAmendmentMessage(plan, snap) : eff.k === 'amend-flag' ? eff.message : ''
+      const message = edited ? `${lead} 画面で直した欄があります。確認カードに出ていない欄も確かめてください。` : lead
       dispatchRef.current({ t: 'ready', snap, message })
     } catch (e) {
       clearStage()
@@ -137,7 +169,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         dispatchRef.current({ t: 'confirmation-invalid', error: e instanceof Error ? e.message : '金額を直せませんでした。' })
       }
     }
-  }, [])
+  }, [review])
 
   const runEffect = useCallback((eff: ChatEffect) => {
     const id = runId.current
@@ -150,30 +182,44 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         } catch { res = null }
         if (runId.current === id) dispatchRef.current({ t: 'reply', res: normalizeReply(res) })
       })()
+    } else if (eff.k === 'choose') {
+      chooserRef.current?.(eff.id)
     } else if (eff.k === 'run') {
       void runOp(eff.op, eff.values, id)
-    } else if (eff.k === 'amend') {
-      void amend(eff.amount, eff.inclusive, id)
+    } else if (eff.k === 'amend' || eff.k === 'amend-flag') {
+      void amend(eff, id)
     } else {
       void (async () => {
         const op = stateRef.current.op
         const form = op ? getAgentForm(op.formKey) : undefined
-        if (!form) { if (runId.current === id) dispatchRef.current({ t: 'submitted', ok: false, error: '登録の画面が閉じられました。もう一度、依頼から始めてください。' }); return }
+        const onScreen = op ? onOpScreen(op, window.location.pathname) : false
+        if (!form) { if (runId.current === id) dispatchRef.current({ t: 'confirmation-invalid', why: onScreen ? 'form' : 'screen' }); return }
         // 成功すると画面が移ってフォームが消えるので、確認カードの値はここで読んでおく
         const snap = { ...form.snapshot() }
-        const receipt = reviewed.current
-        if (!receipt || receipt.form !== form || !form.ready() || window.location.pathname !== op?.path || !sameReview(snap, receipt.snapshot) || !sameReview(stateRef.current.snap, receipt.snapshot)) {
-          reviewed.current = null
-          dispatchRef.current({ t: 'confirmation-invalid', error: '登録する画面または内容が変わりました。依頼から始め直して、内容を確認してください。' })
+        const draft = draftKey(form.draft())
+        const blocked = form.blocked?.() ?? null
+        // 確認カードを出したあとに画面が変わっていたら、保存しない（確認していない内容を保存しない）
+        const verdict = judgeReview({ receipt: reviewed.current, form, onScreen, ready: form.ready(), blocked: Boolean(blocked), shown: stateRef.current.snap, snap, draft })
+        if (verdict !== 'same') {
+          if (runId.current !== id) return
+          if (verdict === 'shown' || verdict === 'hidden') {
+            // 同じフォームの中で本人が直した。今の内容で確認カードを出し直し、本人がもう一度押すのを待つ
+            reviewed.current = { form, draft }
+            dispatchRef.current({ t: 'changed', snap, hidden: verdict === 'hidden' })
+          } else if (verdict === 'busy') dispatchRef.current({ t: 'not-ready' })
+          else if (verdict === 'blocked') dispatchRef.current({ t: 'submitted', ok: false, error: blocked ?? '今の権限では保存できません。', kind: 'blocked' })
+          else { reviewed.current = null; dispatchRef.current({ t: 'confirmation-invalid', why: verdict }) }
           return
         }
         let r: Awaited<ReturnType<typeof form.submit>>
-        try { r = await form.submit() } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
+        try { r = await runAgentSubmit(() => form.submit()) } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return
-        dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error })
+        dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error, kind: r.kind })
+        // 完了を出してから、できた物の画面へ移る（フォームは、会話からの保存では自分で移らない）
+        if (r.ok) { const to = r.href; window.setTimeout(() => { if (runId.current === id && window.location.pathname !== to) router.push(to) }, 700) }
       })()
     }
-  }, [runOp, amend])
+  }, [runOp, amend, router])
 
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
@@ -205,11 +251,4 @@ function normalizeReply(res: ChatApiResponse | null): ChatApiResponse | null {
   if (res.kind !== 'op') return res
   const op = chatOpByKey(res.op?.key)
   return op ? { ...res, op } : null
-}
-
-/** Compare the complete local review, including a form-specific payload marker when present. */
-function sameReview(a: AgentFormSnapshot | null, b: AgentFormSnapshot): boolean {
-  if (!a) return false
-  const keys = Object.keys(a)
-  return keys.length === Object.keys(b).length && keys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && a[key] === b[key])
 }

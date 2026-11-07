@@ -8,10 +8,11 @@
 import { normalizeValue } from '@/lib/agent-router/prefill'
 import type { AgentField } from '@/lib/agent-router/types'
 import { yenCandidates } from './ground'
-import { buildSteps, confirmRows, doneView } from './ops'
-import type { AgentFormSnapshot, ChatApiResponse, ChatOp, ConfirmRow, NextAction, StepView } from './types'
+import { answerProblem, buildSteps, confirmRows, doneView } from './ops'
+import { yenText } from './today'
+import type { AgentFormSnapshot, ChatApiResponse, ChatChoice, ChatOp, ConfirmRow, NextAction, StepView } from './types'
 
-export type Phase = 'idle' | 'reading' | 'asking' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
+export type Phase = 'idle' | 'reading' | 'asking' | 'choosing' | 'working' | 'confirm' | 'submitting' | 'done' | 'failed' | 'guided'
 
 export interface ChatState {
   phase: Phase
@@ -33,9 +34,15 @@ export interface ChatState {
   done: { lead: string; made: string; next: NextAction[]; href: string } | null
   /** 失敗の内容（failed のとき） */
   error: string | null
+  /** 失敗の理由の種類。blocked=権限がない / not-started=ツールをまだ始めていない（どちらも、もう一度やっても同じ失敗になる） */
+  errorKind: FailKind
+  /** 選択肢を出して聞いているとき（choosing）。ワークスペースが複数あるときなど、AI に決めさせずに本人が選ぶ */
+  choose: { prompt: string; options: ChatChoice[] } | null
   /** チャットの操作でない答え（guided のとき）。今の案内のまま出す */
   guide: Exclude<ChatApiResponse, { kind: 'op' }> | null
 }
+
+export type FailKind = 'blocked' | 'not-started' | 'other'
 
 export type ChatEvent =
   | { t: 'ask'; text: string }
@@ -45,22 +52,36 @@ export type ChatEvent =
   | { t: 'ready'; snap: AgentFormSnapshot; message?: string }
   /** 確認カードの前後で、金額を直す依頼（「税込みだった」・新しい金額）。画面の今の値から計算する。AI は呼ばない */
   | { t: 'adjust'; text: string }
-  | { t: 'run-failed'; error: string }
+  | { t: 'run-failed'; error: string; kind?: FailKind }
   | { t: 'approve' }
-  | { t: 'confirmation-invalid'; error: string }
+  /** 保存の前に画面の値を読み直したら、確認カードを出した時と違っていた（本人が画面で直した）。保存せず、確認カードを出し直す */
+  | { t: 'changed'; snap: AgentFormSnapshot; hidden?: boolean }
+  /** 保存の前に見たら、読み込みや保存の処理が終わっていなかった。保存せず、確認カードに戻す */
+  | { t: 'not-ready' }
+  /** 保存の前や金額の直しの途中で、フォームが閉じた・別のフォームになった・別の画面に移った。この確認では保存しない。もう一度は、入力からやり直す */
+  | { t: 'confirmation-invalid'; why?: 'form' | 'screen'; error?: string }
   | { t: 'submitted'; ok: true; snap: AgentFormSnapshot; href: string }
-  | { t: 'submitted'; ok: false; error: string }
+  | { t: 'submitted'; ok: false; error: string; kind?: FailKind }
+  /** 画面が選択肢を出した（例: ワークスペースが複数ある）。作業を止め、本人の選択を待つ */
+  | { t: 'choices'; prompt: string; options: ChatChoice[] }
+  /** 本人が選択肢を選んだ */
+  | { t: 'choose'; id: string }
   | { t: 'retry' }
   | { t: 'reset' }
 
 export type ChatEffect =
   | { k: 'api'; text: string }
   | { k: 'run'; op: ChatOp; values: Record<string, string> }
+  /** 金額の欄を、画面の今の税率で計算して直す（収入の契約・請求書） */
   | { k: 'amend'; amount: number | null; inclusive: boolean }
+  /** 金額の欄を直し、あわせて欄を入れる（例: 税込みの切り替えがある支出） */
+  | { k: 'amend-flag'; amount: number; message: string; set?: Record<string, string> }
   | { k: 'submit' }
+  /** 選んだ id を画面へ渡す（画面が次の画面へ運ぶ） */
+  | { k: 'choose'; id: string }
 
 export const INITIAL_STATE: ChatState = {
-  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, guide: null,
+  phase: 'idle', text: '', op: null, values: {}, missing: [], steps: [], say: '', answers: [], snap: null, notice: null, askError: null, confirm: null, done: null, error: null, errorKind: 'other', choose: null, guide: null,
 }
 
 const READ_FAILED = '依頼を読めませんでした。時間をおいて、もう一度お試しください。'
@@ -80,7 +101,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
   switch (ev.t) {
     case 'ask': {
       const text = ev.text.trim()
-      if (!text || state.phase === 'reading' || state.phase === 'working' || state.phase === 'submitting') return { state, effects: [] }
+      if (!text || state.phase === 'reading' || state.phase === 'working' || state.phase === 'choosing' || state.phase === 'submitting') return { state, effects: [] }
       return { state: { ...INITIAL_STATE, phase: 'reading', text }, effects: [{ k: 'api', text }] }
     }
     case 'reply': {
@@ -88,7 +109,7 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const res = ev.res
       if (!res) return { state: { ...state, phase: 'failed', error: READ_FAILED }, effects: [] }
       if (res.kind === 'op') {
-        const next: ChatState = { ...state, op: res.op, values: res.values, missing: res.missing, steps: buildSteps(res.op), say: res.say }
+        const next: ChatState = { ...state, op: res.op, values: res.values, missing: res.missing, steps: buildSteps(res.op, res.values), say: res.say }
         return advance(next)
       }
       return { state: { ...state, phase: 'guided', guide: res }, effects: [] }
@@ -98,6 +119,9 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const field = state.missing[0]
       const v = normalizeValue(field.type, ev.value)
       if (!v) return { state: { ...state, askError: `${field.label}の形が合いません。もう一度入れてください。` }, effects: [] }
+      // 欄の型だけでは確かめられない形（残業の時間の言い方など）
+      const problem = state.op ? answerProblem(state.op, field.key, v) : null
+      if (problem) return { state: { ...state, askError: problem }, effects: [] }
       return advance({ ...state, answers: [...state.answers, ev.value.trim()], values: { ...state.values, [field.key]: v }, missing: state.missing.slice(1) })
     }
     case 'step': {
@@ -117,29 +141,64 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
       const candidates = [...yenCandidates(text)]
       const typed = candidates[0]
       const inclusive = /税込/.test(text)
+      const answers = [...state.answers, ev.text.trim()]
+      // 税の計算が無い操作は、チャットでは直さない。画面の欄を直してもらい、保存の前に画面の今の値で確認カードを出し直す
+      if (state.op.taxAdjust === 'none') return { state: { ...state, notice: '内容を直すときは、画面の欄を直してください。直したあと、確認カードのボタンを押すと、確認カードを出し直します。' }, effects: [] }
       if (candidates.length > 1 || /[-−]\s*\d|\d+\.\d+(?:円|$)/.test(text) || (inclusive && typed == null && /\d/.test(text))) {
         return { state: { ...state, notice: '金額を1つ、整数の円で指定してください。画面の入力内容は変更していません。' }, effects: [] }
       }
+      if (state.op.taxAdjust === 'flag') {
+        // 画面に「税込み」の切り替えがあるツール。金額はそのままで、切り替えを入れる（割り算をしない）
+        const base = typed ?? Number(state.snap.amount)
+        const exclusive = /税抜/.test(text) && !inclusive
+        if (!Number.isFinite(base) || base <= 0) return { state: { ...state, notice: '金額を読み取れませんでした。画面の金額の欄は、直接直せます。' }, effects: [] }
+        if (!inclusive && !exclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
+        const message = inclusive ? `${yenText(base)} を税込みとして入れ直しました。` : exclusive ? `${yenText(base)} を税抜として入れ直しました。` : `金額を ${yenText(base)} に直しました。`
+        return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend-flag', amount: base, message, ...(inclusive || exclusive ? { set: { taxIncluded: inclusive ? 'true' : 'false' } } : {}) }] }
+      }
       if (!inclusive && typed == null) return { state: { ...state, notice: '直し方を読み取れませんでした。「税込みだった」か、新しい金額を入れてください。' }, effects: [] }
-      // Tax rate, line count and the untyped amount come from the live form in the executor.
-      return { state: { ...state, phase: 'working', notice: null, answers: [...state.answers, ev.text.trim()] }, effects: [{ k: 'amend', amount: typed ?? null, inclusive }] }
+      // 税率・明細の数・入れていない金額は、実行役が画面の今の値から読む
+      return { state: { ...state, phase: 'working', notice: null, answers }, effects: [{ k: 'amend', amount: typed ?? null, inclusive }] }
+    }
+    case 'choices': {
+      // ⚠️ 選択肢を出せるのは、画面を進めている間だけ。選ぶまで、保存にも次の画面にも進まない
+      if (state.phase !== 'working' || !ev.options.length) return { state, effects: [] }
+      return { state: { ...state, phase: 'choosing', choose: { prompt: ev.prompt, options: ev.options } }, effects: [] }
+    }
+    case 'choose': {
+      if (state.phase !== 'choosing' || !state.choose) return { state, effects: [] }
+      const picked = state.choose.options.find((o) => o.id === ev.id)
+      // 出していない選択肢は受け付けない
+      if (!picked) return { state, effects: [] }
+      return { state: { ...state, phase: 'working', choose: null, answers: [...state.answers, picked.label] }, effects: [{ k: 'choose', id: picked.id }] }
     }
     case 'run-failed': {
       if (state.phase !== 'working') return { state, effects: [] }
-      return { state: { ...state, phase: 'failed', error: ev.error }, effects: [] }
+      return { state: { ...state, phase: 'failed', error: ev.error, errorKind: ev.kind ?? 'other' }, effects: [] }
     }
     case 'approve': {
       // ⚠️ 保存の指示を返すのは、確認カードが出ているときだけ
       if (state.phase !== 'confirm') return { state, effects: [] }
       return { state: { ...state, phase: 'submitting', error: null }, effects: [{ k: 'submit' }] }
     }
+    case 'changed': {
+      // 保存の前の読み直しで違いが見つかった。保存はまだ走っていない。確認カードを、画面の今の値で出し直す
+      if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
+      const c = confirmRows(state.op, ev.snap)
+      return { state: { ...state, phase: 'confirm', snap: ev.snap, notice: ev.hidden ? '確認カードに出ていない欄が画面で変わったので、保存せずに止めました。画面の内容を確かめてから、もう一度押してください。' : '画面の内容が変わったので、保存せずに確認カードを出し直しました。内容を確かめてください。', confirm: { title: state.op.confirmTitle, submitLabel: state.op.submitLabel, rows: c.rows, note: c.note } }, effects: [] }
+    }
+    case 'not-ready': {
+      if (state.phase !== 'submitting') return { state, effects: [] }
+      return { state: { ...state, phase: 'confirm', notice: '画面の処理が終わっていないので、保存していません。少し待って、もう一度押してください。' }, effects: [] }
+    }
     case 'confirmation-invalid': {
       if (state.phase !== 'submitting' && state.phase !== 'working') return { state, effects: [] }
-      return { state: { ...state, phase: 'failed', confirm: null, snap: null, error: ev.error }, effects: [] }
+      const error = ev.error ?? (ev.why === 'screen' ? '別の画面に移ったので、保存していません。' : '登録の画面が閉じたか、開き直されたので、保存していません。')
+      return { state: { ...state, phase: 'failed', confirm: null, snap: null, notice: null, error, errorKind: 'other' }, effects: [] }
     }
     case 'submitted': {
       if (state.phase !== 'submitting' || !state.op) return { state, effects: [] }
-      if (!ev.ok) return { state: { ...state, phase: 'failed', error: ev.error }, effects: [] }
+      if (!ev.ok) return { state: { ...state, phase: 'failed', error: ev.error, errorKind: ev.kind ?? 'other' }, effects: [] }
       const d = doneView(state.op, ev.snap, ev.href)
       return {
         state: { ...state, phase: 'done', steps: state.steps.map((s) => ({ ...s, status: 'done' as const })), done: { ...d, href: ev.href }, confirm: null },
@@ -149,8 +208,10 @@ export function reduce(state: ChatState, ev: ChatEvent): { state: ChatState; eff
     case 'retry': {
       // 失敗のあと、画面の値がそのまま残っているので、確認カードに戻す（送信に失敗した場合だけ。読み取り・画面の失敗は最初から）
       if (state.phase !== 'failed') return { state, effects: [] }
-      if (state.confirm) return { state: { ...state, phase: 'confirm', error: null }, effects: [] }
-      if (state.op) return advance({ ...state, steps: buildSteps(state.op), error: null })
+      // 権限がない・ツールを始めていない失敗は、もう一度やっても同じになる。やり直しは受け付けない（画面から始める・管理者に頼む、を案内する）
+      if (state.errorKind !== 'other') return { state, effects: [] }
+      if (state.confirm) return { state: { ...state, phase: 'confirm', error: null, errorKind: 'other' }, effects: [] }
+      if (state.op) return advance({ ...state, steps: buildSteps(state.op, state.values), error: null, errorKind: 'other', choose: null })
       return { state: INITIAL_STATE, effects: [] }
     }
     case 'reset':

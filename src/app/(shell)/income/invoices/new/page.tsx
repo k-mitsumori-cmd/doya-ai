@@ -1,12 +1,15 @@
 'use client'
 
 // 請求書の手入力（下書き）
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { todayJst } from '@/lib/income/dates'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
+import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import {
-  Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, toast, useResource,
+  Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, safeTotals, toast, useResource,
   useUnsavedGuard, type LineRow,
 } from '@/components/income/ui'
 
@@ -26,6 +29,7 @@ export default function NewInvoicePage() {
   const [notes, setNotes] = useState('')
   const [rows, setRows] = useState<LineRow[]>([emptyLine()])
   const [busy, setBusy] = useState(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
@@ -61,12 +65,16 @@ export default function NewInvoicePage() {
   }
   const err = (k: string) => (touched[k] || tried ? errors[k] : undefined)
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  /**
+   * 下書きを保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
+   * 成功したら、できた下書きの画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
+   */
+  const saveNow = async (): Promise<{ ok: true; id: string } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
-    if (Object.values(errors).some(Boolean)) {
+    const firstError = Object.values(errors).find(Boolean)
+    if (firstError) {
       setError('入力に誤りがあります。赤字の項目を直してください。')
-      return
+      return { ok: false, error: firstError }
     }
     setBusy(true)
     setError(null)
@@ -78,14 +86,73 @@ export default function NewInvoicePage() {
           title, issueDate, dueDate: dueDate || null, notes, lines: linesToPayload(rows),
         },
       })
+      saveLock.close()
       markClean()
-      toast('請求書の下書きを保存しました')
-      router.push(`/income/invoices/${d.invoice.id}`)
+      // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
+      if (!isAgentSubmit()) {
+        toast('請求書の下書きを保存しました')
+        router.push(`/income/invoices/${d.invoice.id}`)
+      }
+      return { ok: true, id: d.invoice.id }
     } catch (er) {
       setError(errMsg(er))
       setBusy(false)
+      return { ok: false, error: errMsg(er), kind: failKindOf(er) }
     }
   }
+
+  const save = () => saveLock.run(saveNow)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await save()
+  }
+
+  // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の INCOME_INVOICE_DRAFT ----
+  const totals = safeTotals(rows)
+  const agentTitle = useRef('')
+  useAgentForm('income.invoice.new', {
+    ready: () => (Boolean(clientsRes.data) || Boolean(clientsRes.error)) && !saveLock.busy(),
+    // 取引先の一覧を見る権限がないときは、画面と同じ理由を出して止まる（API が 403 を返す人は、保存もできない）
+    blocked: () => (clientsRes.error?.status === 403 ? '請求書を作る権限がありません。組織の管理者（オーナー）に権限の変更を依頼してください。' : clientsRes.error ? '取引先を読み込めませんでした。ページを開き直して、もう一度お試しください。' : null),
+    setValue: (key, value) => {
+      switch (key) {
+        case 'title': {
+          // 1字ずつ入れられても、明細の1行目の品目は件名に追いつかせる（本人が自分で直した品目には触らない）
+          const prev = agentTitle.current
+          agentTitle.current = value
+          setTitle(value)
+          setRows((r) => r.map((row, i) => (i === 0 && (!row.name.trim() || row.name === prev) ? { ...row, name: value } : row)))
+          return true
+        }
+        case 'amount': setRows((r) => r.map((row, i) => (i === 0 ? { ...row, unitPrice: value } : row))); return true
+        case 'client': {
+          const fold = (x: string) => x.normalize('NFKC').replace(/\s+/g, '').toLowerCase()
+          const hit = clients.find((c) => fold(c.name) === fold(value))
+          if (hit) setClientId(hit.id)
+          else { setClientId(NEW_CLIENT); setNewClientName(value) }
+          return true
+        }
+        default: return false
+      }
+    },
+    snapshot: () => ({
+      client: clientId === NEW_CLIENT ? newClientName.trim() : (clients.find((c) => c.id === clientId)?.name ?? ''),
+      title: title.trim(),
+      issue: issueDate,
+      due: dueDate,
+      subtotal: totals ? String(totals.subtotalExclTax) : '',
+      tax: totals ? String(totals.taxAmount) : '',
+      total: totals ? String(totals.totalInclTax) : '',
+      _amountLineCount: String(rows.length),
+      _amountTaxRate: rows.length === 1 ? String(rows[0].taxRate) : '',
+    }),
+    draft: () => ({ clientId, newClientName, title, issueDate, dueDate, notes, rows }),
+    submit: async () => {
+      const r = await save()
+      return r.ok ? { ok: true, href: `/income/invoices/${r.id}` } : { ok: false, error: r.error, kind: r.kind }
+    },
+  })
 
   return (
     <PageShell>
@@ -102,7 +169,7 @@ export default function NewInvoicePage() {
               error={err('clientId')}
               hint={clientId === NEW_CLIENT ? '名前だけで登録できます。住所や請求先のメールは、あとから取引先の画面で足せます' : undefined}
             >
-              <select className={inputCls} value={clientId} onChange={(e) => setClientId(e.target.value)} onBlur={touch('clientId')} disabled={!clientsRes.data && !clientsRes.error}>
+              <select className={inputCls} data-agent-field="client" value={clientId} onChange={(e) => setClientId(e.target.value)} onBlur={touch('clientId')} disabled={!clientsRes.data && !clientsRes.error}>
                 <option value="">{clientsRes.data || clientsRes.error ? '選択してください' : '読み込み中です'}</option>
                 <option value={NEW_CLIENT}>新しい取引先を登録する</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -120,7 +187,7 @@ export default function NewInvoicePage() {
               )}
             </Field>
             <Field label="件名">
-              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="例: 11月分 制作費" />
+              <input className={inputCls} data-agent-field="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="例: 11月分 制作費" />
             </Field>
             <Field label="請求日（必須）" error={err('issueDate')}>
               <input type="date" className={inputCls} value={issueDate} onChange={(e) => setIssueDate(e.target.value)} onBlur={touch('issueDate')} />

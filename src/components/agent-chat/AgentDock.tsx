@@ -14,6 +14,19 @@ import { useAgentChat } from './AgentChatProvider'
 import { celebrate } from './motion'
 import styles from './agent-dock.module.css'
 
+/** スマホの幅か（767px 以下。AppShell と同じ境目）。最初の描画は false（サーバーと同じ）にして、あとで合わせる */
+function useMobile(): boolean {
+  const [m, setM] = useState(false)
+  useEffect(() => {
+    const q = window.matchMedia('(max-width: 767px)')
+    const f = () => setM(q.matches)
+    f()
+    q.addEventListener('change', f)
+    return () => q.removeEventListener('change', f)
+  }, [])
+  return m
+}
+
 function stepMark() {
   return <i className={styles.dot} aria-hidden="true" />
 }
@@ -23,6 +36,9 @@ export default function AgentDock() {
   const router = useRouter()
   const [draft, setDraft] = useState('')
   const [answer, setAnswer] = useState('')
+  const mobile = useMobile()
+  // スマホで、作業の一覧が長いと確認カードが見えなくなる。確認・完了・失敗のときは一覧を畳んで、1行の見出しにする（押すと開く）
+  const [stepsOpen, setStepsOpen] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
   const state = chat?.state
   // 新しい内容が出るたびに、会話の下端へ寄せる
@@ -31,18 +47,31 @@ export default function AgentDock() {
     if (el) el.scrollTop = el.scrollHeight
   }, [state?.phase, state?.steps, state?.missing.length])
   useEffect(() => { setAnswer('') }, [state?.missing[0]?.key])
+  useEffect(() => { if (state?.phase === 'reading') setStepsOpen(false) }, [state?.phase])
   const doneRef = useRef<HTMLDivElement>(null)
   const phase = state?.phase
   const open = chat?.open ?? false
   const view = chat?.view ?? 'both'
   // 完了のお祝いは、画面の送信が成功を知らせたあと（phase が done になったとき）だけ
   useEffect(() => { if (phase === 'done') celebrate(doneRef.current) }, [phase])
+  // 会話が画面を動かしている間（値を入れる・保存する）は、足元のドヤくんを見えなくして場所だけ取る。画面が切り替わるたびに足元が動いて見えるのを避ける
+  useEffect(() => {
+    const root = document.documentElement
+    if (phase === 'working' || phase === 'submitting') root.setAttribute('data-agent-run', 'true'); else root.removeAttribute('data-agent-run')
+    return () => root.removeAttribute('data-agent-run')
+  }, [phase])
   // 枠の本文の幅（デスクトップ）と下の余白（スマホ）を、会話の欄に合わせる。本文は隠さず、狭めて並べる（AppShell.module.css）
   useEffect(() => {
     const root = document.documentElement
     root.style.setProperty('--agent-dock-w', open ? '400px' : '0px')
-    root.style.setProperty('--agent-dock-h', open ? (view === 'tool' ? '104px' : view === 'chat' ? 'calc(100dvh - 60px - var(--agent-tab-h, 68px))' : '52dvh') : '0px')
-    return () => { root.style.removeProperty('--agent-dock-w'); root.style.removeProperty('--agent-dock-h') }
+    // 会話の欄そのものの高さ（--agent-dock-ph）は、開いているかどうかに依らず見せ方（view）だけで決める。開く瞬間に 0 から伸びて、レイアウトのずれになるのを避けるため。
+    // 本文の下の余白（--agent-dock-h）は、開いているときだけ欄の高さと同じにする
+    const ph = view === 'tool' ? '56px' : view === 'chat' ? 'calc(100dvh - 60px - var(--agent-tab-h, 68px))' : '46dvh'
+    root.style.setProperty('--agent-dock-ph', ph)
+    root.style.setProperty('--agent-dock-h', open ? ph : '0px')
+    // 開いているときの見せ方（both / chat / tool）。サポートチャットのボタンの位置を決める（globals.css）
+    if (open) root.setAttribute('data-agent-dock', view); else root.removeAttribute('data-agent-dock')
+    return () => { root.style.removeProperty('--agent-dock-w'); root.style.removeProperty('--agent-dock-h'); root.style.removeProperty('--agent-dock-ph'); root.removeAttribute('data-agent-dock') }
   }, [open, view])
   if (!chat || !state) return null
   const { setOpen, setView, dispatch } = chat
@@ -54,7 +83,7 @@ export default function AgentDock() {
     router.push(withPrefillKey(n.href, stashPrefill(n.prefill, storage)))
   }
   const busy = state.phase === 'reading' || state.phase === 'working' || state.phase === 'submitting'
-  const canType = !busy && state.phase !== 'asking'
+  const canType = !busy && state.phase !== 'asking' && state.phase !== 'choosing'
   const sendDraft = () => {
     const t = draft.trim()
     if (!t) return
@@ -64,10 +93,25 @@ export default function AgentDock() {
   }
   const field = state.missing[0]
   // 答えを待っている（聞き返し・確認カード）。スマホで「会話」を見ていないときに、印を出す
-  const waiting = state.phase === 'asking' || state.phase === 'confirm'
+  const waiting = state.phase === 'asking' || state.phase === 'choosing' || state.phase === 'confirm'
   const doneCount = state.steps.filter((x) => x.status === 'done').length
   const total = state.steps.length
   const lastAnswer = state.answers.length - 1
+  const foldable = mobile && (state.phase === 'confirm' || state.phase === 'submitting' || state.phase === 'failed' || state.phase === 'done')
+  // スマホでは、確認カードのボタンを会話の下に固定する（カードが長くても押せる）
+  const pinned = mobile && Boolean(state.confirm) && (state.phase === 'confirm' || state.phase === 'submitting')
+
+  const confirmActions = state.confirm ? (
+    <div className={pinned ? styles.pin : styles.actions}>
+      <button type="button" className={styles.primary} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'approve' })}>
+        {state.phase === 'submitting' ? '保存しています…' : state.confirm.submitLabel}
+      </button>
+      {state.op?.taxAdjust !== 'none' && (
+        <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'adjust', text: '税込みだった' })}>税込みだった</button>
+      )}
+      <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
+    </div>
+  ) : null
 
   return (
     <>
@@ -78,17 +122,18 @@ export default function AgentDock() {
       <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label="ドヤAIに頼む" aria-hidden={!open}>
         <header className={styles.head}>
           <strong>ドヤAI</strong>
+          {/* スマホだけ出す切り替え（会話・両方・画面）。見出しと同じ行に置き、狭い画面の高さを使いすぎない */}
+          <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
+            {([['chat', '会話'], ['both', '両方'], ['tool', '画面']] as const).map(([v, label]) => (
+              <button key={v} type="button" data-on={view === v ? 'true' : 'false'} aria-pressed={view === v} onClick={() => setView(v)}>
+                {label}{v === 'chat' && waiting && view !== 'chat' ? <span className={styles.waitMark} aria-label="返事待ち" /> : null}
+              </button>
+            ))}
+          </div>
           {total > 0 ? <em className={styles.count} aria-label={`作業 ${doneCount} 件 / ${total} 件`}>{doneCount} / {total}</em> : <span className={styles.grow} />}
           <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="会話の欄を閉じる">閉じる</button>
         </header>
         <div className={styles.prog} aria-hidden="true"><i style={{ transform: `scaleX(${total ? doneCount / total : 0})` }} /></div>
-        <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
-          {([['chat', '会話'], ['both', '両方'], ['tool', '画面']] as const).map(([v, label]) => (
-            <button key={v} type="button" data-on={view === v ? 'true' : 'false'} data-wait={v === 'chat' && waiting && view !== 'chat' ? 'true' : 'false'} aria-pressed={view === v} onClick={() => setView(v)}>
-              {label}{v === 'chat' && waiting && view !== 'chat' ? <span className={styles.waitMark}>返事待ち</span> : null}
-            </button>
-          ))}
-        </div>
         <div className={styles.body} ref={bodyRef} data-agent-body="" aria-live="polite">
           {state.phase === 'idle' && (
             <p className={styles.hint}>やりたいことを書いてください。例: 今月の売上100万円追加して</p>
@@ -98,7 +143,12 @@ export default function AgentDock() {
           {state.phase === 'reading' && <p className={styles.say}>依頼を読んでいます…</p>}
           {state.say && state.phase !== 'reading' ? <p className={styles.lead}>{state.say}</p> : null}
 
-          {state.steps.length > 0 && state.phase !== 'guided' && (
+          {foldable && state.steps.length > 0 && (
+            <button type="button" className={styles.stepsToggle} aria-expanded={stepsOpen} onClick={() => setStepsOpen(!stepsOpen)}>
+              <span>作業 {doneCount} / {total} 件</span><small>{stepsOpen ? '畳む' : '見る'}</small>
+            </button>
+          )}
+          {state.steps.length > 0 && state.phase !== 'guided' && !(foldable && !stepsOpen) && (
             <ol className={styles.steps}>
               {state.steps.map((s, i) => (
                 <li key={s.id} data-status={s.status} style={{ '--i': i } as CSSProperties}>{stepMark()}<span>{s.label}</span></li>
@@ -117,6 +167,20 @@ export default function AgentDock() {
             </form>
           )}
 
+          {state.phase === 'choosing' && state.choose && (
+            <div className={styles.ask}>
+              <p className={styles.say}>{state.choose.prompt}</p>
+              <div className={styles.next}>
+                {state.choose.options.map((o) => (
+                  <button key={o.id} type="button" className={styles.nextBtn} onClick={() => dispatch({ t: 'choose', id: o.id })}><span>{o.label}</span></button>
+                ))}
+              </div>
+              <div className={styles.actions}>
+                <button type="button" className={styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
+              </div>
+            </div>
+          )}
+
           {state.confirm && (state.phase === 'confirm' || state.phase === 'submitting' || (state.phase === 'failed')) && (
             <div className={styles.card}>
               {state.notice ? <p className={styles.say}>{state.notice}</p> : null}
@@ -127,24 +191,24 @@ export default function AgentDock() {
                 ))}
               </dl>
               {state.confirm.note ? <p className={styles.note}>{state.confirm.note}</p> : null}
-              {state.phase !== 'failed' && (
-                <div className={styles.actions}>
-                  <button type="button" className={styles.primary} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'approve' })}>
-                    {state.phase === 'submitting' ? '登録しています…' : state.confirm.submitLabel}
-                  </button>
-                  <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'adjust', text: '税込みだった' })}>税込みだった</button>
-                  <button type="button" className={styles.ghost} disabled={state.phase !== 'confirm'} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
-                </div>
-              )}
+              {state.phase !== 'failed' && !pinned && confirmActions}
             </div>
           )}
 
           {state.phase === 'failed' && (
             <div className={styles.fail} role="alert">
               <p>{state.error}</p>
+              {/* 権限がない・ツールを始めていない失敗は、もう一度やっても同じになる。理由に合った案内を出す */}
+              {state.errorKind === 'blocked' && <p className={styles.note}>画面から行うときも同じ権限が必要です。もう一度やっても、同じ結果になります。</p>}
+              {state.errorKind === 'not-started' && <p className={styles.note}>始めたあとで、もう一度頼めます。</p>}
               <div className={styles.actions}>
-                <button type="button" className={styles.primary} onClick={() => dispatch({ t: 'retry' })}>{state.confirm ? '確認カードに戻る' : 'もう一度やる'}</button>
-                <button type="button" className={styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
+                {state.errorKind === 'not-started' && state.op && (
+                  <button type="button" className={styles.primary} onClick={() => { const to = `/${state.op!.path.split('/')[1].split('?')[0]}`; dispatch({ t: 'reset' }); router.push(to) }}>画面から始める</button>
+                )}
+                {state.errorKind === 'other' && (
+                  <button type="button" className={styles.primary} onClick={() => dispatch({ t: 'retry' })}>{state.confirm ? '確認カードに戻る' : 'もう一度やる'}</button>
+                )}
+                <button type="button" className={state.errorKind === 'blocked' ? styles.primary : styles.ghost} onClick={() => dispatch({ t: 'reset' })}>やめる</button>
               </div>
             </div>
           )}
@@ -191,6 +255,7 @@ export default function AgentDock() {
             </div>
           )}
         </div>
+        {pinned && confirmActions}
         <form className={styles.foot} onSubmit={(e) => { e.preventDefault(); sendDraft() }}>
           <input className={styles.input} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={state.phase === 'confirm' ? '直したいことがあれば入力' : 'やりたいことを書く'} disabled={!canType} maxLength={500} aria-label={state.phase === 'confirm' ? '金額などの直し' : 'ドヤAIへの依頼'} />
           <button type="submit" className={styles.primary} disabled={!canType || !draft.trim()}>送る</button>

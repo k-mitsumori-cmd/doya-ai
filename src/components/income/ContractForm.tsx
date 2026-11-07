@@ -3,6 +3,9 @@
 // 契約の入力フォーム（新規・編集で共用）。下に売上予定のプレビューを出す
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
+import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
+import { useAgentChat } from '@/components/agent-chat/AgentChatProvider'
+import { createSaveLock } from '@/lib/agent-chat/review'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
@@ -69,7 +72,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const [newClientName, setNewClientName] = useState('')
   const [clientsLoaded, setClientsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
-  const saveInFlight = useRef(false)
+  const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState(false)
@@ -140,15 +143,13 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
    * 保存する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 成功したら、登録した契約の画面へ移る（移ったあとも、会話の欄は枠の側に残り、完了を出す）。
    */
-  const save = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> => {
-    if (saveInFlight.current) return { ok: false, error: '登録処理が進んでいます。完了するまでお待ちください。' }
+  const saveNow = async (): Promise<{ ok: true; id: string | null } | { ok: false; error: string; kind?: 'blocked' }> => {
     setTried(true)
     const firstError = Object.values(errors).find(Boolean)
     if (firstError) {
       setError('入力に誤りがあります。赤字の項目を直してください。')
       return { ok: false, error: firstError }
     }
-    saveInFlight.current = true
     setBusy(true)
     setError(null)
     try {
@@ -170,18 +171,22 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
         return { ok: true, id: initial.id }
       }
       const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
+      saveLock.close()
       markClean()
-      toast('契約を登録しました')
-      router.push(`/income/contracts/${d.id}`)
+      if (!isAgentSubmit()) {
+        toast('契約を登録しました')
+        router.push(`/income/contracts/${d.id}`)
+      }
       return { ok: true, id: d.id }
     } catch (err) {
       setError(errMsg(err))
-      return { ok: false, error: errMsg(err) }
+      return { ok: false, error: errMsg(err), kind: failKindOf(err) }
     } finally {
-      saveInFlight.current = false
       setBusy(false)
     }
   }
+
+  const save = () => saveLock.run(saveNow)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -191,8 +196,11 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   // ---- 会話（AgentDock）から操作される口。新規のときだけ。欄の名前は src/lib/agent-chat/ops.ts の INCOME_SALE_ADD ----
   const totals = safeTotals(rows)
   const agentTitle = useRef('')
+  // 会話が画面を進めている間だけ、売上予定の表（単発の売上は1行）が出る分の高さを先に取る（金額を入れた瞬間に、下のカードが押し下げられてずれないように）。ふだんの画面には、空きを作らない
+  const chatPhase = useAgentChat()?.state.phase
+  const agentRun = !initial && (chatPhase === 'working' || chatPhase === 'confirm' || chatPhase === 'submitting')
   useAgentForm('income.contract.new', {
-    ready: () => !initial && clientsLoaded && !busy && !saveInFlight.current,
+    ready: () => !initial && clientsLoaded && !saveLock.busy(),
     setValue: (key, value) => {
       if (initial) return false
       switch (key) {
@@ -219,8 +227,6 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       }
     },
     snapshot: () => ({
-      // Local-only marker: include every draft field, not only the confirmation card totals. Never sent to the AI.
-      _reviewPayload: JSON.stringify({ f, rows, newClientName }),
       _amountLineCount: String(rows.length),
       _amountTaxRate: rows.length === 1 ? String(rows[0].taxRate) : '',
       client: f.clientId === NEW_CLIENT ? newClientName.trim() : (clients.find((c) => c.id === f.clientId)?.name ?? ''),
@@ -230,9 +236,10 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       tax: totals ? String(totals.taxAmount) : '',
       total: totals ? String(totals.totalInclTax) : '',
     }),
+    draft: () => ({ f, rows, newClientName }),
     submit: async () => {
       const r = await save()
-      return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error }
+      return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error, ...(r.ok ? {} : { kind: r.kind }) }
     },
   })
 
@@ -317,6 +324,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       </Card>
 
       <Card title="売上予定のプレビュー（先頭6件）">
+        <div className={agentRun ? s.previewBox : undefined} style={agentRun ? ({ '--rows': 1 } as React.CSSProperties) : undefined}>
         {preview.rows.length > 0 ? (
           <div className={s.tableWrap}>
             <table className={s.table}>
@@ -336,6 +344,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
           </div>
         ) : null}
         {preview.note && <p className={s.sub} style={{ margin: '8px 0 0' }}>{preview.note}</p>}
+        </div>
         {f.status !== 'active' && <p className={s.note} style={{ margin: '12px 0 0' }}>状態が「有効」ではないため、保存しても売上予定は作られません。</p>}
       </Card>
 

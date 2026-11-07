@@ -238,6 +238,7 @@ function SupportChatSession({ draftKey, mobileDocked }: { draftKey: string | nul
         ref={fabRef}
         type="button"
         className={styles.fab}
+        data-support-chat="fab"
         data-open={open}
         aria-label="質問・お問い合わせのチャットを開く"
         aria-expanded={open}
@@ -251,6 +252,7 @@ function SupportChatSession({ draftKey, mobileDocked }: { draftKey: string | nul
       <section
         id="support-chat-panel"
         className={styles.panel}
+        data-support-chat="panel"
         data-open={open}
         role="dialog"
         aria-modal="false"

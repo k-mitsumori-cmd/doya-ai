@@ -96,12 +96,12 @@ export default function Dashboard() {
             <div className={s.stackY} style={{ opacity: res.loading ? 0.6 : 1, transition: 'opacity .2s' }}>
               {empty && (<OnboardingSteps />)}
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className={s.statWrap}><div className={s.statGrid}>
                 <StatTile label="売上予定（税抜）" value={n(k.scheduled)} unit="円" sub={`契約 ${k.scheduleCount} 件`} />
                 <StatTile label="請求済（税抜）" value={n(k.invoiced)} unit="円" sub={`${k.invoicedCount} / ${k.scheduleCount} 件`} />
                 <StatTile label="入金済" value={n(k.received)} unit="円" tone="ok" />
                 <StatTile label="未入金（税込）" value={n(k.unpaid)} unit="円" sub={`うち遅延 ${k.overdueCount} 件`} tone={k.overdueCount > 0 ? 'bad' : 'default'} />
-              </div>
+              </div></div>
 
               {!empty && <MoneyFlow kpi={k} />}
 

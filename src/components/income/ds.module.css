@@ -430,6 +430,7 @@ textarea.input {
 .stat {
   position: relative;
   overflow: hidden;
+  container-type: inline-size;
   background:
     radial-gradient(120% 90% at 100% 0%, var(--blue-soft), transparent 55%),
     var(--paper);
@@ -466,13 +467,19 @@ textarea.input {
 }
 .statValue {
   margin-top: 8px;
-  font-size: 32px;
   line-height: 1.1;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  /* 数字の途中や「円」だけが次の行へ折り返さないようにする。タイルが狭いときは、タイルの幅に合わせて文字を小さくする（32px から 20px まで） */
+  font-size: clamp(20px, 15cqw, 32px);
 }
+.statNowrap { white-space: nowrap; }
+/* 4つのタイルの並び。画面ではなく、本文の幅で列の数を決める（会話の欄が開いて本文が狭くなっても、タイルが細くならない） */
+.statWrap { container-type: inline-size; }
+.statGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container (min-width: 480px) { .statGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 800px) { .statGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .statUnit {
   margin-left: 4px;
   font-size: 14px;
@@ -905,3 +912,7 @@ textarea.input {
   height: auto;
   flex: none;
 }
+
+/* 売上予定のプレビュー: 会話が画面を進めている間だけ、表が出るときの高さを先に取る（--rows は表の行数、--extra は「ほか N 件」の行の有無）。スマホでは1行が積み重なったカードになる */
+.previewBox { min-height: calc(var(--rows, 1) * 136px + var(--extra, 0) * 30px); }
+@media (min-width: 641px) { .previewBox { min-height: calc(var(--rows, 1) * 49px + 47px + var(--extra, 0) * 30px); } }
