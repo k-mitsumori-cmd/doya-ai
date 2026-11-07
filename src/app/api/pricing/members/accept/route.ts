@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       const capacity = await teamMembershipCapacity(current.companyId, tx)
       const members = await tx.accountCompanyMember.findMany({
         where: { companyId: current.companyId, status: { in: ['invited', 'active'] } },
-        select: { email: true, userId: true, status: true, invitedAt: true },
+        select: { id: true, email: true, userId: true, status: true, invitedAt: true },
       })
       // メールが変わった人も、同じ利用者IDでは所属を重ねない。
       // 既存の役割や招待行を勝手に統合・変更せず、現在の所属を使う。
@@ -59,7 +59,13 @@ export async function POST(req: NextRequest) {
         return json({ code: 'ALREADY_MEMBER', error: 'すでにこの会社に参加しています。現在の所属でご利用ください。不要な招待は会社の持ち主に取り消しを依頼してください。' }, 409)
       }
       const used = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members })
-      if (used > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
+      // 招待のメールが既存所属の旧メールと重なっても、別の利用者IDなら
+      // 受諾後に1人増える。予約時の数だけでなく、更新後のIDで数え直す。
+      const acceptedMembers = members.map(member => member.id === current.id
+        ? { ...member, status: 'active', userId }
+        : member)
+      const acceptedUsed = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members: acceptedMembers })
+      if (used > capacity.limit || acceptedUsed > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
       const now = new Date()
       const r = await tx.accountCompanyMember.updateMany({
         where: { id: current.id, companyId: current.companyId, email, status: 'invited', inviteToken: token, invitedAt: { gt: new Date(now.getTime() - INVITE_TTL_DAYS * 86400000), lte: now } },

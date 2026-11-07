@@ -123,7 +123,7 @@ async function reset() {
   state = { purchased: 5, stripeAttempts: 0, effectiveStripeWrites: 0, responses: new Map(), keys: [], notifications: 0, monthly: 0, grantCalls: [], grants: new Set(), ledgerAccountReads: 0, events: [], invoices: new Map(), latestInvoice: 'in_previous', evidenceReads: 0 };
   clock.now = baselineNow;
   await raw.systemSetting.deleteMany();
-  await raw.user.deleteMany({ where: { id: { in: [owner.id, 'synthetic-invitee'] } } });
+  await raw.user.deleteMany({ where: { id: { in: [owner.id, 'synthetic-invitee', 'former-email-owner'] } } });
   await raw.user.create({ data: owner });
   await raw.user.create({ data: { id: 'synthetic-invitee', email: 'invitee@example.invalid', plan: 'FREE' } });
   await raw.accountCompany.create({ data: { id: companyId, userId: owner.id, name: 'Synthetic' } });
@@ -134,6 +134,27 @@ const cases = [];
 async function check(name, fn) { await reset(); await fn(); assert(await used() <= state.purchased, name + ': member count exceeds purchased seats'); cases.push(name); console.log('PASS coordinated route SQL: ' + name); }
 (async () => {
   try {
+
+    for (const purchased of [5, 6]) {
+      await check('reassigned-stale-email-capacity-' + purchased + '-checks-activated-account-ids', async () => {
+        await raw.user.create({ data: { id: 'former-email-owner', email: 'moved@example.invalid', plan: 'FREE' } });
+        await raw.accountCompanyMember.create({ data: { id: 'former-case-email-row', companyId, email: 'INVITEE@EXAMPLE.INVALID', userId: 'former-email-owner', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+        await raw.accountCompanyMember.create({ data: { id: 'filler', companyId, email: 'filler@example.invalid', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+        await raw.accountCompanyMember.create({ data: { id: 'reassigned-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'reassigned-email-token' } });
+        state.purchased = purchased; await raw.accountCompanyBilling.update({ where: { companyId }, data: { seats: purchased } });
+        const response = await accept.POST({ json: async () => ({ token: 'reassigned-email-token' }) });
+        assert.equal(response.status, purchased === 5 ? 409 : 200);
+        const body = await response.json(), pending = await raw.accountCompanyMember.findUnique({ where: { id: 'reassigned-pending' } });
+        if (purchased === 5) {
+          assert.equal(body.code, 'NO_SEAT'); assert.equal(pending.status, 'invited'); assert.equal(pending.userId, null); assert.equal(pending.inviteToken, 'reassigned-email-token');
+        } else {
+          assert.equal(pending.status, 'active'); assert.equal(pending.userId, 'synthetic-invitee'); assert.equal(pending.inviteToken, null); assert.equal(await used(), 6);
+        }
+        const previous = await raw.accountCompanyMember.findUnique({ where: { id: 'former-case-email-row' } });
+        assert.equal(previous.userId, 'former-email-owner'); assert.equal(previous.email, 'INVITEE@EXAMPLE.INVALID'); assert.equal(previous.role, 'member');
+        assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
+      });
+    }
     for (const email of ['invitee@example.invalid', 'INVITEE@EXAMPLE.INVALID']) {
       await check('active-account-current-email-reinvite-does-not-reserve-another-seat-' + email, async () => {
         await raw.accountCompanyMember.create({ data: { id: 'reinvite-existing-account', companyId, email: 'previous@example.invalid', userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
