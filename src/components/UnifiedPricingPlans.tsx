@@ -50,13 +50,13 @@ export function UnifiedPricingPlans({
   const returnTo = pathname || `/${serviceId}/pricing`
   const trialEligible = useTrialEligible()
   // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプロの申し込みの代わりに /pricing へ案内する
-  const newPricing = useNewPricing()
 
   // 決済済みなのに反映されていない方の自己回復。押しても二重課金にはならない
   // （/api/stripe/sync/latest は Stripe を読んで DB に写すだけ）。
   // ⚠️ 未ログインの初回訪問者に出すと「反映？何のこと？」となるので、
   //    ログイン済みかつ無料プランの方にだけ見せる。
   const { data: session, status: authStatus } = useSession()
+  const newPricing = useNewPricing(JSON.stringify([authStatus, session?.user?.id, session?.user?.email]))
 
   // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
   // セッションはサーバー側で User.plan を読み直してから返される。
@@ -74,6 +74,28 @@ export function UnifiedPricingPlans({
     onVerified: () => { window.location.reload() },
   })
   if (!svc) return null
+  // Only an explicit legacy-pricing response may display legacy prices or checkout.
+  // The canonical page resolves existing contracts; PRO alone cannot identify a legacy contract.
+  if (newPricing !== false) {
+    return (
+      <section className={className || ''} aria-label="料金とご契約の確認">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-bold text-slate-900">料金とご契約の確認</h2>
+          <p className="mt-3 text-base text-slate-700">料金やお支払い方法、ご契約内容は、料金プランでご確認ください。</p>
+          {planSource === 'organization' && (
+            <p className="mt-3 text-sm text-slate-600">組織の利用枠は、組織の契約内容で決まります。ご自身の契約を変更しても、組織の利用枠は増えません。</p>
+          )}
+          {!canPurchase ? (
+            <p className="mt-4 text-sm font-bold text-slate-700">組織の契約変更はオーナーにご相談ください</p>
+          ) : (
+            <Link href="/pricing" className="mt-4 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-base font-semibold text-white transition-colors duration-300 hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+              料金プランを見る
+            </Link>
+          )}
+        </div>
+      </section>
+    )
+  }
   const freeLimit = svc.pricing?.free?.limit || '無料でお試し'
   const proLimit = svc.pricing?.pro?.limit || '上限が大幅アップ'
   const features = svc.features || []
