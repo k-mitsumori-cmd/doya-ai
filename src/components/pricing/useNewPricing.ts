@@ -21,8 +21,9 @@ function load(identityKey: string): Promise<boolean | null> {
     })
     .catch(() => null)
   cached.set(identityKey, request)
-  void request.then((value) => {
-    if (value === null && cached.get(identityKey) === request) cached.delete(identityKey)
+  void request.then(() => {
+    // Share only in-flight reads: a later mount must recheck changed contracts.
+    if (cached.get(identityKey) === request) cached.delete(identityKey)
   })
   return request
 }
