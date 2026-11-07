@@ -333,7 +333,7 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups, actorKey, supportChat = false }: {
+export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups, actorKey, supportChat = false, agentChat = false }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
@@ -346,6 +346,9 @@ export default function AppShell({ children, userName, initialRecent, department
   agentTasks?: boolean
   /** モバイルの下部バーにサポートボタンの場所を確保する。 */
   supportChat?: boolean
+  /** モバイルの下部バーの左端に「ドヤAIに頼む」のボタンの場所を確保する（旗 AGENT_CHAT_ROLLOUT。サーバーが決める）。
+   *  ボタンを本文の上に浮かせると入力欄に重なるため、サポートのボタンと同じく下部バーの中に置く */
+  agentChat?: boolean
   /** 件数と通信を利用者ごとに分離する。表示やAPIの認可には使わない。 */
   actorKey?: string
   /** まとまりの開閉（cookie。押したものだけ） */
@@ -453,7 +456,7 @@ export default function AppShell({ children, userName, initialRecent, department
   return (
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
-    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true">
+    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>
@@ -572,7 +575,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {children}
       </main>
 
-      <nav className={styles.tabbar} data-support-reserved={supportChat} aria-label="よく使うツール">
+      <nav className={styles.tabbar} data-support-reserved={supportChat} data-agent-reserved={agentChat} aria-label="よく使うツール">
         {[productsOn ? productHome : SHELL_HOME, ...tabTools].map((t) => {
           return (
             <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
