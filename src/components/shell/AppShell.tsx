@@ -282,6 +282,7 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
       if (!res.ok) return
       const j = await res.json()
       if (!valid()) return
+      if (j?.store === 'off') { setCounts(null); setOff(true); return }
       if (typeof j?.running === 'number') setCounts({ running: j.running, waiting: j.waiting ?? 0, done: j.done ?? 0, failed: j.failed ?? 0 })
     } catch { /* 数えられなくてもリンクは使える */ }
   }, [])
