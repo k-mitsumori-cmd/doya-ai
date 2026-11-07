@@ -134,6 +134,33 @@ const cases = [];
 async function check(name, fn) { await reset(); await fn(); assert(await used() <= state.purchased, name + ': member count exceeds purchased seats'); cases.push(name); console.log('PASS coordinated route SQL: ' + name); }
 (async () => {
   try {
+    await check('same-account-old-email-membership-blocks-duplicate-acceptance', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'same-account-old-email', companyId, email: 'previous@example.invalid', userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+      await raw.accountCompanyMember.create({ data: { id: 'same-account-new-invite', companyId, email: 'invitee@example.invalid', role: 'admin', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'same-account-new-token' } });
+      const response = await accept.POST({ json: async () => ({ token: 'same-account-new-token' }) });
+      assert.equal(response.status, 409); assert.equal((await response.json()).code, 'ALREADY_MEMBER');
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 1);
+      const existing = await raw.accountCompanyMember.findUnique({ where: { id: 'same-account-old-email' } });
+      assert.equal(existing.role, 'member'); assert.equal(existing.email, 'previous@example.invalid');
+      const pending = await raw.accountCompanyMember.findUnique({ where: { id: 'same-account-new-invite' } });
+      assert.equal(pending.status, 'invited'); assert.equal(pending.inviteToken, 'same-account-new-token');
+      assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
+    });
+    await check('same-account-parallel-email-invites-create-one-active-membership', async () => {
+      for (const n of [1, 2]) await raw.accountCompanyMember.create({ data: { id: 'parallel-email-' + n, companyId, email: `parallel${n}@example.invalid`, role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'parallel-email-token-' + n } });
+      const accepting = [1, 2].map(n => route('src/app/api/pricing/members/accept/route.ts', { id: 'synthetic-invitee', email: `parallel${n}@example.invalid` }).POST({ json: async () => ({ token: 'parallel-email-token-' + n }) }));
+      const responses = await Promise.all(accepting);
+      assert.deepEqual(responses.map(r => r.status).sort(), [200, 409]);
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 1);
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, id: { startsWith: 'parallel-email-' }, status: 'invited' } }), 1);
+      assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
+    });
+    await check('persisted-duplicate-account-rows-consume-one-seat-without-data-migration', async () => {
+      for (const n of [1, 2]) await raw.accountCompanyMember.create({ data: { id: 'persisted-alias-' + n, companyId, email: `alias${n}@example.invalid`, userId: 'synthetic-invitee', role: 'member', status: 'active', invitedAt: new actualDate(clock.now) } });
+      assert.equal(await used(), 4);
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 2);
+      assert.equal(state.stripeAttempts, 0);
+    });
     await check('early-resume-must-not-charge-a-contract-no-longer-owned', async () => {
       state.beforeStripeUpdate = async () => { throw Error('SYNTHETIC_NO_PROVIDER_RESULT'); };
       assert.equal((await change(6)).status, 502); assert.equal(state.effectiveStripeWrites, 0);
