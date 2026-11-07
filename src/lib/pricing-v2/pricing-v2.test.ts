@@ -116,7 +116,7 @@ test('フリーは3人まで', () => {
 // ---------- 旗 ----------
 
 test('旗: 値が無い・知らない値は off。preview と all だけを受け付ける', () => {
-  assert.equal(newPricingRollout(undefined), 'off')
+  // ⚠️ undefined を渡すと本物の環境変数を読むので渡さない（下の '' で確かめる。2026-11-08）
   assert.equal(newPricingRollout(''), 'off')
   assert.equal(newPricingRollout('on'), 'off')
   assert.equal(newPricingRollout(' Preview '), 'preview')

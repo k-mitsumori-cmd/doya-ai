@@ -24,7 +24,8 @@ const opReply = (values: Record<string, string>, missing = INCOME_SALE_ADD.field
   ({ kind: 'op', op: INCOME_SALE_ADD, values, missing, say: '追加します。' })
 
 test('旗: 既定は off。preview と all だけ受け付ける。off は誰にも出さない', () => {
-  assert.equal(agentChatRollout(undefined), 'off')
+  // ⚠️ undefined を渡すと本物の環境変数を読む。本番で旗に値を入れるとビルドが落ちるので、値を明示して渡す（2026-11-08）
+  assert.equal(agentChatRollout(''), 'off')
   assert.equal(agentChatRollout('ALL'), 'all')
   assert.equal(agentChatRollout('on'), 'off')
   assert.equal(decideAgentChat({ rollout: 'off', email: 'a@b.jp', allow: ['a@b.jp'] }), false)
