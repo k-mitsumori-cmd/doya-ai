@@ -35,6 +35,7 @@ const mocks = {
   // 残業の時間の言い方を読む部品。ここでは描画だけを確かめるので、読まない形にする
   '@/lib/agent-chat/duration': { parseDuration: () => null },
   '@/lib/agent-chat/review': { createSaveLock: () => ({ busy: () => false, close: () => {}, run: (fn) => fn() }) },
+  '@/lib/submit-once-client': { submitOnce: ({ send }) => send(undefined), SubmitOnceSavedError: class extends Error {} },
 }
 
 // Render the real extracted clock hook during SSR; effects remain unexecuted here.

@@ -56,4 +56,7 @@ DEFAULT_MOCKS['@/components/one-button/OneButtonBar']={OneButtonBar:()=>null};
 const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
 lazyReal('@/lib/hr/one-on-one-items',()=>load('src/lib/hr/one-on-one-items.ts'));
 lazyReal('@/lib/admin/contract-price',()=>load('src/lib/admin/contract-price.ts',{'@/lib/pricing-v2/amount':load('src/lib/pricing-v2/amount.ts')}));
+// 一度きりの番号（src/lib/submit-once.ts）は本物をそのまま使う。番号のない送信は、受け取りの記録に触らず今までどおり作る。番号があるときの動きは src/lib/submit-once.test.ts が確かめる（2026-11-07）
+lazyReal('@/lib/submit-once',()=>load('src/lib/submit-once.ts',{'node:crypto':require('node:crypto')}));
+lazyReal('@/lib/submit-once-client',()=>load('src/lib/submit-once-client.ts'));
 module.exports={load,check,results,DEFAULT_MOCKS};
