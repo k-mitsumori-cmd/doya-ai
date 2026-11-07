@@ -24,8 +24,11 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as { id?: string } | undefined)?.id
-    const email = normalizeEmail(session?.user?.email)
-    if (!userId || !email) return json({ error: 'ログインが必要です。' }, 401)
+    if (!userId) return json({ error: 'ログインが必要です。' }, 401)
+    // JWT内の旧メールではなく、現在のアカウントのメールで招待を確認する。
+    const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+    const email = normalizeEmail(account?.email)
+    if (!email) return json({ error: 'この招待は使えません。招待したメールアドレスでログインしているか確かめてください。' }, 404)
     if (!isNewPricingEnabledFor(email) || !teamTablesAllowed()) return json({ error: '見つかりません。' }, 404)
     const body = await req.json().catch(() => null)
     const token = typeof body?.token === 'string' ? body.token.trim() : ''
@@ -40,6 +43,13 @@ export async function POST(req: NextRequest) {
     }
     await teamSeatsForCompany(invite.companyId, { refresh: true, strict: true })
     return await withSeatAdmission(invite.companyId, async tx => {
+      // 会社のガードの後で利用者行も固定し、メール変更と受諾を直列化する。
+      // Userのメールを書き換える処理は通常の行ロックで待つため、確認から
+      // 所属の確定まで古いメールへ戻った状態を持ち越さない。
+      const accounts = await tx.$queryRaw<Array<{ email: string | null }>>`
+        SELECT email FROM "User" WHERE id = ${userId} FOR UPDATE
+      `
+      if (accounts.length !== 1 || normalizeEmail(accounts[0].email) !== email) return json({ error: 'この招待は使えません。' }, 404)
       // Re-read the invitation, expiry, capacity and membership under the same
       // company guard used by invite creation and seat changes.
       const current = await tx.accountCompanyMember.findUnique({

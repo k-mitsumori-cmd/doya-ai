@@ -92,7 +92,7 @@ function route(name, actor = owner) {
   return load(name, {
     'node:crypto': crypto, 'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: actor.id, email: actor.email } }) },
     '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma: db }, '@/lib/stripe': { stripe },
-    '@/lib/pricing-v2/rollout': rollout, '@/lib/pricing-v2/prices': prices, '@/lib/pricing-v2/view': view, '@/lib/pricing-v2/team': team, '@/lib/pricing-v2/plans': plans, '@/lib/pricing-v2/team.server': server, '@/lib/pricing-v2/seat-operation': core, '@/lib/pricing-v2/seat-reconciliation.server': reconciliationReader,
+    '@/lib/pricing-v2/rollout': rollout, '@/lib/pricing-v2/prices': prices, '@/lib/pricing-v2/view': view, '@/lib/pricing-v2/team': team, '@/lib/pricing-v2/plans': plans, '@/lib/pricing-v2/team.server': server, '@/lib/pricing-v2/seat-operation': { ...core, withSeatAdmission: async (...args) => { if (state.beforeAdmission) { const hook = state.beforeAdmission; state.beforeAdmission = null; await hook(); } return core.withSeatAdmission(...args); } }, '@/lib/pricing-v2/seat-reconciliation.server': reconciliationReader,
     '@/lib/doya-power/flag': { doyaPowerLedgerAllowed: () => Boolean(state.ledger) },
     '@/lib/doya-power/rules': powerRules,
     '@/lib/doya-power': {
@@ -135,6 +135,53 @@ async function check(name, fn) { await reset(); await fn(); assert(await used() 
 (async () => {
   try {
 
+
+    await check('stale-session-email-cannot-claim-invite-after-database-email-change', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      await raw.user.update({ where: { id: 'synthetic-invitee' }, data: { email: 'changed@example.invalid' } });
+      assert.equal((await accept.POST({ json: async () => ({ token: 'email-token' }) })).status, 404);
+      const row = await raw.accountCompanyMember.findUnique({ where: { id: 'email-pending' } }); assert.equal(row.status, 'invited'); assert.equal(row.userId, null); assert.equal(row.inviteToken, 'email-token'); assert.equal(state.stripeAttempts, 0);
+    });
+    await check('database-current-email-can-join-with-stale-session-email', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'changed@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      await raw.user.update({ where: { id: 'synthetic-invitee' }, data: { email: 'changed@example.invalid' } });
+      assert.equal((await accept.POST({ json: async () => ({ token: 'email-token' }) })).status, 200); assert.equal((await raw.accountCompanyMember.findUnique({ where: { id: 'email-pending' } })).userId, 'synthetic-invitee'); assert.equal(state.stripeAttempts, 0);
+    });
+    await check('database-account-without-email-cannot-claim-invite', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      await raw.user.update({ where: { id: 'synthetic-invitee' }, data: { email: null } });
+      assert.equal((await accept.POST({ json: async () => ({ token: 'email-token' }) })).status, 404); assert.equal((await raw.accountCompanyMember.findUnique({ where: { id: 'email-pending' } })).status, 'invited');
+    });
+    await check('database-email-change-before-company-guard-is-rejected', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      state.beforeAdmission = () => raw.user.update({ where: { id: 'synthetic-invitee' }, data: { email: 'changed@example.invalid' } });
+      assert.equal((await accept.POST({ json: async () => ({ token: 'email-token' }) })).status, 404); assert.equal((await raw.accountCompanyMember.findUnique({ where: { id: 'email-pending' } })).status, 'invited'); assert.equal(state.stripeAttempts, 0);
+    });
+    await check('concurrent-email-writer-waits-until-authorized-membership-commit', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      let changing, done = false, observedWait = false;
+      state.beforeAcceptUpdate = async () => {
+        changing = raw.user.update({ where: { id: 'synthetic-invitee' }, data: { email: 'changed@example.invalid' } }).then(value => { done = true; return value; });
+        const until = actualDate.now() + 3000;
+        while (actualDate.now() < until) {
+          assert.equal(done, false, 'ACCOUNT_EMAIL_ROW_MUST_REMAIN_LOCKED_THROUGH_ACTIVATION');
+          const rows = await raw.$queryRaw`SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND wait_event IN ('transactionid','tuple')`;
+          if (rows[0].n > 0) { observedWait = true; break; }
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        assert(observedWait, 'Actual private PostgreSQL user-row wait required');
+      };
+      let response;
+      try { response = await accept.POST({ json: async () => ({ token: 'email-token' }) }); } finally { if (changing) await changing; }
+      assert.equal(response.status, 200); assert(observedWait); assert.equal((await raw.user.findUnique({ where: { id: 'synthetic-invitee' } })).email, 'changed@example.invalid'); assert.equal((await raw.accountCompanyMember.findUnique({ where: { id: 'email-pending' } })).status, 'active'); assert.equal(state.stripeAttempts, 0);
+    });
+    await check('parallel-same-valid-invite-activates-one-current-account', async () => {
+      await raw.accountCompanyMember.create({ data: { id: 'email-pending', companyId, email: 'invitee@example.invalid', role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'email-token' } });
+      const responses = await Promise.all([1, 2].map(() => accept.POST({ json: async () => ({ token: 'email-token' }) })));
+      const statuses = responses.map(response => response.status).sort();
+      assert.equal(statuses[0], 200); assert([404, 409].includes(statuses[1]), 'Only one accept may succeed; consumed or concurrently coordinated request must be denied');
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 1); assert.equal(state.stripeAttempts, 0);
+    });
     for (const purchased of [5, 6]) {
       await check('reassigned-stale-email-capacity-' + purchased + '-checks-activated-account-ids', async () => {
         await raw.user.create({ data: { id: 'former-email-owner', email: 'moved@example.invalid', plan: 'FREE' } });
@@ -194,13 +241,13 @@ async function check(name, fn) { await reset(); await fn(); assert(await used() 
       assert.equal(pending.status, 'invited'); assert.equal(pending.inviteToken, 'same-account-new-token');
       assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
     });
-    await check('same-account-parallel-email-invites-create-one-active-membership', async () => {
+    await check('parallel-stale-account-emails-cannot-activate-membership', async () => {
       for (const n of [1, 2]) await raw.accountCompanyMember.create({ data: { id: 'parallel-email-' + n, companyId, email: `parallel${n}@example.invalid`, role: 'member', status: 'invited', invitedAt: new actualDate(clock.now), inviteToken: 'parallel-email-token-' + n } });
       const accepting = [1, 2].map(n => route('src/app/api/pricing/members/accept/route.ts', { id: 'synthetic-invitee', email: `parallel${n}@example.invalid` }).POST({ json: async () => ({ token: 'parallel-email-token-' + n }) }));
       const responses = await Promise.all(accepting);
-      assert.deepEqual(responses.map(r => r.status).sort(), [200, 409]);
-      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 1);
-      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, id: { startsWith: 'parallel-email-' }, status: 'invited' } }), 1);
+      assert.deepEqual(responses.map(r => r.status).sort(), [404, 404]);
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, userId: 'synthetic-invitee', status: 'active' } }), 0);
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, id: { startsWith: 'parallel-email-' }, status: 'invited' } }), 2);
       assert.equal(state.stripeAttempts, 0); assert.equal(state.notifications, 0);
     });
     await check('persisted-duplicate-account-rows-consume-one-seat-without-data-migration', async () => {
