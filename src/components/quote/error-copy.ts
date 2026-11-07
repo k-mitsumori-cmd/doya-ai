@@ -11,6 +11,11 @@ export function quoteErrorKind(status: number, message = ''): QuoteErrorKind {
   return 'failed'
 }
 
+/** Saved-document/settings reads do not consume generation quota; an HTTP failure is not proof of a monthly limit. */
+export function quoteReadErrorKind(status: number): QuoteErrorKind {
+  return quoteErrorKind([401, 403, 404].includes(status) ? status : 0)
+}
+
 /** what（何が起きたか）と how（どうすればよいか）。thing は「見積書」「発行者情報」など */
 export function quoteErrorCopy(kind: QuoteErrorKind, thing: string): { what: string; how: string } {
   switch (kind) {

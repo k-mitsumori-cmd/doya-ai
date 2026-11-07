@@ -18,7 +18,7 @@ import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/
 import { DoyaKun } from '@/components/lp'
 import QuotePageHeading from '@/components/quote/QuotePageHeading'
 import { Button as DsButton, ErrorNotice } from '@/components/ds'
-import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
+import { quoteErrorCopy, quoteErrorKind, quoteReadErrorKind } from '@/components/quote/error-copy'
 
 // 新しい見た目で、キーボードで移ったときに見える枠（UI 品質 a11y）
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2'
@@ -66,7 +66,7 @@ export default function QuoteDocumentPage() {
   if (!doc) {
     // 新しい見た目: 生の文言は出さず「何が起きたか・どうするか」を出す（S-20）。
     // HTTP状態を優先し、状態が分からない失敗だけ既存の文言判定へ渡す。
-    const kind = quoteErrorKind(errorStatus, errorStatus ? '' : error || '見つかりません')
+    const kind = errorStatus ? quoteReadErrorKind(errorStatus) : quoteErrorKind(0, error || '見つかりません')
     const copy = quoteErrorCopy(kind, '見積書')
     return (
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">

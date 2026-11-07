@@ -17,11 +17,11 @@ async function test(name,fn){authActor='actor-a';authStatus='authenticated';defa
 
 const crypto=require('node:crypto');
 assert.equal(fs.realpathSync(__filename),fs.realpathSync(path.join(root,'scripts/security-regression/verify-quote-settings-http-status.cjs')),'Execute checked-out verifier from the current project root');
-const completionGuard=setTimeout(()=>{console.error('Quote settings HTTP guidance did not complete17 cases');process.exit(1)},45000);
+const completionGuard=setTimeout(()=>{console.error('Quote settings HTTP guidance did not complete19 cases');process.exit(1)},45000);
 const results=[];
 function guidance(status){
  const alert=c.querySelector('[role="alert"]');assert(alert,'Error notice is rendered');
- const copy=load('src/components/quote/error-copy.ts'),kind=copy.quoteErrorKind(status,''),expected=copy.quoteErrorCopy(kind,'発行者情報');
+ const copy=load('src/components/quote/error-copy.ts'),kind=({401:'login',403:'forbidden',404:'missing',402:'failed',429:'failed',500:'failed'})[status],expected=copy.quoteErrorCopy(kind,'発行者情報');assert(kind,'Explicit read-only status contract');
  assert(alert.textContent.includes(expected.what),'Expected '+kind+' notice: '+alert.textContent);
  if(expected.how)assert(alert.textContent.includes(expected.how),'Expected recovery instruction');
  assert.equal(!!alert.querySelector('button'),!['forbidden','login'].includes(kind),'Retry matches HTTP guidance');
@@ -45,10 +45,12 @@ const refresh=async()=>{authStatus='loading';await act(render);authStatus='authe
  await check('late401 cannot replace current403 after organization switch',async()=>{const d=deferred();readHook=org=>org==='beta'?d.promise:Response.json({error:'Forbidden'},{status:403});await act(()=>select('beta'));await act(()=>select('alpha'));await act(()=>d.resolve(Response.json({error:'組織が見つかりません'},{status:401})));guidance(403)});
  await check('save validation after recovered read does not reuse HTTP status',async()=>{readHook=()=>Response.json({error:'組織が見つかりません'},{status:401});await act(()=>select('beta'));readHook=null;await refresh();await act(()=>edit(''));await act(save);assert.equal(writes.length,0);assert.match(c.textContent,/会社名/);assert.doesNotMatch(c.textContent,/ログインの期限/);assert.equal(button('保存する').disabled,true);await act(()=>edit('valid company'));assert.equal(button('保存する').disabled,false);assert.equal(writes.length,0)});
  await check('current successful organization switch clears old login status',async()=>{readHook=org=>org==='beta'?Response.json({error:'組織が見つかりません'},{status:401}):Response.json({issuer:stored.alpha});await act(()=>select('beta'));guidance(401);await act(()=>select('alpha'));assert.equal(company().value,'alpha issuer');assert.equal(c.querySelector('[role="alert"]'),null);assert.equal(button('保存する').disabled,false);assert.equal(writes.length,0)});
- assert.equal(results.length,17);const sourceBindings={};
+ await check('read402 does not imply a monthly generation limit',async()=>{readHook=()=>Response.json({error:'Payment required'},{status:402});await act(()=>select('beta'));guidance(402)});
+ await check('generation quota classification is retained',async()=>{const copy=load('src/components/quote/error-copy.ts');assert.equal(copy.quoteErrorKind(429,''),'limit');assert.equal(copy.quoteErrorKind(402,''),'limit');assert.equal(writes.length,0)});
+ assert.equal(results.length,19);const sourceBindings={};
  for(const file of [...modules.keys(),'scripts/security-regression/verify-quote-settings-http-status.cjs'])sourceBindings[file]=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex');
  assert.equal(Object.keys(sourceBindings).length,9);
- const report={marker:'quote-settings-http-status',expected:17,passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length,completed:true,checks:results,sourceBindings,realNetworkOrWrites:0,scope:'Actual full settings page, issuer hook, workspace context, selection and bounded transport under StrictMode; synthetic session/API and decorative DS. MemberPanel excluded. Read failures, recovery, stale responses and validation only; no actual browser/DB/authenticated role/provider/production/customer save.'};
+ const report={marker:'quote-settings-http-status',expected:19,passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length,completed:true,checks:results,sourceBindings,realNetworkOrWrites:0,scope:'Actual full settings page, issuer hook, workspace context, selection and bounded transport under StrictMode; synthetic session/API and decorative DS. MemberPanel excluded. Read failures, recovery, stale responses and validation only; no actual browser/DB/authenticated role/provider/production/customer save.'};
  if(process.env.QUOTE_SETTINGS_STATUS_OUTPUT)fs.writeFileSync(process.env.QUOTE_SETTINGS_STATUS_OUTPUT,JSON.stringify(report,null,2)+String.fromCharCode(10),{flag:'wx'});
  console.log(JSON.stringify(report));clearTimeout(completionGuard);dom.window.close();if(report.failed)process.exitCode=1;
 })().catch(e=>{clearTimeout(completionGuard);console.error(e);process.exitCode=1;dom.window.close()});
