@@ -381,6 +381,18 @@ jobs:
       - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
 
+      - name: Mensetsu company-role transaction ceiling (private Unix PostgreSQL)
+        run: python3 scripts/security-regression/verify-mensetsu-company-ceiling-postgres.py
+      - name: Save synthetic Mensetsu company-role transaction evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mensetsu-company-ceiling-${{ github.sha }}
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/mensetsu-company-ceiling-native/company-ceiling-native-results.json
+            docs/audits/2026-10-06-all-services-recheck/mensetsu-company-ceiling-native/seat-postgres-lifecycle.json
+            docs/audits/2026-10-06-all-services-recheck/mensetsu-company-ceiling-native/late-lock-observation.json
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

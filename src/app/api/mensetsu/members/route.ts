@@ -14,6 +14,7 @@ import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type MensetsuRole } from '@/lib/mensetsu/types'
 import { lowerToolRole } from '@/lib/company-roles/tool-roles'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 const ROLES: MensetsuRole[] = ['owner', 'admin', 'manager', 'member']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -72,13 +73,15 @@ export async function POST(req: NextRequest) {
   let result
   try {
     result = await prisma.$transaction(async (tx) => {
+      const currentCompanyRole = await ceilToolRole({ tool: 'mensetsu', userId: c.userId, organizationId: c.organizationId, toolRole: c.role }, tx)
+      if (!currentCompanyRole || !hasMinRole(currentCompanyRole, 'admin')) return { kind: 'forbidden' as const }
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${c.organizationId} FOR UPDATE`
       if (rows.length === 0) return { kind: 'missing' as const }
       const actor = await tx.$queryRaw<{ role: MensetsuRole }[]>`SELECT role FROM mensetsu_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
       // 会社の役割の上限（ctx の役割）より上には上げない
-      const actorRole = actor.length ? lowerToolRole('mensetsu', actor[0].role, c.role) : null
+      const actorRole = actor.length ? lowerToolRole('mensetsu', actor[0].role, currentCompanyRole) : null
       if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as MensetsuRole]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.mensetsuMember.findFirst({

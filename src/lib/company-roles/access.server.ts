@@ -8,6 +8,7 @@
 // ⚠️ account_company_members は新しい料金の表。新しい料金の表を使えないとき（teamTablesAllowed が false）は、読まない。
 //    COMPANY_ROLES_ROLLOUT を off 以外にするのは、新しい料金の表と ROLES §8.2 の表を本番DBに流したあと。
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { newPricingRollout } from '@/lib/pricing-v2/rollout'
 import { teamPriceConfig } from '@/lib/pricing-v2/prices'
 import { applyCompanyCeiling, authorizeCompanyAction, loadRolePolicy, resolveCompanyRole, type CompanyAuthorization, type CompanyRoleContext, type CompanyRoleDb, type RoleEventRecord, type ShadowDenial } from './access'
@@ -15,7 +16,7 @@ import type { CompanyPermission, PermissionTarget } from './permissions'
 import type { CompanyRolePolicy } from './policy'
 import { companyRolesModeFor, companyRolesRollout } from './rollout'
 import type { ToolId } from './tool-roles'
-import { companyOfToolOrg } from './tool-orgs.server'
+import { companyOfToolOrg, readCompanyOfToolOrgInTransaction } from './tool-orgs.server'
 
 // team.server.ts の teamTablesAllowed と同じ判定（Stripe を読み込まないよう、ここで同じことを書く）
 function teamTablesAllowed(): boolean {
@@ -121,7 +122,8 @@ async function sessionEmail(): Promise<string | null> {
  * 旗が off なら、セッションも DB も読まずにそのまま返す。読めなかったときは、止める旗なら null（使えない）、shadow ならそのまま。
  * email を渡さなければ、旗が off でないときだけセッションから読む（preview の判定のため）。
  */
-export async function ceilToolRole(input: { tool: ToolId; userId: string; organizationId: string; email?: string | null; toolRole: string }): Promise<string | null> {
+export async function ceilToolRole(input: { tool: ToolId; userId: string; organizationId: string; email?: string | null; toolRole: string }, tx?: Prisma.TransactionClient): Promise<string | null> {
+  if (tx) return ceilToolRoleInTransaction(input, tx)
   if (companyRolesRollout() === 'off') return input.toolRole
   const email = input.email !== undefined ? input.email : await sessionEmail()
   const mode = companyRolesModeFor(email)
@@ -158,5 +160,35 @@ export async function findRecordAuthor(tool: ToolId, recordId: string): Promise<
     // 表が無い・読めないときは「作った人が分からない」として扱う（見積の確定は止める側に倒れる。500 にしない。再監査の軽微4）
     console.error('[company-roles] 作った人を読めませんでした')
     return null
+  }
+}
+
+
+/** Transactional ceiling for writes. Call before locking the domain organization.
+ * Current User/Company/active membership rows stay shared-locked until commit so
+ * a completed company-role demotion cannot leave an old authority snapshot.
+ * The surrounding write must still recheck its actual tool membership/role.
+ */
+async function ceilToolRoleInTransaction(input: Parameters<typeof ceilToolRole>[0], tx: Prisma.TransactionClient): Promise<string | null> {
+  if (companyRolesRollout() === 'off' || !teamTablesAllowed()) return input.toolRole
+  const users = await tx.$queryRaw<Array<{ email: string | null }>>`SELECT email FROM "User" WHERE id = ${input.userId} FOR SHARE`
+  if (users.length !== 1) return null
+  const mode = companyRolesModeFor(users[0].email)
+  if (mode === 'off') return input.toolRole
+  const db: CompanyRoleDb = {
+    findOwnedCompany: userId => tx.accountCompany.findUnique({ where: { userId }, select: { id: true } }),
+    findCompanyOfToolOrg: (tool, organizationId) => readCompanyOfToolOrgInTransaction(tool, organizationId, tx),
+    async findMembershipIn(userId, companyId) {
+      const rows = await tx.$queryRaw<Array<{ role: string }>>`SELECT role FROM account_company_members WHERE "userId" = ${userId} AND "companyId" = ${companyId} AND status = 'active' ORDER BY id FOR SHARE`
+      if (new Set(rows.map(row => row.role)).size > 1) throw new Error('AMBIGUOUS_COMPANY_ROLE')
+      return rows[0] ?? null
+    },
+    findActiveMembership: userId => tx.accountCompanyMember.findFirst({ where: { userId, status: 'active' }, orderBy: { joinedAt: 'asc' }, select: { companyId: true, role: true } }),
+  }
+  try {
+    return await applyCompanyCeiling({ tool: input.tool, userId: input.userId, organizationId: input.organizationId, toolRole: input.toolRole, mode, db, onShadowClamp: logShadowClamp })
+  } catch {
+    console.error('[company-roles] 取引内の上限を確認できませんでした')
+    return mode === 'enforce' ? null : input.toolRole
   }
 }

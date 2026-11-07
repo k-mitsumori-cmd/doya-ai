@@ -10,6 +10,7 @@
 //   作った人が会社の持ち主でない組織（社員が自分で作った組織・会社を持たない人の組織）は、どの会社にもつながない。上限も決まりも当てない。
 // - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { TOOL_ROLE_TABLES, type ToolId } from './tool-roles'
 
 export type OrgMemberDelegate = {
@@ -120,4 +121,47 @@ export async function unlinkToolOrg(input: { companyId: string; actorIsOwner: bo
   if (!input.actorIsOwner) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
   const r = await prisma.accountCompanyToolOrg.deleteMany({ where: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId } })
   return r.count === 1 ? { ok: true } : { ok: false, status: 404, code: 'NOT_FOUND' }
+}
+
+
+/** Read the existing company attribution inside a guarded write transaction.
+ * No profile, central membership, or inferred link is created here. Company
+ * rows precede link/central-membership/domain locks. Missing or changed explicit
+ * links are unavailable rather than an unowned scope that removes the ceiling.
+ * Full admission/context/link-writer coordination remains the caller's job.
+ */
+export async function readCompanyOfToolOrgInTransaction(tool: ToolId, organizationId: string, tx: Prisma.TransactionClient): Promise<{ companyId: string; ownerUserId: string; linked: boolean } | null> {
+  if (!organizationId || !Object.prototype.hasOwnProperty.call(TOOL_ROLE_TABLES, tool)) throw new Error('INVALID_TOOL_SCOPE')
+  const first = await tx.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
+  if (first) {
+    const companies = await tx.$queryRaw<Array<{ id: string; userId: string }>>`SELECT id, "userId" FROM account_companies WHERE id = ${first.companyId} FOR SHARE`
+    if (companies.length !== 1) throw new Error('COMPANY_SCOPE_UNAVAILABLE')
+    const links = await tx.$queryRaw<Array<{ companyId: string }>>`SELECT "companyId" FROM account_company_tool_orgs WHERE tool = ${tool} AND "organizationId" = ${organizationId} FOR SHARE`
+    if (links.length !== 1 || links[0].companyId !== first.companyId) throw new Error('COMPANY_SCOPE_CHANGED')
+    return { companyId: companies[0].id, ownerUserId: companies[0].userId, linked: true }
+  }
+  const readers = {
+    kintai: tx.kintaiMember, hr: tx.hrOrganizationMember, quote: tx.quoteMember,
+    income: tx.incomeMember, expense: tx.expenseMember, sfa: tx.sfaMember,
+    shodan: tx.shodanMember, aio: tx.aioMember, mensetsu: tx.mensetsuMember,
+    aishodan: tx.aishodanMember,
+  } as unknown as Record<Exclude<ToolId, 'promane'>, OrgMemberDelegate>
+  const creator = tool === 'promane'
+    ? (await tx.promaneWorkspace.findUnique({ where: { id: organizationId }, select: { userId: true } }))?.userId
+    : (await readers[tool].findFirst({ where: { organizationId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { userId: true } }))?.userId
+  if (!creator) return null
+  const companies = await tx.$queryRaw<Array<{ id: string; userId: string }>>`SELECT id, "userId" FROM account_companies WHERE "userId" = ${creator} FOR SHARE`
+  if (!companies.length) return null
+  if (companies.length !== 1) throw new Error('COMPANY_SCOPE_UNAVAILABLE')
+  const company = companies[0]
+  const links = await tx.$queryRaw<Array<{ companyId: string }>>`SELECT "companyId" FROM account_company_tool_orgs WHERE tool = ${tool} AND "organizationId" = ${organizationId} FOR SHARE`
+  if (links.length) {
+    if (links.length !== 1 || links[0].companyId !== company.id) throw new Error('COMPANY_SCOPE_CHANGED')
+    return { companyId: company.id, ownerUserId: company.userId, linked: true }
+  }
+  const top = tool === 'promane'
+    ? await tx.promaneMember.findFirst({ where: { workspaceId: organizationId, userId: creator, role: 'owner', isActive: true }, select: { id: true } })
+    : await readers[tool].findFirst({ where: { organizationId, userId: creator, role: TOOL_ROLE_TABLES[tool].order.at(-1)!, status: 'ACTIVE' }, orderBy: [{ createdAt: 'asc' }], select: { userId: true } })
+  // Match the existing inferred-attribution policy without persisting a link.
+  return { companyId: company.id, ownerUserId: company.userId, linked: !!top }
 }
