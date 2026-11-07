@@ -13,7 +13,8 @@ export const maxDuration = 300
 // （mensetsu で実証済みの構成）
 //
 // ⚠️ OPENAI_API_KEY を絶対にクライアントへ返さないこと。返すのは client_secret のみ。
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { assertSessionUsable, loadGuestSession } from '@/lib/aishodan/session'
 import { toScenarioConfig } from '@/lib/aishodan/public'
@@ -36,13 +37,13 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     body = await readOperationalJson(req, 2048)
   } catch (error) {
     const status = error instanceof OperationalBodyError ? error.status : 400
-    return NextResponse.json({ error: status === 413 ? 'リクエストが大きすぎます' : 'リクエストの形式が正しくありません' }, { status })
+    return privateApiJson({ error: status === 413 ? 'リクエストが大きすぎます' : 'リクエストの形式が正しくありません' }, { status })
   }
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
-  if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+  if (!s) return privateApiJson({ error: '商談が見つかりません' }, { status: 404 })
 
   const usable = assertSessionUsable(s)
-  if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  if (!usable.ok) return privateApiJson({ error: usable.reason }, { status: usable.status })
 
   const cfg = toScenarioConfig(s.room.scenario)
 
@@ -50,20 +51,20 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (s.startedAt) {
     const graceMs = (cfg.durationMin * 60 + 15 * 60) * 1000
     if (Date.now() - s.startedAt.getTime() > graceMs) {
-      return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
+      return privateApiJson({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
     }
   }
   // ドヤパワー（旗の内側だけ）: ルームを出している会社の台帳だけを見る。仮に減らした分数（シナリオの分数 + 3分）を超えて続けない。
   // 戻したあと（終わった）は続けない。旗を入れる前に始めた商談（台帳に記録なし）は今までどおり
   const voice = await voiceCharger.allowance('aishodan', s.organizationId, `session-${s.id}`, cfg.durationMin)
-  if (voice === 'closed') return NextResponse.json({ error: 'この商談は終了しています。' }, { status: 409 })
+  if (voice === 'closed') return privateApiJson({ error: 'この商談は終了しています。' }, { status: 409 })
   if (voice && s.startedAt && Date.now() - s.startedAt.getTime() > voice.minutes * 60 * 1000) {
-    return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
+    return privateApiJson({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
   }
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: '音声商談の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
+    return privateApiJson({ error: '音声商談の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
   }
 
   // --- 発行の上限 ---
@@ -81,10 +82,10 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   })
   if (reserved.count === 0) {
     const current = await loadGuestSession(req, p.token, s.id)
-    if (!current) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+    if (!current) return privateApiJson({ error: '商談が見つかりません' }, { status: 404 })
     const allowed = assertSessionUsable(current)
-    if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
-    return NextResponse.json(
+    if (!allowed.ok) return privateApiJson({ error: allowed.reason }, { status: allowed.status })
+    return privateApiJson(
       { error: '接続の試行回数が上限に達しました。お手数ですが担当者までご連絡ください。' },
       { status: 429 }
     )
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     if (!res.ok) {
       void res.body?.cancel().catch(() => {})
       console.error('[aishodan] realtime session error', res.status)
-      return NextResponse.json(
+      return privateApiJson(
         { error: '商談を開始できませんでした。時間をおいて再度お試しください。' },
         { status: 502 }
       )
@@ -159,14 +160,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     data = await readRealtimeJson(res)
   } catch {
     console.error('[aishodan] realtime session request failed')
-    return NextResponse.json({ error: '音声商談サーバーに接続できませんでした' }, { status: 502 })
+    return privateApiJson({ error: '音声商談サーバーに接続できませんでした' }, { status: 502 })
   }
 
   // 新形式は { value, expires_at, session } を直接返す（旧形式の client_secret.value ではない）
   const clientSecret = realtimeClientSecret(data)
   if (!clientSecret) {
     console.error('[aishodan] realtime: client secret missing')
-    return NextResponse.json({ error: '商談を開始できませんでした。' }, { status: 502 })
+    return privateApiJson({ error: '商談を開始できませんでした。' }, { status: 502 })
   }
 
   if (!s.startedAt) {
@@ -185,14 +186,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   // 外部API待機中に終了・同意撤回・部屋停止になっていたら資格情報を返さない。
   const current = await loadGuestSession(req, p.token, s.id)
-  if (!current) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+  if (!current) return privateApiJson({ error: '商談が見つかりません' }, { status: 404 })
   const allowed = assertSessionUsable(current)
-  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+  if (!allowed.ok) return privateApiJson({ error: allowed.reason }, { status: allowed.status })
   if (!current.startedAt || current.status !== 'live') {
-    return NextResponse.json({ error: '商談の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
+    return privateApiJson({ error: '商談の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
   }
 
-  return NextResponse.json({
+  return privateApiJson({
     clientSecret,
     expiresAt: data?.expires_at ?? null,
     model: REALTIME_MODEL,
