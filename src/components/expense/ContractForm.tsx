@@ -6,6 +6,7 @@ import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
 import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import { createSaveLock } from '@/lib/agent-chat/review'
+import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
 import toast from 'react-hot-toast'
 import {
   BILLING_MODELS, BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CURRENCIES,
@@ -154,7 +155,13 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
           price: priceToPayload({ ...price, effectiveFrom: f.startDate }, f.currency),
           ...(vendorMode === 'existing' ? { vendorId } : { vendor: draftToPayload(vendor, canManage) }),
         }
-        const r = await expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', body))
+        // 通信に失敗したあと送り直しても、契約が2件にならないように番号を付けて送る
+        const r = await submitOnce({
+          scope: `expense-contract:${orgSlug}`,
+          input: body,
+          send: (operationId) => expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', { ...body, operationId })),
+          resolve: (operationId) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/contracts', orgSlug, jsonInit('POST', { operationId, onceAction: 'resolve' })).then((d) => d.once.state),
+        })
         saveLock.close()
         // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）
         if (!isAgentSubmit()) {

@@ -2,7 +2,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
 import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { CATEGORIES } from '@/lib/expense/constants'
 import { contractDto } from '@/lib/expense/dto'
@@ -42,10 +44,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return withExpense(req, 'manager', async (ctx) => {
     const body = await readJson(req)
+    const fail = (status: number, message: string) => new ExpenseHttpError(status, message)
+    const once: OnceScope = { family: 'expense-contract', organizationId: ctx.organizationId, actorId: ctx.userId, operationId: onceOperationId(body, fail), fail }
+    const find = (db: Prisma.TransactionClient) => (id: string) => db.expenseContract.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true } })
+    // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
+    if (isOnceResolve(body)) return NextResponse.json({ once: await prisma.$transaction((tx) => resolveOnce(tx, once, find(tx))) })
     const data = contractInput(body)
     const price = priceInput((body.price ?? {}) as Record<string, unknown>, fromDbDate(data.startDate as Date))
     const paymentMethodId = idParam(body.paymentMethodId, '支払方法', false)
-    const created = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+    // 同じ送信の送り直しは、受け取りの記録を見て、前にできた契約を返す
+    const { entry: created } = await retryOnConflict(() => prisma.$transaction((tx) => createOnce<{ id: string }>(tx, once, body, find(tx), async () => {
       let vendorId = idParam(body.vendorId, '取引先', false)
       if (vendorId) {
         if (!(await tx.expenseVendor.findFirst({ where: { id: vendorId, organizationId: ctx.organizationId }, select: { id: true } }))) throw new ExpenseHttpError(404, '取引先が見つかりません')
@@ -70,7 +78,7 @@ export async function POST(req: NextRequest) {
       await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'contract.create', 'contract', c.id)
       return c
-    }, { maxWait: 10000, timeout: 30000 }))
+    }), { maxWait: 10000, timeout: 30000 }))
     const full = await prisma.expenseContract.findFirstOrThrow({ where: { id: created.id, organizationId: ctx.organizationId }, include: { prices: true, vendor: true, paymentMethod: true } })
     return NextResponse.json({ contract: contractDto(full, ctx) })
   })
