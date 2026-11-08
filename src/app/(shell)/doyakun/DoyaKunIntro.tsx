@@ -14,23 +14,25 @@ const SCENES: Scene[] = [
   { pose: 'success', title: 'できたら知らせます', text: '仕事が終わったら、できあがりを持って戻ってきます。' },
 ]
 
-type ProfileRow = { label: string; value: string; detail?: string[] }
+type ProfileRow = { label: string; value: string; pose: KunPose; detail?: string[] }
 
 const PROFILE: ProfileRow[] = [
-  { label: 'なまえ', value: 'ドヤくん' },
-  { label: 'しごと', value: '仕事の相棒（バディ）' },
+  { label: 'なまえ', value: 'ドヤくん', pose: 'hello' },
+  { label: 'しごと', value: '仕事の相棒（バディ）', pose: 'handshake' },
   {
     label: 'とくい',
     value: '段取り・資料づくり・はげますこと',
+    pose: 'thumbsup',
     detail: [
       'ダースチョーク（格闘技の絞め技。相手の腕ごと首をとらえて、がっちり極める）',
       'チキータ（卓球のバックハンドの台上技。手首をひねって、横回転のボールで先手をとる）',
     ],
   },
-  { label: 'しゅみ', value: '格闘技と卓球' },
+  { label: 'しゅみ', value: '格闘技と卓球', pose: 'jump' },
   {
     label: 'すきなもの',
     value: '喜多方ラーメン',
+    pose: 'ramen',
     detail: [
       'すっきりした醤油スープに、平打ちのちぢれ麺。',
       'チャーシューで麺が見えなくなる「肉そば」が定番。',
@@ -39,13 +41,41 @@ const PROFILE: ProfileRow[] = [
   },
 ]
 
-const GALLERY: KunPose[] = ['hello', 'thumbsup', 'present', 'chart', 'write', 'mic', 'camera', 'money', 'calendar', 'ramen', 'jump', 'sleep']
+const GALLERY: { pose: KunPose; label: string }[] = [
+  { pose: 'hello', label: 'あいさつ' }, { pose: 'thumbsup', label: 'いいね' }, { pose: 'present', label: '発表' },
+  { pose: 'chart', label: '分析' }, { pose: 'write', label: '書く' }, { pose: 'mic', label: 'インタビュー' },
+  { pose: 'camera', label: '撮影' }, { pose: 'money', label: 'お金の管理' }, { pose: 'calendar', label: '予定' },
+  { pose: 'search', label: '調べる' }, { pose: 'survey', label: 'アンケート' }, { pose: 'focus', label: '集中' },
+  { pose: 'ponder', label: '考えごと' }, { pose: 'launch', label: '公開' }, { pose: 'love', label: 'ありがとう' },
+  { pose: 'surprise', label: 'びっくり' }, { pose: 'ramen', label: '喜多方ラーメン' }, { pose: 'jump', label: 'やった！' },
+  { pose: 'run', label: '急いでます' }, { pose: 'sleep', label: 'おやすみ' }, { pose: 'clock', label: '時間' },
+]
+
+const ASK_STEPS: { pose: KunPose; text: (brand: string) => JSX.Element }[] = [
+  { pose: 'point', text: (brand) => <>画面の左下（パソコンでは右下）の「<strong>{brand}に頼む</strong>」を押します。</> },
+  { pose: 'write', text: () => <>やりたいことを、ふだんの言葉で書きます。例:「来週の展示会のバナーを作って」</> },
+  { pose: 'working', text: () => <>ドヤくんが進め方を確かめてから、作業を始めます。</> },
+]
+
+/** 見出しの左に置く小さなドヤくん */
+function Heading({ id, pose, children }: { id: string; pose: KunPose; children: string }) {
+  return (
+    <h2 id={id} className={styles.h2}>
+      <DoyaKun pose={pose} size={44} className={styles.h2Kun} />
+      <span>{children}</span>
+    </h2>
+  )
+}
 
 export default function DoyaKunIntro({ brand }: { brand: string }) {
   return (
     <div className={styles.page}>
       <section className={styles.hero} aria-labelledby="doyakun-title">
-        <DoyaKun pose="hello" act="cheer" size={180} label="手を振るドヤくん" className={styles.heroKun} />
+        <div className={styles.heroArt}>
+          <DoyaKun pose="hello" act="cheer" size={180} label="手を振るドヤくん" className={styles.heroKun} />
+          <DoyaKun pose="ramen" size={64} className={styles.heroSideA} />
+          <DoyaKun pose="thumbsup" size={64} className={styles.heroSideB} />
+        </div>
         <div className={styles.heroText}>
           <p className={styles.kicker}>{brand}の相棒</p>
           <h1 id="doyakun-title" className={styles.title}>ドヤくんとは？</h1>
@@ -57,11 +87,11 @@ export default function DoyaKunIntro({ brand }: { brand: string }) {
       </section>
 
       <section className={styles.section} aria-labelledby="doyakun-profile">
-        <h2 id="doyakun-profile" className={styles.h2}>プロフィール</h2>
+        <Heading id="doyakun-profile" pose="present">プロフィール</Heading>
         <dl className={styles.profile}>
           {PROFILE.map((p) => (
             <div key={p.label} className={styles.profileRow}>
-              <dt>{p.label}</dt>
+              <dt><DoyaKun pose={p.pose} size={48} className={styles.rowKun} /><span>{p.label}</span></dt>
               <dd>
                 {p.value}
                 {p.detail ? (
@@ -76,7 +106,7 @@ export default function DoyaKunIntro({ brand }: { brand: string }) {
       </section>
 
       <section className={styles.section} aria-labelledby="doyakun-help">
-        <h2 id="doyakun-help" className={styles.h2}>ドヤくんがすること</h2>
+        <Heading id="doyakun-help" pose="working">ドヤくんがすること</Heading>
         <ul className={styles.scenes}>
           {SCENES.map((s) => (
             <li key={s.pose} className={styles.scene}>
@@ -91,21 +121,26 @@ export default function DoyaKunIntro({ brand }: { brand: string }) {
       </section>
 
       <section className={styles.section} aria-labelledby="doyakun-ask">
-        <h2 id="doyakun-ask" className={styles.h2}>ドヤくんに頼むには</h2>
+        <Heading id="doyakun-ask" pose="point">ドヤくんに頼むには</Heading>
         <ol className={styles.steps}>
-          <li>画面の左下（パソコンでは右下）の「<strong>{brand}に頼む</strong>」を押します。</li>
-          <li>やりたいことを、ふだんの言葉で書きます。例:「来週の展示会のバナーを作って」</li>
-          <li>ドヤくんが進め方を確かめてから、作業を始めます。</li>
+          {ASK_STEPS.map((st, i) => (
+            <li key={st.pose} className={styles.step}>
+              <DoyaKun pose={st.pose} size={64} />
+              <span className={styles.stepNum}>{i + 1}</span>
+              <p className={styles.stepText}>{st.text(brand)}</p>
+            </li>
+          ))}
         </ol>
         <Link href="/home" className={styles.cta}>ホームで頼んでみる</Link>
       </section>
 
       <section className={styles.section} aria-labelledby="doyakun-gallery">
-        <h2 id="doyakun-gallery" className={styles.h2}>いろいろなドヤくん</h2>
+        <Heading id="doyakun-gallery" pose="love">いろいろなドヤくん</Heading>
         <ul className={styles.gallery}>
-          {GALLERY.map((pose) => (
-            <li key={pose} className={styles.galleryItem}>
-              <DoyaKun pose={pose} size={88} />
+          {GALLERY.map((g) => (
+            <li key={g.pose} className={styles.galleryItem}>
+              <DoyaKun pose={g.pose} size={88} />
+              <span className={styles.galleryLabel}>{g.label}</span>
             </li>
           ))}
         </ul>
