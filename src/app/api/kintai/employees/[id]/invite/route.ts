@@ -11,7 +11,6 @@ import { ToolSeatInvitationDomainError, toolSeatInvitationFailure } from '@/lib/
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { sendEmail } from '@/lib/email'
 import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const token = createKintaiInviteToken()
     const admission = await withToolSeatAdmission<InviteResult, InviteDomain>({ tool: 'kintai', organizationId: kctx.organizationId, actorUserId: kctx.userId, additionalUserIds: recipients.map(user => user.id) }, async tx => {
       const ceiling = await ceilToolRole({ tool: 'kintai', organizationId: kctx.organizationId, userId: kctx.userId, toolRole: 'system_admin' }, tx)
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const limitedRole = ceiling ? lowerToolRole('kintai', kctx.role, ceiling) : null
       const actorRole = limitedRole ? await lockCurrentKintaiManager(tx, { ...kctx, role: limitedRole as typeof kctx.role }) : null
       if (!actorRole) throw new ToolSeatInvitationDomainError('forbidden')

@@ -5,7 +5,6 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
 import type { Prisma } from '@prisma/client'
 import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
@@ -108,7 +107,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const actorRole = await lockCurrentKintaiActor(tx, kctx)
       if (!actorRole) throw new RequestForbidden('申請を変更する権限がありません')
       if (status === 'approved' || status === 'rejected' || cancellingLeave) {

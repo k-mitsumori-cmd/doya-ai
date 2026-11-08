@@ -5,7 +5,6 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { workRuleExpectedRevision, assertKintaiWorkRuleRevision, advanceKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
@@ -30,7 +29,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (inputError) return NextResponse.json({ error: inputError }, { status: 400 })
     const expectedRevision = workRuleExpectedRevision(body.expectedRevision)
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
@@ -78,7 +76,6 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const expectedOrganizations = new URL(req.url).searchParams.getAll('organizationId')
     if (expectedOrganizations.length > 1 || expectedOrganizations.length === 1 && expectedOrganizations[0] !== kctx.organizationId) return NextResponse.json({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, { status: 409 })
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }

@@ -459,6 +459,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Kintai fresh company write authority (private Unix PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-kintai-write-company-authority-evidence
+        run: |
+          python3 scripts/security-regression/verify-kintai-write-company-authority-postgres.py
+          python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-stale-postgres-supervise.py
+      - name: Save synthetic Kintai company write authority evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kintai-write-company-authority-${{ github.sha }}
+          path: |
+            /tmp/doya-kintai-write-company-authority-evidence/
+            docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-stale-postgres-baseline.json
+            docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-stale-postgres-supervisor.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

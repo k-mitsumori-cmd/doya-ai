@@ -12,7 +12,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   const tx = {
     $executeRaw: async () => 1,
     systemSetting: { upsert: async ({where,create,update}) => { const data=receipts.has(where.key)?{...receipts.get(where.key),...update}:create;receipts.set(where.key,data);return data }, findUnique: async ({where}) => receipts.get(where.key) || null, create: async ({data}) => { receipts.set(data.key,data); return data } },
-    $queryRaw: async () => { order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
+    $queryRaw: async strings => { if (strings.join('').includes('kintai_organizations')) { order.push('organization'); return [{ id: 'org' }] } order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
     kintaiWorkRule: {
       findFirst: async ({ where }) => rows.get(where.id)?.organizationId === where.organizationId ? rows.get(where.id) : null,
       create: async ({ data }) => { writes++; const row = { id: 'new', ...data }; rows.set('new', row); return row },

@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 
 export async function GET() {
@@ -46,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
 
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, ctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }

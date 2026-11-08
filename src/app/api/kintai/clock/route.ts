@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
 import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
 import type { ClockType } from '@/lib/kintai/types'
 import { recordServiceUsage } from '@/lib/service-usage'
@@ -120,7 +119,6 @@ export async function POST(req: NextRequest) {
     }
 
     const record = await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       if (!await lockCurrentKintaiActor(tx, ctx)) {
         throw new ClockTransitionError('勤怠へのアクセス権がありません。管理者にご確認ください。', 403)
       }

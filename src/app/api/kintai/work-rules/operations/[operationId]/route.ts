@@ -4,7 +4,6 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { withKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
 import { kintaiWorkRuleOperationId, recoverKintaiWorkRuleCreation, cancelKintaiWorkRuleCreation, KintaiWorkRuleOperationError } from '@/lib/kintai/work-rule-operation'
@@ -19,7 +18,6 @@ async function handle(req: NextRequest, route: Ctx, cancel: boolean) {
   const organizations = new URL(req.url).searchParams.getAll('organizationId')
   if (organizations.length !== 1 || organizations[0] !== ctx.organizationId) return reply({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, 409)
   return await prisma.$transaction(async tx => {
-   await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
    if (!(await lockCurrentKintaiManager(tx, ctx))) return reply({ error: '権限がありません' }, 403)
    const find = async (id: string) => { const row = await tx.kintaiWorkRule.findFirst({ where: { id, organizationId: ctx.organizationId } }); return row ? withKintaiWorkRuleRevision(tx, row) : null }
    const result = cancel ? await cancelKintaiWorkRuleCreation(tx, ctx, operationId, find) : await recoverKintaiWorkRuleCreation(tx, ctx, operationId, find)
