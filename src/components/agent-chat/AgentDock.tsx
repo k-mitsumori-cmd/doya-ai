@@ -13,6 +13,7 @@ import type { NextAction } from '@/lib/agent-chat/types'
 import { useAgentChat } from './AgentChatProvider'
 import { celebrate } from './motion'
 import { UiIcon } from '@/components/icons'
+import { brandName } from '@/lib/brand'
 import styles from './agent-dock.module.css'
 
 /** スマホの幅か（767px 以下。AppShell と同じ境目）。最初の描画は false（サーバーと同じ）にして、あとで合わせる */
@@ -117,10 +118,14 @@ export default function AgentDock() {
   return (
     <>
       <button type="button" className={styles.fab} data-open={open ? 'true' : 'false'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="agent-dock-panel">
-        {/* スマホでは下のタブバーの左端に置く小さなボタンにして、アイコンと「頼む」だけを見せる（入力欄に重ねない） */}
+        {/* スマホでは下のタブバーの左端に、タブ2つ分の幅で置く。「頼む」の上に小さく「ドヤバディに」を出し、
+            「ドヤバディに頼む」と読めるようにする（2026-11-08 本人の指示）。入力欄には重ねない */}
         <UiIcon name="sparkle" size={20} className={styles.fabIcon} aria-hidden="true" />
-        <span className={styles.fabLabel}>ドヤAIに頼む</span>
-        <span className={styles.fabShort} aria-hidden="true">頼む</span>
+        <span className={styles.fabLabel}>{brandName()}に頼む</span>
+        <span className={styles.fabShort} aria-hidden="true">
+          <span className={styles.fabTo}>{brandName()}に</span>
+          <span className={styles.fabDo}>頼む</span>
+        </span>
         {waiting && !open ? <span className={styles.badge}>返事待ち</span> : null}
       </button>
       <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label="ドヤAIに頼む" aria-hidden={!open}>
