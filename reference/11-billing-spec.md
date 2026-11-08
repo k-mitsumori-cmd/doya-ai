@@ -803,3 +803,8 @@ SFA固有の組織オーナー契約による上限（FREE3/LIGHT10/PRO50）は�
 ### 2026-11-09 readonly guest CHECK recovery
 
 Current member invitations accept admin/member/guest without enabling the broader company-role rollout. The production CHECK was aligned from admin/member to these three roles; no customer rows, purchased quantity, billing state, RLS or other constraints changed. Guests remain outside operating-seat consumption. Manager/billing activation and the separate five-role migration are not part of this repair. Reviewed SQL, explicit-run preflight/apply and isolated twelve-condition actual API/SQL regression are documented in [the recovery runbook](../docs/architecture/management-agent/COMPANY-GUEST-ROLE-SCHEMA-RECOVERY-2026-11-09.md). CI uses only synthetic private PostgreSQL; it never applies production DDL. Real production invitations and financial flows are not accepted by this evidence.
+
+
+### 2026-11-09 Stripe outbox initial eligibility
+
+New operational and signed-webhook notices are explicitly due immediately, avoiding initial claim deferral caused by database/application timestamp precision. Existing sent rows and future retry backoff survive duplicate enqueue unchanged. Private PostgreSQL regression covers 400 initial notices and nine boundary groups with clock skew, authentication, retries and concurrent claims. No production notices are drained, and no message, payment, refund or event replay is executed by release verification. See [the scheduling review](../docs/architecture/management-agent/STRIPE-OUTBOX-INITIAL-ELIGIBILITY-2026-11-09.md).

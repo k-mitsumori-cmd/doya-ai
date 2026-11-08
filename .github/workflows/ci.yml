@@ -420,6 +420,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Stripe outbox initial eligibility (private Unix PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-stripe-outbox-initial-due-evidence
+        run: python3 scripts/security-regression/verify-stripe-outbox-initial-due-postgres.py
+      - name: Save synthetic Stripe outbox scheduling evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: stripe-outbox-initial-due-${{ github.sha }}
+          path: /tmp/doya-stripe-outbox-initial-due-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence
