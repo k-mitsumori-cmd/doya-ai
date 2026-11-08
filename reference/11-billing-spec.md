@@ -808,3 +808,8 @@ Current member invitations accept admin/member/guest without enabling the broade
 ### 2026-11-09 Stripe outbox initial eligibility
 
 New operational and signed-webhook notices are explicitly due immediately, avoiding initial claim deferral caused by database/application timestamp precision. Existing sent rows and future retry backoff survive duplicate enqueue unchanged. Private PostgreSQL regression covers 400 initial notices and nine boundary groups with clock skew, authentication, retries and concurrent claims. No production notices are drained, and no message, payment, refund or event replay is executed by release verification. See [the scheduling review](../docs/architecture/management-agent/STRIPE-OUTBOX-INITIAL-ELIGIBILITY-2026-11-09.md).
+
+
+### 2026-11-09 SFA team table direct-access protection
+
+Company/team authority used by operating members depends on server-managed SFA team data. The existing team tables now use RLS and deny direct PUBLIC/anon/authenticated privileges while the trusted backend retains CRUD. This changes neither purchased seats nor subscription quantities. The reviewed manual migration, explicit preflight/apply and private fourteen-condition regression are documented in [the protection runbook](../docs/architecture/management-agent/SFA-TEAM-TABLE-PROTECTION-2026-11-09.md). CI uses only synthetic private PostgreSQL and never applies production DDL.
