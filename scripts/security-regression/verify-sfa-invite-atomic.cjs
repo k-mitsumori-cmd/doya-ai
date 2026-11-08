@@ -46,7 +46,7 @@ function fixture({existing=false,full=false,change={},delayAt='',lost=false,fail
     count:async({where})=>2+(pending&&pending.createdAt>where.OR[1].createdAt.gt?1:0),
     deleteMany:async({where})=>{if(pending&&pending.createdAt<=where.createdAt.lte){pending=null;deletes++;return{count:1}}return{count:0}},
     create:async({data})=>{creates++;pending={id:'new',createdAt:new Clock(),...data};return pending},
-   },user:{findUnique:async()=>({plan:'FREE'})},sfaOrganization:{findUnique:async()=>({name:'Synthetic'})},$queryRaw:async()=>[{role:'owner'}]};
+   },user:{findMany:async()=>[],findUnique:async()=>({plan:'FREE'})},sfaOrganization:{findUnique:async()=>({name:'Synthetic'})},$queryRaw:async()=>[{role:'owner'}]};
    const prisma={...tx,$transaction:async fn=>fn(tx)},limits=load('src/lib/sfa/limits.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/plan-utils':load('src/lib/plan-utils.ts')},{Date:Clock});
    const route=load('src/app/api/sfa/members/route.ts',{'next/server':{NextResponse:Response},crypto:{randomUUID:()=>'new-token'},'@/lib/prisma':{prisma},'@/lib/sfa/limits':limits,'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org',memberId:'actor',userId:'owner',role:'owner'}),hasMinRole:()=>true,orgSlugFrom:()=>undefined},'@/lib/sfa/types':{ROLE_HIERARCHY:{owner:3,admin:2,manager:1,member:0}},'@/lib/html-escape':{escapeHtml:v=>v},'@/lib/email':{sendEmail:async()=>{sends++;return{success:false}}}},{Date:Clock});
    const r=await route.POST({json:async()=>({email:'qa@example.invalid',role:'member'})});assert.equal(r.status,offset<=0?200:409);assert.equal(creates,offset<=0?1:0);assert.equal(deletes,offset<=0?1:0);assert.equal(sends,offset<=0?1:0);assert.ok(pending);

@@ -86,19 +86,29 @@ export async function checkSfaQuota(
   return null
 }
 
+export type SfaAdmissionResult<T> = { created: T; limit?: never } | { created?: never; limit: SfaQuotaExceeded }
+export type SfaAdmissionOptions<T> = {
+  countPendingInvites?: boolean
+  /** SQL-only coordination/authority wraps quota and creation in this same transaction. */
+  coordinate?: (tx: Tx, admit: () => Promise<SfaAdmissionResult<T>>) => Promise<SfaAdmissionResult<T>>
+}
+
 /** 件数確認と作成を Serializable で一体化し、同時リクエストによる上限超過を防ぐ。 */
 export async function withSfaAdmission<T>(
   organizationId: string,
   requested: Requested,
   create: (tx: Tx) => Promise<T>,
-  options: { countPendingInvites?: boolean } = {}
-): Promise<{ created: T; limit?: never } | { created?: never; limit: SfaQuotaExceeded }> {
+  options: SfaAdmissionOptions<T> = {}
+): Promise<SfaAdmissionResult<T>> {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
-        const limit = await checkSfaQuota(tx, organizationId, requested, options)
-        if (limit) return { limit }
-        return { created: await create(tx) }
+        const admit = async (): Promise<SfaAdmissionResult<T>> => {
+          const limit = await checkSfaQuota(tx, organizationId, requested, options)
+          if (limit) return { limit }
+          return { created: await create(tx) }
+        }
+        return options.coordinate ? options.coordinate(tx, admit) : admit()
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
       // Raw row-lock queries report serialization/deadlock SQLSTATE via P2010;
