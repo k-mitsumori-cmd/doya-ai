@@ -94,11 +94,12 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'admin-1', name: 'Admin' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { $transaction: async (work) => work({
+    '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, $transaction: async (work) => work({
+      user: { findMany: async () => [] },
       $queryRaw: async sql => sql.join('?').includes('hr_organization_members')
-        ? currentRole === 'ADMIN' ? [{ id: 'actor' }] : []
+        ? currentRole === 'ADMIN' ? [{ id: 'actor', role: 'ADMIN' }] : []
         : [{ id: 'org-1' }],
-      hrOrganizationMember: { findFirst: async () => null },
+      hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
       hrInvitation: { findFirst: async () => null, create: async ({ data }) => {
         created++;
         createdRole = data.role;
@@ -108,7 +109,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     }) } },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', memberId: 'actor', userId: 'admin-1', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
-    '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/billing': { checkMemberLimit: async () => null, getOrgPlan: async () => 'PRO', getOrgPlanLimits: () => ({ maxMembers: -1 }) },
     '@/lib/hr/email': { sendInvitationEmail: async () => { sent++; return true; } },
     '@/lib/hr/audit': { logAudit: async () => {} },
     crypto: require('node:crypto'),
