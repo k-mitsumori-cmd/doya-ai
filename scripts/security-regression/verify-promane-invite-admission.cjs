@@ -67,6 +67,8 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   let attempts = 0;
   let writes = 0;
   const tx = {
+    user: { findMany: async () => [] },
+    $queryRaw: async sql => /SELECT role/.test(sql.join('?')) ? [{ role: inviterRole, isActive: inviterActive }] : [{ id: 'ws' }],
     promaneMember: {
       findUnique: async () => ({ role: inviterRole, isActive: inviterActive }),
       findFirst: async () => null,
@@ -92,6 +94,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     },
   };
   const prisma = {
+    user: { findMany: async () => [] },
     $transaction: async (callback, options) => {
       attempts++;
       assert.equal(options.isolationLevel, 'Serializable');

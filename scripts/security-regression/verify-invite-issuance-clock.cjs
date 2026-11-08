@@ -10,6 +10,8 @@ function clockFixture() {
 function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
   const c = clockFixture(); let writes = 0;
   const tx = {
+    user: { findMany: async () => [] },
+    $queryRaw: async sql => /SELECT role/.test(sql.join('?')) ? [{ role: 'admin', isActive: true }] : [{ id: 'ws' }],
     promaneMember: { findUnique: async () => ({ isActive: true, role: 'admin' }), findFirst: async () => null,
       count: async () => { if (stage === 'active') c.set(expiry + offset); return 1; } },
     promaneWorkspace: { findUnique: async () => ({ name: 'Team', userId: 'owner' }) },
@@ -25,7 +27,7 @@ function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
   };
   const helper = load('src/lib/promane/invite-admission.ts', {
     '@prisma/client': { Prisma: { TransactionIsolationLevel: { Serializable: 'Serializable' } } }, crypto: require('node:crypto'),
-    '@/lib/prisma': { prisma: { $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'Serializable'); return fn(tx); } } },
+    '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'Serializable'); return fn(tx); } } },
     '@/lib/promane/limits': { getUserPromaneLimits: async (owner, db) => { assert.equal(owner, 'owner'); assert.equal(db, tx); return { maxMembersPerWorkspace: 3 }; } },
   }, { Date: c.Clock });
   return { run: () => helper.issuePromaneInvitation({ workspaceId: 'ws', userId: 'admin', email: 'qa@example.invalid', role: 'member' }), now: c.now, writes: () => writes };
