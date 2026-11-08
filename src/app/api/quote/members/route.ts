@@ -1,3 +1,4 @@
+import { withToolSeatInvitation, ToolSeatInvitationDomainError, toolSeatInvitationFailure } from '@/lib/pricing-v2/tool-seat-invitation.server'
 import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -75,15 +76,18 @@ export async function POST(req: NextRequest) {
   const token = randomBytes(24).toString('base64url')
   let result
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await withToolSeatInvitation({ tool: 'quote', organizationId: c.organizationId, actorUserId: c.userId, email }, async (tx, currentCeiling) => {
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM quote_organizations WHERE id = ${c.organizationId} FOR UPDATE`
-      if (rows.length === 0) return { kind: 'missing' as const }
+      if (rows.length === 0) throw new ToolSeatInvitationDomainError('missing')
       const actor = await tx.$queryRaw<{ role: QuoteRole }[]>`SELECT role FROM quote_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
       // 会社の役割の上限（ctx の役割）より上には上げない
-      const actorRole = actor.length ? lowerToolRole('quote', actor[0].role, c.role) : null
-      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as QuoteRole]) return { kind: 'forbidden' as const }
+      const limitedRole = actor.length && currentCeiling ? lowerToolRole('quote', actor[0].role, currentCeiling) : null
+      const actorRole = limitedRole ? lowerToolRole('quote', limitedRole, c.role) : null
+      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as QuoteRole]) throw new ToolSeatInvitationDomainError('forbidden')
+      return { role: actorRole, value: undefined }
+    }, async tx => {
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.quoteMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
@@ -97,11 +101,11 @@ export async function POST(req: NextRequest) {
       })
       return { kind: 'created' as const, member }
     })
-  } catch {
+  } catch (error) {
+    const seatFailure = toolSeatInvitationFailure(error)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
     return privateApiJson({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
   }
-  if (result.kind === 'missing') return privateApiJson({ error: '組織が見つかりません' }, { status: 404 })
-  if (result.kind === 'forbidden') return privateApiJson({ error: 'メンバーを招待する権限がありません。再読み込みしてください' }, { status: 403 })
   if (result.kind === 'duplicate') return privateApiJson({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
   const member = result.member
 

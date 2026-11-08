@@ -86,12 +86,14 @@ function creationFixture(service, { currentRole = 'owner', clock = Date } = {}) 
     },
   }
   const tx = {
+    user: { findMany: async () => [] },
     $queryRaw: async sql => sql.join('?').includes(`FROM ${service.id}_members`)
       ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
       : [{ id: 'org' }],
     [service.model]: member,
   }
   const prisma = {
+    user: { findMany: async () => [] },
     [service.organization]: { findUnique: async () => ({ name: 'Example' }) },
     $transaction: fn => {
       const result = queue.then(() => fn(tx))

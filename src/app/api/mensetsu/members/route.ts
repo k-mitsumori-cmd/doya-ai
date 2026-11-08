@@ -1,3 +1,5 @@
+import { withToolSeatInvitation, ToolSeatInvitationDomainError, toolSeatInvitationFailure } from '@/lib/pricing-v2/tool-seat-invitation.server'
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -7,21 +9,20 @@ export const maxDuration = 300
 //
 // 組織スコープのサービスなのに招待の導線が無く、実質1人でしか使えなかったため追加。
 import { randomBytes } from 'crypto'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type MensetsuRole } from '@/lib/mensetsu/types'
 import { lowerToolRole } from '@/lib/company-roles/tool-roles'
-import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 const ROLES: MensetsuRole[] = ['owner', 'admin', 'manager', 'member']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 
 export async function GET(req: NextRequest) {
   const c = await getMensetsuContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!c) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   const members = await prisma.mensetsuMember.findMany({
     where: { organizationId: c.organizationId },
@@ -39,50 +40,52 @@ export async function GET(req: NextRequest) {
       createdAt: true,
     },
   })
-  return NextResponse.json({ members, myRole: c.role, myUserId: c.userId })
+  return privateApiJson({ members, myRole: c.role, myUserId: c.userId })
 }
 
 export async function POST(req: NextRequest) {
   const c = await getMensetsuContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!c) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(c.role, 'admin')) {
-    return NextResponse.json({ error: 'メンバーを招待する権限がありません' }, { status: 403 })
+    return privateApiJson({ error: 'メンバーを招待する権限がありません' }, { status: 403 })
   }
 
   const body = await req.json().catch(() => ({}))
   const email = String(body?.email || '').trim().toLowerCase()
   const requestedRole = body?.role
   if (requestedRole !== undefined && !ROLES.includes(requestedRole)) {
-    return NextResponse.json({ error: '招待権限の形式が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: '招待権限の形式が正しくありません' }, { status: 400 })
   }
   const role = (requestedRole ?? 'member') as MensetsuRole
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
   // ⚠️ 自分より上の権限は与えられない（権限の昇格を防ぐ）
   if (ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
+    return privateApiJson({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
   }
   // owner は組織にひとりだけ。招待では付与しない
   if (role === 'owner') {
-    return NextResponse.json({ error: 'オーナー権限は招待では付与できません' }, { status: 400 })
+    return privateApiJson({ error: 'オーナー権限は招待では付与できません' }, { status: 400 })
   }
 
   const token = randomBytes(24).toString('base64url')
   let result
   try {
-    result = await prisma.$transaction(async (tx) => {
-      const currentCompanyRole = await ceilToolRole({ tool: 'mensetsu', userId: c.userId, organizationId: c.organizationId, toolRole: c.role }, tx)
-      if (!currentCompanyRole || !hasMinRole(currentCompanyRole, 'admin')) return { kind: 'forbidden' as const }
+    result = await withToolSeatInvitation({ tool: 'mensetsu', organizationId: c.organizationId, actorUserId: c.userId, email }, async (tx, currentCeiling) => {
+      const currentCompanyRole = currentCeiling ? lowerToolRole('mensetsu', currentCeiling, c.role) : null
+      if (!currentCompanyRole || !hasMinRole(currentCompanyRole, 'admin')) throw new ToolSeatInvitationDomainError('forbidden')
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${c.organizationId} FOR UPDATE`
-      if (rows.length === 0) return { kind: 'missing' as const }
+      if (rows.length === 0) throw new ToolSeatInvitationDomainError('missing')
       const actor = await tx.$queryRaw<{ role: MensetsuRole }[]>`SELECT role FROM mensetsu_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
       // 会社の役割の上限（ctx の役割）より上には上げない
       const actorRole = actor.length ? lowerToolRole('mensetsu', actor[0].role, currentCompanyRole) : null
-      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as MensetsuRole]) return { kind: 'forbidden' as const }
+      if (!actorRole || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actorRole as MensetsuRole]) throw new ToolSeatInvitationDomainError('forbidden')
+      return { role: actorRole, value: undefined }
+    }, async tx => {
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.mensetsuMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
@@ -96,12 +99,12 @@ export async function POST(req: NextRequest) {
       })
       return { kind: 'created' as const, member }
     })
-  } catch {
-    return NextResponse.json({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
+  } catch (error) {
+    const seatFailure = toolSeatInvitationFailure(error)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
+    return privateApiJson({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
   }
-  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
-  if (result.kind === 'forbidden') return NextResponse.json({ error: 'メンバーを招待する権限がありません。再読み込みしてください' }, { status: 403 })
-  if (result.kind === 'duplicate') return NextResponse.json({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
+  if (result.kind === 'duplicate') return privateApiJson({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
   const member = result.member
 
   // ⚠️ 外部向けリンクに VERCEL_URL を使わない（デプロイ保護でログイン画面に飛ぶ）
@@ -123,7 +126,7 @@ export async function POST(req: NextRequest) {
       </div>`,
   })
 
-  return NextResponse.json({
+  return privateApiJson({
     member,
     // メール送信に失敗しても招待自体は作る（URLを手で渡せるように返す）
     url,
