@@ -1,4 +1,6 @@
-import { withToolSeatAdmissionInTransaction, toolSeatAdmissionFailure } from '@/lib/pricing-v2/tool-seat-admission.server'
+import { ToolSeatInvitationDomainError, toolSeatInvitationFailure } from '@/lib/pricing-v2/tool-seat-invitation.server'
+import { lowerToolRole } from '@/lib/company-roles/tool-roles'
+import { withToolSeatAdmissionInTransaction, ToolSeatAdmissionError, toolSeatAdmissionFailure } from '@/lib/pricing-v2/tool-seat-admission.server'
 import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
@@ -30,17 +32,19 @@ export async function issuePromaneInvitation(args: {
   email: string
   role: 'admin' | 'member' | 'guest'
 }): Promise<IssueResult> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      return await prisma.$transaction(async (tx) => {
-        const inviter = await tx.promaneMember.findUnique({
-          where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
-        })
-        // 会社の役割の上限より上には上げない
-        const ceiled = inviter?.isActive ? await ceilToolRole({ tool: 'promane', userId: args.userId, organizationId: args.workspaceId, toolRole: inviter.role }) : null
-        if (!inviter?.isActive || !['owner', 'admin'].includes(inviter.role) || (ceiled !== 'owner' && ceiled !== 'admin')) {
-          return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
-        }
+  const authorize = async (tx: Prisma.TransactionClient, ceiling: string | null) => {
+    const workspaces = await tx.$queryRaw<{ id: string }[]>
+      `SELECT id FROM promane_workspaces WHERE id = ${args.workspaceId} FOR UPDATE`
+    if (workspaces.length !== 1) throw new ToolSeatInvitationDomainError('missing')
+    const inviters = await tx.$queryRaw<{ role: string; isActive: boolean }[]>
+      `SELECT role, "isActive" FROM promane_members
+        WHERE "workspaceId" = ${args.workspaceId} AND "userId" = ${args.userId} FOR UPDATE`
+    const inviter = inviters[0]
+    const role = inviter?.isActive && ceiling ? lowerToolRole('promane', inviter.role, ceiling) : null
+    if (role !== 'owner' && role !== 'admin') throw new ToolSeatInvitationDomainError('forbidden')
+    return { role, value: undefined }
+  }
+  const issue = async (tx: Prisma.TransactionClient): Promise<IssueResult> => {
         const existingMember = await tx.promaneMember.findFirst({
           where: { workspaceId: args.workspaceId, user: { email: { equals: args.email, mode: 'insensitive' } } },
         })
@@ -103,9 +107,36 @@ export async function issuePromaneInvitation(args: {
           select: { token: true, expiresAt: true },
         })
         return { success: true, invitation, workspaceName: workspace.name, reused: false }
+
+  }
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const operating = args.role !== 'guest'
+      const email = args.email.trim().toLowerCase()
+      const recipients = operating ? await prisma.user.findMany({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true }, take: 2 }) : []
+      if (recipients.length > 1) throw new ToolSeatAdmissionError(503, 'SEAT_CAPACITY_UNAVAILABLE', 'retry')
+      return await prisma.$transaction(async tx => {
+        const currentAuthority = async (currentTx: Prisma.TransactionClient) => {
+          const ceiling = await ceilToolRole({ tool: 'promane', userId: args.userId, organizationId: args.workspaceId, toolRole: 'owner' }, currentTx)
+          const domain = await authorize(currentTx, ceiling)
+          if (operating) {
+            const currentRecipients = await currentTx.user.findMany({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true }, take: 2 })
+            if (currentRecipients.length !== recipients.length || currentRecipients.some(user => !recipients.some(hint => hint.id === user.id))) throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
+          }
+          return domain
+        }
+        if (operating) return withToolSeatAdmissionInTransaction({ tool: 'promane', organizationId: args.workspaceId, actorUserId: args.userId, additionalUserIds: recipients.map(user => user.id) }, tx, currentAuthority, currentTx => issue(currentTx))
+        // Read-only guests do not require or consume a purchased operating seat.
+        // Current authority and the existing Serializable service quota remain.
+        await currentAuthority(tx)
+        return issue(tx)
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     } catch (error) {
-      if ((error as { code?: string })?.code !== 'P2034' || attempt === 4) throw error
+      const failure = toolSeatInvitationFailure(error)
+      if (failure) return { success: false, response: { status: failure.status, ...failure.body } }
+      const sql = error as { code?: string; meta?: { code?: string } }
+      const retryable = sql.code === 'P2034' || sql.code === 'P2010' && ['40001', '40P01'].includes(sql.meta?.code ?? '')
+      if (!retryable || attempt === 4) throw error
     }
   }
   throw new Error('Promane invitation issue retries exhausted')

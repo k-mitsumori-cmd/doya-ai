@@ -12,7 +12,7 @@ test('SEC-104: 勤怠でシステム管理者のメール変更と招待の再�
   const patch = read('src/app/api/kintai/employees/[id]/route.ts')
   assert.match(patch, /existingEmp\.member\?\.role === 'system_admin' && actorRole !== 'system_admin'/)
   const invite = read('src/app/api/kintai/employees/[id]/invite/route.ts')
-  assert.match(invite, /employee\.member\?\.role === 'system_admin' && actorRole !== 'system_admin'\) return \{ kind: 'forbidden'/)
+  assert.match(invite, /employee\.member\?\.role === 'system_admin' && actorRole !== 'system_admin'\) return \{ role: actorRole, value: \{ kind: 'forbidden'/)
 })
 
 test('SEC-103: 勤怠で hr_admin は同格以上の人を変更できず、同格以上の権限も付与できない', () => {

@@ -9,6 +9,7 @@ function fixture({ status = 'PENDING', isActive = true, member = true, race = fa
   let sends = 0;
   let updates = 0;
   const prisma = {
+    user: { findMany: async () => [] },
     $transaction: async work => work(prisma),
     $queryRaw: async () => [{ role: actorRole, status: actorStatus, isActive: actorActive }],
     kintaiEmployee: { findFirst: async () => row },
