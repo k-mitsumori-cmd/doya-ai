@@ -14,7 +14,9 @@ const SCENES: Scene[] = [
   { pose: 'success', title: 'できたら知らせます', text: '仕事が終わったら、できあがりを持って戻ってきます。' },
 ]
 
-type ProfileRow = { label: string; value: string; pose: KunPose; detail?: string[] }
+/** detail の行は、文だけか、頭に小さな絵（40px）を置く行 */
+type DetailLine = string | { pose: KunPose; text: string }
+type ProfileRow = { label: string; value: string; pose: KunPose; also?: KunPose[]; detail?: DetailLine[] }
 
 const PROFILE: ProfileRow[] = [
   { label: 'なまえ', value: 'ドヤくん', pose: 'hello' },
@@ -24,15 +26,15 @@ const PROFILE: ProfileRow[] = [
     value: '段取り・資料づくり・はげますこと',
     pose: 'thumbsup',
     detail: [
-      'ダースチョーク（格闘技の絞め技。相手の腕ごと首をとらえて、がっちり極める）',
-      'チキータ（卓球のバックハンドの台上技。手首をひねって、横回転のボールで先手をとる）',
+      { pose: 'grapple', text: 'ダースチョーク（格闘技の絞め技。相手の腕ごと首をとらえて、がっちり極める）' },
+      { pose: 'chiquita', text: 'チキータ（卓球のバックハンドの台上技。手首をひねって、横回転のボールで先手をとる）' },
     ],
   },
-  { label: 'しゅみ', value: '格闘技と卓球', pose: 'jump' },
+  { label: 'しゅみ', value: '格闘技と卓球', pose: 'fight', also: ['pingpong'] },
   {
     label: 'すきなもの',
     value: '喜多方ラーメン',
-    pose: 'ramen',
+    pose: 'kitakata',
     detail: [
       'すっきりした醤油スープに、平打ちのちぢれ麺。',
       'チャーシューで麺が見えなくなる「肉そば」が定番。',
@@ -47,8 +49,9 @@ const GALLERY: { pose: KunPose; label: string }[] = [
   { pose: 'camera', label: '撮影' }, { pose: 'money', label: 'お金の管理' }, { pose: 'calendar', label: '予定' },
   { pose: 'search', label: '調べる' }, { pose: 'survey', label: 'アンケート' }, { pose: 'focus', label: '集中' },
   { pose: 'ponder', label: '考えごと' }, { pose: 'launch', label: '公開' }, { pose: 'love', label: 'ありがとう' },
-  { pose: 'surprise', label: 'びっくり' }, { pose: 'ramen', label: '喜多方ラーメン' }, { pose: 'jump', label: 'やった！' },
+  { pose: 'surprise', label: 'びっくり' }, { pose: 'kitakata', label: '喜多方ラーメン' }, { pose: 'jump', label: 'やった！' },
   { pose: 'run', label: '急いでます' }, { pose: 'sleep', label: 'おやすみ' }, { pose: 'clock', label: '時間' },
+  { pose: 'fight', label: '格闘技' }, { pose: 'pingpong', label: '卓球' }, { pose: 'chiquita', label: 'チキータ' },
 ]
 
 const ASK_STEPS: { pose: KunPose; text: (brand: string) => JSX.Element }[] = [
@@ -73,7 +76,7 @@ export default function DoyaKunIntro({ brand }: { brand: string }) {
       <section className={styles.hero} aria-labelledby="doyakun-title">
         <div className={styles.heroArt}>
           <DoyaKun pose="hello" act="cheer" size={180} label="手を振るドヤくん" className={styles.heroKun} />
-          <DoyaKun pose="ramen" size={64} className={styles.heroSideA} />
+          <DoyaKun pose="kitakata" size={64} className={styles.heroSideA} />
           <DoyaKun pose="thumbsup" size={64} className={styles.heroSideB} />
         </div>
         <div className={styles.heroText}>
@@ -94,9 +97,16 @@ export default function DoyaKunIntro({ brand }: { brand: string }) {
               <dt><DoyaKun pose={p.pose} size={48} className={styles.rowKun} /><span>{p.label}</span></dt>
               <dd>
                 {p.value}
+                {p.also ? (
+                  <span className={styles.also}>
+                    {p.also.map((a) => <DoyaKun key={a} pose={a} size={48} />)}
+                  </span>
+                ) : null}
                 {p.detail ? (
                   <ul className={styles.detail}>
-                    {p.detail.map((d) => <li key={d}>{d}</li>)}
+                    {p.detail.map((d) => typeof d === 'string'
+                      ? <li key={d}>{d}</li>
+                      : <li key={d.text} className={styles.detailArt}><DoyaKun pose={d.pose} size={40} className={styles.detailKun} /><span>{d.text}</span></li>)}
                   </ul>
                 ) : null}
               </dd>

@@ -34,6 +34,11 @@
 .profileRow dd { padding-left: 54px; }
 .profileRow dd { margin: 0; font-size: 15px; font-weight: 700; word-break: auto-phrase; }
 .detail { margin: 6px 0 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 13.5px; font-weight: 500; line-height: 1.7; color: #475569; }
+/* 頭に小さな絵を置く行は、点の代わりに絵を出す */
+.detailArt { list-style: none; margin-left: -1.1em; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; align-items: center; }
+.detailKun { flex: none; }
+/* しゅみの横に並べる絵 */
+.also { display: inline-flex; vertical-align: middle; margin-left: 8px; gap: 4px; }
 
 .scenes { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .scene {
