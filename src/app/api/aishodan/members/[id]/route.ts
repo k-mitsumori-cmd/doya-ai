@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
 import { lowerToolRole } from '@/lib/company-roles/tool-roles'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 type Ctx = { params: Promise<{ id: string }> }
 const ROLES: AishodanRole[] = ['admin', 'manager', 'member']
@@ -19,6 +20,9 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async tx => {
+        // Pin current company authority before locking domain membership rows.
+        const companyCeiling = await ceilToolRole({ tool: 'aishodan', userId: c.userId, organizationId: c.organizationId, toolRole: 'owner' }, tx)
+        if (!companyCeiling) return { kind: 'forbidden' as const }
         await tx.$queryRaw`SELECT id FROM aishodan_members WHERE "organizationId" = ${c.organizationId}
           AND ("userId" = ${c.userId} OR id = ${targetId}) ORDER BY id FOR UPDATE`
         const actor = await tx.aishodanMember.findFirst({
@@ -26,9 +30,9 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
-        // 会社の役割の上限（ctx の役割）より上には上げない
-        const actorRole = lowerToolRole('aishodan', actor.role, c.role)
-        if (!actorRole) return { kind: 'forbidden' as const }
+        // 取引内で再取得した会社の役割の上限を当てる
+        const actorRole = lowerToolRole('aishodan', actor.role, companyCeiling)
+        if (!actorRole || !hasMinRole(actorRole, 'admin')) return { kind: 'forbidden' as const }
         const target = await tx.aishodanMember.findFirst({ where: { id: targetId, organizationId: c.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.id === actor.id || target.userId === c.userId) return { kind: 'self' as const }

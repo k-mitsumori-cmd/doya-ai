@@ -446,6 +446,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Member mutation fresh company authority (private Unix PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-member-mutation-ceiling-evidence
+        run: python3 scripts/security-regression/verify-member-mutation-company-ceiling-postgres.py
+      - name: Save synthetic member mutation authority evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: member-mutation-company-ceiling-${{ github.sha }}
+          path: /tmp/doya-member-mutation-ceiling-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

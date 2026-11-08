@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { ROLE_HIERARCHY, type ShodanContext } from '@/lib/shodan/types'
 import { lowerToolRole } from '@/lib/company-roles/tool-roles'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 
 type Ctx = { params: Promise<{ id: string }> }
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
@@ -16,6 +17,9 @@ async function mutateMember(ctx: ShodanContext, targetId: string, action: 'updat
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async tx => {
+        // Pin current company authority before locking domain membership rows.
+        const companyCeiling = await ceilToolRole({ tool: 'shodan', userId: ctx.userId, organizationId: ctx.organizationId, toolRole: 'owner' }, tx)
+        if (!companyCeiling) return { kind: 'forbidden' as const }
         // Serialize role changes/removals with this mutation before rechecking both rows.
         await tx.$queryRaw`SELECT id FROM shodan_members WHERE "organizationId" = ${ctx.organizationId}
           AND id IN (${ctx.memberId}, ${targetId}) ORDER BY id FOR UPDATE`
@@ -24,9 +28,9 @@ async function mutateMember(ctx: ShodanContext, targetId: string, action: 'updat
           select: { id: true, role: true },
         })
         if (!actor) return { kind: 'forbidden' as const }
-        // 会社の役割の上限（ctx の役割）より上には上げない
-        const actorRole = lowerToolRole('shodan', actor.role, ctx.role)
-        if (!actorRole) return { kind: 'forbidden' as const }
+        // 取引内で再取得した会社の役割の上限を当てる
+        const actorRole = lowerToolRole('shodan', actor.role, companyCeiling)
+        if (!actorRole || !hasMinRole(actorRole, 'admin')) return { kind: 'forbidden' as const }
         const target = await tx.shodanMember.findFirst({ where: { id: targetId, organizationId: ctx.organizationId } })
         if (!target) return { kind: 'missing' as const }
         if (target.role === 'owner') return { kind: 'owner' as const }
