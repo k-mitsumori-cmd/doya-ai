@@ -17,6 +17,7 @@ function fixture(options = {}) {
   let actorQuery
   const db = {
     $queryRaw: async (strings, ...values) => {
+      if (strings.join('').includes('kintai_organizations')) { admissionLocks++; return [{ id: 'org' }] }
       actorQuery = { sql: strings.join('?'), values }
       return [{
         role: options.currentRole || context.role,

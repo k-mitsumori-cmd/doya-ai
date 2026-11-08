@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
+import { kintaiEmployeeLimitPayload, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -82,7 +82,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (isActive !== undefined) data.isActive = isActive
 
     return await mutateEmployee(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const actorRole = await lockCurrentKintaiManager(tx, kctx)
       if (!actorRole) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       const existingEmp = await tx.kintaiEmployee.findFirst({
@@ -193,7 +192,6 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const p = await ctx.params
 
     return await mutateEmployee(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const actorRole = await lockCurrentKintaiManager(tx, kctx)
       if (!actorRole) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       const existingEmp = await tx.kintaiEmployee.findFirst({

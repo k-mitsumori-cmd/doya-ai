@@ -5,7 +5,6 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { withKintaiWorkRuleRevision, withKintaiWorkRuleRevisions, advanceKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
@@ -46,7 +45,6 @@ export async function POST(req: NextRequest) {
     const operationId = kintaiWorkRuleOperationId(body.operationId)
     if (body.organizationId !== ctx.organizationId) return NextResponse.json({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, { status: 409 })
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, ctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }

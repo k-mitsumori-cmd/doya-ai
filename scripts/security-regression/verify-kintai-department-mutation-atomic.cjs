@@ -13,7 +13,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   const order = []
   let writes = 0
   const tx = {
-    $queryRaw: async () => { order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
+    $queryRaw: async strings => { if (strings.join('').includes('kintai_organizations')) { order.push('organization'); return [{ id: 'org' }] } order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
     kintaiDepartment: {
       findFirst: async ({ where }) => rows.get(where.id)?.organizationId === where.organizationId ? rows.get(where.id) : null,
       create: async ({ data }) => { writes++; const row = { id: 'new', ...data }; rows.set('new', row); return row },

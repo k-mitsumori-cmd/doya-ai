@@ -2,14 +2,20 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
+import { kintaiEmployeeLimitPayload, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { sendEmail } from '@/lib/email'
 import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
+import { privateApiJson } from '@/lib/private-api-response'
+import { newPricingRollout } from '@/lib/pricing-v2/rollout'
+import { withToolSeatAdmission, ToolSeatAdmissionError, toolSeatAdmissionFailure } from '@/lib/pricing-v2/tool-seat-admission.server'
+
+type EmployeeAdmissionDenialKind = 'forbidden' | 'admin-only' | 'peer-role'
+class EmployeeAdmissionDenied extends Error { constructor(readonly kind: EmployeeAdmissionDenialKind) { super(kind) } }
 
 const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
@@ -17,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
     if (!ctx || !hasMinRole(ctx.role, 'hr_admin')) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -30,12 +36,12 @@ export async function GET(req: NextRequest) {
     if (!/^\d+$/.test(pageText) || !/^\d+$/.test(pageSizeText) ||
         Number(pageText) < 1 || Number(pageText) > 10_000_000 ||
         Number(pageSizeText) < 1 || Number(pageSizeText) > 200) {
-      return NextResponse.json({ error: 'pageまたはpageSizeが正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'pageまたはpageSizeが正しくありません' }, { status: 400 })
     }
     const page = Number(pageText)
     const pageSize = Number(pageSizeText)
     if (isActive !== null && isActive !== '' && isActive !== 'true' && isActive !== 'false') {
-      return NextResponse.json({ error: 'isActiveが正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'isActiveが正しくありません' }, { status: 400 })
     }
 
     const where: any = { organizationId: ctx.organizationId }
@@ -61,10 +67,10 @@ export async function GET(req: NextRequest) {
       prisma.kintaiEmployee.count({ where }),
     ])
 
-    return NextResponse.json({ employees, total, page, pageSize })
+    return privateApiJson({ employees, total, page, pageSize })
   } catch (e) {
     console.error('[kintai/employees GET]')
-    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
 
@@ -72,43 +78,43 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
     if (!ctx || !hasMinRole(ctx.role, 'hr_admin')) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      return privateApiJson({ error: '権限がありません' }, { status: 403 })
     }
 
     const body = await req.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, role } = body
-    if (!name || !email) {
-      return NextResponse.json({ error: '氏名とメールは必須です' }, { status: 400 })
+    if (typeof name !== 'string' || typeof email !== 'string' || !name.trim() || !email.trim()) {
+      return privateApiJson({ error: '氏名とメールは必須です' }, { status: 400 })
     }
 
     // SEC: departmentId/workRuleId が同じ組織に属するか検証
     if (departmentId) {
       const dept = await prisma.kintaiDepartment.findFirst({ where: { id: departmentId, organizationId: ctx.organizationId } })
-      if (!dept) return NextResponse.json({ error: '指定された部署が見つかりません' }, { status: 400 })
+      if (!dept) return privateApiJson({ error: '指定された部署が見つかりません' }, { status: 400 })
     }
     if (workRuleId) {
       const rule = await prisma.kintaiWorkRule.findFirst({ where: { id: workRuleId, organizationId: ctx.organizationId } })
-      if (!rule) return NextResponse.json({ error: '指定された就業ルールが見つかりません' }, { status: 400 })
+      if (!rule) return privateApiJson({ error: '指定された就業ルールが見つかりません' }, { status: 400 })
     }
 
     // SEC: ロール値のホワイトリスト検証 + 権限エスカレーション防止
     const ALL_ROLES = ['employee', 'manager', 'hr_admin', 'system_admin'] as const
     const assignRole = ALL_ROLES.includes(role) ? role : 'employee'
     const inviteToken = createKintaiInviteToken()
-    const admission = await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
+    const recipientUsers = newPricingRollout() === 'off' ? [] : await prisma.user.findMany({
+      where: { email: { equals: email.trim(), mode: 'insensitive' } }, select: { id: true }, take: 2,
+    })
+    if (recipientUsers.length > 1) throw new ToolSeatAdmissionError(503, 'SEAT_CAPACITY_UNAVAILABLE', 'retry')
+    const admission = await withToolSeatAdmission({ tool: 'kintai', organizationId: ctx.organizationId, actorUserId: ctx.userId, additionalUserIds: recipientUsers.map(user => user.id) }, async tx => {
       const actorRole = await lockCurrentKintaiManager(tx, ctx)
-      if (!actorRole) return { kind: 'forbidden' as const }
-      if (assignRole === 'system_admin' && actorRole !== 'system_admin') {
-        return { kind: 'admin-only' as const }
-      }
-      // hr_admin は自分と同じ権限（hr_admin）を付与できない。付与できるのは自分より下の権限だけ。
-      if (actorRole !== 'system_admin' && hasMinRole(assignRole, actorRole)) {
-        return { kind: 'peer-role' as const }
-      }
+      if (!actorRole) throw new EmployeeAdmissionDenied('forbidden')
+      if (assignRole === 'system_admin' && actorRole !== 'system_admin') throw new EmployeeAdmissionDenied('admin-only')
+      if (actorRole !== 'system_admin' && hasMinRole(assignRole, actorRole)) throw new EmployeeAdmissionDenied('peer-role')
+      return { role: assignRole, value: null }
+    }, async tx => {
       const limit = await reachedKintaiEmployeeLimit(tx, ctx.organizationId)
       if (limit !== null) return { kind: 'limit' as const, limit }
       const employee = await tx.kintaiEmployee.create({
@@ -136,17 +142,8 @@ export async function POST(req: NextRequest) {
       })
       return { kind: 'created' as const, employee }
     })
-    if (admission.kind === 'forbidden') {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
-    }
-    if (admission.kind === 'admin-only') {
-      return NextResponse.json({ error: 'システム管理者のみがシステム管理者権限を付与できます' }, { status: 403 })
-    }
-    if (admission.kind === 'peer-role') {
-      return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
-    }
     if (admission.kind === 'limit') {
-      return NextResponse.json(
+      return privateApiJson(
         kintaiEmployeeLimitPayload(admission.limit, ctx.userId),
         { status: 403 },
       )
@@ -204,14 +201,21 @@ export async function POST(req: NextRequest) {
       console.error('[kintai/employees] invite email failed')
     }
 
-    return NextResponse.json({ employee, inviteUrl, emailSent }, { status: 201 })
+    return privateApiJson({ employee, inviteUrl, emailSent }, { status: 201 })
   } catch (e: any) {
+    const seatFailure = toolSeatAdmissionFailure(e)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
+    if (e instanceof EmployeeAdmissionDenied) {
+      const error = e.kind === 'admin-only' ? 'システム管理者のみがシステム管理者権限を付与できます'
+        : e.kind === 'peer-role' ? '自分と同じか上の権限は付与できません' : '権限がありません'
+      return privateApiJson({ error }, { status: 403 })
+    }
     console.error('[kintai/employees POST]')
     let msg = '作成に失敗しました'
     if (e?.code === 'P2002') msg = 'このメールアドレスは既に登録されています'
     else if (e?.code === 'P2003') msg = '指定された部署または就業ルールが見つかりません'
     else if (e?.message?.includes('Unique constraint')) msg = '同じデータが既に存在します'
     else if (e?.message?.includes('Foreign key constraint')) msg = '指定された部署または就業ルールが見つかりません'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return privateApiJson({ error: msg }, { status: 500 })
   }
 }

@@ -5,7 +5,6 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
 import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
 
@@ -159,7 +158,6 @@ export async function POST(req: NextRequest) {
     const savedDetails = { ...(details || {}) }
     delete savedDetails.leaveCancellation
     const request = await prisma.$transaction(async tx => {
-      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       if (!await lockCurrentKintaiActor(tx, ctx)) {
         throw new RequestForbidden('申請を作成する権限がありません')
       }

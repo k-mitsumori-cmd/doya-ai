@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -32,7 +31,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
@@ -77,7 +75,6 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const p = await ctx.params
 
     return await prisma.$transaction(async (tx) => {
-      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }

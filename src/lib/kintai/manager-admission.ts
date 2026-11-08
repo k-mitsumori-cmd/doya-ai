@@ -1,12 +1,18 @@
 import type { Prisma } from '@prisma/client'
 import type { KintaiContext, KintaiMemberRole } from './types'
 import { lowerToolRole } from '@/lib/company-roles/tool-roles'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { lockKintaiEmployeeAdmission } from './employee-admission'
 
-/** Hold the current member and employee rows while a mutation commits. */
+/** Pin current company authority before the organization/member/employee locks.
+ * All callers use this single order, including shared admission transactions. */
 export async function lockCurrentKintaiActor(
   tx: Prisma.TransactionClient,
   ctx: KintaiContext,
 ): Promise<KintaiMemberRole | null> {
+  const companyCeiling = await ceilToolRole({ tool: 'kintai', userId: ctx.userId, organizationId: ctx.organizationId, toolRole: 'system_admin' }, tx)
+  if (!companyCeiling) return null
+  await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
   const rows = await tx.$queryRaw<{ role: string; status: string; isActive: boolean }[]>`
     SELECT m.role, m.status, e."isActive" AS "isActive"
     FROM "kintai_members" m
@@ -20,8 +26,9 @@ export async function lockCurrentKintaiActor(
   `
   const actor = rows[0]
   if (actor?.status !== 'ACTIVE' || !actor.isActive) return null
-  // 入口で会社の役割の上限を当てた役割（ctx.role）より上には上げない（ROLES-2026-10-26.md §4。旗が off なら ctx.role は DB の役割と同じ）
-  const role = ctx.role === undefined ? actor.role : lowerToolRole('kintai', actor.role, ctx.role)
+  // Preserve the original request ceiling while rechecking current company authority.
+  const limited = lowerToolRole('kintai', actor.role, companyCeiling)
+  const role = limited && (ctx.role === undefined ? limited : lowerToolRole('kintai', limited, ctx.role))
   return role === 'employee' || role === 'manager' || role === 'hr_admin' || role === 'system_admin'
     ? role
     : null
