@@ -6,7 +6,7 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
   let now = deadline + offset, attempted = 0, rollbacks = 0, committed = 0;
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const delay = stage => { if (delayAt === stage) now = deadline; };
-  const member = { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: 'token', inviteEmail: 'qa@example.invalid', role: service === 'kintai' ? 'employee' : 'member', createdAt: new Date(deadline - ttl), employee: { email: 'qa@example.invalid' }, organization: { name: 'Synthetic', slug: 'team' } };
+  const member = { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: 'token', inviteEmail: 'qa@example.invalid', role: service === 'kintai' ? 'employee' : 'member', createdAt: new Date(deadline - ttl), employee: { email: 'qa@example.invalid', isActive: true }, organization: { name: 'Synthetic', slug: 'team' } };
   const invitation = { id: 'invite', token: 'token', workspaceId: 'org', email: 'qa@example.invalid', role: 'member', expiresAt: new Date(deadline), acceptedAt: null, invitedBy: { name: null }, workspace: { id: 'org', name: 'Synthetic', slug: 'team', userId: 'owner' } };
   let state = { member: structuredClone(member), oldStatus: 'ACTIVE', promaneMembers: 0, acceptedAt: null };
   const membership = {
@@ -29,10 +29,11 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
   };
   const tx = {
     sfaMember: membership, kintaiMember: { ...membership, findMany: async () => [] },
-    user: { findUnique: async () => ({ plan: 'FREE', id: 'user' }) },
+    $queryRaw: async (sql, organizationId) => { assert(['sfa','kintai','promane'].includes(service)); assert.match(sql.join('?'), service === 'promane' ? /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/ : service === 'kintai' ? /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/ : /SELECT id FROM sfa_organizations WHERE id = \? FOR UPDATE/); assert.equal(organizationId, 'org'); delay('lock'); return [{ id: 'org' }]; },
+    user: { findUnique: async () => ({ plan: 'FREE', id: 'user', email: 'qa@example.invalid' }) },
     promaneInvitation: {
       findUnique: async () => structuredClone({ ...invitation, acceptedAt: state.acceptedAt }),
-      update: async () => { attempted++; state.acceptedAt = new Clock(); delay('claim'); },
+      updateMany: async ({ where }) => { assert.equal(where.id, invitation.id); assert.equal(where.workspaceId, invitation.workspaceId); assert.equal(where.token, invitation.token); assert.equal(where.role, invitation.role); assert.equal(where.email, invitation.email); assert.equal(where.acceptedAt, null); if (invitation.expiresAt <= where.expiresAt.gt) return { count: 0 }; attempted++; state.acceptedAt = new Clock(); delay('claim'); return { count: 1 }; },
     },
     promaneMember: {
       findUnique: async () => { delay('existing'); return existing ? { id: 'existing', isActive: true } : null; },

@@ -1,0 +1,12 @@
+.inviteGrid .memberPanel { gap: 12px; }
+.help { margin: 0; font-size: 14px; line-height: 20px; color: var(--sub); text-wrap: pretty; }
+.inviteForm { display: grid; gap: 12px; min-width: 0; }
+.roleSelect { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; line-height: 20px; }
+.roleSelect:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.roleSelect:disabled { opacity: 0.45; }
+.memberMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--sub); }
+
+.inviteGrid.membershipOnlyGrid { grid-template-columns: minmax(0, 1fr); }
+.inviteGrid .memberPanel li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.inviteGrid .memberPanel li > span:first-child { grid-column: 1 / -1; }
+.inviteGrid .memberPanel li > button { grid-column: 2; grid-row: 2; min-height: 44px; min-width: 44px; }

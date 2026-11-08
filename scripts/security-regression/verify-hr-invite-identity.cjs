@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com', inviteRole = 'MEMBER', status = 'PENDING', claimCount = 1, memberCount = 1 } = {}) {
+async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com', lockedEmail, inviteRole = 'MEMBER', status = 'PENDING', claimCount = 1, memberCount = 1 } = {}) {
   let created = 0;
   let claims = 0;
   let locks = 0;
@@ -19,7 +19,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     user: { findUnique: async () => ({ email: accountEmail }) },
     hrOrganizationMember: { findFirst: async () => null },
     $transaction: async (fn) => fn({
-      $queryRaw: async () => { locks++; return [{ id: 'org-1' }]; },
+      $queryRaw: async strings => { if(strings.join('').includes('FROM "User"'))return [{email:lockedEmail===undefined?accountEmail:lockedEmail}];locks++;return [{id:'org-1'}]; },
       hrInvitation: { findUnique: async () => invitation, updateMany: async ({ where }) => {
         claims++;
         assert.equal(where.status, 'PENDING');
@@ -57,6 +57,9 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   assert.equal(r.claims, 0);
   assert.equal(r.created, 0);
 
+  r = await acceptCase({ lockedEmail: 'changed@example.com' });
+  assert.equal(r.status,403);assert.equal(r.body.code,'INVITE_EMAIL_MISMATCH');assert.equal(r.claims,0);assert.equal(r.created,0);
+
   r = await acceptCase({ inviteRole: 'OWNER' });
   assert.equal(r.status, 403);
   assert.equal(r.created, 0);
@@ -91,11 +94,12 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'admin-1', name: 'Admin' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { $transaction: async (work) => work({
+    '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, $transaction: async (work) => work({
+      user: { findMany: async () => [] },
       $queryRaw: async sql => sql.join('?').includes('hr_organization_members')
-        ? currentRole === 'ADMIN' ? [{ id: 'actor' }] : []
+        ? currentRole === 'ADMIN' ? [{ id: 'actor', role: 'ADMIN' }] : []
         : [{ id: 'org-1' }],
-      hrOrganizationMember: { findFirst: async () => null },
+      hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
       hrInvitation: { findFirst: async () => null, create: async ({ data }) => {
         created++;
         createdRole = data.role;
@@ -105,7 +109,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     }) } },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', memberId: 'actor', userId: 'admin-1', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
-    '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/billing': { checkMemberLimit: async () => null, getOrgPlan: async () => 'PRO', getOrgPlanLimits: () => ({ maxMembers: -1 }) },
     '@/lib/hr/email': { sendInvitationEmail: async () => { sent++; return true; } },
     '@/lib/hr/audit': { logAudit: async () => {} },
     crypto: require('node:crypto'),

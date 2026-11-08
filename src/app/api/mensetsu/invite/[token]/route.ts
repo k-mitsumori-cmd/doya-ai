@@ -4,13 +4,18 @@ export const maxDuration = 60
 
 // GET  /api/mensetsu/invite/[token] — 招待の内容（組織名・権限）
 // POST /api/mensetsu/invite/[token] — 招待を受ける（要ログイン）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { resolveUserId } from '@/lib/mensetsu/access'
+import { withToolSeatAdmission, toolSeatAdmissionFailure } from '@/lib/pricing-v2/tool-seat-admission.server'
+import type { Prisma } from '@prisma/client'
 
 type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 class InvitationExpired extends Error {}
+class InvitationUnavailable extends Error {}
+class InvitationEmailMismatch extends Error {}
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -38,14 +43,14 @@ async function load(token: string) {
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const m = await load(p.token)
-  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return privateApiJson({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status === 'PENDING' && m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
-    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
 
   // ⚠️ 未ログインでも開ける画面なので、返すのは表示に要る最小限だけ。
   //    招待されたメールアドレスもここでは返さない（総当たりで宛先を探られないように）。
-  return NextResponse.json({
+  return privateApiJson({
     invite: {
       organizationName: m.organization.name,
       roleLabel: ROLE_LABEL[m.role] || m.role,
@@ -57,48 +62,74 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const userId = await resolveUserId()
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  if (!userId) return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
 
   const m = await load(p.token)
-  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (!m || !['admin', 'manager', 'member'].includes(m.role)) return privateApiJson({ error: '招待が見つかりません' }, { status: 404 })
   if (m.status !== 'PENDING') {
-    return NextResponse.json({ error: 'この招待は既に使われています' }, { status: 409 })
+    return privateApiJson({ error: 'この招待は既に使われています' }, { status: 409 })
   }
   if (m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
-    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    // The first transaction may only remove an obsolete pending invitation for
+    // an account that is already active. This decrease-only cleanup remains
+    // available when the company is over capacity or billing is unavailable.
+    // Actual activation always enters the shared company seat guard below.
+    const currentInvitation = async (tx: Prisma.TransactionClient, verified?: { role: string; inviteEmail: string | null }) => {
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${m.organization.id} FOR UPDATE`
-      if (rows.length === 0) return 'unavailable' as const
+      if (rows.length === 0) throw new InvitationUnavailable()
       const invite = await tx.mensetsuMember.findUnique({ where: { id: m.id } })
-      if (!invite || invite.organizationId !== m.organization.id || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
-      const now = new Date()
-      if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
+      if (!invite || invite.organizationId !== m.organization.id || invite.status !== 'PENDING' || invite.inviteToken !== p.token) throw new InvitationUnavailable()
+      if (verified && (invite.role !== verified.role || invite.inviteEmail !== verified.inviteEmail)) throw new InvitationUnavailable()
+      if (invite.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) throw new InvitationExpired()
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
-      if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
-      if (!['admin', 'manager', 'member'].includes(invite.role)) return 'unavailable' as const
+      if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) throw new InvitationEmailMismatch()
+      if (!['admin', 'manager', 'member'].includes(invite.role)) throw new InvitationUnavailable()
+      return invite
+    }
+    const cleanExisting = await prisma.$transaction(async tx => {
+      const invite = await currentInvitation(tx)
+      const already = await tx.mensetsuMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
+      if (!already) return { role: invite.role, inviteEmail: invite.inviteEmail }
+      if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
+      const removed = await tx.mensetsuMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token } })
+      if (removed.count !== 1) throw new InvitationUnavailable()
+      if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
+      return true
+    })
+    if (cleanExisting === true) return privateApiJson({ ok: true, alreadyMember: true })
+
+    const result = await withToolSeatAdmission({ tool: 'mensetsu', organizationId: m.organization.id, actorUserId: userId }, async tx => {
+      const invite = await currentInvitation(tx, cleanExisting)
+      return { role: invite.role, value: invite }
+    }, async (tx, invite) => {
       const already = await tx.mensetsuMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       if (already) {
-        await tx.mensetsuMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token } })
+        const removed = await tx.mensetsuMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token } })
+        if (removed.count !== 1) throw new InvitationUnavailable()
         if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
         return 'already' as const
       }
+      const now = new Date()
       const claimed = await tx.mensetsuMember.updateMany({
         where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
         data: { userId, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
       })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
-      return claimed.count === 1 ? 'accepted' as const : 'unavailable' as const
+      if (claimed.count !== 1) throw new InvitationUnavailable()
+      return 'accepted' as const
     })
-    if (result === 'mismatch') return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
-    if (result === 'expired') return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
-    if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
-    if (result === 'already') return NextResponse.json({ ok: true, alreadyMember: true })
-    return NextResponse.json({ ok: true, organizationName: m.organization.name })
+    if (result === 'already') return privateApiJson({ ok: true, alreadyMember: true })
+    return privateApiJson({ ok: true, organizationName: m.organization.name })
   } catch (error) {
-    if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
-    return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
+    const seatFailure = toolSeatAdmissionFailure(error)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
+    if (error instanceof InvitationEmailMismatch) return privateApiJson({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+    if (error instanceof InvitationUnavailable) return privateApiJson({ error: 'この招待は既に使用済みです' }, { status: 409 })
+    if (error instanceof InvitationExpired) return privateApiJson({ error: '招待の有効期限が切れています' }, { status: 410 })
+    return privateApiJson({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }
 }

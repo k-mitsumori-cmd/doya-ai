@@ -13,9 +13,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { isInviteAlive, normalizeEmail, seatsUsed, INVITE_TTL_DAYS } from '@/lib/pricing-v2/team'
-import { teamMembershipCapacity, teamSeatsForCompany, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
-import { SeatOperationError, withSeatAdmission } from '@/lib/pricing-v2/seat-operation'
+import { isInviteAlive, normalizeEmail, INVITE_TTL_DAYS } from '@/lib/pricing-v2/team'
+import { teamSeatsForCompany, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
+import { SeatOperationError, withSeatAdmissionInTransaction, withSeatRevocation } from '@/lib/pricing-v2/seat-operation'
+
+import { CompanyMembershipSeatError, pinCompanyMembershipPrincipals, readCompanyMembershipLicense, requireCompanyMembershipCapacity } from '@/lib/pricing-v2/company-membership-seat.server'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE })
@@ -35,30 +37,26 @@ export async function POST(req: NextRequest) {
     if (!token || token.length > 128) return json({ error: '招待のリンクを確かめてください。' }, 400)
     const invite = await prisma.accountCompanyMember.findUnique({
       where: { inviteToken: token },
-      select: { id: true, companyId: true, email: true, status: true, invitedAt: true, company: { select: { name: true, userId: true } } },
+      select: { id: true, companyId: true, email: true, role: true, status: true, invitedAt: true, company: { select: { name: true, userId: true } } },
     })
     // 招待が無い・使い済み・他の人あて は、同じ文で断る（招待の有無を知られないように）
     if (!invite || invite.status !== 'invited' || invite.email !== email || invite.company.userId === userId) {
       return json({ error: 'この招待は使えません。招待したメールアドレスでログインしているか確かめてください。' }, 404)
     }
-    await teamSeatsForCompany(invite.companyId, { refresh: true, strict: true })
-    return await withSeatAdmission(invite.companyId, async tx => {
-      // 会社のガードの後で利用者行も固定し、メール変更と受諾を直列化する。
-      // Userのメールを書き換える処理は通常の行ロックで待つため、確認から
-      // 所属の確定まで古いメールへ戻った状態を持ち越さない。
-      const accounts = await tx.$queryRaw<Array<{ email: string | null }>>`
-        SELECT email FROM "User" WHERE id = ${userId} FOR UPDATE
-      `
-      if (accounts.length !== 1 || normalizeEmail(accounts[0].email) !== email) return json({ error: 'この招待は使えません。' }, 404)
+    // A view-only guest neither consumes a seat nor needs a provider refresh.
+    // The current role is re-read under the common fence below.
+    if (invite.role !== 'guest') await teamSeatsForCompany(invite.companyId, { refresh: true, strict: true })
+    return await withSeatRevocation(invite.companyId, async tx => {
+      const actor = await pinCompanyMembershipPrincipals(tx, { companyId: invite.companyId, ownerUserId: invite.company.userId, actorUserId: userId })
+      if (normalizeEmail(actor.email) !== email) return json({ error: 'この招待は使えません。' }, 404)
       // Re-read the invitation, expiry, capacity and membership under the same
       // company guard used by invite creation and seat changes.
       const current = await tx.accountCompanyMember.findUnique({
         where: { inviteToken: token },
-        select: { id: true, companyId: true, email: true, status: true, invitedAt: true, company: { select: { name: true, userId: true } } },
+        select: { id: true, companyId: true, email: true, role: true, status: true, invitedAt: true, company: { select: { name: true, userId: true } } },
       })
       if (!current || current.companyId !== invite.companyId || current.status !== 'invited' || current.email !== email || current.company.userId === userId) return json({ error: 'この招待は使えません。' }, 404)
       if (!isInviteAlive(current.invitedAt)) return json({ error: `この招待は期限（${INVITE_TTL_DAYS}日）が切れています。招待した方に、招待し直してもらってください。` }, 410)
-      const capacity = await teamMembershipCapacity(current.companyId, tx)
       const members = await tx.accountCompanyMember.findMany({
         where: { companyId: current.companyId, status: { in: ['invited', 'active'] } },
         select: { id: true, email: true, userId: true, status: true, invitedAt: true },
@@ -68,14 +66,7 @@ export async function POST(req: NextRequest) {
       if (members.some(member => member.status === 'active' && member.userId === userId)) {
         return json({ code: 'ALREADY_MEMBER', error: 'すでにこの会社に参加しています。現在の所属でご利用ください。不要な招待は会社の持ち主に取り消しを依頼してください。' }, 409)
       }
-      const used = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members })
-      // 招待のメールが既存所属の旧メールと重なっても、別の利用者IDなら
-      // 受諾後に1人増える。予約時の数だけでなく、更新後のIDで数え直す。
-      const acceptedMembers = members.map(member => member.id === current.id
-        ? { ...member, status: 'active', userId }
-        : member)
-      const acceptedUsed = seatsUsed({ ownerUserId: capacity.ownerUserId, ownerEmail: capacity.ownerEmail, members: acceptedMembers })
-      if (used > capacity.limit || acceptedUsed > capacity.limit) return json({ code: 'NO_SEAT', error: '契約人数を確認できるまで参加できません。招待した方に人数の確認を依頼してください。' }, 409)
+      const acceptCurrent = async () => {
       const now = new Date()
       const r = await tx.accountCompanyMember.updateMany({
         where: { id: current.id, companyId: current.companyId, email, status: 'invited', inviteToken: token, invitedAt: { gt: new Date(now.getTime() - INVITE_TTL_DAYS * 86400000), lte: now } },
@@ -83,8 +74,17 @@ export async function POST(req: NextRequest) {
       })
       if (r.count !== 1) return json({ error: 'この招待は使えません。' }, 409)
       return json({ ok: true, companyName: current.company.name })
+      }
+      if (current.role === 'guest') return acceptCurrent()
+      return withSeatAdmissionInTransaction(current.companyId, tx, async () => {
+        requireCompanyMembershipCapacity(await readCompanyMembershipLicense(tx, current.companyId))
+        const result = await acceptCurrent()
+        requireCompanyMembershipCapacity(await readCompanyMembershipLicense(tx, current.companyId))
+        return result
+      })
     })
   } catch (error) {
+    if (error instanceof CompanyMembershipSeatError) return json({ code: error.code, error: '契約人数や会社の所属を確認できるまで参加できません。招待した方に確認を依頼してください。' }, 409)
     if (error instanceof SeatOperationError) return json({ code: error.code, error: '人数の変更を確認中です。時間をおいて、もう一度お試しください。' }, 409)
     console.error('[pricing/members/accept] accept failed')
     return json({ error: '参加できませんでした。時間をおいて再度お試しください。' }, 503)

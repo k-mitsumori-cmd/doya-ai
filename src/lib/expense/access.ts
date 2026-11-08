@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EXPENSE_ROLES, ROLE_RANK, type ExpenseRole } from './constants'
 import { ceilToolRole } from '@/lib/company-roles/access.server'
+import { claimExpensePendingMemberships, expenseMemberAdmissionFailure, type ExpenseClaimResult } from './member-admission'
 
 export type ExpenseContext = {
   userId: string
@@ -59,23 +60,8 @@ export async function getExpenseContext(orgSlug?: string): Promise<ExpenseContex
  * 招待中（PENDING）のメンバーを、本人の ACTIVE にする（システム点検 EXP-F05）。
  * メールはセッションの申告ではなく、DB のユーザーのメールで照合する。入口（/api/expense/usage）で毎回呼ぶ。
  */
-export async function claimPendingMemberships(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
-  const email = user?.email?.toLowerCase()
-  if (!email) return 0
-  const pending = await prisma.expenseMember.findMany({ where: { invitedEmail: email, status: 'PENDING', userId: null }, select: { id: true, organizationId: true } })
-  let claimed = 0
-  for (const p of pending) {
-    // 同じ組織に本人の行が既にあれば（以前に外された等）、招待の行は使わずに取り消す
-    const own = await prisma.expenseMember.findFirst({ where: { organizationId: p.organizationId, userId }, select: { id: true } })
-    if (own) {
-      await prisma.expenseMember.update({ where: { id: p.id }, data: { status: 'INACTIVE' } })
-      continue
-    }
-    const r = await prisma.expenseMember.updateMany({ where: { id: p.id, status: 'PENDING', userId: null }, data: { userId, status: 'ACTIVE' } })
-    claimed += r.count
-  }
-  return claimed
+export async function claimPendingMemberships(userId: string): Promise<ExpenseClaimResult> {
+  return claimExpensePendingMemberships(userId)
 }
 
 export async function listMemberships() {
@@ -119,6 +105,8 @@ export async function withExpense(
     if (!hasMinRole(ctx.role, minRole)) return privateApiJson({ error: 'この操作を行う権限がありません' }, { status: 403 })
     return privateApiResponse(await handler(ctx))
   } catch (e) {
+    const admissionFailure = expenseMemberAdmissionFailure(e)
+    if (admissionFailure) return privateApiJson(admissionFailure.body, { status: admissionFailure.status })
     if (e instanceof ExpenseHttpError) return privateApiJson({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: e.status })
     // 為替レート未設定（plan.ts の FxRateMissingError）は利用者が直せる理由なので、そのまま伝える
     if ((e as Error)?.name === 'FxRateMissingError') return privateApiJson({ error: (e as Error).message, code: 'FX_RATE_MISSING' }, { status: 400 })

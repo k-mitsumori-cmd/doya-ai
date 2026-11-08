@@ -20,7 +20,22 @@ const shared = {
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': quota,
 };
-const transactional = prisma => ({ ...prisma, $transaction: async work => work(prisma) });
+// Legacy/rollout-off fixture. Use the actual admission helper via load-typescript;
+// provide only the newly required organization lock and current account read.
+const transactional = prisma => {
+  const tx = { ...prisma,
+    $queryRaw: async (sql, organizationId) => {
+      assert.match(sql.join('?'), /SELECT id FROM sfa_organizations WHERE id = \? FOR UPDATE/);
+      assert.equal(organizationId, 'org');
+      return [{ id: 'org' }];
+    },
+    user: { findUnique: async ({ where }) => {
+      assert.equal(where.id, 'invitee');
+      return { email: 'member@example.com' };
+    } },
+  };
+  return { ...tx, $transaction: async work => work(tx) };
+};
 const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => null }, json: async () => body });
 
 (async () => {

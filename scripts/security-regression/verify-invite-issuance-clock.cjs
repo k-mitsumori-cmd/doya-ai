@@ -33,7 +33,8 @@ function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
 function hr({ offset = 0, delayCreation = false } = {}) {
   const c = clockFixture(); let writes = 0, deliveries = 0, audits = 0, deliveredExpiry;
   const tx = {
-    $queryRaw: async () => [{ id: 'org' }], hrOrganizationMember: { findFirst: async () => null },
+    user: { findMany: async () => [] },
+    $queryRaw: async () => [{ id: 'org', role: 'ADMIN' }], hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
     hrInvitation: {
       findFirst: async ({ where }) => { const row = expiry > where.expiresAt.gt.getTime() ? { id: 'old', expiresAt: new Date(expiry) } : null; c.set(expiry + offset); return row; },
       create: async ({ data }) => { writes++; return { id: 'new', ...data }; },
@@ -42,9 +43,9 @@ function hr({ offset = 0, delayCreation = false } = {}) {
   };
   const api = load('src/app/api/hr/organization/invite/route.ts', {
     'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: 'admin' } }) }, '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { $transaction: async fn => fn(tx) } },
+    '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, $transaction: async fn => fn(tx) } },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', userId: 'admin', role: 'ADMIN' }), hasMinRole: () => true },
-    '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } }, '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } }, '@/lib/hr/billing': { checkMemberLimit: async () => null, getOrgPlan: async () => 'PRO', getOrgPlanLimits: () => ({ maxMembers: -1 }) },
     '@/lib/hr/email': { sendInvitationEmail: async args => { deliveries++; deliveredExpiry = args.expiresAt.getTime(); return false; } },
     '@/lib/hr/audit': { logAudit: async () => { audits++; } }, crypto: require('node:crypto'),
   }, { Date: c.Clock });

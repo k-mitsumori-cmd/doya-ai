@@ -1,17 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { expenseNav } from '@/lib/expense/nav'
 import { OrgContext, Loading, ErrorBox } from '@/components/expense/ui'
+import AdmissionNotice from '@/components/expense/AdmissionNotice'
+import type { ExpenseClaimIssue } from '@/lib/expense/member-admission'
 import type { Role } from '@/components/expense/types'
 
 export default function ExpenseOrgLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const params = useParams()
   const orgSlug = (params.orgSlug as string) || ''
+  const [admissionIssues, setAdmissionIssues] = useState<ExpenseClaimIssue[]>([])
   const [role, setRole] = useState<Role | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
@@ -35,6 +39,7 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
         }
         const d = await r.json()
         if (!alive) return
+        setAdmissionIssues(d?.admissionIssues || [])
         if (d?.role) {
           setRole(d.role as Role)
           setState('ok')
@@ -52,7 +57,8 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       <ToolFrame serviceId="expense" nav={expenseNav(orgSlug, role)}>
         {state === 'loading' && <Loading />}
-        {state === 'denied' && <ErrorBox forbidden />}
+        {state !== 'loading' && <AdmissionNotice issues={admissionIssues} />}
+        {state === 'denied' && <><ErrorBox forbidden /><Link href="/expense" className="m-4 inline-block underline">利用できる組織を確認する</Link></>}
         {state === 'error' && <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />}
         {state === 'ok' && <OrgContext.Provider value={{ orgSlug, role, loadingStartedAt }}>{children}</OrgContext.Provider>}
       </ToolFrame>

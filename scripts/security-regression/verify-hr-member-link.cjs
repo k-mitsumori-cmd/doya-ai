@@ -26,9 +26,13 @@ function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace
       },
     },
   }
-  const prisma = { $transaction: async fn => fn(tx) }
+  const prisma = { hrOrganizationMember: tx.hrOrganizationMember, $transaction: async fn => fn(tx) }
   const api = load('src/app/api/hr/organization/members/[id]/route.ts', {
     'next/server': { NextResponse: Response },
+  '@/lib/company-roles/access.server': { ceilToolRole: async input => input.toolRole },
+  '@/lib/pricing-v2/tool-seat-union-scope.server': { resolveToolUnionScope: async () => ({ enabled: false }), toolUnionScopeIdentity: () => 'legacy-disabled' },
+  '@/lib/hr/billing': { getOrgPlan: async () => { throw Error('Non-increasing legacy fixture must not read service quota') }, getOrgPlanLimits: () => { throw Error('Non-increasing legacy fixture must not read service quota') } },
+
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': {
       getHrContext: async () => ({ organizationId: 'org', memberId: 'admin', userId: 'user-admin', role }),

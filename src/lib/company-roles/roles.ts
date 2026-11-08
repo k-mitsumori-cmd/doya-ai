@@ -78,7 +78,7 @@ export function grantableCompanyRoles(actor: CompanyRole): MemberRowRole[] {
 
 export type RoleChangeDecision =
   | { ok: true; from: MemberRowRole; to: MemberRowRole }
-  | { ok: false; status: number; code: 'INVALID_ROLE' | 'NOT_ALLOWED' | 'CANNOT_GRANT' | 'NO_CHANGE' | 'NOT_ACTIVE' }
+  | { ok: false; status: number; code: 'INVALID_ROLE' | 'NOT_ALLOWED' | 'CANNOT_GRANT' | 'NO_CHANGE' | 'NOT_ACTIVE' | 'NO_SEAT' | 'SEAT_OPERATION_BUSY' | 'SEAT_CONTEXT_CHANGED' | 'SEAT_CAPACITY_UNAVAILABLE' }
 
 /**
  * メンバーの役割を変えてよいか（招待中・参加の人だけ）。
@@ -102,6 +102,10 @@ export function decideRoleChange(input: {
 }
 
 export const ROLE_CHANGE_MESSAGE: Record<Exclude<RoleChangeDecision, { ok: true }>['code'], string> = {
+  NO_SEAT: '購入人数を超えるため、この役割へ変更できません。会社のオーナーに人数の確認を依頼してください。',
+  SEAT_OPERATION_BUSY: '人数の変更を確認中です。時間をおいて、もう一度お試しください。',
+  SEAT_CONTEXT_CHANGED: '会社の所属や人数が変わりました。画面を読み込み直してください。',
+  SEAT_CAPACITY_UNAVAILABLE: '購入人数を確認できません。時間をおいて、もう一度お試しください。',
   INVALID_ROLE: '役割を選び直してください。',
   NOT_ACTIVE: 'このメンバーは外れています。',
   NOT_ALLOWED: 'この方の役割は変えられません（ご自身・オーナー・同じか上の役割の方は変えられません）。',

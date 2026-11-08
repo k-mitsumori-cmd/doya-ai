@@ -1,3 +1,4 @@
+import { readCompanyOperatingSeatUsage } from '@/lib/pricing-v2/company-seat-minimum.server'
 // ============================================
 // 会社のメンバー（一覧・招待・外す） /api/pricing/members
 // ============================================
@@ -16,9 +17,13 @@ import { prisma } from '@/lib/prisma'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
 import { newPricingPriceIds } from '@/lib/pricing-v2/prices'
 import { subscriberKind } from '@/lib/pricing-v2/view'
-import { decideInvite, memberLimit, normalizeEmail, seatsUsed, MEMBER_ROLES, type MemberRole } from '@/lib/pricing-v2/team'
-import { ownerTeamContext, teamMembershipCapacity, teamSeatsForCompany, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
-import { SeatOperationError, withSeatAdmission } from '@/lib/pricing-v2/seat-operation'
+import { decideInvite, memberLimit, normalizeEmail } from '@/lib/pricing-v2/team'
+import { ownerTeamContext, teamSeatsForCompany, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
+import { SeatOperationError, withSeatAdmission, withSeatAdmissionInTransaction, withSeatRevocation } from '@/lib/pricing-v2/seat-operation'
+
+import { CompanyMembershipSeatError, pinCompanyMembershipPrincipals, readCompanyMembershipLicense, requireCompanyMembershipCapacity } from '@/lib/pricing-v2/company-membership-seat.server'
+
+import { companyInviteRole } from '@/lib/pricing-v2/company-invite-role'
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE })
@@ -48,10 +53,19 @@ export async function GET(req: NextRequest) {
   try {
     const c = await ownerContext(req?.headers?.get('x-doya-owner'))
     if ('error' in c) return c.error
-    const limit = memberLimit(c.kind, c.kind === 'team' ? await teamSeatsForCompany(c.ctx.companyId) : null)
-    const members = await listMembers(c.ctx.companyId)
-    const used = seatsUsed({ ownerUserId: c.ctx.owner.id, ownerEmail: c.ctx.owner.email, members })
-    return json({ members, used, limit, kind: c.kind })
+    return await prisma.$transaction(async tx => {
+      const company = await tx.accountCompany.findUnique({ where: { id: c.ctx.companyId }, select: { userId: true, user: { select: { email: true } } } })
+      if (company?.userId !== c.userId || !isNewPricingEnabledFor(company.user?.email)) throw new CompanyMembershipSeatError('OWNER_CHANGED')
+      const members = await listMembers(c.ctx.companyId, tx)
+      try {
+        const license = await readCompanyMembershipLicense(tx, c.ctx.companyId)
+        return json({ members, used: license.used, limit: license.limit, kind: license.kind, seatUsageUnavailable: false })
+      } catch {
+        // Owner-authorized membership management does not require billing
+        // availability. Unknown usage never authorizes an operating admission.
+        return json({ members, used: null, limit: null, seatUsageUnavailable: true })
+      }
+    }, { isolationLevel: 'RepeatableRead', maxWait: 5000, timeout: 10000 })
   } catch {
     console.error('[pricing/members] list failed')
     return json({ error: 'メンバーを読み込めませんでした。時間をおいて再度お試しください。' }, 503)
@@ -63,26 +77,31 @@ export async function POST(req: NextRequest) {
     const c = await ownerContext(req?.headers?.get('x-doya-owner'))
     if ('error' in c) return c.error
     const body = await req.json().catch(() => null)
-    const role: MemberRole = MEMBER_ROLES.includes(body?.role) ? body.role : 'member'
+    const role = companyInviteRole(body?.role)
+    if (!role) return json({ code: 'INVALID_ROLE', error: '招待する役割を選び直してください。' }, 400)
+    const readonlyGuest = role === 'guest'
     const companyId = c.ctx.companyId
     const userId = c.userId
-    if (c.kind === 'team') await teamSeatsForCompany(companyId, { refresh: true, strict: true })
+    if (!readonlyGuest && c.kind === 'team') await teamSeatsForCompany(companyId, { refresh: true, strict: true })
     let limit = memberLimit(c.kind, null)
     let kind = c.kind
     // 人数を数えることと行を作ることを、直列化できる1つのトランザクションで行う（同時の招待で上限を超えない）。
     // 競合（P2034・P2002）のときは、数え直してやり直す
-    type Out = { ok: true; row: { id: string; email: string; role: string; status: string }; token: string; used: number } | { ok: false; status: number; code: 'NO_SEAT' | 'INVALID_EMAIL' | 'ALREADY_MEMBER' | 'OWNER_SELF' }
+    type Out = { ok: true; row: { id: string; email: string; role: string; status: string }; token: string; used: number | null } | { ok: false; status: number; code: 'NO_SEAT' | 'INVALID_EMAIL' | 'ALREADY_MEMBER' | 'OWNER_SELF' }
     let out: Out | null = null
     for (let attempt = 0; attempt < 4 && !out; attempt++) {
       try {
-        out = await withSeatAdmission(companyId, async (tx) => {
-          const capacity = await teamMembershipCapacity(companyId, tx)
-          if (capacity.ownerUserId !== userId) throw new Error('Company owner changed')
-          limit = capacity.limit
-          kind = capacity.kind
-          const ownerEmail = capacity.ownerEmail
+        const guard = readonlyGuest ? withSeatRevocation : withSeatAdmission
+        out = await guard(companyId, async (tx) => {
+          const owner = await pinCompanyMembershipPrincipals(tx, { companyId, ownerUserId: userId, actorUserId: userId })
+          if (!isNewPricingEnabledFor(owner.email)) throw new CompanyMembershipSeatError('OWNER_CHANGED')
+          const capacity = readonlyGuest ? null : await readCompanyMembershipLicense(tx, companyId)
+          if (capacity) {
+            if (capacity.ownerUserId !== userId) throw new CompanyMembershipSeatError('OWNER_CHANGED')
+            limit = capacity.limit; kind = capacity.kind
+          }
+          const ownerEmail = owner.email
           const members = await listMembers(companyId, tx)
-          const used = seatsUsed({ ownerUserId: c.ctx.owner.id, ownerEmail, members })
           const requestedEmail = normalizeEmail(body?.email)
           const activeUserIds = [...new Set(members.flatMap(member => member.status === 'active' && member.userId ? [member.userId] : []))]
           // 所属に残る旧メールだけで判定せず、参加済みアカウントの
@@ -94,8 +113,9 @@ export async function POST(req: NextRequest) {
             })
             if (alreadyActive) return { ok: false as const, status: 409, code: 'ALREADY_MEMBER' as const }
           }
-          const d = decideInvite({ email: body?.email, ownerEmail, members, used, seats: limit })
+          const d = decideInvite({ email: body?.email, ownerEmail, members, used: 0, seats: 1 })
           if (!d.ok) return d
+          if (capacity) requireCompanyMembershipCapacity(capacity)
           const email = normalizeEmail(body?.email)!
           const token = randomBytes(24).toString('base64url')
           // 外した（removed）人を呼び直すときは、同じ行を招待中に戻す（会社とメールの組は1つだけ）
@@ -105,7 +125,9 @@ export async function POST(req: NextRequest) {
             update: { role, status: 'invited', inviteToken: token, invitedBy: userId, invitedAt: new Date(), userId: null, joinedAt: null, removedAt: null },
             select: { id: true, email: true, role: true, status: true },
           })
-          return { ok: true as const, row, token, used: used + 1 }
+          const final = readonlyGuest ? null : await readCompanyMembershipLicense(tx, companyId)
+          if (final) requireCompanyMembershipCapacity(final)
+          return { ok: true as const, row, token, used: final?.used ?? null }
         })
       } catch (e) {
         const code = (e as { code?: string })?.code
@@ -128,8 +150,9 @@ export async function POST(req: NextRequest) {
     }
     const { row, token, used } = out
     const base = String(process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
-    return json({ member: row, inviteUrl: `${base}/pricing/join?token=${encodeURIComponent(token)}`, used, limit }, 201)
+    return json({ member: row, inviteUrl: `${base}/pricing/join?token=${encodeURIComponent(token)}`, used, limit: readonlyGuest ? null : limit }, 201)
   } catch (error) {
+    if (error instanceof CompanyMembershipSeatError) return json({ code: error.code, error: error.code === 'NO_SEAT' ? '人数がいっぱいです。会社のオーナーに人数の確認を依頼してください。' : '会社の持ち主が変わりました。画面を読み込み直してください。' }, 409)
     if (error instanceof SeatOperationError) return json({ code: error.code, error: '人数の変更を確認中です。時間をおいて、もう一度お試しください。' }, 409)
     console.error('[pricing/members] invite failed')
     return json({ error: '招待できませんでした。時間をおいて再度お試しください。' }, 503)
@@ -143,13 +166,33 @@ export async function DELETE(req: NextRequest) {
     const id = new URL(req.url).searchParams.get('id') || ''
     if (!id || id.length > 64) return json({ error: '外すメンバーを選び直してください。' }, 400)
     // 会社と ID の二重の条件（他の会社の行は外せない）
-    const r = await prisma.accountCompanyMember.updateMany({
-      where: { id, companyId: c.ctx.companyId, status: { in: ['invited', 'active'] } },
-      data: { status: 'removed', removedAt: new Date(), inviteToken: null },
+    const r = await withSeatRevocation(c.ctx.companyId, async tx => {
+      await pinCompanyMembershipPrincipals(tx, { companyId: c.ctx.companyId, ownerUserId: c.userId, actorUserId: c.userId })
+      const rows = await tx.$queryRaw<Array<{ id: string; role: string; status: string }>>
+        `SELECT id, role, status FROM account_company_members WHERE id = ${id} AND "companyId" = ${c.ctx.companyId} AND status IN ('invited', 'active') FOR UPDATE`
+      const target = rows[0]
+      if (!target) return { count: 0 }
+      // Removing an active central guest can restore its independent tool
+      // operating role. That is an admission if actual company usage grows.
+      const before = target.role === 'guest' && target.status === 'active'
+        ? await readCompanyOperatingSeatUsage(tx, c.ctx.companyId) : null
+      const result = await tx.accountCompanyMember.updateMany({
+        where: { id, companyId: c.ctx.companyId, status: target.status, role: target.role },
+        data: { status: 'removed', removedAt: new Date(), inviteToken: null },
+      })
+      if (result.count === 1 && before) {
+        const after = await readCompanyOperatingSeatUsage(tx, c.ctx.companyId)
+        if (after.used > before.used) await withSeatAdmissionInTransaction(c.ctx.companyId, tx, async () => {
+          requireCompanyMembershipCapacity(await readCompanyMembershipLicense(tx, c.ctx.companyId))
+        })
+      }
+      return result
     })
     if (r.count !== 1) return json({ error: 'メンバーが見つかりませんでした。' }, 404)
     return json({ ok: true })
-  } catch {
+  } catch (error) {
+    if (error instanceof CompanyMembershipSeatError && error.code === 'NO_SEAT') return json({ code: 'NO_SEAT', error: 'ツールの操作権限が復活すると購入人数を超えます。先に購入人数を増やすか、ツールの所属を外してください。' }, 409)
+    if (error instanceof SeatOperationError && error.code === 'SEAT_OPERATION_BUSY') return json({ code: error.code, error: '人数の変更を確認中です。時間をおいて、もう一度お試しください。' }, 409)
     console.error('[pricing/members] remove failed')
     return json({ error: 'メンバーを外せませんでした。時間をおいて再度お試しください。' }, 503)
   }

@@ -6,6 +6,7 @@
 // ⚠️ 会社はセッションの本人から決める（companyRoleForSession）。body・query の会社 ID は受け取らない。
 // ⚠️ 招待と外すのは新しい料金の /api/pricing/members（持ち主だけ）。ここは役割の変更と、見ることだけ。
 import { prisma } from '@/lib/prisma'
+import { CompanyRoleSeatError, withCompanyRoleSeatChange } from '@/lib/pricing-v2/company-role-seat.server'
 import { buildRoleEvent } from './access'
 import { companyRoleForSession, writeRoleEvent } from './access.server'
 import { canCompany } from './permissions'
@@ -93,7 +94,8 @@ export async function listMembersWithRoles(s: CompanyRolesSession): Promise<Memb
 /** 役割を変える。変更と記録を同じトランザクションで書く */
 export async function changeMemberRole(s: CompanyRolesSession, memberId: string, requested: unknown): Promise<RoleChangeDecision> {
   if (!canCompany(s.role, 'members.role.change', {}, s.policy)) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
-  return prisma.$transaction(async (tx) => {
+  try {
+    return await withCompanyRoleSeatChange({ companyId: s.companyId, actorUserId: s.userId, memberId, requested }, async (tx, applySeatPolicy) => {
     // 操作する人の役割を、トランザクションの中で読み直す（同時に自分の役割が下げられていたら、下がった役割で判定する。監査の中3）
     const company = await tx.accountCompany.findUnique({ where: { id: s.companyId }, select: { userId: true } })
     if (!company) return { ok: false as const, status: 403, code: 'NOT_ALLOWED' as const }
@@ -118,10 +120,16 @@ export async function changeMemberRole(s: CompanyRolesSession, memberId: string,
     if (!target) return { ok: false as const, status: 404, code: 'NOT_ACTIVE' as const }
     const d = decideRoleChange({ actor, isSelf: target.userId === s.userId, targetRole: target.role, targetStatus: target.status, requested })
     if (!d.ok) return d
+    return applySeatPolicy(d, async () => {
     await tx.accountCompanyMember.update({ where: { id: target.id }, data: { role: d.to } })
     await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: target.id, targetEmail: target.email, kind: 'role_changed', fromRole: d.from, toRole: d.to }), tx)
     return d
-  }, { isolationLevel: 'Serializable' })
+    })
+    })
+  } catch (error) {
+    if (error instanceof CompanyRoleSeatError) return { ok: false, status: error.status, code: error.code }
+    throw error
+  }
 }
 
 export interface RoleEventView {

@@ -10,6 +10,7 @@
 // 見た目は PricingNext と同じ（PricingNext.module.css を使い、足りない所だけ PricingV2.module.css）。
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import CheckoutRecovery from './CheckoutRecovery'
 import { Check, Minus, Plus } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -63,6 +64,8 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
 }) {
   const [interval, setBilling] = useState<BillingInterval>('monthly')
   const [seats, setSeats] = useState(5)
+  const [checkoutBlocked, setCheckoutBlocked] = useState(serverSignedIn)
+  const [recoveryKey, setRecoveryKey] = useState(0)
   const trialEligibleRaw = useTrialEligible()
   const toolCount = getListedServiceCount()
   const enterprise = seats >= ENTERPRISE_MIN_SEATS
@@ -93,7 +96,8 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
         </ul>
       </header>
 
-      {canceled ? <p className={base.notice} role="status">決済がキャンセルされました。もう一度お試しください。</p> : null}
+      {canceled ? <p className={base.notice} role="status">決済画面から戻りました。お申し込みの状況をご確認ください。</p> : null}
+      {view === 'new' ? <CheckoutRecovery serverSignedIn={serverSignedIn} refreshKey={recoveryKey} onBlockedChange={setCheckoutBlocked} /> : null}
       <PowerPackReturn sessionId={powerPackSessionId} canceled={powerPackCanceled} />
 
       {view === 'legacy' ? (
@@ -210,7 +214,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
             {view === 'legacy' ? <span className={base.current}>今のご契約のままお使いください</span>
               : view === 'team' ? <span className={base.current}>ご利用中のプラン</span>
               : enterprise ? <a href={ENTERPRISE_CONTACT_MAILTO} className={base.primary}>見積りを相談する</a>
-              : <TeamCheckoutButton seats={seats} interval={interval} serverSignedIn={serverSignedIn} trialEligible={trialEligible} />}
+              : <TeamCheckoutButton seats={seats} interval={interval} serverSignedIn={serverSignedIn} trialEligible={trialEligible} checkoutBlocked={checkoutBlocked} onRecoveryNeeded={() => setRecoveryKey((key) => key + 1)} />}
           </div>
         </article>
 
@@ -229,7 +233,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
         </article>
       </section>
 
-      {view === 'team' ? <TeamManage /> : null}
+      {view === 'team' ? <TeamManage /> : serverSignedIn ? <TeamManage membershipOnly /> : null}
       {view === 'team' || view === 'legacy' ? <BillingSummary /> : null}
       {canBuyPack && (view === 'team' || view === 'legacy') ? <PowerPackBuy /> : null}
 
@@ -294,23 +298,31 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
 }
 
 /** チームの申し込み。サーバー（/api/stripe/checkout）が旗・据え置き・二重契約を確かめてから、Stripe の画面を作る */
-function TeamCheckoutButton({ seats, interval, serverSignedIn, trialEligible }: {
+function TeamCheckoutButton({ seats, interval, serverSignedIn, trialEligible, checkoutBlocked, onRecoveryNeeded }: {
   seats: number
   interval: BillingInterval
   serverSignedIn: boolean
   trialEligible: boolean
+  checkoutBlocked: boolean
+  onRecoveryNeeded: () => void
 }) {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const ownerId = (session?.user as { id?: string } | undefined)?.id ?? ''
+  const currentOwner = useRef(ownerId)
+  currentOwner.current = status === 'authenticated' ? ownerId : ''
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const messageId = useId()
   const active = useRef<AbortController | null>(null)
-  useEffect(() => () => active.current?.abort(), [])
+  useEffect(() => {
+    active.current?.abort(); active.current = null; setBusy(false); setMessage(null)
+    return () => { active.current?.abort(); active.current = null }
+  }, [ownerId, status])
   const signedIn = status === 'authenticated' || (status === 'loading' && serverSignedIn)
 
   const start = async () => {
-    if (busy || active.current) return
+    if (busy || active.current || checkoutBlocked) return
     if (!signedIn) {
       router.push(`/auth/signin?callbackUrl=${encodeURIComponent(RETURN_TO)}`)
       return
@@ -319,6 +331,7 @@ function TeamCheckoutButton({ seats, interval, serverSignedIn, trialEligible }: 
     active.current = controller
     setBusy(true)
     setMessage(null)
+    const requestOwner = ownerId
     let navigating = false
     try {
       const res = await readBillingResponse('/api/stripe/checkout', {
@@ -326,6 +339,7 @@ function TeamCheckoutButton({ seats, interval, serverSignedIn, trialEligible }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId: TEAM_PLAN_ID, billingPeriod: interval, seats, returnTo: RETURN_TO, serviceId: 'pricing' }),
       }, controller.signal)
+      if (controller.signal.aborted || currentOwner.current !== requestOwner || active.current !== controller) return
       const url = billingRedirectUrl(res.data.url)
       if (res.ok && url && typeof res.data.sessionId === 'string') {
         window.location.href = url
@@ -335,20 +349,21 @@ function TeamCheckoutButton({ seats, interval, serverSignedIn, trialEligible }: 
       // サーバーの文言（据え置き・二重契約・人数など）をそのまま出す。分からないときは、申し込みを繰り返さないよう案内する
       setMessage(typeof res.data.error === 'string' ? res.data.error : '決済画面を開けたか確認できませんでした。新しいお申し込みを繰り返さず、契約状況をご確認ください。')
     } catch (e) {
-      if (e instanceof BillingResponseError && e.cancelled) return
+      if (controller.signal.aborted || currentOwner.current !== requestOwner || e instanceof BillingResponseError && e.cancelled) return
       setMessage('決済画面を開けたか確認できませんでした。新しいお申し込みを繰り返さず、契約状況をご確認ください。')
     } finally {
-      if (!navigating) {
+      if (!navigating && active.current === controller) {
         active.current = null
         setBusy(false)
+        if (currentOwner.current === requestOwner) onRecoveryNeeded()
       }
     }
   }
 
   return (
     <>
-      <button type="button" className={base.primary} onClick={start} disabled={busy} aria-busy={busy} aria-describedby={message ? messageId : undefined}>
-        {busy ? '決済画面を準備しています…' : trialEligible ? 'チームを初月無料で試す' : 'チームを申し込む'}
+      <button type="button" className={base.primary} onClick={start} disabled={busy || checkoutBlocked || status === 'loading' && serverSignedIn} aria-busy={busy} aria-describedby={message ? messageId : undefined}>
+        {busy ? '決済画面を準備しています…' : checkoutBlocked ? 'お申し込みの状況をご確認ください' : trialEligible ? 'チームを初月無料で試す' : 'チームを申し込む'}
       </button>
       {message ? <p id={messageId} role="alert" className={styles.error}>{message}</p> : null}
       <p className={base.actionNote}>いつでも解約できます・人数はあとから増やせます</p>

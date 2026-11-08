@@ -29,13 +29,15 @@ const escapeHtml = load('src/lib/html-escape.ts');
   let previous = Promise.resolve();
   let deliveries = 0;
   const prisma = {
+    user: { findMany: async () => [] },
     $transaction: async (work) => {
       let release;
       const before = previous;
       previous = new Promise((resolve) => { release = resolve; });
       const tx = {
-        $queryRaw: async () => { await before; return [{ id: 'org' }]; },
-        hrOrganizationMember: { findFirst: async () => null },
+        user: { findMany: async () => [] },
+        $queryRaw: async () => { await before; return [{ id: 'org', role: 'ADMIN' }]; },
+        hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
         hrInvitation: {
           findFirst: async ({ where }) => invitations.find((row) => row.email === where.email && row.expiresAt > new Date()) || null,
           create: async ({ data }) => { const row = { ...data, id: `inv-${invitations.length + 1}` }; invitations.push(row); return row; },
@@ -52,7 +54,7 @@ const escapeHtml = load('src/lib/html-escape.ts');
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', userId: 'admin', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } },
-    '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/billing': { checkMemberLimit: async () => null, getOrgPlan: async () => 'PRO', getOrgPlanLimits: () => ({ maxMembers: -1 }) },
     '@/lib/hr/email': { sendInvitationEmail: async () => { deliveries++; return false; } },
     '@/lib/hr/audit': { logAudit: async () => {} },
     crypto: require('node:crypto'),

@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const userId = await resolveUserId()
     if (!userId) return privateApiJson({ onboarded: false, memberships: [] }, { status: 401 })
     // 招待されていた組織があれば、ここで本人の所属にする
-    await claimPendingMemberships(userId)
+    const admission = await claimPendingMemberships(userId)
     const memberships = await listMemberships()
     const slug = new URL(req.url).searchParams.get('org')?.trim() || undefined
     const ctx = await getExpenseContext(slug)
@@ -19,6 +19,7 @@ export async function GET(req: Request) {
       organization: ctx ? { slug: ctx.organizationSlug } : null,
       role: ctx?.role ?? null,
       memberships,
+      ...(admission?.issues?.length ? { admissionIssues: admission.issues } : {}),
     })
   } catch {
     console.error('[expense/usage] failed')

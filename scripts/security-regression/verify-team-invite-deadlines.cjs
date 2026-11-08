@@ -19,7 +19,7 @@ function fixture(service, { offset = -1, delayAt = '', existing = false, changed
   deleteMany:async()=>{writes++;member=null;delay('delete');return{count:1}},
  };
  const tx={
-  $queryRaw:async()=>{delay('lock');return[{id:'org'}]},
+  $queryRaw:async strings=>{if(service==='hr'&&strings.join('').includes('FROM "User"')){delay('account');return[{email:'qa@example.invalid'}]}delay('lock');return[{id:'org'}]},
   [`${service}Member`]:model,hrInvitation:model,
   hrOrganizationMember:{count:async()=>{delay('quota');return full?2:1},create:async()=>{writes++;created++;delay('create');return{id:'new-member'}}},
   user:{findUnique:async()=>{delay('account');return{email:'qa@example.invalid'}}},

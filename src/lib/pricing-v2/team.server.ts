@@ -15,8 +15,9 @@ import { isPaidPlan } from '@/lib/unified-plan'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
 import { LEGACY_PRO_MONTHLY_POINTS, teamMonthlyPoints } from './plans'
 import { newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from './prices'
-import { findSeatItem, isSeatCacheFresh, memberLimit, seatsUsed, type MemberLike } from './team'
+import { findSeatItem, isSeatCacheFresh, memberLimit } from './team'
 import { subscriberKind } from './view'
+import { readCompanyOperatingSeatUsage } from './company-seat-minimum.server'
 import { seatCacheRevision, saveSeatCacheAtRevision, withSeatMonthlyGrantInTransaction } from './seat-operation'
 
 /** 新しい表を使ってよいか（旗が off でなく、新しい料金の価格がそろっている）。人を問わない入口の判定。人ごとは teamTablesAllowedFor */
@@ -177,11 +178,9 @@ export async function teamSeatsUsed(companyId: string): Promise<number> {
   const company = await prisma.accountCompany.findUnique({ where: { id: companyId }, select: { userId: true, user: { select: { email: true } } } })
   if (!company) return 0
   if (!teamTablesAllowedFor(company.user?.email)) return 1
-  const members: MemberLike[] = await prisma.accountCompanyMember.findMany({
-    where: { companyId, status: { in: ['invited', 'active'] } },
-    select: { email: true, userId: true, status: true, invitedAt: true },
+  return prisma.$transaction(async tx => (await readCompanyOperatingSeatUsage(tx, companyId)).used, {
+    isolationLevel: 'RepeatableRead', maxWait: 5000, timeout: 10000,
   })
-  return seatsUsed({ ownerUserId: company.userId, ownerEmail: company.user?.email ?? null, members })
 }
 
 /**
@@ -196,7 +195,9 @@ export async function resolveCompanyForUser(userId: string): Promise<{ companyId
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
   if (!teamTablesAllowedFor(me?.email)) return null
   const m = await prisma.accountCompanyMember.findFirst({
-    where: { userId, status: 'active' },
+    // Only operating central roles can sponsor this user's generation.
+    // Shared guest viewing is resolved by the separate role/access context.
+    where: { userId, status: 'active', role: { in: ['admin', 'manager', 'billing', 'member'] } },
     orderBy: { joinedAt: 'asc' },
     select: { companyId: true, company: { select: { user: { select: { plan: true } } } } },
   })
