@@ -35,10 +35,10 @@
 /* 会話の欄。端まで来ても、後ろの画面をスクロールさせない（overscroll-behavior: contain） */
 .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 16px; font-size: 14px; line-height: 1.7; word-break: auto-phrase; line-break: strict; overflow-wrap: break-word; }
 .feed { display: flex; flex-direction: column; gap: 12px; }
-/* 見出しのバディちゃん */
+/* 見出しのドヤくん */
 .who { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .whoImg { width: 28px; height: 28px; object-fit: contain; }
-/* バディちゃんの発言（左に小さなクマ、右に言葉） */
+/* ドヤくんの発言（左に小さなクマ、右に言葉） */
 .bot { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: start; }
 .botImg { width: 36px; height: 36px; object-fit: contain; animation: rise .3s cubic-bezier(.22, 1, .36, 1) both; }
 .bot > p { padding-top: 4px; }

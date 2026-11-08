@@ -1,4 +1,4 @@
-/* バディちゃんの紹介ページ。スマホ（375px）から崩れないように、1列から始めて広い画面で横に並べる */
+/* ドヤくんの紹介ページ。スマホ（375px）から崩れないように、1列から始めて広い画面で横に並べる */
 .page {
   max-width: 920px; margin: 0 auto; padding: 24px 16px 48px;
   display: flex; flex-direction: column; gap: 32px;
@@ -26,6 +26,7 @@
 .profileRow:first-child { border-top: 0; }
 .profileRow dt { font-size: 13px; font-weight: 800; color: #64748b; }
 .profileRow dd { margin: 0; font-size: 15px; font-weight: 700; word-break: auto-phrase; }
+.detail { margin: 6px 0 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 13.5px; font-weight: 500; line-height: 1.7; color: #475569; }
 
 .scenes { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .scene {

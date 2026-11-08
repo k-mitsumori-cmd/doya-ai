@@ -333,10 +333,10 @@
 /* メニューの「新機能」の札（ドヤくんの知らせ。7日で消える） */
 .newTag { flex: none; margin-left: auto; padding: 0 7px; border-radius: 999px; background: #ff1e72; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px; }
 
-/* 左のメニューの一番下「バディちゃんとは？」（クマの紹介ページへ） */
-.buddyRow { color: var(--blue); }
-.buddyIcon { flex: none; width: 24px; height: 24px; object-fit: contain; }
-/* スマホで「ドヤバディに頼む」（左下に固定）が出る人は、メニューの一番下の行（バディちゃんとは？）がボタンに隠れないよう、下を空ける */
+/* 左のメニューの一番下「ドヤくんとは？」（クマの紹介ページへ） */
+.kunRow { color: var(--blue); }
+.kunIcon { flex: none; width: 24px; height: 24px; object-fit: contain; }
+/* スマホで「ドヤバディに頼む」（左下に固定）が出る人は、メニューの一番下の行（ドヤくんとは？）がボタンに隠れないよう、下を空ける */
 @media (max-width: 767px) {
   .shell[data-agent-chat='true'] .account { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }

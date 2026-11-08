@@ -160,11 +160,11 @@ export default function AgentDock() {
       </button>
       <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label={`${brandName()}に頼む`} aria-hidden={!open}>
         <header className={styles.head}>
-          {/* 見出しにバディちゃん（クマ）を出し、誰と話しているかが分かるようにする */}
+          {/* 見出しにドヤくん（クマ）を出し、誰と話しているかが分かるようにする */}
           <span className={styles.who}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/character/mini-hello-256.webp" alt="" aria-hidden width={28} height={28} className={styles.whoImg} />
-            <strong>バディちゃん</strong>
+            <strong>ドヤくん</strong>
           </span>
           {/* スマホだけ出す切り替え（会話・両方・画面）。見出しと同じ行に置き、狭い画面の高さを使いすぎない */}
           <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
