@@ -60,7 +60,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const undoFill = useCallback(() => {
     const f = filled.current
     filled.current = null
-    if (!f || !shouldUndoFill({ filledForm: f.form, currentForm: getAgentForm(f.formKey), receipt: reviewed.current, draftNow: draftKey(f.form.draft()) })) return
+    if (!f || !shouldUndoFill({ phase: stateRef.current.phase, filledForm: f.form, currentForm: getAgentForm(f.formKey), receipt: reviewed.current, draftNow: draftKey(f.form.draft()) })) return
     clearStage(); cursorOff(); clearMarks()
     f.form.restore?.(f.before)
   }, [])

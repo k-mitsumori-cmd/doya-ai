@@ -48,12 +48,14 @@ export function judgeReview(input: {
 
 /**
  * 「やめる」で、会話が入れた値を画面から消してよいか。
+ * - 本人が「やめる」を押せる時（確認カード・失敗・選択肢）だけ戻す。値を入れている途中・金額を直している途中のやり直しでは、欄に触らない
  * - 値を入れたフォームが、今も同じ画面にあるときだけ戻す（別の画面へ移ったあとは触らない）
  * - 確認カードのあとに本人が画面で直していたら、本人の内容を残す（戻さない）
  * - 確認カードの前（途中で止めた・失敗した）は、入れかけの値を戻す
  */
-export function shouldUndoFill(input: { filledForm: object; currentForm: object | undefined; receipt: ReviewReceipt | null; draftNow: string | null }): boolean {
-  const { filledForm, currentForm, receipt, draftNow } = input
+export function shouldUndoFill(input: { phase: string; filledForm: object; currentForm: object | undefined; receipt: ReviewReceipt | null; draftNow: string | null }): boolean {
+  const { phase, filledForm, currentForm, receipt, draftNow } = input
+  if (phase !== 'confirm' && phase !== 'failed' && phase !== 'choosing') return false
   if (currentForm !== filledForm) return false
   if (!receipt) return true
   return receipt.form === filledForm && receipt.draft === draftNow
