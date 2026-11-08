@@ -22,6 +22,7 @@ export function useAgentForm(formKey: string, handler: AgentFormHandler): void {
     blocked: () => ref.current.blocked?.() ?? null,
     // 省略できる口は、呼ばれた時点の最新の関数があるときだけ呼ぶ（登録の形は変えない）
     prepare: () => ref.current.prepare?.(),
+    restore: (saved) => ref.current.restore?.(saved),
     choices: ref.current.choices ? () => ref.current.choices?.() ?? null : undefined,
     choose: ref.current.choose ? (id) => ref.current.choose?.(id) : undefined,
   }

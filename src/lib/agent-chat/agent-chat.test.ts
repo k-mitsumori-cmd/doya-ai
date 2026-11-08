@@ -8,7 +8,7 @@ import { groundValues, yenCandidates } from './ground'
 import { CHAT_OPS, EXPENSE_ADD, EXPENSE_ONEOFF_ADD, INCOME_INVOICE_DRAFT, INCOME_SALE_ADD, KINTAI_LEAVE_REQUEST, KINTAI_OVERTIME_REQUEST, PROMANE_CLIENT_ADD, PROMANE_PROJECT_ADD, answerProblem, buildSteps, confirmRows, doneView, leadText, resolveFixed, chatOpByKey } from './ops'
 import { chatResponse, chatActions } from './handle'
 import { durationText, parseDuration } from './duration'
-import { createSaveLock, draftKey, judgeReview, onOpScreen } from './review'
+import { createSaveLock, draftKey, judgeReview, onOpScreen, shouldUndoFill } from './review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from './turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from './types'
 
@@ -770,4 +770,22 @@ test('操作に当たらないとき、AI の理由の文を画面に渡さな�
   const res = chatResponse({ kind: 'unknown', reason: 'どの操作にも当たらないので unknown にしました', suggestions: [{ label: '売上を見る', href: '/income/revenue' }] } as never, '利益率ってどう計算するの？')
   assert.equal(res.kind, 'unknown')
   assert.equal((res as { reason?: string }).reason, '')
+})
+
+test('「やめる」で戻すのは、同じ画面のフォームで、確認カードのあとに本人が直していないときだけ', () => {
+  const form = {}, other = {}
+  // 確認カードの前に失敗したときは、入れかけの値を戻す
+  assert.equal(shouldUndoFill({ phase: 'failed', filledForm: form, currentForm: form, receipt: null, draftNow: 'a' }), true)
+  // 値を入れている途中・金額を直している途中のやり直しでは、欄に触らない（verify-agent-confirmation-boundary の「途中でやり直したら、どの欄も変えない」）
+  assert.equal(shouldUndoFill({ phase: 'working', filledForm: form, currentForm: form, receipt: { form, draft: 'a' }, draftNow: 'a' }), false)
+  assert.equal(shouldUndoFill({ phase: 'submitting', filledForm: form, currentForm: form, receipt: { form, draft: 'a' }, draftNow: 'a' }), false)
+  // 確認カードのまま「やめる」は戻す
+  assert.equal(shouldUndoFill({ phase: 'confirm', filledForm: form, currentForm: form, receipt: { form, draft: 'a' }, draftNow: 'a' }), true)
+  // 確認カードのあとに本人が画面で直したら、本人の内容を残す
+  assert.equal(shouldUndoFill({ phase: 'confirm', filledForm: form, currentForm: form, receipt: { form, draft: 'a' }, draftNow: 'b' }), false)
+  // 別の画面へ移った・フォームが作り直された
+  assert.equal(shouldUndoFill({ phase: 'confirm', filledForm: form, currentForm: undefined, receipt: null, draftNow: null }), false)
+  assert.equal(shouldUndoFill({ phase: 'confirm', filledForm: form, currentForm: other, receipt: null, draftNow: 'a' }), false)
+  // 確認カードを出したフォームと違うフォームに入れていたときは触らない
+  assert.equal(shouldUndoFill({ phase: 'confirm', filledForm: form, currentForm: form, receipt: { form: other, draft: 'a' }, draftNow: 'a' }), false)
 })

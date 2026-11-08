@@ -19,6 +19,15 @@
   line-height: 1.7; font-size: 15px;
 }
 .sheet[data-open='true'] { opacity: 1; transform: none; }
+/* 768px 以上で「ドヤバディに頼む」のボタン（右下、高さ48px）がある画面では、知らせのカードをボタンの上に出す。
+   右下に重ねると、頼むと問い合わせの2つのボタンが隠れるため（2026-11-08 統括の本番の確認）。
+   印は AppShell が付ける data-agent-chat。767px 以下は下のシートの指定に任せる */
+@media (min-width: 768px) {
+  :global(body:has([data-agent-chat='true'])) .sheet {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100vh - 112px); overflow-y: auto; overscroll-behavior: contain;
+  }
+}
 .sheet[data-tone='error'] { border-color: color-mix(in srgb, var(--n-bad) 45%, var(--n-line)); }
 .handle { display: none; }
 .head { display: grid; grid-template-columns: 72px minmax(0, 1fr) 32px; gap: 12px; align-items: start; }

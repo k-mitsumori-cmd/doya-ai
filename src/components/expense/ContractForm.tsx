@@ -222,6 +222,12 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
       currency: f.currency,
     }),
     draft: () => ({ f, vendorMode, vendorId, vendor, price, draftYen }),
+    restore: (saved) => {
+      const s = saved as { f: typeof f; vendorMode: typeof vendorMode; vendorId: string; vendor: VendorDraft; price: PriceDraft; draftYen: string } | null
+      if (!s || mode !== 'create') return
+      agentTitle.current = ''
+      setF(s.f); setVendorMode(s.vendorMode); setVendorId(s.vendorId); setVendor(s.vendor); setPrice(s.price); setDraftYen(s.draftYen)
+    },
     submit: async () => {
       // 画面のボタンが押せない状態（必要な項目が足りない）では、会話からも保存しない
       if (!ready) return { ok: false, error: '必要な項目（名称・金額・取引先）が足りないため、登録できません。' }

@@ -41,6 +41,11 @@ export interface AgentFormHandler {
    */
   prepare?(): void | Promise<void>
   /**
+   * 「やめる」で、会話が値を入れる前の画面に戻す。saved は、値を入れる前に draft() で控えたもの（null なら窓は閉じていた）。
+   * prepare で開いた窓は閉じる。⚠️ 欄を戻すだけで、保存も削除もしない
+   */
+  restore?(saved: unknown): void
+  /**
    * 本人に選んでもらう選択肢（例: ワークスペースが複数あるときの一覧）。なければ null。
    * 返すのは、その人が今の権限で見える選択肢だけ（画面が今出している一覧と同じ）。AI に選ばせない。
    */

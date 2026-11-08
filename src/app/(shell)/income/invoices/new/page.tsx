@@ -153,6 +153,13 @@ export default function NewInvoicePage() {
       _amountTaxRate: rows.length === 1 ? String(rows[0].taxRate) : '',
     }),
     draft: () => ({ clientId, newClientName, title, issueDate, dueDate, notes, rows }),
+    restore: (saved) => {
+      const s = saved as { clientId: string; newClientName: string; title: string; issueDate: string; dueDate: string; notes: string; rows: LineRow[] } | null
+      if (!s) return
+      agentTitle.current = ''
+      setClientId(s.clientId); setNewClientName(s.newClientName); setTitle(s.title)
+      setIssueDate(s.issueDate); setDueDate(s.dueDate); setNotes(s.notes); setRows(s.rows)
+    },
     submit: async () => {
       const r = await save()
       return r.ok ? { ok: true, href: `/income/invoices/${r.id}` } : { ok: false, error: r.error, kind: r.kind }

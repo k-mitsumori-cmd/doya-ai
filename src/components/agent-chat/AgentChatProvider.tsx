@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import { chatOpByKey, resolveFixed } from '@/lib/agent-chat/ops'
 import { incomeAmountAmendmentMessage, planIncomeAmountAmendment } from '@/lib/agent-chat/income-amount'
 import { jstTodayYmd, yenText } from '@/lib/agent-chat/today'
-import { draftKey, judgeReview, onOpScreen, type ReviewReceipt } from '@/lib/agent-chat/review'
+import { draftKey, judgeReview, onOpScreen, shouldUndoFill, type ReviewReceipt } from '@/lib/agent-chat/review'
 import { INITIAL_STATE, reduce, type ChatEffect, type ChatEvent, type ChatState } from '@/lib/agent-chat/turn'
 import type { AgentFormSnapshot, ChatApiResponse, ChatOp } from '@/lib/agent-chat/types'
 import { getAgentForm, runAgentSubmit, waitForAgentForm, type AgentFormHandler } from './form-bus'
@@ -54,6 +54,16 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
   const dispatchRef = useRef<(ev: ChatEvent) => void>(() => {})
   // 選択肢を出して待っているとき、本人が選んだ id を実行役へ渡す口（1つの依頼に1つだけ）
   const chooserRef = useRef<((id: string) => void) | null>(null)
+  // 会話が値を入れたフォームと、入れる前の全部の欄（draft）。「やめる」で、入れる前の画面に戻すために控える
+  const filled = useRef<{ form: AgentFormHandler; formKey: string; before: unknown } | null>(null)
+  /** 「やめる」で、会話が入れた値を画面から消す。確認カードのあとに本人が画面で直していたら、その内容は残す */
+  const undoFill = useCallback(() => {
+    const f = filled.current
+    filled.current = null
+    if (!f || !shouldUndoFill({ phase: stateRef.current.phase, filledForm: f.form, currentForm: getAgentForm(f.formKey), receipt: reviewed.current, draftNow: draftKey(f.form.draft()) })) return
+    clearStage(); cursorOff(); clearMarks()
+    f.form.restore?.(f.before)
+  }, [])
 
   const runOp = useCallback(async (op: ChatOp, values: Record<string, string>, id: number) => {
     const alive = () => runId.current === id
@@ -93,6 +103,8 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
       // 権限がないなど、今の人には操作できないとき（画面とサーバーの今の判定）は、値を入れる前に理由を出して止まる
       const blocked = form.blocked?.()
       if (blocked) { d({ t: 'run-failed', kind: 'blocked', error: blocked }); return }
+      // 入れる前の画面を控える（「やめる」で戻すため）。窓を開く前に控えるので、窓が閉じていたことも分かる
+      filled.current = { form, formKey: op.formKey, before: form.draft() }
       // ダイアログを開くなど、欄を出す準備が要る画面は、ここで出す（値は入れない）
       await form.prepare?.()
       if (!alive()) throw ABORTED
@@ -224,6 +236,7 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
         let r: Awaited<ReturnType<typeof form.submit>>
         try { r = await runAgentSubmit(() => form.submit()) } catch { r = { ok: false, error: '登録できませんでした。通信を確かめて、もう一度お試しください。' } }
         if (runId.current !== id) return
+        if (r.ok) filled.current = null
         dispatchRef.current(r.ok ? { t: 'submitted', ok: true, snap, href: r.href } : { t: 'submitted', ok: false, error: r.error, kind: r.kind })
         // 完了を出してから、できた物の画面へ移る（フォームは、会話からの保存では自分で移らない）
         if (r.ok) { const to = r.href; window.setTimeout(() => { if (runId.current === id && window.location.pathname !== to) router.push(to) }, 700) }
@@ -233,18 +246,22 @@ export default function AgentChatProvider({ children }: { children: ReactNode })
 
   const dispatch = useCallback((ev: ChatEvent) => {
     const { state: next, effects } = reduce(stateRef.current, ev)
+    // 「やめる」（reset）では、実行役を止めてから、会話が入れた値を画面から消す。新しい依頼では、前の控えを捨てる
+    if (ev.t === 'reset') undoFill()
+    else if (ev.t === 'ask' && next !== stateRef.current) filled.current = null
     // 新しい依頼を受けたとき・やり直したときだけ、前の実行役を止める（受け付けなかった依頼では止めない）
     if ((ev.t === 'ask' && next !== stateRef.current) || ev.t === 'reset') { runId.current += 1; reviewed.current = null }
     stateRef.current = next
     setState(next)
     effects.forEach(runEffect)
-  }, [runEffect])
+  }, [runEffect, undoFill])
   dispatchRef.current = dispatch
 
   const begin = useCallback((text: string, res: ChatApiResponse) => {
     // 経営ホームがすでに AI を呼んで答えを受け取っているので、ここでは呼ばない。ask のあとに reply を渡す
     runId.current += 1
     reviewed.current = null
+    filled.current = null
     stateRef.current = { ...INITIAL_STATE, phase: 'reading', text }
     setState(stateRef.current)
     setOpen(true)

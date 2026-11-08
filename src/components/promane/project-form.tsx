@@ -202,6 +202,14 @@ export function ProjectForm({
       };
     },
     draft: () => (formRef.current ? { billingType, fields: Array.from(read().entries()) } : null),
+    // 会話が入れる欄（案件名・契約金額）だけを、入れる前の値に戻す
+    restore: (saved) => {
+      const s = saved as { fields: [string, FormDataEntryValue][] } | null;
+      if (!s || project) return;
+      const before = (k: string) => String(s.fields.find(([n]) => n === k)?.[1] ?? '');
+      setDomValue('name', before('name'));
+      setDomValue('contractAmount', before('contractAmount'));
+    },
     submit: async () => {
       if (!formRef.current) return { ok: false, error: '案件の画面が閉じられました。もう一度、依頼から始めてください。' };
       return runSubmit(read());
