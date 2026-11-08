@@ -87,6 +87,8 @@ function PayablesInner() {
     setValue: (key, value) => agentBridge.current?.setValue(key, value) ?? false,
     snapshot: () => agentBridge.current?.snapshot() ?? {},
     draft: () => agentBridge.current?.draft() ?? null,
+    // 「やめる」: 会話が開いた窓は閉じる（窓を閉じると、入れた値も消える）。もともと開いていた窓は、そのままにする
+    restore: (saved) => { if (saved == null) setAdding(false) },
     submit: async () => (agentBridge.current ? agentBridge.current.submit() : { ok: false, error: '単発の支出の画面が閉じられました。もう一度、依頼から始めてください。' }),
   })
   const { ask, dialog } = useConfirm()

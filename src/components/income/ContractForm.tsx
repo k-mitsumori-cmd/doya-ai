@@ -244,6 +244,12 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       total: totals ? String(totals.totalInclTax) : '',
     }),
     draft: () => ({ f, rows, newClientName }),
+    restore: (saved) => {
+      const s = saved as { f: typeof f; rows: typeof rows; newClientName: string } | null
+      if (!s) return
+      agentTitle.current = ''
+      setF(s.f); setRows(s.rows); setNewClientName(s.newClientName)
+    },
     submit: async () => {
       const r = await save()
       return r.ok && r.id ? { ok: true, href: `/income/contracts/${r.id}` } : { ok: false, error: r.ok ? '登録できませんでした。' : r.error, ...(r.ok ? {} : { kind: r.kind }) }

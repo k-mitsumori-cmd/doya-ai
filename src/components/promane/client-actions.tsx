@@ -115,6 +115,13 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
     snapshot: () => ({ name: draft.name.trim(), contactName: draft.contactName.trim(), email: draft.email.trim(), phone: draft.phone.trim() }),
     // 窓を閉じたあとは、確認した内容を保存しない
     draft: () => (open ? draft : null),
+    // 「やめる」: 会話が開いた窓なら閉じて空にする。もともと開いていた窓なら、入れる前の内容に戻す
+    restore: (saved) => {
+      const s = saved as ReturnType<typeof emptyClientDraft> | null;
+      if (s) { setDraft(s); return; }
+      setDraft(emptyClientDraft());
+      setOpen(false);
+    },
     submit: () => createClient(draft),
   });
 

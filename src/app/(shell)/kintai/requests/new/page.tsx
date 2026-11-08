@@ -263,6 +263,14 @@ function NewRequestContent() {
       reason: reason.trim(),
     }),
     draft: () => ({ type, reason, fixDate, fixClockType, fixTime, fixRecordId, leaveStart, leaveEnd, leaveType, otDate, otHours, otMinutes, hwDate, hwStart, hwEnd }),
+    // 会話が入れる欄（種類・休暇・残業・理由）だけを、入れる前に戻す
+    restore: (saved) => {
+      const s = saved as { type: string; reason: string; leaveStart: string; leaveEnd: string; leaveType: string; otDate: string; otHours: string; otMinutes: string } | null
+      if (!s) return
+      setType(s.type); setStep(s.type ? 2 : 1); setReason(s.reason)
+      setLeaveStart(s.leaveStart); setLeaveEnd(s.leaveEnd); setLeaveType(s.leaveType)
+      setOtDate(s.otDate); setOtHours(s.otHours); setOtMinutes(s.otMinutes)
+    },
     submit: submitRequest,
   })
 

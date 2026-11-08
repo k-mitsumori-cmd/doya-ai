@@ -46,6 +46,19 @@ export function judgeReview(input: {
   return 'same'
 }
 
+/**
+ * 「やめる」で、会話が入れた値を画面から消してよいか。
+ * - 値を入れたフォームが、今も同じ画面にあるときだけ戻す（別の画面へ移ったあとは触らない）
+ * - 確認カードのあとに本人が画面で直していたら、本人の内容を残す（戻さない）
+ * - 確認カードの前（途中で止めた・失敗した）は、入れかけの値を戻す
+ */
+export function shouldUndoFill(input: { filledForm: object; currentForm: object | undefined; receipt: ReviewReceipt | null; draftNow: string | null }): boolean {
+  const { filledForm, currentForm, receipt, draftNow } = input
+  if (currentForm !== filledForm) return false
+  if (!receipt) return true
+  return receipt.form === filledForm && receipt.draft === draftNow
+}
+
 export const SAVE_BUSY_MESSAGE = '保存の処理が進んでいます。終わるまでお待ちください。'
 
 /**
