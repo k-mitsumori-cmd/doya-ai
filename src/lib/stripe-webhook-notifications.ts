@@ -13,7 +13,8 @@ export async function enqueueBillingOperationalNotification(
   payload: EventNotification
 ): Promise<void> {
   await prisma.stripeWebhookNotification.createMany({
-    data: [{ eventId, eventType, payload: payload as unknown as Prisma.InputJsonValue }],
+    // Eligible immediately: database defaults can round ahead of the JS clock.
+    data: [{ eventId, eventType, payload: payload as unknown as Prisma.InputJsonValue, nextAttemptAt: new Date(0) }],
     skipDuplicates: true,
   })
 }
@@ -36,6 +37,8 @@ export async function enqueueStripeWebhookNotification(
         eventId,
         eventType,
         payload: payload as unknown as Prisma.InputJsonValue,
+        // Eligibility must not depend on database/application clock precision.
+        nextAttemptAt: new Date(0),
       }],
       skipDuplicates: true,
     })

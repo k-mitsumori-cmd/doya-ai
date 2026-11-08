@@ -1,0 +1,11 @@
+# Stripe notification initial eligibility — 2026-11-09
+
+A newly enqueued notice used the database default timestamp for nextAttemptAt, while the immediate delivery claim compared it with a JavaScript timestamp. In an isolated run using the actual outbox, 146 of 400 initial claims were skipped because the stored due time was 1ms ahead of the application time. The rows remained pending and the actual authenticated Cron recovered all 400 exactly once. Production deployment metadata contains the five-minute /api/cron/stripe-notifications schedule; no real notifications or Cron mutation were executed during diagnosis.
+
+Both operational and claimed-webhook enqueue paths now explicitly make NEW rows immediately eligible with nextAttemptAt at the Unix epoch. Existing rows are untouched. skipDuplicates keeps sent state and retry backoff unchanged on repeated enqueue. Lease ownership, retry delay, receipt-token checks, delivery transport, monetary state and point balances are unchanged.
+
+The private PostgreSQL regression freezes the application clock five seconds behind the database. The unchanged parent fails its first immediate-delivery assertion; the fixed candidate passes 200 operational and 200 webhook initial deliveries plus nine boundary groups. It checks wrong receipt tokens, sent-row preservation, failure backoff preservation on duplicate enqueue, Cron authentication, delayed recovery under an advanced fixture clock, concurrent duplicate claims and repeated Cron idempotence. Provider and transport are synthetic; no real message, payment, refund or event replay occurs. The temporary database listens only on its owned Unix socket and stops in finally.
+
+Run with: python3 scripts/security-regression/verify-stripe-outbox-initial-due-postgres.py. CI runs this against a fresh synthetic database without application credentials. The prior expanded refund fixture failed an immediate attempts=1 assumption; the standalone attention suite and charge suite were evaluated separately, and no combined sixteen-case pass was claimed. The new deterministic clock-skew regression targets the actual scheduling cause.
+
+Real production message delivery and financial acceptance require separate evidence; a private test or successful build does not certify them. No existing notification is drained as part of this release.
