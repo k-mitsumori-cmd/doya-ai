@@ -70,7 +70,7 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
   const members = load('src/app/api/sfa/members/route.ts', {
     ...shared,
     crypto: require('node:crypto'),
-    '@/lib/prisma': { prisma: { sfaOrganization: { findUnique: async () => ({ name: '組織' }) }, sfaMember: { findFirst: async () => null } } },
+    '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, sfaOrganization: { findUnique: async () => ({ name: '組織' }) }, sfaMember: { findFirst: async () => null } } },
     '@/lib/html-escape': { escapeHtml: (value) => value },
     '@/lib/sfa/types': { ROLE_HIERARCHY: { owner: 3, admin: 2, manager: 1, member: 0 } },
     '@/lib/email': { sendEmail: async () => { emailed++; return { success: true }; } },

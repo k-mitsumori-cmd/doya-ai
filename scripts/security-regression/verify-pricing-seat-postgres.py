@@ -60,7 +60,7 @@ try:
                         '--skip-generate', '--schema', str(schema)], cwd=folder,
                        env={**env, 'DATABASE_URL': url, 'DIRECT_URL': url},
                        stdout=log, stderr=subprocess.STDOUT, check=True, timeout=120)
-    for name in ['verify-pricing-seat-core-postgres.cjs', 'verify-pricing-seat-routes-postgres.cjs', 'verify-hr-invite-seat-postgres.cjs', 'verify-tool-invite-reservations-postgres.cjs']:
+    for name in ['verify-pricing-seat-core-postgres.cjs', 'verify-pricing-seat-routes-postgres.cjs', 'verify-hr-invite-seat-postgres.cjs', 'verify-tool-invite-reservations-postgres.cjs', 'verify-sfa-invite-reservations-postgres.cjs']:
         result = subprocess.run([node, str(root / 'scripts/security-regression' / name),
                                  str(private_env), str(private_state)], cwd=root, env=env, timeout=180)
         test_exit = result.returncode
