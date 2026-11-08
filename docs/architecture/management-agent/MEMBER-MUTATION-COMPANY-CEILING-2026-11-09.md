@@ -10,3 +10,5 @@
 証拠：DOYA_SEAT_EVIDENCE_DIR配下の5個の*-member-mutation-results.jsonとseat-postgres-lifecycle.json。各結果には実際に読んだsource hashを残し、私有DBは停止する。
 
 現在の本番COMPANY_ROLES_ROLLOUTはunset/off。今回flagや未適用モデルを有効化しない。本番の顧客権限・会員行・Stripe設定を変更しない。全ツールの全writer、実OAuth、別権限の本番アカウント、課金の受入とは分ける。
+
+プレビューの匿名PATCH/DELETEでAIO・商談・面接・AI商談の8応答に明示private no-storeがなかったため、4ルートの全応答をprivateApiJsonへ統一する。見積は既に同helperを使用。実SQL65条件でも成功/拒否のCache-ControlとVary Cookieを検査する。プレビューの401は認証拒否自体の失敗や顧客情報漏洩の確認ではない。

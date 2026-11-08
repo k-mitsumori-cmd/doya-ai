@@ -1,10 +1,11 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // PATCH  /api/aishodan/members/[id] — 権限を変更
 // DELETE /api/aishodan/members/[id] — メンバーを外す／招待を取り消す
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
@@ -59,35 +60,35 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const c = await getAishodanContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!c) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(c.role, 'admin')) {
-    return NextResponse.json({ error: '権限を変更する権限がありません' }, { status: 403 })
+    return privateApiJson({ error: '権限を変更する権限がありません' }, { status: 403 })
   }
 
   const body = await req.json().catch(() => ({}))
   const role = body?.role as AishodanRole
   if (!ROLES.includes(role)) {
-    return NextResponse.json({ error: '指定できない権限です' }, { status: 400 })
+    return privateApiJson({ error: '指定できない権限です' }, { status: 400 })
   }
   const result = await mutateMember(c, p.id, 'update', role)
-  if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
-  if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  if (result.kind === 'self') return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
-  if (result.kind === 'role') return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
-  return NextResponse.json({ ok: true, memberId: p.id, role })
+  if (result.kind === 'forbidden' || result.kind === 'peer') return privateApiJson({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
+  if (result.kind === 'missing') return privateApiJson({ error: '見つかりません' }, { status: 404 })
+  if (result.kind === 'self') return privateApiJson({ error: '自分の権限は変更できません' }, { status: 403 })
+  if (result.kind === 'role') return privateApiJson({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
+  return privateApiJson({ ok: true, memberId: p.id, role })
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const c = await getAishodanContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!c) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(c.role, 'admin')) {
-    return NextResponse.json({ error: 'メンバーを外す権限がありません' }, { status: 403 })
+    return privateApiJson({ error: 'メンバーを外す権限がありません' }, { status: 403 })
   }
 
   const result = await mutateMember(c, p.id, 'delete')
-  if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーは外せません' }, { status: 403 })
-  if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  if (result.kind === 'self') return NextResponse.json({ error: '自分自身は外せません' }, { status: 403 })
-  return NextResponse.json({ ok: true, memberId: p.id })
+  if (result.kind === 'forbidden' || result.kind === 'peer') return privateApiJson({ error: 'このメンバーは外せません' }, { status: 403 })
+  if (result.kind === 'missing') return privateApiJson({ error: '見つかりません' }, { status: 404 })
+  if (result.kind === 'self') return privateApiJson({ error: '自分自身は外せません' }, { status: 403 })
+  return privateApiJson({ ok: true, memberId: p.id })
 }
