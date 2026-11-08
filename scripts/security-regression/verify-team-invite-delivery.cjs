@@ -8,6 +8,7 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
   const model = `${service}Member`;
   const orgModel = `${service}Organization`;
   const prisma = {
+    user: { findMany: async () => [] },
     [model]: {
       findFirst: async () => null,
       deleteMany: async ({ where }) => { if (expiredInvite && where.status === 'PENDING' && where.createdAt.lte instanceof Date) staleRemoved++; return { count: expiredInvite ? 1 : 0 }; },

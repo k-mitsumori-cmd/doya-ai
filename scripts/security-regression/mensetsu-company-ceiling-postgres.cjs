@@ -24,17 +24,23 @@ let actorId = '', actorEmail = '', afterCeiling = null, afterTxCeiling = null, m
 const mutators = [];
 const cache = new Map(), bindings = {};
 const accessFile = 'src/lib/mensetsu/access.ts', roleFile = 'src/lib/company-roles/access.server.ts';
+// This legacy suite isolates current company authority, including hidden authority tables.
+// Shared paid reservation/identity admission is separately exercised against real SQL65.
+class LegacyInvitationDomainError extends Error { constructor(kind){super(kind);this.kind=kind} }
+const legacySeatBoundary={ToolSeatInvitationDomainError:LegacyInvitationDomainError,toolSeatInvitationFailure:error=>error instanceof LegacyInvitationDomainError?{status:error.kind==='missing'?404:403,body:{error:error.kind}}:null,withToolSeatInvitation:async(input,authorize,work)=>db.$transaction(async tx=>{const role=await load(roleFile).ceilToolRole({tool:input.tool,organizationId:input.organizationId,userId:input.actorUserId,toolRole:'owner'},tx);if(afterTxCeiling&&role!==null){const hook=afterTxCeiling;afterTxCeiling=null;await hook()}const domain=await authorize(tx,role);return work(tx,domain.value)})};
+
 function resolve(file, n) { let candidate = n.startsWith('@/') ? 'src/' + n.slice(2) : path.posix.normalize(path.posix.join(path.posix.dirname(file), n)); if (!candidate.endsWith('.ts'))
     candidate += '.ts'; return candidate; }
 function load(file) {
     if (cache.has(file))
         return cache.get(file);
-    assert(file === 'src/app/api/mensetsu/members/route.ts' || file === 'src/lib/html-escape.ts' || file.startsWith('src/lib/mensetsu/') || file.startsWith('src/lib/company-roles/'), 'Unapproved source ' + file);
-    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    assert(file === 'src/app/api/mensetsu/members/route.ts' || file === 'src/lib/html-escape.ts' || file === 'src/lib/private-api-response.ts' || file.startsWith('src/lib/mensetsu/') || file.startsWith('src/lib/company-roles/'), 'Unapproved source ' + file);
+    const candidate = process.env.DOYA_TEST_BASELINE && path.join(process.env.DOYA_TEST_BASELINE, file);
+    const source = fs.readFileSync(candidate && fs.existsSync(candidate) ? candidate : path.join(root, file), 'utf8');
     bindings[file] = crypto.createHash('sha256').update(source).digest('hex');
     const module = { exports: {} };
     cache.set(file, module.exports);
-    function req(n) { if (n === 'next/server')
+    function req(n) { if (n === '@/lib/pricing-v2/tool-seat-invitation.server') return legacySeatBoundary; if (n === 'next/server')
         return { NextResponse: Response, NextRequest: Request }; if (n === 'next-auth')
         return { getServerSession: async () => ({ user: { id: actorId, email: actorEmail, name: 'Synthetic actor' } }) }; if (n === '@/lib/auth')
         return { authOptions: {} }; if (n === '@/lib/prisma')
@@ -181,7 +187,7 @@ const specs = [
         }
         results.push({ name: spec.name, status: response.status, currentCompanyRole: current.role, currentMembershipStatus: current.status, createdSyntheticInvites: invites, syntheticMailCalls: mailCalls, realMailSends: 0, revocationDenied: !!spec.revocation, lateDemotionObservedBlocked: lateBlocked, afterCompletedDemotionStatus, hiddenTables: spec.hideTables ? hidden.length : 0, capturedAuthorityQueryTables: [...capturedRoleQueryTables].sort(), companyProfileAutoCreation: false, centralAutoEnrollment: false, inferredLinkPersisted: false, returnedInvitation: !!body.member });
     }
-    const proof = { checkedAt: new Date().toISOString(), completed: true, count: results.length, baselineGapFixed: true, revocationCases: results.filter(x => x.revocationDenied).length, lateConcurrentDemotionVerified: true, legacyOffTablesUnavailableVerified: true, legacyOffSqlQueryEventsVerified: true, readOnlyAttributionVerified: true, actualRoute: true, actualContext: true, actualCompanyCeilingServerAndPureModules: true, actualPrismaAndPrivatePostgres: true, sourceBindings: bindings, results, syntheticPorts: ['NextAuth session', 'pricing config/rollout', 'company role mode', 'sendEmail stub', 'timing hooks around actual role resolution'], realMailSends: 0, realProviderRequests: 0, productionRequests: 0, fixedLocally: true, productionVerified: false, all11IntegrationVerified: false, wholeAuditVerified: false };
+    const proof = { checkedAt: new Date().toISOString(), completed: true, count: results.length, baselineGapFixed: true, revocationCases: results.filter(x => x.revocationDenied).length, lateConcurrentDemotionVerified: true, legacyOffTablesUnavailableVerified: true, legacyOffSqlQueryEventsVerified: true, readOnlyAttributionVerified: true, actualRoute: true, actualContext: true, actualCompanyCeilingServerAndPureModules: true, actualPrismaAndPrivatePostgres: true, paidSeatAdmissionExercised: false, recipientIdentityAdapterExercised: false, paidSeatBoundary: 'Explicit legacy financial boundary; actual company ceiling runs in the real transaction. Shared paid admission is covered separately by SQL65.', sourceBindings: bindings, results, syntheticPorts: ['NextAuth session', 'pricing config/rollout', 'company role mode', 'sendEmail stub', 'timing hooks around actual role resolution', 'legacy paid invitation boundary (actual current company ceiling retained)'], realMailSends: 0, realProviderRequests: 0, productionRequests: 0, fixedLocally: true, productionVerified: false, all11IntegrationVerified: false, wholeAuditVerified: false };
     fs.writeFileSync(path.join(outputDir, 'company-ceiling-native-results.json'), JSON.stringify(proof, null, 2) + '\n');
     console.log(JSON.stringify({ count: proof.count, revocationDenied: proof.revocationCases, lateLock: proof.lateConcurrentDemotionVerified, fixedLocally: true }));
 })().catch(e => { console.error(e); process.exitCode = 1; }).finally(async () => { await Promise.allSettled(mutators.map(x => x.$disconnect())); await db.$disconnect(); });

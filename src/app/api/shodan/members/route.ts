@@ -1,8 +1,10 @@
+import { withToolSeatInvitation, ToolSeatInvitationDomainError, toolSeatInvitationFailure } from '@/lib/pricing-v2/tool-seat-invitation.server'
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
@@ -19,51 +21,54 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 // GET /api/shodan/members — メンバー一覧
 export async function GET(req: NextRequest) {
   const ctx = await getShodanContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return privateApiJson({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const members = await prisma.shodanMember.findMany({
     where: { organizationId: ctx.organizationId },
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true, role: true, status: true, inviteEmail: true, acceptedAt: true, createdAt: true },
   })
-  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+  return privateApiJson({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // POST /api/shodan/members — メンバー招待（admin+）
 export async function POST(req: NextRequest) {
   const ctx = await getShodanContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  if (!hasMinRole(ctx.role, 'admin')) return NextResponse.json({ error: '招待権限がありません' }, { status: 403 })
+  if (!ctx) return privateApiJson({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!hasMinRole(ctx.role, 'admin')) return privateApiJson({ error: '招待権限がありません' }, { status: 403 })
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const role = body.role === undefined ? 'member' : body.role
   if (!email || email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return NextResponse.json({ error: '有効なメールアドレスを入力してください' }, { status: 400 })
+    return privateApiJson({ error: '有効なメールアドレスを入力してください' }, { status: 400 })
   }
   if (typeof role !== 'string' || !INVITABLE_ROLES.includes(role)) {
-    return NextResponse.json({ error: '招待権限の形式が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: '招待権限の形式が正しくありません' }, { status: 400 })
   }
   // 自分と同格以上の権限では招待できない
   if (rank(role) >= rank(ctx.role)) {
-    return NextResponse.json({ error: '自分と同格以上の権限では招待できません' }, { status: 403 })
+    return privateApiJson({ error: '自分と同格以上の権限では招待できません' }, { status: 403 })
   }
 
   const org = await prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId } })
   const inviteToken = crypto.randomUUID()
   let result
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await withToolSeatInvitation({ tool: 'shodan', organizationId: ctx.organizationId, actorUserId: ctx.userId, email }, async (tx, currentCeiling) => {
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM shodan_organizations WHERE id = ${ctx.organizationId} FOR UPDATE`
-      if (rows.length === 0) return { kind: 'missing' as const }
+      if (rows.length === 0) throw new ToolSeatInvitationDomainError('missing')
       const actor = await tx.$queryRaw<{ role: string }[]>`SELECT role FROM shodan_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
       // 会社の役割の上限（ctx の役割）より上には上げない
-      const actorRole = actor.length ? lowerToolRole('shodan', actor[0].role, ctx.role) : null
-      if (!actorRole || rank(role) >= rank(actorRole)) return { kind: 'forbidden' as const }
+      const limitedRole = actor.length && currentCeiling ? lowerToolRole('shodan', actor[0].role, currentCeiling) : null
+      const actorRole = limitedRole ? lowerToolRole('shodan', limitedRole, ctx.role) : null
+      if (!actorRole || rank(role) >= rank(actorRole)) throw new ToolSeatInvitationDomainError('forbidden')
+      return { role: actorRole, value: undefined }
+    }, async tx => {
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.shodanMember.findFirst({
         where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
@@ -77,13 +82,13 @@ export async function POST(req: NextRequest) {
       })
       return { kind: 'created' as const, member }
     })
-  } catch {
-    return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
+  } catch (error) {
+    const seatFailure = toolSeatInvitationFailure(error)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
+    return privateApiJson({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
-  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
-  if (result.kind === 'forbidden') return NextResponse.json({ error: '招待権限がありません。再読み込みしてください' }, { status: 403 })
   if (result.kind === 'duplicate') {
-    return NextResponse.json({ error: result.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' }, { status: 409 })
+    return privateApiJson({ error: result.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' }, { status: 409 })
   }
   const member = result.member
 
@@ -106,5 +111,5 @@ export async function POST(req: NextRequest) {
       </div>`,
   })
 
-  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+  return privateApiJson({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
