@@ -5983,7 +5983,7 @@ model AccountCompanyMember {
   company     AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   email       String // 小文字にそろえて入れる
   userId      String? // 参加した人の User.id（招待中は null）
-  role        String         @default("member") // admin | member（持ち主は行を持たない）。会社の役割の旗の内側では manager | billing | guest も（ROLES-2026-10-26.md）
+  role        String         @default("member") // admin | member | guest（持ち主は行を持たない）。manager | billing は会社の役割の旗の内側（ROLES-2026-10-26.md）
   status      String         @default("invited") // invited | active | removed
   inviteToken String?        @unique
   invitedBy   String? // 招待した人の User.id

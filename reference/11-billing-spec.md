@@ -798,3 +798,8 @@ SFA固有の組織オーナー契約による上限（FREE3/LIGHT10/PRO50）は�
 ### 本番の会社人数集計とschema適用確認（2026-11-09）
 
 人数APIが200でも `seatUsageUnavailable:true` なら人数枠の検証は未合格。新料金の会社・ツール横断集計に必須の `account_company_tool_orgs` が本番で未適用のため、実集計がP2021で失敗していた。対応表一つだけを追加し、RLS/公開権限遮断を確認、既存行や請求情報を変更せず、本人の実API/画面で数値取得の復旧を確認した。手順は `docs/architecture/management-agent/COMPANY-TOOL-ORG-SCHEMA-RECOVERY-2026-11-09.md`。ローカルの全schema作成や匿名応答の合格を、本番schema/認証済み人数取得の合格へ流用しない。CIの移行検証は隔離Postgresのみで、本番applyは行わない。
+
+
+### 2026-11-09 readonly guest CHECK recovery
+
+Current member invitations accept admin/member/guest without enabling the broader company-role rollout. The production CHECK was aligned from admin/member to these three roles; no customer rows, purchased quantity, billing state, RLS or other constraints changed. Guests remain outside operating-seat consumption. Manager/billing activation and the separate five-role migration are not part of this repair. Reviewed SQL, explicit-run preflight/apply and isolated twelve-condition actual API/SQL regression are documented in [the recovery runbook](../docs/architecture/management-agent/COMPANY-GUEST-ROLE-SCHEMA-RECOVERY-2026-11-09.md). CI uses only synthetic private PostgreSQL; it never applies production DDL. Real production invitations and financial flows are not accepted by this evidence.
