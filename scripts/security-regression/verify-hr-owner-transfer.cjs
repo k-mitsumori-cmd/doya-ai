@@ -3,6 +3,10 @@ const { load, check, results } = require('./load-typescript.cjs')
 
 const roles = { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' }
 const common = {
+  '@/lib/company-roles/access.server': { ceilToolRole: async input => input.toolRole },
+  '@/lib/pricing-v2/tool-seat-union-scope.server': { resolveToolUnionScope: async () => ({ enabled: false }), toolUnionScopeIdentity: () => 'legacy-disabled' },
+  '@/lib/hr/billing': { getOrgPlan: async () => { throw Error('Non-increasing legacy fixture must not read service quota') }, getOrgPlanLimits: () => { throw Error('Non-increasing legacy fixture must not read service quota') } },
+
   'next/server': { NextResponse: Response },
   '@/lib/hr/types': { HrMemberRole: roles },
   '@/lib/hr/constants': { ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 } },
@@ -29,7 +33,7 @@ function memberRoute({ targetRole = 'MEMBER', changedBeforeWrite = false } = {})
       },
     },
   }
-  const prisma = { $transaction: async fn => fn(tx) }
+  const prisma = { hrOrganizationMember: tx.hrOrganizationMember, $transaction: async fn => fn(tx) }
   const route = load('src/app/api/hr/organization/members/[id]/route.ts', {
     ...common,
     '@/lib/prisma': { prisma },

@@ -49,6 +49,7 @@ function loadModules(env) {
   const teamServer = load('src/lib/pricing-v2/team.server.ts', {
     '@/lib/prisma': { prisma }, '@/lib/stripe': { stripe, findActiveLikeSubscriptions: async () => { throw new Error('stripe touched') } },
     '@/lib/unified-plan': unifiedPlan, './rollout': rollout, './plans': plans, './prices': prices, './team': team,
+    './company-seat-minimum.server':{readCompanyOperatingSeatUsage:async()=>{touched.push('operatingSeatUnion.read');throw Error('New seat union must not be read in legacy flag-off fixture')}},
   }, globals)
   const starter = load('src/lib/pricing-v2/starter.ts', { 'node:crypto': require('node:crypto'), './starter-welcome': load('src/lib/pricing-v2/starter-welcome.ts', {}, globals) }, globals)
   const starterServer = load('src/lib/pricing-v2/starter.server.ts', {
@@ -133,6 +134,7 @@ async function assertUnchanged(env, label) {
       '@/lib/prisma': { prisma: {} },
       '@/lib/unified-plan': load('src/lib/unified-plan.ts'),
       '@/lib/shell/company.server': { currentUserId: async () => 'u_owner' },
+      '@/lib/pricing-v2/company-power-sponsor.server': { companyPowerConsumptionGuard: input => {same(input,{actorUserId:'u_owner',companyId:'co'});return async()=>{throw Error('Account-only fixture must not consume power')} } },
       '@/lib/pricing-v2/team.server': m.teamServer,
       '@/lib/pricing-v2/starter.server': m.starterServer,
       './flag': { doyaPowerRollout: () => 'all', isDoyaPowerEnabled: async () => true },

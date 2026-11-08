@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createTeamSeatCheckout, TeamCheckoutSeatError } from '@/lib/pricing-v2/team-checkout-seat.server'
 import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -161,6 +162,15 @@ export async function POST(request: NextRequest) {
         if (decision.code === 'NEW_PRICING_NOT_CONFIGURED') console.error('[Checkout] team prices are not configured')
         return NextResponse.json({ code: decision.code, error: messages[decision.code] }, { status: decision.status })
       }
+      // New Team purchases require the persistent authenticated account,
+      // never another account that now owns a stale session email.
+      const sessionUserId = (session.user as { id?: string }).id
+      const currentActor = sessionUserId ? await prisma.user.findUnique({
+        where: { id: sessionUserId }, select: { id: true, email: true },
+      }) : null
+      if (!currentActor || currentActor.id !== dbUser.id || currentActor.email?.trim().toLowerCase() !== session.user.email.trim().toLowerCase()) {
+        return NextResponse.json({ code: 'CHECKOUT_IDENTITY_CHANGED', error: 'ログイン情報が変わりました。再ログインしてからお手続きください。' }, { status: 403 })
+      }
       teamLineItems = buildTeamLineItems({ seats: seats as number, interval: billingPeriod }, isTeamSeatCount)
       if (!teamLineItems) {
         console.error('[Checkout] team line items could not be built')
@@ -276,10 +286,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Checkout Session作成
-    const checkoutSession = await createReservedCheckoutSession({
+    const checkoutOptions = {
       userId: dbUser.id,
       signatureParts: { priceId, planId, service, email: session.user.email, successUrl, cancelUrl, trialDays, ...(teamLineItems ? { lineItems: teamLineItems } : {}) },
-      create: (idempotencyKey, expiresAt) => createCheckoutSession({
+      create: (idempotencyKey: string, expiresAt: number) => createCheckoutSession({
         priceId,
         userId: dbUser.id,
         userEmail: session.user.email!,
@@ -291,7 +301,10 @@ export async function POST(request: NextRequest) {
         ...(teamLineItems ? { lineItems: teamLineItems } : {}),
         metadata: { planId, serviceId: service, ...(isTeam ? { seats: String(body.seats), pricing: 'v2-2026-10' } : {}) },
       }),
-    })
+    }
+    const checkoutSession = isTeam
+      ? await createTeamSeatCheckout({ ...checkoutOptions, seats: body.seats, ownerEmail: session.user.email })
+      : await createReservedCheckoutSession(checkoutOptions)
 
     return NextResponse.json({
       sessionId: checkoutSession.id,
@@ -300,6 +313,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Checkout session error:')
+
+    if (error instanceof TeamCheckoutSeatError) {
+      return NextResponse.json({ code: error.code, ...(error.used === null ? {} : { used: error.used }), error: error.code === 'BELOW_USED'
+        ? `今使っている人数（${error.used}人）以上を選んでください。`
+        : '契約や決済画面の人数を確認できません。画面を読み込み直して、もう一度お試しください。' }, { status: error.code === 'SEAT_CAPACITY_UNAVAILABLE' ? 503 : 409 })
+    }
 
     if (error instanceof CheckoutReservationError) {
       const userMessage = error.code === 'CHECKOUT_ALREADY_COMPLETED'

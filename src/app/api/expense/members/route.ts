@@ -3,9 +3,10 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
+import { ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { EXPENSE_ROLES } from '@/lib/expense/constants'
 import { canGrantRole } from '@/lib/expense/member-policy'
+import { addExpenseMember } from '@/lib/expense/member-admission'
 import { oneOf, str } from '@/lib/expense/validate'
 
 // GET /api/expense/members?org= — ACTIVE のメンバーと招待中（PENDING）の人
@@ -46,20 +47,7 @@ export async function POST(req: NextRequest) {
     const role = oneOf(body.role, EXPENSE_ROLES.filter((r) => r !== 'owner'), '権限', 'member')
     if (!canGrantRole(ctx.role, role)) throw new ExpenseHttpError(403, '自分と同じか上の権限は付与できません。オーナーに依頼してください。')
 
-    const user = await prisma.user.findUnique({ where: { email: emailAddr }, select: { id: true } })
-    // ⚠️ 既にいるメンバー・招待中の人の権限はここで変えない（admin がオーナーを降格できてしまう）。権限の変更は PATCH で
-    const existing = await prisma.expenseMember.findFirst({
-      where: { organizationId: ctx.organizationId, OR: [...(user ? [{ userId: user.id }] : []), { invitedEmail: emailAddr }] },
-    })
-    if (existing && existing.status !== 'INACTIVE') throw new ExpenseHttpError(409, 'この方は既にメンバーか招待中です。権限はメンバー一覧から変更してください。')
-
-    const data = user
-      ? { userId: user.id, invitedEmail: emailAddr, name, role, status: 'ACTIVE' }
-      : { userId: null, invitedEmail: emailAddr, name, role, status: 'PENDING' }
-    const member = existing
-      ? await prisma.expenseMember.update({ where: { id: existing.id }, data })
-      : await prisma.expenseMember.create({ data: { ...data, organizationId: ctx.organizationId } })
-    await audit(prisma, ctx, 'member.add', 'member', member.id, { role })
+    await addExpenseMember(ctx, { email: emailAddr, name, role })
     // 応答は登録の有無で変えない
     return NextResponse.json({ ok: true })
   })

@@ -140,6 +140,71 @@ export async function withSeatAdmission<T>(companyId: string, work: (tx: Tx) => 
   })
 }
 
+/** Compose the same admission fence with an existing short domain transaction.
+ * The caller must retry its entire transaction after P2034/P2002, re-read all
+ * authority/capacity inside work, and perform no network work while locked.
+ */
+export async function withSeatAdmissionInTransaction<T>(companyId: string, tx: Tx, work: (tx: Tx) => Promise<T>): Promise<T> {
+  const key = companyKey(companyId)
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('team-seat-operation:v1'), hashtext(${companyId}))`
+  const state = await read(tx, key)
+  if (state.active) throw new SeatOperationError('SEAT_OPERATION_BUSY')
+  const result = await work(tx)
+  await write(tx, key, state)
+  return result
+}
+
+/** Membership revocation only: never use this for admission, activation or a
+ * permission increase. Pending/unknown Stripe work must not stop revocation.
+ * Preserve the financial claim, including malformed state, without resetting
+ * its token or lease. A state-row write fences stale Serializable snapshots.
+ */
+/** Existing SQL effects share the company fence without changing seat-cache
+ * revision or treating an in-flight seat request as a new admission. The caller
+ * validates current authority and does SQL only; the lock lasts to commit. */
+export async function withSeatContextInTransaction<T>(companyId: string, tx: Tx, work: (tx: Tx) => Promise<T>): Promise<T> {
+  companyKey(companyId)
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('team-seat-operation:v1'), hashtext(${companyId}))`
+  return work(tx)
+}
+
+export async function withSeatRevocationInTransaction<T>(companyId: string, tx: Tx, work: (tx: Tx) => Promise<T>): Promise<T> {
+  const key = companyKey(companyId)
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('team-seat-operation:v1'), hashtext(${companyId}))`
+  const row = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  let state: State | null = null
+  if (row) {
+    try {
+      const parsed = parseState(row.value)
+      if (timestamp(parsed.revision + 1)) state = parsed
+    } catch {
+      // Revocation does not authorize financial recovery or repair its state.
+    }
+  }
+  const result = await work(tx)
+  if (state) {
+    await write(tx, key, state)
+  } else {
+    // Even an identical value update is an MVCC write: old Serializable
+    // effect snapshots must conflict instead of ignoring the revocation.
+    await tx.systemSetting.upsert({
+      where: { key },
+      create: { key, value: JSON.stringify({ revision: 1, active: null }) },
+      update: { value: row?.value ?? JSON.stringify({ revision: 1, active: null }) },
+    })
+  }
+  return result
+}
+
+/** Standalone short revocation transaction. Domain authority is the caller's
+ * responsibility and must be re-read inside the callback. No network calls.
+ */
+export async function withSeatRevocation<T>(companyId: string, work: (tx: Tx) => Promise<T>, db: Db = prisma): Promise<T> {
+  return db.$transaction(tx => withSeatRevocationInTransaction(companyId, tx, work), {
+    isolationLevel: 'ReadCommitted', maxWait: 5000, timeout: 10000,
+  })
+}
+
 export async function beginSeatOperation(companyId: string, operationKey: string, requested: number, db: Db = prisma, now = Date.now(), options: { existingOnly?: boolean } = {}): Promise<SeatOperationStart> {
   if (!isValidOperationKey(operationKey) || !seatCount(requested) || !timestamp(now) || !timestamp(now + LEASE_MS)) throw new Error('Invalid seat operation input')
   return guarded(companyId, db, async (tx, key) => {
@@ -186,12 +251,17 @@ export async function readCompletedSeatOperation(companyId: string, operationKey
 /** Commit the immutable request and Stripe key BEFORE making the network call.
  * A resumed stripe claim already contains this request and must reuse it exactly.
  */
-export async function recordSeatStripeAttempt(claim: SeatOperationClaim, request: SeatRequest, db: Db = prisma, now = Date.now()): Promise<SeatOperationClaim> {
+export async function recordSeatStripeAttempt(claim: SeatOperationClaim, request: SeatRequest, db: Db = prisma, now = Date.now(), readCurrentUsage?: (tx: Tx) => Promise<number>): Promise<SeatOperationClaim> {
   if (!requestValid(request) || !timestamp(now) || !timestamp(now + LEASE_MS)) throw new Error('Invalid Stripe seat request')
   return guarded(claim.companyId, db, async (tx, key) => {
     const state = await read(tx, key), active = owned(state, claim)
     if (active.phase !== 'preparing' || active.requested !== request.to || request.pointsAt > now || now >= active.leaseUntil) throw new SeatOperationError('SEAT_OPERATION_STALE')
-    const next: Updating = { ...active, phase: 'stripe', request: { ...request }, idempotencyKey: 'doya-seat-' + randomUUID(), firstSentAt: now, leaseUntil: now + LEASE_MS }
+    // Recount before recording the immutable provider request, under the
+    // same company guard. Network work is forbidden in this port.
+    const used = readCurrentUsage ? await readCurrentUsage(tx) : request.used
+    const verifiedRequest = { ...request, used }
+    if (!requestValid(verifiedRequest)) throw new Error('Current seat usage unavailable')
+    const next: Updating = { ...active, phase: 'stripe', request: verifiedRequest, idempotencyKey: 'doya-seat-' + randomUUID(), firstSentAt: now, leaseUntil: now + LEASE_MS }
     await write(tx, key, { ...state, active: next })
     return { companyId: claim.companyId, token: next.token, active: next }
   })

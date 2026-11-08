@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const root = path.resolve(__dirname, '../..');
 const ts = require(path.join(root, 'node_modules/typescript'));
+const {toolSeatAdmissionFailure}=load('src/lib/pricing-v2/tool-seat-admission.server.ts',{'@prisma/client':require(root+'/node_modules/@prisma/client'),'@/lib/prisma':{prisma:{}},'@/lib/company-roles/tool-roles':{TOOL_ROLE_TABLES:{}},'./tool-seat-union-scope.server':{ToolUnionScopeError:class ToolUnionScopeError extends Error{}},'./seat-operation':{SeatOperationError:class SeatOperationError extends Error{}}});
 const routes = [
   'audit-logs', 'billing/checkout', 'billing/portal', 'departments/[id]',
   'departments', 'one-on-one/[id]/ai-summary', 'organization/invite/[token]',
@@ -28,6 +29,7 @@ function route(name, { fail = false, context = null, invitation = null, members 
   for (const statement of ast.statements) {
     if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly) continue;
     const module = statement.moduleSpecifier.text;
+    if (module === '@/lib/pricing-v2/tool-seat-admission.server') {mocks[module]={withToolSeatAdmission:forbidden,toolSeatAdmissionFailure};continue;} // Pure failure formatting is not a DB/provider/write.
     if (module === '@/lib/private-api-response') continue; // Load the real response helper.
     if (module === '@/lib/direct-upload/flag') { mocks[module] = { directUploadRollout: () => false, isDirectConfirm: () => false }; continue; } // 旗 off（これまでの経路）
     const names = statement.importClause?.namedBindings;

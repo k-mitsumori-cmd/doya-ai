@@ -12,6 +12,7 @@ const verify = async (name, fn) => { await check(name, fn); cases.push(name); };
   const access = load('src/lib/expense/access.ts', {
     ...next, 'next-auth': { getServerSession: async () => session }, '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { user: { findUnique: async () => ({ id: 'synthetic-owner' }) }, expenseMember: { findFirst: async () => { if (contextError) throw contextError; return member; } } } },
+    './member-admission': { claimExpensePendingMemberships: async () => { throw Error('Claim is outside this access-wrapper fixture; actual admission is checked by private SQL tests'); }, expenseMemberAdmissionFailure: () => null },
     './constants': constants, '@/lib/company-roles/access.server': { ceilToolRole: async input => ceiling || input.toolRole },
   });
   const req = (org = 'expense-a') => ({ url: 'https://example.invalid/api/expense/vendors' + (org ? '?org=' + org : ''), nextUrl: { pathname: '/api/expense/vendors' } });

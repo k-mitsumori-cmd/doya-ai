@@ -11,11 +11,13 @@ const CREATE_LEASE_MS = 5 * 60_000
 const RETRY_WINDOW_MS = 10 * 60_000
 const EXPIRY_GRACE_MS = 2 * 60_000
 
-type Creating = {
+type SeatCapacityBinding = { teamSeats?: number; seatCapacityReleased?: boolean }
+
+type Creating = SeatCapacityBinding & {
   phase: 'creating'; signature: string; idempotencyKey: string
   createdAt: number; leaseUntil: number; expiresAt: number
 }
-type Ready = {
+type Ready = SeatCapacityBinding & {
   phase: 'ready'; signature: string; sessionId: string
   url: string; expiresAt: number
 }
@@ -54,11 +56,14 @@ export async function createReservedCheckoutSession<T extends { id: string; url:
   options: {
     userId: string
     signatureParts: unknown
+    teamSeats?: number
+    reservePreparing?: (input: { key: string; value: string; previousValue: string | null }) => Promise<boolean>
     create: (idempotencyKey: string, expiresAt: number) => Promise<T>
   },
   db: Pick<PrismaClient, 'systemSetting'> = prisma,
   retrieve: typeof stripe.checkout.sessions.retrieve = stripe.checkout.sessions.retrieve.bind(stripe.checkout.sessions),
 ): Promise<{ id: string; url: string }> {
+  if (options.teamSeats !== undefined && (!Number.isInteger(options.teamSeats) || options.teamSeats < 1 || options.teamSeats > 49)) throw new Error('Invalid team checkout quantity')
   const mode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ? 'live' : 'test'
   const key = `checkout-reservation:v1:${mode}:${options.userId}`
   const signature = createHash('sha256').update(JSON.stringify(options.signatureParts)).digest('hex')
@@ -74,7 +79,10 @@ export async function createReservedCheckoutSession<T extends { id: string; url:
         const remote = await retrieve(state.sessionId)
         if (remote.status === 'complete') throw completed()
         if (remote.status === 'open') {
-          if (state.signature === signature && remote.url) return { id: remote.id, url: remote.url }
+          if (state.signature === signature && remote.url) {
+            if (options.teamSeats !== undefined && (state.teamSeats !== options.teamSeats || state.seatCapacityReleased)) throw new CheckoutReservationError('CHECKOUT_CAPACITY_RECONCILE', 409, '決済画面の人数を確認できません。運営にお問い合わせください。')
+            return { id: remote.id, url: remote.url }
+          }
           throw pending()
         }
         if (remote.status !== 'expired') throw pending()
@@ -82,9 +90,12 @@ export async function createReservedCheckoutSession<T extends { id: string; url:
         if (now < state.leaseUntil || now > state.createdAt + RETRY_WINDOW_MS || state.signature !== signature) throw pending()
         // The first request may have reached Stripe before its response was
         // lost. Retry the *same* parameters and persisted idempotency key.
+        if (options.teamSeats !== undefined && state.teamSeats !== options.teamSeats) throw new CheckoutReservationError('CHECKOUT_CAPACITY_RECONCILE', 409, '決済画面の人数を確認できません。運営にお問い合わせください。')
         const renewed: Creating = { ...state, leaseUntil: now + CREATE_LEASE_MS }
         const value = JSON.stringify(renewed)
-        const claimed = await db.systemSetting.updateMany({ where: { key, value: row.value }, data: { value } })
+        const claimed = options.reservePreparing
+          ? { count: await options.reservePreparing({ key, value, previousValue: row.value }) ? 1 : 0 }
+          : await db.systemSetting.updateMany({ where: { key, value: row.value }, data: { value } })
         if (claimed.count !== 1) continue
         return finish(renewed, value, key, options.create, db)
       }
@@ -92,11 +103,14 @@ export async function createReservedCheckoutSession<T extends { id: string; url:
 
     const state: Creating = {
       phase: 'creating', signature, idempotencyKey: randomUUID(),
+      ...(options.teamSeats === undefined ? {} : { teamSeats: options.teamSeats }),
       createdAt: now, leaseUntil: now + CREATE_LEASE_MS,
       expiresAt: Math.floor(now / 1000) + SESSION_SECONDS,
     }
     const value = JSON.stringify(state)
-    if (row) {
+    if (options.reservePreparing) {
+      if (!await options.reservePreparing({ key, value, previousValue: row?.value ?? null })) continue
+    } else if (row) {
       const claimed = await db.systemSetting.updateMany({ where: { key, value: row.value }, data: { value } })
       if (claimed.count !== 1) continue
     } else {
@@ -121,6 +135,7 @@ async function finish<T extends { id: string; url: string | null; expires_at?: n
   if (!session.url) throw new Error('Stripe Checkout URL is missing')
   const ready: Ready = {
     phase: 'ready', signature: state.signature, sessionId: session.id,
+    ...(state.teamSeats === undefined ? {} : { teamSeats: state.teamSeats }),
     url: session.url, expiresAt: session.expires_at || state.expiresAt,
   }
   const saved = await db.systemSetting.updateMany({

@@ -45,17 +45,20 @@ test('POST は付与するロールを canGrantRole で確かめる', () => {
   assert.match(post, /if \(!canGrantRole\(ctx\.role, role\)\) throw new ExpenseHttpError\(403/)
 })
 
-test('PATCH は相手を canManageMember、付与を canGrantRole で確かめる', () => {
+const mutation = byId.slice(byId.indexOf('async function mutateMember'), byId.indexOf('/** PATCH'))
+test('PATCH は取引内の現在権限で相手と付与ロールを確かめる', () => {
   const patch = byId.slice(byId.indexOf('export async function PATCH'), byId.indexOf('export async function DELETE'))
-  assert.match(patch, /canManageMember\(ctx\.role, asRole\(m\.role\)\)/)
-  assert.match(patch, /canGrantRole\(ctx\.role, role\)/)
-  assert.match(patch, /assertOwnerRemains/)
+  assert.match(patch, /await mutateMember\(ctx, id, \{ kind: 'role', role \}\)/)
+  assert.match(mutation, /canManageMember\(role, asRole\(m\.role\)\)/)
+  assert.match(mutation, /canGrantRole\(role, change\.role\)/)
+  assert.match(mutation, /assertOwnerRemains\(tx,/)
 })
 
-test('DELETE は相手を canManageMember で確かめ、最後のオーナーを残す', () => {
+test('DELETE は取引内で相手を確かめ最後のオーナーを残す', () => {
   const del = byId.slice(byId.indexOf('export async function DELETE'))
-  assert.match(del, /canManageMember\(ctx\.role, asRole\(m\.role\)\)/)
-  assert.match(del, /assertOwnerRemains/)
+  assert.match(del, /await mutateMember\(ctx, id, \{ kind: 'remove' \}\)/)
+  assert.match(mutation, /canManageMember\(role, asRole\(m\.role\)\)/)
+  assert.match(mutation, /assertOwnerRemains\(tx,/)
 })
 
 test('POST はメールの登録の有無で応答を変えない（404 を返さない・成功の形は 1 つ）', () => {
@@ -70,7 +73,9 @@ test('POST はメールの登録の有無で応答を変えない（404 を返�
 test('招待は本人のログイン時に、DB のメールで照合して ACTIVE にする', () => {
   const access = readFileSync(join(process.cwd(), 'src/lib/expense/access.ts'), 'utf8')
   assert.match(access, /export async function claimPendingMemberships\(userId: string\)/)
-  assert.match(access, /prisma\.user\.findUnique\(\{ where: \{ id: userId \}, select: \{ email: true \} \}\)/)
+  assert.match(access, /return claimExpensePendingMemberships\(userId\)/)
+  const admission = readFileSync(join(process.cwd(), 'src/lib/expense/member-admission.ts'), 'utf8')
+  assert.match(admission, /prisma\.user\.findUnique\(\{ where: \{ id: userId \}, select: \{ email: true \} \}\)/)
   const usage = readFileSync(join(process.cwd(), 'src/app/api/expense/usage/route.ts'), 'utf8')
   assert.match(usage, /await claimPendingMemberships\(userId\)/)
 })

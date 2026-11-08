@@ -21,6 +21,7 @@ function fixture(action, scenario) {
     return { count: 1 }
   }
   const prisma = {
+    hrOrganizationMember: { findFirst: async () => ({ ...target }) },
     $transaction: async (fn, options) => {
       assert.equal(options.isolationLevel, 'Serializable')
       attempts++
@@ -44,6 +45,10 @@ function fixture(action, scenario) {
   }
   const route = load('src/app/api/hr/organization/members/[id]/route.ts', {
     'next/server': { NextResponse: Response },
+  '@/lib/company-roles/access.server': { ceilToolRole: async input => input.toolRole },
+  '@/lib/pricing-v2/tool-seat-union-scope.server': { resolveToolUnionScope: async () => ({ enabled: false }), toolUnionScopeIdentity: () => 'legacy-disabled' },
+  '@/lib/hr/billing': { getOrgPlan: async () => { throw Error('Non-increasing legacy fixture must not read service quota') }, getOrgPlanLimits: () => { throw Error('Non-increasing legacy fixture must not read service quota') } },
+
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': {
       getHrContext: async () => ({ id: 'actor', memberId: 'actor', userId: 'user', organizationId: 'org', role: 'ADMIN' }),

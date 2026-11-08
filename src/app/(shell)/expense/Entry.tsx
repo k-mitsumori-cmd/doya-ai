@@ -2,6 +2,8 @@
 
 // ドヤ支出管理 入口（ログイン済み）: 所属組織があればそこへ、なければ組織作成フォーム
 import { useEffect, useState } from 'react'
+import AdmissionNotice from '@/components/expense/AdmissionNotice'
+import type { ExpenseClaimIssue } from '@/lib/expense/member-admission'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
@@ -21,23 +23,30 @@ function orgPath(slug: string): string {
  * needsCompany: アカウントの会社が未登録（新しい見た目のとき）。組織の作成ではなく、会社の登録を案内する
  * companyName: アカウントの会社の名前（新しい見た目のとき）。「◯◯で始める」を1回押すと、サーバーがその名前で組織を作る
  */
-export default function ExpenseEntry({ known = false, needsCompany = false, companyName = null }: { known?: boolean; needsCompany?: boolean; companyName?: string | null } = {}) {
+export default function ExpenseEntry({ known = false, needsCompany = false, companyName = null, initialAdmissionIssues = [] }: { known?: boolean; needsCompany?: boolean; companyName?: string | null; initialAdmissionIssues?: ExpenseClaimIssue[] } = {}) {
   const router = useRouter()
   const [checking, setChecking] = useState(!known)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [admissionIssues, setAdmissionIssues] = useState(initialAdmissionIssues)
+  const [showIndependentSetup, setShowIndependentSetup] = useState(false)
+  const [lookupFailed, setLookupFailed] = useState(false)
 
   useEffect(() => {
     if (known) return
+    let alive = true
     fetch('/api/expense/usage', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (!r.ok) throw new Error('所属状況を確認できませんでした'); return r.json() })
       .then((d) => {
+        if (!alive) return
+        setAdmissionIssues(d?.admissionIssues || [])
         const slug = d?.organization?.slug || d?.memberships?.[0]?.slug
         if (slug) router.replace(orgPath(slug))
         else setChecking(false)
       })
-      .catch(() => setChecking(false))
+      .catch(() => { if (alive) { setLookupFailed(true); setChecking(false) } })
+    return () => { alive = false }
   }, [router, known])
 
   // アカウントの会社の名前で始める（組織名・氏名はサーバーが決める。POST は押したときの1回だけ）
@@ -90,7 +99,10 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
     return (
       <>
         <Toaster position="top-center" />
-        <EntryNext
+        <AdmissionNotice issues={admissionIssues} />
+        {lookupFailed && <div role="alert" className="m-4 space-y-3 p-4"><p>所属状況を確認できませんでした。時間をおいて再度お試しください。</p><Btn onClick={() => window.location.reload()}>再確認する</Btn></div>}
+        {!lookupFailed && admissionIssues.length > 0 && !showIndependentSetup && <div className="m-4 p-4"><Btn onClick={() => setShowIndependentSetup(true)}>自分の会社で新しく始める</Btn></div>}
+        {!lookupFailed && (admissionIssues.length === 0 || showIndependentSetup) && <EntryNext
           orgName={orgName}
           memberName={memberName}
           busy={busy}
@@ -100,7 +112,7 @@ export default function ExpenseEntry({ known = false, needsCompany = false, comp
           needsCompany={needsCompany}
           companyName={companyName}
           onStartWithCompany={startWithCompany}
-        />
+        />}
       </>
     )
   }

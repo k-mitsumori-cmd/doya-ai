@@ -9,9 +9,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/hr/audit'
 import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
+import { withToolSeatAdmission, toolSeatAdmissionFailure } from '@/lib/pricing-v2/tool-seat-admission.server'
 
 class InviteNoLongerAvailableError extends Error {}
 class InviteExpiredError extends Error {}
+class InviteAccountEmailChangedError extends Error {}
 
 // POST /api/hr/organization/invite/accept
 // 招待を受諾してメンバーとして参加する
@@ -84,13 +86,21 @@ export async function POST(req: NextRequest) {
     }
 
     // メンバーとして追加 & 招待ステータスを更新
-    const admission = await prisma.$transaction(async (tx) => {
+    const admission = await withToolSeatAdmission({ tool: 'hr', organizationId: invitation.organizationId, actorUserId: userId }, async (tx) => {
       const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${invitation.organizationId} FOR UPDATE`
       if (organizations.length === 0) throw new InviteNoLongerAvailableError()
       const currentInvite = await tx.hrInvitation.findUnique({ where: { id: invitation.id } })
       if (!currentInvite || currentInvite.token !== token || currentInvite.organizationId !== invitation.organizationId || currentInvite.role !== 'MEMBER' || currentInvite.email.trim().toLowerCase() !== accountEmail) throw new InviteNoLongerAvailableError()
       if (currentInvite.status === 'EXPIRED' || (currentInvite.status === 'PENDING' && currentInvite.expiresAt.getTime() <= Date.now())) throw new InviteExpiredError()
       if (currentInvite.status !== 'PENDING') throw new InviteNoLongerAvailableError()
+      // 初回確認の後のメール変更も反映し、所属が確定するまで利用者行を固定する。
+      const accounts = await tx.$queryRaw<Array<{ email: string | null }>>`
+        SELECT email FROM "User" WHERE id = ${userId} FOR UPDATE
+      `
+      const currentAccountEmail = accounts[0]?.email?.trim().toLowerCase()
+      if (accounts.length !== 1 || !currentAccountEmail || currentAccountEmail !== currentInvite.email.trim().toLowerCase()) throw new InviteAccountEmailChangedError()
+      return { role: currentInvite.role, value: currentInvite }
+    }, async (tx, currentInvite) => {
       const plan = await getOrgPlan(invitation.organizationId, tx)
       const limit = getOrgPlanLimits(plan).maxMembers
       if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0) {
@@ -156,6 +166,11 @@ export async function POST(req: NextRequest) {
       role: invitation.role,
     })
   } catch (e: any) {
+    const seatFailure = toolSeatAdmissionFailure(e)
+    if (seatFailure) return privateApiJson(seatFailure.body, { status: seatFailure.status })
+    if (e instanceof InviteAccountEmailChangedError) {
+      return privateApiJson({ error: '招待先のメールアドレスでログインしてください', code: 'INVITE_EMAIL_MISMATCH' }, { status: 403 })
+    }
     if (e instanceof InviteExpiredError) {
       return privateApiJson({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
     }

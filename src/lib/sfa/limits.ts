@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { tierFrom, type PlanTier } from '@/lib/plan-utils'
 
@@ -21,7 +21,7 @@ export function sfaQuotaResponse(limit: SfaQuotaExceeded, canManageBilling = fal
   const guidance = canManageBilling
     ? limit.upgradeAvailable ? 'プロプランで枠を広げられます。' : '追加をご希望の場合はお問い合わせください。'
     : '利用枠の変更は組織の契約者にご相談ください。'
-  return NextResponse.json({
+  return privateApiJson({
     error: `${label}の上限（${limit.limit}${limit.resource === 'members' ? '名' : '件'}）に達しました。${guidance}`,
     code: 'SFA_LIMIT_REACHED',
     limitReached: true,

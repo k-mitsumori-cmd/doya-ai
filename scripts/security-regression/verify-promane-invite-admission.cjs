@@ -6,14 +6,21 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
   let memberWrites = 0;
   let inviteWrites = 0;
   const invitation = {
-    id: 'invite', workspaceId: 'ws', email: 'invited@example.com', role: 'member',
+    id: 'invite', workspaceId: 'ws', token: 'token', email: 'invited@example.com', role: 'member',
     acceptedAt: null, expiresAt: new Date(Date.now() + 60000),
     workspace: { id: 'ws', slug: 'team', userId: 'owner' },
   };
   const tx = {
+    $queryRaw: async (sql, workspaceId) => { assert.match(sql.join('?'), /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/); assert.equal(workspaceId, 'ws'); return [{ id: 'ws' }]; },
+    user: { findUnique: async ({ where }) => { assert.equal(where.id, 'invited'); return { email: 'invited@example.com' }; } },
     promaneInvitation: {
       findUnique: async () => invitation,
-      update: async () => { inviteWrites++; },
+      updateMany: async ({ where }) => {
+        assert.equal(where.id, invitation.id); assert.equal(where.workspaceId, invitation.workspaceId);
+        assert.equal(where.token, 'token'); assert.equal(where.role, invitation.role); assert.equal(where.email, invitation.email); assert.equal(where.acceptedAt, null);
+        if (invitation.expiresAt <= where.expiresAt.gt) return { count: 0 };
+        inviteWrites++; return { count: 1 };
+      },
     },
     promaneMember: {
       findUnique: async () => existing,
@@ -190,7 +197,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   await check('available owner seat accepts and consumes exactly one place', async () => {
     const f = fixture();
     assert.equal((await f.run()).success, true);
-    assert.deepEqual(f.state(), { attempts: 1, memberWrites: 1, inviteWrites: 1 });
+    assert.deepEqual(f.state(), { attempts: 2, memberWrites: 1, inviteWrites: 1 });
   });
   await check('full owner seat blocks before member and invitation writes', async () => {
     const f = fixture({ used: 3 });
@@ -199,7 +206,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     assert.equal(result.response.code, 'PROMANE_MEMBER_LIMIT_REACHED');
     assert.equal(result.response.canManageBilling, false);
     assert.match(result.response.error, /契約者にご相談/);
-    assert.deepEqual(f.state(), { attempts: 1, memberWrites: 0, inviteWrites: 0 });
+    assert.deepEqual(f.state(), { attempts: 2, memberWrites: 0, inviteWrites: 0 });
   });
   await check('inactive membership cannot be revived by an invitation', async () => {
     const f = fixture({ existing: { id: 'old', isActive: false } });
@@ -247,7 +254,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   await check('serialization conflict retries before admitting', async () => {
     const f = fixture({ conflicts: 1 });
     assert.equal((await f.run()).success, true);
-    assert.deepEqual(f.state(), { attempts: 2, memberWrites: 1, inviteWrites: 1 });
+    assert.deepEqual(f.state(), { attempts: 3, memberWrites: 1, inviteWrites: 1 });
   });
   console.log(JSON.stringify({ passed: results.length, results }, null, 2));
 })().catch((error) => { console.error(error); process.exitCode = 1; });

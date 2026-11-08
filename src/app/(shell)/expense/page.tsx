@@ -6,6 +6,7 @@ import { claimPendingMemberships, getExpenseContext, resolveUserId } from '@/lib
 import { getOwnCompany } from '@/lib/shell/company.server'
 import ExpenseLp from './Lp'
 import ExpenseEntry from './Entry'
+import type { ExpenseClaimIssue } from '@/lib/expense/member-admission'
 import { forwardPath, toSearchParams } from '@/lib/agent-router/entry'
 
 /** ドヤAIの「頼む」から来たときに、組織の中で開いてよい画面（?to=） */
@@ -26,10 +27,11 @@ export default async function ExpensePage({ searchParams }: ExpensePageProps) {
   //    組織が無いときは、読み込みを挟まずに作成の画面を出す
   let slug: string | null = null
   let companyName: string | null = null
+  let admissionIssues: ExpenseClaimIssue[] = []
   try {
     const userId = await resolveUserId()
     if (userId) {
-      await claimPendingMemberships(userId)
+      admissionIssues = (await claimPendingMemberships(userId)).issues
       slug = (await getExpenseContext())?.organizationSlug ?? null
       // 1アカウント＝1会社（2026-10-24 ユーザーの決定）。支出管理の組織が無ければ、アカウントの会社（account_companies）の名前を読む。
       // ⚠️ ここ（画面を開く GET）では組織を作らない。先取りや他サイトからの読み込みでも作られてしまうため。
@@ -42,5 +44,5 @@ export default async function ExpensePage({ searchParams }: ExpensePageProps) {
   }
   if (slug) redirect(`/expense/${encodeURIComponent(slug)}${next}`)
   // 会社があれば「その会社の名前で始める」を、無ければ会社の登録を案内する（どちらも組織名・氏名の入力は出さない）
-  return companyName ? <ExpenseEntry known companyName={companyName} /> : <ExpenseEntry known needsCompany />
+  return companyName ? <ExpenseEntry known companyName={companyName} initialAdmissionIssues={admissionIssues} /> : <ExpenseEntry known needsCompany initialAdmissionIssues={admissionIssues} />
 }

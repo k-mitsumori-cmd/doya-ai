@@ -27,6 +27,7 @@ import { decideSeatChange, findSeatItem, isValidOperationKey, seatAddGrants } fr
 import { isTeamSeatCount, teamMonthly, teamMonthlyPoints } from '@/lib/pricing-v2/plans'
 import { ownerTeamContext, readOwnerTeamSubscription, saveSeatCache, writeTeamSeatCache, teamSeatsUsed, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
 import { beginSeatOperation, cancelSeatPreparation, claimVerifiedSeatReconciliation, finishSeatOperation, inspectSeatReconciliation, pendingSeatChangeForOwner, readCompletedSeatOperation, recordSeatPaymentRejection, recordSeatStripeAttempt, saveSeatPreparationCache, seatCacheRevision, seatPreparationGrantAllowed, SeatOperationError, type SeatOperationClaim, type SeatOperationStart } from '@/lib/pricing-v2/seat-operation'
+import { CompanySeatMinimumError, verifyCompanySeatMinimum } from '@/lib/pricing-v2/company-seat-minimum.server'
 import { readSeatReconciliationEvidence } from '@/lib/pricing-v2/seat-reconciliation.server'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { jstMonthKey, monthlyGrantExpiresAt } from '@/lib/doya-power/rules'
@@ -167,11 +168,21 @@ export async function POST(req: NextRequest) {
           return json({ code: 'MONTHLY_GRANT_FAILED', error: '人数を変える準備ができませんでした。時間をおいて再度お試しください。人数は変わっていません。' }, 503)
         }
       }
-      claim = await recordSeatStripeAttempt(claim, {
-        subscriptionId: t.subscriptionId, seatItemId: t.seatItemId, from: t.seats,
-        to: requested, interval: t.interval, status: t.status, used,
-        direction: decision.direction, grantPoints, pointsAt,
-      })
+      try {
+        claim = await recordSeatStripeAttempt(claim, {
+          subscriptionId: t.subscriptionId, seatItemId: t.seatItemId, from: t.seats,
+          to: requested, interval: t.interval, status: t.status, used,
+          direction: decision.direction, grantPoints, pointsAt,
+        }, undefined, Date.now(), tx => verifyCompanySeatMinimum(tx, {
+          companyId: c.ctx.companyId, ownerUserId: c.ctx.owner.id, requested,
+        }))
+      } catch (error) {
+        if (!(error instanceof CompanySeatMinimumError)) throw error
+        await cancelSeatPreparation(claim)
+        return json({ code: error.code, ...(error.used === null ? {} : { used: error.used }), error: error.code === 'BELOW_USED'
+          ? `今使っている人数（${error.used}人）より少なくはできません。先にメンバーを外してください。`
+          : '会社の持ち主が変わりました。画面を読み込み直してください。' }, 409)
+      }
     }
     if (claim.active.phase !== 'stripe') throw new Error('Seat request not recorded')
     const active = claim.active

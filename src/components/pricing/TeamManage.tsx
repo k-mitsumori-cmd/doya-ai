@@ -15,6 +15,9 @@ import { confirmDialog } from '@/components/ds'
 import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
 import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
 import PaymentThanks from './PaymentThanks'
+import { COMPANY_ROLE_LABEL, isMemberRowRole } from '@/lib/company-roles/roles'
+import { companyInviteRole, COMPANY_INVITE_ROLE_LABEL, type CompanyInviteRole } from '@/lib/pricing-v2/company-invite-role'
+import guestStyles from './CompanyInvite.module.css'
 import base from './PricingNext.module.css'
 import styles from './PricingV2.module.css'
 
@@ -37,7 +40,7 @@ function managedMembers(raw: unknown): Member[] | null {
   for (const value of raw) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null
     const member = value as Record<string, unknown>
-    if (typeof member.id !== 'string' || !member.id || ids.has(member.id) || typeof member.email !== 'string' || typeof member.role !== 'string' || !['active', 'invited'].includes(String(member.status))) return null
+    if (typeof member.id !== 'string' || !member.id || ids.has(member.id) || typeof member.email !== 'string' || typeof member.role !== 'string' || (typeof member.status !== 'string' || !['active', 'invited'].includes(member.status))) return null
     ids.add(member.id)
     result.push({ id: member.id, email: member.email, role: member.role, status: member.status as string })
   }
@@ -47,19 +50,19 @@ function managedMembers(raw: unknown): Member[] | null {
 /** Session-keyed child resets immediately on logout/account switch. Old dialogs
  * and responses cannot submit or display the previous owner's operation.
  */
-export function TeamManage() {
+export function TeamManage({ membershipOnly = false }: { membershipOnly?: boolean } = {}) {
   const { data: session, status } = useSession()
   const actor = (session?.user as { id?: unknown } | undefined)?.id
   if (status !== 'authenticated' || typeof actor !== 'string' || !actor) return (
     <section id="manage" className={styles.manage} aria-labelledby="manage-title">
-      <h2 id="manage-title" className={base.sectionTitle}>チームの管理</h2>
+      <h2 id="manage-title" className={base.sectionTitle}>{membershipOnly ? '会社のメンバー' : 'チームの管理'}</h2>
       <p className={styles.manageSub} role="status">{status === 'loading' ? 'ログイン状態を確認しています…' : 'ログインして契約情報をご確認ください。'}</p>
     </section>
   )
-  return <OwnerTeamManage key={actor} actorId={actor} />
+  return <OwnerTeamManage key={`${actor}:${membershipOnly}`} actorId={actor} membershipOnly={membershipOnly} />
 }
 
-function OwnerTeamManage({ actorId }: { actorId: string }) {
+function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; membershipOnly: boolean }) {
   const [seats, setSeats] = useState<number | null>(null)
   const [used, setUsed] = useState<number | null>(null)
   const [draft, setDraft] = useState(1)
@@ -71,10 +74,12 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<CompanyInviteRole>('member')
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [inviteLabel, setInviteLabel] = useState<{ email: string; role: CompanyInviteRole } | null>(null)
   const [copied, setCopied] = useState(false)
   const [thanks, setThanks] = useState<PaymentThanksView | null>(null)
-  const emailId = useId()
+  const emailId = useId(), roleId = useId(), roleHelpId = useId()
   const disposed = useRef(false), loadVersion = useRef(0), mutating = useRef(false)
   const controllers = useRef(new Set<AbortController>())
   const request = useCallback(async (path: string, init: RequestInit = {}) => {
@@ -93,22 +98,25 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
     const version = ++loadVersion.current
     setLoading(true)
     try {
-      const [s, m] = await Promise.allSettled([request('/api/pricing/seats'), request('/api/pricing/members')])
+      const [s, m] = await Promise.allSettled([membershipOnly ? Promise.resolve(null) : request('/api/pricing/seats'), request('/api/pricing/members')])
       if (disposed.current || version !== loadVersion.current) return
-      const view = s.status === 'fulfilled' && s.value.ok ? parseTeamSeatsView(s.value.data) : null
-      if (view?.kind === 'ready') {
+      const view = s.status === 'fulfilled' && s.value?.ok ? parseTeamSeatsView(s.value.data) : null
+      if (membershipOnly) {
+        setSeats(null); setPending(null)
+        setLoadFailed(m.status !== 'fulfilled' || !m.value.ok || m.value.data.seatUsageUnavailable === true)
+      } else if (view?.kind === 'ready') {
         setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
       } else if (view?.kind === 'pending') {
         setSeats(null); setUsed(null); setDraft(view.pending.requested); setPending(view.pending); setLoadFailed(false)
       } else {
         setSeats(null); setUsed(null); setLoadFailed(true)
-        setMessage(s.status === 'fulfilled' ? managedError(s.value.data, '人数を読み込めませんでした。状態を再確認してください。') : '人数を読み込めませんでした。状態を再確認してください。')
+        setMessage(s.status === 'fulfilled' && s.value ? managedError(s.value.data, '人数を読み込めませんでした。状態を再確認してください。') : '人数を読み込めませんでした。状態を再確認してください。')
       }
       const list = m.status === 'fulfilled' && m.value.ok ? managedMembers(m.value.data.members) : null
       setMembers(list ?? []); setMembersFailed(list === null)
-      if (list === null && view) setMessage('メンバー情報を読み込めませんでした。状態を再確認してください。')
+      if (list === null && (view || membershipOnly)) setMessage(m.status === 'fulfilled' ? managedError(m.value.data, 'メンバー情報を読み込めませんでした。状態を再確認してください。') : 'メンバー情報を読み込めませんでした。状態を再確認してください。')
     } finally { if (!disposed.current && version === loadVersion.current) setLoading(false) }
-  }, [request])
+  }, [request, membershipOnly])
   useEffect(() => {
     disposed.current = false
     const requests = controllers.current
@@ -116,6 +124,7 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
     return () => { disposed.current = true; for (const controller of requests) controller.abort(); requests.clear() }
   }, [reload])
 
+  const clearInvitePreview = () => { setInviteUrl(null); setInviteLabel(null); setCopied(false) }
   const beginAction = () => {
     if (disposed.current || mutating.current) return false
     mutating.current = true; setBusy(true); setMessage(null)
@@ -167,13 +176,16 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
     } finally { endAction() }
   }
   const invite = async () => {
-    if (pending || loading || loadFailed || membersFailed || !email.trim() || !beginAction()) return
-    setInviteUrl(null); setCopied(false)
+    if ((inviteRole !== 'guest' && (pending || loadFailed)) || loading || membersFailed || !email.trim() || !beginAction()) return
+    const selectedRole = inviteRole
+    clearInvitePreview()
     try {
-      const response = await request('/api/pricing/members', { method: 'POST', body: JSON.stringify({ email }) })
+      const response = await request('/api/pricing/members', { method: 'POST', body: JSON.stringify({ email, role: selectedRole }) })
       if (disposed.current) return
-      if (response.ok && typeof response.data.inviteUrl === 'string' && response.data.inviteUrl.startsWith('https://')) {
-        setInviteUrl(response.data.inviteUrl); setEmail(''); await reload()
+      const returnedMember = response.data.member
+      const roleMatches = returnedMember !== null && typeof returnedMember === 'object' && !Array.isArray(returnedMember) && 'role' in returnedMember && returnedMember.role === selectedRole && 'email' in returnedMember && typeof returnedMember.email === 'string' && returnedMember.email.trim().toLowerCase() === email.trim().toLowerCase()
+      if (response.ok && roleMatches && typeof response.data.inviteUrl === 'string' && response.data.inviteUrl.startsWith('https://')) {
+        setInviteUrl(response.data.inviteUrl); setInviteLabel({ email: email.trim().toLowerCase(), role: selectedRole }); setEmail(''); await reload()
       } else setMessage(managedError(response.data, '招待の結果を確認できませんでした。状態を再確認してください。'))
     } catch { if (!disposed.current) setMessage('招待の結果を確認できませんでした。状態を再確認してください。') }
     finally { endAction() }
@@ -181,7 +193,7 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
   const remove = async (member: Member) => {
     if (!beginAction()) return
     try {
-      const approved = await confirmDialog({ title: `${member.email} を外します`, message: '外した方は、この会社のドヤパワーを使えなくなります。あとから招待し直せます。', confirmLabel: '外す', tone: 'danger' })
+      const approved = await confirmDialog({ title: `${member.email} を外します`, message: 'この会社の所属を外します。各ツールで別に付与した権限は残ります。使用人数を減らすには、該当ツールの操作権限も確認してください。あとから招待し直せます。', confirmLabel: '外す', tone: 'danger' })
       if (!approved || disposed.current) return
       const response = await request(`/api/pricing/members?id=${encodeURIComponent(member.id)}`, { method: 'DELETE' })
       if (disposed.current) return
@@ -200,11 +212,12 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
   }
   const diff = seats !== null ? (teamMonthly(draft) ?? 0) - (teamMonthly(seats) ?? 0) : 0
   const editingBlocked = busy || loading || loadFailed || pending !== null || seats === null
+  const invitationBlocked = busy || loading || membersFailed || (inviteRole !== 'guest' && (loadFailed || pending !== null))
   return (
     <section id="manage" className={styles.manage} aria-labelledby="manage-title" aria-busy={loading || busy}>
-      <h2 id="manage-title" className={base.sectionTitle}>チームの管理</h2>
-      <div className={styles.manageGrid}>
-        <div className={styles.manageCard}>
+      <h2 id="manage-title" className={base.sectionTitle}>{membershipOnly ? '会社のメンバー' : 'チームの管理'}</h2>
+      <div className={`${styles.manageGrid} ${guestStyles.inviteGrid} ${membershipOnly ? guestStyles.membershipOnlyGrid : ''}`}>
+        {!membershipOnly ? <div className={styles.manageCard}>
           <p className={styles.manageHead}>人数</p>
           {pending ? (
             <div className={base.notice}>
@@ -214,7 +227,7 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
             </div>
           ) : (
             <>
-              <p className={styles.manageSub}>{seats === null ? (loadFailed ? '人数を読み込めませんでした。' : '読み込んでいます…') : `今の人数 ${seats}人・使っている人数 ${used ?? '—'}人（持ち主と招待中を含む）`}</p>
+              <p className={styles.manageSub}>{seats === null ? (loadFailed ? '人数を読み込めませんでした。' : '読み込んでいます…') : `今の人数 ${seats}人・使っている人数 ${used ?? '—'}人（操作メンバーと有効な操作招待。持ち主を含み、閲覧専用ゲストは除きます）`}</p>
               <div className={styles.stepper}>
                 <button type="button" className={styles.stepBtn} aria-label="1人減らす" onClick={() => setDraft(d => Math.max(minSeats, d - 1))} disabled={editingBlocked || draft <= minSeats}><Minus size={18} /></button>
                 <span className={styles.seatValue}><span className={styles.seatNum}>{seats === null ? '—' : draft}</span><span>人</span></span>
@@ -225,28 +238,40 @@ function OwnerTeamManage({ actorId }: { actorId: string }) {
             </>
           )}
           <div className={base.planAction}><button type="button" className={base.secondary} onClick={() => { void reload() }} disabled={busy || loading}>状態を再確認する</button></div>
-        </div>
-        <div className={styles.manageCard}>
-          <p className={styles.manageHead}>メンバー</p>
-          <label htmlFor={emailId} className={styles.manageSub}>招待する方のメールアドレス</label>
-          <div className={styles.inviteRow}>
-            <input id={emailId} type="email" inputMode="email" autoComplete="off" value={email} onChange={event => setEmail(event.target.value)} className={styles.textInput} placeholder="name@example.com" disabled={busy || pending !== null || loading || loadFailed || membersFailed} />
-            <button type="button" className={base.secondary} onClick={invite} disabled={busy || pending !== null || loading || loadFailed || membersFailed || !email.trim()}>招待する</button>
-          </div>
+        </div> : null}
+        <div className={`${styles.manageCard} ${guestStyles.memberPanel}`}>
+          <p className={styles.manageHead}>招待と所属</p>
+          <p className={guestStyles.help}>ここには会社への招待と所属を表示します。各ツールだけの操作メンバーも使用人数に含まれますが、この一覧には表示されません。</p>
+          <form className={guestStyles.inviteForm} onSubmit={event => { event.preventDefault(); void invite() }}>
+            <label htmlFor={roleId} className={guestStyles.help}>招待する役割</label>
+            <select id={roleId} className={guestStyles.roleSelect} value={inviteRole} aria-describedby={roleHelpId} disabled={busy || loading || membersFailed} onChange={event => { const role = companyInviteRole(event.target.value); if (role) { setInviteRole(role); clearInvitePreview() } }}>
+              <option value="member">操作メンバー</option>
+              <option value="admin">管理者</option>
+              <option value="guest">ゲスト（閲覧のみ）</option>
+            </select>
+            <p id={roleHelpId} className={guestStyles.help}>{inviteRole === 'guest' ? 'この会社への招待では購入席を使わず、共有された画面の閲覧のみとなります。各ツールに操作権がある方は、その所属で席を使います。' : '操作メンバーと管理者は、会社と各ツールを通じて1人1席を使います。招待だけで自動請求は行いません。'}</p>
+            <label htmlFor={emailId} className={guestStyles.help}>招待する方のメールアドレス</label>
+            <div className={styles.inviteRow}>
+              <input id={emailId} type="email" inputMode="email" autoComplete="off" required maxLength={254} value={email} onChange={event => { setEmail(event.target.value); clearInvitePreview() }} className={styles.textInput} placeholder="name@example.com" disabled={invitationBlocked} />
+              <button type="submit" className={base.secondary} disabled={invitationBlocked || !email.trim()}>招待する</button>
+            </div>
+            {inviteRole !== 'guest' && (pending || loadFailed) && !loading ? <p className={guestStyles.help} role="status">操作メンバーの招待には、人数の確認が必要です。閲覧専用ゲストは役割を切り替えて招待できます。</p> : null}
+          </form>
           {inviteUrl ? <div className={styles.inviteUrl}>
-            <p className={styles.manageSub}>このリンクを、招待した方に渡してください（メールは送っていません）。</p>
+            <p className={styles.manageSub}>{inviteLabel ? `${inviteLabel.email}：${COMPANY_INVITE_ROLE_LABEL[inviteLabel.role]}の招待リンクです。` : ''}招待した方に渡してください（メールは送っていません）。</p>
             <div className={styles.inviteRow}>
               <input readOnly value={inviteUrl} className={styles.textInput} aria-label="招待のリンク" onFocus={event => event.currentTarget.select()} />
               <button type="button" className={base.secondary} onClick={() => { void copyInvite() }}>{copied ? <><Check size={16} />写しました</> : <><Copy size={16} />写す</>}</button>
             </div>
           </div> : null}
           <ul className={styles.memberList}>
-            {loading ? <li className={styles.manageSub}>読み込んでいます…</li> : membersFailed ? <li className={styles.manageSub}>メンバー情報を読み込めませんでした。</li> : members.length === 0 ? <li className={styles.manageSub}>まだメンバーはいません。</li> : members.map(member => <li key={member.id}>
+            {loading ? <li className={styles.manageSub}>読み込んでいます…</li> : membersFailed ? <li className={styles.manageSub}>メンバー情報を読み込めませんでした。</li> : members.length === 0 ? <li className={styles.manageSub}>この会社への招待・参加はまだありません。</li> : members.map(member => <li key={member.id}>
               <span className={styles.memberEmail}>{member.email}</span>
-              <span className={styles.memberStatus}>{member.status === 'active' ? '参加' : '招待中'}</span>
+              <span className={guestStyles.memberMeta}><span>{COMPANY_INVITE_ROLE_LABEL[member.role as CompanyInviteRole] ?? (isMemberRowRole(member.role) ? COMPANY_ROLE_LABEL[member.role] : '役割を確認してください')}</span><span className={styles.memberStatus}>{member.status === 'active' ? '参加' : '招待中'}</span></span>
               <button type="button" className={styles.linkBtn} onClick={() => { void remove(member) }} disabled={busy || loading}>外す</button>
             </li>)}
           </ul>
+          <button type="button" className={base.secondary} onClick={() => { void reload() }} disabled={busy || loading}>一覧を再確認する</button>
         </div>
       </div>
       {message ? <p className={base.notice} role="status">{message}</p> : null}

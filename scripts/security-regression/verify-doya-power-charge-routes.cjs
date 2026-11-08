@@ -80,7 +80,7 @@ const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/
     const team=code('src/lib/pricing-v2/team.server.ts');
     assert.match(team,/prisma\.accountCompany\.findUnique\(\{ where: \{ userId \}/);
     // 参加している会社は、旗が off でなく、本人が対象のとき（人ごと）だけ探す（2026-10-26 統括の点検 B3）
-    assert.match(team,/if \(!teamTablesAllowed\(\)\) return null\s*const me = await prisma\.user\.findUnique\(\{ where: \{ id: userId \}, select: \{ email: true \} \}\)\s*if \(!teamTablesAllowedFor\(me\?\.email\)\) return null\s*const m = await prisma\.accountCompanyMember\.findFirst\(\{\s*where: \{ userId, status: 'active' \}/);
+    assert.match(team,/if \(!teamTablesAllowed\(\)\) return null\s*const me = await prisma\.user\.findUnique\(\{ where: \{ id: userId \}, select: \{ email: true \} \}\)\s*if \(!teamTablesAllowedFor\(me\?\.email\)\) return null\s*const m = await prisma\.accountCompanyMember\.findFirst\(\{\s*where: \{ userId, status: 'active', role: \{ in: \['admin', 'manager', 'billing', 'member'\] \} \}/);
   });
   await check('Shell gauge reads the ledger only when the flag allows it',async()=>{
     assert.match(code('src/app/(shell)/layout.tsx'),/const doyaPowerState = doyaPower \? await doyaPowerCharger\.shellState\(\)\.catch\(\(\) => null\) : null/);

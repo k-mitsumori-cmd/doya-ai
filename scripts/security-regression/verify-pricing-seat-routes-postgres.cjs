@@ -2,7 +2,7 @@ const { root: seatRepo, seatSourcePath, evidenceDir } = require('./seat-regressi
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), crypto = require('node:crypto');
 const repo = seatRepo;
 const { load } = require(repo + '/scripts/security-regression/load-typescript.cjs');
-const { PrismaClient } = require(repo + '/node_modules/@prisma/client');
+const { PrismaClient, Prisma } = require(repo + '/node_modules/@prisma/client');
 const privateEnv = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')), privateState = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
 const url = privateEnv.DATABASE_URL, parsed = new URL(url);
 assert(parsed.searchParams.get('host') === privateState.socket && privateState.socket.startsWith('/tmp/doya-') && ['localhost', '127.0.0.1'].includes(parsed.hostname));
@@ -72,10 +72,25 @@ stripe.events = { list: async query => { state.evidenceReads++; return { data: s
 stripe.invoices = { retrieve: async id => { state.evidenceReads++; if (state.beforeInvoiceEvidenceRead) { const callback = state.beforeInvoiceEvidenceRead; state.beforeInvoiceEvidenceRead = null; await callback(); } const invoice = state.invoices.get(id); if (!invoice) throw Error('NO_SYNTHETIC_INVOICE'); return structuredClone(invoice); } };
 const reconciliationProof = load('src/lib/pricing-v2/seat-reconciliation-proof.ts', {}, globals);
 const reconciliationReader = load('src/lib/pricing-v2/seat-reconciliation.server.ts', { '@/lib/stripe': { stripe }, '@/lib/doya-power/rules': powerRules, './prices': prices, './seat-reconciliation-proof': reconciliationProof }, globals);
+
+// Keep the real company/tool identity collector and minimum in this SQL suite.
+const seatUsage = load('src/lib/pricing-v2/company-seat-usage.ts', {}, globals);
+const roleDefinitions = load('src/lib/company-roles/roles.ts', {}, globals);
+const toolRoles = load('src/lib/company-roles/tool-roles.ts', { './roles': roleDefinitions }, globals);
+const uiNext = load('src/lib/ui-next.ts', {}, globals);
+const roleRollout = load('src/lib/company-roles/rollout.ts', { '@/lib/ui-next': uiNext }, globals);
+const kintaiToken = load('src/lib/kintai/invite-token.ts', {}, globals);
+const seatEntries = load('src/lib/pricing-v2/company-seat-entries.server.ts', { '@/lib/company-roles/rollout': roleRollout, '@/lib/company-roles/tool-roles': toolRoles, '@/lib/kintai/invite-token': kintaiToken, './company-seat-usage': seatUsage }, globals);
+const seatUsers = load('src/lib/pricing-v2/company-seat-usage-users.server.ts', { '@prisma/client': { Prisma }, './company-seat-usage': seatUsage }, globals);
+const minimum = load('src/lib/pricing-v2/company-seat-minimum.server.ts', { './company-seat-entries.server': seatEntries, './company-seat-usage-users.server': seatUsers }, globals);
+const checkoutCapacity = load('src/lib/pricing-v2/checkout-seat-capacity.server.ts', {}, globals);
+const inviteRole = load('src/lib/pricing-v2/company-invite-role.ts', {}, globals);
+
 const server = load('src/lib/pricing-v2/team.server.ts', {
   '@/lib/prisma': { prisma: db }, '@/lib/stripe': { stripe, findActiveLikeSubscriptions: async () => { if (state.contractLookupFails) throw Error('SYNTHETIC_CONTRACT_LOOKUP_FAILURE'); return state.contractAvailable === false ? [] : [{ id: state.currentSubscriptionId || 'sub_synthetic', planId: 'team-pro' }]; } },
-  '@/lib/unified-plan': unified, './rollout': rollout, './plans': plans, './prices': prices, './view': view, './team': team, './seat-operation': core,
+  '@/lib/unified-plan': unified, './rollout': rollout, './plans': plans, './prices': prices, './view': view, './team': team, './seat-operation': core, './company-seat-minimum.server': minimum,
 }, globals);
+const membership = load('src/lib/pricing-v2/company-membership-seat.server.ts', { '@prisma/client': { Prisma }, './team.server': server, './company-seat-minimum.server': minimum, './checkout-seat-capacity.server': checkoutCapacity }, globals);
 const ledgerModule = load('src/lib/doya-power/ledger.ts', { '@/lib/unified-plan': unified, './rules': powerRules }, globals);
 const gateModule = load('src/lib/doya-power/gate.ts', { './ledger': ledgerModule }, globals);
 const serverForLedger = { ...server, newPricingMonthlyGrant: async id => {
@@ -92,7 +107,8 @@ function route(name, actor = owner) {
   return load(name, {
     'node:crypto': crypto, 'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: actor.id, email: actor.email } }) },
     '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma: db }, '@/lib/stripe': { stripe },
-    '@/lib/pricing-v2/rollout': rollout, '@/lib/pricing-v2/prices': prices, '@/lib/pricing-v2/view': view, '@/lib/pricing-v2/team': team, '@/lib/pricing-v2/plans': plans, '@/lib/pricing-v2/team.server': server, '@/lib/pricing-v2/seat-operation': { ...core, withSeatAdmission: async (...args) => { if (state.beforeAdmission) { const hook = state.beforeAdmission; state.beforeAdmission = null; await hook(); } return core.withSeatAdmission(...args); } }, '@/lib/pricing-v2/seat-reconciliation.server': reconciliationReader,
+    '@/lib/pricing-v2/company-seat-minimum.server': minimum, '@/lib/pricing-v2/company-membership-seat.server': membership, '@/lib/pricing-v2/company-invite-role': inviteRole,
+    '@/lib/pricing-v2/rollout': rollout, '@/lib/pricing-v2/prices': prices, '@/lib/pricing-v2/view': view, '@/lib/pricing-v2/team': team, '@/lib/pricing-v2/plans': plans, '@/lib/pricing-v2/team.server': server, '@/lib/pricing-v2/seat-operation': { ...core, withSeatRevocation: async (...args) => { if (state.beforeAdmission) { const hook = state.beforeAdmission; state.beforeAdmission = null; await hook(); } return core.withSeatRevocation(...args); }, withSeatAdmission: async (...args) => { if (state.beforeAdmission) { const hook = state.beforeAdmission; state.beforeAdmission = null; await hook(); } return core.withSeatAdmission(...args); } }, '@/lib/pricing-v2/seat-reconciliation.server': reconciliationReader,
     '@/lib/doya-power/flag': { doyaPowerLedgerAllowed: () => Boolean(state.ledger) },
     '@/lib/doya-power/rules': powerRules,
     '@/lib/doya-power': {

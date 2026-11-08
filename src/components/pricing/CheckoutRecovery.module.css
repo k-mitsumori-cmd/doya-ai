@@ -1,0 +1,16 @@
+.box { display: grid; gap: 12px; margin: 0 auto 24px; padding: 16px; max-width: 1120px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); color: var(--ink); }
+.title { margin: 0; font: inherit; font-size: 16px; line-height: 24px; font-weight: 600; text-wrap: balance; }
+.body, .error, .loading p { margin: 0; font-size: 14px; line-height: 20px; text-wrap: pretty; overflow-wrap: anywhere; }
+.body { color: var(--sub); }
+.error { color: var(--bad-ink); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.button, .primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 24px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color 300ms cubic-bezier(0.22,1,0.36,1), opacity 300ms cubic-bezier(0.22,1,0.36,1), transform 300ms cubic-bezier(0.22,1,0.36,1); }
+.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.button:hover { background: var(--bg); }
+.primary:hover { opacity: 0.88; }
+.button:active, .primary:active { transform: scale(0.98); }
+.button:focus-visible, .primary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.button:disabled { opacity: 0.45; cursor: default; transform: none; }
+.loading { display: grid; gap: 8px; }
+.skeleton { display: block; width: min(100%, 320px); height: 16px; border-radius: 4px; background: var(--line); }
+@media (prefers-reduced-motion: reduce) { .button, .primary { transition: opacity 300ms cubic-bezier(0.22,1,0.36,1); } .button:active, .primary:active { transform: none; } }

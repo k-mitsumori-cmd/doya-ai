@@ -4,7 +4,7 @@ const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: requir
 
 function fixture({ role = 'employee', email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date(), oldRole = 'employee', otherAdmin = false } = {}) {
   let rows = [
-    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', role, inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
+    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', role, inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com', isActive: true } : null, organization: { name: 'Acme' } },
     { id: 'old', organizationId: 'other', userId: 'user', status: 'ACTIVE', role: oldRole },
   ];
   if (otherAdmin) rows.push({ id: 'other-admin', organizationId: 'other', userId: 'someone', status: 'ACTIVE', role: 'system_admin', employee: { isActive: otherAdmin !== 'inactive' } });
@@ -18,7 +18,9 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
     (where.employee?.is?.isActive === undefined || row.employee?.isActive === where.employee.is.isActive);
   let transactions = 0;
   let deletions = 0;
-  const tx = { kintaiMember: {
+  const tx = { user: { findUnique: async () => ({ id: 'user', email: 'invited@example.com' }) },
+    $queryRaw: async (sql, id) => { assert.match(sql.join('?'), /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/); assert.equal(id, 'org'); return [{ id: 'org' }]; },
+    kintaiMember: {
     findFirst: async ({ where }) => structuredClone(rows.find((row) =>
       (where.inviteToken === undefined || row.inviteToken === where.inviteToken) &&
       (where.status === undefined || row.status === where.status) &&
@@ -32,7 +34,11 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
         (where.id?.not === undefined || row.id !== where.id.not) &&
         (where.userId === undefined || row.userId === where.userId) &&
         (where.status === undefined || row.status === where.status) &&
-        (where.inviteToken === undefined || row.inviteToken === where.inviteToken));
+        (where.inviteToken === undefined || row.inviteToken === where.inviteToken) &&
+        (where.organizationId === undefined || row.organizationId === where.organizationId) &&
+        (where.role === undefined || row.role === where.role) &&
+        (where.inviteEmail === undefined || row.inviteEmail === where.inviteEmail) &&
+        (where.createdAt === undefined || row.createdAt.getTime() === where.createdAt.getTime()));
       for (const row of matches) Object.assign(row, data);
       return { count: matches.length };
     },
@@ -41,6 +47,7 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
     delete: async () => { deletions++; },
   } };
   const prisma = {
+    kintaiMember: tx.kintaiMember,
     user: { findUnique: async () => ({ id: 'user' }) },
     $transaction: async (callback, options) => {
       transactions++;
