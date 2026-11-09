@@ -562,6 +562,7 @@ jobs:
           DOYA_BANNER_RELATED_IMAGE_EVIDENCE_DIR: /tmp/doya-banner-related-image-input-evidence
           DOYA_BANNER_DECODE_EVIDENCE_DIR: /tmp/doya-banner-image-decode-evidence
           DOYA_SEO_IMAGE_READ_EVIDENCE_DIR: /tmp/doya-seo-image-read-evidence
+          DOYA_SEO_PAGE_EVIDENCE_DIR: /tmp/doya-seo-article-scope-evidence
           DOYA_AGENT_CONFIRM_EVIDENCE_DIR: /tmp/doya-agent-confirm-evidence
         run: npm run test:security
 
@@ -571,6 +572,15 @@ jobs:
         with:
           name: agent-confirmation-boundary-${{ github.sha }}
           path: /tmp/doya-agent-confirm-evidence
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Save synthetic SEO article scope evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: seo-article-scope-${{ github.sha }}
+          path: /tmp/doya-seo-article-scope-evidence
           if-no-files-found: warn
           retention-days: 7
 

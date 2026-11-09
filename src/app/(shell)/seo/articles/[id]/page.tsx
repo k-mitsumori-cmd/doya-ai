@@ -544,6 +544,9 @@ const DEFAULT_DIAGRAM_PROMPT_TEMPLATE = `あなたは「SEO記事用の図解バ
 function SeoArticleInner() {
   const params = useParams<{ id: string }>()
   const id = params.id
+  const currentArticleIdRef = useRef(id)
+  currentArticleIdRef.current = id
+  const readOwner = useMemo(() => ({ active: false, controllers: new Set<AbortController>() }), [id])
   const searchParams = useSearchParams()
   const automaticActionsAllowed = searchParams.get('auto') !== '0'
   const router = useRouter()
@@ -576,6 +579,7 @@ function SeoArticleInner() {
   const [regenImage, setRegenImage] = useState<SeoImage | null>(null)
   const [regenPrompt, setRegenPrompt] = useState('')
   const autoImagesRequestedRef = useRef(false)
+  const autoImagesArticleRef = useRef(id)
   const [promptOpen, setPromptOpen] = useState(false)
   const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
   const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
@@ -682,12 +686,17 @@ function SeoArticleInner() {
   }, [markdown])
 
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
+    if (!readOwner.active || currentArticleIdRef.current !== id) return
+    const controller = new AbortController()
+    readOwner.controllers.add(controller)
+    const isCurrent = () => readOwner.active && currentArticleIdRef.current === id && !controller.signal.aborted
     const showLoading = opts?.showLoading === true
     if (showLoading) setLoading(true)
     setLoadError(null)
     try {
-      const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store' })
+      const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store', signal: controller.signal })
       const json = await res.json()
+      if (!isCurrent()) return
       if (!res.ok || json?.success === false) {
         // 404エラーの場合、カウントを増やす
         if (res.status === 404) {
@@ -708,19 +717,22 @@ function SeoArticleInner() {
         notFoundErrorCountRef.current = 0
         throw new Error(seoUserMessage(json?.error, '記事を読み込めませんでした。もう一度読み込んでください。'))
       }
+      if (!json.article || json.article.id !== id) throw new Error('記事を確かめられませんでした。もう一度読み込んでください。')
       // 成功した場合、エラーカウントをリセット
       notFoundErrorCountRef.current = 0
       setArticle(json.article || null)
       setMemo(json.article?.memo?.content || '')
       setMarkdownDraft(json.article?.finalMarkdown || '')
     } catch (e: any) {
+      if (!isCurrent()) return
       const errorMessage = seoUserMessage(e, '記事を読み込めませんでした。通信を確かめて、もう一度お試しください。')
       setLoadError(errorMessage)
       if (showLoading) setArticle(null)
     } finally {
-      if (showLoading) setLoading(false)
+      readOwner.controllers.delete(controller)
+      if (showLoading && isCurrent()) setLoading(false)
     }
-  }, [id])
+  }, [id, readOwner])
 
   async function act(name: string, fn: () => Promise<void>) {
     setBusy(name)
@@ -791,18 +803,22 @@ function SeoArticleInner() {
   }
 
   useEffect(() => {
+    readOwner.active = true
     load({ showLoading: true })
     // ポーリングインターバルをrefに保存
     pollingIntervalRef.current = setInterval(() => {
       load({ showLoading: false })
     }, 3000)
     return () => {
+      readOwner.active = false
+      for (const controller of readOwner.controllers) controller.abort()
+      readOwner.controllers.clear()
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
         pollingIntervalRef.current = null
       }
     }
-  }, [load])
+  }, [load, readOwner])
 
   // 記事が完成済み（DONE/ERROR/EXPORTED）になったらポーリングを停止
   useEffect(() => {
@@ -939,7 +955,11 @@ function SeoArticleInner() {
 
   // 記事が完成したら（autoBundleがONなら）自動で画像生成を試行する
   useEffect(() => {
-    if (!automaticActionsAllowed || !article) return
+    if (autoImagesArticleRef.current !== id) {
+      autoImagesArticleRef.current = id
+      autoImagesRequestedRef.current = false
+    }
+    if (!automaticActionsAllowed || !article || article.id !== id) return
     if (!article.autoBundle) return
     if (article.status !== 'DONE') return
     if (autoImagesRequestedRef.current) return
@@ -956,7 +976,7 @@ function SeoArticleInner() {
         const json = await res.json().catch(() => ({}))
         if (!res.ok || json?.success !== true) return
         if (!json?.isLoggedIn) return
-        if (!json?.canUseSeoImages || controller.signal.aborted) return
+        if (!json?.canUseSeoImages || controller.signal.aborted || currentArticleIdRef.current !== id) return
         started = true
         // 失敗してもUIは壊さない（ネットワーク/生成失敗など）。自動はサーバー側で1記事1回だけ。
         await ensureImages('auto')
@@ -967,10 +987,10 @@ function SeoArticleInner() {
     return () => {
       controller.abort()
       // 認証の確認中に画面を離れた場合、次の表示では確認し直せるようにする。
-      if (!started) autoImagesRequestedRef.current = false
+      if (!started && autoImagesArticleRef.current === id) autoImagesRequestedRef.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [automaticActionsAllowed, article?.id, article?.status, article?.autoBundle])
+  }, [id, automaticActionsAllowed, article?.id, article?.status, article?.autoBundle])
 
   async function regenerateImage() {
     if (!regenImage) return
