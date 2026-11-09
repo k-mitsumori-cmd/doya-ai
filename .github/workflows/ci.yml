@@ -24,6 +24,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: OpenID discovery URL compatibility (offline, no providers)
+        env:
+          DOYA_AUTH_COMPAT_EVIDENCE_DIR: /tmp/doya-auth-discovery-compat-evidence
+        run: node scripts/security-regression/verify-openid-discovery-compat.cjs
+      - name: Save synthetic OpenID discovery compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openid-discovery-compat-${{ github.workflow }}-${{ github.sha }}
+          path: /tmp/doya-auth-discovery-compat-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Prisma generate
         run: npx prisma generate
 
