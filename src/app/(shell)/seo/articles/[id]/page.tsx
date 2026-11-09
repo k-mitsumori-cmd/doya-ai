@@ -546,7 +546,7 @@ function SeoArticleInner() {
   const id = params.id
   const currentArticleIdRef = useRef(id)
   currentArticleIdRef.current = id
-  const readOwner = useMemo(() => ({ active: false, controllers: new Set<AbortController>() }), [id])
+  const readOwner = useMemo(() => ({ id, active: false, controllers: new Set<AbortController>() }), [id])
   const searchParams = useSearchParams()
   const automaticActionsAllowed = searchParams.get('auto') !== '0'
   const router = useRouter()
