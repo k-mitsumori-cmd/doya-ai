@@ -516,6 +516,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: HR member changes preserve payer attribution (private PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-hr-owner-payer-transition-evidence
+        run: python3 scripts/security-regression/verify-hr-owner-payer-transition-postgres.py
+      - name: Save synthetic HR payer transition evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: hr-owner-payer-transition-${{ github.sha }}
+          path: /tmp/doya-hr-owner-payer-transition-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

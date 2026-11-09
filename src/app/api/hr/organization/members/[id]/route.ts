@@ -93,7 +93,13 @@ async function mutateMember(ctx: HrContext, id: string, action: Action) {
             if (toolUnionScopeIdentity(await resolveToolUnionScope(scopeInput(ctx), tx)) !== toolUnionScopeIdentity(initial)) throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
           }
           const domain = await authorize(tx), result = await apply(tx, domain.value)
-          if (initial.enabled && 'scope' in initial && toolUnionScopeIdentity(await resolveToolUnionScope(scopeInput(ctx), tx)) !== toolUnionScopeIdentity(initial)) throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
+          // A removal can change the inferred payer when it deletes the oldest member.
+          // Keep unavailable/setup-required attribution stable too; do not move
+          // operating members onto another contract as a deletion side effect.
+          if (initial.enabled && toolUnionScopeIdentity(await resolveToolUnionScope(scopeInput(ctx), tx)) !== toolUnionScopeIdentity(initial)) {
+            if (!('scope' in initial)) throw new ToolSeatAdmissionError(409, 'COMPANY_SETUP_REQUIRED', 'contact-owner')
+            throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
+          }
           return result
         }
         // Removal, suspension and non-increasing metadata changes remain possible
