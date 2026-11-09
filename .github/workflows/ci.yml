@@ -542,6 +542,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Admin login session token uniqueness (private PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-admin-session-nonce-evidence
+        run: python3 scripts/security-regression/verify-admin-session-nonce-postgres.py
+      - name: Save synthetic admin session token evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: admin-session-nonce-${{ github.sha }}
+          path: /tmp/doya-admin-session-nonce-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

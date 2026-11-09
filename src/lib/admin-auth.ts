@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { randomUUID } from 'node:crypto'
 import { prisma } from './prisma'
 
 // JWT秘密鍵（環境変数から取得）
@@ -44,7 +45,7 @@ export function generateToken(adminUserId: string, username: string): string {
       type: 'admin',
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN, jwtid: randomUUID() }
   )
 }
 
@@ -195,7 +196,7 @@ export async function createAdminSession(
     },
   })
 
-  // 古いセッションを削除（同じユーザーのセッションを最大5つまで）
+  // 古いセッションを削除（同じユーザーの最新4つを保持）
   const sessions = await prisma.adminSession.findMany({
     where: { adminUserId },
     orderBy: { createdAt: 'desc' },
