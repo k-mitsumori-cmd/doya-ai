@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import type { ToolId } from './tool-roles'
 
@@ -6,8 +5,9 @@ import type { ToolId } from './tool-roles'
  * blocks only inferred role linking to that company, never explicit relinking.
  * No timestamps/expiry or user-provided JSON can silently remove this choice. */
 export function automaticLinkOptOutKey(companyId: string, tool: ToolId, organizationId: string) {
-  return 'company-tool-auto-link-opt-out:v1:' + createHash('sha256')
-    .update(JSON.stringify([companyId, tool, organizationId])).digest('hex')
+  // JSON tuple encoding distinguishes embedded separators/quotes and keeps
+  // this shared role reader independent of Node-only hashing dependencies.
+  return 'company-tool-auto-link-opt-out:v1:' + JSON.stringify([companyId, tool, organizationId])
 }
 type Reader = Pick<Prisma.TransactionClient, 'systemSetting'>
 export async function automaticLinkOptedOut(tx: Reader, companyId: string, tool: ToolId, organizationId: string) {
