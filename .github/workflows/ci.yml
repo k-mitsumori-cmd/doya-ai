@@ -529,6 +529,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Admin user input validation (private PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-admin-user-input-evidence
+        run: python3 scripts/security-regression/verify-admin-user-input-postgres.py
+      - name: Save synthetic admin input validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: admin-user-input-${{ github.sha }}
+          path: /tmp/doya-admin-user-input-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence

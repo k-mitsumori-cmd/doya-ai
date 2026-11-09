@@ -145,17 +145,38 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
     const { userId, plan, role, serviceId, servicePlan, resetDailyUsage, resetMonthlyUsage, setDailyUsage, setMonthlyUsage } = body
 
-    if (!userId) {
+    // Validate every field before applying a plan or role change. An invalid
+    // usage update must not leave an earlier privileged change committed.
+    if (typeof userId !== 'string' || !userId.trim() || userId !== userId.trim()) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    }
+    if (serviceId !== undefined && (typeof serviceId !== 'string' || !serviceId.trim() || serviceId !== serviceId.trim())) {
+      return NextResponse.json({ error: 'Invalid serviceId' }, { status: 400 })
+    }
+    for (const value of [resetDailyUsage, resetMonthlyUsage]) {
+      if (value !== undefined && typeof value !== 'boolean') {
+        return NextResponse.json({ error: 'Invalid usage reset' }, { status: 400 })
+      }
+    }
+    for (const value of [setDailyUsage, setMonthlyUsage]) {
+      if (value !== undefined && (!Number.isSafeInteger(value) || value < 0 || value > 2_147_483_647)) {
+        return NextResponse.json({ error: 'Usage must be a non-negative 32-bit integer' }, { status: 400 })
+      }
+    }
+    if ((resetDailyUsage === true || resetMonthlyUsage === true || setDailyUsage !== undefined || setMonthlyUsage !== undefined) && serviceId === undefined) {
+      return NextResponse.json({ error: 'serviceId is required for usage changes' }, { status: 400 })
     }
 
     // 旧UIの servicePlan 指定も統一プランとして反映する。サービス個別課金は廃止済み。
     const requestedPlan = plan ?? servicePlan
     const validPlans = ['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE']
-    if (requestedPlan !== undefined && !validPlans.includes(requestedPlan)) {
+    if ([plan, servicePlan].some(value => value !== undefined && (typeof value !== 'string' || !validPlans.includes(value)))) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
     if (plan !== undefined && servicePlan !== undefined && plan !== servicePlan) {
