@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { randomUUID } from 'node:crypto'
 import { prisma } from './prisma'
 
 // JWT秘密鍵（環境変数から取得）
@@ -44,7 +45,7 @@ export function generateToken(adminUserId: string, username: string): string {
       type: 'admin',
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN, jwtid: randomUUID() }
   )
 }
 
@@ -183,38 +184,35 @@ export async function createAdminSession(
   userAgent: string
 ): Promise<void> {
   const expiresAt = new Date()
-  expiresAt.setHours(expiresAt.getHours() + 24) // 24時間後
+  expiresAt.setHours(expiresAt.getHours() + 24)
 
-  await prisma.adminSession.create({
-    data: {
-      token,
-      adminUserId,
-      ipAddress,
-      userAgent,
-      expiresAt,
-    },
-  })
+  await prisma.$transaction(async tx => {
+    // 同じ管理者のログインを直列化し、作成・整理・最終ログイン更新を一緒に確定する。
+    const [admin] = await tx.$queryRaw<{ id: string; isActive: boolean }[]>`
+      SELECT id, "isActive" FROM "AdminUser" WHERE id = ${adminUserId} FOR UPDATE
+    `
+    if (!admin?.isActive) throw new Error('Administrator is unavailable')
 
-  // 古いセッションを削除（同じユーザーのセッションを最大5つまで）
-  const sessions = await prisma.adminSession.findMany({
-    where: { adminUserId },
-    orderBy: { createdAt: 'desc' },
-    skip: 4, // 最新4つを残す
-  })
-
-  if (sessions.length > 0) {
-    await prisma.adminSession.deleteMany({
-      where: {
-        id: { in: sessions.map(s => s.id) },
-      },
+    await tx.adminSession.create({
+      data: { token, adminUserId, ipAddress, userAgent, expiresAt },
     })
-  }
 
-  // 最後ログイン時刻を更新
-  await prisma.adminUser.update({
-    where: { id: adminUserId },
-    data: { lastLoginAt: new Date() },
-  })
+    const sessions = await tx.adminSession.findMany({
+      where: { adminUserId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: 4,
+      select: { id: true },
+    })
+    if (sessions.length > 0) {
+      await tx.adminSession.deleteMany({
+        where: { id: { in: sessions.map(session => session.id) } },
+      })
+    }
+    await tx.adminUser.update({
+      where: { id: adminUserId },
+      data: { lastLoginAt: new Date() },
+    })
+  }, { maxWait: 5000, timeout: 15000 })
 }
 
 // セッション削除（ログアウト）
