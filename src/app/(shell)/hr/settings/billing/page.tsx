@@ -244,7 +244,7 @@ export default function BillingPage() {
               canUpgrade={!['pro', 'bundle', 'enterprise'].includes(planKey)}
             />
             <UsageBar
-              label="メンバー数"
+              label="HR内のメンバー数"
               used={billing?.memberCount ?? 0}
               limit={billing?.memberLimit ?? 2}
               icon="group"
@@ -258,6 +258,7 @@ export default function BillingPage() {
               color="text-teal-600"
             />
           </div>
+          <p className="mt-4 text-sm text-slate-600">ここに表示しているのはHR内の人数です。操作メンバーを追加するときは、会社全体の人数上限も適用されます。</p>
         </motion.div>
 
         {/* Plans */}
