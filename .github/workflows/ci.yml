@@ -542,7 +542,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Admin login session token uniqueness (private PostgreSQL)
+      - name: Admin login session creation and retention (private PostgreSQL)
         env:
           DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-admin-session-nonce-evidence
         run: python3 scripts/security-regression/verify-admin-session-nonce-postgres.py
