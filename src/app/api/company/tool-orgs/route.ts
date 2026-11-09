@@ -29,19 +29,24 @@ export async function POST(req: NextRequest) {
   return companyRolesApi(async (s) => {
     const body = await req.json().catch(() => null)
     if (!isToolId(body?.tool) || typeof body?.organizationId !== 'string') return json({ error: 'ツールと組織を選び直してください。' }, 400)
-    const d = await linkToolOrg({ companyId: s.companyId, actorUserId: s.userId, actorIsAdmin: hasMinCompanyRole(s.role, 'admin'), tool: body.tool, organizationId: body.organizationId })
+    const d = await linkToolOrg({ companyId: s.companyId, actorUserId: s.userId, actorIsAdmin: hasMinCompanyRole(s.role, 'admin'), tool: body.tool, organizationId: body.organizationId }, {
+      onLinked: async (tx) => {
+        const me = await tx.user.findUnique({ where: { id: s.userId }, select: { email: true } })
+        await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_linked', fromRole: null, toRole: null, note: body.tool + ':' + body.organizationId }), tx)
+      },
+    })
     if (!d.ok) {
       const messages = {
         NOT_ALLOWED: '会社につなげるのは、管理者とオーナーです。',
         NOT_TOP_MEMBER: 'つなげるのは、そのツールの組織の最上位の役割の方だけです。',
         LINKED_ELSEWHERE: 'この組織は、ほかの会社につながっています。',
         INVALID: 'ツールと組織を選び直してください。',
+        SEAT_CAPACITY_EXCEEDED: '会社の購入人数を超えています。オーナーに人数の確認を依頼してください。',
+        SEAT_CAPACITY_UNAVAILABLE: '会社の購入人数を確認できません。時間をおいて、もう一度お試しください。',
+        SEAT_OPERATION_BUSY: '会社の人数を変更中です。時間をおいて、もう一度お試しください。',
+        SEAT_CONTEXT_CHANGED: '会社や組織の状態が変わりました。読み直して、もう一度お試しください。',
       } as const
       return json({ code: d.code, error: messages[d.code] }, d.status)
-    }
-    if (d.created) {
-      const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
-      await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_linked', fromRole: null, toRole: null, note: `${body.tool}:${body.organizationId}` }))
     }
     return json({ ok: true, created: d.created }, d.created ? 201 : 200)
   })

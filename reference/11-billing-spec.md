@@ -813,3 +813,13 @@ New operational and signed-webhook notices are explicitly due immediately, avoid
 ### 2026-11-09 SFA team table direct-access protection
 
 Company/team authority used by operating members depends on server-managed SFA team data. The existing team tables now use RLS and deny direct PUBLIC/anon/authenticated privileges while the trusted backend retains CRUD. This changes neither purchased seats nor subscription quantities. The reviewed manual migration, explicit preflight/apply and private fourteen-condition regression are documented in [the protection runbook](../docs/architecture/management-agent/SFA-TEAM-TABLE-PROTECTION-2026-11-09.md). CI uses only synthetic private PostgreSQL and never applies production DDL.
+
+### 明示した会社・ツール組織の連携と購入席（2026-11-09）
+
+会社の管理者以上がツール組織を明示的に連携するPOSTも、会社の購入席を使う。連携先と、確認できた元の支払元の調整ガードを一定順序で取得し、User・会社・会社役割・ツール組織・現在の最上位メンバーを同一取引で固定する。古い画面の管理者表示だけでは許可しない。
+
+新しい連携では、保存前後の会社所属・ツール所属・有効招待の和集合を、現在User IDに基づいて数える。満席、人数控え不明、人数変更処理中・解釈できない状態では保存を拒否する。監査イベントも同じ取引へ保存し、失敗時は連携とイベントを巻き戻す。連携だけで人数購入、Stripe請求、中央所属の作成、User.plan変更は行わない。
+
+すでに同じ会社へ連携済みなら、現在の会社権限・ツール権限を再確認した上で200を返し、人数や監査イベントを増やさない。人数変更処理中や人数控え不明でも、この変更のない再確認は可能とする。別会社への連携済み組織は409。作成者の引継ぎで自動帰属を判定できない組織でも、明示した会社への管理者権限と現在のツール最上位権限を確認して設定できる。古い契約者を自動推測する処理は追加しない。
+
+この実装は明示POSTの48群を対象とする。解除、自動初回連携、会社プロフィール作成、HR所有者譲渡の支払元方針、全writerの整合は別途監査中。会社権限flagの有効化・本番の実連携・実金融を検証済みとはしない。検証と適用状態は [明示連携の検証記録](../docs/architecture/management-agent/COMPANY-TOOL-LINK-SEAT-ADMISSION-2026-11-09.md) を参照する。

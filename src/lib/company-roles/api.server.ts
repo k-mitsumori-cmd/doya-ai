@@ -2,14 +2,13 @@
 // 会社の役割の API の共通処理（/api/company/*）
 // ============================================
 // ⚠️ 旗 COMPANY_ROLES_ROLLOUT が off、または会社に入っていない人には 404（表を読まない・あることを知らせない）。
-import { NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { companyRolesRollout } from './rollout'
 import { companyRolesSession, type CompanyRolesSession } from './members.server'
 
-const NO_STORE = { 'Cache-Control': 'private, no-store' }
-export const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: NO_STORE })
+export const json = (body: unknown, status = 200) => privateApiJson(body, { status })
 
 export async function companyRolesApi(fn: (s: CompanyRolesSession) => Promise<Response>): Promise<Response> {
   try {
