@@ -542,6 +542,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Admin credential changes and pending login (private PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-admin-credential-fence-evidence
+        run: python3 scripts/security-regression/verify-admin-credential-fence-postgres.py
+
+      - name: Save synthetic admin credential state evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: admin-credential-fence-${{ github.sha }}
+          path: /tmp/doya-admin-credential-fence-evidence
+          if-no-files-found: warn
+          retention-days: 7
       - name: Admin login session creation and retention (private PostgreSQL)
         env:
           DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-admin-session-nonce-evidence
