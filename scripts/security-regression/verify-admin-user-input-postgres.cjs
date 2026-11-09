@@ -10,8 +10,25 @@ const forbidden = () => { providerCalls++; throw Error('No external IO'); };
 function load(file, mocks) { hashes[file] = crypto.createHash('sha256').update(fs.readFileSync(seatSourcePath(file))).digest('hex'); return rawLoad(file, mocks, globals); }
 const unified = load('src/lib/unified-plan.ts', {}), pricing = load('src/lib/pricing.ts', { './unified-plan': unified }), planUtils = load('src/lib/plan-utils.ts', {}), stripeModule = load('src/lib/stripe.ts', { stripe: class {
     }, 'node:crypto': crypto }), manual = load('src/lib/billing-manual-grants.ts', { '@/lib/prisma': { prisma: db } }), sync = load('src/lib/billing-sync.ts', { '@/lib/prisma': { prisma: db, withRetry: fn => fn() }, '@/lib/stripe': stripeModule, '@/lib/billing-manual-grants': manual });
-let authorized = true;
-const route = load('src/app/api/admin/users/route.ts', { 'next/server': { NextResponse: { json: (b, i) => Response.json(b, i) } }, 'next/headers': { cookies: async () => ({ get: () => ({ value: 'synthetic-admin-cookie' }) }) }, '@/lib/admin-auth': { COOKIE_NAME: 'admin', verifyAdminSession: async () => ({ valid: authorized }) }, '@/lib/stripe': { ...stripeModule, findActiveLikeSubscriptions: forbidden, isDoyaSubscriptionOwnedByUser: forbidden }, '@/lib/billing-sync': sync, '@/lib/prisma': { prisma: db }, '@/lib/admin/banner-quota': { summarizeBannerMonthlyQuota: forbidden }, '@/lib/pricing': pricing, '@/lib/seo-article-admission': { getSeoArticleMonthlyUsageForUsers: forbidden }, '@/lib/plan-utils': planUtils, '@/lib/admin/contract-price': { summarizeAdminContractPrice: forbidden }, stripe: class {
+let authorized = true, serializationFailures = 0, serializationAttempts = 0;
+// Throw inside a real transaction so injected serialization failures roll back SQL.
+const routeDb = new Proxy(db, { get(target, key) {
+  if (key === '$transaction') return async (callback, options) => {
+    serializationAttempts++;
+    return target.$transaction(async tx => {
+      const result = await callback(tx);
+      if (serializationFailures > 0) {
+        serializationFailures--;
+        const error = new Error('Synthetic serialization failure');
+        error.code = 'P2034';
+        throw error;
+      }
+      return result;
+    }, options);
+  };
+  return Reflect.get(target, key, target);
+} });
+const route = load('src/app/api/admin/users/route.ts', { 'next/server': { NextResponse: { json: (b, i) => Response.json(b, i) } }, 'next/headers': { cookies: async () => ({ get: () => ({ value: 'synthetic-admin-cookie' }) }) }, '@/lib/admin-auth': { COOKIE_NAME: 'admin', verifyAdminSession: async () => ({ valid: authorized }) }, '@/lib/stripe': { ...stripeModule, findActiveLikeSubscriptions: forbidden, isDoyaSubscriptionOwnedByUser: forbidden }, '@/lib/billing-sync': sync, '@/lib/prisma': { prisma: routeDb, withRetry: fn => fn() }, '@/lib/admin/banner-quota': { summarizeBannerMonthlyQuota: forbidden }, '@/lib/pricing': pricing, '@/lib/seo-article-admission': { getSeoArticleMonthlyUsageForUsers: forbidden }, '@/lib/plan-utils': planUtils, '@/lib/admin/contract-price': { summarizeAdminContractPrice: forbidden }, stripe: class {
         constructor() { this.subscriptions = { retrieve: forbidden, cancel: forbidden }; }
     } });
 const rows = [];
@@ -61,7 +78,56 @@ async function untouched(id) { const user = await db.user.findUnique({ where: { 
         rows.push({ name: failedCase, passed: true });
         authorized = true;
     }
-    assert.equal(rows.length, 26);
+    assert.equal(rows.length, 26); // Preserve the original validation/authentication matrix.
+    await db.$executeRawUnsafe(`CREATE FUNCTION audit_reject_usage() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."monthlyUsage" = 12345 THEN RAISE EXCEPTION 'synthetic usage write failure'; END IF; RETURN NEW; END $$`);
+    await db.$executeRawUnsafe(`CREATE TRIGGER audit_reject_usage BEFORE UPDATE ON "UserServiceSubscription" FOR EACH ROW EXECUTE FUNCTION audit_reject_usage()`);
+    const changes = [
+      { plan: 'PRO', setMonthlyUsage: 12345 },
+      { role: 'ADMIN', setMonthlyUsage: 12345 },
+      { servicePlan: 'BUNDLE', setMonthlyUsage: 12345 },
+    ];
+    for (const [i, patch] of changes.entries()) {
+      failedCase = 'database failure rolls back plan/role/legacy change ' + i;
+      const id = await seed(400 + i);
+      assert.equal((await request(id, { plan: undefined, role: undefined, ...patch })).status, 500);
+      await untouched(id);
+      rows.push({ name: failedCase, passed: true });
+    }
+    await db.$executeRawUnsafe('DROP TRIGGER audit_reject_usage ON "UserServiceSubscription"');
+    for (const [i, patch] of changes.entries()) {
+      failedCase = 'successful combined change returns committed snapshot ' + i;
+      const id = await seed(500 + i), response = await request(id, { plan: undefined, role: undefined, ...patch });
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.plan, patch.plan ?? patch.servicePlan ?? 'FREE');
+      assert.equal(result.role, patch.role ?? 'USER');
+      assert.equal(result.serviceSubscriptions.find(s => s.serviceId === 'banner').monthlyUsage, 12345);
+      const persisted = await db.userServiceSubscription.findUnique({ where: { userId_serviceId: { userId: id, serviceId: 'banner' } } });
+      assert.equal(persisted.monthlyUsage, 12345);
+      rows.push({ name: failedCase, passed: true });
+    }
+    failedCase = 'serialization retry rolls back then commits the complete update';
+    {
+      const id = await seed(600), before = serializationAttempts;
+      serializationFailures = 1;
+      assert.equal((await request(id, { setMonthlyUsage: 9 })).status, 200);
+      assert.equal(serializationAttempts - before, 2);
+      const user = await db.user.findUnique({ where: { id } });
+      assert.equal(user.plan, 'PRO'); assert.equal(user.role, 'ADMIN');
+      const sub = await db.userServiceSubscription.findUnique({ where: { userId_serviceId: { userId: id, serviceId: 'banner' } } });
+      assert.equal(sub.monthlyUsage, 9);
+      rows.push({ name: failedCase, passed: true });
+    }
+    failedCase = 'serialization exhaustion leaves all prior state unchanged';
+    {
+      const id = await seed(601), before = serializationAttempts;
+      serializationFailures = 3;
+      assert.equal((await request(id, { setMonthlyUsage: 9 })).status, 500);
+      assert.equal(serializationAttempts - before, 3);
+      await untouched(id);
+      rows.push({ name: failedCase, passed: true });
+    }
+    assert.equal(rows.length, 34);
     assert.equal(providerCalls, 0);
     completed = true;
     failedCase = null;

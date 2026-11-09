@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
-import { syncUnifiedBilling } from '@/lib/billing-sync'
-import { prisma } from '@/lib/prisma'
+import { syncUnifiedBillingInTransaction } from '@/lib/billing-sync'
+import { prisma, withRetry } from '@/lib/prisma'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
 import { getSeoMonthlyLimitByUserPlan, shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
 import { getSeoArticleMonthlyUsageForUsers } from '@/lib/seo-article-admission'
@@ -185,70 +185,83 @@ export async function PATCH(req: NextRequest) {
     if (role !== undefined && !['USER', 'ADMIN'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
-    if (requestedPlan !== undefined) {
-      await syncUnifiedBilling({ userId, plan: requestedPlan, role, preserveManualGrant: false })
-    } else if (role !== undefined) {
-      await prisma.user.update({ where: { id: userId }, data: { role } })
-    }
-
-    // サービス別プラン・使用回数の更新（個別サービスの設定用）
-    if (serviceId) {
-      const existing = await prisma.userServiceSubscription.findUnique({
-        where: { userId_serviceId: { userId, serviceId } },
-      })
-
-      const updateData: any = {}
-      if (resetDailyUsage) updateData.dailyUsage = 0
-      if (resetMonthlyUsage) updateData.monthlyUsage = 0
-      if (typeof setDailyUsage === 'number') updateData.dailyUsage = setDailyUsage
-      if (typeof setMonthlyUsage === 'number') updateData.monthlyUsage = setMonthlyUsage
-      if (resetDailyUsage || resetMonthlyUsage || typeof setDailyUsage === 'number' || typeof setMonthlyUsage === 'number') {
-        // Both counters share one reset timestamp. Preserve only counters that
-        // belong to the current JST day/month before moving that timestamp.
-        if (existing) {
-          if (updateData.dailyUsage === undefined && shouldResetDailyUsage(existing.lastUsageReset)) updateData.dailyUsage = 0
-          if (updateData.monthlyUsage === undefined && shouldResetMonthlyUsage(existing.lastUsageReset)) updateData.monthlyUsage = 0
+    // Commit plan, role, service counters and the returned snapshot together.
+    // A later database failure must not leave an earlier privileged change.
+    const updatedUser = await withRetry(async () => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await prisma.$transaction(async (tx) => {
+            if (requestedPlan !== undefined) {
+              await syncUnifiedBillingInTransaction(tx, { userId, plan: requestedPlan, role, preserveManualGrant: false })
+            } else if (role !== undefined) {
+              await tx.user.update({ where: { id: userId }, data: { role } })
+            }
+        
+            // サービス別プラン・使用回数の更新（個別サービスの設定用）
+            if (serviceId) {
+              const existing = await tx.userServiceSubscription.findUnique({
+                where: { userId_serviceId: { userId, serviceId } },
+              })
+        
+              const updateData: any = {}
+              if (resetDailyUsage) updateData.dailyUsage = 0
+              if (resetMonthlyUsage) updateData.monthlyUsage = 0
+              if (typeof setDailyUsage === 'number') updateData.dailyUsage = setDailyUsage
+              if (typeof setMonthlyUsage === 'number') updateData.monthlyUsage = setMonthlyUsage
+              if (resetDailyUsage || resetMonthlyUsage || typeof setDailyUsage === 'number' || typeof setMonthlyUsage === 'number') {
+                // Both counters share one reset timestamp. Preserve only counters that
+                // belong to the current JST day/month before moving that timestamp.
+                if (existing) {
+                  if (updateData.dailyUsage === undefined && shouldResetDailyUsage(existing.lastUsageReset)) updateData.dailyUsage = 0
+                  if (updateData.monthlyUsage === undefined && shouldResetMonthlyUsage(existing.lastUsageReset)) updateData.monthlyUsage = 0
+                }
+                updateData.lastUsageReset = new Date()
+              }
+        
+              if (existing) {
+                await tx.userServiceSubscription.update({
+                  where: { id: existing.id },
+                  data: updateData,
+                })
+              } else if (requestedPlan) {
+                // 存在しない場合は作成
+                await tx.userServiceSubscription.create({
+                  data: {
+                    userId,
+                    serviceId,
+                    plan: requestedPlan === 'BUNDLE' ? 'PRO' : requestedPlan,
+                    dailyUsage: 0,
+                    monthlyUsage: 0,
+                  },
+                })
+              }
+            }
+        
+            // 更新後のユーザー情報を返す
+            return tx.user.findUnique({
+              where: { id: userId },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                plan: true,
+                role: true,
+                serviceSubscriptions: {
+                  select: {
+                    serviceId: true,
+                    plan: true,
+                    dailyUsage: true,
+                    monthlyUsage: true,
+                  },
+                },
+              },
+            })
+        
+          }, { isolationLevel: 'Serializable', maxWait: 10_000, timeout: 30_000 })
+        } catch (error) {
+          if ((error as { code?: string })?.code !== 'P2034' || attempt >= 2) throw error
         }
-        updateData.lastUsageReset = new Date()
       }
-
-      if (existing) {
-        await prisma.userServiceSubscription.update({
-          where: { id: existing.id },
-          data: updateData,
-        })
-      } else if (requestedPlan) {
-        // 存在しない場合は作成
-        await prisma.userServiceSubscription.create({
-          data: {
-            userId,
-            serviceId,
-            plan: requestedPlan === 'BUNDLE' ? 'PRO' : requestedPlan,
-            dailyUsage: 0,
-            monthlyUsage: 0,
-          },
-        })
-      }
-    }
-
-    // 更新後のユーザー情報を返す
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        plan: true,
-        role: true,
-        serviceSubscriptions: {
-          select: {
-            serviceId: true,
-            plan: true,
-            dailyUsage: true,
-            monthlyUsage: true,
-          },
-        },
-      },
     })
 
     return NextResponse.json(updatedUser)
