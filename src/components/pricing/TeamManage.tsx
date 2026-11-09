@@ -1,4 +1,5 @@
 'use client'
+import { parseCompanyMemberUsage, type CompanyMemberUsage } from '@/lib/pricing-v2/company-member-usage-view'
 import { powerPackReturnMessage, powerPackThanksPoints } from '@/lib/pricing-v2/power-pack-return'
 // ============================================
 // チームの管理（人数・メンバー・ドヤパワーの追加購入）。新しい料金ページ（PricingV2）の中だけ
@@ -68,6 +69,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
   const [draft, setDraft] = useState(1)
   const [pending, setPending] = useState<PendingSeatChange | null>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [memberUsage, setMemberUsage] = useState<CompanyMemberUsage | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [membersFailed, setMembersFailed] = useState(false)
@@ -97,13 +99,16 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
     if (disposed.current) return
     const version = ++loadVersion.current
     setLoading(true)
+    setMemberUsage(null)
     try {
       const [s, m] = await Promise.allSettled([membershipOnly ? Promise.resolve(null) : request('/api/pricing/seats'), request('/api/pricing/members')])
       if (disposed.current || version !== loadVersion.current) return
       const view = s.status === 'fulfilled' && s.value?.ok ? parseTeamSeatsView(s.value.data) : null
+      const usage = m.status === 'fulfilled' && m.value.ok ? parseCompanyMemberUsage(m.value.data) : null
+      setMemberUsage(usage)
       if (membershipOnly) {
         setSeats(null); setPending(null)
-        setLoadFailed(m.status !== 'fulfilled' || !m.value.ok || m.value.data.seatUsageUnavailable === true)
+        setLoadFailed(usage === null)
       } else if (view?.kind === 'ready') {
         setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
       } else if (view?.kind === 'pending') {
@@ -242,6 +247,9 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
         <div className={`${styles.manageCard} ${guestStyles.memberPanel}`}>
           <p className={styles.manageHead}>招待と所属</p>
           <p className={guestStyles.help}>ここには会社への招待と所属を表示します。各ツールだけの操作メンバーも使用人数に含まれますが、この一覧には表示されません。</p>
+          {membershipOnly ? <p className={guestStyles.help} role="status" aria-live="polite">
+            {loading ? '会社全体の使用人数を確認しています…' : memberUsage ? '会社全体で使用中 ' + memberUsage.used.toLocaleString('ja-JP') + '人 / 上限 ' + memberUsage.limit.toLocaleString('ja-JP') + '人（持ち主、各ツールの操作メンバーと有効な操作招待を含み、同じアカウントは1人と数えます。閲覧専用ゲストは除きます）' : '会社全体の使用人数を確認できませんでした。一覧を再確認してください。'}
+          </p> : null}
           <form className={guestStyles.inviteForm} onSubmit={event => { event.preventDefault(); void invite() }}>
             <label htmlFor={roleId} className={guestStyles.help}>招待する役割</label>
             <select id={roleId} className={guestStyles.roleSelect} value={inviteRole} aria-describedby={roleHelpId} disabled={busy || loading || membersFailed} onChange={event => { const role = companyInviteRole(event.target.value); if (role) { setInviteRole(role); clearInvitePreview() } }}>
