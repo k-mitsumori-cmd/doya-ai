@@ -252,7 +252,19 @@ export async function POST(request: NextRequest) {
     const token = generateToken(adminUser.id, adminUser.username)
 
     // セッションをデータベースに保存
-    await createAdminSession(adminUser.id, token, ipAddress, userAgent)
+    try {
+      await createAdminSession(adminUser.id, token, ipAddress, userAgent, {
+        passwordHash: adminUser.passwordHash,
+        totpEnabled: adminUser.totpEnabled,
+        totpSecret: adminUser.totpSecret,
+      })
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ADMIN_AUTH_STATE_CHANGED') {
+        await recordLoginAttempt(identifier, false, null, ipAddress, userAgent, '認証情報更新のため拒否')
+        return NextResponse.json({ error: 'ユーザー名またはパスワードが正しくありません' }, { status: 401 })
+      }
+      throw error
+    }
 
     // ログイン試行を記録
     await recordLoginAttempt(identifier, true, adminUser.id, ipAddress, userAgent)

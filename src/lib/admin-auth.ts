@@ -181,17 +181,20 @@ export async function createAdminSession(
   adminUserId: string,
   token: string,
   ipAddress: string,
-  userAgent: string
+  userAgent: string,
+  expectedAuth: { passwordHash: string; totpEnabled: boolean; totpSecret: string | null }
 ): Promise<void> {
   const expiresAt = new Date()
   expiresAt.setHours(expiresAt.getHours() + 24)
 
   await prisma.$transaction(async tx => {
     // 同じ管理者のログインを直列化し、作成・整理・最終ログイン更新を一緒に確定する。
-    const [admin] = await tx.$queryRaw<{ id: string; isActive: boolean }[]>`
-      SELECT id, "isActive" FROM "AdminUser" WHERE id = ${adminUserId} FOR UPDATE
+    const [admin] = await tx.$queryRaw<{ id: string; isActive: boolean; passwordHash: string; totpEnabled: boolean; totpSecret: string | null }[]>`
+      SELECT id, "isActive", "passwordHash", "totpEnabled", "totpSecret" FROM "AdminUser" WHERE id = ${adminUserId} FOR UPDATE
     `
-    if (!admin?.isActive) throw new Error('Administrator is unavailable')
+    if (!admin?.isActive || !expectedAuth || admin.passwordHash !== expectedAuth.passwordHash || admin.totpEnabled !== expectedAuth.totpEnabled || admin.totpSecret !== expectedAuth.totpSecret) {
+      throw Object.assign(new Error('Administrator authentication state changed'), { code: 'ADMIN_AUTH_STATE_CHANGED' })
+    }
 
     await tx.adminSession.create({
       data: { token, adminUserId, ipAddress, userAgent, expiresAt },
