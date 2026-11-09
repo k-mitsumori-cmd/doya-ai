@@ -429,9 +429,10 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     if (!data) { setError('依頼を読めませんでした。時間をおいて、もう一度お試しください。'); return }
     if (data.kind === 'op') {
       // チャットで進める操作は、右下の会話の欄が、画面を動かして確認カードまで進める。ここは入力の欄に戻す
+      // ⚠️ 'none' にすると「この依頼は、まだドヤAIに任せられません」の札が出て、会話の欄と食い違う（2026-11-09 本番で確認）
       agentChat?.begin(t, data)
       setText('')
-      setScene('none')
+      setScene('input')
       return
     }
     if (data.kind === 'action') {
