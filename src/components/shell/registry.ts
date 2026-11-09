@@ -45,6 +45,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'hub', basePath: '/hub' },
   // アカウントの設定（/settings/files など）。ツールではないので、左のメニューには出さない
   { id: 'settings', basePath: '/settings' },
+  // クマ（ドヤくん）の紹介ページ。ツールではないので、左のメニューには一番下のリンクだけ出す（2026-11-08 本人の指示）
+  { id: 'doyakun', basePath: '/doyakun' },
   { id: 'income', basePath: '/income' },
   { id: 'expense', basePath: '/expense' },
   { id: 'popup', basePath: '/popup', usage: { service: 'popup', refreshEvent: 'popup:generated' } },

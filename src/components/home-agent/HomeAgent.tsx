@@ -563,6 +563,17 @@ export default function HomeAgent({ executor = 'api', greeting, company, dept = 
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', measure) }
   }, [scene, sources, reduce])
 
+  // 場面（入力 → 読む → 計画 → 実行 → できた）が変わって中身の高さが大きく変わったとき、欄の頭が画面の外にあれば、欄の頭まで戻す。
+  // 画面に見えていれば動かさない（2026-11-08 本人の指摘「エージェントを使っているときのスクロールに違和感」）。最初の表示では動かさない
+  const firstScene = useRef(true)
+  useEffect(() => {
+    if (firstScene.current) { firstScene.current = false; return }
+    const el = stageRef.current
+    if (!el || typeof el.scrollIntoView !== 'function') return
+    const top = el.getBoundingClientRect().top
+    if (top < 0 || top > window.innerHeight * 0.6) el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })
+  }, [scene, reduce])
+
   const readCount = sources.filter((s) => s.status !== 'reading').length
   const pose = POSE[scene]
 

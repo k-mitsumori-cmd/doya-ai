@@ -565,6 +565,12 @@ export default function AppShell({ children, userName, initialRecent, department
             <LogOut size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>ログアウト</span>
           </button>
+          {/* 左のメニューの一番下に、クマの紹介ページ（2026-11-08 本人の指示「ドヤくんとは？」） */}
+          <Link href="/doyakun" className={`${styles.navItem} ${styles.kunRow}`} onClick={() => navigate('/doyakun')} title="ドヤくんとは？" aria-current={pathname === '/doyakun' ? 'page' : undefined}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/character/mini-hello-256.webp" alt="" aria-hidden width={24} height={24} className={styles.kunIcon} />
+            <span className={styles.navLabel}>ドヤくんとは？</span>
+          </Link>
         </div>
       </nav>
 
