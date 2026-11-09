@@ -57,10 +57,24 @@ export async function DELETE(req: NextRequest) {
     const q = new URL(req.url).searchParams
     const tool = q.get('tool'), organizationId = q.get('organizationId') ?? ''
     if (!isToolId(tool) || !organizationId || organizationId.length > 128) return json({ error: 'ツールと組織を選び直してください。' }, 400)
-    const d = await unlinkToolOrg({ companyId: s.companyId, actorIsOwner: s.role === 'owner', tool, organizationId })
-    if (!d.ok) return json({ code: d.code, error: d.code === 'NOT_ALLOWED' ? 'つながりを外せるのは、オーナーだけです。' : 'この会社につながった組織が見つかりませんでした。' }, d.status)
-    const me = await prisma.user.findUnique({ where: { id: s.userId }, select: { email: true } })
-    await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_unlinked', fromRole: null, toRole: null, note: `${tool}:${organizationId}` }))
+    const d = await unlinkToolOrg({ companyId: s.companyId, actorUserId: s.userId, actorIsOwner: s.role === 'owner', tool, organizationId }, {
+      onUnlinked: async tx => {
+        const me = await tx.user.findUnique({ where: { id: s.userId }, select: { email: true } })
+        await writeRoleEvent(buildRoleEvent({ companyId: s.companyId, actorUserId: s.userId, targetMemberId: null, targetEmail: me?.email ?? '', kind: 'tool_org_unlinked', fromRole: null, toRole: null, note: tool + ':' + organizationId }), tx)
+      },
+    })
+    if (!d.ok) {
+      const messages = {
+        NOT_ALLOWED: 'つながりを外せるのは、オーナーだけです。',
+        NOT_FOUND: 'この会社につながった組織が見つかりませんでした。',
+        INVALID: 'ツールと組織を選び直してください。',
+        SEAT_CAPACITY_EXCEEDED: '解除後の購入人数が不足します。オーナーに人数の確認を依頼してください。',
+        SEAT_CAPACITY_UNAVAILABLE: '解除後の購入人数を確認できません。時間をおいて、もう一度お試しください。',
+        SEAT_OPERATION_BUSY: '会社の人数を変更中です。時間をおいて、もう一度お試しください。',
+        SEAT_CONTEXT_CHANGED: '会社や組織の状態が変わりました。読み直して、もう一度お試しください。',
+      } as const
+      return json({ code: d.code, error: messages[d.code] }, d.status)
+    }
     return json({ ok: true })
   })
 }
