@@ -11,6 +11,7 @@
 // - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import type { CompanyToolLinkDecision } from './link-seat.server'
 import { TOOL_ROLE_TABLES, type ToolId } from './tool-roles'
 
 export type OrgMemberDelegate = {
@@ -101,19 +102,12 @@ export async function isToolOrgTopMember(tool: ToolId, organizationId: string, u
   return !!row
 }
 
-export type LinkToolOrgDecision =
-  | { ok: true; created: boolean }
-  | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_TOP_MEMBER' | 'LINKED_ELSEWHERE' | 'INVALID' }
+export type LinkToolOrgDecision = CompanyToolLinkDecision
 
-/** 会社の管理者以上が、自分が最上位の役割の組織を、会社につなぐ。ほかの会社につながっていればつながない */
-export async function linkToolOrg(input: { companyId: string; actorUserId: string; actorIsAdmin: boolean; tool: ToolId; organizationId: string }): Promise<LinkToolOrgDecision> {
-  if (!input.actorIsAdmin) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
-  if (!input.organizationId || input.organizationId.length > 128) return { ok: false, status: 400, code: 'INVALID' }
-  if (!(await isToolOrgTopMember(input.tool, input.organizationId, input.actorUserId))) return { ok: false, status: 403, code: 'NOT_TOP_MEMBER' }
-  const existing = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool: input.tool, organizationId: input.organizationId } }, select: { companyId: true } })
-  if (existing) return existing.companyId === input.companyId ? { ok: true, created: false } : { ok: false, status: 409, code: 'LINKED_ELSEWHERE' }
-  await prisma.accountCompanyToolOrg.create({ data: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId, linkedBy: input.actorUserId } })
-  return { ok: true, created: true }
+/** Current company/tool authority and destination seats are pinned until commit. */
+export async function linkToolOrg(input: { companyId: string; actorUserId: string; actorIsAdmin: boolean; tool: ToolId; organizationId: string }, options: { onLinked?: (tx: Prisma.TransactionClient) => Promise<void> } = {}): Promise<LinkToolOrgDecision> {
+  const { linkCompanyToolOrganization } = await import('./link-seat.server')
+  return linkCompanyToolOrganization(input, options)
 }
 
 /** 会社のオーナーだけが、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため。外すと上限が外れるので、管理者には許さない） */

@@ -477,6 +477,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Company tool links enforce operating seats and current authority (private PostgreSQL)
+        env:
+          DOYA_SEAT_EVIDENCE_DIR: /tmp/doya-company-tool-link-evidence
+        run: python3 scripts/security-regression/verify-company-tool-link-seat-admission-postgres.py
+      - name: Save synthetic company tool link evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: company-tool-link-seat-admission-${{ github.sha }}
+          path: /tmp/doya-company-tool-link-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Security and incident regression tests (offline)
         env:
           DOYA_BANNER_TEMPLATE_EVIDENCE_DIR: /tmp/doya-banner-template-read-evidence
