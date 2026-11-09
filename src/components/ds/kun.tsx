@@ -28,6 +28,8 @@ export type KunPose =
   // 展示会の待ち画面（壁をローラーで塗る。ds/DoyaWorking が、作業中は paint-a と paint-b を入れ替え、できたら paint-done を出す）
   | 'paint-a' | 'paint-b' | 'paint-done'
   | 'tool-banner' | 'tool-adimage' | 'tool-persona' | 'tool-asklink' | 'tool-popup' | 'tool-tenjikai' | 'tool-aishodan' | 'tool-doyalist' | 'tool-promane' | 'tool-shanai' | 'tool-income'
+  // 2026-11-08 に Codex の画像生成で足した絵（ドヤくんの紹介ページのしゅみ・とくい・すきなもの）
+  | 'fight' | 'grapple' | 'pingpong' | 'chiquita' | 'kitakata'
 
 /** 小さな動き。idle: 入るだけ / work: 作業中（上下） / think: 考え中（傾く） / cheer: できた（跳ねる） */
 export type KunAct = 'idle' | 'work' | 'think' | 'cheer'

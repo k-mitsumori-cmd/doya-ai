@@ -2,6 +2,8 @@
    2026-10-29 本人の指示で、左の大きなクマの列をやめた。どの状態でも、クマは見出しの右の小さな絵、中身は横いっぱい1列。
    動きは意味のある所だけ。prefers-reduced-motion では止める */
 .stage {
+  /* 場面が変わって欄の頭へ戻すとき、上の固定の帯に隠れないようにする */
+  scroll-margin-top: 72px;
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start;
   /* 角丸の式（内 = 外 − すき間）: 外 24px − 余白 16px = 中の面 8px。背景は平ら、縁は1pxで全周、影は弱く */
   --stage-r: 24px; --stage-pad: 16px; --inner-r: calc(var(--stage-r) - var(--stage-pad));

@@ -13,6 +13,7 @@ import type { NextAction } from '@/lib/agent-chat/types'
 import { useAgentChat } from './AgentChatProvider'
 import { celebrate } from './motion'
 import { UiIcon } from '@/components/icons'
+import { brandName } from '@/lib/brand'
 import styles from './agent-dock.module.css'
 
 /** スマホの幅か（767px 以下。AppShell と同じ境目）。最初の描画は false（サーバーと同じ）にして、あとで合わせる */
@@ -41,18 +42,48 @@ export default function AgentDock() {
   // スマホで、作業の一覧が長いと確認カードが見えなくなる。確認・完了・失敗のときは一覧を畳んで、1行の見出しにする（押すと開く）
   const [stepsOpen, setStepsOpen] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
   const state = chat?.state
-  // 新しい内容が出るたびに、会話の下端へ寄せる
-  useEffect(() => {
+  // 会話の下端に寄せるか。読み返すために上へ戻した人は、新しい内容が出ても引き戻さない（2026-11-08 本人の指摘「スクロールに違和感」）。
+  // 代わりに「新しい内容」のボタンを出し、押すと下端へ移る
+  const stickRef = useRef(true)
+  const [newBelow, setNewBelow] = useState(false)
+  const toBottom = (smooth: boolean) => {
     const el = bodyRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [state?.phase, state?.steps, state?.missing.length])
+    if (!el) return
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth && !reduce ? 'smooth' : 'auto' })
+    stickRef.current = true
+    setNewBelow(false)
+  }
+  const onBodyScroll = () => {
+    const el = bodyRef.current
+    if (!el) return
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+    stickRef.current = near
+    if (near) setNewBelow(false)
+  }
+  // 中身の高さが変わったら（作業の進み・確認カード・できあがり）、下端にいる人だけ、なめらかに下へ寄せる
+  useEffect(() => {
+    const feed = feedRef.current
+    if (!feed || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      if (stickRef.current) toBottom(true)
+      else setNewBelow(true)
+    })
+    ro.observe(feed)
+    return () => ro.disconnect()
+  }, [])
+  // 自分で依頼や答えを送ったときは、いつも下端へ（自分の発言が見えるように）
+  useEffect(() => { toBottom(true) }, [state?.text, state?.answers.length])
   useEffect(() => { setAnswer('') }, [state?.missing[0]?.key])
   useEffect(() => { if (state?.phase === 'reading') setStepsOpen(false) }, [state?.phase])
   const doneRef = useRef<HTMLDivElement>(null)
   const phase = state?.phase
   const open = chat?.open ?? false
   const view = chat?.view ?? 'both'
+  // 開いた瞬間は、動かさずに最新の位置を見せる
+  useEffect(() => { if (open) requestAnimationFrame(() => toBottom(false)) }, [open])
   // 完了のお祝いは、画面の送信が成功を知らせたあと（phase が done になったとき）だけ
   useEffect(() => { if (phase === 'done') celebrate(doneRef.current) }, [phase])
   // 会話が画面を動かしている間（値を入れる・保存する）は、足元のドヤくんを見えなくして場所だけ取る。画面が切り替わるたびに足元が動いて見えるのを避ける
@@ -117,15 +148,24 @@ export default function AgentDock() {
   return (
     <>
       <button type="button" className={styles.fab} data-open={open ? 'true' : 'false'} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="agent-dock-panel">
-        {/* スマホでは下のタブバーの左端に置く小さなボタンにして、アイコンと「頼む」だけを見せる（入力欄に重ねない） */}
+        {/* スマホでは下のタブバーの左端に、タブ2つ分の幅で置く。「頼む」の上に小さく「ドヤバディに」を出し、
+            「ドヤバディに頼む」と読めるようにする（2026-11-08 本人の指示）。入力欄には重ねない */}
         <UiIcon name="sparkle" size={20} className={styles.fabIcon} aria-hidden="true" />
-        <span className={styles.fabLabel}>ドヤAIに頼む</span>
-        <span className={styles.fabShort} aria-hidden="true">頼む</span>
+        <span className={styles.fabLabel}>{brandName()}に頼む</span>
+        <span className={styles.fabShort} aria-hidden="true">
+          <span className={styles.fabTo}>{brandName()}に</span>
+          <span className={styles.fabDo}>頼む</span>
+        </span>
         {waiting && !open ? <span className={styles.badge}>返事待ち</span> : null}
       </button>
-      <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label="ドヤAIに頼む" aria-hidden={!open}>
+      <section id="agent-dock-panel" className={styles.panel} data-open={open ? 'true' : 'false'} data-view={view} aria-label={`${brandName()}に頼む`} aria-hidden={!open}>
         <header className={styles.head}>
-          <strong>ドヤAI</strong>
+          {/* 見出しにドヤくん（クマ）を出し、誰と話しているかが分かるようにする */}
+          <span className={styles.who}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/character/mini-hello-256.webp" alt="" aria-hidden width={28} height={28} className={styles.whoImg} />
+            <strong>ドヤくん</strong>
+          </span>
           {/* スマホだけ出す切り替え（会話・両方・画面）。見出しと同じ行に置き、狭い画面の高さを使いすぎない */}
           <div className={styles.viewsw} role="group" aria-label="表示の切り替え">
             {([['chat', '会話'], ['both', '両方'], ['tool', '画面']] as const).map(([v, label]) => (
@@ -138,14 +178,31 @@ export default function AgentDock() {
           <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="会話の欄を閉じる">閉じる</button>
         </header>
         <div className={styles.prog} aria-hidden="true"><i style={{ transform: `scaleX(${total ? doneCount / total : 0})` }} /></div>
-        <div className={styles.body} ref={bodyRef} data-agent-body="" aria-live="polite">
+        <div className={styles.body} ref={bodyRef} onScroll={onBodyScroll} data-agent-body="" aria-live="polite">
+          <div className={styles.feed} ref={feedRef}>
           {state.phase === 'idle' && (
-            <p className={styles.hint}>やりたいことを書いてください。例: 今月の売上100万円追加して</p>
+            <div className={styles.bot}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/character/mini-hello-256.webp" alt="" aria-hidden width={36} height={36} className={styles.botImg} />
+              <p className={styles.hint}>やりたいことを書いてください。例: 今月の売上100万円追加して</p>
+            </div>
           )}
           {state.text ? <p className={styles.user} data-agent-source={state.answers.length === 0 ? '' : undefined}>{state.text}</p> : null}
           {state.answers.map((a, i) => <p key={i} className={styles.user} data-agent-source={i === lastAnswer ? '' : undefined}>{a}</p>)}
-          {state.phase === 'reading' && <p className={styles.say}>依頼を読んでいます…</p>}
-          {state.say && state.phase !== 'reading' ? <p className={styles.lead}>{state.say}</p> : null}
+          {state.phase === 'reading' && (
+            <div className={styles.bot}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/character/mini-working-256.webp" alt="" aria-hidden width={36} height={36} className={styles.botImg} />
+              <p className={styles.say}>依頼を読んでいます<span className={styles.typing} aria-hidden="true"><i /><i /><i /></span></p>
+            </div>
+          )}
+          {state.say && state.phase !== 'reading' ? (
+            <div className={styles.bot}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/character/mini-${state.phase === 'done' ? 'hello' : state.phase === 'working' || state.phase === 'submitting' ? 'working' : 'point'}-256.webp`} alt="" aria-hidden width={36} height={36} className={styles.botImg} />
+              <p className={styles.lead}>{state.say}</p>
+            </div>
+          ) : null}
 
           {foldable && state.steps.length > 0 && (
             <button type="button" className={styles.stepsToggle} aria-expanded={stepsOpen} onClick={() => setStepsOpen(!stepsOpen)}>
@@ -164,7 +221,8 @@ export default function AgentDock() {
             <form className={styles.ask} onSubmit={(e) => { e.preventDefault(); dispatch({ t: 'answer', value: answer }) }}>
               <label className={styles.say} htmlFor="agent-dock-answer">{field.ask ?? `${field.label}を教えてください。`}</label>
               <div className={styles.row}>
-                <input id="agent-dock-answer" className={styles.input} value={answer} onChange={(e) => setAnswer(e.target.value)} inputMode={field.type === 'yen' || field.type === 'number' ? 'numeric' : undefined} autoFocus />
+                {/* スマホでは自動でキーボードを出さない（出ると画面が勝手に動くため）。押したときだけ出す */}
+                <input id="agent-dock-answer" className={styles.input} value={answer} onChange={(e) => setAnswer(e.target.value)} inputMode={field.type === 'yen' || field.type === 'number' ? 'numeric' : undefined} autoFocus={!mobile} />
                 <button type="submit" className={styles.primary} disabled={!answer.trim()}>送る</button>
               </div>
               {state.askError ? <p className={styles.err} role="alert">{state.askError}</p> : null}
@@ -258,10 +316,14 @@ export default function AgentDock() {
               {state.guide.kind === 'limited' && <p className={styles.say}>{state.guide.reason}</p>}
             </div>
           )}
+          </div>
         </div>
+        {newBelow ? (
+          <button type="button" className={styles.newBelow} onClick={() => toBottom(true)}>新しい内容 ↓</button>
+        ) : null}
         {pinned && confirmActions}
         <form className={styles.foot} onSubmit={(e) => { e.preventDefault(); sendDraft() }}>
-          <input className={styles.input} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={state.phase === 'confirm' ? '直したいことがあれば入力' : 'やりたいことを書く'} disabled={!canType} maxLength={500} aria-label={state.phase === 'confirm' ? '金額などの直し' : 'ドヤAIへの依頼'} />
+          <input className={styles.input} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={state.phase === 'confirm' ? '直したいことがあれば入力' : 'やりたいことを書く'} disabled={!canType} maxLength={500} aria-label={state.phase === 'confirm' ? '金額などの直し' : `${brandName()}への依頼`} />
           <button type="submit" className={styles.primary} disabled={!canType || !draft.trim()}>送る</button>
         </form>
       </section>
