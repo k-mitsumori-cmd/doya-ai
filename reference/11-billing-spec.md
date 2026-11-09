@@ -828,3 +828,10 @@ Company/team authority used by operating members depends on server-managed SFA t
 ## 2026-11-09 明示解除後の自動連携停止
 
 会社オーナーの解除後は、同じ会社への自動再連携を止める（利用者決定）。課金上の帰属と購入席制限は維持し、明示再連携時にも購入席を確認する。解除・停止記録・監査の原子性と詳細は `../docs/architecture/management-agent/COMPANY-TOOL-UNLINK-SEAT-ADMISSION-2026-11-09.md` を参照。実金融の受入とは区別する。
+
+
+### HRメンバー削除と未確定の契約者（2026-11-09）
+
+新料金が有効なHRの停止・削除・非増加編集でも、保存前後の課金上の帰属を照合する。保存前がsetup-requiredやunavailableで、旧所属の削除により新たな契約者へ帰属する場合は全体を巻き戻し、409 COMPANY_SETUP_REQUIRED / contact-ownerを返す。明示連携で契約者が変わらない削除と、未確定のまま通常メンバーを減らす操作は維持する。追加請求・増席・User.plan変更は行わない。
+
+契約者を維持するか明示移管するかの方針は別途回答待ちで、オーナー譲渡後の未確定状態は残る。修正と隔離SQL6条件、実Stripe・本番の受入との区別は [HRメンバーの帰属変化ガード](../docs/architecture/management-agent/HR-MEMBER-PAYER-TRANSITION-GUARD-2026-11-09.md) を参照する。
