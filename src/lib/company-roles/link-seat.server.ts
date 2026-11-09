@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { clearAutomaticLinkOptOut } from './auto-link-opt-out.server'
 import { TOOL_ROLE_TABLES, type ToolId } from './tool-roles'
 import { createToolSeatOwnershipReader } from '@/lib/pricing-v2/tool-seat-ownership.server'
 import { readToolUnionLicense, resolveToolUnionScope, toolUnionScopeIdentity, ToolUnionScopeError, type ToolUnionScope } from '@/lib/pricing-v2/tool-seat-union-scope.server'
@@ -88,6 +89,7 @@ export async function linkCompanyToolOrganization(input: Input, options: { onLin
             const after = await readToolUnionLicense(destination, tx)
             if (after.used > after.limit) return deny(409, 'SEAT_CAPACITY_EXCEEDED')
           }
+          await clearAutomaticLinkOptOut(tx, input.companyId, input.tool, input.organizationId)
           if (options.onLinked) await options.onLinked(tx)
           return { ok: true as const, created: true }
         }

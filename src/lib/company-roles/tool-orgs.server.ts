@@ -3,14 +3,16 @@
 // ============================================
 // 仕様: docs/architecture/management-agent/ROLES-2026-10-26.md §4
 // 決まり（統括の再監査 2026-10-26 中A・中B を受けて、つながりを表に持つ形にした）:
-// - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）が正。つながりは消えない・移らない。
+// - ツールの組織が属する会社は、表 account_company_tool_orgs（AccountCompanyToolOrg）が正。明示解除されるまでつながりは消えない・移らない。
 // - 表に無い組織は、作った人（いちばん古いメンバーの行。プロマネはワークスペースの作成者）が会社の持ち主で、今も最上位の役割で組織にいるときだけ、初めて判定したときにつなぐ（自動）。
-// - 会社のオーナーだけが、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら記録に残す。
+// - 会社のオーナーだけが、自分の会社につながった組織のつながりを外せる（unlinkToolOrg）。外したら同じ会社への自動再連携を止め、監査記録と同じ取引に残す。
 // - 作った人が引き継いだあとの組織は表につながず、作った人の会社の社員にだけ、その会社の役割を当てる（linked: false）。
 //   作った人が会社の持ち主でない組織（社員が自分で作った組織・会社を持たない人の組織）は、どの会社にもつながない。上限も決まりも当てない。
 // - 会社の管理者以上は、自分が最上位の役割の組織を、明示してつなげる（linkToolOrg。/api/company/tool-orgs）。
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { automaticLinkOptedOut } from './auto-link-opt-out.server'
+import type { CompanyToolUnlinkDecision } from './unlink-seat.server'
 import type { CompanyToolLinkDecision } from './link-seat.server'
 import { TOOL_ROLE_TABLES, type ToolId } from './tool-roles'
 
@@ -68,25 +70,30 @@ export async function companyOfToolOrg(tool: ToolId, organizationId: string): Pr
   // 作った人が今も最上位の役割で組織にいるときだけ、自動でつなぐ（引き継いだあとの組織を、前の持ち主の会社につながない）。
   // つながないときも「作った人の会社」は返し、その会社の社員には上限を当てる（社員が最上位を引き継いで上限を外すことを防ぐ。自動の点検の指摘 2026-10-26）
   if (!(await isToolOrgTopMember(tool, organizationId, creator))) return { companyId: own.id, ownerUserId: own.userId, linked: false }
-  try {
-    const row = await prisma.accountCompanyToolOrg.upsert({
-      where: { tool_organizationId: { tool, organizationId } },
-      create: { tool, organizationId, companyId: own.id, linkedBy: own.userId },
-      update: {},
-      select: { companyId: true },
-    })
-    if (row.companyId !== own.id) {
-      const other = await prisma.accountCompany.findUnique({ where: { id: row.companyId }, select: { id: true, userId: true } })
-      return other ? { companyId: other.id, ownerUserId: other.userId, linked: true } : null
+  // An explicit unlink suppresses persistence for this company only. Keep the
+  // unlinked-company role ceiling for its own employees; billing attribution
+  // remains independently verified by the seat union.
+  return prisma.$transaction(async tx => {
+    const companies = await tx.$queryRaw<Array<{ id: string; userId: string }>>`SELECT id, "userId" FROM account_companies WHERE id = ${own.id} FOR SHARE`
+    if (companies.length !== 1 || companies[0].userId !== creator) throw new Error('COMPANY_SCOPE_CHANGED')
+    const tables: Record<ToolId, string> = { kintai: 'kintai_organizations', hr: 'hr_organizations', expense: 'expense_organizations', income: 'income_organizations', quote: 'quote_organizations', promane: 'promane_workspaces', sfa: 'sfa_organizations', shodan: 'shodan_organizations', aio: 'aio_organizations', mensetsu: 'mensetsu_organizations', aishodan: 'aishodan_organizations' }
+    await tx.$queryRawUnsafe('SELECT id FROM "' + tables[tool] + '" WHERE id=$1 FOR UPDATE', organizationId)
+    // A different explicit company may have won while this reader waited for
+    // the organization. Do not acquire that company's row after the org lock:
+    // its writer uses Company -> org ordering. This is a read-only result.
+    const explicit = await tx.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
+    if (explicit) {
+      const linkedCompany = await tx.accountCompany.findUnique({ where: { id: explicit.companyId }, select: { id: true, userId: true } })
+      return linkedCompany ? { companyId: linkedCompany.id, ownerUserId: linkedCompany.userId, linked: true } : null
     }
-  } catch {
-    // 同時に作られた（unique の衝突）: 読み直す
-    const again = await prisma.accountCompanyToolOrg.findUnique({ where: { tool_organizationId: { tool, organizationId } }, select: { companyId: true } })
-    if (!again) return null
-    const c = await prisma.accountCompany.findUnique({ where: { id: again.companyId }, select: { id: true, userId: true } })
-    return c ? { companyId: c.id, ownerUserId: c.userId, linked: true } : null
-  }
-  return { companyId: own.id, ownerUserId: own.userId, linked: true }
+    const current = await readCompanyOfToolOrgInTransaction(tool, organizationId, tx)
+    if (!current || current.companyId !== own.id || !current.linked) return current
+    await tx.accountCompanyToolOrg.upsert({
+      where: { tool_organizationId: { tool, organizationId } },
+      create: { tool, organizationId, companyId: own.id, linkedBy: own.userId }, update: {},
+    })
+    return current
+  })
 }
 
 /** 本人が、そのツールの組織の最上位の役割（ACTIVE）か */
@@ -110,11 +117,10 @@ export async function linkToolOrg(input: { companyId: string; actorUserId: strin
   return linkCompanyToolOrganization(input, options)
 }
 
-/** 会社のオーナーだけが、自分の会社につながった組織のつながりを外す（誤ってつながった組織を直すため。外すと上限が外れるので、管理者には許さない） */
-export async function unlinkToolOrg(input: { companyId: string; actorIsOwner: boolean; tool: ToolId; organizationId: string }): Promise<{ ok: true } | { ok: false; status: number; code: 'NOT_ALLOWED' | 'NOT_FOUND' }> {
-  if (!input.actorIsOwner) return { ok: false, status: 403, code: 'NOT_ALLOWED' }
-  const r = await prisma.accountCompanyToolOrg.deleteMany({ where: { tool: input.tool, organizationId: input.organizationId, companyId: input.companyId } })
-  return r.count === 1 ? { ok: true } : { ok: false, status: 404, code: 'NOT_FOUND' }
+/** Owner-only atomic unlink; no inferred role-link restoration to this company. */
+export async function unlinkToolOrg(input: { companyId: string; actorUserId: string; actorIsOwner: boolean; tool: ToolId; organizationId: string }, options: { onUnlinked?: (tx: Prisma.TransactionClient) => Promise<void> } = {}): Promise<CompanyToolUnlinkDecision> {
+  const { unlinkCompanyToolOrganization } = await import('./unlink-seat.server')
+  return unlinkCompanyToolOrganization(input, options)
 }
 
 
@@ -157,5 +163,5 @@ export async function readCompanyOfToolOrgInTransaction(tool: ToolId, organizati
     ? await tx.promaneMember.findFirst({ where: { workspaceId: organizationId, userId: creator, role: 'owner', isActive: true }, select: { id: true } })
     : await readers[tool].findFirst({ where: { organizationId, userId: creator, role: TOOL_ROLE_TABLES[tool].order.at(-1)!, status: 'ACTIVE' }, orderBy: [{ createdAt: 'asc' }], select: { userId: true } })
   // Match the existing inferred-attribution policy without persisting a link.
-  return { companyId: company.id, ownerUserId: company.userId, linked: !!top }
+  return { companyId: company.id, ownerUserId: company.userId, linked: !!top && !(await automaticLinkOptedOut(tx, company.id, tool, organizationId)) }
 }

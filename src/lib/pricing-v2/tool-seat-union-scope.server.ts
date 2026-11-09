@@ -25,11 +25,11 @@ export class ToolUnionScopeError extends Error {
  * never the superseded requirement to join central company membership. The
  * oldest-stored-member ownership convention is not immutable creator history.
  */
-export async function resolveToolUnionScope(input: { tool: ToolId; organizationId: string }, tx: Prisma.TransactionClient): Promise<ResolvedToolUnionScope> {
+export async function resolveToolUnionScope(input: { tool: ToolId; organizationId: string }, tx: Prisma.TransactionClient, options: { ignoreExplicitLink?: boolean } = {}): Promise<ResolvedToolUnionScope> {
   try {
     const reader = createToolSeatOwnershipReader(tx)
     if (!reader.globallyEnabled()) return { enabled: false }
-    const link = await reader.findLink(input.tool, input.organizationId)
+    const link = options.ignoreExplicitLink ? null : await reader.findLink(input.tool, input.organizationId)
     if (link) {
       const company = await reader.findCompany(link.companyId)
       if (!company || company.id !== link.companyId) return { enabled: true, error: 'unavailable' }
