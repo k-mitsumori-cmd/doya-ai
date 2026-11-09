@@ -579,7 +579,17 @@ jobs:
           DOYA_SEO_JOB_SCOPE_EVIDENCE_DIR: /tmp/doya-seo-job-scope-evidence
           DOYA_AGENT_CONFIRM_EVIDENCE_DIR: /tmp/doya-agent-confirm-evidence
           DOYA_HR_DISPLAY_COHERENCE_RESULT: /tmp/doya-hr-display-coherence.json
+          DOYA_PRICING_SESSION_RESULT: /tmp/doya-pricing-server-session.json
         run: npm run test:security
+
+      - name: Save synthetic pricing server session evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pricing-server-session-${{ github.sha }}
+          path: /tmp/doya-pricing-server-session.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Save synthetic HR display coherence evidence
         if: always()

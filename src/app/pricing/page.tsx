@@ -33,10 +33,11 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
       ? <PricingNext canceled={canceled} serverSignedIn={false} />
       : <PricingV2 view={view} canceled={canceled} serverSignedIn={false} {...v2Extra} />
   }
+  const actorKey = (session.user as { id?: string }).id ?? session.user.email ?? ''
   const [company, toolHrefs, supportChat] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({})), isSupportChatEnabled()])
   const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <ShellGate signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+    <ShellGate key={actorKey} session={session} signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
       {view === 'current'
         ? <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
         : <PricingV2 view={view} canceled={canceled} inShell serverSignedIn {...v2Extra} />}
