@@ -835,3 +835,12 @@ Company/team authority used by operating members depends on server-managed SFA t
 新料金が有効なHRの停止・削除・非増加編集でも、保存前後の課金上の帰属を照合する。保存前がsetup-requiredやunavailableで、旧所属の削除により新たな契約者へ帰属する場合は全体を巻き戻し、409 COMPANY_SETUP_REQUIRED / contact-ownerを返す。明示連携で契約者が変わらない削除と、未確定のまま通常メンバーを減らす操作は維持する。追加請求・増席・User.plan変更は行わない。
 
 契約者を維持するか明示移管するかの方針は別途回答待ちで、オーナー譲渡後の未確定状態は残る。修正と隔離SQL6条件、実Stripe・本番の受入との区別は [HRメンバーの帰属変化ガード](../docs/architecture/management-agent/HR-MEMBER-PAYER-TRANSITION-GUARD-2026-11-09.md) を参照する。
+
+
+### 管理者のユーザー更新：入力不備による部分変更を防ぐ（2026-11-09）
+
+`PATCH /api/admin/users` は全入力を検証してからプラン・役割を変更する。利用回数は0以上2,147,483,647以下の整数に限る。負数、小数、数値文字列、null、範囲外の値は400で拒否し、先にプランや役割を変更しない。リセット指定は真偽値に限り、回数変更には文字列のserviceIdを必須とする。不正JSON、配列の本文、配列などのIDも変更前に拒否する。
+
+既存のservicePlan指定とwriting等の旧サービスIDは維持する。管理者認証、統一プランの伝播、Stripe契約・購入人数の変更方針は変更しない。この入力検証は、正常な入力で起こるDB障害時までPATCH全体の原子性を保証するものではない。
+
+回帰検査は `scripts/security-regression/verify-admin-user-input-postgres.py`。専用Unix socketのPostgreSQLと専用生成Prismaで、実API・統一課金同期・実SQLを使用する。管理者認証と再試行境界は合成で、実Stripe・通知・顧客データは使用しない。不正入力22件の変更拒否、整数境界2件、旧servicePlan/writing、認証拒否の計26条件を確認する。実管理者ログインと本番顧客の更新は別途未検証。
