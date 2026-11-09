@@ -256,6 +256,9 @@ function useTypewriter(text: string, opts?: { cps?: number; maxChars?: number })
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
+  const currentJobIdRef = useRef(jobId)
+  currentJobIdRef.current = jobId
+  const readOwner = useMemo(() => ({ id: jobId, active: false, controllers: new Set<AbortController>() }), [jobId])
   const searchParams = useSearchParams()
   const automaticActionsAllowed = searchParams.get('auto') !== '0'
   const router = useRouter()
@@ -333,7 +336,6 @@ export default function SeoJobPage() {
   }, [job])
 
   // ポーリング中かどうかのref（再レンダリングを避けるため）
-  const isPollingRef = useRef(false)
   const readStoppedRef = useRef(false)
   const jobRef = useRef<SeoJob | null>(null)
 
@@ -416,11 +418,14 @@ export default function SeoJobPage() {
   }, [job?.status, job?.activityState, job?.startedAt, job?.createdAt, job?.updatedAt])
 
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
+    if (!readOwner.active || currentJobIdRef.current !== jobId) return
+    const controller = new AbortController()
+    const isCurrent = () => readOwner.active && currentJobIdRef.current === jobId && !controller.signal.aborted
     const showLoading = opts?.showLoading === true
 
     // ポーリング中の二重呼び出しを防止
-    if (!showLoading && isPollingRef.current) return
-    isPollingRef.current = true
+    if (!showLoading && readOwner.controllers.size > 0) return
+    readOwner.controllers.add(controller)
 
     if (showLoading) {
       setLoading(true)
@@ -428,15 +433,16 @@ export default function SeoJobPage() {
     }
     setLoadError(null)
     let t: ReturnType<typeof setTimeout> | undefined
+    let deadlineReached = false
     try {
-      const controller = new AbortController()
       const timeoutMs = 12000
-      t = setTimeout(() => controller.abort(), timeoutMs)
+      t = setTimeout(() => { deadlineReached = true; controller.abort() }, timeoutMs)
       const res = await fetch(`/api/seo/jobs/${jobId}`, {
         cache: 'no-store',
         signal: controller.signal,
       })
       const json = await res.json()
+      if (!isCurrent()) return
       if (!res.ok || json?.success === false) {
         if ([401, 403, 404].includes(res.status)) {
           setJob(null)
@@ -554,6 +560,7 @@ export default function SeoJobPage() {
         }
       }
     } catch (e: any) {
+      if (!readOwner.active || currentJobIdRef.current !== jobId || (controller.signal.aborted && !deadlineReached)) return
       const msg =
         e?.name === 'AbortError'
           ? '読み込みに時間がかかっています。もう一度読み込んでください。'
@@ -567,10 +574,10 @@ export default function SeoJobPage() {
       })
     } finally {
       if (t !== undefined) clearTimeout(t)
-      if (showLoading) setLoading(false)
-      isPollingRef.current = false
+      readOwner.controllers.delete(controller)
+      if (showLoading && readOwner.active && currentJobIdRef.current === jobId && (!controller.signal.aborted || deadlineReached)) setLoading(false)
     }
-  }, [jobId, pushLog])
+  }, [jobId, pushLog, readOwner])
 
   const [cancelling, setCancelling] = useState(false)
   const cancellingRef = useRef(false)
@@ -597,7 +604,7 @@ export default function SeoJobPage() {
   }, [jobId, job?.supersededAt, load])
 
   const advanceOnce = useCallback(async () => {
-    if (busy || cancellingRef.current || job?.supersededAt) return
+    if (currentJobIdRef.current !== jobId || !readOwner.active || job?.id !== jobId || busy || cancellingRef.current || job?.supersededAt) return
     setBusy(true)
     try {
       setActionError(null)
@@ -606,6 +613,7 @@ export default function SeoJobPage() {
         const resumeResult = await resumed.json()
         if (!resumed.ok || resumeResult?.success !== true) throw new Error(seoUserMessage(resumeResult?.error, '生成を再開できませんでした。もう一度お試しください。'))
       }
+      if (currentJobIdRef.current !== jobId || !readOwner.active) return
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST', keepalive: true })
       let json: any = null
       try {
@@ -625,9 +633,10 @@ export default function SeoJobPage() {
     } finally {
       setBusy(false)
     }
-  }, [busy, jobId, load, job?.status, job?.supersededAt])
+  }, [busy, jobId, load, job?.id, job?.status, job?.supersededAt, readOwner])
 
   useEffect(() => {
+    readOwner.active = true
     load({ showLoading: true })
     const t = setInterval(() => {
       const j = jobRef.current
@@ -635,20 +644,25 @@ export default function SeoJobPage() {
       if (readStoppedRef.current) return
       load({ showLoading: false })
     }, 4000)
-    return () => clearInterval(t)
-  }, [jobId, load])
+    return () => {
+      readOwner.active = false
+      for (const controller of readOwner.controllers) controller.abort()
+      readOwner.controllers.clear()
+      clearInterval(t)
+    }
+  }, [jobId, load, readOwner])
 
   // 長文生成は10分以上かかることもあるため、タブ移動/バックグラウンドでも進行が止まりにくいように補助ループを回す
   // NOTE: ブラウザは非表示タブでタイマーを間引くので、周期を長めにして“継続的に叩く機会”を作る
   useEffect(() => {
     const isTerminal = !!job?.supersededAt || job?.status === 'paused' || job?.status === 'done' || job?.status === 'error' || job?.status === 'cancelled'
-    if (!automaticActionsAllowed || !job || isTerminal || job.activityState === 'needs-review') return
+    if (!automaticActionsAllowed || !job || job.id !== jobId || isTerminal || job.activityState === 'needs-review') return
 
     let disposed = false
     let timer: any = null
 
     const tick = async () => {
-      if (disposed) return
+      if (disposed || currentJobIdRef.current !== jobId) return
       // 連打は busy で弾く
       await advanceOnce()
       if (disposed) return
@@ -662,7 +676,7 @@ export default function SeoJobPage() {
       disposed = true
       if (timer) clearTimeout(timer)
     }
-  }, [automaticActionsAllowed, job, advanceOnce])
+  }, [automaticActionsAllowed, jobId, job, advanceOnce])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)

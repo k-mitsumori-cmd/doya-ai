@@ -22,12 +22,15 @@ function effect(kind, marker, values = {}, auto = '0') {
   const matches = effects.filter(source => source.includes(marker));
   assert.equal(matches.length, 1, marker);
   const timers = new Map(); const calls = { advance: 0, fetch: 0, images: 0 };
-  const context = { AbortController, id: 'a', currentArticleIdRef: { current: 'a' }, autoImagesArticleRef: { current: 'a' }, searchParams: new URLSearchParams({ auto }), job: null, article: null, autoRun: true, latestJob: null,
+  const context = { AbortController, jobId: 'a', currentJobIdRef: { current: 'a' }, id: 'a', currentArticleIdRef: { current: 'a' }, autoImagesArticleRef: { current: 'a' }, searchParams: new URLSearchParams({ auto }), job: null, article: null, autoRun: true, latestJob: null,
     autoImagesRequestedRef: { current: false }, advanceOnce: async () => { calls.advance++; },
     ensureImages: async mode => { assert.equal(mode, 'auto'); calls.images++; },
     fetch: async () => { calls.fetch++; return Response.json({ success: true, isLoggedIn: true, canUseSeoImages: true }); },
     document: { visibilityState: 'visible' },
     setTimeout: fn => { const id = timers.size + 1; timers.set(id, fn); return id; }, clearTimeout: id => timers.delete(id), ...values };
+  if (!Object.hasOwn(values, 'jobId') && context.job?.id) context.jobId = context.job.id;
+  if (!Object.hasOwn(values, 'currentJobIdRef')) context.currentJobIdRef = { current: context.jobId };
+  if (context.job && !context.job.id) context.job = { ...context.job, id: context.jobId };
   if (context.article && !context.article.id) context.article = { ...context.article, id: context.id };
   const code = ts.transpileModule(`const automaticActionsAllowed = ${allowed}; (${matches[0]})()`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   const cleanup = vm.runInNewContext(code, context);
