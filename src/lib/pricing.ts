@@ -1,4 +1,5 @@
 import { UNIFIED_PRO_PRICE, UNIFIED_PRO_PRICE_LABEL, isPaidPlan } from './unified-plan'
+import { hrPlanTier } from './hr/plan-tier'
 // ========================================
 // 料金・プラン設定（統一管理）
 // ========================================
@@ -1723,12 +1724,11 @@ export const HR_PRICING: ServicePricing = {
 
 export function getHrEmployeeLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
-  const p = String(plan || 'FREE').toUpperCase()
+  const p = hrPlanTier(plan) ?? 'FREE'
   switch (p) {
-    case 'ENTERPRISE': return HR_PRICING.enterpriseLimit ?? -1
+    case 'ENTERPRISE': return -1
     case 'PRO': return HR_PRICING.proLimit
-    case 'LIGHT':
-    case 'STARTER': return HR_PRICING.lightLimit ?? 30
+    case 'LIGHT': return HR_PRICING.lightLimit ?? 30
     case 'FREE': return HR_PRICING.freeLimit
     default: return HR_PRICING.freeLimit
   }
@@ -1736,13 +1736,12 @@ export function getHrEmployeeLimitByUserPlan(plan: string | null | undefined): n
 
 export function getHrAiLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
-  const p = String(plan || 'FREE').toUpperCase()
+  const p = hrPlanTier(plan) ?? 'FREE'
   // 実際に効く上限は src/lib/hr/billing.ts（正本は plan-limit.ts の HR_AI_MONTHLY_LIMITS）。表示用に同じ値を返す。
   switch (p) {
     case 'ENTERPRISE': return 500
     case 'PRO': return 100
-    case 'LIGHT':
-    case 'STARTER': return 30
+    case 'LIGHT': return 30
     case 'FREE': return 3
     default: return 3
   }
