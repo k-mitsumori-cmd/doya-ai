@@ -160,7 +160,7 @@ export default function DoyaSlideProjectsPage() {
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
-      {deleteError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{deleteError}</p><button onClick={load} className="mt-2 font-bold underline">一覧を再読み込み</button></div>}
+      {deleteError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{deleteError}</p><button onClick={load} className="mt-2 inline-flex min-h-[40px] items-center font-bold underline">一覧を再読み込み</button></div>}
       <div className="mb-6 space-y-4">
           {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」と主ボタン1つ（UI 品質 H-3・S-57・S-58） */}
           <ToolHero
@@ -197,7 +197,7 @@ export default function DoyaSlideProjectsPage() {
           </span>
         </div>
       )}
-      {usageError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">利用状況を取得できませんでした。<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>}
+      {usageError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">利用状況を取得できませんでした。<button type="button" onClick={load} className="ml-2 inline-flex min-h-[40px] items-center underline">再読み込み</button></div>}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -206,7 +206,7 @@ export default function DoyaSlideProjectsPage() {
           ))}
         </div>
       ) : projectsError ? (
-        <div role="alert" className="rounded-2xl bg-rose-50 p-6 text-center font-bold text-rose-700">プロジェクト一覧を取得できませんでした。<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>
+        <div role="alert" className="rounded-2xl bg-rose-50 p-6 text-center font-bold text-rose-700">プロジェクト一覧を取得できませんでした。<button type="button" onClick={load} className="ml-2 inline-flex min-h-[40px] items-center underline">再読み込み</button></div>
       ) : projects.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white">
           <DsEmptyState
@@ -234,13 +234,13 @@ export default function DoyaSlideProjectsPage() {
                 </Link>
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/doyaslide/${p.id}`} className="font-black text-slate-800 truncate hover:underline">
+                    <Link href={`/doyaslide/${p.id}`} className="inline-flex min-h-[40px] items-center font-black text-slate-800 truncate hover:underline">
                       {p.title}
                     </Link>
                     <button
                       onClick={() => remove(p.id)}
                       disabled={deleteBusyId !== null}
-                      className="text-slate-300 hover:text-red-500 transition-colors"
+                      className="grid min-h-[40px] min-w-[40px] place-items-center text-slate-300 hover:text-red-500 transition-colors"
                       title="削除"
                     >
                       <Trash2 size={18} aria-hidden />
@@ -253,7 +253,7 @@ export default function DoyaSlideProjectsPage() {
                     <span>{p.generatedSlides}枚</span>
                     {/* 止まった・失敗した資料は、開いて続きから作り直せる（構成の再試行・未生成の生成） */}
                     {p.status === 'error' && (
-                      <Link href={`/doyaslide/${p.id}`} className="ml-auto rounded-full bg-blue-600 px-3 py-1 text-xs font-black text-white hover:bg-blue-700">
+                      <Link href={`/doyaslide/${p.id}`} className="ml-auto inline-flex min-h-[40px] items-center rounded-full bg-blue-600 px-4 py-1 text-xs font-black text-white hover:bg-blue-700">
                         もう一度
                       </Link>
                     )}
@@ -263,7 +263,7 @@ export default function DoyaSlideProjectsPage() {
             )
           })}
         </div>
-        {nextCursor && <div className="mt-6 text-center"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-full border border-indigo-300 px-6 py-2 text-sm font-bold text-indigo-700 disabled:opacity-50">{loadingMore ? '読み込み中…' : `さらに表示（${projects.length}/${total}件）`}</button></div>}
+        {nextCursor && <div className="mt-6 text-center"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="min-h-[40px] rounded-full border border-indigo-300 px-6 py-2 text-sm font-bold text-indigo-700 disabled:opacity-50">{loadingMore ? '読み込み中…' : `さらに表示（${projects.length}/${total}件）`}</button></div>}
         </>
       )}
     </div>
