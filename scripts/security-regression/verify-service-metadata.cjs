@@ -2,6 +2,9 @@ const assert = require('node:assert/strict')
 require('tsx/cjs')
 
 const { buildServiceSubMetadata, generateSoftwareApplicationSchema } = require('../../src/lib/seo.ts')
+// ログイン前の料金の文は public-copy.ts の1か所から出す（2026-11-10〜）。数はここに書かず、同じ文が入っていることを確かめる。
+// 前からの契約者の ¥9,980 は、ログイン前の説明文には出さない。
+const { PUBLIC_PRICE_SENTENCE } = require('../../src/lib/pricing-v2/public-copy.ts')
 
 for (const [id, unit, freeLimit, proLimit] of [
   ['banner', '枚', 15, 150],
@@ -11,8 +14,9 @@ for (const [id, unit, freeLimit, proLimit] of [
   const description = metadata.description
   assert.equal(typeof description, 'string')
   assert(description.includes(`月${freeLimit}${unit}`))
-  assert(description.includes(`月${proLimit}${unit}`))
-  assert(description.includes('月額¥9,980'))
+  assert(description.includes(PUBLIC_PRICE_SENTENCE))
+  assert(!description.includes(`月${proLimit}${unit}`))
+  assert(!description.includes('9,980'))
   assert(!description.includes('ゲスト') && !description.includes('1日'))
   assert.equal(metadata.openGraph.description, description)
   assert.equal(metadata.twitter.description, description)
@@ -23,8 +27,8 @@ for (const [id, unit, freeLimit, proLimit] of [
 }
 
 const opening = buildServiceSubMetadata('opening', 'pricing', { path: '/opening/pricing' })
-assert(opening.description.includes('月額¥9,980'))
-assert(!opening.description.includes('¥2,980'))
+assert(opening.description.includes(PUBLIC_PRICE_SENTENCE))
+assert(!opening.description.includes('9,980'))
 const guide = buildServiceSubMetadata('banner', 'guide', { path: '/banner/guide', description: 'ガイド固有の説明文' })
 assert.equal(guide.description, 'ガイド固有の説明文')
 assert.equal(guide.openGraph.description, 'ガイド固有の説明文')
