@@ -107,8 +107,8 @@ export function BannerSizesMock() {
             <div className="grid place-items-center" style={{ height: 48 }}>
               <span className="rounded" style={{ width: s.w, height: s.h, background: 'linear-gradient(135deg,#0066ff,var(--lp-accent))' }} />
             </div>
-            <span className="text-[10px] font-black text-slate-700 leading-none">{s.name}</span>
-            <span className="text-[9px] font-bold text-slate-400 leading-none">{s.ratio}</span>
+            <span className="whitespace-nowrap text-[10px] font-black text-slate-700 leading-none">{s.name}</span>
+            <span className="whitespace-nowrap text-[9px] font-bold text-slate-400 leading-none">{s.ratio}</span>
           </div>
         ))}
       </div>
