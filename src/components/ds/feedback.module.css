@@ -30,6 +30,8 @@
 
 .done { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--r-sm); background: var(--ok-bg); color: var(--ok-ink); }
 .doneIcon { flex: none; }
+/* お祝いの点を置く場所。大きさは中のチェックと同じ（場所は取らない） */
+.doneIconWrap { position: relative; display: inline-flex; flex: none; }
 .doneTitle { margin: 0; font-size: 14px; font-weight: 700; flex: 1; min-width: 0; }
 .doneNext { flex: none; }
 

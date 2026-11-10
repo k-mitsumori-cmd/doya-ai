@@ -8,6 +8,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { AlertTriangle, Check, X } from 'lucide-react'
 import { CheckMark } from './check-mark'
+import { Burst } from './celebrate'
+import { useFirstDone } from './use-save-state'
 import { usePrefersReducedMotion } from './motion'
 import styles from './feedback.module.css'
 
@@ -100,10 +102,15 @@ export function DoneBanner({ title, next, onClose }: {
   next?: ReactNode
   onClose?: () => void
 }) {
+  // 初めての1回は大きめのお祝い（点が広がる）、2回目からは小さなチェックだけ（M8）
+  const first = useFirstDone()
   return (
     <div className={styles.done} role="status" data-motion="pop">
       {/* できたら、結果が弾んで現れ、チェックの線が描かれる */}
-      <CheckMark size={20} burst className={styles.doneIcon} />
+      <span className={styles.doneIconWrap}>
+        <CheckMark size={20} burst className={styles.doneIcon} />
+        {first ? <Burst big delay={200} /> : null}
+      </span>
       <p className={styles.doneTitle}>{title}</p>
       {next ? <div className={styles.doneNext}>{next}</div> : null}
       {onClose ? <button type="button" className={styles.close} onClick={onClose} aria-label="閉じる"><X size={16} aria-hidden /></button> : null}

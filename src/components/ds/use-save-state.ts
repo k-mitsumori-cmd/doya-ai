@@ -82,3 +82,22 @@ export function useSaveFlash(saving: boolean, succeeded: boolean, resetMs = 2200
   }, [saving, resetMs])
   return state
 }
+
+/** 「はじめての1回」を覚えるときの名前（ブラウザに1つだけ） */
+export const FIRST_DONE_KEY = 'doya-first-done-v1'
+
+/**
+ * 生成が初めて完了したか（M8）。この部品が表に出た最初の1回だけ true。2回目からは false。
+ * 覚えるのは localStorage（読み書きは try/catch。使えない環境では毎回 false にして、大きなお祝いを繰り返さない）。
+ */
+export function useFirstDone(): boolean {
+  const [first, setFirst] = useState(false)
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(FIRST_DONE_KEY) === '1') return
+      window.localStorage.setItem(FIRST_DONE_KEY, '1')
+      setFirst(true)
+    } catch { /* 覚えられない環境では、小さなチェックだけ */ }
+  }, [])
+  return first
+}
