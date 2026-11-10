@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict')
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const crypto = require('node:crypto')
 const { load, check, results } = require('./load-typescript.cjs')
 
@@ -42,7 +49,7 @@ function acceptanceFixture(service, { createdAt = new Date(), role = 'member', e
     },
   }
   const tx = {
-    $queryRaw: async () => [{ id: 'org' }],
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['user']) || [{ id: 'org' }],
     [service.model]: membership,
     user: { findUnique: async () => ({ email: accountEmail }) },
   }
@@ -87,9 +94,9 @@ function creationFixture(service, { currentRole = 'owner', clock = Date } = {}) 
   }
   const tx = {
     user: { findMany: async () => [] },
-    $queryRaw: async sql => sql.join('?').includes(`FROM ${service.id}_members`)
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['owner']) || (sql.join('?').includes(`FROM ${service.id}_members`)
       ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
-      : [{ id: 'org' }],
+      : [{ id: 'org' }]),
     [service.model]: member,
   }
   const prisma = {

@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict')
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load, check, results } = require('./load-typescript.cjs')
 const epoch = 1800000000000
 async function acceptCase({ status = 'PENDING', delta = 60000, locked = {}, failedClaim = false, claimResult = {}, members = 1, body = { token: 'opaque-token' }, malformed = false } = {}) {
@@ -6,7 +13,7 @@ async function acceptCase({ status = 'PENDING', delta = 60000, locked = {}, fail
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])) } static now() { return now } }
   const invitation = { id: 'invite', token: 'opaque-token', organizationId: 'org', email: 'invited@example.invalid', role: 'MEMBER', status, expiresAt: new Date(epoch + delta), createdAt: new Date(epoch - 10000), organization: { id: 'org', name: 'Synthetic org' } }
   const tx = {
-    $queryRaw: async strings => { if(strings.join('').includes('hr_organizations')){locks++;return [{id:'org'}]}assert.match(strings.join(''),/FROM "User"/);return [{email:'Invited@Example.Invalid'}] },
+    $queryRaw: async (strings, values) => { const pinned = pinnedFixtureUser(strings, values, ['synthetic-user']); if (pinned) return pinned; if(strings.join('').includes('hr_organizations')){locks++;return [{id:'org'}]}assert.match(strings.join(''),/FROM "User"/);return [{email:'Invited@Example.Invalid'}] },
     hrInvitation: {
       findUnique: async () => { currentReads++; return locked === null ? null : { ...invitation, ...locked, ...(currentReads > 1 ? claimResult : {}) } },
       updateMany: async ({ where }) => { claims++; assert.equal(where.token, invitation.token); assert.equal(where.organizationId, invitation.organizationId); assert.equal(where.role, 'MEMBER'); assert.equal(where.email, invitation.email); assert.equal(where.status, 'PENDING'); assert.ok(where.expiresAt.gt instanceof Date); if (failedClaim) now = epoch + delta + 1; return { count: failedClaim ? 0 : 1 } },

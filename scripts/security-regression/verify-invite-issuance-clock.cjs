@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load, check, results } = require('./load-typescript.cjs');
 const start = Date.parse('2026-10-06T00:00:00Z'), expiry = start + 1000;
 const day = 24 * 60 * 60 * 1000;
@@ -11,7 +18,7 @@ function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
   const c = clockFixture(); let writes = 0;
   const tx = {
     user: { findMany: async () => [] },
-    $queryRaw: async sql => /SELECT role/.test(sql.join('?')) ? [{ role: 'admin', isActive: true }] : [{ id: 'ws' }],
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['admin']) || (/SELECT role/.test(sql.join('?')) ? [{ role: 'admin', isActive: true }] : [{ id: 'ws' }]),
     promaneMember: { findUnique: async () => ({ isActive: true, role: 'admin' }), findFirst: async () => null,
       count: async () => { if (stage === 'active') c.set(expiry + offset); return 1; } },
     promaneWorkspace: { findUnique: async () => ({ name: 'Team', userId: 'owner' }) },
@@ -36,7 +43,7 @@ function hr({ offset = 0, delayCreation = false } = {}) {
   const c = clockFixture(); let writes = 0, deliveries = 0, audits = 0, deliveredExpiry;
   const tx = {
     user: { findMany: async () => [] },
-    $queryRaw: async () => [{ id: 'org', role: 'ADMIN' }], hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['admin']) || [{ id: 'org', role: 'ADMIN' }], hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
     hrInvitation: {
       findFirst: async ({ where }) => { const row = expiry > where.expiresAt.gt.getTime() ? { id: 'old', expiresAt: new Date(expiry) } : null; c.set(expiry + offset); return row; },
       create: async ({ data }) => { writes++; return { id: 'new', ...data }; },

@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load } = require('./load-typescript.cjs');
 const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
 
@@ -19,7 +26,7 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
   let transactions = 0;
   let deletions = 0;
   const tx = { user: { findUnique: async () => ({ id: 'user', email: 'invited@example.com' }) },
-    $queryRaw: async (sql, id) => { assert.match(sql.join('?'), /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/); assert.equal(id, 'org'); return [{ id: 'org' }]; },
+    $queryRaw: async (sql, id) => { const pinned = pinnedFixtureUser(sql, id, ['user']); if (pinned) return pinned; assert.match(sql.join('?'), /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/); assert.equal(id, 'org'); return [{ id: 'org' }]; },
     kintaiMember: {
     findFirst: async ({ where }) => structuredClone(rows.find((row) =>
       (where.inviteToken === undefined || row.inviteToken === where.inviteToken) &&
