@@ -22,3 +22,9 @@
 /* 「足りない」の知らせ。右下に出す（スマホでは下のタブとプレビューの札の上） */
 .lowPower { position: fixed; right: 16px; bottom: 24px; z-index: 70; width: min(420px, calc(100vw - 32px)); }
 @media (max-width: 767px) { .lowPower { right: 12px; left: 12px; width: auto; bottom: calc(128px + env(safe-area-inset-bottom, 0px)); } }
+
+/* 残りわずかのときは札が小さく揺れる（出たときに1回）。足りない知らせは下から出る */
+.meter[data-low='true'] { animation: m-shake var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) 400ms both; }
+.lowPower { animation: m-rise var(--m-dur-slow, 420ms) var(--m-ease-emphasized, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+.fill { width: 100%; transform-origin: left center; transition: transform var(--m-dur-slow, 420ms) var(--m-ease-emphasized, cubic-bezier(0.32, 0.72, 0, 1)); }
+@media (prefers-reduced-motion: reduce) { .meter[data-low='true'], .lowPower { animation: none; } .fill { transition: none; } }

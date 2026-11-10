@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { createContext, useContext, type ReactNode } from 'react'
 import { Zap } from 'lucide-react'
 import { CostBadge } from '@/components/ds/cost-badge'
+import { CountUp } from '@/components/ds/motion'
 import { useDoyaPower } from '@/components/doya-power/doya-power-context'
 import { doyaPowerCost, type DoyaPowerAction } from '@/lib/doya-power/costs'
 import { halfAmount } from '@/lib/doya-power/retry'
@@ -64,9 +65,10 @@ export function ShellPowerMeter({ className, href = '/home/doya-power', variant 
       title={`ドヤパワーの残り ${fmt(value)} / 上限 ${fmt(max)}`}
     >
       <Zap size={14} strokeWidth={2.25} aria-hidden className={styles.icon} />
-      <span className={styles.num} aria-hidden>{fmt(value)}</span>
+      {/* 使ったとき、数字が転がって減る（CountUp。幅は最後の値で決めるので CLS を増やさない） */}
+      <span className={styles.num} aria-hidden><CountUp value={Math.max(0, Math.round(value))} duration={700} format={(n) => fmt(n)} /></span>
       {/* 幅を決めた棒（あとから幅が変わらない。CLS を増やさない） */}
-      <span className={styles.track} aria-hidden><span className={styles.fill} style={{ width: `${Math.round(ratio * 100)}%` }} /></span>
+      <span className={styles.track} aria-hidden><span className={styles.fill} style={{ transform: `scaleX(${Math.round(ratio * 100) / 100})` }} /></span>
     </Link>
   )
 }
