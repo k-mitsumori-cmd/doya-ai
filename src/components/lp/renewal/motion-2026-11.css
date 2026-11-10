@@ -83,22 +83,33 @@
   }
 }
 
-/* 2. 下に固定した2つのボタン：「動きを止める」はアイコンだけ。スマホで下へ送っているあいだは引っ込める */
+/* 2・B. 下に固定する札は「無料相談のご案内」の1つだけ（2026-11-10 メインの指摘。スマホで本文とボタンに重なっていた）。
+   「動きを止める」と「オープニング」は固定をやめ、ページの一番下（フッターの右下）に置く。
+   「無料相談」は、スマホで下へ送っているあいだは引っ込め、上へ戻すか一番下で出す */
+.doya-renewal {
+  position: relative;
+}
+.doya-renewal .doya-motion-toggle,
+.doya-renewal .doya-opening-replay {
+  position: absolute;
+  top: auto;
+  left: auto;
+  bottom: 18px;
+  z-index: 3;
+}
 .doya-renewal .doya-motion-toggle {
-  width: 40px;
-  height: 40px;
-  min-height: 0;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
   justify-content: center;
   border-radius: 50%;
 }
+.doya-renewal .doya-opening-replay {
+  right: 70px;
+}
 @media (max-width: 760px) {
-  .doya-renewal .doya-motion-toggle {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-  }
-  .doya-renewal.doya-chrome-hidden .doya-motion-toggle,
   .doya-renewal.doya-chrome-hidden .doya-consult-toggle {
     transform: translateY(calc(100% + 24px));
     opacity: 0;
@@ -401,5 +412,12 @@
     top: 205px;
     left: -6%;
     width: 72%;
+  }
+}
+
+/* F. ツールの紹介ページが長い：機能の紹介の段の画面見本は、スマホでは出さない（「使い方」の節と同じ画面のくり返しのため） */
+@media (max-width: 767px) {
+  .doya-feature-row > .doya-feature-visual {
+    display: none;
   }
 }

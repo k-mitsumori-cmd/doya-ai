@@ -57,7 +57,7 @@ export function RenewalFrame({
   const hasOpening = Boolean(serviceId && OPENING_COPY[serviceId]);
   const [covered, setCovered] = useState(hasOpening);
   const [paused, setPaused] = useState(false);
-  // スマホで下へ送っているあいだは、下に固定した2つのボタンを引っ込める（カードの「詳しく見る」に重ねないため）
+  // スマホで下へ送っているあいだは、下に固定した「無料相談のご案内」を引っ込める（カードの「詳しく見る」に重ねないため）
   const [chromeHidden, setChromeHidden] = useState(false);
   useEffect(() => {
     const root = ref.current;
