@@ -5,6 +5,7 @@
 import type { Metadata } from 'next'
 import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
 import { getServiceById } from './services'
+import { PUBLIC_PRICE_SENTENCE } from './pricing-v2/public-copy'
 import { staticOgpPath } from './ogp'
 import { brandAlternateNames, brandName, brandNameWithFormer, brandText, isBrandRenamed } from './brand'
 
@@ -157,7 +158,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤ記事作成',
-        description: `記事生成にはログインが必要です。無料プランは月${SEO_PRICING.freeLimit}回まで、プロプランは月${SEO_PRICING.proLimit}回まで。プロプランは月額¥${(SEO_PRICING.plans.find((plan) => plan.id === 'seo-pro')?.price ?? 9980).toLocaleString('ja-JP')}。`,
+        description: `記事生成にはログインが必要です。無料プランは月${SEO_PRICING.freeLimit}回まで。${PUBLIC_PRICE_SENTENCE}`,
       },
       guide: {
         title: '使い方 | ドヤ記事作成',
@@ -188,7 +189,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤバナーAI',
-        description: `バナー生成にはログインが必要です。無料プランは月${BANNER_PRICING.freeLimit}枚まで、プロプランは月${BANNER_PRICING.proLimit}枚まで。プロプランは月額¥${(BANNER_PRICING.plans.find((plan) => plan.id === 'banner-pro')?.price ?? 9980).toLocaleString('ja-JP')}。`,
+        description: `バナー生成にはログインが必要です。無料プランは月${BANNER_PRICING.freeLimit}枚まで。${PUBLIC_PRICE_SENTENCE}`,
       },
       guide: {
         title: '使い方ガイド | ドヤバナーAI',
@@ -224,7 +225,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤオープニングAI',
-        description: `無料プランは1日3回まで（3テンプレート）。プロプランは1日30回、全6テンプレート利用可能。月額¥${(getServiceById('opening')?.pricing.pro.price ?? 9980).toLocaleString('ja-JP')}。`,
+        description: `無料プランは1日3回まで（3テンプレート）。${PUBLIC_PRICE_SENTENCE}`,
       },
       guide: {
         title: '使い方ガイド | ドヤオープニングAI',
@@ -398,7 +399,7 @@ export function generateToolSchema(opts: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'JPY',
-      description: '無料プランあり。プロプラン（月額9,980円）で全ツールが利用可能',
+      description: `無料プランあり。${PUBLIC_PRICE_SENTENCE}`,
     },
     publisher: {
       '@type': 'Organization',
@@ -460,7 +461,7 @@ export function buildServiceMetadata(
   // ルートlayoutの title.template は「親がtitleを持つ入れ子」では下層まで届かず、
   // /banner はサイト名が付くのに /banner/pricing は付かない、という不揃いが起きるため。
   const title = { absolute: `${headline} | ${SITE_CONFIG.name}` }
-  const description = opts?.descriptionOverride || svc.longDescription || svc.description
+  const description = opts?.descriptionOverride || svc.metaDescription || svc.longDescription || svc.description
   const canonical = opts?.canonicalPath || svc.href
   const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || staticOgpPath(svc.id) || `/og/${svc.id}`}`
   // 指名検索の受け皿として、サービス名と表記ゆれを keywords の先頭に必ず置く
@@ -533,7 +534,7 @@ export function buildServiceSubMetadata(
   const description =
     opts?.description || sectionDescription ||
     (kind === 'pricing'
-      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤAIの全ツールでプロ機能を利用できます。各サービスに利用上限があります。`
+      ? `${svc.name}の料金プラン。${PUBLIC_PRICE_SENTENCE}`
       : kind === 'guide'
         ? `${svc.name}の使い方ガイド。基本の流れとコツを解説します。`
         : `${svc.name}の管理画面です。`)

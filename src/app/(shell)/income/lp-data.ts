@@ -1,4 +1,4 @@
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤ収入管理 LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -20,6 +20,6 @@ export const BENEFITS: Benefit[] = [
 export const FAQ: Faq[] = [
   { q: '会計ソフトの代わりになりますか？', a: 'なりません。仕訳・決算・確定申告は、freee やマネーフォワードなどの会計ソフトをお使いください。ドヤ収入管理は、売上・請求・入金の金額を確かめるためのツールです。' },
   { q: 'インボイス制度に対応していますか？', a: '請求書には登録番号、税率ごとの対価の合計と消費税額を記載します。消費税の端数は、請求書1枚につき税率ごとに1回だけ切り捨てています。' },
-  { q: '料金はかかりますか？', a: `開発中のため、現在は無料でお使いいただけます。正式公開後はプロプラン（月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円・税込）1つで、ドヤAIの全サービスのプロ機能が使えます。` },
+  { q: '料金はかかりますか？', a: `開発中のため、現在は無料でお使いいただけます。正式公開後の料金は次のとおりです。${PUBLIC_PRICE_SENTENCE}` },
   { q: '銀行口座と連携できますか？', a: '現在は入金を手で登録していただく形です。銀行明細のCSV取り込みは今後追加する予定です。' },
 ]

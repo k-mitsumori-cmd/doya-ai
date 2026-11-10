@@ -6,6 +6,7 @@
 import React from 'react'
 import { SITE_CONFIG, getServiceAliases } from '@/lib/seo'
 import type { Faq } from './sections'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 function abs(path: string) {
   return `${SITE_CONFIG.url}${path.startsWith('/') ? path : `/${path}`}`
@@ -18,7 +19,7 @@ export function LpJsonLd({
   category = 'BusinessApplication',
   features,
   faq,
-  price = '9980',
+  price = '0',
   hasFreeTier = true,
   includeSoftwareApp = true,
   serviceId,
@@ -56,8 +57,8 @@ export function LpJsonLd({
       price: hasFreeTier ? '0' : price,
       priceCurrency: 'JPY',
       description: hasFreeTier
-        ? `無料プランあり。プロプラン（月額${Number(price).toLocaleString()}円）で全ツールが利用可能`
-        : `プロプラン 月額${Number(price).toLocaleString()}円`,
+        ? `無料プランあり。${PUBLIC_PRICE_SENTENCE}`
+        : PUBLIC_PRICE_SENTENCE,
     },
     publisher: {
       '@type': 'Organization',

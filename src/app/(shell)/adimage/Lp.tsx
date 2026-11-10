@@ -10,6 +10,7 @@ import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { AdImageGridMock, AdImageVerifyMock, AdImageRefineMock } from './mocks'
 import ServiceDiagram from './diagram'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 const SVC = getServiceById('adimage')!
 
@@ -79,7 +80,7 @@ export default function AdImageLp() {
 
       <CtaBand
         title="今週の差し替えから、間に合います"
-        subtitle={`無料プランは${freeLimit}。プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。`}
+        subtitle={`無料プランは${freeLimit}。${PUBLIC_PRICE_SENTENCE}`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         note="クレジットカードの登録は不要です"

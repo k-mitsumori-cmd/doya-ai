@@ -23,6 +23,8 @@ export interface Service {
   shortName?: string  // 短縮名（タブ表示用）
   description: string
   longDescription?: string
+  /** meta description 用の短い説明（80〜120字）。無ければ longDescription → description の順で使う */
+  metaDescription?: string
   
   // デザイン
   icon: string
@@ -137,6 +139,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤバナーAI',
     shortName: 'バナー',
     description: 'プロ品質のバナーを自動生成',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'サービスの内容を入力すると、AIがA/B/Cの3案のバナーを提案します。デザインの知識は要りません。広告に使うバナーを、短い時間で作れます。3案を見比べて、使うものを選べます。',
     longDescription: 'AIがあなたのビジネスに最適なバナーをA/B/Cの3案で提案。デザイン知識不要で、効果的な広告を素早く作成。',
     icon: '🎨',
     color: 'purple',
@@ -236,6 +240,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ記事作成',
     shortName: 'SEO',
     description: 'SEO + LLMOに強い長文記事を安定生成',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'キーワードを入れると、アウトライン作成、分割生成、整合性の確認、統合の順で長文の記事を作ります。5万字から6万字の長い記事でも、話がずれにくいように書くことを目指します。',
     longDescription:
       'アウトライン→分割生成→整合性チェック→統合のパイプラインで、5万字〜6万字でも崩れにくい記事生成を目指します。',
     icon: '🧠',
@@ -277,6 +283,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤインタビュー',
     shortName: 'インタビュー',
     description: 'インタビュー音声からプロ品質の記事を自動生成',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '取材の音声・動画・PDFをアップロードすると、AIが文字起こし、構成、執筆、校正まで行い、インタビュー記事を作ります。編集者が担う中間の工程を、AIが代行します。記事の下書きを短い時間で用意できます。',
     longDescription:
       '音声・動画・PDF等の取材素材をアップロードするだけで、AIが文字起こし→構成→執筆→校正まで一気通貫で記事を生成。編集者の"中間工程"をAIが代行します。',
     icon: '🎙️',
@@ -385,6 +393,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤペルソナAI',
     shortName: 'ペルソナ',
     description: 'ターゲットペルソナをAIで自動生成',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'ビジネスに合うペルソナをAIが自動で作ります。年齢、職業、悩み、行動パターンまで載ったペルソナシートを出力するので、広告や記事を届ける相手を、具体的にそろえられます。',
     longDescription: 'ビジネスに最適なペルソナ像をAIが自動生成。年齢・職業・悩み・行動パターンまで詳細なペルソナシートを作成。',
     icon: '🎯',
     color: 'purple',
@@ -956,6 +966,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤHR',
     shortName: 'HR',
     description: '人を活かすAI。中小企業のためのタレントマネジメント。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '従業員データベース、顔写真の管理、人事評価をAIが支援します。AIが評価コメントを作るので、データにもとづいて人材を管理できます。中小企業向けのタレントマネジメントです。',
     longDescription: '従業員データベース、顔写真管理、人事評価をAIが支援。AI評価コメント生成で、データドリブンな人材マネジメントを実現。',
     icon: '👥',
     color: 'sky',
@@ -1011,6 +1023,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ勤怠',
     shortName: '勤怠',
     description: 'シンプルで使いやすいクラウド勤怠管理。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '打刻、勤怠の集計、申請と承認を1つにまとめた、中小企業向けの勤怠管理ツールです。ほかのツールと同じアカウントで使えるので、アカウントを分けて管理する必要がありません。',
     longDescription: '打刻・勤怠集計・申請承認をオールインワンで。中小企業のための勤怠管理システム。KING OF TIME/ジョブカンに匹敵する機能を、ドヤAIのアカウントで。',
     icon: '⏰',
     color: 'violet',
@@ -1228,6 +1242,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤプロマネ',
     shortName: 'プロマネ',
     description: '案件の進捗・収支・人件費を一元管理。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'ガントチャートとカンバンで案件の進捗を管理します。作業時間から人件費を自動で計算し、売上・原価・利益を確認できる、中小企業と制作会社向けの案件管理ツールです。進捗と収支を一つの画面で確かめられます。',
     longDescription: 'ガントチャートとカンバンで案件を進捗管理。作業時間記録から人件費を自動計算し、売上・原価・利益をリアルタイム可視化。中小企業/制作会社のための案件管理ツール。',
     icon: '📊',
     color: 'blue',
@@ -1331,6 +1347,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ商談準備',
     shortName: '商談準備',
     description: '商談先のURLから企業調査。プロプランなら課題仮説と提案資料も生成。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '商談先のURLを入れると、従業員数、マーケ施策、オウンドメディアの有無を調べます。現状分析、課題仮説、解決策を整理し、提案資料の作成までを一度に進められます。商談前の準備にかかる手間を減らします。',
     longDescription:
       '商談先企業のURLを入力すると、公開されている従業員数・マーケ実施状況・オウンドメディアの有無と所在を調査。プロプランでは現状分析（はっきりめ）から課題仮説・解決策、提案資料（Markdown・スライド）まで作成します。自社情報を登録しておけば、自社の商材・強みに合わせた提案に。チーム招待・組織スコープで情報を分離します。',
     icon: '🎯',
@@ -1374,6 +1392,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤAIO',
     shortName: 'AIO',
     description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を測って比べる（AEO/回答エンジン最適化）。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '登録した質問をChatGPT・Gemini・Claude・Perplexityに繰り返し送り、自社ブランドの言及率、Share of Voice、引用元を測ります。競合との比較と改善案も出します。',
     longDescription:
       '監視したい質問（プロンプト）を登録すると、ChatGPT・Gemini・Claude・Perplexityに反復で投げ、自社ブランドの言及率・Share of Voice・引用元ドメイン・感情を測定します。競合との比較、時系列の推移、AIに引用されるための改善アクション（メディア掲載・サイトのAI可読化・比較コンテンツ）まで提案。検索の次の「AIに選ばれる」競争を可視化します。組織スコープ・チーム招待対応。',
     icon: '🔍',
@@ -1461,6 +1481,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ面接官',
     shortName: '面接官',
     description: 'AIアバターが一次面接を実施し、評価レポートまで残す。応募者はブラウザだけで受けられます。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '企業のURLから質問と評価基準を作り、応募者はAI面接官と音声で一次面接を受けます。全発話のログと評価レポートを自動で作成し、最終的な判断は人が行います。就職差別につながる質問は、システムが出さないようにします。',
     longDescription:
       '企業URLを入力するだけで、自社に合った質問セットと評価基準（ルーブリック）を自動生成。応募者はワンタイムURLを開くだけで、AI面接官と音声で会話する一次面接を受けられます。回答に応じた深掘り、全発話の逐語ログ、評価軸ごとのスコアと根拠引用、応募者向け・採用担当者向けの2種類のレポートまで自動化。構造化面接（全員に同じ主質問・同じ基準）を既定とし、就職差別につながる質問はシステムがブロックします。判定は「推薦度」であり、最終決定は必ず人が行います。',
     icon: '🎙️',
@@ -1508,6 +1530,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ見積もりAI',
     shortName: '見積もり',
     description: 'サービスURLを入れるだけで、相場つきの見積もり品目が並びます。商談中に編集してその場でPDF。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '自社サービスのURLを入れると、読み取った提供形態と課金の軸から、相場つきの見積書の品目を提案します。商談中に品目や単価を編集し、その場でPDFに出力できます。数字の根拠が1件ずつ画面に表示されます。',
     longDescription:
       '自社のサービスURLを入力すると、提供形態と課金の軸を読み取り、見積書に載せる品目の候補を相場つきで提示します。金額は「自社サイトの公開価格 → 相場データ → 根拠なし（要見積）」の優先順位で決まり、どこから来た数字かが1件ずつ画面に表示されます。根拠のない金額をAIが作ることはありません。品目の追加・単価の調整・値引きはその場で編集でき、確定した見積書は日本語対応のPDFとして即座に出力できます。商談の途中で「概算いくら？」と聞かれてから、答えを紙にして渡すまでが数分で終わります。',
     icon: '🧾',
@@ -1556,6 +1580,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤAI商談',
     shortName: 'AI商談',
     description: 'AIが一次商談を代行。サービスURLを入れて発行したURLを開いてもらうだけで、24時間いつでも商談が始まります。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: '自社サービスのURLから商談シナリオを作り、AIが一次商談を進めます。全文のログと、見込み客との適合度が残るので、次にどの相手を追うかを判断できます。営業担当が同席しなくても進みます。',
     longDescription:
       '自社サービスのURLを入力すると、サイトを読み取って商材ナレッジと商談シナリオを自動で用意します。発行された商談URLを見込み客が開くと、AIが会社説明・課題のヒアリング・質疑応答・次アクションの提案までを一次商談として進行します。相手の質問には取り込んだ資料を根拠に回答し、根拠が無いことは推測せず「確認して折り返す」と伝えます。商談後は全文ログ・ヒアリング結果・答えられなかった質問・理想顧客像との適合度が残り、次に誰を追うべきかが判断できます。営業担当が同席する必要はなく、スマートフォンからでも商談できます。',
     icon: '🤝',
@@ -1604,6 +1630,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤ広告画像AI',
     shortName: '広告画像',
     description: 'URLを貼るだけで、媒体・配置ごとにサイズの揃った広告画像が出ます。文字は画像に描き込み済みで、そのまま入稿できます。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'サービスのURLを入れると、Meta・Google・X・LINE・Yahoo!の各配置に合わせた広告画像を一度に作ります。文字は画像に描き込むので、そのまま入稿できます。',
     longDescription:
       'サービスURLを入力すると、ブランド情報を読み取ってコピーを作り、Meta・Google・X・LINE・Yahoo! の各配置に合わせた広告画像を一度に制作します。文字は後から重ねるのではなく画像に直接描き込むため、デザインとして一体感があります。出力は目標サイズと同じ比率で生成してから縮小するだけなので、切り抜きによる文字切れが起きません。生成後は指定した文字が正しく描かれたかを自動で検査し、不合格なら作り直します。仕上がりが気に入らないときは、ボタンを押すだけでAIが実際の画像を見て採点し、具体的な改善を反映した次の案を作ります。媒体別に整理したZIPで一括ダウンロードできます。',
     icon: '🖼️',
@@ -1651,6 +1679,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤAI質問リンク',
     shortName: '質問リンク',
     description: 'サイトのURLを入れるだけで、ChatGPTに質問が届く「AIに聞く」リンクとポップアップ用バナーができます。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'サイトのURLを入れると、訪問者がChatGPTに相談できる「AIに聞く」リンクと、ポップアップ用のバナー画像を作ります。ポップアップツールに貼るだけで、設置が終わります。',
     longDescription:
       '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、訪問者がそのままChatGPTに相談できる「AIに聞く」リンクを2本と、ボタン付きのポップアップ用バナー画像を3サイズ作ります。質問文はサイトに合わせて、訪問者本人の言葉として自然に読める形で作られ、文中のURLはサイト上で実際に確認できたものだけが入ります。リンクと画像はワンクリックでコピーでき、HubSpotなどのポップアップツールに貼るだけで設置が終わります。開発もチャットボットの導入も要りません。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
@@ -1698,6 +1728,8 @@ export const SERVICES: Service[] = [
     name: 'ドヤポップアップ',
     shortName: 'ポップアップ',
     description: 'サイトのURLを入れるだけで、AIがポップアップを提案。タグを1行貼れば表示され、クリック率まで計測できます。',
+    // 検索結果とSNSに出す説明文（80〜120字）。longDescription は画面内・llms-full.txt 用の長い説明
+    metaDescription: 'サイトのURLを入れると、AIがポップアップを3案提案します。タグを1行貼るだけで表示でき、表示数とクリック数、クリック率を日別に確認できます。配信の条件も設定できます。',
     longDescription:
       '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、そのサイトに合ったポップアップを3案提案します。ChatGPTにサイトのことを相談できる「AIに聞く」ボタン、問い合わせや資料ダウンロードへの案内、次に読むおすすめページの3つです。バナーはサイトの色に合わせて自動でデザインされるので、画像を用意する必要はありません。設置タグをサイトに1行貼るだけで、表示するタイミング・端末・ページ・頻度を決めて配信でき、表示数・クリック数・クリック率を日別に確認できます。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）

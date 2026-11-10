@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤインタビュー LPコンテンツ
 // ⚠️ 実績数値（導入社数・短縮率など）は持っていないので書かない。
 import type { Step, Benefit, Faq } from '@/components/lp'
@@ -20,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('interview')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('interview')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('interview')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: '長い取材音声でも大丈夫ですか？', a: 'ファイル1件の上限はゲスト100MB・無料500MB・LIGHT 1GB・PRO 2GB・Enterprise 5GBです。ストレージ側の設定でさらに小さくなる場合があります。文字起こしは1回の長さと月間の残り時間にも上限があります。' },
   { q: '出てきた記事はそのまま公開できますか？', a: 'ドラフトとしてお使いください。事実確認と最終的な文章の調整は、公開前にご確認いただく前提です。' },
   { q: '話者が複数いても分けられますか？', a: 'はい。話者分離に対応しており、誰の発言かが分かる形で文字起こしされます。' },

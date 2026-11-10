@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤAI質問リンク LPコンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -19,7 +19,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('asklink')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('asklink')!.pricing.pro.limit}。1つの契約で全サービスのプロプランが使えます。` },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('asklink')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: 'リンクを押すと何が起きますか？', a: 'ChatGPTが新しいタブで開き、サイトに合わせた質問文が入力欄に入った状態になります（ウェブ検索も有効になります）。訪問者は送信ボタンを押すだけで相談を始められます。訪問者のChatGPTアカウントで動くため、こちら側の利用料はかかりません。' },
   { q: 'ずっと使い続けられますか？', a: 'ChatGPTに質問文を渡す仕組み（URLの q と hints の指定）はOpenAIの公式仕様ではありません。将来ChatGPT側の変更で動かなくなる可能性があります。' },
   { q: 'どのポップアップツールで使えますか？', a: 'ボタンやバナーにリンク先URLを設定できるツールであれば使えます。HubSpotのポップアップのほか、画像とリンクを置けるWebサイトのバナー枠でも使えます。' },

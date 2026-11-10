@@ -11,6 +11,7 @@ import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { CunningKnowledgeMock, CunningLiveMock, CunningAnswerMock } from './mocks'
 import ServiceDiagram from './diagram'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 const SVC = getServiceById('cunning')!
 const ROWS: ShowcaseRow[] = [
@@ -48,7 +49,7 @@ export default function CunningLp() {
 
       <CtaBand
         title="まずは無料で試せます"
-        subtitle="プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。"
+        subtitle={PUBLIC_PRICE_SENTENCE}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         note="クレジットカードの登録は不要です"

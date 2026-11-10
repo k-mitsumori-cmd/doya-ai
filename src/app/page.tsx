@@ -12,11 +12,9 @@ import { LpShell, CtaBand, HowItWorks } from "@/components/lp";
 import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
 import { CountUp, OutputGallery } from "@/components/lp/renewal/TopExtras";
-import { getListedServiceCount, SERVICES } from "@/lib/services";
-import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
+import { getListedServiceCount } from "@/lib/services";
+import { EXAMPLE_LINE, FREE_LINE } from "@/lib/pricing-v2/public-copy";
 
-// 最初のボタンの近くに出す「無料で使える回数」の例（services.ts の無料プランの枠から出す。ベタ書きしない）
-const freeLimitOf = (id: string) => SERVICES.find((s) => s.id === id)?.pricing.free.limit;
 
 export default function HomePage() {
   return (
@@ -60,10 +58,10 @@ export default function HomePage() {
             <p className="doya-home-free">
               <span>
                 <Check size={15} aria-hidden="true" />
-                登録すれば無料で使えます（例：ドヤバナーAI は{freeLimitOf("banner")}、ドヤ記事作成は{freeLimitOf("seo")}）
+                {FREE_LINE}。登録すれば、すぐに使えます
               </span>
               <span>
-                続けて使うなら全ツール共通のプロプラン 月額{UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}円（税込）
+                人数が増えたら有料のチームへ（{EXAMPLE_LINE}）
                 <Link href="/pricing">料金を見る</Link>
               </span>
             </p>

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { SERVICES, HIDDEN_SERVICE_IDS, getListedServices } from "@/lib/services";
 import { SHELL_GROUPS } from "@/components/shell/tools";
-import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
+import { FREE_LINE, PUBLIC_PRICE, yen } from "@/lib/pricing-v2/public-copy";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
 import { DEMOS } from "./OperationDemo";
@@ -645,24 +645,27 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
   );
 }
 
+// 2026-11-10: 料金の節を /pricing のチームの料金にそろえた（三森さんの決定）。数は public-copy.ts（plans.ts）から出す。
+// ⚠️ 前からの契約者の ¥9,980 は、ログイン前のページに出さない（ログイン後の /pricing だけで案内する）
 export function PriceSummary() {
   return (
     <section className="doya-pricing">
       <div className="doya-section-inner">
         <div>
-          <span className="doya-eyebrow">ONE ACCOUNT, ONE PLAN</span>
-          <h2>ひとつの契約で、 仕事の可能性が広がります。</h2>
+          <span className="doya-eyebrow">ONE COMPANY, ONE PLAN</span>
+          <h2>料金は会社ごと。全ツールを使えます。</h2>
           <p>
-            まずは無料プランで。継続して使うなら、
-            全サービス共通のプロプランをご利用ください。
+            {PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。人数が増えたら、有料のチームに切り替えます。
           </p>
         </div>
         <div className="doya-price-card">
-          <span>プロプラン / 月額（税込）</span>
-          <strong>¥{UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}</strong>
-          <p>各サービスの利用上限があります。</p>
+          <span>チーム（{PUBLIC_PRICE.exampleSeats}人の場合）/ 月額（税抜）</span>
+          <strong>{yen(PUBLIC_PRICE.exampleMonthly)}</strong>
+          <p>
+            税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。基本料 {yen(PUBLIC_PRICE.base)}＋1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。
+          </p>
           <Link className="doya-button" href="/pricing">
-            料金・利用枠を確認する <ArrowRight size={18} />
+            人数ごとの料金を見る <ArrowRight size={18} />
           </Link>
         </div>
       </div>
