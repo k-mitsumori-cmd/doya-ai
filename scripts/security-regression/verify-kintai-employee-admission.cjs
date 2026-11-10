@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict')
+
+// The real pricing-off guard pins the current actor before existing domain locks.
+function pinnedFixtureUser(sql, values) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, ['owner']);
+  return [{ id: 'owner' }];
+}
 const { webcrypto } = require('node:crypto')
 const { load, check } = require('./load-typescript.cjs')
 
@@ -20,7 +27,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       $transaction: async (work) => {
         let release = () => {}
         const tx = {
-          $queryRaw: async (strings) => {
+          $queryRaw: async (strings, values) => { const pinned = pinnedFixtureUser(strings, values); if (pinned) return pinned;
             if (String(strings[0]).includes('kintai_members')) {
               return [{ role: 'system_admin', status: 'ACTIVE', isActive: true }]
             }
@@ -72,9 +79,9 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
     let updates = 0
     let count = 1
     const tx = {
-      $queryRaw: async (strings) => String(strings[0]).includes('kintai_members')
+      $queryRaw: async (strings, values) => pinnedFixtureUser(strings, values) || (String(strings[0]).includes('kintai_members')
         ? [{ role: 'system_admin', status: 'ACTIVE', isActive: true }]
-        : [{ id: 'org' }],
+        : [{ id: 'org' }]),
       kintaiMember: { findFirst: async () => ({ userId: 'owner' }) },
       user: { findUnique: async () => ({ plan: 'FREE' }) },
       kintaiEmployee: {
@@ -113,9 +120,9 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       let creates = 0
       let sends = 0
       const tx = {
-        $queryRaw: async (strings) => String(strings[0]).includes('kintai_members')
+        $queryRaw: async (strings, values) => pinnedFixtureUser(strings, values) || (String(strings[0]).includes('kintai_members')
           ? [{ role: scenario.role, status: scenario.status, isActive: scenario.isActive }]
-          : [{ id: 'org' }],
+          : [{ id: 'org' }]),
         kintaiEmployee: { create: async () => { creates++; throw Error('unauthorized create') } },
       }
       const prisma = {
