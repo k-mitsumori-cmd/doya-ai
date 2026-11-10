@@ -17,6 +17,10 @@ import {
 } from './plans'
 import { PURCHASE_MAX_MONTHS } from '../doya-power/rules'
 
+// 新しい料金（チーム）を全員に出した日。2026-11-05 夜に NEW_PRICING_ROLLOUT を all にした（Obsidian ドヤAI_04・05）。
+// それより後は 9,980円の新規申し込みを受け付けていない（410 LEGACY_PLAN_CLOSED）。同じ日の朝の申し込みも含めるため「までに」と書く。
+export const LEGACY_CUTOFF_LABEL = '2026年11月5日'
+
 const yen = (n: number) => `¥${n.toLocaleString('ja-JP')}`
 const exTax = (n: number) => `${yen(n)}（税抜。税込 ${yen(withTax(n))}）`
 
@@ -28,7 +32,7 @@ export function tokushohoPriceLines(): string[] {
     `チーム（年払い）: 月払いの${12 - YEARLY_FREE_MONTHS}か月分を、1年分としてお支払いいただきます`,
     `${ENTERPRISE_MIN_SEATS}人以上: 個別にお見積りします`,
     `ドヤパワーの追加購入: ${POWER_PACK.points.toLocaleString('ja-JP')}ごとに ${exTax(POWER_PACK.price)}。購入した分は${PURCHASE_MAX_MONTHS}か月で失効します`,
-    `新しい料金（チーム）の前からプロプランをご契約の方: 月額 ${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}（税込）のまま変わりません`,
+    `${LEGACY_CUTOFF_LABEL}までにプロプランをご契約の方: 月額 ${yen(LEGACY_PRO_PRICE_TAX_INCLUDED)}（税込）のまま変わりません`,
   ]
 }
 
