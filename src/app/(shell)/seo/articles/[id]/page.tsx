@@ -219,7 +219,7 @@ function ImageCard({
                   {mediaLockLabel}
                 </div>
                 <p className="mt-3 text-white text-sm font-black">アイキャッチの操作（DL/コピー）は有料プラン限定</p>
-                <p className="mt-1 text-white/80 text-[11px] font-bold">
+                <p className="mt-1 text-white/80 text-xs font-bold">
                   画像は表示のみです。アップグレードでダウンロードできます。
                 </p>
                 <Link href={upgradeHref} className="inline-flex mt-3">
@@ -264,7 +264,7 @@ function ImageCard({
                     style={{ width: '55%' }}
                   />
                 </div>
-                <div className="mt-1 text-[10px] font-bold text-gray-500">
+                <div className="mt-1 text-xs font-bold text-gray-500">
                   ※ 生成→保存→反映まで少し時間がかかる場合があります
                 </div>
               </div>
@@ -274,7 +274,7 @@ function ImageCard({
       </div>
       <div className="p-4 sm:p-5">
         <p className="font-black text-gray-900 truncate text-sm sm:text-base">{img.title || '無題の画像'}</p>
-        <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{new Date(img.createdAt).toLocaleDateString()}</p>
+        <p className="text-xs font-bold text-gray-400 uppercase mt-1">{new Date(img.createdAt).toLocaleDateString()}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -1488,7 +1488,7 @@ function SeoArticleInner() {
                       disabled={regenArticleBusy}
                       placeholder="例：比較表に“無料枠の有無”を追加／各ツールの注意点を1行で入れる／初心者向けに噛み砕く…"
                     />
-                    <p className="mt-2 text-[11px] text-gray-500 font-bold">
+                    <p className="mt-2 text-xs text-gray-500 font-bold">
                       ※「同じテーマ」で再生成しつつ、この指示を一次情報として優先的に反映します
                     </p>
                   </div>
@@ -1640,7 +1640,7 @@ function SeoArticleInner() {
             {actionError && (
               <div className="p-6 sm:p-8 bg-red-50 border-t border-red-100 text-red-700">
                 <p className="font-black mb-2 flex items-center gap-2 text-sm sm:text-base"><AlertTriangle className="w-5 h-5" /> 生成エラー</p>
-                <p className="text-[10px] sm:text-xs font-bold opacity-80 mb-4">{actionError}</p>
+                <p className="text-xs sm:text-xs font-bold opacity-80 mb-4">{actionError}</p>
                 <Button variant="secondary" onClick={advanceOnce} className="bg-white text-red-600 border-red-200 text-xs sm:text-sm">再試行</Button>
               </div>
             )}
@@ -1657,11 +1657,11 @@ function SeoArticleInner() {
               { label: '画像', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
             ].map((s, i) => (
               <div key={i} className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-baseline gap-1">
                     <p className={`text-xl sm:text-3xl font-black ${s.color}`}>{s.val}</p>
-                    {s.sub && <span className="text-[9px] sm:text-[10px] font-bold text-gray-400">{s.sub}</span>}
+                    {s.sub && <span className="text-xs sm:text-xs font-bold text-gray-400">{s.sub}</span>}
                   </div>
                   <s.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${s.color} opacity-20`} />
                 </div>
@@ -1677,7 +1677,7 @@ function SeoArticleInner() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-black transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap ${
                   tab === t.id
                     ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-500/30'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -1722,7 +1722,7 @@ function SeoArticleInner() {
                   </div>
 
                   <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
-                    <div className="flex items-center gap-2 text-white/80 text-[10px] font-black uppercase tracking-widest mb-2">
+                    <div className="flex items-center gap-2 text-white/80 text-xs font-black uppercase tracking-widest mb-2">
                       <Eye className="w-4 h-4" />
                       プレビュー
                     </div>
@@ -1730,17 +1730,17 @@ function SeoArticleInner() {
                       {article.title}
                     </h2>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-xs font-black">
                         {readingMinutes}分で読める
                       </span>
-                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-xs font-black">
                         目標 {Number(article.targetChars || 0).toLocaleString()}字
                       </span>
-                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-xs font-black">
                         {new Date(article.createdAt).toLocaleDateString()}
                       </span>
                       {article.mode === 'comparison_research' && article.comparisonCount && article.comparisonCount > 0 && (
-                        <span className="px-3 py-1 rounded-full bg-emerald-500/80 border border-emerald-400/50 text-white text-[10px] font-black flex items-center gap-1">
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/80 border border-emerald-400/50 text-white text-xs font-black flex items-center gap-1">
                           <Target className="w-3 h-3" />
                           {article.comparisonCount}社を比較
                         </span>
@@ -1813,7 +1813,7 @@ function SeoArticleInner() {
                           <details className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
                             <summary className="cursor-pointer select-none px-5 py-4 font-black text-sm text-gray-900 flex items-center justify-between">
                               目次
-                              <span className="text-[10px] font-black text-gray-400">タップで開く</span>
+                              <span className="text-xs font-black text-gray-400">タップで開く</span>
                             </summary>
                             <div className="px-5 pb-5">
                               <div className="space-y-2">
@@ -1964,7 +1964,7 @@ function SeoArticleInner() {
                         <Check className="w-4 h-4" />
                         保存
                       </button>
-                      <span className="text-[10px] font-bold text-gray-400">サムネイル4枚＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
+                      <span className="text-xs font-bold text-gray-400">サムネイル4枚＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
                     </div>
                   )}
 
@@ -1985,7 +1985,7 @@ function SeoArticleInner() {
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-[11px] font-black text-gray-600 mb-2">記事バナー用プロンプト</p>
+                          <p className="text-xs font-black text-gray-600 mb-2">記事バナー用プロンプト</p>
                           <textarea
                             value={bannerPromptTemplate}
                             onChange={(e) => setBannerPromptTemplate(e.target.value)}
@@ -1995,7 +1995,7 @@ function SeoArticleInner() {
                           />
                         </div>
                         <div>
-                          <p className="text-[11px] font-black text-gray-600 mb-2">図解用プロンプト</p>
+                          <p className="text-xs font-black text-gray-600 mb-2">図解用プロンプト</p>
                           <textarea
                             value={diagramPromptTemplate}
                             onChange={(e) => setDiagramPromptTemplate(e.target.value)}
@@ -2005,7 +2005,7 @@ function SeoArticleInner() {
                           />
                         </div>
                       </div>
-                      <p className="mt-3 text-[10px] font-bold text-gray-500">
+                      <p className="mt-3 text-xs font-bold text-gray-500">
                         ※ テンプレ内の「▼ここに…▼」部分は自動で記事本文に置き換えて生成します（サーバ側で処理）。
                       </p>
                     </div>
@@ -2044,7 +2044,7 @@ function SeoArticleInner() {
                           サムネイルを選択
                           <span className="text-xs font-bold text-gray-400 ml-1">({bannerImages.length}枚から選択)</span>
                         </h4>
-                        <p className="text-[10px] font-bold text-gray-400 mb-4">クリックでメインサムネイルに設定されます。記事プレビューのカバー画像に使用されます。</p>
+                        <p className="text-xs font-bold text-gray-400 mb-4">クリックでメインサムネイルに設定されます。記事プレビューのカバー画像に使用されます。</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           {bannerImages.map((img, idx) => {
                             const isSelected = img.id === selectedId
@@ -2093,14 +2093,14 @@ function SeoArticleInner() {
                                   )}
                                   {!isSelected && !isGenerating && (
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black bg-black/50 px-2 py-1 rounded-lg">
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-black bg-black/50 px-2 py-1 rounded-lg">
                                         メインに設定
                                       </span>
                                     </div>
                                   )}
                                 </div>
                                 <div className="px-2 py-1.5 bg-white">
-                                  <p className={`text-[10px] font-black truncate ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
+                                  <p className={`text-xs font-black truncate ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
                                     {isSelected ? 'メイン' : `候補${idx + 1}`}
                                   </p>
                                 </div>
@@ -2218,7 +2218,7 @@ function SeoArticleInner() {
                             <p id="seo-image-detail-title" className="text-lg font-black text-gray-900 mt-1 truncate">{imageDetail.title || '画像'}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <Badge tone={imageDetail.kind === 'BANNER' ? 'orange' : 'blue'}>{imageDetail.kind}</Badge>
-                              <span className="text-[10px] font-bold text-gray-400">{new Date(imageDetail.createdAt).toLocaleString()}</span>
+                              <span className="text-xs font-bold text-gray-400">{new Date(imageDetail.createdAt).toLocaleString()}</span>
                             </div>
                           </div>
                           <button
@@ -2393,7 +2393,7 @@ function SeoArticleInner() {
                   >
                     <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-blue-500 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">Markdown (.md)</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">GitHub, Notion, Qiita等に最適</p>
+                    <p className="text-xs sm:text-xs text-gray-400 font-bold mt-2">GitHub, Notion, Qiita等に最適</p>
                   </a>
 
                   <a
@@ -2403,7 +2403,7 @@ function SeoArticleInner() {
                   >
                     <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-slate-600 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">Text (.txt)</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">プレーンテキスト（メール/Docs貼り付け用）</p>
+                    <p className="text-xs sm:text-xs text-gray-400 font-bold mt-2">プレーンテキスト（メール/Docs貼り付け用）</p>
                   </a>
 
                   <a
@@ -2413,7 +2413,7 @@ function SeoArticleInner() {
                   >
                     <Layout className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-amber-600 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">HTML (.html)</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">ブラウザ表示/社内共有用（基本CSS付き）</p>
+                    <p className="text-xs sm:text-xs text-gray-400 font-bold mt-2">ブラウザ表示/社内共有用（基本CSS付き）</p>
                   </a>
 
                   <a
@@ -2423,7 +2423,7 @@ function SeoArticleInner() {
                   >
                     <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-rose-600 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">note用Markdown (.md)</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">note向けに見出し/画像/表を調整</p>
+                    <p className="text-xs sm:text-xs text-gray-400 font-bold mt-2">note向けに見出し/画像/表を調整</p>
                   </a>
 
                   <a
@@ -2433,7 +2433,7 @@ function SeoArticleInner() {
                   >
                     <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-brand-500 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">JSON (.json)</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">連携/自動処理用（markdown + text入り）</p>
+                    <p className="text-xs sm:text-xs text-gray-400 font-bold mt-2">連携/自動処理用（markdown + text入り）</p>
                   </a>
                 </div>
               </div>
@@ -2446,7 +2446,7 @@ function SeoArticleInner() {
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm sticky top-[7rem]">
               <div className="space-y-3">
                 <div>
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">文字数</p>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">文字数</p>
                   <p className="text-sm font-black text-gray-900">{score.charCount.toLocaleString()} <span className="text-xs text-gray-400">/ {article.targetChars.toLocaleString()}字</span></p>
                 </div>
                 <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -2454,17 +2454,17 @@ function SeoArticleInner() {
                 </div>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {((article.keywords as string[]) || []).slice(0, 3).map((k, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black border border-blue-100 truncate max-w-full">{k}</span>
+                    <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-black border border-blue-100 truncate max-w-full">{k}</span>
                   ))}
                 </div>
               </div>
               
               {/* クイックアクション */}
               <div className="mt-4 pt-4 border-t border-gray-100 grid gap-2">
-                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-brand-50 text-brand-600 font-black text-[10px] flex items-center justify-between hover:bg-brand-50 transition-all">
+                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-brand-50 text-brand-600 font-black text-xs flex items-center justify-between hover:bg-brand-50 transition-all">
                   編集 <Edit3 className="w-3 h-3" />
                 </button>
-                <button onClick={() => setTab('export')} className="w-full px-3 py-2 rounded-lg bg-gray-50 text-gray-700 font-black text-[10px] flex items-center justify-between hover:bg-gray-100 transition-all">
+                <button onClick={() => setTab('export')} className="w-full px-3 py-2 rounded-lg bg-gray-50 text-gray-700 font-black text-xs flex items-center justify-between hover:bg-gray-100 transition-all">
                   DL <Download className="w-3 h-3" />
                 </button>
               </div>

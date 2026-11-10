@@ -250,7 +250,7 @@ export default function SeoOutlineEditPage() {
             <p className="text-sm font-black text-gray-900 leading-none truncate max-w-xs sm:max-w-md">
               {article.title}
             </p>
-            <p className="text-[10px] font-bold text-gray-400 mt-1">構成を編集</p>
+            <p className="text-xs font-bold text-gray-400 mt-1">構成を編集</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -297,13 +297,13 @@ export default function SeoOutlineEditPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => addHeading(2)}
-                className="h-8 px-3 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                className="h-8 px-3 rounded-lg bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" /> H2
               </button>
               <button
                 onClick={() => addHeading(3)}
-                className="h-8 px-3 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
+                className="h-8 px-3 rounded-lg bg-gray-50 text-gray-600 text-xs font-black hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" /> H3
               </button>
@@ -333,7 +333,7 @@ export default function SeoOutlineEditPage() {
                       <GripVertical className="w-4 h-4 text-gray-300 cursor-grab flex-shrink-0" />
 
                       <span
-                        className={`flex-shrink-0 w-8 h-5 rounded text-[10px] font-black flex items-center justify-center ${
+                        className={`flex-shrink-0 w-8 h-5 rounded text-xs font-black flex items-center justify-center ${
                           h.level === 2
                             ? 'bg-blue-100 text-blue-600'
                             : h.level === 3
@@ -428,7 +428,7 @@ export default function SeoOutlineEditPage() {
                   </label>
                   <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                     <p className="text-sm font-bold text-gray-800">{selectedHeading.text}</p>
-                    <span className="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-600">
+                    <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs font-black bg-blue-100 text-blue-600">
                       H{selectedHeading.level}
                     </span>
                   </div>

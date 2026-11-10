@@ -598,7 +598,7 @@ export default function SeoCreateWizardPage() {
             <button
               type="button"
               onClick={() => setShowHelp(true)}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black hover:bg-blue-100 transition-all"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-xs font-black hover:bg-blue-100 transition-all"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               使い方
@@ -635,7 +635,7 @@ export default function SeoCreateWizardPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="mt-2 text-xs font-black text-gray-400 uppercase tracking-widest">
               {step === 1 && 'Step 1: 記事の軸'}
               {step === 2 && 'Step 2: 読者像'}
               {step === 3 && 'Step 3: 仕上がり'}
@@ -665,7 +665,7 @@ export default function SeoCreateWizardPage() {
                         <button
                           type="button"
                           onClick={cycleSample}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-50 text-brand-500 text-[10px] font-black hover:from-brand-50 hover:to-indigo-100 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-50 text-brand-500 text-xs font-black hover:from-brand-50 hover:to-indigo-100 transition-all"
                           title="押すたびにサンプルが切り替わります"
                         >
                           <Wand2 className="w-3 h-3" />
@@ -674,7 +674,7 @@ export default function SeoCreateWizardPage() {
                         <button
                           type="button"
                           onClick={() => setShowSampleMenu((v) => !v)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-[10px] font-black hover:bg-gray-50 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-50 transition-all"
                           title="サンプル一覧"
                         >
                           一覧
@@ -690,7 +690,7 @@ export default function SeoCreateWizardPage() {
                               className="absolute right-0 top-full mt-2 w-[360px] max-w-[85vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
                             >
                               <div className="p-3 border-b border-gray-50 bg-gray-50/50">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">サンプルを選択</p>
+                                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">サンプルを選択</p>
                               </div>
                               <div className="max-h-80 overflow-y-auto">
                                 {SAMPLES.map((s) => (
@@ -701,12 +701,12 @@ export default function SeoCreateWizardPage() {
                                     className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-b-0"
                                   >
                                     <p className="text-sm font-black text-gray-900">{s.name}</p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">{s.mainKeyword}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">{s.mainKeyword}</p>
                                     <div className="flex items-center gap-2 mt-1.5">
-                                      <span className="px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 text-[9px] font-black border border-gray-100">
+                                      <span className="px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 text-xs font-black border border-gray-100">
                                         {ARTICLE_TYPES.find((t) => t.id === s.articleType)?.label || s.articleType}
                                       </span>
-                                      <span className="text-[10px] text-gray-400">{s.targetChars.toLocaleString()}字</span>
+                                      <span className="text-xs text-gray-400">{s.targetChars.toLocaleString()}字</span>
                                     </div>
                                   </button>
                                 ))}
@@ -739,7 +739,7 @@ export default function SeoCreateWizardPage() {
                         type="button"
                         onClick={generateTitleCandidates}
                         disabled={titleLoading || mainKeyword.trim().length < 2}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-[10px] font-black shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-black shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         title="主キーワードからタイトル候補を6つ生成します"
                       >
                         {titleLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -801,7 +801,7 @@ export default function SeoCreateWizardPage() {
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black tracking-widest">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-black tracking-widest">
                             重要
                           </span>
                           <label className="text-xs font-black text-blue-800 uppercase tracking-widest">
@@ -812,7 +812,7 @@ export default function SeoCreateWizardPage() {
                           ぜひ入力してください。ここが入るほど「あなたにしか書けない記事」になり、差別化できます。
                         </p>
                       </div>
-                      <div className="text-[10px] font-black text-blue-700/80 bg-white/70 border border-blue-100 px-3 py-2 rounded-2xl">
+                      <div className="text-xs font-black text-blue-700/80 bg-white/70 border border-blue-100 px-3 py-2 rounded-2xl">
                         例：実体験 / 数字 / 失敗談 / 現場の工夫 / 比較の結論
                       </div>
                     </div>
@@ -853,7 +853,7 @@ export default function SeoCreateWizardPage() {
                             <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
                               {type.label}
                             </p>
-                            <p className="text-[10px] text-gray-400 mt-1">{type.desc}</p>
+                            <p className="text-xs text-gray-400 mt-1">{type.desc}</p>
                           </button>
                         )
                       })}
@@ -897,7 +897,7 @@ export default function SeoCreateWizardPage() {
                               {preset.label}
                             </p>
                             {preset.desc && (
-                              <p className="text-[10px] text-gray-400 mt-1">{preset.desc}</p>
+                              <p className="text-xs text-gray-400 mt-1">{preset.desc}</p>
                             )}
                           </button>
                         )
@@ -961,7 +961,7 @@ export default function SeoCreateWizardPage() {
                                 {option.label}
                               </p>
                             </div>
-                            <p className="text-[10px] text-gray-400">{option.desc}</p>
+                            <p className="text-xs text-gray-400">{option.desc}</p>
                           </button>
                         )
                       })}
@@ -972,7 +972,7 @@ export default function SeoCreateWizardPage() {
                   <div>
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文字数目安
-                      <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
+                      <span className="ml-2 text-xs font-bold text-gray-400 normal-case">
                         ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'LIGHT' ? 'ライト' : userPlan === 'PRO' ? 'プロ' : 'Enterprise'}プラン: 最大{charLimit.toLocaleString()}字)
                       </span>
                     </label>
@@ -1027,7 +1027,7 @@ export default function SeoCreateWizardPage() {
                             {locked && (
                               <div className="absolute inset-0 pointer-events-none">
                                 <div className="absolute inset-0 bg-white/35" />
-                                <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
+                                <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-xs font-black shadow">
                                   <Lock className="w-3 h-3" />
                                   {requiredPlan === 'ENTERPRISE' ? '相談' : requiredPlan === 'PRO' ? 'PRO' : requiredPlan === 'FREE' ? 'LOGIN' : 'GUEST'}
                                 </div>
@@ -1036,9 +1036,9 @@ export default function SeoCreateWizardPage() {
                             <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
                               {preset.label}
                             </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{preset.desc}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{preset.desc}</p>
                             {locked && (
-                              <p className="text-[10px] font-black text-gray-500 mt-1">
+                              <p className="text-xs font-black text-gray-500 mt-1">
                                 {requiredLabel}
                               </p>
                             )}
@@ -1053,7 +1053,7 @@ export default function SeoCreateWizardPage() {
                               <Lock className="w-3.5 h-3.5" />
                               <span>もっと長く</span>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{userPlan === 'PRO' ? '利用について相談する' : 'プランを確認する'}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{userPlan === 'PRO' ? '利用について相談する' : 'プランを確認する'}</p>
                           </div>
                         </a>
                       )}
@@ -1065,7 +1065,7 @@ export default function SeoCreateWizardPage() {
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-black tracking-widest">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-black tracking-widest">
                             重要
                           </span>
                           <label className="text-xs font-black text-indigo-900 uppercase tracking-widest">
@@ -1076,7 +1076,7 @@ export default function SeoCreateWizardPage() {
                           ぜひ入力してください。ここに入れたURLを調査し、構成・見出しの“型”を参考にして、より上位表示を狙える記事にします（内容のコピーはしません）。
                         </p>
                       </div>
-                      <div className="text-[10px] font-black text-indigo-700/80 bg-white/70 border border-indigo-100 px-3 py-2 rounded-2xl inline-flex items-center gap-2">
+                      <div className="text-xs font-black text-indigo-700/80 bg-white/70 border border-indigo-100 px-3 py-2 rounded-2xl inline-flex items-center gap-2">
                         <Link2 className="w-3.5 h-3.5" />
                         <span>有効: {referenceUrlParse.urls.length}件</span>
                       </div>
@@ -1132,7 +1132,7 @@ export default function SeoCreateWizardPage() {
                               rows={3}
                               className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                             />
-                            <p className="mt-1 text-[10px] text-gray-400">
+                            <p className="mt-1 text-xs text-gray-400">
                               入れなくても生成できます。入れると網羅性が上がります
                             </p>
                           </div>
@@ -1148,7 +1148,7 @@ export default function SeoCreateWizardPage() {
                               rows={4}
                               className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                             />
-                            <p className="mt-1 text-[10px] text-gray-400">
+                            <p className="mt-1 text-xs text-gray-400">
                               一次情報を入れると、他にない記事になります
                             </p>
                           </div>
@@ -1164,23 +1164,23 @@ export default function SeoCreateWizardPage() {
                     </p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-[10px] text-blue-500 font-bold">記事タイプ</p>
+                        <p className="text-xs text-blue-500 font-bold">記事タイプ</p>
                         <p className="font-black text-gray-900">{preview.type}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-blue-500 font-bold">想定読者</p>
+                        <p className="text-xs text-blue-500 font-bold">想定読者</p>
                         <p className="font-black text-gray-900">{preview.audience}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-blue-500 font-bold">想定見出し数</p>
+                        <p className="text-xs text-blue-500 font-bold">想定見出し数</p>
                         <p className="font-black text-gray-900">{preview.headings}見出し</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-blue-500 font-bold">想定文字数</p>
+                        <p className="text-xs text-blue-500 font-bold">想定文字数</p>
                         <p className="font-black text-gray-900">{preview.chars}字</p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-[10px] text-blue-500 font-bold">SEO意図</p>
+                        <p className="text-xs text-blue-500 font-bold">SEO意図</p>
                         <p className="font-black text-gray-900">{preview.seoIntent}</p>
                       </div>
                     </div>
