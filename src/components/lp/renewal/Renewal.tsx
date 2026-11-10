@@ -32,6 +32,7 @@ import { CINEMATIC_SCENES } from "./cinematic-scenes";
 import { OpeningCurtain, OPENING_COPY } from "./OpeningCurtain";
 import type { Step } from "../sections";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motion";
+import { brandNameEn } from "@/lib/brand";
 import { CountUp, LP_CARD_IO } from "./TopExtras";
 import "./renewal.css";
 import "./hero-motion.css";
@@ -489,7 +490,8 @@ export function ResourcePack() {
             >
               <div className="doya-book-stage">
                 <div className="doya-book">
-                  <span>DOYA MARKE AI</span>
+                  {/* 2026-11-10: 旧名「DOYA MARKE AI」をやめ、今のブランド名（旗に合わせて DOYA AI / DOYA BUDDY）にした */}
+                  <span>{brandNameEn()}</span>
                   <Icon size={36} />
                   <strong>{label}</strong>
                   <small>{String(i + 1).padStart(2, "0")} / STARTER KIT</small>
@@ -577,6 +579,10 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
                 />
                 <h3>{s.name}</h3>
                 <CardIO id={s.id} fallback={s.description} />
+                <small>
+                  <Check size={14} aria-hidden="true" />
+                  無料プラン：{s.pricing.free.limit}
+                </small>
                 <span>
                   詳しく見る <ArrowRight size={18} />
                 </span>
