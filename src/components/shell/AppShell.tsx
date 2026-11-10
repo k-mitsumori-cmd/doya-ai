@@ -18,6 +18,7 @@ import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import '@/components/ds/app-motion.css'
 import PressMotion from './PressMotion'
+import { NavMark } from './NavMark'
 import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
@@ -77,6 +78,8 @@ function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: Shell
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
     <Link href={href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(href)} title={tool.name} prefetch={prefetch}>
+      {/* 選択中の印。別のツールへ移ると、この印が滑って動く（layoutId） */}
+      {active && !mirror ? <NavMark kind="side" className={styles.navMark} /> : null}
       <ToolBearIcon id={tool.id} icon={tool.icon} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -589,6 +592,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {[productsOn ? productHome : SHELL_HOME, ...tabTools].map((t) => {
           return (
             <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
+              {isActive(pathname, t) ? <NavMark kind="tab" className={styles.tabMark} /> : null}
               <ToolBearIcon id={t.id} icon={t.icon} size={26} iconSize={20} />
               <span>{t.id === 'home' || t.id.startsWith('hub-') ? 'ホーム' : t.name}</span>
             </Link>

@@ -8,7 +8,7 @@
 // ⚠️ ここで API を呼ばない。状態は props で受け取る。各ツールの文は next-step-copy.ts に置く
 // ⚠️ 帯の外の主ボタン（塗りつぶし）は増やさない。帯のボタンが1つだけの主ボタンになるようにする
 import Link from 'next/link'
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import { flowStepState, type NextStepState } from './next-step-model'
@@ -90,12 +90,24 @@ export function FlowSteps({ steps, current, label, className }: {
 }) {
   const n = steps.length
   const style = { '--cols': n, '--cols-sm': n >= 4 ? 2 : n } as CSSProperties
+  // 手順が1つ済むたびに、その印が弾んで光る（最初の表示では動かさない。戻したときも動かさない）
+  const prev = useRef(current)
+  const [fresh, setFresh] = useState<number | null>(null)
+  useEffect(() => {
+    if (current > prev.current) {
+      setFresh(current - 1)
+      const t = setTimeout(() => setFresh(null), 900)
+      prev.current = current
+      return () => clearTimeout(t)
+    }
+    prev.current = current
+  }, [current])
   return (
     <ol className={`${tokens.ds} ${styles.steps} ${className ?? ''}`} aria-label={label} style={style}>
       {steps.map((s, i) => {
         const st = flowStepState(i, current)
         return (
-          <li key={s} className={styles.step} data-state={st} aria-current={st === 'now' ? 'step' : undefined}>
+          <li key={s} className={styles.step} data-state={st} data-fresh={fresh === i ? 'true' : undefined} aria-current={st === 'now' ? 'step' : undefined}>
             <span className={styles.mark} aria-hidden>{st === 'done' ? <Check size={14} /> : i + 1}</span>
             <span className={styles.label}>
               {st === 'done' ? <span className={styles.srOnly}>済み：</span> : null}

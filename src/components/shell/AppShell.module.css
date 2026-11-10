@@ -72,7 +72,10 @@
 }
 .navItem svg { flex: none; }
 .navItem:hover { background: var(--bg); color: var(--ink); }
-.navItem[aria-current='page'] { background: var(--blue-soft); color: var(--blue); }
+.navItem[aria-current='page'] { background: transparent; color: var(--blue); }
+/* 選択中の背景は NavMark（滑って動く印）が持つ。navItem の後ろに敷く */
+.navItem { position: relative; isolation: isolate; }
+.navMark { position: absolute; inset: 0; z-index: -1; border-radius: 12px; background: var(--blue-soft); pointer-events: none; }
 
 /* ツールのまとまり（ドヤマーケAI など）。見出しを押すと開く・畳む */
 .deptBlock { margin-top: 2px; }
@@ -310,6 +313,9 @@
   .shell[data-ui-next='true'] .tab { font-size: 12px; }
   .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
   .tab[aria-current='page'] { color: var(--blue); }
+  .tab { position: relative; }
+  /* 下のタブの選択中の印（上の細い棒）。別のタブへ移ると滑って動く */
+  .tabMark { position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--blue); pointer-events: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

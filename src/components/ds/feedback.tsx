@@ -6,7 +6,8 @@
 // ⚠️ ここで API を呼ばない。状態は props で受け取る。
 // ⚠️ エラーの中身（例外の文・内部のコード）をそのまま message に入れない。利用者向けの文にする。
 import { useEffect, useState, type ReactNode } from 'react'
-import { AlertTriangle, CheckCircle2, X } from 'lucide-react'
+import { AlertTriangle, Check, X } from 'lucide-react'
+import { CheckMark } from './check-mark'
 import { usePrefersReducedMotion } from './motion'
 import styles from './feedback.module.css'
 
@@ -73,13 +74,18 @@ export function GenerationProgress({ stages, current, startedAt, estimateSec, on
   return (
     <div className={styles.progress} role="status" aria-live="polite">
       <div className={styles.progressHead}>
-        <p className={styles.progressStage}>{stages[current] ?? stages[stages.length - 1]}</p>
+        {/* 段階が変わるたびに、新しい一行が下から入れ替わる（key で作り直す） */}
+        <p key={current} className={styles.progressStage} data-motion="rise">{stages[current] ?? stages[stages.length - 1]}</p>
         <p className={styles.progressLeft}>{leftText}</p>
       </div>
-      <div className={styles.bar} aria-hidden><span style={{ width: `${Math.round(ratio * 100)}%`, transition: reduced ? 'none' : undefined }} /></div>
+      {/* 棒は幅ではなく scaleX で伸ばす（レイアウトを動かさない） */}
+      <div className={styles.bar} aria-hidden><span style={{ transform: `scaleX(${Math.round(ratio * 100) / 100})`, transition: reduced ? 'none' : undefined }} /></div>
       <ol className={styles.stageList}>
         {stages.map((s, i) => (
-          <li key={s} data-state={i < current ? 'done' : i === current ? 'now' : 'next'}>{s}</li>
+          <li key={s} data-state={i < current ? 'done' : i === current ? 'now' : 'next'}>
+            {i < current ? <Check size={12} aria-hidden className={styles.stageCheck} /> : null}
+            {s}
+          </li>
         ))}
       </ol>
       {onCancel ? <button type="button" className={styles.linkButton} onClick={onCancel}>止める</button> : null}
@@ -95,8 +101,9 @@ export function DoneBanner({ title, next, onClose }: {
   onClose?: () => void
 }) {
   return (
-    <div className={styles.done} role="status">
-      <CheckCircle2 size={18} aria-hidden className={styles.doneIcon} />
+    <div className={styles.done} role="status" data-motion="pop">
+      {/* できたら、結果が弾んで現れ、チェックの線が描かれる */}
+      <CheckMark size={20} burst className={styles.doneIcon} />
       <p className={styles.doneTitle}>{title}</p>
       {next ? <div className={styles.doneNext}>{next}</div> : null}
       {onClose ? <button type="button" className={styles.close} onClick={onClose} aria-label="閉じる"><X size={16} aria-hidden /></button> : null}
@@ -114,7 +121,7 @@ export function ErrorNotice({ what, how, onRetry, retryLabel = 'やり直す' }:
   retryLabel?: string
 }) {
   return (
-    <div className={styles.error} role="alert">
+    <div className={styles.error} role="alert" data-motion="shake">
       <AlertTriangle size={18} aria-hidden className={styles.errorIcon} />
       <div className={styles.errorText}>
         <p className={styles.errorWhat}>{what}</p>

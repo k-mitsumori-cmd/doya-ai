@@ -18,8 +18,12 @@
 .progressStage { margin: 0; font-size: 15px; font-weight: 800; }
 .progressLeft { margin: 0; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
 .bar { height: 6px; border-radius: 999px; background: var(--bg); overflow: hidden; }
-.bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--blue-deep)); transition: width 800ms var(--ease); }
+.bar span { display: block; width: 100%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--blue-deep)); transform-origin: left center; transform: scaleX(0); transition: transform 800ms var(--ease); }
 .stageList { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.stageList li { display: inline-flex; align-items: center; gap: 4px; }
+.stageCheck { animation: m-pop var(--m-dur-base, 280ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
+.stageList li[data-state='now']::before { content: ''; width: 6px; height: 6px; border-radius: 99px; background: var(--blue); animation: fb-now 1.2s ease-in-out infinite; }
+@keyframes fb-now { 0%, 100% { transform: scale(0.7); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 1; } }
 .stageList li[data-state='done'] { color: var(--sub); }
 .stageList li[data-state='now'] { color: var(--blue); font-weight: 700; }
 .linkButton { justify-self: start; padding: 0; border: 0; background: none; color: var(--sub); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
@@ -33,7 +37,7 @@
 .errorIcon { flex: none; margin-top: 2px; }
 .errorText { flex: 1; min-width: 0; }
 .errorWhat { margin: 0; font-size: 14px; font-weight: 700; }
-.errorHow { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink); }
+.errorHow { animation: m-rise var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) 280ms both; margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink); }
 .retry { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; flex: none; padding: 8px 14px; border: 1px solid currentColor; border-radius: 999px; background: var(--paper); color: var(--bad-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 
 @media (max-width: 767px) {
@@ -42,4 +46,4 @@
   .error { display: grid; grid-template-columns: 18px minmax(0, 1fr); }
   .error .retry { grid-column: 2; justify-self: start; }
 }
-@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } .stageCheck, .stageList li[data-state='now']::before, .errorHow { animation: none; } }

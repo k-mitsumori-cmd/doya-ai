@@ -1,14 +1,25 @@
-/* 中身の入れ替え: 不透明度と少しの上下だけ。短く（180ms）、レイアウトは動かさない
- * ⚠️ 新しい見た目（枠の data-ui-next。チェックリスト §5.1）のときだけ動かす */
+/* 中身の入れ替え: 進む向きに合わせて横から入る。不透明度は下げない（空の画面を出さない）
+ * 動かすのは transform だけ。レイアウトは動かさない
+ * ⚠️ 新しい見た目（枠の data-ui-next。チェックリスト §5.1）のときだけ動かす
+ * ⚠️ 時間と曲線は app-motion.css の変数（--m-dur-slow / --m-ease-emphasized）。変数が無い環境でも動くよう、既定値を添える */
 :global([data-ui-next='true']) .enter {
-  animation: shell-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: shell-enter var(--m-dur-slow, 420ms) var(--m-ease-emphasized, cubic-bezier(0.32, 0.72, 0, 1)) both;
 }
+:global([data-ui-next='true']) .enter[data-dir='back'] {
+  animation-name: shell-enter-back;
+}
+/* 横に動かしている間だけ、はみ出しを切る */
+:global([data-ui-next='true']) .enter[data-entering='true'] { overflow-x: clip; }
 
 @keyframes shell-enter {
-  from { opacity: 1; transform: translateY(6px); }
+  from { opacity: 1; transform: translate3d(16px, 6px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shell-enter-back {
+  from { opacity: 1; transform: translate3d(-16px, 6px, 0); }
   to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .enter { animation: none; }
+  .enter { animation: none !important; }
 }
