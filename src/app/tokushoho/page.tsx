@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Metadata } from 'next'
+import { brandNameWithFormer } from '@/lib/brand'
+import { tokushohoPriceLines, TOKUSHOHO_PAYMENT_TIMING, TOKUSHOHO_REFUND } from '@/lib/pricing-v2/legal-copy'
 
 export const metadata: Metadata = {
   title: '特定商取引法に基づく表記',
@@ -25,7 +27,7 @@ export default function TokushohoPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">特定商取引法に基づく表記</h1>
 
         <div className="prose prose-gray max-w-none">
-          <p className="text-gray-600 mb-8">最終更新日: 2026年3月20日</p>
+          <p className="text-gray-600 mb-8">最終更新日: 2026年11月10日</p>
 
           <table className="w-full border-collapse">
             <tbody className="divide-y divide-gray-200">
@@ -67,7 +69,7 @@ export default function TokushohoPage() {
               </tr>
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">サービス名</th>
-                <td className="py-4 text-sm text-gray-700">ドヤAI（ドヤ記事作成、ドヤバナーAI、ドヤインタビューAI、ドヤペルソナAI 等）</td>
+                <td className="py-4 text-sm text-gray-700">{brandNameWithFormer()}（ドヤ記事作成、ドヤバナーAI、ドヤインタビュー、ドヤペルソナAI 等）</td>
               </tr>
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">サービスURL</th>
@@ -80,9 +82,11 @@ export default function TokushohoPage() {
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">販売価格</th>
                 <td className="py-4 text-sm text-gray-700">
-                  無料プラン: ¥0<br />
-                  プロプラン: 月額 ¥9,980（税込）<br />
-                  <span className="text-xs text-gray-500">※全サービス共通の統一プランです。プロプラン1つで全サービスをご利用いただけます。</span>
+                  {/* 2026-11-10: 今の実際の請求（チームの料金）に合わせた。数は src/lib/pricing-v2/legal-copy.ts（plans.ts）から出す。ここに数を書かない */}
+                  {tokushohoPriceLines().map((line) => (
+                    <span key={line} className="block">{line}</span>
+                  ))}
+                  <span className="mt-1 block text-xs text-gray-500">※料金は会社ごとで、どのプランでも全ツールをご利用いただけます。くわしくは料金のページ（/pricing）をご覧ください。</span>
                 </td>
               </tr>
               <tr>
@@ -101,7 +105,9 @@ export default function TokushohoPage() {
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">支払時期</th>
                 <td className="py-4 text-sm text-gray-700">
-                  お申し込み時に即時決済。以降、月額プランは毎月同日に自動課金されます。
+                  {TOKUSHOHO_PAYMENT_TIMING.map((line) => (
+                    <span key={line} className="block">{line}</span>
+                  ))}
                 </td>
               </tr>
               <tr>
@@ -113,8 +119,9 @@ export default function TokushohoPage() {
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">返品・キャンセルについて</th>
                 <td className="py-4 text-sm text-gray-700">
-                  デジタルコンテンツの性質上、お支払い後の返品・返金は原則として承っておりません。<br />
-                  ただし、サービスの重大な不具合により利用できない場合は、個別にご相談ください。
+                  {TOKUSHOHO_REFUND.map((line) => (
+                    <span key={line} className="block">{line}</span>
+                  ))}
                 </td>
               </tr>
               <tr>
