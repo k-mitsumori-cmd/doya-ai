@@ -12,6 +12,7 @@ import { motion } from 'framer-motion'
 import rawToast from 'react-hot-toast'
 import { ArrowRight, X } from 'lucide-react'
 import { confirmDialog } from '@/components/ds/dialog'
+import { Button, EmptyState } from '@/components/ds'
 import { hrUserMessage } from '@/lib/hr/user-message'
 
 interface AuditLog {
@@ -735,11 +736,12 @@ function HrSettingsForActor({ actor }: { actor: string }) {
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-500">
-              <span className="material-symbols-outlined text-4xl mb-2 block text-amber-300">apartment</span>
-              <p className="text-sm font-bold text-slate-700">まだ部署が作成されていません</p>
-              {canManageMembers && <p className="text-xs mt-1">「部署を追加」ボタンから作成してください</p>}
-            </div>
+            <EmptyState
+              art="/hr/empty-members.webp"
+              title="まだ部署が作成されていません"
+              description={canManageMembers ? '部署を作ると、従業員を部署ごとに分けて、組織図に出せます。' : '部署は、組織の管理者が作成します。'}
+              action={canManageMembers ? <Button icon="Plus" onClick={() => setShowDeptModal(true)}>部署を追加する</Button> : undefined}
+            />
           )}
         </div>
 
@@ -957,7 +959,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
               })}
             </div>
           ) : (
-            <p className="text-lg font-bold text-slate-500 text-center py-4">まだメンバーはいません</p>
+            <EmptyState art="/hr/empty-members.webp" title="まだメンバーがいません" description="組織に招待された人が、ここに並びます。" />
           )}
         </div>
 
