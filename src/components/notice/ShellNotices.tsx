@@ -15,6 +15,7 @@ import { useAccountCompany } from '@/components/shell/company-context'
 import { getServiceById } from '@/lib/services'
 import { activeAnnouncements } from '@/lib/notice/announcements'
 import { useNotice } from './NoticeProvider'
+import { confirmOffline, serverProbe } from '@/lib/notice/offline'
 import { loadUpsellInfo } from '@/components/pricing/UpsellActions'
 
 export const WELCOME_ID = 'welcome:v1'
@@ -105,14 +106,39 @@ export default function ShellNotices() {
   }, [enabled, push])
 
   // (37) 通信が切れたとき。作業中でも出す（エラーと同じ扱い）。つながったらトーストで知らせる
+  // ⚠️ navigator.onLine や offline イベントだけでは決めない（実際はつながっていても false になる。F16）。
+  //    合図が来たら、サーバーへ小さな確かめを何度か送り、ぜんぶ届かなかったときだけ帯を出す。
+  //    画面が裏にあるときは確かめず、表に戻ってから確かめる。
   useEffect(() => {
     if (!enabled) return
-    const off = () => push({ id: 'offline', kind: 'error', tone: 'warn', pose: 'focus', eyebrow: '通信が切れました',
-      title: 'インターネットにつながっていません', body: '入力した内容は、この画面に残っています。つながったら、続きから進められます。', primary: { label: 'わかった' } })
-    const back = () => notify({ tone: 'info', title: 'インターネットにつながりました', sub: '続きから進められます', durationMs: 3000 })
-    window.addEventListener('offline', off); window.addEventListener('online', back)
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) off()
-    return () => { window.removeEventListener('offline', off); window.removeEventListener('online', back) }
+    let alive = true
+    let checking = false
+    let shown = false
+    const hidden = () => document.visibilityState === 'hidden'
+    const show = () => {
+      shown = true
+      push({ id: 'offline', kind: 'error', tone: 'warn', pose: 'focus', eyebrow: '通信が切れました',
+        title: 'インターネットにつながっていません', body: '入力した内容は、この画面に残っています。つながったら、続きから進められます。', primary: { label: 'わかった' } })
+    }
+    const check = async () => {
+      if (checking || !alive) return
+      if (hidden()) return
+      checking = true
+      try {
+        const off = await confirmOffline(serverProbe())
+        if (alive && off && !hidden()) show()
+      } finally { checking = false }
+    }
+    const back = () => {
+      if (!shown) return
+      shown = false
+      notify({ tone: 'info', title: 'インターネットにつながりました', sub: '続きから進められます', durationMs: 3000 })
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible' && typeof navigator !== 'undefined' && navigator.onLine === false) void check() }
+    window.addEventListener('offline', check); window.addEventListener('online', back)
+    document.addEventListener('visibilitychange', onVisible)
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) void check()
+    return () => { alive = false; window.removeEventListener('offline', check); window.removeEventListener('online', back); document.removeEventListener('visibilitychange', onVisible) }
   }, [enabled, push, notify])
 
   // (3)(6) ツールを初めて開いた・切り替えたとき、そのツールでできることを3つ
