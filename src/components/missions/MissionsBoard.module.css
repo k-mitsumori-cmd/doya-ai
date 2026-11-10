@@ -53,7 +53,10 @@
   background: var(--blue-soft); color: var(--blue);
   font-variant-numeric: tabular-nums;
 }
-.badgeDone { background: var(--ok-bg); color: var(--ok-ink); }
+.badgeDone { position: relative; background: var(--ok-bg); color: var(--ok-ink); }
+/* 達成の印から光の輪が1回広がる（M12） */
+.badgeDone::after { content: ''; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--ok-ink); opacity: 0; pointer-events: none; animation: badgeRing 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms both; }
+@keyframes badgeRing { 0% { opacity: 0.6; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.5); } }
 
 .list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
 .item {
@@ -129,6 +132,7 @@
 @media (prefers-reduced-motion: reduce) {
   .meterFill { animation: none; }
   .markFresh, .allDone { animation: none; }
+  .badgeDone::after { display: none; }
 }
 .page[data-motion='off'] .meterFill { animation: none; }
 
