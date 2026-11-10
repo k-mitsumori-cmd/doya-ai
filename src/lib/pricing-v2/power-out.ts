@@ -16,6 +16,8 @@ export interface PowerOutInput {
   seats: number | null
   canBuyPack: boolean
   canCheckoutTeam: boolean
+  /** 1人いくらの料金か（/api/pricing/upsell の値） */
+  perSeat?: boolean
   /** 今の残りと上限（ゲージの値） */
   remaining: number
   limit: number
@@ -69,7 +71,7 @@ export function powerOutView(input: PowerOutInput): PowerOutView | null {
   if (!trigger) return null
   const v = decideUpsell({
     kind: input.kind, isOwner: input.isOwner, trigger, seats: input.seats,
-    canBuyPack: input.canBuyPack, canCheckoutTeam: input.canCheckoutTeam,
+    canBuyPack: input.canBuyPack, canCheckoutTeam: input.canCheckoutTeam, perSeat: input.perSeat,
     required: input.required, recoveryLabel: recoveryText(input.nextRecoveryAt),
   })
   const actions = [v.primary, ...v.secondary]

@@ -21,7 +21,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { newPricingPriceIds, teamPriceConfig } from '@/lib/pricing-v2/prices'
+import { contractPricingModel, newPricingPriceIds, seatItemPriceIds } from '@/lib/pricing-v2/prices'
 import { subscriberKind } from '@/lib/pricing-v2/view'
 import { decideSeatChange, findSeatItem, isValidOperationKey, seatAddGrants } from '@/lib/pricing-v2/team'
 import { isTeamSeatCount, teamMonthly, teamMonthlyPoints } from '@/lib/pricing-v2/plans'
@@ -61,7 +61,9 @@ export async function GET(req: NextRequest) {
     if (!t) return json({ code: 'NO_TEAM_SUBSCRIPTION', error: 'チームプランのご契約を確認できませんでした。' }, 409)
     await saveSeatCache(c.ctx.companyId, t, revision)
     const used = await teamSeatsUsed(c.ctx.companyId)
-    return json({ seats: t.seats, used, interval: t.interval, monthly: teamMonthly(t.seats), points: teamMonthlyPoints(t.seats) })
+    // 料金の形は契約の価格で決める（基本料ありの契約には perSeat を付けない。今までの応答のまま）
+    const model = contractPricingModel(c.ctx.owner.stripePriceId)
+    return json({ seats: t.seats, used, interval: t.interval, monthly: teamMonthly(t.seats, model), points: teamMonthlyPoints(t.seats, model), ...(model === 'per_seat' ? { perSeat: true } : {}) })
   } catch {
     console.error('[pricing/seats] could not read seats')
     return json({ error: '人数を確認できませんでした。時間をおいて再度お試しください。' }, 503)
@@ -155,7 +157,7 @@ export async function POST(req: NextRequest) {
       if (grantPoints) {
         await saveSeatPreparationCache(claim, tx => writeTeamSeatCache(c.ctx.companyId, t, tx))
         const preparingClaim = claim
-        const monthlyAmount = teamMonthlyPoints(t.seats)
+        const monthlyAmount = teamMonthlyPoints(t.seats, contractPricingModel(c.ctx.owner.stripePriceId))
         if (monthlyAmount === null) throw new Error('Previous seat allowance unavailable')
         const { grant } = await import('@/lib/doya-power')
         const pointsDate = new Date(pointsAt)
@@ -208,8 +210,8 @@ export async function POST(req: NextRequest) {
         ...(request.direction === 'up' ? { payment_behavior: 'error_if_incomplete' as const } : {}),
       }, { idempotencyKey: active.idempotencyKey })
       stage = 'after'
-      const config = teamPriceConfig()
-      const seatItem = config.ok ? findSeatItem(updated.items.data as any[], new Set([config.seat.monthly, config.seat.yearly])) : null
+      const seatIds = seatItemPriceIds()
+      const seatItem = seatIds.size > 0 ? findSeatItem(updated.items.data as any[], seatIds) : null
       if (!seatItem || seatItem.id !== request.seatItemId || seatItem.quantity !== request.to) {
         // Keep the reservation. A mismatched response cannot authorize cache
         // publication, points, another change, or new admissions.
@@ -222,13 +224,14 @@ export async function POST(req: NextRequest) {
       const { grant } = await import('@/lib/doya-power')
       const originalDate = new Date(request.pointsAt)
       const addedSeats = Array.from({ length: request.to - request.from }, (_, i) => request.from + i + 1)
-      for (const pointGrant of seatAddGrants({ subscriptionId: request.subscriptionId, monthKey: jstMonthKey(originalDate), addedSeats, now: originalDate })) {
+      for (const pointGrant of seatAddGrants({ subscriptionId: request.subscriptionId, monthKey: jstMonthKey(originalDate), addedSeats, now: originalDate, model: contractPricingModel(c.ctx.owner.stripePriceId) })) {
         const receipt = await grant(c.ctx.companyId, 'monthly', pointGrant.amount, monthlyGrantExpiresAt(originalDate), { sourceKey: pointGrant.sourceKey, note: 'seat-add' })
         if (!receipt.ok) throw new Error('Seat point grant did not complete')
         if (!receipt.duplicated) addedPoints += receipt.granted
       }
     }
-    const monthly = teamMonthly(request.to), points = teamMonthlyPoints(request.to)
+    const resultModel = contractPricingModel(c.ctx.owner.stripePriceId)
+    const monthly = teamMonthly(request.to, resultModel), points = teamMonthlyPoints(request.to, resultModel)
     if (monthly === null || points === null) throw new Error('Seat totals unavailable')
     const result = { seats: request.to, used: request.used, monthly, points, addedPoints }
     await finishSeatOperation(claim, result, tx => writeTeamSeatCache(c.ctx.companyId, {

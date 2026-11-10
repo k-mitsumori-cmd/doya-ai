@@ -8,10 +8,10 @@ import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
-import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { buildTeamLineItems, newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from '@/lib/pricing-v2/prices'
+import { isNewPricingEnabledFor, isPerSeatPricingFor } from '@/lib/pricing-v2/rollout'
+import { buildTeamLineItems, checkoutConfigured, newPricingPriceIds, TEAM_PLAN_ID } from '@/lib/pricing-v2/prices'
 import { decideLegacyPlanCheckout, decideTeamCheckout, subscriberKind } from '@/lib/pricing-v2/view'
-import { isEnterpriseSeatCount, isTeamSeatCount, TEAM_TRIAL_DAYS } from '@/lib/pricing-v2/plans'
+import { isEnterpriseSeatCount, isTeamSeatCount, TEAM_TRIAL_DAYS, type PricingModel } from '@/lib/pricing-v2/plans'
 
 /** 同一オリジン内のパスだけを戻り先として許可する（オープンリダイレクト防止） */
 function safeReturnPath(raw: unknown): string | null {
@@ -136,6 +136,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ code: legacyDecision.code, error: 'このプランの新しいお申し込みは終了しました。料金ページのチームプランをご覧ください。' }, { status: legacyDecision.status })
       }
     }
+    // 料金の形。旗 PER_SEAT_PRICING_ROLLOUT が off（または対象外）なら、いつも今の形（基本料あり）
+    const pricingModel: PricingModel = newPricingEnabled && isPerSeatPricingFor(session.user.email) ? 'per_seat' : 'base_plus_seat'
     let teamLineItems: ReturnType<typeof buildTeamLineItems> = null
     if (isTeam) {
       if (billingPeriod !== 'monthly' && billingPeriod !== 'yearly') {
@@ -144,7 +146,7 @@ export async function POST(request: NextRequest) {
       const seats = body?.seats
       const decision = decideTeamCheckout({
         enabled: newPricingEnabled,
-        configured: teamPriceConfig().ok,
+        configured: checkoutConfigured(pricingModel),
         kind,
         seats,
         isValidSeats: isTeamSeatCount,
@@ -171,14 +173,14 @@ export async function POST(request: NextRequest) {
       if (!currentActor || currentActor.id !== dbUser.id || currentActor.email?.trim().toLowerCase() !== session.user.email.trim().toLowerCase()) {
         return NextResponse.json({ code: 'CHECKOUT_IDENTITY_CHANGED', error: 'ログイン情報が変わりました。再ログインしてからお手続きください。' }, { status: 403 })
       }
-      teamLineItems = buildTeamLineItems({ seats: seats as number, interval: billingPeriod }, isTeamSeatCount)
+      teamLineItems = buildTeamLineItems({ seats: seats as number, interval: billingPeriod }, isTeamSeatCount, process.env, pricingModel)
       if (!teamLineItems) {
         console.error('[Checkout] team line items could not be built')
         return NextResponse.json({ code: 'NEW_PRICING_NOT_CONFIGURED', error: '決済の設定を確認しています。時間をおいて再度お試しください。' }, { status: 503 })
       }
     }
 
-    // プランIDからStripe価格IDを取得（チームは基本料の価格。明細は teamLineItems）
+    // プランIDからStripe価格IDを取得（チームは明細の最初の価格。基本料あり＝基本料の価格、1人いくら＝1人あたりの価格。明細は teamLineItems）
     const priceId = isTeam ? teamLineItems![0]!.price : getPriceId(planId, billingPeriod)
     if (!priceId) {
       return NextResponse.json(
@@ -299,7 +301,7 @@ export async function POST(request: NextRequest) {
         idempotencyKey,
         expiresAt,
         ...(teamLineItems ? { lineItems: teamLineItems } : {}),
-        metadata: { planId, serviceId: service, ...(isTeam ? { seats: String(body.seats), pricing: 'v2-2026-10' } : {}) },
+        metadata: { planId, serviceId: service, ...(isTeam ? { seats: String(body.seats), pricing: pricingModel === 'per_seat' ? 'per-seat-2026-11' : 'v2-2026-10' } : {}) },
       }),
     }
     const checkoutSession = isTeam

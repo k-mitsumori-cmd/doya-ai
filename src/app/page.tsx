@@ -13,7 +13,7 @@ import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
 import { CountUp, OutputGallery } from "@/components/lp/renewal/TopExtras";
 import { getListedServiceCount } from "@/lib/services";
-import { EXAMPLE_LINE, FREE_LINE } from "@/lib/pricing-v2/public-copy";
+import { EXAMPLE_LINE, FREE_LINE, UPGRADE_LEAD } from "@/lib/pricing-v2/public-copy";
 
 
 export default function HomePage() {
@@ -61,7 +61,7 @@ export default function HomePage() {
                 {FREE_LINE}。登録すれば、すぐに使えます
               </span>
               <span>
-                人数が増えたら有料のチームへ（{EXAMPLE_LINE}）
+                {UPGRADE_LEAD}（{EXAMPLE_LINE}）
                 <Link href="/pricing">料金を見る</Link>
               </span>
             </p>

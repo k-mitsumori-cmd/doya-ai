@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { TOOL_ROLE_TABLES, type ToolId } from '@/lib/company-roles/tool-roles'
 import { subscriberKind } from './view'
-import { newPricingPriceIds, teamPriceConfig } from './prices'
+import { newPricingPriceIds, teamPricingOperable } from './prices'
 import { newPricingRollout, isNewPricingEnabledFor } from './rollout'
 
 type ToolMemberReader = {
@@ -48,7 +48,7 @@ export function createToolSeatOwnershipReader(tx: Prisma.TransactionClient): Too
       if (newPricingRollout() === 'off') return false
       // Missing configuration must neither read unready new tables nor bypass
       // the seat policy by treating it as deliberately switched off.
-      if (!teamPriceConfig().ok) throw new Error('Seat configuration unavailable')
+      if (!teamPricingOperable()) throw new Error('Seat configuration unavailable')
       return true
     },
     enabledForOwner: isNewPricingEnabledFor,

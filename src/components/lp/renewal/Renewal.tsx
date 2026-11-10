@@ -655,14 +655,18 @@ export function PriceSummary() {
           <span className="doya-eyebrow">ONE COMPANY, ONE PLAN</span>
           <h2>料金は会社ごと。全ツールを使えます。</h2>
           <p>
-            {PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。人数が増えたら、有料のチームに切り替えます。
+            {PUBLIC_PRICE.isPerSeat
+              ? `${PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。ドヤパワーが足りないときや、${PUBLIC_PRICE.freeMembers + 1}人以上で使うときは、有料のチームに切り替えます。`
+              : `${PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。人数が増えたら、有料のチームに切り替えます。`}
           </p>
         </div>
         <div className="doya-price-card">
           <span>チーム（{PUBLIC_PRICE.exampleSeats}人の場合）/ 月額（税抜）</span>
           <strong>{yen(PUBLIC_PRICE.exampleMonthly)}</strong>
           <p>
-            税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。基本料 {yen(PUBLIC_PRICE.base)}＋1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。
+            {PUBLIC_PRICE.isPerSeat
+              ? <>税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。</>
+              : <>税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。基本料 {yen(PUBLIC_PRICE.base)}＋1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。</>}
           </p>
           <Link className="doya-button" href="/pricing">
             人数ごとの料金を見る <ArrowRight size={18} />

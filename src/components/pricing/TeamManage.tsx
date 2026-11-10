@@ -13,7 +13,7 @@ import { BillingResponseError, readBillingResponse } from '@/lib/billing-respons
 import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/seat-operation-view'
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
-import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
+import { POWER_PACK, seatMonthlyPoints, teamMonthly, withTax, type PricingModel } from '@/lib/pricing-v2/plans'
 import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
 import PaymentThanks from './PaymentThanks'
 import { COMPANY_ROLE_LABEL, isMemberRowRole } from '@/lib/company-roles/roles'
@@ -65,6 +65,8 @@ export function TeamManage({ membershipOnly = false }: { membershipOnly?: boolea
 
 function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; membershipOnly: boolean }) {
   const [seats, setSeats] = useState<number | null>(null)
+  // 契約の料金の形（サーバーが渡す。1人いくらの契約だけ per_seat）
+  const [model, setModel] = useState<PricingModel>('base_plus_seat')
   const [used, setUsed] = useState<number | null>(null)
   const [draft, setDraft] = useState(1)
   const [pending, setPending] = useState<PendingSeatChange | null>(null)
@@ -110,7 +112,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
         setSeats(null); setPending(null)
         setLoadFailed(usage === null)
       } else if (view?.kind === 'ready') {
-        setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
+        setSeats(view.seats); setModel(view.perSeat ? 'per_seat' : 'base_plus_seat'); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
       } else if (view?.kind === 'pending') {
         setSeats(null); setUsed(null); setDraft(view.pending.requested); setPending(view.pending); setLoadFailed(false)
       } else {
@@ -143,7 +145,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
       const approved = await confirmDialog({
         title: `人数を${requested}人に${up ? '増やします' : '減らします'}`,
         message: up
-          ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(requested - from) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
+          ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${Array.from({ length: requested - from }, (_, i) => seatMonthlyPoints(from + 1 + i, model)).reduce((a, b) => a + b, 0)} 増え、今月は残りの日数の分を足します。`
           : '減らした分の返金はありません。人数はすぐに減ります。',
         confirmLabel: up ? '増やして請求する' : '減らす',
       })
@@ -215,7 +217,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
       if (!disposed.current) setCopied(true)
     } catch { if (!disposed.current) setMessage('コピーできませんでした。リンク欄を選択してコピーしてください。') }
   }
-  const diff = seats !== null ? (teamMonthly(draft) ?? 0) - (teamMonthly(seats) ?? 0) : 0
+  const diff = seats !== null ? (teamMonthly(draft, model) ?? 0) - (teamMonthly(seats, model) ?? 0) : 0
   const editingBlocked = busy || loading || loadFailed || pending !== null || seats === null
   const invitationBlocked = busy || loading || membersFailed || (inviteRole !== 'guest' && (loadFailed || pending !== null))
   return (

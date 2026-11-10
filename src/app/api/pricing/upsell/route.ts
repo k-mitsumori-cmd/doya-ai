@@ -11,8 +11,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { newPricingPriceIds, powerPackPriceId, teamPriceConfig } from '@/lib/pricing-v2/prices'
+import { isNewPricingEnabledFor, isPerSeatPricingFor } from '@/lib/pricing-v2/rollout'
+import { checkoutConfigured, newPricingPriceIds, powerPackPriceId } from '@/lib/pricing-v2/prices'
 import { subscriberKind } from '@/lib/pricing-v2/view'
 import { resolveCompanyForUser, teamSeatsForCompany } from '@/lib/pricing-v2/team.server'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
@@ -27,6 +27,7 @@ export async function GET() {
     const email = session?.user?.email ?? null
     if (!userId || !email) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401, headers: NO_STORE })
     if (!isNewPricingEnabledFor(email)) return NextResponse.json({ error: '見つかりません。' }, { status: 404, headers: NO_STORE })
+    const perSeat = isPerSeatPricingFor(email)
     const company = await resolveCompanyForUser(userId)
     // 区分は会社の持ち主の契約で決める（メンバーは持ち主の会社のドヤパワーを使う）
     const ownerId = company?.role === 'member'
@@ -41,7 +42,9 @@ export async function GET() {
       isOwner,
       seats: kind === 'team' && company ? await teamSeatsForCompany(company.companyId) : null,
       canBuyPack: kind !== 'free' && isOwner && Boolean(powerPackPriceId()) && doyaPowerLedgerAllowed(),
-      canCheckoutTeam: teamPriceConfig().ok,
+      // 1人いくらの旗の対象なら、その価格（STRIPE_PRICE_SEAT_ONLY_*）がそろっているかを見る。旗が off なら今までと同じ
+      canCheckoutTeam: checkoutConfigured(perSeat ? 'per_seat' : 'base_plus_seat'),
+      perSeat,
       // はじめの付与（最初の100）を受け取った日時（ようこその知らせに使う）。表を使えないときは null
       starter: isOwner && starterTablesAllowed() && doyaPowerLedgerAllowed()
         ? await prisma.doyaPowerStarterClaim.findUnique({ where: { userId }, select: { amount: true, createdAt: true } }).then((c) => (c ? { amount: c.amount, at: c.createdAt.toISOString() } : null))

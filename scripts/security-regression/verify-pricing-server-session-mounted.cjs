@@ -53,7 +53,7 @@ async function scenario(kind,strict){
    if(n==='next/headers')return{cookies:async()=>({get:()=>undefined})};
    if(n==='@/lib/shell/company.server')return{getAccountCompanyName:async()=>({id:'synthetic-company',name:'Synthetic company'})};
    if(n==='@/lib/shell/tool-hrefs.server')return{shellToolHrefs:async()=>({})};
-   if(n==='@/lib/pricing-v2/view.server')return{resolvePricingView:async()=>state.view};
+   if(n==='@/lib/pricing-v2/view.server')return{resolvePricingView:async()=>state.view,resolvePerSeatForView:async()=>false};
    if(n==='@/lib/pricing-v2/prices')return{powerPackPriceId:()=>null};
    if(n==='@/lib/doya-power/flag')return{doyaPowerLedgerAllowed:()=>false};
    if(n==='@/lib/support-chat/flag')return{isSupportChatEnabled:async()=>false};

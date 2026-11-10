@@ -14,8 +14,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { newPricingPriceIds } from '@/lib/pricing-v2/prices'
+import { isNewPricingEnabledFor, isPerSeatPricingFor } from '@/lib/pricing-v2/rollout'
+import { contractPricingModel, newPricingPriceIds } from '@/lib/pricing-v2/prices'
+import { PER_SEAT_FIRST_MONTHLY, seatUnitMonthly } from '@/lib/pricing-v2/plans'
 import { subscriberKind } from '@/lib/pricing-v2/view'
 import { decideInvite, memberLimit, normalizeEmail } from '@/lib/pricing-v2/team'
 import { ownerTeamContext, teamSeatsForCompany, teamTablesAllowed } from '@/lib/pricing-v2/team.server'
@@ -141,10 +142,14 @@ export async function POST(req: NextRequest) {
         OWNER_SELF: 'ご自身は、すでに会社の持ち主として数えています。',
         ALREADY_MEMBER: 'この方は、すでに招待しているか、参加しています。',
         NO_SEAT: kind === 'team'
-          ? `人数（${limit}人）がいっぱいです。人数を増やしてから招待してください。`
+          ? (contractPricingModel(c.ctx.owner.stripePriceId) === 'per_seat'
+            ? `人数（${limit}人）がいっぱいです。1人増やすと月 ¥${seatUnitMonthly(limit + 1, 'per_seat').toLocaleString('ja-JP')}（税抜）です。増やしてから招待してください。`
+            : `人数（${limit}人）がいっぱいです。人数を増やしてから招待してください。`)
           : kind === 'legacy'
             ? '今のご契約は1人用です。メンバーを増やしたいときは、お問い合わせください。'
-            : `フリーは${limit}人までです。チームプランにすると人数を増やせます。`,
+            : isPerSeatPricingFor(c.ctx.owner.email)
+              ? `フリーは${limit}人までです。${limit + 1}人以上で使うときは、1人 月 ¥${PER_SEAT_FIRST_MONTHLY.toLocaleString('ja-JP')}（税抜）で、人数を増やせます。`
+              : `フリーは${limit}人までです。チームプランにすると人数を増やせます。`,
       }
       return json({ code: out.code, error: messages[out.code] }, out.status)
     }

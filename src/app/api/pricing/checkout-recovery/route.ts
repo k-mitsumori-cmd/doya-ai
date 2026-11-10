@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
-import { teamPriceConfig } from '@/lib/pricing-v2/prices'
+import { teamPricingOperable } from '@/lib/pricing-v2/prices'
 import { readCheckoutRecovery, checkCheckoutRecovery } from '@/lib/pricing-v2/checkout-recovery.server'
 import { TeamCheckoutSeatError } from '@/lib/pricing-v2/team-checkout-seat.server'
 
@@ -16,7 +16,7 @@ async function owner(req: NextRequest) {
   const session = await getServerSession(authOptions)
   const id = (session?.user as { id?: string } | undefined)?.id, email = session?.user?.email
   if (!id || !email) return { error: json({ code: 'LOGIN_REQUIRED', error: 'ログインし直してください。' }, 401) }
-  if (!isNewPricingEnabledFor(email) || !teamPriceConfig().ok) return { error: json({ error: '見つかりません。' }, 404) }
+  if (!isNewPricingEnabledFor(email) || !teamPricingOperable()) return { error: json({ error: '見つかりません。' }, 404) }
   if (req.headers.get('x-doya-owner') !== id) return { error: json({ code: 'OWNER_CHANGED', error: 'ログイン情報が変わりました。ページを読み込み直してください。' }, 403) }
   const user = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, stripeCustomerId: true } })
   if (!user?.email || user.email.trim().toLowerCase() !== email.trim().toLowerCase()) return { error: json({ code: 'CHECKOUT_IDENTITY_CHANGED', error: 'ログイン情報が変わりました。再ログインしてください。' }, 403) }

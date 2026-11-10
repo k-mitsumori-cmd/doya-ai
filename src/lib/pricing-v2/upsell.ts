@@ -10,7 +10,7 @@
 // 出す場面: insufficient（生成のボタンを押して足りなかった。その場で）／ low（残りが2割を切った。月1回）／ empty（0になった。1日1回）
 // ⚠️ 文言と行き先はここだけで持つ。見た目と出し方（下からのシート・右下のカード・同時に1つ）は UI リニューアルの知らせの部品。
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
-import { ENTERPRISE_MIN_SEATS, POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, withTax } from './plans'
+import { ENTERPRISE_MIN_SEATS, PER_SEAT_DISCOUNT_FROM, PER_SEAT_FIRST_MONTHLY, POWER_PACK, planConfig, seatMonthlyPoints, seatUnitMonthly, withTax } from './plans'
 
 export type UpsellKind = 'free' | 'team' | 'legacy'
 export type UpsellTrigger = 'insufficient' | 'low' | 'empty'
@@ -42,6 +42,8 @@ export interface UpsellInput {
   required?: number
   /** 次の回復の時刻の言い方（例: 「明日 0:00」）。フリーのとき */
   recoveryLabel?: string | null
+  /** 1人いくらの料金を出すか（旗 PER_SEAT_PRICING_ROLLOUT。/api/pricing/upsell の値）。省くと今の料金の言い方 */
+  perSeat?: boolean
 }
 
 /** お問い合わせ（料金ページと同じ窓口） */
@@ -58,6 +60,14 @@ function title(trigger: UpsellTrigger, required?: number): string {
 
 export function decideUpsell(i: UpsellInput): UpsellView {
   const t = title(i.trigger, i.required)
+  const model = i.perSeat ? 'per_seat' as const : 'base_plus_seat' as const
+  const plan = planConfig(model)
+  const perSeatPoints = plan.pointsPerSeat
+  const nextSeat = (i.seats ?? 0) + 1
+  /** チームにしたときの毎月のドヤパワーの言い方 */
+  const teamPoints = i.perSeat
+    ? `1人 月 ${yen(PER_SEAT_FIRST_MONTHLY)}（税抜）で、毎月 1人あたり ${perSeatPoints} が付きます。${PER_SEAT_DISCOUNT_FROM}人目からはもっと安くなります。`
+    : `チームにすると、毎月 ${plan.pointsBase.toLocaleString('ja-JP')} ＋ 1人 ${perSeatPoints} が付きます。`
   if (!i.isOwner) {
     return {
       title: t,
@@ -70,10 +80,10 @@ export function decideUpsell(i: UpsellInput): UpsellView {
     return {
       title: t,
       body: i.recoveryLabel
-        ? `フリーは毎日10ずつ回復します（${i.recoveryLabel} に回復）。チームにすると、毎月 1,500 ＋ 1人 ${TEAM_MONTHLY_POINTS_PER_SEAT} が付きます。`
-        : `チームにすると、毎月 1,500 ＋ 1人 ${TEAM_MONTHLY_POINTS_PER_SEAT} が付きます。`,
+        ? `フリーは毎日10ずつ回復します（${i.recoveryLabel} に回復）。${teamPoints}`
+        : i.perSeat ? `有料にすると、${teamPoints}` : teamPoints,
       primary: i.canCheckoutTeam
-        ? { kind: 'link', label: 'チームに上げる', sub: '人数を選んで申し込めます', href: '/pricing#team' }
+        ? { kind: 'link', label: 'チームに上げる', sub: i.perSeat ? `1人 月 ${yen(PER_SEAT_FIRST_MONTHLY)}（税抜）。人数を選んで申し込めます` : '人数を選んで申し込めます', href: '/pricing#team' }
         : { kind: 'link', label: '料金プランを見る', href: '/pricing' },
       secondary: [],
     }
@@ -82,7 +92,7 @@ export function decideUpsell(i: UpsellInput): UpsellView {
     ? { kind: 'buy_pack', label: '追加で買う', sub: PACK_LABEL, packs: 1 }
     : { kind: 'disabled', label: '追加購入は準備中です', sub: 'もうしばらくお待ちください' }
   if (i.kind === 'team') {
-    const secondary: UpsellAction[] = [{ kind: 'link', label: '人数を増やす', sub: `1人増やすごとに、毎月 ${TEAM_MONTHLY_POINTS_PER_SEAT} 増えます`, href: '/pricing#manage' }]
+    const secondary: UpsellAction[] = [{ kind: 'link', label: '人数を増やす', sub: i.perSeat ? `1人増やすと、月 ${yen(seatUnitMonthly(nextSeat, 'per_seat'))}（税抜）で、毎月 ${seatMonthlyPoints(nextSeat, 'per_seat')} 増えます` : `1人増やすごとに、毎月 ${perSeatPoints} 増えます`, href: '/pricing#manage' }]
     if ((i.seats ?? 0) >= ENTERPRISE_MIN_SEATS - 10) secondary.push({ kind: 'link', label: '個別見積を相談する', sub: `${ENTERPRISE_MIN_SEATS}人以上は、使い方に合わせてお見積りします`, href: CONTACT_HREF })
     return { title: t, body: '追加で買った分は6か月使えます。期限の近いものから順に使います。', primary: pack, secondary }
   }

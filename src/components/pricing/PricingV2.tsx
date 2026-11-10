@@ -21,9 +21,9 @@ import { DOYA_POWER_COSTS, whatYouCanDo, type DoyaPowerAction } from '@/lib/doya
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { getListedServiceCount } from '@/lib/services'
 import {
-  ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, TEAM_TRIAL_DAYS, LEGACY_PRO_PRICE_TAX_INCLUDED, PLAN_COPY, POWER_PACK, TEAM_BASE_MONTHLY,
-  TEAM_MONTHLY_POINTS_BASE, TEAM_MONTHLY_POINTS_PER_SEAT, TEAM_SEAT_TIERS, YEARLY_FREE_MONTHS, seatBreakdown,
-  teamMonthly, teamMonthlyPoints, teamPrice, withTax, type BillingInterval,
+  ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, TEAM_TRIAL_DAYS, LEGACY_PRO_PRICE_TAX_INCLUDED, PLAN_COPY, POWER_PACK, PER_SEAT_DISCOUNT_FROM, PER_SEAT_FIRST_MONTHLY,
+  YEARLY_FREE_MONTHS, planConfig, seatBreakdown,
+  teamMonthly, teamMonthlyPoints, teamPrice, withTax, type BillingInterval, type PricingModel,
 } from '@/lib/pricing-v2/plans'
 import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP, PURCHASE_MAX_MONTHS } from '@/lib/doya-power/rules'
 import type { PricingView } from '@/lib/pricing-v2/view'
@@ -51,17 +51,21 @@ const COST_LABELS: Partial<Record<DoyaPowerAction, string>> = {
 
 const SEAT_STOPS = [1, 3, 5, 10, 20, 30]
 
-export default function PricingV2({ view, canceled, inShell = false, serverSignedIn, canBuyPack = false, powerPackSessionId = null, powerPackCanceled = false }: {
+export default function PricingV2({ view, canceled, inShell = false, serverSignedIn, perSeat = false, canBuyPack = false, powerPackSessionId = null, powerPackCanceled = false }: {
   view: Exclude<PricingView, 'current'>
   canceled: boolean
   inShell?: boolean
   serverSignedIn: boolean
+  /** 1人いくらの料金で見せるか（サーバーが決める。旗 PER_SEAT_PRICING_ROLLOUT。省くと基本料ありの今の料金） */
+  perSeat?: boolean
   /** 追加購入を出すか（サーバーが決める: 価格の設定とドヤパワーの台帳の旗。買えるかの最終の判定は API） */
   canBuyPack?: boolean
   /** 追加購入の決済から戻ったとき（/pricing?power_pack=done&cs=...） */
   powerPackSessionId?: string | null
   powerPackCanceled?: boolean
 }) {
+  const model: PricingModel = perSeat ? 'per_seat' : 'base_plus_seat'
+  const plan = planConfig(model)
   const [interval, setBilling] = useState<BillingInterval>('monthly')
   const [seats, setSeats] = useState(5)
   const [checkoutBlocked, setCheckoutBlocked] = useState(serverSignedIn)
@@ -69,10 +73,10 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
   const trialEligibleRaw = useTrialEligible()
   const toolCount = getListedServiceCount()
   const enterprise = seats >= ENTERPRISE_MIN_SEATS
-  const price = enterprise ? null : teamPrice(seats, interval)
-  const monthly = enterprise ? null : teamMonthly(seats)
-  const points = enterprise ? null : teamMonthlyPoints(seats)
-  const lines = useMemo(() => seatBreakdown(seats), [seats])
+  const price = enterprise ? null : teamPrice(seats, interval, model)
+  const monthly = enterprise ? null : teamMonthly(seats, model)
+  const points = enterprise ? null : teamMonthlyPoints(seats, model)
+  const lines = useMemo(() => seatBreakdown(seats, model), [seats, model])
   const canDo = points ? whatYouCanDo(points).slice(0, 3) : []
   // 有料の人（据え置き・チーム）には、トライアルの文言を出さない（PricingNext と同じ決まり）
   // チームの初月無料は TEAM_TRIAL_DAYS（既定 0 ＝ 付けない）。付けないときは「初月無料」を出さない
@@ -88,7 +92,9 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
         <img src="/character/point-512.webp" alt="" width={160} height={160} className={base.heroArt} />
         <p className={base.eyebrow}>料金プラン</p>
         <h1 className={base.title}>会社のみんなで、<wbr /><span className={styles.nowrap}>全{toolCount}ツールを</span><wbr />使えます</h1>
-        <p className={base.lead}>料金は会社ごとです。基本料に、使う人数の分を足します。AIで作る分は「ドヤパワー」で数えます。</p>
+        <p className={base.lead}>{perSeat
+          ? `料金は会社ごとです。基本料はなく、1人 月 ${yen(PER_SEAT_FIRST_MONTHLY)}（税抜）です。${PER_SEAT_DISCOUNT_FROM}人目からは安くなります。AIで作る分は「ドヤパワー」で数えます。`
+          : '料金は会社ごとです。基本料に、使う人数の分を足します。AIで作る分は「ドヤパワー」で数えます。'}</p>
         <ul className={base.promises}>
           <li><Check size={16} strokeWidth={2.5} aria-hidden />{FREE_MAX_MEMBERS}人までは無料</li>
           <li><Check size={16} strokeWidth={2.5} aria-hidden />年払いは{YEARLY_FREE_MONTHS}か月分おトク</li>
@@ -183,10 +189,22 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
 
           {!enterprise ? (
             <dl className={styles.breakdown}>
-              <div><dt>基本料</dt><dd>{yen(TEAM_BASE_MONTHLY)}</dd></div>
-              {lines.map((l) => (
-                <div key={l.from}><dt>{l.from === l.to ? `${l.from}人目` : `${l.from}〜${l.to}人目`}（{yen(l.unitMonthly)} × {l.seats}人）</dt><dd>{yen(l.subtotalMonthly)}</dd></div>
-              ))}
+              {perSeat ? (
+                // 1人いくら: 基本料の行は出さない。「1人 ¥2,980 × 人数」と税込を出す
+                <>
+                  {lines.map((l) => (
+                    <div key={l.from}><dt>{l.from === l.to ? `${l.from}人目` : `${l.from}〜${l.to}人目`}（1人 {yen(l.unitMonthly)} × {l.seats}人）</dt><dd>{yen(l.subtotalMonthly)}</dd></div>
+                  ))}
+                  <div><dt>税込</dt><dd>{yen(withTax(monthly ?? 0))}</dd></div>
+                </>
+              ) : (
+                <>
+                  <div><dt>基本料</dt><dd>{yen(plan.baseMonthly)}</dd></div>
+                  {lines.map((l) => (
+                    <div key={l.from}><dt>{l.from === l.to ? `${l.from}人目` : `${l.from}〜${l.to}人目`}（{yen(l.unitMonthly)} × {l.seats}人）</dt><dd>{yen(l.subtotalMonthly)}</dd></div>
+                  ))}
+                </>
+              )}
               <div className={styles.breakdownNote}><dt>上の内訳は月額（税抜）です</dt><dd /></div>
             </dl>
           ) : null}
@@ -208,7 +226,9 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           <ul className={base.planList}>
             <li>全{toolCount}ツールのプロ機能を、会社のみんなで使えます</li>
             <li>使い残したドヤパワーは、翌月まで繰り越せます</li>
-            <li>11人目からは1人 {yen(TEAM_SEAT_TIERS[1]!.unitMonthly)}（税抜。税込 {yen(withTax(TEAM_SEAT_TIERS[1]!.unitMonthly))}）に下がります</li>
+            {perSeat
+              ? <li>{plan.tiers.slice(1).map((t, i) => `${plan.tiers[i]!.upTo + 1}人目からは1人 ${yen(t.unitMonthly)}`).join('、')}（税抜）に下がります。下がるのは、その人数に入る人の分だけです</li>
+              : <li>11人目からは1人 {yen(planConfig('base_plus_seat').tiers[1]!.unitMonthly)}（税抜。税込 {yen(withTax(planConfig('base_plus_seat').tiers[1]!.unitMonthly))}）に下がります</li>}
           </ul>
           <div className={`${base.planAction} ${styles.teamAction}`}>
             {view === 'legacy' ? <span className={base.current}>今のご契約のままお使いください</span>
@@ -240,7 +260,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
       <section className={base.section} aria-labelledby="power-title">
         <h2 id="power-title" className={base.sectionTitle}>ドヤパワーとは</h2>
         <p className={base.sectionLead}>
-          {`AIで作るときに使うポイントです。チームは毎月 ${TEAM_MONTHLY_POINTS_BASE.toLocaleString('ja-JP')} ＋ 1人 ${TEAM_MONTHLY_POINTS_PER_SEAT} が付きます。勤怠・プロジェクト管理・収入・支出など、AIを使わない操作では減りません。`}
+          {`AIで作るときに使うポイントです。チームは毎月 ${perSeat ? `1人あたり ${plan.pointsPerSeatTiers.map((p, i) => i === 0 ? `${p}` : `${plan.tiers[i - 1]!.upTo + 1}人目からは ${p}`).join('、')}` : `${plan.pointsBase.toLocaleString('ja-JP')} ＋ 1人 ${plan.pointsPerSeat}`} が付きます。勤怠・プロジェクト管理・収入・支出など、AIを使わない操作では減りません。`}
         </p>
         <div className={styles.powerGrid}>
           <ul className={styles.costList} aria-label="1回で減る量">
