@@ -47,6 +47,20 @@
   100% { opacity: 0; transform: scale(1.9); }
 }
 
+/* トースト（react-hot-toast）。出るときは弾み、消えるときは縮んで薄くなる。
+   元の動き（中の ToastBar の style）は !important で止め、外側の1枚で動かす。この CSS は枠の中でだけ読まれる */
+@keyframes m-toast-in {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.86); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes m-toast-out {
+  0% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: scale(0.88); }
+}
+.m-toast-in > *, .m-toast-out > * { animation: none !important; }
+.m-toast-in { animation: m-toast-in var(--m-dur-base) var(--m-ease-spring) both !important; }
+.m-toast-out { animation: m-toast-out var(--m-dur-fast) var(--m-ease-out) both !important; }
+
 /* 使い方: 要素に data-motion を付ける。付けた要素が最初に出るときに1回だけ動く */
 [data-motion='pop'] { animation: m-pop var(--m-dur-slow) var(--m-ease-spring) both; }
 [data-motion='rise'] { animation: m-rise var(--m-dur-base) var(--m-ease-out) both; }
@@ -54,4 +68,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-motion] { animation: none !important; }
+  .m-toast-in, .m-toast-out { animation: none !important; }
 }
