@@ -130,33 +130,15 @@ export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProp
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
-  if (renderFrame && usageError && session?.user && !knownScope) {
-    return <>{renderFrame({ role: 'employee', employeeActive: true, children: <div style={{ padding: 24 }}><ErrorNotice what="勤怠の情報を読み込めませんでした。組織の状態は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div> })}</>
-  }
-  if (renderFrame && !knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
-    return <>{renderFrame({ role: 'employee', employeeActive: true, children: <KintaiDashboardLoading /> })}</>
-  }
-
+  // 読み込みの失敗と待ちは、枠の有無にかかわらず、枠の中の表示（骨組みとエラーの案内）にそろえる。全面のスピナーや全面のエラーは出さない
+  const bare = (body: React.ReactNode) => renderFrame
+    ? <>{renderFrame({ role: 'employee', employeeActive: true, children: body })}</>
+    : <>{body}</>
   if (usageError && session?.user && !knownScope) {
-    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">勤怠情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">再読み込み</button></div>
+    return bare(<div style={{ padding: 24 }}><ErrorNotice what="勤怠の情報を読み込めませんでした。組織の状態は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
   }
-
-  // Loading state
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <img
-            src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
-            alt="読み込み中"
-            className="layout-bear-float"
-            style={{ width: 100, height: 100, objectFit: 'contain' }}
-          />
-          <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
-        </div>
-      </div>
-    )
+    return bare(<KintaiDashboardLoading />)
   }
 
   // Not authenticated → redirect to landing page
