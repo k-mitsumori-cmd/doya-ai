@@ -1597,3 +1597,10 @@ for (const file of ['verify-admin-google-dual-session.cjs', 'verify-admin-google
   const r = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
   if (r.error || r.status !== 0) process.exit(r.status || 1);
 }
+
+// Keep authentication failure diagnostics useful without logging private metadata.
+const authClientFetchDiagnostic = spawnSync(process.execPath, [path.join(__dirname, 'verify-auth-client-fetch-diagnostic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (authClientFetchDiagnostic.status !== 0) {
+  console.error('Security regression failed: verify-auth-client-fetch-diagnostic.cjs');
+  process.exit(authClientFetchDiagnostic.status || 1);
+}
