@@ -57,7 +57,9 @@
   animation: ringIn 900ms var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) 150ms both;
 }
 @keyframes ringIn { from { stroke-dashoffset: var(--ring-c); } }
+.ringNum { white-space: nowrap; }
 .ringValue {
+  white-space: nowrap;
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 30px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
 }

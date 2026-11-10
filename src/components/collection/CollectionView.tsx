@@ -141,7 +141,7 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
             <circle cx="60" cy="60" r={R} className={styles.ringFill} strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} style={{ ['--ring-c' as string]: C }} />
           </svg>
           <span className={styles.ringValue}>
-            {score.percent === null ? <span className={styles.ringNone}>未設定</span> : <>{score.percent}<small>%</small></>}
+            {score.percent === null ? <span className={styles.ringNone}>未設定</span> : <span className={styles.ringNum}>{score.percent}<small>%</small></span>}
           </span>
         </div>
         <div className={styles.scoreText}>
