@@ -10,6 +10,9 @@ const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 const { load, check, results } = require('./load-typescript.cjs')
+// ログイン前の料金の文（public-copy.ts）は、本物をそのまま読む（2026-11-11。llms.txt が使う）
+require('tsx/cjs')
+const publicCopy = require('../../src/lib/pricing-v2/public-copy.ts')
 
 const root = path.resolve(__dirname, '../..')
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8')
@@ -128,7 +131,7 @@ function routeFiles(dir) {
   await check('public lists (llms.txt, llms-full.txt, sitemap) omit cunning', async () => {
     const seo = { SITE_CONFIG: { url: 'https://example.invalid', name: 'ドヤAI' } }
     for (const file of ['src/app/llms.txt/route.ts', 'src/app/llms-full.txt/route.ts']) {
-      const route = load(file, { '@/lib/services': services, '@/lib/seo': seo })
+      const route = load(file, { '@/lib/services': services, '@/lib/seo': seo, '@/lib/pricing-v2/public-copy': publicCopy })
       const body = await route.GET().text()
       assert.ok(body.length > 100, file)
       assert.ok(!body.includes('/cunning') && !body.includes('ドヤカンニング'), file)
