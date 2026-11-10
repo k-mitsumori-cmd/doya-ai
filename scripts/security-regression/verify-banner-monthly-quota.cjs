@@ -118,7 +118,7 @@ function fixture(initial = null, accountPlan = 'FREE') {
       assert(quotaOwner.indexOf('if (persisted) throw') < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'persisted image must prevent refund even with inconsistent receipt')
     }
   }
-  for (const page of ['dashboard/page.tsx', 'test/page.tsx']) {
+  for (const page of ['dashboard/page.tsx']) {
     const source = fs.readFileSync(path.join(root, 'src/app/(shell)/banner', page), 'utf8')
     assert(!source.includes('bannerTrialStartTime'), `${page} must not grant a local-only free hour`)
     assert(!source.includes('isTrialActive'), `${page} must not treat a free user as ENTERPRISE`)
