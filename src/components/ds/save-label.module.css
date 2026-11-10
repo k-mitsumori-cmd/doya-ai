@@ -1,0 +1,11 @@
+/* 保存ボタンの中身。文字とチェックを同じ場所に重ねる（幅は文字のまま） */
+.wrap { position: relative; display: inline-grid; align-items: center; justify-items: center; }
+.label { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 8px; transition: opacity var(--m-dur-fast, 150ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)); }
+.mark { grid-area: 1 / 1; display: inline-flex; }
+.wrap[data-state='saved'] .label { opacity: 0; }
+.wrap[data-state='error'] .label { animation: m-shake var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .label { transition: none; }
+  .wrap[data-state='error'] .label { animation: none; }
+}
