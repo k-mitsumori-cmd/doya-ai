@@ -1,5 +1,12 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+// Pricing-off admissions now pin the current User before domain row locks.
+function pinnedActorRows(sql, ids, actor) {
+ if (sql.join('?') !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+ assert.deepEqual(ids.values, [actor]);
+ return [{ id: actor }];
+}
+
 
 function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.com', conflicts = 0, clock = Date } = {}) {
   let attempts = 0;
@@ -11,7 +18,7 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
     workspace: { id: 'ws', slug: 'team', userId: 'owner' },
   };
   const tx = {
-    $queryRaw: async (sql, workspaceId) => { assert.match(sql.join('?'), /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/); assert.equal(workspaceId, 'ws'); return [{ id: 'ws' }]; },
+    $queryRaw: async (sql, workspaceId) => { const pinned = pinnedActorRows(sql, workspaceId, 'invited'); if (pinned) return pinned; assert.match(sql.join('?'), /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/); assert.equal(workspaceId, 'ws'); return [{ id: 'ws' }]; },
     user: { findUnique: async ({ where }) => { assert.equal(where.id, 'invited'); return { email: 'invited@example.com' }; } },
     promaneInvitation: {
       findUnique: async () => invitation,
@@ -68,7 +75,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
   let writes = 0;
   const tx = {
     user: { findMany: async () => [] },
-    $queryRaw: async sql => /SELECT role/.test(sql.join('?')) ? [{ role: inviterRole, isActive: inviterActive }] : [{ id: 'ws' }],
+    $queryRaw: async (sql, ids) => { const pinned = pinnedActorRows(sql, ids, actorId); if (pinned) return pinned; return /SELECT role/.test(sql.join('?')) ? [{ role: inviterRole, isActive: inviterActive }] : [{ id: 'ws' }]; },
     promaneMember: {
       findUnique: async () => ({ role: inviterRole, isActive: inviterActive }),
       findFirst: async () => null,

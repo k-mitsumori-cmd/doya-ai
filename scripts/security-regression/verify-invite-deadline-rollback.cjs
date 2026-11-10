@@ -1,5 +1,12 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+// Pricing-off admissions now pin the current User before domain row locks.
+function pinnedActorRows(sql, ids, actor) {
+ if (sql.join('?') !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+ assert.deepEqual(ids.values, [actor]);
+ return [{ id: actor }];
+}
+
 const deadline = Date.parse('2026-10-06T03:00:00Z');
 const ttl = 48 * 60 * 60 * 1000;
 function fixture(service, { offset = -1, delayAt = '', full = false, existing = false } = {}) {
@@ -29,7 +36,7 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
   };
   const tx = {
     sfaMember: membership, kintaiMember: { ...membership, findMany: async () => [] },
-    $queryRaw: async (sql, organizationId) => { assert(['sfa','kintai','promane'].includes(service)); assert.match(sql.join('?'), service === 'promane' ? /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/ : service === 'kintai' ? /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/ : /SELECT id FROM sfa_organizations WHERE id = \? FOR UPDATE/); assert.equal(organizationId, 'org'); delay('lock'); return [{ id: 'org' }]; },
+    $queryRaw: async (sql, organizationId) => { const pinned = pinnedActorRows(sql, organizationId, 'user'); if (pinned) return pinned; assert(['sfa','kintai','promane'].includes(service)); assert.match(sql.join('?'), service === 'promane' ? /SELECT id FROM promane_workspaces WHERE id = \? FOR UPDATE/ : service === 'kintai' ? /SELECT id FROM kintai_organizations WHERE id = \? FOR UPDATE/ : /SELECT id FROM sfa_organizations WHERE id = \? FOR UPDATE/); assert.equal(organizationId, 'org'); delay('lock'); return [{ id: 'org' }]; },
     user: { findUnique: async () => ({ plan: 'FREE', id: 'user', email: 'qa@example.invalid' }) },
     promaneInvitation: {
       findUnique: async () => structuredClone({ ...invitation, acceptedAt: state.acceptedAt }),
