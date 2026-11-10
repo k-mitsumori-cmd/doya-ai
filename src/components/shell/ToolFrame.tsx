@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { findShellTool, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
@@ -43,6 +44,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
   // （統括の確認 2026-10-19）
   const usage = useToolUsageBody()
+  const reducedMotion = useReducedMotion()
   const tabsRef = useRef<HTMLElement | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   useEffect(() => {
@@ -108,6 +110,11 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
                 <Link key={item.href} href={item.href} className={styles.tab} aria-current={active ? 'page' : undefined}>
                   {item.icon ? <ShellIcon name={item.icon} size={16} /> : null}
                   {item.label}
+                  {/* 選んだ印は、タブの間を1つの線のまま滑って動く（transform だけ。動きを減らす設定では滑らず切り替わる） */}
+                  {active ? (
+                    <motion.span aria-hidden layoutId="toolframe-tab-mark" className={styles.tabMark}
+                      transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 34, mass: 0.9 }} />
+                  ) : null}
                 </Link>
               )
             })}
