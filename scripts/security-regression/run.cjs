@@ -1591,3 +1591,9 @@ if (adminContractPrice.error || adminContractPrice.status !== 0) process.exit(ad
 
 // Pricing uses the verified server identity even when an outer client session is stale.
 { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-pricing-server-session-mounted.cjs')], {stdio:'inherit',timeout:60000}); if (result.error || result.status !== 0) process.exit(result.status || 1); }
+
+// Both independent admin sessions are required; bootstrap must not loop or expose children.
+for (const file of ['verify-admin-google-dual-session.cjs', 'verify-admin-google-bootstrap-mounted.cjs', 'verify-admin-google-login-client-mounted.cjs']) {
+  const r = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
+  if (r.error || r.status !== 0) process.exit(r.status || 1);
+}
