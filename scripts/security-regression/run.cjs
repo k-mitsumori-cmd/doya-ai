@@ -1604,3 +1604,10 @@ if (authClientFetchDiagnostic.status !== 0) {
   console.error('Security regression failed: verify-auth-client-fetch-diagnostic.cjs');
   process.exit(authClientFetchDiagnostic.status || 1);
 }
+
+// Public landing pricing must use the same canonical contract verdict as /pricing.
+const publicTopPricing = spawnSync(process.execPath, [path.join(__dirname, 'verify-public-top-pricing-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (publicTopPricing.error || publicTopPricing.status !== 0) {
+  console.error('Security regression failed: verify-public-top-pricing-mounted.cjs');
+  process.exit(publicTopPricing.status || 1);
+}
