@@ -47,3 +47,7 @@
   .error .retry { grid-column: 2; justify-self: start; }
 }
 @media (prefers-reduced-motion: reduce) { .bar span { transition: none; } .stageCheck, .stageList li[data-state='now']::before, .errorHow { animation: none; } }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-pop { 0% { opacity: 0; transform: scale(0.82); } 100% { opacity: 1; transform: none; } }
+@keyframes m-rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }

@@ -9,3 +9,6 @@
   .label { transition: none; }
   .wrap[data-state='error'] .label { animation: none; }
 }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-shake { 0%, 100% { transform: translateX(0); } 18% { transform: translateX(-6px); } 36% { transform: translateX(5px); } 54% { transform: translateX(-3px); } 72% { transform: translateX(2px); } }

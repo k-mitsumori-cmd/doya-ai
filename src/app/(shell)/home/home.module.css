@@ -392,3 +392,7 @@
 @media (prefers-reduced-motion: reduce) {
   .step, .step[data-state='done'] svg, .answer, .answer .row, .intents .chip { animation: none; }
 }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-pop { 0% { opacity: 0; transform: scale(0.82); } 100% { opacity: 1; transform: none; } }
+@keyframes m-rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }

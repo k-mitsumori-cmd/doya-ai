@@ -10,3 +10,7 @@
   .ring { display: none; }
   .tick { animation: none; stroke-dashoffset: 0; }
 }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes m-ring { 0% { opacity: 0.55; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.9); } }
