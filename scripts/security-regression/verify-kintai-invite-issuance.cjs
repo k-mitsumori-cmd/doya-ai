@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load } = require('./load-typescript.cjs');
 const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
 const manager = load('src/lib/kintai/manager-admission.ts');
@@ -11,7 +18,7 @@ function fixture({ status = 'PENDING', isActive = true, member = true, race = fa
   const prisma = {
     user: { findMany: async () => [] },
     $transaction: async work => work(prisma),
-    $queryRaw: async () => [{ role: actorRole, status: actorStatus, isActive: actorActive }],
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['actor']) || [{ role: actorRole, status: actorStatus, isActive: actorActive }],
     kintaiEmployee: { findFirst: async () => row },
     kintaiMember: { updateMany: async ({ where, data }) => {
       updates++;

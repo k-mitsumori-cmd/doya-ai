@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load, check, results } = require('./load-typescript.cjs');
 const epoch = Date.parse('2026-10-06T04:00:00Z'), ttl = 48*60*60*1000, token = 'synthetic-token-long-enough';
 function fixture(service, { offset = -1, delayAt = '', existing = false, changed = {}, changedAfterRead = {}, full = false } = {}) {
@@ -19,7 +26,7 @@ function fixture(service, { offset = -1, delayAt = '', existing = false, changed
   deleteMany:async()=>{writes++;member=null;delay('delete');return{count:1}},
  };
  const tx={
-  $queryRaw:async strings=>{if(service==='hr'&&strings.join('').includes('FROM "User"')){delay('account');return[{email:'qa@example.invalid'}]}delay('lock');return[{id:'org'}]},
+  $queryRaw:async (strings,values)=>{const pinned=pinnedFixtureUser(strings,values,['user']);if(pinned)return pinned;if(service==='hr'&&strings.join('').includes('FROM "User"')){delay('account');return[{email:'qa@example.invalid'}]}delay('lock');return[{id:'org'}]},
   [`${service}Member`]:model,hrInvitation:model,
   hrOrganizationMember:{count:async()=>{delay('quota');return full?2:1},create:async()=>{writes++;created++;delay('create');return{id:'new-member'}}},
   user:{findUnique:async()=>{delay('account');return{email:'qa@example.invalid'}}},

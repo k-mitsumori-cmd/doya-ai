@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load } = require('./load-typescript.cjs');
 
 const escapeHtml = load('src/lib/html-escape.ts');
@@ -36,7 +43,7 @@ const escapeHtml = load('src/lib/html-escape.ts');
       previous = new Promise((resolve) => { release = resolve; });
       const tx = {
         user: { findMany: async () => [] },
-        $queryRaw: async () => { await before; return [{ id: 'org', role: 'ADMIN' }]; },
+        $queryRaw: async (sql, values) => { const pinned = pinnedFixtureUser(sql, values, ['admin']); if (pinned) return pinned; await before; return [{ id: 'org', role: 'ADMIN' }]; },
         hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
         hrInvitation: {
           findFirst: async ({ where }) => invitations.find((row) => row.email === where.email && row.expiresAt > new Date()) || null,

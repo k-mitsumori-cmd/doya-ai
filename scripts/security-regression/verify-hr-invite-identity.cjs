@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load } = require('./load-typescript.cjs');
 
 async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com', lockedEmail, inviteRole = 'MEMBER', status = 'PENDING', claimCount = 1, memberCount = 1 } = {}) {
@@ -19,7 +26,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     user: { findUnique: async () => ({ email: accountEmail }) },
     hrOrganizationMember: { findFirst: async () => null },
     $transaction: async (fn) => fn({
-      $queryRaw: async strings => { if(strings.join('').includes('FROM "User"'))return [{email:lockedEmail===undefined?accountEmail:lockedEmail}];locks++;return [{id:'org-1'}]; },
+      $queryRaw: async (strings, values) => { const pinned = pinnedFixtureUser(strings, values, ['user-1']); if (pinned) return pinned; if(strings.join('').includes('FROM "User"'))return [{email:lockedEmail===undefined?accountEmail:lockedEmail}];locks++;return [{id:'org-1'}]; },
       hrInvitation: { findUnique: async () => invitation, updateMany: async ({ where }) => {
         claims++;
         assert.equal(where.status, 'PENDING');
@@ -96,9 +103,9 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { user: { findMany: async () => [] }, $transaction: async (work) => work({
       user: { findMany: async () => [] },
-      $queryRaw: async sql => sql.join('?').includes('hr_organization_members')
+      $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['admin-1']) || (sql.join('?').includes('hr_organization_members')
         ? currentRole === 'ADMIN' ? [{ id: 'actor', role: 'ADMIN' }] : []
-        : [{ id: 'org-1' }],
+        : [{ id: 'org-1' }]),
       hrOrganizationMember: { findFirst: async () => null, count: async () => 1 },
       hrInvitation: { findFirst: async () => null, create: async ({ data }) => {
         created++;
