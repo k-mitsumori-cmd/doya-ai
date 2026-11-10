@@ -3001,7 +3001,7 @@ function BannerTestPageInner() {
       <div className={nextStyles.heroWrap}>
         <BannerModeChooser current="template" />
         <ToolHero
-          title="好きな見本を選んで、文字を入れるだけ。"
+          title={<>好きな見本を選んで、<wbr />文字を入れるだけ。</>}
           lead={`プロが作った見本の雰囲気のまま、あなたのサービスのバナーを${generateCount}枚つくります。`}
           tool="banner"
           artAlt=""

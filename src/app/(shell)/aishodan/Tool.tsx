@@ -469,7 +469,7 @@ export default function AishodanTool() {
             />
           ) : null}
           <ToolHero
-            title="AIが一次商談を進め、適合度まで残す。"
+            title={<>AIが一次商談を進め、<wbr />適合度まで残す。</>}
             lead="自社サービスのURLを取り込むと、AIが商材を覚えて商談のシナリオを作ります。発行したURLを送るだけで、相手はログインせずに商談を始められます。"
             tool="aishodan"
           />
