@@ -87,9 +87,11 @@ function prefersReducedNow(): boolean {
  * - スクリプトが動く前（サーバーの描画）は最後の値を出す
  * 例: <CountUp value={2650000} format={(n) => `${Math.round(n / 10000)}万円`} />
  */
-export function CountUp({ value, duration = 900, format, className }: {
+export function CountUp({ value, duration = 900, format, className, initial = 'zero' }: {
   value: number
   duration?: number
+  /** 最初の表示。'zero' は 0 から数え上げる（既定）。'value' は最初から最後の値を出し、値が変わったときだけ転がる（料金など） */
+  initial?: 'zero' | 'value'
   format?: (n: number) => string
   className?: string
 }) {
@@ -98,7 +100,7 @@ export function CountUp({ value, duration = 900, format, className }: {
   const armed = useArmed()
   // null のときは最後の値を出す
   const [shown, setShown] = useState<number | null>(null)
-  const from = useRef(0)
+  const from = useRef(initial === 'value' && Number.isFinite(value) ? value : 0)
   const cur = useRef<number | null>(null)
   useEffect(() => {
     if (!armed) return

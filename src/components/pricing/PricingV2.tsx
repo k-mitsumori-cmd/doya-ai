@@ -12,6 +12,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import CheckoutRecovery from './CheckoutRecovery'
 import { Check, Minus, Plus } from 'lucide-react'
+import { LayoutGroup, MotionConfig, motion } from 'framer-motion'
+import { CountUp } from '@/components/ds/motion'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { TrialNote, useTrialEligible } from '@/components/TrialCallout'
@@ -117,14 +119,23 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
       ) : null}
 
       <div className={styles.toggleRow}>
-        <div className={styles.toggle} role="radiogroup" aria-label="支払いの間隔">
-          {(['monthly', 'yearly'] as const).map((v) => (
-            <button key={v} type="button" role="radio" aria-checked={interval === v} className={styles.toggleItem}
-              data-active={interval === v ? 'true' : undefined} onClick={() => setBilling(v)}>
-              {v === 'monthly' ? '月払い' : <>年払い<span className={styles.toggleSave}>{YEARLY_FREE_MONTHS}か月分おトク</span></>}
-            </button>
-          ))}
-        </div>
+        {/* 選んだ印は、月払いと年払いの間を1つのまま滑って動く（見た目だけ。動きを減らす設定では滑らず切り替わる） */}
+        <MotionConfig reducedMotion="user">
+          <LayoutGroup id="pricing-interval">
+            <div className={styles.toggle} role="radiogroup" aria-label="支払いの間隔">
+              {(['monthly', 'yearly'] as const).map((v) => (
+                <button key={v} type="button" role="radio" aria-checked={interval === v} className={styles.toggleItem}
+                  data-active={interval === v ? 'true' : undefined} onClick={() => setBilling(v)}>
+                  {interval === v ? (
+                    <motion.span aria-hidden layoutId="pricing-interval-thumb" className={styles.toggleThumb} style={{ borderRadius: 999 }}
+                      transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.9 }} />
+                  ) : null}
+                  <span className={styles.toggleLabel}>{v === 'monthly' ? '月払い' : <>年払い<span className={styles.toggleSave}>{YEARLY_FREE_MONTHS}か月分おトク</span></>}</span>
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
+        </MotionConfig>
       </div>
 
       <section className={styles.plans} aria-label="プラン">
@@ -170,14 +181,14 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           <p className={`${base.price} ${styles.teamPrice}`}>
             {price !== null ? (
               <>
-                <span className={base.priceNum}>{yen(price)}</span>
+                <span className={base.priceNum}><CountUp value={price} format={yen} duration={420} initial="value" /></span>
                 <span className={base.priceUnit}>/ {interval === 'yearly' ? '年' : '月'}（税抜）</span>
               </>
             ) : <span className={styles.quote}>個別にお見積りします</span>}
           </p>
           <p className={`${styles.priceSub} ${styles.teamPriceSub}`}>
             {price !== null && monthly !== null
-              ? <>税込 {yen(withTax(price))}・1人あたり月 {yen(Math.round((interval === 'yearly' ? price / 12 : monthly) / seats))}{interval === 'yearly' ? `・月払いより ${yen(monthly * YEARLY_FREE_MONTHS)} おトク` : ''}</>
+              ? <>税込 <CountUp value={withTax(price)} format={yen} duration={420} initial="value" />・1人あたり月 <CountUp value={Math.round((interval === 'yearly' ? price / 12 : monthly) / seats)} format={yen} duration={420} initial="value" />{interval === 'yearly' ? `・月払いより ${yen(monthly * YEARLY_FREE_MONTHS)} おトク` : ''}</>
               : `${ENTERPRISE_MIN_SEATS}人以上の会社は、人数と使い方に合わせてお見積りします。`}
           </p>
 
@@ -193,7 +204,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
 
           {points !== null ? (
             <div className={styles.power}>
-              <p className={styles.powerHead}>毎月のドヤパワー<span className={styles.powerNum}>{points.toLocaleString('ja-JP')}</span></p>
+              <p className={styles.powerHead}>毎月のドヤパワー<span className={styles.powerNum}><CountUp value={points} format={(n) => Math.round(n).toLocaleString('ja-JP')} duration={420} initial="value" /></span></p>
               <p className={styles.powerSub}>{canDo.map((c) => `${c.label} ${c.count.toLocaleString('ja-JP')}${c.unit}`).join('・')} ぶん</p>
             </div>
           ) : <div className={styles.power} aria-hidden />}
