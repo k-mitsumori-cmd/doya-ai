@@ -8,6 +8,9 @@ import React, {
   useState,
 } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useNewPricing } from "@/components/pricing/useNewPricing";
+import { FREE_MAX_MEMBERS, TEAM_MIN_SEATS, teamMonthly, withTax } from "@/lib/pricing-v2/plans";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -526,21 +529,38 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
 }
 
 export function PriceSummary() {
+  const { data: session, status: authStatus } = useSession();
+  const newPricing = useNewPricing(JSON.stringify([
+    authStatus, session?.user?.id, session?.user?.email, session?.user?.plan,
+  ]));
+  const minimumTeamMonthly = teamMonthly(TEAM_MIN_SEATS);
+  const legacy = newPricing === false;
+  const team = newPricing === true && minimumTeamMonthly !== null;
+
   return (
     <section className="doya-pricing">
       <div className="doya-section-inner">
         <div>
-          <span className="doya-eyebrow">ONE ACCOUNT, ONE PLAN</span>
+          <span className="doya-eyebrow">{team ? "ONE COMPANY, ONE PLAN" : legacy ? "ONE ACCOUNT, ONE PLAN" : "PRICING"}</span>
           <h2>ひとつの契約で、 仕事の可能性が広がります。</h2>
           <p>
-            まずは無料プランで。継続して使うなら、
-            全サービス共通のプロプランをご利用ください。
+            {legacy
+              ? "まずは無料プランで。継続して使うなら、全サービス共通のプロプランをご利用ください。"
+              : team
+                ? `フリーは${FREE_MAX_MEMBERS}人まで無料。チームは会社の基本料に、使う人数分の料金を加えます。`
+                : "ご契約内容に応じた料金をご案内します。最新の料金は、料金プランでご確認ください。"}
           </p>
         </div>
         <div className="doya-price-card">
-          <span>プロプラン / 月額（税込）</span>
-          <strong>¥{UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}</strong>
-          <p>各サービスの利用上限があります。</p>
+          <span>{legacy ? "プロプラン / 月額（税込）" : team ? `チーム / ${TEAM_MIN_SEATS}人利用時の月額（税込）` : "料金とご契約の確認"}</span>
+          {legacy ? (
+            <strong>¥{UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}</strong>
+          ) : team ? (
+            <strong>¥{withTax(minimumTeamMonthly).toLocaleString("ja-JP")}〜</strong>
+          ) : (
+            <strong aria-hidden="true">—</strong>
+          )}
+          <p>{legacy ? "各サービスの利用上限があります。" : team ? `会社の基本料と${TEAM_MIN_SEATS}人分の料金を含みます。人数により変わります。` : "現在の料金とご契約内容は、料金プランでご確認ください。"}</p>
           <Link className="doya-button" href="/pricing">
             料金・利用枠を確認する <ArrowRight size={18} />
           </Link>
