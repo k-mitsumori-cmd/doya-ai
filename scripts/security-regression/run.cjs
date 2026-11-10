@@ -1611,3 +1611,10 @@ if (publicTopPricing.error || publicTopPricing.status !== 0) {
   console.error('Security regression failed: verify-public-top-pricing-mounted.cjs');
   process.exit(publicTopPricing.status || 1);
 }
+
+// Verify the installed NextAuth log intake cannot inject text through code identifiers.
+const authLogCodeValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-auth-log-code-validation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (authLogCodeValidation.error || authLogCodeValidation.status !== 0) {
+  console.error('Security regression failed: verify-auth-log-code-validation.cjs');
+  process.exit(authLogCodeValidation.status || 1);
+}

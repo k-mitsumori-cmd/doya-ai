@@ -33,7 +33,18 @@ function clientFetchDiagnostic(metadata: unknown) {
 /** Provider-declined authorization is not an application exception. */
 const declinedAuthorizations = new WeakSet<object>()
 
+function safeAuthLogCode(code: unknown): string {
+  if (typeof code === 'string' && code.length > 0 && code.length <= 96 && !/[^A-Za-z0-9_]/.test(code)) {
+    return code
+  }
+  return 'UNKNOWN_AUTH_LOG_CODE'
+}
+
 export const authLogger = {
+  warn(code: string) {
+    const safeCode = safeAuthLogCode(code)
+    console.warn(`[next-auth][warn][${safeCode}]`, `\nhttps://next-auth.js.org/warnings#${safeCode.toLowerCase()}`)
+  },
   error(code: string, metadata: unknown) {
     const detail = metadata as { providerId?: unknown; error?: { message?: unknown }; error_description?: unknown } | null
     if (code === 'OAUTH_CALLBACK_HANDLER_ERROR'
@@ -57,6 +68,6 @@ export const authLogger = {
       console.error('[next-auth][error][CLIENT_FETCH_ERROR]', clientFetchDiagnostic(metadata))
       return
     }
-    console.error(`[next-auth][error][${code}]`)
+    console.error(`[next-auth][error][${safeAuthLogCode(code)}]`)
   },
 }
