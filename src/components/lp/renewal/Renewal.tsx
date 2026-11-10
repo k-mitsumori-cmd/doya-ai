@@ -31,8 +31,13 @@ import { ServiceCinematicHero } from "./ServiceCinematicHero";
 import { CINEMATIC_SCENES } from "./cinematic-scenes";
 import { OpeningCurtain, OPENING_COPY } from "./OpeningCurtain";
 import type { Step } from "../sections";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motion";
+import { brandNameEn } from "@/lib/brand";
+import { CountUp, LP_CARD_IO } from "./TopExtras";
 import "./renewal.css";
 import "./hero-motion.css";
+// 2026-11-10 の直し（表示の動き・画面の外の動きを止める・押したときの動き）。上の2つより後に読む
+import "./motion-2026-11.css";
 
 // 操作の3段階の写真（public/<id>/shots/）がまだ無いサービス。写真を置いたら外す
 const NO_STEP_SHOTS = new Set(["income", "expense", "tenjikai"]);
@@ -53,30 +58,70 @@ export function RenewalFrame({
   const hasOpening = Boolean(serviceId && OPENING_COPY[serviceId]);
   const [covered, setCovered] = useState(hasOpening);
   const [paused, setPaused] = useState(false);
+  // スマホで下へ送っているあいだは、下に固定した2つのボタンを引っ込める（カードの「詳しく見る」に重ねないため）
+  const [chromeHidden, setChromeHidden] = useState(false);
   useEffect(() => {
     const root = ref.current;
     if (!root || !("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(
+    // ⚠️ 中身は初めから見える状態のまま。動きは、小さなずれと透明度だけ（2026-11-10。速く送ると白い画面が出ていたため）。
+    //    画面に入る少し手前（下 25%）で始め、大きな section 全体ではなく、中の見出しやカード単位で動かす。
+    const reveal = new IntersectionObserver(
       (entries) =>
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("doya-visible");
-            observer.unobserve(entry.target);
+            reveal.unobserve(entry.target);
           }
         }),
-      { threshold: 0.07 },
+      { rootMargin: "0px 0px 25% 0px", threshold: 0 },
     );
     root
-      .querySelectorAll("main > section, .doya-feature-row, .doya-resource")
-      .forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+      .querySelectorAll(
+        "main > section:not(.doya-home-hero):not(.doya-hero) .doya-section-inner > *, .doya-feature-row, .doya-resource",
+      )
+      .forEach((el) => {
+        el.classList.add("doya-reveal");
+        reveal.observe(el);
+      });
+    // 画面の外にある section の動きは止める（電池と、重い PC での表示のため）。少し手前から動かし始める
+    const offscreen = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) =>
+          entry.target.toggleAttribute("data-offscreen", !entry.isIntersecting),
+        ),
+      { rootMargin: "200px 0px 200px 0px", threshold: 0 },
+    );
+    root.querySelectorAll("main > section, main > div").forEach((el) => offscreen.observe(el));
+    return () => {
+      reveal.disconnect();
+      offscreen.disconnect();
+    };
+  }, []);
+  useEffect(() => {
+    let last = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const nearBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 160;
+        if (nearBottom || y < 120) setChromeHidden(false);
+        else if (y - last > 6) setChromeHidden(true);
+        else if (last - y > 6) setChromeHidden(false);
+        last = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
   return (
     <RenewalContext.Provider value={serviceName}>
       <MotionContext.Provider value={paused || covered}>
         <div
           ref={ref}
-          className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
+          className={`doya-renewal ${paused ? "doya-motion-paused" : ""} ${chromeHidden ? "doya-chrome-hidden" : ""}`}
           data-renewal="2026-09"
           data-fv-motion="2026-09-08"
           data-operation-demo="2026-09-08"
@@ -94,13 +139,16 @@ export function RenewalFrame({
             >
               無料相談のご案内
             </a>
+            {/* 2026-11-10: 文字をやめてアイコンだけにした（スマホで絵やカードに重なっていたため）。名前は aria-label と title で伝える */}
             <button
+              type="button"
               className="doya-motion-toggle"
               onClick={() => setPaused(!paused)}
               aria-pressed={paused}
+              aria-label={paused ? "動きを再開" : "動きを止める"}
+              title={paused ? "動きを再開" : "動きを止める"}
             >
-              {paused ? <Play size={14} /> : <Pause size={14} />}
-              {paused ? "動きを再開" : "動きを止める"}
+              {paused ? <Play size={16} /> : <Pause size={16} />}
             </button>
           </div>
           {hasOpening && serviceId && (
@@ -442,7 +490,8 @@ export function ResourcePack() {
             >
               <div className="doya-book-stage">
                 <div className="doya-book">
-                  <span>DOYA MARKE AI</span>
+                  {/* 2026-11-10: 旧名「DOYA MARKE AI」をやめ、今のブランド名（旗に合わせて DOYA AI / DOYA BUDDY）にした */}
+                  <span>{brandNameEn()}</span>
                   <Icon size={36} />
                   <strong>{label}</strong>
                   <small>{String(i + 1).padStart(2, "0")} / STARTER KIT</small>
@@ -473,11 +522,37 @@ const groups = [
     ids: g.tools.map((t) => t.id),
   })),
 ];
+// 最初に大きく見せる代表のツール（2026-11-10 メインの指摘「18枚が同じ重さで長い」による）
+const FEATURED_IDS = ["banner", "seo", "shodan", "doyaslide"];
+
+function CardIO({ id, fallback }: { id: string; fallback: string }) {
+  const io = LP_CARD_IO[id];
+  if (!io) return <p>{fallback}</p>;
+  return (
+    <p className="doya-card-io">
+      <span>
+        <b>入れる</b>
+        {io.input}
+      </span>
+      <span>
+        <b>出る</b>
+        {io.output}
+      </span>
+    </p>
+  );
+}
+
 export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
   const [filter, setFilter] = useState(0);
   const all = getListedServices();
+  const featured = FEATURED_IDS.map((id) => all.find((s) => s.id === id)).filter(
+    (s): s is (typeof all)[number] => Boolean(s),
+  );
+  // 「すべて」のときは、上の代表の4つを除いた残りを並べる。部署で絞ったときは、その部署の全部を並べる
   const shown =
-    filter === 0 ? all : all.filter((s) => groups[filter].ids.includes(s.id));
+    filter === 0
+      ? all.filter((s) => !FEATURED_IDS.includes(s.id))
+      : all.filter((s) => groups[filter].ids.includes(s.id));
   return (
     <section id="doya-services" className="doya-directory">
       <div className="doya-section-inner">
@@ -487,11 +562,40 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
             ? "ほかの仕事にも、ドヤAI。"
             : "今日の「やりたい」に、\nぴったりの仲間を。"}
         </h2>
-        <p>作る、伝える、チームで進める。必要な業務からお選びください。</p>
-        <div className="doya-filter" aria-label="業務で絞り込み">
+        <p>
+          作る、伝える、チームで進める。<CountUp to={all.length} />
+          のツールから、必要な業務をお選びください。
+        </p>
+        {!compact && featured.length > 0 && (
+          <div className="doya-featured-grid">
+            {featured.map((s) => (
+              <Link href={s.href} key={s.id} className="doya-featured-card">
+                <Image
+                  unoptimized
+                  src={`/renewal/icons/${s.id}.webp`}
+                  alt=""
+                  width={64}
+                  height={64}
+                />
+                <h3>{s.name}</h3>
+                <CardIO id={s.id} fallback={s.description} />
+                <small>
+                  <Check size={14} aria-hidden="true" />
+                  無料プラン：{s.pricing.free.limit}
+                </small>
+                <span>
+                  詳しく見る <ArrowRight size={18} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+        <h3 className="doya-directory-sub">ほかのツールを、仕事で探す</h3>
+        <div className="doya-filter" role="group" aria-label="業務で絞り込み">
           {groups.map((g, i) => (
             <button
               key={g.name}
+              type="button"
               aria-pressed={filter === i}
               onClick={() => setFilter(i)}
             >
@@ -502,24 +606,40 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
         <p className="doya-result-count" aria-live="polite">
           {shown.length}ツール
         </p>
-        <div className="doya-service-grid">
-          {shown.map((s) => (
-            <Link href={s.href} key={s.id} className="doya-service-card">
-              <Image
-                unoptimized
-                src={`/renewal/icons/${s.id}.webp`}
-                alt=""
-                width={52}
-                height={52}
-              />
-              <h3>{s.name}</h3>
-              <p>{s.description}</p>
-              <span>
-                詳しく見る <ArrowRight size={18} />
-              </span>
-            </Link>
-          ))}
-        </div>
+        <MotionConfig reducedMotion="user">
+          <LayoutGroup>
+            <motion.div layout className="doya-service-grid doya-service-grid-compact">
+              <AnimatePresence initial={false} mode="popLayout">
+                {shown.map((s) => (
+                  <motion.div
+                    key={s.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                    className="doya-service-cell"
+                  >
+                    <Link href={s.href} className="doya-service-card">
+                      <Image
+                        unoptimized
+                        src={`/renewal/icons/${s.id}.webp`}
+                        alt=""
+                        width={52}
+                        height={52}
+                      />
+                      <h3>{s.name}</h3>
+                      <CardIO id={s.id} fallback={s.description} />
+                      <span>
+                        詳しく見る <ArrowRight size={18} />
+                      </span>
+                    </Link>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </LayoutGroup>
+        </MotionConfig>
       </div>
     </section>
   );
