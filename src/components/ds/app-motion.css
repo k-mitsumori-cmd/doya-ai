@@ -1,0 +1,57 @@
+/* ============================================
+ * アプリの動きの共通値（ログイン後の画面）
+ * ============================================
+ * 値と考え方は ~/Code/games/rehatalk/docs/motion.md と同じ。
+ * - 時間は 150 / 280 / 420ms の3段階。順に入るときの遅れは 40ms ずつ
+ * - 曲線は「ふつう」「最後に少し弾む」「大きな移動」の3つ
+ * - 動かすのは transform（scale / translate を含む）と opacity だけ
+ * - 動きを減らす設定では、下の @media で全部止める（最終の見た目はそのまま出る）
+ * ⚠️ 変数名は --m- で始める（既存の --ease / --dur とぶつけない）。:root に置くのは変数だけで、見た目は変えない */
+:root {
+  --m-dur-fast: 150ms;
+  --m-dur-base: 280ms;
+  --m-dur-slow: 420ms;
+  --m-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --m-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --m-ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  --m-stagger: 40ms;
+  --m-press: 0.95;
+}
+
+/* 弾んで現れる（結果・札・チェックの印） */
+@keyframes m-pop {
+  0% { opacity: 0; transform: scale(0.82); }
+  100% { opacity: 1; transform: none; }
+}
+/* 下から出る（案内・シート） */
+@keyframes m-rise {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: none; }
+}
+/* 小さく揺れる（失敗・足りない） */
+@keyframes m-shake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-6px); }
+  36% { transform: translateX(5px); }
+  54% { transform: translateX(-3px); }
+  72% { transform: translateX(2px); }
+}
+/* 線を描く（保存できたチェックの印。pathLength="1" の線に使う） */
+@keyframes m-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+/* 縁から広がる光の輪（お祝い・できた印） */
+@keyframes m-ring {
+  0% { opacity: 0.55; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+
+/* 使い方: 要素に data-motion を付ける。付けた要素が最初に出るときに1回だけ動く */
+[data-motion='pop'] { animation: m-pop var(--m-dur-slow) var(--m-ease-spring) both; }
+[data-motion='rise'] { animation: m-rise var(--m-dur-base) var(--m-ease-out) both; }
+[data-motion='shake'] { animation: m-shake var(--m-dur-slow) var(--m-ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-motion] { animation: none !important; }
+}

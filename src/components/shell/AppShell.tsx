@@ -16,6 +16,8 @@ import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
+import '@/components/ds/app-motion.css'
+import PressMotion from './PressMotion'
 import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
@@ -460,6 +462,8 @@ export default function AppShell({ children, userName, initialRecent, department
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>
+      {/* 押したときの縮みと弾み（枠の中の押せる部品すべて） */}
+      <PressMotion />
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
