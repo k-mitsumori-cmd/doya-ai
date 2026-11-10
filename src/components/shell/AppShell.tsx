@@ -19,6 +19,7 @@ import ds from '@/components/ds/tokens.module.css'
 import '@/components/ds/app-motion.css'
 import PressMotion from './PressMotion'
 import { NavMark } from './NavMark'
+import { MotionConfig } from 'framer-motion'
 import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
@@ -460,6 +461,8 @@ export default function AppShell({ children, userName, initialRecent, department
 
   return (
     <InShellContext.Provider value={true}>
+    {/* framer-motion の動きは、動きを減らす設定の人には位置・大きさの動きを止める（枠の中すべて） */}
+    <MotionConfig reducedMotion="user">
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
@@ -611,6 +614,7 @@ export default function AppShell({ children, userName, initialRecent, department
       <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn && !productsOn} withProducts={productsOn} />
     </div>
     </ShellUsageProvider>
+    </MotionConfig>
     </InShellContext.Provider>
   )
 }

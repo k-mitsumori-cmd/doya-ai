@@ -98,7 +98,12 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
   .statValue { font-size: 26px; }
 }
 
+/* 空の状態の絵は、ゆっくり浮き沈みする（最初に弾んで現れてから） */
+.empty > :first-child { animation: m-pop var(--m-dur-slow, 420ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both, ds-float 3.2s ease-in-out 600ms infinite; }
+@keyframes ds-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
 @media (prefers-reduced-motion: reduce) {
+  .empty > :first-child { animation: none; }
   .skeleton { animation: none; }
   .stat, .button { transition: none; }
   a.stat:hover { transform: none; }

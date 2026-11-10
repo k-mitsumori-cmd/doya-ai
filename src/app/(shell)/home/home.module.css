@@ -372,3 +372,23 @@
   .tools { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .todayItem, .tool { transition: none; } }
+
+/* ---- 動き（2026-11-10）: 頼んだ流れが1行ずつ現れ、できたら答えが弾んで出る。transform と opacity だけ ---- */
+.step { animation: m-rise var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both; }
+.step[data-state='done'] svg { animation: m-pop var(--m-dur-base, 280ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
+.answer { animation: m-pop var(--m-dur-slow, 420ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
+.answer .row { animation: m-rise var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both; }
+.answer .row:nth-child(2) { animation-delay: 40ms; }
+.answer .row:nth-child(3) { animation-delay: 80ms; }
+.answer .row:nth-child(4) { animation-delay: 120ms; }
+.answer .row:nth-child(n + 5) { animation-delay: 160ms; }
+/* 入口の札（やりたいこと）は、上から順に入る */
+.intents .chip { animation: m-rise var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both; }
+.intents .chip:nth-child(2) { animation-delay: 40ms; }
+.intents .chip:nth-child(3) { animation-delay: 80ms; }
+.intents .chip:nth-child(4) { animation-delay: 120ms; }
+.intents .chip:nth-child(5) { animation-delay: 160ms; }
+.intents .chip:nth-child(n + 6) { animation-delay: 200ms; }
+@media (prefers-reduced-motion: reduce) {
+  .step, .step[data-state='done'] svg, .answer, .answer .row, .intents .chip { animation: none; }
+}

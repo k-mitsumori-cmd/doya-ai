@@ -431,7 +431,7 @@ export default function BannerGalleryPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((it, idx) => (
-                  <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
+                  <div key={it.id} data-motion="pop" style={{ animationDelay: `${Math.min(idx % 12, 8) * 40}ms` }} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
                     <div className="relative aspect-square bg-slate-50 overflow-hidden">
                       <div className="w-full h-full transition-transform duration-500 group-hover:scale-105">
                         <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} lqip={it.lqip} index={idx} />

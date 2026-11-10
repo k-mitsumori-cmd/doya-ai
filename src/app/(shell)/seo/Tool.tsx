@@ -586,10 +586,16 @@ export default function SeoTool() {
               return (
                 <motion.div
                   key={a.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ delay: idx * 0.03 }}
+                  // 記事のカードが順に弾んで入る（遅れは40msずつ、8枚目まで）。
+                  // 絞り込み・並べ替え・追加・削除では、残るカードが新しい位置へ動いて入れ替わる（layout）
+                  layout
+                  initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{
+                    layout: { type: 'spring', stiffness: 420, damping: 36 },
+                    default: { type: 'spring', stiffness: 380, damping: 26, delay: Math.min(idx, 8) * 0.04 },
+                  }}
                 >
                   <div
                     role="button"
